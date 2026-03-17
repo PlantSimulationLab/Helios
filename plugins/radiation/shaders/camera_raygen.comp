@@ -1,0 +1,484 @@
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_EXT_shader_atomic_float : enable
+#extension GL_GOOGLE_include_directive : enable
+
+// Camera ray generation shader
+// Launches rays from camera for image rendering with antialiasing
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+// Push constants (camera parameters)
+layout(push_constant) uniform PushConstants {
+    vec3 camera_position;          // 12 bytes, offset 0
+    float viewplane_length;        // 4 bytes, offset 12
+    float camera_direction_x;      // 4 bytes, offset 16 (elevation)
+    float camera_direction_y;      // 4 bytes, offset 20 (azimuth)
+    float focal_length;            // 4 bytes, offset 24
+    float lens_diameter;           // 4 bytes, offset 28
+    float fov_aspect_ratio;        // 4 bytes, offset 32
+    uint resolution_x;             // 4 bytes, offset 36
+    uint resolution_y;             // 4 bytes, offset 40
+    uint resolution_full_x;        // 4 bytes, offset 44
+    uint resolution_full_y;        // 4 bytes, offset 48
+    uint pixel_offset_x;           // 4 bytes, offset 52
+    uint pixel_offset_y;           // 4 bytes, offset 56
+    uint antialiasing_samples;     // 4 bytes, offset 60
+    uint random_seed;              // 4 bytes, offset 64
+    uint band_count;               // 4 bytes, offset 68
+    uint source_count;             // 4 bytes, offset 72
+    uint primitive_count;          // 4 bytes, offset 76
+    vec3 sun_direction;            // 12 bytes, offset 80
+    float solar_disk_cos_angle;    // 4 bytes, offset 92
+    uint periodic_flag_x;          // 4 bytes, offset 96
+    uint periodic_flag_y;          // 4 bytes, offset 100
+    uint bbox_count;               // 4 bytes, offset 104
+    float domain_xmin;             // 4 bytes, offset 108
+    float domain_xmax;             // 4 bytes, offset 112
+    float domain_ymin;             // 4 bytes, offset 116
+    float domain_ymax;             // 4 bytes, offset 120
+    uint specular_reflection_enabled;  // 4 bytes, offset 124 (0=disabled, 1=default scale, 2=user scale)
+} pc; // Total: 128 bytes
+
+// ========== Descriptor Set 0: Geometry ==========
+layout(set = 0, binding = 0) readonly buffer BVHBuffer { float data[]; } bvh_buf;
+layout(set = 0, binding = 1) readonly buffer PrimIndicesBuffer { uint indices[]; } prim_indices_buf;
+layout(set = 0, binding = 2) readonly buffer TransformMatricesBuffer { float matrices[]; } transform_buf;
+layout(set = 0, binding = 3) readonly buffer PrimTypesBuffer { uint types[]; } prim_types_buf;
+layout(set = 0, binding = 4) readonly buffer PrimUUIDsBuffer { uint uuids[]; } prim_uuids_buf;
+layout(set = 0, binding = 5) readonly buffer PrimPositionsBuffer { uint positions[]; } prim_positions_buf;
+layout(set = 0, binding = 6) readonly buffer ObjectSubdivisionsBuffer { ivec2 subdivisions[]; } obj_subdivisions_buf;
+layout(set = 0, binding = 7) readonly buffer TwosidedFlagBuffer { uint twosided_flags[]; } twosided_buf;
+layout(set = 0, binding = 8) readonly buffer PatchVerticesBuffer { float vertices[]; } patch_vertices_buf;
+layout(set = 0, binding = 9) readonly buffer TriangleVerticesBuffer { float vertices[]; } triangle_vertices_buf;
+layout(set = 0, binding = 10) readonly buffer NormalsBuffer { float normals[]; } normals_buf;
+layout(set = 0, binding = 11) readonly buffer MaskDataBuffer { uint mask_data[]; } mask_data_buf;
+layout(set = 0, binding = 12) readonly buffer MaskSizesBuffer { ivec2 mask_sizes[]; } mask_sizes_buf;
+layout(set = 0, binding = 13) readonly buffer MaskOffsetsBuffer { uint mask_offsets[]; } mask_offsets_buf;
+layout(set = 0, binding = 14) readonly buffer MaskIDsBuffer { int mask_ids[]; } mask_ids_buf;
+layout(set = 0, binding = 15) readonly buffer UVDataBuffer { vec2 uv_data[]; } uv_data_buf;
+layout(set = 0, binding = 16) readonly buffer UVIDsBuffer { int uv_ids[]; } uv_ids_buf;
+layout(set = 0, binding = 17) readonly buffer BboxVerticesBuffer { float vertices[]; } bbox_verts_buf;
+
+// ========== Descriptor Set 1: Materials/Sources ==========
+layout(set = 1, binding = 0) readonly buffer SourcePositionsBuffer { vec3 positions[]; } source_positions_buf;
+layout(set = 1, binding = 1) readonly buffer SourceTypesBuffer { uint types[]; } source_types_buf;
+layout(set = 1, binding = 2) readonly buffer SourceRotationsBuffer { vec3 rotations[]; } source_rotations_buf;
+layout(set = 1, binding = 3) readonly buffer SourceWidthsBuffer { vec2 widths[]; } source_widths_buf;
+layout(set = 1, binding = 4) readonly buffer SourceFluxesBuffer { float fluxes[]; } source_fluxes_buf;
+layout(set = 1, binding = 7) readonly buffer SpecularExponentBuffer { float specular_exponent[]; } specular_exponent_buf;
+layout(set = 1, binding = 8) readonly buffer SpecularScaleBuffer { float specular_scale[]; } specular_scale_buf;
+layout(set = 1, binding = 9) readonly buffer SourceFluxesCamBuffer { float source_fluxes_cam[]; } source_fluxes_cam_buf;
+
+// ========== Descriptor Set 2: Result Buffers ==========
+layout(set = 2, binding = 1) readonly buffer RadiationOutTopBuffer { float radiation_out_top[]; };
+layout(set = 2, binding = 2) readonly buffer RadiationOutBottomBuffer { float radiation_out_bottom[]; };
+layout(set = 2, binding = 5) buffer CameraRadiationBuffer { float camera_radiation[]; };
+layout(set = 2, binding = 10) readonly buffer RadiationSpecularBuffer { float radiation_specular[]; } radiation_specular_buf;
+
+// ========== Descriptor Set 3: Sky Parameters ==========
+layout(set = 3, binding = 4) readonly buffer SkyRadianceParamsBuffer { vec4 sky_radiance_params[]; };
+layout(set = 3, binding = 5) readonly buffer CameraSkyRadianceBuffer { float camera_sky_radiance[]; };
+layout(set = 3, binding = 6) readonly buffer SolarDiskRadianceBuffer { float solar_disk_radiance[]; };
+
+// ========== Include common shader utilities ==========
+#include "common/random.glsl"
+#include "common/transforms.glsl"
+#include "common/bvh_traversal.glsl"
+#include "common/periodic_boundary.glsl"
+#include "common/sky_distribution.glsl"
+
+// PI is defined in sky_distribution.glsl
+
+// Sample uniform point on unit disk (concentric mapping)
+// Matches OptiX d_sampleDisk (RayTracing.cuh:444-487)
+vec3 sample_disk(inout RNGState rng) {
+    float Rx = rng_float(rng);
+    float Ry = rng_float(rng);
+
+    // Map to square [-1,1] x [-1,1]
+    vec2 sp = vec2(-1.0 + 2.0 * Rx, -1.0 + 2.0 * Ry);
+
+    float r, phi;
+
+    // Concentric disk mapping (Shirley & Chiu 1997)
+    if (sp.x > -sp.y) {
+        if (sp.x > sp.y) {
+            r = sp.x;
+            phi = sp.y / sp.x;
+        } else {
+            r = sp.y;
+            phi = 2.0 - sp.x / sp.y;
+        }
+    } else {
+        if (sp.x < sp.y) {
+            r = -sp.x;
+            phi = 4.0 + sp.y / sp.x;
+        } else {
+            r = -sp.y;
+            phi = (sp.y != 0.0) ? (6.0 - sp.x / sp.y) : 0.0;
+        }
+    }
+
+    phi *= 0.25 * PI;
+
+    // Point on unit disk
+    return vec3(r * cos(phi), r * sin(phi), 0.0);
+}
+
+// Helper: Check if sphere source is visible between camera and hit point
+bool sphere_source_visible(vec3 ray_origin, vec3 ray_dir, vec3 source_pos, float radius, float t_max) {
+    vec3 oc = ray_origin - source_pos;
+    float b = dot(oc, ray_dir);
+    float c = dot(oc, oc) - radius * radius;
+    float discriminant = b * b - c;
+
+    if (discriminant >= 0.0) {
+        float t_sphere = -b - sqrt(discriminant);
+        return (t_sphere > 0.0 && t_sphere < t_max);
+    }
+    return false;
+}
+
+// Helper: Check if rectangle source is visible
+bool rectangle_source_visible(vec3 ray_origin, vec3 ray_dir, vec3 source_pos, vec2 widths, vec3 rotation, float t_max, out float cos_angle) {
+    mat4 transform = make_rotation_matrix(rotation);
+    vec3 normal = vec3(transform[0][2], transform[1][2], transform[2][2]); // Z-axis column
+
+    float denom = dot(ray_dir, normal);
+    if (denom >= -1e-6) {
+        return false; // Back face or parallel
+    }
+
+    vec3 oc = source_pos - ray_origin;
+    float t_rect = dot(oc, normal) / denom;
+
+    if (t_rect <= 0.0 || t_rect >= t_max) {
+        return false; // Behind or beyond hit
+    }
+
+    vec3 hit_point = ray_origin + t_rect * ray_dir;
+    vec3 local_hit = hit_point - source_pos;
+
+    // Transform to local coords
+    mat3 inv_rot = transpose(mat3(transform));
+    local_hit = inv_rot * local_hit;
+
+    if (abs(local_hit.x) <= widths.x * 0.5 && abs(local_hit.y) <= widths.y * 0.5) {
+        cos_angle = -denom;
+        return true;
+    }
+    return false;
+}
+
+// Helper: Check if disk source is visible
+bool disk_source_visible(vec3 ray_origin, vec3 ray_dir, vec3 source_pos, float radius, vec3 rotation, float t_max, out float cos_angle) {
+    mat4 transform = make_rotation_matrix(rotation);
+    vec3 normal = vec3(transform[0][2], transform[1][2], transform[2][2]);
+
+    float denom = dot(ray_dir, normal);
+    if (denom >= -1e-6) {
+        return false;
+    }
+
+    vec3 oc = source_pos - ray_origin;
+    float t_disk = dot(oc, normal) / denom;
+
+    if (t_disk <= 0.0 || t_disk >= t_max) {
+        return false;
+    }
+
+    vec3 hit_point = ray_origin + t_disk * ray_dir;
+    vec3 offset = hit_point - source_pos;
+    float dist_sq = dot(offset, offset);
+
+    if (dist_sq <= radius * radius) {
+        cos_angle = -denom;
+        return true;
+    }
+    return false;
+}
+
+void main() {
+    uint pixel_x = gl_GlobalInvocationID.x;
+    uint pixel_y = gl_GlobalInvocationID.y;
+    uint sample_idx = gl_GlobalInvocationID.z;
+
+    // Bounds check
+    if (pixel_x >= pc.resolution_x || pixel_y >= pc.resolution_y) {
+        return;
+    }
+    if (sample_idx >= pc.antialiasing_samples) {
+        return;
+    }
+
+    // Compute global pixel coordinates (including tile offset)
+    uint ii = pc.pixel_offset_x + pixel_x;  // global x-pixel
+    uint jj = pc.pixel_offset_y + pixel_y;  // global y-pixel
+    uint pixel_index = jj * pc.resolution_full_x + ii;  // global pixel linear index
+
+    // RNG seed (matches OptiX: tea(ray_index + Nrays * sample_index, random_seed))
+    uint dimx = pc.resolution_x * pc.resolution_y;
+    uint indx = pc.resolution_x * pixel_y + pixel_x;
+    RNGState rng = rng_init(pc.random_seed, indx + dimx * sample_idx);
+
+    // ========== Camera Ray Generation with Antialiasing ==========
+
+    float multiplier = 1.0 / pc.fov_aspect_ratio;
+
+    // Sample point on pixel with jitter for antialiasing
+    float Rx = rng_float(rng);
+    float Ry = rng_float(rng);
+
+    vec3 sp;
+    sp.y = (-0.5 + (float(ii) + Rx) / float(pc.resolution_full_x));
+    sp.z = (0.5 - (float(jj) + Ry) / float(pc.resolution_full_y)) * multiplier;
+    sp.x = pc.viewplane_length;
+
+    // Point on focal plane through lens center and pixel sample
+    vec3 p = vec3(
+        pc.focal_length,
+        sp.y / pc.viewplane_length * pc.focal_length,
+        sp.z / pc.viewplane_length * pc.focal_length
+    );
+
+    // Sample point on lens (depth of field)
+    vec3 ray_origin = vec3(0, 0, 0);
+    if (pc.lens_diameter > 0.0) {
+        vec3 disk_sample = sample_disk(rng);
+        ray_origin = vec3(0.0, 0.5 * disk_sample.x * pc.lens_diameter, 0.5 * disk_sample.y * pc.lens_diameter);
+    }
+
+    // Ray direction from lens sample to focal point
+    vec3 ray_dir = p - ray_origin;
+
+    // Rotate into world space using camera direction
+    float theta = -0.5 * PI + pc.camera_direction_x;  // elevation
+    float phi = 0.5 * PI - pc.camera_direction_y;      // azimuth
+    ray_origin = camera_rotate_point(ray_origin, theta, phi) + pc.camera_position;
+    ray_dir = normalize(camera_rotate_point(ray_dir, theta, phi));
+
+    // Per-ray strength (Monte Carlo averaging: 1/N_samples)
+    float strength = 1.0 / float(pc.antialiasing_samples);
+
+    // ========== BVH Traversal with Periodic Boundary Wrapping ==========
+
+    uint hit_prim = UINT_MAX;
+    float closest_t;
+    uint hit_prim_type;
+    vec2 hit_uv;
+
+    for (int wrap = 0; wrap < 10; ++wrap) {
+        hit_prim = traverse_cwbvh(ray_origin, ray_dir, 1e-5, UINT_MAX, closest_t, hit_prim_type, hit_uv);
+
+        if (pc.bbox_count == 0) break; // No periodic boundaries
+
+        vec3 wrapped_origin;
+        bool hit_periodic = check_periodic_boundary(
+            ray_origin, ray_dir, closest_t,
+            pc.periodic_flag_x, pc.periodic_flag_y, pc.bbox_count,
+            pc.domain_xmin, pc.domain_xmax, pc.domain_ymin, pc.domain_ymax,
+            wrapped_origin);
+
+        if (!hit_periodic) break; // Real hit or miss
+        ray_origin = wrapped_origin;
+        hit_prim = UINT_MAX; // Reset for next iteration
+    }
+
+    // ========== Process Hit or Miss ==========
+
+    if (hit_prim != UINT_MAX) {
+        // ========== HIT PROCESSING (from closest_hit_camera) ==========
+
+        uint hit_position = prim_positions_buf.positions[prim_uuids_buf.uuids[hit_prim]];
+
+        // Bounds check
+        if (hit_position == UINT_MAX || hit_position >= pc.primitive_count) {
+            return;
+        }
+
+        // Read surface normal
+        vec3 normal = vec3(
+            normals_buf.normals[hit_prim * 3 + 0],
+            normals_buf.normals[hit_prim * 3 + 1],
+            normals_buf.normals[hit_prim * 3 + 2]
+        );
+
+        // Determine which face was hit
+        bool face = dot(normal, ray_dir) < 0.0; // true = hit top face
+
+        // Process each band
+        for (uint b = 0; b < pc.band_count; b++) {
+            float source_radiance = 0.0;
+
+            // Check if any light sources are visible between camera and hit point
+            for (uint s = 0; s < pc.source_count; s++) {
+                float flux = source_fluxes_buf.fluxes[s * pc.band_count + b];
+                if (flux <= 0.0) continue;
+
+                uint source_type = source_types_buf.types[s];
+                vec3 source_pos = source_positions_buf.positions[s];
+                vec2 source_widths = source_widths_buf.widths[s];
+                vec3 source_rotation = source_rotations_buf.rotations[s];
+
+                if (source_type == 1u) {
+                    // SPHERE
+                    float radius = source_widths.x * 0.5;
+                    if (sphere_source_visible(ray_origin, ray_dir, source_pos, radius, closest_t)) {
+                        float area = 4.0 * PI * radius * radius;
+                        source_radiance += (flux / area) / PI;
+                    }
+                } else if (source_type == 3u) {
+                    // RECTANGLE
+                    float cos_angle;
+                    if (rectangle_source_visible(ray_origin, ray_dir, source_pos, source_widths, source_rotation, closest_t, cos_angle)) {
+                        float area = source_widths.x * source_widths.y;
+                        source_radiance += (flux / area) * cos_angle / PI;
+                    }
+                } else if (source_type == 4u) {
+                    // DISK
+                    float cos_angle;
+                    float radius = source_widths.x;
+                    if (disk_source_visible(ray_origin, ray_dir, source_pos, radius, source_rotation, closest_t, cos_angle)) {
+                        float area = PI * radius * radius;
+                        source_radiance += (flux / area) * cos_angle / PI;
+                    }
+                }
+            }
+
+            // Read surface scattered radiation (from radiation_out buffers populated by copyScatterToRadiation)
+            uint buf_idx = hit_position * pc.band_count + b;
+            float surface_strength;
+            if (face || prim_types_buf.types[hit_prim] == 4u) {
+                surface_strength = radiation_out_top[buf_idx] * strength;
+            } else {
+                surface_strength = radiation_out_bottom[buf_idx] * strength;
+            }
+
+            if (source_radiance > 0.0) {
+                surface_strength += source_radiance * strength;
+            }
+
+            // ========== Specular Reflection (Blinn-Phong) ==========
+            // Compute specular highlights using incident radiation accumulated during direct ray tracing
+            // Matches OptiX closest_hit_camera (rayHit.cu lines 438-483)
+            float strength_spec = 0.0;
+            if (pc.specular_reflection_enabled > 0 && specular_exponent_buf.specular_exponent[hit_position] > 0.0) {
+                // Loop over all sources to accumulate specular contribution
+                for (uint s = 0; s < pc.source_count; s++) {
+                    // Read accumulated incident radiation from direct rays
+                    // radiation_specular is indexed as [source][primitive][band]
+                    uint spec_idx = s * pc.primitive_count * pc.band_count + hit_position * pc.band_count + b;
+                    float spec = radiation_specular_buf.radiation_specular[spec_idx];
+
+                    // Apply camera spectral response weight and Fresnel factor
+                    // source_fluxes_cam stores ∫(source_spectrum × camera_response) / ∫(source_spectrum)
+                    float cam_weight = source_fluxes_cam_buf.source_fluxes_cam[s * pc.band_count + b];
+                    spec *= cam_weight * 0.25;  // 0.25 = default Fresnel reflectance
+
+                    if (spec > 0.0) {
+                        // Determine light direction based on source type
+                        vec3 light_direction;
+                        uint source_type = source_types_buf.types[s];
+                        if (source_type == 0u || source_type == 2u) {
+                            // Collimated or sun-sphere: parallel rays from source direction
+                            light_direction = normalize(source_positions_buf.positions[s]);
+                        } else {
+                            // Sphere, disk, or rectangle: direction from hit point to source center
+                            vec3 hit_point = ray_origin + closest_t * ray_dir;
+                            light_direction = normalize(source_positions_buf.positions[s] - hit_point);
+                        }
+
+                        // Blinn-Phong half-vector (between light direction and view direction)
+                        vec3 half_vec = normalize(light_direction - ray_dir);
+                        float exp_val = specular_exponent_buf.specular_exponent[hit_position];
+
+                        // Apply user-defined scale coefficient if mode == 2
+                        float scale = 1.0;
+                        if (pc.specular_reflection_enabled == 2) {
+                            scale = specular_scale_buf.specular_scale[hit_position];
+                        }
+
+                        // Blinn-Phong specular BRDF:
+                        // (exp+2)/(2π) normalizes the distribution to unity
+                        // Division by antialiasing_samples averages over Monte Carlo samples
+                        strength_spec += spec * scale * pow(max(0.0, dot(half_vec, normal)), exp_val)
+                                       * (exp_val + 2.0) / (float(pc.antialiasing_samples) * 2.0 * PI);
+                    }
+                }
+            }
+
+            // Accumulate into camera pixel buffer (with pi conversion)
+            // Note: pi factor converts flux to intensity assuming Lambertian surface
+            uint camera_idx = pixel_index * pc.band_count + b;
+            atomicAdd(camera_radiation[camera_idx], (surface_strength + strength_spec) / PI);
+        }
+
+    } else {
+        // ========== MISS PROCESSING (from miss_camera) ==========
+
+        for (uint b = 0; b < pc.band_count; b++) {
+            float radiance = 0.0;
+
+            // Check all light sources
+            for (uint s = 0; s < pc.source_count; s++) {
+                float flux = source_fluxes_buf.fluxes[s * pc.band_count + b];
+                if (flux <= 0.0) continue;
+
+                uint source_type = source_types_buf.types[s];
+                vec3 source_pos = source_positions_buf.positions[s];
+                vec2 source_widths = source_widths_buf.widths[s];
+                vec3 source_rotation = source_rotations_buf.rotations[s];
+
+                if (source_type == 0u || source_type == 2u) {
+                    // COLLIMATED or SUN_SPHERE
+                    float cos_sun_angle = dot(ray_dir, pc.sun_direction);
+                    if (cos_sun_angle >= pc.solar_disk_cos_angle && solar_disk_radiance[b] > 0.0) {
+                        radiance += solar_disk_radiance[b];
+                    }
+                } else if (source_type == 1u) {
+                    // SPHERE
+                    float radius = source_widths.x * 0.5;
+                    if (sphere_source_visible(ray_origin, ray_dir, source_pos, radius, 1e30)) {
+                        float area = 4.0 * PI * radius * radius;
+                        radiance += (flux / area) / PI;
+                    }
+                } else if (source_type == 3u) {
+                    // RECTANGLE
+                    float cos_angle;
+                    if (rectangle_source_visible(ray_origin, ray_dir, source_pos, source_widths, source_rotation, 1e30, cos_angle)) {
+                        float area = source_widths.x * source_widths.y;
+                        radiance += (flux / area) * cos_angle / PI;
+                    }
+                } else if (source_type == 4u) {
+                    // DISK
+                    float cos_angle;
+                    float radius = source_widths.x;
+                    if (disk_source_visible(ray_origin, ray_dir, source_pos, radius, source_rotation, 1e30, cos_angle)) {
+                        float area = PI * radius * radius;
+                        radiance += (flux / area) * cos_angle / PI;
+                    }
+                }
+            }
+
+            // Fallback to sky radiance if no sources visible
+            if (radiance <= 0.0 && camera_sky_radiance[b] > 0.0) {
+                // Evaluate directional sky radiance using Prague model
+                // For camera: power-law disabled (K=0, norm=1)
+                float angular_weight = evaluate_sky_distribution(
+                    ray_dir,
+                    pc.sun_direction,
+                    0.0,  // No power-law for camera
+                    1.0,
+                    sky_radiance_params[b]
+                );
+                radiance = camera_sky_radiance[b] * angular_weight;
+            }
+
+            if (radiance > 0.0) {
+                uint camera_idx = pixel_index * pc.band_count + b;
+                atomicAdd(camera_radiation[camera_idx], radiance * strength);
+            }
+        }
+    }
+}

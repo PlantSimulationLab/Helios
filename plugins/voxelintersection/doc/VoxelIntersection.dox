@@ -4,6 +4,35 @@
 
  <p> <br><br> </p>
 
+ \warning <b>DEPRECATED PLUGIN</b>: The VoxelIntersection plugin functionality has been merged into the \ref CollisionDetection plugin. This plugin is deprecated and will be removed in a future release. Please migrate to CollisionDetection for all voxel intersection and primitive slicing operations.
+
+ \section DeprecationNotice Migration to CollisionDetection Plugin
+
+ All VoxelIntersection functionality is now available in the CollisionDetection plugin with the same API:
+
+ <b>Migration Steps:</b>
+ 1. Replace <code>#include "VoxelIntersection.h"</code> with <code>#include "CollisionDetection.h"</code>
+ 2. Replace <code>VoxelIntersection</code> class with <code>CollisionDetection</code>
+ 3. All method names remain identical (no API changes)
+ 4. <code>calculatePrimitiveVoxelIntersection()</code> now uses OpenMP instead of CUDA
+
+ <b>Example Migration:</b>
+ ~~~~~~{.cpp}
+ // Old VoxelIntersection code:
+ VoxelIntersection voxelintersection(&context);
+ voxelintersection.slicePrimitivesUsingGrid(uuids, center, size, divisions);
+ auto cells = voxelintersection.getCellPrimitives();
+
+ // New CollisionDetection code:
+ CollisionDetection collisiondetection(&context);
+ collisiondetection.slicePrimitivesUsingGrid(uuids, center, size, divisions);
+ auto cells = collisiondetection.getGridCells();
+ ~~~~~~
+
+ See the \ref CollisionDetection documentation section on \ref slicing "Primitive Slicing Operations" for complete details and examples.
+
+ <hr>
+
  <table>
  <tr><th>Dependencies</th><td>NVIDIA CUDA 9.0+ <p>gcc/g++ 5.5+</td></tr>
  <tr><th>CMakeLists.txt</th><td>set( PLUGINS "voxelintersection" )</td></tr>

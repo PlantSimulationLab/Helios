@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: CarbohydrateParameters Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -165,19 +198,28 @@ $(function(){initNavTree('struct_carbohydrate_parameters.html',''); initResizabl
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Data Fields</h2></td></tr>
-<tr class="memitem:ad8f2e3caee08b6aed727892d1db95b9c" id="r_ad8f2e3caee08b6aed727892d1db95b9c"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad8f2e3caee08b6aed727892d1db95b9c">stem_density</a> = 540000</td></tr>
+<tr class="memitem:ad8f2e3caee08b6aed727892d1db95b9c" id="r_ad8f2e3caee08b6aed727892d1db95b9c"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad8f2e3caee08b6aed727892d1db95b9c">stem_density</a> = 54000</td></tr>
 <tr class="memdesc:ad8f2e3caee08b6aed727892d1db95b9c"><td class="mdescLeft">&#160;</td><td class="mdescRight">mature internode (wood/stem) density (g m^-3)  <br /></td></tr>
 <tr class="separator:ad8f2e3caee08b6aed727892d1db95b9c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7af4a1ca1254dea68c046e3d5548c201" id="r_a7af4a1ca1254dea68c046e3d5548c201"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7af4a1ca1254dea68c046e3d5548c201">stem_carbon_percentage</a> = 0.4559</td></tr>
 <tr class="memdesc:a7af4a1ca1254dea68c046e3d5548c201"><td class="mdescLeft">&#160;</td><td class="mdescRight">fraction of the dry weight of internode made up by carbon in mature shoot  <br /></td></tr>
 <tr class="separator:a7af4a1ca1254dea68c046e3d5548c201"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1c4f6618046f702594b071b9b266741c" id="r_a1c4f6618046f702594b071b9b266741c"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1c4f6618046f702594b071b9b266741c">carbohydrate_percentage</a> = 0.10</td></tr>
+<tr class="memdesc:a1c4f6618046f702594b071b9b266741c"><td class="mdescLeft">&#160;</td><td class="mdescRight">mean fraction of the dry weight of internode composed of carbohydrates in mature shoot  <br /></td></tr>
+<tr class="separator:a1c4f6618046f702594b071b9b266741c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6b49efab47153730bc73aa1482e07783" id="r_a6b49efab47153730bc73aa1482e07783"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6b49efab47153730bc73aa1482e07783">carbohydrate_carbon_percentage</a> = 0.4</td></tr>
+<tr class="memdesc:a6b49efab47153730bc73aa1482e07783"><td class="mdescLeft">&#160;</td><td class="mdescRight">fraction of carbohydrates composed of carbon  <br /></td></tr>
+<tr class="separator:a6b49efab47153730bc73aa1482e07783"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2e9df35ee960a1b281c30791d83c94fb" id="r_a2e9df35ee960a1b281c30791d83c94fb"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2e9df35ee960a1b281c30791d83c94fb">stem_structural_carbon_percentage</a> = <a class="el" href="#a7af4a1ca1254dea68c046e3d5548c201">stem_carbon_percentage</a> - (<a class="el" href="#a6b49efab47153730bc73aa1482e07783">carbohydrate_carbon_percentage</a> * <a class="el" href="#a1c4f6618046f702594b071b9b266741c">carbohydrate_percentage</a>)</td></tr>
+<tr class="memdesc:a2e9df35ee960a1b281c30791d83c94fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">fraction of the dry weight of internode made up by structural carbon in mature shoot - Excludes fraction made up by carbohydrates  <br /></td></tr>
+<tr class="separator:a2e9df35ee960a1b281c30791d83c94fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a63929a3fd67a785d6b83f45ab1f68418" id="r_a63929a3fd67a785d6b83f45ab1f68418"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a63929a3fd67a785d6b83f45ab1f68418">maturity_age</a> = 180</td></tr>
 <tr class="memdesc:a63929a3fd67a785d6b83f45ab1f68418"><td class="mdescLeft">&#160;</td><td class="mdescRight">age at which stem reaches physiological maturity (days)  <br /></td></tr>
 <tr class="separator:a63929a3fd67a785d6b83f45ab1f68418"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae7c0547f83dda837b1d28c37d793d614" id="r_ae7c0547f83dda837b1d28c37d793d614"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae7c0547f83dda837b1d28c37d793d614">initial_density_ratio</a> = 0.2</td></tr>
 <tr class="memdesc:ae7c0547f83dda837b1d28c37d793d614"><td class="mdescLeft">&#160;</td><td class="mdescRight">starting fraction of the final stem carbon density in new growth  <br /></td></tr>
 <tr class="separator:ae7c0547f83dda837b1d28c37d793d614"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5c5adb0655d3186d36a712709e00b058" id="r_a5c5adb0655d3186d36a712709e00b058"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5c5adb0655d3186d36a712709e00b058">shoot_root_ratio</a> = 4.5</td></tr>
+<tr class="memitem:a5c5adb0655d3186d36a712709e00b058" id="r_a5c5adb0655d3186d36a712709e00b058"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5c5adb0655d3186d36a712709e00b058">shoot_root_ratio</a> = 3</td></tr>
 <tr class="memdesc:a5c5adb0655d3186d36a712709e00b058"><td class="mdescLeft">&#160;</td><td class="mdescRight">ratio of shoot internode dry weight to root dry weight  <br /></td></tr>
 <tr class="separator:a5c5adb0655d3186d36a712709e00b058"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adc0ff3ba0d78efcf09a1d2b67b216cc1" id="r_adc0ff3ba0d78efcf09a1d2b67b216cc1"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adc0ff3ba0d78efcf09a1d2b67b216cc1">SLA</a> = 2.5e-2</td></tr>
@@ -195,19 +237,25 @@ Data Fields</h2></td></tr>
 <tr class="memitem:ad4cafedeff228ebde455347dcb68cdb2" id="r_ad4cafedeff228ebde455347dcb68cdb2"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad4cafedeff228ebde455347dcb68cdb2">fruit_carbon_percentage</a> = 0.4786</td></tr>
 <tr class="memdesc:ad4cafedeff228ebde455347dcb68cdb2"><td class="mdescLeft">&#160;</td><td class="mdescRight">fraction of the dry weight of fruit made up by carbon  <br /></td></tr>
 <tr class="separator:ad4cafedeff228ebde455347dcb68cdb2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a14c4d4fcea94c3bec6a0b9727c7fde6f" id="r_a14c4d4fcea94c3bec6a0b9727c7fde6f"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a14c4d4fcea94c3bec6a0b9727c7fde6f">stem_maintainance_respiration_rate</a> = 3.5024e-05</td></tr>
-<tr class="memdesc:a14c4d4fcea94c3bec6a0b9727c7fde6f"><td class="mdescLeft">&#160;</td><td class="mdescRight">maintenance respiration rate of stem (mol C respired/mol C in pool/day)  <br /></td></tr>
-<tr class="separator:a14c4d4fcea94c3bec6a0b9727c7fde6f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3ea5c50af267ce244cc6aeebaed8498a" id="r_a3ea5c50af267ce244cc6aeebaed8498a"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3ea5c50af267ce244cc6aeebaed8498a">root_maintainance_respiration_rate</a> = 3.5024e-05</td></tr>
-<tr class="memdesc:a3ea5c50af267ce244cc6aeebaed8498a"><td class="mdescLeft">&#160;</td><td class="mdescRight">maintenance respiration rate of root (mol C respired/mol C in pool/day)  <br /></td></tr>
-<tr class="separator:a3ea5c50af267ce244cc6aeebaed8498a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1d3018279b1256160645c522c8f6b205" id="r_a1d3018279b1256160645c522c8f6b205"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1d3018279b1256160645c522c8f6b205">stem_maintenance_respiration_rate</a> = 3.5024e-05</td></tr>
+<tr class="memdesc:a1d3018279b1256160645c522c8f6b205"><td class="mdescLeft">&#160;</td><td class="mdescRight">maintenance respiration rate of stem (mol C respired/mol C in pool/day)  <br /></td></tr>
+<tr class="separator:a1d3018279b1256160645c522c8f6b205"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0df24e91a3697af440f7c3d3462cb5bd" id="r_a0df24e91a3697af440f7c3d3462cb5bd"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0df24e91a3697af440f7c3d3462cb5bd">root_maintenance_respiration_rate</a> = 3.5024e-05</td></tr>
+<tr class="memdesc:a0df24e91a3697af440f7c3d3462cb5bd"><td class="mdescLeft">&#160;</td><td class="mdescRight">maintenance respiration rate of root (mol C respired/mol C in pool/day)  <br /></td></tr>
+<tr class="separator:a0df24e91a3697af440f7c3d3462cb5bd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae65d0e65eef395a638670752a47b25d1" id="r_ae65d0e65eef395a638670752a47b25d1"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae65d0e65eef395a638670752a47b25d1">living_wood_fraction</a> = 0.5</td></tr>
+<tr class="memdesc:ae65d0e65eef395a638670752a47b25d1"><td class="mdescLeft">&#160;</td><td class="mdescRight">fraction of wood composed of physiologically active tissue  <br /></td></tr>
+<tr class="separator:ae65d0e65eef395a638670752a47b25d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a65bd762dece9897d0c866b7d568255e1" id="r_a65bd762dece9897d0c866b7d568255e1"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a65bd762dece9897d0c866b7d568255e1">dormant_respiration_fraction</a> = 0.9</td></tr>
+<tr class="memdesc:a65bd762dece9897d0c866b7d568255e1"><td class="mdescLeft">&#160;</td><td class="mdescRight">fraction of active respiration that occurs during dormancy  <br /></td></tr>
+<tr class="separator:a65bd762dece9897d0c866b7d568255e1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a03c67c88de5e82bad3efae32e1d10317" id="r_a03c67c88de5e82bad3efae32e1d10317"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a03c67c88de5e82bad3efae32e1d10317">growth_respiration_fraction</a> = 0.28</td></tr>
 <tr class="memdesc:a03c67c88de5e82bad3efae32e1d10317"><td class="mdescLeft">&#160;</td><td class="mdescRight">growth respiration cost (fraction of total carbon used during growth that goes toward respiration rather than structure)  <br /></td></tr>
 <tr class="separator:a03c67c88de5e82bad3efae32e1d10317"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab80588f969b966de5339d7289472e14b" id="r_ab80588f969b966de5339d7289472e14b"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab80588f969b966de5339d7289472e14b">carbohydrate_abortion_threshold</a> = 0.1</td></tr>
+<tr class="memitem:ab80588f969b966de5339d7289472e14b" id="r_ab80588f969b966de5339d7289472e14b"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab80588f969b966de5339d7289472e14b">carbohydrate_abortion_threshold</a> = 0.15</td></tr>
 <tr class="memdesc:ab80588f969b966de5339d7289472e14b"><td class="mdescLeft">&#160;</td><td class="mdescRight">carbohydrate concentration threshold to abort a flowering bud as a fraction of g C/ g DW in the stem  <br /></td></tr>
 <tr class="separator:ab80588f969b966de5339d7289472e14b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2940b52729f3cb3d6e4dcb952a04fb25" id="r_a2940b52729f3cb3d6e4dcb952a04fb25"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2940b52729f3cb3d6e4dcb952a04fb25">carbohydrate_pruning_threshold</a> = 0.01</td></tr>
+<tr class="memitem:a2940b52729f3cb3d6e4dcb952a04fb25" id="r_a2940b52729f3cb3d6e4dcb952a04fb25"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2940b52729f3cb3d6e4dcb952a04fb25">carbohydrate_pruning_threshold</a> = 0.025</td></tr>
 <tr class="memdesc:a2940b52729f3cb3d6e4dcb952a04fb25"><td class="mdescLeft">&#160;</td><td class="mdescRight">carbohydrate concentration threshold to prune a shoot as a fraction of g C/ g DW in the stem  <br /></td></tr>
 <tr class="separator:a2940b52729f3cb3d6e4dcb952a04fb25"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac1763759051f2f9cb5657ad378c0fcdd" id="r_ac1763759051f2f9cb5657ad378c0fcdd"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac1763759051f2f9cb5657ad378c0fcdd">bud_death_threshold_days</a> = 2</td></tr>
@@ -222,15 +270,17 @@ Data Fields</h2></td></tr>
 <tr class="memitem:a2f07c1c1aa55c05cba30c1eb696ef62b" id="r_a2f07c1c1aa55c05cba30c1eb696ef62b"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2f07c1c1aa55c05cba30c1eb696ef62b">carbohydrate_vegetative_break_threshold</a> = 0.15</td></tr>
 <tr class="memdesc:a2f07c1c1aa55c05cba30c1eb696ef62b"><td class="mdescLeft">&#160;</td><td class="mdescRight">carbohydrate concentration threshold to reduce vegetative bud break probability as a fraction of g C/ g DW in the stem  <br /></td></tr>
 <tr class="separator:a2f07c1c1aa55c05cba30c1eb696ef62b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abb26904cdff549509a609b3a926e343c" id="r_abb26904cdff549509a609b3a926e343c"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abb26904cdff549509a609b3a926e343c">carbohydrate_growth_threshold</a> = 0.1</td></tr>
+<tr class="memitem:abb26904cdff549509a609b3a926e343c" id="r_abb26904cdff549509a609b3a926e343c"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abb26904cdff549509a609b3a926e343c">carbohydrate_growth_threshold</a> = 0.15</td></tr>
 <tr class="memdesc:abb26904cdff549509a609b3a926e343c"><td class="mdescLeft">&#160;</td><td class="mdescRight">carbohydrate concentration threshold for radial growth as a fraction of g C/ g DW in the stem  <br /></td></tr>
 <tr class="separator:abb26904cdff549509a609b3a926e343c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a974a032f59874798e23a506d348b17d9" id="r_a974a032f59874798e23a506d348b17d9"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a974a032f59874798e23a506d348b17d9">carbohydrate_transfer_threshold</a> = 0.05</td></tr>
-<tr class="memdesc:a974a032f59874798e23a506d348b17d9"><td class="mdescLeft">&#160;</td><td class="mdescRight">carbohydrate concentration threshold to transfer carbon to child shoots as a fraction of g C/ g DW in the stem  <br /></td></tr>
-<tr class="separator:a974a032f59874798e23a506d348b17d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a683f914ae4ca12a5cd9c99c4a58b31a8" id="r_a683f914ae4ca12a5cd9c99c4a58b31a8"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a683f914ae4ca12a5cd9c99c4a58b31a8">carbon_conductance_down</a> = 0.9</td></tr>
+<tr class="memitem:aca07789fa0d14f30a9b8e2cedb2b50fd" id="r_aca07789fa0d14f30a9b8e2cedb2b50fd"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aca07789fa0d14f30a9b8e2cedb2b50fd">carbohydrate_transfer_threshold_down</a> = 0.025</td></tr>
+<tr class="memdesc:aca07789fa0d14f30a9b8e2cedb2b50fd"><td class="mdescLeft">&#160;</td><td class="mdescRight">carbohydrate concentration threshold to transfer carbon to child shoots as a fraction of g C/ g DW in the stem  <br /></td></tr>
+<tr class="separator:aca07789fa0d14f30a9b8e2cedb2b50fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ada61223018f4b109a1f70d66822f7bb7" id="r_ada61223018f4b109a1f70d66822f7bb7"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ada61223018f4b109a1f70d66822f7bb7">carbohydrate_transfer_threshold_up</a> = 0.04</td></tr>
+<tr class="separator:ada61223018f4b109a1f70d66822f7bb7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a683f914ae4ca12a5cd9c99c4a58b31a8" id="r_a683f914ae4ca12a5cd9c99c4a58b31a8"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a683f914ae4ca12a5cd9c99c4a58b31a8">carbon_conductance_down</a> = 0.75</td></tr>
 <tr class="separator:a683f914ae4ca12a5cd9c99c4a58b31a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1535f88ca404319e56e308bb64bfeca3" id="r_a1535f88ca404319e56e308bb64bfeca3"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1535f88ca404319e56e308bb64bfeca3">carbon_conductance_up</a> = carbon_conductance_down/5</td></tr>
+<tr class="memitem:a1535f88ca404319e56e308bb64bfeca3" id="r_a1535f88ca404319e56e308bb64bfeca3"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1535f88ca404319e56e308bb64bfeca3">carbon_conductance_up</a> = carbon_conductance_down</td></tr>
 <tr class="separator:a1535f88ca404319e56e308bb64bfeca3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -251,7 +301,7 @@ Data Fields</h2></td></tr>
 
 <p>threshold time (days) to abort a shoot (shoot is aborted when the carbohydrate concentration is below carbohydrate_abortion_threshold for more than this time) </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00320">320</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00330">330</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -269,7 +319,7 @@ Data Fields</h2></td></tr>
 
 <p>threshold time (days) to abort a bud (bud is aborted when the carbohydrate concentration is below carbohydrate_abortion_threshold for more than this time) </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00318">318</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00328">328</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -280,14 +330,32 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float CarbohydrateParameters::carbohydrate_abortion_threshold = 0.1</td>
+          <td class="memname">float CarbohydrateParameters::carbohydrate_abortion_threshold = 0.15</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 <p>carbohydrate concentration threshold to abort a flowering bud as a fraction of g C/ g DW in the stem </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00314">314</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00324">324</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="a6b49efab47153730bc73aa1482e07783" name="a6b49efab47153730bc73aa1482e07783"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6b49efab47153730bc73aa1482e07783">&#9670;&#160;</a></span>carbohydrate_carbon_percentage</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float CarbohydrateParameters::carbohydrate_carbon_percentage = 0.4</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>fraction of carbohydrates composed of carbon </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00284">284</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -298,14 +366,32 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float CarbohydrateParameters::carbohydrate_growth_threshold = 0.1</td>
+          <td class="memname">float CarbohydrateParameters::carbohydrate_growth_threshold = 0.15</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 <p>carbohydrate concentration threshold for radial growth as a fraction of g C/ g DW in the stem </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00329">329</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00339">339</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="a1c4f6618046f702594b071b9b266741c" name="a1c4f6618046f702594b071b9b266741c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1c4f6618046f702594b071b9b266741c">&#9670;&#160;</a></span>carbohydrate_percentage</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float CarbohydrateParameters::carbohydrate_percentage = 0.10</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>mean fraction of the dry weight of internode composed of carbohydrates in mature shoot </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00282">282</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -323,7 +409,7 @@ Data Fields</h2></td></tr>
 
 <p>carbohydrate concentration threshold to reduce phyllochron as a fraction of g C/ g DW in the stem </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00324">324</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00334">334</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -334,32 +420,48 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float CarbohydrateParameters::carbohydrate_pruning_threshold = 0.01</td>
+          <td class="memname">float CarbohydrateParameters::carbohydrate_pruning_threshold = 0.025</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 <p>carbohydrate concentration threshold to prune a shoot as a fraction of g C/ g DW in the stem </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00316">316</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00326">326</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
-<a id="a974a032f59874798e23a506d348b17d9" name="a974a032f59874798e23a506d348b17d9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a974a032f59874798e23a506d348b17d9">&#9670;&#160;</a></span>carbohydrate_transfer_threshold</h2>
+<a id="aca07789fa0d14f30a9b8e2cedb2b50fd" name="aca07789fa0d14f30a9b8e2cedb2b50fd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aca07789fa0d14f30a9b8e2cedb2b50fd">&#9670;&#160;</a></span>carbohydrate_transfer_threshold_down</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float CarbohydrateParameters::carbohydrate_transfer_threshold = 0.05</td>
+          <td class="memname">float CarbohydrateParameters::carbohydrate_transfer_threshold_down = 0.025</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 <p>carbohydrate concentration threshold to transfer carbon to child shoots as a fraction of g C/ g DW in the stem </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00333">333</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00343">343</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="ada61223018f4b109a1f70d66822f7bb7" name="ada61223018f4b109a1f70d66822f7bb7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ada61223018f4b109a1f70d66822f7bb7">&#9670;&#160;</a></span>carbohydrate_transfer_threshold_up</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float CarbohydrateParameters::carbohydrate_transfer_threshold_up = 0.04</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00344">344</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -377,7 +479,7 @@ Data Fields</h2></td></tr>
 
 <p>carbohydrate concentration threshold to reduce vegetative bud break probability as a fraction of g C/ g DW in the stem </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00326">326</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00336">336</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -388,12 +490,12 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float CarbohydrateParameters::carbon_conductance_down = 0.9</td>
+          <td class="memname">float CarbohydrateParameters::carbon_conductance_down = 0.75</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00334">334</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00345">345</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -404,12 +506,30 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float CarbohydrateParameters::carbon_conductance_up = carbon_conductance_down/5</td>
+          <td class="memname">float CarbohydrateParameters::carbon_conductance_up = carbon_conductance_down</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00335">335</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00346">346</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="a65bd762dece9897d0c866b7d568255e1" name="a65bd762dece9897d0c866b7d568255e1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a65bd762dece9897d0c866b7d568255e1">&#9670;&#160;</a></span>dormant_respiration_fraction</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float CarbohydrateParameters::dormant_respiration_fraction = 0.9</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>fraction of active respiration that occurs during dormancy </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00318">318</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -427,7 +547,7 @@ Data Fields</h2></td></tr>
 
 <p>fraction of the dry weight of fruit made up by carbon </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00302">302</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00308">308</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -445,7 +565,7 @@ Data Fields</h2></td></tr>
 
 <p>density of fruit (g m^-3) </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00300">300</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00306">306</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -463,7 +583,7 @@ Data Fields</h2></td></tr>
 
 <p>growth respiration cost (fraction of total carbon used during growth that goes toward respiration rather than structure) </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00310">310</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00320">320</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -481,7 +601,7 @@ Data Fields</h2></td></tr>
 
 <p>starting fraction of the final stem carbon density in new growth </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00284">284</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00290">290</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -499,7 +619,25 @@ Data Fields</h2></td></tr>
 
 <p>fraction of leaf dry weight made up by carbon </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00292">292</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00298">298</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="ae65d0e65eef395a638670752a47b25d1" name="ae65d0e65eef395a638670752a47b25d1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae65d0e65eef395a638670752a47b25d1">&#9670;&#160;</a></span>living_wood_fraction</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float CarbohydrateParameters::living_wood_fraction = 0.5</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>fraction of wood composed of physiologically active tissue </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00316">316</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -517,25 +655,25 @@ Data Fields</h2></td></tr>
 
 <p>age at which stem reaches physiological maturity (days) </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00282">282</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00288">288</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
-<a id="a3ea5c50af267ce244cc6aeebaed8498a" name="a3ea5c50af267ce244cc6aeebaed8498a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3ea5c50af267ce244cc6aeebaed8498a">&#9670;&#160;</a></span>root_maintainance_respiration_rate</h2>
+<a id="a0df24e91a3697af440f7c3d3462cb5bd" name="a0df24e91a3697af440f7c3d3462cb5bd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0df24e91a3697af440f7c3d3462cb5bd">&#9670;&#160;</a></span>root_maintenance_respiration_rate</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float CarbohydrateParameters::root_maintainance_respiration_rate = 3.5024e-05</td>
+          <td class="memname">float CarbohydrateParameters::root_maintenance_respiration_rate = 3.5024e-05</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 <p>maintenance respiration rate of root (mol C respired/mol C in pool/day) </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00308">308</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00314">314</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -546,14 +684,14 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float CarbohydrateParameters::shoot_root_ratio = 4.5</td>
+          <td class="memname">float CarbohydrateParameters::shoot_root_ratio = 3</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 <p>ratio of shoot internode dry weight to root dry weight </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00286">286</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00292">292</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -571,7 +709,7 @@ Data Fields</h2></td></tr>
 
 <p>specific leaf area - ratio of leaf area to leaf dry mass (m^2 / g DW) </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00290">290</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00296">296</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -600,7 +738,7 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float CarbohydrateParameters::stem_density = 540000</td>
+          <td class="memname">float CarbohydrateParameters::stem_density = 54000</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -611,21 +749,39 @@ Data Fields</h2></td></tr>
 
 </div>
 </div>
-<a id="a14c4d4fcea94c3bec6a0b9727c7fde6f" name="a14c4d4fcea94c3bec6a0b9727c7fde6f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a14c4d4fcea94c3bec6a0b9727c7fde6f">&#9670;&#160;</a></span>stem_maintainance_respiration_rate</h2>
+<a id="a1d3018279b1256160645c522c8f6b205" name="a1d3018279b1256160645c522c8f6b205"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1d3018279b1256160645c522c8f6b205">&#9670;&#160;</a></span>stem_maintenance_respiration_rate</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float CarbohydrateParameters::stem_maintainance_respiration_rate = 3.5024e-05</td>
+          <td class="memname">float CarbohydrateParameters::stem_maintenance_respiration_rate = 3.5024e-05</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 <p>maintenance respiration rate of stem (mol C respired/mol C in pool/day) </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00306">306</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00312">312</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="a2e9df35ee960a1b281c30791d83c94fb" name="a2e9df35ee960a1b281c30791d83c94fb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2e9df35ee960a1b281c30791d83c94fb">&#9670;&#160;</a></span>stem_structural_carbon_percentage</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float CarbohydrateParameters::stem_structural_carbon_percentage = <a class="el" href="#a7af4a1ca1254dea68c046e3d5548c201">stem_carbon_percentage</a> - (<a class="el" href="#a6b49efab47153730bc73aa1482e07783">carbohydrate_carbon_percentage</a> * <a class="el" href="#a1c4f6618046f702594b071b9b266741c">carbohydrate_percentage</a>)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>fraction of the dry weight of internode made up by structural carbon in mature shoot - Excludes fraction made up by carbohydrates </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00286">286</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -643,7 +799,7 @@ Data Fields</h2></td></tr>
 
 <p>carbon cost to produce a flower (mol C flower^-1) </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00296">296</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00302">302</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>

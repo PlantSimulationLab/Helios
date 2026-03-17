@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Solar Position Plugin Documentation</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -175,7 +208,10 @@ $(function(){initNavTree('_solar_position_doc.html',''); initResizable(true); })
         <a href="#SolarPosTheory">Position of the Sun</a>
       </li>
       <li class="level2">
-        <a href="#SolarFluxTheory">Direct and Diffuse Solar Flux</a>
+        <a href="#SolarFluxTheory">Direct and Diffuse Solar Flux (REST-2 Model)</a>
+      </li>
+      <li class="level2">
+        <a href="#SpectralIrradianceTheory">Spectral Solar Irradiance (SSolar-GOA Model)</a>
       </li>
       <li class="level2">
         <a href="#LWTheory">Ambient Longwave Flux</a>
@@ -189,6 +225,14 @@ $(function(){initNavTree('_solar_position_doc.html',''); initResizable(true); })
         <a href="#SolarPos">Getting the Direction of the Sun</a>
       </li>
       <li class="level2">
+        <a href="#AtmosphericConditions">Setting Atmospheric Conditions Globally</a>
+        <ul>
+          <li class="level3">
+            <a href="#TurbidityDefinition">Understanding the Turbidity Parameter</a>
+          </li>
+        </ul>
+      </li>
+      <li class="level2">
         <a href="#SolarFlux">Getting the Solar Flux</a>
         <ul>
           <li class="level3">
@@ -198,6 +242,9 @@ $(function(){initNavTree('_solar_position_doc.html',''); initResizable(true); })
             <a href="#SolarFluxClouds">Incorporating the effects of clouds</a>
           </li>
         </ul>
+      </li>
+      <li class="level2">
+        <a href="#SpectralFlux">Getting Spectral Solar Irradiance</a>
       </li>
       <li class="level2">
         <a href="#LWFlux">Getting the Sky Longwave Flux</a>
@@ -263,8 +310,31 @@ Position of the Sun</h2>
 <center> \(\theta_s=\mathrm{sin}^{-1}( \mathrm{sin}(latitude)\mathrm{sin}(\delta) + \mathrm{cos}(latitude)\mathrm{cos}(\delta)\mathrm{cos}(h) )\), (7) </center><p>and the solar azimuthal angle is given by</p>
 <center> \(\phi_s=\mathrm{cos}^{-1}( (\mathrm{sin}(\delta) - \mathrm{sin}(\theta_s)\mathrm{sin}(latitude))/(\mathrm{cos}(\theta)\mathrm{cos}(latitude)))\). (8) </center><p>Note that \(\mathrm{cos}^{-1}\) gives angles between 0 and \(\pi\), so to get a \(\phi_s\) between 0 and \(2\pi\), we take \(\phi_s=2\pi-\phi_s\) if \(LST&gt;12\).</p>
 <h2><a class="anchor" id="SolarFluxTheory"></a>
-Direct and Diffuse Solar Flux</h2>
-<p>Clear-sky solar fluxes are calculated using the 'REST-2' model of <a href="https://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>. REST-2 is a state-of-the-art atmospheric transmission model that calculates the solar flux at Earth's surface after attenuation by water vapor, CO<sub>2</sub>, Ozone, NO<sub>2</sub>, and aerosols. The model partitions the total radiative flux into direct and diffuse components.</p>
+Direct and Diffuse Solar Flux (REST-2 Model)</h2>
+<p>Clear-sky solar fluxes are calculated using the 'REST-2' (Reference Evaluation of Solar Transmittance, 2 bands) model of <a href="https://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>. REST-2 is a high-performance broadband radiative transfer model derived from parameterizations of the SMARTS spectral code, and is widely recognized as one of the most accurate clear-sky models available.</p>
+<p>The model uses a two-band spectral scheme that separately treats the visible band (290-700 nm) and near-infrared band (700-4000 nm). In the visible band, attenuation is dominated by Rayleigh scattering and aerosol extinction, while the NIR band is primarily affected by water vapor absorption. For each band, the model calculates independent broadband transmittances for:</p>
+<ul>
+<li><b>Rayleigh scattering</b>: Molecular scattering by air molecules</li>
+<li><b>Uniformly mixed gases</b>: Absorption by CO<sub>2</sub> and O<sub>2</sub></li>
+<li><b>Ozone</b>: UV and visible absorption bands</li>
+<li><b>Water vapor</b>: Major absorption in the NIR</li>
+<li><b>Aerosols</b>: Scattering and absorption characterized by Ångström turbidity coefficients</li>
+</ul>
+<p>Direct beam irradiance is computed from the product of these transmittances, while diffuse irradiance uses a two-layer scattering scheme that accounts for aerosol forward scattering and backscattering from the atmosphere-ground system. The model partitions the total radiative flux into direct and diffuse components suitable for agricultural, solar energy, and climate applications.</p>
+<h2><a class="anchor" id="SpectralIrradianceTheory"></a>
+Spectral Solar Irradiance (SSolar-GOA Model)</h2>
+<p>For applications requiring high spectral resolution (e.g., photosynthesis, remote sensing), the plugin implements the SSolar-GOA spectral radiative transfer model from <a href="https://gmd.copernicus.org/articles/15/1689/2022/">Cachorro et al. (2022)</a>. This model computes bottom-of-atmosphere spectral irradiance from 300-2600 nm at 1 nm resolution.</p>
+<p>The SSolar-GOA model uses the Wehrli (1985) extraterrestrial solar spectrum corrected for Earth-Sun distance, then applies atmospheric transmittances for:</p>
+<ul>
+<li><b>Rayleigh scattering</b>: Molecular scattering using Bates (1984) optical depth formula</li>
+<li><b>Aerosol extinction</b>: Ångström turbidity law with Ambartsumian solution for scattering</li>
+<li><b>Water vapor absorption</b>: Empirical model for bands at 940, 1130, 1380, and 1870 nm</li>
+<li><b>Ozone absorption</b>: UV Hartley band (200-310 nm) and visible Chappuis band (400-700 nm)</li>
+<li><b>Oxygen absorption</b>: Primarily the A-band at 760 nm</li>
+</ul>
+<p>The model also accounts for surface-atmosphere multiple reflections based on surface albedo and atmospheric spherical albedo.</p>
+<p><b>Parameter Derivation:</b> The implementation uses the same atmospheric inputs as the REST-2 model (pressure, temperature, humidity, turbidity). Additional parameters are derived automatically: precipitable water (Viswanadham 1981), ozone column (van Heuklon 1979), Ångström alpha (1.3), surface albedo (0.2), aerosol single scattering albedo (0.90), and asymmetry parameter (0.85).</p>
+<p><b>Output Format:</b> Results are stored in Context global data as vectors of (wavelength, irradiance) pairs (<a class="el" href="structhelios_1_1vec2.html">helios::vec2</a>) with user-defined labels. Three spectral components are computed: global irradiance on horizontal surface, direct irradiance normal to sun direction, and diffuse irradiance on horizontal surface (all in W/m²/nm).</p>
 <h2><a class="anchor" id="LWTheory"></a>
 Ambient Longwave Flux</h2>
 <p>The longwave radiation flux emanating from the clear-sky is modeled following <a href="https://rmets.onlinelibrary.wiley.com/doi/full/10.1002/qj.49712253306">Prata (1996)</a>.</p>
@@ -311,26 +381,11 @@ Getting the Direction of the Sun</h2>
 <div class="line">    <span class="keywordtype">float</span> azimuth = sun.getSunAzimuth(); <span class="comment">//azimuthal angle (radians)</span></div>
 <div class="line">    </div>
 <div class="line">}</div>
-</div><!-- fragment --><h2><a class="anchor" id="SolarFlux"></a>
-Getting the Solar Flux</h2>
-<p>The solar flux can be calculated using the REST-2 model of <a href="https://www.sciencedirect.com/science/article/pii/S0038092X07000990?casa_token=BAJYGez71awAAAAA:CfmA4oT9MLiHGvpD6oUkkDu4EJ1S9uRabZq4-wM07jtcmviZ12jvhD8VVcAkjLWoGNMtg8hDaqo">Gueymard (2008)</a> using the <a class="el" href="class_solar_position.html#a9701cb29a0336a11c445d285405b6956">SolarPosition::getSolarFlux()</a> function. IT IS CRITICAL TO NOTE THAT THE CALCULATED FLUX IS FOR A SURFACE PERPENDICULAR TO THE SUN DIRECTION. To get the flux on a horizontal surface, multiply by the cosine of the solar zenith angle.</p>
-<p>Methods are available to get the incoming solar radiation flux perpendicular to the direction of the sun 1) for the entire solar spectrum (<a class="el" href="class_solar_position.html#a9701cb29a0336a11c445d285405b6956">SolarPosition::getSolarFlux()</a>), 2) for the PAR band (<a class="el" href="class_solar_position.html#a5c6635160944b5b8202ea9965da6de9d">SolarPosition::getSolarFluxPAR()</a>), and 3) (<a class="el" href="class_solar_position.html#a611461f700df9efa7c56b6f4ee7712b7">SolarPosition::getSolarFluxNIR()</a>).</p>
-<p>These functions takes several arguments needed for the model, which are listed in the table below.</p>
-<table class="doxtable">
-<tr>
-<th>Argument</th><th>Description</th><th>Example Value </th></tr>
-<tr>
-<td>pressure</td><td>Atmospheric pressure in Pascals (near the ground).</td><td>101,000 Pa </td></tr>
-<tr>
-<td>temperature</td><td>Air temperature in Kelvin (near the ground).</td><td>300 K </td></tr>
-<tr>
-<td>humidity</td><td>Air relative humidity (near the ground).</td><td>0.6 </td></tr>
-<tr>
-<td>turbidity</td><td>Angstrom's aerosol turbidity coefficient.</td><td>0.05 </td></tr>
-</table>
-<p>The very similar function <a class="el" href="class_solar_position.html#af8dbd15453ce775dab5b2c5a49b1c93b">SolarPosition::getDiffuseFraction()</a> calculates the fraction of the total flux that is diffuse. The fraction that is direct is simply one minus the diffuse fraction. This function takes the same arguments as <a class="el" href="class_solar_position.html#a9701cb29a0336a11c445d285405b6956">SolarPosition::getSolarFlux()</a>.</p>
-<p>Example code for using these solar flux functions is given below.</p>
-<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;SolarPosition&quot;</span></div>
+</div><!-- fragment --><h2><a class="anchor" id="AtmosphericConditions"></a>
+Setting Atmospheric Conditions Globally</h2>
+<p>The SolarPosition plugin supports setting atmospheric conditions globally in the Context, which allows them to be easily shared across different plugins. This is the recommended approach for setting atmospheric parameters.</p>
+<p>To use this approach, first set the atmospheric conditions using the <a class="el" href="class_solar_position.html#adf82fc8cb5aeea3eb3bac729af032a8d">SolarPosition::setAtmosphericConditions()</a> method. This stores the atmospheric parameters as global data in the Context with the labels: atmosphere_pressure_Pa, atmosphere_temperature_K, atmosphere_humidity_rel, and atmosphere_turbidity.</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_solar_position_8h.html">SolarPosition.h</a>&quot;</span></div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line">    Context context; <span class="comment">//declare the context</span></div>
@@ -342,17 +397,87 @@ Getting the Solar Flux</h2>
 <div class="line">    <span class="comment">//Initialize the SolarPosition class</span></div>
 <div class="line">    <a class="code hl_class" href="class_solar_position.html">SolarPosition</a> sun( 7, 31.256, 119.947, &amp;context );</div>
 <div class="line"> </div>
+<div class="line">    <span class="comment">//Set atmospheric conditions globally</span></div>
+<div class="line">    sun.setAtmosphericConditions( 101000, 300, 0.6, 0.05 ); <span class="comment">//pressure, temperature, humidity, turbidity</span></div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">//Calculate solar flux using stored atmospheric conditions</span></div>
+<div class="line">    <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> = sun.getSolarFlux(); <span class="comment">//flux perpendicular to sun (W/m^2)</span></div>
+<div class="line">    <span class="keywordtype">float</span> zenith = sun.getSunZenith(); <span class="comment">//zenithal angle (radians)</span></div>
+<div class="line">    <span class="keywordtype">float</span> R_horiz = <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a>*cos(zenith);  <span class="comment">//flux on horizontal surface</span></div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordtype">float</span> f_diff = sun.getDiffuseFraction(); <span class="comment">//fraction of diffuse radiation</span></div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordtype">float</span> R_dir = <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a>*(1.f-f_diff); <span class="comment">//direct component of flux (W/m^2)</span></div>
+<div class="line"> </div>
+<div class="line">}</div>
+</div><!-- fragment --><p>The atmospheric conditions can be retrieved at any time using <a class="el" href="class_solar_position.html#a2dd6417e7ad55d48621df29fafca663e">SolarPosition::getAtmosphericConditions()</a>.</p>
+<h3><a class="anchor" id="TurbidityDefinition"></a>
+Understanding the Turbidity Parameter</h3>
+<p>The turbidity parameter used in the SolarPosition plugin is <b>Ångström's aerosol turbidity coefficient (β)</b>, which represents the <b>aerosol optical depth (AOD) at 500 nm reference wavelength</b>. This parameter quantifies the amount of aerosols (dust, pollution, haze) in the atmosphere that scatter and absorb solar radiation.</p>
+<p><b>Important:</b> This turbidity definition is NOT the same as "Linke turbidity" (T<sub>L</sub>), which is commonly used in some other solar radiation models. Linke turbidity typically ranges from 2-6, while Ångström turbidity (AOD) typically ranges from 0.02-0.4. The two are related but use different scales.</p>
+<p>The turbidity value is used in the Ångström turbidity formula:   </p><p class="formulaDsp">
+\[ \tau_{aerosol}(\lambda) = \beta \left(\frac{\lambda_{ref}}{\lambda}\right)^{\alpha}
+\]
+</p>
+<p> where β is the turbidity parameter (AOD at 500 nm), λ is wavelength, λ<sub>ref</sub> = 500 nm, and α is the Ångström exponent (typically ~1.3).</p>
+<p><b>Guidance for selecting turbidity values:</b></p><ul>
+<li>0.02: Very clear sky (remote/clean atmosphere) - <b>default value</b></li>
+<li>0.03-0.05: Clear sky (typical for rural areas)</li>
+<li>0.1: Light haze or light pollution</li>
+<li>0.2-0.3: Hazy conditions (urban/polluted atmosphere)</li>
+<li>&gt;0.4: Very hazy or heavily polluted atmosphere</li>
+</ul>
+<p>Higher turbidity values result in:</p><ul>
+<li>Reduced direct solar radiation</li>
+<li>Increased fraction of diffuse radiation</li>
+<li>Whitening of the sky (reduced blue color)</li>
+<li>Enhanced circumsolar brightening (bright region around the sun)</li>
+</ul>
+<table class="doxtable">
+<caption>Atmospheric condition parameters</caption>
+<tr>
+<th>Parameter</th><th>Description</th><th>Validation</th><th>Example Value </th></tr>
+<tr>
+<td>pressure_Pa</td><td>Atmospheric pressure in Pascals (near the ground)</td><td>Must be &gt; 0</td><td>101,325 Pa (1 atm) </td></tr>
+<tr>
+<td>temperature_K</td><td>Air temperature in Kelvin (near the ground)</td><td>Must be &gt; 0</td><td>300 K (27°C) </td></tr>
+<tr>
+<td>humidity_rel</td><td>Air relative humidity (near the ground)</td><td>Must be 0-1</td><td>0.6 (60%) </td></tr>
+<tr>
+<td>turbidity</td><td>Ångström's aerosol turbidity coefficient (β), which represents the aerosol optical depth (AOD) at 500 nm reference wavelength. <b>Note:</b> This is NOT Linke turbidity, which uses a different scale (typically 2-6). Typical values: 0.02 (very clear sky), 0.05 (clear sky), 0.1 (light haze), 0.2-0.3 (hazy), &gt;0.4 (very hazy/polluted). Higher values indicate more aerosols in the atmosphere, which reduces direct solar flux and increases diffuse fraction.</td><td>Must be ≥ 0</td><td>0.02 (default clear sky) </td></tr>
+</table>
+<h2><a class="anchor" id="SolarFlux"></a>
+Getting the Solar Flux</h2>
+<p>The solar flux can be calculated using the REST-2 model of <a href="https://www.sciencedirect.com/science/article/pii/S0038092X07000990?casa_token=BAJYGez71awAAAAA:CfmA4oT9MLiHGvpD6oUkkDu4EJ1S9uRabZq4-wM07jtcmviZ12jvhD8VVcAkjLWoGNMtg8hDaqo">Gueymard (2008)</a> using the <a class="el" href="class_solar_position.html#a9701cb29a0336a11c445d285405b6956">SolarPosition::getSolarFlux()</a> function. IT IS CRITICAL TO NOTE THAT THE CALCULATED FLUX IS FOR A SURFACE PERPENDICULAR TO THE SUN DIRECTION. To get the flux on a horizontal surface, multiply by the cosine of the solar zenith angle.</p>
+<p>Methods are available to get the incoming solar radiation flux perpendicular to the direction of the sun 1) for the entire solar spectrum (<a class="el" href="class_solar_position.html#a9701cb29a0336a11c445d285405b6956">SolarPosition::getSolarFlux()</a>), 2) for the PAR band (<a class="el" href="class_solar_position.html#a5c6635160944b5b8202ea9965da6de9d">SolarPosition::getSolarFluxPAR()</a>), and 3) for the NIR band (<a class="el" href="class_solar_position.html#a611461f700df9efa7c56b6f4ee7712b7">SolarPosition::getSolarFluxNIR()</a>).</p>
+<p>The very similar function <a class="el" href="class_solar_position.html#af8dbd15453ce775dab5b2c5a49b1c93b">SolarPosition::getDiffuseFraction()</a> calculates the fraction of the total flux that is diffuse. The fraction that is direct is simply one minus the diffuse fraction.</p>
+<p>Example code for using these solar flux functions is given below.</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_solar_position_8h.html">SolarPosition.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line">    Context context; <span class="comment">//declare the context</span></div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">//Set the current time and date</span></div>
+<div class="line">    context.setDate(1,5,2015); <span class="comment">//May 1, 2015</span></div>
+<div class="line">    context.setTime(30,12); <span class="comment">//12:30</span></div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">//Initialize the SolarPosition class</span></div>
+<div class="line">    <a class="code hl_class" href="class_solar_position.html">SolarPosition</a> sun( 7, 31.256, 119.947, &amp;context );</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">//Set atmospheric conditions globally</span></div>
+<div class="line">    sun.setAtmosphericConditions( 101000, 300, 0.6, 0.05 ); <span class="comment">//pressure, temperature, humidity, turbidity</span></div>
+<div class="line"> </div>
 <div class="line">    <span class="comment">//Get the sun position</span></div>
 <div class="line">    <span class="keywordtype">float</span> zenith = sun.getSunZenith(); <span class="comment">//zenithal angle (radians)</span></div>
 <div class="line"> </div>
-<div class="line">    <span class="comment">//Calculate solar flux</span></div>
-<div class="line">    <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> = sun.getSolarFlux( 101000, 300, 0.6, 0.05 ); <span class="comment">//flux perpendicular to sun (W/m^2)</span></div>
+<div class="line">    <span class="comment">//Calculate solar flux using stored atmospheric conditions</span></div>
+<div class="line">    <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> = sun.getSolarFlux(); <span class="comment">//flux perpendicular to sun (W/m^2)</span></div>
 <div class="line">    <span class="keywordtype">float</span> R_horiz = <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a>*cos(zenith);  <span class="comment">//flux on horizontal surface</span></div>
 <div class="line"> </div>
-<div class="line">    <span class="keywordtype">float</span> f_diff = sun.getDiffuseFraction( 101000, 300, 0.6, 0.05 ); <span class="comment">//fraction of diffuse radiation</span></div>
+<div class="line">    <span class="keywordtype">float</span> f_diff = sun.getDiffuseFraction(); <span class="comment">//fraction of diffuse radiation</span></div>
 <div class="line"> </div>
 <div class="line">    <span class="keywordtype">float</span> R_dir = <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a>*(1.f-f_diff); <span class="comment">//direct component of flux (W/m^2)</span></div>
-<div class="line">    </div>
+<div class="line"> </div>
 <div class="line">}</div>
 </div><!-- fragment --><h3><a class="anchor" id="SolarFluxTurb"></a>
 Calibrating the turbidity using weather station (radiometer) data</h3>
@@ -417,6 +542,53 @@ Incorporating the effects of clouds</h3>
 <div class="image">
 <img src="CloudyFluxPartitioning.png" alt=""/>
 </div>
+<h2><a class="anchor" id="SpectralFlux"></a>
+Getting Spectral Solar Irradiance</h2>
+<p>For applications requiring wavelength-resolved irradiance (e.g., photosynthesis models with wavelength-dependent quantum yield, remote sensing, hyperspectral image simulation), the SolarPosition::calculateSpectralIrradiance() method computes high-resolution spectral irradiance using the SSolar-GOA model.</p>
+<p>This method uses the same atmospheric conditions set via <a class="el" href="class_solar_position.html#adf82fc8cb5aeea3eb3bac729af032a8d">SolarPosition::setAtmosphericConditions()</a>, automatically deriving additional parameters (water vapor, ozone column) as needed. Results are stored in Context global data for use by other plugins (e.g., radiation plugin for ray tracing with spectral sources).</p>
+<p>Example code for calculating spectral irradiance:</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_solar_position_8h.html">SolarPosition.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line">    Context context;</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">//Set current time, date, and location</span></div>
+<div class="line">    context.setDate(16,7,2023); <span class="comment">//July 16, 2023</span></div>
+<div class="line">    context.setTime(12,0); <span class="comment">//Solar noon</span></div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">//Initialize SolarPosition with location</span></div>
+<div class="line">    <a class="code hl_class" href="class_solar_position.html">SolarPosition</a> sun( 0, 36.93f, 3.33f, &amp;context ); <span class="comment">//UTC, latitude, longitude</span></div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">//Set atmospheric conditions</span></div>
+<div class="line">    sun.setAtmosphericConditions( 87700.f, 298.f, 0.5f, 0.026f ); <span class="comment">//pressure, temp, humidity, turbidity</span></div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">//Calculate global solar spectrum at 1 nm resolution (default)</span></div>
+<div class="line">    sun.calculateGlobalSolarSpectrum( <span class="stringliteral">&quot;clear_sky&quot;</span> );</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">//Or specify a coarser resolution (e.g., 10 nm)</span></div>
+<div class="line">    sun.calculateGlobalSolarSpectrum( <span class="stringliteral">&quot;clear_sky_10nm&quot;</span>, 10.0f );</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">//Retrieve spectral data from Context using the same label</span></div>
+<div class="line">    std::vector&lt;helios::vec2&gt; global_spectrum;</div>
+<div class="line">    context.getGlobalData( <span class="stringliteral">&quot;clear_sky&quot;</span>, global_spectrum );</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">//Use spectral data (wavelength in nm, irradiance in W/m²/nm)</span></div>
+<div class="line">    <span class="keywordflow">for</span>( <span class="keyword">const</span> <span class="keyword">auto</span>&amp; point : global_spectrum ){</div>
+<div class="line">        <span class="keywordtype">float</span> wavelength_nm = point.x;</div>
+<div class="line">        <span class="keywordtype">float</span> irradiance = point.y; <span class="comment">//W/m²/nm on horizontal surface</span></div>
+<div class="line">        <span class="comment">//... use wavelength-resolved irradiance</span></div>
+<div class="line">    }</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">//Similarly for direct and diffuse components:</span></div>
+<div class="line">    sun.calculateDirectSolarSpectrum( <span class="stringliteral">&quot;direct_beam&quot;</span> );</div>
+<div class="line">    sun.calculateDiffuseSolarSpectrum( <span class="stringliteral">&quot;sky_diffuse&quot;</span> );</div>
+<div class="line">}</div>
+</div><!-- fragment --><p>Three separate methods are available for the different spectral components:</p><ul>
+<li><a class="el" href="class_solar_position.html#a3505411c0fa1af970d12c2b0108ef20d">SolarPosition::calculateGlobalSolarSpectrum()</a>: Total irradiance on horizontal surface (direct + diffuse)</li>
+<li><a class="el" href="class_solar_position.html#a78dfa1147eaf8b69fb4a3d8feac21eea">SolarPosition::calculateDirectSolarSpectrum()</a>: Direct beam irradiance normal to sun direction</li>
+<li><a class="el" href="class_solar_position.html#aabd1c1199000c2cc2950fa92936bafcf">SolarPosition::calculateDiffuseSolarSpectrum()</a>: Diffuse irradiance on horizontal surface</li>
+</ul>
+<p>Each method accepts an optional resolution parameter (default 1 nm) allowing wavelength downsampling. For example, resolution_nm=10.0 produces 231 wavelengths instead of the native 2301.</p>
 <h2><a class="anchor" id="LWFlux"></a>
 Getting the Sky Longwave Flux</h2>
 <p>The downwelling longwave radiation flux from the sky can be calculated using the <a class="el" href="class_solar_position.html#a30ee555eedece8b7e19855877a74da71">SolarPosition::getAmbientLongwaveFlux()</a> function. This function takes the air temperature and humidity as arguments, which are defined in the same was as for the <a class="el" href="class_solar_position.html#a9701cb29a0336a11c445d285405b6956">SolarPosition::getSolarFlux()</a> function described above. The value returned by the function is the clear-sky downwelling longwave radiation flux on a horizontal surface in W/m<sup>2</sup>. </p>

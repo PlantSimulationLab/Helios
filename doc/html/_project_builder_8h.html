@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: plugins/projectbuilder/include/ProjectBuilder.h File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -220,9 +253,6 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>BuildGeometry</b> (co
 <tr class="memitem:a2024e38fdfc826ff46c8310a32b0069f" id="r_a2024e38fdfc826ff46c8310a32b0069f"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2024e38fdfc826ff46c8310a32b0069f">vec_to_string</a> (const <a class="el" href="structhelios_1_1int2.html">helios::int2</a> &amp;v)</td></tr>
 <tr class="memdesc:a2024e38fdfc826ff46c8310a32b0069f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to convert vector to string.  <br /></td></tr>
 <tr class="separator:a2024e38fdfc826ff46c8310a32b0069f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab5dbf3e7cbda62126b5dc0b34456e149" id="r_ab5dbf3e7cbda62126b5dc0b34456e149"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab5dbf3e7cbda62126b5dc0b34456e149">linspace</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;a, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;b, int num_points)</td></tr>
-<tr class="memdesc:ab5dbf3e7cbda62126b5dc0b34456e149"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to linearly space between two vectors.  <br /></td></tr>
-<tr class="separator:ab5dbf3e7cbda62126b5dc0b34456e149"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4721e8292143200215a5142e64575a8f" id="r_a4721e8292143200215a5142e64575a8f"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4721e8292143200215a5142e64575a8f">interpolate</a> (const std::vector&lt; int &gt; &amp;keypoints, const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;positions, int num_points)</td></tr>
 <tr class="memdesc:a4721e8292143200215a5142e64575a8f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to return interpolated vector based on keypoints.  <br /></td></tr>
 <tr class="separator:a4721e8292143200215a5142e64575a8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -264,7 +294,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>BuildGeometry</b> (co
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>ProjectBuilder header.</p>
-<p>Copyright (C) 2016-2025 Brian Bailey </p><pre class="fragment">This program is free software: you can redistribute it and/or modify
+<p>Copyright (C) 2016-2026 Brian Bailey </p><pre class="fragment">This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, version 2.
 
@@ -303,7 +333,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05555">5555</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05917">5917</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -335,7 +365,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05563">5563</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05925">5925</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -367,7 +397,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05571">5571</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05933">5933</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -402,7 +432,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05523">5523</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05885">5885</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -442,7 +472,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05539">5539</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05901">5901</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -477,7 +507,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05531">5531</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05893">5893</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -517,7 +547,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05547">5547</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l05909">5909</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -538,7 +568,7 @@ GNU General Public License for more details.
 
 <p>Function to open file dialog. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00155">155</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00165">165</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -584,7 +614,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00350">350</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00360">360</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -721,52 +751,6 @@ GNU General Public License for more details.
 
 </div>
 </div>
-<a id="ab5dbf3e7cbda62126b5dc0b34456e149" name="ab5dbf3e7cbda62126b5dc0b34456e149"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab5dbf3e7cbda62126b5dc0b34456e149">&#9670;&#160;</a></span>linspace()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; linspace </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>a</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>b</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>num_points</em></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Function to linearly space between two vectors. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">a</td><td>Start point coordinates </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">b</td><td>End point coordinates </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">num_points</td><td>Total number of points (including a &amp; b) </td></tr>
-  </table>
-  </dd>
-</dl>
-
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00077">77</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
-
-</div>
-</div>
 <a id="a53cbaff8568ea6dd2a7de5a6c5cbc14d" name="a53cbaff8568ea6dd2a7de5a6c5cbc14d"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a53cbaff8568ea6dd2a7de5a6c5cbc14d">&#9670;&#160;</a></span>parse_distribution()</h2>
 
@@ -786,7 +770,7 @@ GNU General Public License for more details.
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l01300">1300</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l01372">1372</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -813,7 +797,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00227">227</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00237">237</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -845,7 +829,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00121">121</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00128">128</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -872,7 +856,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00059">59</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00078">78</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -899,7 +883,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00065">65</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00084">84</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>
@@ -926,7 +910,7 @@ GNU General Public License for more details.
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00071">71</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8cpp_source.html#l00090">90</a> of file <a class="el" href="_project_builder_8cpp_source.html">ProjectBuilder.cpp</a>.</p>
 
 </div>
 </div>

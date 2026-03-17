@@ -1,6 +1,6 @@
 /** \file "CanopyGenerator.h" Primary header file for canopy geometry generator plug-in.
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -1043,7 +1043,7 @@ public:
     explicit CanopyGenerator(helios::Context *context);
 
     //! Unit testing routine
-    static int selfTest(int argc = 0, char** argv = nullptr);
+    static int selfTest(int argc = 0, char **argv = nullptr);
 
     //! Stores the given canopy parameters
     template<typename CanopyType, typename... Args>
@@ -1329,8 +1329,14 @@ public:
     //! Toggle off primitive data element type labels
     void disableElementLabels();
 
+    //! Report any accumulated warnings and clear the warning aggregator
+    void reportWarnings();
+
 private:
     helios::Context *context;
+
+    //! Warning aggregator for collecting and reporting fzero convergence warnings
+    helios::WarningAggregator warnings;
 
     //! List of stored canopy parameters, which can then be used to build individual plants or whole canopies
     std::vector<std::shared_ptr<BaseCanopyParameters>> canopy_parameters_list;

@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: canopy Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -182,7 +215,7 @@ Data Fields</h2></td></tr>
 <tr class="separator:a29c742da5d7e15011f4dc9134b73f742"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab71cc90310ef5427cdbc04190c094e47" id="r_ab71cc90310ef5427cdbc04190c094e47"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab71cc90310ef5427cdbc04190c094e47">library_name_verbose</a></td></tr>
 <tr class="separator:ab71cc90310ef5427cdbc04190c094e47"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1e0dce32140e2272a87e6a3e3e4ba725" id="r_a1e0dce32140e2272a87e6a3e3e4ba725"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1e0dce32140e2272a87e6a3e3e4ba725">IDs</a></td></tr>
+<tr class="memitem:a1e0dce32140e2272a87e6a3e3e4ba725" id="r_a1e0dce32140e2272a87e6a3e3e4ba725"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1e0dce32140e2272a87e6a3e3e4ba725">IDs</a></td></tr>
 <tr class="separator:a1e0dce32140e2272a87e6a3e3e4ba725"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6d478379111607c0b45444f9160f1e77" id="r_a6d478379111607c0b45444f9160f1e77"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6d478379111607c0b45444f9160f1e77">individual_plant_locations</a></td></tr>
 <tr class="separator:a6d478379111607c0b45444f9160f1e77"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -200,7 +233,7 @@ Data Fields</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Canopy struct. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00208">208</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00198">198</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 </div><h2 class="groupheader">Field Documentation</h2>
 <a id="a24fcfbc19adc684a42c3ad836bf104f7" name="a24fcfbc19adc684a42c3ad836bf104f7"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a24fcfbc19adc684a42c3ad836bf104f7">&#9670;&#160;</a></span>age</h2>
@@ -214,7 +247,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00210">210</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00200">200</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -230,7 +263,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00220">220</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00210">210</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -246,7 +279,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00211">211</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00201">201</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -257,12 +290,12 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::vector&lt;uint&gt; canopy::IDs</td>
+          <td class="memname">std::vector&lt;<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&gt; canopy::IDs</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00215">215</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00205">205</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -278,7 +311,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00209">209</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00199">199</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -294,7 +327,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00216">216</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00206">206</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -310,7 +343,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00221">221</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00211">211</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -326,7 +359,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00212">212</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00202">202</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -342,7 +375,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00213">213</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00203">203</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -358,7 +391,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00214">214</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00204">204</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -374,7 +407,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00219">219</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00209">209</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -390,7 +423,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00218">218</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00208">208</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -406,7 +439,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00217">217</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00207">207</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>

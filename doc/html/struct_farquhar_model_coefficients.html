@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: FarquharModelCoefficients Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -298,7 +331,7 @@ Friends</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00112">112</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00123">123</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a87f8535a388bf7de293f5b7df71a5567" name="a87f8535a388bf7de293f5b7df71a5567"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a87f8535a388bf7de293f5b7df71a5567">&#9670;&#160;</a></span>FarquharModelCoefficients()</h2>
@@ -323,7 +356,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00114">114</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00125">125</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -351,7 +384,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00415">415</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00426">426</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -378,7 +411,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00431">431</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00442">442</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -405,7 +438,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00427">427</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00438">438</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -432,7 +465,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00423">423</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00434">434</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -459,7 +492,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00419">419</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00430">430</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -486,7 +519,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00411">411</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00422">422</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -521,7 +554,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00211">211</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00222">222</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -555,13 +588,13 @@ Friends</h2></td></tr>
 <p>Set Jmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Jmax_at_25_C</td><td>Value of Jmax at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Jmax_at_25_C</td><td>Value of Jmax at a reference of 25 Celsius. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of Jmax with temperature. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00220">220</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00231">231</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -600,14 +633,14 @@ Friends</h2></td></tr>
 <p>Set Jmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Jmax_at_25_C</td><td>Value of Jmax at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Jmax_at_25_C</td><td>Value of Jmax at a reference of 25 Celsius. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of Jmax with temperature before the optimum. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of Jmax in Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of Jmax in Celsius. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00230">230</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00241">241</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -651,15 +684,15 @@ Friends</h2></td></tr>
 <p>Set Jmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Jmax_at_25_C</td><td>Value of Jmax at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Jmax_at_25_C</td><td>Value of Jmax at a reference of 25 Celsius. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of Jmax with temperature before the optimum. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of Jmax in Celcius. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_decrease_dHd</td><td>Dectivation energy dHd controlling the rate of decrease of Jmax with temperature beyond the optimum. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of Jmax in Celsius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_decrease_dHd</td><td>Deactivation energy dHd controlling the rate of decrease of Jmax with temperature beyond the optimum. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00242">242</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00253">253</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -689,12 +722,12 @@ Friends</h2></td></tr>
 <p>Set light response curvature (theta) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">theta</td><td>Value of theta at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">theta</td><td>Value of theta at a reference of 25 Celsius. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00375">375</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00386">386</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -728,13 +761,13 @@ Friends</h2></td></tr>
 <p>Set light response curvature (theta) of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">theta_at_25_C</td><td>Value of theta at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">theta_at_25_C</td><td>Value of theta at a reference of 25 Celsius. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of theta with temperature. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00384">384</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00395">395</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -773,15 +806,15 @@ Friends</h2></td></tr>
 <p>Set light response curvature (theta) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">theta_at_25_C</td><td>Value of theta at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">theta_at_25_C</td><td>Value of theta at a reference of 25 Celsius. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of theta with temperature before the optimum. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of theta in Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of theta in Celsius. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>The rate of decrease will be assumed with a biologically reasonable default value if not specified. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00395">395</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00406">406</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -825,15 +858,15 @@ Friends</h2></td></tr>
 <p>Set light response curvature (theta) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">theta_at_25_C</td><td>Value of theta at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">theta_at_25_C</td><td>Value of theta at a reference of 25 Celsius. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of theta with temperature before the optimum. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of reaction in Celcius. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_decrease_dHd</td><td>Dectivation energy dHd controlling the rate of decrease of theta with temperature beyond the optimum. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of reaction in Celsius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_decrease_dHd</td><td>Deactivation energy dHd controlling the rate of decrease of theta with temperature beyond the optimum. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00407">407</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00418">418</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -863,12 +896,12 @@ Friends</h2></td></tr>
 <p>Set light response quantum efficiency (alpha) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">alpha</td><td>Value of alpha at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">alpha</td><td>Value of alpha at a reference of 25 Celsius. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00335">335</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00346">346</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -902,13 +935,13 @@ Friends</h2></td></tr>
 <p>Set light response quantum efficiency (alpha) of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">alpha_at_25_C</td><td>Value of alpha at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">alpha_at_25_C</td><td>Value of alpha at a reference of 25 Celsius. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of alpha with temperature. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00344">344</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00355">355</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -947,15 +980,15 @@ Friends</h2></td></tr>
 <p>Set light response quantum efficiency (alpha) of the Farquhar-von Caemmerer-Berry model according to a modified Arrhenius equation with an optimum. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">alpha_at_25_C</td><td>Value of alpha at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">alpha_at_25_C</td><td>Value of alpha at a reference of 25 Celsius. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of alpha with temperature before the optimum. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of alpha in Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of alpha in Celsius. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>The rate of decrease will be assumed with a biologically reasonable default value if not specified. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00355">355</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00366">366</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -999,15 +1032,15 @@ Friends</h2></td></tr>
 <p>Set light response quantum efficiency (alpha) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">alpha_at_25_C</td><td>Value of alpha at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">alpha_at_25_C</td><td>Value of alpha at a reference of 25 Celsius. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of alpha with temperature before the optimum. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of alpha in Celcius. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_decrease_dHd</td><td>Dectivation energy dHd controlling the rate of decrease of alpha with temperature beyond the optimum. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of alpha in Celsius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_decrease_dHd</td><td>Deactivation energy dHd controlling the rate of decrease of alpha with temperature beyond the optimum. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00367">367</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00378">378</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1037,12 +1070,12 @@ Friends</h2></td></tr>
 <p>Set mitochondrial respiration rate (Rd) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Rd</td><td>Value of Rd at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Rd</td><td>Value of Rd at a reference of 25 Celsius. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00295">295</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00306">306</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1076,13 +1109,13 @@ Friends</h2></td></tr>
 <p>Set mitochondrial respiration rate (Rd) of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Rd_at_25_C</td><td>Value of Rd at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Rd_at_25_C</td><td>Value of Rd at a reference of 25 Celsius. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of Rd with temperature. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00304">304</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00315">315</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1121,15 +1154,15 @@ Friends</h2></td></tr>
 <p>Set mitochondrial respiration rate (Rd) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Rd_at_25_C</td><td>Value of Rd at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Rd_at_25_C</td><td>Value of Rd at a reference of 25 Celsius. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of Rd with temperature before the optimum. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of Rd in Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of Rd in Celsius. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>The rate of decrease will be assumed with a biologically reasonable default value if not specified. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00315">315</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00326">326</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1173,15 +1206,15 @@ Friends</h2></td></tr>
 <p>Set mitochondrial respiration rate (Rd) of the Farquhar-von Caemmerer-Berry model with temperature response ccording to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Rd_at_25_C</td><td>Value of Rd at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Rd_at_25_C</td><td>Value of Rd at a reference of 25 Celsius. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of Rd with temperature before the optimum. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of Rd in Celcius. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_decrease_dHd</td><td>Dectivation energy dHd controlling the rate of decrease of Rd with temperature beyond the optimum. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of Rd in Celsius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_decrease_dHd</td><td>Deactivation energy dHd controlling the rate of decrease of Rd with temperature beyond the optimum. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00327">327</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00338">338</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1211,12 +1244,12 @@ Friends</h2></td></tr>
 <p>Set Triose-Phosphate Utilization (TPU) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">TPU</td><td>Value of TPU at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">TPU</td><td>Value of TPU at a reference of 25 Celsius. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00250">250</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00261">261</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1250,14 +1283,14 @@ Friends</h2></td></tr>
 <p>Set Triose-Phosphate Utilization (TPU) of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">TPU_at_25_C</td><td>Value of TPU at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">TPU_at_25_C</td><td>Value of TPU at a reference of 25 Celsius. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of TPU with temperature. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>A temperature optimum will not be assumed if not specified. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00261">261</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00272">272</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1296,15 +1329,15 @@ Friends</h2></td></tr>
 <p>Set Triose-Phosphate Utilization (TPU) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">TPU_at_25_C</td><td>Value of TPU at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">TPU_at_25_C</td><td>Value of TPU at a reference of 25 Celsius. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of TPU with temperature before the optimum. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of TPU in Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of TPU in Celsius. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>The rate of decrease will be assumed with a biologically reasonable default value if not specified. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00273">273</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00284">284</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1348,15 +1381,15 @@ Friends</h2></td></tr>
 <p>Set Triose-Phosphate Utilization (TPU) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">TPU_at_25_C</td><td>Value of TPU at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">TPU_at_25_C</td><td>Value of TPU at a reference of 25 Celsius. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of TPU with temperature before the optimum. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of TPU in Celcius. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_decrease_dHd</td><td>Dectivation energy dHd controlling the rate of decrease of TPU with temperature beyond the optimum. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of TPU in Celsius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_decrease_dHd</td><td>Deactivation energy dHd controlling the rate of decrease of TPU with temperature beyond the optimum. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00286">286</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00297">297</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1391,7 +1424,7 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00171">171</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00182">182</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1425,13 +1458,13 @@ Friends</h2></td></tr>
 <p>Set Vcmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Vcmax_at_25_C</td><td>Value of Vcmax at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Vcmax_at_25_C</td><td>Value of Vcmax at a reference of 25 Celsius. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of Vcmax with temperature. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00180">180</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00191">191</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1470,15 +1503,15 @@ Friends</h2></td></tr>
 <p>Set Vcmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Vcmax_at_25_C</td><td>Value of Vcmax at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Vcmax_at_25_C</td><td>Value of Vcmax at a reference of 25 Celsius. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of Vcmax with temperature before the optimum. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of Vcmax in Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of Vcmax in Celsius. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>The rate of decrease of Vcmax with temperature will be assumed with a biologically reasonable default value if not specified. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00191">191</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00202">202</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1522,15 +1555,15 @@ Friends</h2></td></tr>
 <p>Set Vcmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">Vcmax_at_25_C</td><td>Value of Vcmax at a reference of 25 Celcius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Vcmax_at_25_C</td><td>Value of Vcmax at a reference of 25 Celsius. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_increase_dHa</td><td>Activation energy dHa controlling the rate of increase of Vcmax with temperature before the optimum. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of Vcmax in Celcius. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_decrease_dHd</td><td>Dectivation energy dHd controlling the rate of decrease of Vcmax with temperature beyond the optimum. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">optimum_temperature_in_C</td><td>Temperature optimum of Vcmax in Celsius. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">rate_of_decrease_dHd</td><td>Deactivation energy dHd controlling the rate of decrease of Vcmax with temperature beyond the optimum. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00203">203</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00214">214</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1555,7 +1588,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00445">445</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00456">456</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1572,7 +1605,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00149">149</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00160">160</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1588,7 +1621,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00156">156</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00167">167</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1604,7 +1637,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00155">155</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00166">166</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1620,7 +1653,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00157">157</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00168">168</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1636,7 +1669,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00158">158</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00169">169</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1652,7 +1685,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00153">153</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00164">164</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1668,7 +1701,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00154">154</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00165">165</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1684,7 +1717,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00163">163</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00174">174</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1700,7 +1733,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00162">162</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00173">173</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1716,7 +1749,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00164">164</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00175">175</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1732,7 +1765,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00165">165</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00176">176</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1748,7 +1781,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00160">160</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00171">171</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1764,7 +1797,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00161">161</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00172">172</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1780,7 +1813,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00147">147</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00158">158</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1796,7 +1829,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00150">150</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00161">161</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1812,7 +1845,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00148">148</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00159">159</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1828,7 +1861,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00143">143</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00154">154</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>
@@ -1844,7 +1877,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00146">146</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_photosynthesis_model_8h_source.html#l00157">157</a> of file <a class="el" href="_photosynthesis_model_8h_source.html">PhotosynthesisModel.h</a>.</p>
 
 </div>
 </div>

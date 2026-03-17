@@ -2,7 +2,7 @@
 
 # This script sets up a new project. To use it, first create a new directory where you want the project to be located. Then, run this script and give it the path to that directory, for example: $ ./create_project.sh projects/myProject.
 
-if [ "$#" == 0 ] || [ "${2}" == "--help" ]; then
+if [ "$#" == 0 ] || [ "${1}" == "--help" ]; then
     echo "Usage: $0 [path] '[plugins]'";
     echo "";
     echo "[path] = Path to project directory.";
@@ -11,28 +11,41 @@ if [ "$#" == 0 ] || [ "${2}" == "--help" ]; then
     exit 1;
 fi
 
-DIRPATH=${1}
-UTILPATH="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+DIRPATH="${1}"
 
-if [ ! -e "${DIRPATH}" ]; then
-    echo "Directory ""${DIRPATH}"" does not exist.";
+# Validate input path for security
+if [[ "${DIRPATH}" =~ [\;\&\|\`\$] ]]; then
+    echo "Error: Invalid characters in path. Path cannot contain: ; & | \` $";
     exit 1;
 fi
+UTILPATH="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+HELIOS_BASE_DIR="$(dirname "$UTILPATH")"
 
-cd ${DIRPATH}
+if [ ! -e "${DIRPATH}" ]; then
+    echo "Directory ""${DIRPATH}"" does not exist. Creating it...";
+    if ! mkdir -p "${DIRPATH}"; then
+        echo "Error: Failed to create directory ""${DIRPATH}""";
+        exit 1;
+    fi
+fi
+
+if ! cd "${DIRPATH}"; then
+    echo "Error: Failed to change to directory ""${DIRPATH}""";
+    exit 1;
+fi
 
 if [ ! -e "build" ]; then
     mkdir build;
 fi
 
-PLUGINS=("energybalance" "lidar" "aeriallidar" "photosynthesis" "radiation" "solarposition" "stomatalconductance" "topography" "visualizer" "voxelintersection" "weberpenntree" "canopygenerator" "boundarylayerconductance" "leafoptics" "syntheticannotation" "plantarchitecture" "projectbuilder" "planthydraulics" "parameteroptimization" "collisiondetection")
+PLUGINS=("energybalance" "irrigation" "lidar" "aeriallidar" "photosynthesis" "radiation" "solarposition" "stomatalconductance" "topography" "visualizer" "voxelintersection" "weberpenntree" "canopygenerator" "boundarylayerconductance" "leafoptics" "syntheticannotation" "plantarchitecture" "projectbuilder" "planthydraulics" "parameteroptimization" "collisiondetection")
 HEADERS=("EnergyBalanceModel.h" "LiDAR.h" "AerialLiDAR.h" "PhotosynthesisModel.h" "RadiationModel.h" "SolarPosition.h" "StomatalConductanceModel.h" "Topography.h" "Visualizer.h" "VoxelIntersection.h" "WeberPennTree.h" "CanopyGenerator.h" "BoundaryLayerConductanceModel.h" "LeafOptics.h" "SyntheticAnnotation.h" "PlantArchitecture.h" "ProjectBuilder.h" "PlantHydraulicsModel.h" "ParameterOptimization.h" "CollisionDetection.h")
 
-FILEBASE=`basename $DIRPATH`
+FILEBASE=$(basename "${DIRPATH}")
 
 if [ "${FILEBASE}" == '.' ]; then
-  FILEBASE=`pwd .`
-  FILEBASE=`basename $FILEBASE`
+  FILEBASE=$(pwd)
+  FILEBASE=$(basename "${FILEBASE}")
 fi
 
 #----- build the CMakeLists.txt file ------#
@@ -43,7 +56,46 @@ echo -e 'cmake_minimum_required(VERSION 3.15)\nproject(helios)\n' >> CMakeLists.
 
 echo -e '#-------- USER INPUTS ---------#\n' >> CMakeLists.txt
 
-echo -e '#provide the path to Helios base directory, either as an absolute path or a path relative to the location of this file\nset( BASE_DIRECTORY "../.." )\n'  >> CMakeLists.txt
+# For the common case where we're running from utilities/ and creating a project in samples/
+# we can simplify this significantly
+if [[ "${DIRPATH}" == "../samples/"* ]]; then
+    # Extract just the project name from the path like ../samples/project_name
+    PROJECT_NAME="${DIRPATH#../samples/}"
+    BASE_DIR_REL="../.."  # From samples/project_name/ to Helios root is ../..
+elif [[ "${DIRPATH}" = /* ]]; then
+    # Absolute path - calculate normally
+    PROJECT_ABS_PATH="${DIRPATH}"
+    if [[ "${PROJECT_ABS_PATH}" == "${HELIOS_BASE_DIR}"* ]]; then
+        RELATIVE_PATH="${PROJECT_ABS_PATH#${HELIOS_BASE_DIR}}"
+        RELATIVE_PATH="${RELATIVE_PATH#/}"
+        if [ -z "$RELATIVE_PATH" ]; then
+            BASE_DIR_REL="."
+        else
+            IFS='/' read -ra PATH_PARTS <<< "$RELATIVE_PATH"
+            LEVEL_COUNT=0
+            for part in "${PATH_PARTS[@]}"; do
+                if [ -n "$part" ]; then
+                    LEVEL_COUNT=$((LEVEL_COUNT + 1))
+                fi
+            done
+            BASE_DIR_REL=""
+            for ((i=0; i<LEVEL_COUNT; i++)); do
+                if [ $i -eq 0 ]; then
+                    BASE_DIR_REL=".."
+                else
+                    BASE_DIR_REL="${BASE_DIR_REL}/.."
+                fi
+            done
+        fi
+    else
+        BASE_DIR_REL="${HELIOS_BASE_DIR}"  # Use absolute path
+    fi
+else
+    # Other relative paths - use absolute path as fallback for reliability
+    BASE_DIR_REL="${HELIOS_BASE_DIR}"
+fi
+
+echo -e '#provide the path to Helios base directory, either as an absolute path or a path relative to the location of this file\nset( BASE_DIRECTORY "'"${BASE_DIR_REL}"'" )\n'  >> CMakeLists.txt
 
 echo -e '#define the name of the executable to be created\nset( EXECUTABLE_NAME "'$FILEBASE'" )\n' >> CMakeLists.txt
 

@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: ParameterOptimization Class Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -20,6 +21,33 @@
   DoxygenAwesomeParagraphLink.init()
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
+</script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
 </script>
 <script>
     try {
@@ -76,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -84,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.43</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -98,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -116,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -157,12 +193,13 @@ $(function(){initNavTree('class_parameter_optimization.html',''); initResizable(
   <div class="summary">
 <a href="#nested-classes">Data Structures</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
-<a href="#pub-static-methods">Static Public Member Functions</a>  </div>
+<a href="#pub-static-methods">Static Public Member Functions</a> &#124;
+<a href="#pub-attribs">Data Fields</a>  </div>
   <div class="headertitle"><div class="title">ParameterOptimization Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
-<p>Simple parameter optimization routines.  
+<p>Parameter optimization routines.  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="_parameter_optimization_8h_source.html">ParameterOptimization.h</a>&gt;</code></p>
@@ -174,23 +211,50 @@ Data Structures</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a97592071a206c4ca7617664c06e51a96" id="r_a97592071a206c4ca7617664c06e51a96"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_parameter_optimization_1_1_result.html">Result</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a97592071a206c4ca7617664c06e51a96">run</a> (std::function&lt; float(const <a class="el" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078">ParametersToOptimize</a> &amp;)&gt; simulation, const <a class="el" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078">ParametersToOptimize</a> &amp;parameters, const <a class="el" href="struct_optimization_settings.html">OptimizationSettings</a> &amp;settings)</td></tr>
-<tr class="memdesc:a97592071a206c4ca7617664c06e51a96"><td class="mdescLeft">&#160;</td><td class="mdescRight">Run the plugin for a simulation with a computed objective, parameter set to optimize over, and algorithmic settings.  <br /></td></tr>
-<tr class="separator:a97592071a206c4ca7617664c06e51a96"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2ebf9f48fa2c65404711080cbcf18248" id="r_a2ebf9f48fa2c65404711080cbcf18248"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2ebf9f48fa2c65404711080cbcf18248">setAlgorithm</a> (const <a class="el" href="struct_genetic_algorithm.html">GeneticAlgorithm</a> &amp;algorithm)</td></tr>
+<tr class="memdesc:a2ebf9f48fa2c65404711080cbcf18248"><td class="mdescLeft">&#160;</td><td class="mdescRight">Select the Genetic Algorithm for optimization.  <br /></td></tr>
+<tr class="separator:a2ebf9f48fa2c65404711080cbcf18248"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abda0c588637cd4bbaebe123e786c60f9" id="r_abda0c588637cd4bbaebe123e786c60f9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abda0c588637cd4bbaebe123e786c60f9">setAlgorithm</a> (const <a class="el" href="struct_bayesian_optimization.html">BayesianOptimization</a> &amp;algorithm)</td></tr>
+<tr class="memdesc:abda0c588637cd4bbaebe123e786c60f9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Select Bayesian Optimization for optimization.  <br /></td></tr>
+<tr class="separator:abda0c588637cd4bbaebe123e786c60f9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa7ac1d14a4b416e6dbc9be4ae7e186de" id="r_aa7ac1d14a4b416e6dbc9be4ae7e186de"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa7ac1d14a4b416e6dbc9be4ae7e186de">setAlgorithm</a> (const <a class="el" href="struct_c_m_a_e_s.html">CMAES</a> &amp;algorithm)</td></tr>
+<tr class="memdesc:aa7ac1d14a4b416e6dbc9be4ae7e186de"><td class="mdescLeft">&#160;</td><td class="mdescRight">Select CMA-ES for optimization.  <br /></td></tr>
+<tr class="separator:aa7ac1d14a4b416e6dbc9be4ae7e186de"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac297d4e47978ee6a2492588d88def313" id="r_ac297d4e47978ee6a2492588d88def313"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_parameter_optimization_1_1_result.html">Result</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac297d4e47978ee6a2492588d88def313">run</a> (std::function&lt; float(const <a class="el" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078">ParametersToOptimize</a> &amp;)&gt; simulation, const <a class="el" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078">ParametersToOptimize</a> &amp;parameters)</td></tr>
+<tr class="memdesc:ac297d4e47978ee6a2492588d88def313"><td class="mdescLeft">&#160;</td><td class="mdescRight">Run the optimization with stored algorithm settings.  <br /></td></tr>
+<tr class="separator:ac297d4e47978ee6a2492588d88def313"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
 <tr class="memitem:a635959bf9af40b7a0082b4fe93a137bf" id="r_a635959bf9af40b7a0082b4fe93a137bf"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a635959bf9af40b7a0082b4fe93a137bf">selfTest</a> (int argc=0, char **argv=nullptr)</td></tr>
 <tr class="memdesc:a635959bf9af40b7a0082b4fe93a137bf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Runs a self-test of the ParameterOptimization plugin, verifying its functionality.  <br /></td></tr>
 <tr class="separator:a635959bf9af40b7a0082b4fe93a137bf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaf9f9570262950420561df576ff39c89" id="r_aaf9f9570262950420561df576ff39c89"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaf9f9570262950420561df576ff39c89">selfTestVisualized</a> (const std::string &amp;output_dir=&quot;.&quot;)</td></tr>
+<tr class="memdesc:aaf9f9570262950420561df576ff39c89"><td class="mdescLeft">&#160;</td><td class="mdescRight">Runs visualization tests that output population data for plotting algorithm performance.  <br /></td></tr>
+<tr class="separator:aaf9f9570262950420561df576ff39c89"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
+Data Fields</h2></td></tr>
+<tr class="memitem:ad50d214b9a6f3fb68a3af50eb9d9d9af" id="r_ad50d214b9a6f3fb68a3af50eb9d9d9af"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad50d214b9a6f3fb68a3af50eb9d9d9af">print_progress</a> = false</td></tr>
+<tr class="memdesc:ad50d214b9a6f3fb68a3af50eb9d9d9af"><td class="mdescLeft">&#160;</td><td class="mdescRight">I/O configuration.  <br /></td></tr>
+<tr class="separator:ad50d214b9a6f3fb68a3af50eb9d9d9af"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1352b6530bbb32dc5a6964bd05bb3a78" id="r_a1352b6530bbb32dc5a6964bd05bb3a78"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1352b6530bbb32dc5a6964bd05bb3a78">write_result_to_file</a></td></tr>
+<tr class="memdesc:a1352b6530bbb32dc5a6964bd05bb3a78"><td class="mdescLeft">&#160;</td><td class="mdescRight">Name of file to write final result to, skips writing if empty.  <br /></td></tr>
+<tr class="separator:a1352b6530bbb32dc5a6964bd05bb3a78"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6b04a0c2794de2df6c5319ae22b51f0c" id="r_a6b04a0c2794de2df6c5319ae22b51f0c"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6b04a0c2794de2df6c5319ae22b51f0c">write_progress_to_file</a></td></tr>
+<tr class="memdesc:a6b04a0c2794de2df6c5319ae22b51f0c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Name of file to write progress to, skips writing if empty.  <br /></td></tr>
+<tr class="separator:a6b04a0c2794de2df6c5319ae22b51f0c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5a7df98e549e81acab15cff5afb34121" id="r_a5a7df98e549e81acab15cff5afb34121"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5a7df98e549e81acab15cff5afb34121">read_input_from_file</a></td></tr>
+<tr class="memdesc:a5a7df98e549e81acab15cff5afb34121"><td class="mdescLeft">&#160;</td><td class="mdescRight">Name of file to read parameter set in from, ignores if empty.  <br /></td></tr>
+<tr class="separator:a5a7df98e549e81acab15cff5afb34121"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Simple parameter optimization routines. </p>
+<div class="textblock"><p>Parameter optimization routines. </p>
 
-<p class="definition">Definition at line <a class="el" href="_parameter_optimization_8h_source.html#l00046">46</a> of file <a class="el" href="_parameter_optimization_8h_source.html">ParameterOptimization.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_parameter_optimization_8h_source.html#l00130">130</a> of file <a class="el" href="_parameter_optimization_8h_source.html">ParameterOptimization.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="a97592071a206c4ca7617664c06e51a96" name="a97592071a206c4ca7617664c06e51a96"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a97592071a206c4ca7617664c06e51a96">&#9670;&#160;</a></span>run()</h2>
+<a id="ac297d4e47978ee6a2492588d88def313" name="ac297d4e47978ee6a2492588d88def313"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac297d4e47978ee6a2492588d88def313">&#9670;&#160;</a></span>run()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -203,27 +267,21 @@ Static Public Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078">ParametersToOptimize</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>parameters</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="struct_optimization_settings.html">OptimizationSettings</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>settings</em></span>&#160;)</td>
+          <td class="paramtype">const <a class="el" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078">ParametersToOptimize</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>parameters</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p>Run the plugin for a simulation with a computed objective, parameter set to optimize over, and algorithmic settings. </p>
+<p>Run the optimization with stored algorithm settings. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">simulation</td><td>A self contained Helios simulation that takes in parameters, performs computation, and returns a floating point objective value. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">parameters</td><td>A parameter set to optimize over </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">settings</td><td>Settings of underlying genetic algorithm that performs the optimization </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_parameter_optimization_8cpp_source.html#l00060">60</a> of file <a class="el" href="_parameter_optimization_8cpp_source.html">ParameterOptimization.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_parameter_optimization_8cpp_source.html#l01641">1641</a> of file <a class="el" href="_parameter_optimization_8cpp_source.html">ParameterOptimization.cpp</a>.</p>
 
 </div>
 </div>
@@ -258,7 +316,199 @@ Static Public Member Functions</h2></td></tr>
 <p>The self-test executes a series of internal tests, validating critical methods and functionalities of the ParameterOptimization plugin. Errors encountered during the process are counted and reported.</p>
 <dl class="section return"><dt>Returns</dt><dd>The number of errors encountered during the self-test. Returns 0 if all tests pass successfully. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="plugins_2parameteroptimization_2tests_2self_test_8cpp_source.html#l00024">24</a> of file <a class="el" href="plugins_2parameteroptimization_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2parameteroptimization_2tests_2self_test_8cpp_source.html#l00036">36</a> of file <a class="el" href="plugins_2parameteroptimization_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aaf9f9570262950420561df576ff39c89" name="aaf9f9570262950420561df576ff39c89"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaf9f9570262950420561df576ff39c89">&#9670;&#160;</a></span>selfTestVisualized()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">int ParameterOptimization::selfTestVisualized </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>output_dir</em></span><span class="paramdefsep"> = </span><span class="paramdefval">&quot;.&quot;</span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Runs visualization tests that output population data for plotting algorithm performance. </p>
+<p>Tests all three optimization methods (GA, BO, CMA-ES) on standard benchmark functions and outputs iteration-by-iteration population data to CSV files for visualization.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">output_dir</td><td>Directory path where output CSV files will be written </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>0 on success, non-zero on error </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_parameter_optimization_8cpp_source.html#l01678">1678</a> of file <a class="el" href="_parameter_optimization_8cpp_source.html">ParameterOptimization.cpp</a>.</p>
+
+</div>
+</div>
+<a id="abda0c588637cd4bbaebe123e786c60f9" name="abda0c588637cd4bbaebe123e786c60f9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abda0c588637cd4bbaebe123e786c60f9">&#9670;&#160;</a></span>setAlgorithm() <span class="overload">[1/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ParameterOptimization::setAlgorithm </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_bayesian_optimization.html">BayesianOptimization</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>algorithm</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Select Bayesian Optimization for optimization. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">algorithm</td><td>BO hyperparameters including acquisition function parameters </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_parameter_optimization_8cpp_source.html#l01632">1632</a> of file <a class="el" href="_parameter_optimization_8cpp_source.html">ParameterOptimization.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aa7ac1d14a4b416e6dbc9be4ae7e186de" name="aa7ac1d14a4b416e6dbc9be4ae7e186de"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa7ac1d14a4b416e6dbc9be4ae7e186de">&#9670;&#160;</a></span>setAlgorithm() <span class="overload">[2/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ParameterOptimization::setAlgorithm </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_c_m_a_e_s.html">CMAES</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>algorithm</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Select CMA-ES for optimization. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">algorithm</td><td>CMA-ES hyperparameters </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_parameter_optimization_8cpp_source.html#l01636">1636</a> of file <a class="el" href="_parameter_optimization_8cpp_source.html">ParameterOptimization.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2ebf9f48fa2c65404711080cbcf18248" name="a2ebf9f48fa2c65404711080cbcf18248"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2ebf9f48fa2c65404711080cbcf18248">&#9670;&#160;</a></span>setAlgorithm() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ParameterOptimization::setAlgorithm </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_genetic_algorithm.html">GeneticAlgorithm</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>algorithm</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Select the Genetic Algorithm for optimization. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">algorithm</td><td>GA hyperparameters including crossover/mutation operator selection </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_parameter_optimization_8cpp_source.html#l01628">1628</a> of file <a class="el" href="_parameter_optimization_8cpp_source.html">ParameterOptimization.cpp</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Field Documentation</h2>
+<a id="ad50d214b9a6f3fb68a3af50eb9d9d9af" name="ad50d214b9a6f3fb68a3af50eb9d9d9af"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad50d214b9a6f3fb68a3af50eb9d9d9af">&#9670;&#160;</a></span>print_progress</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool ParameterOptimization::print_progress = false</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>I/O configuration. </p>
+<p>Optional progress printout </p>
+
+<p class="definition">Definition at line <a class="el" href="_parameter_optimization_8h_source.html#l00156">156</a> of file <a class="el" href="_parameter_optimization_8h_source.html">ParameterOptimization.h</a>.</p>
+
+</div>
+</div>
+<a id="a5a7df98e549e81acab15cff5afb34121" name="a5a7df98e549e81acab15cff5afb34121"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5a7df98e549e81acab15cff5afb34121">&#9670;&#160;</a></span>read_input_from_file</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string ParameterOptimization::read_input_from_file</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Name of file to read parameter set in from, ignores if empty. </p>
+
+<p class="definition">Definition at line <a class="el" href="_parameter_optimization_8h_source.html#l00159">159</a> of file <a class="el" href="_parameter_optimization_8h_source.html">ParameterOptimization.h</a>.</p>
+
+</div>
+</div>
+<a id="a6b04a0c2794de2df6c5319ae22b51f0c" name="a6b04a0c2794de2df6c5319ae22b51f0c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6b04a0c2794de2df6c5319ae22b51f0c">&#9670;&#160;</a></span>write_progress_to_file</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string ParameterOptimization::write_progress_to_file</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Name of file to write progress to, skips writing if empty. </p>
+
+<p class="definition">Definition at line <a class="el" href="_parameter_optimization_8h_source.html#l00158">158</a> of file <a class="el" href="_parameter_optimization_8h_source.html">ParameterOptimization.h</a>.</p>
+
+</div>
+</div>
+<a id="a1352b6530bbb32dc5a6964bd05bb3a78" name="a1352b6530bbb32dc5a6964bd05bb3a78"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1352b6530bbb32dc5a6964bd05bb3a78">&#9670;&#160;</a></span>write_result_to_file</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string ParameterOptimization::write_result_to_file</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Name of file to write final result to, skips writing if empty. </p>
+
+<p class="definition">Definition at line <a class="el" href="_parameter_optimization_8h_source.html#l00157">157</a> of file <a class="el" href="_parameter_optimization_8h_source.html">ParameterOptimization.h</a>.</p>
 
 </div>
 </div>

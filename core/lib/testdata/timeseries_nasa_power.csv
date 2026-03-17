@@ -1,0 +1,19 @@
+-BEGIN HEADER-
+NASA/POWER Source Native Resolution Hourly Data
+Dates (month/day/year): 01/01/2024 through 01/03/2024 in LST
+Location: Latitude  38.55   Longitude -121.76
+Elevation from MERRA-2: Average for 0.5 x 0.625 degree lat/lon region = 67.69 meters
+The value for missing source data that cannot be computed or is outside of the sources availability range: -999
+Parameter(s):
+T2M      MERRA-2 Temperature at 2 Meters (C)
+RH2M     MERRA-2 Relative Humidity at 2 Meters (%)
+-END HEADER-
+YEAR,MO,DY,HR,T2M,RH2M
+2024,1,1,0,7.68,100.0
+2024,1,1,1,7.7,100.0
+2024,1,1,8,7.54,92.58
+2024,1,1,12,14.71,60.28
+2024,1,1,13,15.43,57.61
+2024,1,2,0,6.79,100.0
+2024,1,2,12,14.99,71.5
+2024,1,2,13,15.89,64.99

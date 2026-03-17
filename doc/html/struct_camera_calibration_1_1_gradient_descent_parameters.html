@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: CameraCalibration::GradientDescentParameters Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -170,19 +203,19 @@ $(function(){initNavTree('struct_camera_calibration_1_1_gradient_descent_paramet
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Data Fields</h2></td></tr>
-<tr class="memitem:af60efb8013e586ce4ffdd4ede2a116c0" id="r_af60efb8013e586ce4ffdd4ede2a116c0"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af60efb8013e586ce4ffdd4ede2a116c0">learningrate</a> =0.000001</td></tr>
+<tr class="memitem:af60efb8013e586ce4ffdd4ede2a116c0" id="r_af60efb8013e586ce4ffdd4ede2a116c0"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af60efb8013e586ce4ffdd4ede2a116c0">learningrate</a> = 0.000001</td></tr>
 <tr class="separator:af60efb8013e586ce4ffdd4ede2a116c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a74c6cfd128ca72b94f39d2b705a9fdfc" id="r_a74c6cfd128ca72b94f39d2b705a9fdfc"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a74c6cfd128ca72b94f39d2b705a9fdfc">maxiteration</a> = 500</td></tr>
 <tr class="separator:a74c6cfd128ca72b94f39d2b705a9fdfc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af7d25501ec7cd31578144b64bfad40b3" id="r_af7d25501ec7cd31578144b64bfad40b3"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af7d25501ec7cd31578144b64bfad40b3">minloss</a> = 0.01</td></tr>
 <tr class="separator:af7d25501ec7cd31578144b64bfad40b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a35c3ba7f11d73ed0c01bd67f61faf0d0" id="r_a35c3ba7f11d73ed0c01bd67f61faf0d0"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a35c3ba7f11d73ed0c01bd67f61faf0d0">camerarescales</a> = {1,1,1}</td></tr>
+<tr class="memitem:a35c3ba7f11d73ed0c01bd67f61faf0d0" id="r_a35c3ba7f11d73ed0c01bd67f61faf0d0"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a35c3ba7f11d73ed0c01bd67f61faf0d0">camerarescales</a> = {1, 1, 1}</td></tr>
 <tr class="separator:a35c3ba7f11d73ed0c01bd67f61faf0d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Parameter struct for gradient descent. </p>
 
-<p class="definition">Definition at line <a class="el" href="_camera_calibration_8h_source.html#l00145">145</a> of file <a class="el" href="_camera_calibration_8h_source.html">CameraCalibration.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8h_source.html#l00155">155</a> of file <a class="el" href="_camera_calibration_8h_source.html">CameraCalibration.h</a>.</p>
 </div><h2 class="groupheader">Field Documentation</h2>
 <a id="a35c3ba7f11d73ed0c01bd67f61faf0d0" name="a35c3ba7f11d73ed0c01bd67f61faf0d0"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a35c3ba7f11d73ed0c01bd67f61faf0d0">&#9670;&#160;</a></span>camerarescales</h2>
@@ -191,12 +224,12 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::vector&lt;float&gt; CameraCalibration::GradientDescentParameters::camerarescales = {1,1,1}</td>
+          <td class="memname">std::vector&lt;float&gt; CameraCalibration::GradientDescentParameters::camerarescales = {1, 1, 1}</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_camera_calibration_8h_source.html#l00150">150</a> of file <a class="el" href="_camera_calibration_8h_source.html">CameraCalibration.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8h_source.html#l00159">159</a> of file <a class="el" href="_camera_calibration_8h_source.html">CameraCalibration.h</a>.</p>
 
 </div>
 </div>
@@ -207,12 +240,12 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float CameraCalibration::GradientDescentParameters::learningrate =0.000001</td>
+          <td class="memname">float CameraCalibration::GradientDescentParameters::learningrate = 0.000001</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_camera_calibration_8h_source.html#l00147">147</a> of file <a class="el" href="_camera_calibration_8h_source.html">CameraCalibration.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8h_source.html#l00156">156</a> of file <a class="el" href="_camera_calibration_8h_source.html">CameraCalibration.h</a>.</p>
 
 </div>
 </div>
@@ -228,7 +261,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_camera_calibration_8h_source.html#l00148">148</a> of file <a class="el" href="_camera_calibration_8h_source.html">CameraCalibration.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8h_source.html#l00157">157</a> of file <a class="el" href="_camera_calibration_8h_source.html">CameraCalibration.h</a>.</p>
 
 </div>
 </div>
@@ -244,7 +277,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_camera_calibration_8h_source.html#l00149">149</a> of file <a class="el" href="_camera_calibration_8h_source.html">CameraCalibration.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_camera_calibration_8h_source.html#l00158">158</a> of file <a class="el" href="_camera_calibration_8h_source.html">CameraCalibration.h</a>.</p>
 
 </div>
 </div>

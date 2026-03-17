@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: FloralBud Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -171,9 +204,9 @@ Data Fields</h2></td></tr>
 <tr class="separator:a7850ba20f0ea97bddf73fab1ad9a8cf4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1c1ccad04abbb694507e78a9cc044da7" id="r_a1c1ccad04abbb694507e78a9cc044da7"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1c1ccad04abbb694507e78a9cc044da7">isterminal</a> = false</td></tr>
 <tr class="separator:a1c1ccad04abbb694507e78a9cc044da7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af9d4927756d61098df0aa0ef62a6630d" id="r_af9d4927756d61098df0aa0ef62a6630d"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af9d4927756d61098df0aa0ef62a6630d">parent_index</a> = 0</td></tr>
+<tr class="memitem:af9d4927756d61098df0aa0ef62a6630d" id="r_af9d4927756d61098df0aa0ef62a6630d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af9d4927756d61098df0aa0ef62a6630d">parent_index</a> = 0</td></tr>
 <tr class="separator:af9d4927756d61098df0aa0ef62a6630d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac05237b5c72c34fd1a5449703ba3684d" id="r_ac05237b5c72c34fd1a5449703ba3684d"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac05237b5c72c34fd1a5449703ba3684d">bud_index</a> = 0</td></tr>
+<tr class="memitem:ac05237b5c72c34fd1a5449703ba3684d" id="r_ac05237b5c72c34fd1a5449703ba3684d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac05237b5c72c34fd1a5449703ba3684d">bud_index</a> = 0</td></tr>
 <tr class="separator:ac05237b5c72c34fd1a5449703ba3684d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abab0121583d54634083680e022a17457" id="r_abab0121583d54634083680e022a17457"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abab0121583d54634083680e022a17457">current_fruit_scale_factor</a> = 1</td></tr>
 <tr class="separator:abab0121583d54634083680e022a17457"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -187,14 +220,18 @@ Data Fields</h2></td></tr>
 <tr class="separator:aae710f92d578e58018348d7133a33fcb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afa12a235bc3a5cc66c7c33f358329758" id="r_afa12a235bc3a5cc66c7c33f358329758"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afa12a235bc3a5cc66c7c33f358329758">inflorescence_bases</a></td></tr>
 <tr class="separator:afa12a235bc3a5cc66c7c33f358329758"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5130959662caf5c6f2edc92d0576ca5a" id="r_a5130959662caf5c6f2edc92d0576ca5a"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5130959662caf5c6f2edc92d0576ca5a">peduncle_objIDs</a></td></tr>
+<tr class="memitem:aaaf61bc49c47f2654ba1369738b60e8d" id="r_aaaf61bc49c47f2654ba1369738b60e8d"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="struct_axis_rotation.html">AxisRotation</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaaf61bc49c47f2654ba1369738b60e8d">inflorescence_rotation</a></td></tr>
+<tr class="separator:aaaf61bc49c47f2654ba1369738b60e8d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac05348464d3307600ec98c7fd1dfb59f" id="r_ac05348464d3307600ec98c7fd1dfb59f"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac05348464d3307600ec98c7fd1dfb59f">inflorescence_base_scales</a></td></tr>
+<tr class="separator:ac05348464d3307600ec98c7fd1dfb59f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5130959662caf5c6f2edc92d0576ca5a" id="r_a5130959662caf5c6f2edc92d0576ca5a"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5130959662caf5c6f2edc92d0576ca5a">peduncle_objIDs</a></td></tr>
 <tr class="separator:a5130959662caf5c6f2edc92d0576ca5a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa28e9c19ff18318ef56742049c6e447c" id="r_aa28e9c19ff18318ef56742049c6e447c"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa28e9c19ff18318ef56742049c6e447c">inflorescence_objIDs</a></td></tr>
+<tr class="memitem:aa28e9c19ff18318ef56742049c6e447c" id="r_aa28e9c19ff18318ef56742049c6e447c"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa28e9c19ff18318ef56742049c6e447c">inflorescence_objIDs</a></td></tr>
 <tr class="separator:aa28e9c19ff18318ef56742049c6e447c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00360">360</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00398">398</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 </div><h2 class="groupheader">Field Documentation</h2>
 <a id="a2e0bb1be7fa4b40111021198d66b02ef" name="a2e0bb1be7fa4b40111021198d66b02ef"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a2e0bb1be7fa4b40111021198d66b02ef">&#9670;&#160;</a></span>base_position</h2>
@@ -208,7 +245,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00379">379</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00416">416</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -224,7 +261,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00380">380</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00417">417</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -240,7 +277,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00381">381</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00418">418</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -251,12 +288,12 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">uint FloralBud::bud_index = 0</td>
+          <td class="memname"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> FloralBud::bud_index = 0</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00372">372</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00410">410</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -272,7 +309,23 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00374">374</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00412">412</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="ac05348464d3307600ec98c7fd1dfb59f" name="ac05348464d3307600ec98c7fd1dfb59f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac05348464d3307600ec98c7fd1dfb59f">&#9670;&#160;</a></span>inflorescence_base_scales</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;float&gt; FloralBud::inflorescence_base_scales</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00422">422</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -288,7 +341,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00383">383</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00420">420</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -299,12 +352,28 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::vector&lt;uint&gt; FloralBud::inflorescence_objIDs</td>
+          <td class="memname">std::vector&lt;<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&gt; FloralBud::inflorescence_objIDs</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00385">385</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00424">424</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="aaaf61bc49c47f2654ba1369738b60e8d" name="aaaf61bc49c47f2654ba1369738b60e8d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaaf61bc49c47f2654ba1369738b60e8d">&#9670;&#160;</a></span>inflorescence_rotation</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;<a class="el" href="struct_axis_rotation.html">AxisRotation</a>&gt; FloralBud::inflorescence_rotation</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00421">421</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -320,7 +389,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00367">367</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00405">405</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -331,12 +400,12 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">uint FloralBud::parent_index = 0</td>
+          <td class="memname"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> FloralBud::parent_index = 0</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00370">370</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00408">408</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -347,12 +416,12 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::vector&lt;uint&gt; FloralBud::peduncle_objIDs</td>
+          <td class="memname">std::vector&lt;<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&gt; FloralBud::peduncle_objIDs</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00384">384</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00423">423</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -368,7 +437,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00375">375</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00413">413</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -384,7 +453,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00363">363</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00401">401</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -400,7 +469,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00365">365</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00403">403</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>

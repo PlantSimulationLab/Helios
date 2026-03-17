@@ -58,7 +58,6 @@ var class_aerial_li_d_a_rcloud =
     [ "readContextXML", "class_aerial_li_d_a_rcloud.html#a9ef16e6966bd8d2b22dec257b1826821", null ],
     [ "reflectanceFilter", "class_aerial_li_d_a_rcloud.html#a5cb2e852b103499c7d217b8020718676", null ],
     [ "scalarFilter", "class_aerial_li_d_a_rcloud.html#a3368dd715f2cb17c0977c844e192ac45", null ],
-    [ "selfTest", "class_aerial_li_d_a_rcloud.html#a8ce24bf39f32c71a4acb929ec0f68133", null ],
     [ "setCellCoverFraction", "class_aerial_li_d_a_rcloud.html#a4c0e17c469c2ec8380e4b5d56f1d6b1b", null ],
     [ "setCellGroundHeight", "class_aerial_li_d_a_rcloud.html#ac3759bc24564aca497648327b38178f3", null ],
     [ "setCellLeafArea", "class_aerial_li_d_a_rcloud.html#a138a49c26e29e57794302efb27173576", null ],

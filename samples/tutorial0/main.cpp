@@ -1,6 +1,6 @@
 #include "Context.h"
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
 
     // Declare and initialize the Helios context
     helios::Context context;

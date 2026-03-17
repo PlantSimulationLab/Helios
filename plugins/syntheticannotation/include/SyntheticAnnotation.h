@@ -1,7 +1,7 @@
 /** \file "SyntheticAnnotation.h" Primary header file for synthetic image annotation plug-in.
     \author Brian Bailey
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ public:
     explicit SyntheticAnnotation(helios::Context *context);
 
     //! Function to perform a self-test of plug-in functions
-    static int selfTest(int argc, char** argv);
+    static int selfTest(int argc, char **argv);
 
     void labelPrimitives(const char *label);
 

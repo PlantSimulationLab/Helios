@@ -1,6 +1,6 @@
 /** \file "BoundaryLayerConductanceModel.h" Primary header file for boundary layer conductance model.
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ public:
     /**
      * \return 0 if test was successful, 1 if test failed.
      */
-    static int selfTest(int argc = 0, char** argv = nullptr);
+    static int selfTest(int argc = 0, char **argv = nullptr);
 
     //! Enable standard output from this plug-in (default)
     void enableMessages();

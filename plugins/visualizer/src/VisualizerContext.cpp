@@ -1,6 +1,6 @@
 /** \file "VisualizerContext.cpp" Visualizer Context geometry handling functions.
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -31,7 +31,15 @@ void Visualizer::clearContextGeometry() {
 void Visualizer::buildContextGeometry(helios::Context *context_ptr) {
     context = context_ptr;
 
+    // Asset directory registration removed - now using HELIOS_BUILD resolution
+
     build_all_context_geometry = true;
+
+    // Restore navigation gizmo if it was enabled before displaying an image
+    if (navigation_gizmo_was_enabled_before_image_display) {
+        this->showNavigationGizmo();
+        navigation_gizmo_was_enabled_before_image_display = false; // Reset the flag
+    }
 }
 
 void Visualizer::buildContextGeometry(helios::Context *context_ptr, const std::vector<uint> &UUIDs) {
@@ -42,8 +50,16 @@ void Visualizer::buildContextGeometry(helios::Context *context_ptr, const std::v
 
     context = context_ptr;
 
+    // Asset directory registration removed - now using HELIOS_BUILD resolution
+
     build_all_context_geometry = false;
     contextUUIDs_build = UUIDs;
+
+    // Restore navigation gizmo if it was enabled before displaying an image
+    if (navigation_gizmo_was_enabled_before_image_display) {
+        this->showNavigationGizmo();
+        navigation_gizmo_was_enabled_before_image_display = false; // Reset the flag
+    }
 }
 
 void Visualizer::buildContextGeometry_private() {
@@ -112,7 +128,7 @@ void Visualizer::buildContextGeometry_private() {
             std::vector<uint> ObjIDs = context->getAllObjectIDs();
             for (uint objID: ObjIDs) {
                 if (context->doesObjectExist(objID)) {
-                    std::vector<uint> UUIDs = context->getObjectPointer(objID)->getPrimitiveUUIDs();
+                    std::vector<uint> UUIDs = context->getObjectPrimitiveUUIDs(objID);
                     for (uint UUID: UUIDs) {
                         if (context->doesPrimitiveExist(UUID)) {
                             colorPrimitives_UUIDs[UUID] = UUID;
@@ -123,7 +139,7 @@ void Visualizer::buildContextGeometry_private() {
         } else { // load primitives specified by user
             for (const auto &objID: colorPrimitives_objIDs) {
                 if (context->doesObjectExist(objID.first)) {
-                    std::vector<uint> UUIDs = context->getObjectPointer(objID.first)->getPrimitiveUUIDs();
+                    std::vector<uint> UUIDs = context->getObjectPrimitiveUUIDs(objID.first);
                     for (uint UUID: UUIDs) {
                         if (context->doesPrimitiveExist(UUID)) {
                             colorPrimitives_UUIDs[UUID] = UUID;
@@ -164,12 +180,23 @@ void Visualizer::buildContextGeometry_private() {
         colorbar_min = (std::numeric_limits<float>::max)();
         colorbar_max = (std::numeric_limits<float>::lowest)();
 
+        // Initialize integer data flag (will be set on first data encounter)
+        colorbar_integer_data = false;
+        bool data_type_detected = false;
+
         for (uint UUID: contextUUIDs_build) {
             float colorValue = -9999;
             if (!colorPrimitivesByData.empty()) {
                 if (colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end()) {
                     if (context->doesPrimitiveDataExist(UUID, colorPrimitivesByData.c_str())) {
-                        HeliosDataType type = context->getPrimitiveDataType(UUID, colorPrimitivesByData.c_str());
+                        HeliosDataType type = context->getPrimitiveDataType(colorPrimitivesByData.c_str());
+
+                        // Detect data type on first encounter
+                        if (!data_type_detected) {
+                            colorbar_integer_data = (type == HELIOS_TYPE_INT || type == HELIOS_TYPE_UINT);
+                            data_type_detected = true;
+                        }
+
                         if (type == HELIOS_TYPE_FLOAT) {
                             context->getPrimitiveData(UUID, colorPrimitivesByData.c_str(), colorValue);
                         } else if (type == HELIOS_TYPE_INT) {
@@ -195,7 +222,14 @@ void Visualizer::buildContextGeometry_private() {
                 if (colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end()) {
                     uint ObjID = context->getPrimitiveParentObjectID(UUID);
                     if (ObjID != 0 && context->doesObjectDataExist(ObjID, colorPrimitivesByObjectData.c_str())) {
-                        HeliosDataType type = context->getObjectDataType(ObjID, colorPrimitivesByObjectData.c_str());
+                        HeliosDataType type = context->getObjectDataType(colorPrimitivesByObjectData.c_str());
+
+                        // Detect data type on first encounter
+                        if (!data_type_detected) {
+                            colorbar_integer_data = (type == HELIOS_TYPE_INT || type == HELIOS_TYPE_UINT);
+                            data_type_detected = true;
+                        }
+
                         if (type == HELIOS_TYPE_FLOAT) {
                             context->getObjectData(ObjID, colorPrimitivesByObjectData.c_str(), colorValue);
                         } else if (type == HELIOS_TYPE_INT) {
@@ -270,7 +304,7 @@ void Visualizer::buildContextGeometry_private() {
         if (!colorPrimitivesByData.empty()) {
             if (colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end()) {
                 if (context->doesPrimitiveDataExist(UUID, colorPrimitivesByData.c_str())) {
-                    HeliosDataType type = context->getPrimitiveDataType(UUID, colorPrimitivesByData.c_str());
+                    HeliosDataType type = context->getPrimitiveDataType(colorPrimitivesByData.c_str());
                     if (type == HELIOS_TYPE_FLOAT) {
                         context->getPrimitiveData(UUID, colorPrimitivesByData.c_str(), colorValue);
                     } else if (type == HELIOS_TYPE_INT) {
@@ -304,7 +338,7 @@ void Visualizer::buildContextGeometry_private() {
             if (colorPrimitives_UUIDs.find(UUID) != colorPrimitives_UUIDs.end()) {
                 uint ObjID = context->getPrimitiveParentObjectID(UUID);
                 if (ObjID != 0 && context->doesObjectDataExist(ObjID, colorPrimitivesByObjectData.c_str())) {
-                    HeliosDataType type = context->getObjectDataType(ObjID, colorPrimitivesByObjectData.c_str());
+                    HeliosDataType type = context->getObjectDataType(colorPrimitivesByObjectData.c_str());
                     if (type == HELIOS_TYPE_FLOAT) {
                         context->getObjectData(ObjID, colorPrimitivesByObjectData.c_str(), colorValue);
                     } else if (type == HELIOS_TYPE_INT) {
@@ -460,6 +494,10 @@ void Visualizer::updateContextPrimitiveColors() {
         colorbar_min = (std::numeric_limits<float>::max)();
         colorbar_max = (std::numeric_limits<float>::lowest)();
 
+        // Initialize integer data flag (will be set on first data encounter)
+        colorbar_integer_data = false;
+        bool data_type_detected = false;
+
         for (auto UUID: geometry_UUIDs) {
             if (!context->doesPrimitiveExist(static_cast<uint>(UUID))) {
                 continue;
@@ -469,7 +507,14 @@ void Visualizer::updateContextPrimitiveColors() {
             if (!colorPrimitivesByData.empty()) {
                 if (colorPrimitives_UUIDs.find(static_cast<uint>(UUID)) != colorPrimitives_UUIDs.end()) {
                     if (context->doesPrimitiveDataExist(static_cast<uint>(UUID), colorPrimitivesByData.c_str())) {
-                        HeliosDataType type = context->getPrimitiveDataType(static_cast<uint>(UUID), colorPrimitivesByData.c_str());
+                        HeliosDataType type = context->getPrimitiveDataType(colorPrimitivesByData.c_str());
+
+                        // Detect data type on first encounter
+                        if (!data_type_detected) {
+                            colorbar_integer_data = (type == HELIOS_TYPE_INT || type == HELIOS_TYPE_UINT);
+                            data_type_detected = true;
+                        }
+
                         if (type == HELIOS_TYPE_FLOAT) {
                             context->getPrimitiveData(static_cast<uint>(UUID), colorPrimitivesByData.c_str(), colorValue);
                         } else if (type == HELIOS_TYPE_INT) {
@@ -495,7 +540,14 @@ void Visualizer::updateContextPrimitiveColors() {
                 if (colorPrimitives_UUIDs.find(static_cast<uint>(UUID)) != colorPrimitives_UUIDs.end()) {
                     uint ObjID = context->getPrimitiveParentObjectID(static_cast<uint>(UUID));
                     if (ObjID != 0 && context->doesObjectDataExist(ObjID, colorPrimitivesByObjectData.c_str())) {
-                        HeliosDataType type = context->getObjectDataType(ObjID, colorPrimitivesByObjectData.c_str());
+                        HeliosDataType type = context->getObjectDataType(colorPrimitivesByObjectData.c_str());
+
+                        // Detect data type on first encounter
+                        if (!data_type_detected) {
+                            colorbar_integer_data = (type == HELIOS_TYPE_INT || type == HELIOS_TYPE_UINT);
+                            data_type_detected = true;
+                        }
+
                         if (type == HELIOS_TYPE_FLOAT) {
                             context->getObjectData(ObjID, colorPrimitivesByObjectData.c_str(), colorValue);
                         } else if (type == HELIOS_TYPE_INT) {
@@ -552,7 +604,7 @@ void Visualizer::updateContextPrimitiveColors() {
             if (colorPrimitives_UUIDs.find(uid) != colorPrimitives_UUIDs.end()) {
                 float colorValue = 0.f;
                 if (context->doesPrimitiveDataExist(uid, colorPrimitivesByData.c_str())) {
-                    HeliosDataType type = context->getPrimitiveDataType(uid, colorPrimitivesByData.c_str());
+                    HeliosDataType type = context->getPrimitiveDataType(colorPrimitivesByData.c_str());
                     if (type == HELIOS_TYPE_FLOAT) {
                         context->getPrimitiveData(uid, colorPrimitivesByData.c_str(), colorValue);
                     } else if (type == HELIOS_TYPE_INT) {
@@ -589,7 +641,7 @@ void Visualizer::updateContextPrimitiveColors() {
                 float colorValue = 0.f;
                 uint ObjID = context->getPrimitiveParentObjectID(uid);
                 if (ObjID != 0 && context->doesObjectDataExist(ObjID, colorPrimitivesByObjectData.c_str())) {
-                    HeliosDataType type = context->getObjectDataType(ObjID, colorPrimitivesByObjectData.c_str());
+                    HeliosDataType type = context->getObjectDataType(colorPrimitivesByObjectData.c_str());
                     if (type == HELIOS_TYPE_FLOAT) {
                         context->getObjectData(ObjID, colorPrimitivesByObjectData.c_str(), colorValue);
                     } else if (type == HELIOS_TYPE_INT) {
@@ -753,6 +805,7 @@ void Visualizer::colorContextObjectsRandomly() {
 void Visualizer::clearColor() {
     colorPrimitivesByData = "";
     colorPrimitivesByObjectData = "";
+    colorbar_integer_data = false;
     if (!colorPrimitives_UUIDs.empty()) {
         colorPrimitives_UUIDs.clear();
     }

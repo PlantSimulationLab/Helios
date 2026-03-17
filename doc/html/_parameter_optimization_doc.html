@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Parameter Optimization Plugin Documentation</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -20,6 +21,33 @@
   DoxygenAwesomeParagraphLink.init()
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
+</script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
 </script>
 <script>
     try {
@@ -76,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -84,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.43</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -98,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -116,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -163,19 +199,120 @@ $(function(){initNavTree('_parameter_optimization_doc.html',''); initResizable(t
     <a href="#ParameterOptimizationConstructor">Class Constructor</a>
   </li>
   <li class="level1">
-    <a href="#POissues">Known Issues</a>
-  </li>
-  <li class="level1">
     <a href="#PO_Intro">Introduction</a>
   </li>
   <li class="level1">
-    <a href="#PO_Algorithm">Genetic Algorithm</a>
+    <a href="#PO_Algorithms">Optimization Algorithms</a>
+    <ul>
+      <li class="level2">
+        <a href="#PO_GA">Genetic Algorithm (GA)</a>
+      </li>
+      <li class="level2">
+        <a href="#PO_BO">Bayesian Optimization (BO)</a>
+      </li>
+      <li class="level2">
+        <a href="#PO_CMAES">CMA-ES (Covariance Matrix Adaptation Evolution Strategy)</a>
+      </li>
+    </ul>
   </li>
   <li class="level1">
-    <a href="#PO_Params">Settings</a>
+    <a href="#PO_AlgorithmSettings">Algorithm Settings</a>
+    <ul>
+      <li class="level2">
+        <a href="#PO_Settings_GA">GeneticAlgorithm</a>
+      </li>
+      <li class="level2">
+        <a href="#PO_Settings_BO">BayesianOptimization</a>
+      </li>
+      <li class="level2">
+        <a href="#PO_Settings_CMAES">CMAES</a>
+      </li>
+      <li class="level2">
+        <a href="#PO_Settings_IO">I/O Settings</a>
+      </li>
+    </ul>
+  </li>
+  <li class="level1">
+    <a href="#PO_Crossover">Crossover Operators (GA)</a>
+    <ul>
+      <li class="level2">
+        <a href="#PO_Crossover_BLXAlpha">BLXAlphaCrossover (default)</a>
+      </li>
+      <li class="level2">
+        <a href="#PO_Crossover_BLXPCA">BLXPCACrossover</a>
+      </li>
+    </ul>
+  </li>
+  <li class="level1">
+    <a href="#PO_Mutation">Mutation Operators (GA)</a>
+    <ul>
+      <li class="level2">
+        <a href="#PO_Mutation_PerGene">PerGeneMutation (default)</a>
+      </li>
+      <li class="level2">
+        <a href="#PO_Mutation_Isotropic">IsotropicMutation</a>
+      </li>
+      <li class="level2">
+        <a href="#PO_Mutation_Hybrid">HybridMutation</a>
+      </li>
+    </ul>
+  </li>
+  <li class="level1">
+    <a href="#PO_Presets">Presets</a>
+    <ul>
+      <li class="level2">
+        <a href="#PO_Presets_GA">GeneticAlgorithm Presets</a>
+      </li>
+      <li class="level2">
+        <a href="#PO_Presets_BO">BayesianOptimization Presets</a>
+      </li>
+      <li class="level2">
+        <a href="#PO_Presets_CMAES">CMAES Presets</a>
+      </li>
+    </ul>
+  </li>
+  <li class="level1">
+    <a href="#PO_ParamTypes">Parameter Types</a>
+    <ul>
+      <li class="level2">
+        <a href="#PO_ParamTypes_Float">FLOAT (default)</a>
+      </li>
+      <li class="level2">
+        <a href="#PO_ParamTypes_Integer">INTEGER (GA only)</a>
+      </li>
+      <li class="level2">
+        <a href="#PO_ParamTypes_Categorical">CATEGORICAL (GA only)</a>
+      </li>
+      <li class="level2">
+        <a href="#PO_ParamTypes_Mixed">Mixing Parameter Types</a>
+      </li>
+    </ul>
   </li>
   <li class="level1">
     <a href="#PO_Example">Examples</a>
+    <ul>
+      <li class="level2">
+        <a href="#PO_Example_Basic">Basic Example</a>
+      </li>
+      <li class="level2">
+        <a href="#PO_Example_AllAlgorithms">Comparing All Three Algorithms</a>
+      </li>
+      <li class="level2">
+        <a href="#PO_Example_Presets">Using Presets</a>
+      </li>
+      <li class="level2">
+        <a href="#PO_Example_Operators">Customizing Crossover and Mutation Operators</a>
+      </li>
+      <li class="level2">
+        <a href="#PO_Example_WarmStart">Warm-Starting from Previous Results</a>
+      </li>
+      <li class="level2">
+        <a href="#PO_Example_MixedTypes">Mixed Parameter Types (GA)</a>
+      </li>
+      <li class="level2">
+        <a href="#PO_Example_HeliosIntegration">Integration with Helios Simulations</a>
+      </li>
+    </ul>
   </li>
 </ul>
 </div>
@@ -197,98 +334,638 @@ Class Constructor</h1>
 <tr>
 <td><a class="el" href="class_parameter_optimization.html">ParameterOptimization()</a> </td></tr>
 </table>
-<h1><a class="anchor" id="POissues"></a>
-Known Issues</h1>
-<p>Currently under construction.</p>
 <h1><a class="anchor" id="PO_Intro"></a>
 Introduction</h1>
-<p>The Parameter Optimization plugin performs a genetic algorithm-based optimization on arbitrary parameters used in Helios simulations. The plugin takes in a function that defines the Helios simulation, a parameter structure that enumerates decision variables to optimize over, and a settings structure that sets algorithm options.</p>
-<h1><a class="anchor" id="PO_Algorithm"></a>
-Genetic Algorithm</h1>
-<p>The optimization procedure implemented in this plugin is a simple but robust <a href="https://www.geeksforgeeks.org/dsa/genetic-algorithms/"><b>Genetic Algorithm (GA)</b></a>. It is designed to explore the parameter space of Helios simulations to find the parameter set that <b>minimizes</b> a user-defined objective function. At a high level, the algorithm maintains a population of candidate solutions (parameter sets), which it evolves over multiple generations using biologically inspired operations:</p>
+<p>The Parameter Optimization plugin provides three optimization algorithms for tuning parameters in Helios simulations: Genetic Algorithm (GA), Bayesian Optimization (BO), and Covariance Matrix Adaptation Evolution Strategy (CMA-ES). The plugin takes a user-defined simulation function and a set of parameters to optimize, then searches the parameter space to find the parameter set that <b>minimizes</b> the objective function.</p>
+<p>Algorithm selection is done by constructing an algorithm struct and passing it to <a class="el" href="class_parameter_optimization.html#a2ebf9f48fa2c65404711080cbcf18248">ParameterOptimization::setAlgorithm()</a>. If no algorithm is set, the Genetic Algorithm with default settings is used.</p>
+<p>Each algorithm has distinct strengths and is suited to different problem types:</p><ul>
+<li><b>Genetic Algorithm (GA)</b>: Robust and simple, good for noisy or discrete problems</li>
+<li><b>Bayesian Optimization (BO)</b>: Sample-efficient, ideal for expensive simulations with smooth objective landscapes</li>
+<li><b>CMA-ES</b>: Fast convergence on smooth continuous problems, especially effective in higher dimensions</li>
+</ul>
+<h1><a class="anchor" id="PO_Algorithms"></a>
+Optimization Algorithms</h1>
+<h2><a class="anchor" id="PO_GA"></a>
+Genetic Algorithm (GA)</h2>
+<p>The Genetic Algorithm is a robust evolutionary optimization method inspired by natural selection. It is particularly well-suited for problems with noisy objective functions, discrete parameters, or multi-modal landscapes. The GA is the only algorithm in this plugin that supports integer and categorical parameter types (see <a class="el" href="#PO_ParamTypes">Parameter Types</a>).</p>
+<div class="image">
+<img src="GeneticAlgorithm.png" alt="" width="600px"/>
+</div>
+<p><b>Algorithm Overview:</b></p>
+<p>The GA maintains a population of candidate solutions (parameter sets), which it evolves over multiple generations using biologically inspired operations:</p>
 <ul>
 <li><b>Initialization</b>: A population of individuals is randomly initialized within the user-specified parameter bounds. Optionally, a known best individual can be injected from a file.</li>
 <li><b>Evaluation</b>: Each individual in the population is evaluated using the user-supplied simulation function. The function must return a single float value, interpreted as the <b>cost</b> or <b>error</b> to minimize.</li>
-<li><b>Elitism</b>: The best-performing individuals (top 5% by default) are preserved unchanged into the next generation.</li>
-<li><b>Selection</b>: Parents are selected from the population using a nonuniform random selection (tournament selection).</li>
-<li><b>Crossover (Recombination)</b>: For each child, corresponding parameters from two parents are blended using the <b>BLX-α operator</b> (Eshelman &amp; Shaffer, 1993), which samples new values uniformly from an extended range around the parent values.</li>
-<li><b>Mutation</b>: Each parameter has a probability of mutation, implemented as Gaussian noise added to the parameter value, scaled to 10% of the parameter's range.</li>
+<li><b>Elitism</b>: The best-performing individuals (configurable, default 5%) are preserved unchanged into the next generation.</li>
+<li><b>Selection</b>: Parents are selected from the population using tournament selection, where the best individual from a random subset is chosen.</li>
+<li><b>Crossover (Recombination)</b>: Two parents are blended using a configurable crossover operator (see <a class="el" href="#PO_Crossover">Crossover Operators (GA)</a>).</li>
+<li><b>Mutation</b>: Each child may be mutated using a configurable mutation operator (see <a class="el" href="#PO_Mutation">Mutation Operators (GA)</a>).</li>
 <li><b>Clamping</b>: After crossover and mutation, parameter values are clamped within the user-defined bounds to ensure validity.</li>
 <li><b>Termination</b>: The algorithm terminates after a fixed number of generations.</li>
 </ul>
-<p>This approach allows robust global optimization of parameters even when the simulation function is nonlinear, non-differentiable, or noisy.</p>
-<h1><a class="anchor" id="PO_Params"></a>
-Settings</h1>
-<p>Genetic Algorithm Settings </p><table class="markdownTable">
+<p><b>When to use GA:</b></p><ul>
+<li>When the objective function is noisy or stochastic</li>
+<li>When parameters are discrete (INTEGER or CATEGORICAL) or mixed continuous/discrete (see <a class="el" href="#PO_ParamTypes">Parameter Types</a>)</li>
+<li>When you need a robust method that makes few assumptions about the problem</li>
+<li>When the objective landscape is highly multi-modal (many local optima)</li>
+<li>When computational budget is moderate (hundreds to thousands of evaluations)</li>
+<li>When you need the only algorithm in this plugin that supports non-float parameter types</li>
+</ul>
+<h2><a class="anchor" id="PO_BO"></a>
+Bayesian Optimization (BO)</h2>
+<p>Bayesian Optimization is a sequential model-based optimization strategy designed for expensive-to-evaluate functions. It builds a probabilistic surrogate model (Gaussian Process) of the objective function and uses this model to intelligently select promising parameter sets to evaluate next.</p>
+<div class="image">
+<img src="BayesianOptimization.png" alt="" width="600px"/>
+</div>
+<p><b>Algorithm Overview:</b></p>
+<p>BO operates by maintaining a Gaussian Process (GP) model of the objective function and iteratively refining it:</p>
+<ul>
+<li><b>Initialization</b>: Initial parameter sets are sampled using Latin Hypercube Sampling (LHS) to ensure good coverage of the parameter space. The default number of initial samples is \(\max(2d, 10)\), where \(d\) is the number of parameters.</li>
+<li><b>Gaussian Process Model</b>: A GP with an RBF (Radial Basis Function) kernel is fit to all evaluated points. The GP provides both a mean prediction (expected objective value) and uncertainty estimate (standard deviation) at any point in the parameter space.</li>
+<li><b>Hyperparameter Optimization</b>: The GP kernel hyperparameters (length scale, signal variance, noise variance) are optimized via maximum likelihood estimation to best fit the observed data.</li>
+<li><b>Acquisition Function</b>: The Upper Confidence Bound (UCB) acquisition function is used to balance exploration (sampling uncertain regions) and exploitation (sampling near known good solutions): \(\text{UCB}(x) = -\mu(x) + \kappa\sigma(x)\), where \(\mu(x)\) is the GP mean, \(\sigma(x)\) is the GP standard deviation, and \(\kappa\) controls exploration.</li>
+<li><b>Next Sample Selection</b>: The acquisition function is optimized over random candidate points to select the most promising parameter set to evaluate next.</li>
+<li><b>Termination</b>: The algorithm terminates after reaching the maximum number of evaluations.</li>
+</ul>
+<p>The key advantage of BO is its sample efficiency &ndash; it can often find good solutions with far fewer evaluations than population-based methods.</p>
+<p><b>When to use BO:</b></p><ul>
+<li>When each simulation evaluation is very expensive (minutes to hours)</li>
+<li>When you have a limited evaluation budget (tens to hundreds of evaluations)</li>
+<li>When the objective function is smooth and continuous</li>
+<li>When the number of parameters is small to moderate (typically d &lt; 20)</li>
+<li>When you want to incorporate prior knowledge or warm-start from previous runs</li>
+<li>When you need uncertainty quantification of the optimal solution</li>
+</ul>
+<dl class="section note"><dt>Note</dt><dd>BO only supports FLOAT parameters. For discrete (INTEGER or CATEGORICAL) parameters, use the Genetic Algorithm.</dd></dl>
+<h2><a class="anchor" id="PO_CMAES"></a>
+CMA-ES (Covariance Matrix Adaptation Evolution Strategy)</h2>
+<p>CMA-ES is a state-of-the-art evolutionary algorithm for continuous optimization. It adapts a full covariance matrix to learn the shape of the objective landscape, allowing it to efficiently navigate ill-conditioned or non-separable problems.</p>
+<div class="image">
+<img src="CMA-ES.png" alt="" width="600px"/>
+</div>
+<p><b>Algorithm Overview:</b></p>
+<p>CMA-ES operates by maintaining and adapting a multivariate normal distribution over the parameter space, based on Hansen &amp; Ostermeier (2001):</p>
+<ul>
+<li><b>Initialization</b>: The search distribution is initialized with mean at the center of the parameter bounds (or at the provided initial guess) and an isotropic covariance matrix with step-size \(\sigma\) (default 0.3).</li>
+<li><b>Sampling</b>: In each generation, \(\lambda\) offspring are sampled from the current distribution: \(x_i \sim \mathcal{N}(m, \sigma^2 C)\), where \(m\) is the mean, \(C\) is the covariance matrix, and \(\sigma\) is the global step-size. The population size \(\lambda\) is automatically set to \(4 + \lfloor 3\ln(d)\rfloor\) where \(d\) is the number of parameters.</li>
+<li><b>Selection</b>: The top \(\mu = \lambda/2\) individuals are selected to update the distribution.</li>
+<li><b>Mean Update</b>: The mean is moved toward the weighted average of the selected individuals.</li>
+<li><b>Step-Size Adaptation</b>: The global step-size \(\sigma\) is adapted using the cumulative step-size adaptation (CSA) mechanism, which increases \(\sigma\) when consecutive steps are correlated and decreases it when they are anti-correlated.</li>
+<li><b>Covariance Matrix Adaptation</b>: The covariance matrix \(C\) is updated using a combination of rank-one and rank- \(\mu\) updates, learning the shape and orientation of the objective landscape.</li>
+<li><b>Termination</b>: The algorithm terminates after reaching the maximum number of evaluations.</li>
+</ul>
+<p>CMA-ES is particularly powerful because it learns the problem structure on-the-fly, automatically adapting to elongated valleys, rotated landscapes, and parameter dependencies.</p>
+<p><b>When to use CMA-ES:</b></p><ul>
+<li>When the objective function is smooth and continuous</li>
+<li>When the problem is ill-conditioned (parameters have vastly different sensitivities)</li>
+<li>When parameters are correlated or the problem is non-separable</li>
+<li>When you have a moderate to large evaluation budget (hundreds to thousands of evaluations)</li>
+<li>When the objective landscape has elongated valleys or ridges</li>
+<li>When you need fast, reliable convergence on continuous problems</li>
+<li>When problem dimensionality is moderate (works well up to d ~ 50-100)</li>
+</ul>
+<dl class="section note"><dt>Note</dt><dd>CMA-ES only supports FLOAT parameters. For discrete (INTEGER or CATEGORICAL) parameters, use the Genetic Algorithm.</dd></dl>
+<h1><a class="anchor" id="PO_AlgorithmSettings"></a>
+Algorithm Settings</h1>
+<p>Each optimization algorithm has its own settings struct. To select an algorithm, construct the struct, set any desired fields, and pass it to <a class="el" href="class_parameter_optimization.html#a2ebf9f48fa2c65404711080cbcf18248">ParameterOptimization::setAlgorithm()</a>. If <a class="el" href="class_parameter_optimization.html#a2ebf9f48fa2c65404711080cbcf18248">ParameterOptimization::setAlgorithm()</a> is never called, the Genetic Algorithm with default settings is used.</p>
+<h2><a class="anchor" id="PO_Settings_GA"></a>
+GeneticAlgorithm</h2>
+<table class="markdownTable">
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">Parameter   </th><th class="markdownTableHeadNone">Description   </th><th class="markdownTableHeadNone">Default Value    </th></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">Generations   </td><td class="markdownTableBodyNone">number of iterations the algorithm is run for   </td><td class="markdownTableBodyNone">100    </td></tr>
+<td class="markdownTableBodyNone">generations   </td><td class="markdownTableBodyNone">Number of generations to run   </td><td class="markdownTableBodyNone">100    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">Population Size   </td><td class="markdownTableBodyNone">number of individuals used to explore the objective function space   </td><td class="markdownTableBodyNone">100    </td></tr>
+<td class="markdownTableBodyNone">population_size   </td><td class="markdownTableBodyNone">Number of individuals in the population   </td><td class="markdownTableBodyNone">20    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">Elitism Rate   </td><td class="markdownTableBodyNone">fraction of best-performing individuals to be preserved unchanged into the next generation   </td><td class="markdownTableBodyNone">0.05    </td></tr>
+<td class="markdownTableBodyNone">crossover_rate   </td><td class="markdownTableBodyNone">Probability of crossover (blending) between parent parameters   </td><td class="markdownTableBodyNone">0.5    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">Crossover Rate   </td><td class="markdownTableBodyNone">fraction of cross-over, or mixing, of the parameters of parent individuals   </td><td class="markdownTableBodyNone">0.5    </td></tr>
+<td class="markdownTableBodyNone">elitism_rate   </td><td class="markdownTableBodyNone">Fraction of best individuals preserved unchanged to next generation   </td><td class="markdownTableBodyNone">0.05    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">Mutation Rate   </td><td class="markdownTableBodyNone">probability of mutation, or perturbation, of the parameters of generated child individuals   </td><td class="markdownTableBodyNone">0.1   </td></tr>
+<td class="markdownTableBodyNone">crossover   </td><td class="markdownTableBodyNone">Crossover operator selection (see <a class="el" href="#PO_Crossover">Crossover Operators (GA)</a>)   </td><td class="markdownTableBodyNone">BLXAlphaCrossover{}    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">mutation   </td><td class="markdownTableBodyNone">Mutation operator selection (see <a class="el" href="#PO_Mutation">Mutation Operators (GA)</a>)   </td><td class="markdownTableBodyNone">PerGeneMutation{}   </td></tr>
 </table>
-<h1><a class="anchor" id="PO_Example"></a>
+<div class="fragment"><div class="line"><a class="code hl_struct" href="struct_genetic_algorithm.html" title="Genetic Algorithm settings.">GeneticAlgorithm</a> ga;</div>
+<div class="line">ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#ac1c849870d128355b0ba1c7a18eff3ab" title="Number of generations to run.">generations</a> = 200;</div>
+<div class="line">ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#a40ce26da16cf975a63b8b19431aaaa76" title="Size of the population.">population_size</a> = 50;</div>
+<div class="line">ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#ad2dd243516636bcec5fd736abd51c829" title="Probability of crossover.">crossover_rate</a> = 0.8f;</div>
+<div class="line">ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#a1d1545d0a85d5f989aff84cd29952428" title="Fraction of top individuals kept in next generation.">elitism_rate</a> = 0.1f;</div>
+<div class="line"> </div>
+<div class="line"><a class="code hl_class" href="class_parameter_optimization.html" title="Parameter optimization routines.">ParameterOptimization</a> popt;</div>
+<div class="line">popt.<a class="code hl_function" href="class_parameter_optimization.html#a2ebf9f48fa2c65404711080cbcf18248" title="Select the Genetic Algorithm for optimization.">setAlgorithm</a>(ga);</div>
+</div><!-- fragment --><h2><a class="anchor" id="PO_Settings_BO"></a>
+BayesianOptimization</h2>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Parameter   </th><th class="markdownTableHeadNone">Description   </th><th class="markdownTableHeadNone">Default Value    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">max_evaluations   </td><td class="markdownTableBodyNone">Total number of function evaluations   </td><td class="markdownTableBodyNone">100    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">initial_samples   </td><td class="markdownTableBodyNone">Number of initial random samples before GP-guided search. 0 = auto: max(2d, 10)   </td><td class="markdownTableBodyNone">0 (auto)    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">ucb_kappa   </td><td class="markdownTableBodyNone">Exploration parameter for UCB acquisition function. Higher values favor exploration   </td><td class="markdownTableBodyNone">2.0    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">max_gp_samples   </td><td class="markdownTableBodyNone">Maximum samples retained in GP model (for memory efficiency)   </td><td class="markdownTableBodyNone">200    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">acquisition_samples   </td><td class="markdownTableBodyNone">Number of random candidates evaluated when optimizing acquisition function   </td><td class="markdownTableBodyNone">1000   </td></tr>
+</table>
+<div class="fragment"><div class="line"><a class="code hl_struct" href="struct_bayesian_optimization.html" title="Bayesian Optimization settings using Gaussian Process.">BayesianOptimization</a> bo;</div>
+<div class="line">bo.<a class="code hl_variable" href="struct_bayesian_optimization.html#aec15f2e991b18941fce5149dfff83970" title="Total number of function evaluations.">max_evaluations</a> = 150;</div>
+<div class="line">bo.<a class="code hl_variable" href="struct_bayesian_optimization.html#a80346ec3996dd27982303f345bc421a4" title="Exploration parameter for UCB acquisition (higher = more exploration)">ucb_kappa</a> = 3.0f;</div>
+<div class="line"> </div>
+<div class="line"><a class="code hl_class" href="class_parameter_optimization.html" title="Parameter optimization routines.">ParameterOptimization</a> popt;</div>
+<div class="line">popt.<a class="code hl_function" href="class_parameter_optimization.html#a2ebf9f48fa2c65404711080cbcf18248" title="Select the Genetic Algorithm for optimization.">setAlgorithm</a>(bo);</div>
+</div><!-- fragment --><h2><a class="anchor" id="PO_Settings_CMAES"></a>
+CMAES</h2>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Parameter   </th><th class="markdownTableHeadNone">Description   </th><th class="markdownTableHeadNone">Default Value    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">max_evaluations   </td><td class="markdownTableBodyNone">Total number of function evaluations   </td><td class="markdownTableBodyNone">200    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">lambda   </td><td class="markdownTableBodyNone">Population size (number of offspring per generation). 0 = auto: 4 + floor(3*ln(d))   </td><td class="markdownTableBodyNone">0 (auto)    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">sigma   </td><td class="markdownTableBodyNone">Initial step-size controlling search radius. Typical values: 0.2-0.5   </td><td class="markdownTableBodyNone">0.3   </td></tr>
+</table>
+<div class="fragment"><div class="line"><a class="code hl_struct" href="struct_c_m_a_e_s.html" title="Covariance Matrix Adaptation Evolution Strategy settings.">CMAES</a> cmaes;</div>
+<div class="line">cmaes.<a class="code hl_variable" href="struct_c_m_a_e_s.html#a24cb0dfd0d00d17dfeec23fc081c8919" title="Total number of function evaluations.">max_evaluations</a> = 500;</div>
+<div class="line">cmaes.<a class="code hl_variable" href="struct_c_m_a_e_s.html#a418e84b339c143bd7e5fe8e05f303458" title="Initial step size (typical: 0.3)">sigma</a> = 0.5f;</div>
+<div class="line"> </div>
+<div class="line"><a class="code hl_class" href="class_parameter_optimization.html" title="Parameter optimization routines.">ParameterOptimization</a> popt;</div>
+<div class="line">popt.<a class="code hl_function" href="class_parameter_optimization.html#a2ebf9f48fa2c65404711080cbcf18248" title="Select the Genetic Algorithm for optimization.">setAlgorithm</a>(cmaes);</div>
+</div><!-- fragment --><h2><a class="anchor" id="PO_Settings_IO"></a>
+I/O Settings</h2>
+<p>I/O configuration is set directly on the <a class="el" href="class_parameter_optimization.html">ParameterOptimization</a> object, not on the algorithm struct.</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Parameter   </th><th class="markdownTableHeadNone">Description   </th><th class="markdownTableHeadNone">Default Value    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">print_progress   </td><td class="markdownTableBodyNone">Enable/disable progress output to console during optimization   </td><td class="markdownTableBodyNone">false    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">write_progress_to_file   </td><td class="markdownTableBodyNone">Filename to write iteration-by-iteration progress (CSV format). Empty string disables   </td><td class="markdownTableBodyNone">""    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">write_result_to_file   </td><td class="markdownTableBodyNone">Filename to write final optimized parameters. Empty string disables   </td><td class="markdownTableBodyNone">""    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">read_input_from_file   </td><td class="markdownTableBodyNone">Filename to read initial parameter guess from (for warm-starting). Empty string starts from random   </td><td class="markdownTableBodyNone">""   </td></tr>
+</table>
+<div class="fragment"><div class="line"><a class="code hl_class" href="class_parameter_optimization.html" title="Parameter optimization routines.">ParameterOptimization</a> popt;</div>
+<div class="line">popt.<a class="code hl_variable" href="class_parameter_optimization.html#ad50d214b9a6f3fb68a3af50eb9d9d9af" title="I/O configuration.">print_progress</a> = <span class="keyword">true</span>;</div>
+<div class="line">popt.<a class="code hl_variable" href="class_parameter_optimization.html#a1352b6530bbb32dc5a6964bd05bb3a78" title="Name of file to write final result to, skips writing if empty.">write_result_to_file</a> = <span class="stringliteral">&quot;result.txt&quot;</span>;</div>
+<div class="line">popt.<a class="code hl_variable" href="class_parameter_optimization.html#a6b04a0c2794de2df6c5319ae22b51f0c" title="Name of file to write progress to, skips writing if empty.">write_progress_to_file</a> = <span class="stringliteral">&quot;progress.csv&quot;</span>;</div>
+<div class="line">popt.<a class="code hl_variable" href="class_parameter_optimization.html#a5a7df98e549e81acab15cff5afb34121" title="Name of file to read parameter set in from, ignores if empty.">read_input_from_file</a> = <span class="stringliteral">&quot;initial_guess.txt&quot;</span>;</div>
+</div><!-- fragment --><h1><a class="anchor" id="PO_Crossover"></a>
+Crossover Operators (GA)</h1>
+<p>The GA supports multiple crossover operators, selected by assigning a crossover struct to the <a class="el" href="struct_genetic_algorithm.html#af48fac0a2505a513d3ac0d65c71c891a">GeneticAlgorithm::crossover</a> field. Each struct carries its own parameters.</p>
+<h2><a class="anchor" id="PO_Crossover_BLXAlpha"></a>
+BLXAlphaCrossover (default)</h2>
+<p>Standard component-wise BLX-alpha crossover (Eshelman &amp; Shaffer, 1993). For each parameter, the child value is sampled uniformly from an extended range around the two parent values.</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Parameter   </th><th class="markdownTableHeadNone">Description   </th><th class="markdownTableHeadNone">Default Value    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">alpha   </td><td class="markdownTableBodyNone">Blend parameter controlling how far beyond parent values the child can be sampled   </td><td class="markdownTableBodyNone">0.5   </td></tr>
+</table>
+<div class="fragment"><div class="line"><a class="code hl_struct" href="struct_genetic_algorithm.html" title="Genetic Algorithm settings.">GeneticAlgorithm</a> ga;</div>
+<div class="line">ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#af48fac0a2505a513d3ac0d65c71c891a" title="Crossover operator selection (default: BLX-alpha)">crossover</a> = <a class="code hl_struct" href="struct_b_l_x_alpha_crossover.html" title="Standard component-wise blend crossover.">BLXAlphaCrossover</a>{ .alpha = 0.3f };</div>
+</div><!-- fragment --><h2><a class="anchor" id="PO_Crossover_BLXPCA"></a>
+BLXPCACrossover</h2>
+<p>BLX-alpha crossover performed in PCA-transformed space. The population is projected into principal component space before blending, which better handles non-separable problems where parameters are correlated.</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Parameter   </th><th class="markdownTableHeadNone">Description   </th><th class="markdownTableHeadNone">Default Value    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">alpha   </td><td class="markdownTableBodyNone">Blend parameter controlling extrapolation range   </td><td class="markdownTableBodyNone">0.5    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">pca_update_interval   </td><td class="markdownTableBodyNone">Number of generations between PCA basis recomputation   </td><td class="markdownTableBodyNone">5   </td></tr>
+</table>
+<div class="fragment"><div class="line"><a class="code hl_struct" href="struct_genetic_algorithm.html" title="Genetic Algorithm settings.">GeneticAlgorithm</a> ga;</div>
+<div class="line">ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#af48fac0a2505a513d3ac0d65c71c891a" title="Crossover operator selection (default: BLX-alpha)">crossover</a> = <a class="code hl_struct" href="struct_b_l_x_p_c_a_crossover.html" title="BLX-alpha in PCA-transformed space (better for non-separable problems)">BLXPCACrossover</a>{ .alpha = 0.5f, .pca_update_interval = 10 };</div>
+</div><!-- fragment --><h1><a class="anchor" id="PO_Mutation"></a>
+Mutation Operators (GA)</h1>
+<p>The GA supports multiple mutation operators, selected by assigning a mutation struct to the <a class="el" href="struct_genetic_algorithm.html#ae29300cfb06d6414871bcc6848a7ff8f">GeneticAlgorithm::mutation</a> field.</p>
+<h2><a class="anchor" id="PO_Mutation_PerGene"></a>
+PerGeneMutation (default)</h2>
+<p>Standard per-gene Gaussian mutation. Each parameter is independently mutated with a given probability. The perturbation is Gaussian noise scaled to 10% of the parameter's range.</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Parameter   </th><th class="markdownTableHeadNone">Description   </th><th class="markdownTableHeadNone">Default Value    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">rate   </td><td class="markdownTableBodyNone">Per-gene mutation probability   </td><td class="markdownTableBodyNone">0.1   </td></tr>
+</table>
+<div class="fragment"><div class="line"><a class="code hl_struct" href="struct_genetic_algorithm.html" title="Genetic Algorithm settings.">GeneticAlgorithm</a> ga;</div>
+<div class="line">ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#ae29300cfb06d6414871bcc6848a7ff8f" title="Mutation operator selection (default: per-gene)">mutation</a> = <a class="code hl_struct" href="struct_per_gene_mutation.html" title="Standard per-gene Gaussian mutation (axis-aligned, default)">PerGeneMutation</a>{ .rate = 0.05f };</div>
+</div><!-- fragment --><h2><a class="anchor" id="PO_Mutation_Isotropic"></a>
+IsotropicMutation</h2>
+<p>Single-gate isotropic Gaussian mutation. A single coin flip determines whether the entire individual is mutated. If triggered, all genes are perturbed simultaneously with correlated Gaussian noise.</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Parameter   </th><th class="markdownTableHeadNone">Description   </th><th class="markdownTableHeadNone">Default Value    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">rate   </td><td class="markdownTableBodyNone">Mutation gate probability (probability of mutating the individual)   </td><td class="markdownTableBodyNone">0.1   </td></tr>
+</table>
+<div class="fragment"><div class="line"><a class="code hl_struct" href="struct_genetic_algorithm.html" title="Genetic Algorithm settings.">GeneticAlgorithm</a> ga;</div>
+<div class="line">ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#ae29300cfb06d6414871bcc6848a7ff8f" title="Mutation operator selection (default: per-gene)">mutation</a> = <a class="code hl_struct" href="struct_isotropic_mutation.html" title="Single-gate isotropic Gaussian mutation (all genes mutated together)">IsotropicMutation</a>{ .rate = 0.15f };</div>
+</div><!-- fragment --><h2><a class="anchor" id="PO_Mutation_Hybrid"></a>
+HybridMutation</h2>
+<p>A multi-strategy hybrid mutation combining three sub-strategies: PCA-Gaussian, PCA-Cauchy, and random direction. This operator is most useful for complex, non-separable landscapes where axis-aligned mutations are inefficient.</p>
+<p>The sub-strategies are selected probabilistically:</p><ul>
+<li><b>PCA-Gaussian</b>: Perturbation along a principal component axis with Gaussian step size.</li>
+<li><b>PCA-Cauchy</b>: Perturbation along a principal component axis with Cauchy step size (heavier tails for occasional large jumps).</li>
+<li><b>Random Direction</b>: Perturbation in a uniformly random direction, unrelated to the PCA basis.</li>
+</ul>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Parameter   </th><th class="markdownTableHeadNone">Description   </th><th class="markdownTableHeadNone">Default Value    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">rate   </td><td class="markdownTableBodyNone">Mutation gate probability   </td><td class="markdownTableBodyNone">0.15    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">pca_update_interval   </td><td class="markdownTableBodyNone">Generations between PCA recomputation   </td><td class="markdownTableBodyNone">5    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">sigma_pca   </td><td class="markdownTableBodyNone">PCA-Gaussian sigma in whitened space   </td><td class="markdownTableBodyNone">0.25    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">gamma_cauchy   </td><td class="markdownTableBodyNone">PCA-Cauchy scale parameter   </td><td class="markdownTableBodyNone">0.1    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">sigma_random   </td><td class="markdownTableBodyNone">Random direction step size as fraction of average parameter range   </td><td class="markdownTableBodyNone">0.3    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">pca_gaussian_prob   </td><td class="markdownTableBodyNone">Probability of selecting the PCA-Gaussian sub-strategy   </td><td class="markdownTableBodyNone">0.70    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">pca_cauchy_prob   </td><td class="markdownTableBodyNone">Probability of selecting the PCA-Cauchy sub-strategy   </td><td class="markdownTableBodyNone">0.20   </td></tr>
+</table>
+<p>The remaining probability (1 - pca_gaussian_prob - pca_cauchy_prob) is allocated to the random direction sub-strategy.</p>
+<div class="fragment"><div class="line"><a class="code hl_struct" href="struct_genetic_algorithm.html" title="Genetic Algorithm settings.">GeneticAlgorithm</a> ga;</div>
+<div class="line"><a class="code hl_struct" href="struct_hybrid_mutation.html" title="PCA-Gaussian + PCA-Cauchy + Random Direction hybrid mutation.">HybridMutation</a> hm;</div>
+<div class="line">hm.<a class="code hl_variable" href="struct_hybrid_mutation.html#a0a46de8cfc6c338ed95c9c29c74d51b8" title="Mutation gate probability.">rate</a> = 0.2f;</div>
+<div class="line">hm.<a class="code hl_variable" href="struct_hybrid_mutation.html#ac1a9910b642150dd58e04df21425b933" title="PCA-Gaussian sigma in whitened space.">sigma_pca</a> = 0.3f;</div>
+<div class="line">hm.<a class="code hl_variable" href="struct_hybrid_mutation.html#ae4ade4da7645658efa82b37bda8bbe45" title="Probability of PCA-Gaussian sub-strategy.">pca_gaussian_prob</a> = 0.60f;</div>
+<div class="line">hm.<a class="code hl_variable" href="struct_hybrid_mutation.html#aff4ceaa65e6a0edb3753689279d1981e" title="Probability of PCA-Cauchy sub-strategy.">pca_cauchy_prob</a> = 0.25f;</div>
+<div class="line">ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#ae29300cfb06d6414871bcc6848a7ff8f" title="Mutation operator selection (default: per-gene)">mutation</a> = hm;</div>
+</div><!-- fragment --><h1><a class="anchor" id="PO_Presets"></a>
+Presets</h1>
+<p>Each algorithm struct provides static factory methods that return pre-configured instances biased toward either exploration (broad search) or exploitation (refining near a known good solution).</p>
+<h2><a class="anchor" id="PO_Presets_GA"></a>
+GeneticAlgorithm Presets</h2>
+<p><b>GeneticAlgorithm::explore()</b></p><ul>
+<li>generations = 200, population_size = 40, crossover_rate = 0.9</li>
+<li>elitism_rate = 0.02</li>
+<li>crossover = BLXPCACrossover{}, mutation = HybridMutation{ rate=0.20, pca_gaussian_prob=0.50, pca_cauchy_prob=0.35 }</li>
+</ul>
+<p><b>GeneticAlgorithm::exploit()</b></p><ul>
+<li>generations = 100, population_size = 30, crossover_rate = 0.7</li>
+<li>elitism_rate = 0.15</li>
+<li>crossover = BLXPCACrossover{}, mutation = PerGeneMutation{ rate=0.05 }</li>
+</ul>
+<div class="fragment"><div class="line"><a class="code hl_class" href="class_parameter_optimization.html" title="Parameter optimization routines.">ParameterOptimization</a> popt;</div>
+<div class="line">popt.<a class="code hl_function" href="class_parameter_optimization.html#a2ebf9f48fa2c65404711080cbcf18248" title="Select the Genetic Algorithm for optimization.">setAlgorithm</a>(<a class="code hl_function" href="struct_genetic_algorithm.html#aa0579d3c097c0cadedb8e4cb7dc2baf6" title="Exploration-biased preset (large population, high mutation, BLXPCA + HYBRID)">GeneticAlgorithm::explore</a>());</div>
+<div class="line"><span class="keyword">auto</span> result = popt.<a class="code hl_function" href="class_parameter_optimization.html#ac297d4e47978ee6a2492588d88def313" title="Run the optimization with stored algorithm settings.">run</a>(sim, params);</div>
+</div><!-- fragment --><h2><a class="anchor" id="PO_Presets_BO"></a>
+BayesianOptimization Presets</h2>
+<p><b>BayesianOptimization::explore()</b></p><ul>
+<li>max_evaluations = 200, ucb_kappa = 4.0, acquisition_samples = 2000</li>
+</ul>
+<p><b>BayesianOptimization::exploit()</b></p><ul>
+<li>max_evaluations = 100, ucb_kappa = 0.5, acquisition_samples = 2000</li>
+</ul>
+<div class="fragment"><div class="line"><a class="code hl_class" href="class_parameter_optimization.html" title="Parameter optimization routines.">ParameterOptimization</a> popt;</div>
+<div class="line">popt.<a class="code hl_function" href="class_parameter_optimization.html#a2ebf9f48fa2c65404711080cbcf18248" title="Select the Genetic Algorithm for optimization.">setAlgorithm</a>(<a class="code hl_function" href="struct_bayesian_optimization.html#af44b4f9b3b33e79cbc4403c9dd10da55" title="Exploitation-biased preset (low kappa)">BayesianOptimization::exploit</a>());</div>
+<div class="line"><span class="keyword">auto</span> result = popt.<a class="code hl_function" href="class_parameter_optimization.html#ac297d4e47978ee6a2492588d88def313" title="Run the optimization with stored algorithm settings.">run</a>(sim, params);</div>
+</div><!-- fragment --><h2><a class="anchor" id="PO_Presets_CMAES"></a>
+CMAES Presets</h2>
+<p><b>CMAES::explore()</b></p><ul>
+<li>max_evaluations = 300, sigma = 0.5</li>
+</ul>
+<p><b>CMAES::exploit()</b></p><ul>
+<li>max_evaluations = 100, sigma = 0.1</li>
+</ul>
+<div class="fragment"><div class="line"><a class="code hl_class" href="class_parameter_optimization.html" title="Parameter optimization routines.">ParameterOptimization</a> popt;</div>
+<div class="line">popt.<a class="code hl_function" href="class_parameter_optimization.html#a2ebf9f48fa2c65404711080cbcf18248" title="Select the Genetic Algorithm for optimization.">setAlgorithm</a>(<a class="code hl_function" href="struct_c_m_a_e_s.html#aecf3447ecba9e176b2ad7756008d43d8" title="Exploration-biased preset (large sigma)">CMAES::explore</a>());</div>
+<div class="line"><span class="keyword">auto</span> result = popt.<a class="code hl_function" href="class_parameter_optimization.html#ac297d4e47978ee6a2492588d88def313" title="Run the optimization with stored algorithm settings.">run</a>(sim, params);</div>
+</div><!-- fragment --><h1><a class="anchor" id="PO_ParamTypes"></a>
+Parameter Types</h1>
+<p>Each parameter in a <a class="el" href="struct_parameter_to_optimize.html">ParameterToOptimize</a> struct has a <a class="el" href="_parameter_optimization_8h.html#a4d63980e4031b0fc366e623868b27ed0">ParameterType</a> that controls how the optimization algorithms handle it. By default, parameters are continuous floats. The GA also supports integer and categorical parameter types, enabling mixed continuous/discrete optimization.</p>
+<h2><a class="anchor" id="PO_ParamTypes_Float"></a>
+FLOAT (default)</h2>
+<p>Continuous float parameters. All three optimization algorithms (GA, BO, CMA-ES) support this type.</p>
+<div class="fragment"><div class="line"><span class="comment">// FLOAT is the default -- no type field needed</span></div>
+<div class="line"><a class="code hl_typedef" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078" title="Convenience typedef for a list of parameters to optimize.">ParametersToOptimize</a> params = {</div>
+<div class="line">    {<span class="stringliteral">&quot;temperature&quot;</span>, {25.f, 0.f, 100.f}},</div>
+<div class="line">    {<span class="stringliteral">&quot;pressure&quot;</span>,    {1.0f, 0.5f, 2.0f}}</div>
+<div class="line">};</div>
+</div><!-- fragment --><h2><a class="anchor" id="PO_ParamTypes_Integer"></a>
+INTEGER (GA only)</h2>
+<p>Integer parameters are rounded to the nearest whole number at every stage of the GA (initialization, crossover, mutation, clamping). This ensures the simulation function always receives integer values.</p>
+<p>Requirements:**</p><ul>
+<li><code>min</code> and <code>max</code> must be integer-valued (e.g., <code>1.f</code>, not <code>1.5f</code>). Non-integer bounds will throw a <code>std::runtime_error</code>.</li>
+<li>Only supported by the Genetic Algorithm. Using INTEGER parameters with BO or CMA-ES will have no effect (they will be treated as floats).</li>
+</ul>
+<div class="fragment"><div class="line"><a class="code hl_typedef" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078" title="Convenience typedef for a list of parameters to optimize.">ParametersToOptimize</a> params = {</div>
+<div class="line">    {<span class="stringliteral">&quot;num_layers&quot;</span>, {3.f, 1.f, 10.f, <a class="code hl_enumvalue" href="_parameter_optimization_8h.html#a4d63980e4031b0fc366e623868b27ed0a5d5cd46919fa987731fb2edefe0f2a0c" title="Integer parameter (rounded to nearest whole number)">ParameterType::INTEGER</a>}}</div>
+<div class="line">};</div>
+</div><!-- fragment --><h2><a class="anchor" id="PO_ParamTypes_Categorical"></a>
+CATEGORICAL (GA only)</h2>
+<p>Categorical parameters are restricted to a fixed set of allowed values. The GA uses uniform crossover (randomly picking one parent's value) and uniform mutation (randomly picking from the allowed set) instead of the continuous BLX-alpha and Gaussian operators.</p>
+<p>Requirements:**</p><ul>
+<li>The <code>categories</code> vector must be non-empty. An empty vector will throw a <code>std::runtime_error</code>.</li>
+<li>The <code>min</code> and <code>max</code> fields are ignored for categorical parameters (set to any value).</li>
+<li>Only supported by the Genetic Algorithm.</li>
+</ul>
+<div class="fragment"><div class="line"><a class="code hl_typedef" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078" title="Convenience typedef for a list of parameters to optimize.">ParametersToOptimize</a> params = {</div>
+<div class="line">    {<span class="stringliteral">&quot;method&quot;</span>, {0.5f, 0.f, 0.f, <a class="code hl_enumvalue" href="_parameter_optimization_8h.html#a4d63980e4031b0fc366e623868b27ed0ae241b6ca066a95a0505c570cc2f23467" title="Categorical parameter (picks from a set of allowed values)">ParameterType::CATEGORICAL</a>, {0.5f, 1.7f, 3.14f, 7.2f}}}</div>
+<div class="line">};</div>
+</div><!-- fragment --><h2><a class="anchor" id="PO_ParamTypes_Mixed"></a>
+Mixing Parameter Types</h2>
+<p>The GA supports any combination of FLOAT, INTEGER, and CATEGORICAL parameters in a single optimization run. Each parameter is handled according to its own type.</p>
+<div class="fragment"><div class="line"><a class="code hl_typedef" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078" title="Convenience typedef for a list of parameters to optimize.">ParametersToOptimize</a> params = {</div>
+<div class="line">    {<span class="stringliteral">&quot;leaf_angle&quot;</span>,  {45.f, 0.f, 90.f}},                                                     <span class="comment">// FLOAT (default)</span></div>
+<div class="line">    {<span class="stringliteral">&quot;num_layers&quot;</span>,  {3.f, 1.f, 10.f, <a class="code hl_enumvalue" href="_parameter_optimization_8h.html#a4d63980e4031b0fc366e623868b27ed0a5d5cd46919fa987731fb2edefe0f2a0c" title="Integer parameter (rounded to nearest whole number)">ParameterType::INTEGER</a>}},                               <span class="comment">// INTEGER</span></div>
+<div class="line">    {<span class="stringliteral">&quot;canopy_type&quot;</span>, {1.f, 0.f, 0.f, <a class="code hl_enumvalue" href="_parameter_optimization_8h.html#a4d63980e4031b0fc366e623868b27ed0ae241b6ca066a95a0505c570cc2f23467" title="Categorical parameter (picks from a set of allowed values)">ParameterType::CATEGORICAL</a>, {1.f, 2.f, 3.f, 4.f}}}     <span class="comment">// CATEGORICAL</span></div>
+<div class="line">};</div>
+</div><!-- fragment --><h1><a class="anchor" id="PO_Example"></a>
 Examples</h1>
-<p>A minimal working example is given below.</p>
+<h2><a class="anchor" id="PO_Example_Basic"></a>
+Basic Example</h2>
+<p>A minimal working example using the default Genetic Algorithm to optimize four parameters toward known target values.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_parameter_optimization_8h.html">ParameterOptimization.h</a>&quot;</span></div>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
 <div class="line"> </div>
-<div class="line"><span class="comment">// Define a function that contains any ordinary C++ or Helios simulation code and computes a singular float to minimize</span></div>
-<div class="line"><span class="comment">// Here, we attempt to minimize the error, or distance, from known parameter values</span></div>
+<div class="line"><span class="comment">// Define a simulation function that returns a scalar cost to minimize</span></div>
 <div class="line"><span class="keywordtype">float</span> sim(<span class="keyword">const</span> <a class="code hl_typedef" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078" title="Convenience typedef for a list of parameters to optimize.">ParametersToOptimize</a>&amp; p) {</div>
 <div class="line">    <span class="keywordtype">float</span> error = 0.0f;</div>
-<div class="line"> </div>
 <div class="line">    error += std::fabs(p.at(<span class="stringliteral">&quot;Em_BMF&quot;</span>).value - 5.f);</div>
 <div class="line">    error += std::fabs(p.at(<span class="stringliteral">&quot;i0_BMF&quot;</span>).value - 100.f);</div>
 <div class="line">    error += std::fabs(p.at(<span class="stringliteral">&quot;k_BMF&quot;</span>).value - 1000.f);</div>
 <div class="line">    error += std::fabs(p.at(<span class="stringliteral">&quot;b_BMF&quot;</span>).value - 7.f);</div>
+<div class="line">    <span class="keywordflow">return</span> error;</div>
+<div class="line">}</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main() {</div>
+<div class="line">    <span class="comment">// Initialize the optimizer (uses GA with defaults if setAlgorithm is not called)</span></div>
+<div class="line">    <a class="code hl_class" href="class_parameter_optimization.html" title="Parameter optimization routines.">ParameterOptimization</a> popt;</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// Define parameters: {&quot;name&quot;, {initial_value, min, max}}</span></div>
+<div class="line">    <a class="code hl_typedef" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078" title="Convenience typedef for a list of parameters to optimize.">ParametersToOptimize</a> params = {</div>
+<div class="line">        {<span class="stringliteral">&quot;Em_BMF&quot;</span>, {10, 0, 100}},</div>
+<div class="line">        {<span class="stringliteral">&quot;i0_BMF&quot;</span>, {10, 0, 1000}},</div>
+<div class="line">        {<span class="stringliteral">&quot;k_BMF&quot;</span>,  {1e5, 0, 20000}},</div>
+<div class="line">        {<span class="stringliteral">&quot;b_BMF&quot;</span>,  {0.5, 0, 100}}</div>
+<div class="line">    };</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// Configure the GA</span></div>
+<div class="line">    <a class="code hl_struct" href="struct_genetic_algorithm.html" title="Genetic Algorithm settings.">GeneticAlgorithm</a> ga;</div>
+<div class="line">    ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#ac1c849870d128355b0ba1c7a18eff3ab" title="Number of generations to run.">generations</a> = 100;</div>
+<div class="line">    ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#a40ce26da16cf975a63b8b19431aaaa76" title="Size of the population.">population_size</a> = 100;</div>
+<div class="line">    ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#ad2dd243516636bcec5fd736abd51c829" title="Probability of crossover.">crossover_rate</a> = 0.5f;</div>
+<div class="line">    popt.<a class="code hl_function" href="class_parameter_optimization.html#a2ebf9f48fa2c65404711080cbcf18248" title="Select the Genetic Algorithm for optimization.">setAlgorithm</a>(ga);</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// Set I/O options</span></div>
+<div class="line">    popt.<a class="code hl_variable" href="class_parameter_optimization.html#ad50d214b9a6f3fb68a3af50eb9d9d9af" title="I/O configuration.">print_progress</a> = <span class="keyword">true</span>;</div>
+<div class="line">    popt.<a class="code hl_variable" href="class_parameter_optimization.html#a6b04a0c2794de2df6c5319ae22b51f0c" title="Name of file to write progress to, skips writing if empty.">write_progress_to_file</a> = <span class="stringliteral">&quot;progress.csv&quot;</span>;</div>
+<div class="line">    popt.<a class="code hl_variable" href="class_parameter_optimization.html#a1352b6530bbb32dc5a6964bd05bb3a78" title="Name of file to write final result to, skips writing if empty.">write_result_to_file</a> = <span class="stringliteral">&quot;result.txt&quot;</span>;</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// Run optimization</span></div>
+<div class="line">    <span class="keyword">auto</span> result = popt.<a class="code hl_function" href="class_parameter_optimization.html#ac297d4e47978ee6a2492588d88def313" title="Run the optimization with stored algorithm settings.">run</a>(sim, params);</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// Display results</span></div>
+<div class="line">    std::cout &lt;&lt; <span class="stringliteral">&quot;Best fitness: &quot;</span> &lt;&lt; result.<a class="code hl_variable" href="struct_parameter_optimization_1_1_result.html#a9eb6a82e03942f74eebbf284f013bb56" title="Fitness value of the best individual.">fitness</a> &lt;&lt; std::endl;</div>
+<div class="line">    std::cout &lt;&lt; <span class="stringliteral">&quot;Expected (5, 100, 1000, 7), got (&quot;</span>;</div>
+<div class="line">    std::cout &lt;&lt; result.parameters.at(<span class="stringliteral">&quot;Em_BMF&quot;</span>).value &lt;&lt; <span class="stringliteral">&quot;, &quot;</span>;</div>
+<div class="line">    std::cout &lt;&lt; result.parameters.at(<span class="stringliteral">&quot;i0_BMF&quot;</span>).value &lt;&lt; <span class="stringliteral">&quot;, &quot;</span>;</div>
+<div class="line">    std::cout &lt;&lt; result.parameters.at(<span class="stringliteral">&quot;k_BMF&quot;</span>).value &lt;&lt; <span class="stringliteral">&quot;, &quot;</span>;</div>
+<div class="line">    std::cout &lt;&lt; result.parameters.at(<span class="stringliteral">&quot;b_BMF&quot;</span>).value &lt;&lt; <span class="stringliteral">&quot;)&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line">}</div>
+</div><!-- fragment --><h2><a class="anchor" id="PO_Example_AllAlgorithms"></a>
+Comparing All Three Algorithms</h2>
+<p>This example runs each algorithm on the Rosenbrock function and compares results.</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_parameter_optimization_8h.html">ParameterOptimization.h</a>&quot;</span></div>
+<div class="line"><span class="keyword">using namespace </span>helios;</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">float</span> rosenbrock(<span class="keyword">const</span> <a class="code hl_typedef" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078" title="Convenience typedef for a list of parameters to optimize.">ParametersToOptimize</a>&amp; p) {</div>
+<div class="line">    <span class="keywordtype">float</span> x = p.at(<span class="stringliteral">&quot;x&quot;</span>).value;</div>
+<div class="line">    <span class="keywordtype">float</span> y = p.at(<span class="stringliteral">&quot;y&quot;</span>).value;</div>
+<div class="line">    <span class="comment">// Rosenbrock: f(x,y) = (1-x)^2 + 100*(y-x^2)^2, minimum at (1,1)</span></div>
+<div class="line">    <span class="keywordflow">return</span> std::pow(1 - x, 2) + 100 * std::pow(y - x*x, 2);</div>
+<div class="line">}</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main() {</div>
+<div class="line">    <a class="code hl_typedef" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078" title="Convenience typedef for a list of parameters to optimize.">ParametersToOptimize</a> params = {</div>
+<div class="line">        {<span class="stringliteral">&quot;x&quot;</span>, {0.0, -2.0, 2.0}},</div>
+<div class="line">        {<span class="stringliteral">&quot;y&quot;</span>, {0.0, -2.0, 2.0}}</div>
+<div class="line">    };</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// --- Genetic Algorithm ---</span></div>
+<div class="line">    {</div>
+<div class="line">        <a class="code hl_class" href="class_parameter_optimization.html" title="Parameter optimization routines.">ParameterOptimization</a> popt;</div>
+<div class="line">        <a class="code hl_struct" href="struct_genetic_algorithm.html" title="Genetic Algorithm settings.">GeneticAlgorithm</a> ga;</div>
+<div class="line">        ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#ac1c849870d128355b0ba1c7a18eff3ab" title="Number of generations to run.">generations</a> = 200;</div>
+<div class="line">        ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#a40ce26da16cf975a63b8b19431aaaa76" title="Size of the population.">population_size</a> = 50;</div>
+<div class="line">        ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#ad2dd243516636bcec5fd736abd51c829" title="Probability of crossover.">crossover_rate</a> = 0.8f;</div>
+<div class="line">        ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#ae29300cfb06d6414871bcc6848a7ff8f" title="Mutation operator selection (default: per-gene)">mutation</a> = <a class="code hl_struct" href="struct_isotropic_mutation.html" title="Single-gate isotropic Gaussian mutation (all genes mutated together)">IsotropicMutation</a>{ .rate = 0.15f };</div>
+<div class="line">        popt.<a class="code hl_function" href="class_parameter_optimization.html#a2ebf9f48fa2c65404711080cbcf18248" title="Select the Genetic Algorithm for optimization.">setAlgorithm</a>(ga);</div>
+<div class="line">        popt.<a class="code hl_variable" href="class_parameter_optimization.html#ad50d214b9a6f3fb68a3af50eb9d9d9af" title="I/O configuration.">print_progress</a> = <span class="keyword">true</span>;</div>
+<div class="line"> </div>
+<div class="line">        <span class="keyword">auto</span> result = popt.<a class="code hl_function" href="class_parameter_optimization.html#ac297d4e47978ee6a2492588d88def313" title="Run the optimization with stored algorithm settings.">run</a>(rosenbrock, params);</div>
+<div class="line">        std::cout &lt;&lt; <span class="stringliteral">&quot;GA Best: (&quot;</span> &lt;&lt; result.<a class="code hl_variable" href="struct_parameter_optimization_1_1_result.html#a3891caf5b058a75362ef0566093ec631" title="Optimized parameters.">parameters</a>.at(<span class="stringliteral">&quot;x&quot;</span>).value &lt;&lt; <span class="stringliteral">&quot;, &quot;</span></div>
+<div class="line">                  &lt;&lt; result.parameters.at(<span class="stringliteral">&quot;y&quot;</span>).value &lt;&lt; <span class="stringliteral">&quot;) = &quot;</span> &lt;&lt; result.fitness &lt;&lt; <span class="stringliteral">&quot;\n&quot;</span>;</div>
+<div class="line">    }</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// --- Bayesian Optimization ---</span></div>
+<div class="line">    {</div>
+<div class="line">        <a class="code hl_class" href="class_parameter_optimization.html" title="Parameter optimization routines.">ParameterOptimization</a> popt;</div>
+<div class="line">        <a class="code hl_struct" href="struct_bayesian_optimization.html" title="Bayesian Optimization settings using Gaussian Process.">BayesianOptimization</a> bo;</div>
+<div class="line">        bo.<a class="code hl_variable" href="struct_bayesian_optimization.html#aec15f2e991b18941fce5149dfff83970" title="Total number of function evaluations.">max_evaluations</a> = 100;</div>
+<div class="line">        bo.<a class="code hl_variable" href="struct_bayesian_optimization.html#a032122584b854becec3d93de423a618e" title="Number of initial random samples (0 = auto: 2*num_params)">initial_samples</a> = 10;</div>
+<div class="line">        bo.<a class="code hl_variable" href="struct_bayesian_optimization.html#a80346ec3996dd27982303f345bc421a4" title="Exploration parameter for UCB acquisition (higher = more exploration)">ucb_kappa</a> = 2.0f;</div>
+<div class="line">        popt.<a class="code hl_function" href="class_parameter_optimization.html#a2ebf9f48fa2c65404711080cbcf18248" title="Select the Genetic Algorithm for optimization.">setAlgorithm</a>(bo);</div>
+<div class="line">        popt.<a class="code hl_variable" href="class_parameter_optimization.html#ad50d214b9a6f3fb68a3af50eb9d9d9af" title="I/O configuration.">print_progress</a> = <span class="keyword">true</span>;</div>
+<div class="line"> </div>
+<div class="line">        <span class="keyword">auto</span> result = popt.<a class="code hl_function" href="class_parameter_optimization.html#ac297d4e47978ee6a2492588d88def313" title="Run the optimization with stored algorithm settings.">run</a>(rosenbrock, params);</div>
+<div class="line">        std::cout &lt;&lt; <span class="stringliteral">&quot;BO Best: (&quot;</span> &lt;&lt; result.<a class="code hl_variable" href="struct_parameter_optimization_1_1_result.html#a3891caf5b058a75362ef0566093ec631" title="Optimized parameters.">parameters</a>.at(<span class="stringliteral">&quot;x&quot;</span>).value &lt;&lt; <span class="stringliteral">&quot;, &quot;</span></div>
+<div class="line">                  &lt;&lt; result.parameters.at(<span class="stringliteral">&quot;y&quot;</span>).value &lt;&lt; <span class="stringliteral">&quot;) = &quot;</span> &lt;&lt; result.fitness &lt;&lt; <span class="stringliteral">&quot;\n&quot;</span>;</div>
+<div class="line">    }</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// --- CMA-ES ---</span></div>
+<div class="line">    {</div>
+<div class="line">        <a class="code hl_class" href="class_parameter_optimization.html" title="Parameter optimization routines.">ParameterOptimization</a> popt;</div>
+<div class="line">        <a class="code hl_struct" href="struct_c_m_a_e_s.html" title="Covariance Matrix Adaptation Evolution Strategy settings.">CMAES</a> cmaes;</div>
+<div class="line">        cmaes.<a class="code hl_variable" href="struct_c_m_a_e_s.html#a24cb0dfd0d00d17dfeec23fc081c8919" title="Total number of function evaluations.">max_evaluations</a> = 200;</div>
+<div class="line">        cmaes.<a class="code hl_variable" href="struct_c_m_a_e_s.html#a418e84b339c143bd7e5fe8e05f303458" title="Initial step size (typical: 0.3)">sigma</a> = 0.5f;</div>
+<div class="line">        popt.<a class="code hl_function" href="class_parameter_optimization.html#a2ebf9f48fa2c65404711080cbcf18248" title="Select the Genetic Algorithm for optimization.">setAlgorithm</a>(cmaes);</div>
+<div class="line">        popt.<a class="code hl_variable" href="class_parameter_optimization.html#ad50d214b9a6f3fb68a3af50eb9d9d9af" title="I/O configuration.">print_progress</a> = <span class="keyword">true</span>;</div>
+<div class="line"> </div>
+<div class="line">        <span class="keyword">auto</span> result = popt.<a class="code hl_function" href="class_parameter_optimization.html#ac297d4e47978ee6a2492588d88def313" title="Run the optimization with stored algorithm settings.">run</a>(rosenbrock, params);</div>
+<div class="line">        std::cout &lt;&lt; <span class="stringliteral">&quot;CMA-ES Best: (&quot;</span> &lt;&lt; result.<a class="code hl_variable" href="struct_parameter_optimization_1_1_result.html#a3891caf5b058a75362ef0566093ec631" title="Optimized parameters.">parameters</a>.at(<span class="stringliteral">&quot;x&quot;</span>).value &lt;&lt; <span class="stringliteral">&quot;, &quot;</span></div>
+<div class="line">                  &lt;&lt; result.parameters.at(<span class="stringliteral">&quot;y&quot;</span>).value &lt;&lt; <span class="stringliteral">&quot;) = &quot;</span> &lt;&lt; result.fitness &lt;&lt; <span class="stringliteral">&quot;\n&quot;</span>;</div>
+<div class="line">    }</div>
+<div class="line">}</div>
+</div><!-- fragment --><h2><a class="anchor" id="PO_Example_Presets"></a>
+Using Presets</h2>
+<p>Presets provide pre-configured algorithm settings for common use cases. The <code>explore()</code> preset favors broad search of the parameter space, while <code>exploit()</code> favors refining near a known good solution.</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_parameter_optimization_8h.html">ParameterOptimization.h</a>&quot;</span></div>
+<div class="line"><span class="keyword">using namespace </span>helios;</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main() {</div>
+<div class="line">    <a class="code hl_typedef" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078" title="Convenience typedef for a list of parameters to optimize.">ParametersToOptimize</a> params = {</div>
+<div class="line">        {<span class="stringliteral">&quot;x&quot;</span>, {0.0, -5.0, 5.0}},</div>
+<div class="line">        {<span class="stringliteral">&quot;y&quot;</span>, {0.0, -5.0, 5.0}}</div>
+<div class="line">    };</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// Phase 1: Broad exploration with GA</span></div>
+<div class="line">    <a class="code hl_class" href="class_parameter_optimization.html" title="Parameter optimization routines.">ParameterOptimization</a> explorer;</div>
+<div class="line">    explorer.<a class="code hl_function" href="class_parameter_optimization.html#a2ebf9f48fa2c65404711080cbcf18248" title="Select the Genetic Algorithm for optimization.">setAlgorithm</a>(<a class="code hl_function" href="struct_genetic_algorithm.html#aa0579d3c097c0cadedb8e4cb7dc2baf6" title="Exploration-biased preset (large population, high mutation, BLXPCA + HYBRID)">GeneticAlgorithm::explore</a>());</div>
+<div class="line">    explorer.<a class="code hl_variable" href="class_parameter_optimization.html#a1352b6530bbb32dc5a6964bd05bb3a78" title="Name of file to write final result to, skips writing if empty.">write_result_to_file</a> = <span class="stringliteral">&quot;phase1_result.txt&quot;</span>;</div>
+<div class="line">    <span class="keyword">auto</span> phase1 = explorer.<a class="code hl_function" href="class_parameter_optimization.html#ac297d4e47978ee6a2492588d88def313" title="Run the optimization with stored algorithm settings.">run</a>(sim, params);</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// Phase 2: Refine with CMA-ES exploitation, warm-starting from phase 1</span></div>
+<div class="line">    <a class="code hl_class" href="class_parameter_optimization.html" title="Parameter optimization routines.">ParameterOptimization</a> refiner;</div>
+<div class="line">    refiner.<a class="code hl_function" href="class_parameter_optimization.html#a2ebf9f48fa2c65404711080cbcf18248" title="Select the Genetic Algorithm for optimization.">setAlgorithm</a>(<a class="code hl_function" href="struct_c_m_a_e_s.html#a190d609954ef84086848a439d9fa5ce7" title="Exploitation-biased preset (small sigma)">CMAES::exploit</a>());</div>
+<div class="line">    refiner.<a class="code hl_variable" href="class_parameter_optimization.html#a5a7df98e549e81acab15cff5afb34121" title="Name of file to read parameter set in from, ignores if empty.">read_input_from_file</a> = <span class="stringliteral">&quot;phase1_result.txt&quot;</span>;</div>
+<div class="line">    refiner.<a class="code hl_variable" href="class_parameter_optimization.html#a1352b6530bbb32dc5a6964bd05bb3a78" title="Name of file to write final result to, skips writing if empty.">write_result_to_file</a> = <span class="stringliteral">&quot;final_result.txt&quot;</span>;</div>
+<div class="line">    <span class="keyword">auto</span> phase2 = refiner.<a class="code hl_function" href="class_parameter_optimization.html#ac297d4e47978ee6a2492588d88def313" title="Run the optimization with stored algorithm settings.">run</a>(sim, params);</div>
+<div class="line">}</div>
+</div><!-- fragment --><h2><a class="anchor" id="PO_Example_Operators"></a>
+Customizing Crossover and Mutation Operators</h2>
+<p>This example shows how to mix and match crossover and mutation operators for the GA.</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_parameter_optimization_8h.html">ParameterOptimization.h</a>&quot;</span></div>
+<div class="line"><span class="keyword">using namespace </span>helios;</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main() {</div>
+<div class="line">    <a class="code hl_typedef" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078" title="Convenience typedef for a list of parameters to optimize.">ParametersToOptimize</a> params = {</div>
+<div class="line">        {<span class="stringliteral">&quot;x&quot;</span>, {0.0, -5.0, 5.0}},</div>
+<div class="line">        {<span class="stringliteral">&quot;y&quot;</span>, {0.0, -5.0, 5.0}}</div>
+<div class="line">    };</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// PCA-aware crossover with hybrid mutation for non-separable problems</span></div>
+<div class="line">    <a class="code hl_struct" href="struct_genetic_algorithm.html" title="Genetic Algorithm settings.">GeneticAlgorithm</a> ga;</div>
+<div class="line">    ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#ac1c849870d128355b0ba1c7a18eff3ab" title="Number of generations to run.">generations</a> = 300;</div>
+<div class="line">    ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#a40ce26da16cf975a63b8b19431aaaa76" title="Size of the population.">population_size</a> = 50;</div>
+<div class="line">    ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#af48fac0a2505a513d3ac0d65c71c891a" title="Crossover operator selection (default: BLX-alpha)">crossover</a> = <a class="code hl_struct" href="struct_b_l_x_p_c_a_crossover.html" title="BLX-alpha in PCA-transformed space (better for non-separable problems)">BLXPCACrossover</a>{ .alpha = 0.3f, .pca_update_interval = 10 };</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_struct" href="struct_hybrid_mutation.html" title="PCA-Gaussian + PCA-Cauchy + Random Direction hybrid mutation.">HybridMutation</a> hm;</div>
+<div class="line">    hm.<a class="code hl_variable" href="struct_hybrid_mutation.html#a0a46de8cfc6c338ed95c9c29c74d51b8" title="Mutation gate probability.">rate</a> = 0.2f;</div>
+<div class="line">    hm.<a class="code hl_variable" href="struct_hybrid_mutation.html#ac1a9910b642150dd58e04df21425b933" title="PCA-Gaussian sigma in whitened space.">sigma_pca</a> = 0.3f;</div>
+<div class="line">    hm.<a class="code hl_variable" href="struct_hybrid_mutation.html#ae4ade4da7645658efa82b37bda8bbe45" title="Probability of PCA-Gaussian sub-strategy.">pca_gaussian_prob</a> = 0.60f;</div>
+<div class="line">    hm.<a class="code hl_variable" href="struct_hybrid_mutation.html#aff4ceaa65e6a0edb3753689279d1981e" title="Probability of PCA-Cauchy sub-strategy.">pca_cauchy_prob</a> = 0.25f;</div>
+<div class="line">    ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#ae29300cfb06d6414871bcc6848a7ff8f" title="Mutation operator selection (default: per-gene)">mutation</a> = hm;</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_class" href="class_parameter_optimization.html" title="Parameter optimization routines.">ParameterOptimization</a> popt;</div>
+<div class="line">    popt.<a class="code hl_function" href="class_parameter_optimization.html#a2ebf9f48fa2c65404711080cbcf18248" title="Select the Genetic Algorithm for optimization.">setAlgorithm</a>(ga);</div>
+<div class="line">    popt.<a class="code hl_variable" href="class_parameter_optimization.html#ad50d214b9a6f3fb68a3af50eb9d9d9af" title="I/O configuration.">print_progress</a> = <span class="keyword">true</span>;</div>
+<div class="line"> </div>
+<div class="line">    <span class="keyword">auto</span> result = popt.<a class="code hl_function" href="class_parameter_optimization.html#ac297d4e47978ee6a2492588d88def313" title="Run the optimization with stored algorithm settings.">run</a>(sim, params);</div>
+<div class="line">}</div>
+</div><!-- fragment --><h2><a class="anchor" id="PO_Example_WarmStart"></a>
+Warm-Starting from Previous Results</h2>
+<p>A previously optimized parameter set can be read from a file and used to warm-start a subsequent optimization run. This is useful for refining solutions or continuing optimization with different settings.</p>
+<div class="fragment"><div class="line"><span class="comment">// First run: save result</span></div>
+<div class="line"><a class="code hl_class" href="class_parameter_optimization.html" title="Parameter optimization routines.">ParameterOptimization</a> popt1;</div>
+<div class="line">popt1.<a class="code hl_variable" href="class_parameter_optimization.html#a1352b6530bbb32dc5a6964bd05bb3a78" title="Name of file to write final result to, skips writing if empty.">write_result_to_file</a> = <span class="stringliteral">&quot;result.txt&quot;</span>;</div>
+<div class="line"><span class="keyword">auto</span> result1 = popt1.<a class="code hl_function" href="class_parameter_optimization.html#ac297d4e47978ee6a2492588d88def313" title="Run the optimization with stored algorithm settings.">run</a>(sim, params);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Second run: load previous result and refine</span></div>
+<div class="line"><a class="code hl_class" href="class_parameter_optimization.html" title="Parameter optimization routines.">ParameterOptimization</a> popt2;</div>
+<div class="line">popt2.<a class="code hl_variable" href="class_parameter_optimization.html#a5a7df98e549e81acab15cff5afb34121" title="Name of file to read parameter set in from, ignores if empty.">read_input_from_file</a> = <span class="stringliteral">&quot;result.txt&quot;</span>;</div>
+<div class="line">popt2.<a class="code hl_variable" href="class_parameter_optimization.html#a1352b6530bbb32dc5a6964bd05bb3a78" title="Name of file to write final result to, skips writing if empty.">write_result_to_file</a> = <span class="stringliteral">&quot;result_refined.txt&quot;</span>;</div>
+<div class="line"><span class="keyword">auto</span> result2 = popt2.<a class="code hl_function" href="class_parameter_optimization.html#ac297d4e47978ee6a2492588d88def313" title="Run the optimization with stored algorithm settings.">run</a>(sim, params);</div>
+</div><!-- fragment --><h2><a class="anchor" id="PO_Example_MixedTypes"></a>
+Mixed Parameter Types (GA)</h2>
+<p>This example demonstrates how to use all three parameter types in a single GA optimization run.</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_parameter_optimization_8h.html">ParameterOptimization.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">float</span> mixedObjective(<span class="keyword">const</span> <a class="code hl_typedef" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078" title="Convenience typedef for a list of parameters to optimize.">ParametersToOptimize</a>&amp; p) {</div>
+<div class="line">    <span class="keywordtype">float</span> angle = p.at(<span class="stringliteral">&quot;leaf_angle&quot;</span>).value;      <span class="comment">// float: continuous</span></div>
+<div class="line">    <span class="keywordtype">int</span> layers = (int)p.at(<span class="stringliteral">&quot;num_layers&quot;</span>).value;   <span class="comment">// integer: discrete whole number</span></div>
+<div class="line">    <span class="keywordtype">float</span> method = p.at(<span class="stringliteral">&quot;method&quot;</span>).value;          <span class="comment">// categorical: one of {1, 2, 3}</span></div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// Simulate with these parameters and return error</span></div>
+<div class="line">    <span class="keywordtype">float</span> error = std::pow(angle - 45.f, 2) + std::pow(layers - 5, 2);</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// Different penalty depending on categorical method choice</span></div>
+<div class="line">    <span class="keywordflow">if</span> (method == 1.f) error += 10.f;</div>
+<div class="line">    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (method == 2.f) error += 0.f;   <span class="comment">// method 2 is optimal</span></div>
+<div class="line">    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (method == 3.f) error += 5.f;</div>
 <div class="line"> </div>
 <div class="line">    <span class="keywordflow">return</span> error;</div>
 <div class="line">}</div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main() {</div>
-<div class="line">    <span class="comment">//Initialize the optimization class</span></div>
-<div class="line">    <a class="code hl_class" href="class_parameter_optimization.html" title="Simple parameter optimization routines.">ParameterOptimization</a> popt;</div>
+<div class="line">    <a class="code hl_class" href="class_parameter_optimization.html" title="Parameter optimization routines.">ParameterOptimization</a> popt;</div>
 <div class="line"> </div>
-<div class="line">    <span class="comment">//Initialize the parameter structure</span></div>
-<div class="line">    <a class="code hl_typedef" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078" title="Convenience typedef for a list of parameters to optimize.">ParametersToOptimize</a> params;</div>
-<div class="line"> </div>
-<div class="line">    <span class="comment">//Set the parameters to optimize over using a map from string &quot;name&quot; to {initial_value, min_value, max_value}</span></div>
-<div class="line">    params = {</div>
-<div class="line">        {<span class="stringliteral">&quot;Em_BMF&quot;</span>,{10,0,100}},</div>
-<div class="line">        {<span class="stringliteral">&quot;i0_BMF&quot;</span>,{10,0,1000}},</div>
-<div class="line">        {<span class="stringliteral">&quot;k_BMF&quot;</span>,{1e5,0,20000}},</div>
-<div class="line">        {<span class="stringliteral">&quot;b_BMF&quot;</span>,{0.5,0,100}}</div>
+<div class="line">    <a class="code hl_typedef" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078" title="Convenience typedef for a list of parameters to optimize.">ParametersToOptimize</a> params = {</div>
+<div class="line">        {<span class="stringliteral">&quot;leaf_angle&quot;</span>,  {30.f, 0.f, 90.f}},                                              <span class="comment">// FLOAT (default)</span></div>
+<div class="line">        {<span class="stringliteral">&quot;num_layers&quot;</span>,  {3.f, 1.f, 10.f, <a class="code hl_enumvalue" href="_parameter_optimization_8h.html#a4d63980e4031b0fc366e623868b27ed0a5d5cd46919fa987731fb2edefe0f2a0c" title="Integer parameter (rounded to nearest whole number)">ParameterType::INTEGER</a>}},                       <span class="comment">// INTEGER</span></div>
+<div class="line">        {<span class="stringliteral">&quot;method&quot;</span>,      {1.f, 0.f, 0.f, <a class="code hl_enumvalue" href="_parameter_optimization_8h.html#a4d63980e4031b0fc366e623868b27ed0ae241b6ca066a95a0505c570cc2f23467" title="Categorical parameter (picks from a set of allowed values)">ParameterType::CATEGORICAL</a>, {1.f, 2.f, 3.f}}}  <span class="comment">// CATEGORICAL</span></div>
 <div class="line">    };</div>
 <div class="line"> </div>
-<div class="line">    <span class="comment">//Set the algorithm settings</span></div>
-<div class="line">    <a class="code hl_struct" href="struct_optimization_settings.html" title="Settings structure controlling the optimization.">OptimizationSettings</a> settings;</div>
-<div class="line">    settings.<a class="code hl_variable" href="struct_optimization_settings.html#a8d6ca3918a794bd047b8763304eb6f25" title="Size of the population.">population_size</a> = 100;</div>
-<div class="line">    settings.<a class="code hl_variable" href="struct_optimization_settings.html#a229ede63a881b5e2775cc51c167356dc" title="Number of generations.">generations</a> = 100;</div>
-<div class="line">    settings.<a class="code hl_variable" href="struct_optimization_settings.html#a6f518ac3afaee1671b313e38b3b153d2" title="Probability of crossover per gene.">crossover_rate</a> = 0.5;</div>
-<div class="line">    settings.<a class="code hl_variable" href="struct_optimization_settings.html#a6562a574a3dd81eb5b092f5182260f7b" title="Probability of mutation per gene.">mutation_rate</a> = 0.1;</div>
-<div class="line">    settings.<a class="code hl_variable" href="struct_optimization_settings.html#add189a55d99eab51fabf9c0af99be4d0" title="Optional progress printout.">print_progress</a> = <span class="keyword">true</span>;</div>
-<div class="line">    settings.<a class="code hl_variable" href="struct_optimization_settings.html#a303577fe46f994517e4bbead30138b9c" title="Name of file to write progress to, skips writing if empty.">write_progress_to_file</a> = <span class="stringliteral">&quot;progress.txt&quot;</span>;</div>
-<div class="line">    settings.<a class="code hl_variable" href="struct_optimization_settings.html#abb8dd503101778dc0023668faff5b65f" title="Name of file to write final result to, skips writing if empty.">write_result_to_file</a> = <span class="stringliteral">&quot;result.txt&quot;</span>;</div>
+<div class="line">    <a class="code hl_struct" href="struct_genetic_algorithm.html" title="Genetic Algorithm settings.">GeneticAlgorithm</a> ga;</div>
+<div class="line">    ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#ac1c849870d128355b0ba1c7a18eff3ab" title="Number of generations to run.">generations</a> = 100;</div>
+<div class="line">    ga.<a class="code hl_variable" href="struct_genetic_algorithm.html#a40ce26da16cf975a63b8b19431aaaa76" title="Size of the population.">population_size</a> = 30;</div>
+<div class="line">    popt.<a class="code hl_function" href="class_parameter_optimization.html#a2ebf9f48fa2c65404711080cbcf18248" title="Select the Genetic Algorithm for optimization.">setAlgorithm</a>(ga);</div>
+<div class="line">    popt.<a class="code hl_variable" href="class_parameter_optimization.html#ad50d214b9a6f3fb68a3af50eb9d9d9af" title="I/O configuration.">print_progress</a> = <span class="keyword">true</span>;</div>
 <div class="line"> </div>
-<div class="line">    <span class="keyword">auto</span> result = popt.<a class="code hl_function" href="class_parameter_optimization.html#a97592071a206c4ca7617664c06e51a96" title="Run the plugin for a simulation with a computed objective, parameter set to optimize over,...">run</a>(sim,params,settings);</div>
+<div class="line">    <span class="keyword">auto</span> result = popt.<a class="code hl_function" href="class_parameter_optimization.html#ac297d4e47978ee6a2492588d88def313" title="Run the optimization with stored algorithm settings.">run</a>(mixedObjective, params);</div>
 <div class="line"> </div>
-<div class="line">    std::cout &lt;&lt; <span class="stringliteral">&quot;Expected (5,100,1000,7), got (&quot;</span> &lt;&lt; result.<a class="code hl_variable" href="struct_parameter_optimization_1_1_result.html#a3891caf5b058a75362ef0566093ec631" title="Optimized parameters.">parameters</a>.at(<span class="stringliteral">&quot;Em_BMF&quot;</span>).value &lt;&lt; <span class="stringliteral">&quot;,&quot;</span> &lt;&lt;</div>
-<div class="line">        result.parameters.at(<span class="stringliteral">&quot;i0_BMF&quot;</span>).value &lt;&lt; <span class="stringliteral">&quot;)&quot;</span> &lt;&lt; result.parameters.at(<span class="stringliteral">&quot;k_BMF&quot;</span>).value &lt;&lt; <span class="stringliteral">&quot;,&quot;</span> &lt;&lt;</div>
-<div class="line">        result.parameters.at(<span class="stringliteral">&quot;b&quot;</span>).value &lt;&lt; <span class="stringliteral">&quot;)&quot;</span> &lt;&lt; std::endl;</div>
-<div class="line"> </div>
+<div class="line">    std::cout &lt;&lt; <span class="stringliteral">&quot;leaf_angle: &quot;</span> &lt;&lt; result.<a class="code hl_variable" href="struct_parameter_optimization_1_1_result.html#a3891caf5b058a75362ef0566093ec631" title="Optimized parameters.">parameters</a>.at(<span class="stringliteral">&quot;leaf_angle&quot;</span>).value &lt;&lt; std::endl;  <span class="comment">// ~45.0</span></div>
+<div class="line">    std::cout &lt;&lt; <span class="stringliteral">&quot;num_layers: &quot;</span> &lt;&lt; result.parameters.at(<span class="stringliteral">&quot;num_layers&quot;</span>).value &lt;&lt; std::endl;  <span class="comment">// 5 (integer)</span></div>
+<div class="line">    std::cout &lt;&lt; <span class="stringliteral">&quot;method: &quot;</span> &lt;&lt; result.parameters.at(<span class="stringliteral">&quot;method&quot;</span>).value &lt;&lt; std::endl;          <span class="comment">// 2 (category)</span></div>
 <div class="line">}</div>
-</div><!-- fragment --><p>A previously written resulting parameter set can be read and imported into the population before subsequent running of the algorithm.</p>
-<div class="fragment"><div class="line">...</div>
-<div class="line">   settings.<a class="code hl_variable" href="struct_optimization_settings.html#acf24101fd9e90b95b2e1352dc8e0c9df" title="Name of file to read parameter set in from, ignores if empty.">read_input_from_file</a> = <span class="stringliteral">&quot;result.txt&quot;</span>;</div>
-<div class="line">   <span class="keyword">auto</span> result = popt.<a class="code hl_function" href="class_parameter_optimization.html#a97592071a206c4ca7617664c06e51a96" title="Run the plugin for a simulation with a computed objective, parameter set to optimize over,...">run</a>(sim,params,settings);</div>
-<div class="line">...</div>
+</div><!-- fragment --><h2><a class="anchor" id="PO_Example_HeliosIntegration"></a>
+Integration with Helios Simulations</h2>
+<p>This example demonstrates how to optimize parameters in a realistic Helios plant simulation.</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
+<div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_parameter_optimization_8h.html">ParameterOptimization.h</a>&quot;</span></div>
+<div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_solar_position_8h.html">SolarPosition.h</a>&quot;</span></div>
+<div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_radiation_model_8h.html">RadiationModel.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keyword">using namespace </span>helios;</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">float</span> plantSimulation(<span class="keyword">const</span> <a class="code hl_typedef" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078" title="Convenience typedef for a list of parameters to optimize.">ParametersToOptimize</a>&amp; p) {</div>
+<div class="line">    <span class="keywordtype">float</span> leaf_angle = p.at(<span class="stringliteral">&quot;leaf_angle&quot;</span>).value;</div>
+<div class="line">    <span class="keywordtype">float</span> leaf_area_density = p.at(<span class="stringliteral">&quot;LAD&quot;</span>).value;</div>
+<div class="line">    <span class="keywordtype">float</span> leaf_reflectivity = p.at(<span class="stringliteral">&quot;leaf_rho&quot;</span>).value;</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// Set up simulation</span></div>
+<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// Build canopy with optimized parameters</span></div>
+<div class="line">    <span class="comment">// ... (canopy generation code)</span></div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// Run radiation simulation</span></div>
+<div class="line">    <a class="code hl_class" href="class_radiation_model.html" title="Radiation transport model plugin.">RadiationModel</a> radiation(&amp;context);</div>
+<div class="line">    radiation.addRadiationBand(<span class="stringliteral">&quot;PAR&quot;</span>);</div>
+<div class="line">    <span class="comment">// ... (radiation setup)</span></div>
+<div class="line">    radiation.runBand(<span class="stringliteral">&quot;PAR&quot;</span>);</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// Calculate objective (e.g., difference from target light interception)</span></div>
+<div class="line">    <span class="keywordtype">float</span> target_interception = 0.85;</div>
+<div class="line">    <span class="keywordtype">float</span> simulated_interception = calculateInterception(&amp;context);</div>
+<div class="line">    <span class="keywordtype">float</span> error = std::pow(target_interception - simulated_interception, 2);</div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordflow">return</span> error;</div>
+<div class="line">}</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main() {</div>
+<div class="line">    <a class="code hl_class" href="class_parameter_optimization.html" title="Parameter optimization routines.">ParameterOptimization</a> popt;</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_typedef" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078" title="Convenience typedef for a list of parameters to optimize.">ParametersToOptimize</a> params = {</div>
+<div class="line">        {<span class="stringliteral">&quot;leaf_angle&quot;</span>, {45.0, 0.0, 90.0}},</div>
+<div class="line">        {<span class="stringliteral">&quot;LAD&quot;</span>, {1.0, 0.1, 5.0}},</div>
+<div class="line">        {<span class="stringliteral">&quot;leaf_rho&quot;</span>, {0.1, 0.05, 0.3}}</div>
+<div class="line">    };</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// Use CMA-ES for smooth continuous optimization</span></div>
+<div class="line">    <a class="code hl_struct" href="struct_c_m_a_e_s.html" title="Covariance Matrix Adaptation Evolution Strategy settings.">CMAES</a> cmaes;</div>
+<div class="line">    cmaes.<a class="code hl_variable" href="struct_c_m_a_e_s.html#a24cb0dfd0d00d17dfeec23fc081c8919" title="Total number of function evaluations.">max_evaluations</a> = 100;</div>
+<div class="line">    popt.<a class="code hl_function" href="class_parameter_optimization.html#a2ebf9f48fa2c65404711080cbcf18248" title="Select the Genetic Algorithm for optimization.">setAlgorithm</a>(cmaes);</div>
+<div class="line">    popt.<a class="code hl_variable" href="class_parameter_optimization.html#ad50d214b9a6f3fb68a3af50eb9d9d9af" title="I/O configuration.">print_progress</a> = <span class="keyword">true</span>;</div>
+<div class="line">    popt.<a class="code hl_variable" href="class_parameter_optimization.html#a1352b6530bbb32dc5a6964bd05bb3a78" title="Name of file to write final result to, skips writing if empty.">write_result_to_file</a> = <span class="stringliteral">&quot;optimized_canopy_params.txt&quot;</span>;</div>
+<div class="line"> </div>
+<div class="line">    <span class="keyword">auto</span> result = popt.<a class="code hl_function" href="class_parameter_optimization.html#ac297d4e47978ee6a2492588d88def313" title="Run the optimization with stored algorithm settings.">run</a>(plantSimulation, params);</div>
+<div class="line"> </div>
+<div class="line">    std::cout &lt;&lt; <span class="stringliteral">&quot;Optimized canopy parameters:&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line">    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; [name, param] : result.parameters) {</div>
+<div class="line">        std::cout &lt;&lt; <span class="stringliteral">&quot;  &quot;</span> &lt;&lt; name &lt;&lt; <span class="stringliteral">&quot;: &quot;</span> &lt;&lt; param.value &lt;&lt; std::endl;</div>
+<div class="line">    }</div>
+<div class="line">}</div>
 </div><!-- fragment --> </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </div><!-- doc-content -->

@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: plugins/solarposition/include/SolarPosition.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -166,85 +199,182 @@ $(function(){initNavTree('_solar_position_8h_source.html',''); initResizable(tru
 <div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="preprocessor">#define SOLARPOSITION</span></div>
 <div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span> </div>
 <div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span> </div>
-<div class="foldopen" id="foldopen00021" data-start="{" data-end="};">
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno"><a class="line" href="class_solar_position.html">   21</a></span><span class="keyword">class </span><a class="code hl_function" href="class_solar_position.html#a25fa8345e4101fa2d63757ca1bc9fe10" title="Solar position model default constructor. Initializes location based on the location set in the Conte...">SolarPosition</a>{</div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span> <span class="keyword">public</span>:</div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span></div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span></div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>  <span class="keyword">explicit</span> <a class="code hl_function" href="class_solar_position.html#a25fa8345e4101fa2d63757ca1bc9fe10" title="Solar position model default constructor. Initializes location based on the location set in the Conte...">SolarPosition</a>( <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>* context_ptr );</div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>  </div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span></div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>  <a class="code hl_function" href="class_solar_position.html#a25fa8345e4101fa2d63757ca1bc9fe10" title="Solar position model default constructor. Initializes location based on the location set in the Conte...">SolarPosition</a>(<span class="keywordtype">float</span> UTC_hrs, <span class="keywordtype">float</span> latitude_deg, <span class="keywordtype">float</span> longitude_deg, <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>* context_ptr );</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span></div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>  <span class="keywordtype">int</span> <a class="code hl_function" href="class_solar_position.html#aced032bb94f6fcff47e66747f7547396" title="Function to perform a self-test of model functions.">selfTest</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="preprocessor">#include &lt;memory&gt;</span></div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="comment">// Forward declaration is in PragueSkyModelInterface.h</span></div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="preprocessor">#include &quot;<a class="code" href="_prague_sky_model_interface_8h.html">PragueSkyModelInterface.h</a>&quot;</span></div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span> </div>
+<div class="foldopen" id="foldopen00025" data-start="{" data-end="};">
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno"><a class="line" href="class_solar_position.html">   25</a></span><span class="keyword">class </span><a class="code hl_function" href="class_solar_position.html#a25fa8345e4101fa2d63757ca1bc9fe10" title="Solar position model default constructor. Initializes location based on the location set in the Conte...">SolarPosition</a> {</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span><span class="keyword">public</span>:</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span></div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    <span class="keyword">explicit</span> <a class="code hl_function" href="class_solar_position.html#a25fa8345e4101fa2d63757ca1bc9fe10" title="Solar position model default constructor. Initializes location based on the location set in the Conte...">SolarPosition</a>(<a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a> *context_ptr);</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span></div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span></div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    <a class="code hl_function" href="class_solar_position.html#a25fa8345e4101fa2d63757ca1bc9fe10" title="Solar position model default constructor. Initializes location based on the location set in the Conte...">SolarPosition</a>(<span class="keywordtype">float</span> UTC_hrs, <span class="keywordtype">float</span> latitude_deg, <span class="keywordtype">float</span> longitude_deg, <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a> *context_ptr);</div>
 <div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span></div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>  <a class="code hl_struct" href="structhelios_1_1_time.html" title="Time vector.">helios::Time</a> <a class="code hl_function" href="class_solar_position.html#a2d15fe2ca0d29adf33971916b1d8cd83" title="Get the approximate time of sunrise at the current location.">getSunriseTime</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    <span class="keyword">static</span> <span class="keywordtype">int</span> <a class="code hl_function" href="class_solar_position.html#ab109ebcd68dcc3ef4e12c52cb9671150" title="Function to perform a self-test of model functions.">selfTest</a>(<span class="keywordtype">int</span> argc = 0, <span class="keywordtype">char</span> **argv = <span class="keyword">nullptr</span>);</div>
 <div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span></div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>  <a class="code hl_struct" href="structhelios_1_1_time.html" title="Time vector.">helios::Time</a> <a class="code hl_function" href="class_solar_position.html#a4c58aa642b4fc2300d1c1447388bc0d8" title="Get the approximate time of sunset at the current location.">getSunsetTime</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    [[nodiscard]] <a class="code hl_struct" href="structhelios_1_1_time.html" title="Time vector.">helios::Time</a> <a class="code hl_function" href="class_solar_position.html#a2d15fe2ca0d29adf33971916b1d8cd83" title="Get the approximate time of sunrise at the current location.">getSunriseTime</a>() <span class="keyword">const</span>;</div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span></div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#a307e963d840abb9ee7867579fec69fa2" title="Get the current sun elevation angle in radians for the current location. The sun angle is computed ba...">getSunElevation</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    [[nodiscard]] <a class="code hl_struct" href="structhelios_1_1_time.html" title="Time vector.">helios::Time</a> <a class="code hl_function" href="class_solar_position.html#a4c58aa642b4fc2300d1c1447388bc0d8" title="Get the approximate time of sunset at the current location.">getSunsetTime</a>() <span class="keyword">const</span>;</div>
 <div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span></div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#a4c4ba4931d13c6cc2ad69e8eab90ac14" title="Get the current sun zenithal angle in radians for the current location. The sun angle is computed bas...">getSunZenith</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    [[nodiscard]] <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#a307e963d840abb9ee7867579fec69fa2" title="Get the current sun elevation angle in radians for the current location. The sun angle is computed ba...">getSunElevation</a>() <span class="keyword">const</span>;</div>
 <div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span></div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#a2b736578f75ecb8532556931b8263dc4" title="Get the current sun azimuthal angle in radians for the current location. The sun angle is computed ba...">getSunAzimuth</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    [[nodiscard]] <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#a4c4ba4931d13c6cc2ad69e8eab90ac14" title="Get the current sun zenithal angle in radians for the current location. The sun angle is computed bas...">getSunZenith</a>() <span class="keyword">const</span>;</div>
 <div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span></div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>  <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> <a class="code hl_function" href="class_solar_position.html#af889756d5b3d7d3c366887fae1fb86ab" title="Get a unit vector pointing toward the sun for the current location. The sun angle is computed based o...">getSunDirectionVector</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    [[nodiscard]] <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#a2b736578f75ecb8532556931b8263dc4" title="Get the current sun azimuthal angle in radians for the current location. The sun angle is computed ba...">getSunAzimuth</a>() <span class="keyword">const</span>;</div>
 <div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span></div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>  <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">helios::SphericalCoord</a> <a class="code hl_function" href="class_solar_position.html#adad5310db742ef9f2754e75095aeea92" title="Get a spherical coordinate vector pointing toward the sun for the current location....">getSunDirectionSpherical</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    [[nodiscard]] <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> <a class="code hl_function" href="class_solar_position.html#af889756d5b3d7d3c366887fae1fb86ab" title="Get a unit vector pointing toward the sun for the current location. The sun angle is computed based o...">getSunDirectionVector</a>() <span class="keyword">const</span>;</div>
 <div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span></div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span></div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>   <span class="keywordtype">void</span> <a class="code hl_function" href="class_solar_position.html#af52dad396956d1699fb08ceed6f9a29e" title="Override solar position calculation based on time in the Context by using a prescribed solar position...">setSunDirection</a>( <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">helios::SphericalCoord</a> &amp;sundirection );</div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span></div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span></div>
-<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#a9701cb29a0336a11c445d285405b6956" title="Get the solar radiation flux perpendicular to the sun direction.">getSolarFlux</a>(<span class="keywordtype">float</span> pressure_Pa, <span class="keywordtype">float</span> temperature_K, <span class="keywordtype">float</span> humidity_rel, <span class="keywordtype">float</span> turbidity ) <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span></div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span></div>
-<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#a5c6635160944b5b8202ea9965da6de9d" title="Get the photosynthetically active (PAR) component of solar radiation flux perpendicular to the sun di...">getSolarFluxPAR</a>(<span class="keywordtype">float</span> pressure_Pa, <span class="keywordtype">float</span> temperature_K, <span class="keywordtype">float</span> humidity_rel, <span class="keywordtype">float</span> turbidity ) <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span></div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span></div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#a611461f700df9efa7c56b6f4ee7712b7" title="Get the near-infrared (NIR) component of solar radiation flux perpendicular to the sun direction.">getSolarFluxNIR</a>(<span class="keywordtype">float</span> pressure_Pa, <span class="keywordtype">float</span> temperature_K, <span class="keywordtype">float</span> humidity_rel, <span class="keywordtype">float</span> turbidity ) <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span></div>
-<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span></div>
-<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#af8dbd15453ce775dab5b2c5a49b1c93b" title="Get the fraction of solar radiation flux that is diffuse.">getDiffuseFraction</a>(<span class="keywordtype">float</span> pressure_Pa, <span class="keywordtype">float</span> temperature_K, <span class="keywordtype">float</span> humidity_rel, <span class="keywordtype">float</span> turbidity ) <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span></div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span></div>
-<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#a30ee555eedece8b7e19855877a74da71" title="Calculate the ambient (sky) longwave radiation flux.">getAmbientLongwaveFlux</a>(<span class="keywordtype">float</span> temperature_K, <span class="keywordtype">float</span> humidity_rel ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    [[nodiscard]] <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">helios::SphericalCoord</a> <a class="code hl_function" href="class_solar_position.html#adad5310db742ef9f2754e75095aeea92" title="Get a spherical coordinate vector pointing toward the sun for the current location....">getSunDirectionSpherical</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span></div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span></div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_solar_position.html#af52dad396956d1699fb08ceed6f9a29e" title="Override solar position calculation based on time in the Context by using a prescribed solar position...">setSunDirection</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">helios::SphericalCoord</a> &amp;sundirection);</div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span></div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span></div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    [[deprecated(<span class="stringliteral">&quot;Use setAtmosphericConditions() and parameter-free getSolarFlux() instead&quot;</span>)]] [[nodiscard]] <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#abf4ce53e74f9c0874a101dd4434f1fbb" title="Get the solar radiation flux perpendicular to the sun direction using atmospheric conditions from the...">getSolarFlux</a>(<span class="keywordtype">float</span> pressure_Pa, <span class="keywordtype">float</span> temperature_K, <span class="keywordtype">float</span> humidity_rel, <span class="keywordtype">float</span> turbidity) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span></div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span></div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    [[deprecated(<span class="stringliteral">&quot;Use setAtmosphericConditions() and parameter-free getSolarFluxPAR() instead&quot;</span>)]] [[nodiscard]] <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#a171b3c31721d9e4734c228307b267c0d" title="Get the photosynthetically active (PAR) component of solar radiation flux perpendicular to the sun di...">getSolarFluxPAR</a>(<span class="keywordtype">float</span> pressure_Pa, <span class="keywordtype">float</span> temperature_K, <span class="keywordtype">float</span> humidity_rel, <span class="keywordtype">float</span> turbidity) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span></div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span></div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>    [[deprecated(<span class="stringliteral">&quot;Use setAtmosphericConditions() and parameter-free getSolarFluxNIR() instead&quot;</span>)]] [[nodiscard]] <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#a65e67a78b589ecb0b3050321fb73efcc" title="Get the near-infrared (NIR) component of solar radiation flux perpendicular to the sun direction usin...">getSolarFluxNIR</a>(<span class="keywordtype">float</span> pressure_Pa, <span class="keywordtype">float</span> temperature_K, <span class="keywordtype">float</span> humidity_rel, <span class="keywordtype">float</span> turbidity) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span></div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span></div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>    [[deprecated(<span class="stringliteral">&quot;Use setAtmosphericConditions() and parameter-free getDiffuseFraction() instead&quot;</span>)]] [[nodiscard]] <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#a18fdaf08f28266b5e9b9c0c72dabb27b" title="Get the fraction of solar radiation flux that is diffuse using atmospheric conditions from the Contex...">getDiffuseFraction</a>(<span class="keywordtype">float</span> pressure_Pa, <span class="keywordtype">float</span> temperature_K, <span class="keywordtype">float</span> humidity_rel, <span class="keywordtype">float</span> turbidity) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span></div>
 <div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span></div>
-<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span></div>
-<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>  <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#aeefa73ede0d1797f94fd4ca2739f7f3e" title="Calculate the turbidity value based on a timeseries of net radiation measurements.">calibrateTurbidityFromTimeseries</a>( <span class="keyword">const</span> std::string &amp;timeseries_shortwave_flux_label_Wm2 ) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>    [[deprecated(<span class="stringliteral">&quot;Use setAtmosphericConditions() and parameter-free getAmbientLongwaveFlux() instead&quot;</span>)]] [[nodiscard]] <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#a38e6a4e3281a9ac03f5014a364c8a5f2" title="Calculate the ambient (sky) longwave radiation flux using atmospheric conditions from the Context.">getAmbientLongwaveFlux</a>(<span class="keywordtype">float</span> temperature_K, <span class="keywordtype">float</span> humidity_rel) <span class="keyword">const</span>;</div>
 <div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span></div>
 <div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span></div>
-<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_solar_position.html#abee2003c22cbbffb671e8e6a9305b66f" title="Enable calibration of solar flux and diffuse fraction when possibility of clouds are present against ...">enableCloudCalibration</a>( <span class="keyword">const</span> std::string &amp;timeseries_shortwave_flux_label_Wm2 );</div>
-<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span></div>
-<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="class_solar_position.html#a282ed51f351684b847255212dcd53869" title="Disable calibration of solar flux and diffuse fraction for clouds.">disableCloudCalibration</a>();</div>
-<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span>  </div>
-<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span> <span class="keyword">private</span>:</div>
-<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span> </div>
-<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>  <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a>* context;</div>
-<div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span> </div>
-<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>  <span class="keywordtype">float</span> UTC;</div>
-<div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span>  <span class="keywordtype">float</span> latitude;</div>
-<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>  <span class="keywordtype">float</span> longitude;</div>
-<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span> </div>
-<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>  <span class="keywordtype">bool</span> issolarpositionoverridden = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>  <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">helios::SphericalCoord</a> sun_direction;</div>
-<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span> </div>
-<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>  std::string cloudcalibrationlabel;</div>
-<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span> </div>
-<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>  <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">helios::SphericalCoord</a> calculateSunDirection( <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1_time.html" title="Time vector.">helios::Time</a> &amp;time, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1_date.html" title="Date vector.">helios::Date</a> &amp;date ) <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span> </div>
-<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>  <span class="keywordtype">void</span> GueymardSolarModel( <span class="keywordtype">float</span> pressure, <span class="keywordtype">float</span> temperature, <span class="keywordtype">float</span> humidity, <span class="keywordtype">float</span> turbidity, <span class="keywordtype">float</span>&amp; Eb_PAR, <span class="keywordtype">float</span>&amp; Eb_NIR, <span class="keywordtype">float</span> &amp;fdiff ) <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span> </div>
-<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>  <span class="keywordtype">void</span> applyCloudCalibration(<span class="keywordtype">float</span> &amp;R_calc_Wm2, <span class="keywordtype">float</span> &amp;fdiff_calc) <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span> </div>
-<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>  <span class="keyword">static</span> <span class="keywordtype">float</span> turbidityResidualFunction(<span class="keywordtype">float</span> turbidity, std::vector&lt;float&gt; &amp;parameters, <span class="keyword">const</span> <span class="keywordtype">void</span> * a_solarpositionmodel);</div>
-<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span> </div>
-<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span> </div>
-<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>};</div>
+<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>    [[nodiscard]] <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#aeefa73ede0d1797f94fd4ca2739f7f3e" title="Calculate the turbidity value based on a timeseries of net radiation measurements.">calibrateTurbidityFromTimeseries</a>(<span class="keyword">const</span> std::string &amp;timeseries_shortwave_flux_label_Wm2) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span></div>
+<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span></div>
+<div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_solar_position.html#abee2003c22cbbffb671e8e6a9305b66f" title="Enable calibration of solar flux and diffuse fraction when possibility of clouds are present against ...">enableCloudCalibration</a>(<span class="keyword">const</span> std::string &amp;timeseries_shortwave_flux_label_Wm2);</div>
+<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span></div>
+<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_solar_position.html#a282ed51f351684b847255212dcd53869" title="Disable calibration of solar flux and diffuse fraction for clouds.">disableCloudCalibration</a>();</div>
+<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span></div>
+<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span></div>
+<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_solar_position.html#adf82fc8cb5aeea3eb3bac729af032a8d" title="Set atmospheric conditions globally in the Context.">setAtmosphericConditions</a>(<span class="keywordtype">float</span> pressure_Pa, <span class="keywordtype">float</span> temperature_K, <span class="keywordtype">float</span> humidity_rel, <span class="keywordtype">float</span> turbidity);</div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span></div>
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span></div>
+<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_solar_position.html#a2dd6417e7ad55d48621df29fafca663e" title="Get atmospheric conditions from the Context.">getAtmosphericConditions</a>(<span class="keywordtype">float</span> &amp;pressure_Pa, <span class="keywordtype">float</span> &amp;temperature_K, <span class="keywordtype">float</span> &amp;humidity_rel, <span class="keywordtype">float</span> &amp;turbidity) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span></div>
+<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span></div>
+<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>    [[nodiscard]] <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#abf4ce53e74f9c0874a101dd4434f1fbb" title="Get the solar radiation flux perpendicular to the sun direction using atmospheric conditions from the...">getSolarFlux</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span></div>
+<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span></div>
+<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>    [[nodiscard]] <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#a171b3c31721d9e4734c228307b267c0d" title="Get the photosynthetically active (PAR) component of solar radiation flux perpendicular to the sun di...">getSolarFluxPAR</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span></div>
+<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span></div>
+<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>    [[nodiscard]] <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#a65e67a78b589ecb0b3050321fb73efcc" title="Get the near-infrared (NIR) component of solar radiation flux perpendicular to the sun direction usin...">getSolarFluxNIR</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span></div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span></div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>    [[nodiscard]] <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#a18fdaf08f28266b5e9b9c0c72dabb27b" title="Get the fraction of solar radiation flux that is diffuse using atmospheric conditions from the Contex...">getDiffuseFraction</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span></div>
+<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span></div>
+<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>    [[nodiscard]] <span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#a38e6a4e3281a9ac03f5014a364c8a5f2" title="Calculate the ambient (sky) longwave radiation flux using atmospheric conditions from the Context.">getAmbientLongwaveFlux</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span></div>
+<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span></div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_solar_position.html#a78dfa1147eaf8b69fb4a3d8feac21eea" title="Calculate direct beam solar spectrum and store in global data.">calculateDirectSolarSpectrum</a>(<span class="keyword">const</span> std::string &amp;label, <span class="keywordtype">float</span> resolution_nm = 1.0f);</div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span></div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span></div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_solar_position.html#aabd1c1199000c2cc2950fa92936bafcf" title="Calculate diffuse solar spectrum and store in global data.">calculateDiffuseSolarSpectrum</a>(<span class="keyword">const</span> std::string &amp;label, <span class="keywordtype">float</span> resolution_nm = 1.0f);</div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span></div>
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span></div>
+<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_solar_position.html#a3505411c0fa1af970d12c2b0108ef20d" title="Calculate global (total) solar spectrum and store in global data.">calculateGlobalSolarSpectrum</a>(<span class="keyword">const</span> std::string &amp;label, <span class="keywordtype">float</span> resolution_nm = 1.0f);</div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span> </div>
+<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>    <span class="comment">// ===== Prague Sky Model =====</span></div>
+<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span></div>
+<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span></div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_solar_position.html#a900e5eb3d009edbe6859cb765404c9cb" title="Enable Prague sky model for atmospheric sky radiance computation.">enablePragueSkyModel</a>();</div>
+<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span></div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span></div>
+<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>    [[nodiscard]] <span class="keywordtype">bool</span> <a class="code hl_function" href="class_solar_position.html#a6709709e0f0c7fdfd1d8a415f13827ab" title="Check if Prague sky model is enabled.">isPragueSkyModelEnabled</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span></div>
+<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span></div>
+<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_solar_position.html#ac896ef45f38253c4f85b008df1ac236f" title="Update Prague sky model and store spectral-angular parameters in Context.">updatePragueSkyModel</a>(<span class="keywordtype">float</span> ground_albedo = 0.33f);</div>
+<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span></div>
+<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span></div>
+<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>    [[nodiscard]] <span class="keywordtype">bool</span> <a class="code hl_function" href="class_solar_position.html#ab18530756e247296c959bdc425fe580c" title="Check if Prague sky model update is needed based on changed conditions.">pragueSkyModelNeedsUpdate</a>(<span class="keywordtype">float</span> ground_albedo = 0.33f, <span class="keywordtype">float</span> sun_tolerance = 0.01f, <span class="keywordtype">float</span> turbidity_tolerance = 0.02f, <span class="keywordtype">float</span> albedo_tolerance = 0.05f) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span> </div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a> *context;</div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span> </div>
+<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>    <span class="keywordtype">float</span> UTC;</div>
+<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>    <span class="keywordtype">float</span> latitude;</div>
+<div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>    <span class="keywordtype">float</span> longitude;</div>
+<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span> </div>
+<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>    <span class="keywordtype">bool</span> issolarpositionoverridden = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>    <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">helios::SphericalCoord</a> sun_direction;</div>
+<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span> </div>
+<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>    std::string cloudcalibrationlabel;</div>
+<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span> </div>
+<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>    <span class="comment">// Prague Sky Model members</span></div>
+<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>    std::unique_ptr&lt;helios::PragueSkyModelInterface&gt; prague_model;</div>
+<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>    <span class="keywordtype">bool</span> prague_enabled = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span> </div>
+<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>    <span class="comment">// Cached values for Prague lazy evaluation</span></div>
+<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> cached_sun_direction;</div>
+<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>    <span class="keywordtype">float</span> cached_turbidity = -1.0f;</div>
+<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>    <span class="keywordtype">float</span> cached_albedo = -1.0f;</div>
+<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span> </div>
+<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>    [[nodiscard]] <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">helios::SphericalCoord</a> calculateSunDirection(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1_time.html" title="Time vector.">helios::Time</a> &amp;time, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1_date.html" title="Date vector.">helios::Date</a> &amp;date) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span> </div>
+<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>    <span class="comment">// Prague Sky Model helper methods</span></div>
+<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span>    <span class="keywordtype">void</span> fitAngularParametersAtWavelength(<span class="keywordtype">float</span> wavelength, <span class="keywordtype">float</span> visibility_km, <span class="keywordtype">float</span> albedo, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;sun_dir, <span class="keywordtype">float</span> &amp;L_zenith, <span class="keywordtype">float</span> &amp;circ_str, <span class="keywordtype">float</span> &amp;circ_width, <span class="keywordtype">float</span> &amp;horiz_bright, <span class="keywordtype">float</span> &amp;normalization);</div>
+<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span> </div>
+<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>    [[nodiscard]] <span class="keywordtype">float</span> fitCircumsolarWidth(<span class="keywordtype">float</span> L1, <span class="keywordtype">float</span> L2, <span class="keywordtype">float</span> h1, <span class="keywordtype">float</span> h2, <span class="keywordtype">float</span> gamma1, <span class="keywordtype">float</span> gamma2) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span> </div>
+<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>    [[nodiscard]] <span class="keywordtype">float</span> computeAngularNormalization(<span class="keywordtype">float</span> circ_str, <span class="keywordtype">float</span> circ_width, <span class="keywordtype">float</span> horiz_bright) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span> </div>
+<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>    [[nodiscard]] <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> rotateDirectionTowardZenith(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;dir, <span class="keywordtype">float</span> angle_rad) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span> </div>
+<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>    [[nodiscard]] <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> getDirectionAwayFromSun(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;sun_dir, <span class="keywordtype">float</span> zenith_angle_deg) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span> </div>
+<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>    <span class="keywordtype">void</span> GueymardSolarModel(<span class="keywordtype">float</span> pressure, <span class="keywordtype">float</span> temperature, <span class="keywordtype">float</span> humidity, <span class="keywordtype">float</span> turbidity, <span class="keywordtype">float</span> &amp;Eb_PAR, <span class="keywordtype">float</span> &amp;Eb_NIR, <span class="keywordtype">float</span> &amp;fdiff) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span> </div>
+<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>    <span class="keywordtype">void</span> applyCloudCalibration(<span class="keywordtype">float</span> &amp;R_calc_Wm2, <span class="keywordtype">float</span> &amp;fdiff_calc) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span> </div>
+<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>    <span class="keyword">static</span> <span class="keywordtype">float</span> turbidityResidualFunction(<span class="keywordtype">float</span> turbidity, std::vector&lt;float&gt; &amp;parameters, <span class="keyword">const</span> <span class="keywordtype">void</span> *a_solarpositionmodel);</div>
+<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span> </div>
+<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>    <span class="comment">// ===== SSolar-GOA Spectral Solar Radiation Model =====</span></div>
+<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span></div>
+<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>    <span class="keyword">struct </span>SpectralData {</div>
+<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>        std::vector&lt;float&gt; wavelengths_nm; <span class="comment">// 300-2600 nm (2301 points)</span></div>
+<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>        std::vector&lt;float&gt; toa_irradiance; <span class="comment">// Top-of-atmosphere irradiance in W/m²/nm</span></div>
+<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>        std::vector&lt;float&gt; h2o_coef; <span class="comment">// Water vapor absorption coefficient</span></div>
+<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>        std::vector&lt;float&gt; h2o_exp; <span class="comment">// Water vapor absorption exponent</span></div>
+<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>        std::vector&lt;float&gt; o3_xsec; <span class="comment">// Ozone cross section in cm²/molecule</span></div>
+<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>        std::vector&lt;float&gt; o2_coef; <span class="comment">// Oxygen absorption coefficient</span></div>
+<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span></div>
+<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>        <span class="keywordtype">void</span> loadFromDirectory(<span class="keyword">const</span> std::string &amp;data_path);</div>
+<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span></div>
+<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>        [[nodiscard]] <span class="keyword">static</span> <span class="keywordtype">float</span> <a class="code hl_function" href="_project_builder_8h.html#a4721e8292143200215a5142e64575a8f" title="Function to return interpolated vector based on keypoints.">interpolate</a>(<span class="keyword">const</span> std::vector&lt;float&gt; &amp;x, <span class="keyword">const</span> std::vector&lt;float&gt; &amp;y, <span class="keywordtype">float</span> x_val);</div>
+<div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>    };</div>
+<div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span></div>
+<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>    [[nodiscard]] <span class="keywordtype">float</span> calculateGeometricFactor(<span class="keywordtype">int</span> julian_day) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span></div>
+<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>    <span class="keywordtype">void</span> calculateRayleighTransmittance(<span class="keyword">const</span> std::vector&lt;float&gt; &amp;wavelengths_um, <span class="keywordtype">float</span> mu0, <span class="keywordtype">float</span> pressure_ratio, std::vector&lt;float&gt; &amp;tdir, std::vector&lt;float&gt; &amp;tglb, std::vector&lt;float&gt; &amp;tdif, std::vector&lt;float&gt; &amp;atm_albedo) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span></div>
+<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>    <span class="keywordtype">void</span> calculateAerosolTransmittance(<span class="keyword">const</span> std::vector&lt;float&gt; &amp;wavelengths_um, <span class="keywordtype">float</span> mu0, <span class="keywordtype">float</span> alpha, <span class="keywordtype">float</span> beta, <span class="keywordtype">float</span> w0, <span class="keywordtype">float</span> g, std::vector&lt;float&gt; &amp;tdir, std::vector&lt;float&gt; &amp;tglb, std::vector&lt;float&gt; &amp;tdif,</div>
+<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>                                       std::vector&lt;float&gt; &amp;atm_albedo) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span></div>
+<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>    <span class="keywordtype">void</span> calculateMixtureTransmittance(<span class="keyword">const</span> std::vector&lt;float&gt; &amp;wavelengths_um, <span class="keywordtype">float</span> mu0, <span class="keywordtype">float</span> pressure_Pa, <span class="keywordtype">float</span> turbidity_beta, <span class="keywordtype">float</span> angstrom_alpha, <span class="keywordtype">float</span> aerosol_ssa, <span class="keywordtype">float</span> aerosol_g, <span class="keywordtype">bool</span> coupling, std::vector&lt;float&gt; &amp;tglb,</div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>                                       std::vector&lt;float&gt; &amp;tdir, std::vector&lt;float&gt; &amp;tdif, std::vector&lt;float&gt; &amp;atm_albedo) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span></div>
+<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>    <span class="keywordtype">void</span> calculateWaterVaporTransmittance(<span class="keyword">const</span> SpectralData &amp;data, <span class="keywordtype">float</span> mu0, <span class="keywordtype">float</span> water_vapor_cm, std::vector&lt;float&gt; &amp;transmittance) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span></div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>    <span class="keywordtype">void</span> calculateOzoneTransmittance(<span class="keyword">const</span> SpectralData &amp;data, <span class="keywordtype">float</span> mu0, <span class="keywordtype">float</span> ozone_DU, std::vector&lt;float&gt; &amp;transmittance) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span></div>
+<div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>    <span class="keywordtype">void</span> calculateOxygenTransmittance(<span class="keyword">const</span> SpectralData &amp;data, <span class="keywordtype">float</span> mu0, std::vector&lt;float&gt; &amp;transmittance) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span></div>
+<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>    <span class="keywordtype">void</span> calculateSpectralIrradianceComponents(std::vector&lt;helios::vec2&gt; &amp;global_spectrum, std::vector&lt;helios::vec2&gt; &amp;direct_spectrum, std::vector&lt;helios::vec2&gt; &amp;diffuse_spectrum, <span class="keywordtype">float</span> resolution_nm) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>};</div>
 </div>
-<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span> </div>
-<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span> </div>
+<div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span><span class="preprocessor">#endif</span></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

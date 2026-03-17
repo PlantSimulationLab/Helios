@@ -49,9 +49,23 @@ run_command() {
     fi
 }
 
-ALL_SAMPLES=("radiation_homogeneous_canopy" "energy_balance_dragon" "plant_architecture_bean")
+ALL_SAMPLES=("radiation_homogeneous_canopy" "energy_balance_dragon" "plant_architecture_bean" "collision_detection_performance")
 
 BUILD_TYPES=("Debug" "Release")
+
+# Detect number of processors for parallel compilation
+if command -v nproc >/dev/null 2>&1; then
+    NPROC=$(nproc)
+elif [[ "${OSTYPE}" == "darwin"* ]]; then
+    NPROC=$(sysctl -n hw.ncpu)
+elif [[ "${OSTYPE}" == "msys"* ]] || [[ "${OSTYPE}" == "cygwin"* ]] || [[ -n "${NUMBER_OF_PROCESSORS}" ]]; then
+    # Windows environment (Git Bash, MSYS2, Cygwin, or GitHub Actions)
+    NPROC=${NUMBER_OF_PROCESSORS:-$(nproc 2>/dev/null || echo "1")}
+else
+    NPROC=1
+fi
+
+echo "Detected ${NPROC} processes for parallel build"
 
 # Default thread counts if not specified
 THREAD_COUNTS=(1)
@@ -239,7 +253,7 @@ for i in "${SAMPLES[@]}"; do
         fi
 
         echo -ne "Compiling benchmark ${i}..."
-        run_command cmake --build ./ --target "${i}" --config "${build}"
+        run_command cmake --build ./ --target "${i}" --config "${build}" -j "${NPROC}"
         if (($? == 0)); then
             if [ -e "${i}" ] || [ -e "${i}.exe" ]; then
                 echo -e "\r\x1B[32mCompiling benchmark ${i}...done.\x1B[39m"

@@ -15,5 +15,6 @@ var struct_shoot =
     [ "sumShootLeafArea", "struct_shoot.html#a3fda7ac79d3730527fd14f3e049ea9b8", null ],
     [ "terminateApicalBud", "struct_shoot.html#aabd26ec09a87e64c2b575896016f0ac8", null ],
     [ "terminateAxillaryVegetativeBuds", "struct_shoot.html#a0e41b7edf06fe0d3571e03715a926b75", null ],
-    [ "updateShootNodes", "struct_shoot.html#a19eb5d6e3248c45de08774d11cbf329b", null ]
+    [ "updateShootNodes", "struct_shoot.html#a19eb5d6e3248c45de08774d11cbf329b", null ],
+    [ "leaf_nitrogen_gN_m2", "struct_shoot.html#a1b37f545674418d952f3b4dd0fb7c0c9", null ]
 ];

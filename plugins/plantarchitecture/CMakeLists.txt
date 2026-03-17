@@ -14,6 +14,7 @@ add_library( plantarchitecture STATIC "src/PlantArchitecture.cpp"
         "src/Assets.cpp"
         "src/InputOutput.cpp"
         "src/CarbohydrateModel.cpp"
+        "src/NitrogenModel.cpp"
         "src/Hungarian.cpp"
         "tests/selfTest.cpp"
 )
@@ -49,6 +50,8 @@ add_custom_command(
 add_custom_target(copy_texture_assets DEPENDS "${CMAKE_BINARY_DIR}/plugins/plantarchitecture/texture_assets.stamp")
 add_dependencies(plantarchitecture copy_texture_assets)
 
-add_executable(plantarchitecture_tests "tests/TestMain.cpp")
-target_link_libraries(plantarchitecture_tests PRIVATE plantarchitecture)
-add_test(NAME plantarchitecture_tests COMMAND plantarchitecture_tests)
+if(BUILD_TESTS)
+    add_executable(plantarchitecture_tests "tests/TestMain.cpp")
+    target_link_libraries(plantarchitecture_tests PRIVATE plantarchitecture)
+    add_test(NAME plantarchitecture_tests COMMAND plantarchitecture_tests)
+endif()

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['deprecated_0',['DEPRECATED',['../global_8h.html#aaf225a2b96038de3a42d61a1fa63654b',1,'global.h']]]
+  ['helios_5fhost_5fdevice_0',['HELIOS_HOST_DEVICE',['../_buffer_indexing_8h.html#a64220947988b496bdb77a9f11cc070b7',1,'BufferIndexing.h']]]
 ];

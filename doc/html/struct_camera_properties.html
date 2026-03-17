@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: CameraProperties Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -182,8 +215,11 @@ Data Fields</h2></td></tr>
 <tr class="memdesc:a2806b640deeab5fbcd9dda8ea240f345"><td class="mdescLeft">&#160;</td><td class="mdescRight">Camera sensor resolution (number of pixels) in the horizontal (.x) and vertical (.y) directions.  <br /></td></tr>
 <tr class="separator:a2806b640deeab5fbcd9dda8ea240f345"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7eae760b6f6729b2e391d0b96d07b209" id="r_a7eae760b6f6729b2e391d0b96d07b209"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7eae760b6f6729b2e391d0b96d07b209">focal_plane_distance</a></td></tr>
-<tr class="memdesc:a7eae760b6f6729b2e391d0b96d07b209"><td class="mdescLeft">&#160;</td><td class="mdescRight">Distance from the viewing plane to the focal plane.  <br /></td></tr>
+<tr class="memdesc:a7eae760b6f6729b2e391d0b96d07b209"><td class="mdescLeft">&#160;</td><td class="mdescRight">Distance from the viewing plane to the focal plane (working distance for ray generation)  <br /></td></tr>
 <tr class="separator:a7eae760b6f6729b2e391d0b96d07b209"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aed80e4454fcc84c15bb03f02eb0e495a" id="r_aed80e4454fcc84c15bb03f02eb0e495a"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aed80e4454fcc84c15bb03f02eb0e495a">lens_focal_length</a></td></tr>
+<tr class="memdesc:aed80e4454fcc84c15bb03f02eb0e495a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Camera lens optical focal length in meters (characteristic of the lens, used for f-number and aperture calculations). This is the physical focal length, not the 35mm equivalent.  <br /></td></tr>
+<tr class="separator:aed80e4454fcc84c15bb03f02eb0e495a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acf2d9d32a978b027658045c8068c7d1a" id="r_acf2d9d32a978b027658045c8068c7d1a"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acf2d9d32a978b027658045c8068c7d1a">lens_diameter</a></td></tr>
 <tr class="memdesc:acf2d9d32a978b027658045c8068c7d1a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Diameter of the camera lens (lens_diameter = 0 gives a 'pinhole' camera with everything in focus)  <br /></td></tr>
 <tr class="separator:acf2d9d32a978b027658045c8068c7d1a"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -191,17 +227,39 @@ Data Fields</h2></td></tr>
 <tr class="memdesc:ac1419dfa651f1f8343f5fb5a2fad2148"><td class="mdescLeft">&#160;</td><td class="mdescRight">Camera horizontal field of view in degrees.  <br /></td></tr>
 <tr class="separator:ac1419dfa651f1f8343f5fb5a2fad2148"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae1e4df4d4612fd652ccd1e57fc71d104" id="r_ae1e4df4d4612fd652ccd1e57fc71d104"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae1e4df4d4612fd652ccd1e57fc71d104">FOV_aspect_ratio</a></td></tr>
-<tr class="memdesc:ae1e4df4d4612fd652ccd1e57fc71d104"><td class="mdescLeft">&#160;</td><td class="mdescRight">Physical dimensions of the pixel array sensor in the horizontal (.x) and vertical (.y) directions.  <br /></td></tr>
+<tr class="memdesc:ae1e4df4d4612fd652ccd1e57fc71d104"><td class="mdescLeft">&#160;</td><td class="mdescRight">Ratio of camera horizontal field of view to vertical field of view (HFOV/VFOV). DEPRECATED: This parameter is auto-calculated from camera_resolution to ensure square pixels. Setting it explicitly will be ignored with a warning.  <br /></td></tr>
 <tr class="separator:ae1e4df4d4612fd652ccd1e57fc71d104"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad1f6afe7edb179fd5072039a3441c41a" id="r_ad1f6afe7edb179fd5072039a3441c41a"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad1f6afe7edb179fd5072039a3441c41a">exposure_midgray_target</a></td></tr>
-<tr class="separator:ad1f6afe7edb179fd5072039a3441c41a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9d88e749f5202f7975baf639c61a8983" id="r_a9d88e749f5202f7975baf639c61a8983"><td class="memItemLeft" align="right" valign="top">std::array&lt; float, 12 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9d88e749f5202f7975baf639c61a8983">color_correction_matrix</a></td></tr>
-<tr class="separator:a9d88e749f5202f7975baf639c61a8983"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac48c34f82b20b43ce3ea9b94edd34668" id="r_ac48c34f82b20b43ce3ea9b94edd34668"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac48c34f82b20b43ce3ea9b94edd34668">sensor_width_mm</a></td></tr>
+<tr class="memdesc:ac48c34f82b20b43ce3ea9b94edd34668"><td class="mdescLeft">&#160;</td><td class="mdescRight">Physical sensor width in mm (default 35mm full-frame)  <br /></td></tr>
+<tr class="separator:ac48c34f82b20b43ce3ea9b94edd34668"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a11bfd379c7e8aaf656f8f7db1552f572" id="r_a11bfd379c7e8aaf656f8f7db1552f572"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a11bfd379c7e8aaf656f8f7db1552f572">model</a></td></tr>
+<tr class="memdesc:a11bfd379c7e8aaf656f8f7db1552f572"><td class="mdescLeft">&#160;</td><td class="mdescRight">Camera model name (e.g., "Nikon D700", "Canon EOS 5D")  <br /></td></tr>
+<tr class="separator:a11bfd379c7e8aaf656f8f7db1552f572"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af6d63a60db76523bf51818417c291d18" id="r_af6d63a60db76523bf51818417c291d18"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af6d63a60db76523bf51818417c291d18">lens_make</a></td></tr>
+<tr class="memdesc:af6d63a60db76523bf51818417c291d18"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lens make/manufacturer (e.g., "Canon", "Nikon")  <br /></td></tr>
+<tr class="separator:af6d63a60db76523bf51818417c291d18"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a44ffedbc6691ebdb2d86b91ea3251ec7" id="r_a44ffedbc6691ebdb2d86b91ea3251ec7"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a44ffedbc6691ebdb2d86b91ea3251ec7">lens_model</a></td></tr>
+<tr class="memdesc:a44ffedbc6691ebdb2d86b91ea3251ec7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lens model name (e.g., "AF-S NIKKOR 50mm f/1.8G")  <br /></td></tr>
+<tr class="separator:a44ffedbc6691ebdb2d86b91ea3251ec7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a38190d1890a94e8c6a31189a37cf1901" id="r_a38190d1890a94e8c6a31189a37cf1901"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a38190d1890a94e8c6a31189a37cf1901">lens_specification</a></td></tr>
+<tr class="memdesc:a38190d1890a94e8c6a31189a37cf1901"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lens specification (e.g., "50mm f/1.8", "18-55mm f/3.5-5.6")  <br /></td></tr>
+<tr class="separator:a38190d1890a94e8c6a31189a37cf1901"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aab8dc32e5765b3df3e360a0685775480" id="r_aab8dc32e5765b3df3e360a0685775480"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aab8dc32e5765b3df3e360a0685775480">exposure</a></td></tr>
+<tr class="separator:aab8dc32e5765b3df3e360a0685775480"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a66a2e46e6ffbc12bd08bfef6854a75e6" id="r_a66a2e46e6ffbc12bd08bfef6854a75e6"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a66a2e46e6ffbc12bd08bfef6854a75e6">shutter_speed</a></td></tr>
+<tr class="memdesc:a66a2e46e6ffbc12bd08bfef6854a75e6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Camera shutter speed in seconds (used for ISO-based exposure calculations). Example: 1/125 second = 0.008.  <br /></td></tr>
+<tr class="separator:a66a2e46e6ffbc12bd08bfef6854a75e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab65c7b02d4b1bbf930da9ac5f5e8d831" id="r_ab65c7b02d4b1bbf930da9ac5f5e8d831"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab65c7b02d4b1bbf930da9ac5f5e8d831">white_balance</a></td></tr>
+<tr class="memdesc:ab65c7b02d4b1bbf930da9ac5f5e8d831"><td class="mdescLeft">&#160;</td><td class="mdescRight">White balance mode: "auto" (automatic white balance using spectral response) or "off" (no white balance correction)  <br /></td></tr>
+<tr class="separator:ab65c7b02d4b1bbf930da9ac5f5e8d831"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae4d1ed9832fbe83b6e72ea03672dc829" id="r_ae4d1ed9832fbe83b6e72ea03672dc829"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae4d1ed9832fbe83b6e72ea03672dc829">camera_zoom</a></td></tr>
+<tr class="memdesc:ae4d1ed9832fbe83b6e72ea03672dc829"><td class="mdescLeft">&#160;</td><td class="mdescRight">Camera optical zoom multiplier (1.0 = no zoom, 2.0 = 2x zoom, etc.)  <br /></td></tr>
+<tr class="separator:ae4d1ed9832fbe83b6e72ea03672dc829"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Properties defining a radiation camera. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00031">31</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00027">27</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a829a5931ced752602247691892636171" name="a829a5931ced752602247691892636171"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a829a5931ced752602247691892636171">&#9670;&#160;</a></span>CameraProperties()</h2>
@@ -226,7 +284,7 @@ Data Fields</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00058">58</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00090">90</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -254,7 +312,7 @@ Data Fields</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00033">33</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00029">29</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -281,7 +339,7 @@ Data Fields</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00071">71</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00105">105</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -300,39 +358,46 @@ Data Fields</h2></td></tr>
 
 <p>Camera sensor resolution (number of pixels) in the horizontal (.x) and vertical (.y) directions. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00038">38</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00034">34</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
-<a id="a9d88e749f5202f7975baf639c61a8983" name="a9d88e749f5202f7975baf639c61a8983"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9d88e749f5202f7975baf639c61a8983">&#9670;&#160;</a></span>color_correction_matrix</h2>
+<a id="ae4d1ed9832fbe83b6e72ea03672dc829" name="ae4d1ed9832fbe83b6e72ea03672dc829"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae4d1ed9832fbe83b6e72ea03672dc829">&#9670;&#160;</a></span>camera_zoom</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::array&lt;float,12&gt; CameraProperties::color_correction_matrix</td>
+          <td class="memname">float CameraProperties::camera_zoom</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00056">56</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p>Camera optical zoom multiplier (1.0 = no zoom, 2.0 = 2x zoom, etc.) </p>
+<p>! </p>
+<p>This parameter scales the horizontal field of view (HFOV) during rendering: effective_HFOV = HFOV / camera_zoom. The HFOV parameter represents the reference field of view at zoom=1.0. When zoom &gt; 1.0, the effective FOV becomes narrower (telephoto effect). When zoom &lt; 1.0, the effective FOV becomes wider.</p>
+<p>IMPORTANT: All camera metadata exported to JSON (focal_length, sensor dimensions, etc.) reflect the REFERENCE state at zoom=1.0, not the zoomed state. The zoom value itself is written to metadata as "zoom" so users can reconstruct the effective parameters.</p>
+<p>Example: HFOV=60° with camera_zoom=2.0 renders with an effective HFOV of 30° (2x optical zoom). </p>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00088">88</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
-<a id="ad1f6afe7edb179fd5072039a3441c41a" name="ad1f6afe7edb179fd5072039a3441c41a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad1f6afe7edb179fd5072039a3441c41a">&#9670;&#160;</a></span>exposure_midgray_target</h2>
+<a id="aab8dc32e5765b3df3e360a0685775480" name="aab8dc32e5765b3df3e360a0685775480"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aab8dc32e5765b3df3e360a0685775480">&#9670;&#160;</a></span>exposure</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float CameraProperties::exposure_midgray_target</td>
+          <td class="memname">std::string CameraProperties::exposure</td>
         </tr>
       </table>
 </div><div class="memdoc">
+<p>Exposure mode: "auto" (automatic exposure), "ISOXXX" (ISO-based, e.g., "ISO100"), or "manual" (no automatic exposure scaling). ISO mode is calibrated to match auto-exposure at reference settings (ISO 100, 1/125s, f/2.8) for typical Helios scenes. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00053">53</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00068">68</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -348,9 +413,9 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Distance from the viewing plane to the focal plane. </p>
+<p>Distance from the viewing plane to the focal plane (working distance for ray generation) </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00041">41</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00037">37</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -366,9 +431,9 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Physical dimensions of the pixel array sensor in the horizontal (.x) and vertical (.y) directions. </p>
+<p>Ratio of camera horizontal field of view to vertical field of view (HFOV/VFOV). DEPRECATED: This parameter is auto-calculated from camera_resolution to ensure square pixels. Setting it explicitly will be ignored with a warning. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00050">50</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00049">49</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -386,7 +451,7 @@ Data Fields</h2></td></tr>
 
 <p>Camera horizontal field of view in degrees. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00047">47</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00046">46</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -404,7 +469,151 @@ Data Fields</h2></td></tr>
 
 <p>Diameter of the camera lens (lens_diameter = 0 gives a 'pinhole' camera with everything in focus) </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00044">44</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00043">43</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+
+</div>
+</div>
+<a id="aed80e4454fcc84c15bb03f02eb0e495a" name="aed80e4454fcc84c15bb03f02eb0e495a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aed80e4454fcc84c15bb03f02eb0e495a">&#9670;&#160;</a></span>lens_focal_length</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float CameraProperties::lens_focal_length</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Camera lens optical focal length in meters (characteristic of the lens, used for f-number and aperture calculations). This is the physical focal length, not the 35mm equivalent. </p>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00040">40</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+
+</div>
+</div>
+<a id="af6d63a60db76523bf51818417c291d18" name="af6d63a60db76523bf51818417c291d18"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af6d63a60db76523bf51818417c291d18">&#9670;&#160;</a></span>lens_make</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string CameraProperties::lens_make</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Lens make/manufacturer (e.g., "Canon", "Nikon") </p>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00058">58</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a44ffedbc6691ebdb2d86b91ea3251ec7" name="a44ffedbc6691ebdb2d86b91ea3251ec7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a44ffedbc6691ebdb2d86b91ea3251ec7">&#9670;&#160;</a></span>lens_model</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string CameraProperties::lens_model</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Lens model name (e.g., "AF-S NIKKOR 50mm f/1.8G") </p>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00061">61</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a38190d1890a94e8c6a31189a37cf1901" name="a38190d1890a94e8c6a31189a37cf1901"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a38190d1890a94e8c6a31189a37cf1901">&#9670;&#160;</a></span>lens_specification</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string CameraProperties::lens_specification</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Lens specification (e.g., "50mm f/1.8", "18-55mm f/3.5-5.6") </p>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00064">64</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a11bfd379c7e8aaf656f8f7db1552f572" name="a11bfd379c7e8aaf656f8f7db1552f572"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a11bfd379c7e8aaf656f8f7db1552f572">&#9670;&#160;</a></span>model</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string CameraProperties::model</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Camera model name (e.g., "Nikon D700", "Canon EOS 5D") </p>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00055">55</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+
+</div>
+</div>
+<a id="ac48c34f82b20b43ce3ea9b94edd34668" name="ac48c34f82b20b43ce3ea9b94edd34668"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac48c34f82b20b43ce3ea9b94edd34668">&#9670;&#160;</a></span>sensor_width_mm</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float CameraProperties::sensor_width_mm</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Physical sensor width in mm (default 35mm full-frame) </p>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00052">52</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a66a2e46e6ffbc12bd08bfef6854a75e6" name="a66a2e46e6ffbc12bd08bfef6854a75e6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a66a2e46e6ffbc12bd08bfef6854a75e6">&#9670;&#160;</a></span>shutter_speed</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float CameraProperties::shutter_speed</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Camera shutter speed in seconds (used for ISO-based exposure calculations). Example: 1/125 second = 0.008. </p>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00071">71</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+
+</div>
+</div>
+<a id="ab65c7b02d4b1bbf930da9ac5f5e8d831" name="ab65c7b02d4b1bbf930da9ac5f5e8d831"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab65c7b02d4b1bbf930da9ac5f5e8d831">&#9670;&#160;</a></span>white_balance</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string CameraProperties::white_balance</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>White balance mode: "auto" (automatic white balance using spectral response) or "off" (no white balance correction) </p>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00074">74</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>

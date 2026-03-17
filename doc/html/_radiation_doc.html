@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Radiation Model Plugin Documentation</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -164,6 +197,14 @@ $(function(){initNavTree('_radiation_doc.html',''); initResizable(true); });
 <ul>
   <li class="level1">
     <a href="#RadDepends">Dependencies</a>
+  </li>
+  <li class="level1">
+    <a href="#RadKnownIssues">Known Issues</a>
+    <ul>
+      <li class="level2">
+        <a href="#VulkanInstanceLimitation">Vulkan Backend: Repeated RadiationModel Creation Limitation (Linux NVIDIA Drivers)</a>
+      </li>
+    </ul>
   </li>
   <li class="level1">
     <a href="#RadIntro">Introduction</a>
@@ -242,10 +283,41 @@ $(function(){initNavTree('_radiation_doc.html',''); initResizable(true); });
             <a href="#RadCamAdd">Adding a Radiation Camera</a>
           </li>
           <li class="level3">
+            <a href="#RadCamLibrary">Adding a Camera from the Camera Library</a>
+            <ul>
+              <li class="level4">
+                <a href="#RadCamLibraryCustomBands">Custom Band Names</a>
+              </li>
+            </ul>
+          </li>
+          <li class="level3">
             <a href="#RadCamSpecular">Radiation Camera Specular Reflection</a>
           </li>
           <li class="level3">
             <a href="#RadCamCalibColor">Radiation Camera Color Calibration</a>
+          </li>
+          <li class="level3">
+            <a href="#RadCamMetadata">Exporting Camera Metadata</a>
+            <ul>
+              <li class="level4">
+                <a href="#RadCamMetadataStruct">Camera Metadata Structure</a>
+              </li>
+              <li class="level4">
+                <a href="#RadCamMetadataAuto">Auto-populating Metadata</a>
+              </li>
+              <li class="level4">
+                <a href="#RadCamMetadataManual">Manual Metadata Population</a>
+              </li>
+              <li class="level4">
+                <a href="#RadCamMetadataExport">Automatic JSON Export</a>
+              </li>
+              <li class="level4">
+                <a href="#RadCamMetadataSensor">Sensor Width Parameter</a>
+              </li>
+              <li class="level4">
+                <a href="#RadCamMetadataModel">Camera Model Name</a>
+              </li>
+            </ul>
           </li>
         </ul>
       </li>
@@ -266,6 +338,14 @@ $(function(){initNavTree('_radiation_doc.html',''); initResizable(true); });
           </li>
           <li class="level3">
             <a href="#RadCamOut">Writing Camera Images to File</a>
+            <ul>
+              <li class="level4">
+                <a href="#RadCamImageCorrections">Applying Camera Image Corrections</a>
+              </li>
+            </ul>
+          </li>
+          <li class="level3">
+            <a href="#RadCamSegmentation">Writing Camera Image Segmentation Masks</a>
           </li>
         </ul>
       </li>
@@ -281,7 +361,7 @@ $(function(){initNavTree('_radiation_doc.html',''); initResizable(true); });
  </p>
 <table class="doxtable">
 <tr>
-<th>Dependencies </th><td>NVIDIA CUDA 9.0+  </td></tr>
+<th>Dependencies </th><td>Vulkan SDK (all platforms) and/or NVIDIA CUDA 9.0+ (NVIDIA systems, enables OptiX backend)  </td></tr>
 <tr>
 <th>CMakeLists.txt </th><td>set( PLUGINS "radiation" )  </td></tr>
 <tr>
@@ -291,9 +371,10 @@ $(function(){initNavTree('_radiation_doc.html',''); initResizable(true); });
 </table>
 <h1><a class="anchor" id="RadDepends"></a>
 Dependencies</h1>
+<p>The radiation model requires at least one ray-tracing backend. Two backends are available:</p>
 <table class="doxtable">
 <tr>
-<th>Package </th><td><div class="image">
+<th>Backend </th><th>Package </th><td><div class="image">
 <img src="apple-logo.png" alt=""/>
 </div>
  </td><td><div class="image">
@@ -304,14 +385,45 @@ Dependencies</h1>
 </div>
   </td></tr>
 <tr>
-<td>NVIDIA CUDA 9.0+ </td><td>Mac OSX: Not available </td><td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a> </td><td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a>  </td></tr>
+<td><b>Vulkan</b> (all platforms) </td><td>Vulkan SDK + glslang </td><td><code>brew install vulkan-headers vulkan-loader molten-vk glslang</code> </td><td><code>sudo apt-get install libvulkan-dev glslang-tools</code> </td><td>Install <a href="https://vulkan.lunarg.com/sdk/home">LunarG Vulkan SDK</a> (includes glslang)  </td></tr>
+<tr>
+<td><b>OptiX</b> (NVIDIA only) </td><td>NVIDIA CUDA 9.0+ </td><td>Not available (no NVIDIA GPU) </td><td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a> </td><td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a>  </td></tr>
 </table>
+<p>CMake automatically detects which backends are available and enables them. If both are found, the OptiX backend is used by default on NVIDIA systems; otherwise the Vulkan backend is used. You can force the Vulkan backend by setting <code>-DFORCE_VULKAN_BACKEND=ON</code>.</p>
+<dl class="section note"><dt>Note</dt><dd><b>Performance:</b> The OptiX backend is strongly preferred on NVIDIA systems. For direct radiation source ray traces, performance between the two backends is broadly comparable. However, for diffuse radiation or scattering ray traces, the Vulkan backend can be significantly slower. If you have an NVIDIA GPU and are running simulations with diffuse radiation or multiple scattering iterations, it is strongly recommended to install CUDA and use the OptiX backend.</dd></dl>
 <p>For help choosing the correct CUDA toolkit version and accompanying OptiX version for your system, consult this page: <a class="el" href="_choosing_c_u_d_a.html">Choosing the right CUDA and OptiX version</a></p>
 <p>Useful OS-specific information for installing CUDA can be found here: <a class="el" href="_dependent_software.html">Install and Set-up</a></p>
-<p>If you are using a PC, it is likely you will need to increase the GPU timeout in the registry, otherwise calculations lasting longer than 2 secs. will timeout and kill your program. A guide on how to increase the timeout can be found here: <a class="el" href="_p_c_g_p_u_timeout.html">Increasing graphics driver timeout</a></p>
+<p>If you are using a PC with the OptiX backend, it is likely you will need to increase the GPU timeout in the registry, otherwise calculations lasting longer than 2 secs. will timeout and kill your program. A guide on how to increase the timeout can be found here: <a class="el" href="_p_c_g_p_u_timeout.html">Increasing graphics driver timeout</a></p>
+<h1><a class="anchor" id="RadKnownIssues"></a>
+Known Issues</h1>
+<h2><a class="anchor" id="VulkanInstanceLimitation"></a>
+Vulkan Backend: Repeated RadiationModel Creation Limitation (Linux NVIDIA Drivers)</h2>
+<p><b>Issue:</b> On Linux systems with NVIDIA GPUs (driver versions 465+), creating and destroying more than approximately 25-30 RadiationModel instances within a single process will cause the Vulkan backend to fail with <code>VK_ERROR_INCOMPATIBLE_DRIVER</code>.</p>
+<p><b>Root Cause:</b> This is a long-standing NVIDIA Linux driver limitation where repeated Vulkan instance creation/destruction cycles exhaust internal driver resources. This issue has been present since driver version 465 (2021) and remains unfixed as of driver version 550+ (2025). The limitation appears to be intentional rather than a bug that will be fixed.</p>
+<p><b>Workaround:</b> <b>Reuse a single RadiationModel instance</b> across multiple simulation runs instead of creating/destroying instances in a loop:</p>
+<div class="fragment"><div class="line"><span class="comment">// INCORRECT - Will fail after ~25 iterations with Vulkan backend:</span></div>
+<div class="line"><span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; scenario : scenarios) {</div>
+<div class="line">    <a class="code hl_class" href="class_radiation_model.html" title="Radiation transport model plugin.">RadiationModel</a> model(&amp;context);</div>
+<div class="line">    model.runBand(<span class="stringliteral">&quot;PAR&quot;</span>);</div>
+<div class="line">}</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// CORRECT - Reuse the same instance:</span></div>
+<div class="line"><a class="code hl_class" href="class_radiation_model.html" title="Radiation transport model plugin.">RadiationModel</a> model(&amp;context);</div>
+<div class="line"><span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; scenario : scenarios) {</div>
+<div class="line">    context.loadXML(scenario.geometry);</div>
+<div class="line">    model.updateGeometry();  <span class="comment">// Update backend with new geometry</span></div>
+<div class="line">    model.runBand(<span class="stringliteral">&quot;PAR&quot;</span>);</div>
+<div class="line">}</div>
+</div><!-- fragment --><p><b>Note:</b> This limitation only affects the Vulkan backend on Linux NVIDIA systems. The OptiX backend is unaffected. Reusing RadiationModel instances is recommended practice regardless, as it avoids repeated GPU resource allocation overhead.</p>
+<p><b>References:</b></p><ul>
+<li><a href="https://forums.developer.nvidia.com/t/issue-with-repeated-instance-creation-in-one-process/176978">NVIDIA Developer Forums: Instance Creation Issue</a></li>
+<li><a href="https://github.com/qdrant/qdrant/pull/6031">Qdrant's Workaround (2024)</a></li>
+<li><a href="https://github.com/Igalia/vkrunner/issues/7">VkRunner's Workaround (2019)</a></li>
+</ul>
 <h1><a class="anchor" id="RadIntro"></a>
 Introduction</h1>
 <p>This model simulates the transport of radiative energy for arbitrary wavelength bands using a GPU-accelerated ray-tracing model. The model details are described in <a href="http://dx.doi.org/10.1016/j.ecolmodel.2017.11.022">Bailey (2018)</a>. Briefly, the model uses a reverse ray-tracing approach to simulate emission from primitive elements, collimated radiation sources, and point radiation sources.</p>
+<p>The model supports two GPU backends: the <b>Vulkan compute backend</b>, which works on all platforms (macOS, Linux, Windows) including systems without NVIDIA hardware, and the <b>OptiX backend</b>, which is available on NVIDIA systems and requires CUDA. The appropriate backend is selected automatically at build time based on available hardware and libraries.</p>
 <h1><a class="anchor" id="RadConstructor"></a>
 RadiationModel Class Constructor</h1>
 <table class="doxtable">
@@ -329,19 +441,19 @@ Input Primitive Data</h2>
 <tr>
 <th>Primitive Data </th><th>Units </th><th>Data Type </th><th>Description </th><th>Available Plug-ins </th><th>Default Value  </th></tr>
 <tr>
-<td>temperature </td><td>Kelvin </td><td> <font face="courier" color="green">float</font> </td><td>Primitive surface temperature. <b>NOTE: Only needed if performing emission calculations.</b> </td><td>Can be computed by <a class="el" href="class_energy_balance_model.html">EnergyBalanceModel</a> plug-in </td><td>300 K  </td></tr>
+<td>temperature </td><td>Kelvin </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Primitive surface temperature. <b>NOTE: Only needed if performing emission calculations.</b> </td><td>Can be computed by <a class="el" href="class_energy_balance_model.html">EnergyBalanceModel</a> plug-in </td><td>300 K  </td></tr>
 <tr>
-<td>reflectivity_* </td><td>unitless </td><td> <font face="courier" color="green">float</font> </td><td>Primitive reflectivity for band * (i.e., reflectivity for band 'PAR' would be 'reflectivity_PAR'). </td><td>N/A </td><td>0  </td></tr>
+<td>reflectivity_* </td><td>unitless </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Primitive reflectivity for band * (i.e., reflectivity for band 'PAR' would be 'reflectivity_PAR'). </td><td>N/A </td><td>0  </td></tr>
 <tr>
-<td>transmissivity_* </td><td>unitless </td><td> <font face="courier" color="green">float</font> </td><td>Primitive transmissivity for band * (i.e., transmissivity for band 'PAR' would be 'transmissivity_PAR'). </td><td>N/A </td><td>0  </td></tr>
+<td>transmissivity_* </td><td>unitless </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Primitive transmissivity for band * (i.e., transmissivity for band 'PAR' would be 'transmissivity_PAR'). </td><td>N/A </td><td>0  </td></tr>
 <tr>
-<td>emissivity_* </td><td>unitless </td><td> <font face="courier" color="green">float</font> </td><td>Primitive emissivity for band * (i.e., emissivity for band 'PAR' would be 'emissivity_PAR'). <b>NOTE: Only needed if performing emission calculations.</b> </td><td>N/A </td><td>1.0  </td></tr>
+<td>emissivity_* </td><td>unitless </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Primitive emissivity for band * (i.e., emissivity for band 'PAR' would be 'emissivity_PAR'). <b>NOTE: Only needed if performing emission calculations.</b> </td><td>N/A </td><td>1.0  </td></tr>
 <tr>
-<td>twosided_flag </td><td>N/A </td><td> <font face="courier" color="green">uint</font> </td><td>Flag to determine whether a primitive should be treated as two-sided (=1) or single-sided (=0). See Sect. <a class="el" href="#RadTwoSided">Area Basis for Calculating Fluxes</a> below for more information. </td><td>N/A </td><td>1  </td></tr>
+<td>twosided_flag </td><td>N/A </td><td> <span style="font-family: Courier, monospace; color: green;">uint</span> </td><td>Flag to determine whether a primitive should be treated as two-sided (=1) or single-sided (=0). See Sect. <a class="el" href="#RadTwoSided">Area Basis for Calculating Fluxes</a> below for more information. </td><td>N/A </td><td>1  </td></tr>
 <tr>
-<td>specular_exponent </td><td>N/A </td><td> <font face="courier" color="green">float</font> </td><td>Value controlling the spread of specular reflection distribution in simulated camera images. </td><td>N/A </td><td>-1 (specular reflection disabled)  </td></tr>
+<td>specular_exponent </td><td>N/A </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Value controlling the spread of specular reflection distribution in simulated camera images. </td><td>N/A </td><td>-1 (specular reflection disabled)  </td></tr>
 <tr>
-<td>specular_scale </td><td>N/A </td><td> <font face="courier" color="green">float</font> </td><td>Value that scales the strength of specular reflection in simulated camera images. </td><td>N/A </td><td>1.0  </td></tr>
+<td>specular_scale </td><td>N/A </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Value that scales the strength of specular reflection in simulated camera images. </td><td>N/A </td><td>1.0  </td></tr>
 </table>
 <p><br  />
 </p>
@@ -351,7 +463,7 @@ Output Primitive Data</h2>
 <tr>
 <th>Primitive Data </th><th>Units </th><th>Data Type </th><th>Description  </th></tr>
 <tr>
-<td>radiation_flux_* </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>Absorbed radiation flux for band * (i.e., the flux for band 'PAR' would be 'radiation_flux_PAR').  </td></tr>
+<td>radiation_flux_* </td><td>W/m<sup>2</sup> </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Absorbed radiation flux for band * (i.e., the flux for band 'PAR' would be 'radiation_flux_PAR').  </td></tr>
 </table>
 <h1><a class="anchor" id="RadUse"></a>
 Using the Radiation Model Plug-In</h1>
@@ -361,12 +473,18 @@ Model Class Constructor</h2>
 <div class="fragment"><div class="line"><a class="code hl_class" href="class_radiation_model.html" title="Radiation transport model plugin.">RadiationModel</a> radiationmodel(&amp;context); <span class="comment">//declare the model class</span></div>
 </div><!-- fragment --><h2><a class="anchor" id="RadTwoSided"></a>
 Area Basis for Calculating Fluxes</h2>
-<p>The ultimate outputs of the radiation model are absorbed radiative fluxes, which is the rate of radiative energy transfer per unit surface area. <b>All flux calculations are on a per unit one-sided surface area basis.</b> For planar primitive elements (patches and triangles), this means that the flux will be the rate of radiative energy absorption on both sides of the primitive, divided by the one-sided surface area of the primitive (i.e., that returned by the helios::Primitive::getArea() function).</p>
+<p>The ultimate outputs of the radiation model are absorbed radiative fluxes, which is the rate of radiative energy transfer per unit surface area. <b>All flux calculations are on a per unit one-sided surface area basis.</b> For planar primitive elements (patches and triangles), this means that the flux will be the rate of radiative energy absorption on both sides of the primitive, divided by the one-sided surface area of the primitive (i.e., that returned by the <a class="el" href="classhelios_1_1_context.html#a1dafe58b3251d2ef9d09112258b2e85d">helios::Context::getPrimitiveArea(uint) const</a> function).</p>
 <p>By default, a planar primitive will emit and absorb radiation from/to both faces. For primitives that only emit and absorb from/to one face (e.g., ground primitives), this default behavior should be modified. Single-sided emission can be achieved by setting primitive data for the particular primitive with a name of "twosided_flag" to a value of 0 (where '0' is defined as an unsigned integer):</p>
-<div class="fragment"><div class="line">context.setPrimitiveData( UUID, <span class="stringliteral">&quot;twosided_flag&quot;</span>, uint(1) );</div>
+<div class="fragment"><div class="line">context.setPrimitiveData( UUID, <span class="stringliteral">&quot;twosided_flag&quot;</span>, <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>(1) );</div>
 </div><!-- fragment --><p>Note that in this case radiation will be emitted from the side with its face in the direction of the primitive normal vector. If primitive data called "twosided_flag" is set to 1, this will produce the default behavior of emission from both faces.</p>
 <p>A primitive with "twosided_flag" set to 0 will not absorb any radiation from the back face of the primitive, but it will attenuate radiation. So if a ray hits the back face, the ray trajectory will be terminated, but no energy will be deposited.</p>
 <p>Example: If we had a single patch and a diffuse radiation source with a flux of 1.0, with default behavior the absorbed flux on the patch would be 2.0 because it would absorb energy from both faces, but the end flux would be expressed on a single-sided area basis. If "twosided_flag" was set to 0 for that patch (non-default behavior), then the absorbed flux on the patch would be 1.0.</p>
+<p><b>Material-based Configuration (Recommended)</b></p>
+<p>The twosided_flag can also be set at the material level using Context::setMaterialTwosidedFlag(). When a primitive has a user-assigned material, the material's twosided_flag setting takes precedence over primitive data. This allows configuring sidedness once on a material and having it automatically apply to all primitives using that material:</p>
+<div class="fragment"><div class="line">context.addMaterial(<span class="stringliteral">&quot;ground_material&quot;</span>);</div>
+<div class="line">context.setMaterialTwosidedFlag(<span class="stringliteral">&quot;ground_material&quot;</span>, 0);  <span class="comment">// One-sided</span></div>
+<div class="line">context.assignMaterialToPrimitive(ground_UUIDs, <span class="stringliteral">&quot;ground_material&quot;</span>);</div>
+</div><!-- fragment --><p>If no user-assigned material exists (or the material is auto-generated), the radiation model falls back to checking for "twosided_flag" primitive data.</p>
 <h2><a class="anchor" id="RadBands"></a>
 Defining Wavelength Bands</h2>
 <p>The end output of the radiation model is absorbed radiative fluxes for primitives or camera pixels for one or more wavelength bands. Radiative bands are defined by the total radiative fluxes emitted by any radiative sources, surface radiative properties integrated over the band (reflectivity, transmissivity, and emissivity). These source fluxes and surface radiative properties can be manually specified for each band, or can be automatically calculated based on spectral data input to the model.</p>
@@ -390,7 +508,7 @@ Input Spectral Data</h2>
 <div class="line">   &lt;<span class="keywordtype">globaldata_vec2</span>&gt;</div>
 <div class="line">&lt;<span class="keywordtype">helios</span>&gt;</div>
 </div><!-- fragment --><p>In this example, we've specified the leaf spectral transmissivity at four wavebands - 300, 400, 500, and 600 nm. Note that wavelength values are always given in nanometers. The label "leaf_transmissivity" is important, as this would be used later to assign this transmissivity spectrum to one or more primitives.</p>
-<p>The Helios radiation model has some pre-defined spectra in several XML files. These files are automatically copied into the project build directory under "plugins/radiation/spectral_data/". The files "leaf_surface_spectral_library.xml", "soil_surface_spectral_library.xml", etc. have many surface reflectivity and/or transmissivity spectra; the file "light_spectral_library.xml" has several artificial light spectral flux spectra; the file "solar_spectrum_ASTMG173.xml" has the ASTM standard clear sky solar spectrum.</p>
+<p>The Helios radiation model has some pre-defined spectra in several XML files. These files are automatically resolved by the asset management system regardless of where the executable is run. The files "leaf_surface_spectral_library.xml", "soil_surface_spectral_library.xml", etc. have many surface reflectivity and/or transmissivity spectra; the file "light_spectral_library.xml" has several artificial light spectral flux spectra; the file "solar_spectrum_ASTMG173.xml" has the ASTM standard clear sky solar spectrum.</p>
 <p>In order to get the spectral data into the Context as global data, the XML file containing the data must be loaded. This is done via the usual procedure:</p>
 <div class="fragment"><div class="line">context.loadXML(<span class="stringliteral">&quot;plugins/radiation/spectral_data/leaf_surface_spectral_library.xml&quot;</span>);</div>
 </div><!-- fragment --><p>This command would load all the leaf surface spectra from the file "leaf_surface_spectral_library.xml" into the Context as global data. We could then access it in the usual way (see page on <a class="el" href="_a_p_i.html#GlobalData">Global Data</a> for details on Helios global data):</p>
@@ -408,7 +526,7 @@ Radiative Properties</h2>
 <div class="line">Context context;</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Add &#39;Patch&#39; primitive</span></div>
-<div class="line">uint UUID = context.addPatch();</div>
+<div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = context.addPatch();</div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">float</span> rho = 0.1; <span class="comment">//reflectivity value</span></div>
 <div class="line">context.setPrimitiveData( UUID, <span class="stringliteral">&quot;reflectivity_PAR&quot;</span>, rho);</div>
@@ -427,7 +545,7 @@ Radiative Properties</h2>
 <div class="line">Context context;</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Add &#39;Patch&#39; primitive</span></div>
-<div class="line">uint UUID = context.addPatch();</div>
+<div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = context.addPatch();</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Load the surface spectral library</span></div>
 <div class="line">context.loadXML(<span class="stringliteral">&quot;plugins/radiation/spectral_data/leaf_surface_spectral_library.xml&quot;</span>);</div>
@@ -467,7 +585,7 @@ Adding Collimated Sources</h3>
 <p>The radiation model also requires the specification of the number of rays per primitive to be used in the simulation (default is 100 rays per primitive). The more rays used in the simulation the more accurate the answer will be, but this will result in a longer simulation time.</p>
 <p>Below is an example of adding a collimated source oriented in the direction of the sun, with a flux of 800 and using 200 rays per primitive:</p>
 <div class="fragment"><div class="line">vec3 sun_dir(0,0,1);</div>
-<div class="line">uint SunSource = radiationmodel.addCollimatedRadiationSource( sun_dir ); <span class="comment">//add the source, whose identifier is stored in the &#39;SunSource&#39; variable</span></div>
+<div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> SunSource = radiationmodel.addCollimatedRadiationSource( sun_dir ); <span class="comment">//add the source, whose identifier is stored in the &#39;SunSource&#39; variable</span></div>
 <div class="line">radiationmodel.setSourceFlux(SunSource,<span class="stringliteral">&quot;PAR&quot;</span>,800); <span class="comment">//set the flux of the source</span></div>
 <div class="line">radiationmodel.setDirectRayCount(<span class="stringliteral">&quot;PAR&quot;</span>,200); <span class="comment">//set the ray count for sources</span></div>
 </div><!-- fragment --><p>The <a class="el" href="class_radiation_model.html#adea522844d6fe85df2f1dc3b78f514eb">RadiationModel::addCollimatedRadiationSource()</a> method can also be called with no argument, in which case it will set the sun direction to be vertical. It can also be called based on a <a class="el" href="structhelios_1_1_spherical_coord.html">helios::SphericalCoord</a>.</p>
@@ -476,28 +594,28 @@ Adding Spherical Sun Source</h3>
 <p>To represent penumbral effects, a spherical radiation source can be used to represent the sun. The sun is represented by a sphere, which has the same diameter and distance from the earth as the sun.</p>
 <p>The spherical sun source is defined in a similar manner as the collimated radiation source, but using the <a class="el" href="class_radiation_model.html#a8edb972e53fecddc21f0c23d08e355d0">addSunSphereRadiationSource()</a> function. Below is an example of adding a spherical sun source, with a flux of 800:</p>
 <div class="fragment"><div class="line">vec3 sun_dir(0,0,1);</div>
-<div class="line">uint SunSource = radiationmodel.addSunSphereRadiationSource( sun_dir ); <span class="comment">//add the source, whose identifier is stored in the &#39;SunSource&#39; variable</span></div>
+<div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> SunSource = radiationmodel.addSunSphereRadiationSource( sun_dir ); <span class="comment">//add the source, whose identifier is stored in the &#39;SunSource&#39; variable</span></div>
 <div class="line">radiationmodel.setSourceFlux(SunSource,<span class="stringliteral">&quot;PAR&quot;</span>,800); <span class="comment">//set the flux of the source</span></div>
 </div><!-- fragment --><h3><a class="anchor" id="PointSource"></a>
 Adding Spherical Radiation Sources</h3>
 <p>Spherical sources are added using the <a class="el" href="class_radiation_model.html#a44fbd20dd6ee50666f8d693dbba89822">addSphereRadiationSource()</a> function, which takes an (x,y,z) location of the spherical source and its radius as arguments. This function returns a uint which specifies the identifier for the point source, similar to a collimated and sun sphere source. The flux emanating from the surface of the source can also be set using the source identifier.</p>
 <div class="fragment"><div class="line">vec3 sun_dir(0,0,1);</div>
 <div class="line"><span class="keywordtype">float</span> sphere_radius = 1.0;</div>
-<div class="line">uint SphereSource = radiationmodel.addSphereRadiationSource( sun_dir, sphere_radius ); <span class="comment">//add the source, whose identifier is stored in the &#39;SphereSource&#39; variable</span></div>
+<div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> SphereSource = radiationmodel.addSphereRadiationSource( sun_dir, sphere_radius ); <span class="comment">//add the source, whose identifier is stored in the &#39;SphereSource&#39; variable</span></div>
 <div class="line">radiationmodel.setSourceFlux(SphereSource,<span class="stringliteral">&quot;PAR&quot;</span>,800); <span class="comment">//set the flux of the source</span></div>
 </div><!-- fragment --><h3><a class="anchor" id="DiskSource"></a>
 Adding Disk Radiation Sources</h3>
-<p>A disk radiation source emits directionally from one surface of a circular disk. Disk sources are added using the <a class="el" href="class_radiation_model.html#a8ef94c0bf6286d3e64d7d8c8b96f33bc">addDiskRadiationSource()</a> function, which takes an (x,y,z) location of the disk source center, its radius, and its rotation as arguments. By default, the disk is horizontal and emits from its upper face. The rotation argument specifies the rotation angle in radians about its x-, y-, and z-axes. For example, to have a downward-emitting disk, the rotation would be ( \(\pi\), 0, 0). The flux emanating from the surface of the disk can also be set using the source identifier.</p>
-<div class="fragment"><div class="line">vec3 rotation(M_PI,0,0); <span class="comment">//emitting downward</span></div>
+<p>A disk radiation source emits directionally from one surface of a circular disk. Disk sources are added using the <a class="el" href="class_radiation_model.html#a9f72bc9789dcede3fd3de870867056e4">addDiskRadiationSource()</a> function, which takes an (x,y,z) location of the disk source center, its radius, and its rotation as arguments. By default, the disk is horizontal and emits from its upper face. The rotation argument specifies the rotation angle in radians about its x-, y-, and z-axes. For example, to have a downward-emitting disk, the rotation would be ( \(\pi\), 0, 0). The flux emanating from the surface of the disk can also be set using the source identifier.</p>
+<div class="fragment"><div class="line">vec3 rotation(<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>,0,0); <span class="comment">//emitting downward</span></div>
 <div class="line"><span class="keywordtype">float</span> disk_radius = 1.0;</div>
-<div class="line">uint DiskSource = radiationmodel.addDiskRadiationSource( nullorigin, disk_radius, rotation );</div>
+<div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> DiskSource = radiationmodel.addDiskRadiationSource( nullorigin, disk_radius, rotation );</div>
 <div class="line">radiationmodel.setSourceFlux(DiskSource,<span class="stringliteral">&quot;PAR&quot;</span>,800); <span class="comment">//set the flux of the source</span></div>
 </div><!-- fragment --><h3><a class="anchor" id="RectSource"></a>
 Adding Rectangular Radiation Sources</h3>
 <p>Adding a rectangular radiation source is nearly the same as adding a disk source, except that the horizontal and lateral dimensions of the source can be specified independently. As with the disk source, the rectangle is horizontal by default and emits from its upper face.</p>
-<div class="fragment"><div class="line">vec3 rotation(M_PI,0,0); <span class="comment">//emitting downward</span></div>
+<div class="fragment"><div class="line">vec3 rotation(<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>,0,0); <span class="comment">//emitting downward</span></div>
 <div class="line">vec2 size(2.0, 1.0);</div>
-<div class="line">uint RectSource = radiationmodel.addRectangleRadiationSource( nullorigin, size, rotation );</div>
+<div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> RectSource = radiationmodel.addRectangleRadiationSource( nullorigin, size, rotation );</div>
 <div class="line">radiationmodel.setSourceFlux(RectSource,<span class="stringliteral">&quot;PAR&quot;</span>,800); <span class="comment">//set the flux of the source</span></div>
 </div><!-- fragment --><h3><a class="anchor" id="SourceDist"></a>
 Setting the Radiation Source Spectral Distribution and Normalization</h3>
@@ -512,13 +630,13 @@ Setting the Radiation Source Spectral Distribution and Normalization</h3>
 \[R = \int\limits_{\lambda_{min}}^{\lambda_{max}} R_\lambda d\lambda \]
 </p>
 <p>However, users typically want to change the integral of the source flux distribution dynamically throughout a simulation. This can be done using the <a class="el" href="class_radiation_model.html#a0d07935957cc6651d38a621513581189">RadiationModel::setSourceSpectrumIntegral()</a> method. The user can either set the integral of the source flux spectral distribution across all wavelengths to a prescribed value. The source flux spectral distribution can also be scaled based on a prescribed integral between two wavelengths. For example, if only the total PAR flux was known, the entire solar source flux distribution could be scaled based on the integral from 400-700nm. When called, the <a class="el" href="class_radiation_model.html#a0d07935957cc6651d38a621513581189">RadiationModel::setSourceSpectrumIntegral()</a> function properly normalizes the source spectral distribution, calculates radiative source fluxes for all bands through integration, then calls the <a class="el" href="class_radiation_model.html#a2fa24d994612857ddc889e705b0444b1">RadiationModel::setSourceFlux()</a> method for all bands based on the updated fluxes.</p>
-<div class="fragment"><div class="line">uint SourceID = radiationmodel.addSunSphereRadiationSource(); <span class="comment">//add a radiation source</span></div>
+<div class="fragment"><div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> SourceID = radiationmodel.addSunSphereRadiationSource(); <span class="comment">//add a radiation source</span></div>
 <div class="line">radiationmodel.setSourceSpectrum(SourceID, <span class="stringliteral">&quot;solar_spectrum_direct_ASTMG173&quot;</span>); <span class="comment">//set the source flux spectral distribution to ASTMG173 solar spectrum</span></div>
 <div class="line">radiationmodel.addRadiationBand(<span class="stringliteral">&quot;PAR&quot;</span>, 400, 700); <span class="comment">//add a radiation band called &quot;PAR&quot; defined between 400-700nm</span></div>
 <div class="line">radiationmodel.setSourceSpectrumIntegral(SourceID, 1000 ); <span class="comment">//set the integral of solar flux spectrum across all bands to 1000 W/m^2</span></div>
 </div><!-- fragment --><p>In order to be able to set the source spectrum integral, it is required that: 1) the source has been assigned a spectral distribution via the <a class="el" href="class_radiation_model.html#a790ce56ed07f2f40b80be9676fa02c05">RadiationModel::setSourceSpectrum()</a> method, and 2) bands should have been added with explicit wavelength bounds. If they were not, their fluxes will not be set based on the updated source flux integral.</p>
 <p>A user may want to set the source integral based on only a subset of wavelengths contained in the entire spectrum. For example, if only the PAR (400-700nm) flux was known, the entire source flux distribution could be normalized to produce a given PAR flux.</p>
-<div class="fragment"><div class="line">uint SourceID = radiationmodel.addSunSphereRadiationSource(); <span class="comment">//add a radiation source</span></div>
+<div class="fragment"><div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> SourceID = radiationmodel.addSunSphereRadiationSource(); <span class="comment">//add a radiation source</span></div>
 <div class="line">radiationmodel.setSourceSpectrum(SourceID, <span class="stringliteral">&quot;solar_spectrum_direct_ASTMG173&quot;</span>); <span class="comment">//set the source flux spectral distribution to ASTMG173 solar spectrum (direct)</span></div>
 <div class="line">radiationmodel.addRadiationBand(<span class="stringliteral">&quot;PAR&quot;</span>, 400, 700); <span class="comment">//add a radiation band called &quot;PAR&quot; defined between 400-700nm</span></div>
 <div class="line">radiationmodel.setSourceSpectrumIntegral(SourceID, 300, 400, 700 ); <span class="comment">//set the integral of solar flux spectrum from 400-700nm to 300 W/m^2</span></div>
@@ -527,7 +645,11 @@ Setting the Radiation Source Spectral Distribution and Normalization</h3>
 Adding Diffuse/Ambient Sources</h3>
 <p>An ambient radiation source is added simply by setting its flux value:</p>
 <div class="fragment"><div class="line">radiationmodel.setDiffuseRadiationFlux(<span class="stringliteral">&quot;PAR&quot;</span>,200.f); <span class="comment">//set the flux</span></div>
-</div><!-- fragment --><p>The default is to use 100 diffuse rays per primitive, which can be set to a user-defined value using the following command:</p>
+</div><!-- fragment --><p>Alternatively, diffuse flux can be computed automatically from a spectral distribution by setting the diffuse spectrum:</p>
+<div class="fragment"><div class="line">radiationmodel.setDiffuseSpectrum(<span class="stringliteral">&quot;solar_spectrum_ASTMG173&quot;</span>); <span class="comment">//set diffuse spectrum for all bands</span></div>
+</div><!-- fragment --><p>This applies the spectrum to all existing radiation bands. For each band, the diffuse flux is computed by integrating the spectrum over the band's wavelength range. If <a class="el" href="class_radiation_model.html#aa976502e7f722222399fbfe4f25dbe05">RadiationModel::setDiffuseRadiationFlux()</a> is called for a band, it will override the spectrum-based flux.</p>
+<dl class="section note"><dt>Note</dt><dd>For emission-enabled bands (thermal/longwave bands), spectra are not relevant since these bands use thermal emission rather than incoming solar radiation. For such bands, <a class="el" href="class_radiation_model.html#af8450f2308aee38272b4aef87f0c547b">RadiationModel::getDiffuseFlux()</a> returns 0 unless a manual flux is set via <a class="el" href="class_radiation_model.html#aa976502e7f722222399fbfe4f25dbe05">RadiationModel::setDiffuseRadiationFlux()</a>.</dd></dl>
+<p>The default is to use 100 diffuse rays per primitive, which can be set to a user-defined value using the following command:</p>
 <div class="fragment"><div class="line">radiationmodel.setDiffuseRayCount(<span class="stringliteral">&quot;PAR&quot;</span>,200); <span class="comment">//set the number of rays</span></div>
 </div><!-- fragment --><p>By default, the diffuse radiation distribution is isotropic. An anisotropic diffuse radiation distribution can be utilized using the function <a class="el" href="class_radiation_model.html#ac85aa79af6c1b3b50081216c6c257225">setDiffuseRadiationExtinctionCoeff()</a>. This function applies an anisotropic diffuse distribution in which intensity declines exponentially away from the peak direction (usually the solar direction). The relative diffuse intensity is given by <a href="https://doi.org/10.1016/0038-092X(88)90072-2">(Harrison and Coombes, 1988)</a></p>
 <p class="formulaDsp">
@@ -578,24 +700,24 @@ Adding a Radiation Camera</h3>
 <tr>
 <th>Parameter </th><th>Data Type </th><th>Description  </th></tr>
 <tr>
-<td>camera_position </td><td> <font face="courier" color="green">vec3</font> </td><td>Cartesian (x,y,z) position of the center of the camera lens.  </td></tr>
+<td>camera_position </td><td> <span style="font-family: Courier, monospace; color: green;">vec3</span> </td><td>Cartesian (x,y,z) position of the center of the camera lens.  </td></tr>
 <tr>
-<td>camera_lookat </td><td> <font face="courier" color="green">vec3</font> </td><td>Cartesian (x,y,z) position that the camera is looking directly at (i.e., a line perpendicular to the lens will pass through camera_position and camera_lookat).  </td></tr>
+<td>camera_lookat </td><td> <span style="font-family: Courier, monospace; color: green;">vec3</span> </td><td>Cartesian (x,y,z) position that the camera is looking directly at (i.e., a line perpendicular to the lens will pass through camera_position and camera_lookat).  </td></tr>
 <tr>
-<td>antialiasing_samples </td><td> <font face="courier" color="green">uint</font> </td><td>Number of ray samples launched per camera pixel.  </td></tr>
+<td>antialiasing_samples </td><td> <span style="font-family: Courier, monospace; color: green;">uint</span> </td><td>Number of ray samples launched per camera pixel.  </td></tr>
 </table>
 <p>The set of parameters given in the table below define a camera's intrinsic parameters that determines how it captures images. Each of these values are member variables of a parameters structure called <a class="el" href="struct_camera_properties.html">CameraProperties</a>.</p>
 <table class="doxtable">
 <tr>
-<td>lens_diameter </td><td> <font face="courier" color="green">float</font> </td><td>Physical diameter of the camera lens.  </td></tr>
+<td>lens_diameter </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Physical diameter of the camera lens.  </td></tr>
 <tr>
-<td>focal_plane_distance </td><td> <font face="courier" color="green">float</font> </td><td>Distance from the camera lens to the focal plane (at this distance from the camera, all objects will be in focus).  </td></tr>
+<td>focal_plane_distance </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Distance from the camera lens to the focal plane (at this distance from the camera, all objects will be in focus).  </td></tr>
 <tr>
-<td>HFOV </td><td> <font face="courier" color="green">float</font> </td><td>Angle of the horizontal camera field of view in degrees.  </td></tr>
+<td>HFOV </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Angle of the horizontal camera field of view in degrees.  </td></tr>
 <tr>
-<td>FOV_aspect_ratio </td><td> <font face="courier" color="green">float</font> </td><td>Ratio of horizontal to vertical camera field of view.  </td></tr>
+<td>FOV_aspect_ratio </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td><b>DEPRECATED:</b> This parameter is automatically calculated from camera_resolution to ensure square pixels. The value is set to FOV_aspect_ratio = horizontal_resolution / vertical_resolution. Explicitly setting this parameter will trigger a warning and the value will be ignored.  </td></tr>
 <tr>
-<td>camera_resolution </td><td> <font face="courier" color="green">int2</font> </td><td>Number of camera pixels in the horizontal and vertical directions.  </td></tr>
+<td>camera_resolution </td><td> <span style="font-family: Courier, monospace; color: green;">int2</span> </td><td>Number of camera pixels in the horizontal and vertical directions.  </td></tr>
 </table>
 <p>The last thing to define before adding a camera is which radiation bands the camera will detect. This is specified via a vector of strings, with each element corresponding to the label for a radiation band that has been added from the <a class="el" href="class_radiation_model.html#ad0a4554dfa67054804de534229805054">RadiationModel::addRadiationBand()</a> method. Note that if a camera band was never added, an error will be thrown. Each camera band will correspond to a channel of the camera image.</p>
 <p>Once all these parameters have been defined, we can add a camera to the simulation using the <a class="el" href="class_radiation_model.html#aedf80552eaf2bf6a8544dcb2c72cb331">RadiationModel::addRadiationCamera()</a> method. The first argument to this method is an arbitrary label string (e.g., "thermal", "multispec", "mycamera") that will later be used to reference the camera. Example code is given below.</p>
@@ -604,20 +726,70 @@ Adding a Radiation Camera</h3>
 <div class="line"> </div>
 <div class="line">vec3 camera_position(0,0,3);</div>
 <div class="line">vec3 camera_lookat(0,0,0);</div>
-<div class="line">uint antialiasing_samples = 100;</div>
+<div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> antialiasing_samples = 100;</div>
 <div class="line"> </div>
 <div class="line">radiationmodel.addRadiationCamera(<span class="stringliteral">&quot;visible&quot;</span>, {<span class="stringliteral">&quot;red&quot;</span>,<span class="stringliteral">&quot;green&quot;</span>,<span class="stringliteral">&quot;blue&quot;</span>}, camera_position, camera_lookat, properties, antialiasing_samples );</div>
 </div><!-- fragment --><p>This will add a 3-band RGB camera, and assumes that radiation bands with labels "red", "green", and "blue" have been added based on a call to <a class="el" href="class_radiation_model.html#ad0a4554dfa67054804de534229805054">RadiationModel::addRadiationBand()</a>.</p>
+<h3><a class="anchor" id="RadCamLibrary"></a>
+Adding a Camera from the Camera Library</h3>
+<p>For convenience, a library of real-world cameras with pre-configured intrinsic parameters and spectral response data is provided. This allows you to quickly set up cameras with realistic properties without manually specifying all camera parameters.</p>
+<p>The camera library is located at <code>plugins/radiation/camera_library/camera_library.xml</code> and currently includes the following cameras:</p>
+<table class="doxtable">
+<tr>
+<th>Camera Label </th><th>Manufacturer </th><th>Model </th><th>Sensor Width </th><th>Resolution </th><th>Focal Length </th><th>Lens Diameter  </th></tr>
+<tr>
+<td>Canon_20D </td><td>Canon </td><td>EOS 20D </td><td>22.5 mm </td><td>3504 x 2236 </td><td>31.0 mm </td><td>6.9 mm  </td></tr>
+<tr>
+<td>Nikon_D700 </td><td>Nikon </td><td>D700 </td><td>36.0 mm </td><td>3008 x 2000 </td><td>50.0 mm </td><td>27.8 mm  </td></tr>
+<tr>
+<td>Nikon_D50 </td><td>Nikon </td><td>D50 </td><td>23.7 mm </td><td>3008 x 2000 </td><td>33.9 mm </td><td>7.53 mm  </td></tr>
+<tr>
+<td>iPhone11 </td><td>Apple </td><td>iPhone 11 </td><td>4.29 mm </td><td>3024 x 4032 </td><td>4.25 mm </td><td>2.36 mm  </td></tr>
+<tr>
+<td>iPhone12ProMAX </td><td>Apple </td><td>iPhone 12 Pro Max </td><td>5.1 mm </td><td>3024 x 4032 </td><td>5.1 mm </td><td>3.19 mm  </td></tr>
+</table>
+<dl class="section note"><dt>Note</dt><dd>Sensor height is automatically calculated from sensor width and resolution to ensure square pixels: <code>sensor_height = sensor_width × (resolution_height / resolution_width)</code>.</dd></dl>
+<p>Each camera in the library includes manufacturer-measured spectral response curves for red, green, and blue channels. The spectral response data sources are documented in the XML file comments.</p>
+<p>To add a camera from the library, use the <a class="el" href="class_radiation_model.html#ac6c8a5dd2adaccb6ce5150e29f699e24">RadiationModel::addRadiationCameraFromLibrary()</a> method:</p>
+<div class="fragment"><div class="line">vec3 camera_position(0,0,3);</div>
+<div class="line">vec3 camera_lookat(0,0,0);</div>
+<div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> antialiasing_samples = 100;</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Add an iPhone 11 camera from the library</span></div>
+<div class="line">radiationmodel.addRadiationCameraFromLibrary(<span class="stringliteral">&quot;myiphone&quot;</span>, <span class="stringliteral">&quot;iPhone11&quot;</span>, camera_position, camera_lookat, antialiasing_samples);</div>
+</div><!-- fragment --><p>This method automatically:</p><ul>
+<li>Loads all intrinsic camera parameters (sensor dimensions, resolution, field of view, focal length, lens diameter)</li>
+<li>Creates radiation bands for red, green, and blue channels if they don't already exist</li>
+<li>Sets the spectral response for each band based on the manufacturer's measured data</li>
+<li>Stores the spectral response data in global data with labels like <code>iPhone11_red</code>, <code>iPhone11_green</code>, <code>iPhone11_blue</code></li>
+</ul>
+<h4><a class="anchor" id="RadCamLibraryCustomBands"></a>
+Custom Band Names</h4>
+<p>You can also specify custom band names when loading a camera from the library. This is useful when you want to use different band names than the default "red", "green", "blue" labels defined in the XML file:</p>
+<div class="fragment"><div class="line"><span class="comment">// Use custom band names instead of default &quot;red&quot;, &quot;green&quot;, &quot;blue&quot;</span></div>
+<div class="line">std::vector&lt;std::string&gt; custom_bands = {<span class="stringliteral">&quot;R&quot;</span>, <span class="stringliteral">&quot;G&quot;</span>, <span class="stringliteral">&quot;B&quot;</span>};</div>
+<div class="line">radiationmodel.addRadiationCameraFromLibrary(<span class="stringliteral">&quot;myiphone&quot;</span>, <span class="stringliteral">&quot;iPhone11&quot;</span>, camera_position, camera_lookat, antialiasing_samples, custom_bands);</div>
+</div><!-- fragment --><p>The custom band names are mapped to the spectral responses in the order they appear in the camera library XML file. For example, if the XML defines spectral responses in order "red", "green", "blue" and you provide <code>custom_bands = {"R", "G", "B"}</code>, then "R" will use the "red" spectral response, "G" will use "green", and "B" will use "blue".</p>
+<p>The number of custom band names must exactly match the number of spectral responses defined in the camera library entry. If the sizes don't match, an error will be raised.</p>
+<dl class="section note"><dt>Note</dt><dd>When using custom band names, the global data storing spectral response curves still uses the XML labels (e.g., <code>iPhone11_red</code>). Only the band names used for radiation model operations are customized.</dd></dl>
+<p>If the radiation bands (red, green, blue) don't exist when loading a camera from the library, they will be automatically created with:</p><ul>
+<li>Wavelength ranges determined from the spectral response data (typically 400-720 nm)</li>
+<li>Emission disabled (cameras measure, not emit radiation)</li>
+<li>Scattering depth set to 3</li>
+</ul>
+<p>A warning message will be printed if bands are auto-created.</p>
+<dl class="section note"><dt>Note</dt><dd>The working distance (focal plane distance) for cameras loaded from the library is set to a default value of 2.0 meters. This is the distance at which objects will be in focus.</dd></dl>
 <h3><a class="anchor" id="RadCamSpecular"></a>
 Radiation Camera Specular Reflection</h3>
-<p>Specular reflection causes a surface to look "shiny". Waxy leaves or polished objects have high specular reflection, causing glancing light angles to appear very bright. Specular reflection is modeled using a Blinn-Phong-style approach, which provides a simple approximation to the full specular BRDF.</p>
-<p>Specular reflection effects can be included in simulated images by setting the value of the primitive data "specular_exponent" and/or "specular_scale" for each primitive. By default, if this primitive data is not set for any primitives specular reflection will be disabled entirely. Furthermore, if the specular exponent is set to a negative value for a given primitive, or the primitive data "specular_exponent" does not exist for a given primitive, specular reflection will be disabled for that primitive.</p>
+<p>Specular reflection causes a surface to look "shiny". Waxy leaves or polished objects have high specular reflection, causing glancing light angles to appear very bright. Specular reflection is modeled using a Blinn-Phong-style approach, which provides a simple approximation to Fresnel reflection at the air-material interface.</p>
+<p>Physically, specular reflection occurs at the surface interface before light penetrates the material. For dielectric materials like leaves and plastics, the specular highlight reflects the color of the incident light source (typically white for sunlight), not the material's diffuse color. This is why shiny leaves have white highlights rather than green ones.</p>
+<p>Specular reflection effects can be included in simulated images by setting the value of the primitive data "specular_exponent" and/or "specular_scale" for each primitive. By default, if this primitive data is not set for any primitives specular reflection will be disabled entirely. Furthermore, if the specular exponent is set to a negative value for a given primitive, or the primitive data "specular_exponent" does not exist for a given primitive, specular reflection will be disabled for that primitive. Specular reflection is supported for all radiation source types (collimated, sunsphere, sphere, disk, and rectangle).</p>
 <p>The strength of specular reflection is calculated according to the following equation:</p>
 <p class="formulaDsp">
 \[    I_{spec} = I_{s} \, k_s \, \mathrm{max}\left(0, \vec{n}_{spec} \cdot \vec{n}_p \right)^k\left(\frac{k+2}{2\pi}\right),
 \]
 </p>
-<p>where \(I_{spec}\) is the specular flux contribution, \(I_s\) is the outgoing flux of the sampled primitive, \(k_s\) is the specular scaling coefficient, \(\vec{n}_p\) is the surface normal, \(\vec{n}_s\) is the source direction, \(\vec{n}_{ray}\) is the ray direction, and \(k\) is the specular exponent. \(\vec{n}_{spec}\) is the specular reflection direction, which is calculated as:</p>
+<p>where \(I_{spec}\) is the specular flux contribution, \(I_s\) is the incident flux from the radiation source, \(k_s\) is the specular scaling coefficient, \(\vec{n}_p\) is the surface normal, \(\vec{n}_s\) is the source direction, \(\vec{n}_{ray}\) is the ray direction, and \(k\) is the specular exponent. \(\vec{n}_{spec}\) is the specular reflection direction, which is calculated as:</p>
 <p class="formulaDsp">
 \[    \vec{n}_{spec} = \frac{\vec{n}_s - \vec{n}_{ray}}{|| \vec{n}_s + \vec{n}_{ray} ||}.
 \]
@@ -660,7 +832,132 @@ Radiation Camera Color Calibration</h3>
 <div class="line">truevalues.at(2) = {1.0, 0.71, 0.60, 0.48, 0.36, 0.0, 0.20, 0.31, 0.35, 0.91, 0.31, 0.54, 0.24, 0.24, 0.63, 0.57, 0.56, 0.50};</div>
 </div><!-- fragment --><p>It is preferable to use more significant digits for the color values for increased precision. The above example used only two significant digits for simplicity.</p>
 <p>3. Set up the scene in Helios based on the geometry, radiative conditions, and camera(s) that will be present in the simulations. You must specify the spectral distribution of any radiation sources using <a class="el" href="class_radiation_model.html#a790ce56ed07f2f40b80be9676fa02c05">RadiationModel::setSourceSpectrum()</a>, and specify an initial guess for the camera channel spectral distribution(s) using <a class="el" href="class_radiation_model.html#a1ea2acedb464217f1acc38f0e05d353f">RadiationModel::setCameraSpectralResponse()</a>.</p>
-<p>4. Add a simulated color calibration board to the scene. You can add the default color board (DGK Color Tools DKK Color Calibration Chart) using the method <a class="el" href="struct_camera_calibration.html#a4b1c43adcd27bc075327a239f31f03b8">CameraCalibration::addDefaultColorboard()</a>, or a custom color board helios::CameraCalibration::addCustomColorboard().</p>
+<p>4. Add a simulated color calibration board to the scene. You can add the default color board (DGK Color Tools DKK Color Calibration Chart) using the method ef CameraCalibration::addDefaultColorboard(), or a custom color board ef CameraCalibration::addColorboard().</p>
+<h3><a class="anchor" id="RadCamMetadata"></a>
+Exporting Camera Metadata</h3>
+<p>The radiation model can automatically export JSON metadata files alongside camera images. This metadata includes camera properties (resolution, focal length, aperture, sensor dimensions), geographic location, acquisition time/date, and lighting conditions. This is useful for documentation, machine learning applications, and archival purposes.</p>
+<h4><a class="anchor" id="RadCamMetadataStruct"></a>
+Camera Metadata Structure</h4>
+<p>Camera metadata is stored in the <a class="el" href="struct_camera_metadata.html">CameraMetadata</a> struct, which contains three nested structures:</p>
+<ul>
+<li><b>camera_properties</b>: Intrinsic camera parameters including image resolution, number of channels, optical focal length (mm), aperture (f-stop), and physical sensor dimensions (mm)</li>
+<li><b>location_properties</b>: Geographic coordinates (latitude/longitude in degrees)</li>
+<li><b>acquisition_properties</b>: Capture information including date (YYYY-MM-DD), time (HH:MM:SS), UTC offset, camera height above ground (meters), camera tilt angle from horizontal (degrees), and light source type ("sunlight", "artificial", "mixed", or "none")</li>
+<li><b>image_processing</b>: (optional) Any applied image corrections including saturation, brightness, contrast adjustments and gamma compression flag</li>
+</ul>
+<h4><a class="anchor" id="RadCamMetadataAuto"></a>
+Auto-populating Metadata</h4>
+<p>The easiest way to populate camera metadata is to use the RadiationModel::populateCameraMetadata() method, which automatically fills all fields from the camera parameters and simulation context:</p>
+<div class="fragment"><div class="line"><span class="comment">// Assume camera has already been added with label &quot;RGB_camera&quot;</span></div>
+<div class="line"><a class="code hl_struct" href="struct_camera_metadata.html" title="Metadata for radiation camera image export.">CameraMetadata</a> metadata;</div>
+<div class="line">radiationmodel.populateCameraMetadata(<span class="stringliteral">&quot;RGB_camera&quot;</span>, metadata);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Set the metadata for this camera</span></div>
+<div class="line">radiationmodel.setCameraMetadata(<span class="stringliteral">&quot;RGB_camera&quot;</span>, metadata);</div>
+</div><!-- fragment --><p>The auto-population calculates:</p><ul>
+<li><b>Optical focal length</b>: Derived from sensor width and horizontal field of view using \(f = \frac{w}{2 \tan(\theta/2)}\), where \(w\) is sensor width and \(\theta\) is HFOV</li>
+<li><b>Sensor dimensions</b>: Sensor width is specified via the <a class="el" href="struct_camera_properties.html#ac48c34f82b20b43ce3ea9b94edd34668">CameraProperties::sensor_width_mm</a> parameter (default 35mm), and sensor height is calculated as \(h = w / \mathrm{aspect\_ratio}\)</li>
+<li><b>Aperture (f-stop)</b>: Calculated from focal length and lens diameter as \(N = f / D\), formatted as "f/X.X". For pinhole cameras (lens_diameter = 0), aperture is set to "pinhole"</li>
+<li><b>Camera tilt angle</b>: Angle from horizontal computed from the camera viewing direction, where 0° is horizontal, 90° is pointing straight down, and -90° is pointing straight up</li>
+<li><b>Light source type</b>: Automatically detected based on radiation sources:<ul>
+<li>"sunlight" if only collimated or sun sphere sources are present</li>
+<li>"artificial" if only sphere, rectangle, or disk sources are present</li>
+<li>"mixed" if both natural and artificial sources are present</li>
+<li>"none" if no sources are present</li>
+</ul>
+</li>
+<li><b>Location and date/time</b>: Retrieved from the simulation Context</li>
+</ul>
+<h4><a class="anchor" id="RadCamMetadataManual"></a>
+Manual Metadata Population</h4>
+<p>You can also manually populate metadata fields if you want to override auto-calculated values or provide custom information:</p>
+<div class="fragment"><div class="line"><a class="code hl_struct" href="struct_camera_metadata.html" title="Metadata for radiation camera image export.">CameraMetadata</a> metadata;</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Manually set camera properties</span></div>
+<div class="line">metadata.camera_properties.<a class="code hl_variable" href="struct_camera_metadata_1_1_camera_properties.html#ae5ad5ff81fb74282bf1a1aa95f6d5331" title="Image width in pixels.">width</a> = 1024;</div>
+<div class="line">metadata.camera_properties.<a class="code hl_variable" href="struct_camera_metadata_1_1_camera_properties.html#a501615ea10b07d8c7d512cab752c1e4b" title="Image height in pixels.">height</a> = 1024;</div>
+<div class="line">metadata.camera_properties.<a class="code hl_variable" href="struct_camera_metadata_1_1_camera_properties.html#a5ed2c2b02d31adb578191725a24f6ce4" title="Number of spectral bands (1=grayscale, 3=RGB)">channels</a> = 3;</div>
+<div class="line">metadata.camera_properties.<a class="code hl_variable" href="struct_camera_metadata_1_1_camera_properties.html#a99f574d35e71ae4653ce6d437746d2ce" title="Optical focal length in mm (physical focal length, not 35mm equivalent)">focal_length</a> = 50.0f;  <span class="comment">// mm</span></div>
+<div class="line">metadata.camera_properties.<a class="code hl_variable" href="struct_camera_metadata_1_1_camera_properties.html#a43046a9b93f662b3ff2dad622f4116ab" title="Aperture f-stop (e.g., &quot;f/2.8&quot; or &quot;pinhole&quot;)">aperture</a> = <span class="stringliteral">&quot;f/2.8&quot;</span>;</div>
+<div class="line">metadata.camera_properties.<a class="code hl_variable" href="struct_camera_metadata_1_1_camera_properties.html#ae7b78f737b97541c4206f23acbf18c4c" title="Physical sensor width in mm.">sensor_width</a> = 36.0f;  <span class="comment">// mm (full-frame)</span></div>
+<div class="line">metadata.camera_properties.<a class="code hl_variable" href="struct_camera_metadata_1_1_camera_properties.html#a5ab7f463c019e48e32ba848b79533c5b" title="Physical sensor height in mm.">sensor_height</a> = 24.0f; <span class="comment">// mm</span></div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Set location</span></div>
+<div class="line">metadata.location_properties.<a class="code hl_variable" href="struct_camera_metadata_1_1_location_properties.html#a0ba03da78fa1f0aec302ed0037a405dc" title="Latitude in degrees (+N/-S)">latitude</a> = 34.0522f;</div>
+<div class="line">metadata.location_properties.<a class="code hl_variable" href="struct_camera_metadata_1_1_location_properties.html#acb444eb82ae2f25888eaaf6c53cee6fb" title="Longitude in degrees (+E/-W)">longitude</a> = -118.2437f;</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Set acquisition properties</span></div>
+<div class="line">metadata.acquisition_properties.<a class="code hl_variable" href="struct_camera_metadata_1_1_acquisition_properties.html#a1b39067cff19cf6c510ccdb3a7bc40e6" title="Acquisition date (YYYY-MM-DD format)">date</a> = <span class="stringliteral">&quot;2025-09-30&quot;</span>;</div>
+<div class="line">metadata.acquisition_properties.<a class="code hl_variable" href="struct_camera_metadata_1_1_acquisition_properties.html#a98fdcbc86d4f2c384c60acf66c365ce3" title="Acquisition time (HH:MM:SS format)">time</a> = <span class="stringliteral">&quot;14:30:00&quot;</span>;</div>
+<div class="line">metadata.acquisition_properties.<a class="code hl_variable" href="struct_camera_metadata_1_1_acquisition_properties.html#a67463291c7154cec9d62bd8f3f9f126e" title="UTC offset in hours.">UTC_offset</a> = 8.0f;</div>
+<div class="line">metadata.acquisition_properties.<a class="code hl_variable" href="struct_camera_metadata_1_1_acquisition_properties.html#a2a2aa268a0bba5b34f4356154e9abcc8" title="Camera height above ground in meters.">camera_height_m</a> = 50.0f;</div>
+<div class="line">metadata.acquisition_properties.<a class="code hl_variable" href="struct_camera_metadata_1_1_acquisition_properties.html#aa7907281354171124296a76ba56d2489" title="Camera tilt angle from horizontal (0=horizontal, 90=down)">camera_angle_deg</a> = 15.0f;</div>
+<div class="line">metadata.acquisition_properties.<a class="code hl_variable" href="struct_camera_metadata_1_1_acquisition_properties.html#a32855ea185780b82552b55788a85206d" title="Lighting type: &quot;sunlight&quot;, &quot;artificial&quot;, &quot;mixed&quot;, or &quot;none&quot;.">light_source</a> = <span class="stringliteral">&quot;sunlight&quot;</span>;</div>
+<div class="line"> </div>
+<div class="line">radiationmodel.setCameraMetadata(<span class="stringliteral">&quot;RGB_camera&quot;</span>, metadata);</div>
+</div><!-- fragment --><h4><a class="anchor" id="RadCamMetadataExport"></a>
+Automatic JSON Export</h4>
+<p>Once metadata has been set for a camera using <a class="el" href="class_radiation_model.html#a813e4e336be3cc968c9620beb8a99748">RadiationModel::setCameraMetadata()</a>, a JSON metadata file will be automatically written whenever <a class="el" href="class_radiation_model.html#ac93b05d9fe782329261d477935b37bcb">RadiationModel::writeCameraImage()</a> is called for that camera. The JSON file will have the same base name as the image but with a .json extension.</p>
+<div class="fragment"><div class="line"><span class="comment">// After running simulation...</span></div>
+<div class="line">std::string image_path = radiationmodel.writeCameraImage(<span class="stringliteral">&quot;RGB_camera&quot;</span>, {<span class="stringliteral">&quot;red&quot;</span>,<span class="stringliteral">&quot;green&quot;</span>,<span class="stringliteral">&quot;blue&quot;</span>}, <span class="stringliteral">&quot;scene&quot;</span>);</div>
+<div class="line"><span class="comment">// This writes both &quot;RGB_camera_scene.jpeg&quot; and &quot;RGB_camera_scene.json&quot;</span></div>
+</div><!-- fragment --><p>The JSON file follows this structure:</p>
+<div class="fragment"><div class="line">{</div>
+<div class="line">  &quot;path&quot;: &quot;RGB_camera_scene.jpeg&quot;,</div>
+<div class="line">  &quot;camera_properties&quot;: {</div>
+<div class="line">    &quot;height&quot;: 1024,</div>
+<div class="line">    &quot;width&quot;: 1024,</div>
+<div class="line">    &quot;channels&quot;: 3,</div>
+<div class="line">    &quot;focal_length&quot;: 28.5,</div>
+<div class="line">    &quot;aperture&quot;: &quot;f/2.8&quot;,</div>
+<div class="line">    &quot;sensor_width&quot;: 35.0,</div>
+<div class="line">    &quot;sensor_height&quot;: 35.0,</div>
+<div class="line">    &quot;model&quot;: &quot;generic&quot;</div>
+<div class="line">  },</div>
+<div class="line">  &quot;location_properties&quot;: {</div>
+<div class="line">    &quot;latitude&quot;: 34.0522,</div>
+<div class="line">    &quot;longitude&quot;: -118.2437</div>
+<div class="line">  },</div>
+<div class="line">  &quot;acquisition_properties&quot;: {</div>
+<div class="line">    &quot;date&quot;: &quot;2025-09-30&quot;,</div>
+<div class="line">    &quot;time&quot;: &quot;14:30:00&quot;,</div>
+<div class="line">    &quot;UTC_offset&quot;: 8.0,</div>
+<div class="line">    &quot;camera_height_m&quot;: 50.0,</div>
+<div class="line">    &quot;camera_angle_deg&quot;: 15.0,</div>
+<div class="line">    &quot;light_source&quot;: &quot;sunlight&quot;</div>
+<div class="line">  },</div>
+<div class="line">  &quot;image_processing&quot;: {</div>
+<div class="line">    &quot;saturation_adjustment&quot;: 1.5,</div>
+<div class="line">    &quot;brightness_adjustment&quot;: 1.2,</div>
+<div class="line">    &quot;contrast_adjustment&quot;: 1.1,</div>
+<div class="line">    &quot;color_space&quot;: &quot;sRGB&quot;</div>
+<div class="line">  }</div>
+<div class="line">}</div>
+</div><!-- fragment --><h4><a class="anchor" id="RadCamMetadataSensor"></a>
+Sensor Width Parameter</h4>
+<p>The physical sensor width can be specified when defining camera properties using the <a class="el" href="struct_camera_properties.html#ac48c34f82b20b43ce3ea9b94edd34668">CameraProperties::sensor_width_mm</a> parameter (default is 35mm for full-frame):</p>
+<div class="fragment"><div class="line"><a class="code hl_struct" href="struct_camera_properties.html" title="Properties defining a radiation camera.">CameraProperties</a> properties;</div>
+<div class="line">properties.<a class="code hl_variable" href="struct_camera_properties.html#a2806b640deeab5fbcd9dda8ea240f345" title="Camera sensor resolution (number of pixels) in the horizontal (.x) and vertical (....">camera_resolution</a> = make_int2(1920, 1280);  <span class="comment">// 3:2 aspect ratio</span></div>
+<div class="line">properties.<a class="code hl_variable" href="struct_camera_properties.html#ac48c34f82b20b43ce3ea9b94edd34668" title="Physical sensor width in mm (default 35mm full-frame)">sensor_width_mm</a> = 24.0f;  <span class="comment">// APS-C sensor size</span></div>
+<div class="line">properties.<a class="code hl_variable" href="struct_camera_properties.html#ac1419dfa651f1f8343f5fb5a2fad2148" title="Camera horizontal field of view in degrees.">HFOV</a> = 45.0f;</div>
+<div class="line"><span class="comment">// FOV_aspect_ratio is automatically calculated from camera_resolution (1920/1280 = 1.5)</span></div>
+<div class="line">properties.<a class="code hl_variable" href="struct_camera_properties.html#a11bfd379c7e8aaf656f8f7db1552f572" title="Camera model name (e.g., &quot;Nikon D700&quot;, &quot;Canon EOS 5D&quot;)">model</a> = <span class="stringliteral">&quot;Canon EOS 70D&quot;</span>;  <span class="comment">// Optional camera model name</span></div>
+<div class="line"> </div>
+<div class="line">radiationmodel.addRadiationCamera(<span class="stringliteral">&quot;APS-C_camera&quot;</span>, {<span class="stringliteral">&quot;red&quot;</span>,<span class="stringliteral">&quot;green&quot;</span>,<span class="stringliteral">&quot;blue&quot;</span>},</div>
+<div class="line">                                  camera_position, camera_lookat,</div>
+<div class="line">                                  properties, antialiasing_samples);</div>
+</div><!-- fragment --><p>This sensor width is used to calculate the optical focal length when metadata is auto-populated. Common sensor sizes include:</p><ul>
+<li>Full-frame: 36mm × 24mm (sensor_width_mm = 36.0)</li>
+<li>APS-C: 24mm × 16mm (sensor_width_mm = 24.0)</li>
+<li>Micro Four Thirds: 17.3mm × 13mm (sensor_width_mm = 17.3)</li>
+</ul>
+<h4><a class="anchor" id="RadCamMetadataModel"></a>
+Camera Model Name</h4>
+<p>The camera model name can be specified using the <a class="el" href="struct_camera_properties.html#a11bfd379c7e8aaf656f8f7db1552f572">CameraProperties::model</a> parameter (default is "generic"). This is useful for documentation and distinguishing between different camera types in your simulation:</p>
+<div class="fragment"><div class="line"><a class="code hl_struct" href="struct_camera_properties.html" title="Properties defining a radiation camera.">CameraProperties</a> properties;</div>
+<div class="line">properties.<a class="code hl_variable" href="struct_camera_properties.html#a11bfd379c7e8aaf656f8f7db1552f572" title="Camera model name (e.g., &quot;Nikon D700&quot;, &quot;Canon EOS 5D&quot;)">model</a> = <span class="stringliteral">&quot;Nikon D700&quot;</span>;</div>
+<div class="line"><span class="comment">// ... other properties ...</span></div>
+</div><!-- fragment --><p>The model name will be automatically included in the exported JSON metadata.</p>
 <h2><a class="anchor" id="RadRun"></a>
 Running Simulations</h2>
 <p>Before simulations are run, we must update the context geometry within the radiation model using the <a class="el" href="class_radiation_model.html#acf5fe304146a9270bf0e841f59e51934">updateGeometry()</a> command. The geometry update can be somewhat costly, so it should only be done whenever geometry changes.</p>
@@ -708,7 +1005,7 @@ Integrating with the SolarPosition Plug-in</h2>
 <div class="line"> </div>
 <div class="line">   <a class="code hl_class" href="class_radiation_model.html" title="Radiation transport model plugin.">RadiationModel</a> radiationmodel( &amp;context ); <span class="comment">//initialize the radiation model</span></div>
 <div class="line"> </div>
-<div class="line">   uint SunSource = radiationmodel.addCollimatedRadiationSource(); <span class="comment">//add the source (sun), we&#39;ll set it&#39;s direction later</span></div>
+<div class="line">   <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> SunSource = radiationmodel.addCollimatedRadiationSource(); <span class="comment">//add the source (sun), we&#39;ll set it&#39;s direction later</span></div>
 <div class="line"> </div>
 <div class="line">   radiationmodel.addRadiationBand(<span class="stringliteral">&quot;SW&quot;</span>);</div>
 <div class="line">   radiationmodel.setDirectRayCount(<span class="stringliteral">&quot;SW&quot;</span>,1000); <span class="comment">//set the ray count for source</span></div>
@@ -807,8 +1104,41 @@ Integrating Fluxes</h3>
 <h3><a class="anchor" id="RadCamOut"></a>
 Writing Camera Images to File</h3>
 <p>Simulated camera data can be written to file as a JPEG image, or the raw pixel data can be queried from the Context.</p>
-<p>JPEG images are written either as a grayscale image (1 spectral band) or and RGB image (3 spectral bands) using the <a class="el" href="class_radiation_model.html#aa30ec7ec3b6c3b109e9a9544b890e8de">RadiationModel::writeCameraImage()</a> method. This method takes three required arguments and two optional arguments: 1) a string denoting the label of a camera that was added through the <a class="el" href="class_radiation_model.html#aedf80552eaf2bf6a8544dcb2c72cb331">RadiationModel::addRadiationCamera()</a> method, 2) a vector of strings denoting the label(s) of radiation bands to be written to the image(s), which must contain exactly 1 element (grayscale image) or 3 elements (RGB image), and 3) a string denoting the base of the image filename, which may be appended with information like a radiation band label or frame count. The two optional arguments are: 1) the relative path to the directory where the images should be stored, and 2) a numerical integer identifier to be appended to the image file name (e.g., "camera_thermal_00001.jpeg"). Note that this value must be less than or equal to 99,9999. By default, images are stored in the directory where the executable is being run (usually the build directory), and the numerical identifier is omitted unless a value is provided.</p>
-<p>Below is example code of writing an RGB image (3 spectral bands).</p>
+<p>JPEG images are written either as a grayscale image (1 spectral band) or and RGB image (3 spectral bands) using the <a class="el" href="class_radiation_model.html#ac93b05d9fe782329261d477935b37bcb">RadiationModel::writeCameraImage()</a> method. This method takes three required arguments and two optional arguments: 1) a string denoting the label of a camera that was added through the <a class="el" href="class_radiation_model.html#aedf80552eaf2bf6a8544dcb2c72cb331">RadiationModel::addRadiationCamera()</a> method, 2) a vector of strings denoting the label(s) of radiation bands to be written to the image(s), which must contain exactly 1 element (grayscale image) or 3 elements (RGB image), and 3) a string denoting the base of the image filename, which may be appended with information like a radiation band label or frame count. The two optional arguments are: 1) the relative path to the directory where the images should be stored, and 2) a numerical integer identifier to be appended to the image file name (e.g., "camera_thermal_00001.jpeg"). Note that this value must be less than or equal to 99,9999. By default, images are stored in the current working directory, and the numerical identifier is omitted unless a value is provided.</p>
+<h4><a class="anchor" id="RadCamImageCorrections"></a>
+Applying Camera Image Corrections</h4>
+<p>Before writing RGB camera images, you can apply post-processing corrections using the <a class="el" href="class_radiation_model.html#aeecebaafcc1964c986de466c517b434a">RadiationModel::applyCameraImageCorrections()</a> method. This method applies brightness/contrast adjustment, saturation adjustment, and gamma compression to produce more realistic camera-like output. The correction parameters are automatically saved to camera metadata if metadata export is enabled via <a class="el" href="class_radiation_model.html#ae0345c79189227d4cc5eef5cc8ec8437">RadiationModel::enableCameraMetadata()</a>.</p>
+<div class="fragment"><div class="line"><span class="comment">// After running radiation simulation...</span></div>
+<div class="line">radiationmodel.runBand({<span class="stringliteral">&quot;red&quot;</span>,<span class="stringliteral">&quot;green&quot;</span>,<span class="stringliteral">&quot;blue&quot;</span>});</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Apply image corrections before writing</span></div>
+<div class="line">radiationmodel.applyCameraImageCorrections(<span class="stringliteral">&quot;visible&quot;</span>, <span class="stringliteral">&quot;red&quot;</span>, <span class="stringliteral">&quot;green&quot;</span>, <span class="stringliteral">&quot;blue&quot;</span>,</div>
+<div class="line">                                           1.5f,  <span class="comment">// saturation adjustment (1.0 = no change)</span></div>
+<div class="line">                                           1.2f,  <span class="comment">// brightness adjustment</span></div>
+<div class="line">                                           1.1f); <span class="comment">// contrast adjustment</span></div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Write corrected image (metadata JSON will include image_processing parameters if enabled)</span></div>
+<div class="line">radiationmodel.writeCameraImage(<span class="stringliteral">&quot;visible&quot;</span>, {<span class="stringliteral">&quot;red&quot;</span>,<span class="stringliteral">&quot;green&quot;</span>,<span class="stringliteral">&quot;blue&quot;</span>}, <span class="stringliteral">&quot;myimage&quot;</span>);</div>
+</div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>The older method <a class="el" href="class_radiation_model.html#afd8991944c709078c7dce0afde384a96">RadiationModel::applyImageProcessingPipeline()</a> is deprecated. Use <a class="el" href="class_radiation_model.html#aeecebaafcc1964c986de466c517b434a">RadiationModel::applyCameraImageCorrections()</a> instead.</dd></dl>
+<h3><a class="anchor" id="RadCamSegmentation"></a>
+Writing Camera Image Segmentation Masks</h3>
+<p>In addition to regular camera images, the radiation model can generate segmentation masks in COCO JSON format for machine learning applications. Segmentation masks identify and outline objects within camera images, providing pixel-level annotations that can be used for training object detection and segmentation models.</p>
+<p>Two methods are available for writing segmentation masks:</p>
+<p>1. <a class="el" href="class_radiation_model.html#ab09e3ca616d4b973e86a46d55b06f780">RadiationModel::writeImageSegmentationMasks()</a> - Creates segmentation masks based on primitive data labels.</p>
+<p>2. <a class="el" href="class_radiation_model.html#a530249dda55ba4849312acb862676a73">RadiationModel::writeImageSegmentationMasks_ObjectData()</a> - Creates segmentation masks based on object data labels.</p>
+<p>Both methods take the following arguments: 1) a string denoting the camera label, 2) a string denoting the primitive/object data label to use for segmentation, 3) an integer object class ID for COCO annotations, 4) a string denoting the JSON output filename (can include a relative path), 5) a string denoting the image file corresponding to these labels, 6) an optional vector of strings specifying primitive or object data labels whose mean values will be calculated for each mask and written as attributes (defaults to empty vector), and 7) an optional boolean flag to append to existing JSON files (defaults to false for new files).</p>
+<p>The segmentation masks are generated using boundary tracing algorithms that identify connected regions of pixels with the same data label values. Each unique label value becomes a separate annotation in the COCO JSON output, with precise polygon boundaries traced around the object regions.</p>
+<p>When the append flag is set to true, new annotations are added to existing JSON files, allowing multiple primitive/object types to be combined into a single segmentation dataset. This is useful for creating comprehensive annotations that include both foreground objects and background elements like ground surfaces.</p>
+<div class="fragment"><div class="line"><span class="comment">// Write segmentation masks for bunny objects (primitive data approach)</span></div>
+<div class="line">radiationmodel.writeImageSegmentationMasks(<span class="stringliteral">&quot;visible&quot;</span>, <span class="stringliteral">&quot;bunny&quot;</span>, 1, <span class="stringliteral">&quot;bunny_masks&quot;</span>, <span class="stringliteral">&quot;./&quot;</span>);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Write segmentation masks for ground surfaces  </span></div>
+<div class="line">radiationmodel.writeImageSegmentationMasks(<span class="stringliteral">&quot;visible&quot;</span>, <span class="stringliteral">&quot;ground&quot;</span>, 0, <span class="stringliteral">&quot;ground_masks&quot;</span>, <span class="stringliteral">&quot;./&quot;</span>);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Append both to create combined annotations</span></div>
+<div class="line">radiationmodel.writeImageSegmentationMasks(<span class="stringliteral">&quot;visible&quot;</span>, <span class="stringliteral">&quot;ground&quot;</span>, 0, <span class="stringliteral">&quot;combined_masks&quot;</span>, <span class="stringliteral">&quot;./&quot;</span>, <span class="keyword">false</span>);</div>
+<div class="line">radiationmodel.writeImageSegmentationMasks(<span class="stringliteral">&quot;visible&quot;</span>, <span class="stringliteral">&quot;bunny&quot;</span>, 1, <span class="stringliteral">&quot;combined_masks&quot;</span>, <span class="stringliteral">&quot;./&quot;</span>, <span class="keyword">true</span>);</div>
+</div><!-- fragment --><p>Below is example code of writing an RGB image (3 spectral bands).</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_radiation_model_8h.html">RadiationModel.h</a>&quot;</span></div>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
 <div class="line"> </div>
@@ -821,18 +1151,18 @@ Writing Camera Images to File</h3>
 <div class="line">   std::vector&lt;uint&gt; UUIDs_ground = context.<a class="code hl_function" href="group__compoundobjects.html#gae15ba3f5741d27c52c43a35eec6c866b" title="Add a patch that is subdivided into a regular grid of sub-patches (tiled)">addTile</a>( <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be" title="Default null vec3 that gives the origin (0,0,0)">nullorigin</a>, <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(3,3), <a class="code hl_variable" href="global_8h.html#adcd5a98ec7c45292736ec8e19ce9de51" title="Default null SphericalCoord that applies no rotation.">nullrotation</a>, <a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(200,200) );</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">// Set labels that we&#39;ll use to label pixels</span></div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUIDs_bunny, <span class="stringliteral">&quot;bunny&quot;</span>, 1 );</div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUIDs_ground, <span class="stringliteral">&quot;bunny&quot;</span>, 0 );</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>( UUIDs_bunny, <span class="stringliteral">&quot;bunny&quot;</span>, 1 );</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>( UUIDs_ground, <span class="stringliteral">&quot;bunny&quot;</span>, 0 );</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">// Load and set spectral reflectivity data for bunny based on a grapevine leaf and ground based on soil</span></div>
 <div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a129516a8fce035705a541e7b877eba2f" title="Load inputs specified in an XML file.">loadXML</a>(<span class="stringliteral">&quot;plugins/radiation/spectral_data/leaf_surface_spectral_library.xml&quot;</span>);</div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUIDs_bunny, <span class="stringliteral">&quot;reflectivity_spectrum&quot;</span>, <span class="stringliteral">&quot;grape_leaf_reflectivity_0000&quot;</span> );</div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUIDs_ground, <span class="stringliteral">&quot;reflectivity_spectrum&quot;</span>, <span class="stringliteral">&quot;soil_reflectivity_0000&quot;</span> );</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>( UUIDs_bunny, <span class="stringliteral">&quot;reflectivity_spectrum&quot;</span>, <span class="stringliteral">&quot;grape_leaf_reflectivity_0000&quot;</span> );</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>( UUIDs_ground, <span class="stringliteral">&quot;reflectivity_spectrum&quot;</span>, <span class="stringliteral">&quot;soil_reflectivity_0000&quot;</span> );</div>
 <div class="line"> </div>
 <div class="line">   <a class="code hl_class" href="class_radiation_model.html" title="Radiation transport model plugin.">RadiationModel</a> radiationmodel(&amp;context);</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">// Add a sun sphere radiation source</span></div>
-<div class="line">   uint source = radiationmodel.addSunSphereRadiationSource(<a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(<a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(90-50), <a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(40)));</div>
+<div class="line">   <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> source = radiationmodel.addSunSphereRadiationSource(<a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(<a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(90-50), <a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(40)));</div>
 <div class="line">   <span class="comment">// Set the solar spectrum to ASTMG173 from the library</span></div>
 <div class="line">   radiationmodel.setSourceSpectrum( source, <span class="stringliteral">&quot;solar_spectrum_direct_ASTMG173&quot;</span> );</div>
 <div class="line"> </div>
@@ -851,12 +1181,12 @@ Writing Camera Images to File</h3>
 <div class="line"> </div>
 <div class="line">   <span class="keywordtype">float</span> camera_height = 2;</div>
 <div class="line">   <a class="code hl_struct" href="struct_camera_properties.html" title="Properties defining a radiation camera.">CameraProperties</a> properties; <span class="comment">//default camera properties</span></div>
-<div class="line">   properties.<a class="code hl_variable" href="struct_camera_properties.html#a7eae760b6f6729b2e391d0b96d07b209" title="Distance from the viewing plane to the focal plane.">focal_plane_distance</a> = camera_height-0.75;</div>
-<div class="line">   properties.<a class="code hl_variable" href="struct_camera_properties.html#ac1419dfa651f1f8343f5fb5a2fad2148" title="Camera horizontal field of view in degrees.">HFOV</a> = std::atan(1.5f/camera_height)*180.f/M_PI*2.f; <span class="comment">//exactly frame the ground</span></div>
+<div class="line">   properties.<a class="code hl_variable" href="struct_camera_properties.html#a7eae760b6f6729b2e391d0b96d07b209" title="Distance from the viewing plane to the focal plane (working distance for ray generation)">focal_plane_distance</a> = camera_height-0.75;</div>
+<div class="line">   properties.<a class="code hl_variable" href="struct_camera_properties.html#ac1419dfa651f1f8343f5fb5a2fad2148" title="Camera horizontal field of view in degrees.">HFOV</a> = std::atan(1.5f/camera_height)*180.f/<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>*2.f; <span class="comment">//exactly frame the ground</span></div>
 <div class="line"> </div>
 <div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> camera_position(0,0,camera_height);</div>
 <div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> camera_lookat(0,0,0);</div>
-<div class="line">   uint antialiasing_samples = 100;</div>
+<div class="line">   <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> antialiasing_samples = 100;</div>
 <div class="line"> </div>
 <div class="line">   radiationmodel.addRadiationCamera(<span class="stringliteral">&quot;visible&quot;</span>, {<span class="stringliteral">&quot;red&quot;</span>,<span class="stringliteral">&quot;green&quot;</span>,<span class="stringliteral">&quot;blue&quot;</span>}, camera_position, camera_lookat, properties, antialiasing_samples );</div>
 <div class="line"> </div>
@@ -877,7 +1207,7 @@ Writing Camera Images to File</h3>
 <div class="line"> </div>
 <div class="line">   <span class="keywordflow">return</span> 0;</div>
 <div class="line">}</div>
-</div><!-- fragment --><p>The above code would produce an image in the build directory called "camera_visible_myimage.jpeg", which is shown below, along with a file labels.txt that contains the primitive data labels for each pixel.</p>
+</div><!-- fragment --><p>The above code would produce an image in the current working directory called "camera_visible_myimage.jpeg", which is shown below, along with a file labels.txt that contains the primitive data labels for each pixel.</p>
 <div class="image">
 <img src="camera_visible_myimage.jpeg" alt=""/>
 </div>

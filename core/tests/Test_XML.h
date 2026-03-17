@@ -149,14 +149,14 @@ TEST_CASE("Context XML I/O Functions") {
         ctx.setObjectData(box, "object_data", "test_string");
         ctx.setGlobalData("global_test", 123);
 
-        // Write to XML
-        const char *test_file = "/tmp/helios_test.xml";
-        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file));
+        // Write to XML (use quiet parameter to avoid output)
+        const char *test_file = "helios_test.xml";
+        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, true));
 
-        // Create new context and load
+        // Create new context and load (use quiet parameter)
         Context ctx2;
         std::vector<uint> loaded_uuids;
-        DOCTEST_CHECK_NOTHROW(loaded_uuids = ctx2.loadXML(test_file));
+        DOCTEST_CHECK_NOTHROW(loaded_uuids = ctx2.loadXML(test_file, true));
         DOCTEST_CHECK(loaded_uuids.size() >= 2);
 
         // Verify loaded data
@@ -191,12 +191,13 @@ TEST_CASE("Context XML I/O Functions") {
         uint box2 = ctx.addBoxObject(make_vec3(2, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
 
         std::vector<uint> selected_objects = {box1};
-        const char *test_file = "/tmp/helios_partial_test.xml";
+        const char *test_file = "helios_partial_test.xml";
 
-        DOCTEST_CHECK_NOTHROW(ctx.writeXML_byobject(test_file, selected_objects));
+        // Use quiet parameter to avoid output
+        DOCTEST_CHECK_NOTHROW(ctx.writeXML_byobject(test_file, selected_objects, true));
 
         Context ctx2;
-        std::vector<uint> loaded_uuids = ctx2.loadXML(test_file);
+        std::vector<uint> loaded_uuids = ctx2.loadXML(test_file, true);
 
         // Should only have primitives from one box (6 faces)
         DOCTEST_CHECK(loaded_uuids.size() == 6);
@@ -212,12 +213,13 @@ TEST_CASE("Context XML I/O Functions") {
         uint p3 = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
 
         std::vector<uint> selected_uuids = {p1, p3};
-        const char *test_file = "/tmp/helios_uuid_test.xml";
+        const char *test_file = "helios_uuid_test.xml";
 
-        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, selected_uuids));
+        // Use quiet parameter to avoid output
+        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, selected_uuids, true));
 
         Context ctx2;
-        std::vector<uint> loaded_uuids = ctx2.loadXML(test_file);
+        std::vector<uint> loaded_uuids = ctx2.loadXML(test_file, true);
 
         DOCTEST_CHECK(loaded_uuids.size() == 2);
 
@@ -231,17 +233,131 @@ TEST_CASE("Context XML I/O Functions") {
         std::vector<std::string> files = ctx.getLoadedXMLFiles();
         size_t initial_count = files.size();
 
-        // Create and load a test file
+        // Create and load a test file using current working directory (cross-platform)
         uint patch = ctx.addPatch();
-        const char *test_file = "/tmp/helios_loaded_files_test.xml";
-        ctx.writeXML(test_file);
+        std::string test_file = "helios_loaded_files_test.xml";
+        // Use quiet parameter to avoid output
+        ctx.writeXML(test_file.c_str(), true);
 
         Context ctx2;
-        ctx2.loadXML(test_file);
+        ctx2.loadXML(test_file.c_str(), true);
 
         std::vector<std::string> loaded_files = ctx2.getLoadedXMLFiles();
         DOCTEST_CHECK(loaded_files.size() == initial_count + 1);
-        DOCTEST_CHECK(std::find(loaded_files.begin(), loaded_files.end(), test_file) != loaded_files.end());
+
+        // Compare against the resolved path, not the original path
+        std::filesystem::path resolved_test_file = resolveProjectFile(test_file);
+        std::string resolved_test_file_str = resolved_test_file.string();
+        DOCTEST_CHECK(std::find(loaded_files.begin(), loaded_files.end(), resolved_test_file_str) != loaded_files.end());
+
+        std::remove(test_file.c_str());
+    }
+
+    SUBCASE("XML I/O quiet parameter") {
+        Context ctx;
+        uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        const char *test_file = "helios_quiet_test.xml";
+
+        // Test writeXML with quiet=false (should produce output)
+        {
+            capture_cout cout_buffer;
+            ctx.writeXML(test_file, false);
+            DOCTEST_CHECK(cout_buffer.get_captured_output().find("Writing XML file") != std::string::npos);
+        }
+
+        // Test loadXML with quiet=false (should produce output)
+        Context ctx2;
+        {
+            capture_cout cout_buffer;
+            ctx2.loadXML(test_file, false);
+            DOCTEST_CHECK(cout_buffer.get_captured_output().find("Loading XML file") != std::string::npos);
+        }
+
+        // Test writeXML with quiet=true (should not produce output)
+        {
+            capture_cout cout_buffer;
+            ctx.writeXML(test_file, true);
+            DOCTEST_CHECK(cout_buffer.get_captured_output().find("Writing XML file") == std::string::npos);
+        }
+
+        // Test loadXML with quiet=true (should not produce output)
+        Context ctx3;
+        {
+            capture_cout cout_buffer;
+            ctx3.loadXML(test_file, true);
+            DOCTEST_CHECK(cout_buffer.get_captured_output().find("Loading XML file") == std::string::npos);
+        }
+
+        std::remove(test_file);
+    }
+
+    SUBCASE("vector global data XML formatting") {
+        Context ctx;
+
+        // Add various vector type global data
+        std::vector<vec2> vec2_data = {make_vec2(400, 0.0666747f), make_vec2(401, 0.0640556f), make_vec2(402, 0.0619332f)};
+        std::vector<vec3> vec3_data = {make_vec3(1.1f, 2.2f, 3.3f), make_vec3(4.4f, 5.5f, 6.6f)};
+        std::vector<vec4> vec4_data = {make_vec4(1.1f, 2.2f, 3.3f, 4.4f), make_vec4(5.5f, 6.6f, 7.7f, 8.8f)};
+        std::vector<int2> int2_data = {make_int2(1, 2), make_int2(3, 4)};
+        std::vector<int3> int3_data = {make_int3(1, 2, 3), make_int3(4, 5, 6)};
+        std::vector<int4> int4_data = {make_int4(1, 2, 3, 4), make_int4(5, 6, 7, 8)};
+
+        ctx.setGlobalData("test_vec2", vec2_data);
+        ctx.setGlobalData("test_vec3", vec3_data);
+        ctx.setGlobalData("test_vec4", vec4_data);
+        ctx.setGlobalData("test_int2", int2_data);
+        ctx.setGlobalData("test_int3", int3_data);
+        ctx.setGlobalData("test_int4", int4_data);
+
+        const char *test_file = "helios_vector_test.xml";
+        ctx.writeXML(test_file, true);
+
+        // Load and verify all vector data
+        Context ctx2;
+        ctx2.loadXML(test_file, true);
+
+        // Verify vec2
+        std::vector<vec2> loaded_vec2;
+        ctx2.getGlobalData("test_vec2", loaded_vec2);
+        DOCTEST_CHECK(loaded_vec2.size() == 3);
+        DOCTEST_CHECK(loaded_vec2[0].x == doctest::Approx(400.0f));
+        DOCTEST_CHECK(loaded_vec2[0].y == doctest::Approx(0.0666747f));
+        DOCTEST_CHECK(loaded_vec2[2].x == doctest::Approx(402.0f));
+
+        // Verify vec3
+        std::vector<vec3> loaded_vec3;
+        ctx2.getGlobalData("test_vec3", loaded_vec3);
+        DOCTEST_CHECK(loaded_vec3.size() == 2);
+        DOCTEST_CHECK(loaded_vec3[0] == vec3(1.1f, 2.2f, 3.3f));
+        DOCTEST_CHECK(loaded_vec3[1] == vec3(4.4f, 5.5f, 6.6f));
+
+        // Verify vec4
+        std::vector<vec4> loaded_vec4;
+        ctx2.getGlobalData("test_vec4", loaded_vec4);
+        DOCTEST_CHECK(loaded_vec4.size() == 2);
+        DOCTEST_CHECK(loaded_vec4[0] == vec4(1.1f, 2.2f, 3.3f, 4.4f));
+        DOCTEST_CHECK(loaded_vec4[1] == vec4(5.5f, 6.6f, 7.7f, 8.8f));
+
+        // Verify int2
+        std::vector<int2> loaded_int2;
+        ctx2.getGlobalData("test_int2", loaded_int2);
+        DOCTEST_CHECK(loaded_int2.size() == 2);
+        DOCTEST_CHECK(loaded_int2[0] == int2(1, 2));
+        DOCTEST_CHECK(loaded_int2[1] == int2(3, 4));
+
+        // Verify int3
+        std::vector<int3> loaded_int3;
+        ctx2.getGlobalData("test_int3", loaded_int3);
+        DOCTEST_CHECK(loaded_int3.size() == 2);
+        DOCTEST_CHECK(loaded_int3[0] == int3(1, 2, 3));
+        DOCTEST_CHECK(loaded_int3[1] == int3(4, 5, 6));
+
+        // Verify int4
+        std::vector<int4> loaded_int4;
+        ctx2.getGlobalData("test_int4", loaded_int4);
+        DOCTEST_CHECK(loaded_int4.size() == 2);
+        DOCTEST_CHECK(loaded_int4[0] == int4(1, 2, 3, 4));
+        DOCTEST_CHECK(loaded_int4[1] == int4(5, 6, 7, 8));
 
         std::remove(test_file);
     }

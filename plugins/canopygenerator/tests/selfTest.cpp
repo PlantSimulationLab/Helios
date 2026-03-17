@@ -181,6 +181,6 @@ DOCTEST_TEST_CASE("CanopyGenerator Primitive Deletion Test") {
     context_test.deletePrimitive(context_test.getAllUUIDs());
 }
 
-int CanopyGenerator::selfTest(int argc, char** argv) {
+int CanopyGenerator::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

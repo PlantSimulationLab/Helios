@@ -12,6 +12,7 @@ var struct_phytomer =
     [ "getInternodeRadius", "struct_phytomer.html#a38c6cd729c0033fcb0b4acec5089d328", null ],
     [ "getLeafArea", "struct_phytomer.html#a78acccf5f57c43c794c85d9170be4656", null ],
     [ "getLeafBasePosition", "struct_phytomer.html#ab6a9cc6c21a82817eee8091481ab8f73", null ],
+    [ "getPeduncleAxisVector", "struct_phytomer.html#a61172d18efe17b016ced32da2607d833", null ],
     [ "getPetioleAxisVector", "struct_phytomer.html#a42a7e97e8c89a8707852869990933a01", null ],
     [ "getPetioleLength", "struct_phytomer.html#a0798f9c7d471372199f72172b67da173", null ],
     [ "hasLeaf", "struct_phytomer.html#a8c3196c1b186e116f85d8a8514a2df40", null ],
@@ -20,6 +21,7 @@ var struct_phytomer =
     [ "scaleInternodeMaxLength", "struct_phytomer.html#aecc6f52f3490562f4daf581bec7f4260", null ],
     [ "scaleLeafPrototypeScale", "struct_phytomer.html#a3221b2aca2b12fcb2c83997391c6d7b1", null ],
     [ "scaleLeafPrototypeScale", "struct_phytomer.html#ad6db5a357b8449910a19341dbb6f95fb", null ],
+    [ "scalePetioleGeometry", "struct_phytomer.html#a0d311648bcf369d8e520f0d03f728faf", null ],
     [ "setFloralBudState", "struct_phytomer.html#a1b1d72e55ff65f9bd83b415b3ed34fc6", null ],
     [ "setFloralBudState", "struct_phytomer.html#ac012241d44bc67a7a2c933abc835e82d", null ],
     [ "setFloralBudState", "struct_phytomer.html#a433831209c45baebf77a4ce61192bc7b", null ],
@@ -35,6 +37,8 @@ var struct_phytomer =
     [ "setVegetativeBudState", "struct_phytomer.html#a1b5659880128988e290b0084b775cc15", null ],
     [ "setVegetativeBudState", "struct_phytomer.html#ac875e12ad2a6d85e68fcac53f338d0b9", null ],
     [ "age", "struct_phytomer.html#adca1542efc0d16f0117d533f86c849e5", null ],
+    [ "internode_curvature_perturbations", "struct_phytomer.html#ad5d864679183315ad03f947b31e9c785", null ],
+    [ "internode_yaw_perturbations", "struct_phytomer.html#a01b3c7d279ad70192252d2dd88c93f0a", null ],
     [ "petiole_vertices", "struct_phytomer.html#a63c1deff7ef09e41bddc155cb4e22861", null ],
     [ "shoot_index", "struct_phytomer.html#aa35d5da6c2d3ae761d1b4ce491db2e17", null ]
 ];

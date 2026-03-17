@@ -1,18 +1,7 @@
 var searchData=
 [
-  ['_7eaeriallidarcloud_0',['~AerialLiDARcloud',['../class_aerial_li_d_a_rcloud.html#ac6d082f7928a865787aa4b1d88fd4f55',1,'AerialLiDARcloud']]],
-  ['_7ebox_1',['~Box',['../classhelios_1_1_box.html#ab040ad0ee078cb1c9b4fc3c29ec3688d',1,'helios::Box']]],
-  ['_7ecollisiondetection_2',['~CollisionDetection',['../class_collision_detection.html#a02163f314ae4c76cfda1a3e214ff9b68',1,'CollisionDetection']]],
-  ['_7ecompoundobject_3',['~CompoundObject',['../classhelios_1_1_compound_object.html#a482d328646e3da071d4504664d205fe9',1,'helios::CompoundObject']]],
-  ['_7econe_4',['~Cone',['../classhelios_1_1_cone.html#ac4f380f30c6bb1dbdf2e8c215c05677c',1,'helios::Cone']]],
-  ['_7econtext_5',['~Context',['../classhelios_1_1_context.html#a2d34e4556448e40693f61d15e091b604',1,'helios::Context']]],
-  ['_7edisk_6',['~Disk',['../classhelios_1_1_disk.html#aa670ffa43a0cf0570ea1d789cb8653a5',1,'helios::Disk']]],
-  ['_7elidarcloud_7',['~LiDARcloud',['../class_li_d_a_rcloud.html#a849627f4e1cd43c49ab21757e812ca68',1,'LiDARcloud']]],
-  ['_7epolymesh_8',['~Polymesh',['../classhelios_1_1_polymesh.html#a19617972bebd43a3bff944250fc7ddb1',1,'helios::Polymesh']]],
-  ['_7eprojectbuilder_9',['~ProjectBuilder',['../class_project_builder.html#a3833132c3dad125b4f843aea337f7d7b',1,'ProjectBuilder']]],
-  ['_7eradiationmodel_10',['~RadiationModel',['../class_radiation_model.html#aeae03b4de9b9c57ac987407fdfd6afa4',1,'RadiationModel']]],
-  ['_7esphere_11',['~Sphere',['../classhelios_1_1_sphere.html#ae7e8121c9a60f9c4e4efa853fd2cee59',1,'helios::Sphere']]],
-  ['_7etile_12',['~Tile',['../classhelios_1_1_tile.html#a001e45730aa531c75c90a599b5524956',1,'helios::Tile']]],
-  ['_7etube_13',['~Tube',['../classhelios_1_1_tube.html#a15d0248cb525ce91129abcb398f728e8',1,'helios::Tube']]],
-  ['_7evisualizer_14',['~Visualizer',['../class_visualizer.html#a013ec3101407fbe4805f289bc32d1265',1,'Visualizer']]]
+  ['zerocamerapixelbuffers_0',['zeroCameraPixelBuffers',['../classhelios_1_1_ray_tracing_backend.html#ab06d736b7be34fd49fa8adcc73325380',1,'helios::RayTracingBackend::zeroCameraPixelBuffers()'],['../classhelios_1_1_opti_x6_backend.html#ad42b63d179dbe6511e4bf2567a59eaab',1,'helios::OptiX6Backend::zeroCameraPixelBuffers()'],['../classhelios_1_1_vulkan_compute_backend.html#a642678a0014e4c093d7f865fb1889603',1,'helios::VulkanComputeBackend::zeroCameraPixelBuffers()']]],
+  ['zerocamerascatterbuffers_1',['zeroCameraScatterBuffers',['../classhelios_1_1_ray_tracing_backend.html#a81459b52811e269b2185ddda41a92aaa',1,'helios::RayTracingBackend::zeroCameraScatterBuffers()'],['../classhelios_1_1_opti_x6_backend.html#ab097573d8403863b7af1ba7a86b8b140',1,'helios::OptiX6Backend::zeroCameraScatterBuffers()'],['../classhelios_1_1_vulkan_compute_backend.html#a2cf5b0ab6a61bc2756286e932101f067',1,'helios::VulkanComputeBackend::zeroCameraScatterBuffers()']]],
+  ['zeroradiationbuffers_2',['zeroRadiationBuffers',['../classhelios_1_1_ray_tracing_backend.html#adef3cd8a5993ef3cf0d6a34496e666ad',1,'helios::RayTracingBackend::zeroRadiationBuffers()'],['../classhelios_1_1_opti_x6_backend.html#a2f7481a9c385a9d70c6ead83392da201',1,'helios::OptiX6Backend::zeroRadiationBuffers()'],['../classhelios_1_1_vulkan_compute_backend.html#a1d4f2ce42b93a50be786ee8198a838a4',1,'helios::VulkanComputeBackend::zeroRadiationBuffers()']]],
+  ['zeroscatterbuffers_3',['zeroScatterBuffers',['../classhelios_1_1_ray_tracing_backend.html#a0d95c38c9d9b9823b432bcdc4938817c',1,'helios::RayTracingBackend::zeroScatterBuffers()'],['../classhelios_1_1_opti_x6_backend.html#a8ec8f1fd9a29904f797fd1d6b4300f0c',1,'helios::OptiX6Backend::zeroScatterBuffers()'],['../classhelios_1_1_vulkan_compute_backend.html#af6f3ce6d5437253a60e9867caa0a71bc',1,'helios::VulkanComputeBackend::zeroScatterBuffers()']]]
 ];

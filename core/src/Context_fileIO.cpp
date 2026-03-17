@@ -1,7 +1,7 @@
 /**
  * \file "Context_fileIO.cpp" Filesystem input/output functions within the Context.
  *
- * Copyright (C) 2016-2025 Brian Bailey
+ * Copyright (C) 2016-2026 Brian Bailey
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,6 +16,10 @@
 #include "Context.h"
 
 using namespace helios;
+
+// Geometric tolerance for triangle area validation
+// Triangles with area below this threshold are considered degenerate and skipped
+static constexpr float MIN_TRIANGLE_AREA_THRESHOLD = 1e-8f;
 
 int XMLparser::parse_data_float(const pugi::xml_node &node_data, std::vector<float> &data) {
     std::string data_str = node_data.child_value();
@@ -467,6 +471,162 @@ int XMLparser::parse_radius(const pugi::xml_node &node, std::vector<float> &radi
     return 0;
 }
 
+void Context::loadMaterialData(pugi::xml_node mat_node, const std::string &material_label) {
+    // Load uint data
+    for (pugi::xml_node data = mat_node.child("data_uint"); data; data = data.next_sibling("data_uint")) {
+        const char *label = data.attribute("label").value();
+        std::vector<uint> datav;
+        if (XMLparser::parse_data_uint(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_uint> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+
+    // Load int data
+    for (pugi::xml_node data = mat_node.child("data_int"); data; data = data.next_sibling("data_int")) {
+        const char *label = data.attribute("label").value();
+        std::vector<int> datav;
+        if (XMLparser::parse_data_int(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_int> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+
+    // Load float data
+    for (pugi::xml_node data = mat_node.child("data_float"); data; data = data.next_sibling("data_float")) {
+        const char *label = data.attribute("label").value();
+        std::vector<float> datav;
+        if (XMLparser::parse_data_float(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_float> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+
+    // Load double data
+    for (pugi::xml_node data = mat_node.child("data_double"); data; data = data.next_sibling("data_double")) {
+        const char *label = data.attribute("label").value();
+        std::vector<double> datav;
+        if (XMLparser::parse_data_double(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_double> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+
+    // Load vec2 data
+    for (pugi::xml_node data = mat_node.child("data_vec2"); data; data = data.next_sibling("data_vec2")) {
+        const char *label = data.attribute("label").value();
+        std::vector<vec2> datav;
+        if (XMLparser::parse_data_vec2(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_vec2> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+
+    // Load vec3 data
+    for (pugi::xml_node data = mat_node.child("data_vec3"); data; data = data.next_sibling("data_vec3")) {
+        const char *label = data.attribute("label").value();
+        std::vector<vec3> datav;
+        if (XMLparser::parse_data_vec3(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_vec3> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+
+    // Load vec4 data
+    for (pugi::xml_node data = mat_node.child("data_vec4"); data; data = data.next_sibling("data_vec4")) {
+        const char *label = data.attribute("label").value();
+        std::vector<vec4> datav;
+        if (XMLparser::parse_data_vec4(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_vec4> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+
+    // Load int2 data
+    for (pugi::xml_node data = mat_node.child("data_int2"); data; data = data.next_sibling("data_int2")) {
+        const char *label = data.attribute("label").value();
+        std::vector<int2> datav;
+        if (XMLparser::parse_data_int2(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_int2> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+
+    // Load int3 data
+    for (pugi::xml_node data = mat_node.child("data_int3"); data; data = data.next_sibling("data_int3")) {
+        const char *label = data.attribute("label").value();
+        std::vector<int3> datav;
+        if (XMLparser::parse_data_int3(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_int3> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+
+    // Load int4 data
+    for (pugi::xml_node data = mat_node.child("data_int4"); data; data = data.next_sibling("data_int4")) {
+        const char *label = data.attribute("label").value();
+        std::vector<int4> datav;
+        if (XMLparser::parse_data_int4(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_int4> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+
+    // Load string data
+    for (pugi::xml_node data = mat_node.child("data_string"); data; data = data.next_sibling("data_string")) {
+        const char *label = data.attribute("label").value();
+        std::vector<std::string> datav;
+        if (XMLparser::parse_data_string(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_string> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+}
+
 void Context::loadPData(pugi::xml_node p, uint UUID) {
     for (pugi::xml_node data = p.child("data_int"); data; data = data.next_sibling("data_int")) {
         const char *label = data.attribute("label").value();
@@ -806,7 +966,7 @@ void Context::loadOData(pugi::xml_node p, uint ID) {
 void Context::loadOsubPData(pugi::xml_node p, uint ID) {
     assert(doesObjectExist(ID));
 
-    std::vector<uint> prim_UUIDs = getObjectPointer(ID)->getPrimitiveUUIDs();
+    std::vector<uint> prim_UUIDs = getObjectPointer_private(ID)->getPrimitiveUUIDs();
 
     int u;
 
@@ -1119,7 +1279,11 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         helios_runtime_error("failed.\n File " + fn + " is not XML format.");
     }
 
-    XMLfiles.emplace_back(filename);
+    // Resolve file path using unified resolution
+    std::filesystem::path resolved_path = resolveFilePath(filename);
+    std::string resolved_filename = resolved_path.string();
+
+    XMLfiles.emplace_back(resolved_filename);
 
     uint ID;
     std::vector<uint> UUID;
@@ -1128,7 +1292,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
     pugi::xml_document xmldoc;
 
     // load file
-    pugi::xml_parse_result load_result = xmldoc.load_file(filename);
+    pugi::xml_parse_result load_result = xmldoc.load_file(resolved_filename.c_str());
 
     // error checking
     if (!load_result) {
@@ -1200,6 +1364,107 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         setTime(second, minute, hour);
     }
 
+    //-------------- MATERIALS ---------------//
+    // Map to track legacy numeric material IDs to labels for backward compatibility
+    std::map<uint, std::string> legacy_material_id_to_label;
+
+    for (pugi::xml_node m = helios.child("materials"); m; m = m.next_sibling("materials")) {
+        for (pugi::xml_node mat = m.child("material"); mat; mat = mat.next_sibling("material")) {
+            std::string material_label;
+            RGBAcolor color = make_RGBAcolor(0, 0, 0, 1);
+            std::string texture_file;
+            bool texture_override = false;
+
+            // Check for v3 format (label="...") first
+            pugi::xml_attribute label_attr = mat.attribute("label");
+            if (!label_attr.empty()) {
+                material_label = label_attr.value();
+            } else {
+                // Check for v2 format (id="N")
+                pugi::xml_attribute id_attr = mat.attribute("id");
+                if (!id_attr.empty()) {
+                    uint matID = 0;
+                    const char *id_str = id_attr.value();
+                    if (!parse_uint(id_str, matID)) {
+                        helios_runtime_error("ERROR (Context::loadXML): Material ID must be an unsigned integer value.");
+                    }
+                    // Generate label from numeric ID for backward compatibility
+                    material_label = "__auto_material_" + std::to_string(matID);
+                    legacy_material_id_to_label[matID] = material_label;
+                } else {
+                    helios_runtime_error("ERROR (Context::loadXML): Material must have either a 'label' or 'id' attribute.");
+                }
+            }
+
+            // Color
+            pugi::xml_node color_node = mat.child("color");
+            if (!color_node.empty()) {
+                const char *color_str = color_node.child_value();
+                std::istringstream color_stream(color_str);
+                std::vector<float> color_vec;
+                float tmp;
+                while (color_stream >> tmp) {
+                    color_vec.push_back(tmp);
+                }
+                if (color_vec.size() == 3) {
+                    color = make_RGBAcolor(color_vec.at(0), color_vec.at(1), color_vec.at(2), 1.f);
+                } else if (color_vec.size() == 4) {
+                    color = make_RGBAcolor(color_vec.at(0), color_vec.at(1), color_vec.at(2), color_vec.at(3));
+                }
+            }
+
+            // Texture
+            pugi::xml_node texture_node = mat.child("texture");
+            if (!texture_node.empty()) {
+                texture_file = deblank(texture_node.child_value());
+                if (!texture_file.empty()) {
+                    addTexture(texture_file.c_str());
+                }
+            }
+
+            // Texture override
+            pugi::xml_node override_node = mat.child("texture_override");
+            if (!override_node.empty()) {
+                const char *override_str = override_node.child_value();
+                int override_val;
+                if (parse_int(override_str, override_val)) {
+                    texture_override = (override_val != 0);
+                }
+            }
+
+            // Twosided flag
+            uint twosided = 1; // default: two-sided
+            pugi::xml_node twosided_node = mat.child("twosided_flag");
+            if (!twosided_node.empty()) {
+                const char *twosided_str = twosided_node.child_value();
+                int twosided_val;
+                if (parse_int(twosided_str, twosided_val) && twosided_val >= 0) {
+                    twosided = (uint) twosided_val;
+                }
+            }
+
+            // Create the material using the new label-based API
+            // Use internal method to bypass reserved label check for __auto_ labels
+            if (!doesMaterialExist(material_label)) {
+                uint newID = currentMaterialID++;
+                Material loaded_mat(newID, material_label, color, texture_file, texture_override, twosided);
+                materials[newID] = loaded_mat;
+                material_label_to_id[material_label] = newID;
+            } else {
+                // Material already exists, update its properties
+                setMaterialColor(material_label, color);
+                if (!texture_file.empty()) {
+                    setMaterialTexture(material_label, texture_file);
+                }
+                setMaterialTextureColorOverride(material_label, texture_override);
+                setMaterialTwosidedFlag(material_label, twosided);
+            }
+
+            // Load material data
+            loadMaterialData(mat, material_label);
+        }
+    }
+
     //-------------- PATCHES ---------------//
     for (pugi::xml_node p = helios.child("patch"); p; p = p.next_sibling("patch")) {
         // * Patch Object ID * //
@@ -1233,38 +1498,74 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Solid fraction given in 'patch' block contains invalid data.");
         }
 
-        // * Patch Diffuse Colors * //
-        RGBAcolor color;
-        pugi::xml_node color_node = p.child("color");
+        // * Check for v3 material format (string label) vs v2 (numeric ID) vs legacy (color/texture) * //
+        pugi::xml_node material_node = p.child("material");
+        pugi::xml_node material_id_node = p.child("material_id");
+        std::string material_label_from_xml;
+        bool has_material = false;
 
-        const char *color_str = color_node.child_value();
-        if (strlen(color_str) == 0) {
-            color = make_RGBAcolor(0, 0, 0, 1); // assume default color of black
-        } else {
-            color = string2RGBcolor(color_str);
+        if (!material_node.empty()) {
+            // v3 format: <material>label</material>
+            material_label_from_xml = deblank(material_node.child_value());
+            if (!material_label_from_xml.empty() && doesMaterialExist(material_label_from_xml)) {
+                has_material = true;
+                ID = addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBAcolor(0, 0, 0, 1));
+            }
+        } else if (!material_id_node.empty()) {
+            // v2 format: <material_id>N</material_id>
+            uint materialID_from_xml = 0;
+            const char *mat_id_str = material_id_node.child_value();
+            if (parse_uint(mat_id_str, materialID_from_xml)) {
+                // Look up the label for this legacy numeric ID
+                auto it = legacy_material_id_to_label.find(materialID_from_xml);
+                if (it != legacy_material_id_to_label.end()) {
+                    material_label_from_xml = it->second;
+                    has_material = true;
+                    ID = addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBAcolor(0, 0, 0, 1));
+                }
+            }
         }
 
-        // * Add the Patch * //
-        if (strcmp(texture_file.c_str(), "none") == 0) { // no texture file was given
-            ID = addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), color);
-        } else { // has a texture file
-            std::string texture_file_copy;
-            if (solid_fraction < 1.f && solid_fraction >= 0.f) { // solid fraction was given in the XML, and is not equal to 1.0
-                texture_file_copy = texture_file;
-                texture_file = "lib/images/solid.jpg"; // load dummy solid texture to avoid re-calculating the solid fraction
-            }
-            if (uv.empty()) { // custom (u,v) coordinates were not given
-                ID = addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), texture_file.c_str());
+        if (!has_material) {
+            // Legacy format: parse color and texture
+            RGBAcolor color;
+            pugi::xml_node color_node = p.child("color");
+
+            const char *color_str = color_node.child_value();
+            if (strlen(color_str) == 0) {
+                color = make_RGBAcolor(0, 0, 0, 1); // assume default color of black
             } else {
-                ID = addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), texture_file.c_str(), 0.5 * (uv.at(2) + uv.at(0)), uv.at(2) - uv.at(0));
+                color = string2RGBcolor(color_str);
             }
-            if (solid_fraction < 1.f && solid_fraction >= 0.f) { // replace dummy texture and set the solid fraction
-                getPrimitivePointer_private(ID)->setTextureFile(texture_file_copy.c_str());
-                addTexture(texture_file_copy.c_str());
-                getPrimitivePointer_private(ID)->setSolidFraction(solid_fraction);
+
+            // * Add the Patch * //
+            if (strcmp(texture_file.c_str(), "none") == 0) { // no texture file was given
+                ID = addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), color);
+            } else { // has a texture file
+                std::string texture_file_copy;
+                if (solid_fraction < 1.f && solid_fraction >= 0.f) { // solid fraction was given in the XML, and is not equal to 1.0
+                    texture_file_copy = texture_file;
+                    texture_file = "lib/images/solid.jpg"; // load dummy solid texture to avoid re-calculating the solid fraction
+                }
+                if (uv.empty()) { // custom (u,v) coordinates were not given
+                    ID = addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), texture_file.c_str());
+                } else {
+                    ID = addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), texture_file.c_str(), 0.5 * (uv.at(2) + uv.at(0)), uv.at(2) - uv.at(0));
+                }
+                if (solid_fraction < 1.f && solid_fraction >= 0.f) { // replace dummy texture and set the solid fraction
+                    getPrimitivePointer_private(ID)->setTextureFile(texture_file_copy.c_str());
+                    addTexture(texture_file_copy.c_str());
+                    getPrimitivePointer_private(ID)->setSolidFraction(solid_fraction);
+                }
             }
         }
+
         getPrimitivePointer_private(ID)->setTransformationMatrix(transform);
+
+        // Assign material if using material format
+        if (has_material && !material_label_from_xml.empty()) {
+            assignMaterialToPrimitive(ID, material_label_from_xml);
+        }
 
         if (objID > 0) {
             object_prim_UUIDs[objID].push_back(ID);
@@ -1314,15 +1615,30 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Solid fraction given in 'triangle' block contains invalid data.");
         }
 
-        // * Triangle Diffuse Colors * //
-        RGBAcolor color;
-        pugi::xml_node color_node = tri.child("color");
+        // * Check for v3 material format (string label) vs v2 (numeric ID) vs legacy (color/texture) * //
+        pugi::xml_node material_node_tri = tri.child("material");
+        pugi::xml_node material_id_node_tri = tri.child("material_id");
+        std::string material_label_from_xml_tri;
+        bool has_material_tri = false;
 
-        const char *color_str = color_node.child_value();
-        if (strlen(color_str) == 0) {
-            color = make_RGBAcolor(0, 0, 0, 1); // assume default color of black
-        } else {
-            color = string2RGBcolor(color_str);
+        if (!material_node_tri.empty()) {
+            // v3 format: <material>label</material>
+            material_label_from_xml_tri = deblank(material_node_tri.child_value());
+            if (!material_label_from_xml_tri.empty() && doesMaterialExist(material_label_from_xml_tri)) {
+                has_material_tri = true;
+            }
+        } else if (!material_id_node_tri.empty()) {
+            // v2 format: <material_id>N</material_id>
+            uint materialID_from_xml_tri = 0;
+            const char *mat_id_str = material_id_node_tri.child_value();
+            if (parse_uint(mat_id_str, materialID_from_xml_tri)) {
+                // Look up the label for this legacy numeric ID
+                auto it = legacy_material_id_to_label.find(materialID_from_xml_tri);
+                if (it != legacy_material_id_to_label.end()) {
+                    material_label_from_xml_tri = it->second;
+                    has_material_tri = true;
+                }
+            }
         }
 
         std::vector<vec3> vert_pos;
@@ -1331,23 +1647,45 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         vert_pos.at(1) = make_vec3(0.f, 1.f, 0.f);
         vert_pos.at(2) = make_vec3(1.f, 1.f, 0.f);
 
-        // * Add the Triangle * //
-        if (strcmp(texture_file.c_str(), "none") == 0 || uv.empty()) {
-            ID = addTriangle(vert_pos.at(0), vert_pos.at(1), vert_pos.at(2), color);
+        if (has_material_tri) {
+            // Material format: create triangle with default color, will assign material below
+            ID = addTriangle(vert_pos.at(0), vert_pos.at(1), vert_pos.at(2), make_RGBAcolor(0, 0, 0, 1));
         } else {
-            std::string texture_file_copy;
-            if (solid_fraction < 1.f && solid_fraction >= 0.f) { // solid fraction was given in the XML, and is not equal to 1.0
-                texture_file_copy = texture_file;
-                texture_file = "lib/images/solid.jpg"; // load dummy solid texture to avoid re-calculating the solid fraction
+            // Legacy format: parse color and texture
+            RGBAcolor color;
+            pugi::xml_node color_node = tri.child("color");
+
+            const char *color_str = color_node.child_value();
+            if (strlen(color_str) == 0) {
+                color = make_RGBAcolor(0, 0, 0, 1); // assume default color of black
+            } else {
+                color = string2RGBcolor(color_str);
             }
-            ID = addTriangle(vert_pos.at(0), vert_pos.at(1), vert_pos.at(2), texture_file.c_str(), uv.at(0), uv.at(1), uv.at(2));
-            if (solid_fraction < 1.f && solid_fraction >= 0.f) {
-                getPrimitivePointer_private(ID)->setTextureFile(texture_file_copy.c_str());
-                addTexture(texture_file_copy.c_str());
-                getPrimitivePointer_private(ID)->setSolidFraction(solid_fraction);
+
+            // * Add the Triangle * //
+            if (strcmp(texture_file.c_str(), "none") == 0 || uv.empty()) {
+                ID = addTriangle(vert_pos.at(0), vert_pos.at(1), vert_pos.at(2), color);
+            } else {
+                std::string texture_file_copy;
+                if (solid_fraction < 1.f && solid_fraction >= 0.f) { // solid fraction was given in the XML, and is not equal to 1.0
+                    texture_file_copy = texture_file;
+                    texture_file = "lib/images/solid.jpg"; // load dummy solid texture to avoid re-calculating the solid fraction
+                }
+                ID = addTriangle(vert_pos.at(0), vert_pos.at(1), vert_pos.at(2), texture_file.c_str(), uv.at(0), uv.at(1), uv.at(2));
+                if (solid_fraction < 1.f && solid_fraction >= 0.f) {
+                    getPrimitivePointer_private(ID)->setTextureFile(texture_file_copy.c_str());
+                    addTexture(texture_file_copy.c_str());
+                    getPrimitivePointer_private(ID)->setSolidFraction(solid_fraction);
+                }
             }
         }
+
         getPrimitivePointer_private(ID)->setTransformationMatrix(transform);
+
+        // Assign material if using material format
+        if (has_material_tri && !material_label_from_xml_tri.empty()) {
+            assignMaterialToPrimitive(ID, material_label_from_xml_tri);
+        }
 
         if (objID > 0) {
             object_prim_UUIDs[objID].push_back(ID);
@@ -1385,20 +1723,57 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Solid fraction given in 'voxel' block contains invalid data.");
         }
 
-        // * Voxel Diffuse Colors * //
-        RGBAcolor color;
-        pugi::xml_node color_node = p.child("color");
+        // * Check for v3 material format (string label) vs v2 (numeric ID) vs legacy (color/texture) * //
+        pugi::xml_node material_node_vox = p.child("material");
+        pugi::xml_node material_id_node_vox = p.child("material_id");
+        std::string material_label_from_xml_vox;
+        bool has_material_vox = false;
 
-        const char *color_str = color_node.child_value();
-        if (strlen(color_str) == 0) {
-            color = make_RGBAcolor(0, 0, 0, 1); // assume default color of black
-        } else {
-            color = string2RGBcolor(color_str);
+        if (!material_node_vox.empty()) {
+            // v3 format: <material>label</material>
+            material_label_from_xml_vox = deblank(material_node_vox.child_value());
+            if (!material_label_from_xml_vox.empty() && doesMaterialExist(material_label_from_xml_vox)) {
+                has_material_vox = true;
+            }
+        } else if (!material_id_node_vox.empty()) {
+            // v2 format: <material_id>N</material_id>
+            uint materialID_from_xml_vox = 0;
+            const char *mat_id_str = material_id_node_vox.child_value();
+            if (parse_uint(mat_id_str, materialID_from_xml_vox)) {
+                // Look up the label for this legacy numeric ID
+                auto it = legacy_material_id_to_label.find(materialID_from_xml_vox);
+                if (it != legacy_material_id_to_label.end()) {
+                    material_label_from_xml_vox = it->second;
+                    has_material_vox = true;
+                }
+            }
         }
 
-        // * Add the Voxel * //
-        ID = addVoxel(make_vec3(0, 0, 0), make_vec3(0, 0, 0), 0, color);
+        if (has_material_vox) {
+            // Material format: create voxel with default color, will assign material below
+            ID = addVoxel(make_vec3(0, 0, 0), make_vec3(0, 0, 0), 0, make_RGBAcolor(0, 0, 0, 1));
+        } else {
+            // Legacy format: parse color
+            RGBAcolor color;
+            pugi::xml_node color_node = p.child("color");
+
+            const char *color_str = color_node.child_value();
+            if (strlen(color_str) == 0) {
+                color = make_RGBAcolor(0, 0, 0, 1); // assume default color of black
+            } else {
+                color = string2RGBcolor(color_str);
+            }
+
+            // * Add the Voxel * //
+            ID = addVoxel(make_vec3(0, 0, 0), make_vec3(0, 0, 0), 0, color);
+        }
+
         getPrimitivePointer_private(ID)->setTransformationMatrix(transform);
+
+        // Assign material if using material format
+        if (has_material_vox && !material_label_from_xml_vox.empty()) {
+            assignMaterialToPrimitive(ID, material_label_from_xml_vox);
+        }
 
         if (objID > 0) {
             object_prim_UUIDs[objID].push_back(ID);
@@ -1488,14 +1863,14 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             ID = addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, subdiv, texture_file.c_str());
         }
 
-        getTileObjectPointer(ID)->setTransformationMatrix(transform);
+        getTileObjectPointer_private(ID)->setTransformationMatrix(transform);
 
         setPrimitiveTransformationMatrix(getObjectPrimitiveUUIDs(ID), transform);
 
         // if primitives exist that were assigned to this object, delete all primitives that were just created
         if (objID > 0 && !object_prim_UUIDs.empty() && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end()) {
             std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
-            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+            getObjectPointer_private(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
             deletePrimitive(uuids_to_delete);
             // \todo This is fairly inefficient, it would be nice to have a way to do this without having to create and delete a bunch of primitives
         }
@@ -1578,7 +1953,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         // if primitives exist that were assigned to this object, delete all primitives that were just created
         if (objID > 0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end()) {
             std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
-            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+            getObjectPointer_private(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
             deletePrimitive(uuids_to_delete);
             //          if( !doesObjectExist(ID) ){ //if the above method deleted all primitives for this object, move on
             //            continue;
@@ -1676,12 +2051,12 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             ID = addTubeObject(subdiv, nodes, radii, texture_file.c_str());
         }
 
-        getObjectPointer(ID)->setTransformationMatrix(transform);
+        getObjectPointer_private(ID)->setTransformationMatrix(transform);
 
         // if primitives exist that were assigned to this object, delete all primitives that were just created
         if (objID > 0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end()) {
             std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
-            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+            getObjectPointer_private(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
             deletePrimitive(uuids_to_delete);
             //            if( !doesObjectExist(ID) ){ //if the above method deleted all primitives for this object, move on
             //              continue;
@@ -1766,7 +2141,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         // if primitives exist that were assigned to this object, delete all primitives that were just created
         if (objID > 0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end()) {
             std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
-            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+            getObjectPointer_private(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
             deletePrimitive(uuids_to_delete);
             //            if( !doesObjectExist(ID) ){ //if the above method deleted all primitives for this object, move on
             //              continue;
@@ -1851,7 +2226,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         // if primitives exist that were assigned to this object, delete all primitives that were just created
         if (objID > 0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end()) {
             std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
-            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+            getObjectPointer_private(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
             deletePrimitive(uuids_to_delete);
             //            if( !doesObjectExist(ID) ){ //if the above method deleted all primitives for this object, move on
             //              continue;
@@ -1938,12 +2313,12 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             ID = addConeObject(subdiv, nodes.at(0), nodes.at(1), radii.at(0), radii.at(1), texture_file.c_str());
         }
 
-        getObjectPointer(ID)->setTransformationMatrix(transform);
+        getObjectPointer_private(ID)->setTransformationMatrix(transform);
 
         // if primitives exist that were assigned to this object, delete all primitives that were just created
         if (objID > 0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end()) {
             std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
-            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+            getObjectPointer_private(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
             deletePrimitive(uuids_to_delete);
             //          if( !doesObjectExist(ID) ){ //if the above method deleted all primitives for this object, move on
             //            continue;
@@ -2287,10 +2662,12 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
             dtype = ((Primitive *) ptr)->getPrimitiveDataType(label.c_str());
         } else if (strcmp(data_group, "object") == 0) {
             dtype = ((CompoundObject *) ptr)->getObjectDataType(label.c_str());
+        } else if (strcmp(data_group, "material") == 0) {
+            dtype = ((Material *) ptr)->getMaterialDataType(label.c_str());
         } else if (strcmp(data_group, "global") == 0) {
             dtype = getGlobalDataType(label.c_str());
         } else {
-            helios_runtime_error("ERROR (Context::writeDataToXMLstream): unknown data group argument of " + std::string(data_group) + ". Must be one of primitive, object, or global.");
+            helios_runtime_error("ERROR (Context::writeDataToXMLstream): unknown data group argument of " + std::string(data_group) + ". Must be one of primitive, object, material, or global.");
         }
 
         if (dtype == HELIOS_TYPE_UINT) {
@@ -2300,6 +2677,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2317,6 +2696,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2334,6 +2715,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2351,6 +2734,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2368,6 +2753,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2385,6 +2772,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2402,6 +2791,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2419,6 +2810,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2436,6 +2829,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2453,6 +2848,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2470,6 +2867,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2525,6 +2924,47 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
     outfile << "<?xml version=\"1.0\"?>\n\n";
 
     outfile << "<helios>\n\n";
+
+    // -- materials -- //
+
+    // Collect unique material labels used by the primitives being written
+    std::set<std::string> material_labels_used;
+    for (uint UUID: UUIDs) {
+        if (doesPrimitiveExist(UUID)) {
+            uint matID = getPrimitivePointer_private(UUID)->materialID;
+            if (materials.find(matID) != materials.end()) {
+                material_labels_used.insert(materials.at(matID).label);
+            }
+        }
+    }
+
+    if (!material_labels_used.empty()) {
+        outfile << "   <materials>" << std::endl;
+        for (const std::string &label: material_labels_used) {
+            if (doesMaterialExist(label)) {
+                uint matID = getMaterialIDFromLabel(label);
+                const Material &mat = materials.at(matID);
+                outfile << "\t<material label=\"" << mat.label << "\">" << std::endl;
+                outfile << "\t\t<color>" << mat.color.r << " " << mat.color.g << " " << mat.color.b << " " << mat.color.a << "</color>" << std::endl;
+                if (!mat.texture_file.empty()) {
+                    outfile << "\t\t<texture>" << mat.texture_file << "</texture>" << std::endl;
+                }
+                if (mat.texture_color_overridden) {
+                    outfile << "\t\t<texture_override>1</texture_override>" << std::endl;
+                }
+                if (mat.twosided_flag != 1) { // Only write if non-default
+                    outfile << "\t\t<twosided_flag>" << mat.twosided_flag << "</twosided_flag>" << std::endl;
+                }
+                // Write material data
+                std::vector<std::string> mdata = mat.listMaterialData();
+                if (!mdata.empty()) {
+                    writeDataToXMLstream("material", mdata, const_cast<Material *>(&mat), outfile);
+                }
+                outfile << "\t</material>" << std::endl;
+            }
+        }
+        outfile << "   </materials>\n" << std::endl;
+    }
 
     // -- time/date -- //
 
@@ -2591,9 +3031,9 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             outfile << "\t<objID>" << parent_objID << "</objID>" << std::endl;
         }
 
-        outfile << "\t<color>" << color.r << " " << color.g << " " << color.b << " " << color.a << "</color>" << std::endl;
-        if (prim->hasTexture()) {
-            outfile << "\t<texture>" << texture_file << "</texture>" << std::endl;
+        // Write material label (v3 format)
+        if (materials.find(prim->materialID) != materials.end()) {
+            outfile << "\t<material>" << materials.at(prim->materialID).label << "</material>" << std::endl;
         }
 
         if (!pdata.empty()) {
@@ -2714,7 +3154,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             for (const auto &label: labels) {
                 if (find(pdata_labels.begin(), pdata_labels.end(), label) == pdata_labels.end()) {
                     pdata_labels.push_back(label);
-                    pdata_types.push_back(getPrimitiveDataType(UUID, label.c_str()));
+                    pdata_types.push_back(getPrimitiveDataType(label.c_str()));
                 }
             }
         }
@@ -2878,7 +3318,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
         // Tiles
         if (obj->getObjectType() == OBJECT_TYPE_TILE) {
-            Tile *tile = getTileObjectPointer(o);
+            Tile *tile = getTileObjectPointer_private(o);
 
             float transform[16];
             tile->getTransformationMatrix(transform);
@@ -2896,7 +3336,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
             // Spheres
         } else if (obj->getObjectType() == OBJECT_TYPE_SPHERE) {
-            Sphere *sphere = getSphereObjectPointer(o);
+            Sphere *sphere = getSphereObjectPointer_private(o);
 
             float transform[16];
             sphere->getTransformationMatrix(transform);
@@ -2914,7 +3354,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
             // Tubes
         } else if (obj->getObjectType() == OBJECT_TYPE_TUBE) {
-            Tube *tube = getTubeObjectPointer(o);
+            Tube *tube = getTubeObjectPointer_private(o);
 
             float transform[16];
             tube->getTransformationMatrix(transform);
@@ -2957,7 +3397,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
             // Boxes
         } else if (obj->getObjectType() == OBJECT_TYPE_BOX) {
-            Box *box = getBoxObjectPointer(o);
+            Box *box = getBoxObjectPointer_private(o);
 
             float transform[16];
             box->getTransformationMatrix(transform);
@@ -2975,7 +3415,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
             // Disks
         } else if (obj->getObjectType() == OBJECT_TYPE_DISK) {
-            Disk *disk = getDiskObjectPointer(o);
+            Disk *disk = getDiskObjectPointer_private(o);
 
             float transform[16];
             disk->getTransformationMatrix(transform);
@@ -2993,7 +3433,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
             // Cones
         } else if (obj->getObjectType() == OBJECT_TYPE_CONE) {
-            Cone *cone = getConeObjectPointer(o);
+            Cone *cone = getConeObjectPointer_private(o);
 
             float transform[16];
             cone->getTransformationMatrix(transform);
@@ -3074,59 +3514,41 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             }
             outfile << "</globaldata_double>" << std::endl;
         } else if (type == HELIOS_TYPE_VEC2) {
-            outfile << "   <globaldata_vec2 label=\"" << label << "\">" << std::flush;
+            outfile << "   <globaldata_vec2 label=\"" << label << "\">" << std::endl;
             for (size_t i = 0; i < data.size; i++) {
-                outfile << data.global_data_vec2.at(i).x << " " << data.global_data_vec2.at(i).y << std::flush;
-                if (i != data.size - 1) {
-                    outfile << " " << std::flush;
-                }
+                outfile << "      " << data.global_data_vec2.at(i).x << " " << data.global_data_vec2.at(i).y << std::endl;
             }
-            outfile << "</globaldata_vec2>" << std::endl;
+            outfile << "   </globaldata_vec2>" << std::endl;
         } else if (type == HELIOS_TYPE_VEC3) {
-            outfile << "   <globaldata_vec3 label=\"" << label << "\">" << std::flush;
+            outfile << "   <globaldata_vec3 label=\"" << label << "\">" << std::endl;
             for (size_t i = 0; i < data.size; i++) {
-                outfile << data.global_data_vec3.at(i).x << " " << data.global_data_vec3.at(i).y << " " << data.global_data_vec3.at(i).z << std::flush;
-                if (i != data.size - 1) {
-                    outfile << " " << std::flush;
-                }
+                outfile << "      " << data.global_data_vec3.at(i).x << " " << data.global_data_vec3.at(i).y << " " << data.global_data_vec3.at(i).z << std::endl;
             }
-            outfile << "</globaldata_vec3>" << std::endl;
+            outfile << "   </globaldata_vec3>" << std::endl;
         } else if (type == HELIOS_TYPE_VEC4) {
-            outfile << "   <globaldata_vec4 label=\"" << label << "\">" << std::flush;
+            outfile << "   <globaldata_vec4 label=\"" << label << "\">" << std::endl;
             for (size_t i = 0; i < data.size; i++) {
-                outfile << data.global_data_vec4.at(i).x << " " << data.global_data_vec4.at(i).y << " " << data.global_data_vec4.at(i).z << " " << data.global_data_vec4.at(i).w << std::flush;
-                if (i != data.size - 1) {
-                    outfile << " " << std::flush;
-                }
+                outfile << "      " << data.global_data_vec4.at(i).x << " " << data.global_data_vec4.at(i).y << " " << data.global_data_vec4.at(i).z << " " << data.global_data_vec4.at(i).w << std::endl;
             }
-            outfile << "</globaldata_vec4>" << std::endl;
+            outfile << "   </globaldata_vec4>" << std::endl;
         } else if (type == HELIOS_TYPE_INT2) {
-            outfile << "   <globaldata_int2 label=\"" << label << "\">" << std::flush;
+            outfile << "   <globaldata_int2 label=\"" << label << "\">" << std::endl;
             for (size_t i = 0; i < data.size; i++) {
-                outfile << data.global_data_int2.at(i).x << " " << data.global_data_int2.at(i).y << std::flush;
-                if (i != data.size - 1) {
-                    outfile << " " << std::flush;
-                }
+                outfile << "      " << data.global_data_int2.at(i).x << " " << data.global_data_int2.at(i).y << std::endl;
             }
-            outfile << "</globaldata_int2>" << std::endl;
+            outfile << "   </globaldata_int2>" << std::endl;
         } else if (type == HELIOS_TYPE_INT3) {
-            outfile << "   <globaldata_int3 label=\"" << label << "\">" << std::flush;
+            outfile << "   <globaldata_int3 label=\"" << label << "\">" << std::endl;
             for (size_t i = 0; i < data.size; i++) {
-                outfile << data.global_data_int3.at(i).x << " " << data.global_data_int3.at(i).y << data.global_data_int3.at(i).z << std::flush;
-                if (i != data.size - 1) {
-                    outfile << " " << std::flush;
-                }
+                outfile << "      " << data.global_data_int3.at(i).x << " " << data.global_data_int3.at(i).y << " " << data.global_data_int3.at(i).z << std::endl;
             }
-            outfile << "</globaldata_int3>" << std::endl;
+            outfile << "   </globaldata_int3>" << std::endl;
         } else if (type == HELIOS_TYPE_INT4) {
-            outfile << "   <globaldata_int4 label=\"" << label << "\">" << std::flush;
+            outfile << "   <globaldata_int4 label=\"" << label << "\">" << std::endl;
             for (size_t i = 0; i < data.size; i++) {
-                outfile << data.global_data_int4.at(i).x << " " << data.global_data_int4.at(i).y << data.global_data_int4.at(i).z << data.global_data_int4.at(i).w << std::flush;
-                if (i != data.size - 1) {
-                    outfile << " " << std::flush;
-                }
+                outfile << "      " << data.global_data_int4.at(i).x << " " << data.global_data_int4.at(i).y << " " << data.global_data_int4.at(i).z << " " << data.global_data_int4.at(i).w << std::endl;
             }
-            outfile << "</globaldata_int4>" << std::endl;
+            outfile << "   </globaldata_int4>" << std::endl;
         } else if (type == HELIOS_TYPE_STRING) {
             outfile << "   <globaldata_string label=\"" << label << "\">" << std::flush;
             for (size_t i = 0; i < data.size; i++) {
@@ -3222,8 +3644,12 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
 
     bool ifColor = false;
 
+    // Resolve file path using unified resolution
+    std::filesystem::path resolved_path = resolveFilePath(filename);
+    std::string resolved_filename = resolved_path.string();
+
     std::ifstream inputPly;
-    inputPly.open(filename);
+    inputPly.open(resolved_filename);
 
     if (!inputPly.is_open()) {
         helios_runtime_error("ERROR (Context::loadPLY): Couldn't open " + std::string(filename));
@@ -3440,7 +3866,13 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
             vec3 v1 = vertices.at(faces.at(row).at(t - 1));
             vec3 v2 = vertices.at(faces.at(row).at(t));
 
-            if ((v0 - v1).magnitude() == 0 || (v0 - v2).magnitude() == 0 || (v1 - v2).magnitude() == 0) {
+            if ((v0 - v1).magnitude() < 1e-10f || (v0 - v2).magnitude() < 1e-10f || (v1 - v2).magnitude() < 1e-10f) {
+                continue;
+            }
+
+            // Additional check for triangle area to avoid near-degenerate triangles
+            float triangle_area = calculateTriangleArea(v0, v1, v2);
+            if (triangle_area < MIN_TRIANGLE_AREA_THRESHOLD) {
                 continue;
             }
 
@@ -3549,6 +3981,7 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, flo
 }
 
 std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, const helios::vec3 &scale, const SphericalCoord &rotation, const RGBcolor &default_color, const char *upaxis, bool silent) {
+
     if (!silent) {
         std::cout << "Reading OBJ file " << filename << "..." << std::flush;
     }
@@ -3574,16 +4007,19 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
 
     std::vector<uint> UUID;
 
+    // Resolve file path using unified resolution
+    std::filesystem::path resolved_path = resolveFilePath(filename);
+    std::string resolved_filename = resolved_path.string();
+
     std::ifstream inputOBJ, inputMTL;
-    inputOBJ.open(filename);
+    inputOBJ.open(resolved_filename);
 
     if (!inputOBJ.is_open()) {
         helios_runtime_error("ERROR (Context::loadOBJ): Couldn't open " + std::string(filename));
     }
 
-    // determine the base file path for 'filename'
-    std::string fstring = filename;
-    std::string filebase = getFilePath(fstring);
+    // determine the base file path for resolved filename
+    std::string filebase = getFilePath(resolved_filename);
 
     // determine bounding box
     float boxmin = 100000;
@@ -3606,7 +4042,7 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
         } else if (line == "mtllib") {
             getline(inputOBJ, line);
             std::string material_file = trim_whitespace(line);
-            materials = loadMTL(filebase, material_file);
+            materials = loadMTL(filebase, material_file, default_color);
 
             // ------- OBJECT ------- //
         } else if (line == "o") {
@@ -3676,12 +4112,22 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
                     if (!parse_int(digitf, face)) {
                         helios_runtime_error("ERROR (Context::loadOBJ): Face index on line " + std::to_string(lineno) + " must be a non-negative integer value.");
                     }
+                    // Add bounds checking for face indices
+                    if (face <= 0 || face > vertices.size()) {
+                        helios_runtime_error("ERROR (Context::loadOBJ): Face vertex index " + std::to_string(face) + " on line " + std::to_string(lineno) + " is out of range. Valid range is 1-" + std::to_string(vertices.size()) +
+                                             ". Check that vertex indices in face definitions reference existing vertices.");
+                    }
                     f.push_back(face);
                 }
                 if (!digitu.empty()) {
                     int uv;
                     if (!parse_int(digitu, uv)) {
                         helios_runtime_error("ERROR (Context::loadOBJ): u,v index on line " + std::to_string(lineno) + " must be a non-negative integer value.");
+                    }
+                    // Add bounds checking for UV indices
+                    if (uv <= 0 || uv > texture_uv.size()) {
+                        helios_runtime_error("ERROR (Context::loadOBJ): Texture coordinate index " + std::to_string(uv) + " on line " + std::to_string(lineno) + " is out of range. Valid range is 1-" + std::to_string(texture_uv.size()) +
+                                             ". Check that texture coordinate indices in face definitions reference existing texture coordinates.");
                     }
                     u.push_back(uv);
                 }
@@ -3697,7 +4143,12 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
 
     vec3 scl = scale;
     if (scl.x == 0 && scl.y == 0 && scl.z > 0) {
-        scl = make_vec3(scale.z / (boxmax - boxmin), scale.z / (boxmax - boxmin), scale.z / (boxmax - boxmin));
+        if (boxmax - boxmin > 1e-6f) {
+            scl = make_vec3(scale.z / (boxmax - boxmin), scale.z / (boxmax - boxmin), scale.z / (boxmax - boxmin));
+        } else {
+            // Object is flat or has zero height - use uniform scaling of requested height
+            scl = make_vec3(scale.z, scale.z, scale.z);
+        }
     } else {
         if (scl.x == 0 && (scl.y != 0 || scl.z != 0)) {
             std::cout << "WARNING (Context::loadOBJ): Scaling factor given for x-direction is zero. Setting scaling factor to 1" << std::endl;
@@ -3720,6 +4171,20 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
         }
     }
 
+    // Structure to hold triangle data for parallel processing
+    struct TriangleData {
+        vec3 vert0, vert1, vert2;
+        std::string texture;
+        vec2 uv0, uv1, uv2;
+        RGBcolor color;
+        bool hasTexture;
+        bool textureColorIsOverridden;
+        std::string object;
+    };
+
+    std::vector<TriangleData> triangleDataList;
+
+    // First pass: Parallel data preparation - compute all triangle vertex data
     for (auto iter = face_inds.begin(); iter != face_inds.end(); ++iter) {
         std::string materialname = iter->first;
 
@@ -3735,53 +4200,129 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
             textureColorIsOverridden = mat.textureColorIsOverridden;
         }
 
-        for (size_t i = 0; i < face_inds.at(materialname).size(); i++) {
-            for (uint t = 2; t < face_inds.at(materialname).at(i).size(); t++) {
-                vec3 v0 = vertices.at(face_inds.at(materialname).at(i).at(0) - 1);
-                vec3 v1 = vertices.at(face_inds.at(materialname).at(i).at(t - 1) - 1);
-                vec3 v2 = vertices.at(face_inds.at(materialname).at(i).at(t) - 1);
 
-                if ((v0 - v1).magnitude() == 0 || (v0 - v2).magnitude() == 0 || (v1 - v2).magnitude() == 0) {
-                    continue;
-                }
+        const auto &material_faces = face_inds.at(materialname);
+        const auto &material_texture_inds = texture_inds.count(materialname) ? texture_inds.at(materialname) : std::vector<std::vector<int>>();
 
-                if (strcmp(upaxis, "YUP") == 0) {
-                    v0 = rotatePointAboutLine(v0, make_vec3(0, 0, 0), make_vec3(1, 0, 0), 0.5 * M_PI);
-                    v1 = rotatePointAboutLine(v1, make_vec3(0, 0, 0), make_vec3(1, 0, 0), 0.5 * M_PI);
-                    v2 = rotatePointAboutLine(v2, make_vec3(0, 0, 0), make_vec3(1, 0, 0), 0.5 * M_PI);
-                }
+        // Exception handling for OpenMP - capture exceptions and rethrow after parallel region
+        std::string exception_message;
+        bool exception_occurred = false;
 
-                v0 = rotatePoint(v0, rotation);
-                v1 = rotatePoint(v1, rotation);
-                v2 = rotatePoint(v2, rotation);
+#ifdef USE_OPENMP
+#pragma omp parallel for schedule(dynamic)
+#endif
+        for (int i = 0; i < static_cast<int>(material_faces.size()); i++) {
+            try {
+                for (uint t = 2; t < material_faces[i].size(); t++) {
+                    vec3 v0 = vertices.at(material_faces[i][0] - 1);
+                    vec3 v1 = vertices.at(material_faces[i][t - 1] - 1);
+                    vec3 v2 = vertices.at(material_faces[i][t] - 1);
 
-                uint ID;
-                if (!texture.empty() && !texture_inds.at(materialname).at(i).empty()) { // has texture
+                    if ((v0 - v1).magnitude() == 0 || (v0 - v2).magnitude() == 0 || (v1 - v2).magnitude() == 0) {
+                        continue;
+                    }
 
-                    if (t < texture_inds.at(materialname).at(i).size()) {
-                        int iuv0 = texture_inds.at(materialname).at(i).at(0) - 1;
-                        int iuv1 = texture_inds.at(materialname).at(i).at(t - 1) - 1;
-                        int iuv2 = texture_inds.at(materialname).at(i).at(t) - 1;
+                    if (strcmp(upaxis, "YUP") == 0) {
+                        v0 = rotatePointAboutLine(v0, make_vec3(0, 0, 0), make_vec3(1, 0, 0), 0.5 * M_PI);
+                        v1 = rotatePointAboutLine(v1, make_vec3(0, 0, 0), make_vec3(1, 0, 0), 0.5 * M_PI);
+                        v2 = rotatePointAboutLine(v2, make_vec3(0, 0, 0), make_vec3(1, 0, 0), 0.5 * M_PI);
+                    }
 
-                        ID = addTriangle(origin + v0 * scl.x, origin + v1 * scl.y, origin + v2 * scl.z, texture.c_str(), texture_uv.at(iuv0), texture_uv.at(iuv1), texture_uv.at(iuv2));
+                    v0 = rotatePoint(v0, rotation);
+                    v1 = rotatePoint(v1, rotation);
+                    v2 = rotatePoint(v2, rotation);
 
-                        if (textureColorIsOverridden) {
-                            setPrimitiveColor(ID, color);
-                            overridePrimitiveTextureColor(ID);
+                    // Calculate final triangle vertices after transformations
+                    vec3 vert0 = origin + make_vec3(v0.x * scl.x, v0.y * scl.y, v0.z * scl.z);
+                    vec3 vert1 = origin + make_vec3(v1.x * scl.x, v1.y * scl.y, v1.z * scl.z);
+                    vec3 vert2 = origin + make_vec3(v2.x * scl.x, v2.y * scl.y, v2.z * scl.z);
+
+                    // Check if triangle has sufficient area to avoid zero-area triangles
+                    float triangle_area = calculateTriangleArea(vert0, vert1, vert2);
+
+                    if (triangle_area > MIN_TRIANGLE_AREA_THRESHOLD) { // Only process triangle if area is not negligible
+                        TriangleData triangleData;
+                        triangleData.vert0 = vert0;
+                        triangleData.vert1 = vert1;
+                        triangleData.vert2 = vert2;
+                        triangleData.texture = texture;
+                        triangleData.color = color;
+                        triangleData.textureColorIsOverridden = textureColorIsOverridden;
+                        triangleData.object = objects.at(material_faces[i][0] - 1);
+
+                        // Handle texture coordinates if present
+                        // First check if material has texture file
+                        triangleData.hasTexture = !texture.empty();
+
+
+                        // If texture exists, try to get UV coordinates
+                        if (triangleData.hasTexture && i < material_texture_inds.size() && !material_texture_inds[i].empty() && t < material_texture_inds[i].size()) {
+
+                            int iuv0 = material_texture_inds[i][0] - 1;
+                            int iuv1 = material_texture_inds[i][t - 1] - 1;
+                            int iuv2 = material_texture_inds[i][t] - 1;
+
+                            if (iuv0 >= 0 && iuv0 < texture_uv.size() && iuv1 >= 0 && iuv1 < texture_uv.size() && iuv2 >= 0 && iuv2 < texture_uv.size()) {
+                                triangleData.uv0 = texture_uv.at(iuv0);
+                                triangleData.uv1 = texture_uv.at(iuv1);
+                                triangleData.uv2 = texture_uv.at(iuv2);
+                            } else {
+                                helios_runtime_error("ERROR (Context::loadOBJ): Invalid texture coordinate indices in face for material '" + materialname + "'. " + "UV indices [" + std::to_string(iuv0 + 1) + ", " + std::to_string(iuv1 + 1) + ", " +
+                                                     std::to_string(iuv2 + 1) + "] " + "exceed available UV coordinates (1-" + std::to_string(texture_uv.size()) + "). " +
+                                                     "Check that all face texture coordinate references in the OBJ file are valid.");
+                            }
+                        } else if (triangleData.hasTexture) {
+                            helios_runtime_error("ERROR (Context::loadOBJ): Material '" + materialname + "' specifies texture file '" + texture + "' " + "but face has no texture coordinates. Either remove the texture from the material " +
+                                                 "or add texture coordinates (vt) and face texture indices (f v1/vt1 v2/vt2 v3/vt3) to the OBJ file.");
+                        }
+
+#ifdef USE_OPENMP
+#pragma omp critical
+#endif
+                        {
+                            triangleDataList.push_back(triangleData);
                         }
                     }
-                } else {
-                    ID = addTriangle(origin + v0 * scl.x, origin + v1 * scl.y, origin + v2 * scl.z, color);
                 }
-
-                const std::string &object = objects.at(face_inds.at(materialname).at(i).at(0) - 1);
-
-                if (object != "none" && doesPrimitiveExist(ID)) {
-                    setPrimitiveData(ID, "object_label", object);
+            } catch (const std::exception &e) {
+                // Capture exception in OpenMP-safe way
+#ifdef USE_OPENMP
+#pragma omp critical
+#endif
+                {
+                    if (!exception_occurred) {
+                        exception_message = e.what();
+                        exception_occurred = true;
+                    }
                 }
-
-                UUID.push_back(ID);
             }
+        }
+
+        // Rethrow captured exception after parallel region
+        if (exception_occurred) {
+            helios_runtime_error(exception_message);
+        }
+    }
+
+    // Second pass: Sequential triangle creation to maintain thread safety
+    for (const auto &triangleData: triangleDataList) {
+        uint ID = 0;
+
+        if (triangleData.hasTexture) {
+            ID = addTriangle(triangleData.vert0, triangleData.vert1, triangleData.vert2, triangleData.texture.c_str(), triangleData.uv0, triangleData.uv1, triangleData.uv2);
+
+            if (triangleData.textureColorIsOverridden) {
+                setPrimitiveColor(ID, triangleData.color);
+                overridePrimitiveTextureColor(ID);
+            }
+        } else {
+            ID = addTriangle(triangleData.vert0, triangleData.vert1, triangleData.vert2, triangleData.color);
+        }
+
+        UUID.push_back(ID);
+
+        if (triangleData.object != "none" && doesPrimitiveExist(ID)) {
+            setPrimitiveData(ID, "object_label", triangleData.object);
         }
     }
 
@@ -3792,31 +4333,29 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
     return UUID;
 }
 
-std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &filebase, const std::string &material_file) {
+std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &filebase, const std::string &material_file, const RGBcolor &default_color) {
     std::ifstream inputMTL;
 
     std::string file = material_file;
 
-    // first look for mtl file using path given in obj file
-    inputMTL.open(file.c_str());
-    if (!inputMTL.is_open()) {
-        // if that doesn't work, try looking in the same directory where obj file is located
-        file = filebase + file;
-        file.erase(remove(file.begin(), file.end(), ' '), file.end());
-        for (size_t i = file.size(); i-- > 0;) {
-            if (strcmp(&file.at(i), "l") == 0) {
-                break;
-            }
+    // For relative paths, resolve relative to the OBJ file's directory (filebase)
+    // For absolute paths, use unified file resolution
+    std::filesystem::path resolved_path;
 
-            file.erase(file.begin() + scast<int>(i));
-        }
-        if (file.empty()) {
-            helios_runtime_error("ERROR (Context::loadMTL): Material file does not have correct file extension (.mtl).");
-        }
-        inputMTL.open(file.c_str());
-        if (!inputMTL.is_open()) {
-            helios_runtime_error("ERROR (Context::loadMTL): Material file " + std::string(file) + " given in .obj file cannot be found.");
-        }
+    if (std::filesystem::path(file).is_absolute()) {
+        // Absolute path - use unified resolution
+        resolved_path = resolveFilePath(file);
+    } else {
+        // Relative path - resolve relative to OBJ file directory
+        std::filesystem::path mtl_path = std::filesystem::path(filebase) / file;
+        resolved_path = resolveFilePath(mtl_path.string());
+    }
+
+    std::string resolved_file = resolved_path.string();
+    inputMTL.open(resolved_file.c_str());
+
+    if (!inputMTL.is_open()) {
+        helios_runtime_error("ERROR (Context::loadMTL): Could not open material file " + resolved_file + " after successful path resolution.");
     }
 
     std::map<std::string, OBJmaterial> materials;
@@ -3832,7 +4371,7 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
         } else if (line == "newmtl") { // material library
             getline(inputMTL, line);
             std::string material_name = trim_whitespace(line);
-            OBJmaterial mat(RGB::red, "", 0);
+            OBJmaterial mat(default_color, "", 0);
             materials.emplace(material_name, mat);
 
             std::string map_Kd, map_d;
@@ -3855,20 +4394,27 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
                         std::string ext = getFileExtension(tmp);
                         if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" || ext == ".JPEG") {
                             std::string texturefile = tmp;
-                            std::ifstream tfile;
 
-                            // first look for texture file using path given in mtl file
-                            tfile.open(texturefile.c_str());
-                            if (!tfile.is_open()) {
-                                // if that doesn't work, try looking in the same directory where obj file is located
-                                tfile.close();
-                                texturefile = filebase + texturefile;
-                                tfile.open(texturefile.c_str());
-                                if (!tfile.is_open()) {
-                                    std::cerr << "WARNING (Context::loadOBJ): Texture file " << texturefile << " given in .mtl file cannot be found." << std::endl;
+                            // Check for texture file existence using filesystem operations (more efficient)
+                            std::filesystem::path texture_path = texturefile;
+                            bool texture_exists = false;
+
+                            // First try the path as given in MTL file
+                            if (std::filesystem::exists(texture_path)) {
+                                texture_exists = true;
+                            } else {
+                                // Try looking in the same directory where OBJ file is located
+                                texture_path = std::filesystem::path(filebase) / tmp;
+                                texturefile = texture_path.string();
+                                if (std::filesystem::exists(texture_path)) {
+                                    texture_exists = true;
                                 }
                             }
-                            tfile.close();
+
+                            if (!texture_exists) {
+                                helios_runtime_error("ERROR (Context::loadOBJ): Texture file '" + tmp + "' referenced in .mtl file cannot be found. " + "Searched in current directory and OBJ file directory (" + filebase + "). " +
+                                                     "Ensure texture file exists or remove texture reference from material.");
+                            }
 
                             if (maptype == "map_d") {
                                 map_d = texturefile;
@@ -3905,15 +4451,15 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
     return materials;
 }
 
-void Context::writeOBJ(const std::string &filename, bool write_normals) const {
-    writeOBJ(filename, getAllUUIDs(), {}, write_normals);
+void Context::writeOBJ(const std::string &filename, bool write_normals, bool silent) const {
+    writeOBJ(filename, getAllUUIDs(), {}, write_normals, silent);
 }
 
-void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUIDs, bool write_normals) const {
-    writeOBJ(filename, UUIDs, {}, write_normals);
+void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUIDs, bool write_normals, bool silent) const {
+    writeOBJ(filename, UUIDs, {}, write_normals, silent);
 }
 
-void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields, bool write_normals) const {
+void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields, bool write_normals, bool silent) const {
 
     if (UUIDs.empty()) {
         std::cout << "WARNING (Context::writeOBJ): No primitives found to write - OBJ file " << filename << " will not be written." << std::endl;
@@ -3945,48 +4491,67 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
 
     if (!file_path.empty() && !std::filesystem::exists(file_path)) {
         if (!std::filesystem::create_directory(file_path)) {
-            std::cout << "failed. Directory " << file_path << " does not exist and it could not be created - OBJ file will not be written." << std::endl;
+            std::cerr << "failed. Directory " << file_path << " does not exist and it could not be created - OBJ file will not be written." << std::endl;
             return;
         }
     }
 
-    std::cout << "Writing OBJ file " << objfilename << "..." << std::flush;
+    if (!silent) {
+        std::cout << "Writing OBJ file " << objfilename << "..." << std::flush;
+    }
 
     std::vector<OBJmaterial> materials;
-
-    bool uuidexistswarning = false;
-    bool voxelwarning = false;
+    std::unordered_map<std::string, uint> material_cache;
+    const size_t primitive_count = UUIDs.size();
+    const size_t estimated_vertices = primitive_count * 4;
 
     std::vector<vec3> verts;
+    verts.reserve(estimated_vertices);
     std::vector<vec3> normals;
+    if (write_normals) {
+        normals.reserve(primitive_count);
+    }
     std::vector<vec2> uv;
+    uv.reserve(estimated_vertices);
+
     std::map<uint, std::vector<int3>> faces;
     std::map<uint, std::vector<int>> normal_inds;
     std::map<uint, std::vector<int3>> uv_inds;
-    size_t vertex_count = 1; // OBJ files start indices at 1
+    size_t vertex_count = 1;
     size_t normal_count = 0;
     size_t uv_count = 1;
     std::map<uint, std::vector<uint>> UUIDs_write;
-    // maintain object groupings
+
     std::map<std::string, std::map<uint, std::vector<int3>>> object_faces;
     std::map<std::string, std::map<uint, std::vector<int>>> object_normal_inds;
     std::map<std::string, std::map<uint, std::vector<int3>>> object_uv_inds;
     std::vector<std::string> object_order;
+    object_order.reserve(primitive_count / 10);
     bool object_groups_found = false;
 
     for (size_t p: UUIDs) {
         if (!doesPrimitiveExist(p)) {
-            uuidexistswarning = true;
-            continue;
-        } else if (getPrimitivePointer_private(p)->getType() == PRIMITIVE_TYPE_VOXEL) {
-            voxelwarning = true;
-            continue;
+            std::ostringstream err_stream;
+            err_stream << "ERROR (Context::writeOBJ): Primitive with UUID " << p << " does not exist. "
+                       << "Ensure all UUIDs in the input vector correspond to valid primitives before calling writeOBJ.";
+            helios_runtime_error(err_stream.str());
         }
 
-        std::vector<vec3> vertices = getPrimitivePointer_private(p)->getVertices();
-        PrimitiveType type = getPrimitivePointer_private(p)->getType();
-        RGBcolor C = getPrimitivePointer_private(p)->getColor();
-        std::string texturefile = getPrimitivePointer_private(p)->getTextureFile();
+        const Primitive *prim_ptr = getPrimitivePointer_private(p);
+
+        if (prim_ptr->getType() == PRIMITIVE_TYPE_VOXEL) {
+            std::ostringstream err_stream;
+            err_stream << "ERROR (Context::writeOBJ): Voxel primitives (UUID " << p << ") cannot be written to OBJ format. "
+                       << "OBJ format only supports surface primitives (triangles, patches). "
+                       << "Filter out voxel primitives before calling writeOBJ.";
+            helios_runtime_error(err_stream.str());
+        }
+
+        std::vector<vec3> vertices = prim_ptr->getVertices();
+        PrimitiveType type = prim_ptr->getType();
+        RGBcolor C = prim_ptr->getColor();
+        std::string texturefile = prim_ptr->getTextureFile();
+        bool texture_color_overridden = prim_ptr->isTextureColorOverridden();
 
         std::string obj_label = "default";
         if (doesPrimitiveDataExist(p, "object_label")) {
@@ -4000,27 +4565,28 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
             object_order.push_back(obj_label);
         }
 
-        bool material_exists = false;
-        uint material_ID = 99999;
+        std::string material_key = texturefile + "|" + std::to_string(C.r) + "," + std::to_string(C.g) + "," + std::to_string(C.b) + "|" + std::to_string(texture_color_overridden);
 
-        for (auto &material: materials) {
-            if (material.texture == texturefile && material.color == C && material.textureColorIsOverridden == getPrimitivePointer_private(p)->isTextureColorOverridden()) {
-                material_exists = true;
-                material_ID = material.materialID;
-                break;
-            }
-        }
+        uint material_ID;
+        auto material_iter = material_cache.find(material_key);
 
-        if (!material_exists) {
+        if (material_iter != material_cache.end()) {
+            // Material exists in cache
+            material_ID = material_iter->second;
+        } else {
+            // Create new material
             OBJmaterial mat(C, texturefile, materials.size());
             materials.emplace_back(mat);
             material_ID = mat.materialID;
+
             if (primitiveTextureHasTransparencyChannel(p)) {
                 materials.back().textureHasTransparency = true;
             }
-            if (isPrimitiveTextureColorOverridden(p)) {
+            if (texture_color_overridden) {
                 materials.back().textureColorIsOverridden = true;
             }
+
+            material_cache[material_key] = material_ID;
         }
 
         if (!primitive_dat_fields.empty()) {
@@ -4120,13 +4686,58 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
     }
 
     // copy material textures to new directory and edit old file paths
-    std::filesystem::path texture_dir = std::filesystem::path(file_path);
+    std::filesystem::path output_path = std::filesystem::path(file_path);
+    std::filesystem::path texture_dir = output_path.parent_path();
+
+    // If no parent path (filename only), use current directory
+    if (texture_dir.empty()) {
+        texture_dir = ".";
+    }
+
     for (auto &material: materials) {
         std::string texture = material.texture;
-        if (!texture.empty() && std::filesystem::exists(texture)) {
-            auto file = std::filesystem::path(texture).filename();
-            std::filesystem::copy_file(texture, texture_dir / file, std::filesystem::copy_options::overwrite_existing);
-            material.texture = file.string();
+        if (!texture.empty()) {
+            std::error_code ec;
+            std::filesystem::path source_path = std::filesystem::absolute(texture, ec);
+
+            // If we can't resolve the absolute path, try the original path
+            if (ec) {
+                source_path = std::filesystem::path(texture);
+            }
+
+            if (!std::filesystem::exists(source_path)) {
+                // Skip missing texture files silently (maintain original behavior)
+                continue;
+            }
+
+            auto filename = source_path.filename();
+            std::filesystem::path dest_path = texture_dir / filename;
+
+            // Skip copying if source and destination are the same file
+            bool same_file = false;
+            try {
+                same_file = std::filesystem::equivalent(source_path, dest_path, ec);
+                if (ec)
+                    same_file = false; // If we can't determine equivalence, assume different
+            } catch (...) {
+                same_file = false;
+            }
+
+            if (same_file) {
+                material.texture = filename.string();
+                continue;
+            }
+
+            // Attempt to copy file, but don't fail if it doesn't work
+            try {
+                std::filesystem::copy_file(source_path, dest_path, std::filesystem::copy_options::overwrite_existing, ec);
+                if (!ec) {
+                    material.texture = filename.string();
+                } // else keep original texture path
+            } catch (...) {
+                // If copy fails for any reason, keep original texture path
+                // This maintains backward compatibility
+            }
         }
     }
 
@@ -4139,77 +4750,265 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
     objfstream << "# baileylab.ucdavis.edu/software/helios" << std::endl;
     objfstream << "mtllib " << getFileName(mtlfilename) << std::endl;
 
-    for (auto &vert: verts) {
-        objfstream << "v " << vert.x << " " << vert.y << " " << vert.z << std::endl;
-    }
-    if (write_normals) {
-        float epsilon = 1e-7;
-        for (auto &n: normals) {
-            if (std::abs(n.x) < epsilon)
-                n.x = 0;
-            if (std::abs(n.y) < epsilon)
-                n.y = 0;
-            if (std::abs(n.z) < epsilon)
-                n.z = 0;
-            objfstream << "vn " << n.x << " " << n.y << " " << n.z << std::endl;
+    // Parallel string formatting for vertices, normals, and UV coordinates
+    std::vector<std::string> vertex_chunks;
+    const int num_threads = std::min(static_cast<int>(verts.size() / 1000 + 1), std::max(1, static_cast<int>(std::thread::hardware_concurrency())));
+    vertex_chunks.resize(num_threads);
+
+#ifdef USE_OPENMP
+#pragma omp parallel num_threads(num_threads)
+#endif
+    {
+        int tid = 0;
+#ifdef USE_OPENMP
+        tid = omp_get_thread_num();
+#endif
+        std::ostringstream vertex_stream;
+        vertex_stream.precision(8);
+
+        const size_t chunk_size = (verts.size() + num_threads - 1) / num_threads;
+        const size_t start_idx = tid * chunk_size;
+        const size_t end_idx = std::min(start_idx + chunk_size, verts.size());
+
+        for (size_t i = start_idx; i < end_idx; i++) {
+            vertex_stream << "v " << verts[i].x << " " << verts[i].y << " " << verts[i].z << "\n";
         }
-    }
-    for (auto &v: uv) {
-        objfstream << "vt " << v.x << " " << v.y << std::endl;
+
+        vertex_chunks[tid] = vertex_stream.str();
     }
 
+    for (const auto &chunk: vertex_chunks) {
+        objfstream << chunk;
+    }
+
+    if (write_normals) {
+        std::vector<std::string> normal_chunks;
+        normal_chunks.resize(num_threads);
+
+#ifdef USE_OPENMP
+#pragma omp parallel num_threads(num_threads)
+#endif
+        {
+            int tid = 0;
+#ifdef USE_OPENMP
+            tid = omp_get_thread_num();
+#endif
+            std::ostringstream normal_stream;
+            normal_stream.precision(8);
+
+            const size_t chunk_size = (normals.size() + num_threads - 1) / num_threads;
+            const size_t start_idx = tid * chunk_size;
+            const size_t end_idx = std::min(start_idx + chunk_size, normals.size());
+
+            const float epsilon = 1e-7;
+            for (size_t i = start_idx; i < end_idx; i++) {
+                vec3 n = normals[i];
+                if (std::abs(n.x) < epsilon)
+                    n.x = 0;
+                if (std::abs(n.y) < epsilon)
+                    n.y = 0;
+                if (std::abs(n.z) < epsilon)
+                    n.z = 0;
+                normal_stream << "vn " << n.x << " " << n.y << " " << n.z << "\n";
+            }
+
+            normal_chunks[tid] = normal_stream.str();
+        }
+
+        for (const auto &chunk: normal_chunks) {
+            objfstream << chunk;
+        }
+    }
+
+    if (!uv.empty()) {
+        std::vector<std::string> uv_chunks;
+        uv_chunks.resize(num_threads);
+
+#ifdef USE_OPENMP
+#pragma omp parallel num_threads(num_threads)
+#endif
+        {
+            int tid = 0;
+#ifdef USE_OPENMP
+            tid = omp_get_thread_num();
+#endif
+            std::ostringstream uv_stream;
+            uv_stream.precision(8);
+
+            const size_t chunk_size = (uv.size() + num_threads - 1) / num_threads;
+            const size_t start_idx = tid * chunk_size;
+            const size_t end_idx = std::min(start_idx + chunk_size, uv.size());
+
+            for (size_t i = start_idx; i < end_idx; i++) {
+                uv_stream << "vt " << uv[i].x << " " << uv[i].y << "\n";
+            }
+
+            uv_chunks[tid] = uv_stream.str();
+        }
+
+        for (const auto &chunk: uv_chunks) {
+            objfstream << chunk;
+        }
+    }
+
+    // Parallel face string generation
+
     if (object_groups_found) {
+        // Process object groups sequentially (maintain OBJ structure)
+        // but parallelize face generation within each material group
         for (const auto &obj_label: object_order) {
-            objfstream << "o " << obj_label << std::endl;
+            objfstream << "o " << obj_label << "\n";
+
             for (int mat = 0; mat < materials.size(); mat++) {
                 auto fit = object_faces[obj_label].find(mat);
                 if (fit == object_faces[obj_label].end())
                     continue;
-                objfstream << "usemtl material" << mat << std::endl;
-                for (size_t f = 0; f < fit->second.size(); ++f) {
-                    if (uv.empty()) {
-                        if (write_normals) {
-                            objfstream << "f " << fit->second.at(f).x << "//" << object_normal_inds[obj_label][mat].at(f) << " " << fit->second.at(f).y << "//" << object_normal_inds[obj_label][mat].at(f) << " " << fit->second.at(f).z << "//"
-                                       << object_normal_inds[obj_label][mat].at(f) << std::endl;
-                        } else {
-                            objfstream << "f " << fit->second.at(f).x << " " << fit->second.at(f).y << " " << fit->second.at(f).z << std::endl;
+
+                objfstream << "usemtl material" << mat << "\n";
+
+                const auto &current_faces = fit->second;
+                if (current_faces.size() > 100) { // Only parallelize if enough faces
+                    // Parallel face string generation for this material
+                    std::vector<std::string> face_chunks;
+                    face_chunks.resize(num_threads);
+
+#ifdef USE_OPENMP
+#pragma omp parallel num_threads(num_threads)
+#endif
+                    {
+                        int tid = 0;
+#ifdef USE_OPENMP
+                        tid = omp_get_thread_num();
+#endif
+                        std::ostringstream face_stream;
+
+                        const size_t chunk_size = (current_faces.size() + num_threads - 1) / num_threads;
+                        const size_t start_idx = tid * chunk_size;
+                        const size_t end_idx = std::min(start_idx + chunk_size, current_faces.size());
+
+                        for (size_t f = start_idx; f < end_idx; f++) {
+                            if (uv.empty()) {
+                                if (write_normals) {
+                                    face_stream << "f " << current_faces[f].x << "//" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].y << "//" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].z << "//"
+                                                << object_normal_inds[obj_label][mat][f] << "\n";
+                                } else {
+                                    face_stream << "f " << current_faces[f].x << " " << current_faces[f].y << " " << current_faces[f].z << "\n";
+                                }
+                            } else if (object_uv_inds[obj_label][mat][f].x < 0) {
+                                face_stream << "f " << current_faces[f].x << "/1 " << current_faces[f].y << "/1 " << current_faces[f].z << "/1\n";
+                            } else {
+                                if (write_normals) {
+                                    face_stream << "f " << current_faces[f].x << "/" << object_uv_inds[obj_label][mat][f].x << "/" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].y << "/" << object_uv_inds[obj_label][mat][f].y
+                                                << "/" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].z << "/" << object_uv_inds[obj_label][mat][f].z << "/" << object_normal_inds[obj_label][mat][f] << "\n";
+                                } else {
+                                    face_stream << "f " << current_faces[f].x << "/" << object_uv_inds[obj_label][mat][f].x << " " << current_faces[f].y << "/" << object_uv_inds[obj_label][mat][f].y << " " << current_faces[f].z << "/"
+                                                << object_uv_inds[obj_label][mat][f].z << "\n";
+                                }
+                            }
                         }
-                    } else if (object_uv_inds[obj_label][mat].at(f).x < 0) {
-                        objfstream << "f " << fit->second.at(f).x << "/1 " << fit->second.at(f).y << "/1 " << fit->second.at(f).z << "/1" << std::endl;
-                    } else {
-                        if (write_normals) {
-                            objfstream << "f " << fit->second.at(f).x << "/" << object_uv_inds[obj_label][mat].at(f).x << "/" << object_normal_inds[obj_label][mat].at(f) << " " << fit->second.at(f).y << "/" << object_uv_inds[obj_label][mat].at(f).y
-                                       << "/" << object_normal_inds[obj_label][mat].at(f) << " " << fit->second.at(f).z << "/" << object_uv_inds[obj_label][mat].at(f).z << "/" << object_normal_inds[obj_label][mat].at(f) << std::endl;
+
+                        face_chunks[tid] = face_stream.str();
+                    }
+
+                    // Sequential write of face chunks
+                    for (const auto &chunk: face_chunks) {
+                        objfstream << chunk;
+                    }
+                } else {
+                    // For small face counts, use original sequential approach
+                    for (size_t f = 0; f < current_faces.size(); ++f) {
+                        if (uv.empty()) {
+                            if (write_normals) {
+                                objfstream << "f " << current_faces[f].x << "//" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].y << "//" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].z << "//"
+                                           << object_normal_inds[obj_label][mat][f] << std::endl;
+                            } else {
+                                objfstream << "f " << current_faces[f].x << " " << current_faces[f].y << " " << current_faces[f].z << std::endl;
+                            }
+                        } else if (object_uv_inds[obj_label][mat][f].x < 0) {
+                            objfstream << "f " << current_faces[f].x << "/1 " << current_faces[f].y << "/1 " << current_faces[f].z << "/1" << std::endl;
                         } else {
-                            objfstream << "f " << fit->second.at(f).x << "/" << object_uv_inds[obj_label][mat].at(f).x << " " << fit->second.at(f).y << "/" << object_uv_inds[obj_label][mat].at(f).y << " " << fit->second.at(f).z << "/"
-                                       << object_uv_inds[obj_label][mat].at(f).z << std::endl;
+                            if (write_normals) {
+                                objfstream << "f " << current_faces[f].x << "/" << object_uv_inds[obj_label][mat][f].x << "/" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].y << "/" << object_uv_inds[obj_label][mat][f].y << "/"
+                                           << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].z << "/" << object_uv_inds[obj_label][mat][f].z << "/" << object_normal_inds[obj_label][mat][f] << std::endl;
+                            } else {
+                                objfstream << "f " << current_faces[f].x << "/" << object_uv_inds[obj_label][mat][f].x << " " << current_faces[f].y << "/" << object_uv_inds[obj_label][mat][f].y << " " << current_faces[f].z << "/"
+                                           << object_uv_inds[obj_label][mat][f].z << std::endl;
+                            }
                         }
                     }
                 }
             }
         }
     } else {
+        // No object groups - simpler structure, better parallelization opportunity
         for (int mat = 0; mat < materials.size(); mat++) {
             assert(materials.at(mat).materialID == mat);
+            objfstream << "usemtl material" << mat << "\n";
 
-            objfstream << "usemtl material" << mat << std::endl;
+            const auto &current_faces = faces.at(mat);
+            if (current_faces.size() > 100) { // Only parallelize if enough faces
+                // Parallel face string generation for this material
+                std::vector<std::string> face_chunks;
+                face_chunks.resize(num_threads);
 
-            for (int f = 0; f < faces.at(mat).size(); f++) {
-                if (uv.empty()) {
-                    if (write_normals) {
-                        objfstream << "f " << faces.at(mat).at(f).x << "//" << normal_inds.at(mat).at(f) << " " << faces.at(mat).at(f).y << "//" << normal_inds.at(mat).at(f) << " " << faces.at(mat).at(f).z << "//" << normal_inds.at(mat).at(f)
-                                   << std::endl;
-                    } else {
-                        objfstream << "f " << faces.at(mat).at(f).x << " " << faces.at(mat).at(f).y << " " << faces.at(mat).at(f).z << std::endl;
+#ifdef USE_OPENMP
+#pragma omp parallel num_threads(num_threads)
+#endif
+                {
+                    int tid = 0;
+#ifdef USE_OPENMP
+                    tid = omp_get_thread_num();
+#endif
+                    std::ostringstream face_stream;
+
+                    const size_t chunk_size = (current_faces.size() + num_threads - 1) / num_threads;
+                    const size_t start_idx = tid * chunk_size;
+                    const size_t end_idx = std::min(start_idx + chunk_size, current_faces.size());
+
+                    for (size_t f = start_idx; f < end_idx; f++) {
+                        if (uv.empty()) {
+                            if (write_normals) {
+                                face_stream << "f " << current_faces[f].x << "//" << normal_inds.at(mat)[f] << " " << current_faces[f].y << "//" << normal_inds.at(mat)[f] << " " << current_faces[f].z << "//" << normal_inds.at(mat)[f] << "\n";
+                            } else {
+                                face_stream << "f " << current_faces[f].x << " " << current_faces[f].y << " " << current_faces[f].z << "\n";
+                            }
+                        } else if (uv_inds.at(mat)[f].x < 0) {
+                            face_stream << "f " << current_faces[f].x << "/1 " << current_faces[f].y << "/1 " << current_faces[f].z << "/1\n";
+                        } else {
+                            if (write_normals) {
+                                face_stream << "f " << current_faces[f].x << "/" << uv_inds.at(mat)[f].x << "/" << normal_inds.at(mat)[f] << " " << current_faces[f].y << "/" << uv_inds.at(mat)[f].y << "/" << normal_inds.at(mat)[f] << " "
+                                            << current_faces[f].z << "/" << uv_inds.at(mat)[f].z << "/" << normal_inds.at(mat)[f] << "\n";
+                            } else {
+                                face_stream << "f " << current_faces[f].x << "/" << uv_inds.at(mat)[f].x << " " << current_faces[f].y << "/" << uv_inds.at(mat)[f].y << " " << current_faces[f].z << "/" << uv_inds.at(mat)[f].z << "\n";
+                            }
+                        }
                     }
-                } else if (uv_inds.at(mat).at(f).x < 0) {
-                    objfstream << "f " << faces.at(mat).at(f).x << "/1 " << faces.at(mat).at(f).y << "/1 " << faces.at(mat).at(f).z << "/1" << std::endl;
-                } else {
-                    if (write_normals) {
-                        objfstream << "f " << faces.at(mat).at(f).x << "/" << uv_inds.at(mat).at(f).x << "/" << normal_inds.at(mat).at(f) << " " << faces.at(mat).at(f).y << "/" << uv_inds.at(mat).at(f).y << "/" << normal_inds.at(mat).at(f) << " "
-                                   << faces.at(mat).at(f).z << "/" << uv_inds.at(mat).at(f).z << "/" << normal_inds.at(mat).at(f) << std::endl;
+
+                    face_chunks[tid] = face_stream.str();
+                }
+
+                // Sequential write of face chunks
+                for (const auto &chunk: face_chunks) {
+                    objfstream << chunk;
+                }
+            } else {
+                // For small face counts, use original sequential approach
+                for (int f = 0; f < current_faces.size(); f++) {
+                    if (uv.empty()) {
+                        if (write_normals) {
+                            objfstream << "f " << current_faces[f].x << "//" << normal_inds.at(mat)[f] << " " << current_faces[f].y << "//" << normal_inds.at(mat)[f] << " " << current_faces[f].z << "//" << normal_inds.at(mat)[f] << std::endl;
+                        } else {
+                            objfstream << "f " << current_faces[f].x << " " << current_faces[f].y << " " << current_faces[f].z << std::endl;
+                        }
+                    } else if (uv_inds.at(mat)[f].x < 0) {
+                        objfstream << "f " << current_faces[f].x << "/1 " << current_faces[f].y << "/1 " << current_faces[f].z << "/1" << std::endl;
                     } else {
-                        objfstream << "f " << faces.at(mat).at(f).x << "/" << uv_inds.at(mat).at(f).x << " " << faces.at(mat).at(f).y << "/" << uv_inds.at(mat).at(f).y << " " << faces.at(mat).at(f).z << "/" << uv_inds.at(mat).at(f).z << std::endl;
+                        if (write_normals) {
+                            objfstream << "f " << current_faces[f].x << "/" << uv_inds.at(mat)[f].x << "/" << normal_inds.at(mat)[f] << " " << current_faces[f].y << "/" << uv_inds.at(mat)[f].y << "/" << normal_inds.at(mat)[f] << " "
+                                       << current_faces[f].z << "/" << uv_inds.at(mat)[f].z << "/" << normal_inds.at(mat)[f] << std::endl;
+                        } else {
+                            objfstream << "f " << current_faces[f].x << "/" << uv_inds.at(mat)[f].x << " " << current_faces[f].y << "/" << uv_inds.at(mat)[f].y << " " << current_faces[f].z << "/" << uv_inds.at(mat)[f].z << std::endl;
+                        }
                     }
                 }
             }
@@ -4246,9 +5045,9 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
     mtlfstream.close();
 
     if (!primitive_dat_fields.empty()) {
+        bool uuidexistswarning = false;
         bool dataexistswarning = false;
         bool datatypewarning = false;
-
 
         for (const std::string &label: primitive_dat_fields) {
             std::filesystem::path dat_path = std::filesystem::path(file_path) / (file_stem + "_" + std::string(label) + ".dat");
@@ -4276,7 +5075,7 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
                         continue;
                     }
 
-                    HeliosDataType type = getPrimitiveDataType(UUID, label.c_str());
+                    HeliosDataType type = getPrimitiveDataType(label.c_str());
                     if (type == HELIOS_TYPE_INT) {
                         int data;
                         getPrimitiveData(UUID, label.c_str(), data);
@@ -4320,21 +5119,15 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
         }
 
         if (uuidexistswarning) {
-            std::cerr << "WARNING (Context::writeOBJ): Vector of UUIDs passed to writePrimitiveData() function contained UUIDs that do not exist, which were skipped." << std::endl;
+            helios_runtime_error("Context::writeOBJ: One or more UUIDs do not exist in the Context. Cannot write OBJ file with invalid primitives.");
         }
         if (dataexistswarning) {
-            std::cerr << "WARNING (Context::writeOBJ): Primitive data requested did not exist for one or more primitives. A default value of 0 was written in these cases." << std::endl;
+            helios_runtime_error("Context::writeOBJ: Primitive data requested did not exist for one or more primitives. Cannot write incomplete data to OBJ file.");
         }
         if (datatypewarning) {
-            std::cerr << "WARNING (Context::writeOBJ): Only scalar primitive data types (uint, int, float, and double) are supported for this function. A column of 0's was written in these cases." << std::endl;
-        }
-        if (voxelwarning) {
-            std::cerr << "WARNING (Context::writeOBJ): Writing voxels to OBJ file is not supported. Some voxels were ignored. Use boxes or box objects to represent rectangular prism geometry." << std::endl;
+            helios_runtime_error("Context::writeOBJ: Only scalar primitive data types (uint, int, float, double, and string) are supported for primitive data export.");
         }
     }
-
-
-    std::cout << "done." << std::endl;
 }
 
 void Context::writePrimitiveData(const std::string &filename, const std::vector<std::string> &column_format, bool print_header) const {
@@ -4371,7 +5164,7 @@ void Context::writePrimitiveData(const std::string &filename, const std::vector<
                 file << 0 << " ";
                 continue;
             }
-            HeliosDataType type = getPrimitiveDataType(UUID, label.c_str());
+            HeliosDataType type = getPrimitiveDataType(label.c_str());
             if (type == HELIOS_TYPE_INT) {
                 int data;
                 getPrimitiveData(UUID, label.c_str(), data);
@@ -4414,8 +5207,288 @@ void Context::writePrimitiveData(const std::string &filename, const std::vector<
     file.close();
 }
 
+namespace {
+
+    // Parse a date string with '-' or '/' delimiters, or compact 8-digit YYYYMMDD format.
+    Date parseDateString(const std::string &datestr, const std::string &date_string_format, size_t row, const std::string &data_file) {
+
+        // Check for compact 8-digit format (no delimiters)
+        if (datestr.find('-') == std::string::npos && datestr.find('/') == std::string::npos) {
+            if (datestr.size() == 8) {
+                // Compact 8-digit date: parse according to format
+                int year, month, day;
+                if (date_string_format == "YYYYMMDD" || date_string_format == "YYYY-MM-DD") {
+                    year = std::stoi(datestr.substr(0, 4));
+                    month = std::stoi(datestr.substr(4, 2));
+                    day = std::stoi(datestr.substr(6, 2));
+                } else if (date_string_format == "DDMMYYYY" || date_string_format == "DD-MM-YYYY" || date_string_format == "DD/MM/YYYY") {
+                    day = std::stoi(datestr.substr(0, 2));
+                    month = std::stoi(datestr.substr(2, 2));
+                    year = std::stoi(datestr.substr(4, 4));
+                } else if (date_string_format == "MMDDYYYY" || date_string_format == "MM-DD-YYYY" || date_string_format == "MM/DD/YYYY") {
+                    month = std::stoi(datestr.substr(0, 2));
+                    day = std::stoi(datestr.substr(2, 2));
+                    year = std::stoi(datestr.substr(4, 4));
+                } else if (date_string_format == "YYYYDDMM") {
+                    year = std::stoi(datestr.substr(0, 4));
+                    day = std::stoi(datestr.substr(4, 2));
+                    month = std::stoi(datestr.substr(6, 2));
+                } else {
+                    helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid date string format '" + date_string_format + "' for compact date on line " + std::to_string(row) + " of file " + data_file + ".");
+                }
+                if (year < 1000 || month < 1 || month > 12 || day < 1 || day > 31) {
+                    helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse compact date string on line " + std::to_string(row) + " of file " + data_file + ".");
+                }
+                return make_Date(day, month, year);
+            }
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + " of file " + data_file +
+                                 ". Expected a delimited date (e.g., YYYY-MM-DD) or an 8-digit compact date (e.g., 20260203).");
+        }
+
+        // Delimited date: try '-' then '/'
+        std::vector<std::string> thisdatestr = separate_string_by_delimiter(datestr, "-");
+        if (thisdatestr.size() != 3) {
+            thisdatestr = separate_string_by_delimiter(datestr, "/");
+        }
+        if (thisdatestr.size() != 3) {
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + " of file " + data_file +
+                                 ". It should be in the format YYYY-MM-DD, delimited by either '-' or '/'.");
+        }
+
+        std::vector<int> thisdate(3);
+        for (int i = 0; i < 3; i++) {
+            if (!parse_int(thisdatestr.at(i), thisdate.at(i))) {
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + " of file " + data_file +
+                                     ". It should be in the format YYYY-MM-DD, delimited by either '-' or '/'.");
+            }
+        }
+
+        int year, month, day;
+        if (date_string_format == "YYYYMMDD" || date_string_format == "YYYY-MM-DD") {
+            year = thisdate.at(0);
+            month = thisdate.at(1);
+            day = thisdate.at(2);
+        } else if (date_string_format == "YYYYDDMM") {
+            year = thisdate.at(0);
+            month = thisdate.at(2);
+            day = thisdate.at(1);
+        } else if (date_string_format == "DDMMYYYY" || date_string_format == "DD-MM-YYYY" || date_string_format == "DD/MM/YYYY") {
+            year = thisdate.at(2);
+            month = thisdate.at(1);
+            day = thisdate.at(0);
+        } else if (date_string_format == "MMDDYYYY" || date_string_format == "MM-DD-YYYY" || date_string_format == "MM/DD/YYYY") {
+            year = thisdate.at(2);
+            month = thisdate.at(0);
+            day = thisdate.at(1);
+        } else {
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid date string format in file " + data_file + ": " + date_string_format +
+                                 ". Must be one of YYYYMMDD, YYYYDDMM, DDMMYYYY, MMDDYYYY (or with - or / delimiters, e.g. YYYY-MM-DD, DD/MM/YYYY).");
+        }
+
+        if (year < 1000 || month < 1 || month > 12 || day < 1 || day > 31) {
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + " of file " + data_file + ".");
+        }
+
+        return make_Date(day, month, year);
+    }
+
+    // Parse a time string: "HH", "HH:MM", or "HH:MM:SS"
+    // Note: may return hour=24 (via direct struct assignment) for midnight rollover; caller must handle.
+    Time parseTimeString(const std::string &timestr, size_t row, const std::string &data_file) {
+        std::string trimmed = trim_whitespace(timestr);
+
+        std::vector<std::string> parts = separate_string_by_delimiter(trimmed, ":");
+        int hour = 0, minute = 0, second = 0;
+
+        if (parts.size() == 1) {
+            // Integer hour
+            if (!parse_int(parts.at(0), hour)) {
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse time string '" + timestr + "' on line " + std::to_string(row) + " of file " + data_file + ".");
+            }
+            // Handle HHMM format (e.g., 1300)
+            if (hour > 24) {
+                int hr_min = hour;
+                hour = hr_min / 100;
+                minute = hr_min - hour * 100;
+            }
+        } else if (parts.size() == 2) {
+            if (!parse_int(parts.at(0), hour) || !parse_int(parts.at(1), minute)) {
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse time string '" + timestr + "' on line " + std::to_string(row) + " of file " + data_file + ".");
+            }
+        } else if (parts.size() == 3) {
+            if (!parse_int(parts.at(0), hour) || !parse_int(parts.at(1), minute)) {
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse time string '" + timestr + "' on line " + std::to_string(row) + " of file " + data_file + ".");
+            }
+            // Handle fractional seconds by truncating at '.'
+            std::string sec_str = parts.at(2);
+            size_t dot_pos = sec_str.find('.');
+            if (dot_pos != std::string::npos) {
+                sec_str = sec_str.substr(0, dot_pos);
+            }
+            if (!parse_int(sec_str, second)) {
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse time string '" + timestr + "' on line " + std::to_string(row) + " of file " + data_file + ".");
+            }
+        } else {
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse time string '" + timestr + "' on line " + std::to_string(row) + " of file " + data_file + ".");
+        }
+
+        // Handle hour=24 by directly setting struct fields (make_Time validates hour < 24)
+        if (hour == 24) {
+            Time t;
+            t.hour = 24;
+            t.minute = minute;
+            t.second = second;
+            return t;
+        }
+
+        return make_Time(hour, minute, second);
+    }
+
+    // Parse an ISO-8601 datetime string (e.g., "2026-02-03T10:00:00Z" or "2026-02-03T02:00:00-08:00")
+    void parseISO8601(const std::string &datetimestr, Date &date, Time &time, float &utc_offset, size_t row, const std::string &data_file) {
+        utc_offset = NAN;
+
+        size_t t_pos = datetimestr.find('T');
+        if (t_pos == std::string::npos) {
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): ISO-8601 datetime string '" + datetimestr + "' on line " + std::to_string(row) + " of file " + data_file + " does not contain 'T' separator.");
+        }
+
+        // Parse date part (always YYYY-MM-DD)
+        std::string date_part = datetimestr.substr(0, t_pos);
+        std::vector<std::string> date_parts = separate_string_by_delimiter(date_part, "-");
+        if (date_parts.size() != 3) {
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date portion of ISO-8601 string '" + datetimestr + "' on line " + std::to_string(row) + " of file " + data_file + ".");
+        }
+        int year, month, day;
+        if (!parse_int(date_parts.at(0), year) || !parse_int(date_parts.at(1), month) || !parse_int(date_parts.at(2), day)) {
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date portion of ISO-8601 string '" + datetimestr + "' on line " + std::to_string(row) + " of file " + data_file + ".");
+        }
+        date = make_Date(day, month, year);
+
+        // Parse time part + optional timezone
+        std::string time_tz = datetimestr.substr(t_pos + 1);
+
+        // Strip and parse timezone suffix
+        std::string time_part;
+        if (time_tz.back() == 'Z' || time_tz.back() == 'z') {
+            time_part = time_tz.substr(0, time_tz.size() - 1);
+            utc_offset = 0.0f; // UTC → Helios convention: +West, so UTC = 0
+        } else {
+            // Look for +/- timezone offset (e.g., +05:30, -08:00)
+            // Search from after the hour portion to avoid matching a negative hour (shouldn't happen in ISO-8601 time)
+            size_t tz_pos = std::string::npos;
+            for (size_t i = 1; i < time_tz.size(); i++) {
+                if (time_tz[i] == '+' || time_tz[i] == '-') {
+                    tz_pos = i;
+                    // Keep searching — we want the last +/- that's part of timezone, not inside time
+                    // Actually for ISO-8601, the timezone offset is always at the end, so we want the last occurrence
+                }
+            }
+            if (tz_pos != std::string::npos) {
+                time_part = time_tz.substr(0, tz_pos);
+                std::string tz_str = time_tz.substr(tz_pos); // e.g., "-08:00" or "+05:30"
+                char tz_sign = tz_str[0];
+                std::string tz_num = tz_str.substr(1);
+                std::vector<std::string> tz_parts = separate_string_by_delimiter(tz_num, ":");
+                int tz_hours = 0, tz_minutes = 0;
+                if (!tz_parts.empty()) parse_int(tz_parts.at(0), tz_hours);
+                if (tz_parts.size() > 1) parse_int(tz_parts.at(1), tz_minutes);
+                float iso_offset_hours = static_cast<float>(tz_hours) + static_cast<float>(tz_minutes) / 60.0f;
+                if (tz_sign == '-') iso_offset_hours = -iso_offset_hours;
+                // Helios convention: UTC_offset is +West. ISO convention: +East.
+                // So ISO -08:00 (Pacific) → Helios +8, ISO +05:30 (India) → Helios -5.5
+                utc_offset = -iso_offset_hours;
+            } else {
+                time_part = time_tz; // No timezone info
+            }
+        }
+
+        // Truncate fractional seconds
+        size_t dot_pos = time_part.find('.');
+        if (dot_pos != std::string::npos) {
+            time_part = time_part.substr(0, dot_pos);
+        }
+
+        // Parse the time portion
+        time = parseTimeString(time_part, row, data_file);
+    }
+
+    // Dispatch combined datetime string parsing based on format
+    void parseDatetimeString(const std::string &datetimestr, const std::string &date_string_format,
+                             Date &date, Time &time, float &utc_offset, size_t row, const std::string &data_file) {
+        utc_offset = NAN;
+
+        if (date_string_format == "ISO8601") {
+            parseISO8601(datetimestr, date, time, utc_offset, row, data_file);
+            return;
+        }
+
+        if (date_string_format == "YYYYMMDDHH") {
+            if (datetimestr.size() < 10) {
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): YYYYMMDDHH datetime string '" + datetimestr + "' on line " + std::to_string(row) + " of file " + data_file + " is too short.");
+            }
+            int year = std::stoi(datetimestr.substr(0, 4));
+            int month = std::stoi(datetimestr.substr(4, 2));
+            int day = std::stoi(datetimestr.substr(6, 2));
+            int hour = std::stoi(datetimestr.substr(8, 2));
+            date = make_Date(day, month, year);
+            time = make_Time(hour, 0, 0);
+            return;
+        }
+
+        if (date_string_format == "YYYYMMDDHHMM") {
+            if (datetimestr.size() < 12) {
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): YYYYMMDDHHMM datetime string '" + datetimestr + "' on line " + std::to_string(row) + " of file " + data_file + " is too short.");
+            }
+            int year = std::stoi(datetimestr.substr(0, 4));
+            int month = std::stoi(datetimestr.substr(4, 2));
+            int day = std::stoi(datetimestr.substr(6, 2));
+            int hour = std::stoi(datetimestr.substr(8, 2));
+            int minute = std::stoi(datetimestr.substr(10, 2));
+            date = make_Date(day, month, year);
+            time = make_Time(hour, minute, 0);
+            return;
+        }
+
+        // Formats with space separator: "YYYY-MM-DD HH:MM", "DD/MM/YYYY HH:MM", etc.
+        // The space has already been rejoined by the caller, so split at space
+        size_t space_pos = datetimestr.find(' ');
+        if (space_pos != std::string::npos) {
+            std::string date_part = datetimestr.substr(0, space_pos);
+            std::string time_part = datetimestr.substr(space_pos + 1);
+
+            // Determine the date format portion (strip the time portion from format)
+            std::string date_format;
+            size_t fmt_space = date_string_format.find(' ');
+            if (fmt_space != std::string::npos) {
+                date_format = date_string_format.substr(0, fmt_space);
+            } else {
+                date_format = date_string_format;
+            }
+
+            // Normalize date format: "YYYY-MM-DD" → "YYYYMMDD", "DD/MM/YYYY" → "DDMMYYYY", etc.
+            // parseDateString handles both delimited and synonym formats
+            date = parseDateString(date_part, date_format, row, data_file);
+            time = parseTimeString(time_part, row, data_file);
+            return;
+        }
+
+        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse datetime string '" + datetimestr + "' with format '" + date_string_format + "' on line " + std::to_string(row) + " of file " + data_file + ".");
+    }
+
+    // Check if a datetime format string contains a space (i.e., date and time parts separated by space)
+    bool datetimeFormatHasSpace(const std::string &format) {
+        return format.find(' ') != std::string::npos;
+    }
+
+} // anonymous namespace
+
 void Context::loadTabularTimeseriesData(const std::string &data_file, const std::vector<std::string> &col_labels, const std::string &a_delimeter, const std::string &a_date_string_format, uint headerlines) {
-    std::ifstream datafile(data_file); // open the file
+    // Resolve file path using project-based resolution
+    std::filesystem::path resolved_path = resolveProjectFile(data_file);
+    std::string resolved_filename = resolved_path.string();
+
+    std::ifstream datafile(resolved_filename); // open the file
 
     if (!datafile.is_open()) { // check that file exists
         helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Weather data file '" + data_file + "' does not exist.");
@@ -4424,9 +5497,11 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
     int yearcol = -1;
     int DOYcol = -1;
     int datestrcol = -1;
+    int datetimecol = -1;
     int hourcol = -1;
     int minutecol = -1;
     int secondcol = -1;
+    int timecol = -1;
     std::map<std::string, int> datacols;
 
     size_t Ncolumns = 0;
@@ -4456,12 +5531,16 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
                 DOYcol = col;
             } else if (label == "date" || label == "Date") {
                 datestrcol = col;
+            } else if (label == "datetime" || label == "Datetime" || label == "DateTime") {
+                datetimecol = col;
             } else if (label == "hour" || label == "Hour") {
                 hourcol = col;
             } else if (label == "minute" || label == "Minute") {
                 minutecol = col;
             } else if (label == "second" || label == "Second") {
                 secondcol = col;
+            } else if (label == "time" || label == "Time") {
+                timecol = col;
             } else if (!label.empty()) {
                 if (datacols.find(label) == datacols.end()) {
                     datacols[label] = col;
@@ -4478,7 +5557,7 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
         // If column labels were not provided, read the first line of the text file and parse it for labels
     } else {
         if (headerlines == 0) {
-            std::cout << "WARNING (Context::loadTabularTimeseriesData): "
+            std::cerr << "WARNING (Context::loadTabularTimeseriesData): "
                          "headerlines"
                          " argument was specified as zero, and no column label information was given. Attempting to read the first line to see if it contains label information."
                       << std::endl;
@@ -4504,12 +5583,16 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
                     DOYcol = col;
                 } else if (label == "date" || label == "Date") {
                     datestrcol = col;
+                } else if (label == "datetime" || label == "Datetime" || label == "DateTime") {
+                    datetimecol = col;
                 } else if (label == "hour" || label == "Hour") {
                     hourcol = col;
                 } else if (label == "minute" || label == "Minute") {
                     minutecol = col;
                 } else if (label == "second" || label == "Second") {
                     secondcol = col;
+                } else if (label == "time" || label == "Time") {
+                    timecol = col;
                 } else if (!label.empty()) {
                     if (datacols.find(label) == datacols.end()) {
                         datacols[label] = col;
@@ -4524,26 +5607,37 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
             helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Attempted to parse first line of file for column labels, but read failed.");
         }
 
-        if (yearcol == -1 && DOYcol == -1 && datestrcol == -1) {
+        if (yearcol == -1 && DOYcol == -1 && datestrcol == -1 && datetimecol == -1) {
             helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Attempted to parse first line of file for column labels, but could not find valid label information.");
         }
     }
 
-    if (datestrcol < 0 && (yearcol < 0 || DOYcol < 0)) {
-        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): The date must be specified by either a column labeled "
-                             "date"
-                             ", or by two columns labeled "
-                             "year"
-                             " and "
-                             "DOY"
-                             ".");
-    } else if (hourcol < 0) {
-        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): At a minimum, the time must be specified by a column labeled "
-                             "hour"
-                             ".");
-    } else if (datacols.empty()) {
+    // Validate column combinations
+    bool has_date = (datestrcol >= 0) || (yearcol >= 0 && DOYcol >= 0);
+    bool has_time = (hourcol >= 0) || (timecol >= 0);
+    bool has_datetime = (datetimecol >= 0);
+
+    if (has_datetime && datestrcol >= 0) {
+        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Cannot specify both 'datetime' and 'date' columns. Use 'datetime' for combined date+time, or 'date' + 'hour'/'time' for separate columns.");
+    }
+    if (has_datetime && hourcol >= 0) {
+        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Cannot specify both 'datetime' and 'hour' columns. Use 'datetime' for combined date+time, or 'date' + 'hour' for separate columns.");
+    }
+    if (has_datetime && timecol >= 0) {
+        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Cannot specify both 'datetime' and 'time' columns. The 'datetime' column already includes time information.");
+    }
+    if (!has_datetime && !has_date) {
+        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): The date must be specified by a column labeled 'datetime', 'date', or by two columns labeled 'year' and 'DOY'.");
+    }
+    if (!has_datetime && !has_time) {
+        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): The time must be specified by a column labeled 'datetime', 'hour', or 'time'.");
+    }
+    if (datacols.empty()) {
         helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): No columns were found containing data variables (e.g., temperature, humidity, wind speed).");
     }
+
+    // Check if datetime format has a space — we may need to rejoin split columns
+    bool datetime_format_has_space = has_datetime && datetimeFormatHasSpace(date_string_format);
 
     std::string line;
 
@@ -4552,6 +5646,8 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
     for (int i = 0; i < headerlines; i++) {
         std::getline(datafile, line);
     }
+
+    bool utc_offset_set = false;
 
     while (std::getline(datafile, line)) { // loop through file to read data
         row++;
@@ -4563,136 +5659,94 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
         // separate the line by delimiter
         std::vector<std::string> line_separated = separate_string_by_delimiter(line, delimiter);
 
+        // Handle space-delimited datetime auto-rejoin: if the datetime format contains a space
+        // (e.g., "YYYY-MM-DD HH:MM"), the space delimiter will split the datetime into two columns.
+        // Rejoin them here.
+        if (datetime_format_has_space && datetimecol >= 0 && line_separated.size() == Ncolumns + 1 && datetimecol + 1 < static_cast<int>(line_separated.size())) {
+            line_separated[datetimecol] = line_separated[datetimecol] + " " + line_separated[datetimecol + 1];
+            line_separated.erase(line_separated.begin() + datetimecol + 1);
+        }
+
         if (line_separated.size() != Ncolumns) {
             helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Line " + std::to_string(row) + " had " + std::to_string(line_separated.size()) + " columns, but was expecting " + std::to_string(Ncolumns));
         }
 
-        // compile date
         Date date;
-        if (yearcol >= 0 && DOYcol >= 0) {
-            int DOY;
-            parse_int(line_separated.at(DOYcol), DOY);
-            if (DOY < 1 || DOY > 366) {
-                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid date specified on line " + std::to_string(row) + ".");
-            }
-            int year;
-            parse_int(line_separated.at(yearcol), year);
-            if (year < 1000) {
-                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid year specified on line " + std::to_string(row) + ".");
-            }
-            date = make_Date(DOY, year);
-        } else if (datestrcol >= 0) {
-            // parse date string. expecting format YYYY-MM-DD with delimiter '-' or '/'
-            const std::string &datestr = line_separated.at(datestrcol);
-
-            // try parsing date string based on '-' delimiter
-            std::vector<std::string> thisdatestr = separate_string_by_delimiter(datestr, "-");
-
-            if (thisdatestr.size() != 3) {
-                // try parsing date string based on '/' delimiter
-                thisdatestr = separate_string_by_delimiter(datestr, "/");
-            }
-
-            if (thisdatestr.size() != 3) {
-                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + " of file " + data_file +
-                                     ". It should be in the format YYYY-MM-DD, delimited by either "
-                                     "-"
-                                     " or "
-                                     "/"
-                                     ".");
-            }
-
-            // convert parsed date strings into a vector of integers
-            std::vector<int> thisdate(3);
-            for (int i = 0; i < 3; i++) {
-                if (!parse_int(thisdatestr.at(i), thisdate.at(i))) {
-                    helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + " of file " + data_file +
-                                         ". It should be in the format YYYY-MM-DD, delimited by either "
-                                         "-"
-                                         " or "
-                                         "/"
-                                         ".");
-                }
-            }
-
-            // figure out ordering of values
-            int year;
-            int month;
-            int day;
-            if (date_string_format == "YYYYMMDD") {
-                year = thisdate.at(0);
-                month = thisdate.at(1);
-                day = thisdate.at(2);
-            } else if (date_string_format == "YYYYDDMM") {
-                year = thisdate.at(0);
-                month = thisdate.at(2);
-                day = thisdate.at(1);
-            } else if (date_string_format == "DDMMYYYY") {
-                year = thisdate.at(2);
-                month = thisdate.at(1);
-                day = thisdate.at(0);
-            } else if (date_string_format == "MMDDYYYY") {
-                year = thisdate.at(2);
-                month = thisdate.at(0);
-                day = thisdate.at(1);
-            } else {
-                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid date string format in file " + data_file + ": " + date_string_format +
-                                     ". Must be one of "
-                                     "YYYYMMDD"
-                                     ", "
-                                     "YYYYDDMM"
-                                     ", "
-                                     "DDMMYYYY"
-                                     ", or "
-                                     "MMDDYYYY"
-                                     ".  Check that the date string does not include a delimiter (i.e., should be MMDDYYYY not MM/DD/YYYY).");
-            }
-
-            if (year < 1000 || month < 1 || month > 12 || day < 1 || day > 31) {
-                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + " of file " + data_file +
-                                     ". It should be in the format YYYY-MM-DD, delimited by either "
-                                     "-"
-                                     " or "
-                                     "/"
-                                     ".");
-            }
-
-            date = make_Date(day, month, year);
-        } else {
-            assert(1); // shouldn't be here
-        }
-
-        // compile time
         Time time;
-        int hour = 0;
-        int minute = 0;
-        int second = 0;
+        float parsed_utc_offset = NAN;
 
-        if (!parse_int(line_separated.at(hourcol), hour)) {
-            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse hour string on line " + std::to_string(row) + " of file " + data_file + ".");
+        if (datetimecol >= 0) {
+            // Combined datetime column
+            parseDatetimeString(line_separated.at(datetimecol), date_string_format,
+                                date, time, parsed_utc_offset, row, data_file);
+        } else {
+            // Separate date + time columns
+            if (yearcol >= 0 && DOYcol >= 0) {
+                int DOY;
+                parse_int(line_separated.at(DOYcol), DOY);
+                if (DOY < 1 || DOY > 366) {
+                    helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid date specified on line " + std::to_string(row) + ".");
+                }
+                int year;
+                parse_int(line_separated.at(yearcol), year);
+                if (year < 1000) {
+                    helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid year specified on line " + std::to_string(row) + ".");
+                }
+                date = make_Date(DOY, year);
+            } else if (datestrcol >= 0) {
+                date = parseDateString(line_separated.at(datestrcol), date_string_format, row, data_file);
+            }
+
+            if (timecol >= 0) {
+                time = parseTimeString(line_separated.at(timecol), row, data_file);
+            } else if (hourcol >= 0) {
+                int hour = 0;
+                int minute = 0;
+                int second = 0;
+
+                if (!parse_int(line_separated.at(hourcol), hour)) {
+                    helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse hour string on line " + std::to_string(row) + " of file " + data_file + ".");
+                }
+                if (hour > 24 && minutecol < 0 && secondcol < 0) {
+                    int hr_min = hour;
+                    hour = hr_min / 100;
+                    minute = hr_min - hour * 100;
+                }
+                if (hour == 24) {
+                    hour = 0;
+                    date.incrementDay();
+                }
+                if (minutecol >= 0) {
+                    if (!parse_int(line_separated.at(minutecol), minute)) {
+                        minute = 0;
+                        std::cout << "WARNING (Context::loadTabularTimeseriesData): Could not parse minute string on line " << row << " of file " << data_file << ". Setting minute equal to 0." << std::endl;
+                    }
+                }
+                if (secondcol >= 0) {
+                    if (!parse_int(line_separated.at(secondcol), second)) {
+                        second = 0;
+                        std::cout << "WARNING (Context::loadTabularTimeseriesData): Could not parse second string on line " << row << " of file " << data_file << ". Setting second equal to 0." << std::endl;
+                    }
+                }
+                time = make_Time(hour, minute, second);
+            }
         }
-        if (hour > 24 && minutecol < 0 && secondcol < 0) {
-            int hr_min = hour;
-            hour = std::floor(hr_min / 100);
-            minute = hr_min - hour * 100;
-        }
-        if (hour == 24) {
-            hour = 0;
+
+        // Handle hour=24 rollover
+        if (time.hour == 24) {
+            time = make_Time(0, time.minute, time.second);
             date.incrementDay();
         }
-        if (minutecol >= 0) {
-            if (!parse_int(line_separated.at(minutecol), minute)) {
-                minute = 0;
-                std::cout << "WARNING (Context::loadTabularTimeseriesData): Could not parse minute string on line " << row << " of file " << data_file << ". Setting minute equal to 0." << std::endl;
+
+        // Set UTC offset from ISO-8601 if parsed
+        if (!std::isnan(parsed_utc_offset)) {
+            if (!utc_offset_set) {
+                Location loc = getLocation();
+                loc.UTC_offset = parsed_utc_offset;
+                setLocation(loc);
+                utc_offset_set = true;
             }
         }
-        if (secondcol >= 0) {
-            if (!parse_int(line_separated.at(secondcol), second)) {
-                second = 0;
-                std::cout << "WARNING (Context::loadTabularTimeseriesData): Could not parse second string on line " << row << " of file " << data_file << ". Setting second equal to 0." << std::endl;
-            }
-        }
-        time = make_Time(hour, minute, second);
 
         // compile data values
         for (auto &dat: datacols) {
@@ -4701,9 +5755,7 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
 
             float dataval;
             if (!parse_float(line_separated.at(col), dataval)) {
-                std::cout << "WARNING (Context::loadTabularTimeseriesData): Failed to parse data value as "
-                             "float"
-                             " on line "
+                std::cout << "WARNING (Context::loadTabularTimeseriesData): Failed to parse data value as float on line "
                           << row << ", column " << col + 1 << " of file " << data_file << ". Skipping this value..." << std::endl;
                 continue;
             }

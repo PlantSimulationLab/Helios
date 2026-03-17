@@ -2,6 +2,33 @@ cmake_minimum_required(VERSION 3.15)
 
 project(helios)
 
+# ============================================================================
+# DEPRECATION WARNING
+# ============================================================================
+message(WARNING "
+********************************************************************************
+*** DEPRECATED PLUGIN: VoxelIntersection                                    ***
+********************************************************************************
+The VoxelIntersection plugin has been DEPRECATED and merged into the
+CollisionDetection plugin. All functionality is now available in CollisionDetection.
+
+PLEASE UPDATE YOUR CODE:
+  - Replace: set(PLUGINS \"voxelintersection\")
+  - With:    set(PLUGINS \"collisiondetection\")
+
+  - Replace: #include \"VoxelIntersection.h\"
+  - With:    #include \"CollisionDetection.h\"
+
+  - Replace: VoxelIntersection class
+  - With:    CollisionDetection class
+
+All method names remain the same. See CollisionDetection plugin documentation
+for details: https://baileylab.ucdavis.edu/software/helios/doc/
+
+This plugin will be REMOVED in a future release.
+********************************************************************************
+")
+
 if(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)
      set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
 endif()
@@ -59,7 +86,7 @@ endif()
 add_library(voxelintersection STATIC "src/VoxelIntersection.cu" "src/VoxelIntersection.cpp" "tests/selfTest.cpp")
 
 # Set CUDA properties for the target
-set_target_properties(voxelintersection PROPERTIES CUDA_RUNTIME_LIBRARY Static CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+set_target_properties(voxelintersection PROPERTIES CUDA_RUNTIME_LIBRARY Static CUDA_RESOLVE_DEVICE_SYMBOLS ON POSITION_INDEPENDENT_CODE ON)
 
 # Windows-specific: Clear any inherited global compile options that cause nvcc issues
 if(WIN32 AND MSVC)
@@ -75,6 +102,8 @@ target_include_directories(voxelintersection PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/
 
 target_link_libraries(voxelintersection PUBLIC CUDA::cudart_static)
 
-add_executable(voxelintersection_tests "tests/TestMain.cpp")
-target_link_libraries(voxelintersection_tests PRIVATE voxelintersection)
-add_test(NAME voxelintersection_tests COMMAND voxelintersection_tests)
+if(BUILD_TESTS)
+    add_executable(voxelintersection_tests "tests/TestMain.cpp")
+    target_link_libraries(voxelintersection_tests PRIVATE voxelintersection)
+    add_test(NAME voxelintersection_tests COMMAND voxelintersection_tests)
+endif()

@@ -6,7 +6,7 @@
 
 using namespace helios;
 
-int AerialLiDARcloud::selfTest(int argc, char** argv) {
+int AerialLiDARcloud::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }
 

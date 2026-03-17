@@ -1,6 +1,6 @@
 /** \file "EnergyBalanceModel.h" Primary header file for energy balance model.
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -49,7 +49,7 @@ public:
     /**
      * \return 0 if test was successful, 1 if test failed.
      */
-    static int selfTest(int argc = 0, char** argv = nullptr);
+    static int selfTest(int argc = 0, char **argv = nullptr);
 
     //! Enable standard output from this plug-in (default)
     void enableMessages();
@@ -128,6 +128,28 @@ public:
      */
     void optionalOutputPrimitiveData(const char *label);
 
+#ifdef HELIOS_CUDA_AVAILABLE
+    //! Enable GPU acceleration for energy balance calculations
+    /**
+     * Attempts to enable GPU acceleration. If GPU is not available at runtime,
+     * this will have no effect and CPU mode will be used.
+     */
+    void enableGPUAcceleration();
+
+    //! Disable GPU acceleration and force CPU mode
+    /**
+     * Forces the use of OpenMP CPU implementation even if GPU is available.
+     * Useful for testing, benchmarking, or when CPU performance is preferred.
+     */
+    void disableGPUAcceleration();
+
+    //! Check if GPU acceleration is currently enabled
+    /**
+     * \return True if GPU acceleration is enabled and available, false otherwise
+     */
+    bool isGPUAccelerationEnabled() const;
+#endif
+
     //! Print a report detailing usage of default input values for all primitives in the Context
     void printDefaultValueReport() const;
 
@@ -140,8 +162,24 @@ public:
 private:
     void evaluateSurfaceEnergyBalance(const std::vector<uint> &UUIDs, float dt);
 
+#ifdef HELIOS_CUDA_AVAILABLE
+    //! GPU implementation using CUDA
+    void evaluateSurfaceEnergyBalance_GPU(const std::vector<uint> &UUIDs, float dt);
+
+    //! Check if GPU is available at runtime and initialize
+    void initializeGPUAcceleration();
+#endif
+
+    //! CPU implementation using OpenMP
+    void evaluateSurfaceEnergyBalance_CPU(const std::vector<uint> &UUIDs, float dt);
+
     //! Copy of a pointer to the context
     helios::Context *context;
+
+#ifdef HELIOS_CUDA_AVAILABLE
+    //! Flag to enable/disable GPU acceleration
+    bool gpu_acceleration_enabled = false;
+#endif
 
     //! Default surface temperature if it was not specified in the context
     float temperature_default;

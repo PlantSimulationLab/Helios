@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Utility functions</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -171,6 +204,12 @@ $(function(){initNavTree('group__functions.html',''); initResizable(true); });
 Data Structures</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhelios_1_1_timer.html">helios::Timer</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">MATLAB-style timer. Call tic() to start timer, call toc() to stop timer and print duration.  <a href="structhelios_1_1_timer.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_progress_bar.html">helios::ProgressBar</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Simple progress bar for console output.  <a href="classhelios_1_1_progress_bar.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_warning_aggregator.html">helios::WarningAggregator</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Warning message aggregator for reducing console flooding.  <a href="classhelios_1_1_warning_aggregator.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
@@ -275,18 +314,18 @@ Functions</h2></td></tr>
 <tr class="memitem:ga461699c384fe606656ce1cc59618e727" id="r_ga461699c384fe606656ce1cc59618e727"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga461699c384fe606656ce1cc59618e727">helios::median</a> (std::vector&lt; float &gt; vect)</td></tr>
 <tr class="memdesc:ga461699c384fe606656ce1cc59618e727"><td class="mdescLeft">&#160;</td><td class="mdescRight">Median of a vector of floats.  <br /></td></tr>
 <tr class="separator:ga461699c384fe606656ce1cc59618e727"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga8b6573f58a513ebbc539ae7529daa748" id="r_ga8b6573f58a513ebbc539ae7529daa748"><td class="memTemplParams" colspan="2">template&lt;typename anytype&gt; </td></tr>
-<tr class="memitem:ga8b6573f58a513ebbc539ae7529daa748"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ga8b6573f58a513ebbc539ae7529daa748">helios::resize_vector</a> (std::vector&lt; std::vector&lt; anytype &gt; &gt; &amp;vec, uint Nx, uint Ny)</td></tr>
-<tr class="memdesc:ga8b6573f58a513ebbc539ae7529daa748"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resize 2D C++ vector.  <br /></td></tr>
-<tr class="separator:ga8b6573f58a513ebbc539ae7529daa748"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga71f9bf6c09e75b9c8d8ff36c7187a31d" id="r_ga71f9bf6c09e75b9c8d8ff36c7187a31d"><td class="memTemplParams" colspan="2">template&lt;typename anytype&gt; </td></tr>
-<tr class="memitem:ga71f9bf6c09e75b9c8d8ff36c7187a31d"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ga71f9bf6c09e75b9c8d8ff36c7187a31d">helios::resize_vector</a> (std::vector&lt; std::vector&lt; std::vector&lt; anytype &gt; &gt; &gt; &amp;vec, uint Nx, uint Ny, uint Nz)</td></tr>
-<tr class="memdesc:ga71f9bf6c09e75b9c8d8ff36c7187a31d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resize 3D C++ vector.  <br /></td></tr>
-<tr class="separator:ga71f9bf6c09e75b9c8d8ff36c7187a31d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga9c202da0366b53b742824bfac2e8f536" id="r_ga9c202da0366b53b742824bfac2e8f536"><td class="memTemplParams" colspan="2">template&lt;typename anytype&gt; </td></tr>
-<tr class="memitem:ga9c202da0366b53b742824bfac2e8f536"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ga9c202da0366b53b742824bfac2e8f536">helios::resize_vector</a> (std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; anytype &gt; &gt; &gt; &gt; &amp;vec, uint Nx, uint Ny, uint Nz, uint Nw)</td></tr>
-<tr class="memdesc:ga9c202da0366b53b742824bfac2e8f536"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resize 4D C++ vector.  <br /></td></tr>
-<tr class="separator:ga9c202da0366b53b742824bfac2e8f536"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga2044823281717e3abe80282e0b3b26e4" id="r_ga2044823281717e3abe80282e0b3b26e4"><td class="memTemplParams" colspan="2">template&lt;typename anytype&gt; </td></tr>
+<tr class="memitem:ga2044823281717e3abe80282e0b3b26e4"><td class="memTemplItemLeft" align="right" valign="top">std::enable_if&lt; std::is_default_constructible&lt; anytype &gt;::value &gt;::type&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ga2044823281717e3abe80282e0b3b26e4">helios::resize_vector</a> (std::vector&lt; std::vector&lt; anytype &gt; &gt; &amp;vec, size_t Nx, size_t Ny)</td></tr>
+<tr class="memdesc:ga2044823281717e3abe80282e0b3b26e4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resize 2D C++ vector.  <br /></td></tr>
+<tr class="separator:ga2044823281717e3abe80282e0b3b26e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga3f55c7bfdde18a2463aca3c746eaf82c" id="r_ga3f55c7bfdde18a2463aca3c746eaf82c"><td class="memTemplParams" colspan="2">template&lt;typename anytype&gt; </td></tr>
+<tr class="memitem:ga3f55c7bfdde18a2463aca3c746eaf82c"><td class="memTemplItemLeft" align="right" valign="top">std::enable_if&lt; std::is_default_constructible&lt; anytype &gt;::value &gt;::type&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ga3f55c7bfdde18a2463aca3c746eaf82c">helios::resize_vector</a> (std::vector&lt; std::vector&lt; std::vector&lt; anytype &gt; &gt; &gt; &amp;vec, size_t Nx, size_t Ny, size_t Nz)</td></tr>
+<tr class="memdesc:ga3f55c7bfdde18a2463aca3c746eaf82c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resize 3D C++ vector.  <br /></td></tr>
+<tr class="separator:ga3f55c7bfdde18a2463aca3c746eaf82c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gabd703193a845fc620fcd91ffec34a89c" id="r_gabd703193a845fc620fcd91ffec34a89c"><td class="memTemplParams" colspan="2">template&lt;typename anytype&gt; </td></tr>
+<tr class="memitem:gabd703193a845fc620fcd91ffec34a89c"><td class="memTemplItemLeft" align="right" valign="top">std::enable_if&lt; std::is_default_constructible&lt; anytype &gt;::value &gt;::type&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#gabd703193a845fc620fcd91ffec34a89c">helios::resize_vector</a> (std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; anytype &gt; &gt; &gt; &gt; &amp;vec, size_t Nx, size_t Ny, size_t Nz, size_t Nw)</td></tr>
+<tr class="memdesc:gabd703193a845fc620fcd91ffec34a89c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resize 4D C++ vector.  <br /></td></tr>
+<tr class="separator:gabd703193a845fc620fcd91ffec34a89c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga17de9e03f309dedcd648606653ddd05e" id="r_ga17de9e03f309dedcd648606653ddd05e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga17de9e03f309dedcd648606653ddd05e">helios::rotatePoint</a> (const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;position, const <a class="el" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a> &amp;rotation)</td></tr>
 <tr class="memdesc:ga17de9e03f309dedcd648606653ddd05e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to rotate a 3D vector given spherical angles elevation and azimuth.  <br /></td></tr>
 <tr class="separator:ga17de9e03f309dedcd648606653ddd05e"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -335,6 +374,69 @@ Functions</h2></td></tr>
 <tr class="memitem:ga7f8e948aa3a70481ebd3a829531bee4e" id="r_ga7f8e948aa3a70481ebd3a829531bee4e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga7f8e948aa3a70481ebd3a829531bee4e">helios::spline_interp3</a> (float u, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;x_start, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;tan_start, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;x_end, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;tan_end)</td></tr>
 <tr class="memdesc:ga7f8e948aa3a70481ebd3a829531bee4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to perform cubic Hermite spline interpolation.  <br /></td></tr>
 <tr class="separator:ga7f8e948aa3a70481ebd3a829531bee4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga7b3096a0046cf1bd108796a6f7d90bfa" id="r_ga7b3096a0046cf1bd108796a6f7d90bfa"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga7b3096a0046cf1bd108796a6f7d90bfa">helios::linspace</a> (float start, float end, int num)</td></tr>
+<tr class="memdesc:ga7b3096a0046cf1bd108796a6f7d90bfa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate linearly spaced values between two endpoints.  <br /></td></tr>
+<tr class="separator:ga7b3096a0046cf1bd108796a6f7d90bfa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaee02b6805960b89201555f4022768c6b" id="r_gaee02b6805960b89201555f4022768c6b"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">vec2</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gaee02b6805960b89201555f4022768c6b">helios::linspace</a> (const <a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp;start, const <a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp;end, int num)</td></tr>
+<tr class="memdesc:gaee02b6805960b89201555f4022768c6b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate linearly spaced vec2 values between two endpoints.  <br /></td></tr>
+<tr class="separator:gaee02b6805960b89201555f4022768c6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga23f7dd71170481919d4d6f91ae6ce658" id="r_ga23f7dd71170481919d4d6f91ae6ce658"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga23f7dd71170481919d4d6f91ae6ce658">helios::linspace</a> (const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;start, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;end, int num)</td></tr>
+<tr class="memdesc:ga23f7dd71170481919d4d6f91ae6ce658"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate linearly spaced vec3 values between two endpoints.  <br /></td></tr>
+<tr class="separator:ga23f7dd71170481919d4d6f91ae6ce658"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga579d9cf59822d6ead41585737d9d5211" id="r_ga579d9cf59822d6ead41585737d9d5211"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec4.html">vec4</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga579d9cf59822d6ead41585737d9d5211">helios::linspace</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;start, const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;end, int num)</td></tr>
+<tr class="memdesc:ga579d9cf59822d6ead41585737d9d5211"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate linearly spaced vec4 values between two endpoints.  <br /></td></tr>
+<tr class="separator:ga579d9cf59822d6ead41585737d9d5211"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga24991720c54ea9b7679d2b1231355837" id="r_ga24991720c54ea9b7679d2b1231355837"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga24991720c54ea9b7679d2b1231355837">helios::resolveAssetPath</a> (const std::string &amp;relativePath)</td></tr>
+<tr class="memdesc:ga24991720c54ea9b7679d2b1231355837"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve asset file path using cpplocate, allowing executables to run from any directory.  <br /></td></tr>
+<tr class="separator:ga24991720c54ea9b7679d2b1231355837"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga68877cedb04be67e38ea7701ae53b2e8" id="r_ga68877cedb04be67e38ea7701ae53b2e8"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga68877cedb04be67e38ea7701ae53b2e8">helios::resolvePluginAsset</a> (const std::string &amp;pluginName, const std::string &amp;assetPath)</td></tr>
+<tr class="memdesc:ga68877cedb04be67e38ea7701ae53b2e8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve plugin-specific asset path.  <br /></td></tr>
+<tr class="separator:ga68877cedb04be67e38ea7701ae53b2e8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gad038042d98f56cbcab639d90c2b53e9e" id="r_gad038042d98f56cbcab639d90c2b53e9e"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gad038042d98f56cbcab639d90c2b53e9e">helios::tryResolvePluginAsset</a> (const std::string &amp;pluginName, const std::string &amp;assetPath)</td></tr>
+<tr class="memdesc:gad038042d98f56cbcab639d90c2b53e9e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Attempt to resolve a plugin asset path without throwing exceptions.  <br /></td></tr>
+<tr class="separator:gad038042d98f56cbcab639d90c2b53e9e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gab164b47810a8c9e7acdb512a72ec46fe" id="r_gab164b47810a8c9e7acdb512a72ec46fe"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gab164b47810a8c9e7acdb512a72ec46fe">helios::resolveFilePath</a> (const std::string &amp;filename)</td></tr>
+<tr class="memdesc:gab164b47810a8c9e7acdb512a72ec46fe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve file path using standard Helios resolution hierarchy.  <br /></td></tr>
+<tr class="separator:gab164b47810a8c9e7acdb512a72ec46fe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga80308e1c933cf407c947dfd507007b0c" id="r_ga80308e1c933cf407c947dfd507007b0c"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga80308e1c933cf407c947dfd507007b0c">helios::tryResolveFilePath</a> (const std::string &amp;filename)</td></tr>
+<tr class="memdesc:ga80308e1c933cf407c947dfd507007b0c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Attempt to resolve a file path without throwing exceptions.  <br /></td></tr>
+<tr class="separator:ga80308e1c933cf407c947dfd507007b0c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gac00df4c5b8a19046f4e606232ffe2842" id="r_gac00df4c5b8a19046f4e606232ffe2842"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gac00df4c5b8a19046f4e606232ffe2842">helios::resolveSpectraPath</a> (const std::string &amp;spectraFile)</td></tr>
+<tr class="memdesc:gac00df4c5b8a19046f4e606232ffe2842"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve spectral data file path.  <br /></td></tr>
+<tr class="separator:gac00df4c5b8a19046f4e606232ffe2842"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga6081cd159b1d50f8a50435316679b6c6" id="r_ga6081cd159b1d50f8a50435316679b6c6"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga6081cd159b1d50f8a50435316679b6c6">helios::validateAssetPath</a> (const std::filesystem::path &amp;assetPath)</td></tr>
+<tr class="memdesc:ga6081cd159b1d50f8a50435316679b6c6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Validate that an asset file exists and is readable.  <br /></td></tr>
+<tr class="separator:ga6081cd159b1d50f8a50435316679b6c6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga44d890d0f4059ae47a9938c29f8d098b" id="r_ga44d890d0f4059ae47a9938c29f8d098b"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga44d890d0f4059ae47a9938c29f8d098b">helios::findProjectRoot</a> (const std::filesystem::path &amp;startPath=std::filesystem::current_path())</td></tr>
+<tr class="memdesc:ga44d890d0f4059ae47a9938c29f8d098b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find the project root directory (directory containing top-level CMakeLists.txt)  <br /></td></tr>
+<tr class="separator:ga44d890d0f4059ae47a9938c29f8d098b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gadadfa82538ea2c04ed2dea45fc07749e" id="r_gadadfa82538ea2c04ed2dea45fc07749e"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gadadfa82538ea2c04ed2dea45fc07749e">helios::resolveProjectFile</a> (const std::string &amp;relativePath)</td></tr>
+<tr class="memdesc:gadadfa82538ea2c04ed2dea45fc07749e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve file path using project-based resolution strategy.  <br /></td></tr>
+<tr class="separator:gadadfa82538ea2c04ed2dea45fc07749e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaee822b7a2b1463f5ae3db9abde97ef60" id="r_gaee822b7a2b1463f5ae3db9abde97ef60"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gaee822b7a2b1463f5ae3db9abde97ef60">helios::operator+</a> (const std::vector&lt; float &gt; &amp;vec, float scalar)</td></tr>
+<tr class="memdesc:gaee822b7a2b1463f5ae3db9abde97ef60"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a scalar to each element of a vector.  <br /></td></tr>
+<tr class="separator:gaee822b7a2b1463f5ae3db9abde97ef60"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga79028308269efd3bc228765465f8055e" id="r_ga79028308269efd3bc228765465f8055e"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga79028308269efd3bc228765465f8055e">helios::operator+</a> (float scalar, const std::vector&lt; float &gt; &amp;vec)</td></tr>
+<tr class="memdesc:ga79028308269efd3bc228765465f8055e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a scalar to each element of a vector (scalar on left)  <br /></td></tr>
+<tr class="separator:ga79028308269efd3bc228765465f8055e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gac32614062697a03576600872f6e285bd" id="r_gac32614062697a03576600872f6e285bd"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gac32614062697a03576600872f6e285bd">helios::operator-</a> (const std::vector&lt; float &gt; &amp;vec, float scalar)</td></tr>
+<tr class="memdesc:gac32614062697a03576600872f6e285bd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Subtract a scalar from each element of a vector.  <br /></td></tr>
+<tr class="separator:gac32614062697a03576600872f6e285bd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga334fe201d34cb1b74fe923be7053595e" id="r_ga334fe201d34cb1b74fe923be7053595e"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga334fe201d34cb1b74fe923be7053595e">helios::operator-</a> (float scalar, const std::vector&lt; float &gt; &amp;vec)</td></tr>
+<tr class="memdesc:ga334fe201d34cb1b74fe923be7053595e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Subtract each element of a vector from a scalar.  <br /></td></tr>
+<tr class="separator:ga334fe201d34cb1b74fe923be7053595e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga464c88e3b440ef0400881dcf57a815e1" id="r_ga464c88e3b440ef0400881dcf57a815e1"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga464c88e3b440ef0400881dcf57a815e1">helios::operator*</a> (const std::vector&lt; float &gt; &amp;vec, float scalar)</td></tr>
+<tr class="memdesc:ga464c88e3b440ef0400881dcf57a815e1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Multiply each element of a vector by a scalar.  <br /></td></tr>
+<tr class="separator:ga464c88e3b440ef0400881dcf57a815e1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga07920683cbb88cc6976bc735686aff4c" id="r_ga07920683cbb88cc6976bc735686aff4c"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga07920683cbb88cc6976bc735686aff4c">helios::operator*</a> (float scalar, const std::vector&lt; float &gt; &amp;vec)</td></tr>
+<tr class="memdesc:ga07920683cbb88cc6976bc735686aff4c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Multiply each element of a vector by a scalar (scalar on left)  <br /></td></tr>
+<tr class="separator:ga07920683cbb88cc6976bc735686aff4c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga3d58c408c4c534ef8444ecee2090caee" id="r_ga3d58c408c4c534ef8444ecee2090caee"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga3d58c408c4c534ef8444ecee2090caee">helios::operator/</a> (const std::vector&lt; float &gt; &amp;vec, float scalar)</td></tr>
+<tr class="memdesc:ga3d58c408c4c534ef8444ecee2090caee"><td class="mdescLeft">&#160;</td><td class="mdescRight">Divide each element of a vector by a scalar.  <br /></td></tr>
+<tr class="separator:ga3d58c408c4c534ef8444ecee2090caee"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga66f368cc2bfd0ccdd76572181befa6bb" id="r_ga66f368cc2bfd0ccdd76572181befa6bb"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga66f368cc2bfd0ccdd76572181befa6bb">helios::operator/</a> (float scalar, const std::vector&lt; float &gt; &amp;vec)</td></tr>
+<tr class="memdesc:ga66f368cc2bfd0ccdd76572181befa6bb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Divide a scalar by each element of a vector.  <br /></td></tr>
+<tr class="separator:ga66f368cc2bfd0ccdd76572181befa6bb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <p>Miscellaneous helper functions. </p>
@@ -364,7 +466,7 @@ Functions</h2></td></tr>
 
 <p>arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1, and thus regular acos() returns NaN </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00268">268</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00271">271</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -393,7 +495,7 @@ Functions</h2></td></tr>
 
 <p>arcsine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1, and thus regular asin() returns NaN </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00274">274</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00279">279</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -427,7 +529,7 @@ Functions</h2></td></tr>
 <p>Four quadrant arc tangent between 0 and 2*pi. </p>
 <dl class="section note"><dt>Note</dt><dd>atan2_2pi(0,1) = 0, atan2_2pi(1,0) = pi/2, etc. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00616">616</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00731">731</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -474,7 +576,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>One-sided surface area of triangle </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00197">197</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00199">199</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -511,7 +613,7 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>SphericalCoord vector. </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>sphere2cart(), SphericalCoord </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00640">640</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00755">755</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -559,7 +661,7 @@ template&lt;typename anytype&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01034">1034</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00438">438</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -588,7 +690,7 @@ template&lt;typename anytype&gt; </div>
 
 <p>Remove all whitespace from character array. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00986">986</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01138">1138</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -617,7 +719,7 @@ template&lt;typename anytype&gt; </div>
 
 <p>Remove all whitespace from a string. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00997">997</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01149">1149</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -654,7 +756,44 @@ template&lt;typename anytype&gt; </div>
 <dl class="section return"><dt>Returns</dt><dd>angle in radians </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>rad2deg() </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00608">608</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00723">723</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ga44d890d0f4059ae47a9938c29f8d098b" name="ga44d890d0f4059ae47a9938c29f8d098b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga44d890d0f4059ae47a9938c29f8d098b">&#9670;&#160;</a></span>findProjectRoot()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path helios::findProjectRoot </td>
+          <td>(</td>
+          <td class="paramtype">const std::filesystem::path &amp;</td>          <td class="paramname"><span class="paramname"><em>startPath</em></span><span class="paramdefsep"> = </span><span class="paramdefval">std::filesystem::current_path()</span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Find the project root directory (directory containing top-level CMakeLists.txt) </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">startPath</td><td>Starting directory for search (defaults to current working directory) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Absolute path to the project root directory, or empty path if not found </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Searches upward from startPath for a directory containing CMakeLists.txt </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02773">2773</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -691,7 +830,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02101">2101</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00917">917</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -728,7 +867,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02066">2066</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00901">901</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -765,7 +904,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02033">2033</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00887">887</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -802,7 +941,7 @@ template&lt;typename T&gt; </div>
 <dl class="section return"><dt>Returns</dt><dd>Julian day of year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>CalendarDay() </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01340">1340</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01380">1380</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -845,7 +984,195 @@ template&lt;typename T&gt; </div>
 
 <p>Determine if two line segments intersect. The lines segments are defined by vertices (p1,q1) and (p2,q2) </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00303">303</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00287">287</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="gaee02b6805960b89201555f4022768c6b" name="gaee02b6805960b89201555f4022768c6b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gaee02b6805960b89201555f4022768c6b">&#9670;&#160;</a></span>linspace() <span class="overload">[1/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">vec2</a> &gt; helios::linspace </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>start</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>end</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>num</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Generate linearly spaced vec2 values between two endpoints. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">start</td><td>Starting vec2 value </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">end</td><td>Ending vec2 value </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">num</td><td>Number of uniformly spaced points to generate </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of linearly spaced vec2 values </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02937">2937</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ga23f7dd71170481919d4d6f91ae6ce658" name="ga23f7dd71170481919d4d6f91ae6ce658"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga23f7dd71170481919d4d6f91ae6ce658">&#9670;&#160;</a></span>linspace() <span class="overload">[2/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">vec3</a> &gt; helios::linspace </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>start</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>end</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>num</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Generate linearly spaced vec3 values between two endpoints. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">start</td><td>Starting vec3 value </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">end</td><td>Ending vec3 value </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">num</td><td>Number of uniformly spaced points to generate </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of linearly spaced vec3 values </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02958">2958</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ga579d9cf59822d6ead41585737d9d5211" name="ga579d9cf59822d6ead41585737d9d5211"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga579d9cf59822d6ead41585737d9d5211">&#9670;&#160;</a></span>linspace() <span class="overload">[3/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="structhelios_1_1vec4.html">vec4</a> &gt; helios::linspace </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>start</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>end</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>num</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Generate linearly spaced vec4 values between two endpoints. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">start</td><td>Starting vec4 value </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">end</td><td>Ending vec4 value </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">num</td><td>Number of uniformly spaced points to generate </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of linearly spaced vec4 values </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02979">2979</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ga7b3096a0046cf1bd108796a6f7d90bfa" name="ga7b3096a0046cf1bd108796a6f7d90bfa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga7b3096a0046cf1bd108796a6f7d90bfa">&#9670;&#160;</a></span>linspace() <span class="overload">[4/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; float &gt; helios::linspace </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>start</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>end</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>num</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Generate linearly spaced values between two endpoints. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">start</td><td>Starting value </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">end</td><td>Ending value </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">num</td><td>Number of uniformly spaced points to generate </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of linearly spaced float values </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02916">2916</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -883,7 +1210,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00352">352</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00467">467</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -921,7 +1248,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00402">402</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00517">517</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -965,7 +1292,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00426">426</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00541">541</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1003,7 +1330,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00507">507</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00622">622</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1035,7 +1362,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00488">488</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00603">603</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1067,7 +1394,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00469">469</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00584">584</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1102,7 +1429,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01118">1118</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01258">1258</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1137,7 +1464,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01126">1126</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01266">1266</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1172,7 +1499,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01134">1134</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01274">1274</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1207,7 +1534,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01066">1066</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01206">1206</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1242,7 +1569,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01177">1177</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01317">1317</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1277,7 +1604,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01080">1080</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01220">1220</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1312,7 +1639,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01088">1088</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01228">1228</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1347,7 +1674,335 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01096">1096</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01236">1236</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ga464c88e3b440ef0400881dcf57a815e1" name="ga464c88e3b440ef0400881dcf57a815e1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga464c88e3b440ef0400881dcf57a815e1">&#9670;&#160;</a></span>operator*() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; float &gt; helios::operator* </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>vec</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>scalar</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Multiply each element of a vector by a scalar. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">vec</td><td>Vector of floats </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">scalar</td><td>Scalar value to multiply </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>New vector with each element multiplied by scalar </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l01364">1364</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+
+</div>
+</div>
+<a id="ga07920683cbb88cc6976bc735686aff4c" name="ga07920683cbb88cc6976bc735686aff4c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga07920683cbb88cc6976bc735686aff4c">&#9670;&#160;</a></span>operator*() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; float &gt; helios::operator* </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>scalar</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>vec</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Multiply each element of a vector by a scalar (scalar on left) </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">scalar</td><td>Scalar value to multiply </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">vec</td><td>Vector of floats </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>New vector with each element multiplied by scalar </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l01379">1379</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+
+</div>
+</div>
+<a id="gaee822b7a2b1463f5ae3db9abde97ef60" name="gaee822b7a2b1463f5ae3db9abde97ef60"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gaee822b7a2b1463f5ae3db9abde97ef60">&#9670;&#160;</a></span>operator+() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; float &gt; helios::operator+ </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>vec</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>scalar</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Add a scalar to each element of a vector. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">vec</td><td>Vector of floats </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">scalar</td><td>Scalar value to add </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>New vector with scalar added to each element </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l01308">1308</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+
+</div>
+</div>
+<a id="ga79028308269efd3bc228765465f8055e" name="ga79028308269efd3bc228765465f8055e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga79028308269efd3bc228765465f8055e">&#9670;&#160;</a></span>operator+() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; float &gt; helios::operator+ </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>scalar</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>vec</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Add a scalar to each element of a vector (scalar on left) </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">scalar</td><td>Scalar value to add </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">vec</td><td>Vector of floats </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>New vector with scalar added to each element </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l01323">1323</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+
+</div>
+</div>
+<a id="gac32614062697a03576600872f6e285bd" name="gac32614062697a03576600872f6e285bd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gac32614062697a03576600872f6e285bd">&#9670;&#160;</a></span>operator-() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; float &gt; helios::operator- </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>vec</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>scalar</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Subtract a scalar from each element of a vector. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">vec</td><td>Vector of floats </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">scalar</td><td>Scalar value to subtract </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>New vector with scalar subtracted from each element </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l01334">1334</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+
+</div>
+</div>
+<a id="ga334fe201d34cb1b74fe923be7053595e" name="ga334fe201d34cb1b74fe923be7053595e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga334fe201d34cb1b74fe923be7053595e">&#9670;&#160;</a></span>operator-() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; float &gt; helios::operator- </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>scalar</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>vec</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Subtract each element of a vector from a scalar. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">scalar</td><td>Scalar value </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">vec</td><td>Vector of floats to subtract from scalar </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>New vector with each element being scalar minus the vector element </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l01349">1349</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+
+</div>
+</div>
+<a id="ga3d58c408c4c534ef8444ecee2090caee" name="ga3d58c408c4c534ef8444ecee2090caee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga3d58c408c4c534ef8444ecee2090caee">&#9670;&#160;</a></span>operator/() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; float &gt; helios::operator/ </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>vec</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>scalar</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Divide each element of a vector by a scalar. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">vec</td><td>Vector of floats </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">scalar</td><td>Scalar value to divide by </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>New vector with each element divided by scalar </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l01390">1390</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+
+</div>
+</div>
+<a id="ga66f368cc2bfd0ccdd76572181befa6bb" name="ga66f368cc2bfd0ccdd76572181befa6bb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga66f368cc2bfd0ccdd76572181befa6bb">&#9670;&#160;</a></span>operator/() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; float &gt; helios::operator/ </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>scalar</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>vec</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Divide a scalar by each element of a vector. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">scalar</td><td>Scalar value (numerator) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">vec</td><td>Vector of floats (denominators) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>New vector with each element being scalar divided by vector element </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l01405">1405</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -1380,7 +2035,7 @@ template&lt;typename T&gt; </div>
 
 <p>Determine whether point lines within a polygon. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00323">323</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00357">357</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1417,7 +2072,7 @@ template&lt;typename T&gt; </div>
 <dl class="section return"><dt>Returns</dt><dd>angle in degrees </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>deg2rad() </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00612">612</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00727">727</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1446,7 +2101,7 @@ template&lt;typename T&gt; </div>
 
 <p>Random number from a uniform distribution between 0 and 1. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00254">254</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00257">257</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1479,12 +2134,12 @@ template&lt;typename T&gt; </div>
 
 <p>Random integer from a uniform distribution between imin and imax. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00258">258</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00261">261</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
-<a id="ga8b6573f58a513ebbc539ae7529daa748" name="ga8b6573f58a513ebbc539ae7529daa748"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga8b6573f58a513ebbc539ae7529daa748">&#9670;&#160;</a></span>resize_vector() <span class="overload">[1/3]</span></h2>
+<a id="ga2044823281717e3abe80282e0b3b26e4" name="ga2044823281717e3abe80282e0b3b26e4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga2044823281717e3abe80282e0b3b26e4">&#9670;&#160;</a></span>resize_vector() <span class="overload">[1/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1492,19 +2147,19 @@ template&lt;typename T&gt; </div>
 template&lt;typename anytype&gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">void helios::resize_vector </td>
+          <td class="memname">std::enable_if&lt; std::is_default_constructible&lt; anytype &gt;::value &gt;::type helios::resize_vector </td>
           <td>(</td>
           <td class="paramtype">std::vector&lt; std::vector&lt; anytype &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>vec</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>Nx</em></span>, </td>
+          <td class="paramtype">size_t</td>          <td class="paramname"><span class="paramname"><em>Nx</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>Ny</em></span>&#160;)</td>
+          <td class="paramtype">size_t</td>          <td class="paramname"><span class="paramname"><em>Ny</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -1519,12 +2174,12 @@ template&lt;typename anytype&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01198">1198</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00527">527</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
-<a id="ga71f9bf6c09e75b9c8d8ff36c7187a31d" name="ga71f9bf6c09e75b9c8d8ff36c7187a31d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga71f9bf6c09e75b9c8d8ff36c7187a31d">&#9670;&#160;</a></span>resize_vector() <span class="overload">[2/3]</span></h2>
+<a id="ga3f55c7bfdde18a2463aca3c746eaf82c" name="ga3f55c7bfdde18a2463aca3c746eaf82c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga3f55c7bfdde18a2463aca3c746eaf82c">&#9670;&#160;</a></span>resize_vector() <span class="overload">[2/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1532,24 +2187,24 @@ template&lt;typename anytype&gt; </div>
 template&lt;typename anytype&gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">void helios::resize_vector </td>
+          <td class="memname">std::enable_if&lt; std::is_default_constructible&lt; anytype &gt;::value &gt;::type helios::resize_vector </td>
           <td>(</td>
           <td class="paramtype">std::vector&lt; std::vector&lt; std::vector&lt; anytype &gt; &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>vec</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>Nx</em></span>, </td>
+          <td class="paramtype">size_t</td>          <td class="paramname"><span class="paramname"><em>Nx</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>Ny</em></span>, </td>
+          <td class="paramtype">size_t</td>          <td class="paramname"><span class="paramname"><em>Ny</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>Nz</em></span>&#160;)</td>
+          <td class="paramtype">size_t</td>          <td class="paramname"><span class="paramname"><em>Nz</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -1565,12 +2220,12 @@ template&lt;typename anytype&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01228">1228</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00540">540</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
-<a id="ga9c202da0366b53b742824bfac2e8f536" name="ga9c202da0366b53b742824bfac2e8f536"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga9c202da0366b53b742824bfac2e8f536">&#9670;&#160;</a></span>resize_vector() <span class="overload">[3/3]</span></h2>
+<a id="gabd703193a845fc620fcd91ffec34a89c" name="gabd703193a845fc620fcd91ffec34a89c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gabd703193a845fc620fcd91ffec34a89c">&#9670;&#160;</a></span>resize_vector() <span class="overload">[3/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1578,29 +2233,29 @@ template&lt;typename anytype&gt; </div>
 template&lt;typename anytype&gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">void helios::resize_vector </td>
+          <td class="memname">std::enable_if&lt; std::is_default_constructible&lt; anytype &gt;::value &gt;::type helios::resize_vector </td>
           <td>(</td>
           <td class="paramtype">std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; anytype &gt; &gt; &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>vec</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>Nx</em></span>, </td>
+          <td class="paramtype">size_t</td>          <td class="paramname"><span class="paramname"><em>Nx</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>Ny</em></span>, </td>
+          <td class="paramtype">size_t</td>          <td class="paramname"><span class="paramname"><em>Ny</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>Nz</em></span>, </td>
+          <td class="paramtype">size_t</td>          <td class="paramname"><span class="paramname"><em>Nz</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>Nw</em></span>&#160;)</td>
+          <td class="paramtype">size_t</td>          <td class="paramname"><span class="paramname"><em>Nw</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -1617,7 +2272,206 @@ template&lt;typename anytype&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01261">1261</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00554">554</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+
+</div>
+</div>
+<a id="ga24991720c54ea9b7679d2b1231355837" name="ga24991720c54ea9b7679d2b1231355837"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga24991720c54ea9b7679d2b1231355837">&#9670;&#160;</a></span>resolveAssetPath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path helios::resolveAssetPath </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>relativePath</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Resolve asset file path using cpplocate, allowing executables to run from any directory. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">relativePath</td><td>Relative path to the asset file (e.g., "plugins/visualizer/shaders/shader.vert") </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Absolute path to the asset file </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>This function searches for assets in multiple locations: build directory, system install locations, and custom paths </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02689">2689</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="gab164b47810a8c9e7acdb512a72ec46fe" name="gab164b47810a8c9e7acdb512a72ec46fe"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gab164b47810a8c9e7acdb512a72ec46fe">&#9670;&#160;</a></span>resolveFilePath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path helios::resolveFilePath </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>filename</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Resolve file path using standard Helios resolution hierarchy. </p>
+<p>Resolves file paths using the following fallback sequence:</p><ol type="1">
+<li>If absolute path, validates existence and returns canonical path</li>
+<li>Checks relative to current working directory first</li>
+<li>Falls back to checking relative to HELIOS_BUILD environment variable path</li>
+<li>Throws helios_runtime_error if file not found in either location</li>
+</ol>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">filename</td><td>File name with or without path (e.g., "texture.jpg" or "models/texture.jpg") </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Absolute canonical path to the file </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02740">2740</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ga68877cedb04be67e38ea7701ae53b2e8" name="ga68877cedb04be67e38ea7701ae53b2e8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga68877cedb04be67e38ea7701ae53b2e8">&#9670;&#160;</a></span>resolvePluginAsset()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path helios::resolvePluginAsset </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>pluginName</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>assetPath</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Resolve plugin-specific asset path. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">pluginName</td><td>Name of the plugin (e.g., "visualizer", "plantarchitecture", "radiation") </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">assetPath</td><td>Relative path within the plugin's asset directory </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Absolute path to the plugin asset file </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02700">2700</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="gadadfa82538ea2c04ed2dea45fc07749e" name="gadadfa82538ea2c04ed2dea45fc07749e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gadadfa82538ea2c04ed2dea45fc07749e">&#9670;&#160;</a></span>resolveProjectFile()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path helios::resolveProjectFile </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>relativePath</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Resolve file path using project-based resolution strategy. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">relativePath</td><td>Relative path to the file </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Absolute path to the file </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Resolution order: 1) Current working directory, 2) Project directory, 3) Error </dd></dl>
+<dl class="exception"><dt>Exceptions</dt><dd>
+  <table class="exception">
+    <tr><td class="paramname">std::runtime_error</td><td>if file cannot be found </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02787">2787</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="gac00df4c5b8a19046f4e606232ffe2842" name="gac00df4c5b8a19046f4e606232ffe2842"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gac00df4c5b8a19046f4e606232ffe2842">&#9670;&#160;</a></span>resolveSpectraPath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path helios::resolveSpectraPath </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>spectraFile</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Resolve spectral data file path. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">spectraFile</td><td>Spectral data filename with or without path (e.g., "camera_spectral_library.xml") </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Absolute path to the spectral data file </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02763">2763</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1657,7 +2511,7 @@ template&lt;typename anytype&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00101">101</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00103">103</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1703,7 +2557,7 @@ template&lt;typename anytype&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00105">105</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00107">107</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1744,7 +2598,7 @@ template&lt;typename anytype&gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of substrings. If inputstring does not contain delimiter, empty vector is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01017">1017</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01169">1169</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1781,7 +2635,7 @@ template&lt;typename anytype&gt; </div>
 <dl class="section return"><dt>Returns</dt><dd>vec3 vector of Cartesian coordinates </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>cart2sphere() </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00645">645</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00770">770</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1840,7 +2694,7 @@ template&lt;typename anytype&gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Interpolated (x,y,z) Cartesian point. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02135">2135</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02063">2063</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1875,7 +2729,7 @@ template&lt;typename anytype&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01156">1156</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01296">1296</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1904,7 +2758,7 @@ template&lt;typename anytype&gt; </div>
 
 <p>Convert a space-delimited string into an int2 vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00703">703</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00834">834</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1933,7 +2787,7 @@ template&lt;typename anytype&gt; </div>
 
 <p>Convert a space-delimited string into an int3 vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00721">721</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00854">854</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1962,7 +2816,7 @@ template&lt;typename anytype&gt; </div>
 
 <p>Convert a space-delimited string into an int4 vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00739">739</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00874">874</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1991,7 +2845,7 @@ template&lt;typename anytype&gt; </div>
 
 <p>Convert a space-delimited string into an RGBcolor vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00757">757</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00894">894</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2020,7 +2874,7 @@ template&lt;typename anytype&gt; </div>
 
 <p>Convert a space-delimited string into a vec2 vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00649">649</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00774">774</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2049,7 +2903,7 @@ template&lt;typename anytype&gt; </div>
 
 <p>Convert a space-delimited string into a vec3 vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00667">667</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00794">794</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2078,7 +2932,7 @@ template&lt;typename anytype&gt; </div>
 
 <p>Convert a space-delimited string into a vec4 vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00685">685</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00814">814</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2113,7 +2967,7 @@ template&lt;typename anytype&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01053">1053</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01193">1193</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2142,7 +2996,122 @@ template&lt;typename anytype&gt; </div>
 
 <p>Remove leading and trailing whitespace from a string. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01001">1001</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01153">1153</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ga80308e1c933cf407c947dfd507007b0c" name="ga80308e1c933cf407c947dfd507007b0c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga80308e1c933cf407c947dfd507007b0c">&#9670;&#160;</a></span>tryResolveFilePath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path helios::tryResolveFilePath </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>filename</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Attempt to resolve a file path without throwing exceptions. </p>
+<p>Similar to resolveFilePath() but returns an empty path instead of throwing on failure. Useful for probing whether a file exists at various locations.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">filename</td><td>File name with or without path (e.g., "texture.jpg" or "models/texture.jpg") </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Absolute canonical path to the file if found, empty path otherwise </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02706">2706</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="gad038042d98f56cbcab639d90c2b53e9e" name="gad038042d98f56cbcab639d90c2b53e9e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gad038042d98f56cbcab639d90c2b53e9e">&#9670;&#160;</a></span>tryResolvePluginAsset()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path helios::tryResolvePluginAsset </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>pluginName</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>assetPath</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Attempt to resolve a plugin asset path without throwing exceptions. </p>
+<p>Similar to resolvePluginAsset() but returns an empty path instead of throwing on failure. Useful for probing whether a plugin asset exists.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">pluginName</td><td>Name of the plugin (e.g., "plantarchitecture") </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">assetPath</td><td>Path relative to plugin directory (e.g., "assets/textures/leaf.png") </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Absolute canonical path to the asset if found, empty path otherwise </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02695">2695</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ga6081cd159b1d50f8a50435316679b6c6" name="ga6081cd159b1d50f8a50435316679b6c6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga6081cd159b1d50f8a50435316679b6c6">&#9670;&#160;</a></span>validateAssetPath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool helios::validateAssetPath </td>
+          <td>(</td>
+          <td class="paramtype">const std::filesystem::path &amp;</td>          <td class="paramname"><span class="paramname"><em>assetPath</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Validate that an asset file exists and is readable. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">assetPath</td><td>Path to the asset file to validate </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if the file exists and is readable, false otherwise </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02769">2769</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2169,7 +3138,7 @@ template&lt;typename anytype&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00347">347</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00462">462</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>

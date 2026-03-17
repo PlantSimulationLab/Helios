@@ -250,7 +250,8 @@
 #  define z_longlong long long
 #  if defined(NO_SIZE_T)
      typedef unsigned NO_SIZE_T z_size_t;
-#  elif defined(STDC)
+#  elif defined(STDC) || defined(__STDC__) || defined(__GNUC__) || defined(__linux__)
+     /* Enhanced STDC detection for manylinux containers and modern compilers */
 #    include <stddef.h>
      typedef size_t z_size_t;
 #  else

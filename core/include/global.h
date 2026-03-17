@@ -1,7 +1,7 @@
 /**
  * \file "global.h" Header file for all global function/object definitions.
  *
- * Copyright (C) 2016-2025 Brian Bailey
+ * Copyright (C) 2016-2026 Brian Bailey
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,16 +15,6 @@
 
 #ifndef HELIOS_GLOBAL
 #define HELIOS_GLOBAL
-
-//! Macro for marking functions as deprecated.
-#ifdef __GNUC__
-#define DEPRECATED(func) func __attribute__((deprecated))
-#elif defined(_MSC_VER)
-#define DEPRECATED(func) __declspec(deprecated) func
-#else
-#pragma message("WARNING: You need to implement DEPRECATED for this compiler")
-#define DEPRECATED(func) func
-#endif
 
 //! Pi constant.
 #ifndef M_PI
@@ -51,13 +41,13 @@ constexpr float PI_F = 3.14159265358979323846f;
 #include <map>
 #include <memory>
 #include <random>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <thread>
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
-#include <set>
 
 #ifdef USE_OPENMP
 #include <omp.h>
@@ -77,6 +67,12 @@ constexpr To scast(From &&v) noexcept {
 
 // pugi XML parser
 #include "pugixml.hpp"
+
+// Standard library for file path resolution
+#include <filesystem>
+
+// Thread synchronization
+#include <mutex>
 
 // *** Groups *** //
 
@@ -750,6 +746,56 @@ namespace helios {
         std::chrono::high_resolution_clock::time_point timer_start;
     };
 
+    //! Simple progress bar for console output
+    /**
+     * \ingroup functions
+     */
+    class ProgressBar {
+    private:
+        size_t total_steps;
+        size_t current_step;
+        int bar_width;
+        bool enabled;
+        std::string message;
+
+    public:
+        //! Constructor for ProgressBar
+        /**
+         * \param[in] total Total number of steps expected
+         * \param[in] width Width of the progress bar in characters (default: 50)
+         * \param[in] enable Whether to enable progress bar display (default: true)
+         * \param[in] progress_message Custom message to display (default: "Progress")
+         */
+        ProgressBar(size_t total, int width = 50, bool enable = true, const std::string &progress_message = "Progress");
+
+        //! Update progress bar by one step
+        void update();
+
+        //! Update progress bar to a specific step
+        /**
+         * \param[in] step_number Current step number (0-based)
+         */
+        void update(size_t step_number);
+
+        //! Finish the progress bar and ensure it shows 100%
+        void finish();
+
+        //! Enable or disable the progress bar
+        /**
+         * \param[in] enable True to enable, false to disable
+         */
+        void setEnabled(bool enable);
+
+        //! Check if progress bar is enabled
+        /**
+         * \return True if enabled, false otherwise
+         */
+        [[nodiscard]] bool isEnabled() const;
+
+        //! Disable all progress bar output
+        void disableMessages();
+    };
+
     //! Wait/sleep for a specified amount of time
     /**
      * \param[in] seconds Number of seconds to wait
@@ -969,6 +1015,9 @@ namespace helios {
      */
     [[nodiscard]] helios::RGBAcolor XMLloadrgba(pugi::xml_node node, const char *field);
 
+    // Forward declaration for fzero()
+    class WarningAggregator;
+
     //! Use Newton-Raphson method to find the zero of a function
     /**
      * \param[in] function Function to be evaluated. The function should take as its first argument the value at which the function should be evaluated, as second argument any function arguments.
@@ -977,8 +1026,24 @@ namespace helios {
      * \param[in] init_guess Initial guess for the zero of the function.
      * \param[in] err_tol [optional] Maximum allowable relative error in solution.
      * \param[in] max_iterations [optional] Maximum number of iterations to allow before exiting solver.
+     * \param[in] warnings [optional] Pointer to WarningAggregator for collecting convergence warnings. If nullptr, warnings are not collected.
      */
-    [[nodiscard]] float fzero(float (*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, float err_tol = 0.0001f, int max_iterations = 100);
+    [[nodiscard]] float fzero(float (*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, float err_tol = 0.0001f, int max_iterations = 100,
+                              WarningAggregator *warnings = nullptr);
+
+    //! Use Newton-Raphson method to find the zero of a function with convergence status
+    /**
+     * \param[in] function Function to be evaluated. The function should take as its first argument the value at which the function should be evaluated, as second argument any function arguments.
+     * \param[in] variables Vector of function arguments
+     * \param[in] parameters Pointer to any additional parameters needed by the function
+     * \param[in] init_guess Initial guess for the zero of the function.
+     * \param[out] converged Boolean indicating whether the solver converged successfully.
+     * \param[in] err_tol [optional] Maximum allowable relative error in solution.
+     * \param[in] max_iterations [optional] Maximum number of iterations to allow before exiting solver.
+     * \return Value of function zero (best estimate even if not converged).
+     */
+    [[nodiscard]] float fzero(float (*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, bool &converged, float err_tol = 0.0001f,
+                              int max_iterations = 100);
 
     //! Function to perform linear interpolation based on a vector of discrete (x,y) values
     /**
@@ -995,6 +1060,46 @@ namespace helios {
      * \return distance between p1 and p2 in three dimensions
      */
     [[nodiscard]] float point_distance(const helios::vec3 &p1, const helios::vec3 &p2);
+
+    //! Generate linearly spaced values between two endpoints
+    /**
+     * \param[in] start Starting value
+     * \param[in] end Ending value
+     * \param[in] num Number of uniformly spaced points to generate
+     * \return Vector of linearly spaced float values
+     * \ingroup functions
+     */
+    [[nodiscard]] std::vector<float> linspace(float start, float end, int num);
+
+    //! Generate linearly spaced vec2 values between two endpoints
+    /**
+     * \param[in] start Starting vec2 value
+     * \param[in] end Ending vec2 value
+     * \param[in] num Number of uniformly spaced points to generate
+     * \return Vector of linearly spaced vec2 values
+     * \ingroup functions
+     */
+    [[nodiscard]] std::vector<vec2> linspace(const vec2 &start, const vec2 &end, int num);
+
+    //! Generate linearly spaced vec3 values between two endpoints
+    /**
+     * \param[in] start Starting vec3 value
+     * \param[in] end Ending vec3 value
+     * \param[in] num Number of uniformly spaced points to generate
+     * \return Vector of linearly spaced vec3 values
+     * \ingroup functions
+     */
+    [[nodiscard]] std::vector<vec3> linspace(const vec3 &start, const vec3 &end, int num);
+
+    //! Generate linearly spaced vec4 values between two endpoints
+    /**
+     * \param[in] start Starting vec4 value
+     * \param[in] end Ending vec4 value
+     * \param[in] num Number of uniformly spaced points to generate
+     * \return Vector of linearly spaced vec4 values
+     * \ingroup functions
+     */
+    [[nodiscard]] std::vector<vec4> linspace(const vec4 &start, const vec4 &end, int num);
 
     //! Parse a file string to get the extension
     /**
@@ -1040,6 +1145,106 @@ namespace helios {
      * \return True if directory/file was valid, false otherwise
      */
     [[nodiscard]] bool validateOutputPath(std::string &output_directory, const std::vector<std::string> &allowable_file_extensions = {});
+
+    //! Check whether a path string represents a directory path (as opposed to a file path)
+    /**
+     * \param[in] path String containing the path to check
+     * \return True if the path represents a directory, false if it represents a file
+     * \note This function uses multiple heuristics: trailing slash, existing filesystem paths, and common file extensions
+     */
+    [[nodiscard]] bool isDirectoryPath(const std::string &path);
+
+    //--------------------- ASSET PATH RESOLUTION -----------------------------------//
+
+    //! Resolve asset file path using cpplocate, allowing executables to run from any directory
+    /**
+     * \param[in] relativePath Relative path to the asset file (e.g., "plugins/visualizer/shaders/shader.vert")
+     * \return Absolute path to the asset file
+     * \note This function searches for assets in multiple locations: build directory, system install locations, and custom paths
+     * \ingroup functions
+     */
+    [[nodiscard]] std::filesystem::path resolveAssetPath(const std::string &relativePath);
+
+    //! Resolve plugin-specific asset path
+    /**
+     * \param[in] pluginName Name of the plugin (e.g., "visualizer", "plantarchitecture", "radiation")
+     * \param[in] assetPath Relative path within the plugin's asset directory
+     * \return Absolute path to the plugin asset file
+     * \ingroup functions
+     */
+    [[nodiscard]] std::filesystem::path resolvePluginAsset(const std::string &pluginName, const std::string &assetPath);
+
+    //! Attempt to resolve a plugin asset path without throwing exceptions
+    /**
+     * Similar to resolvePluginAsset() but returns an empty path instead of throwing on failure.
+     * Useful for probing whether a plugin asset exists.
+     *
+     * \param[in] pluginName Name of the plugin (e.g., "plantarchitecture")
+     * \param[in] assetPath Path relative to plugin directory (e.g., "assets/textures/leaf.png")
+     * \return Absolute canonical path to the asset if found, empty path otherwise
+     * \ingroup functions
+     */
+    [[nodiscard]] std::filesystem::path tryResolvePluginAsset(const std::string &pluginName, const std::string &assetPath);
+
+    //! Resolve file path using standard Helios resolution hierarchy
+    /**
+     * Resolves file paths using the following fallback sequence:
+     * 1. If absolute path, validates existence and returns canonical path
+     * 2. Checks relative to current working directory first
+     * 3. Falls back to checking relative to HELIOS_BUILD environment variable path
+     * 4. Throws helios_runtime_error if file not found in either location
+     *
+     * \param[in] filename File name with or without path (e.g., "texture.jpg" or "models/texture.jpg")
+     * \return Absolute canonical path to the file
+     * \ingroup functions
+     */
+    [[nodiscard]] std::filesystem::path resolveFilePath(const std::string &filename);
+
+    //! Attempt to resolve a file path without throwing exceptions
+    /**
+     * Similar to resolveFilePath() but returns an empty path instead of throwing on failure.
+     * Useful for probing whether a file exists at various locations.
+     *
+     * \param[in] filename File name with or without path (e.g., "texture.jpg" or "models/texture.jpg")
+     * \return Absolute canonical path to the file if found, empty path otherwise
+     * \ingroup functions
+     */
+    [[nodiscard]] std::filesystem::path tryResolveFilePath(const std::string &filename);
+
+    //! Resolve spectral data file path
+    /**
+     * \param[in] spectraFile Spectral data filename with or without path (e.g., "camera_spectral_library.xml")
+     * \return Absolute path to the spectral data file
+     * \ingroup functions
+     */
+    [[nodiscard]] std::filesystem::path resolveSpectraPath(const std::string &spectraFile);
+
+    //! Validate that an asset file exists and is readable
+    /**
+     * \param[in] assetPath Path to the asset file to validate
+     * \return True if the file exists and is readable, false otherwise
+     * \ingroup functions
+     */
+    [[nodiscard]] bool validateAssetPath(const std::filesystem::path &assetPath);
+
+    //! Find the project root directory (directory containing top-level CMakeLists.txt)
+    /**
+     * \param[in] startPath Starting directory for search (defaults to current working directory)
+     * \return Absolute path to the project root directory, or empty path if not found
+     * \note Searches upward from startPath for a directory containing CMakeLists.txt
+     * \ingroup functions
+     */
+    [[nodiscard]] std::filesystem::path findProjectRoot(const std::filesystem::path &startPath = std::filesystem::current_path());
+
+    //! Resolve file path using project-based resolution strategy
+    /**
+     * \param[in] relativePath Relative path to the file
+     * \return Absolute path to the file
+     * \note Resolution order: 1) Current working directory, 2) Project directory, 3) Error
+     * \throws std::runtime_error if file cannot be found
+     * \ingroup functions
+     */
+    [[nodiscard]] std::filesystem::path resolveProjectFile(const std::string &relativePath);
 
     //! Read values contained in a text file into a one-dimensional vector of floats
     /**
@@ -1089,6 +1294,118 @@ namespace helios {
         std::vector<float> result(vector1.size());
         for (std::size_t i = 0; i < vector1.size(); ++i) {
             result[i] = vector1[i] + vector2[i];
+        }
+        return result;
+    }
+
+    //! Add a scalar to each element of a vector
+    /**
+     * \param[in] vec Vector of floats
+     * \param[in] scalar Scalar value to add
+     * \return New vector with scalar added to each element
+     * \ingroup functions
+     */
+    inline std::vector<float> operator+(const std::vector<float> &vec, float scalar) {
+        std::vector<float> result(vec.size());
+        for (std::size_t i = 0; i < vec.size(); ++i) {
+            result[i] = vec[i] + scalar;
+        }
+        return result;
+    }
+
+    //! Add a scalar to each element of a vector (scalar on left)
+    /**
+     * \param[in] scalar Scalar value to add
+     * \param[in] vec Vector of floats
+     * \return New vector with scalar added to each element
+     * \ingroup functions
+     */
+    inline std::vector<float> operator+(float scalar, const std::vector<float> &vec) {
+        return vec + scalar;
+    }
+
+    //! Subtract a scalar from each element of a vector
+    /**
+     * \param[in] vec Vector of floats
+     * \param[in] scalar Scalar value to subtract
+     * \return New vector with scalar subtracted from each element
+     * \ingroup functions
+     */
+    inline std::vector<float> operator-(const std::vector<float> &vec, float scalar) {
+        std::vector<float> result(vec.size());
+        for (std::size_t i = 0; i < vec.size(); ++i) {
+            result[i] = vec[i] - scalar;
+        }
+        return result;
+    }
+
+    //! Subtract each element of a vector from a scalar
+    /**
+     * \param[in] scalar Scalar value
+     * \param[in] vec Vector of floats to subtract from scalar
+     * \return New vector with each element being scalar minus the vector element
+     * \ingroup functions
+     */
+    inline std::vector<float> operator-(float scalar, const std::vector<float> &vec) {
+        std::vector<float> result(vec.size());
+        for (std::size_t i = 0; i < vec.size(); ++i) {
+            result[i] = scalar - vec[i];
+        }
+        return result;
+    }
+
+    //! Multiply each element of a vector by a scalar
+    /**
+     * \param[in] vec Vector of floats
+     * \param[in] scalar Scalar value to multiply
+     * \return New vector with each element multiplied by scalar
+     * \ingroup functions
+     */
+    inline std::vector<float> operator*(const std::vector<float> &vec, float scalar) {
+        std::vector<float> result(vec.size());
+        for (std::size_t i = 0; i < vec.size(); ++i) {
+            result[i] = vec[i] * scalar;
+        }
+        return result;
+    }
+
+    //! Multiply each element of a vector by a scalar (scalar on left)
+    /**
+     * \param[in] scalar Scalar value to multiply
+     * \param[in] vec Vector of floats
+     * \return New vector with each element multiplied by scalar
+     * \ingroup functions
+     */
+    inline std::vector<float> operator*(float scalar, const std::vector<float> &vec) {
+        return vec * scalar;
+    }
+
+    //! Divide each element of a vector by a scalar
+    /**
+     * \param[in] vec Vector of floats
+     * \param[in] scalar Scalar value to divide by
+     * \return New vector with each element divided by scalar
+     * \ingroup functions
+     */
+    inline std::vector<float> operator/(const std::vector<float> &vec, float scalar) {
+        std::vector<float> result(vec.size());
+        for (std::size_t i = 0; i < vec.size(); ++i) {
+            result[i] = vec[i] / scalar;
+        }
+        return result;
+    }
+
+    //! Divide a scalar by each element of a vector
+    /**
+     * \param[in] scalar Scalar value (numerator)
+     * \param[in] vec Vector of floats (denominators)
+     * \return New vector with each element being scalar divided by vector element
+     * \ingroup functions
+     */
+    inline std::vector<float> operator/(float scalar, const std::vector<float> &vec) {
+        std::vector<float> result(vec.size());
+        for (std::size_t i = 0; i < vec.size(); ++i) {
+            result[i] = scalar / vec[i];
         }
         return result;
     }
@@ -1204,6 +1521,80 @@ namespace helios {
         }
     };
 
+
+    //! Warning message aggregator for reducing console flooding
+    /**
+     * \brief Accumulates warning messages during loops/iterations and reports aggregated summaries.
+     *
+     * This class helps prevent console flooding when processing millions of primitives/objects
+     * by collecting warnings and reporting counts with example messages instead of printing
+     * each warning individually. Thread-safe for use in OpenMP parallel regions.
+     *
+     * Example usage:
+     * \code{.cpp}
+     * WarningAggregator warnings;
+     * for(uint UUID : UUIDs) {
+     *     if(someCondition) {
+     *         warnings.addWarning("category_name", "Warning message here");
+     *     }
+     * }
+     * warnings.report(std::cerr);  // Prints aggregated summary
+     * \endcode
+     *
+     * \ingroup functions
+     */
+    class WarningAggregator {
+    public:
+        //! Constructor
+        WarningAggregator() = default;
+
+        //! Add a warning to be aggregated
+        /**
+         * \param[in] category Category identifier for this warning type (e.g., "fzero_convergence_failure")
+         * \param[in] message The warning message text
+         * \note Thread-safe: can be called from OpenMP parallel regions
+         */
+        void addWarning(const std::string &category, const std::string &message);
+
+        //! Report all accumulated warnings and clear
+        /**
+         * \param[in] stream Output stream to write warnings to (default: std::cerr)
+         * \param[in] compact If true, output single line per category with count only (default: false)
+         * \note Standard format: "WARNING: N instances of 'category' (showing first 3):"
+         * \note Compact format: "WARNING: N instances of 'category'"
+         */
+        void report(std::ostream &stream = std::cerr, bool compact = false);
+
+        //! Get the count of warnings for a specific category
+        /**
+         * \param[in] category Category identifier
+         * \return Number of warnings accumulated for this category
+         */
+        [[nodiscard]] size_t getCount(const std::string &category) const;
+
+        //! Clear all accumulated warnings
+        void clear();
+
+        //! Enable or disable warning accumulation
+        /**
+         * \param[in] enabled True to enable, false to disable
+         * \note When disabled, calls to addWarning() are ignored
+         */
+        void setEnabled(bool enabled);
+
+        //! Check if warning accumulation is enabled
+        /**
+         * \return True if enabled, false otherwise
+         */
+        [[nodiscard]] bool isEnabled() const;
+
+    private:
+        mutable std::mutex mutex_; //!< Thread safety for OpenMP
+        std::unordered_map<std::string, std::vector<std::string>> warnings_; //!< Storage: category -> messages
+        std::unordered_map<std::string, size_t> counts_; //!< Total count per category (may exceed stored messages)
+        bool enabled_ = true; //!< Whether to accumulate warnings
+        static constexpr size_t MAX_EXAMPLES = 100; //!< Maximum examples to store per category
+    };
 
     //! Default null SphericalCoord that applies no rotation
     extern SphericalCoord nullrotation;

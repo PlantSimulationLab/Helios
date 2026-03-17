@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: LiDAR Point Cloud Plugin Documentation</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -199,6 +232,17 @@ $(function(){initNavTree('_li_d_a_r_doc.html',''); initResizable(true); });
   </li>
   <li class="level1">
     <a href="#LiDARgrid">Establishing grid cells</a>
+    <ul>
+      <li class="level2">
+        <a href="#LiDARgridXML">Loading grid cells from XML file</a>
+      </li>
+      <li class="level2">
+        <a href="#LiDARgridAPI">Adding grid cells programmatically</a>
+      </li>
+      <li class="level2">
+        <a href="#LiDARgridDimensions">Determining grid dimensions</a>
+      </li>
+    </ul>
   </li>
   <li class="level1">
     <a href="#LiDARprocess">Processing LiDAR data</a>
@@ -244,8 +288,8 @@ $(function(){initNavTree('_li_d_a_r_doc.html',''); initResizable(true); });
  </p>
 <table class="doxtable">
 <tr>
-<th>Dependencies</th><td>NVIDIA CUDA 9.0+ <br  />
-Visualizer plug-in </td></tr>
+<th>Dependencies</th><td>Visualizer plug-in <br  />
+CollisionDetection plug-in </td></tr>
 <tr>
 <th>CMakeLists.txt</th><td>set( PLUGINS "lidar" ) </td></tr>
 <tr>
@@ -257,33 +301,20 @@ Visualizer plug-in </td></tr>
 Known Issues</h1>
 <ul>
 <li>The LiDAR plug-in requires the Visualizer plug-in to be loaded in the CMakeLists.txt file.</li>
-<li>The current version of calculateLeafAreaGPU() assumes data is discrete-return. The version calculateLeafAreaGPU_testing() does both discrete-return and waveform data, but it has not been thoroughly tested.</li>
+<li>The current version of calculateLeafArea() handles both discrete-return and multi-return data automatically.</li>
 </ul>
 <h1><a class="anchor" id="LiDARintro"></a>
 Introduction</h1>
 <p>The LiDAR plugin is used to process terrestrial LiDAR data into information that is useful for plant models. For example, this may be to determine leaf area and angle distributions at the voxel scale, or to reconstruct individual leaves and add them to the Context.</p>
 <h1><a class="anchor" id="LiDARdepends"></a>
 Dependencies</h1>
-<table class="doxtable">
-<caption>Installing dependent packages</caption>
-<tr>
-<th>Package</th><td><div class="image">
-<img src="apple-logo.png" alt=""/>
-</div>
- </td><td><div class="image">
-<img src="unix-logo.png" alt=""/>
-</div>
- </td><td><div class="image">
-<img src="windows-logo.png" alt=""/>
-</div>
-  </td></tr>
-<tr>
-<td>NVIDIA CUDA 9.0+ </td><td>Mac OSX: Not available. </td><td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a> </td><td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a>  </td></tr>
-</table>
-<p>For help choosing the correct CUDA toolkit version for your system, consult this page: <a class="el" href="_choosing_c_u_d_a.html">Choosing the right CUDA and OptiX version</a></p>
-<p>Useful OS-specific information for installing CUDA can be found here: <a class="el" href="_dependent_software.html">Install and Set-up</a></p>
-<p>If you are using a PC, it is likely you will need to increase the GPU timeout in the registry, otherwise calculations lasting longer than 2 secs. will timeout and kill your program. A guide on how to increase the timeout can be found here: <a class="el" href="_p_c_g_p_u_timeout.html">Increasing graphics driver timeout</a></p>
-<h1><a class="anchor" id="LiDARConstructor"></a>
+<p>The LiDAR plugin uses the CollisionDetection plugin for ray tracing. GPU acceleration is optional and controlled through the CollisionDetection plugin:</p><ul>
+<li>For CPU-only operation: No additional dependencies required</li>
+<li>For GPU acceleration: NVIDIA CUDA-capable GPU and CUDA runtime (managed by CollisionDetection plugin)</li>
+</ul>
+<p>To enable GPU acceleration for faster processing of large point clouds: </p><div class="fragment"><div class="line"><a class="code hl_class" href="class_li_d_a_rcloud.html" title="Primary class for terrestrial LiDAR scan.">LiDARcloud</a> pointcloud;</div>
+<div class="line">pointcloud.enableCDGPUAcceleration();  <span class="comment">// Enable GPU acceleration before running scans</span></div>
+</div><!-- fragment --><h1><a class="anchor" id="LiDARConstructor"></a>
 Class Constructor</h1>
 <table class="doxtable">
 <tr>
@@ -298,7 +329,7 @@ Input Primitive Data</h1>
 <tr>
 <th>Primitive Data Label</th><th>Symbol</th><th>Units</th><th>Data Type</th><th>Description</th><th>Available Plug-ins</th><th>Default Value </th></tr>
 <tr>
-<td>reflectivity_lidar</td><td>\(\rho_l\)</td><td>unitless</td><td> <font face="courier" color="green">float</font></td><td>Primitive reflectivity in the waveband of the laser. This is used to calculate the return intensity in synthetic scans.</td><td>N/A</td><td>1.0 </td></tr>
+<td>reflectivity_lidar</td><td>\(\rho_l\)</td><td>unitless</td><td> <span style="font-family: Courier, monospace; color: green;">float</span></td><td>Primitive reflectivity in the waveband of the laser. This is used to calculate the return intensity in synthetic scans.</td><td>N/A</td><td>1.0 </td></tr>
 </table>
 <h1><a class="anchor" id="LiDARbg"></a>
 Background information</h1>
@@ -419,7 +450,7 @@ Loading scan data from file</h1>
 <tr>
 <td>(label)</td><td>User-defined floating-point data value. "label" can be any string describing data. For example, "temperature", etc. </td><td>N/A </td></tr>
 </table>
-<p>The XML file can be automatically loaded into the point cloud using the loadXML() function, as illustrated below.</p>
+<p>The XML file can be automatically loaded into the point cloud using the <a class="el" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7">LiDARcloud::loadXML()</a> function, as illustrated below.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_li_d_a_r_8h.html">LiDAR.h</a>&quot;</span></div>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
 <div class="line"> </div>
@@ -451,6 +482,8 @@ Establishing grid cells</h1>
 <td>Nz</td><td>Grid cell subdivisions in the z-direction.</td><td>1 </td></tr>
 </table>
 <p>The grid cell subdivisions options allow the cells to be easily split up into a grid of smaller cells. For example, Nx=Ny=Nz=3 would create 27 grid cells similar to a "Rubik's cube".</p>
+<h2><a class="anchor" id="LiDARgridXML"></a>
+Loading grid cells from XML file</h2>
 <p>Grid cell options can be specified in an XML file using the tags listed in the table above. Multiple grid cells are added by simply adding more &lt;grid&gt;...&lt;/grid&gt; groups to the XML file.</p>
 <div class="fragment"><div class="line">&lt;<span class="keywordtype">grid</span>&gt;</div>
 <div class="line">   &lt;<span class="keywordtype">center</span>&gt; 0 0 0.5 &lt;/<span class="keywordtype">center</span>&gt;</div>
@@ -460,7 +493,38 @@ Establishing grid cells</h1>
 <div class="line">   &lt;<span class="keywordtype">Ny</span>&gt; 3 &lt;/<span class="keywordtype">Ny</span>&gt;</div>
 <div class="line">   &lt;<span class="keywordtype">Nz</span>&gt; 3 &lt;/<span class="keywordtype">Nz</span>&gt;</div>
 <div class="line">&lt;/<span class="keywordtype">grid</span>&gt;</div>
-</div><!-- fragment --><p>One way to figure out the appropriate dimension and position of the voxel grid is using the visualizer and trial-and-error. Make a guess of the voxel parameters, then visualize the point cloud and voxels together and adjust accordingly. This can be tedious and time-consuming because you need to re-run the entire code each time.</p>
+</div><!-- fragment --><h2><a class="anchor" id="LiDARgridAPI"></a>
+Adding grid cells programmatically</h2>
+<p>Grid cells can also be added programmatically using the <a class="el" href="class_li_d_a_rcloud.html#a755ab5b665c80e30a49450ccfa1592d1">LiDARcloud::addGrid()</a> function, without needing to specify them in an XML file. This is useful when grid parameters are computed at runtime or when setting up scans entirely in code.</p>
+<p>The <a class="el" href="class_li_d_a_rcloud.html#a755ab5b665c80e30a49450ccfa1592d1">LiDARcloud::addGrid()</a> function takes four arguments: the (x,y,z) center of the grid, the size of the grid in each dimension, the number of subdivisions in each dimension, and the azimuthal rotation angle in degrees.</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_li_d_a_r_8h.html">LiDAR.h</a>&quot;</span></div>
+<div class="line"><span class="keyword">using namespace </span>helios;</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line"> </div>
+<div class="line">   <a class="code hl_class" href="class_li_d_a_rcloud.html" title="Primary class for terrestrial LiDAR scan.">LiDARcloud</a> pointcloud;</div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">// Define grid parameters</span></div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> grid_center(0.0f, 0.0f, 0.5f);  <span class="comment">// (x,y,z) center of grid</span></div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> grid_size(1.0f, 1.0f, 1.0f);    <span class="comment">// size in x,y,z directions</span></div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a> grid_divisions = <a class="code hl_function" href="helios__vector__types_8h.html#a55971d7a623ad5c10a74e7eda37c2149" title="Make an int3 vector from three ints.">make_int3</a>(3, 3, 3);  <span class="comment">// number of subdivisions (creates 27 cells)</span></div>
+<div class="line">   <span class="keywordtype">float</span> rotation = 0;  <span class="comment">// azimuthal rotation in degrees</span></div>
+<div class="line"> </div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a755ab5b665c80e30a49450ccfa1592d1" title="Add a grid to point cloud instead of reading in from an xml file.">addGrid</a>(grid_center, grid_size, grid_divisions, rotation);</div>
+<div class="line"> </div>
+<div class="line">}</div>
+</div><!-- fragment --><p>This is equivalent to specifying the following in an XML file:</p>
+<div class="fragment"><div class="line">&lt;<span class="keywordtype">grid</span>&gt;</div>
+<div class="line">  &lt;<span class="keywordtype">center</span>&gt; 0 0 0.5 &lt;/<span class="keywordtype">center</span>&gt;</div>
+<div class="line">  &lt;<span class="keywordtype">size</span>&gt; 1 1 1 &lt;/<span class="keywordtype">size</span>&gt;</div>
+<div class="line">  &lt;<span class="keywordtype">Nx</span>&gt; 3 &lt;/<span class="keywordtype">Nx</span>&gt;</div>
+<div class="line">  &lt;<span class="keywordtype">Ny</span>&gt; 3 &lt;/<span class="keywordtype">Ny</span>&gt;</div>
+<div class="line">  &lt;<span class="keywordtype">Nz</span>&gt; 3 &lt;/<span class="keywordtype">Nz</span>&gt;</div>
+<div class="line">&lt;/<span class="keywordtype">grid</span>&gt;</div>
+</div><!-- fragment --><p>After adding the grid, you can query grid cell properties such as the cell size using <a class="el" href="class_li_d_a_rcloud.html#a6662330b95ee7ee77ea6647871695c55">LiDARcloud::getCellSize()</a>.</p>
+<h2><a class="anchor" id="LiDARgridDimensions"></a>
+Determining grid dimensions</h2>
+<p>One way to figure out the appropriate dimension and position of the voxel grid is using the visualizer and trial-and-error. Make a guess of the voxel parameters, then visualize the point cloud and voxels together and adjust accordingly. This can be tedious and time-consuming because you need to re-run the entire code each time.</p>
 <p>An often faster way to figure out the dimensions of the voxel grid is to use point cloud visualization software such as <a href="https://www.cloudcompare.org">Cloud Compare</a>. Load the point cloud data into Cloud Compare, then add a Box (file-&gt;Primitive Factory). You can translate or rotate the box by clicking on the Box object in the DB Tree pane, then select the menu item Edit-&gt;Translate/Rotate. To change the box size, click on the box vertices in the DB Tree pane, then go to Edit-&gt;Multiply/Scale. You can then find the resulting box location and dimensions in the Properties pane.</p>
 <div class="image">
 <img src="LiDARvoxelgrid.png" alt=""/>
@@ -472,6 +536,7 @@ Hit point triangulation</h2>
 <p>A triangulation between adjacent points is typically required for any of the available data processing algorithms. In the triangulation, adjacent hit points are connected to form a mesh of triangular solid surfaces. The algorithm for performing this triangulation is described in detail in <a href="dx.doi.org/doi:10.1016/j.rse.2017.03.011">Bailey and Mahaffee (2017a)</a>.</p>
 <p>There are two possible options to be specified when performing the triangulation. A required option is \(L_{max}\), which is the maximum allowable length of a triangle side. This parameter prevents triangles from connecting adjacent leaves (i.e., we only want triangles to be formed with neighboring points on the same leaf). Typically we want \(L_{max}\) to be much larger than the spacing between adjacent hit points, and much smaller than the characteristic length of a leaf. For example, <a href="dx.doi.org/doi:10.1016/j.rse.2017.03.011">Bailey and Mahaffee (2017a)</a> used 5cm for a cottonwood tree.</p>
 <p>Another optional parameter is the maximum allowable aspect ratio of a triangle, which is the ratio of the length of the longest triangle side to the shortest triangle side. This has a similar effect as the \(L_{max}\) parameter, and works better in some cases.</p>
+<dl class="section note"><dt>Note</dt><dd><b>Multi-Return Data:</b> For multi-return LiDAR data (detected automatically via target_count field), the triangulation automatically filters for first returns only (target_index == 0), since later returns along the same pulse can create spurious triangles between spatially distant surfaces. In addition to the standard aspect ratio filter, an adaptive separation ratio filter is applied. This filter calculates the ratio of spatial distance to angular separation for each triangle edge and rejects triangles where this ratio is anomalously high (indicating points that are angularly close but spatially distant, characteristic of "sliver" triangles from beam spreading). The threshold is automatically calculated as 8.5 times the 25th percentile of the separation ratio distribution, eliminating the need for manual tuning. This approach is robust across different leaf sizes and scan resolutions.</dd></dl>
 <p>The following code sample illustrates how to perform a triangulation.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_li_d_a_r_8h.html">LiDAR.h</a>&quot;</span></div>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
@@ -503,15 +568,15 @@ Calculating leaf area for each grid cell</h2>
 <div class="line"> </div>
 <div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a" title="Perform triangulation on all hit points in point cloud.">triangulateHitPoints</a>( 0.05, 5 ); <span class="comment">//Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a" title="Calculate the leaf area for each grid volume.">calculateLeafAreaGPU</a>(); <span class="comment">//Calculate leaf area for each grid cell</span></div>
-<div class="line">    </div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a0dd3e9910d24639d95e67d88f3dda6d7" title="Calculate the leaf area for each grid volume.">calculateLeafArea</a>(&amp;context); <span class="comment">//Calculate leaf area for each grid cell</span></div>
+<div class="line"> </div>
 <div class="line">}</div>
 </div><!-- fragment --><h2><a class="anchor" id="LiDARresonstruction"></a>
 Plant reconstruction</h2>
 <p>A leaf-by-leaf reconstruction can be performed for the plant of interest using the method described in <a href="https://www.sciencedirect.com/science/article/pii/S0034425718300191?via%3Dihub">Bailey and Ochoa (2018)</a>. The reconstruction utilizes the triangulation and leaf area computations to ensure the correct leaf angle and area distributions on average, and thus requires that these routines have been run before performing the reconstruction.</p>
-<p>There are two types of available reconstructions. One is a triangular reconstruction that directly uses triangles resulting from the triangulation to produce the reconstruction. The advantage is that it does not require any assumption about the shape of the leaf and can give a more direct reconstruction in some cases, however this reconstruction is typically not recommended as it often results in many small triangle groups that don't necessarily resemble actual leaves. This reconstruction is performed using the leafReconstructionTriangular() function, whose arguments are thresholds for the minimum and maximum area of reconstructed triangular leaf groups.</p>
-<p>The other type of reconstruction is the "Alpha Mask" reconstruction, which replaces the triangle groups with a "prototype" leaf (which is an alpha mask). This ensures that all reconstructed leaves are representative of an actual leaf in terms of shape and size. This reconstruction is performed using the leafReconstructionAlphaMask() function. This function's arguments, in addition to area thresholds, are the aspect ratio of the prototype leaf (length along midrib divided by width perpendicular to midrib) and the path to a PNG image file to be used for the leaf alpha mask.</p>
-<p>There is a function that can automatically add all reconstructed elements (triangles or alpha masks) to the Helios Context, which is addLeafReconstructionToContext().</p>
+<p>There are two types of available reconstructions. One is a triangular reconstruction that directly uses triangles resulting from the triangulation to produce the reconstruction. The advantage is that it does not require any assumption about the shape of the leaf and can give a more direct reconstruction in some cases, however this reconstruction is typically not recommended as it often results in many small triangle groups that don't necessarily resemble actual leaves. This reconstruction is performed using the <a class="el" href="class_li_d_a_rcloud.html#a503c74fc549e5c3b25a5f5bf2d6a8955">LiDARcloud::addReconstructedTriangleGroupsToContext(helios::Context*) const</a> function, whose arguments are thresholds for the minimum and maximum area of reconstructed triangular leaf groups.</p>
+<p>The other type of reconstruction is the "Alpha Mask" reconstruction, which replaces the triangle groups with a "prototype" leaf (which is an alpha mask). This ensures that all reconstructed leaves are representative of an actual leaf in terms of shape and size. This reconstruction is performed using the <a class="el" href="class_li_d_a_rcloud.html#aba102c6c5036ffb99b105fb2b4850935">LiDARcloud::leafReconstructionAlphaMask( float, float, float, const char*)</a> function. This function's arguments, in addition to area thresholds, are the aspect ratio of the prototype leaf (length along midrib divided by width perpendicular to midrib) and the path to a PNG image file to be used for the leaf alpha mask.</p>
+<p>There is a function that can automatically add all reconstructed elements (triangles or alpha masks) to the Helios Context, which is <a class="el" href="class_li_d_a_rcloud.html#aeca8578d8b5ecbc92fa669c612196f8c">LiDARcloud::addLeafReconstructionToContext()</a>.</p>
 <p>Below is an example of performing a reconstruction using alpha masks and adding the alpha masks to the Context.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_li_d_a_r_8h.html">LiDAR.h</a>&quot;</span></div>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
@@ -524,11 +589,11 @@ Plant reconstruction</h2>
 <div class="line"> </div>
 <div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a" title="Perform triangulation on all hit points in point cloud.">triangulateHitPoints</a>( 0.05, 5 ); <span class="comment">//Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a" title="Calculate the leaf area for each grid volume.">calculateLeafAreaGPU</a>(); <span class="comment">//Calculate leaf area for each grid cell</span></div>
+<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context; <span class="comment">//Initialize the Context</span></div>
+<div class="line"> </div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a0dd3e9910d24639d95e67d88f3dda6d7" title="Calculate the leaf area for each grid volume.">calculateLeafArea</a>(&amp;context); <span class="comment">//Calculate leaf area for each grid cell</span></div>
 <div class="line"> </div>
 <div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aba102c6c5036ffb99b105fb2b4850935" title="Perform a leaf reconstruction based on texture-masked Patches within each gridcell....">leafReconstructionAlphaMask</a>( 0.001, 0.02, <span class="stringliteral">&quot;plugins/visualizer/textures/ElmLeaf.png&quot;</span> ); <span class="comment">//Perform the reconstruction</span></div>
-<div class="line"> </div>
-<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context; <span class="comment">//Initialize the Context</span></div>
 <div class="line"> </div>
 <div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aeca8578d8b5ecbc92fa669c612196f8c" title="Add reconstructed leaves (texture-masked patches) to the Context.">addLeafReconstructionToContext</a>( &amp;context );</div>
 <div class="line">    </div>
@@ -545,7 +610,7 @@ XML parameter file</h2>
 <p>Note that you can add multiple &lt;scan&gt;&lt;/scan&gt; blocks in a single XML file to perform multiple scans.</p>
 <h2><a class="anchor" id="LiDARsynthdiscrete"></a>
 Synthetic discrete-return data</h2>
-<p>Once the <a class="el" href="class_li_d_a_rcloud.html">LiDARcloud</a> has been declared, and an XML file containing the scan parameters has been read, a discrete-return synthetic scan can be performed by calling LiDARcloud::syntheticScan( helios::Context*, const char* ). This version (i.e., without the optional rays_per_pulse and pulse_distance_threshold arguments) will perform a discrete-return synthetic scan.</p>
+<p>Once the <a class="el" href="class_li_d_a_rcloud.html">LiDARcloud</a> has been declared, and an XML file containing the scan parameters has been read, a discrete-return synthetic scan can be performed by calling <a class="el" href="class_li_d_a_rcloud.html#aac5cafa2281f9d479f2bb56be0780e31">LiDARcloud::syntheticScan( helios::Context* )</a>. This version (i.e., without the optional rays_per_pulse and pulse_distance_threshold arguments) will perform a discrete-return synthetic scan.</p>
 <p>The code block below gives an example XML file. As a reminder, you can place this XML file anywhere, but the path given to the LiDARcloud::loadXML() function should either be absolute or relative to the directory in which the executable is being run (usually build/).</p>
 <div class="fragment"><div class="line">&lt;<span class="keywordtype">helios</span>&gt;</div>
 <div class="line"> </div>
@@ -627,13 +692,14 @@ Synthetic waveform data</h2>
 Visualizing results</h1>
 <p>Results can be visualized using the Visualizer plug-in for Helios. There are two possible means for doing so. First, is to add the relevant geometry to the Context, then visualize primitives in the Context using the Visualizer. This works for the triangulation and plant reconstructions, but cannot be used to visualize just the point cloud since there is no "point" primitive in the Context. The next section describes how to accomplish this.</p>
 <p>The second option is to add any geometry directly to the Visualizer. There are several functions build in to the LiDAR plug-in that can to this automatically, which are listed below.</p>
+<dl class="section note"><dt>Note</dt><dd>The Visualizer now includes automatic culling optimization for large point clouds (tens of millions of points), making it suitable for visualizing even very large LiDAR datasets with interactive performance.</dd></dl>
 <table class="doxtable">
 <tr>
 <th>Function</th><th>Description </th></tr>
 <tr>
 <td><a class="el" href="class_li_d_a_rcloud.html#a2102dd4711658414cca10fd40a66af18">LiDARcloud::addHitsToVisualizer</a></td><td>Add all hits in the point cloud to the visualizer. </td></tr>
 <tr>
-<td>LiDARcloud::addGridToVisualizer( Visualizer * visualizer )</td><td>Add all grid cells to the visualizer, which are displayed as translucent voxels. </td></tr>
+<td><a class="el" href="class_li_d_a_rcloud.html#a2b7b76c26d6dd976bf37c0595b761507">LiDARcloud::addGridToVisualizer(Visualizer*) const</a></td><td>Add all grid cells to the visualizer, which are displayed as translucent voxels. </td></tr>
 <tr>
 <td><a class="el" href="class_li_d_a_rcloud.html#a11d8d20197aa909080d70954c97395e6">LiDARcloud::addTrianglesToVisualizer</a></td><td>Add all triangles to the visualizer, which are colored by the r-g-b color value. </td></tr>
 <tr>
@@ -690,12 +756,14 @@ Writing results to file</h1>
 <div class="line"> </div>
 <div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a" title="Perform triangulation on all hit points in point cloud.">triangulateHitPoints</a>( 0.05, 5 ); <span class="comment">//Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5</span></div>
 <div class="line"> </div>
-<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a" title="Calculate the leaf area for each grid volume.">calculateLeafAreaGPU</a>(); <span class="comment">//Calculate leaf area for each grid cell</span></div>
+<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context; <span class="comment">//Initialize the Context</span></div>
 <div class="line"> </div>
-<div class="line">   uint Ncells = pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a28297a71becd69b30820d69b110fcc90" title="Get the number of cells in the grid.">getGridCellCount</a>(); <span class="comment">//Get the number of grid cells</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a0dd3e9910d24639d95e67d88f3dda6d7" title="Calculate the leaf area for each grid volume.">calculateLeafArea</a>(&amp;context); <span class="comment">//Calculate leaf area for each grid cell</span></div>
+<div class="line"> </div>
+<div class="line">   <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Ncells = pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a28297a71becd69b30820d69b110fcc90" title="Get the number of cells in the grid.">getGridCellCount</a>(); <span class="comment">//Get the number of grid cells</span></div>
 <div class="line">   </div>
 <div class="line">   <span class="keywordtype">char</span> f_normals[50], f_areas[50];</div>
-<div class="line">   <span class="keywordflow">for</span>( uint i=0; i&lt;Ncells; i++ ){ <span class="comment">//loop over grid cells</span></div>
+<div class="line">   <span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> i=0; i&lt;Ncells; i++ ){ <span class="comment">//loop over grid cells</span></div>
 <div class="line">        <span class="comment">// define strings with output file names</span></div>
 <div class="line">        sprintf(f_normals,<span class="stringliteral">&quot;../output/triangle_normals_%d.txt&quot;</span>,i);</div>
 <div class="line">        sprintf(f_areas,<span class="stringliteral">&quot;../output/triangle_areas_%d.txt&quot;</span>,i);</div>

@@ -1,6 +1,6 @@
 /** \file "StomatalConductanceModel.h" Primary header file for stomatalconductance plug-in.
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -100,7 +100,7 @@ public:
     explicit StomatalConductanceModel(helios::Context *m_context);
 
     //! Self-test (unit test) routine
-    static int selfTest(int argc = 0, char** argv = nullptr);
+    static int selfTest(int argc = 0, char **argv = nullptr);
 
     //! Set the model coefficient values for all primitives - Ball, Woodrow, Berry model
     /**
@@ -193,6 +193,48 @@ public:
      */
     BMFcoefficients getBMFCoefficientsFromLibrary(const std::string &species);
 
+    //! Set BWB model coefficients for a material by label
+    /**
+     * \param[in] material_label String identifier for the material
+     * \param[in] coeffs Model coefficient values
+     */
+    void setModelCoefficients(const std::string &material_label, const BWBcoefficients &coeffs);
+
+    //! Set BBL model coefficients for a material by label
+    /**
+     * \param[in] material_label String identifier for the material
+     * \param[in] coeffs Model coefficient values
+     */
+    void setModelCoefficients(const std::string &material_label, const BBLcoefficients &coeffs);
+
+    //! Set MOPT model coefficients for a material by label
+    /**
+     * \param[in] material_label String identifier for the material
+     * \param[in] coeffs Model coefficient values
+     */
+    void setModelCoefficients(const std::string &material_label, const MOPTcoefficients &coeffs);
+
+    //! Set BMF model coefficients for a material by label
+    /**
+     * \param[in] material_label String identifier for the material
+     * \param[in] coeffs Model coefficient values
+     */
+    void setModelCoefficients(const std::string &material_label, const BMFcoefficients &coeffs);
+
+    //! Set BB model coefficients for a material by label
+    /**
+     * \param[in] material_label String identifier for the material
+     * \param[in] coeffs Model coefficient values
+     */
+    void setModelCoefficients(const std::string &material_label, const BBcoefficients &coeffs);
+
+    //! Set BMF model coefficients from species library for a material
+    /**
+     * \param[in] species Name of species
+     * \param[in] material_label String identifier for the material
+     */
+    void setBMFCoefficientsFromLibrary(const std::string &species, const std::string &material_label);
+
     //! Set time constants for dynamic stomatal opening and closing for all primitives
     /**
      * \param[in] tau_open Time constant (seconds) for dynamic stomatal opening
@@ -279,6 +321,20 @@ private:
     std::map<uint, MOPTcoefficients> MOPTmodel_coefficients;
     std::map<uint, BMFcoefficients> BMFmodel_coefficients;
     std::map<uint, BBcoefficients> BBmodel_coefficients;
+
+    // Cache to avoid repeated Context lookups during run()
+    mutable std::map<uint, BWBcoefficients> material_coefficient_cache_BWB;
+    mutable std::map<uint, BBLcoefficients> material_coefficient_cache_BBL;
+    mutable std::map<uint, MOPTcoefficients> material_coefficient_cache_MOPT;
+    mutable std::map<uint, BMFcoefficients> material_coefficient_cache_BMF;
+    mutable std::map<uint, BBcoefficients> material_coefficient_cache_BB;
+
+    // Helper to retrieve coefficients with caching
+    BWBcoefficients getCoefficientsForPrimitive_BWB(uint UUID) const;
+    BBLcoefficients getCoefficientsForPrimitive_BBL(uint UUID) const;
+    MOPTcoefficients getCoefficientsForPrimitive_MOPT(uint UUID) const;
+    BMFcoefficients getCoefficientsForPrimitive_BMF(uint UUID) const;
+    BBcoefficients getCoefficientsForPrimitive_BB(uint UUID) const;
 
     std::map<uint, helios::vec2> dynamic_time_constants; // .x is tau_open, .y is tau_close
 

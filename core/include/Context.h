@@ -1,7 +1,7 @@
 /**
  * \file "Context.h" Context header file.
  *
- * Copyright (C) 2016-2025 Brian Bailey
+ * Copyright (C) 2016-2026 Brian Bailey
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,9 +16,9 @@
 #ifndef HELIOS_CONTEXT
 #define HELIOS_CONTEXT
 
-#include <utility>
 #include <set>
 #include <unordered_set>
+#include <utility>
 
 #include "global.h"
 
@@ -117,6 +117,451 @@ namespace helios {
         [[nodiscard]] float computeSolidFraction(const std::vector<vec2> &uvs) const;
     };
 
+    //! Material data structure
+    /** \brief Structure to store surface rendering properties that can be shared across multiple primitives.
+     *
+     * Materials store visualization properties such as color and texture information. Multiple primitives can reference the same material
+     * to reduce memory usage when many primitives share the same appearance properties.
+     *
+     * Each material is assigned a unique string label that users use to reference the material. Internally, materials also have a
+     * numeric ID for efficient primitive storage.
+     */
+    struct Material {
+        //! Unique identifier for this material (internal use)
+        uint materialID;
+
+        //! String label for this material (user-facing identifier)
+        std::string label;
+
+        //! Diffuse RGBA color of the material
+        RGBAcolor color;
+
+        //! Path to texture image file (empty string if no texture)
+        std::string texture_file;
+
+        //! Flag indicating whether texture color should be overridden with the color value
+        /** If true, primitives will use the color value even when a texture is present */
+        bool texture_color_overridden;
+
+        //! Flag indicating one-sided (0) or two-sided (1) radiation absorption/emission
+        /** Value of 1 (default) means primitive absorbs/emits from both faces.
+            Value of 0 means one-sided (absorb/emit from front face only). */
+        uint twosided_flag;
+
+        //! Reference count - number of primitives currently using this material
+        /** Used for efficient copy-on-write material sharing */
+        mutable uint reference_count;
+
+        //! Material primitive data storage - type registry
+        std::map<std::string, HeliosDataType> material_data_types;
+        //! Material primitive data storage - integer data
+        std::map<std::string, std::vector<int>> material_data_int;
+        //! Material primitive data storage - unsigned integer data
+        std::map<std::string, std::vector<uint>> material_data_uint;
+        //! Material primitive data storage - float data
+        std::map<std::string, std::vector<float>> material_data_float;
+        //! Material primitive data storage - double data
+        std::map<std::string, std::vector<double>> material_data_double;
+        //! Material primitive data storage - vec2 data
+        std::map<std::string, std::vector<vec2>> material_data_vec2;
+        //! Material primitive data storage - vec3 data
+        std::map<std::string, std::vector<vec3>> material_data_vec3;
+        //! Material primitive data storage - vec4 data
+        std::map<std::string, std::vector<vec4>> material_data_vec4;
+        //! Material primitive data storage - int2 data
+        std::map<std::string, std::vector<int2>> material_data_int2;
+        //! Material primitive data storage - int3 data
+        std::map<std::string, std::vector<int3>> material_data_int3;
+        //! Material primitive data storage - int4 data
+        std::map<std::string, std::vector<int4>> material_data_int4;
+        //! Material primitive data storage - string data
+        std::map<std::string, std::vector<std::string>> material_data_string;
+        //! Material primitive data storage - bool data
+        std::map<std::string, std::vector<bool>> material_data_bool;
+
+        //! Default constructor
+        Material() : materialID(0), label(""), color(make_RGBAcolor(0, 0, 0, 1)), texture_file(""), texture_color_overridden(false), twosided_flag(1), reference_count(0) {
+        }
+
+        //! Constructor with parameters
+        Material(uint ID, const std::string &lbl, const RGBAcolor &c, const std::string &tex, bool override, uint twosided = 1) :
+            materialID(ID), label(lbl), color(c), texture_file(tex), texture_color_overridden(override), twosided_flag(twosided), reference_count(0) {
+        }
+
+        //-------- Material Data Methods ---------- //
+
+        //! Add scalar data value associated with this material
+        /**
+         * \tparam T Material data type
+         * \param[in] label Name/label associated with data
+         * \param[in] data Material data value (scalar)
+         */
+        template<typename T>
+        void setMaterialData(const char *label, const T &data) {
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "Material::setMaterialData() was called with an unsupported type.");
+
+            if constexpr (std::is_same_v<T, int>) {
+                material_data_int[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_INT;
+            } else if constexpr (std::is_same_v<T, uint>) {
+                material_data_uint[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_UINT;
+            } else if constexpr (std::is_same_v<T, float>) {
+                material_data_float[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_FLOAT;
+            } else if constexpr (std::is_same_v<T, double>) {
+                material_data_double[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_DOUBLE;
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                material_data_vec2[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_VEC2;
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                material_data_vec3[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_VEC3;
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                material_data_vec4[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_VEC4;
+            } else if constexpr (std::is_same_v<T, int2>) {
+                material_data_int2[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_INT2;
+            } else if constexpr (std::is_same_v<T, int3>) {
+                material_data_int3[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_INT3;
+            } else if constexpr (std::is_same_v<T, int4>) {
+                material_data_int4[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_INT4;
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                material_data_string[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_STRING;
+            }
+        }
+
+        //! Add vector data associated with this material
+        /**
+         * \tparam T Material data type
+         * \param[in] label Name/label associated with data
+         * \param[in] data Material data (vector)
+         */
+        template<typename T>
+        void setMaterialData(const char *label, const std::vector<T> &data) {
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "Material::setMaterialData() was called with an unsupported type.");
+
+            if constexpr (std::is_same_v<T, int>) {
+                material_data_int[label] = data;
+                material_data_types[label] = HELIOS_TYPE_INT;
+            } else if constexpr (std::is_same_v<T, uint>) {
+                material_data_uint[label] = data;
+                material_data_types[label] = HELIOS_TYPE_UINT;
+            } else if constexpr (std::is_same_v<T, float>) {
+                material_data_float[label] = data;
+                material_data_types[label] = HELIOS_TYPE_FLOAT;
+            } else if constexpr (std::is_same_v<T, double>) {
+                material_data_double[label] = data;
+                material_data_types[label] = HELIOS_TYPE_DOUBLE;
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                material_data_vec2[label] = data;
+                material_data_types[label] = HELIOS_TYPE_VEC2;
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                material_data_vec3[label] = data;
+                material_data_types[label] = HELIOS_TYPE_VEC3;
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                material_data_vec4[label] = data;
+                material_data_types[label] = HELIOS_TYPE_VEC4;
+            } else if constexpr (std::is_same_v<T, int2>) {
+                material_data_int2[label] = data;
+                material_data_types[label] = HELIOS_TYPE_INT2;
+            } else if constexpr (std::is_same_v<T, int3>) {
+                material_data_int3[label] = data;
+                material_data_types[label] = HELIOS_TYPE_INT3;
+            } else if constexpr (std::is_same_v<T, int4>) {
+                material_data_int4[label] = data;
+                material_data_types[label] = HELIOS_TYPE_INT4;
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                material_data_string[label] = data;
+                material_data_types[label] = HELIOS_TYPE_STRING;
+            }
+        }
+
+        //! Get scalar data associated with this material
+        /**
+         * \tparam T Material data type
+         * \param[in] label Name/label associated with data
+         * \param[out] data Material data structure
+         */
+        template<typename T>
+        void getMaterialData(const char *label, T &data) const {
+            if (!doesMaterialDataExist(label)) {
+                helios_runtime_error("ERROR (Material::getMaterialData): Material data " + std::string(label) + " does not exist for material " + std::to_string(materialID));
+            }
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "Material::getMaterialData() was called with an unsupported type.");
+
+            HeliosDataType type = material_data_types.at(label);
+
+            if constexpr (std::is_same_v<T, int>) {
+                if (type == HELIOS_TYPE_INT) {
+                    data = material_data_int.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type int, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type int.");
+                }
+            } else if constexpr (std::is_same_v<T, uint>) {
+                if (type == HELIOS_TYPE_UINT) {
+                    data = material_data_uint.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type uint, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type uint.");
+                }
+            } else if constexpr (std::is_same_v<T, float>) {
+                if (type == HELIOS_TYPE_FLOAT) {
+                    data = material_data_float.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type float, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type float.");
+                }
+            } else if constexpr (std::is_same_v<T, double>) {
+                if (type == HELIOS_TYPE_DOUBLE) {
+                    data = material_data_double.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type double, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type double.");
+                }
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                if (type == HELIOS_TYPE_VEC2) {
+                    data = material_data_vec2.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type vec2, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type vec2.");
+                }
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                if (type == HELIOS_TYPE_VEC3) {
+                    data = material_data_vec3.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type vec3, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type vec3.");
+                }
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                if (type == HELIOS_TYPE_VEC4) {
+                    data = material_data_vec4.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type vec4, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type vec4.");
+                }
+            } else if constexpr (std::is_same_v<T, int2>) {
+                if (type == HELIOS_TYPE_INT2) {
+                    data = material_data_int2.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type int2, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type int2.");
+                }
+            } else if constexpr (std::is_same_v<T, int3>) {
+                if (type == HELIOS_TYPE_INT3) {
+                    data = material_data_int3.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type int3, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type int3.");
+                }
+            } else if constexpr (std::is_same_v<T, int4>) {
+                if (type == HELIOS_TYPE_INT4) {
+                    data = material_data_int4.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type int4, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type int4.");
+                }
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                if (type == HELIOS_TYPE_STRING) {
+                    data = material_data_string.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type string, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type string.");
+                }
+            }
+        }
+
+        //! Get vector data associated with this material
+        /**
+         * \tparam T Material data type
+         * \param[in] label Name/label associated with data
+         * \param[out] data Material data structure
+         */
+        template<typename T>
+        void getMaterialData(const char *label, std::vector<T> &data) const {
+            if (!doesMaterialDataExist(label)) {
+                helios_runtime_error("ERROR (Material::getMaterialData): Material data " + std::string(label) + " does not exist for material " + std::to_string(materialID));
+            }
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "Material::getMaterialData() was called with an unsupported type.");
+
+            HeliosDataType type = material_data_types.at(label);
+
+            if constexpr (std::is_same_v<T, int>) {
+                if (type == HELIOS_TYPE_INT) {
+                    data = material_data_int.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type int, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type int.");
+                }
+            } else if constexpr (std::is_same_v<T, uint>) {
+                if (type == HELIOS_TYPE_UINT) {
+                    data = material_data_uint.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type uint, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type uint.");
+                }
+            } else if constexpr (std::is_same_v<T, float>) {
+                if (type == HELIOS_TYPE_FLOAT) {
+                    data = material_data_float.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type float, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type float.");
+                }
+            } else if constexpr (std::is_same_v<T, double>) {
+                if (type == HELIOS_TYPE_DOUBLE) {
+                    data = material_data_double.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type double, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type double.");
+                }
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                if (type == HELIOS_TYPE_VEC2) {
+                    data = material_data_vec2.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type vec2, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type vec2.");
+                }
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                if (type == HELIOS_TYPE_VEC3) {
+                    data = material_data_vec3.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type vec3, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type vec3.");
+                }
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                if (type == HELIOS_TYPE_VEC4) {
+                    data = material_data_vec4.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type vec4, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type vec4.");
+                }
+            } else if constexpr (std::is_same_v<T, int2>) {
+                if (type == HELIOS_TYPE_INT2) {
+                    data = material_data_int2.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type int2, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type int2.");
+                }
+            } else if constexpr (std::is_same_v<T, int3>) {
+                if (type == HELIOS_TYPE_INT3) {
+                    data = material_data_int3.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type int3, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type int3.");
+                }
+            } else if constexpr (std::is_same_v<T, int4>) {
+                if (type == HELIOS_TYPE_INT4) {
+                    data = material_data_int4.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type int4, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type int4.");
+                }
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                if (type == HELIOS_TYPE_STRING) {
+                    data = material_data_string.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type string, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type string.");
+                }
+            }
+        }
+
+        //! Check if material data 'label' exists
+        /**
+         * \param[in] label Name/label associated with data
+         * \return True if data exists, false otherwise
+         */
+        bool doesMaterialDataExist(const char *label) const {
+            return material_data_types.find(label) != material_data_types.end();
+        }
+
+        //! Get the Helios data type of material data
+        /**
+         * \param[in] label Name/label associated with data
+         * \return Helios data type of material data
+         * \sa HeliosDataType
+         */
+        HeliosDataType getMaterialDataType(const char *label) const {
+            if (!doesMaterialDataExist(label)) {
+                helios_runtime_error("ERROR (Material::getMaterialDataType): Material data " + std::string(label) + " does not exist for material " + std::to_string(materialID));
+            }
+            return material_data_types.at(label);
+        }
+
+        //! Get the size/length of material data
+        /**
+         * \param[in] label Name/label associated with data
+         * \return Size/length of material data array
+         */
+        uint getMaterialDataSize(const char *label) const {
+            if (!doesMaterialDataExist(label)) {
+                helios_runtime_error("ERROR (Material::getMaterialDataSize): Material data " + std::string(label) + " does not exist for material " + std::to_string(materialID));
+            }
+            HeliosDataType type = material_data_types.at(label);
+            if (type == HELIOS_TYPE_INT) {
+                return material_data_int.at(label).size();
+            } else if (type == HELIOS_TYPE_UINT) {
+                return material_data_uint.at(label).size();
+            } else if (type == HELIOS_TYPE_FLOAT) {
+                return material_data_float.at(label).size();
+            } else if (type == HELIOS_TYPE_DOUBLE) {
+                return material_data_double.at(label).size();
+            } else if (type == HELIOS_TYPE_VEC2) {
+                return material_data_vec2.at(label).size();
+            } else if (type == HELIOS_TYPE_VEC3) {
+                return material_data_vec3.at(label).size();
+            } else if (type == HELIOS_TYPE_VEC4) {
+                return material_data_vec4.at(label).size();
+            } else if (type == HELIOS_TYPE_INT2) {
+                return material_data_int2.at(label).size();
+            } else if (type == HELIOS_TYPE_INT3) {
+                return material_data_int3.at(label).size();
+            } else if (type == HELIOS_TYPE_INT4) {
+                return material_data_int4.at(label).size();
+            } else if (type == HELIOS_TYPE_STRING) {
+                return material_data_string.at(label).size();
+            }
+            return 0;
+        }
+
+        //! Clear the material data for this material
+        /**
+         * \param[in] label Name/label associated with data
+         */
+        void clearMaterialData(const char *label) {
+            if (!doesMaterialDataExist(label)) {
+                helios_runtime_error("ERROR (Material::clearMaterialData): Material data " + std::string(label) + " does not exist for material " + std::to_string(materialID));
+            }
+            HeliosDataType type = material_data_types.at(label);
+            if (type == HELIOS_TYPE_INT) {
+                material_data_int.erase(label);
+            } else if (type == HELIOS_TYPE_UINT) {
+                material_data_uint.erase(label);
+            } else if (type == HELIOS_TYPE_FLOAT) {
+                material_data_float.erase(label);
+            } else if (type == HELIOS_TYPE_DOUBLE) {
+                material_data_double.erase(label);
+            } else if (type == HELIOS_TYPE_VEC2) {
+                material_data_vec2.erase(label);
+            } else if (type == HELIOS_TYPE_VEC3) {
+                material_data_vec3.erase(label);
+            } else if (type == HELIOS_TYPE_VEC4) {
+                material_data_vec4.erase(label);
+            } else if (type == HELIOS_TYPE_INT2) {
+                material_data_int2.erase(label);
+            } else if (type == HELIOS_TYPE_INT3) {
+                material_data_int3.erase(label);
+            } else if (type == HELIOS_TYPE_INT4) {
+                material_data_int4.erase(label);
+            } else if (type == HELIOS_TYPE_STRING) {
+                material_data_string.erase(label);
+            }
+            material_data_types.erase(label);
+        }
+
+        //! Return labels for all material data for this particular material
+        std::vector<std::string> listMaterialData() const {
+            std::vector<std::string> data_labels;
+            data_labels.reserve(material_data_types.size());
+            for (const auto &data: material_data_types) {
+                data_labels.push_back(data.first);
+            }
+            return data_labels;
+        }
+    };
+
     //! \brief Structure for Global Data Entities
     struct GlobalData {
 
@@ -149,6 +594,8 @@ namespace helios {
         size_t size;
         //! \brief Type of the data
         HeliosDataType type;
+        //! \brief Version number for change detection (incremented on every setGlobalData call)
+        uint64_t version = 0;
     };
 
     //--------------------- GEOMETRIC PRIMITIVES -----------------------------------//
@@ -845,6 +1292,8 @@ namespace helios {
 
         void updateTriangleVertices() const;
 
+        void recomputeCrossSections();
+
         friend class CompoundObject;
         friend class Context;
     };
@@ -1508,11 +1957,13 @@ namespace helios {
         //! Identifier of parent object (default is object 0)
         uint parent_object_ID;
 
-        //! Diffuse RGB color
-        helios::RGBAcolor color;
+        //! Reference to material containing color and texture properties
+        /** Material ID 0 is the default material. Use Context methods to query/modify material properties. */
+        uint materialID;
 
-        //! Path to texture image
-        std::string texturefile;
+        //! Pointer to the parent Context (for material access in deprecated member methods)
+        Context *context_ptr;
+
         //! Affine transformation matrix
         float transform[16];
 
@@ -1538,8 +1989,6 @@ namespace helios {
         std::map<std::string, std::vector<int4>> primitive_data_int4;
         std::map<std::string, std::vector<std::string>> primitive_data_string;
         std::map<std::string, std::vector<bool>> primitive_data_bool;
-
-        bool texturecoloroverridden = false;
 
         bool ishidden = false;
 
@@ -2031,6 +2480,8 @@ namespace helios {
      * be initialized via a call to initializeContext(), after which geometry and models can be added and simulated.
      */
     class Context {
+        friend class Primitive; // Allow Primitive methods to access private material data
+
     private:
         //---------- PRIMITIVE/OBJECT HELIOS::VECTORS ----------------//
 
@@ -2135,6 +2586,9 @@ namespace helios {
         //! Flag indicating whether the getAllUUIDs cache is valid
         mutable bool all_uuids_cache_valid = false;
 
+        //! Warning aggregator for API design warnings (e.g., inefficient API usage)
+        mutable WarningAggregator api_warnings;
+
         //! List of primitives that have been modified since geometry was last set as clean
         std::vector<uint> dirty_deleted_primitives;
 
@@ -2154,9 +2608,43 @@ namespace helios {
 
         void addTexture(const char *texture_file);
 
+
         bool doesTextureFileExist(const char *texture_file) const;
 
         bool validateTextureFileExtenstion(const char *texture_file) const;
+
+        //------------ MATERIALS ----------------//
+
+        //! Reserved label for the default material
+        static constexpr const char *DEFAULT_MATERIAL_LABEL = "__default__";
+
+        //! Map containing all materials indexed by material ID
+        std::map<uint, Material> materials;
+
+        //! Map from material label to material ID for efficient lookup
+        std::map<std::string, uint> material_label_to_id;
+
+        //! Auto-incrementing material ID counter
+        uint currentMaterialID;
+
+        //! Internal method to add material (allows reserved __ prefix labels)
+        /**
+         * \param[in] label Material label
+         * \param[in] color Initial color
+         * \param[in] texture Initial texture file (optional)
+         * \return Material ID of the newly created material
+         * \note This is an internal method that bypasses the __ prefix restriction
+         */
+        uint addMaterial_internal(const std::string &label, const RGBAcolor &color, const std::string &texture = "");
+
+        //! Generate material label from properties for automatic de-duplication
+        std::string generateMaterialLabel(const RGBAcolor &color, const std::string &texture, bool texture_override) const;
+
+        //! Check if a material is shared by multiple primitives
+        bool isMaterialShared(uint materialID) const;
+
+        //! Create a copy of a material for a specific primitive (copy-on-write)
+        uint copyMaterialForPrimitive(uint primitiveUUID);
 
         //----------- GLOBAL DATA -------------//
 
@@ -2166,25 +2654,25 @@ namespace helios {
         std::unordered_map<std::string, size_t> object_data_label_counts;
 
         //----------- DATA TYPE CONSISTENCY REGISTRIES -------------//
-        
+
         //! Registry to track the expected data type for each primitive data label across all primitives
         std::unordered_map<std::string, HeliosDataType> primitive_data_type_registry;
-        
+
         //! Registry to track the expected data type for each object data label across all objects
         std::unordered_map<std::string, HeliosDataType> object_data_type_registry;
 
         //----------- VALUE-LEVEL CACHING REGISTRIES -------------//
-        
+
         //! Generic value registries for primitive data - maps data_label -> {value -> reference_count}
         std::unordered_map<std::string, std::unordered_map<std::string, size_t>> primitive_string_value_registry;
         std::unordered_map<std::string, std::unordered_map<int, size_t>> primitive_int_value_registry;
         std::unordered_map<std::string, std::unordered_map<uint, size_t>> primitive_uint_value_registry;
-        
+
         //! Generic value registries for object data - maps data_label -> {value -> reference_count}
         std::unordered_map<std::string, std::unordered_map<std::string, size_t>> object_string_value_registry;
         std::unordered_map<std::string, std::unordered_map<int, size_t>> object_int_value_registry;
         std::unordered_map<std::string, std::unordered_map<uint, size_t>> object_uint_value_registry;
-        
+
         //! Sets to track which data labels have value-level caching enabled
         std::unordered_set<std::string> cached_primitive_data_labels;
         std::unordered_set<std::string> cached_object_data_labels;
@@ -2201,7 +2689,6 @@ namespace helios {
          */
         void decrementPrimitiveDataLabelCounter(const std::string &primitive_data_label);
 
-        
 
         //! Increments the count associated with a given object data label.
         /**
@@ -2217,7 +2704,7 @@ namespace helios {
 
         //! Helper function to convert data type enum to string
         std::string dataTypeToString(HeliosDataType type) const;
-        
+
         //! Helper function to check if type casting is supported between two types
         bool isTypeCastingSupported(HeliosDataType from_type, HeliosDataType to_type) const;
 
@@ -2262,7 +2749,9 @@ namespace helios {
             OBJmaterial(const RGBcolor &a_color, std::string a_texture, uint a_materialID) : color{a_color}, texture{std::move(a_texture)}, materialID{a_materialID} {};
         };
 
-        static std::map<std::string, OBJmaterial> loadMTL(const std::string &filebase, const std::string &material_file);
+        std::map<std::string, OBJmaterial> loadMTL(const std::string &filebase, const std::string &material_file, const RGBcolor &default_color);
+
+        void loadMaterialData(pugi::xml_node mat_node, const std::string &material_label);
 
         void loadPData(pugi::xml_node p, uint UUID);
 
@@ -2313,7 +2802,7 @@ namespace helios {
          * \param[in] argv Array of command line argument strings
          * \return 0 if test was successful, 1 if test failed.
          */
-        static int selfTest(int argc, char** argv);
+        static int selfTest(int argc, char **argv);
 
         //! Set seed for random generator
         /**
@@ -2880,7 +3369,7 @@ namespace helios {
             // Check if this primitive already has cached data for registry maintenance
             std::string label_str = std::string(label);
             bool had_cached_value = false;
-            
+
             // Handle caching only for supported types, and avoid character arrays
             if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
                 if (isPrimitiveDataValueCachingEnabled(label_str) && primitives.at(UUID)->doesPrimitiveDataExist(label)) {
@@ -2897,11 +3386,11 @@ namespace helios {
                     had_cached_value = true;
                 }
             }
-            
+
             if (!primitives.at(UUID)->doesPrimitiveDataExist(label)) {
                 incrementPrimitiveDataLabelCounter(label);
             }
-            
+
             // Validate data type consistency and register/validate type
             HeliosDataType data_type;
             if constexpr (std::is_same_v<T, int>) {
@@ -2928,14 +3417,14 @@ namespace helios {
                 data_type = HELIOS_TYPE_STRING;
             }
             HeliosDataType target_type = registerOrValidatePrimitiveDataType<T>(label, data_type);
-            
+
             // Store data with type casting if needed
             if (target_type != data_type && isTypeCastingSupported(data_type, target_type)) {
                 storeDataWithTypeCasting(UUID, label, data, target_type);
             } else {
                 primitives.at(UUID)->setPrimitiveData(label, data);
             }
-            
+
             // Update value registry if caching is enabled for this label (only for new data)
             if (isPrimitiveDataValueCachingEnabled(label_str) && !had_cached_value) {
                 if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
@@ -2970,7 +3459,7 @@ namespace helios {
             if (!primitives.at(UUID)->doesPrimitiveDataExist(label)) {
                 incrementPrimitiveDataLabelCounter(label);
             }
-            
+
             // For vector data, register the base type (not vector type)
             HeliosDataType data_type;
             if constexpr (std::is_same_v<T, int>) {
@@ -2997,7 +3486,7 @@ namespace helios {
                 data_type = HELIOS_TYPE_STRING;
             }
             registerOrValidatePrimitiveDataType<T>(label, data_type);
-            
+
             primitives.at(UUID)->setPrimitiveData(label, data);
         }
 
@@ -3061,7 +3550,7 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (size_t i = 0; i < UUIDs.size(); ++i) {
+            for (int i = 0; i < (int) UUIDs.size(); ++i) {
                 primitives.at(UUIDs[i])->setPrimitiveData(label, data[i]);
             }
         }
@@ -3119,7 +3608,7 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (size_t i = 0; i < UUIDs.size(); ++i) {
+            for (int i = 0; i < (int) UUIDs.size(); ++i) {
                 primitives.at(UUIDs[i])->setPrimitiveData(label, data);
             }
         }
@@ -3166,6 +3655,7 @@ namespace helios {
          * \return Helios data type of primitive data
          * \sa HeliosDataType
          */
+        [[deprecated]]
         HeliosDataType getPrimitiveDataType(uint UUID, const char *label) const;
 
         //! Get the expected data type for a primitive data label (cached lookup)
@@ -3215,38 +3705,38 @@ namespace helios {
 
 
         //----------- VALUE-LEVEL CACHING CONFIGURATION ----------//
-        
+
         //! Enable value-level caching for a primitive data label
         /**
          * \param[in] label The primitive data label to enable caching for. Must have string, int, or uint type.
          */
         void enablePrimitiveDataValueCaching(const std::string &label);
-        
+
         //! Disable value-level caching for a primitive data label
         /**
          * \param[in] label The primitive data label to disable caching for.
          */
         void disablePrimitiveDataValueCaching(const std::string &label);
-        
+
         //! Check if value-level caching is enabled for a primitive data label
         /**
          * \param[in] label The primitive data label to check.
          * \return True if caching is enabled, false otherwise.
          */
         [[nodiscard]] bool isPrimitiveDataValueCachingEnabled(const std::string &label) const;
-        
+
         //! Enable value-level caching for an object data label
         /**
          * \param[in] label The object data label to enable caching for. Must have string, int, or uint type.
          */
         void enableObjectDataValueCaching(const std::string &label);
-        
+
         //! Disable value-level caching for an object data label
         /**
          * \param[in] label The object data label to disable caching for.
          */
         void disableObjectDataValueCaching(const std::string &label);
-        
+
         //! Check if value-level caching is enabled for an object data label
         /**
          * \param[in] label The object data label to check.
@@ -3255,7 +3745,7 @@ namespace helios {
         [[nodiscard]] bool isObjectDataValueCachingEnabled(const std::string &label) const;
 
         //----------- UNIQUE VALUE QUERY METHODS ----------//
-        
+
 
         //! Method to get the Primitive type
         /**
@@ -3685,6 +4175,294 @@ namespace helios {
          */
         void printPrimitiveInfo(uint UUID) const;
 
+        //! Report accumulated API design warnings and clear the aggregator
+        /**
+         * \brief Reports warnings about inefficient API usage (e.g., per-primitive materials).
+         * \note These warnings aggregate across multiple calls and are reported once with counts.
+         */
+        void reportAPIWarnings() const;
+
+        //-------- Material Management Methods ---------- //
+
+        //! Add a new material with the given label
+        /**
+         * \param[in] material_label Unique string identifier for the material
+         * \note Creates a material with default properties (black color, no texture).
+         *       If a material with this label already exists, it will be overwritten with a warning.
+         */
+        void addMaterial(const std::string &material_label);
+
+        //! Check if a material with the given label exists
+        /**
+         * \param[in] material_label String identifier for the material
+         * \return True if material exists, false otherwise
+         */
+        [[nodiscard]] bool doesMaterialExist(const std::string &material_label) const;
+
+        //! Get list of all material labels
+        /**
+         * \return Vector of all user-defined material labels (excludes internal default material)
+         */
+        [[nodiscard]] std::vector<std::string> listMaterials() const;
+
+        //! Get the color of a material
+        /**
+         * \param[in] material_label String identifier for the material
+         * \return RGBA color of the material
+         */
+        [[nodiscard]] RGBAcolor getMaterialColor(const std::string &material_label) const;
+
+        //! Get the texture file path of a material
+        /**
+         * \param[in] material_label String identifier for the material
+         * \return Path to texture file (empty string if no texture)
+         */
+        [[nodiscard]] std::string getMaterialTexture(const std::string &material_label) const;
+
+        //! Check if material texture color is overridden
+        /**
+         * \param[in] material_label String identifier for the material
+         * \return True if texture color is overridden with solid color
+         */
+        [[nodiscard]] bool isMaterialTextureColorOverridden(const std::string &material_label) const;
+
+        //! Set the color of a material
+        /**
+         * \param[in] material_label String identifier for the material
+         * \param[in] color New RGBA color for the material
+         * \note This will affect all primitives that reference this material
+         */
+        void setMaterialColor(const std::string &material_label, const RGBAcolor &color);
+
+        //! Set the texture of a material
+        /**
+         * \param[in] material_label String identifier for the material
+         * \param[in] texture_file Path to texture image file
+         * \note This will affect all primitives that reference this material
+         */
+        void setMaterialTexture(const std::string &material_label, const std::string &texture_file);
+
+        //! Set whether the material should override texture color with solid color
+        /**
+         * \param[in] material_label String identifier for the material
+         * \param[in] override If true, use solid color even when texture is present
+         * \note This will affect all primitives that reference this material
+         */
+        void setMaterialTextureColorOverride(const std::string &material_label, bool override);
+
+        //! Get the twosided flag of a material
+        /**
+         * \param[in] material_label String identifier for the material
+         * \return The twosided flag value (0=one-sided, 1=two-sided)
+         */
+        [[nodiscard]] uint getMaterialTwosidedFlag(const std::string &material_label) const;
+
+        //! Set the twosided flag of a material
+        /**
+         * \param[in] material_label String identifier for the material
+         * \param[in] twosided_flag 0=one-sided, 1=two-sided
+         * \note This will affect all primitives that reference this material
+         */
+        void setMaterialTwosidedFlag(const std::string &material_label, uint twosided_flag);
+
+        //! Get the twosided flag for a primitive, checking material first, then primitive data
+        /**
+         * \param[in] UUID Unique universal identifier of primitive
+         * \param[in] default_value Default value if neither material nor primitive data exists (default: 1 = two-sided)
+         * \return The twosided flag value (0=one-sided, 1=two-sided, 2=transparent, 3=special)
+         * \note If the primitive has a user-assigned material (not __auto_ or __default__),
+         *       the material's twosided_flag is used. Otherwise, primitive data is checked.
+         */
+        [[nodiscard]] uint getPrimitiveTwosidedFlag(uint UUID, uint default_value = 1) const;
+
+        //! Assign a material to a primitive
+        /**
+         * \param[in] UUID Unique universal identifier of primitive
+         * \param[in] material_label String identifier for the material to assign
+         * \note Throws helios_runtime_error if material label does not exist
+         */
+        void assignMaterialToPrimitive(uint UUID, const std::string &material_label);
+
+        //! Assign a material to multiple primitives
+        /**
+         * \param[in] UUIDs Vector of primitive unique universal identifiers
+         * \param[in] material_label String identifier for the material to assign
+         * \note Throws helios_runtime_error if material label does not exist
+         */
+        void assignMaterialToPrimitive(const std::vector<uint> &UUIDs, const std::string &material_label);
+
+        //! Assign a material to all primitives in a compound object
+        /**
+         * \param[in] ObjID Unique identifier for the compound object
+         * \param[in] material_label String identifier for the material to assign
+         * \note Throws helios_runtime_error if material label does not exist
+         */
+        void assignMaterialToObject(uint ObjID, const std::string &material_label);
+
+        //! Assign a material to all primitives in multiple compound objects
+        /**
+         * \param[in] ObjIDs Vector of compound object identifiers
+         * \param[in] material_label String identifier for the material to assign
+         * \note Throws helios_runtime_error if material label does not exist
+         */
+        void assignMaterialToObject(const std::vector<uint> &ObjIDs, const std::string &material_label);
+
+        //! Get the material label assigned to a primitive
+        /**
+         * \param[in] UUID Unique universal identifier of primitive
+         * \return Material label (empty string if primitive uses the default material)
+         */
+        [[nodiscard]] std::string getPrimitiveMaterialLabel(uint UUID) const;
+
+        //! Get all primitives that use a given material
+        /**
+         * \param[in] material_label String identifier for the material
+         * \return Vector of UUIDs for all primitives using this material
+         */
+        [[nodiscard]] std::vector<uint> getPrimitivesUsingMaterial(const std::string &material_label) const;
+
+        //! Delete a material by label
+        /**
+         * \param[in] material_label String identifier for the material to delete
+         * \note Primitives currently using this material will be reassigned to the default material.
+         *       Emits a warning if the material is still in use.
+         */
+        void deleteMaterial(const std::string &material_label);
+
+        //! Set scalar data value for a material
+        /**
+         * \tparam T Data type (int, uint, float, double, vec2, vec3, vec4, int2, int3, int4, string)
+         * \param[in] material_label String identifier for the material
+         * \param[in] data_label Name/label associated with data
+         * \param[in] data Scalar data value
+         * \note This will affect all primitives that reference this material
+         */
+        template<typename T>
+        void setMaterialData(const std::string &material_label, const char *data_label, const T &data) {
+            uint matID = getMaterialIDFromLabel(material_label);
+            materials[matID].setMaterialData(data_label, data);
+        }
+
+        //! Set vector data for a material
+        /**
+         * \tparam T Data type (int, uint, float, double, vec2, vec3, vec4, int2, int3, int4, string)
+         * \param[in] material_label String identifier for the material
+         * \param[in] data_label Name/label associated with data
+         * \param[in] data Vector of data values
+         * \note This will affect all primitives that reference this material
+         */
+        template<typename T>
+        void setMaterialData(const std::string &material_label, const char *data_label, const std::vector<T> &data) {
+            uint matID = getMaterialIDFromLabel(material_label);
+            materials[matID].setMaterialData(data_label, data);
+        }
+
+        //! Get scalar data value from a material
+        /**
+         * \tparam T Data type (int, uint, float, double, vec2, vec3, vec4, int2, int3, int4, string)
+         * \param[in] material_label String identifier for the material
+         * \param[in] data_label Name/label associated with data
+         * \param[out] data Scalar data value
+         */
+        template<typename T>
+        void getMaterialData(const std::string &material_label, const char *data_label, T &data) const {
+            uint matID = getMaterialIDFromLabel(material_label);
+            materials.at(matID).getMaterialData(data_label, data);
+        }
+
+        //! Get vector data from a material
+        /**
+         * \tparam T Data type (int, uint, float, double, vec2, vec3, vec4, int2, int3, int4, string)
+         * \param[in] material_label String identifier for the material
+         * \param[in] data_label Name/label associated with data
+         * \param[out] data Vector of data values
+         */
+        template<typename T>
+        void getMaterialData(const std::string &material_label, const char *data_label, std::vector<T> &data) const {
+            uint matID = getMaterialIDFromLabel(material_label);
+            materials.at(matID).getMaterialData(data_label, data);
+        }
+
+        //! Check if material data exists for a given label
+        /**
+         * \param[in] material_label String identifier for the material
+         * \param[in] data_label Name/label associated with data
+         * \return True if data exists, false otherwise
+         */
+        [[nodiscard]] bool doesMaterialDataExist(const std::string &material_label, const char *data_label) const;
+
+        //! Get the data type of material data
+        /**
+         * \param[in] material_label String identifier for the material
+         * \param[in] data_label Name/label associated with data
+         * \return Helios data type of the material data
+         */
+        [[nodiscard]] HeliosDataType getMaterialDataType(const std::string &material_label, const char *data_label) const;
+
+        //! Clear material data for a given label
+        /**
+         * \param[in] material_label String identifier for the material
+         * \param[in] data_label Name/label associated with data
+         */
+        void clearMaterialData(const std::string &material_label, const char *data_label);
+
+        //! Get data value with material fallback (checks material data first, then primitive data)
+        /**
+         * \tparam T Data type (int, uint, float, double, vec2, vec3, vec4, int2, int3, int4, string)
+         * \param[in] UUID Unique universal identifier of primitive
+         * \param[in] data_label Name/label associated with data
+         * \param[out] data Data value
+         * \note This method first checks if the primitive's material has data with the given label. If so, it retrieves
+         *       the data from the material. Otherwise, it checks if the primitive itself has data with the given label.
+         *       If neither the material nor primitive has the data, an error is thrown. This provides backward compatibility
+         *       while allowing material-based data specification.
+         */
+        template<typename T>
+        void getDataWithMaterialFallback(uint UUID, const char *data_label, T &data) const {
+            Primitive *prim = getPrimitivePointer_private(UUID);
+            uint materialID = prim->materialID;
+
+            // First check if material has this data
+            if (materials.find(materialID) != materials.end() && materials.at(materialID).doesMaterialDataExist(data_label)) {
+                materials.at(materialID).getMaterialData(data_label, data);
+            }
+            // Otherwise check if primitive has this data
+            else if (prim->doesPrimitiveDataExist(data_label)) {
+                prim->getPrimitiveData(data_label, data);
+            }
+            // If neither has the data, throw error
+            else {
+                helios_runtime_error("ERROR (Context::getDataWithMaterialFallback): Data " + std::string(data_label) + " does not exist for primitive " + std::to_string(UUID) + " (neither in its material nor as primitive data).");
+            }
+        }
+
+        //! Get the material ID of a primitive
+        /**
+         * \param[in] UUID Unique universal identifier of primitive
+         * \return Material ID assigned to the primitive
+         */
+        [[nodiscard]] uint getPrimitiveMaterialID(uint UUID) const;
+
+        //! Get material struct by material ID
+        /**
+         * \param[in] materialID Unique identifier of the material
+         * \return Constant reference to the Material struct
+         */
+        [[nodiscard]] const Material &getMaterial(uint materialID) const;
+
+        //! Get material ID from material label
+        /**
+         * \param[in] material_label String identifier for the material
+         * \return Material ID corresponding to the label
+         */
+        [[nodiscard]] uint getMaterialIDFromLabel(const std::string &material_label) const;
+
+        //! Get the total number of user-defined materials
+        /**
+         * \return Number of materials (excludes the internal default material)
+         */
+        [[nodiscard]] uint getMaterialCount() const;
+
         //-------- Compound Object Data Methods ---------- //
 
         //! Add data value associated with a compound object
@@ -3704,7 +4482,7 @@ namespace helios {
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
-            
+
             // Validate data type consistency and register/validate type
             HeliosDataType data_type;
             if constexpr (std::is_same_v<T, int>) {
@@ -3731,11 +4509,11 @@ namespace helios {
                 data_type = HELIOS_TYPE_STRING;
             }
             registerOrValidateObjectDataType<T>(label, data_type);
-            
+
             // Check if this object already has cached data for registry maintenance
             std::string label_str = std::string(label);
             bool had_cached_value = false;
-            
+
             // Handle caching only for supported types, and avoid character arrays
             if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
                 if (isObjectDataValueCachingEnabled(label_str) && objects.at(objID)->doesObjectDataExist(label)) {
@@ -3752,12 +4530,12 @@ namespace helios {
                     had_cached_value = true;
                 }
             }
-            
+
             if (!objects.at(objID)->doesObjectDataExist(label)) {
                 incrementObjectDataLabelCounter(label);
             }
             objects.at(objID)->setObjectData(label, data);
-            
+
             // Update value registry if caching is enabled for this label (only for new data)
             if (isObjectDataValueCachingEnabled(label_str) && !had_cached_value) {
                 if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
@@ -3817,6 +4595,33 @@ namespace helios {
                 registerOrValidateObjectDataType<T>(label, data_type);
             }
 
+            // Check if caching is enabled for this label
+            std::string label_str = std::string(label);
+            bool caching_enabled = isObjectDataValueCachingEnabled(label_str);
+
+            // For caching, we need to handle old values before setting new ones (cannot parallelize this part)
+            if (caching_enabled) {
+                // Handle caching only for supported types
+                if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
+                    for (uint objID: objIDs) {
+                        if (objects.at(objID)->doesObjectDataExist(label)) {
+                            T old_cached_value{};
+                            objects.at(objID)->getObjectData(label, old_cached_value);
+                            decrementObjectValueRegistry(label_str, old_cached_value);
+                        }
+                    }
+                } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    for (uint objID: objIDs) {
+                        if (objects.at(objID)->doesObjectDataExist(label)) {
+                            std::string old_cached_value;
+                            objects.at(objID)->getObjectData(label, old_cached_value);
+                            decrementObjectValueRegistry(label_str, old_cached_value);
+                        }
+                    }
+                }
+            }
+
+            // Count new data labels
             for (uint objID: objIDs) {
                 if (!objects.at(objID)->doesObjectDataExist(label)) {
                     incrementObjectDataLabelCounter(label);
@@ -3826,8 +4631,23 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (size_t i = 0; i < objIDs.size(); ++i) {
+            for (int i = 0; i < (int) objIDs.size(); ++i) {
                 objects.at(objIDs[i])->setObjectData(label, data);
+            }
+
+            // Update value registry if caching is enabled (increment the new value for all objects)
+            if (caching_enabled) {
+                if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
+                    // Increment the new value once for each object that received it
+                    for (size_t i = 0; i < objIDs.size(); ++i) {
+                        incrementObjectValueRegistry(label_str, data);
+                    }
+                } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    // Increment the new value once for each object that received it
+                    for (size_t i = 0; i < objIDs.size(); ++i) {
+                        incrementObjectValueRegistry(label_str, std::string(data));
+                    }
+                }
             }
         }
 
@@ -3873,6 +4693,44 @@ namespace helios {
                 registerOrValidateObjectDataType<T>(label, data_type);
             }
 
+            // Check if caching is enabled for this label
+            std::string label_str = std::string(label);
+            bool caching_enabled = isObjectDataValueCachingEnabled(label_str);
+            size_t total_objects = 0;
+
+            // For caching, we need to handle old values before setting new ones (cannot parallelize this part)
+            if (caching_enabled) {
+                // Handle caching only for supported types
+                if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
+                    for (const auto &j: objIDs) {
+                        for (uint objID: j) {
+                            total_objects++;
+                            if (objects.at(objID)->doesObjectDataExist(label)) {
+                                T old_cached_value{};
+                                objects.at(objID)->getObjectData(label, old_cached_value);
+                                decrementObjectValueRegistry(label_str, old_cached_value);
+                            }
+                        }
+                    }
+                } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    for (const auto &j: objIDs) {
+                        for (uint objID: j) {
+                            total_objects++;
+                            if (objects.at(objID)->doesObjectDataExist(label)) {
+                                std::string old_cached_value;
+                                objects.at(objID)->getObjectData(label, old_cached_value);
+                                decrementObjectValueRegistry(label_str, old_cached_value);
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Count total objects for later cache increment
+                for (const auto &j: objIDs) {
+                    total_objects += j.size();
+                }
+            }
+
             for (const auto &j: objIDs) {
                 for (uint objID: j) {
                     if (!objects.at(objID)->doesObjectDataExist(label)) {
@@ -3884,9 +4742,24 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (size_t j = 0; j < objIDs.size(); ++j) {
+            for (int j = 0; j < (int) objIDs.size(); ++j) {
                 for (size_t i = 0; i < objIDs[j].size(); ++i) {
                     objects.at(objIDs[j][i])->setObjectData(label, data);
+                }
+            }
+
+            // Update value registry if caching is enabled (increment the new value for all objects)
+            if (caching_enabled) {
+                if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
+                    // Increment the new value once for each object that received it
+                    for (size_t i = 0; i < total_objects; ++i) {
+                        incrementObjectValueRegistry(label_str, data);
+                    }
+                } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    // Increment the new value once for each object that received it
+                    for (size_t i = 0; i < total_objects; ++i) {
+                        incrementObjectValueRegistry(label_str, std::string(data));
+                    }
                 }
             }
         }
@@ -3933,6 +4806,50 @@ namespace helios {
                 registerOrValidateObjectDataType<T>(label, data_type);
             }
 
+            // Check if caching is enabled for this label
+            std::string label_str = std::string(label);
+            bool caching_enabled = isObjectDataValueCachingEnabled(label_str);
+            size_t total_objects = 0;
+
+            // For caching, we need to handle old values before setting new ones (cannot parallelize this part)
+            if (caching_enabled) {
+                // Handle caching only for supported types
+                if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
+                    for (const auto &k: objIDs) {
+                        for (const auto &j: k) {
+                            for (uint objID: j) {
+                                total_objects++;
+                                if (objects.at(objID)->doesObjectDataExist(label)) {
+                                    T old_cached_value{};
+                                    objects.at(objID)->getObjectData(label, old_cached_value);
+                                    decrementObjectValueRegistry(label_str, old_cached_value);
+                                }
+                            }
+                        }
+                    }
+                } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    for (const auto &k: objIDs) {
+                        for (const auto &j: k) {
+                            for (uint objID: j) {
+                                total_objects++;
+                                if (objects.at(objID)->doesObjectDataExist(label)) {
+                                    std::string old_cached_value;
+                                    objects.at(objID)->getObjectData(label, old_cached_value);
+                                    decrementObjectValueRegistry(label_str, old_cached_value);
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Count total objects for later cache increment
+                for (const auto &k: objIDs) {
+                    for (const auto &j: k) {
+                        total_objects += j.size();
+                    }
+                }
+            }
+
             for (const auto &k: objIDs) {
                 for (const auto &j: k) {
                     for (uint objID: j) {
@@ -3946,11 +4863,26 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (size_t k = 0; k < objIDs.size(); ++k) {
+            for (int k = 0; k < (int) objIDs.size(); ++k) {
                 for (size_t j = 0; j < objIDs[k].size(); ++j) {
                     for (size_t i = 0; i < objIDs[k][j].size(); ++i) {
                         uint objID = objIDs[k][j][i];
                         objects.at(objID)->setObjectData(label, data);
+                    }
+                }
+            }
+
+            // Update value registry if caching is enabled (increment the new value for all objects)
+            if (caching_enabled) {
+                if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
+                    // Increment the new value once for each object that received it
+                    for (size_t i = 0; i < total_objects; ++i) {
+                        incrementObjectValueRegistry(label_str, data);
+                    }
+                } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    // Increment the new value once for each object that received it
+                    for (size_t i = 0; i < total_objects; ++i) {
+                        incrementObjectValueRegistry(label_str, std::string(data));
                     }
                 }
             }
@@ -3974,7 +4906,7 @@ namespace helios {
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
-            
+
             // Validate data type consistency and register/validate type
             HeliosDataType data_type;
             if constexpr (std::is_same_v<T, int>) {
@@ -4001,7 +4933,7 @@ namespace helios {
                 data_type = HELIOS_TYPE_STRING;
             }
             registerOrValidateObjectDataType<T>(label, data_type);
-            
+
             objects.at(objID)->setObjectData(label, data);
         }
 
@@ -4062,10 +4994,20 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (size_t i = 0; i < objIDs.size(); ++i) {
+            for (int i = 0; i < (int) objIDs.size(); ++i) {
                 objects.at(objIDs[i])->setObjectData(label, data[i]);
             }
         }
+
+        //! Set object data from mean of primitive data values for all child primitives
+        /**
+         * \param[in] objID Unique identifier of compound object
+         * \param[in] label Name of primitive data to aggregate and resulting object data label
+         * \note The data type is automatically detected from the primitive data (supports float, double, vec2, vec3, vec4)
+         * \note Only primitives that have the specified primitive data are included in the calculation
+         * \note Raises error if no primitives have the specified primitive data
+         */
+        void setObjectDataFromPrimitiveDataMean(uint objID, const std::string &label);
 
         //! Get data value associated with a compound object
         /**
@@ -4115,6 +5057,7 @@ namespace helios {
          * \return Helios data type of primitive data
          * \sa HeliosDataType
          */
+        [[deprecated]]
         HeliosDataType getObjectDataType(uint objID, const char *label) const;
 
         //! Get the expected data type for an object data label (cached lookup)
@@ -4238,6 +5181,7 @@ namespace helios {
                 globaldata[label].global_data_bool = {data};
                 globaldata[label].type = HELIOS_TYPE_BOOL;
             }
+            globaldata[label].version++;
         }
 
         //! Add global data value (vector)
@@ -4289,6 +5233,7 @@ namespace helios {
                 globaldata[label].global_data_bool = data;
                 globaldata[label].type = HELIOS_TYPE_BOOL;
             }
+            globaldata[label].version++;
         }
 
         //! Get global data value (scalar or vector)
@@ -4504,6 +5449,14 @@ namespace helios {
          */
         size_t getGlobalDataSize(const char *label) const;
 
+        //! Get the version number of global data (for change detection)
+        /**
+         * \param[in] label Name/label associated with data
+         * \return Version number of global data (incremented on every setGlobalData call)
+         * \note Version is 0 if global data does not exist
+         */
+        uint64_t getGlobalDataVersion(const char *label) const;
+
         //! List the labels for all global data in the Context
         /**
          * \return Vector of labels for all global data
@@ -4550,12 +5503,6 @@ namespace helios {
         void incrementGlobalData(const char *label, double increment);
 
         //--------- Compound Objects Methods -------------//
-
-        //! Get a pointer to a Compound Object
-        /**
-         * \param[in] ObjID Identifier for Compound Object.
-         */
-        [[nodiscard]] CompoundObject *getObjectPointer(uint ObjID) const;
 
         //! Get the total number of objects that have been created in the Context
         /**
@@ -4797,12 +5744,6 @@ namespace helios {
          */
         [[nodiscard]] helios::ObjectType getObjectType(uint ObjID) const;
 
-        //! Get a pointer to a Tile Compound Object
-        /**
-         * \param[in] ObjID Identifier for Tile Compound Object.
-         */
-        [[nodiscard]] Tile *getTileObjectPointer(uint ObjID) const;
-
         //! Get the area ratio of a tile object (total object area / sub-patch area)
         /**
          * \param[in] ObjID Identifier for Tile Compound Object.
@@ -4867,12 +5808,6 @@ namespace helios {
          */
         [[nodiscard]] std::vector<helios::vec3> getTileObjectVertices(uint ObjID) const;
 
-        //! Get a pointer to a Sphere Compound Object
-        /**
-         * \param[in] ObjID Identifier for Sphere Compound Object.
-         */
-        [[nodiscard]] Sphere *getSphereObjectPointer(uint ObjID) const;
-
         //! get the center of a Sphere object from the context
         /**
          * \param[in] ObjID object ID of the Sphere object
@@ -4896,12 +5831,6 @@ namespace helios {
          * \param[in] ObjID object ID of the Sphere object
          */
         [[nodiscard]] float getSphereObjectVolume(uint ObjID) const;
-
-        //! Get a pointer to a Tube Compound Object
-        /**
-         * \param[in] ObjID Identifier for Tube Compound Object.
-         */
-        [[nodiscard]] Tube *getTubeObjectPointer(uint ObjID) const;
 
         //! get the subdivision count of a Tube object from the context
         /**
@@ -5000,12 +5929,6 @@ namespace helios {
          */
         void setTubeNodes(uint ObjID, const std::vector<helios::vec3> &node_xyz);
 
-        //! Get a pointer to a Box Compound Object
-        /**
-         * \param[in] ObjID Identifier for Box Compound Object.
-         */
-        [[nodiscard]] Box *getBoxObjectPointer(uint ObjID) const;
-
         //! get the center of a Box object from the context
         /**
          * \param[in] ObjID object ID of the Box object
@@ -5030,12 +5953,6 @@ namespace helios {
          */
         [[nodiscard]] float getBoxObjectVolume(uint ObjID) const;
 
-        //! Get a pointer to a Disk Compound Object
-        /**
-         * \param[in] ObjID Identifier for Disk Compound Object.
-         */
-        [[nodiscard]] Disk *getDiskObjectPointer(uint ObjID) const;
-
         //! get the center of a Disk object from the context
         /**
          * \param[in] ObjID object ID of the Disk object
@@ -5054,23 +5971,11 @@ namespace helios {
          */
         [[nodiscard]] uint getDiskObjectSubdivisionCount(uint ObjID) const;
 
-        //! Get a pointer to a Polygon Mesh Compound Object
-        /**
-         * \param[in] ObjID Identifier for Polygon Mesh Compound Object.
-         */
-        [[nodiscard]] Polymesh *getPolymeshObjectPointer(uint ObjID) const;
-
         //! Get the volume of a Polygon Mesh object from the context
         /**
          * \param[in] ObjID object ID of the Polygon Mesh object
          */
         [[nodiscard]] float getPolymeshObjectVolume(uint ObjID) const;
-
-        //! Get a pointer to a Cone Compound Object
-        /**
-         * \param[in] ObjID Identifier for Cone Compound Object.
-         */
-        [[nodiscard]] Cone *getConeObjectPointer(uint ObjID) const;
 
         //! get the subdivision count of a Cone object from the context
         /**
@@ -5122,6 +6027,20 @@ namespace helios {
          * \param[in] ObjID object ID of the Cone object
          */
         [[nodiscard]] float getConeObjectVolume(uint ObjID) const;
+
+        //! Scale the length of a Cone object by scaling the distance between its nodes
+        /**
+         * \param[in] ObjID object ID of the Cone object
+         * \param[in] scale_factor Scaling factor to apply to the length of the cone object
+         */
+        void scaleConeObjectLength(uint ObjID, float scale_factor);
+
+        //! Scale the girth of a Cone object by scaling the radii at both nodes
+        /**
+         * \param[in] ObjID object ID of the Cone object
+         * \param[in] scale_factor Scaling factor to apply to the girth (radii) of the cone object
+         */
+        void scaleConeObjectGirth(uint ObjID, float scale_factor);
 
         //! Add a patch that is subdivided into a regular grid of sub-patches (tiled)
         /**
@@ -5899,9 +6818,27 @@ namespace helios {
         //! Load tabular weather data from text file into timeseries
         /**
          * \param[in] data_file Path to the text file containing the tabular weather data.
-         * \param[in] column_labels Vector of strings indicating which columns to extract.
+         * \param[in] column_labels Vector of strings indicating which columns to extract. Special keywords:
+         *   - "year", "DOY"/"Jul": Specify date via year + day-of-year columns.
+         *   - "date": Date string column (requires date_string_format).
+         *   - "datetime": Combined date+time column (e.g., ISO-8601). Cannot be used with "date" or "hour".
+         *   - "hour": Integer hour column (supports 13 or 1300 formats).
+         *   - "time": Time string column (auto-detects HH, HH:MM, or HH:MM:SS).
+         *   - "minute", "second": Optional sub-hour precision with "hour" column.
+         *   - Any other non-empty label: treated as a data variable.
          * \param[in] delimiter Character or string that separates values in each row.
-         * \param[in] date_string_format [optional] Format of date strings. Default: "YYYYMMDD".
+         * \param[in] date_string_format [optional] Format of date strings. Supported formats:
+         *   - Date-only (for "date" column): "YYYYMMDD", "DDMMYYYY", "MMDDYYYY", "YYYYDDMM"
+         *     (also accepts delimiter-style synonyms: "YYYY-MM-DD", "DD/MM/YYYY", "MM-DD-YYYY", etc.)
+         *     Compact 8-digit dates without delimiters (e.g., "20260203") are auto-detected.
+         *   - Combined datetime (for "datetime" column):
+         *     "ISO8601" — e.g., "2026-02-03T10:00:00Z" or "2026-02-03T02:00:00-08:00"
+         *     "YYYYMMDDHH" — compact 10-digit, e.g., "2026020310"
+         *     "YYYYMMDDHHMM" — compact 12-digit, e.g., "202602031000"
+         *     "YYYY-MM-DD HH:MM", "YYYY-MM-DD HH:MM:SS" — space-separated date and time
+         *     "DD/MM/YYYY HH:MM", "MM/DD/YYYY HH:MM" — with various date orderings
+         *   For ISO-8601 with timezone offsets, the local time is used and the Context UTC_offset is set.
+         *   Default: "YYYYMMDD".
          * \param[in] headerlines [optional] Number of lines to skip at the beginning. Default: 0.
          */
         void loadTabularTimeseriesData(const std::string &data_file, const std::vector<std::string> &column_labels, const std::string &delimiter, const std::string &date_string_format = "YYYYMMDD", uint headerlines = 0);
@@ -6129,6 +7066,8 @@ namespace helios {
          */
         void writePLY(const char *filename, const std::vector<uint> &UUIDs) const;
 
+        // Asset directory registration removed - now using HELIOS_BUILD resolution
+
         //! Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without any scaling or rotation applied.
         /**
          * \param[in] filename name of OBJ file
@@ -6179,16 +7118,18 @@ namespace helios {
         /**
          * \param[in] filename Base filename of .obj and .mtl file
          * \param[in] write_normals [optional] true if we should write the normal vectors
+         * \param[in] silent [optional] If set to true, output messaged will be disabled
          */
-        void writeOBJ(const std::string &filename, bool write_normals = false) const;
+        void writeOBJ(const std::string &filename, bool write_normals = false, bool silent = false) const;
 
         //! Write geometry in the Context to a Wavefront file (.obj) for a subset of UUIDs
         /**
          * \param[in] filename Base filename of .obj and .mtl file
          * \param[in] UUIDs Vector of UUIDs for which geometry should be written
          * \param[in] write_normals [optional] true if we should write the normal vectors
+         * \param[in] silent [optional] If set to true, output messaged will be disabled
          */
-        void writeOBJ(const std::string &filename, const std::vector<uint> &UUIDs, bool write_normals = false) const;
+        void writeOBJ(const std::string &filename, const std::vector<uint> &UUIDs, bool write_normals = false, bool silent = false) const;
 
         //! Write geometry in the Context to a Wavefront file (.obj)
         /**
@@ -6196,8 +7137,19 @@ namespace helios {
          * \param[in] UUIDs Vector of UUIDs for which geometry should be written
          * \param[in] primitive_dat_fields A .dat file will be written containing primitive data given in this vector (for Unity visualization)
          * \param[in] write_normals [optional] true if we should write the normal vectors
+         * \param[in] silent [optional] If set to true, output messaged will be disabled
          */
-        void writeOBJ(const std::string &filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields, bool write_normals = false) const;
+        void writeOBJ(const std::string &filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields, bool write_normals = false, bool silent = false) const;
+
+        //------------ FILE PATH RESOLUTION ----------------//
+
+        //! Unified file path resolution for Context methods - resolves relative paths using build directory
+        /**
+         * \param[in] filename Relative or absolute file path to resolve
+         * \return std::filesystem::path Resolved absolute file path
+         * \note Uses HELIOS_BUILD environment variable or auto-detection to resolve relative paths
+         */
+        std::filesystem::path resolveFilePath(const std::string &filename) const;
 
         //! Set simulation date by day, month, year
         /**
@@ -6711,7 +7663,7 @@ namespace helios {
         std::vector<RGBcolor> generateColormap(const std::vector<helios::RGBcolor> &ctable, const std::vector<float> &cfrac, uint Ncolors);
 
         // ---------- Template method implementations for data type consistency ---------- //
-        
+
         template<typename T>
         void storeDataWithTypeCasting(uint UUID, const char *label, const T &data, HeliosDataType target_type) {
             // Only cast between numeric scalar types
@@ -6733,7 +7685,7 @@ namespace helios {
                 primitives.at(UUID)->setPrimitiveData(label, data);
             }
         }
-        
+
         template<typename T>
         void storeObjectDataWithTypeCasting(uint objID, const char *label, const T &data, HeliosDataType target_type) {
             // Only cast between numeric scalar types
@@ -6769,19 +7721,19 @@ namespace helios {
                 if (expected_type != data_type) {
                     // Types don't match - check if casting is possible
                     if (!isTypeCastingSupported(data_type, expected_type)) {
-                        helios_runtime_error("ERROR (Context::registerOrValidatePrimitiveDataType): Data type mismatch for label '" + label + "'. Expected " + 
-                                           dataTypeToString(expected_type) + " but got " + dataTypeToString(data_type) + 
-                                           ". Type casting between these types is not supported.");
+                        helios_runtime_error("ERROR (Context::registerOrValidatePrimitiveDataType): Data type mismatch for label '" + label + "'. Expected " + dataTypeToString(expected_type) + " but got " + dataTypeToString(data_type) +
+                                             ". Type casting between these types is not supported.");
                     } else {
-                        std::cerr << "WARNING (Context::registerOrValidatePrimitiveDataType): Type casting from " + dataTypeToString(data_type) + 
-                                     " to " + dataTypeToString(expected_type) + " for label '" + label + "'. Consider using consistent types." << std::endl;
+                        std::cerr << "WARNING (Context::registerOrValidatePrimitiveDataType): Type casting from " + dataTypeToString(data_type) + " to " + dataTypeToString(expected_type) + " for label '" + label +
+                                             "'. Consider using consistent types."
+                                  << std::endl;
                     }
                 }
                 return expected_type;
             }
         }
 
-        template<typename T>  
+        template<typename T>
         HeliosDataType registerOrValidateObjectDataType(const std::string &label, HeliosDataType data_type) {
             auto it = object_data_type_registry.find(label);
             if (it == object_data_type_registry.end()) {
@@ -6794,12 +7746,11 @@ namespace helios {
                 if (expected_type != data_type) {
                     // Types don't match - check if casting is possible
                     if (!isTypeCastingSupported(data_type, expected_type)) {
-                        helios_runtime_error("ERROR (Context::registerOrValidateObjectDataType): Data type mismatch for label '" + label + "'. Expected " + 
-                                           dataTypeToString(expected_type) + " but got " + dataTypeToString(data_type) + 
-                                           ". Type casting between these types is not supported.");
+                        helios_runtime_error("ERROR (Context::registerOrValidateObjectDataType): Data type mismatch for label '" + label + "'. Expected " + dataTypeToString(expected_type) + " but got " + dataTypeToString(data_type) +
+                                             ". Type casting between these types is not supported.");
                     } else {
-                        std::cerr << "WARNING (Context::registerOrValidateObjectDataType): Type casting from " + dataTypeToString(data_type) + 
-                                     " to " + dataTypeToString(expected_type) + " for label '" + label + "'. Consider using consistent types." << std::endl;
+                        std::cerr << "WARNING (Context::registerOrValidateObjectDataType): Type casting from " + dataTypeToString(data_type) + " to " + dataTypeToString(expected_type) + " for label '" + label + "'. Consider using consistent types."
+                                  << std::endl;
                     }
                 }
                 return expected_type;
@@ -6807,7 +7758,7 @@ namespace helios {
         }
 
         //----------- TEMPLATE METHOD IMPLEMENTATIONS FOR VALUE REGISTRY ----------//
-        
+
         //! Template implementation for incrementing primitive value registry
         template<typename T>
         void incrementPrimitiveValueRegistry(const std::string &label, const T &value) {
@@ -6820,7 +7771,7 @@ namespace helios {
                 primitive_uint_value_registry[label][value]++;
             }
         }
-        
+
         //! Template implementation for decrementing primitive value registry
         template<typename T>
         void decrementPrimitiveValueRegistry(const std::string &label, const T &value) {
@@ -6869,7 +7820,7 @@ namespace helios {
                 }
             }
         }
-        
+
         //! Template implementation for incrementing object value registry
         template<typename T>
         void incrementObjectValueRegistry(const std::string &label, const T &value) {
@@ -6882,7 +7833,7 @@ namespace helios {
                 object_uint_value_registry[label][value]++;
             }
         }
-        
+
         //! Template implementation for decrementing object value registry
         template<typename T>
         void decrementObjectValueRegistry(const std::string &label, const T &value) {
@@ -6933,7 +7884,7 @@ namespace helios {
         }
 
         //----------- UNIQUE VALUE QUERY METHODS ----------//
-        
+
         //! Get all unique values for a primitive data label (requires caching to be enabled)
         /**
          * \tparam T Data type (std::string, int, or uint)
@@ -6943,20 +7894,19 @@ namespace helios {
          */
         template<typename T>
         void getUniquePrimitiveDataValues(const std::string &label, std::vector<T> &values) const {
-            static_assert(std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>,
-                         "getUniquePrimitiveDataValues() only supports std::string, int, and uint types.");
-            
+            static_assert(std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>, "getUniquePrimitiveDataValues() only supports std::string, int, and uint types.");
+
             if (!isPrimitiveDataValueCachingEnabled(label)) {
                 helios_runtime_error("ERROR (Context::getUniquePrimitiveDataValues): Value-level caching is not enabled for primitive data label '" + label + "'. Use enablePrimitiveDataValueCaching() first.");
             }
-            
+
             values.clear();
-            
+
             if constexpr (std::is_same_v<T, std::string>) {
                 auto it = primitive_string_value_registry.find(label);
                 if (it != primitive_string_value_registry.end()) {
                     values.reserve(it->second.size());
-                    for (const auto &[value, count] : it->second) {
+                    for (const auto &[value, count]: it->second) {
                         if (count > 0) {
                             values.push_back(value);
                         }
@@ -6966,7 +7916,7 @@ namespace helios {
                 auto it = primitive_int_value_registry.find(label);
                 if (it != primitive_int_value_registry.end()) {
                     values.reserve(it->second.size());
-                    for (const auto &[value, count] : it->second) {
+                    for (const auto &[value, count]: it->second) {
                         if (count > 0) {
                             values.push_back(value);
                         }
@@ -6976,7 +7926,7 @@ namespace helios {
                 auto it = primitive_uint_value_registry.find(label);
                 if (it != primitive_uint_value_registry.end()) {
                     values.reserve(it->second.size());
-                    for (const auto &[value, count] : it->second) {
+                    for (const auto &[value, count]: it->second) {
                         if (count > 0) {
                             values.push_back(value);
                         }
@@ -6984,7 +7934,7 @@ namespace helios {
                 }
             }
         }
-        
+
         //! Get all unique values for an object data label (requires caching to be enabled)
         /**
          * \tparam T Data type (std::string, int, or uint)
@@ -6994,20 +7944,19 @@ namespace helios {
          */
         template<typename T>
         void getUniqueObjectDataValues(const std::string &label, std::vector<T> &values) const {
-            static_assert(std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>,
-                         "getUniqueObjectDataValues() only supports std::string, int, and uint types.");
-            
+            static_assert(std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>, "getUniqueObjectDataValues() only supports std::string, int, and uint types.");
+
             if (!isObjectDataValueCachingEnabled(label)) {
                 helios_runtime_error("ERROR (Context::getUniqueObjectDataValues): Value-level caching is not enabled for object data label '" + label + "'. Use enableObjectDataValueCaching() first.");
             }
-            
+
             values.clear();
-            
+
             if constexpr (std::is_same_v<T, std::string>) {
                 auto it = object_string_value_registry.find(label);
                 if (it != object_string_value_registry.end()) {
                     values.reserve(it->second.size());
-                    for (const auto &[value, count] : it->second) {
+                    for (const auto &[value, count]: it->second) {
                         if (count > 0) {
                             values.push_back(value);
                         }
@@ -7017,7 +7966,7 @@ namespace helios {
                 auto it = object_int_value_registry.find(label);
                 if (it != object_int_value_registry.end()) {
                     values.reserve(it->second.size());
-                    for (const auto &[value, count] : it->second) {
+                    for (const auto &[value, count]: it->second) {
                         if (count > 0) {
                             values.push_back(value);
                         }
@@ -7027,7 +7976,7 @@ namespace helios {
                 auto it = object_uint_value_registry.find(label);
                 if (it != object_uint_value_registry.end()) {
                     values.reserve(it->second.size());
-                    for (const auto &[value, count] : it->second) {
+                    for (const auto &[value, count]: it->second) {
                         if (count > 0) {
                             values.push_back(value);
                         }
@@ -7035,8 +7984,6 @@ namespace helios {
                 }
             }
         }
-
-
     };
 
 } // namespace helios

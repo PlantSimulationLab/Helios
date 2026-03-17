@@ -1,7 +1,7 @@
 /**
  * \file "helios_vector_types.h" Declarations for vector types
  *
- * Copyright (C) 2016-2025 Brian Bailey
+ * Copyright (C) 2016-2026 Brian Bailey
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

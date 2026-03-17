@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: File Input/Output</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -160,7 +193,7 @@ $(function(){initNavTree('_i_o.html',''); initResizable(true); });
   <div class="headertitle"><div class="title">File Input/Output</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><div style="padding:10px;background-color:#FF6666 ;line-height:1.2;"> A very important note with regard to File Input/Output is that all file paths need to be given with respect to the current build directory or as absolute paths. </div><h1><a class="anchor" id="XMLstructure"></a>
+<div class="textblock"><div style="padding:10px;background-color:#66FF66 ;line-height:1.2;"> File paths can be given as absolute paths or relative paths. Helios automatically resolves asset file paths (models, textures, spectra, etc.) so executables can be run from any directory. The resolution system searches for assets relative to the build directory. You can set the HELIOS_BUILD environment variable to specify a custom build directory location if needed. </div><h1><a class="anchor" id="XMLstructure"></a>
 XML File Structure</h1>
 <p>File input and output is handled using .xml files. See the Wikipedia page for xml for more information on xml files: <a href="https://en.wikipedia.org/wiki/XML">en.wikipedia.org/wiki/XML</a>.</p>
 <p>Within Helios, xml files can be used to execute any Context commands that would be issued within a program, for example, adding geometry, adding timeseries, or adding primitive data.</p>
@@ -246,13 +279,17 @@ Adding Timeseries (Weather) Data from Tabular Text Files</h1>
 <tr>
 <th>Column Label</th><th>Description</th><th>Required? </th></tr>
 <tr>
-<td>year</td><td>Year (YYYY)</td><td>year+DOY -OR- date </td></tr>
+<td>year</td><td>Year (YYYY)</td><td>year+DOY -OR- date -OR- datetime </td></tr>
 <tr>
-<td>DOY or Jul</td><td>Day of year starting at Jan. 1 (DOY=1)</td><td>year+DOY -OR- date </td></tr>
+<td>DOY or Jul</td><td>Day of year starting at Jan. 1 (DOY=1)</td><td>year+DOY -OR- date -OR- datetime </td></tr>
 <tr>
-<td>date</td><td>Date string delimited by '/' or '-' character (default format YYYY-MM-DD)</td><td>year+DOY -OR- date </td></tr>
+<td>date</td><td>Date string delimited by '/' or '-' character, or compact 8-digit (e.g., 20260203). Default format YYYY-MM-DD.</td><td>year+DOY -OR- date -OR- datetime </td></tr>
 <tr>
-<td>hour</td><td>Hour of the day. Can be specified either as 13 or 1300 (for 1PM example).</td><td>yes </td></tr>
+<td>datetime</td><td>Combined date+time string (e.g., ISO-8601 "2026-02-03T10:00:00Z", compact "2026020310", or space-separated "2026-02-03 10:00"). Cannot be combined with 'date' or 'hour'.</td><td>year+DOY -OR- date -OR- datetime </td></tr>
+<tr>
+<td>hour</td><td>Hour of the day. Can be specified either as 13 or 1300 (for 1PM example).</td><td>hour -OR- time -OR- datetime </td></tr>
+<tr>
+<td>time</td><td>Time string in HH, HH:MM, or HH:MM:SS format. Auto-detected based on presence of colons.</td><td>hour -OR- time -OR- datetime </td></tr>
 <tr>
 <td>minute</td><td>Minute of the hour. If 'hour' above is specified with minute included (e.g., 1315), the minute field will be automatically added.</td><td>no </td></tr>
 <tr>
@@ -260,10 +297,15 @@ Adding Timeseries (Weather) Data from Tabular Text Files</h1>
 </table>
 <p>Arguments to the <a class="el" href="classhelios_1_1_context.html#a1dc9a0f79be2477c4873755586744e51">helios::Context::loadTabularTimeseriesData()</a> method:</p>
 <ol type="1">
-<li>A string specifying the file to be loaded, with path relative to where the executable was run (usually the build directory).</li>
+<li>A string specifying the file to be loaded, with path relative to the current working directory or as an absolute path.</li>
 <li>A vector of strings specifying labels for the columns in the file. If an empty vector is specified ('{}'), the labels given in the first line of the file will be used. Otherwise, the length of the vector must match the number of columns in the file.</li>
 <li>The delimiter character separating values in each row (e.g., ',').</li>
-<li>(optional) The format of the date string used to specify date values (e.g., 'YYYYMMDD', 'MMDDYYYY'; month and day should always be two values, and year should be four values). This is not used if dates are specified using the year and DOY. The default format is 'YYYYMMDD'.</li>
+<li>(optional) The format of the date/datetime string. Supported formats include:<ul>
+<li>Date-only formats (for "date" column): 'YYYYMMDD', 'MMDDYYYY', 'DDMMYYYY', 'YYYYDDMM'. Delimiter-style synonyms like 'YYYY-MM-DD', 'DD/MM/YYYY' are also accepted. Compact 8-digit dates without delimiters (e.g., '20260203') are auto-detected.</li>
+<li>Combined datetime formats (for "datetime" column): 'ISO8601' (e.g., '2026-02-03T10:00:00Z' or '2026-02-03T02:00:00-08:00'), 'YYYYMMDDHH', 'YYYYMMDDHHMM', 'YYYY-MM-DD HH:MM', 'YYYY-MM-DD HH:MM:SS', 'DD/MM/YYYY HH:MM', 'MM/DD/YYYY HH:MM'.</li>
+<li>For ISO-8601 strings with timezone offsets, the local time from the string is used and the Context's UTC_offset is set from the offset. The default format is 'YYYYMMDD'.</li>
+</ul>
+</li>
 <li>(optional) Number of header lines in the file. By default, headerlines=0.</li>
 </ol>
 <p>There is a special shortcut for reading <a href="https://cimis.water.ca.gov">CIMIS weather station</a> files. To read these files, simply specify the second argument as a vector of length 1 containing the string "CIMIS" (e.g., {"CIMIS"}), which will automatically set column labels as: '{"", "", "", "date", "hour", "DOY", "ETo", "", "precipitation", "", "net_radiation", "", "vapor_pressure", "", "air_temperature", "", "air_humidity", "", "dew_point", "", "wind_speed", "", "wind_direction", "", "soil_temperature", ""}'. You can specify any delimiter in this case - it will be overridden to be comma delimited.</p>
@@ -283,7 +325,20 @@ Adding Timeseries (Weather) Data from Tabular Text Files</h1>
 <div class="line"> </div>
 <div class="line">}</div>
 </div><!-- fragment --><p>The above example would read the comma-delimited file "../input/weatherfile.csv". Timeseries data would be added to the Context for values of "temperature", which could be queried based on this label.</p>
-<h1><a class="anchor" id="XMLread"></a>
+<h2><a class="anchor" id="TimeseriesISO"></a>
+ISO-8601 and Combined Datetime Columns</h2>
+<p>For files with combined date+time columns, use the "datetime" column label instead of separate "date" and "hour" columns. This is useful for ISO-8601 formatted data commonly found in NOAA, NASA, CAMS, and other international weather data sources.</p>
+<div class="fragment"><div class="line"><span class="comment">// ISO-8601 formatted data (e.g., from NOAA or CAMS)</span></div>
+<div class="line">context.<a class="code hl_function" href="classhelios_1_1_context.html#a1dc9a0f79be2477c4873755586744e51" title="Load tabular weather data from text file into timeseries.">loadTabularTimeseriesData</a>(<span class="stringliteral">&quot;../input/iso_weather.csv&quot;</span>, {<span class="stringliteral">&quot;datetime&quot;</span>, <span class="stringliteral">&quot;temperature&quot;</span>, <span class="stringliteral">&quot;humidity&quot;</span>}, <span class="stringliteral">&quot;,&quot;</span>, <span class="stringliteral">&quot;ISO8601&quot;</span>, 1);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Compact datetime format (YYYYMMDDHH)</span></div>
+<div class="line">context.<a class="code hl_function" href="classhelios_1_1_context.html#a1dc9a0f79be2477c4873755586744e51" title="Load tabular weather data from text file into timeseries.">loadTabularTimeseriesData</a>(<span class="stringliteral">&quot;../input/compact_weather.csv&quot;</span>, {<span class="stringliteral">&quot;datetime&quot;</span>, <span class="stringliteral">&quot;temperature&quot;</span>}, <span class="stringliteral">&quot;,&quot;</span>, <span class="stringliteral">&quot;YYYYMMDDHH&quot;</span>, 1);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Space-separated datetime with European date ordering</span></div>
+<div class="line">context.<a class="code hl_function" href="classhelios_1_1_context.html#a1dc9a0f79be2477c4873755586744e51" title="Load tabular weather data from text file into timeseries.">loadTabularTimeseriesData</a>(<span class="stringliteral">&quot;../input/eu_weather.csv&quot;</span>, {<span class="stringliteral">&quot;datetime&quot;</span>, <span class="stringliteral">&quot;temperature&quot;</span>}, <span class="stringliteral">&quot;,&quot;</span>, <span class="stringliteral">&quot;DD/MM/YYYY HH:MM&quot;</span>, 1);</div>
+</div><!-- fragment --><p>For files using a separate "time" column (HH:MM or HH:MM:SS format) instead of an integer "hour" column:</p>
+<div class="fragment"><div class="line">context.<a class="code hl_function" href="classhelios_1_1_context.html#a1dc9a0f79be2477c4873755586744e51" title="Load tabular weather data from text file into timeseries.">loadTabularTimeseriesData</a>(<span class="stringliteral">&quot;../input/precise_weather.csv&quot;</span>, {<span class="stringliteral">&quot;date&quot;</span>, <span class="stringliteral">&quot;time&quot;</span>, <span class="stringliteral">&quot;temperature&quot;</span>}, <span class="stringliteral">&quot;,&quot;</span>, <span class="stringliteral">&quot;YYYYMMDD&quot;</span>, 1);</div>
+</div><!-- fragment --><h1><a class="anchor" id="XMLread"></a>
 Reading XML Files</h1>
 <p>XML files can be read by the Context via the function <a class="el" href="classhelios_1_1_context.html#a129516a8fce035705a541e7b877eba2f">helios::Context::loadXML()</a>. This function parses the XML file and adds all specified structures (see above) to the Context. Below is an example of how to load an XML file into the Context. </p><div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
@@ -314,7 +369,7 @@ Reading PLY (Stanford Polygon) Files</h2>
 <div class="line">    <span class="keywordtype">float</span> scale = 1.0;</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// rotation to apply to model (optional argument to loadPLY)</span></div>
-<div class="line">    <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> rotation( 0., M_PI );</div>
+<div class="line">    <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> rotation( 0., <a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a> );</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// default color for model (optional argument to loadPLY)</span></div>
 <div class="line">    <a class="code hl_struct" href="structhelios_1_1_r_g_bcolor.html" title="R-G-B color vector.">RGBcolor</a> color = RGB::red;</div>
@@ -387,7 +442,7 @@ Writing OBJ (Wavefront) Files</h2>
 <div class="line">    context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>();</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// This will produce two files: &quot;file.obj&quot; and &quot;file.mtl&quot;</span></div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#aa3a926087e572ac8298c01862f752d44" title="Write geometry in the Context to a Wavefront file (.obj)">writeOBJ</a>( <span class="stringliteral">&quot;file&quot;</span> );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#abf76e6bf7aadd6e60380410869871643" title="Write geometry in the Context to a Wavefront file (.obj)">writeOBJ</a>( <span class="stringliteral">&quot;file&quot;</span> );</div>
 <div class="line"> </div>
 <div class="line">}</div>
 </div><!-- fragment --><h1><a class="anchor" id="Export"></a>
@@ -401,9 +456,9 @@ Exporting Project to XML File Format</h1>
 <div class="line"> </div>
 <div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">    uint UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>();</div>
+<div class="line">    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>();</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;somedata&quot;</span>, 10.2f );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;somedata&quot;</span>, 10.2f );</div>
 <div class="line"> </div>
 <div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#abfcac5a56c13e86298609ed3fccf354d" title="Write Context geometry and data to XML file for all UUIDs in the context.">writeXML</a>( <span class="stringliteral">&quot;file.xml&quot;</span> );</div>
 <div class="line"> </div>
@@ -422,7 +477,7 @@ Exporting Project to XML File Format</h1>
 <div class="line">}</div>
 </div><!-- fragment --><h1><a class="anchor" id="ExportASCII"></a>
 Exporting Primitive Data to Text File</h1>
-<p>It is often useful to be able to write primitive data to an ASCII text file for analysis in 3rd party software. This can be accomplished using the <a class="el" href="classhelios_1_1_context.html#ab643fc787ea7b1a215605c369f446844">helios::Context::writePrimitiveData()</a> function. Each row of the resulting file will correspond to each primitive, and each column corresponds to different primitive data values. The user must specify which primitive data fields to write to each column in the file. If requested primitive data does not exist for one or more primitives, a default value of 0 will be written and a warning will be issued.</p>
+<p>It is often useful to be able to write primitive data to an ASCII text file for analysis in 3rd party software. This can be accomplished using the <a class="el" href="classhelios_1_1_context.html#ae98cc7d133238ab7fb79fb6862737eff">helios::Context::writePrimitiveData()</a> function. Each row of the resulting file will correspond to each primitive, and each column corresponds to different primitive data values. The user must specify which primitive data fields to write to each column in the file. If requested primitive data does not exist for one or more primitives, a default value of 0 will be written and a warning will be issued.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
 <div class="line"> </div>
@@ -430,14 +485,14 @@ Exporting Primitive Data to Text File</h1>
 <div class="line"> </div>
 <div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
 <div class="line"> </div>
-<div class="line">    uint UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>();</div>
+<div class="line">    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>();</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;somedata&quot;</span>, 10.2f );</div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;otherdata&quot;</span>, 5 );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;somedata&quot;</span>, 10.2f );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>( UUID, <span class="stringliteral">&quot;otherdata&quot;</span>, 5 );</div>
 <div class="line"> </div>
 <div class="line">    std::string columns{<span class="stringliteral">&quot;somedata&quot;</span>,<span class="stringliteral">&quot;otherdata&quot;</span>};</div>
 <div class="line"> </div>
-<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#ab643fc787ea7b1a215605c369f446844" title="Write primitive data to an ASCII text file for all primitives in the Context.">writePrimitiveData</a>( <span class="stringliteral">&quot;file.txt&quot;</span>, columns );</div>
+<div class="line">    context.<a class="code hl_function" href="classhelios_1_1_context.html#ae98cc7d133238ab7fb79fb6862737eff" title="Write primitive data to an ASCII text file for all primitives in the Context.">writePrimitiveData</a>( <span class="stringliteral">&quot;file.txt&quot;</span>, columns );</div>
 <div class="line"> </div>
 <div class="line">}</div>
 </div><!-- fragment --><p>By default, column header labels will not be written, but if the optional third argument is set as "true" the label of the primitive data for each column will be written to the first line of the file. </p>

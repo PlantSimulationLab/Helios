@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: WalnutCanopyParameters Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -242,7 +275,7 @@ Data Fields</h2></td></tr>
 <tr class="memitem:a43de7836434a46b15520a96a80036d89" id="r_a43de7836434a46b15520a96a80036d89"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a43de7836434a46b15520a96a80036d89">fruit_texture_file</a></td></tr>
 <tr class="memdesc:a43de7836434a46b15520a96a80036d89"><td class="mdescLeft">&#160;</td><td class="mdescRight">Texture map for walnut fruit.  <br /></td></tr>
 <tr class="separator:a43de7836434a46b15520a96a80036d89"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4c3ac117f2b32ee15b22ff2e0ec4c325" id="r_a4c3ac117f2b32ee15b22ff2e0ec4c325"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4c3ac117f2b32ee15b22ff2e0ec4c325">fruit_subdivisions</a></td></tr>
+<tr class="memitem:a4c3ac117f2b32ee15b22ff2e0ec4c325" id="r_a4c3ac117f2b32ee15b22ff2e0ec4c325"><td class="memItemLeft" align="right" valign="top"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4c3ac117f2b32ee15b22ff2e0ec4c325">fruit_subdivisions</a></td></tr>
 <tr class="memdesc:a4c3ac117f2b32ee15b22ff2e0ec4c325"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of azimuthal and zenithal subdivisions making up fruit (will result in roughly fruit_subdivisions^2 triangles per fruit)  <br /></td></tr>
 <tr class="separator:a4c3ac117f2b32ee15b22ff2e0ec4c325"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0a8fd703c9e0f1beedf990d85038d173" id="r_a0a8fd703c9e0f1beedf990d85038d173"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1int2.html">helios::int2</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0a8fd703c9e0f1beedf990d85038d173">plant_count</a></td></tr>
@@ -259,7 +292,7 @@ Data Fields</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Parameters defining the walnut tree canopy. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00696">696</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00684">684</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a3e9529efe557947137c49fefa450bb85" name="a3e9529efe557947137c49fefa450bb85"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a3e9529efe557947137c49fefa450bb85">&#9670;&#160;</a></span>WalnutCanopyParameters() <span class="overload">[1/2]</span></h2>
@@ -278,7 +311,7 @@ Data Fields</h2></td></tr>
 
 <p>Default constructor. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l01201">1201</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l01190">1190</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -303,7 +336,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l01233">1233</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l01221">1221</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -335,7 +368,7 @@ Data Fields</h2></td></tr>
 
 <p>Implements <a class="el" href="struct_base_canopy_parameters.html#a741a7c822b8f84d8f658cebd54e23eed">BaseCanopyParameters</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l01306">1306</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l01294">1294</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -370,7 +403,7 @@ Data Fields</h2></td></tr>
 
 <p>Implements <a class="el" href="struct_base_canopy_parameters.html#afcbe470fe8e3e7106f0da0a93e540cce">BaseCanopyParameters</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l01302">1302</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l01290">1290</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -397,7 +430,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l01237">1237</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l01225">1225</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -416,7 +449,7 @@ Data Fields</h2></td></tr>
 
 <p>Average length of branches in each recursive branch level. For example, the first (.x) value is the length of branches emanating from the trunk, the second (.y) is the the length of branches emanating from the first branching level. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00740">740</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00728">728</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -434,7 +467,7 @@ Data Fields</h2></td></tr>
 
 <p>Radius of walnuts. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00750">750</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00738">738</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -445,14 +478,14 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">uint WalnutCanopyParameters::fruit_subdivisions</td>
+          <td class="memname"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> WalnutCanopyParameters::fruit_subdivisions</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 <p>Number of azimuthal and zenithal subdivisions making up fruit (will result in roughly fruit_subdivisions^2 triangles per fruit) </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00756">756</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00744">744</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -470,7 +503,7 @@ Data Fields</h2></td></tr>
 
 <p>Texture map for walnut fruit. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00753">753</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00741">741</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -488,7 +521,7 @@ Data Fields</h2></td></tr>
 
 <p>Maximum length of leaves along midrib. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00719">719</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00707">707</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -506,7 +539,7 @@ Data Fields</h2></td></tr>
 
 <p>Number of sub-division segments per leaf. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00722">722</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00710">710</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -524,7 +557,7 @@ Data Fields</h2></td></tr>
 
 <p>Path to texture map file for leaves. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00725">725</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00713">713</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -542,7 +575,7 @@ Data Fields</h2></td></tr>
 
 <p>Number of crowns/plants in the x- and y-directions. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00759">759</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00747">747</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -560,7 +593,7 @@ Data Fields</h2></td></tr>
 
 <p>Spacing between adjacent plants along the row direction. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00744">744</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00732">732</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -578,7 +611,7 @@ Data Fields</h2></td></tr>
 
 <p>Spacing between plant rows. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00747">747</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00735">735</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -596,7 +629,7 @@ Data Fields</h2></td></tr>
 
 <p>Height of the trunk. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00737">737</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00725">725</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -614,7 +647,7 @@ Data Fields</h2></td></tr>
 
 <p>Radius of trunk. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00734">734</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00722">722</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -632,7 +665,7 @@ Data Fields</h2></td></tr>
 
 <p>Number of radial subdivisions for branch tubes. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00731">731</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00719">719</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -650,7 +683,7 @@ Data Fields</h2></td></tr>
 
 <p>Path to texture map file for wood/branches. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00728">728</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00716">716</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>

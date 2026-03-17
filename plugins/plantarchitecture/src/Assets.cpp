@@ -1,6 +1,6 @@
 /** \file "Assets.cpp" Function definitions for plant organ prototypes plant architecture plug-in.
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -14,6 +14,7 @@
 */
 
 #include "PlantArchitecture.h"
+#include "global.h"
 
 using namespace helios;
 
@@ -21,10 +22,9 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
 
     // If OBJ model file is specified, load it and return the object ID
     if (!prototype_parameters->OBJ_model_file.empty()) {
-        if (!std::filesystem::exists(prototype_parameters->OBJ_model_file)) {
-            helios_runtime_error("ERROR (PlantArchitecture): Leaf prototype OBJ file " + prototype_parameters->OBJ_model_file + " does not exist.");
-        }
-        return context_ptr->addPolymeshObject(context_ptr->loadOBJ(prototype_parameters->OBJ_model_file.c_str(), prototype_parameters->leaf_offset, 0, nullrotation, RGB::black, "ZUP", true));
+        // Resolve OBJ file path (allows users to specify simple paths like "MyLeaf.obj")
+        std::string resolved_obj = PlantArchitecture::resolveTextureFile(prototype_parameters->OBJ_model_file);
+        return context_ptr->addPolymeshObject(context_ptr->loadOBJ(resolved_obj.c_str(), prototype_parameters->leaf_offset, 0, nullrotation, RGB::black, "ZUP", true));
     }
 
     std::string leaf_texture;
@@ -37,6 +37,9 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
     } else {
         leaf_texture = prototype_parameters->leaf_texture_file[compound_leaf_index];
     }
+
+    // Resolve leaf texture path (allows users to specify simple paths like "AlmondLeaf.png")
+    leaf_texture = PlantArchitecture::resolveTextureFile(leaf_texture);
 
     // -- main leaf generation code -- //
 
@@ -118,15 +121,28 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
             vec3 v2 = vertices.at(j + 1).at(i + 1);
             vec3 v3 = vertices.at(j + 1).at(i);
 
-            UUIDs.push_back(context_ptr->addTriangle(v0, v1, v2, leaf_texture.c_str(), uv0, uv1, uv2));
-            UUIDs.push_back(context_ptr->addTriangle(v0, v2, v3, leaf_texture.c_str(), uv0, uv2, uv3));
+            // Add triangle 1 and check if it has effective area (including texture transparency)
+            uint uuid1 = context_ptr->addTriangle(v0, v1, v2, leaf_texture.c_str(), uv0, uv1, uv2);
+            if (context_ptr->getPrimitiveArea(uuid1) > 0) {
+                UUIDs.push_back(uuid1);
+            } else {
+                context_ptr->deletePrimitive(uuid1);
+            }
+
+            // Add triangle 2 and check if it has effective area (including texture transparency)
+            uint uuid2 = context_ptr->addTriangle(v0, v2, v3, leaf_texture.c_str(), uv0, uv2, uv3);
+            if (context_ptr->getPrimitiveArea(uuid2) > 0) {
+                UUIDs.push_back(uuid2);
+            } else {
+                context_ptr->deletePrimitive(uuid2);
+            }
         }
     }
 
     context_ptr->translatePrimitive(UUIDs, prototype_parameters->leaf_offset);
 
     if (prototype_parameters->build_petiolule) {
-        std::vector<uint> UUIDs_petiolule = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/PetiolulePrototype.obj", make_vec3(0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+        std::vector<uint> UUIDs_petiolule = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/PetiolulePrototype.obj").string().c_str(), make_vec3(0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
         context_ptr->translatePrimitive(UUIDs, make_vec3(0.07, 0, 0.005));
         UUIDs.insert(UUIDs.end(), UUIDs_petiolule.begin(), UUIDs_petiolule.end());
     }
@@ -149,13 +165,13 @@ uint GeneralSphericalFruitPrototype(helios::Context *context_ptr, uint subdivisi
 }
 
 uint AlmondFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/AlmondHull.obj", make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/AlmondHull.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
 uint AlmondFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/AlmondFlower.obj", make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/AlmondFlower.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
@@ -181,13 +197,13 @@ void AlmondPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
 }
 
 uint AppleFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/AppleFruit.obj", make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/AppleFruit.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
 uint AppleFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/AlmondFlower.obj", make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/AlmondFlower.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
@@ -244,7 +260,7 @@ void AsparagusPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint 
 
 uint BeanLeafPrototype_unifoliate_OBJ(helios::Context *context_ptr, LeafPrototype *prototype_parameters, int compound_leaf_index) {
     std::vector<uint> UUIDs;
-    UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/BeanLeaf_unifoliate.obj", true);
+    UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/BeanLeaf_unifoliate.obj").string().c_str(), true);
 
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
@@ -253,18 +269,18 @@ uint BeanLeafPrototype_unifoliate_OBJ(helios::Context *context_ptr, LeafPrototyp
 uint BeanLeafPrototype_trifoliate_OBJ(helios::Context *context_ptr, LeafPrototype *prototype_parameters, int compound_leaf_index) {
     std::vector<uint> UUIDs;
     if (compound_leaf_index == 0) {
-        UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/BeanLeaf_tip.obj", true);
+        UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/BeanLeaf_tip.obj").string().c_str(), true);
     } else if (compound_leaf_index < 0) {
-        UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/BeanLeaf_left.obj", true);
+        UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/BeanLeaf_left.obj").string().c_str(), true);
     } else {
-        UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/BeanLeaf_right.obj", true);
+        UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/BeanLeaf_right.obj").string().c_str(), true);
     }
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
 uint BeanFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/BeanPod.obj", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/BeanPod.obj").string().c_str(), true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
@@ -272,9 +288,9 @@ uint BeanFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
 uint BeanFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
     std::vector<uint> UUIDs;
     if (flower_is_open) {
-        UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/BeanFlower_open_white.obj", true);
+        UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/BeanFlower_open_white.obj").string().c_str(), true);
     } else {
-        UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/BeanFlower_closed_white.obj", true);
+        UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/BeanFlower_closed_white.obj").string().c_str(), true);
     }
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
@@ -300,7 +316,13 @@ void BeanPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot
 }
 
 uint BindweedFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/BindweedFlower.obj", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/BindweedFlower.obj").string().c_str(), true);
+    uint objID = context_ptr->addPolymeshObject(UUIDs);
+    return objID;
+}
+
+uint BougainvilleaFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/BougainvilleaFlower.obj").string().c_str(), true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
@@ -308,9 +330,9 @@ uint BindweedFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bo
 uint CapsicumFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
     std::string OBJ_file;
     if (context_ptr->randn() < 0.4) {
-        OBJ_file = "plugins/plantarchitecture/assets/obj/CapsicumFruit_green.obj";
+        OBJ_file = helios::resolvePluginAsset("plantarchitecture", "assets/obj/CapsicumFruit_green.obj").string().c_str();
     } else {
-        OBJ_file = "plugins/plantarchitecture/assets/obj/CapsicumFruit_red.obj";
+        OBJ_file = helios::resolvePluginAsset("plantarchitecture", "assets/obj/CapsicumFruit_red.obj").string().c_str();
     }
 
     std::vector<uint> UUIDs = context_ptr->loadOBJ(OBJ_file.c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
@@ -342,13 +364,13 @@ void CapsicumPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint s
 }
 
 uint CheeseweedLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype_parameters, int compound_leaf_index) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/CheeseweedLeaf.obj", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/CheeseweedLeaf.obj").string().c_str(), true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
 uint CowpeaLeafPrototype_unifoliate_OBJ(helios::Context *context_ptr, LeafPrototype *prototype_parameters, int compound_leaf_index) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/CowpeaLeaf_unifoliate.obj", make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/CowpeaLeaf_unifoliate.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
 
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
@@ -357,18 +379,18 @@ uint CowpeaLeafPrototype_unifoliate_OBJ(helios::Context *context_ptr, LeafProtot
 uint CowpeaLeafPrototype_trifoliate_OBJ(helios::Context *context_ptr, LeafPrototype *prototype_parameters, int compound_leaf_index) {
     std::vector<uint> UUIDs;
     if (compound_leaf_index < 0) {
-        UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/CowpeaLeaf_left_highres.obj", make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+        UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/CowpeaLeaf_left_highres.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     } else if (compound_leaf_index == 0) {
-        UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/CowpeaLeaf_tip_highres.obj", make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+        UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/CowpeaLeaf_tip_highres.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     } else {
-        UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/CowpeaLeaf_right_highres.obj", make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+        UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/CowpeaLeaf_right_highres.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     }
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
 uint CowpeaFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/CowpeaPod.obj", make_vec3(0., 0, 0), 0.75, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/CowpeaPod.obj").string().c_str(), make_vec3(0., 0, 0), 0.75, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
@@ -376,9 +398,9 @@ uint CowpeaFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
 uint CowpeaFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
     std::vector<uint> UUIDs;
     if (flower_is_open) {
-        UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/CowpeaFlower_open_yellow.obj", make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+        UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/CowpeaFlower_open_yellow.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     } else {
-        UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/CowpeaFlower_closed_yellow.obj", make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+        UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/CowpeaFlower_closed_yellow.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     }
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
@@ -417,7 +439,7 @@ bool spheres_overlap(const helios::vec3 &center1, float radius1, const helios::v
 uint GrapevineFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
 
     int num_grapes = 60;
-    float height = 6.0f; // Height of the cluster
+    float height = 5.0f; // Height of the cluster
     float base_radius = 2.f; // Base radius of the cluster
     float taper_factor = 0.6f; // Taper factor (higher means more taper)
     float grape_radius = 0.25f; // Fixed radius for each grape
@@ -484,14 +506,16 @@ uint GrapevineFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
         UUIDs.insert(UUIDs.end(), UUIDs_tmp.begin(), UUIDs_tmp.end());
     }
 
-    context_ptr->rotatePrimitive(UUIDs, -0.5 * M_PI, "y");
+    context_ptr->rotatePrimitive(UUIDs, 0.5 * M_PI, "y");
+
+    context_ptr->setPrimitiveData(UUIDs, "object_label", "fruit");
 
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
 // uint GrapevineFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open ){
-//     std::vector<uint> UUIDs = context_ptr->loadOBJ( "plugins/plantarchitecture/assets/obj/OliveFlower_open.obj", make_vec3(0.0,0,0), 0,nullrotation, RGB::black, "ZUP", true );
+//     std::vector<uint> UUIDs = context_ptr->loadOBJ( helios::resolvePluginAsset("plantarchitecture", "assets/obj/OliveFlower_open.obj").string().c_str(), make_vec3(0.0,0,0), 0,nullrotation, RGB::black, "ZUP", true );
 //     uint objID = context_ptr->addPolymeshObject( UUIDs );
 //     return objID;
 // }
@@ -500,6 +524,13 @@ void GrapevinePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint 
 
     // blind nodes
     if (shoot_node_index >= 2) {
+        phytomer->setFloralBudState(BUD_DEAD);
+    }
+    if (phytomer->rank >= 1 && shoot_node_index >= 8) {
+        phytomer->setVegetativeBudState(BUD_DEAD);
+    }
+    if (phytomer->rank >= 2) {
+        phytomer->setVegetativeBudState(BUD_DEAD);
         phytomer->setFloralBudState(BUD_DEAD);
     }
 }
@@ -519,20 +550,20 @@ void GrapevinePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint 
 
 uint MaizeTasselPrototype(helios::Context *context_ptr, uint subdivisions) {
 
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/MaizeTassel.obj", make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/MaizeTassel.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     return context_ptr->addPolymeshObject(UUIDs);
 }
 
 uint MaizeEarPrototype(helios::Context *context_ptr, uint subdivisions) {
 
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/MaizeEar.obj", make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/MaizeEar.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     return context_ptr->addPolymeshObject(UUIDs);
 }
 
 void MaizePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
 
     // set leaf scale based on position along the shoot
-    float scale;
+    float scale = 1.f;
     if (shoot_node_index <= 5) {
         scale = fmin(1.f, 0.7 + 0.3 * float(shoot_node_index) / 5.f);
         phytomer->scaleInternodeMaxLength(scale);
@@ -560,10 +591,10 @@ void MaizePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoo
 
 uint OliveLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype_parameters, int compound_leaf_index) {
 
-    std::vector<uint> UUIDs_upper =
-            context_ptr->addTile(make_vec3(0.5, 0, 0), make_vec2(1, 0.2), nullrotation, make_int2(prototype_parameters->subdivisions, prototype_parameters->subdivisions), "plugins/plantarchitecture/assets/textures/OliveLeaf_upper.png");
-    std::vector<uint> UUIDs_lower =
-            context_ptr->addTile(make_vec3(0.5, 0, -1e-4), make_vec2(1, 0.2), nullrotation, make_int2(prototype_parameters->subdivisions, prototype_parameters->subdivisions), "plugins/plantarchitecture/assets/textures/OliveLeaf_lower.png");
+    std::vector<uint> UUIDs_upper = context_ptr->addTile(make_vec3(0.5, 0, 0), make_vec2(1, 0.2), nullrotation, make_int2(prototype_parameters->subdivisions, prototype_parameters->subdivisions),
+                                                         helios::resolvePluginAsset("plantarchitecture", "assets/textures/OliveLeaf_upper.png").string().c_str());
+    std::vector<uint> UUIDs_lower = context_ptr->addTile(make_vec3(0.5, 0, -1e-4), make_vec2(1, 0.2), nullrotation, make_int2(prototype_parameters->subdivisions, prototype_parameters->subdivisions),
+                                                         helios::resolvePluginAsset("plantarchitecture", "assets/textures/OliveLeaf_lower.png").string().c_str());
     context_ptr->rotatePrimitive(UUIDs_lower, M_PI, "x");
 
     UUIDs_upper.insert(UUIDs_upper.end(), UUIDs_lower.begin(), UUIDs_lower.end());
@@ -572,7 +603,7 @@ uint OliveLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype_p
 }
 
 uint OliveFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/OliveFruit.obj", make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/OliveFruit.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     std::vector<uint> UUIDs_fruit = context_ptr->filterPrimitivesByData(context_ptr->getObjectPrimitiveUUIDs(objID), "object_label", "fruit");
     context_ptr->setPrimitiveColor(UUIDs_fruit, make_RGBcolor(0.65, 0.7, 0.4)); // green
@@ -580,7 +611,7 @@ uint OliveFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
 }
 
 uint OliveFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/OliveFlower_open.obj", make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/OliveFlower_open.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
@@ -598,13 +629,13 @@ void OlivePhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
 }
 
 uint PistachioFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/PistachioNut.obj", make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/PistachioNut.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
 uint PistachioFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/OliveFlower_open.obj", make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/OliveFlower_open.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
@@ -628,18 +659,18 @@ void PistachioPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
 }
 
 uint PuncturevineFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/PuncturevineFlower.obj", make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/PuncturevineFlower.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
 uint RedbudFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/RedbudFlower_open.obj", make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/RedbudFlower_open.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     return context_ptr->addPolymeshObject(UUIDs);
 }
 
 uint RedbudFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/RedbudPod.obj", make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/RedbudPod.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     return context_ptr->addPolymeshObject(UUIDs);
 }
 
@@ -660,7 +691,7 @@ void RedbudPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
 }
 
 uint RiceSpikePrototype(helios::Context *context_ptr, uint subdivisions) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/RiceGrain.obj", make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/RiceGrain.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
@@ -700,7 +731,7 @@ uint SorghumPaniclePrototype(helios::Context *context_ptr, uint subdivisions) {
     float seed_tilt = 50;
     subdivisions = 6;
 
-    std::string seed_texture_file = "plugins/plantarchitecture/assets/textures/SorghumSeed.jpeg";
+    std::string seed_texture_file = helios::resolvePluginAsset("plantarchitecture", "assets/textures/SorghumSeed.jpeg").string().c_str();
     RGBcolor stem_color(0.45, 0.55, 0.42);
 
     std::vector<uint> UUIDs;
@@ -788,7 +819,7 @@ void SorghumPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint sh
 }
 
 uint SoybeanFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/SoybeanPod.obj", make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/SoybeanPod.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
@@ -796,9 +827,9 @@ uint SoybeanFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
 uint SoybeanFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
     std::vector<uint> UUIDs;
     if (flower_is_open) {
-        UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/SoybeanFlower_open_white.obj", make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+        UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/SoybeanFlower_open_white.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     } else {
-        UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/BeanFlower_closed_white.obj", make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+        UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/BeanFlower_closed_white.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     }
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
@@ -822,25 +853,25 @@ void SoybeanPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint sh
 }
 
 uint StrawberryFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/StrawberryFlower.obj", make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/StrawberryFlower.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
 uint StrawberryFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/StrawberryFruit.obj", make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/StrawberryFruit.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
 uint TomatoFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/TomatoFruit.obj", make_vec3(0., 0, 0), 0.75, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/TomatoFruit.obj").string().c_str(), make_vec3(0., 0, 0), 0.75, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
 uint TomatoFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/TomatoFlower.obj", make_vec3(0.0, 0, 0), 0.75, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/TomatoFlower.obj").string().c_str(), make_vec3(0.0, 0, 0), 0.75, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
@@ -849,10 +880,6 @@ void TomatoPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint sho
 
     if (shoot_node_index < 8 && phytomer->rank == 0) {
         phytomer->setFloralBudState(BUD_DEAD);
-    }
-    if (phytomer->rank > 1) {
-        phytomer->setFloralBudState(BUD_DEAD);
-        phytomer->setVegetativeBudState(BUD_DEAD);
     }
     if (phytomer->rank > 1) {
         phytomer->setFloralBudState(BUD_DEAD);
@@ -900,13 +927,13 @@ void CherryTomatoPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
 }
 
 uint WalnutFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/WalnutHull.obj", make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/WalnutHull.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
 uint WalnutFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/AlmondFlower.obj", make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/AlmondFlower.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
@@ -924,7 +951,7 @@ void WalnutPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
 }
 
 uint WheatSpikePrototype(helios::Context *context_ptr, uint subdivisions) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/WheatSpike.obj", make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/WheatSpike.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }

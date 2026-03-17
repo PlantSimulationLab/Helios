@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: plugins/radiation/src/rayHit.cu File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -166,6 +199,7 @@ $(function(){initNavTree('ray_hit_8cu.html',''); initResizable(true); });
 <code>#include &lt;optixu/optixu_math_namespace.h&gt;</code><br />
 <code>#include &lt;optixu/optixu_matrix_namespace.h&gt;</code><br />
 <code>#include &quot;RayTracing.cuh&quot;</code><br />
+<code>#include &quot;<a class="el" href="_buffer_indexing_8h_source.html">BufferIndexing.h</a>&quot;</code><br />
 </div>
 <p><a href="ray_hit_8cu_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -193,6 +227,8 @@ Functions</h2></td></tr>
 <tr class="separator:a136c5c809fc20bf20eada103639f1423"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1f109040f068e7b8a0cace4af561f706" id="r_a1f109040f068e7b8a0cace4af561f706"><td class="memItemLeft" align="right" valign="top">RT_PROGRAM void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1f109040f068e7b8a0cace4af561f706">miss_direct</a> ()</td></tr>
 <tr class="separator:a1f109040f068e7b8a0cace4af561f706"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a158b500e8af2e9ad117115911c94c089" id="r_a158b500e8af2e9ad117115911c94c089"><td class="memItemLeft" align="right" valign="top">__device__ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a158b500e8af2e9ad117115911c94c089">evaluateDiffuseAngularDistribution</a> (const float3 &amp;ray_dir, const float3 &amp;peak_dir, float power_law_K, float power_law_norm, const float4 &amp;prague_params)</td></tr>
+<tr class="separator:a158b500e8af2e9ad117115911c94c089"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a30c9d350116d3651bf96e5ccb5e0dcd6" id="r_a30c9d350116d3651bf96e5ccb5e0dcd6"><td class="memItemLeft" align="right" valign="top">RT_PROGRAM void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a30c9d350116d3651bf96e5ccb5e0dcd6">miss_diffuse</a> ()</td></tr>
 <tr class="separator:a30c9d350116d3651bf96e5ccb5e0dcd6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a870ca71644ea146d3e1480603cc8ed0c" id="r_a870ca71644ea146d3e1480603cc8ed0c"><td class="memItemLeft" align="right" valign="top">RT_PROGRAM void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a870ca71644ea146d3e1480603cc8ed0c">miss_camera</a> ()</td></tr>
@@ -202,7 +238,7 @@ Functions</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Functions for object intersection.</p>
-<p>Copyright (C) 2016-2025 Brian Bailey</p>
+<p>Copyright (C) 2016-2026 Brian Bailey</p>
 <p>This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 2.</p>
 <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. </p>
 
@@ -223,7 +259,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="ray_hit_8cu_source.html#l00224">224</a> of file <a class="el" href="ray_hit_8cu_source.html">rayHit.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="ray_hit_8cu_source.html#l00253">253</a> of file <a class="el" href="ray_hit_8cu_source.html">rayHit.cu</a>.</p>
 
 </div>
 </div>
@@ -242,7 +278,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="ray_hit_8cu_source.html#l00064">64</a> of file <a class="el" href="ray_hit_8cu_source.html">rayHit.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="ray_hit_8cu_source.html#l00068">68</a> of file <a class="el" href="ray_hit_8cu_source.html">rayHit.cu</a>.</p>
 
 </div>
 </div>
@@ -261,7 +297,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="ray_hit_8cu_source.html#l00031">31</a> of file <a class="el" href="ray_hit_8cu_source.html">rayHit.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="ray_hit_8cu_source.html#l00032">32</a> of file <a class="el" href="ray_hit_8cu_source.html">rayHit.cu</a>.</p>
 
 </div>
 </div>
@@ -280,7 +316,45 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="ray_hit_8cu_source.html#l00355">355</a> of file <a class="el" href="ray_hit_8cu_source.html">rayHit.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="ray_hit_8cu_source.html#l00496">496</a> of file <a class="el" href="ray_hit_8cu_source.html">rayHit.cu</a>.</p>
+
+</div>
+</div>
+<a id="a158b500e8af2e9ad117115911c94c089" name="a158b500e8af2e9ad117115911c94c089"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a158b500e8af2e9ad117115911c94c089">&#9670;&#160;</a></span>evaluateDiffuseAngularDistribution()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">__device__ float evaluateDiffuseAngularDistribution </td>
+          <td>(</td>
+          <td class="paramtype">const float3 &amp;</td>          <td class="paramname"><span class="paramname"><em>ray_dir</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float3 &amp;</td>          <td class="paramname"><span class="paramname"><em>peak_dir</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>power_law_K</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>power_law_norm</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float4 &amp;</td>          <td class="paramname"><span class="paramname"><em>prague_params</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="ray_hit_8cu_source.html#l00619">619</a> of file <a class="el" href="ray_hit_8cu_source.html">rayHit.cu</a>.</p>
 
 </div>
 </div>
@@ -299,7 +373,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="ray_hit_8cu_source.html#l00538">538</a> of file <a class="el" href="ray_hit_8cu_source.html">rayHit.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="ray_hit_8cu_source.html#l00733">733</a> of file <a class="el" href="ray_hit_8cu_source.html">rayHit.cu</a>.</p>
 
 </div>
 </div>
@@ -318,7 +392,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="ray_hit_8cu_source.html#l00450">450</a> of file <a class="el" href="ray_hit_8cu_source.html">rayHit.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="ray_hit_8cu_source.html#l00651">651</a> of file <a class="el" href="ray_hit_8cu_source.html">rayHit.cu</a>.</p>
 
 </div>
 </div>
@@ -337,7 +411,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="ray_hit_8cu_source.html#l00399">399</a> of file <a class="el" href="ray_hit_8cu_source.html">rayHit.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="ray_hit_8cu_source.html#l00539">539</a> of file <a class="el" href="ray_hit_8cu_source.html">rayHit.cu</a>.</p>
 
 </div>
 </div>
@@ -356,7 +430,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="ray_hit_8cu_source.html#l00563">563</a> of file <a class="el" href="ray_hit_8cu_source.html">rayHit.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="ray_hit_8cu_source.html#l00809">809</a> of file <a class="el" href="ray_hit_8cu_source.html">rayHit.cu</a>.</p>
 
 </div>
 </div>

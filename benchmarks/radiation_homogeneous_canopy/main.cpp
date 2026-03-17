@@ -24,7 +24,7 @@ int main() {
     timer.tic();
 
     uint objID_ptype = context.addTileObject(make_vec3(0, 0, 0), make_vec2(w_leaf, w_leaf), make_SphericalCoord(0, 0), make_int2(2, 2), "plugins/radiation/disk.png");
-    std::vector<uint> UUIDs_ptype = context.getObjectPointer(objID_ptype)->getPrimitiveUUIDs();
+    std::vector<uint> UUIDs_ptype = context.getObjectPrimitiveUUIDs(objID_ptype);
 
     float A_leaf = 0;
     for (uint p = 0; p < UUIDs_ptype.size(); p++) {
@@ -43,12 +43,12 @@ int main() {
 
         uint objID = context.copyObject(objID_ptype);
 
-        context.getObjectPointer(objID)->rotate(-rotation.elevation, "y");
-        context.getObjectPointer(objID)->rotate(rotation.azimuth, "z");
+        context.rotateObject(objID, -rotation.elevation, "y");
+        context.rotateObject(objID, rotation.azimuth, "z");
 
-        context.getObjectPointer(objID)->translate(position);
+        context.translateObject(objID, position);
 
-        std::vector<uint> UUIDs = context.getObjectPointer(objID)->getPrimitiveUUIDs();
+        std::vector<uint> UUIDs = context.getObjectPrimitiveUUIDs(objID);
 
         UUIDs_leaf.insert(UUIDs_leaf.end(), UUIDs.begin(), UUIDs.end());
     }

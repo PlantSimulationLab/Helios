@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: RadiationBand Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -171,7 +204,7 @@ $(function(){initNavTree('struct_radiation_band.html',''); initResizable(true); 
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a24a8c605f4553fd80e47f8cb7dd77744" id="r_a24a8c605f4553fd80e47f8cb7dd77744"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a24a8c605f4553fd80e47f8cb7dd77744">RadiationBand</a> (std::string a_label, size_t directRayCount_default, size_t diffuseRayCount_default, float diffuseFlux_default, uint scatteringDepth_default, float minScatterEnergy_default)</td></tr>
+<tr class="memitem:a24a8c605f4553fd80e47f8cb7dd77744" id="r_a24a8c605f4553fd80e47f8cb7dd77744"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a24a8c605f4553fd80e47f8cb7dd77744">RadiationBand</a> (std::string a_label, size_t directRayCount_default, size_t diffuseRayCount_default, float diffuseFlux_default, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> scatteringDepth_default, float minScatterEnergy_default)</td></tr>
 <tr class="memdesc:a24a8c605f4553fd80e47f8cb7dd77744"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor.  <br /></td></tr>
 <tr class="separator:a24a8c605f4553fd80e47f8cb7dd77744"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
@@ -198,10 +231,12 @@ Data Fields</h2></td></tr>
 <tr class="memitem:a774ee8eb75fc96a086688fe4c643cdec" id="r_a774ee8eb75fc96a086688fe4c643cdec"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a774ee8eb75fc96a086688fe4c643cdec">diffuseDistNorm</a></td></tr>
 <tr class="memdesc:a774ee8eb75fc96a086688fe4c643cdec"><td class="mdescLeft">&#160;</td><td class="mdescRight">Diffuse distribution normalization factor.  <br /></td></tr>
 <tr class="separator:a774ee8eb75fc96a086688fe4c643cdec"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a93f5de2ca11bff7edd9d1ced639014bf" id="r_a93f5de2ca11bff7edd9d1ced639014bf"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec4.html">helios::vec4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a93f5de2ca11bff7edd9d1ced639014bf">diffusePragueParams</a> = <a class="el" href="helios__vector__types_8h.html#aff3dc2aab916d45e0b9e1752192db22c">helios::make_vec4</a>(0, 0, 0, 0)</td></tr>
+<tr class="separator:a93f5de2ca11bff7edd9d1ced639014bf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a24a0753d9bc91d02db11046a7278220b" id="r_a24a0753d9bc91d02db11046a7278220b"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a24a0753d9bc91d02db11046a7278220b">diffuse_spectrum</a></td></tr>
 <tr class="memdesc:a24a0753d9bc91d02db11046a7278220b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Spectral distribution of diffuse radiation flux for wave band.  <br /></td></tr>
 <tr class="separator:a24a0753d9bc91d02db11046a7278220b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1e6751a77faec064c49aba70539865de" id="r_a1e6751a77faec064c49aba70539865de"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1e6751a77faec064c49aba70539865de">scatteringDepth</a></td></tr>
+<tr class="memitem:a1e6751a77faec064c49aba70539865de" id="r_a1e6751a77faec064c49aba70539865de"><td class="memItemLeft" align="right" valign="top"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1e6751a77faec064c49aba70539865de">scatteringDepth</a></td></tr>
 <tr class="memdesc:a1e6751a77faec064c49aba70539865de"><td class="mdescLeft">&#160;</td><td class="mdescRight">Scattering depth for wave band.  <br /></td></tr>
 <tr class="separator:a1e6751a77faec064c49aba70539865de"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2f54d84dc4a82db6bdd50ba3648cae59" id="r_a2f54d84dc4a82db6bdd50ba3648cae59"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2f54d84dc4a82db6bdd50ba3648cae59">minScatterEnergy</a></td></tr>
@@ -217,7 +252,7 @@ Data Fields</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Properties defining a radiation band. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00211">211</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00497">497</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a24a8c605f4553fd80e47f8cb7dd77744" name="a24a8c605f4553fd80e47f8cb7dd77744"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a24a8c605f4553fd80e47f8cb7dd77744">&#9670;&#160;</a></span>RadiationBand()</h2>
@@ -251,7 +286,7 @@ Data Fields</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>scatteringDepth_default</em></span>, </td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>scatteringDepth_default</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -268,7 +303,7 @@ Data Fields</h2></td></tr>
 
 <p>Constructor. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00214">214</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00500">500</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -287,7 +322,7 @@ Data Fields</h2></td></tr>
 
 <p>Spectral distribution of diffuse radiation flux for wave band. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00248">248</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00539">539</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -305,7 +340,7 @@ Data Fields</h2></td></tr>
 
 <p>Diffuse distribution normalization factor. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00245">245</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00531">531</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -323,7 +358,7 @@ Data Fields</h2></td></tr>
 
 <p>Distribution coefficient of ambient diffuse radiation for wave band. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00239">239</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00525">525</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -341,7 +376,7 @@ Data Fields</h2></td></tr>
 
 <p>Diffuse component of radiation flux integrated over wave band. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00236">236</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00522">522</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -359,7 +394,24 @@ Data Fields</h2></td></tr>
 
 <p>Direction of peak in ambient diffuse radiation. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00242">242</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00528">528</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a93f5de2ca11bff7edd9d1ced639014bf" name="a93f5de2ca11bff7edd9d1ced639014bf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a93f5de2ca11bff7edd9d1ced639014bf">&#9670;&#160;</a></span>diffusePragueParams</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1vec4.html">helios::vec4</a> RadiationBand::diffusePragueParams = <a class="el" href="helios__vector__types_8h.html#aff3dc2aab916d45e0b9e1752192db22c">helios::make_vec4</a>(0, 0, 0, 0)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Prague sky model angular parameters for diffuse distribution (circumsolar_strength, circumsolar_width, horizon_brightness, normalization) If normalization (w component) == 0, Prague not active for this band </p>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00536">536</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -377,7 +429,7 @@ Data Fields</h2></td></tr>
 
 <p>Number of diffuse rays launched per element. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00233">233</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00519">519</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -395,7 +447,7 @@ Data Fields</h2></td></tr>
 
 <p>Number of direct rays launched per element. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00230">230</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00516">516</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -413,7 +465,7 @@ Data Fields</h2></td></tr>
 
 <p>Flag that determines if emission calculations are performed for wave band. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00257">257</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00548">548</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -431,7 +483,7 @@ Data Fields</h2></td></tr>
 
 <p>Label for band. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00227">227</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00513">513</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -449,7 +501,7 @@ Data Fields</h2></td></tr>
 
 <p>Minimum energy for scattering for wave band. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00254">254</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00545">545</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -460,14 +512,14 @@ Data Fields</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">uint RadiationBand::scatteringDepth</td>
+          <td class="memname"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> RadiationBand::scatteringDepth</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 <p>Scattering depth for wave band. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00251">251</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00542">542</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>
@@ -485,7 +537,7 @@ Data Fields</h2></td></tr>
 
 <p>Waveband range of band. </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00260">260</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_model_8h_source.html#l00551">551</a> of file <a class="el" href="_radiation_model_8h_source.html">RadiationModel.h</a>.</p>
 
 </div>
 </div>

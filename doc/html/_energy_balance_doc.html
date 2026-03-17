@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Energy Balance Model Plugin Documentation</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -164,6 +197,11 @@ $(function(){initNavTree('_energy_balance_doc.html',''); initResizable(true); })
 <ul>
   <li class="level1">
     <a href="#EBDepends">Dependencies</a>
+    <ul>
+      <li class="level2">
+        <a href="#EBCUDAOptional">CUDA is Now Optional</a>
+      </li>
+    </ul>
   </li>
   <li class="level1">
     <a href="#EBissues">Known Issues</a>
@@ -198,6 +236,9 @@ $(function(){initNavTree('_energy_balance_doc.html',''); initResizable(true); })
         <a href="#EBRad">Input Radiative Bands</a>
       </li>
       <li class="level2">
+        <a href="#EBGPUControl">GPU Acceleration Control</a>
+      </li>
+      <li class="level2">
         <a href="#EBblc">Boundary-layer Conductance Model</a>
       </li>
       <li class="level2">
@@ -223,7 +264,7 @@ $(function(){initNavTree('_energy_balance_doc.html',''); initResizable(true); })
  </p>
 <table class="doxtable">
 <tr>
-<th>Dependencies </th><td>NVIDIA CUDA 9.0+ </td></tr>
+<th>Dependencies </th><td>OpenMP (recommended), NVIDIA CUDA 9.0+ (optional) </td></tr>
 <tr>
 <th>CMakeLists.txt </th><td>set( PLUGINS "energybalance" ) </td></tr>
 <tr>
@@ -235,7 +276,7 @@ $(function(){initNavTree('_energy_balance_doc.html',''); initResizable(true); })
 Dependencies</h1>
 <table class="doxtable">
 <tr>
-<th>Package </th><td><div class="image">
+<th>Package </th><th>Status </th><td><div class="image">
 <img src="apple-logo.png" alt=""/>
 </div>
  </td><td><div class="image">
@@ -246,17 +287,42 @@ Dependencies</h1>
 </div>
   </td></tr>
 <tr>
-<td>NVIDIA CUDA 9.0+ </td><td>Mac OSX: Not available </td><td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a> </td><td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a>  </td></tr>
+<td>OpenMP </td><td><b>Recommended</b> </td><td>Usually available (via libomp) </td><td>Usually available </td><td>Usually available  </td></tr>
+<tr>
+<td>NVIDIA CUDA 9.0+ </td><td><b>Optional</b> </td><td>Mac OSX: Not available </td><td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a> </td><td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a>  </td></tr>
 </table>
-<p>For help choosing the correct CUDA toolkit version for your system, consult this page: <a class="el" href="_choosing_c_u_d_a.html">Choosing the right CUDA and OptiX version</a></p>
+<p><b>Important:</b> As of version 1.3.61, the Energy Balance plugin no longer requires CUDA. The plugin uses a three-tier execution hierarchy:</p>
+<ol>
+<li>
+<b>GPU (CUDA):</b> Used when CUDA is compiled and GPU hardware is detected. Optional. </li>
+<li>
+<b>OpenMP (CPU parallel):</b> Used when OpenMP is available (default). <b>Recommended for best performance.</b> </li>
+<li>
+<b>Serial CPU:</b> Fallback when neither GPU nor OpenMP available. Works but significantly slower. </li>
+</ol>
+<p><b>Performance Note:</b> Benchmarks show the OpenMP CPU implementation is actually faster than the GPU implementation for typical workloads (&lt; 1M primitives). OpenMP is strongly recommended for production use.</p>
+<h2><a class="anchor" id="EBCUDAOptional"></a>
+CUDA is Now Optional</h2>
+<p>The Energy Balance plugin can be built and used in multiple configurations:</p>
+<ol>
+<li>
+<b>CPU-only build with OpenMP (Recommended):</b> No CUDA Toolkit required. Uses optimized OpenMP parallelization. Fastest for most workloads. </li>
+<li>
+<b>CPU-only build without OpenMP:</b> No CUDA or OpenMP. Uses serial CPU implementation. Works but significantly slower. A warning is issued recommending OpenMP installation. </li>
+<li>
+<b>CUDA build with GPU:</b> Compiles with CUDA support. Automatically uses GPU if available at runtime. Falls back to OpenMP if no GPU detected. </li>
+<li>
+<b>CUDA build without GPU:</b> Compiles with CUDA support but runs on machine without GPU. Automatically falls back to OpenMP (or serial if OpenMP unavailable). </li>
+</ol>
+<p>For help choosing the correct CUDA toolkit version for your system (if using CUDA), consult this page: <a class="el" href="_choosing_c_u_d_a.html">Choosing the right CUDA and OptiX version</a></p>
 <p>Useful OS-specific information for installing CUDA can be found here: <a class="el" href="_dependent_software.html">Install and Set-up</a></p>
-<p>If you are using a PC, it is likely you will need to increase the GPU timeout in the registry, otherwise calculations lasting longer than 2 secs. will timeout and kill your program. A guide on how to increase the timeout can be found here: <a class="el" href="_p_c_g_p_u_timeout.html">Increasing graphics driver timeout</a></p>
+<p><b>Note:</b> The GPU timeout registry setting (previously required for Windows) is no longer necessary when using the default CPU implementation.</p>
 <h1><a class="anchor" id="EBissues"></a>
 Known Issues</h1>
 <p>None.</p>
 <h1><a class="anchor" id="EBIntro"></a>
 Introduction</h1>
-<p>This model plugin calculates a local energy balance for every primitive, and ultimately predicts sensible, latent, and longwave fluxes as well as surface temperature. The energy balance equation is solved in parallel on the GPU to accelerate calculations.</p>
+<p>This model plugin calculates a local energy balance for every primitive, and ultimately predicts sensible, latent, and longwave fluxes as well as surface temperature. The energy balance equation is solved in parallel using OpenMP CPU parallelization by default, with optional GPU acceleration available when CUDA is installed and GPU hardware is detected.</p>
 <p>The model is solving the steady-state budget between absorbed radiation, emitted radiation, sensible heat exchange, and latent heat exchange, which is written as</p>
 <p class="formulaDsp">
 \[ R-n_s\varepsilon\sigma T_s^4 = c_p g_H \left( T_s-T_a \right) + \lambda g_M \left(\frac{e_s(T_s)f_s-e_s(T_a)h}{p_{atm}}\right)+C_p\frac{dT_s}{dt}+Q_{other}\]
@@ -318,31 +384,31 @@ Input Primitive Data</h2>
 <tr>
 <th>Primitive Data </th><th>Units </th><th>Data Type </th><th>Description </th><th>Available Plug-ins </th><th>Default Value </th></tr>
 <tr>
-<td>radiation_flux_[*] </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>Net absorbed radiation flux for band [*] (e.g., radiation_flux_PAR). </td><td>Can be computed by <a class="el" href="class_radiation_model.html">RadiationModel</a> plug-in. </td><td>N/A (must add at least one band) </td></tr>
+<td>radiation_flux_[*] </td><td>W/m<sup>2</sup> </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Net absorbed radiation flux for band [*] (e.g., radiation_flux_PAR). </td><td>Can be computed by <a class="el" href="class_radiation_model.html">RadiationModel</a> plug-in. </td><td>N/A (must add at least one band) </td></tr>
 <tr>
-<td>wind_speed </td><td>m/s </td><td> <font face="courier" color="green">float</font> </td><td>Air wind speed just outside of primitive boundary-layer. </td><td>N/A </td><td>1 m/s </td></tr>
+<td>wind_speed </td><td>m/s </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Air wind speed just outside of primitive boundary-layer. </td><td>N/A </td><td>1 m/s </td></tr>
 <tr>
-<td>object_length </td><td>m </td><td> <font face="courier" color="green">float</font> </td><td>Characteristic dimension of object formed by primitive. </td><td>N/A </td><td>Square root of primitive surface area </td></tr>
+<td>object_length </td><td>m </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Characteristic dimension of object formed by primitive. </td><td>N/A </td><td>Square root of primitive surface area </td></tr>
 <tr>
-<td>boundarylayer_conductance</td><td>mol air/m<sup>2</sup>-s </td><td> <font face="courier" color="green">float</font> </td><td>Leaf boundary-layer conductance to heat. </td><td><a class="el" href="class_b_l_conductance_model.html">BLConductanceModel</a> plug-in </td><td>Try calculating from model \(0.135\sqrt{\frac{U}{L}}\) </td></tr>
+<td>boundarylayer_conductance</td><td>mol air/m<sup>2</sup>-s </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Leaf boundary-layer conductance to heat. </td><td><a class="el" href="class_b_l_conductance_model.html">BLConductanceModel</a> plug-in </td><td>Try calculating from model \(0.135\sqrt{\frac{U}{L}}\) </td></tr>
 <tr>
-<td>air_temperature </td><td>Kelvin </td><td> <font face="courier" color="green">float</font> </td><td>Ambient air temperature outside of surface boundary layer. </td><td>N/A </td><td>300 K </td></tr>
+<td>air_temperature </td><td>Kelvin </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Ambient air temperature outside of surface boundary layer. </td><td>N/A </td><td>300 K </td></tr>
 <tr>
-<td>moisture_conductance </td><td>mol air/m<sup>2</sup>-s </td><td> <font face="courier" color="green">float</font> </td><td>Conductance to moisture between sub-surface air spaces and surface (e.g., for leaves this is stomatal conductance). </td><td>Can be computed by <a class="el" href="class_stomatal_conductance_model.html">StomatalConductanceModel</a> plug-in. </td><td>0 </td></tr>
+<td>moisture_conductance </td><td>mol air/m<sup>2</sup>-s </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Conductance to moisture between sub-surface air spaces and surface (e.g., for leaves this is stomatal conductance). </td><td>Can be computed by <a class="el" href="class_stomatal_conductance_model.html">StomatalConductanceModel</a> plug-in. </td><td>0 </td></tr>
 <tr>
-<td>surface_humidity </td><td>unitless </td><td> <font face="courier" color="green">float</font> </td><td>Relative humidity of air immediately above surface evaporating site. </td><td>N/A </td><td>1.0 (saturated) </td></tr>
+<td>surface_humidity </td><td>unitless </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Relative humidity of air immediately above surface evaporating site. </td><td>N/A </td><td>1.0 (saturated) </td></tr>
 <tr>
-<td>air_humidity </td><td>unitless </td><td> <font face="courier" color="green">float</font> </td><td>Ambient air relative humidity outside of surface boundary layer. </td><td>N/A </td><td>0.5 </td></tr>
+<td>air_humidity </td><td>unitless </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Ambient air relative humidity outside of surface boundary layer. </td><td>N/A </td><td>0.5 </td></tr>
 <tr>
-<td>air_pressure </td><td>Pascals </td><td> <font face="courier" color="green">float</font> </td><td>Atmospheric pressure. </td><td>N/A </td><td>101,000 Pa </td></tr>
+<td>air_pressure </td><td>Pascals </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Atmospheric pressure. </td><td>N/A </td><td>101,000 Pa </td></tr>
 <tr>
-<td>heat_capacity </td><td>J/m<sup>2</sup>/<sup>o</sup>C </td><td> <font face="courier" color="green">float</font> </td><td>Heat capacity of object. </td><td>N/A </td><td>0 </td></tr>
+<td>heat_capacity </td><td>J/m<sup>2</sup>/<sup>o</sup>C </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Heat capacity of object. </td><td>N/A </td><td>0 </td></tr>
 <tr>
-<td>other_surface_flux </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>Other surface energy fluxes. </td><td>N/A </td><td>0 </td></tr>
+<td>other_surface_flux </td><td>W/m<sup>2</sup> </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Other surface energy fluxes. </td><td>N/A </td><td>0 </td></tr>
 <tr>
-<td>twosided_flag </td><td>N/A </td><td> <font face="courier" color="green">uint</font> </td><td>Flag indicating the number of primitive faces with heat transfer (twosided_flag = 0 for one-sided heat transfer; twosided_flag = 1 for two-sided heat transfer). </td><td>N/A </td><td>1  </td></tr>
+<td>twosided_flag </td><td>N/A </td><td> <span style="font-family: Courier, monospace; color: green;">uint</span> </td><td>Flag indicating the number of primitive faces with heat transfer (twosided_flag = 0 for one-sided heat transfer; twosided_flag = 1 for two-sided heat transfer). Can also be set via the material system using Context::setMaterialTwosidedFlag(). When a user-assigned material exists, the material's twosided_flag takes precedence over primitive data. </td><td>N/A </td><td>1  </td></tr>
 <tr>
-<td>stomatal_sidedness </td><td>\(\zeta\) </td><td> <font face="courier" color="green">float</font> </td><td>Ratio of stomatal density on the upper leaf surface to the sum of the stomatal density on upper and lower leaf surfaces. Note: if "twosided_flag" is equal to 0, stomatal_sidedness will be automatically set to 0.</td><td>N/A </td><td>0  </td></tr>
+<td>stomatal_sidedness </td><td>\(\zeta\) </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Ratio of stomatal density on the upper leaf surface to the sum of the stomatal density on upper and lower leaf surfaces. Note: if "twosided_flag" is equal to 0, stomatal_sidedness will be automatically set to 0.</td><td>N/A </td><td>0  </td></tr>
 </table>
 <h2><a class="anchor" id="EBOutputData"></a>
 Default Output Primitive Data</h2>
@@ -350,11 +416,11 @@ Default Output Primitive Data</h2>
 <tr>
 <th>Primitive Data </th><th>Units </th><th>Data Type </th><th>Description </th></tr>
 <tr>
-<td>temperature </td><td>Kelvin </td><td> <font face="courier" color="green">float</font> </td><td>Primitive surface temperature. </td></tr>
+<td>temperature </td><td>Kelvin </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Primitive surface temperature. </td></tr>
 <tr>
-<td>sensible_flux </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>Sensible heat flux. </td></tr>
+<td>sensible_flux </td><td>W/m<sup>2</sup> </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Sensible heat flux. </td></tr>
 <tr>
-<td>latent_flux </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>Latent heat flux. </td></tr>
+<td>latent_flux </td><td>W/m<sup>2</sup> </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Latent heat flux. </td></tr>
 </table>
 <h2><a class="anchor" id="EBOptionalOutputData"></a>
 Optional Output Primitive Data</h2>
@@ -362,13 +428,13 @@ Optional Output Primitive Data</h2>
 <tr>
 <th>Primitive Data </th><th>Units </th><th>Data Type </th><th>Description </th></tr>
 <tr>
-<td>boundarylayer_conductance_out </td><td>mol air/m<sup>2</sup>-s </td><td> <font face="courier" color="green">float</font> </td><td>Primitive boundary-layer conductance calculated by this plug-in. </td></tr>
+<td>boundarylayer_conductance_out </td><td>mol air/m<sup>2</sup>-s </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Primitive boundary-layer conductance calculated by this plug-in. </td></tr>
 <tr>
-<td>vapor_pressure_deficit </td><td>mol/mol </td><td> <font face="courier" color="green">float</font> </td><td>Surface vapor pressure deficit. </td></tr>
+<td>vapor_pressure_deficit </td><td>mol/mol </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Surface vapor pressure deficit. </td></tr>
 <tr>
-<td>storage_flux </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>Storage heat flux. </td></tr>
+<td>storage_flux </td><td>W/m<sup>2</sup> </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Storage heat flux. </td></tr>
 <tr>
-<td>net_radiation_flux </td><td>W/m<sup>2</sup> </td><td> <font face="courier" color="green">float</font> </td><td>Primitive net radiation flux (absorption minus emission). </td></tr>
+<td>net_radiation_flux </td><td>W/m<sup>2</sup> </td><td> <span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Primitive net radiation flux (absorption minus emission). </td></tr>
 </table>
 <h1><a class="anchor" id="EBUse"></a>
 Using the Energy Balance Model Plug-in</h1>
@@ -384,7 +450,35 @@ Input Radiative Bands</h2>
 <div class="line">energybalance.addRadiationBand(<span class="stringliteral">&quot;PAR&quot;</span>);</div>
 <div class="line">energybalance.addRadiationBand(<span class="stringliteral">&quot;NIR&quot;</span>);</div>
 <div class="line">energybalance.addRadiationBand(<span class="stringliteral">&quot;LW&quot;</span>);</div>
-</div><!-- fragment --><h2><a class="anchor" id="EBblc"></a>
+</div><!-- fragment --><h2><a class="anchor" id="EBGPUControl"></a>
+GPU Acceleration Control</h2>
+<p>The Energy Balance plugin automatically detects GPU availability at runtime and uses GPU acceleration when available. However, you can manually control whether to use GPU or CPU execution:</p>
+<div class="fragment"><div class="line"><a class="code hl_class" href="class_energy_balance_model.html" title="Energy balance model class.">EnergyBalanceModel</a> energybalance(&amp;context);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Force CPU mode (even if GPU is available)</span></div>
+<div class="line">energybalance.disableGPUAcceleration();</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Enable GPU if available</span></div>
+<div class="line">energybalance.enableGPUAcceleration();</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Check current mode</span></div>
+<div class="line"><span class="keywordflow">if</span> (energybalance.isGPUAccelerationEnabled()) {</div>
+<div class="line">    std::cout &lt;&lt; <span class="stringliteral">&quot;Using GPU acceleration&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line">} <span class="keywordflow">else</span> {</div>
+<div class="line">    std::cout &lt;&lt; <span class="stringliteral">&quot;Using CPU (OpenMP) implementation&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line">}</div>
+</div><!-- fragment --><p><b>Note:</b> These methods are only available when the plugin is compiled with CUDA support (HELIOS_CUDA_AVAILABLE defined). For CPU-only builds, these methods are not available and the plugin always uses OpenMP.</p>
+<p><b>When to use CPU mode:</b> </p><ul>
+<li>
+Benchmarks show CPU implementation is faster than GPU for workloads &lt; 1M primitives </li>
+<li>
+Testing and validation (ensure consistent results across platforms) </li>
+<li>
+Debugging (simpler execution path) </li>
+<li>
+Systems where GPU is shared with visualization </li>
+</ul>
+<h2><a class="anchor" id="EBblc"></a>
 Boundary-layer Conductance Model</h2>
 <p>The primitive boundary-layer conductance can either be set using the <a class="el" href="class_b_l_conductance_model.html">BLConductanceModel</a> plug-in, or using the default model which is the Polhausen equation. Note also that custom conductance values can also be provided by setting the value of primitive data labeled 'boundarylayer_conductance', which overrides the computed model value.</p>
 <p>It is also important to note that, by default, the length scale used to calculate the boundary-layer conductance is taken to be the square root of the primitive surface area. If the size of the object is different from the size of the primitive, then it is important to manually set the length scale to be the size of the object, as this is the relevant scale for boundary-layer development.</p>
@@ -429,7 +523,7 @@ Running the Steady-State Model</h2>
 <div class="line">    <span class="comment">// Add `Patch&#39; primitive</span></div>
 <div class="line">    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
 <div class="line">    <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
-<div class="line">    uint UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size );</div>
+<div class="line">    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size );</div>
 <div class="line"> </div>
 <div class="line">    <a class="code hl_class" href="class_energy_balance_model.html" title="Energy balance model class.">EnergyBalanceModel</a> energybalance(&amp;context);</div>
 <div class="line"> </div>
@@ -473,15 +567,15 @@ Unsteady model with heat storage</h3>
 <div class="line">   <span class="comment">// Add one &#39;Patch&#39; primitive</span></div>
 <div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> center = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,1);</div>
 <div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> size = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1,1);</div>
-<div class="line">   uint UUID1 = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size );</div>
+<div class="line">   <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID1 = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size );</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">// Add a second `Patch&#39; primitive</span></div>
 <div class="line">   center = <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(2,0,1);</div>
-<div class="line">   uint UUID2 = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size );</div>
+<div class="line">   <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID2 = context.<a class="code hl_function" href="group__primitives.html#gaf4aec42f3f104b7c71150577ef129659" title="Add new default Patch geometric primitive, which is centered at the origin (0,0,0),...">addPatch</a>( center, size );</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">// Set the heat capacity of the first patch so that the unsteady energy balance model will be run</span></div>
 <div class="line">   <span class="keywordtype">float</span> Cp = 10000; <span class="comment">//J/m^2-oC</span></div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a817fe7d1b8a11f51923d3a7e2c3ba092" title="Add data value (int) associated with a primitive element.">setPrimitiveData</a>( UUID1, <span class="stringliteral">&quot;heat_capacity&quot;</span>, Cp );</div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a2673acc20f460ce6d8a31de79d512c9e" title="Add data value associated with a primitive element.">setPrimitiveData</a>( UUID1, <span class="stringliteral">&quot;heat_capacity&quot;</span>, Cp );</div>
 <div class="line"> </div>
 <div class="line">   <a class="code hl_class" href="class_energy_balance_model.html" title="Energy balance model class.">EnergyBalanceModel</a> energybalance(&amp;context);</div>
 <div class="line"> </div>

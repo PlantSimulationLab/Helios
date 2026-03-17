@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Visualizer Plugin Documentation</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -184,6 +217,9 @@ $(function(){initNavTree('_visualizer_doc.html',''); initResizable(true); });
         <a href="#Window">Visualization Window</a>
       </li>
       <li class="level2">
+        <a href="#Headless">Headless Rendering</a>
+      </li>
+      <li class="level2">
         <a href="#Background">Window background</a>
       </li>
       <li class="level2">
@@ -191,6 +227,17 @@ $(function(){initNavTree('_visualizer_doc.html',''); initResizable(true); });
         <ul>
           <li class="level3">
             <a href="#ContextGeom">Automatically importing Context geometry</a>
+          </li>
+        </ul>
+      </li>
+      <li class="level2">
+        <a href="#PointCloudPerf">Point Cloud Performance Optimization</a>
+        <ul>
+          <li class="level3">
+            <a href="#PointCulling">Point Culling Methods</a>
+          </li>
+          <li class="level3">
+            <a href="#PointCullingConfig">Point Culling Configuration</a>
           </li>
         </ul>
       </li>
@@ -222,6 +269,11 @@ $(function(){initNavTree('_visualizer_doc.html',''); initResizable(true); });
           </li>
           <li class="level3">
             <a href="#Cbar">Colorbar</a>
+            <ul>
+              <li class="level4">
+                <a href="#auto_ticks">Automatic Tick Generation</a>
+              </li>
+            </ul>
           </li>
           <li class="level3">
             <a href="#Shading">Shading</a>
@@ -273,7 +325,9 @@ Dependencies</h1>
 <h1><a class="anchor" id="VisIssues"></a>
 Known Issues</h1>
 <ul>
-<li>The visualizer does not work well for visualizing very large point clouds, as it will be very slow to respond.</li>
+<li><b>macOS OpenGL Warning in Headless Mode</b>: When using headless rendering on macOS, you may see a warning like: <div class="fragment"><div class="line">UNSUPPORTED (log once): POSSIBLE ISSUE: unit 6 GLD_TEXTURE_INDEX_2D is unloadable and bound to sampler type (Float) - using zero texture because texture unloadable</div>
+</div><!-- fragment --> This is a harmless driver warning from the macOS OpenGL implementation and does not affect rendering functionality. It appears once per run and can be safely ignored.</li>
+<li>Large point clouds are supported with automatic culling optimization.</li>
 </ul>
 <h1><a class="anchor" id="VisIntro"></a>
 Introduction</h1>
@@ -326,16 +380,88 @@ Visualization Window</h2>
 <div class="line">   vis.printWindow(<span class="stringliteral">&quot;blank_window.jpg&quot;</span>);</div>
 <div class="line">   vis.closeWindow();</div>
 <div class="line"> }</div>
-</div><!-- fragment --><h2><a class="anchor" id="Background"></a>
+</div><!-- fragment --><h2><a class="anchor" id="Headless"></a>
+Headless Rendering</h2>
+<p>The Visualizer supports headless rendering for server environments or automated workflows where no display is available. Headless mode enables all visualization and image export functionality without requiring a graphics display or user interaction.</p>
+<p><b>Enabling Headless Mode:</b></p>
+<p>Headless mode is enabled through the constructor by setting the <code>headless</code> parameter to <code>true</code>:</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line">    <span class="comment">// Enable headless mode (5th parameter = true)</span></div>
+<div class="line">    <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis( 1200, 800, 8, <span class="keyword">true</span>, <span class="keyword">true</span> );</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// All visualization functions work normally</span></div>
+<div class="line">    vis.buildContextGeometry(&amp;context);</div>
+<div class="line">    vis.setCameraPosition( make_vec3(0,0,5), make_vec3(0,0,0) );</div>
+<div class="line">    vis.plotUpdate(<span class="keyword">true</span>);</div>
+<div class="line">    vis.printWindow(<span class="stringliteral">&quot;headless_output.jpg&quot;</span>);</div>
+<div class="line">}</div>
+</div><!-- fragment --><p><b>Key Features:</b></p><ul>
+<li>Full OpenGL rendering using offscreen framebuffers</li>
+<li>All geometry types and visual effects supported</li>
+<li>Image export via <a class="el" href="class_visualizer.html#a2db00c518bf610fdcb70e0ec5a5a0e32">printWindow()</a> and <a class="el" href="class_visualizer.html#a050a1f01ec3eea82b1231abe8c87c259">getWindowPixelsRGB()</a></li>
+<li>No display or window manager required</li>
+<li>Identical visual output to windowed mode</li>
+</ul>
+<p><b>Important Notes:</b></p><ul>
+<li>When in headless mode, calling plotUpdate(false) (requesting visible window) will issue a warning and continue with offscreen rendering</li>
+<li>Always use plotUpdate(true) for headless workflows to avoid warnings</li>
+<li><a class="el" href="class_visualizer.html#ab4858ed12fa78fe451569f4bbc27cd7c">plotInteractive()</a> is not available in headless mode</li>
+</ul>
+<p><b>Use Cases:</b></p><ul>
+<li>Automated visualization pipelines on servers</li>
+<li>Batch processing of simulation results</li>
+<li>Integration with cloud computing environments</li>
+<li>Continuous integration testing of visualization features</li>
+</ul>
+<h2><a class="anchor" id="Background"></a>
 Window background</h2>
-<p>The window background can be set to a constant color via the command <a class="el" href="class_visualizer.html#a6e54e59d971acaadbf4cef72a28585ce">setBackgroundColor( RGBcolor color )</a>. Alternatively, a three-dimensional &lsquo;sky&rsquo; background can be set using the <a class="el" href="class_visualizer.html#a266e9ff3e825dcbd283f9e403688e09d">addSkyDomeByCenter</a> command. This adds a hemispherical dome with a sky texture image mapped to its surface. The default sky texture is &lsquo;SkyDome_clouds.jpg&rsquo; located in the plugins/visualizer/textures directory. The following example shows how to add a sky dome:</p>
+<p>The Visualizer provides multiple options for customizing the window background:</p>
+<p><b>Default Gradient Background</b></p>
+<p>By default, the Visualizer displays a subtle vertical gradient background that transitions from a neutral blue at the bottom to white at the top. This provides a clean, professional appearance without requiring any configuration.</p>
+<p><b>Solid Color Background</b></p>
+<p>The window background can be set to a constant color using the <a class="el" href="class_visualizer.html#a6e54e59d971acaadbf4cef72a28585ce">setBackgroundColor( RGBcolor color )</a> command:</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
 <div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis( 1200 );</div>
-<div class="line">   vis.addSkyDomeByCenter( 100, make_vec3(0,0,0), 20, <span class="stringliteral">&quot;plugins/visualizer/textures/SkyDome_clouds.jpg&quot;</span>, 0 );</div>
+<div class="line">   vis.setBackgroundColor( RGB::white );  <span class="comment">// Set background to white</span></div>
 <div class="line">}</div>
-</div><!-- fragment --><p>In the example, we have created a sky dome with a radius of 100 centered at the origin (0,0,0), 20 divisions in the spherical coordinate directions (elevation,azimuth), and on layer 0.</p>
+</div><!-- fragment --><p><b>Transparent Background</b></p>
+<p>For creating visualizations with transparent backgrounds (useful for overlaying on other images or presentations), use the <a class="el" href="class_visualizer.html#a70f1ec8b0d73c3832586053e4d46bade">setBackgroundTransparent()</a> command. When rendering to the screen, a checkerboard pattern indicates transparency. When exporting to PNG format via <a class="el" href="class_visualizer.html#a2db00c518bf610fdcb70e0ec5a5a0e32">printWindow()</a>, the background will have true alpha channel transparency:</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis( 1200 );</div>
+<div class="line">   vis.setBackgroundTransparent();</div>
+<div class="line">   vis.plotUpdate();</div>
+<div class="line">   vis.printWindow(<span class="stringliteral">&quot;output.png&quot;</span>, <span class="stringliteral">&quot;png&quot;</span>);  <span class="comment">// Saves with transparent background</span></div>
+<div class="line">}</div>
+</div><!-- fragment --><p>Note: Transparent backgrounds only work with PNG output format. JPEG output will have an opaque background.</p>
+<p><b>Custom Image Background</b></p>
+<p>You can set a custom texture image as the background using the <a class="el" href="class_visualizer.html#a5beb17c4307b49dcdda7852f483b5ca9">setBackgroundImage( const char* texture_file )</a> command:</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis( 1200 );</div>
+<div class="line">   vis.setBackgroundImage( <span class="stringliteral">&quot;path/to/custom_background.jpg&quot;</span> );</div>
+<div class="line">}</div>
+</div><!-- fragment --><p>The image will be stretched to fill the window while maintaining the aspect ratio to avoid distortion. Both JPEG and PNG formats are supported.</p>
+<p><b>Sky Texture Background</b></p>
+<p>For outdoor scenes, a three-dimensional sky background can be added using the <a class="el" href="class_visualizer.html#acb536e783660f361e9251810c7c7709e">setBackgroundSkyTexture</a> command. This creates a dynamically scaling sky sphere that uses shader-based transformations to keep the camera always inside, eliminating the need to manually specify a radius. The sky appears infinitely distant regardless of camera position or zoom level:</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis( 1200 );</div>
+<div class="line">   <span class="comment">// Use default sky texture (SkyDome_clouds.jpg)</span></div>
+<div class="line">   vis.setBackgroundSkyTexture();</div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">// Or specify a custom texture</span></div>
+<div class="line">   <span class="comment">// vis.setBackgroundSkyTexture( &quot;path/to/custom_sky.jpg&quot; );</span></div>
+<div class="line">}</div>
+</div><!-- fragment --><p>The method automatically uses the default sky texture (<code>plugins/visualizer/textures/SkyDome_clouds.jpg</code>) if no texture file is specified. The sky can be toggled on/off like other background modes using <a class="el" href="class_visualizer.html#a6e54e59d971acaadbf4cef72a28585ce">setBackgroundColor</a>, <a class="el" href="class_visualizer.html#a70f1ec8b0d73c3832586053e4d46bade">setBackgroundTransparent</a>, or <a class="el" href="class_visualizer.html#a5beb17c4307b49dcdda7852f483b5ca9">setBackgroundImage</a>.</p>
+<dl class="section note"><dt>Note</dt><dd>The older <a class="el" href="class_visualizer.html#a266e9ff3e825dcbd283f9e403688e09d">addSkyDomeByCenter</a> method is deprecated and will be removed in a future version. It required manual specification of radius and center, which could break when zooming out beyond the dome's boundaries. The new <a class="el" href="class_visualizer.html#acb536e783660f361e9251810c7c7709e">setBackgroundSkyTexture</a> method provides a more robust solution that works correctly at all zoom levels.</dd></dl>
 <h2><a class="anchor" id="AddGeom"></a>
 Adding Geometry</h2>
 <p>Next, we will learn how to add objects to the visualization. The visualizer supports the following objects:</p>
@@ -396,6 +522,23 @@ Adding Geometry</h2>
 <a class="el" href="class_visualizer.html#a641757758332e85a853a510bd9c5191e">Visualizer::addLine( const helios::vec3 &amp;start, const helios::vec3 &amp;end, const helios::RGBcolor &amp;color, Visualizer::CoordinateSystem coordFlag )</a> </li>
 <li>
 <a class="el" href="class_visualizer.html#a03885f2501207e152a198fbb6110d21e">Visualizer::addLine( const helios::vec3 &amp;start, const helios::vec3 &amp;end, const helios::RGBAcolor &amp;color, Visualizer::CoordinateSystem coordFlag )</a> </li>
+<li>
+<a class="el" href="class_visualizer.html#a8c4cc31b63547e3658eb30aac0100ba3">Visualizer::addLine( const helios::vec3 &amp;start, const helios::vec3 &amp;end, const helios::RGBcolor &amp;color, float linewidth, Visualizer::CoordinateSystem coordFlag )</a> </li>
+<li>
+<a class="el" href="class_visualizer.html#a83a4addfdb9fce9137481b90f096929f">Visualizer::addLine( const helios::vec3 &amp;start, const helios::vec3 &amp;end, const helios::RGBAcolor &amp;color, float linewidth, Visualizer::CoordinateSystem coordFlag )</a> </li>
+</ul>
+<p class="endtd"></p>
+</td></tr>
+<tr>
+<td>Point </td><td>Single point in 3D space with configurable size. </td><td><ul>
+<li>
+Visualizer::addPoint( const helios::vec3 &amp;position, const helios::RGBcolor &amp;color, Visualizer::CoordinateSystem coordFlag ) </li>
+<li>
+Visualizer::addPoint( const helios::vec3 &amp;position, const helios::RGBAcolor &amp;color, Visualizer::CoordinateSystem coordFlag ) </li>
+<li>
+<a class="el" href="class_visualizer.html#a3165538c30d9964d43dd5d815d6c1483">Visualizer::addPoint( const helios::vec3 &amp;position, const helios::RGBcolor &amp;color, float pointsize, Visualizer::CoordinateSystem coordFlag )</a> </li>
+<li>
+<a class="el" href="class_visualizer.html#afaba78505d66705b6067ed75c95da881">Visualizer::addPoint( const helios::vec3 &amp;position, const helios::RGBAcolor &amp;color, float pointsize, Visualizer::CoordinateSystem coordFlag )</a> </li>
 </ul>
 <p class="endtd"></p>
 </td></tr>
@@ -446,6 +589,58 @@ Automatically importing Context geometry</h3>
 <div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis( 1200 );</div>
 <div class="line"> </div>
 <div class="line">   vis.buildContextGeometry(&amp;context);</div>
+<div class="line">}</div>
+</div><!-- fragment --><h2><a class="anchor" id="PointCloudPerf"></a>
+Point Cloud Performance Optimization</h2>
+<p>For large point clouds (tens of millions of points), the visualizer includes automatic culling optimization to maintain interactive performance. This feature is enabled by default when the number of points exceeds a configurable threshold.</p>
+<h3><a class="anchor" id="PointCulling"></a>
+Point Culling Methods</h3>
+<p>The visualizer supports two types of automatic culling:</p>
+<ul>
+<li>
+<b>View Frustum Culling</b> - Points outside the camera's field of view are automatically excluded from rendering </li>
+<li>
+<b>Distance-based Culling</b> - Distant points are culled with level-of-detail scaling and adaptive sizing to maintain visual coverage </li>
+</ul>
+<h3><a class="anchor" id="PointCullingConfig"></a>
+Point Culling Configuration</h3>
+<p>Point cloud culling can be configured using the following functions:</p>
+<table class="doxtable">
+<tr>
+<th>Function </th><th>Description  </th></tr>
+<tr>
+<td><a class="el" href="class_visualizer.html#a5708c79c66541d7a6d8b523f963f39a7">setPointCullingEnabled( bool enabled )</a> </td><td>Enable or disable automatic point culling.  </td></tr>
+<tr>
+<td><a class="el" href="class_visualizer.html#a59bc285ed20fe8f4e54ecdc9cf034f88">setPointCullingThreshold( size_t threshold )</a> </td><td>Set the minimum number of points required to trigger culling optimization.  </td></tr>
+<tr>
+<td><a class="el" href="class_visualizer.html#a43bc71c2bd556e8afd436246ee220c87">setPointMaxRenderDistance( float distance )</a> </td><td>Set the maximum distance for point rendering in distance-based culling.  </td></tr>
+<tr>
+<td><a class="el" href="class_visualizer.html#a53de83e2975fbe25b9f93572444b8fa8">setPointLODFactor( float factor )</a> </td><td>Set the level-of-detail scaling factor for distant points.  </td></tr>
+<tr>
+<td>getPointRenderingMetrics(...) </td><td>Retrieve real-time performance metrics including total points, rendered points, and culling computation time.  </td></tr>
+</table>
+<p>Example code showing how to configure point cloud culling:</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_visualizer_8h.html">Visualizer.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line">   <a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis( 1200 );</div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">// Configure culling for large point clouds</span></div>
+<div class="line">   vis.setPointCullingEnabled(<span class="keyword">true</span>);</div>
+<div class="line">   vis.setPointCullingThreshold(1000000); <span class="comment">// Enable for point clouds &gt; 1M points</span></div>
+<div class="line">   vis.setPointMaxRenderDistance(500.0f); <span class="comment">// Cull points beyond 500 units</span></div>
+<div class="line">   vis.setPointLODFactor(10.0f); <span class="comment">// Aggressive LOD scaling</span></div>
+<div class="line">   </div>
+<div class="line">   <span class="comment">// Add large point cloud...</span></div>
+<div class="line">   <span class="keywordflow">for</span>(<span class="keywordtype">int</span> i = 0; i &lt; 10000000; ++i) {</div>
+<div class="line">       vis.addPoint(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(random_x, random_y, random_z), RGB::red, 1.0f, <a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a83efc5e87fcf84a8c3d646e77adf53d4" title="Coordinates are specified in a 3D Cartesian system (right-handed), where +z is vertical.">Visualizer::COORDINATES_CARTESIAN</a>);</div>
+<div class="line">   }</div>
+<div class="line">   </div>
+<div class="line">   <span class="comment">// Check performance metrics</span></div>
+<div class="line">   <span class="keywordtype">size_t</span> total, rendered;</div>
+<div class="line">   <span class="keywordtype">float</span> culling_time;</div>
+<div class="line">   vis.getPointRenderingMetrics(total, rendered, culling_time);</div>
+<div class="line">   std::cout &lt;&lt; <span class="stringliteral">&quot;Rendering &quot;</span> &lt;&lt; rendered &lt;&lt; <span class="stringliteral">&quot;/&quot;</span> &lt;&lt; total &lt;&lt; <span class="stringliteral">&quot; points in &quot;</span> &lt;&lt; culling_time &lt;&lt; <span class="stringliteral">&quot;ms&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line">}</div>
 </div><!-- fragment --><h2><a class="anchor" id="PlotWindow"></a>
 Plotting Geometry</h2>
@@ -579,7 +774,7 @@ Coloring by pseudocolor map</h3>
 <tr>
 <td><a class="el" href="class_visualizer.html#a0af839aae42fd7086643608a6cbd194ba915aba9d8ae7c0796d8ed705671003a7">Visualizer::COLORMAP_CUSTOM</a> </td><td>N/A  </td></tr>
 </table>
-<p>The colormap to be used is set using the following command setColormap( Ctable colormap_name ), where &lsquo;colormap_name&rsquo; is one of the enumerations in the table above. For example, to set the &lsquo;hot&rsquo; colormap one would use:</p>
+<p>The colormap to be used is set using the following command <a class="el" href="class_visualizer.html#a992f636c4c406bbfc3f29add1fa3a278">setColormap( Ctable colormap_name )</a>, where &lsquo;colormap_name&rsquo; is one of the enumerations in the table above. For example, to set the &lsquo;hot&rsquo; colormap one would use:</p>
 <div class="fragment"><div class="line">vis.setColormap( <a class="code hl_enumvalue" href="class_visualizer.html#a0af839aae42fd7086643608a6cbd194ba50215b5b3fb3a48fc83d7b4670da2026" title="&quot;Hot&quot; colormap">Visualizer::COLORMAP_HOT</a> );</div>
 </div><!-- fragment --><p>To set a custom color table, the same command is used with the <a class="el" href="class_visualizer.html#a0af839aae42fd7086643608a6cbd194ba915aba9d8ae7c0796d8ed705671003a7">Visualizer::COLORMAP_CUSTOM</a> argument, plus additional arguments that define the custom color table. These arguments are 1) a vector of r-g-b colors defining various colors in the color table, and 2) a vector of values between 0 and 1 defining the relative positions of the colors in the table. The first position value must always be 0, and the last value must be 1. The visualizer interpolates between colors to populate the full color table. The table below shows how the &lsquo;hot&rsquo; color table is defined:</p>
 <table class="doxtable">
@@ -639,6 +834,21 @@ Colorbar</h3>
 <tr>
 <td><a class="el" href="class_visualizer.html#a40280c3f96152de174a4d9b26cc58c9d">setColorbarFontSize( uint font_size )</a>  </td><td>Set the size of the colorbar text in points.  </td></tr>
 </table>
+<h4><a class="anchor" id="auto_ticks"></a>
+Automatic Tick Generation</h4>
+<p>When custom ticks are not specified using <a class="el" href="class_visualizer.html#aabe4913f9a3444a5fea906382eeb6037">Visualizer::setColorbarTicks</a>, the visualizer automatically generates tick positions and labels using Heckbert's "nice numbers" algorithm. This algorithm selects tick values that are "clean" multiples of 1, 2, or 5 times a power of 10, making the colorbar easier to read.</p>
+<p><b>Adaptive Tick Count:</b> The number of ticks is automatically determined based on the colorbar size and font size to prevent overcrowding. Smaller colorbars will have fewer ticks to maintain readability.</p>
+<p>For example:</p><ul>
+<li>A colorbar ranging from 0 to 1 will generate ticks at 0.0, 0.2, 0.4, 0.6, 0.8, 1.0</li>
+<li>A colorbar ranging from 0 to 600 (with limited space) will generate ticks at 0, 200, 400, 600</li>
+<li>A colorbar ranging from 0 to 20 with integer data will generate ticks at 0, 5, 10, 15, 20</li>
+</ul>
+<p>The tick label formatting automatically adapts based on the data type and range:</p><ul>
+<li><b>Integer data</b>: Tick labels are formatted as integers with no decimal places (e.g., 0, 5, 10). For values ≥10,000, scientific notation is used (e.g., 1e+04)</li>
+<li><b>Floating-point data</b>: Tick labels show an appropriate number of decimal places based on the tick spacing (e.g., 0.0, 0.2, 0.4). Scientific notation is used for values ≥10,000 or &lt;0.001</li>
+<li><b>Scientific notation</b>: Automatically used for very large (≥10,000) or very small (&lt;0.001) values to maintain readability</li>
+</ul>
+<p>The data type (integer vs. float) is automatically detected when calling <a class="el" href="class_visualizer.html#a0c75972b0cc0300a4fa0139af6a32234">Visualizer::colorContextPrimitivesByData</a> or <a class="el" href="class_visualizer.html#ad6479e1f6bb7f0f06d0c83b0351b4424">Visualizer::colorContextPrimitivesByObjectData</a>.</p>
 <div class="image">
 <img src="vineyard_PAR_cmap.png" alt=""/>
 </div>

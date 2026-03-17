@@ -1,6 +1,6 @@
 /** \file "StomatalConductanceModel.cpp" Primary source file for stomatalconductance plug-in.
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -17,6 +17,34 @@
 
 using namespace std;
 using namespace helios;
+
+namespace {
+    // Material data labels for BWB model
+    constexpr const char *LABEL_BWB_gs0 = "gs_bwb_gs0";
+    constexpr const char *LABEL_BWB_a1 = "gs_bwb_a1";
+
+    // Material data labels for BBL model
+    constexpr const char *LABEL_BBL_gs0 = "gs_bbl_gs0";
+    constexpr const char *LABEL_BBL_a1 = "gs_bbl_a1";
+    constexpr const char *LABEL_BBL_D0 = "gs_bbl_D0";
+
+    // Material data labels for MOPT model
+    constexpr const char *LABEL_MOPT_gs0 = "gs_mopt_gs0";
+    constexpr const char *LABEL_MOPT_g1 = "gs_mopt_g1";
+
+    // Material data labels for BMF model
+    constexpr const char *LABEL_BMF_Em = "gs_bmf_Em";
+    constexpr const char *LABEL_BMF_i0 = "gs_bmf_i0";
+    constexpr const char *LABEL_BMF_k = "gs_bmf_k";
+    constexpr const char *LABEL_BMF_b = "gs_bmf_b";
+
+    // Material data labels for BB model
+    constexpr const char *LABEL_BB_pi_0 = "gs_bb_pi_0";
+    constexpr const char *LABEL_BB_pi_m = "gs_bb_pi_m";
+    constexpr const char *LABEL_BB_theta = "gs_bb_theta";
+    constexpr const char *LABEL_BB_sigma = "gs_bb_sigma";
+    constexpr const char *LABEL_BB_chi = "gs_bb_chi";
+} // namespace
 
 StomatalConductanceModel::StomatalConductanceModel(helios::Context *m_context) {
     context = m_context;
@@ -98,6 +126,74 @@ void StomatalConductanceModel::setModelCoefficients(const BMFcoefficients &coeff
         BMFmodel_coefficients[UUID] = coeffs;
     }
     model = "BMF";
+}
+
+// Material-based coefficient setters
+
+void StomatalConductanceModel::setModelCoefficients(const std::string &material_label, const BWBcoefficients &coeffs) {
+    context->setMaterialData(material_label, LABEL_BWB_gs0, coeffs.gs0);
+    context->setMaterialData(material_label, LABEL_BWB_a1, coeffs.a1);
+
+    // Clear cache for this material to force refresh on next run
+    uint matID = context->getMaterialIDFromLabel(material_label);
+    material_coefficient_cache_BWB.erase(matID);
+
+    model = "BWB";
+}
+
+void StomatalConductanceModel::setModelCoefficients(const std::string &material_label, const BBLcoefficients &coeffs) {
+    context->setMaterialData(material_label, LABEL_BBL_gs0, coeffs.gs0);
+    context->setMaterialData(material_label, LABEL_BBL_a1, coeffs.a1);
+    context->setMaterialData(material_label, LABEL_BBL_D0, coeffs.D0);
+
+    // Clear cache for this material
+    uint matID = context->getMaterialIDFromLabel(material_label);
+    material_coefficient_cache_BBL.erase(matID);
+
+    model = "BBL";
+}
+
+void StomatalConductanceModel::setModelCoefficients(const std::string &material_label, const MOPTcoefficients &coeffs) {
+    context->setMaterialData(material_label, LABEL_MOPT_gs0, coeffs.gs0);
+    context->setMaterialData(material_label, LABEL_MOPT_g1, coeffs.g1);
+
+    // Clear cache for this material
+    uint matID = context->getMaterialIDFromLabel(material_label);
+    material_coefficient_cache_MOPT.erase(matID);
+
+    model = "MOPT";
+}
+
+void StomatalConductanceModel::setModelCoefficients(const std::string &material_label, const BMFcoefficients &coeffs) {
+    context->setMaterialData(material_label, LABEL_BMF_Em, coeffs.Em);
+    context->setMaterialData(material_label, LABEL_BMF_i0, coeffs.i0);
+    context->setMaterialData(material_label, LABEL_BMF_k, coeffs.k);
+    context->setMaterialData(material_label, LABEL_BMF_b, coeffs.b);
+
+    // Clear cache for this material
+    uint matID = context->getMaterialIDFromLabel(material_label);
+    material_coefficient_cache_BMF.erase(matID);
+
+    model = "BMF";
+}
+
+void StomatalConductanceModel::setModelCoefficients(const std::string &material_label, const BBcoefficients &coeffs) {
+    context->setMaterialData(material_label, LABEL_BB_pi_0, coeffs.pi_0);
+    context->setMaterialData(material_label, LABEL_BB_pi_m, coeffs.pi_m);
+    context->setMaterialData(material_label, LABEL_BB_theta, coeffs.theta);
+    context->setMaterialData(material_label, LABEL_BB_sigma, coeffs.sigma);
+    context->setMaterialData(material_label, LABEL_BB_chi, coeffs.chi);
+
+    // Clear cache for this material
+    uint matID = context->getMaterialIDFromLabel(material_label);
+    material_coefficient_cache_BB.erase(matID);
+
+    model = "BB";
+}
+
+void StomatalConductanceModel::setBMFCoefficientsFromLibrary(const std::string &species, const std::string &material_label) {
+    BMFcoefficients coeffs = getBMFCoefficientsFromLibrary(species);
+    setModelCoefficients(material_label, coeffs);
 }
 
 void StomatalConductanceModel::setBMFCoefficientsFromLibrary(const std::string &species_name) {
@@ -241,6 +337,184 @@ void StomatalConductanceModel::setDynamicTimeConstants(float tau_open, float tau
     }
 }
 
+// Cached coefficient retrieval helpers
+
+BWBcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_BWB(uint UUID) const {
+    uint materialID = context->getPrimitiveMaterialID(UUID);
+
+    // Check cache first
+    if (material_coefficient_cache_BWB.find(materialID) != material_coefficient_cache_BWB.end()) {
+        return material_coefficient_cache_BWB.at(materialID);
+    }
+
+    // Try to load from material data
+    BWBcoefficients coeffs;
+    bool found = true;
+
+    try {
+        const Material &mat = context->getMaterial(materialID);
+        if (mat.doesMaterialDataExist(LABEL_BWB_gs0) && mat.doesMaterialDataExist(LABEL_BWB_a1)) {
+
+            mat.getMaterialData(LABEL_BWB_gs0, coeffs.gs0);
+            mat.getMaterialData(LABEL_BWB_a1, coeffs.a1);
+
+            // Cache the retrieved coefficients
+            material_coefficient_cache_BWB[materialID] = coeffs;
+            return coeffs;
+        } else {
+            found = false;
+        }
+    } catch (const std::exception &) {
+        found = false;
+    }
+
+    // Fallback to legacy UUID map
+    if (!found && BWBmodel_coefficients.find(UUID) != BWBmodel_coefficients.end()) {
+        return BWBmodel_coefficients.at(UUID);
+    }
+
+    // Fallback to global default
+    return BWBcoeffs;
+}
+
+BBLcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_BBL(uint UUID) const {
+    uint materialID = context->getPrimitiveMaterialID(UUID);
+
+    if (material_coefficient_cache_BBL.find(materialID) != material_coefficient_cache_BBL.end()) {
+        return material_coefficient_cache_BBL.at(materialID);
+    }
+
+    BBLcoefficients coeffs;
+    bool found = true;
+
+    try {
+        const Material &mat = context->getMaterial(materialID);
+        if (mat.doesMaterialDataExist(LABEL_BBL_gs0) && mat.doesMaterialDataExist(LABEL_BBL_a1) && mat.doesMaterialDataExist(LABEL_BBL_D0)) {
+
+            mat.getMaterialData(LABEL_BBL_gs0, coeffs.gs0);
+            mat.getMaterialData(LABEL_BBL_a1, coeffs.a1);
+            mat.getMaterialData(LABEL_BBL_D0, coeffs.D0);
+
+            material_coefficient_cache_BBL[materialID] = coeffs;
+            return coeffs;
+        } else {
+            found = false;
+        }
+    } catch (const std::exception &) {
+        found = false;
+    }
+
+    if (!found && BBLmodel_coefficients.find(UUID) != BBLmodel_coefficients.end()) {
+        return BBLmodel_coefficients.at(UUID);
+    }
+
+    return BBLcoeffs;
+}
+
+MOPTcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_MOPT(uint UUID) const {
+    uint materialID = context->getPrimitiveMaterialID(UUID);
+
+    if (material_coefficient_cache_MOPT.find(materialID) != material_coefficient_cache_MOPT.end()) {
+        return material_coefficient_cache_MOPT.at(materialID);
+    }
+
+    MOPTcoefficients coeffs;
+    bool found = true;
+
+    try {
+        const Material &mat = context->getMaterial(materialID);
+        if (mat.doesMaterialDataExist(LABEL_MOPT_gs0) && mat.doesMaterialDataExist(LABEL_MOPT_g1)) {
+
+            mat.getMaterialData(LABEL_MOPT_gs0, coeffs.gs0);
+            mat.getMaterialData(LABEL_MOPT_g1, coeffs.g1);
+
+            material_coefficient_cache_MOPT[materialID] = coeffs;
+            return coeffs;
+        } else {
+            found = false;
+        }
+    } catch (const std::exception &) {
+        found = false;
+    }
+
+    if (!found && MOPTmodel_coefficients.find(UUID) != MOPTmodel_coefficients.end()) {
+        return MOPTmodel_coefficients.at(UUID);
+    }
+
+    return MOPTcoeffs;
+}
+
+BMFcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_BMF(uint UUID) const {
+    uint materialID = context->getPrimitiveMaterialID(UUID);
+
+    if (material_coefficient_cache_BMF.find(materialID) != material_coefficient_cache_BMF.end()) {
+        return material_coefficient_cache_BMF.at(materialID);
+    }
+
+    BMFcoefficients coeffs;
+    bool found = true;
+
+    try {
+        const Material &mat = context->getMaterial(materialID);
+        if (mat.doesMaterialDataExist(LABEL_BMF_Em) && mat.doesMaterialDataExist(LABEL_BMF_i0) && mat.doesMaterialDataExist(LABEL_BMF_k) && mat.doesMaterialDataExist(LABEL_BMF_b)) {
+
+            mat.getMaterialData(LABEL_BMF_Em, coeffs.Em);
+            mat.getMaterialData(LABEL_BMF_i0, coeffs.i0);
+            mat.getMaterialData(LABEL_BMF_k, coeffs.k);
+            mat.getMaterialData(LABEL_BMF_b, coeffs.b);
+
+            material_coefficient_cache_BMF[materialID] = coeffs;
+            return coeffs;
+        } else {
+            found = false;
+        }
+    } catch (const std::exception &) {
+        found = false;
+    }
+
+    if (!found && BMFmodel_coefficients.find(UUID) != BMFmodel_coefficients.end()) {
+        return BMFmodel_coefficients.at(UUID);
+    }
+
+    return BMFcoeffs;
+}
+
+BBcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_BB(uint UUID) const {
+    uint materialID = context->getPrimitiveMaterialID(UUID);
+
+    if (material_coefficient_cache_BB.find(materialID) != material_coefficient_cache_BB.end()) {
+        return material_coefficient_cache_BB.at(materialID);
+    }
+
+    BBcoefficients coeffs;
+    bool found = true;
+
+    try {
+        const Material &mat = context->getMaterial(materialID);
+        if (mat.doesMaterialDataExist(LABEL_BB_pi_0) && mat.doesMaterialDataExist(LABEL_BB_pi_m) && mat.doesMaterialDataExist(LABEL_BB_theta) && mat.doesMaterialDataExist(LABEL_BB_sigma) && mat.doesMaterialDataExist(LABEL_BB_chi)) {
+
+            mat.getMaterialData(LABEL_BB_pi_0, coeffs.pi_0);
+            mat.getMaterialData(LABEL_BB_pi_m, coeffs.pi_m);
+            mat.getMaterialData(LABEL_BB_theta, coeffs.theta);
+            mat.getMaterialData(LABEL_BB_sigma, coeffs.sigma);
+            mat.getMaterialData(LABEL_BB_chi, coeffs.chi);
+
+            material_coefficient_cache_BB[materialID] = coeffs;
+            return coeffs;
+        } else {
+            found = false;
+        }
+    } catch (const std::exception &) {
+        found = false;
+    }
+
+    if (!found && BBmodel_coefficients.find(UUID) != BBmodel_coefficients.end()) {
+        return BBmodel_coefficients.at(UUID);
+    }
+
+    return BBcoeffs;
+}
+
 void StomatalConductanceModel::run() {
     run(context->getAllUUIDs());
 }
@@ -255,6 +529,9 @@ void StomatalConductanceModel::run(float dt) {
 
 void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
 
+    WarningAggregator warnings;
+    warnings.setEnabled(message_flag);
+
     size_t assumed_default_An = 0;
     size_t assumed_default_Gamma = 0;
 
@@ -265,85 +542,73 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
     for (uint UUID: UUIDs) {
 
         if (!context->doesPrimitiveExist(UUID)) {
-            if (message_flag) {
-                std::cout << "WARNING (StomatalConductance::run): primitive " << UUID << " does not exist in the Context." << std::endl;
-            }
+            warnings.addWarning("primitive_not_exist", "Primitive " + std::to_string(UUID) + " does not exist in the Context.");
             continue;
         }
 
         // PAR radiation flux (W/m^2)
         float i = i_default;
-        if (context->doesPrimitiveDataExist(UUID, "radiation_flux_PAR") && context->getPrimitiveDataType(UUID, "radiation_flux_PAR") == HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(UUID, "radiation_flux_PAR") && context->getPrimitiveDataType("radiation_flux_PAR") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "radiation_flux_PAR", i); // W/m^2
             i = i * 4.57f; // umol/m^2-s (ref https://www.controlledenvironments.org/wp-content/uploads/sites/6/2017/06/Ch01.pdf)
         }
 
         // surface temperature (K)
         float TL = TL_default;
-        if (context->doesPrimitiveDataExist(UUID, "temperature") && context->getPrimitiveDataType(UUID, "temperature") == HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(UUID, "temperature") && context->getPrimitiveDataType("temperature") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "temperature", TL); // Kelvin
             if (TL < 250.f) {
-                if (message_flag) {
-                    std::cout << "WARNING (StomatalConductanceModel::run): Specified surface temperature value is very low - assuming default value instead. Did you accidentally specify temperature in Celcius instead of Kelvin?" << std::endl;
-                }
+                warnings.addWarning("low_surface_temperature", "Specified surface temperature value is very low - assuming default value instead. Did you accidentally specify temperature in Celcius instead of Kelvin?");
                 TL = TL_default;
             }
         }
 
         // air pressure (Pa)
         float press = pressure_default;
-        if (context->doesPrimitiveDataExist(UUID, "air_pressure") && context->getPrimitiveDataType(UUID, "air_pressure") == HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(UUID, "air_pressure") && context->getPrimitiveDataType("air_pressure") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "air_pressure", press); // Pa
             if (press < 50000) {
-                if (message_flag) {
-                    std::cout << "WARNING (StomatalConductanceModel::run): Specified air pressure value is very low - assuming default value instead. Did you accidentally specify pressure in kPA instead of Pa?" << std::endl;
-                }
+                warnings.addWarning("low_air_pressure", "Specified air pressure value is very low - assuming default value instead. Did you accidentally specify pressure in kPA instead of Pa?");
                 press = pressure_default;
             }
         }
 
         // air temperature (K)
         float Ta = air_temperature_default;
-        if (context->doesPrimitiveDataExist(UUID, "air_temperature") && context->getPrimitiveDataType(UUID, "air_temperature") == HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(UUID, "air_temperature") && context->getPrimitiveDataType("air_temperature") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "air_temperature", Ta); // Kelvin
             if (Ta < 250.f) {
-                if (message_flag) {
-                    std::cout << "WARNING (StomatalConductanceModel::run): Specified air temperature value is very low - assuming default value instead. Did you accidentally specify temperature in Celcius instead of Kelvin?" << std::endl;
-                }
+                warnings.addWarning("low_air_temperature", "Specified air temperature value is very low - assuming default value instead. Did you accidentally specify temperature in Celcius instead of Kelvin?");
                 Ta = air_temperature_default;
             }
         }
 
         // boundary-layer conductance to heat/moisture (mol/m^2/s)
         float gbw = blconductance_default;
-        if (context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance") && context->getPrimitiveDataType(UUID, "boundarylayer_conductance") == HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance") && context->getPrimitiveDataType("boundarylayer_conductance") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "boundarylayer_conductance", gbw);
             gbw = gbw * 1.08; // assume bl conductance to moisture is 1.08 of conductance to heat
-        } else if (context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_out") && context->getPrimitiveDataType(UUID, "boundarylayer_conductance_out") == HELIOS_TYPE_FLOAT) {
+        } else if (context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_out") && context->getPrimitiveDataType("boundarylayer_conductance_out") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "boundarylayer_conductance_out", gbw);
             gbw = gbw * 1.08; // assume bl conductance to moisture is 1.08 of conductance to heat
         }
         if (gbw < 0) {
             gbw = 0;
-            if (message_flag) {
-                std::cout << "WARNING (StomatalConductanceModel::run): Boundary-layer conductance value provided was negative. Clipping to zero." << std::endl;
-            }
+            warnings.addWarning("negative_boundarylayer_conductance", "Boundary-layer conductance value provided was negative. Clipping to zero.");
         }
 
         // beta soil moisture factor
         float beta = beta_default;
-        if (context->doesPrimitiveDataExist(UUID, "beta_soil") && context->getPrimitiveDataType(UUID, "beta_soil") == HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(UUID, "beta_soil") && context->getPrimitiveDataType("beta_soil") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "beta_soil", beta);
         }
 
         // air humidity
         float rh = air_humidity_default;
-        if (context->doesPrimitiveDataExist(UUID, "air_humidity") && context->getPrimitiveDataType(UUID, "air_humidity") == HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(UUID, "air_humidity") && context->getPrimitiveDataType("air_humidity") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "air_humidity", rh);
             if (rh > 1.f) {
-                if (message_flag) {
-                    std::cout << "WARNING (StomatalConductanceModel::run): Specified air humidity value is greater than 1 - clamping to 1. Did you accidentally specify in percent instead of a decimal?" << std::endl;
-                }
+                warnings.addWarning("high_air_humidity", "Specified air humidity value is greater than 1 - clamping to 1. Did you accidentally specify in percent instead of a decimal?");
                 rh = 1.f;
             }
         }
@@ -362,14 +627,14 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
         if (model == "BWB" || model == "BBL" || model == "MOPT") {
 
             // net photosynthesis
-            if (context->doesPrimitiveDataExist(UUID, "net_photosynthesis") && context->getPrimitiveDataType(UUID, "net_photosynthesis") == HELIOS_TYPE_FLOAT) {
+            if (context->doesPrimitiveDataExist(UUID, "net_photosynthesis") && context->getPrimitiveDataType("net_photosynthesis") == HELIOS_TYPE_FLOAT) {
                 context->getPrimitiveData(UUID, "net_photosynthesis", An);
             } else {
                 assumed_default_An++;
             }
 
             // CO2 compensation point - Gamma
-            if (context->doesPrimitiveDataExist(UUID, "Gamma_CO2") && context->getPrimitiveDataType(UUID, "Gamma_CO2") == HELIOS_TYPE_FLOAT) {
+            if (context->doesPrimitiveDataExist(UUID, "Gamma_CO2") && context->getPrimitiveDataType("Gamma_CO2") == HELIOS_TYPE_FLOAT) {
                 context->getPrimitiveData(UUID, "Gamma_CO2", Gamma);
             } else {
                 assumed_default_Gamma++;
@@ -377,7 +642,7 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
 
             // ambient air CO2
             float Ca = air_CO2_default;
-            if (context->doesPrimitiveDataExist(UUID, "air_CO2") && context->getPrimitiveDataType(UUID, "air_CO2") == HELIOS_TYPE_FLOAT) {
+            if (context->doesPrimitiveDataExist(UUID, "air_CO2") && context->getPrimitiveDataType("air_CO2") == HELIOS_TYPE_FLOAT) {
                 context->getPrimitiveData(UUID, "air_CO2", Ca);
             }
 
@@ -390,7 +655,7 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
         float Psix = xylem_potential_default;
         if (model == "BB") {
             // xylem moisture potential
-            if (context->doesPrimitiveDataExist(UUID, "xylem_water_potential") && context->getPrimitiveDataType(UUID, "xylem_water_potential") == HELIOS_TYPE_FLOAT) {
+            if (context->doesPrimitiveDataExist(UUID, "xylem_water_potential") && context->getPrimitiveDataType("xylem_water_potential") == HELIOS_TYPE_FLOAT) {
                 context->getPrimitiveData(UUID, "xylem_water_potential", Psix);
             }
         }
@@ -400,20 +665,17 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
         if (model == "BWB") {
 
             // model coefficients
-            float gs0;
-            float a1;
-            BWBcoefficients coeffs;
-            if (BWBmodel_coefficients.empty() || BWBmodel_coefficients.find(UUID) == BWBmodel_coefficients.end()) {
-                coeffs = BWBcoeffs;
-            } else {
-                coeffs = BWBmodel_coefficients.at(UUID);
-            }
-            gs0 = coeffs.gs0;
-            a1 = coeffs.a1;
+            BWBcoefficients coeffs = getCoefficientsForPrimitive_BWB(UUID);
+            float gs0 = coeffs.gs0;
+            float a1 = coeffs.a1;
 
             std::vector<float> variables{An, Cs, es, ea, gbw, beta};
 
-            float esurf = fzero(evaluate_BWBmodel, variables, &coeffs, es);
+            // Use better initial guess: start closer to air vapor pressure
+            // Surface vapor pressure should be between ea and es, typically closer to ea
+            float initial_guess = ea + 0.1f * (es - ea);
+            // Use looser tolerance and more iterations for vapor pressure equations
+            float esurf = fzero(evaluate_BWBmodel, variables, &coeffs, initial_guess, 0.001f, 200, &warnings);
             float hs = esurf / es;
             gs = gs0 + a1 * An * beta * hs / Cs;
 
@@ -425,22 +687,16 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
         } else if (model == "BBL") {
 
             // model coefficients
-            float gs0;
-            float a1;
-            float D0;
-            BBLcoefficients coeffs;
-            if (BBLmodel_coefficients.empty() || BBLmodel_coefficients.find(UUID) == BBLmodel_coefficients.end()) {
-                coeffs = BBLcoeffs;
-            } else {
-                coeffs = BBLmodel_coefficients.at(UUID);
-            }
-            gs0 = coeffs.gs0;
-            a1 = coeffs.a1;
-            D0 = coeffs.D0;
+            BBLcoefficients coeffs = getCoefficientsForPrimitive_BBL(UUID);
+            float gs0 = coeffs.gs0;
+            float a1 = coeffs.a1;
+            float D0 = coeffs.D0;
 
             std::vector<float> variables{An, Cs, Gamma, es, ea, gbw, press, beta};
 
-            float esurf = fzero(evaluate_BBLmodel, variables, &coeffs, es); // Pa
+            // Use better initial guess: start closer to air vapor pressure
+            float initial_guess = ea + 0.1f * (es - ea);
+            float esurf = fzero(evaluate_BBLmodel, variables, &coeffs, initial_guess, 0.001f, 200, &warnings); // Pa
             float Ds = max(0.f, (es - esurf) / press * 1000.f); // mmol/mol
             gs = gs0 + a1 * An * beta / (Cs - Gamma) / (1.f + Ds / D0);
 
@@ -453,20 +709,17 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
         } else if (model == "MOPT") {
 
             // model coefficients
-            float gs0;
-            float g1;
-            MOPTcoefficients coeffs;
-            if (MOPTmodel_coefficients.empty() || MOPTmodel_coefficients.find(UUID) == MOPTmodel_coefficients.end()) {
-                coeffs = MOPTcoeffs;
-            } else {
-                coeffs = MOPTmodel_coefficients.at(UUID);
-            }
-            gs0 = coeffs.gs0;
-            g1 = coeffs.g1;
+            MOPTcoefficients coeffs = getCoefficientsForPrimitive_MOPT(UUID);
+            float gs0 = coeffs.gs0;
+            float g1 = coeffs.g1;
 
             std::vector<float> variables{An, Cs, es, ea, gbw, beta};
 
-            float esurf = fzero(evaluate_MOPTmodel, variables, &coeffs, ea);
+            // Use better initial guess: start closer to air vapor pressure
+            // Surface vapor pressure should be between ea and es, typically closer to ea
+            float initial_guess = ea + 0.1f * (es - ea);
+            // Use looser tolerance and more iterations for vapor pressure equations
+            float esurf = fzero(evaluate_MOPTmodel, variables, &coeffs, initial_guess, 0.001f, 200, &warnings);
             float Ds = max(0.00001f, (es - esurf) / 1000.f); // kPa
             gs = gs0 + 1.6f * (1.f + g1 * sqrtf(beta / Ds)) * An / Cs;
 
@@ -478,16 +731,11 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
         } else if (model == "BB") {
 
             // model coefficients
-            BBcoefficients coeffs;
-            if (BBmodel_coefficients.empty() || BBmodel_coefficients.find(UUID) == BBmodel_coefficients.end()) {
-                coeffs = BBcoeffs;
-            } else {
-                coeffs = BBmodel_coefficients.at(UUID);
-            }
+            BBcoefficients coeffs = getCoefficientsForPrimitive_BB(UUID);
 
             std::vector<float> variables{i, D, Psix};
 
-            gs = fzero(evaluate_BBmodel, variables, &coeffs, 0.1f);
+            gs = fzero(evaluate_BBmodel, variables, &coeffs, 0.1f, 0.0001f, 100, &warnings);
 
             if (std::find(output_prim_data.begin(), output_prim_data.end(), "model_parameters") != output_prim_data.end()) {
                 context->setPrimitiveData(UUID, "pi0_BB", coeffs.pi_0);
@@ -500,12 +748,7 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
         } else {
 
             // model coefficients
-            BMFcoefficients coeffs;
-            if (BMFmodel_coefficients.empty() || BMFmodel_coefficients.find(UUID) == BMFmodel_coefficients.end()) {
-                coeffs = BMFcoeffs;
-            } else {
-                coeffs = BMFmodel_coefficients.at(UUID);
-            }
+            BMFcoefficients coeffs = getCoefficientsForPrimitive_BMF(UUID);
             float Em = coeffs.Em;
             float i0 = coeffs.i0;
             float k = coeffs.k;
@@ -513,7 +756,9 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
 
             std::vector<float> variables{i, es, ea, gbw, press, beta};
 
-            float esurf = fzero(evaluate_BMFmodel, variables, &coeffs, es);
+            // Use better initial guess: start closer to air vapor pressure
+            float initial_guess = ea + 0.1f * (es - ea);
+            float esurf = fzero(evaluate_BMFmodel, variables, &coeffs, initial_guess, 0.001f, 200, &warnings);
             float Ds = max(0.f, (es - esurf) / press * 1000.f);
 
             gs = Em * beta * (i + i0) / (k + b * i + (i + i0) * Ds);
@@ -538,7 +783,7 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
 
             if (!dynamic_time_constants.empty() && (dynamic_time_constants.find(UUID) != dynamic_time_constants.end() || dynamic_time_constants.find(0) != dynamic_time_constants.end())) {
 
-                if (context->doesPrimitiveDataExist(UUID, "moisture_conductance") && context->getPrimitiveDataType(UUID, "moisture_conductance") == HELIOS_TYPE_FLOAT) {
+                if (context->doesPrimitiveDataExist(UUID, "moisture_conductance") && context->getPrimitiveDataType("moisture_conductance") == HELIOS_TYPE_FLOAT) {
 
                     float gs_old;
                     context->getPrimitiveData(UUID, "moisture_conductance", gs_old);
@@ -576,6 +821,8 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
 
         context->setPrimitiveData(UUID, "moisture_conductance", gs);
     }
+
+    warnings.report(std::cerr);
 
     if (message_flag) {
         if (model == "BWB" && assumed_default_An > 0) {
@@ -768,38 +1015,38 @@ void StomatalConductanceModel::printDefaultValueReport(const std::vector<uint> &
 
     for (uint UUID: UUIDs) {
 
-        if (!context->doesPrimitiveDataExist(UUID, "radiation_flux_PAR") || context->getPrimitiveDataType(UUID, "radiation_flux_PAR") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "radiation_flux_PAR") || context->getPrimitiveDataType("radiation_flux_PAR") != HELIOS_TYPE_FLOAT) {
             assumed_default_i++;
         }
 
         // surface temperature (K)
-        if (!context->doesPrimitiveDataExist(UUID, "temperature") || context->getPrimitiveDataType(UUID, "temperature") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "temperature") || context->getPrimitiveDataType("temperature") != HELIOS_TYPE_FLOAT) {
             assumed_default_TL++;
         }
 
         // air pressure (Pa)
-        if (!context->doesPrimitiveDataExist(UUID, "air_pressure") || context->getPrimitiveDataType(UUID, "air_pressure") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "air_pressure") || context->getPrimitiveDataType("air_pressure") != HELIOS_TYPE_FLOAT) {
             assumed_default_p++;
         }
 
         // air temperature (K)
-        if (!context->doesPrimitiveDataExist(UUID, "air_temperature") || context->getPrimitiveDataType(UUID, "air_temperature") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "air_temperature") || context->getPrimitiveDataType("air_temperature") != HELIOS_TYPE_FLOAT) {
             assumed_default_Ta++;
         }
 
         // air humidity
-        if (!context->doesPrimitiveDataExist(UUID, "air_humidity") || context->getPrimitiveDataType(UUID, "air_humidity") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "air_humidity") || context->getPrimitiveDataType("air_humidity") != HELIOS_TYPE_FLOAT) {
             assumed_default_rh++;
         }
 
         // boundary-layer conductance to heat/moisture (mol/m^2/s)
-        if ((!context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance") || context->getPrimitiveDataType(UUID, "boundarylayer_conductance") != HELIOS_TYPE_FLOAT) &&
-            (!context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_out") || context->getPrimitiveDataType(UUID, "boundarylayer_conductance_out") != HELIOS_TYPE_FLOAT)) {
+        if ((!context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance") || context->getPrimitiveDataType("boundarylayer_conductance") != HELIOS_TYPE_FLOAT) &&
+            (!context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_out") || context->getPrimitiveDataType("boundarylayer_conductance_out") != HELIOS_TYPE_FLOAT)) {
             assumed_default_gbw++;
         }
 
         // beta soil moisture factor
-        if (!context->doesPrimitiveDataExist(UUID, "beta_soil") || context->getPrimitiveDataType(UUID, "beta_soil") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "beta_soil") || context->getPrimitiveDataType("beta_soil") != HELIOS_TYPE_FLOAT) {
             assumed_default_beta++;
         }
 
@@ -807,22 +1054,22 @@ void StomatalConductanceModel::printDefaultValueReport(const std::vector<uint> &
         if (model == "BWB" || model == "BBL" || model == "MOPT") {
 
             // net photosynthesis
-            if (!context->doesPrimitiveDataExist(UUID, "net_photosynthesis") || context->getPrimitiveDataType(UUID, "net_photosynthesis") != HELIOS_TYPE_FLOAT) {
+            if (!context->doesPrimitiveDataExist(UUID, "net_photosynthesis") || context->getPrimitiveDataType("net_photosynthesis") != HELIOS_TYPE_FLOAT) {
                 assumed_default_An++;
             }
 
             // CO2 compensation point - Gamma
-            if (!context->doesPrimitiveDataExist(UUID, "Gamma_CO2") || context->getPrimitiveDataType(UUID, "Gamma_CO2") != HELIOS_TYPE_FLOAT) {
+            if (!context->doesPrimitiveDataExist(UUID, "Gamma_CO2") || context->getPrimitiveDataType("Gamma_CO2") != HELIOS_TYPE_FLOAT) {
                 assumed_default_Gamma++;
             }
 
             // ambient air CO2
-            if (!context->doesPrimitiveDataExist(UUID, "air_CO2") || context->getPrimitiveDataType(UUID, "air_CO2") != HELIOS_TYPE_FLOAT) {
+            if (!context->doesPrimitiveDataExist(UUID, "air_CO2") || context->getPrimitiveDataType("air_CO2") != HELIOS_TYPE_FLOAT) {
                 assumed_default_CO2++;
             }
         } else if (model == "BB") {
             // xylem moisture potential
-            if (!context->doesPrimitiveDataExist(UUID, "xylem_water_potential") || context->getPrimitiveDataType(UUID, "xylem_water_potential") != HELIOS_TYPE_FLOAT) {
+            if (!context->doesPrimitiveDataExist(UUID, "xylem_water_potential") || context->getPrimitiveDataType("xylem_water_potential") != HELIOS_TYPE_FLOAT) {
                 assumed_default_Psix++;
             }
         }
@@ -901,13 +1148,15 @@ void StomatalConductanceModel::setModelCoefficients(const std::vector<BMFcoeffic
 
     model = "BMF";
 
+    helios::WarningAggregator warnings;
     for (size_t i = 0; i < UUIDs.size(); i++) {
 
         if (context->doesPrimitiveDataExist(UUIDs.at(i), "twoway_stomatal_conductance_flag")) {
-            std::cerr << "WARNING (StomatalConductanceModel::setModelCoefficients): Stomatal conductance model coefficients for UUID " << UUIDs.at(i) << " are being overwritten." << std::endl;
+            warnings.addWarning("coefficients_overwritten", "Stomatal conductance model coefficients for UUID " + std::to_string(UUIDs.at(i)) + " are being overwritten.");
         }
 
         BMFmodel_coefficients[UUIDs.at(i)] = coeffs.at(i);
         context->setPrimitiveData(UUIDs.at(i), "twoway_stomatal_conductance_flag", 1);
     }
+    warnings.report(std::cerr);
 }

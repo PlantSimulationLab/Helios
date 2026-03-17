@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: core/include/Context.h File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -163,7 +196,9 @@ $(function(){initNavTree('_context_8h.html',''); initResizable(true); });
   <div class="headertitle"><div class="title">Context.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><code>#include &lt;utility&gt;</code><br />
+<div class="textblock"><code>#include &lt;set&gt;</code><br />
+<code>#include &lt;unordered_set&gt;</code><br />
+<code>#include &lt;utility&gt;</code><br />
 <code>#include &quot;<a class="el" href="global_8h_source.html">global.h</a>&quot;</code><br />
 </div>
 <p><a href="_context_8h_source.html">Go to the source code of this file.</a></p>
@@ -172,6 +207,9 @@ $(function(){initNavTree('_context_8h.html',''); initResizable(true); });
 Data Structures</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelios_1_1_texture.html">helios::Texture</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Texture map data structure.  <a href="classhelios_1_1_texture.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhelios_1_1_material.html">helios::Material</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Material data structure.  <a href="structhelios_1_1_material.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhelios_1_1_global_data.html">helios::GlobalData</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Structure for Global Data Entities.  <a href="structhelios_1_1_global_data.html#details">More...</a><br /></td></tr>
@@ -228,6 +266,9 @@ Enumerations</h2></td></tr>
 &#160;&#160;<a class="el" href="#a935eb2a4249411a8f376a27820c70de3a28e69c60e380496c8c35892e76ee4ad3">helios::HELIOS_TYPE_INT3</a> = 8
 , <a class="el" href="#a935eb2a4249411a8f376a27820c70de3aa6e12ea3a9160f59a1208f7cbb6c1ce7">helios::HELIOS_TYPE_INT4</a> = 9
 , <a class="el" href="#a935eb2a4249411a8f376a27820c70de3a7c1f526f519f173e5931fd73b78ccbb3">helios::HELIOS_TYPE_STRING</a> = 10
+, <a class="el" href="#a935eb2a4249411a8f376a27820c70de3adcc9d5a554768c77f6b2e4a14a7991c5">helios::HELIOS_TYPE_BOOL</a> = 11
+, <br />
+&#160;&#160;<a class="el" href="#a935eb2a4249411a8f376a27820c70de3a19cf5a4dfc840d6e23eda5c4dd69112f">helios::HELIOS_TYPE_UNKNOWN</a> = 12
 <br />
  }</td></tr>
 <tr class="memdesc:a935eb2a4249411a8f376a27820c70de3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Data types.  <a href="#a935eb2a4249411a8f376a27820c70de3">More...</a><br /></td></tr>
@@ -249,7 +290,7 @@ Enumerations</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Context header file.</p>
-<p>Copyright (C) 2016-2025 Brian Bailey</p>
+<p>Copyright (C) 2016-2026 Brian Bailey</p>
 <p>This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 2</p>
 <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. </p>
 
@@ -291,9 +332,13 @@ Enumerations</h2></td></tr>
 </td></tr>
 <tr><td class="fieldname"><a id="a935eb2a4249411a8f376a27820c70de3a7c1f526f519f173e5931fd73b78ccbb3" name="a935eb2a4249411a8f376a27820c70de3a7c1f526f519f173e5931fd73b78ccbb3"></a>HELIOS_TYPE_STRING&#160;</td><td class="fielddoc"><p>std::string data type </p>
 </td></tr>
+<tr><td class="fieldname"><a id="a935eb2a4249411a8f376a27820c70de3adcc9d5a554768c77f6b2e4a14a7991c5" name="a935eb2a4249411a8f376a27820c70de3adcc9d5a554768c77f6b2e4a14a7991c5"></a>HELIOS_TYPE_BOOL&#160;</td><td class="fielddoc"><p>bool data type </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a935eb2a4249411a8f376a27820c70de3a19cf5a4dfc840d6e23eda5c4dd69112f" name="a935eb2a4249411a8f376a27820c70de3a19cf5a4dfc840d6e23eda5c4dd69112f"></a>HELIOS_TYPE_UNKNOWN&#160;</td><td class="fielddoc"><p>unknown/uninitialized data type (used for registry queries) </p>
+</td></tr>
 </table>
 
-<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00041">41</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00043">43</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
 
 </div>
 </div>
@@ -329,7 +374,7 @@ Enumerations</h2></td></tr>
 </td></tr>
 </table>
 
-<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00143">143</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00607">607</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
 
 </div>
 </div>
@@ -355,7 +400,7 @@ Enumerations</h2></td></tr>
 </td></tr>
 </table>
 
-<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00031">31</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8h_source.html#l00033">33</a> of file <a class="el" href="_context_8h_source.html">Context.h</a>.</p>
 
 </div>
 </div>

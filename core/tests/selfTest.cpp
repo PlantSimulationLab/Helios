@@ -1,7 +1,7 @@
 /**
  * \file "selfTest.cpp" Context selfTest() function.
  *
- * Copyright (C) 2016-2025 Brian Bailey
+ * Copyright (C) 2016-2026 Brian Bailey
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,12 +24,13 @@ using namespace helios;
 
 double errtol = 1e-6;
 
+#include "Test_OBJ.h"
 #include "Test_XML.h"
 #include "Test_context.h"
 #include "Test_data.h"
 #include "Test_functions.h"
 #include "Test_utilities.h"
 
-int Context::selfTest(int argc, char** argv) {
+int Context::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

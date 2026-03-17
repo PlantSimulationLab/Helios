@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['parameterstooptimize_0',['ParametersToOptimize',['../_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078',1,'ParameterOptimization.h']]]
+  ['cameramaterialindexer_0',['CameraMaterialIndexer',['../_buffer_indexing_8h.html#a4b12643ad7be942a950cf4856643ae4d',1,'BufferIndexing.h']]]
 ];

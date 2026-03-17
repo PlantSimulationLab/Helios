@@ -6,8 +6,9 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.13.2"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Helios: Tutorial 9: Customizing visualizations</title>
+<title>Helios: Leaf Optics Plugin Documentation</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -131,7 +164,7 @@ $(function() { codefold.init(0); });
 </div>
 <script type="text/javascript">
 /* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function(){initNavTree('visualizer_custom_tutorial.html',''); initResizable(true); });
+$(function(){initNavTree('_leaf_optics_doc.html',''); initResizable(true); });
 /* @license-end */
 </script>
 <div id="doc-content">
@@ -157,30 +190,682 @@ $(function(){initNavTree('visualizer_custom_tutorial.html',''); initResizable(tr
 </div>
 
 <div><div class="header">
-  <div class="headertitle"><div class="title">Tutorial 9: Customizing visualizations</div></div>
+  <div class="headertitle"><div class="title">Leaf Optics Plugin Documentation</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p>The Visualizer offers many options for tailoring how results are displayed. In this tutorial we start from a Context that already contains geometry and data. We will adjust lighting, map primitive data to a colorbar and add a text annotation.</p>
+<div class="toc"><h3>Table of Contents</h3>
+<ul>
+  <li class="level1">
+    <a href="#LOConstructor">LeafOptics Class Constructor</a>
+  </li>
+  <li class="level1">
+    <a href="#LOData">Input/Output Data</a>
+    <ul>
+      <li class="level2">
+        <a href="#LOInputObjectData">Input Object Data</a>
+      </li>
+      <li class="level2">
+        <a href="#LOOutputGlobalData">Output Global Data</a>
+      </li>
+      <li class="level2">
+        <a href="#LOOutputPrimData">Output Primitive Data</a>
+      </li>
+      <li class="level2">
+        <a href="#LOOptionalOutputData">Optional Output Primitive Data</a>
+      </li>
+    </ul>
+  </li>
+  <li class="level1">
+    <a href="#LOIntro">Introduction</a>
+  </li>
+  <li class="level1">
+    <a href="#LOModes">PROSPECT Model Variants</a>
+    <ul>
+      <li class="level2">
+        <a href="#LOProspectD">PROSPECT-D Mode</a>
+      </li>
+      <li class="level2">
+        <a href="#LOProspectPRO">PROSPECT-PRO Mode</a>
+      </li>
+      <li class="level2">
+        <a href="#LOModeSelection">Automatic Mode Selection</a>
+      </li>
+    </ul>
+  </li>
+  <li class="level1">
+    <a href="#LOProps">LeafOpticsProperties Structure</a>
+  </li>
+  <li class="level1">
+    <a href="#LOUse">Using the LeafOptics Plug-in</a>
+  </li>
+  <li class="level1">
+    <a href="#LOLibrary">Using the Built-in Species Library</a>
+    <ul>
+      <li class="level2">
+        <a href="#LOLibraryBasic">Basic Usage</a>
+      </li>
+      <li class="level2">
+        <a href="#LOLibrarySpecies">Available Species</a>
+      </li>
+      <li class="level2">
+        <a href="#LOLibraryError">Error Handling</a>
+      </li>
+      <li class="level2">
+        <a href="#LOLibraryExtend">Extending the Species Library</a>
+      </li>
+    </ul>
+  </li>
+  <li class="level1">
+    <a href="#LORetrieve">Retrieving PROSPECT Parameters from Spectra</a>
+    <ul>
+      <li class="level2">
+        <a href="#LORetrieveBasic">Basic Usage</a>
+      </li>
+      <li class="level2">
+        <a href="#LORetrieveBehavior">Method Behavior</a>
+      </li>
+      <li class="level2">
+        <a href="#LORetrieveLabels">Assigned Primitive Data Labels</a>
+      </li>
+      <li class="level2">
+        <a href="#LORetrieveNotes">Important Notes</a>
+      </li>
+    </ul>
+  </li>
+  <li class="level1">
+    <a href="#LONitrogenAuto">Nitrogen-Based Automatic Leaf Optics</a>
+    <ul>
+      <li class="level2">
+        <a href="#LONitrogenBackground">Scientific Background</a>
+      </li>
+      <li class="level2">
+        <a href="#LONitrogenNauto">LeafOpticsProperties_Nauto Structure</a>
+      </li>
+      <li class="level2">
+        <a href="#LONitrogenUsage">Using Nitrogen-Based Mode</a>
+      </li>
+      <li class="level2">
+        <a href="#LONitrogenBehavior">Method Behavior</a>
+      </li>
+      <li class="level2">
+        <a href="#LONitrogenUpdate">Efficient Update Path</a>
+      </li>
+      <li class="level2">
+        <a href="#LONitrogenBinning">Adaptive Binning Algorithm</a>
+      </li>
+      <li class="level2">
+        <a href="#LONitrogenStability">Reassignment Stability (Hysteresis)</a>
+      </li>
+      <li class="level2">
+        <a href="#LONitrogenPFT">Parameter Values by Plant Functional Type</a>
+      </li>
+      <li class="level2">
+        <a href="#LONitrogenExample">Complete Integration Example</a>
+      </li>
+      <li class="level2">
+        <a href="#LONitrogenRequirements">Requirements</a>
+      </li>
+      <li class="level2">
+        <a href="#LONitrogenReferences">References</a>
+      </li>
+    </ul>
+  </li>
+</ul>
+</div>
+<div class="textblock"><p><br  />
+<br  />
+ </p>
+<table class="doxtable">
+<tr>
+<th>Dependencies</th><td>None </td></tr>
+<tr>
+<th>CMakeLists.txt</th><td>set( PLUGINS "leafoptics" ) </td></tr>
+<tr>
+<th>Header File</th><td>include "LeafOptics.h" </td></tr>
+<tr>
+<th>Class</th><td><a class="el" href="class_leaf_optics.html">LeafOptics</a> </td></tr>
+</table>
+<h1><a class="anchor" id="LOConstructor"></a>
+LeafOptics Class Constructor</h1>
+<table class="doxtable">
+<tr>
+<th>Constructors </th></tr>
+<tr>
+<td><a class="el" href="class_leaf_optics.html#a8f286671c723166c8aae098d0efd9b04">LeafOptics::LeafOptics( helios::Context* context )</a> </td></tr>
+</table>
+<p>The constructor simply stores a pointer to the Helios context and loads the spectral library data required by the model.</p>
+<h1><a class="anchor" id="LOData"></a>
+Input/Output Data</h1>
+<h2><a class="anchor" id="LOInputObjectData"></a>
+Input Object Data</h2>
+<p>The following object data is used by the nitrogen-based automatic mode (see <a class="el" href="#LONitrogenAuto">Nitrogen-Based Automatic Leaf Optics</a>):</p>
+<table class="doxtable">
+<tr>
+<th>Object Data Label </th><th>Units </th><th>Data Type </th><th>Description </th><th>Available Plug-ins  </th></tr>
+<tr>
+<td>leaf_nitrogen_gN_m2 </td><td>g N/m² </td><td><span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Leaf nitrogen content per unit area. Required for nitrogen-based automatic mode. </td><td>Written by <a class="el" href="class_plant_architecture.html">PlantArchitecture</a> nitrogen model  </td></tr>
+</table>
+<h2><a class="anchor" id="LOOutputGlobalData"></a>
+Output Global Data</h2>
+<p>The plug-in creates global data containing the computed spectra:</p>
+<table class="doxtable">
+<tr>
+<th>Global Data Label </th><th>Data Type </th><th>Description  </th></tr>
+<tr>
+<td>leaf_reflectivity_* </td><td><span style="font-family: Courier, monospace; color: green;">std::vector&lt;helios::vec2&gt;</span> </td><td>Reflectivity spectrum (wavelength in nm, reflectivity). The * is replaced by the user-specified label.  </td></tr>
+<tr>
+<td>leaf_transmissivity_* </td><td><span style="font-family: Courier, monospace; color: green;">std::vector&lt;helios::vec2&gt;</span> </td><td>Transmissivity spectrum (wavelength in nm, transmissivity). The * is replaced by the user-specified label.  </td></tr>
+</table>
+<h2><a class="anchor" id="LOOutputPrimData"></a>
+Output Primitive Data</h2>
+<p>The plug-in assigns the following primitive data to processed primitives:</p>
+<table class="doxtable">
+<tr>
+<th>Primitive Data Label </th><th>Data Type </th><th>Description  </th></tr>
+<tr>
+<td>reflectivity_spectrum </td><td><span style="font-family: Courier, monospace; color: green;">std::string</span> </td><td>Label of the assigned reflectivity spectrum global data (e.g., "leaf_reflectivity_example")  </td></tr>
+<tr>
+<td>transmissivity_spectrum </td><td><span style="font-family: Courier, monospace; color: green;">std::string</span> </td><td>Label of the assigned transmissivity spectrum global data (e.g., "leaf_transmissivity_example")  </td></tr>
+</table>
+<h2><a class="anchor" id="LOOptionalOutputData"></a>
+Optional Output Primitive Data</h2>
+<p>By default, the LeafOptics plug-in does not write leaf constituent concentrations to primitive data. To enable optional output, call LeafOptics::optionalOutputPrimitiveData() with the desired labels before calling run().</p>
+<div class="fragment"><div class="line"><a class="code hl_class" href="class_leaf_optics.html">LeafOptics</a> leafoptics( &amp;context );</div>
+<div class="line">leafoptics.optionalOutputPrimitiveData( <span class="stringliteral">&quot;chlorophyll&quot;</span> );</div>
+<div class="line">leafoptics.optionalOutputPrimitiveData( <span class="stringliteral">&quot;carotenoid&quot;</span> );</div>
+<div class="line"> </div>
+<div class="line"><a class="code hl_struct" href="struct_leaf_optics_properties.html" title="LeafOptics model class.">LeafOpticsProperties</a> props;</div>
+<div class="line">std::vector&lt;uint&gt; leafIDs = ...;</div>
+<div class="line">leafoptics.run( leafIDs, props, <span class="stringliteral">&quot;example&quot;</span> );</div>
+</div><!-- fragment --><table class="doxtable">
+<tr>
+<th>Primitive Data Label </th><th>Units </th><th>Data Type </th><th>Description  </th></tr>
+<tr>
+<td>chlorophyll </td><td>\(\mu\)g cm \(^{-2}\) </td><td><span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Total chlorophyll content  </td></tr>
+<tr>
+<td>carotenoid </td><td>\(\mu\)g cm \(^{-2}\) </td><td><span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Total carotenoid content  </td></tr>
+<tr>
+<td>anthocyanin </td><td>\(\mu\)g cm \(^{-2}\) </td><td><span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Anthocyanin content  </td></tr>
+<tr>
+<td>brown </td><td>unitless </td><td><span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Brown pigment content (only written if value &gt; 0)  </td></tr>
+<tr>
+<td>water </td><td>g cm \(^{-2}\) </td><td><span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Equivalent water thickness  </td></tr>
+<tr>
+<td>drymass </td><td>g cm \(^{-2}\) </td><td><span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Dry matter mass (only written in PROSPECT-D mode, see <a class="el" href="#LOModes">PROSPECT Model Variants</a>)  </td></tr>
+<tr>
+<td>protein </td><td>g cm \(^{-2}\) </td><td><span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Protein mass (only written in PROSPECT-PRO mode, see <a class="el" href="#LOModes">PROSPECT Model Variants</a>)  </td></tr>
+<tr>
+<td>cellulose </td><td>g cm \(^{-2}\) </td><td><span style="font-family: Courier, monospace; color: green;">float</span> </td><td>Cellulose and carbon compounds (only written in PROSPECT-PRO mode, see <a class="el" href="#LOModes">PROSPECT Model Variants</a>)  </td></tr>
+</table>
+<h1><a class="anchor" id="LOIntro"></a>
+Introduction</h1>
+<p>This plug-in computes leaf spectral reflectance and transmittance using the PROSPECT family of models. The implementation follows the <a href="https://doi.org/10.1016/j.rse.2017.08.004">PROSPECT&ndash;PRO</a> formulation with eight absorbing constituents and a structural parameter \(N\) that represents the number of elementary layers in the leaf. Output spectra cover the range 400&ndash;2500&#160;nm in 1&#160;nm steps.</p>
+<p>For each wavelength \(\lambda\) the absorption coefficient of a single layer is calculated as  </p><p class="formulaDsp">
+\[ k(\lambda)=\frac{C_{ab}a_{ab}(\lambda)+C_{ar}a_{ar}(\lambda)+C_{an}a_{an}(\lambda)+C_{br}a_{br}(\lambda)
++C_{w}a_{w}(\lambda)+C_{m}a_{m}(\lambda)+C_{p}a_{p}(\lambda)+C_{c}a_{c}(\lambda)}{N}, \]
+</p>
+<p> where the \(C\) variables are the constituent masses per area and the \(a(\lambda)\) terms are the specific absorption coefficients loaded from the internal spectral library. Fresnel equations are used to compute surface reflectance and a radiative transfer solution gives the total leaf reflectance and transmittance.</p>
+<h1><a class="anchor" id="LOModes"></a>
+PROSPECT Model Variants</h1>
+<p>The plug-in supports two variants of the PROSPECT model, which differ in how leaf dry matter is represented:</p>
+<h2><a class="anchor" id="LOProspectD"></a>
+PROSPECT-D Mode</h2>
+<p>PROSPECT-D represents leaf dry matter as a single "dry mass" parameter that lumps together all carbon-based constituents. This is the simpler and more commonly used mode.</p>
+<p>To use PROSPECT-D mode:** Set <code>drymass &gt; 0</code> and leave <code>protein = 0</code> and <code>carbonconstituents = 0</code> (default behavior).</p>
+<div class="fragment"><div class="line"><a class="code hl_struct" href="struct_leaf_optics_properties.html" title="LeafOptics model class.">LeafOpticsProperties</a> props;</div>
+<div class="line">props.drymass = 0.006f;  <span class="comment">// g/cm² - PROSPECT-D mode</span></div>
+<div class="line"><span class="comment">// protein and carbonconstituents default to 0</span></div>
+</div><!-- fragment --><h2><a class="anchor" id="LOProspectPRO"></a>
+PROSPECT-PRO Mode</h2>
+<p><a href="https://doi.org/10.1016/j.rse.2017.08.004">PROSPECT-PRO</a> separates dry matter into protein and carbon constituents (cellulose, lignin, etc.), providing more detailed characterization of leaf biochemistry. This mode is useful when protein content is known or when modeling nitrogen-rich leaves.</p>
+<p>To use PROSPECT-PRO mode:** Set <code>protein &gt; 0</code> and/or <code>carbonconstituents &gt; 0</code>. When either of these parameters is non-zero, the <code>drymass</code> parameter is automatically ignored.</p>
+<div class="fragment"><div class="line"><a class="code hl_struct" href="struct_leaf_optics_properties.html" title="LeafOptics model class.">LeafOpticsProperties</a> props;</div>
+<div class="line">props.protein = 0.001f;           <span class="comment">// g/cm² - enables PROSPECT-PRO mode</span></div>
+<div class="line">props.carbonconstituents = 0.005f; <span class="comment">// g/cm²</span></div>
+<div class="line"><span class="comment">// drymass is ignored when protein or carbonconstituents &gt; 0</span></div>
+</div><!-- fragment --><h2><a class="anchor" id="LOModeSelection"></a>
+Automatic Mode Selection</h2>
+<p>The model automatically selects the appropriate mode based on parameter values:</p>
+<table class="doxtable">
+<tr>
+<th>Condition</th><th>Mode</th><th>Dry Matter Parameters Used </th></tr>
+<tr>
+<td><code>protein == 0</code> AND <code>carbonconstituents == 0</code></td><td>PROSPECT-D</td><td><code>drymass</code> </td></tr>
+<tr>
+<td><code>protein &gt; 0</code> OR <code>carbonconstituents &gt; 0</code></td><td>PROSPECT-PRO</td><td><code>protein</code>, <code>carbonconstituents</code> </td></tr>
+</table>
+<p>Note:** The built-in species library uses PROSPECT-D mode for all species. If you need PROSPECT-PRO parameters, you must set them manually.</p>
+<h1><a class="anchor" id="LOProps"></a>
+LeafOpticsProperties Structure</h1>
+<p>The <a class="el" href="struct_leaf_optics_properties.html">LeafOpticsProperties</a> structure stores the biochemical inputs to the model. See <a class="el" href="#LOModes">PROSPECT Model Variants</a> for details on PROSPECT-D vs PROSPECT-PRO mode selection.</p>
+<table class="doxtable">
+<tr>
+<th colspan="4">Common Parameters (Both Modes) </th></tr>
+<tr>
+<th>Member</th><th>Units</th><th>Description</th><th>Default Value </th></tr>
+<tr>
+<td>numberlayers</td><td>unitless</td><td>Leaf structure parameter \(N\)</td><td>1.5 </td></tr>
+<tr>
+<td>chlorophyllcontent</td><td>\(\mu\)g&#160;cm \(^{-2}\)</td><td>Total chlorophyll</td><td>30 </td></tr>
+<tr>
+<td>carotenoidcontent</td><td>\(\mu\)g&#160;cm \(^{-2}\)</td><td>Total carotenoids</td><td>7 </td></tr>
+<tr>
+<td>anthocyancontent</td><td>\(\mu\)g&#160;cm \(^{-2}\)</td><td>Anthocyanins</td><td>1 </td></tr>
+<tr>
+<td>brownpigments</td><td>unitless</td><td>Brown pigments (senescence indicator)</td><td>0 </td></tr>
+<tr>
+<td>watermass</td><td>g&#160;cm \(^{-2}\)</td><td>Equivalent water thickness</td><td>0.015 </td></tr>
+</table>
+<table class="doxtable">
+<tr>
+<th colspan="4">Dry Matter Parameters (Mode-Dependent) </th></tr>
+<tr>
+<th>Member</th><th>Units</th><th>Description</th><th>Default Value </th></tr>
+<tr>
+<td>drymass</td><td>g&#160;cm \(^{-2}\)</td><td>Total dry matter mass (PROSPECT-D mode)</td><td>0.09 </td></tr>
+<tr>
+<td>protein</td><td>g&#160;cm \(^{-2}\)</td><td>Protein mass (PROSPECT-PRO mode)</td><td>0 </td></tr>
+<tr>
+<td>carbonconstituents</td><td>g&#160;cm \(^{-2}\)</td><td>Cellulose, lignin, and other carbon compounds (PROSPECT-PRO mode)</td><td>0 </td></tr>
+</table>
+<h1><a class="anchor" id="LOUse"></a>
+Using the LeafOptics Plug-in</h1>
+<p>The model can be run to produce global spectra and, optionally, assign those spectra and optical properties to a set of primitives.</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_leaf_optics_8h.html">LeafOptics.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line">Context context;</div>
+<div class="line"><a class="code hl_class" href="class_leaf_optics.html">LeafOptics</a> leafoptics( &amp;context );</div>
+<div class="line"> </div>
+<div class="line"><a class="code hl_struct" href="struct_leaf_optics_properties.html" title="LeafOptics model class.">LeafOpticsProperties</a> props;</div>
+<div class="line">props.chlorophyllcontent = 40.0f;</div>
+<div class="line">props.watermass = 0.02f;</div>
+<div class="line"> </div>
+<div class="line">std::vector&lt;uint&gt; leafIDs = ...; <span class="comment">//UUIDs for leaf primitives</span></div>
+<div class="line">leafoptics.run( leafIDs, props, <span class="stringliteral">&quot;example&quot;</span> );</div>
+</div><!-- fragment --><p>This command creates global data labeled "leaf_reflectivity_example" and "leaf_transmissivity_example" containing the computed spectra. The spectra labels are also stored as primitive data for the specified UUIDs together with the biochemical property values.</p>
+<h1><a class="anchor" id="LOLibrary"></a>
+Using the Built-in Species Library</h1>
+<p>The LeafOptics class includes a built-in species library that provides pre-configured optical properties for common plant species. This simplifies model usage by eliminating the need to manually specify biochemical parameters.</p>
+<h2><a class="anchor" id="LOLibraryBasic"></a>
+Basic Usage</h2>
+<p>Use the <a class="el" href="class_leaf_optics.html#a29a01c38e43c0ab1d91bc0a662b090bb">LeafOptics::getPropertiesFromLibrary()</a> method to populate a <a class="el" href="struct_leaf_optics_properties.html">LeafOpticsProperties</a> structure with species-specific values:</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_leaf_optics_8h.html">LeafOptics.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line">Context context;</div>
+<div class="line"><a class="code hl_class" href="class_leaf_optics.html">LeafOptics</a> leafoptics( &amp;context );</div>
+<div class="line"> </div>
+<div class="line"><a class="code hl_struct" href="struct_leaf_optics_properties.html" title="LeafOptics model class.">LeafOpticsProperties</a> props;</div>
+<div class="line">leafoptics.getPropertiesFromLibrary( <span class="stringliteral">&quot;default&quot;</span>, props );</div>
+<div class="line"> </div>
+<div class="line">std::vector&lt;uint&gt; leafIDs = ...; <span class="comment">//UUIDs for leaf primitives</span></div>
+<div class="line">leafoptics.run( leafIDs, props, <span class="stringliteral">&quot;example&quot;</span> );</div>
+</div><!-- fragment --><p>The method populates all nine parameters in the <a class="el" href="struct_leaf_optics_properties.html">LeafOpticsProperties</a> structure (numberlayers, chlorophyllcontent, carotenoidcontent, anthocyancontent, brownpigments, watermass, drymass, protein, carbonconstituents).</p>
+<h2><a class="anchor" id="LOLibrarySpecies"></a>
+Available Species</h2>
+<p>The library contains parameters fitted to LOPEX93 spectral library samples using the <code>fit_prospect_visrobust.py</code> script with robust optimization. All species use PROSPECT-D mode (see <a class="el" href="#LOModes">PROSPECT Model Variants</a>).</p>
+<table class="doxtable">
+<tr>
+<th>Species Label</th><th>Scientific Name</th><th>N</th><th>Cab<br  />
+(µg/cm²)</th><th>Car<br  />
+(µg/cm²)</th><th>Ant<br  />
+(µg/cm²)</th><th>Cbrown</th><th>Cw<br  />
+(g/cm²)</th><th>Cm<br  />
+(g/cm²)</th><th>R²</th><th>Source </th></tr>
+<tr>
+<td>"default"</td><td>-</td><td>1.50</td><td>30.0</td><td>7.00</td><td>1.00</td><td>0.000</td><td>0.0150</td><td>0.0900</td><td>-</td><td>Original Helios defaults </td></tr>
+<tr>
+<td>"garden_lettuce"</td><td>Lactuca sativa L.</td><td>2.01</td><td>30.3</td><td>6.99</td><td>1.36</td><td>0.107</td><td>0.0282</td><td>0.0053</td><td>0.993</td><td>LOPEX93 sample 0021 </td></tr>
+<tr>
+<td>"alfalfa"</td><td>Medicago sativa L.</td><td>2.01</td><td>43.6</td><td>10.3</td><td>1.34</td><td>0.000</td><td>0.0190</td><td>0.0047</td><td>0.994</td><td>LOPEX93 sample 0036 </td></tr>
+<tr>
+<td>"corn"</td><td>Zea mays L.</td><td>1.59</td><td>22.9</td><td>3.97</td><td>0.00</td><td>0.727</td><td>0.0150</td><td>0.0044</td><td>0.975</td><td>LOPEX93 sample 0041 </td></tr>
+<tr>
+<td>"sunflower"</td><td>Helianthus annuus L.</td><td>1.76</td><td>54.1</td><td>12.9</td><td>1.75</td><td>0.011</td><td>0.0186</td><td>0.0064</td><td>0.995</td><td>LOPEX93 sample 0081 </td></tr>
+<tr>
+<td>"english_walnut"</td><td>Juglans regia L.</td><td>1.56</td><td>55.9</td><td>12.5</td><td>1.74</td><td>0.000</td><td>0.0128</td><td>0.0058</td><td>0.994</td><td>LOPEX93 sample 0091 </td></tr>
+<tr>
+<td>"rice"</td><td>Oryza sativa L.</td><td>1.67</td><td>37.2</td><td>10.0</td><td>0.00</td><td>0.028</td><td>0.0101</td><td>0.0048</td><td>0.998</td><td>LOPEX93 sample 0106 </td></tr>
+<tr>
+<td>"soybean"</td><td>Glycine max L.</td><td>1.54</td><td>46.4</td><td>12.1</td><td>0.65</td><td>0.000</td><td>0.0101</td><td>0.0029</td><td>0.997</td><td>LOPEX93 sample 0116 </td></tr>
+<tr>
+<td>"wine_grape"</td><td>Vitis vinifera L.</td><td>1.43</td><td>50.9</td><td>12.5</td><td>1.44</td><td>0.080</td><td>0.0109</td><td>0.0060</td><td>0.997</td><td>LOPEX93 sample 0276 </td></tr>
+<tr>
+<td>"tomato"</td><td>Lycopersicum esculentum</td><td>1.40</td><td>48.3</td><td>11.6</td><td>1.45</td><td>0.000</td><td>0.0156</td><td>0.0026</td><td>0.997</td><td>LOPEX93 sample 0316 </td></tr>
+</table>
+<p>Notes:**</p><ul>
+<li>Species names are case-insensitive (e.g., "corn" and "CORN" are equivalent).</li>
+<li>R² values computed as 1 - (RMSE² / variance), indicating goodness-of-fit to measured spectra.</li>
+<li>All parameters were fitted without affine calibration using visible-robust optimization.</li>
+<li>LOPEX93 dataset: Hosgood B. et al. (1994), Leaf Optical Properties Experiment 93 (LOPEX93), EUR 16095 EN.</li>
+</ul>
+<h2><a class="anchor" id="LOLibraryError"></a>
+Error Handling</h2>
+<p>If an unknown species name is provided, the method:</p><ol type="1">
+<li>Issues a warning message (if messages are enabled)</li>
+<li>Populates the properties structure with default values</li>
+<li>Does not throw an error</li>
+</ol>
+<p>This ensures that code continues to run even if a species name is misspelled or not yet in the library.</p>
+<h2><a class="anchor" id="LOLibraryExtend"></a>
+Extending the Species Library</h2>
+<p>To add new species to the library, edit the <a class="el" href="class_leaf_optics.html#a29a01c38e43c0ab1d91bc0a662b090bb">LeafOptics::getPropertiesFromLibrary()</a> method in <code>plugins/leafoptics/src/LeafOptics.cpp</code>. Follow the existing if-else pattern to add new species entries. The library supports both PROSPECT-D mode (using drymass) and PROSPECT-PRO mode (using protein and carbonconstituents).</p>
+<h1><a class="anchor" id="LORetrieve"></a>
+Retrieving PROSPECT Parameters from Spectra</h1>
+<p>The LeafOptics class maintains an internal mapping between spectrum labels and the PROSPECT parameters used to generate them. This allows users to retrieve the original model parameters from primitives that have been assigned LeafOptics-generated spectra.</p>
+<h2><a class="anchor" id="LORetrieveBasic"></a>
+Basic Usage</h2>
+<p>The <a class="el" href="class_leaf_optics.html#a1d374e510c376bbf078729a1e5ded20f">LeafOptics::getPropertiesFromSpectrum()</a> method queries primitives for their "reflectivity_spectrum" primitive data and, if it matches a spectrum generated by the LeafOptics instance, assigns the corresponding PROSPECT parameters as primitive data:</p>
 <div class="fragment"><div class="line">Context context;</div>
-<div class="line"><span class="comment">// assume geometry and data have been added</span></div>
-<div class="line"><a class="code hl_class" href="class_visualizer.html" title="Class for visualization of simulation results.">Visualizer</a> vis(800);</div>
-<div class="line">vis.buildContextGeometry(&amp;context);</div>
+<div class="line"><a class="code hl_class" href="class_leaf_optics.html">LeafOptics</a> leafoptics( &amp;context );</div>
 <div class="line"> </div>
-<div class="line">vis.setLightingModel(<a class="code hl_enumvalue" href="class_visualizer.html#a580a78fe3e25c423e2d13aebc1b54573adce805e52c5b47950ecc3cfdddd2160c" title="Phong lighting model is applied to add shading effects to the diffuse color.">Visualizer::LIGHTING_PHONG</a>);</div>
-<div class="line">vis.setLightIntensityFactor(1.2f);</div>
+<div class="line"><span class="comment">// Generate spectra for different leaf types</span></div>
+<div class="line"><a class="code hl_struct" href="struct_leaf_optics_properties.html" title="LeafOptics model class.">LeafOpticsProperties</a> healthy_leaf;</div>
+<div class="line">healthy_leaf.chlorophyllcontent = 45.0f;</div>
+<div class="line">healthy_leaf.carotenoidcontent = 12.0f;</div>
 <div class="line"> </div>
-<div class="line">vis.colorContextPrimitivesByData(<span class="stringliteral">&quot;height&quot;</span>);</div>
-<div class="line">vis.setColormap(<a class="code hl_enumvalue" href="class_visualizer.html#a0af839aae42fd7086643608a6cbd194ba9a15b906eca8c544a6b83f885877fbe7" title="&quot;Parula&quot; colormap">Visualizer::COLORMAP_PARULA</a>);</div>
-<div class="line">vis.enableColorbar();</div>
-<div class="line">vis.setColorbarTitle(<span class="stringliteral">&quot;Height (m)&quot;</span>);</div>
-<div class="line">vis.setColorbarRange(0.f, 2.f);</div>
+<div class="line"><a class="code hl_struct" href="struct_leaf_optics_properties.html" title="LeafOptics model class.">LeafOpticsProperties</a> stressed_leaf;</div>
+<div class="line">stressed_leaf.chlorophyllcontent = 20.0f;</div>
+<div class="line">stressed_leaf.brownpigments = 0.3f;</div>
 <div class="line"> </div>
-<div class="line">vis.addTextboxByCenter(<span class="stringliteral">&quot;Demo&quot;</span>, make_vec3(0.5,0.9,0), nullrotation,</div>
-<div class="line">                      RGB::black, 16, <span class="stringliteral">&quot;Arial&quot;</span>,</div>
-<div class="line">                      <a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a9392af82f887f2fc1982a8315bcc95f5" title="Coordinates are normalized to unity and are window-aligned. The point (x,y)=(0,0) is in the bottom le...">Visualizer::COORDINATES_WINDOW_NORMALIZED</a>);</div>
+<div class="line">std::vector&lt;uint&gt; healthy_IDs = ...; <span class="comment">// Some primitives</span></div>
+<div class="line">std::vector&lt;uint&gt; stressed_IDs = ...; <span class="comment">// Other primitives</span></div>
 <div class="line"> </div>
-<div class="line">vis.plotInteractive();</div>
-</div><!-- fragment --><p>The first two commands call <a class="el" href="class_visualizer.html#afc496b8bd99bbb786d553c4b3e8dfded">Visualizer::setLightingModel()</a> and <a class="el" href="class_visualizer.html#ae2227bdf3b92fb67bcad6acf7e9279b0">Visualizer::setLightIntensityFactor()</a> to control shading. We then color primitives by the primitive data label "height" using <a class="el" href="class_visualizer.html#a0c75972b0cc0300a4fa0139af6a32234">Visualizer::colorContextPrimitivesByData()</a> and select the <a class="el" href="class_visualizer.html#a992f636c4c406bbfc3f29add1fa3a278">Parula</a> colormap. Calling <a class="el" href="class_visualizer.html#a050807f8462ca95bde2fd737b26830c4">Visualizer::enableColorbar()</a> adds a scale bar that we title "Height (m)" and restrict to a range of 0&ndash;2 meters. Finally, a short text label is placed near the top of the window using <a class="el" href="class_visualizer.html#a2b6e537fa13d94083beb030ea6da5be6">Visualizer::addTextboxByCenter()</a>. </p>
+<div class="line">leafoptics.run( healthy_IDs, healthy_leaf, <span class="stringliteral">&quot;healthy&quot;</span> );</div>
+<div class="line">leafoptics.run( stressed_IDs, stressed_leaf, <span class="stringliteral">&quot;stressed&quot;</span> );</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Later, retrieve parameters from primitives based on their assigned spectra</span></div>
+<div class="line">std::vector&lt;uint&gt; all_leaves;</div>
+<div class="line">all_leaves.insert( all_leaves.end(), healthy_IDs.begin(), healthy_IDs.end() );</div>
+<div class="line">all_leaves.insert( all_leaves.end(), stressed_IDs.begin(), stressed_IDs.end() );</div>
+<div class="line"> </div>
+<div class="line">leafoptics.getPropertiesFromSpectrum( all_leaves );</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Each primitive now has parameter data matching its assigned spectrum</span></div>
+<div class="line"><span class="keywordtype">float</span> chl;</div>
+<div class="line">context.getPrimitiveData( healthy_IDs[0], <span class="stringliteral">&quot;chlorophyll&quot;</span>, chl );</div>
+<div class="line"><span class="comment">// chl = 45.0 (from healthy_leaf parameters)</span></div>
+<div class="line"> </div>
+<div class="line">context.getPrimitiveData( stressed_IDs[0], <span class="stringliteral">&quot;chlorophyll&quot;</span>, chl );</div>
+<div class="line"><span class="comment">// chl = 20.0 (from stressed_leaf parameters)</span></div>
+</div><!-- fragment --><h2><a class="anchor" id="LORetrieveBehavior"></a>
+Method Behavior</h2>
+<p>For each UUID passed to <a class="el" href="class_leaf_optics.html#a1d374e510c376bbf078729a1e5ded20f">LeafOptics::getPropertiesFromSpectrum()</a>:</p>
+<ol type="1">
+<li>The method queries the primitive data "reflectivity_spectrum"</li>
+<li>If the spectrum label starts with "leaf_reflectivity_", it extracts the user-provided label</li>
+<li>If that label matches a spectrum generated by this LeafOptics instance, the corresponding parameters are assigned as primitive data</li>
+<li>Primitives without matching spectra are silently skipped (no error is thrown)</li>
+</ol>
+<h2><a class="anchor" id="LORetrieveLabels"></a>
+Assigned Primitive Data Labels</h2>
+<p>The method assigns primitive data using the same labels as <a class="el" href="class_leaf_optics.html#ac7a1cfe512d9417c26ad798a94cbdba1">LeafOptics::setProperties()</a>:</p>
+<table class="doxtable">
+<tr>
+<th>Primitive Data Label</th><th>Parameter</th><th>Condition </th></tr>
+<tr>
+<td>"chlorophyll"</td><td>chlorophyllcontent</td><td>Always </td></tr>
+<tr>
+<td>"carotenoid"</td><td>carotenoidcontent</td><td>Always </td></tr>
+<tr>
+<td>"anthocyanin"</td><td>anthocyancontent</td><td>Always </td></tr>
+<tr>
+<td>"brown"</td><td>brownpigments</td><td>If brownpigments &gt; 0 </td></tr>
+<tr>
+<td>"water"</td><td>watermass</td><td>Always </td></tr>
+<tr>
+<td>"drymass"</td><td>drymass</td><td>PROSPECT-D mode only (see <a class="el" href="#LOModes">PROSPECT Model Variants</a>) </td></tr>
+<tr>
+<td>"protein"</td><td>protein</td><td>PROSPECT-PRO mode only (see <a class="el" href="#LOModes">PROSPECT Model Variants</a>) </td></tr>
+<tr>
+<td>"cellulose"</td><td>carbonconstituents</td><td>PROSPECT-PRO mode only (see <a class="el" href="#LOModes">PROSPECT Model Variants</a>) </td></tr>
+</table>
+<h2><a class="anchor" id="LORetrieveNotes"></a>
+Important Notes</h2>
+<ul>
+<li>The parameter mapping is stored per LeafOptics instance. If you create a new LeafOptics object, it will not have access to spectra generated by a previous instance.</li>
+<li>Only spectra generated using the <a class="el" href="class_leaf_optics.html#a883df20abfc7c37120262108ac056507">LeafOptics::run()</a> methods are tracked. Manually created global data with "leaf_reflectivity_" prefixes will not match.</li>
+<li>The method always overwrites existing primitive data for the parameters listed above.</li>
+<li>Both overloads are available: <a class="el" href="class_leaf_optics.html#a1d374e510c376bbf078729a1e5ded20f">LeafOptics::getPropertiesFromSpectrum(const std::vector&lt;uint&gt;&amp;)</a> for multiple primitives and <a class="el" href="class_leaf_optics.html#adf1227f5cb0693d85d0e4dc9d8eb74f0">LeafOptics::getPropertiesFromSpectrum(uint)</a> for a single primitive.</li>
+</ul>
+<h1><a class="anchor" id="LONitrogenAuto"></a>
+Nitrogen-Based Automatic Leaf Optics</h1>
+<p>The LeafOptics plugin supports automatic computation of leaf optical properties from leaf nitrogen concentration. This enables seamless integration with the PlantArchitecture nitrogen model, where chlorophyll and carotenoid content are derived from nitrogen data while limiting computational overhead through adaptive spectrum binning.</p>
+<h2><a class="anchor" id="LONitrogenBackground"></a>
+Scientific Background</h2>
+<p>The nitrogen-to-chlorophyll relationship is based on Evans (1989) and subsequent literature:</p>
+<ul>
+<li><b>Stoichiometry</b>: Approximately 50 mol thylakoid N per mol chlorophyll</li>
+<li><b>Photosynthetic fraction</b>: ~50% of leaf nitrogen is in photosynthetic machinery</li>
+<li><b>Empirical relationship</b>: \(C_{ab} (\mu g/cm^2) = N_{area} (g/m^2) \times 100 \times f_{photo} \times k\)</li>
+</ul>
+<p>Carotenoids do not contain nitrogen directly. The relationship is indirect through chlorophyll:</p><ul>
+<li>Healthy leaves: \(C_{ar} \approx 0.25 \times C_{ab}\)</li>
+<li>Under nitrogen stress, the Car/Cab ratio increases as chlorophyll declines faster</li>
+</ul>
+<p>Since nitrogen alone cannot uniquely determine all PROSPECT parameters, only chlorophyll and carotenoids are computed from nitrogen. Other parameters (structure, water, dry matter, etc.) use user-specified defaults.</p>
+<h2><a class="anchor" id="LONitrogenNauto"></a>
+LeafOpticsProperties_Nauto Structure</h2>
+<p>The <a class="el" href="struct_leaf_optics_properties___nauto.html">LeafOpticsProperties_Nauto</a> structure configures the nitrogen-based automatic mode.</p>
+<table class="doxtable">
+<tr>
+<th colspan="4">Nitrogen-to-Pigment Conversion Coefficients </th></tr>
+<tr>
+<th>Member</th><th>Units</th><th>Description</th><th>Default </th></tr>
+<tr>
+<td>f_photosynthetic</td><td>unitless [0-1]</td><td>Fraction of leaf nitrogen in photosynthetic machinery</td><td>0.50 </td></tr>
+<tr>
+<td>N_to_Cab_coefficient</td><td>unitless</td><td>Empirical coefficient for chlorophyll calculation</td><td>0.40 </td></tr>
+<tr>
+<td>Car_to_Cab_ratio</td><td>unitless</td><td>Carotenoid to chlorophyll ratio</td><td>0.25 </td></tr>
+</table>
+<p>The chlorophyll calculation follows: \(C_{ab} (\mu g/cm^2) = N_{area} (g/m^2) \times 100 \times f_{photosynthetic} \times N\_to\_Cab\_coefficient\)</p>
+<p>Chlorophyll is clamped to the range [5, 80] \(\mu g/cm^2\) to ensure physically realistic values.</p>
+<table class="doxtable">
+<tr>
+<th colspan="4">Fixed PROSPECT Parameters </th></tr>
+<tr>
+<th>Member</th><th>Units</th><th>Description</th><th>Default </th></tr>
+<tr>
+<td>numberlayers</td><td>unitless</td><td>Leaf structure parameter \(N\)</td><td>1.5 </td></tr>
+<tr>
+<td>anthocyancontent</td><td>\(\mu\)g&#160;cm \(^{-2}\)</td><td>Anthocyanin content</td><td>1.0 </td></tr>
+<tr>
+<td>brownpigments</td><td>unitless</td><td>Brown pigment content (senescence indicator)</td><td>0.0 </td></tr>
+<tr>
+<td>watermass</td><td>g&#160;cm \(^{-2}\)</td><td>Equivalent water thickness</td><td>0.015 </td></tr>
+<tr>
+<td>drymass</td><td>g&#160;cm \(^{-2}\)</td><td>Leaf mass per area</td><td>0.006 </td></tr>
+<tr>
+<td>protein</td><td>g&#160;cm \(^{-2}\)</td><td>Protein content (PROSPECT-PRO mode)</td><td>0.0 </td></tr>
+<tr>
+<td>carbonconstituents</td><td>g&#160;cm \(^{-2}\)</td><td>Carbon constituents (PROSPECT-PRO mode)</td><td>0.0 </td></tr>
+</table>
+<table class="doxtable">
+<tr>
+<th colspan="4">Adaptive Binning Configuration </th></tr>
+<tr>
+<th>Member</th><th>Units</th><th>Description</th><th>Default </th></tr>
+<tr>
+<td>num_bins</td><td>count</td><td>Target number of spectrum bins</td><td>20 </td></tr>
+<tr>
+<td>reassignment_threshold</td><td>unitless</td><td>Relative nitrogen change threshold for reassignment</td><td>0.30 </td></tr>
+<tr>
+<td>min_reassignment_change</td><td>g&#160;m \(^{-2}\)</td><td>Minimum absolute nitrogen change for reassignment</td><td>0.3 </td></tr>
+</table>
+<h2><a class="anchor" id="LONitrogenUsage"></a>
+Using Nitrogen-Based Mode</h2>
+<p>Call <a class="el" href="class_leaf_optics.html#a8ae90409472f46d8be778d9a641b092c">LeafOptics::run(const std::vector&lt;uint&gt;&amp;, const LeafOpticsProperties_Nauto&amp;)</a> with primitive UUIDs and nitrogen-auto parameters. The method groups primitives by parent object, reads "leaf_nitrogen_gN_m2" object data, and assigns spectra accordingly.</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_leaf_optics_8h.html">LeafOptics.h</a>&quot;</span></div>
+<div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_plant_architecture_8h.html">PlantArchitecture.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line">Context context;</div>
+<div class="line"><a class="code hl_class" href="class_plant_architecture.html">PlantArchitecture</a> plantarch(&amp;context);</div>
+<div class="line"><a class="code hl_class" href="class_leaf_optics.html">LeafOptics</a> leafoptics(&amp;context);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Build plant canopy and enable nitrogen model</span></div>
+<div class="line">plantarch.loadPlantModelFromLibrary(<span class="stringliteral">&quot;bean&quot;</span>);</div>
+<div class="line">std::vector&lt;uint&gt; plantIDs = plantarch.buildPlantCanopyFromLibrary(</div>
+<div class="line">    make_vec3(0,0,0), make_vec2(0.3, 0.3), make_int2(10, 10), 30);</div>
+<div class="line">plantarch.enableNitrogenModel();</div>
+<div class="line">plantarch.initializeNitrogenPools(2.0f);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Configure nitrogen-based leaf optics</span></div>
+<div class="line"><a class="code hl_struct" href="struct_leaf_optics_properties___nauto.html" title="Parameters for nitrogen-based automatic leaf optics calculation.">LeafOpticsProperties_Nauto</a> N_optics;</div>
+<div class="line">N_optics.<a class="code hl_variable" href="struct_leaf_optics_properties___nauto.html#a0fe250ad7ffdf44709b86a84bb6fe30a" title="Fraction of leaf nitrogen in photosynthetic machinery [0-1].">f_photosynthetic</a> = 0.50f;</div>
+<div class="line">N_optics.<a class="code hl_variable" href="struct_leaf_optics_properties___nauto.html#a85ca741b94f2f839a0ab8b324b401784" title="Empirical coefficient for chlorophyll calculation.">N_to_Cab_coefficient</a> = 0.40f;</div>
+<div class="line">N_optics.<a class="code hl_variable" href="struct_leaf_optics_properties___nauto.html#afa0e869ef2280a8ad5d89e735681a958" title="Carotenoid to chlorophyll ratio.">Car_to_Cab_ratio</a> = 0.25f;</div>
+<div class="line">N_optics.<a class="code hl_variable" href="struct_leaf_optics_properties___nauto.html#a1ebc58f3be3a6e9a43f66d1d3f69ecaf" title="Target number of spectrum bins.">num_bins</a> = 20;</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Get leaf primitives and run</span></div>
+<div class="line">std::vector&lt;uint&gt; leaf_UUIDs = plantarch.getAllLeafUUIDs(plantIDs);</div>
+<div class="line">leafoptics.run(leaf_UUIDs, N_optics);</div>
+</div><!-- fragment --><h2><a class="anchor" id="LONitrogenBehavior"></a>
+Method Behavior</h2>
+<p>The behavior of <a class="el" href="class_leaf_optics.html#a8ae90409472f46d8be778d9a641b092c">LeafOptics::run(const std::vector&lt;uint&gt;&amp;, const LeafOpticsProperties_Nauto&amp;)</a> depends on the call sequence:</p>
+<p>First call (initialization):**</p><ol type="1">
+<li>Groups primitives by parent object ID</li>
+<li>Reads "leaf_nitrogen_gN_m2" from each object (throws error if missing)</li>
+<li>Creates adaptive spectrum bins based on nitrogen distribution using quantiles</li>
+<li>Generates PROSPECT spectra for each bin (stored as "leaf_reflectivity_Nauto_0", etc.)</li>
+<li><p class="startli">Assigns each object to its nearest bin</p>
+<p class="startli">Subsequent calls (update):**</p>
+</li>
+</ol>
+<ol type="1">
+<li>New primitives (not previously tracked) are assigned to the nearest existing bin</li>
+<li>Removed primitives (previously tracked but not in current call) are untracked</li>
+<li>Existing primitives are checked for nitrogen changes and reassigned if thresholds are exceeded</li>
+</ol>
+<p>All primitives belonging to the same parent object receive the same spectrum assignment.</p>
+<h2><a class="anchor" id="LONitrogenUpdate"></a>
+Efficient Update Path</h2>
+<p>When nitrogen values have changed but the primitive set is unchanged, use <a class="el" href="class_leaf_optics.html#af9f478e1fd6ce10aa61fb9aae09e857e">LeafOptics::updateNitrogenBasedSpectra()</a> for more efficient updates:</p>
+<div class="fragment"><div class="line"><span class="comment">// After nitrogen model advances time</span></div>
+<div class="line">plantarch.advanceTime(1.0f);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Fast update - skips primitive grouping and add/remove processing</span></div>
+<div class="line">leafoptics.updateNitrogenBasedSpectra();</div>
+</div><!-- fragment --><p>This method re-reads nitrogen from parent objects and reassigns primitives if the change exceeds configured thresholds. It throws an error if nitrogen mode has not been initialized.</p>
+<h2><a class="anchor" id="LONitrogenBinning"></a>
+Adaptive Binning Algorithm</h2>
+<p>The adaptive binning algorithm selects bin centers using quantiles of the nitrogen distribution:</p>
+<ol type="1">
+<li>Sort nitrogen values from all tracked objects</li>
+<li>Select bin centers at evenly spaced quantile positions</li>
+<li>Remove duplicate bin centers (occurs when many objects have similar nitrogen)</li>
+<li>Generate a PROSPECT spectrum for each unique bin</li>
+</ol>
+<p>This ensures bins are concentrated where data is dense, providing better spectral resolution in common nitrogen ranges while limiting the total number of unique spectra.</p>
+<h2><a class="anchor" id="LONitrogenStability"></a>
+Reassignment Stability (Hysteresis)</h2>
+<p>To prevent oscillation at bin boundaries, reassignment requires both:</p>
+<ol type="1">
+<li><b>Relative change</b>: \(|N_{current} - N_{bin}| / N_{bin} &gt; reassignment\_threshold\)</li>
+<li><b>Absolute change</b>: \(|N_{current} - N_{bin}| &gt; min\_reassignment\_change\)</li>
+</ol>
+<p>Additionally, moving to a new bin requires a significant improvement in fit (at least half of <code>min_reassignment_change</code> closer to the new bin center than the old). This hysteresis prevents frequent reassignments when nitrogen values hover near bin boundaries.</p>
+<h2><a class="anchor" id="LONitrogenPFT"></a>
+Parameter Values by Plant Functional Type</h2>
+<p>Suggested parameter values for different plant types:</p>
+<table class="doxtable">
+<tr>
+<th>Parameter</th><th>C3 Crops</th><th>C4 Crops</th><th>Deciduous Trees </th></tr>
+<tr>
+<td>f_photosynthetic</td><td>0.50</td><td>0.35</td><td>0.45 </td></tr>
+<tr>
+<td>N_to_Cab_coefficient</td><td>0.40</td><td>0.45</td><td>0.38 </td></tr>
+<tr>
+<td>Car_to_Cab_ratio</td><td>0.25</td><td>0.22</td><td>0.28 </td></tr>
+<tr>
+<td>numberlayers</td><td>1.5</td><td>1.6</td><td>1.8 </td></tr>
+<tr>
+<td>drymass</td><td>0.005</td><td>0.004</td><td>0.008 </td></tr>
+</table>
+<p>C4 crops have a lower photosynthetic nitrogen fraction because more nitrogen is allocated to PEP carboxylase rather than Rubisco. Deciduous trees typically have thicker leaves (higher drymass and numberlayers).</p>
+<h2><a class="anchor" id="LONitrogenExample"></a>
+Complete Integration Example</h2>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
+<div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_plant_architecture_8h.html">PlantArchitecture.h</a>&quot;</span></div>
+<div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_leaf_optics_8h.html">LeafOptics.h</a>&quot;</span></div>
+<div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_radiation_model_8h.html">RadiationModel.h</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keyword">using namespace </span>helios;</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main() {</div>
+<div class="line">    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context;</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// === Build plant canopy ===</span></div>
+<div class="line">    <a class="code hl_class" href="class_plant_architecture.html">PlantArchitecture</a> plantarch(&amp;context);</div>
+<div class="line">    plantarch.loadPlantModelFromLibrary(<span class="stringliteral">&quot;bean&quot;</span>);</div>
+<div class="line">    std::vector&lt;uint&gt; plantIDs = plantarch.buildPlantCanopyFromLibrary(</div>
+<div class="line">        <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(0.3, 0.3), <a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(10, 10), 30);</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// === Initialize nitrogen model ===</span></div>
+<div class="line">    plantarch.enableNitrogenModel();</div>
+<div class="line">    <a class="code hl_struct" href="struct_nitrogen_parameters.html" title="Parameters for the nitrogen model.">NitrogenParameters</a> N_params_plant;</div>
+<div class="line">    N_params_plant.<a class="code hl_variable" href="struct_nitrogen_parameters.html#a58facc5b514d2838f12c6d5c380bc233" title="target leaf nitrogen content per unit area (g N/m²)">target_leaf_N_area</a> = 2.0f;  <span class="comment">// g N/m²</span></div>
+<div class="line">    plantarch.setPlantNitrogenParameters(plantIDs, N_params_plant);</div>
+<div class="line">    plantarch.initializeNitrogenPools(2.0f);</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// === Configure nitrogen-based leaf optics ===</span></div>
+<div class="line">    <a class="code hl_class" href="class_leaf_optics.html">LeafOptics</a> leafoptics(&amp;context);</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_struct" href="struct_leaf_optics_properties___nauto.html" title="Parameters for nitrogen-based automatic leaf optics calculation.">LeafOpticsProperties_Nauto</a> N_optics;</div>
+<div class="line">    N_optics.<a class="code hl_variable" href="struct_leaf_optics_properties___nauto.html#a0fe250ad7ffdf44709b86a84bb6fe30a" title="Fraction of leaf nitrogen in photosynthetic machinery [0-1].">f_photosynthetic</a> = 0.50f;</div>
+<div class="line">    N_optics.<a class="code hl_variable" href="struct_leaf_optics_properties___nauto.html#a85ca741b94f2f839a0ab8b324b401784" title="Empirical coefficient for chlorophyll calculation.">N_to_Cab_coefficient</a> = 0.40f;</div>
+<div class="line">    N_optics.<a class="code hl_variable" href="struct_leaf_optics_properties___nauto.html#afa0e869ef2280a8ad5d89e735681a958" title="Carotenoid to chlorophyll ratio.">Car_to_Cab_ratio</a> = 0.25f;</div>
+<div class="line">    N_optics.<a class="code hl_variable" href="struct_leaf_optics_properties___nauto.html#a661e07bea1db1476e5b7db4c12de91e0" title="Leaf structure parameter (N)">numberlayers</a> = 1.5f;</div>
+<div class="line">    N_optics.<a class="code hl_variable" href="struct_leaf_optics_properties___nauto.html#a7ddccd5e6a534c133c0e92d7fa9a2653" title="Leaf mass per area (g/cm2)">drymass</a> = 0.005f;</div>
+<div class="line">    N_optics.<a class="code hl_variable" href="struct_leaf_optics_properties___nauto.html#a1ebc58f3be3a6e9a43f66d1d3f69ecaf" title="Target number of spectrum bins.">num_bins</a> = 20;</div>
+<div class="line">    N_optics.<a class="code hl_variable" href="struct_leaf_optics_properties___nauto.html#a8acd664d88bfb3b1644205bf3fdb19f6" title="Relative nitrogen change threshold for reassignment.">reassignment_threshold</a> = 0.30f;</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// === Initial leaf optics assignment ===</span></div>
+<div class="line">    std::vector&lt;uint&gt; leaf_UUIDs = plantarch.getAllLeafUUIDs(plantIDs);</div>
+<div class="line">    leafoptics.run(leaf_UUIDs, N_optics);</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// === Setup radiation ===</span></div>
+<div class="line">    <a class="code hl_class" href="class_radiation_model.html" title="Radiation transport model plugin.">RadiationModel</a> radiation(&amp;context);</div>
+<div class="line">    radiation.addSunSphereRadiationSource(<a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(30*<a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>/180, 0));</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// === Time loop ===</span></div>
+<div class="line">    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> day = 100; day &lt;= 200; day++) {</div>
+<div class="line">        context.<a class="code hl_function" href="classhelios_1_1_context.html#a5b9565e477a321ec7b7b9b62d43b2139" title="Set simulation date by day, month, year.">setDate</a>(<a class="code hl_function" href="group__vectors.html#gad4c811a7a39319de43f58c93e14ecda6" title="Make a Date vector.">make_Date</a>(day, 2024));</div>
+<div class="line"> </div>
+<div class="line">        <span class="comment">// Nitrogen fertilization events</span></div>
+<div class="line">        <span class="keywordflow">if</span> (day == 115 || day == 145) {</div>
+<div class="line">            plantarch.addPlantNitrogen(plantIDs, 0.5f);</div>
+<div class="line">        }</div>
+<div class="line"> </div>
+<div class="line">        <span class="comment">// Advance plant growth and nitrogen dynamics</span></div>
+<div class="line">        plantarch.advanceTime(1.0f);</div>
+<div class="line"> </div>
+<div class="line">        <span class="comment">// Update leaf optics (handles new leaves, removed leaves, N changes)</span></div>
+<div class="line">        leaf_UUIDs = plantarch.getAllLeafUUIDs(plantIDs);</div>
+<div class="line">        leafoptics.run(leaf_UUIDs, N_optics);</div>
+<div class="line"> </div>
+<div class="line">        <span class="comment">// Alternative: fast update when primitive set is unchanged</span></div>
+<div class="line">        <span class="comment">// leafoptics.updateNitrogenBasedSpectra();</span></div>
+<div class="line"> </div>
+<div class="line">        <span class="comment">// Run radiation with current spectra</span></div>
+<div class="line">        radiation.runBand(<span class="stringliteral">&quot;PAR&quot;</span>);</div>
+<div class="line">    }</div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordflow">return</span> 0;</div>
+<div class="line">}</div>
+</div><!-- fragment --><h2><a class="anchor" id="LONitrogenRequirements"></a>
+Requirements</h2>
+<ul>
+<li>Each leaf object must have "leaf_nitrogen_gN_m2" object data set (typically by PlantArchitecture::NitrogenModel)</li>
+<li>All primitives must belong to a parent object (primitives without parents are skipped with a warning)</li>
+<li>The nitrogen mode parameters are stored at initialization; subsequent calls ignore parameter changes</li>
+</ul>
+<h2><a class="anchor" id="LONitrogenReferences"></a>
+References</h2>
+<ul>
+<li>Evans, J.R. (1989). Photosynthesis and nitrogen relationships in leaves of C3 plants. <em>Oecologia</em>, 78(1), 9-19.</li>
+<li>Féret, J.B., et al. (2021). PROSPECT-PRO for estimating content of nitrogen-containing leaf proteins and other carbon-based constituents. <em>Remote Sensing of Environment</em>, 252, 112173.</li>
+<li>Ali, A.M., et al. (2020). Retrieval of leaf nitrogen content from hyperspectral data. <em>Agricultural and Forest Meteorology</em>, 281, 107819. </li>
+</ul>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </div><!-- doc-content -->

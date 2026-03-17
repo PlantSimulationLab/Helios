@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Timeseries</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -171,7 +204,7 @@ Functions</h2></td></tr>
 <tr class="memitem:gab4e83017576a164eaa7c61cd0812d8a2" id="r_gab4e83017576a164eaa7c61cd0812d8a2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gab4e83017576a164eaa7c61cd0812d8a2">helios::Context::addTimeseriesData</a> (const char *label, float value, const <a class="el" href="structhelios_1_1_date.html">Date</a> &amp;date, const <a class="el" href="structhelios_1_1_time.html">Time</a> &amp;time)</td></tr>
 <tr class="memdesc:gab4e83017576a164eaa7c61cd0812d8a2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a data point to timeseries of data.  <br /></td></tr>
 <tr class="separator:gab4e83017576a164eaa7c61cd0812d8a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga3ca2e5c0a2c1983d552fd7ee57d04997" id="r_ga3ca2e5c0a2c1983d552fd7ee57d04997"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga3ca2e5c0a2c1983d552fd7ee57d04997">helios::Context::setCurrentTimeseriesPoint</a> (const char *label, uint index)</td></tr>
+<tr class="memitem:ga3ca2e5c0a2c1983d552fd7ee57d04997" id="r_ga3ca2e5c0a2c1983d552fd7ee57d04997"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga3ca2e5c0a2c1983d552fd7ee57d04997">helios::Context::setCurrentTimeseriesPoint</a> (const char *label, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> index)</td></tr>
 <tr class="memdesc:ga3ca2e5c0a2c1983d552fd7ee57d04997"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the Context date and time by providing the index of a timeseries data point.  <br /></td></tr>
 <tr class="separator:ga3ca2e5c0a2c1983d552fd7ee57d04997"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga8845155a8f5df1e6db968b78f5a5fb18" id="r_ga8845155a8f5df1e6db968b78f5a5fb18"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga8845155a8f5df1e6db968b78f5a5fb18">helios::Context::queryTimeseriesData</a> (const char *label, const <a class="el" href="structhelios_1_1_date.html">Date</a> &amp;date, const <a class="el" href="structhelios_1_1_time.html">Time</a> &amp;time) const</td></tr>
@@ -180,16 +213,16 @@ Functions</h2></td></tr>
 <tr class="memitem:gab52bde84b96d02a4d928a610794ab146" id="r_gab52bde84b96d02a4d928a610794ab146"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gab52bde84b96d02a4d928a610794ab146">helios::Context::queryTimeseriesData</a> (const char *label) const</td></tr>
 <tr class="memdesc:gab52bde84b96d02a4d928a610794ab146"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a timeseries data point at the time currently set in the Context.  <br /></td></tr>
 <tr class="separator:gab52bde84b96d02a4d928a610794ab146"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gadffd45c3717c9255d035ce098349ca74" id="r_gadffd45c3717c9255d035ce098349ca74"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gadffd45c3717c9255d035ce098349ca74">helios::Context::queryTimeseriesData</a> (const char *label, uint index) const</td></tr>
+<tr class="memitem:gadffd45c3717c9255d035ce098349ca74" id="r_gadffd45c3717c9255d035ce098349ca74"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gadffd45c3717c9255d035ce098349ca74">helios::Context::queryTimeseriesData</a> (const char *label, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> index) const</td></tr>
 <tr class="memdesc:gadffd45c3717c9255d035ce098349ca74"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a timeseries data point by index in the timeseries.  <br /></td></tr>
 <tr class="separator:gadffd45c3717c9255d035ce098349ca74"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga520b33fad86d1514ceb5eeafa52c81ef" id="r_ga520b33fad86d1514ceb5eeafa52c81ef"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_time.html">Time</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga520b33fad86d1514ceb5eeafa52c81ef">helios::Context::queryTimeseriesTime</a> (const char *label, uint index) const</td></tr>
+<tr class="memitem:ga520b33fad86d1514ceb5eeafa52c81ef" id="r_ga520b33fad86d1514ceb5eeafa52c81ef"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_time.html">Time</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga520b33fad86d1514ceb5eeafa52c81ef">helios::Context::queryTimeseriesTime</a> (const char *label, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> index) const</td></tr>
 <tr class="memdesc:ga520b33fad86d1514ceb5eeafa52c81ef"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the time associated with a timeseries data point.  <br /></td></tr>
 <tr class="separator:ga520b33fad86d1514ceb5eeafa52c81ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gae15d53565b2a699d212de636318290b8" id="r_gae15d53565b2a699d212de636318290b8"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_date.html">Date</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gae15d53565b2a699d212de636318290b8">helios::Context::queryTimeseriesDate</a> (const char *label, uint index) const</td></tr>
+<tr class="memitem:gae15d53565b2a699d212de636318290b8" id="r_gae15d53565b2a699d212de636318290b8"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_date.html">Date</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gae15d53565b2a699d212de636318290b8">helios::Context::queryTimeseriesDate</a> (const char *label, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> index) const</td></tr>
 <tr class="memdesc:gae15d53565b2a699d212de636318290b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the date associated with a timeseries data point.  <br /></td></tr>
 <tr class="separator:gae15d53565b2a699d212de636318290b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga56d13f8c949e68137581a3c974790892" id="r_ga56d13f8c949e68137581a3c974790892"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga56d13f8c949e68137581a3c974790892">helios::Context::getTimeseriesLength</a> (const char *label) const</td></tr>
+<tr class="memitem:ga56d13f8c949e68137581a3c974790892" id="r_ga56d13f8c949e68137581a3c974790892"><td class="memItemLeft" align="right" valign="top"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga56d13f8c949e68137581a3c974790892">helios::Context::getTimeseriesLength</a> (const char *label) const</td></tr>
 <tr class="memdesc:ga56d13f8c949e68137581a3c974790892"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the length of timeseries data.  <br /></td></tr>
 <tr class="separator:ga56d13f8c949e68137581a3c974790892"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga8beaa8454ad248064b74698f7f0534a2" id="r_ga8beaa8454ad248064b74698f7f0534a2"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga8beaa8454ad248064b74698f7f0534a2">helios::Context::doesTimeseriesVariableExist</a> (const char *label) const</td></tr>
@@ -239,7 +272,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01860">1860</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l00603">603</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -266,7 +299,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02043">2043</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l00788">788</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -277,7 +310,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">uint Context::getTimeseriesLength </td>
+          <td class="memname"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> Context::getTimeseriesLength </td>
           <td>(</td>
           <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>label</em></span></td><td>)</td>
           <td> const</td>
@@ -293,7 +326,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02032">2032</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l00777">777</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -321,7 +354,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Value of timeseries data point </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01972">1972</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l00715">715</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -360,7 +393,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Value of timeseries data point </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01924">1924</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l00667">667</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -378,7 +411,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>index</em></span>&#160;) const</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>index</em></span>&#160;) const</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -393,7 +426,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Value of timeseries data point </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01974">1974</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l00719">719</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -411,7 +444,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>index</em></span>&#160;) const</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>index</em></span>&#160;) const</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -426,7 +459,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Date of timeseries data point </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l02016">2016</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l00761">761</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -444,7 +477,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>index</em></span>&#160;) const</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>index</em></span>&#160;) const</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -459,7 +492,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Time of timeseries data point </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01982">1982</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l00727">727</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>
@@ -477,7 +510,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint</td>          <td class="paramname"><span class="paramname"><em>index</em></span>&#160;)</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>index</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -491,7 +524,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l01916">1916</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_context_8cpp_source.html#l00659">659</a> of file <a class="el" href="_context_8cpp_source.html">Context.cpp</a>.</p>
 
 </div>
 </div>

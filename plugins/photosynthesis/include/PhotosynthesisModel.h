@@ -1,6 +1,6 @@
 /** \file "PhotosynthesisModel.h" Primary header file for photosynthesis plug-in.
 
-Copyright (C) 2016-2025 Brian Bailey
+Copyright (C) 2016-2026 Brian Bailey
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -19,6 +19,19 @@ GNU General Public License for more details.
 #include "Context.h"
 
 struct PhotosyntheticTemperatureResponseParameters {
+private:
+    static void validateOptimalTemperature(float optimum_temperature_in_C) {
+        if (optimum_temperature_in_C < 0.f) {
+            helios::helios_runtime_error("ERROR (PhotosyntheticTemperatureResponseParameters): Optimal temperature cannot be negative. Received Topt = " + std::to_string(optimum_temperature_in_C) +
+                                         " C. Please check that temperature is provided in units of Celsius, not Kelvin.");
+        }
+        if (optimum_temperature_in_C > 100.f) {
+            helios::helios_runtime_error("ERROR (PhotosyntheticTemperatureResponseParameters): Optimal temperature cannot exceed 100 C. Received Topt = " + std::to_string(optimum_temperature_in_C) +
+                                         " C. This value is biologically unrealistic and likely indicates temperature was provided in Kelvin instead of Celsius. Please convert to Celsius (subtract 273.15 from Kelvin value).");
+        }
+    }
+
+public:
     PhotosyntheticTemperatureResponseParameters() {
         value_at_25C = 100.0f;
         dHa = 60.0f;
@@ -45,6 +58,7 @@ struct PhotosyntheticTemperatureResponseParameters {
     }
 
     PhotosyntheticTemperatureResponseParameters(float value_at_25C, float rate_of_increase_dHa, float optimum_temperature_in_C) {
+        validateOptimalTemperature(optimum_temperature_in_C);
         this->value_at_25C = value_at_25C;
         this->dHa = rate_of_increase_dHa;
         if (rate_of_increase_dHa > 0.f) {
@@ -56,6 +70,7 @@ struct PhotosyntheticTemperatureResponseParameters {
     }
 
     PhotosyntheticTemperatureResponseParameters(float value_at_25C, float rate_of_increase_dHa, float optimum_temperature_in_C, float rate_of_decrease_dHd) {
+        validateOptimalTemperature(optimum_temperature_in_C);
         this->value_at_25C = value_at_25C;
         this->dHa = rate_of_increase_dHa;
         this->dHd = rate_of_decrease_dHd;
@@ -450,7 +465,7 @@ public:
      */
     explicit PhotosynthesisModel(helios::Context *a_context);
 
-    static int selfTest(int argc = 0, char** argv = nullptr);
+    static int selfTest(int argc = 0, char **argv = nullptr);
 
     //! Sets photosynthesis to be calculated according to the empirical model
     void setModelType_Empirical();
@@ -516,6 +531,27 @@ public:
      */
     FarquharModelCoefficients getFarquharCoefficientsFromLibrary(const std::string &species);
 
+    //! Set empirical model coefficients for a material by label
+    /**
+     * \param[in] material_label String identifier for the material
+     * \param[in] coeffs Model coefficient values
+     */
+    void setModelCoefficients(const std::string &material_label, const EmpiricalModelCoefficients &coeffs);
+
+    //! Set Farquhar model coefficients for a material by label
+    /**
+     * \param[in] material_label String identifier for the material
+     * \param[in] coeffs Model coefficient values
+     */
+    void setModelCoefficients(const std::string &material_label, const FarquharModelCoefficients &coeffs);
+
+    //! Set Farquhar model coefficients from species library for a material
+    /**
+     * \param[in] species Name of species
+     * \param[in] material_label String identifier for the material
+     */
+    void setFarquharCoefficientsFromLibrary(const std::string &species, const std::string &material_label);
+
     //! Run the model for all UUIDs in the Context
     void run();
 
@@ -547,9 +583,20 @@ public:
 
     //! Add optional output primitive data values to the Context
     /**
-     * \param[in] label Name of primitive data (e.g., Ci)
+     * \param[in] label Name of primitive data. Available labels for the Farquhar model: "Ci" (intercellular CO2), "limitation_state" (0=Rubisco-limited, 1=electron transport-limited), "Gamma_CO2" (CO2 compensation point), "electron_transport_ratio"
+     * (J/Jmax ratio, useful for fluorescence calculations).
      */
     void optionalOutputPrimitiveData(const char *label);
+
+    //! Manually set the intercellular CO2 concentration (Ci) for specified primitives, bypassing iterative calculation
+    /**
+     * \param[in] Ci Intercellular CO2 concentration in units of umol CO2/mol air
+     * \param[in] UUIDs Universal unique identifiers for primitives to set manual Ci
+     * \note This method is primarily intended for testing and validation purposes. For normal operation, Ci should be calculated from moisture_conductance.
+     * \note Manual Ci values will persist across multiple run() calls until overwritten with another setCi() call.
+     * \note Ci must be positive and should typically be between 50-800 umol/mol for C3 plants (typical range 0.3-0.9 times ambient CO2).
+     */
+    void setCi(float Ci, const std::vector<uint> &UUIDs);
 
     //! Print a report detailing usage of default input values for all primitives in the Context
     void printDefaultValueReport() const;
@@ -568,12 +615,26 @@ private:
     EmpiricalModelCoefficients empiricalmodelcoeffs;
     FarquharModelCoefficients farquharmodelcoeffs;
 
-    std::map<uint, EmpiricalModelCoefficients> empiricalmodel_coefficients;
-    std::map<uint, FarquharModelCoefficients> farquharmodel_coefficients;
+    std::unordered_map<uint, EmpiricalModelCoefficients> empiricalmodel_coefficients;
+    std::unordered_map<uint, FarquharModelCoefficients> farquharmodel_coefficients;
+
+    // Cache to avoid repeated Context lookups during run()
+    mutable std::unordered_map<uint, EmpiricalModelCoefficients> material_coefficient_cache_empirical;
+    mutable std::unordered_map<uint, FarquharModelCoefficients> material_coefficient_cache_farquhar;
+
+    // Helper to retrieve coefficients with caching
+    EmpiricalModelCoefficients getCoefficientsForPrimitive_Empirical(uint UUID) const;
+    FarquharModelCoefficients getCoefficientsForPrimitive_Farquhar(uint UUID) const;
+
+    //! Storage for previous timestep Ci values for temporal continuity (O(1) lookup performance)
+    std::unordered_map<uint, float> previous_Ci;
+
+    //! Storage for manual Ci overrides that bypass iterative calculation
+    std::unordered_map<uint, float> manual_Ci;
 
     float evaluateEmpiricalModel(const EmpiricalModelCoefficients &params, float i_PAR, float TL, float CO2, float gM);
 
-    float evaluateFarquharModel(const FarquharModelCoefficients &params, float i_PAR, float TL, float CO2, float gM, float &Ci, float &Gamma, int &limitation_state, int &TPU_flag);
+    float evaluateFarquharModel(const FarquharModelCoefficients &params, float i_PAR, float TL, float CO2, float gM, float &Ci, float &Gamma, int &limitation_state, int &TPU_flag, float &J_over_Jmax, helios::WarningAggregator &warnings);
 
     float evaluateCi_Empirical(const EmpiricalModelCoefficients &params, float Ci, float CO2, float fL, float Rd, float gM) const;
 

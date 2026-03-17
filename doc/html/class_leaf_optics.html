@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: LeafOptics Class Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -169,7 +202,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a8f286671c723166c8aae098d0efd9b04" id="r_a8f286671c723166c8aae098d0efd9b04"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8f286671c723166c8aae098d0efd9b04">LeafOptics</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *a_context)</td></tr>
 <tr class="memdesc:a8f286671c723166c8aae098d0efd9b04"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor.  <br /></td></tr>
 <tr class="separator:a8f286671c723166c8aae098d0efd9b04"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a883df20abfc7c37120262108ac056507" id="r_a883df20abfc7c37120262108ac056507"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a883df20abfc7c37120262108ac056507">run</a> (const std::vector&lt; uint &gt; &amp;UUIDs, const <a class="el" href="struct_leaf_optics_properties.html">LeafOpticsProperties</a> &amp;leafproperties, const std::string &amp;label)</td></tr>
+<tr class="memitem:a883df20abfc7c37120262108ac056507" id="r_a883df20abfc7c37120262108ac056507"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a883df20abfc7c37120262108ac056507">run</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs, const <a class="el" href="struct_leaf_optics_properties.html">LeafOpticsProperties</a> &amp;leafproperties, const std::string &amp;label)</td></tr>
 <tr class="memdesc:a883df20abfc7c37120262108ac056507"><td class="mdescLeft">&#160;</td><td class="mdescRight">Run the LeafOptics model to generate reflectivity and transmissivity spectra, create associated global data, and assign to specified primitives.  <br /></td></tr>
 <tr class="separator:a883df20abfc7c37120262108ac056507"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:affa921ab4465e6d89cdbe41e15a087ba" id="r_affa921ab4465e6d89cdbe41e15a087ba"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#affa921ab4465e6d89cdbe41e15a087ba">run</a> (const <a class="el" href="struct_leaf_optics_properties.html">LeafOpticsProperties</a> &amp;leafproperties, const std::string &amp;label)</td></tr>
@@ -181,25 +214,43 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a6b9fa9b6fb34fe7738e425b19118005a" id="r_a6b9fa9b6fb34fe7738e425b19118005a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6b9fa9b6fb34fe7738e425b19118005a">getLeafSpectra</a> (const <a class="el" href="struct_leaf_optics_properties.html">LeafOpticsProperties</a> &amp;leafproperties, std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt; &amp;reflectivities_fit, std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> &gt; &amp;transmissivities_fit)</td></tr>
 <tr class="memdesc:a6b9fa9b6fb34fe7738e425b19118005a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the leaf spectra.  <br /></td></tr>
 <tr class="separator:a6b9fa9b6fb34fe7738e425b19118005a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac7a1cfe512d9417c26ad798a94cbdba1" id="r_ac7a1cfe512d9417c26ad798a94cbdba1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac7a1cfe512d9417c26ad798a94cbdba1">setProperties</a> (const std::vector&lt; uint &gt; &amp;UUIDs, const <a class="el" href="struct_leaf_optics_properties.html">LeafOpticsProperties</a> &amp;leafproperties)</td></tr>
+<tr class="memitem:ac7a1cfe512d9417c26ad798a94cbdba1" id="r_ac7a1cfe512d9417c26ad798a94cbdba1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac7a1cfe512d9417c26ad798a94cbdba1">setProperties</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs, const <a class="el" href="struct_leaf_optics_properties.html">LeafOpticsProperties</a> &amp;leafproperties)</td></tr>
 <tr class="memdesc:ac7a1cfe512d9417c26ad798a94cbdba1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set leaf optical properties for a set of primitives.  <br /></td></tr>
 <tr class="separator:ac7a1cfe512d9417c26ad798a94cbdba1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1d374e510c376bbf078729a1e5ded20f" id="r_a1d374e510c376bbf078729a1e5ded20f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1d374e510c376bbf078729a1e5ded20f">getPropertiesFromSpectrum</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs)</td></tr>
+<tr class="memdesc:a1d374e510c376bbf078729a1e5ded20f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get PROSPECT parameters from reflectivity spectrum for a set of primitives.  <br /></td></tr>
+<tr class="separator:a1d374e510c376bbf078729a1e5ded20f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adf1227f5cb0693d85d0e4dc9d8eb74f0" id="r_adf1227f5cb0693d85d0e4dc9d8eb74f0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adf1227f5cb0693d85d0e4dc9d8eb74f0">getPropertiesFromSpectrum</a> (<a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> UUID)</td></tr>
+<tr class="memdesc:adf1227f5cb0693d85d0e4dc9d8eb74f0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get PROSPECT parameters from reflectivity spectrum for a single primitive.  <br /></td></tr>
+<tr class="separator:adf1227f5cb0693d85d0e4dc9d8eb74f0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a29a01c38e43c0ab1d91bc0a662b090bb" id="r_a29a01c38e43c0ab1d91bc0a662b090bb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a29a01c38e43c0ab1d91bc0a662b090bb">getPropertiesFromLibrary</a> (const std::string &amp;species, <a class="el" href="struct_leaf_optics_properties.html">LeafOpticsProperties</a> &amp;leafproperties)</td></tr>
+<tr class="memdesc:a29a01c38e43c0ab1d91bc0a662b090bb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get leaf optical properties from the built-in species library.  <br /></td></tr>
+<tr class="separator:a29a01c38e43c0ab1d91bc0a662b090bb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acc78ee64bd0569888dbaab2b29b4e7d5" id="r_acc78ee64bd0569888dbaab2b29b4e7d5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acc78ee64bd0569888dbaab2b29b4e7d5">disableMessages</a> ()</td></tr>
 <tr class="memdesc:acc78ee64bd0569888dbaab2b29b4e7d5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Disable command-line output messages from this plug-in.  <br /></td></tr>
 <tr class="separator:acc78ee64bd0569888dbaab2b29b4e7d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abf74f6bab17e5ef1465efca7803be71a" id="r_abf74f6bab17e5ef1465efca7803be71a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abf74f6bab17e5ef1465efca7803be71a">enableMessages</a> ()</td></tr>
 <tr class="memdesc:abf74f6bab17e5ef1465efca7803be71a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable command-line output messages from this plug-in.  <br /></td></tr>
 <tr class="separator:abf74f6bab17e5ef1465efca7803be71a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af340ae2f9078f7e4e088205fcd69acc1" id="r_af340ae2f9078f7e4e088205fcd69acc1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af340ae2f9078f7e4e088205fcd69acc1">optionalOutputPrimitiveData</a> (const char *label)</td></tr>
+<tr class="memdesc:af340ae2f9078f7e4e088205fcd69acc1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add optional primitive data output.  <br /></td></tr>
+<tr class="separator:af340ae2f9078f7e4e088205fcd69acc1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8ae90409472f46d8be778d9a641b092c" id="r_a8ae90409472f46d8be778d9a641b092c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8ae90409472f46d8be778d9a641b092c">run</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs, const <a class="el" href="struct_leaf_optics_properties___nauto.html">LeafOpticsProperties_Nauto</a> &amp;params)</td></tr>
+<tr class="memdesc:a8ae90409472f46d8be778d9a641b092c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Run nitrogen-based leaf optics for the specified primitives.  <br /></td></tr>
+<tr class="separator:a8ae90409472f46d8be778d9a641b092c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af9f478e1fd6ce10aa61fb9aae09e857e" id="r_af9f478e1fd6ce10aa61fb9aae09e857e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af9f478e1fd6ce10aa61fb9aae09e857e">updateNitrogenBasedSpectra</a> ()</td></tr>
+<tr class="memdesc:af9f478e1fd6ce10aa61fb9aae09e857e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Update nitrogen-based spectra for currently tracked primitives.  <br /></td></tr>
+<tr class="separator:af9f478e1fd6ce10aa61fb9aae09e857e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
-<tr class="memitem:a5f5d878ba9b955e52c3dfff46e10416f" id="r_a5f5d878ba9b955e52c3dfff46e10416f"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5f5d878ba9b955e52c3dfff46e10416f">selfTest</a> ()</td></tr>
-<tr class="memdesc:a5f5d878ba9b955e52c3dfff46e10416f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Self-test.  <br /></td></tr>
-<tr class="separator:a5f5d878ba9b955e52c3dfff46e10416f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a25cd38aec99a8e0a0987637d49d14e85" id="r_a25cd38aec99a8e0a0987637d49d14e85"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a25cd38aec99a8e0a0987637d49d14e85">selfTest</a> (int argc=0, char **argv=nullptr)</td></tr>
+<tr class="memdesc:a25cd38aec99a8e0a0987637d49d14e85"><td class="mdescLeft">&#160;</td><td class="mdescRight">Self-test.  <br /></td></tr>
+<tr class="separator:a25cd38aec99a8e0a0987637d49d14e85"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="_leaf_optics_8h_source.html#l00046">46</a> of file <a class="el" href="_leaf_optics_8h_source.html">LeafOptics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_leaf_optics_8h_source.html#l00099">99</a> of file <a class="el" href="_leaf_optics_8h_source.html">LeafOptics.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a8f286671c723166c8aae098d0efd9b04" name="a8f286671c723166c8aae098d0efd9b04"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a8f286671c723166c8aae098d0efd9b04">&#9670;&#160;</a></span>LeafOptics()</h2>
@@ -240,7 +291,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Disable command-line output messages from this plug-in. </p>
 
-<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l00401">401</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l00659">659</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
 
 </div>
 </div>
@@ -261,7 +312,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Enable command-line output messages from this plug-in. </p>
 
-<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l00405">405</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l00663">663</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
 
 </div>
 </div>
@@ -299,7 +350,120 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l00272">272</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l00421">421</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a29a01c38e43c0ab1d91bc0a662b090bb" name="a29a01c38e43c0ab1d91bc0a662b090bb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a29a01c38e43c0ab1d91bc0a662b090bb">&#9670;&#160;</a></span>getPropertiesFromLibrary()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void LeafOptics::getPropertiesFromLibrary </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>species</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="struct_leaf_optics_properties.html">LeafOpticsProperties</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>leafproperties</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get leaf optical properties from the built-in species library. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">species</td><td>Name of the species to retrieve properties for (e.g., "default"). Species names are case-insensitive. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">leafproperties</td><td>LeafOpticsProperties struct to be populated with the species-specific properties. If the species is not found in the library, default properties are used and a warning is issued. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l00637">637</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a1d374e510c376bbf078729a1e5ded20f" name="a1d374e510c376bbf078729a1e5ded20f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1d374e510c376bbf078729a1e5ded20f">&#9670;&#160;</a></span>getPropertiesFromSpectrum() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void LeafOptics::getPropertiesFromSpectrum </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get PROSPECT parameters from reflectivity spectrum for a set of primitives. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUIDs</td><td>UUIDs for primitives to query. For each primitive, this method retrieves the "reflectivity_spectrum" primitive data and checks if it matches a spectrum generated by this LeafOptics instance. If a match is found, the corresponding PROSPECT model parameters are assigned as primitive data using the same labels as setProperties() ("chlorophyll", "carotenoid", "anthocyanin", "brown", "water", "drymass", "protein", "cellulose"). Primitives without matching spectra are silently skipped. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l00580">580</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
+
+</div>
+</div>
+<a id="adf1227f5cb0693d85d0e4dc9d8eb74f0" name="adf1227f5cb0693d85d0e4dc9d8eb74f0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adf1227f5cb0693d85d0e4dc9d8eb74f0">&#9670;&#160;</a></span>getPropertiesFromSpectrum() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void LeafOptics::getPropertiesFromSpectrum </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>UUID</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get PROSPECT parameters from reflectivity spectrum for a single primitive. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUID</td><td>UUID for primitive to query. This method retrieves the "reflectivity_spectrum" primitive data and checks if it matches a spectrum generated by this LeafOptics instance. If a match is found, the corresponding PROSPECT model parameters are assigned as primitive data using the same labels as setProperties() ("chlorophyll", "carotenoid", "anthocyanin", "brown", "water", "drymass", "protein", "cellulose"). If no matching spectrum is found, the primitive is silently skipped. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l00633">633</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
+
+</div>
+</div>
+<a id="af340ae2f9078f7e4e088205fcd69acc1" name="af340ae2f9078f7e4e088205fcd69acc1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af340ae2f9078f7e4e088205fcd69acc1">&#9670;&#160;</a></span>optionalOutputPrimitiveData()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void LeafOptics::optionalOutputPrimitiveData </td>
+          <td>(</td>
+          <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>label</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Add optional primitive data output. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">label</td><td>Label of the primitive data to output. Available labels: "chlorophyll", "carotenoid", "anthocyanin", "brown", "water", "drymass", "protein", "cellulose". </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l00667">667</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
 
 </div>
 </div>
@@ -383,12 +547,12 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l00204">204</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l00353">353</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
 
 </div>
 </div>
 <a id="affa921ab4465e6d89cdbe41e15a087ba" name="affa921ab4465e6d89cdbe41e15a087ba"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#affa921ab4465e6d89cdbe41e15a087ba">&#9670;&#160;</a></span>run() <span class="overload">[1/2]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#affa921ab4465e6d89cdbe41e15a087ba">&#9670;&#160;</a></span>run() <span class="overload">[1/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -415,12 +579,12 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l00191">191</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l00338">338</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a883df20abfc7c37120262108ac056507" name="a883df20abfc7c37120262108ac056507"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a883df20abfc7c37120262108ac056507">&#9670;&#160;</a></span>run() <span class="overload">[2/2]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a883df20abfc7c37120262108ac056507">&#9670;&#160;</a></span>run() <span class="overload">[2/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -428,7 +592,7 @@ Static Public Member Functions</h2></td></tr>
         <tr>
           <td class="memname">void LeafOptics::run </td>
           <td>(</td>
-          <td class="paramtype">const std::vector&lt; uint &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span>, </td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -453,12 +617,51 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l00176">176</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l00320">320</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
 
 </div>
 </div>
-<a id="a5f5d878ba9b955e52c3dfff46e10416f" name="a5f5d878ba9b955e52c3dfff46e10416f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5f5d878ba9b955e52c3dfff46e10416f">&#9670;&#160;</a></span>selfTest()</h2>
+<a id="a8ae90409472f46d8be778d9a641b092c" name="a8ae90409472f46d8be778d9a641b092c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8ae90409472f46d8be778d9a641b092c">&#9670;&#160;</a></span>run() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void LeafOptics::run </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="struct_leaf_optics_properties___nauto.html">LeafOpticsProperties_Nauto</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>params</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Run nitrogen-based leaf optics for the specified primitives. </p>
+<p>Computes leaf optical properties based on nitrogen content. Groups primitives by parent object, reads "leaf_nitrogen_gN_m2" from each object, and assigns spectra accordingly.</p>
+<p>Behavior depends on call sequence:</p><ul>
+<li>First call: Creates adaptive spectrum bins based on nitrogen distribution, generates PROSPECT spectra for each bin, assigns primitives to bins.</li>
+<li>Subsequent calls: New primitives assigned to nearest existing bin, removed primitives untracked, existing primitives checked for nitrogen changes and reassigned if threshold exceeded.</li>
+</ul>
+<p>All primitives belonging to the same parent object receive the same spectrum.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUIDs</td><td>Primitive UUIDs of leaf surfaces </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">params</td><td>Nitrogen-auto parameters specifying conversion coefficients, fixed PROSPECT values, and binning configuration</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>Requires "leaf_nitrogen_gN_m2" object data to be set on each leaf object (typically by PlantArchitecture::NitrogenModel) </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l00882">882</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a25cd38aec99a8e0a0987637d49d14e85" name="a25cd38aec99a8e0a0987637d49d14e85"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a25cd38aec99a8e0a0987637d49d14e85">&#9670;&#160;</a></span>selfTest()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -469,8 +672,12 @@ Static Public Member Functions</h2></td></tr>
         <tr>
           <td class="memname">int LeafOptics::selfTest </td>
           <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>argc</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">char **</td>          <td class="paramname"><span class="paramname"><em>argv</em></span><span class="paramdefsep"> = </span><span class="paramdefval">nullptr</span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -483,7 +690,7 @@ Static Public Member Functions</h2></td></tr>
 <p>Self-test. </p>
 <dl class="section return"><dt>Returns</dt><dd>0 if test was successful, 1 if test failed </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l00161">161</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2leafoptics_2tests_2self_test_8cpp_source.html#l01706">1706</a> of file <a class="el" href="plugins_2leafoptics_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
@@ -496,7 +703,7 @@ Static Public Member Functions</h2></td></tr>
         <tr>
           <td class="memname">void LeafOptics::setProperties </td>
           <td>(</td>
-          <td class="paramtype">const std::vector&lt; uint &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span>, </td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -515,13 +722,38 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l00383">383</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l00558">558</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
+
+</div>
+</div>
+<a id="af9f478e1fd6ce10aa61fb9aae09e857e" name="af9f478e1fd6ce10aa61fb9aae09e857e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af9f478e1fd6ce10aa61fb9aae09e857e">&#9670;&#160;</a></span>updateNitrogenBasedSpectra()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void LeafOptics::updateNitrogenBasedSpectra </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Update nitrogen-based spectra for currently tracked primitives. </p>
+<p>Efficient update method for when nitrogen values have changed but the primitive set is unchanged. Re-reads nitrogen from parent objects and reassigns primitives if the change exceeds configured thresholds.</p>
+<p>This is equivalent to calling run() with the same UUIDs but faster since it skips primitive grouping and add/remove processing.</p>
+<dl class="section note"><dt>Note</dt><dd>Nitrogen mode must be active (run() called with LeafOpticsProperties_Nauto) </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_leaf_optics_8cpp_source.html#l01030">1030</a> of file <a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a>.</p>
 
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>plugins/leafoptics/include/<a class="el" href="_leaf_optics_8h_source.html">LeafOptics.h</a></li>
 <li>plugins/leafoptics/src/<a class="el" href="_leaf_optics_8cpp_source.html">LeafOptics.cpp</a></li>
+<li>plugins/leafoptics/tests/<a class="el" href="plugins_2leafoptics_2tests_2self_test_8cpp_source.html">selfTest.cpp</a></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

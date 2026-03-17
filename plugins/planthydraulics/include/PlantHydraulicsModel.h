@@ -1,6 +1,6 @@
 /** \file "PlantHydraulicsModel.h" Primary header file for the Plant Hydraulics plug-in.
 
-Copyright (C) 2016-2025 Brian Bailey
+Copyright (C) 2016-2026 Brian Bailey
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -443,7 +443,7 @@ public:
      *
      * \return The number of errors encountered during the self-test. Returns 0 if all tests pass successfully.
      */
-    static int selfTest(int argc = 0, char** argv = nullptr);
+    static int selfTest(int argc = 0, char **argv = nullptr);
 
     //! Set the PlantHydraulics model coefficients for all primitives
     /**

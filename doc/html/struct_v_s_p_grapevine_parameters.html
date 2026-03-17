@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: VSPGrapevineParameters Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -297,10 +330,10 @@ Additional Inherited Members</h2></td></tr>
 <tr class="memitem:a0988985e1efda816cbee5273f67fcb28 inherit pub_attribs_struct_base_grape_vine_parameters" id="r_a0988985e1efda816cbee5273f67fcb28"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_base_grape_vine_parameters.html#a0988985e1efda816cbee5273f67fcb28">shoot_radius_spread</a></td></tr>
 <tr class="memdesc:a0988985e1efda816cbee5273f67fcb28 inherit pub_attribs_struct_base_grape_vine_parameters"><td class="mdescLeft">&#160;</td><td class="mdescRight">Spread value for the shoot radius. With any new canopy or plant generation, the shoot radius would be between shoot_radius - shoot_radius_spread and shoot_radius + shoot_radius_spread.  <br /></td></tr>
 <tr class="separator:a0988985e1efda816cbee5273f67fcb28 inherit pub_attribs_struct_base_grape_vine_parameters"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a80a0060ddd5de6e77e9071d320f49702 inherit pub_attribs_struct_base_grape_vine_parameters" id="r_a80a0060ddd5de6e77e9071d320f49702"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_base_grape_vine_parameters.html#a80a0060ddd5de6e77e9071d320f49702">shoots_per_cordon</a></td></tr>
+<tr class="memitem:a80a0060ddd5de6e77e9071d320f49702 inherit pub_attribs_struct_base_grape_vine_parameters" id="r_a80a0060ddd5de6e77e9071d320f49702"><td class="memItemLeft" align="right" valign="top"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_base_grape_vine_parameters.html#a80a0060ddd5de6e77e9071d320f49702">shoots_per_cordon</a></td></tr>
 <tr class="memdesc:a80a0060ddd5de6e77e9071d320f49702 inherit pub_attribs_struct_base_grape_vine_parameters"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of shoots on each cordon.  <br /></td></tr>
 <tr class="separator:a80a0060ddd5de6e77e9071d320f49702 inherit pub_attribs_struct_base_grape_vine_parameters"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5b20278772fcefb3ecace03fda12885e inherit pub_attribs_struct_base_grape_vine_parameters" id="r_a5b20278772fcefb3ecace03fda12885e"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_base_grape_vine_parameters.html#a5b20278772fcefb3ecace03fda12885e">shoots_per_cordon_spread</a></td></tr>
+<tr class="memitem:a5b20278772fcefb3ecace03fda12885e inherit pub_attribs_struct_base_grape_vine_parameters" id="r_a5b20278772fcefb3ecace03fda12885e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_base_grape_vine_parameters.html#a5b20278772fcefb3ecace03fda12885e">shoots_per_cordon_spread</a></td></tr>
 <tr class="memdesc:a5b20278772fcefb3ecace03fda12885e inherit pub_attribs_struct_base_grape_vine_parameters"><td class="mdescLeft">&#160;</td><td class="mdescRight">Spread value for the number of shoots per cordon. With any new canopy or plant generation, the number of shoots per cordon would be between shoots_per_cordon - shoots_per_cordon_spread and shoots_per_cordon + shoots_per_cordon_spread.  <br /></td></tr>
 <tr class="separator:a5b20278772fcefb3ecace03fda12885e inherit pub_attribs_struct_base_grape_vine_parameters"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a55cc37c53fdd62e586f836129bde9a45 inherit pub_attribs_struct_base_grape_vine_parameters" id="r_a55cc37c53fdd62e586f836129bde9a45"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_base_grape_vine_parameters.html#a55cc37c53fdd62e586f836129bde9a45">leaf_spacing_fraction</a></td></tr>
@@ -333,10 +366,10 @@ Additional Inherited Members</h2></td></tr>
 <tr class="memitem:ac90904eec34fa3e0dea393dd1c12faf6 inherit pub_attribs_struct_base_grape_vine_parameters" id="r_ac90904eec34fa3e0dea393dd1c12faf6"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_base_grape_vine_parameters.html#ac90904eec34fa3e0dea393dd1c12faf6">grape_color</a></td></tr>
 <tr class="memdesc:ac90904eec34fa3e0dea393dd1c12faf6 inherit pub_attribs_struct_base_grape_vine_parameters"><td class="mdescLeft">&#160;</td><td class="mdescRight">Color of grapes.  <br /></td></tr>
 <tr class="separator:ac90904eec34fa3e0dea393dd1c12faf6 inherit pub_attribs_struct_base_grape_vine_parameters"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a510a2a5876fe8b3fb8ec70701c32df48 inherit pub_attribs_struct_base_grape_vine_parameters" id="r_a510a2a5876fe8b3fb8ec70701c32df48"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_base_grape_vine_parameters.html#a510a2a5876fe8b3fb8ec70701c32df48">grape_subdivisions</a></td></tr>
+<tr class="memitem:a510a2a5876fe8b3fb8ec70701c32df48 inherit pub_attribs_struct_base_grape_vine_parameters" id="r_a510a2a5876fe8b3fb8ec70701c32df48"><td class="memItemLeft" align="right" valign="top"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_base_grape_vine_parameters.html#a510a2a5876fe8b3fb8ec70701c32df48">grape_subdivisions</a></td></tr>
 <tr class="memdesc:a510a2a5876fe8b3fb8ec70701c32df48 inherit pub_attribs_struct_base_grape_vine_parameters"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of azimuthal and zenithal subdivisions making up berries (will result in roughly 2*(grape_subdivisions)^2 triangles per grape berry)  <br /></td></tr>
 <tr class="separator:a510a2a5876fe8b3fb8ec70701c32df48 inherit pub_attribs_struct_base_grape_vine_parameters"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa27b9934f658e9047462703e7d059d74 inherit pub_attribs_struct_base_grape_vine_parameters" id="r_aa27b9934f658e9047462703e7d059d74"><td class="memItemLeft" align="right" valign="top">uint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_base_grape_vine_parameters.html#aa27b9934f658e9047462703e7d059d74">grape_subdivisions_spread</a></td></tr>
+<tr class="memitem:aa27b9934f658e9047462703e7d059d74 inherit pub_attribs_struct_base_grape_vine_parameters" id="r_aa27b9934f658e9047462703e7d059d74"><td class="memItemLeft" align="right" valign="top"><a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_base_grape_vine_parameters.html#aa27b9934f658e9047462703e7d059d74">grape_subdivisions_spread</a></td></tr>
 <tr class="memdesc:aa27b9934f658e9047462703e7d059d74 inherit pub_attribs_struct_base_grape_vine_parameters"><td class="mdescLeft">&#160;</td><td class="mdescRight">Spread value for the number of grape subdivisions. With any new canopy or plant generation, the number of grape subdivisions would be between grape_subdivisions - grape_subdivisions_spread and grape_subdivisions + grape_subdivisions_spread.  <br /></td></tr>
 <tr class="separator:aa27b9934f658e9047462703e7d059d74 inherit pub_attribs_struct_base_grape_vine_parameters"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9584cff9be1e79a0781a2e08e332c98e inherit pub_attribs_struct_base_grape_vine_parameters" id="r_a9584cff9be1e79a0781a2e08e332c98e"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_base_grape_vine_parameters.html#a9584cff9be1e79a0781a2e08e332c98e">leaf_angle_PDF</a></td></tr>
@@ -355,7 +388,7 @@ Additional Inherited Members</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Parameters defining the grapevine canopy with vertical shoot positioned (VSP) trellis. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00373">373</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00368">368</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="af61690f86b14f0f6852e2c43b5549217" name="af61690f86b14f0f6852e2c43b5549217"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#af61690f86b14f0f6852e2c43b5549217">&#9670;&#160;</a></span>VSPGrapevineParameters() <span class="overload">[1/2]</span></h2>
@@ -374,7 +407,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Default constructor. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l00620">620</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l00616">616</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -399,7 +432,7 @@ Additional Inherited Members</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l00654">654</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l00649">649</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -431,7 +464,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="struct_base_grape_vine_parameters.html#a8251daae21fcd0cfccffab9f23812c18">BaseGrapeVineParameters</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l00666">666</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l00661">661</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -466,7 +499,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="struct_base_grape_vine_parameters.html#a7577cb650adee17f4343f30af8e3179d">BaseGrapeVineParameters</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l00662">662</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l00657">657</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -493,7 +526,7 @@ Additional Inherited Members</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l00658">658</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l00653">653</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>

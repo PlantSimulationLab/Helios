@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: WhiteSpruceCanopyParameters Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -268,7 +301,7 @@ Data Fields</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Parameters defining the white spruce. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00489">489</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00480">480</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="abab47c6661e734271286dbe4808f484b" name="abab47c6661e734271286dbe4808f484b"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#abab47c6661e734271286dbe4808f484b">&#9670;&#160;</a></span>WhiteSpruceCanopyParameters() <span class="overload">[1/2]</span></h2>
@@ -287,7 +320,7 @@ Data Fields</h2></td></tr>
 
 <p>Default constructor. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l00842">842</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l00834">834</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -312,7 +345,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l00880">880</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l00871">871</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -344,7 +377,7 @@ Data Fields</h2></td></tr>
 
 <p>Implements <a class="el" href="struct_base_canopy_parameters.html#a741a7c822b8f84d8f658cebd54e23eed">BaseCanopyParameters</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l00972">972</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l00963">963</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -379,7 +412,7 @@ Data Fields</h2></td></tr>
 
 <p>Implements <a class="el" href="struct_base_canopy_parameters.html#afcbe470fe8e3e7106f0da0a93e540cce">BaseCanopyParameters</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l00968">968</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l00959">959</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -406,7 +439,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l00884">884</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l00875">875</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -425,7 +458,7 @@ Data Fields</h2></td></tr>
 
 <p>Height at which branches start. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00536">536</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00527">527</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -443,7 +476,7 @@ Data Fields</h2></td></tr>
 
 <p>Number of primary branches on the bottom level. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00548">548</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00539">539</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -461,7 +494,7 @@ Data Fields</h2></td></tr>
 
 <p>Specifies whether to use a uniformly spaced canopy (canopy_configuration="uniform") or a randomly arranged canopy with non-overlapping crowns (canopy_configuration="random"). </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00554">554</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00545">545</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -479,7 +512,7 @@ Data Fields</h2></td></tr>
 
 <p>Radius of the crown at the base. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00539">539</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00530">530</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -497,7 +530,7 @@ Data Fields</h2></td></tr>
 
 <p>Vertical spacing between branching levels. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00545">545</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00536">536</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -515,7 +548,7 @@ Data Fields</h2></td></tr>
 
 <p>Color of needles. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00521">521</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00512">512</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -533,7 +566,7 @@ Data Fields</h2></td></tr>
 
 <p>Length of needles. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00515">515</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00506">506</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -551,7 +584,7 @@ Data Fields</h2></td></tr>
 
 <p>Number of sub-division segments per needle. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00518">518</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00509">509</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -569,7 +602,7 @@ Data Fields</h2></td></tr>
 
 <p>Width of needles. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00512">512</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00503">503</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -587,7 +620,7 @@ Data Fields</h2></td></tr>
 
 <p>Number of crowns/plants in the x- and y-directions. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00560">560</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00551">551</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -605,7 +638,7 @@ Data Fields</h2></td></tr>
 
 <p>Spacing between adjacent crowns in the x- and y-directions. Note that if canopy_configuration='random' this is the average spacing. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00557">557</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00548">548</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -623,7 +656,7 @@ Data Fields</h2></td></tr>
 
 <p>Maximum shoot angle. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00551">551</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00542">542</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -641,7 +674,7 @@ Data Fields</h2></td></tr>
 
 <p>Radius of shoot branches. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00542">542</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00533">533</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -659,7 +692,7 @@ Data Fields</h2></td></tr>
 
 <p>Distance between the ground and top of trunks. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00530">530</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00521">521</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -677,7 +710,7 @@ Data Fields</h2></td></tr>
 
 <p>Radius of the trunk at the base. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00533">533</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00524">524</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -695,7 +728,7 @@ Data Fields</h2></td></tr>
 
 <p>Number of radial subdivisions for trunk/cordon/shoot tubes. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00527">527</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00518">518</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>
@@ -713,7 +746,7 @@ Data Fields</h2></td></tr>
 
 <p>Path to texture map file for trunks/branches. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00524">524</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l00515">515</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 
 </div>
 </div>

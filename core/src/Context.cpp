@@ -1,7 +1,7 @@
 /**
  * \file "Context.cpp" Context declarations.
  *
- * Copyright (C) 2016-2025 Brian Bailey
+ * Copyright (C) 2016-2026 Brian Bailey
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,6 +39,16 @@ Context::Context() {
     currentUUID = 0;
 
     currentObjectID = 1; // object ID of 0 is reserved for default object
+
+    // --- Initialize Material System --- //
+
+    currentMaterialID = 0;
+
+    // Create default material (ID = 0) with reserved label
+    Material default_material(0, DEFAULT_MATERIAL_LABEL, make_RGBAcolor(0, 0, 0, 1), "", false);
+    materials[0] = default_material;
+    material_label_to_id[DEFAULT_MATERIAL_LABEL] = 0;
+    currentMaterialID = 1; // Next material will be ID 1
 }
 
 void Context::seedRandomGenerator(uint seed) {
@@ -47,6 +57,13 @@ void Context::seedRandomGenerator(uint seed) {
 
 std::minstd_rand0 *Context::getRandomGenerator() {
     return &generator;
+}
+
+// Asset directory registration system removed - now using HELIOS_BUILD resolution
+
+std::filesystem::path Context::resolveFilePath(const std::string &filename) const {
+    // Use the global helios::resolveFilePath function which implements HELIOS_BUILD resolution
+    return helios::resolveFilePath(filename);
 }
 
 void Context::addTexture(const char *texture_file) {
@@ -61,12 +78,19 @@ void Context::addTexture(const char *texture_file) {
             helios_runtime_error("ERROR (Context::addTexture): Texture file " + std::string(texture_file) + " does not exist.");
         }
 
-        textures.emplace(texture_file, Texture(texture_file));
+        // Use unified path resolution
+        auto resolved_path = resolveFilePath(texture_file);
+        textures.emplace(texture_file, Texture(resolved_path.string().c_str()));
     }
 }
 
 bool Context::doesTextureFileExist(const char *texture_file) const {
-    return std::filesystem::exists(texture_file);
+    try {
+        auto resolved_path = resolveFilePath(texture_file);
+        return std::filesystem::exists(resolved_path);
+    } catch (const std::runtime_error &) {
+        return false;
+    }
 }
 
 bool Context::validateTextureFileExtenstion(const char *texture_file) const {
@@ -160,8 +184,9 @@ float Texture::getSolidFraction(const std::vector<helios::vec2> &uvs) {
 
 float Texture::computeSolidFraction(const std::vector<helios::vec2> &uvs) const {
     // Early out for opaque textures or degenerate UVs
-    if (!hasTransparencyChannel() || uvs.size() < 3)
+    if (!hasTransparencyChannel() || uvs.size() < 3) {
         return 1.0f;
+    }
 
     // Fetch alpha mask and dimensions
     const auto *alpha2D = getTransparencyData(); // vector<vector<bool>>
@@ -202,6 +227,22 @@ float Texture::computeSolidFraction(const std::vector<helios::vec2> &uvs) const 
         C[i] = a.x * b.y - a.y * b.x;
     }
 
+    // Check winding order using signed area (shoelace formula)
+    // If area is negative, triangle has clockwise winding - flip all coefficients
+    float signed_area = 0.0f;
+    for (int i = 0; i < N; ++i) {
+        int j = (i + 1) % N;
+        signed_area += uvs[i].x * uvs[j].y - uvs[j].x * uvs[i].y;
+    }
+    if (signed_area < 0.0f) {
+        // Clockwise winding - negate all half-space coefficients
+        for (int i = 0; i < N; ++i) {
+            A[i] = -A[i];
+            B[i] = -B[i];
+            C[i] = -C[i];
+        }
+    }
+
     // Raster‐scan, test each pixel center
     int64_t countTotal = 0, countOpaque = 0;
     float invWm1 = 1.0f / float(W - 1);
@@ -230,7 +271,8 @@ float Texture::computeSolidFraction(const std::vector<helios::vec2> &uvs) const 
         }
     }
 
-    return countTotal == 0 ? 0.0f : float(countOpaque) / float(countTotal);
+    float result = countTotal == 0 ? 0.0f : float(countOpaque) / float(countTotal);
+    return result;
 }
 
 void Context::markGeometryClean() {
@@ -446,7 +488,7 @@ std::vector<uint> Context::getAllUUIDs() const {
     if (all_uuids_cache_valid) {
         return cached_all_uuids;
     }
-    
+
     // Rebuild cache
     cached_all_uuids.clear();
     cached_all_uuids.reserve(primitives.size());
@@ -456,6 +498,7 @@ std::vector<uint> Context::getAllUUIDs() const {
         }
         cached_all_uuids.push_back(UUID);
     }
+
     all_uuids_cache_valid = true;
     return cached_all_uuids;
 }
@@ -784,7 +827,7 @@ void Context::getDomainBoundingBox(const std::vector<uint> &UUIDs, vec2 &xbounds
 
 // Parallelize the outer loop over primitives. Use "for" inside the parallel region.
 #pragma omp for nowait
-        for (size_t i = 0; i < UUIDs.size(); i++) {
+        for (int i = 0; i < (int) UUIDs.size(); i++) {
             // For each primitive:
             const std::vector<vec3> &verts = getPrimitivePointer_private(UUIDs[i])->getVertices();
             // Update local bounding box for each vertex in this primitive.
@@ -949,7 +992,7 @@ bool Context::areObjectPrimitivesComplete(uint objID) const {
         helios_runtime_error("ERROR (Context::areObjectPrimitivesComplete): Object ID of " + std::to_string(objID) + " does not exist in the context.");
     }
 #endif
-    return getObjectPointer(objID)->arePrimitivesComplete();
+    return getObjectPointer_private(objID)->arePrimitivesComplete();
 }
 
 void Context::cleanDeletedObjectIDs(std::vector<uint> &objIDs) const {
@@ -986,15 +1029,6 @@ void Context::cleanDeletedObjectIDs(std::vector<std::vector<std::vector<uint>>> 
             }
         }
     }
-}
-
-CompoundObject *Context::getObjectPointer(uint ObjID) const {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::getObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    }
-#endif
-    return objects.at(ObjID);
 }
 
 uint Context::getObjectCount() const {
@@ -1063,7 +1097,7 @@ uint Context::copyObject(uint ObjID) {
 
     ObjectType type = objects.at(ObjID)->getObjectType();
 
-    const std::vector<uint> &UUIDs = getObjectPointer(ObjID)->getPrimitiveUUIDs();
+    const std::vector<uint> &UUIDs = getObjectPointer_private(ObjID)->getPrimitiveUUIDs();
 
     const std::vector<uint> &UUIDs_copy = copyPrimitive(UUIDs);
     for (uint p: UUIDs_copy) {
@@ -1073,7 +1107,7 @@ uint Context::copyObject(uint ObjID) {
     const std::string &texturefile = objects.at(ObjID)->getTextureFile();
 
     if (type == OBJECT_TYPE_TILE) {
-        Tile *o = getTileObjectPointer(ObjID);
+        Tile *o = getTileObjectPointer_private(ObjID);
 
         const int2 &subdiv = o->getSubdivisionCount();
 
@@ -1081,7 +1115,7 @@ uint Context::copyObject(uint ObjID) {
 
         objects[currentObjectID] = tile_new;
     } else if (type == OBJECT_TYPE_SPHERE) {
-        Sphere *o = getSphereObjectPointer(ObjID);
+        Sphere *o = getSphereObjectPointer_private(ObjID);
 
         uint subdiv = o->getSubdivisionCount();
 
@@ -1089,7 +1123,7 @@ uint Context::copyObject(uint ObjID) {
 
         objects[currentObjectID] = sphere_new;
     } else if (type == OBJECT_TYPE_TUBE) {
-        Tube *o = getTubeObjectPointer(ObjID);
+        Tube *o = getTubeObjectPointer_private(ObjID);
 
         const std::vector<vec3> &nodes = o->getNodes();
         const std::vector<float> &radius = o->getNodeRadii();
@@ -1101,7 +1135,7 @@ uint Context::copyObject(uint ObjID) {
 
         objects[currentObjectID] = tube_new;
     } else if (type == OBJECT_TYPE_BOX) {
-        Box *o = getBoxObjectPointer(ObjID);
+        Box *o = getBoxObjectPointer_private(ObjID);
 
         const int3 &subdiv = o->getSubdivisionCount();
 
@@ -1109,7 +1143,7 @@ uint Context::copyObject(uint ObjID) {
 
         objects[currentObjectID] = box_new;
     } else if (type == OBJECT_TYPE_DISK) {
-        Disk *o = getDiskObjectPointer(ObjID);
+        Disk *o = getDiskObjectPointer_private(ObjID);
 
         const int2 &subdiv = o->getSubdivisionCount();
 
@@ -1121,7 +1155,7 @@ uint Context::copyObject(uint ObjID) {
 
         objects[currentObjectID] = polymesh_new;
     } else if (type == OBJECT_TYPE_CONE) {
-        Cone *o = getConeObjectPointer(ObjID);
+        Cone *o = getConeObjectPointer_private(ObjID);
 
         const std::vector<vec3> &nodes = o->getNodeCoordinates();
         const std::vector<float> &radius = o->getNodeRadii();
@@ -1135,9 +1169,9 @@ uint Context::copyObject(uint ObjID) {
     copyObjectData(ObjID, currentObjectID);
 
     float T[16];
-    getObjectPointer(ObjID)->getTransformationMatrix(T);
+    getObjectPointer_private(ObjID)->getTransformationMatrix(T);
 
-    getObjectPointer(currentObjectID)->setTransformationMatrix(T);
+    getObjectPointer_private(currentObjectID)->setTransformationMatrix(T);
 
     currentObjectID++;
     return currentObjectID - 1;
@@ -1150,7 +1184,7 @@ std::vector<uint> Context::filterObjectsByData(const std::vector<uint> &IDs, con
 
     for (uint i = 0; i < IDs.size(); i++) {
         if (doesObjectDataExist(IDs.at(i), object_data)) {
-            HeliosDataType type = getObjectDataType(IDs.at(i), object_data);
+            HeliosDataType type = getObjectDataType(object_data);
             if (type == HELIOS_TYPE_UINT) {
                 uint R;
                 getObjectData(IDs.at(i), object_data, R);
@@ -1227,7 +1261,7 @@ void Context::translateObject(uint ObjID, const vec3 &shift) const {
         helios_runtime_error("ERROR (Context::translateObject): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    getObjectPointer(ObjID)->translate(shift);
+    getObjectPointer_private(ObjID)->translate(shift);
 }
 
 void Context::translateObject(const std::vector<uint> &ObjIDs, const vec3 &shift) const {
@@ -1242,7 +1276,7 @@ void Context::rotateObject(uint ObjID, float rotation_radians, const char *rotat
         helios_runtime_error("ERROR (Context::rotateObject): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    getObjectPointer(ObjID)->rotate(rotation_radians, rotation_axis_xyz);
+    getObjectPointer_private(ObjID)->rotate(rotation_radians, rotation_axis_xyz);
 }
 
 void Context::rotateObject(const std::vector<uint> &ObjIDs, float rotation_radians, const char *rotation_axis_xyz) const {
@@ -1257,7 +1291,7 @@ void Context::rotateObject(uint ObjID, float rotation_radians, const vec3 &rotat
         helios_runtime_error("ERROR (Context::rotateObject): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    getObjectPointer(ObjID)->rotate(rotation_radians, rotation_axis_vector);
+    getObjectPointer_private(ObjID)->rotate(rotation_radians, rotation_axis_vector);
 }
 
 void Context::rotateObject(const std::vector<uint> &ObjIDs, float rotation_radians, const vec3 &rotation_axis_vector) const {
@@ -1272,7 +1306,7 @@ void Context::rotateObject(uint ObjID, float rotation_radians, const vec3 &rotat
         helios_runtime_error("ERROR (Context::rotateObject): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    getObjectPointer(ObjID)->rotate(rotation_radians, rotation_origin, rotation_axis_vector);
+    getObjectPointer_private(ObjID)->rotate(rotation_radians, rotation_origin, rotation_axis_vector);
 }
 
 void Context::rotateObject(const std::vector<uint> &ObjIDs, float rotation_radians, const vec3 &rotation_origin, const vec3 &rotation_axis_vector) const {
@@ -1287,7 +1321,7 @@ void Context::rotateObjectAboutOrigin(uint ObjID, float rotation_radians, const 
         helios_runtime_error("ERROR (Context::rotateObjectAboutOrigin): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    getObjectPointer(ObjID)->rotate(rotation_radians, objects.at(ObjID)->object_origin, rotation_axis_vector);
+    getObjectPointer_private(ObjID)->rotate(rotation_radians, objects.at(ObjID)->object_origin, rotation_axis_vector);
 }
 
 void Context::rotateObjectAboutOrigin(const std::vector<uint> &ObjIDs, float rotation_radians, const vec3 &rotation_axis_vector) const {
@@ -1302,7 +1336,7 @@ void Context::scaleObject(uint ObjID, const helios::vec3 &scalefact) const {
         helios_runtime_error("ERROR (Context::scaleObject): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    getObjectPointer(ObjID)->scale(scalefact);
+    getObjectPointer_private(ObjID)->scale(scalefact);
 }
 
 void Context::scaleObject(const std::vector<uint> &ObjIDs, const helios::vec3 &scalefact) const {
@@ -1317,7 +1351,7 @@ void Context::scaleObjectAboutCenter(uint ObjID, const helios::vec3 &scalefact) 
         helios_runtime_error("ERROR (Context::scaleObjectAboutCenter): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    getObjectPointer(ObjID)->scaleAboutCenter(scalefact);
+    getObjectPointer_private(ObjID)->scaleAboutCenter(scalefact);
 }
 
 void Context::scaleObjectAboutCenter(const std::vector<uint> &ObjIDs, const helios::vec3 &scalefact) const {
@@ -1332,7 +1366,7 @@ void Context::scaleObjectAboutPoint(uint ObjID, const helios::vec3 &scalefact, c
         helios_runtime_error("ERROR (Context::scaleObjectAboutPoint): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    getObjectPointer(ObjID)->scaleAboutPoint(scalefact, point);
+    getObjectPointer_private(ObjID)->scaleAboutPoint(scalefact, point);
 }
 
 void Context::scaleObjectAboutPoint(const std::vector<uint> &ObjIDs, const helios::vec3 &scalefact, const helios::vec3 &point) const {
@@ -1347,7 +1381,7 @@ void Context::scaleObjectAboutOrigin(uint ObjID, const helios::vec3 &scalefact) 
         helios_runtime_error("ERROR (Context::scaleObjectAboutOrigin): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    getObjectPointer(ObjID)->scaleAboutPoint(scalefact, objects.at(ObjID)->object_origin);
+    getObjectPointer_private(ObjID)->scaleAboutPoint(scalefact, objects.at(ObjID)->object_origin);
 }
 
 void Context::scaleObjectAboutOrigin(const std::vector<uint> &ObjIDs, const helios::vec3 &scalefact) const {
@@ -1375,7 +1409,7 @@ std::vector<uint> Context::getObjectPrimitiveUUIDs(uint ObjID) const {
         return UUIDs;
     }
 
-    return getObjectPointer(ObjID)->getPrimitiveUUIDs();
+    return getObjectPointer_private(ObjID)->getPrimitiveUUIDs();
 }
 
 std::vector<uint> Context::getObjectPrimitiveUUIDs(const std::vector<uint> &ObjIDs) const {
@@ -1404,7 +1438,7 @@ std::vector<uint> Context::getObjectPrimitiveUUIDs(const std::vector<std::vector
             }
 #endif
 
-            const std::vector<uint> &current_UUIDs = getObjectPointer(ObjIDs.at(j).at(i))->getPrimitiveUUIDs();
+            const std::vector<uint> &current_UUIDs = getObjectPointer_private(ObjIDs.at(j).at(i))->getPrimitiveUUIDs();
             output_UUIDs.insert(output_UUIDs.end(), current_UUIDs.begin(), current_UUIDs.end());
         }
     }
@@ -1420,7 +1454,7 @@ helios::ObjectType Context::getObjectType(uint ObjID) const {
         helios_runtime_error("ERROR (Context::getObjectType): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    return getObjectPointer(ObjID)->getObjectType();
+    return getObjectPointer_private(ObjID)->getObjectType();
 }
 
 float Context::getTileObjectAreaRatio(uint ObjID) const {
@@ -1429,22 +1463,22 @@ float Context::getTileObjectAreaRatio(uint ObjID) const {
         helios_runtime_error("ERROR (Context::getTileObjectAreaRatio): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    if (getObjectPointer(ObjID)->getObjectType() != OBJECT_TYPE_TILE) {
+    if (getObjectPointer_private(ObjID)->getObjectType() != OBJECT_TYPE_TILE) {
         std::cerr << "WARNING (Context::getTileObjectAreaRatio): ObjectID " << ObjID << " is not a tile object. Skipping..." << std::endl;
         return 0.0;
     }
 
-    if (!(getObjectPointer(ObjID)->arePrimitivesComplete())) {
+    if (!(getObjectPointer_private(ObjID)->arePrimitivesComplete())) {
         std::cerr << "WARNING (Context::getTileObjectAreaRatio): ObjectID " << ObjID << " is missing primitives. Area ratio calculated is area of non-missing subpatches divided by the area of an individual subpatch." << std::endl;
     }
 
-    const int2 &subdiv = getTileObjectPointer(ObjID)->getSubdivisionCount();
+    const int2 &subdiv = getTileObjectPointer_private(ObjID)->getSubdivisionCount();
     if (subdiv.x == 1 && subdiv.y == 1) {
         return 1.0;
     }
 
-    float area = getTileObjectPointer(ObjID)->getArea();
-    const vec2 size = getTileObjectPointer(ObjID)->getSize();
+    float area = getTileObjectPointer_private(ObjID)->getArea();
+    const vec2 size = getTileObjectPointer_private(ObjID)->getSize();
 
     float subpatch_area = size.x * size.y / scast<float>(subdiv.x * subdiv.y);
     return area / subpatch_area;
@@ -1475,13 +1509,13 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, con
 #endif
 
         // check if the object ID is a tile object and if it is add it the tile_ObjectIDs vector
-        if (getObjectPointer(ObjID)->getObjectType() != OBJECT_TYPE_TILE) {
+        if (getObjectPointer_private(ObjID)->getObjectType() != OBJECT_TYPE_TILE) {
             std::cerr << "WARNING (Context::setTileObjectSubdivisionCount): ObjectID " << ObjID << " is not a tile object. Skipping..." << std::endl;
-        } else if (!(getObjectPointer(ObjID)->arePrimitivesComplete())) {
+        } else if (!(getObjectPointer_private(ObjID)->arePrimitivesComplete())) {
             std::cerr << "WARNING (Context::setTileObjectSubdivisionCount): ObjectID " << ObjID << " is missing primitives. Skipping..." << std::endl;
         } else {
             // test if the tile is textured and push into two different vectors
-            Patch *p = getPatchPointer_private(getObjectPointer(ObjID)->getPrimitiveUUIDs().at(0));
+            Patch *p = getPatchPointer_private(getObjectPointer_private(ObjID)->getPrimitiveUUIDs().at(0));
             if (!p->hasTexture()) { // no texture
                 tile_ObjectIDs.push_back(ObjID);
             } else { // texture
@@ -1493,7 +1527,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, con
 
     // Here just call setSubdivisionCount directly for the non-textured tile objects
     for (unsigned int tile_ObjectID: tile_ObjectIDs) {
-        Tile *current_object_pointer = getTileObjectPointer(tile_ObjectID);
+        Tile *current_object_pointer = getTileObjectPointer_private(tile_ObjectID);
         const std::vector<uint> &UUIDs_old = current_object_pointer->getPrimitiveUUIDs();
 
         vec2 size = current_object_pointer->getSize();
@@ -1526,7 +1560,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, con
         // create a template object for the current texture
         uint object_template = addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, new_subdiv, tex.at(j).c_str());
         object_templates.emplace_back(object_template);
-        std::vector<uint> object_primitives = getTileObjectPointer(object_template)->getPrimitiveUUIDs();
+        std::vector<uint> object_primitives = getTileObjectPointer_private(object_template)->getPrimitiveUUIDs();
         template_primitives.emplace_back(object_primitives);
     }
 
@@ -1534,7 +1568,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, con
     // for each textured tile object
     for (uint i = 0; i < textured_tile_ObjectIDs.size(); i++) {
         // get info from current object
-        Tile *current_object_pointer = getTileObjectPointer(textured_tile_ObjectIDs.at(i));
+        Tile *current_object_pointer = getTileObjectPointer_private(textured_tile_ObjectIDs.at(i));
         std::string current_texture_file = current_object_pointer->getTextureFile();
 
         std::vector<uint> UUIDs_old = current_object_pointer->getPrimitiveUUIDs();
@@ -1597,13 +1631,13 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
 #endif
 
         // check if the object ID is a tile object and if it is add it the tile_ObjectIDs vector
-        if (getObjectPointer(ObjID)->getObjectType() != OBJECT_TYPE_TILE) {
+        if (getObjectPointer_private(ObjID)->getObjectType() != OBJECT_TYPE_TILE) {
             std::cerr << "WARNING (Context::setTileObjectSubdivisionCount): ObjectID " << ObjID << " is not a tile object. Skipping..." << std::endl;
-        } else if (!(getObjectPointer(ObjID)->arePrimitivesComplete())) {
+        } else if (!(getObjectPointer_private(ObjID)->arePrimitivesComplete())) {
             std::cerr << "WARNING (Context::setTileObjectSubdivisionCount): ObjectID " << ObjID << " is missing primitives. Skipping..." << std::endl;
         } else {
             // test if the tile is textured and push into two different vectors
-            Patch *p = getPatchPointer_private(getObjectPointer(ObjID)->getPrimitiveUUIDs().at(0));
+            Patch *p = getPatchPointer_private(getObjectPointer_private(ObjID)->getPrimitiveUUIDs().at(0));
             if (!p->hasTexture()) { // no texture
                 tile_ObjectIDs.push_back(ObjID);
             } else { // texture
@@ -1615,7 +1649,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
 
     // Here just call setSubdivisionCount directly for the non-textured tile objects
     for (uint i = 0; i < tile_ObjectIDs.size(); i++) {
-        Tile *current_object_pointer = getTileObjectPointer(tile_ObjectIDs.at(i));
+        Tile *current_object_pointer = getTileObjectPointer_private(tile_ObjectIDs.at(i));
         std::vector<uint> UUIDs_old = current_object_pointer->getPrimitiveUUIDs();
 
         vec2 size = current_object_pointer->getSize();
@@ -1672,7 +1706,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
         uint ii;
         for (uint i = 0; i < textured_tile_ObjectIDs.size(); i++) {
             // get info from current object
-            Tile *current_object_pointer_b = getTileObjectPointer(textured_tile_ObjectIDs.at(i));
+            Tile *current_object_pointer_b = getTileObjectPointer_private(textured_tile_ObjectIDs.at(i));
             std::string current_texture_file_b = current_object_pointer_b->getTextureFile();
             // if the current tile object has the same texture file as the current unique texture file
             if (current_texture_file_b == tex.at(j)) {
@@ -1682,7 +1716,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
         }
 
         // get info from current object
-        Tile *current_object_pointer = getTileObjectPointer(textured_tile_ObjectIDs.at(ii));
+        Tile *current_object_pointer = getTileObjectPointer_private(textured_tile_ObjectIDs.at(ii));
         vec2 tile_size = current_object_pointer->getSize();
         float tile_area = current_object_pointer->getArea();
 
@@ -1706,7 +1740,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
         // create a template object for the current texture
         uint object_template = addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, new_subdiv, tex.at(j).c_str());
         object_templates.emplace_back(object_template);
-        std::vector<uint> object_primitives = getTileObjectPointer(object_template)->getPrimitiveUUIDs();
+        std::vector<uint> object_primitives = getTileObjectPointer_private(object_template)->getPrimitiveUUIDs();
         template_primitives.emplace_back(object_primitives);
     }
 
@@ -1714,7 +1748,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
     // for each textured tile object
     for (uint i = 0; i < textured_tile_ObjectIDs.size(); i++) {
         // get info from current object
-        Tile *current_object_pointer = getTileObjectPointer(textured_tile_ObjectIDs.at(i));
+        Tile *current_object_pointer = getTileObjectPointer_private(textured_tile_ObjectIDs.at(i));
         // std::string current_texture_file = getPrimitivePointer_private(current_object_pointer->getPrimitiveUUIDs().at(0))->getTextureFile();
         std::string current_texture_file = current_object_pointer->getTextureFile();
         // std::cout << "current_texture_file for ObjID " << textured_tile_ObjectIDs.at(i) << " = " << current_texture_file << std::endl;
@@ -1735,7 +1769,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
                 // change the objectID for the new primitives
                 setPrimitiveParentObjectID(new_primitives, textured_tile_ObjectIDs.at(i));
 
-                int2 new_subdiv = getTileObjectPointer(object_templates.at(j))->getSubdivisionCount();
+                int2 new_subdiv = getTileObjectPointer_private(object_templates.at(j))->getSubdivisionCount();
                 current_object_pointer->setPrimitiveUUIDs(new_primitives);
                 current_object_pointer->setSubdivisionCount(new_subdiv);
 
@@ -1843,7 +1877,12 @@ std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radiu
             uv2.x = 1;
         }
 
-        UUID.push_back(addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
+        uint triangle_uuid = addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2);
+        if (getPrimitiveArea(triangle_uuid) > 0) {
+            UUID.push_back(triangle_uuid);
+        } else {
+            deletePrimitive(triangle_uuid);
+        }
     }
 
     // top cap
@@ -1867,7 +1906,12 @@ std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radiu
             uv2.x = 1;
         }
 
-        UUID.push_back(addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
+        uint triangle_uuid = addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2);
+        if (getPrimitiveArea(triangle_uuid) > 0) {
+            UUID.push_back(triangle_uuid);
+        } else {
+            deletePrimitive(triangle_uuid);
+        }
     }
 
     // middle
@@ -1897,8 +1941,18 @@ std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radiu
                 uv3.x = 1;
             }
 
-            UUID.push_back(addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
-            UUID.push_back(addTriangle(v0, v2, v3, texturefile, uv0, uv2, uv3));
+            uint triangle_uuid1 = addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2);
+            if (getPrimitiveArea(triangle_uuid1) > 0) {
+                UUID.push_back(triangle_uuid1);
+            } else {
+                deletePrimitive(triangle_uuid1);
+            }
+            uint triangle_uuid2 = addTriangle(v0, v2, v3, texturefile, uv0, uv2, uv3);
+            if (getPrimitiveArea(triangle_uuid2) > 0) {
+                UUID.push_back(triangle_uuid2);
+            } else {
+                deletePrimitive(triangle_uuid2);
+            }
         }
     }
 
@@ -2018,6 +2072,13 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
             patch_new->translate(center);
 
             primitives[currentUUID] = patch_new;
+
+            // Set context pointer and use default material
+            patch_new->context_ptr = this;
+            patch_new->materialID = 0; // Default material
+            // Increment material reference count
+            materials[0].reference_count++;
+
             currentUUID++;
             UUID.push_back(currentUUID - 1);
         }
@@ -2074,6 +2135,19 @@ std::vector<uint> Context::addTube(uint radial_subdivisions, const std::vector<v
             vec.x = 0.5f * ((nodes[i].x - nodes[i - 1].x) + (nodes[i + 1].x - nodes[i].x));
             vec.y = 0.5f * ((nodes[i].y - nodes[i - 1].y) + (nodes[i + 1].y - nodes[i].y));
             vec.z = 0.5f * ((nodes[i].z - nodes[i - 1].z) + (nodes[i + 1].z - nodes[i].z));
+        }
+
+        // Ensure nvec is not parallel to vec to avoid degenerate cross products
+        vec.normalize();
+        if (fabs(nvec * vec) > 0.95f) {
+            nvec = vec3(0.1817f, 0.6198f, 0.7634f); // Reset to original random vector
+            if (fabs(nvec * vec) > 0.95f) {
+                nvec = vec3(1.0f, 0.0f, 0.0f); // Use x-axis if still parallel
+            }
+        }
+        // Also handle nearly vertical axes
+        if (fabs(vec.z) > 0.95f) {
+            nvec = vec3(1.0f, 0.0f, 0.0f); // Use horizontal direction for vertical axes
         }
 
         convec = cross(nvec, vec);
@@ -2169,6 +2243,19 @@ std::vector<uint> Context::addTube(uint radial_subdivisions, const std::vector<v
             vec.z = 0.5f * ((nodes[i].z - nodes[i - 1].z) + (nodes[i + 1].z - nodes[i].z));
         }
 
+        // Ensure nvec is not parallel to vec to avoid degenerate cross products
+        vec.normalize();
+        if (fabs(nvec * vec) > 0.95f) {
+            nvec = vec3(0.1817f, 0.6198f, 0.7634f); // Reset to original random vector
+            if (fabs(nvec * vec) > 0.95f) {
+                nvec = vec3(1.0f, 0.0f, 0.0f); // Use x-axis if still parallel
+            }
+        }
+        // Also handle nearly vertical axes
+        if (fabs(vec.z) > 0.95f) {
+            nvec = vec3(1.0f, 0.0f, 0.0f); // Use horizontal direction for vertical axes
+        }
+
         convec = cross(nvec, vec);
         convec.normalize();
         nvec = cross(vec, convec);
@@ -2205,7 +2292,13 @@ std::vector<uint> Context::addTube(uint radial_subdivisions, const std::vector<v
             uv1 = uv[j + 1][i + 1];
             uv2 = uv[j + 1][i];
 
-            UUIDs.at(ii) = addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2);
+            uint triangle_uuid = addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2);
+            if (getPrimitiveArea(triangle_uuid) > 0) {
+                UUIDs.at(ii) = triangle_uuid;
+            } else {
+                deletePrimitive(triangle_uuid);
+                UUIDs.at(ii) = 0; // Mark as invalid
+            }
 
             v0 = xyz[j][i];
             v1 = xyz[j][i + 1];
@@ -2215,11 +2308,20 @@ std::vector<uint> Context::addTube(uint radial_subdivisions, const std::vector<v
             uv1 = uv[j][i + 1];
             uv2 = uv[j + 1][i + 1];
 
-            UUIDs.at(ii + 1) = addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2);
+            uint triangle_uuid2 = addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2);
+            if (getPrimitiveArea(triangle_uuid2) > 0) {
+                UUIDs.at(ii + 1) = triangle_uuid2;
+            } else {
+                deletePrimitive(triangle_uuid2);
+                UUIDs.at(ii + 1) = 0; // Mark as invalid
+            }
 
             ii += 2;
         }
     }
+
+    // Remove invalid UUIDs (zeros) from the vector
+    UUIDs.erase(std::remove(UUIDs.begin(), UUIDs.end(), 0), UUIDs.end());
 
     return UUIDs;
 }
@@ -2488,8 +2590,8 @@ std::vector<uint> Context::addDisk(const int2 &Ndivs, const vec3 &center, const 
         helios_runtime_error("ERROR (Context::addDisk): Texture file " + std::string(texturefile) + " does not exist.");
     }
 
-    std::vector<uint> UUID(Ndivs.x + Ndivs.x * (Ndivs.y - 1) * 2);
-    int i = 0;
+    std::vector<uint> UUID;
+    UUID.reserve(Ndivs.x + Ndivs.x * (Ndivs.y - 1) * 2); // Reserve expected capacity
     for (int r = 0; r < Ndivs.y; r++) {
         for (int t = 0; t < Ndivs.x; t++) {
             float dtheta = 2.f * PI_F / float(Ndivs.x);
@@ -2502,23 +2604,43 @@ std::vector<uint> Context::addDisk(const int2 &Ndivs, const vec3 &center, const 
             float ry_plus = size.y / float(Ndivs.y) * float(r + 1);
 
             if (r == 0) {
-                UUID.at(i) = addTriangle(make_vec3(0, 0, 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), texturefile, make_vec2(0.5, 0.5),
-                                         make_vec2(0.5f * (1.f + cosf(theta) * rx_plus / size.x), 0.5f * (1.f + sinf(theta) * ry_plus / size.y)),
-                                         make_vec2(0.5f * (1.f + cosf(theta_plus) * rx_plus / size.x), 0.5f * (1.f + sinf(theta_plus) * ry_plus / size.y)));
+                uint triangle_uuid = addTriangle(make_vec3(0, 0, 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), texturefile, make_vec2(0.5, 0.5),
+                                                 make_vec2(0.5f * (1.f + cosf(theta) * rx_plus / size.x), 0.5f * (1.f + sinf(theta) * ry_plus / size.y)),
+                                                 make_vec2(0.5f * (1.f + cosf(theta_plus) * rx_plus / size.x), 0.5f * (1.f + sinf(theta_plus) * ry_plus / size.y)));
+                if (getPrimitiveArea(triangle_uuid) > 0) {
+                    UUID.push_back(triangle_uuid);
+                } else {
+                    deletePrimitive(triangle_uuid);
+                    continue;
+                }
             } else {
-                UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx * cosf(theta), ry * sinf(theta), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), texturefile,
-                                         make_vec2(0.5f * (1.f + cosf(theta_plus) * rx / size.x), 0.5f * (1.f + sinf(theta_plus) * ry / size.y)), make_vec2(0.5f * (1.f + cosf(theta) * rx / size.x), 0.5f * (1.f + sinf(theta) * ry / size.y)),
-                                         make_vec2(0.5f * (1.f + cosf(theta) * rx_plus / size.x), 0.5f * (1.f + sinf(theta) * ry_plus / size.y)));
-                i++;
-                UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), texturefile,
-                                         make_vec2(0.5f * (1.f + cosf(theta_plus) * rx / size.x), 0.5f * (1.f + sinf(theta_plus) * ry / size.y)), make_vec2(0.5f * (1.f + cosf(theta) * rx_plus / size.x), 0.5f * (1.f + sinf(theta) * ry_plus / size.y)),
-                                         make_vec2(0.5f * (1.f + cosf(theta_plus) * rx_plus / size.x), 0.5f * (1.f + sinf(theta_plus) * ry_plus / size.y)));
-            }
-            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.elevation, "y");
-            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.azimuth, "z");
-            getPrimitivePointer_private(UUID.at(i))->translate(center);
+                uint triangle_uuid1 = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx * cosf(theta), ry * sinf(theta), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), texturefile,
+                                                  make_vec2(0.5f * (1.f + cosf(theta_plus) * rx / size.x), 0.5f * (1.f + sinf(theta_plus) * ry / size.y)), make_vec2(0.5f * (1.f + cosf(theta) * rx / size.x), 0.5f * (1.f + sinf(theta) * ry / size.y)),
+                                                  make_vec2(0.5f * (1.f + cosf(theta) * rx_plus / size.x), 0.5f * (1.f + sinf(theta) * ry_plus / size.y)));
+                if (getPrimitiveArea(triangle_uuid1) > 0) {
+                    UUID.push_back(triangle_uuid1);
+                } else {
+                    deletePrimitive(triangle_uuid1);
+                }
 
-            i++;
+                uint triangle_uuid2 =
+                        addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), texturefile,
+                                    make_vec2(0.5f * (1.f + cosf(theta_plus) * rx / size.x), 0.5f * (1.f + sinf(theta_plus) * ry / size.y)), make_vec2(0.5f * (1.f + cosf(theta) * rx_plus / size.x), 0.5f * (1.f + sinf(theta) * ry_plus / size.y)),
+                                    make_vec2(0.5f * (1.f + cosf(theta_plus) * rx_plus / size.x), 0.5f * (1.f + sinf(theta_plus) * ry_plus / size.y)));
+                if (getPrimitiveArea(triangle_uuid2) > 0) {
+                    UUID.push_back(triangle_uuid2);
+                } else {
+                    deletePrimitive(triangle_uuid2);
+                    continue;
+                }
+            }
+            // Apply transformations to all valid triangles added in this iteration
+            size_t start_idx = UUID.size() - (r == 0 ? 1 : 2);
+            for (size_t uuid_idx = start_idx; uuid_idx < UUID.size(); uuid_idx++) {
+                getPrimitivePointer_private(UUID.at(uuid_idx))->rotate(rotation.elevation, "y");
+                getPrimitivePointer_private(UUID.at(uuid_idx))->rotate(rotation.azimuth, "z");
+                getPrimitivePointer_private(UUID.at(uuid_idx))->translate(center);
+            }
         }
     }
 
@@ -2698,7 +2820,12 @@ std::vector<uint> Context::addCone(uint Ndivs, const vec3 &node0, const vec3 &no
             uv2 = uv[j + 1][i];
 
             if ((v1 - v0).magnitude() > 1e-6 && (v2 - v0).magnitude() > 1e-6 && (v2 - v1).magnitude() > 1e-6) {
-                UUID.push_back(addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
+                uint triangle_uuid = addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2);
+                if (getPrimitiveArea(triangle_uuid) > 0) {
+                    UUID.push_back(triangle_uuid);
+                } else {
+                    deletePrimitive(triangle_uuid);
+                }
             }
 
             v0 = xyz[j][i];
@@ -2710,7 +2837,12 @@ std::vector<uint> Context::addCone(uint Ndivs, const vec3 &node0, const vec3 &no
             uv2 = uv[j + 1][i + 1];
 
             if ((v1 - v0).magnitude() > 1e-6 && (v2 - v0).magnitude() > 1e-6 && (v2 - v1).magnitude() > 1e-6) {
-                UUID.push_back(addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
+                uint triangle_uuid = addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2);
+                if (getPrimitiveArea(triangle_uuid) > 0) {
+                    UUID.push_back(triangle_uuid);
+                } else {
+                    deletePrimitive(triangle_uuid);
+                }
             }
         }
     }
@@ -2725,35 +2857,36 @@ void Context::colorPrimitiveByDataPseudocolor(const std::vector<uint> &UUIDs, co
 void Context::colorPrimitiveByDataPseudocolor(const std::vector<uint> &UUIDs, const std::string &primitive_data, const std::string &colormap, uint Ncolors, float data_min, float data_max) {
     std::map<uint, float> pcolor_data;
 
+    helios::WarningAggregator warnings;
     float data_min_new = 9999999;
     float data_max_new = -9999999;
     for (uint UUID: UUIDs) {
         if (!doesPrimitiveExist(UUID)) {
-            std::cerr << "WARNING (Context::colorPrimitiveDataPseudocolor): primitive for UUID " << std::to_string(UUID) << " does not exist. Skipping this primitive." << std::endl;
+            warnings.addWarning("primitive_does_not_exist", "Primitive for UUID " + std::to_string(UUID) + " does not exist. Skipping this primitive.");
             continue;
         }
 
         float dataf = 0;
         if (doesPrimitiveDataExist(UUID, primitive_data.c_str())) {
-            if (getPrimitiveDataType(UUID, primitive_data.c_str()) != HELIOS_TYPE_FLOAT && getPrimitiveDataType(UUID, primitive_data.c_str()) != HELIOS_TYPE_INT && getPrimitiveDataType(UUID, primitive_data.c_str()) != HELIOS_TYPE_UINT &&
-                getPrimitiveDataType(UUID, primitive_data.c_str()) != HELIOS_TYPE_DOUBLE) {
-                std::cerr << "WARNING (Context::colorPrimitiveDataPseudocolor): Only primitive data types of int, uint, float, and double are supported for this function. Skipping this primitive." << std::endl;
+            if (getPrimitiveDataType(primitive_data.c_str()) != HELIOS_TYPE_FLOAT && getPrimitiveDataType(primitive_data.c_str()) != HELIOS_TYPE_INT && getPrimitiveDataType(primitive_data.c_str()) != HELIOS_TYPE_UINT &&
+                getPrimitiveDataType(primitive_data.c_str()) != HELIOS_TYPE_DOUBLE) {
+                warnings.addWarning("unsupported_data_type", "Only primitive data types of int, uint, float, and double are supported for this function. Skipping this primitive.");
                 continue;
             }
 
-            if (getPrimitiveDataType(UUID, primitive_data.c_str()) == HELIOS_TYPE_FLOAT) {
+            if (getPrimitiveDataType(primitive_data.c_str()) == HELIOS_TYPE_FLOAT) {
                 float data;
                 getPrimitiveData(UUID, primitive_data.c_str(), data);
                 dataf = data;
-            } else if (getPrimitiveDataType(UUID, primitive_data.c_str()) == HELIOS_TYPE_DOUBLE) {
+            } else if (getPrimitiveDataType(primitive_data.c_str()) == HELIOS_TYPE_DOUBLE) {
                 double data;
                 getPrimitiveData(UUID, primitive_data.c_str(), data);
                 dataf = float(data);
-            } else if (getPrimitiveDataType(UUID, primitive_data.c_str()) == HELIOS_TYPE_INT) {
+            } else if (getPrimitiveDataType(primitive_data.c_str()) == HELIOS_TYPE_INT) {
                 int data;
                 getPrimitiveData(UUID, primitive_data.c_str(), data);
                 dataf = float(data);
-            } else if (getPrimitiveDataType(UUID, primitive_data.c_str()) == HELIOS_TYPE_UINT) {
+            } else if (getPrimitiveDataType(primitive_data.c_str()) == HELIOS_TYPE_UINT) {
                 uint data;
                 getPrimitiveData(UUID, primitive_data.c_str(), data);
                 dataf = float(data);
@@ -2805,6 +2938,8 @@ void Context::colorPrimitiveByDataPseudocolor(const std::vector<uint> &UUIDs, co
             setPrimitiveColor(UUID, colormap_data.at(cmap_ind));
         }
     }
+
+    warnings.report(std::cerr);
 }
 
 std::vector<RGBcolor> Context::generateColormap(const std::vector<helios::RGBcolor> &ctable, const std::vector<float> &cfrac, uint Ncolors) {
@@ -2994,7 +3129,7 @@ Context::~Context() {
     }
 
     for (auto &[UUID, object]: objects) {
-        delete getObjectPointer(UUID);
+        delete getObjectPointer_private(UUID);
     }
 }
 
@@ -3185,20 +3320,24 @@ helios::RGBAcolor Context::getPrimitiveColorRGBA(uint UUID) const {
 }
 
 void Context::setPrimitiveColor(uint UUID, const RGBcolor &color) const {
+    api_warnings.addWarning("setPrimitiveColor_inefficient_api", "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     getPrimitivePointer_private(UUID)->setColor(color);
 }
 
 void Context::setPrimitiveColor(const std::vector<uint> &UUIDs, const RGBcolor &color) const {
+    api_warnings.addWarning("setPrimitiveColor_inefficient_api", "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     for (uint UUID: UUIDs) {
         getPrimitivePointer_private(UUID)->setColor(color);
     }
 }
 
 void Context::setPrimitiveColor(uint UUID, const RGBAcolor &color) const {
+    api_warnings.addWarning("setPrimitiveColor_inefficient_api", "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     getPrimitivePointer_private(UUID)->setColor(color);
 }
 
 void Context::setPrimitiveColor(const std::vector<uint> &UUIDs, const RGBAcolor &color) const {
+    api_warnings.addWarning("setPrimitiveColor_inefficient_api", "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     for (uint UUID: UUIDs) {
         getPrimitivePointer_private(UUID)->setColor(color);
     }
@@ -3209,6 +3348,7 @@ std::string Context::getPrimitiveTextureFile(uint UUID) const {
 }
 
 void Context::setPrimitiveTextureFile(uint UUID, const std::string &texturefile) const {
+    api_warnings.addWarning("setPrimitiveTextureFile_inefficient_api", "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     getPrimitivePointer_private(UUID)->setTextureFile(texturefile.c_str());
 }
 
@@ -3243,20 +3383,24 @@ const std::vector<std::vector<bool>> *Context::getPrimitiveTextureTransparencyDa
 }
 
 void Context::overridePrimitiveTextureColor(uint UUID) const {
+    api_warnings.addWarning("overridePrimitiveTextureColor_inefficient_api", "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     getPrimitivePointer_private(UUID)->overrideTextureColor();
 }
 
 void Context::overridePrimitiveTextureColor(const std::vector<uint> &UUIDs) const {
+    api_warnings.addWarning("overridePrimitiveTextureColor_inefficient_api", "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     for (uint UUID: UUIDs) {
         getPrimitivePointer_private(UUID)->overrideTextureColor();
     }
 }
 
 void Context::usePrimitiveTextureColor(uint UUID) const {
+    api_warnings.addWarning("usePrimitiveTextureColor_inefficient_api", "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     getPrimitivePointer_private(UUID)->useTextureColor();
 }
 
 void Context::usePrimitiveTextureColor(const std::vector<uint> &UUIDs) const {
+    api_warnings.addWarning("usePrimitiveTextureColor_inefficient_api", "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     for (uint UUID: UUIDs) {
         getPrimitivePointer_private(UUID)->useTextureColor();
     }
@@ -3331,7 +3475,7 @@ void Context::printPrimitiveInfo(uint UUID) const {
     std::vector<std::string> pd = listPrimitiveData(UUID);
     for (uint i = 0; i < pd.size(); i++) {
         uint dsize = getPrimitiveDataSize(UUID, pd.at(i).c_str());
-        HeliosDataType dtype = getPrimitiveDataType(UUID, pd.at(i).c_str());
+        HeliosDataType dtype = getPrimitiveDataType(pd.at(i).c_str());
         std::string dstype;
 
         if (dtype == HELIOS_TYPE_INT) {
@@ -3514,6 +3658,322 @@ void Context::printPrimitiveInfo(uint UUID) const {
     std::cout << "-------------------------------------------" << std::endl;
 }
 
+//========== MATERIAL MANAGEMENT METHODS ==========//
+
+uint Context::getMaterialIDFromLabel(const std::string &material_label) const {
+    auto it = material_label_to_id.find(material_label);
+    if (it == material_label_to_id.end()) {
+        helios_runtime_error("ERROR (Context::getMaterialIDFromLabel): Material with label '" + material_label + "' does not exist.");
+    }
+    return it->second;
+}
+
+void Context::addMaterial(const std::string &material_label) {
+    if (material_label.empty()) {
+        helios_runtime_error("ERROR (Context::addMaterial): Material label cannot be empty.");
+    }
+
+    // Check for reserved label prefix
+    if (material_label.substr(0, 2) == "__" && material_label != DEFAULT_MATERIAL_LABEL) {
+        helios_runtime_error("ERROR (Context::addMaterial): Material labels starting with '__' are reserved for internal use.");
+    }
+
+    // Check if label already exists - overwrite with warning
+    if (material_label_to_id.find(material_label) != material_label_to_id.end()) {
+        std::cerr << "WARNING (Context::addMaterial): Material with label '" << material_label << "' already exists. Overwriting." << std::endl;
+        // Remove old material
+        uint oldID = material_label_to_id[material_label];
+        materials.erase(oldID);
+    }
+
+    // Create new material with default properties
+    uint newID = currentMaterialID++;
+    Material newMaterial(newID, material_label, make_RGBAcolor(0, 0, 0, 1), "", false);
+    materials[newID] = newMaterial;
+    material_label_to_id[material_label] = newID;
+}
+
+uint Context::addMaterial_internal(const std::string &label, const RGBAcolor &color, const std::string &texture) {
+    // Internal method - no check for __ prefix reservation
+    if (label.empty()) {
+        helios_runtime_error("ERROR (Context::addMaterial_internal): Material label cannot be empty.");
+    }
+
+    // Check if label already exists - silently overwrite for internal use
+    if (material_label_to_id.find(label) != material_label_to_id.end()) {
+        uint oldID = material_label_to_id[label];
+        materials.erase(oldID);
+    }
+
+    // Create new material with specified properties
+    uint newID = currentMaterialID++;
+    Material newMaterial(newID, label, color, texture, false);
+    materials[newID] = newMaterial;
+    material_label_to_id[label] = newID;
+    return newID;
+}
+
+std::string Context::generateMaterialLabel(const RGBAcolor &color, const std::string &texture, bool texture_override) const {
+    // Generate hash from all material properties for de-duplication
+    size_t hash = 0;
+    hash ^= std::hash<float>{}(color.r) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    hash ^= std::hash<float>{}(color.g) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    hash ^= std::hash<float>{}(color.b) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    hash ^= std::hash<float>{}(color.a) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    hash ^= std::hash<std::string>{}(texture) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    hash ^= std::hash<bool>{}(texture_override) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    return "__auto_" + std::to_string(hash);
+}
+
+bool Context::isMaterialShared(uint materialID) const {
+    if (materials.find(materialID) == materials.end()) {
+        return false;
+    }
+    // Use reference count for O(1) lookup instead of O(n) scan
+    return materials.at(materialID).reference_count > 1;
+}
+
+uint Context::copyMaterialForPrimitive(uint primitiveUUID) {
+    Primitive *prim = getPrimitivePointer_private(primitiveUUID);
+    uint oldMaterialID = prim->materialID;
+    const Material &oldMaterial = materials.at(oldMaterialID);
+
+    // Generate unique label using primitive UUID
+    std::string newLabel = "__copy_" + std::to_string(currentMaterialID) + "_" + std::to_string(primitiveUUID);
+
+    // Create new material with same base properties
+    uint newMaterialID = addMaterial_internal(newLabel, oldMaterial.color, oldMaterial.texture_file);
+
+    // Copy all material properties
+    materials[newMaterialID].texture_color_overridden = oldMaterial.texture_color_overridden;
+    materials[newMaterialID].twosided_flag = oldMaterial.twosided_flag;
+
+    // Copy all material data (all types)
+    materials[newMaterialID].material_data_types = oldMaterial.material_data_types;
+    materials[newMaterialID].material_data_int = oldMaterial.material_data_int;
+    materials[newMaterialID].material_data_uint = oldMaterial.material_data_uint;
+    materials[newMaterialID].material_data_float = oldMaterial.material_data_float;
+    materials[newMaterialID].material_data_double = oldMaterial.material_data_double;
+    materials[newMaterialID].material_data_vec2 = oldMaterial.material_data_vec2;
+    materials[newMaterialID].material_data_vec3 = oldMaterial.material_data_vec3;
+    materials[newMaterialID].material_data_vec4 = oldMaterial.material_data_vec4;
+    materials[newMaterialID].material_data_int2 = oldMaterial.material_data_int2;
+    materials[newMaterialID].material_data_int3 = oldMaterial.material_data_int3;
+    materials[newMaterialID].material_data_int4 = oldMaterial.material_data_int4;
+    materials[newMaterialID].material_data_string = oldMaterial.material_data_string;
+    materials[newMaterialID].material_data_bool = oldMaterial.material_data_bool;
+
+    // Update material reference counts
+    materials[oldMaterialID].reference_count--; // Decrement old material
+    materials[newMaterialID].reference_count = 1; // New material has one user (this primitive)
+
+    // Update primitive to use new material
+    prim->materialID = newMaterialID;
+
+    return newMaterialID;
+}
+
+bool Context::doesMaterialExist(const std::string &material_label) const {
+    return material_label_to_id.find(material_label) != material_label_to_id.end();
+}
+
+std::vector<std::string> Context::listMaterials() const {
+    std::vector<std::string> labels;
+    labels.reserve(material_label_to_id.size());
+    for (const auto &pair: material_label_to_id) {
+        // Don't include the default material or auto-generated materials in the list
+        if (pair.first != DEFAULT_MATERIAL_LABEL && pair.first.substr(0, 7) != "__auto_") {
+            labels.push_back(pair.first);
+        }
+    }
+    return labels;
+}
+
+RGBAcolor Context::getMaterialColor(const std::string &material_label) const {
+    uint matID = getMaterialIDFromLabel(material_label);
+    return materials.at(matID).color;
+}
+
+std::string Context::getMaterialTexture(const std::string &material_label) const {
+    uint matID = getMaterialIDFromLabel(material_label);
+    return materials.at(matID).texture_file;
+}
+
+bool Context::isMaterialTextureColorOverridden(const std::string &material_label) const {
+    uint matID = getMaterialIDFromLabel(material_label);
+    return materials.at(matID).texture_color_overridden;
+}
+
+void Context::setMaterialColor(const std::string &material_label, const RGBAcolor &color) {
+    uint matID = getMaterialIDFromLabel(material_label);
+    materials[matID].color = color;
+}
+
+void Context::setMaterialTexture(const std::string &material_label, const std::string &texture_file) {
+    uint matID = getMaterialIDFromLabel(material_label);
+    // Add texture to context if it has a file
+    if (!texture_file.empty()) {
+        addTexture(texture_file.c_str());
+    }
+    materials[matID].texture_file = texture_file;
+}
+
+void Context::setMaterialTextureColorOverride(const std::string &material_label, bool override) {
+    uint matID = getMaterialIDFromLabel(material_label);
+    materials[matID].texture_color_overridden = override;
+}
+
+uint Context::getMaterialTwosidedFlag(const std::string &material_label) const {
+    uint matID = getMaterialIDFromLabel(material_label);
+    return materials.at(matID).twosided_flag;
+}
+
+void Context::setMaterialTwosidedFlag(const std::string &material_label, uint twosided_flag) {
+    uint matID = getMaterialIDFromLabel(material_label);
+    materials[matID].twosided_flag = twosided_flag;
+}
+
+uint Context::getPrimitiveTwosidedFlag(uint UUID, uint default_value) const {
+    std::string mat_label = getPrimitiveMaterialLabel(UUID);
+    bool has_user_material = (mat_label.substr(0, 7) != "__auto_" && mat_label != DEFAULT_MATERIAL_LABEL);
+
+    if (has_user_material) {
+        return getMaterialTwosidedFlag(mat_label);
+    }
+
+    if (doesPrimitiveDataExist(UUID, "twosided_flag")) {
+        uint flag;
+        getPrimitiveData(UUID, "twosided_flag", flag);
+        return flag;
+    }
+
+    return default_value;
+}
+
+void Context::assignMaterialToPrimitive(uint UUID, const std::string &material_label) {
+    uint materialID = getMaterialIDFromLabel(material_label);
+    Primitive *prim = getPrimitivePointer_private(UUID);
+    uint oldMaterialID = prim->materialID;
+    // Update reference counts
+    materials[oldMaterialID].reference_count--;
+    materials[materialID].reference_count++;
+    prim->materialID = materialID;
+}
+
+void Context::assignMaterialToPrimitive(const std::vector<uint> &UUIDs, const std::string &material_label) {
+    uint materialID = getMaterialIDFromLabel(material_label);
+    for (uint UUID: UUIDs) {
+        Primitive *prim = getPrimitivePointer_private(UUID);
+        uint oldMaterialID = prim->materialID;
+        // Update reference counts
+        materials[oldMaterialID].reference_count--;
+        materials[materialID].reference_count++;
+        prim->materialID = materialID;
+    }
+}
+
+void Context::assignMaterialToObject(uint ObjID, const std::string &material_label) {
+    std::vector<uint> UUIDs = getObjectPrimitiveUUIDs(ObjID);
+    assignMaterialToPrimitive(UUIDs, material_label);
+}
+
+void Context::assignMaterialToObject(const std::vector<uint> &ObjIDs, const std::string &material_label) {
+    for (uint ObjID: ObjIDs) {
+        assignMaterialToObject(ObjID, material_label);
+    }
+}
+
+std::string Context::getPrimitiveMaterialLabel(uint UUID) const {
+    Primitive *prim = getPrimitivePointer_private(UUID);
+    uint materialID = prim->materialID;
+    // Find the label for this material ID
+    if (materials.find(materialID) != materials.end()) {
+        return materials.at(materialID).label;
+    }
+    return DEFAULT_MATERIAL_LABEL;
+}
+
+std::vector<uint> Context::getPrimitivesUsingMaterial(const std::string &material_label) const {
+    uint materialID = getMaterialIDFromLabel(material_label);
+    std::vector<uint> result;
+    for (const auto &pair: primitives) {
+        if (pair.second->materialID == materialID) {
+            result.push_back(pair.first);
+        }
+    }
+    return result;
+}
+
+void Context::deleteMaterial(const std::string &material_label) {
+    if (material_label == DEFAULT_MATERIAL_LABEL) {
+        helios_runtime_error("ERROR (Context::deleteMaterial): Cannot delete the default material.");
+    }
+
+    auto it = material_label_to_id.find(material_label);
+    if (it == material_label_to_id.end()) {
+        helios_runtime_error("ERROR (Context::deleteMaterial): Material with label '" + material_label + "' does not exist.");
+    }
+
+    uint materialID = it->second;
+
+    // Check if any primitives are using this material
+    std::vector<uint> users = getPrimitivesUsingMaterial(material_label);
+    if (!users.empty()) {
+        std::cerr << "WARNING (Context::deleteMaterial): Material '" << material_label << "' is in use by " << users.size() << " primitives. They will be reassigned to the default material." << std::endl;
+        // Reassign primitives to default material
+        for (uint UUID: users) {
+            Primitive *prim = getPrimitivePointer_private(UUID);
+            // Update material reference counts
+            materials[materialID].reference_count--; // Decrement deleted material
+            prim->materialID = 0; // Default material ID
+            materials[0].reference_count++; // Increment default material
+        }
+    }
+
+    // Remove the material
+    materials.erase(materialID);
+    material_label_to_id.erase(material_label);
+}
+
+bool Context::doesMaterialDataExist(const std::string &material_label, const char *data_label) const {
+    uint matID = getMaterialIDFromLabel(material_label);
+    return materials.at(matID).doesMaterialDataExist(data_label);
+}
+
+HeliosDataType Context::getMaterialDataType(const std::string &material_label, const char *data_label) const {
+    uint matID = getMaterialIDFromLabel(material_label);
+    return materials.at(matID).getMaterialDataType(data_label);
+}
+
+void Context::clearMaterialData(const std::string &material_label, const char *data_label) {
+    uint matID = getMaterialIDFromLabel(material_label);
+    materials[matID].clearMaterialData(data_label);
+}
+
+uint Context::getPrimitiveMaterialID(uint UUID) const {
+    Primitive *prim = getPrimitivePointer_private(UUID);
+    return prim->materialID;
+}
+
+const Material &Context::getMaterial(uint materialID) const {
+    if (materials.find(materialID) == materials.end()) {
+        helios_runtime_error("ERROR (Context::getMaterial): Material ID " + std::to_string(materialID) + " does not exist.");
+    }
+    return materials.at(materialID);
+}
+
+uint Context::getMaterialCount() const {
+    // Don't count the default material or auto-generated primitive materials
+    uint count = 0;
+    for (const auto &pair: material_label_to_id) {
+        // Skip default and auto-generated materials
+        if (pair.first != DEFAULT_MATERIAL_LABEL && pair.first.substr(0, 7) != "__auto_") {
+            count++;
+        }
+    }
+    return count;
+}
+
 void Context::printObjectInfo(uint ObjID) const {
     std::cout << "-------------------------------------------" << std::endl;
     std::cout << "Info for ObjID " << ObjID << std::endl;
@@ -3684,7 +4144,7 @@ void Context::printObjectInfo(uint ObjID) const {
     std::vector<std::string> pd = listObjectData(ObjID);
     for (uint i = 0; i < pd.size(); i++) {
         uint dsize = getObjectDataSize(ObjID, pd.at(i).c_str());
-        HeliosDataType dtype = getObjectDataType(ObjID, pd.at(i).c_str());
+        HeliosDataType dtype = getObjectDataType(pd.at(i).c_str());
         std::string dstype;
 
         if (dtype == HELIOS_TYPE_INT) {
@@ -4398,6 +4858,18 @@ float Context::getConeObjectVolume(uint ObjID) const {
     return getConeObjectPointer_private(ObjID)->getVolume();
 }
 
+void Context::scaleConeObjectLength(uint ObjID, float scale_factor) {
+    getConeObjectPointer_private(ObjID)->scaleLength(scale_factor);
+}
+
+void Context::scaleConeObjectGirth(uint ObjID, float scale_factor) {
+    getConeObjectPointer_private(ObjID)->scaleGirth(scale_factor);
+}
+
 float Context::getPolymeshObjectVolume(uint ObjID) const {
     return getPolymeshObjectPointer_private(ObjID)->getVolume();
+}
+
+void Context::reportAPIWarnings() const {
+    api_warnings.report(std::cerr);
 }

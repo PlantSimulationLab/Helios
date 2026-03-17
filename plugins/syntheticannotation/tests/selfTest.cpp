@@ -36,10 +36,10 @@ TEST_CASE("SyntheticAnnotation setCameraPosition") {
 
     helios::vec3 cam_pos(1, 1, 1);
     helios::vec3 cam_lookat(0, 0, 0);
-    
+
     // Test that setCameraPosition doesn't throw
     DOCTEST_CHECK_NOTHROW(test_instance.setCameraPosition(cam_pos, cam_lookat));
-    
+
     // Test vector version
     std::vector<helios::vec3> positions = {cam_pos};
     std::vector<helios::vec3> lookats = {cam_lookat};
@@ -124,6 +124,6 @@ TEST_CASE("SyntheticAnnotation addSkyDome") {
     DOCTEST_CHECK_NOTHROW(test_instance.addSkyDome("plugins/visualizer/textures/SkyDome_clouds.jpg"));
 }
 
-int SyntheticAnnotation::selfTest(int argc, char** argv) {
+int SyntheticAnnotation::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

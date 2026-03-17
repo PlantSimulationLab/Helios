@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: PlantInstance Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -183,8 +216,8 @@ Data Fields</h2></td></tr>
 <tr class="separator:a27ca39aa861a11d183469085e7f9c079"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a25aaf92d5f0cc66f9f7b8e95479069c4" id="r_a25aaf92d5f0cc66f9f7b8e95479069c4"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a25aaf92d5f0cc66f9f7b8e95479069c4">plant_name</a></td></tr>
 <tr class="separator:a25aaf92d5f0cc66f9f7b8e95479069c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7c3d61d0ee1f85b4c3b5a396524c7b90" id="r_a7c3d61d0ee1f85b4c3b5a396524c7b90"><td class="memItemLeft" align="right" valign="top">std::pair&lt; std::string, float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7c3d61d0ee1f85b4c3b5a396524c7b90">epicormic_shoot_probability_perlength_per_day</a></td></tr>
-<tr class="separator:a7c3d61d0ee1f85b4c3b5a396524c7b90"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2cc8387946a7a49818a9b94d34fb4bbe" id="r_a2cc8387946a7a49818a9b94d34fb4bbe"><td class="memItemLeft" align="right" valign="top">std::pair&lt; std::string, float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2cc8387946a7a49818a9b94d34fb4bbe">epicormic_shoot_probability_perlength_per_day</a></td></tr>
+<tr class="separator:a2cc8387946a7a49818a9b94d34fb4bbe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af840d81006e448da5e9d1375a72fc8e0" id="r_af840d81006e448da5e9d1375a72fc8e0"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af840d81006e448da5e9d1375a72fc8e0">dd_to_dormancy_break</a> = 0</td></tr>
 <tr class="separator:af840d81006e448da5e9d1375a72fc8e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a48f4b4d62412351202063d688ca6e444" id="r_a48f4b4d62412351202063d688ca6e444"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a48f4b4d62412351202063d688ca6e444">dd_to_flower_initiation</a> = 0</td></tr>
@@ -205,10 +238,42 @@ Data Fields</h2></td></tr>
 <tr class="separator:a6eee4208c6744dd4da1b50f6913a2aeb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a683ee1c96324b5d4316fe1e2871c512e" id="r_a683ee1c96324b5d4316fe1e2871c512e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_carbohydrate_parameters.html">CarbohydrateParameters</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a683ee1c96324b5d4316fe1e2871c512e">carb_parameters</a></td></tr>
 <tr class="separator:a683ee1c96324b5d4316fe1e2871c512e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a788c919e6ee7286a5ab380096e738cbf" id="r_a788c919e6ee7286a5ab380096e738cbf"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_nitrogen_parameters.html">NitrogenParameters</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a788c919e6ee7286a5ab380096e738cbf">nitrogen_parameters</a></td></tr>
+<tr class="memdesc:a788c919e6ee7286a5ab380096e738cbf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parameters for the nitrogen model.  <br /></td></tr>
+<tr class="separator:a788c919e6ee7286a5ab380096e738cbf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aae1e9017dbf62ab002250fec621271de" id="r_aae1e9017dbf62ab002250fec621271de"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aae1e9017dbf62ab002250fec621271de">root_nitrogen_pool_gN</a> = 0</td></tr>
+<tr class="memdesc:aae1e9017dbf62ab002250fec621271de"><td class="mdescLeft">&#160;</td><td class="mdescRight">Root nitrogen pool (g N)  <br /></td></tr>
+<tr class="separator:aae1e9017dbf62ab002250fec621271de"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a597e6a96f16cc61404d7be780132bf71" id="r_a597e6a96f16cc61404d7be780132bf71"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a597e6a96f16cc61404d7be780132bf71">available_nitrogen_pool_gN</a> = 0</td></tr>
+<tr class="memdesc:a597e6a96f16cc61404d7be780132bf71"><td class="mdescLeft">&#160;</td><td class="mdescRight">Available nitrogen pool for leaves to draw from (g N)  <br /></td></tr>
+<tr class="separator:a597e6a96f16cc61404d7be780132bf71"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac3dd8479e6f1644935919134d361639e" id="r_ac3dd8479e6f1644935919134d361639e"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac3dd8479e6f1644935919134d361639e">cumulative_N_uptake_gN</a> = 0</td></tr>
+<tr class="memdesc:ac3dd8479e6f1644935919134d361639e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cumulative nitrogen uptake tracking (g N)  <br /></td></tr>
+<tr class="separator:ac3dd8479e6f1644935919134d361639e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5879e064c4206e962c8822a9e35f95aa" id="r_a5879e064c4206e962c8822a9e35f95aa"><td class="memItemLeft" align="right" valign="top">std::map&lt; std::string, <a class="el" href="struct_shoot_parameters.html">ShootParameters</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5879e064c4206e962c8822a9e35f95aa">shoot_types_snapshot</a></td></tr>
+<tr class="separator:a5879e064c4206e962c8822a9e35f95aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a155886aed8acf68f9f126cdbae7fdf41" id="r_a155886aed8acf68f9f126cdbae7fdf41"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a155886aed8acf68f9f126cdbae7fdf41">attraction_points_enabled</a> = false</td></tr>
+<tr class="memdesc:a155886aed8acf68f9f126cdbae7fdf41"><td class="mdescLeft">&#160;</td><td class="mdescRight">Flag indicating if attraction points are enabled for this plant.  <br /></td></tr>
+<tr class="separator:a155886aed8acf68f9f126cdbae7fdf41"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a75331d3c6ee5de1d2a500bea41fdebe0" id="r_a75331d3c6ee5de1d2a500bea41fdebe0"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a75331d3c6ee5de1d2a500bea41fdebe0">attraction_points</a></td></tr>
+<tr class="memdesc:a75331d3c6ee5de1d2a500bea41fdebe0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Vector of attraction point positions for this plant.  <br /></td></tr>
+<tr class="separator:a75331d3c6ee5de1d2a500bea41fdebe0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9d2d538ef1f184015097d1955238fe26" id="r_a9d2d538ef1f184015097d1955238fe26"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9d2d538ef1f184015097d1955238fe26">attraction_cone_half_angle_rad</a> = 80.f * <a class="el" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3">M_PI</a> / 180.f</td></tr>
+<tr class="memdesc:a9d2d538ef1f184015097d1955238fe26"><td class="mdescLeft">&#160;</td><td class="mdescRight">Attraction detection cone half-angle in radians for this plant.  <br /></td></tr>
+<tr class="separator:a9d2d538ef1f184015097d1955238fe26"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a41d3ddd4aaa4c7e554d472546c770998" id="r_a41d3ddd4aaa4c7e554d472546c770998"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a41d3ddd4aaa4c7e554d472546c770998">attraction_cone_height</a> = 0.1f</td></tr>
+<tr class="memdesc:a41d3ddd4aaa4c7e554d472546c770998"><td class="mdescLeft">&#160;</td><td class="mdescRight">Attraction detection cone height in meters for this plant.  <br /></td></tr>
+<tr class="separator:a41d3ddd4aaa4c7e554d472546c770998"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6cda6c0d3c0fc558776a2370629f476a" id="r_a6cda6c0d3c0fc558776a2370629f476a"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6cda6c0d3c0fc558776a2370629f476a">attraction_weight</a> = 0.6f</td></tr>
+<tr class="memdesc:a6cda6c0d3c0fc558776a2370629f476a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Weight factor for attraction vs natural growth for this plant (0.0 = ignore attraction, 1.0 = full attraction)  <br /></td></tr>
+<tr class="separator:a6cda6c0d3c0fc558776a2370629f476a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a83c13f585658cf7b85c82ea4b8e52240" id="r_a83c13f585658cf7b85c82ea4b8e52240"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a83c13f585658cf7b85c82ea4b8e52240">attraction_obstacle_reduction_factor</a> = 0.5f</td></tr>
+<tr class="memdesc:a83c13f585658cf7b85c82ea4b8e52240"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reduction factor for attraction weight when hard obstacles are present for this plant (0.0 = no attraction, 1.0 = full attraction)  <br /></td></tr>
+<tr class="separator:a83c13f585658cf7b85c82ea4b8e52240"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01514">1514</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01697">1697</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a09462cd0eae660cb0caef4d76daaf1c6" name="a09462cd0eae660cb0caef4d76daaf1c6"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a09462cd0eae660cb0caef4d76daaf1c6">&#9670;&#160;</a></span>PlantInstance()</h2>
@@ -247,11 +312,137 @@ Data Fields</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01516">1516</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01699">1699</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Field Documentation</h2>
+<a id="a9d2d538ef1f184015097d1955238fe26" name="a9d2d538ef1f184015097d1955238fe26"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9d2d538ef1f184015097d1955238fe26">&#9670;&#160;</a></span>attraction_cone_half_angle_rad</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float PlantInstance::attraction_cone_half_angle_rad = 80.f * <a class="el" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3">M_PI</a> / 180.f</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Attraction detection cone half-angle in radians for this plant. </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01749">1749</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="a41d3ddd4aaa4c7e554d472546c770998" name="a41d3ddd4aaa4c7e554d472546c770998"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a41d3ddd4aaa4c7e554d472546c770998">&#9670;&#160;</a></span>attraction_cone_height</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float PlantInstance::attraction_cone_height = 0.1f</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Attraction detection cone height in meters for this plant. </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01752">1752</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="a83c13f585658cf7b85c82ea4b8e52240" name="a83c13f585658cf7b85c82ea4b8e52240"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a83c13f585658cf7b85c82ea4b8e52240">&#9670;&#160;</a></span>attraction_obstacle_reduction_factor</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float PlantInstance::attraction_obstacle_reduction_factor = 0.5f</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Reduction factor for attraction weight when hard obstacles are present for this plant (0.0 = no attraction, 1.0 = full attraction) </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01758">1758</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="a75331d3c6ee5de1d2a500bea41fdebe0" name="a75331d3c6ee5de1d2a500bea41fdebe0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a75331d3c6ee5de1d2a500bea41fdebe0">&#9670;&#160;</a></span>attraction_points</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;<a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&gt; PlantInstance::attraction_points</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Vector of attraction point positions for this plant. </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01746">1746</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="a155886aed8acf68f9f126cdbae7fdf41" name="a155886aed8acf68f9f126cdbae7fdf41"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a155886aed8acf68f9f126cdbae7fdf41">&#9670;&#160;</a></span>attraction_points_enabled</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool PlantInstance::attraction_points_enabled = false</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Flag indicating if attraction points are enabled for this plant. </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01743">1743</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="a6cda6c0d3c0fc558776a2370629f476a" name="a6cda6c0d3c0fc558776a2370629f476a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6cda6c0d3c0fc558776a2370629f476a">&#9670;&#160;</a></span>attraction_weight</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float PlantInstance::attraction_weight = 0.6f</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Weight factor for attraction vs natural growth for this plant (0.0 = ignore attraction, 1.0 = full attraction) </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01755">1755</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="a597e6a96f16cc61404d7be780132bf71" name="a597e6a96f16cc61404d7be780132bf71"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a597e6a96f16cc61404d7be780132bf71">&#9670;&#160;</a></span>available_nitrogen_pool_gN</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float PlantInstance::available_nitrogen_pool_gN = 0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Available nitrogen pool for leaves to draw from (g N) </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01732">1732</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
 <a id="a8468a49302d0296dfb2a5d815f29148d" name="a8468a49302d0296dfb2a5d815f29148d"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a8468a49302d0296dfb2a5d815f29148d">&#9670;&#160;</a></span>base_position</h2>
 
@@ -264,7 +455,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01518">1518</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01703">1703</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -280,7 +471,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01537">1537</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01722">1722</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -296,7 +487,25 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01521">1521</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01706">1706</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="ac3dd8479e6f1644935919134d361639e" name="ac3dd8479e6f1644935919134d361639e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac3dd8479e6f1644935919134d361639e">&#9670;&#160;</a></span>cumulative_N_uptake_gN</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float PlantInstance::cumulative_N_uptake_gN = 0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Cumulative nitrogen uptake tracking (g N) </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01734">1734</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -312,7 +521,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01519">1519</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01704">1704</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -328,7 +537,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01531">1531</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01716">1716</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -344,7 +553,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01526">1526</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01711">1711</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -360,7 +569,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01527">1527</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01712">1712</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -376,7 +585,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01528">1528</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01713">1713</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -392,7 +601,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01530">1530</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01715">1715</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -408,23 +617,23 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01529">1529</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01714">1714</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
-<a id="a7c3d61d0ee1f85b4c3b5a396524c7b90" name="a7c3d61d0ee1f85b4c3b5a396524c7b90"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7c3d61d0ee1f85b4c3b5a396524c7b90">&#9670;&#160;</a></span>epicormic_shoot_probability_perlength_per_day</h2>
+<a id="a2cc8387946a7a49818a9b94d34fb4bbe" name="a2cc8387946a7a49818a9b94d34fb4bbe"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2cc8387946a7a49818a9b94d34fb4bbe">&#9670;&#160;</a></span>epicormic_shoot_probability_perlength_per_day</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::pair&lt;std::string,float&gt; PlantInstance::epicormic_shoot_probability_perlength_per_day</td>
+          <td class="memname">std::pair&lt;std::string, float&gt; PlantInstance::epicormic_shoot_probability_perlength_per_day</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01523">1523</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01708">1708</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -440,7 +649,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01533">1533</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01718">1718</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -456,7 +665,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01535">1535</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01720">1720</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -472,7 +681,25 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01532">1532</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01717">1717</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="a788c919e6ee7286a5ab380096e738cbf" name="a788c919e6ee7286a5ab380096e738cbf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a788c919e6ee7286a5ab380096e738cbf">&#9670;&#160;</a></span>nitrogen_parameters</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_nitrogen_parameters.html">NitrogenParameters</a> PlantInstance::nitrogen_parameters</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Parameters for the nitrogen model. </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01727">1727</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -488,7 +715,25 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01522">1522</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01707">1707</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="aae1e9017dbf62ab002250fec621271de" name="aae1e9017dbf62ab002250fec621271de"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aae1e9017dbf62ab002250fec621271de">&#9670;&#160;</a></span>root_nitrogen_pool_gN</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float PlantInstance::root_nitrogen_pool_gN = 0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Root nitrogen pool (g N) </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01730">1730</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -504,7 +749,24 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01517">1517</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01702">1702</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="a5879e064c4206e962c8822a9e35f95aa" name="a5879e064c4206e962c8822a9e35f95aa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5879e064c4206e962c8822a9e35f95aa">&#9670;&#160;</a></span>shoot_types_snapshot</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::map&lt;std::string, <a class="el" href="struct_shoot_parameters.html">ShootParameters</a>&gt; PlantInstance::shoot_types_snapshot</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Snapshot of shoot parameters that were active when this plant was created This prevents parameter contamination between different plant types </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01738">1738</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -520,7 +782,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01520">1520</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01705">1705</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>

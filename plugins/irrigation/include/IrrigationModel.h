@@ -28,12 +28,14 @@
 const double INCH_TO_METER = 0.0254;
 const double FEET_TO_METER = 0.3048;
 
+//! Physical properties of a pipe component.
 struct ComponentSpecs {
     double diameter;        // in meters
     double length;          // in meters
     std::string material;
 };
 
+//! Configuration for a complete sprinkler unit, including pipe fittings and emitter hydraulic properties.
 struct SprinklerAssembly {
     std::string name;
     ComponentSpecs barbToEmitter;
@@ -46,17 +48,23 @@ struct SprinklerAssembly {
 };
 
 
+//! Library of predefined sprinkler assembly configurations.
 class SprinklerConfigLibrary {
 
     std::unordered_map<std::string, SprinklerAssembly> sprinklerLibrary;
 
 public:
 
+    //! Constructor that initializes the library with predefined sprinkler assembly types.
     SprinklerConfigLibrary();
 
+    //! Register a custom sprinkler assembly in the library.
     void registerSprinklerAssembly(const SprinklerAssembly& type);
+    //! Check if a sprinkler assembly type is registered in the library.
     bool hasSprinklerAssembly(const std::string& typeName) const;
+    //! Get a sprinkler assembly by type name.
     const SprinklerAssembly& getSprinklerType(const std::string& typeName) const;
+    //! Get a list of all registered sprinkler assembly type names.
     std::vector<std::string> getAvailableTypes() const;
 
     // sprinkler types stored based on experimental data
@@ -69,18 +77,20 @@ public:
 
 };
 
+//! 3D spatial coordinate in the irrigation network.
 struct Position {
     double x;
     double y;
     double z; //elevation
 
-    // distance calculation
+    //! Compute the 2D Euclidean distance to another position.
     double distanceTo(const Position& other) const {
         return std::hypot(x - other.x, y - other.y);
     }
 };
 
 
+//! A point in the hydraulic network.
 struct Node {
     int id;
     std::string type;
@@ -94,6 +104,7 @@ struct Node {
     bool isValveOpen = false; // this is for zone_valve nodes only
 };
 
+//! A pipe segment connecting two nodes.
 struct Link {
     int from;
     int to;
@@ -111,6 +122,7 @@ struct Link {
     }
 };
 
+//! Output from the hydraulic solver.
 struct HydraulicResults {
     std::vector<double> nodalPressures;
     std::vector<double> flowRates;
@@ -120,6 +132,7 @@ struct HydraulicResults {
 };
 
 
+//! Pressure loss between two nodes.
 struct PressureLossResult {
     int fromNode;
     int toNode;
@@ -128,10 +141,11 @@ struct PressureLossResult {
 
 
 
+//! Placement of the submain distribution line within an irrigation zone.
 enum class SubmainPosition {
-    NORTH,
-    SOUTH,
-    MIDDLE
+    NORTH,  //!< Place the submain at the north (top) edge
+    SOUTH,  //!< Place the submain at the south (bottom) edge
+    MIDDLE  //!< Place the submain through the center
 };
 
 enum class ZoningMode {
@@ -142,59 +156,102 @@ enum class ZoningMode {
 };
 
 
+//! Irrigation system hydraulic model.
 class IrrigationModel {
 public:
     std::unordered_map<int, Node> nodes;
     std::vector<Link> links;
+    //! Return the memory usage of internal caches.
     size_t getCacheSize() const;
 
-    // Main system creation
-    IrrigationModel() : sprinklerLibrary() {} // calls SprinklerConfigLibrary constructor
+    //! Default constructor. Initializes the sprinkler configuration library with predefined assembly types.
+    IrrigationModel() : sprinklerLibrary(), nextNodeId(1) {}
+    //! Get the water source node ID.
     int getWaterSourceId() const;
-    int getNextNodeId() const;
+    //! Get the next available node ID.
+    int getNextNodeId();
+    //! Get all nodes in the system.
     const std::unordered_map<int, Node>& getNodes() const;
+    //! Get all links in the system.
     const std::vector<Link>& getLinks() const;
+    //! Get node IDs filtered by type string.
     std::vector<int> getNodesByType(const std::string& type) const;
+    //! Get links filtered by type string.
     std::vector<Link> getLinksByType(const std::string& type) const;
 
-    // Print network in visualization format
+    //! Disable command-line output messages from this plug-in.
+    void disableMessages();
+
+    //! Enable command-line output messages from this plug-in.
+    void enableMessages();
+
+    //! Check if command-line output messages are enabled.
+    bool isMessageEnabled() const { return message_flag; }
+
+    //! Print the network in a visualization format.
     void printNetwork() const;
+    //! Run the single-zone hydraulic solver.
     HydraulicResults calculateHydraulics(bool doPreSize, const std::string& sprinklerAssemblyType,
                                                      double Qspecified, double Pw,
                                                      double V_main, double V_lateral);
+    //! Get a text summary of the network.
     std::string getSystemSummary() const;
+    //! Calculate the emitter discharge rate based on sprinkler assembly type and operating pressure.
+    /**
+     * \param[in] sprinklerAssemblyType Name of the sprinkler assembly from the library.
+     * \param[in] pressure Operating pressure (psi).
+     * \param[in] updateEmitterNodes If true (default), writes the computed flow to all emitter nodes.
+     * \return Emitter flow rate (m3/s).
+     */
     double calculateEmitterFlow(const std::string& sprinklerAssemblyType,
                                 double pressure,
                                 bool updateEmitterNodes = true);
+    //! Set an irregular field boundary polygon.
     void setBoundaryPolygon(const std::vector<Position>& polygon);
 
+    //! Automatically size pipe diameters based on target maximum velocities.
+    /**
+     * \param[in] V_main Target maximum mainline velocity (m/s). Default: 1.5.
+     * \param[in] V_lateral Target maximum lateral velocity (m/s). Default: 2.0.
+     */
     void preSizePipes(double V_main = 1.5, double V_lateral = 2.0);
     //! Self-test
     /**
      * \return 0 if test was successful, 1 if test failed.
      */
     static int selfTest(int argc = 0, char** argv = nullptr);
+    //! Get pressure drops across all barb-to-emitter connections.
     std::vector<PressureLossResult> getBarbToEmitterPressureLosses() const;
+    //! Get pressure drops across all lateral-to-barb connections.
     std::vector<PressureLossResult> getLateralToBarbPressureLosses() const;
+    //! Print a formatted pressure loss analysis to the console.
     void printPressureLossAnalysis(const IrrigationModel& system);
+    //! Write the pressure loss analysis to a text file.
     void writePressureLossesToFile(const IrrigationModel& system, const std::string& filename);
 
+    //! Get the pressure difference between two nodes.
     double getPressureDifference(int nodeId1, int nodeId2) const;
+    //! Find pairs of connected nodes matching the specified types.
     std::vector<std::pair<int, int>> findConnectedNodePairs(const std::string& type1, const std::string& type2) const;
+    //! Check if a connection exists between two nodes.
     bool connectionExists(int node1, int node2) const;
+    //! Create a virtual connection between two nodes.
     void createVirtualConnection(int node1, int node2,
                                                const ComponentSpecs& specs,
                                                const std::string& connectionType,
                                                const std::string& assemblyType);
+    //! Count the number of nodes of a given type.
     int countNodesByType(const std::string& type) const;
+    //! Get the maximum node ID in the system.
     int getMaxNodeId() const;
+    //! Recreate sprinkler assemblies from an Irricad layout.
     void createAssembliesFromIrricad(const std::string& sprinklerAssemblyType);
-    // void addWaterSource(double fieldLength, double fieldWidth,
-    //                                const std::string& lateralDirection,
-    //                                SubmainPosition submainPosition);
+    //! Load an irrigation system from a text file.
     bool loadFromTextFile(const std::string& filename);
 
+    //! Validate the hydraulic system (water source, connectivity, link integrity).
     void validateHydraulicSystem() const;
+    //! Write the linear system matrix to a file for debugging.
     void writeMatrixToFile(const std::vector<std::vector<double>>& A,
                                           const std::vector<double>& RHS,
                                           const std::vector<int>& orderedNodeIds,
@@ -202,6 +259,18 @@ public:
 
     ////////////////////////////////////////////////////////////////////////////////
     // Multi-zone functionality
+
+    //! Create a complete multi-zone irrigation system from zone boundary polygons.
+    /**
+     * \param[in] numZones Number of irrigation zones to create.
+     * \param[in] zoneBoundaries Boundary polygon vertices for each zone.
+     * \param[in] Pw Water source pressure (psi).
+     * \param[in] sprinklerSpacing Spacing between sprinklers along a lateral line (m).
+     * \param[in] lineSpacing Spacing between lateral lines (m).
+     * \param[in] connectionType "vertical" or "horizontal" lateral orientation.
+     * \param[in] sprinklerConfig Name of the sprinkler assembly from the library.
+     * \param[in] submainPos Submain placement within each zone.
+     */
     void assignZones(
         int numZones,
         const std::vector<std::vector<Position>>& zoneBoundaries,
@@ -213,31 +282,37 @@ public:
         SubmainPosition submainPos
     );
 
-    // Zone query functions
+    //! Get node IDs belonging to a specific zone.
     std::vector<int> getNodesByZone(int zoneID) const;
+    //! Get link indices belonging to a specific zone.
     std::vector<size_t> getLinksByZone(int zoneID) const;
 
-
-    //functions to help simulate any combination of active zones
-    // HydraulicResults calculateHydraulicsByZone(int activeZoneID,
-    //                                          bool doPreSize,
-    //                                          const std::string& sprinklerAssemblyType,
-    //                                          double Qspecified,
-    //                                          double Pw,
-    //                                          double V_main,
-    //                                          double V_lateral);
-
-    // Helper methods
-    // using cached BFS using valve control
+    //! Open the valve for a specific zone.
     void openZoneValve(int zoneID);
+    //! Close the valve for a specific zone.
     void closeZoneValve(int zoneID);
+    //! Query whether a zone's valve is currently open.
     bool isZoneValveOpen(int zoneID) const;
+    //! Set the valve state for a specific zone.
     void setZoneValveState(int zoneID, bool open);
-    // fast call for changing zone_valve state
+    //! Open all zone valves.
     void activateAllZones();
+    //! Close all zone valves.
     void deactivateAllZones();
+    //! Close all valves, then open only the specified zone.
     void activateSingleZone(int zoneID);
+    //! Close all valves, then open the specified zones.
     void activateZones(const std::vector<int>& zoneIDs);
+    //! Run the multi-zone hydraulic solver.
+    /**
+     * \param[in] doPreSize If true, runs preSizePipes() before solving.
+     * \param[in] sprinklerAssemblyType Sprinkler assembly name (used for minor loss calculations).
+     * \param[in] Qspecified Specified emitter flow rate (m3/s).
+     * \param[in] Pw Water source pressure (psi).
+     * \param[in] V_main Maximum mainline velocity for pipe sizing (m/s).
+     * \param[in] V_lateral Maximum lateral velocity for pipe sizing (m/s).
+     * \return HydraulicResults struct with pressures, flows, and convergence status.
+     */
     HydraulicResults calculateHydraulicsMultiZoneOptimized(
         bool doPreSize,
         const std::string& sprinklerAssemblyType,
@@ -245,11 +320,23 @@ public:
         double Pw,
         double V_main,
         double V_lateral);
+    //! Build the valve-to-nodes mapping. Must be called after assignZones().
     void initialize();
+    //! Choose between fast cached method and tree traversal for active node determination.
     void setActiveNodeMethod(bool useFastMethod);
+    //! Check for nodes with unassigned zone IDs and print warnings.
     void checkUnassignedNodes();
 
-    // function to generate the system curve (GPM vs head in feet)
+    //! Generate system curve data points (GPM vs. head in feet) for pump selection.
+    /**
+     * \param[in] emitterRequiredPressure Emitter operating pressures to evaluate (psi).
+     * \param[in] sprinklerAssemblyType Sprinkler assembly name.
+     * \param[in] V_main Maximum mainline velocity for pipe sizing (m/s).
+     * \param[in] V_lateral Maximum lateral velocity for pipe sizing (m/s).
+     * \param[in] referenceNodeId Optional node ID for analysis (default: -1 for automatic).
+     * \param[in] staticHead Optional static head adjustment (default: 0.0).
+     * \return Vector of (GPM, head in feet) data points.
+     */
     std::vector<std::pair<double, double>> generateSystemCurve(
             const std::vector<double>& emitterRequiredPressure,
             const std::string& sprinklerAssemblyType,
@@ -258,8 +345,10 @@ public:
             int referenceNodeId = -1,
             double staticHead = 0.0);
 
+    //! Write the system curve to a CSV file with a quadratic fit.
     void writeSystemCurveToCsvWithFit(const std::string& filename,
                                       const std::vector<std::pair<double, double>>& curve) const;
+    //! Fit a quadratic curve to system curve data.
     static std::tuple<double, double, double> fitCurveQuadratic(
             const std::vector<std::pair<double, double>>& curve);
 
@@ -267,6 +356,8 @@ public:
 private:
 
     int waterSourceId = -1;  // Tracks water source node ID
+    int nextNodeId = 1;      // Tracked counter for O(1) node ID generation
+    bool message_flag = true; // Controls command-line output messages
 
     // Helper methods
     std::vector<Position> boundaryPolygon; // for irregular shapes
@@ -345,9 +436,9 @@ private:
     bool validateLink(const Link& link) const;
 
    // double calculateLateralLength(const Link* lateral) const;
-    double computeLinkFlows(int nodeId, int parentId,
+    double computeLinkFlows(int sourceId,
                         const std::unordered_map<int, std::vector<int>>& adj,
-                        std::unordered_set<int>& visited); // recursion function to calculate flows upstream
+                        std::unordered_map<uint64_t, Link*>& linkMap); // iterative post-order flow accumulation
 
     /////// functions to assist irricad layout re creation
     void recreateLateralConnections();

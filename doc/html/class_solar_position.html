@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: SolarPosition Class Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -158,7 +191,8 @@ $(function(){initNavTree('class_solar_position.html',''); initResizable(true); }
 
 <div class="header">
   <div class="summary">
-<a href="#pub-methods">Public Member Functions</a>  </div>
+<a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-static-methods">Static Public Member Functions</a>  </div>
   <div class="headertitle"><div class="title">SolarPosition Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -171,9 +205,6 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:aad8b52cdec7e725441001f99dce4316f" id="r_aad8b52cdec7e725441001f99dce4316f"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aad8b52cdec7e725441001f99dce4316f">SolarPosition</a> (float UTC_hrs, float latitude_deg, float longitude_deg, <a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context_ptr)</td></tr>
 <tr class="memdesc:aad8b52cdec7e725441001f99dce4316f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Solar position model constructor.  <br /></td></tr>
 <tr class="separator:aad8b52cdec7e725441001f99dce4316f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aced032bb94f6fcff47e66747f7547396" id="r_aced032bb94f6fcff47e66747f7547396"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aced032bb94f6fcff47e66747f7547396">selfTest</a> () const</td></tr>
-<tr class="memdesc:aced032bb94f6fcff47e66747f7547396"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to perform a self-test of model functions.  <br /></td></tr>
-<tr class="separator:aced032bb94f6fcff47e66747f7547396"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2d15fe2ca0d29adf33971916b1d8cd83" id="r_a2d15fe2ca0d29adf33971916b1d8cd83"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_time.html">helios::Time</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2d15fe2ca0d29adf33971916b1d8cd83">getSunriseTime</a> () const</td></tr>
 <tr class="memdesc:a2d15fe2ca0d29adf33971916b1d8cd83"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the approximate time of sunrise at the current location.  <br /></td></tr>
 <tr class="separator:a2d15fe2ca0d29adf33971916b1d8cd83"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -222,10 +253,58 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a282ed51f351684b847255212dcd53869" id="r_a282ed51f351684b847255212dcd53869"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a282ed51f351684b847255212dcd53869">disableCloudCalibration</a> ()</td></tr>
 <tr class="memdesc:a282ed51f351684b847255212dcd53869"><td class="mdescLeft">&#160;</td><td class="mdescRight">Disable calibration of solar flux and diffuse fraction for clouds.  <br /></td></tr>
 <tr class="separator:a282ed51f351684b847255212dcd53869"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adf82fc8cb5aeea3eb3bac729af032a8d" id="r_adf82fc8cb5aeea3eb3bac729af032a8d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adf82fc8cb5aeea3eb3bac729af032a8d">setAtmosphericConditions</a> (float pressure_Pa, float temperature_K, float humidity_rel, float turbidity)</td></tr>
+<tr class="memdesc:adf82fc8cb5aeea3eb3bac729af032a8d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set atmospheric conditions globally in the Context.  <br /></td></tr>
+<tr class="separator:adf82fc8cb5aeea3eb3bac729af032a8d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2dd6417e7ad55d48621df29fafca663e" id="r_a2dd6417e7ad55d48621df29fafca663e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2dd6417e7ad55d48621df29fafca663e">getAtmosphericConditions</a> (float &amp;pressure_Pa, float &amp;temperature_K, float &amp;humidity_rel, float &amp;turbidity) const</td></tr>
+<tr class="memdesc:a2dd6417e7ad55d48621df29fafca663e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get atmospheric conditions from the Context.  <br /></td></tr>
+<tr class="separator:a2dd6417e7ad55d48621df29fafca663e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abf4ce53e74f9c0874a101dd4434f1fbb" id="r_abf4ce53e74f9c0874a101dd4434f1fbb"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abf4ce53e74f9c0874a101dd4434f1fbb">getSolarFlux</a> () const</td></tr>
+<tr class="memdesc:abf4ce53e74f9c0874a101dd4434f1fbb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the solar radiation flux perpendicular to the sun direction using atmospheric conditions from the Context.  <br /></td></tr>
+<tr class="separator:abf4ce53e74f9c0874a101dd4434f1fbb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a171b3c31721d9e4734c228307b267c0d" id="r_a171b3c31721d9e4734c228307b267c0d"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a171b3c31721d9e4734c228307b267c0d">getSolarFluxPAR</a> () const</td></tr>
+<tr class="memdesc:a171b3c31721d9e4734c228307b267c0d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the photosynthetically active (PAR) component of solar radiation flux perpendicular to the sun direction using atmospheric conditions from the Context.  <br /></td></tr>
+<tr class="separator:a171b3c31721d9e4734c228307b267c0d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a65e67a78b589ecb0b3050321fb73efcc" id="r_a65e67a78b589ecb0b3050321fb73efcc"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a65e67a78b589ecb0b3050321fb73efcc">getSolarFluxNIR</a> () const</td></tr>
+<tr class="memdesc:a65e67a78b589ecb0b3050321fb73efcc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the near-infrared (NIR) component of solar radiation flux perpendicular to the sun direction using atmospheric conditions from the Context.  <br /></td></tr>
+<tr class="separator:a65e67a78b589ecb0b3050321fb73efcc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a18fdaf08f28266b5e9b9c0c72dabb27b" id="r_a18fdaf08f28266b5e9b9c0c72dabb27b"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a18fdaf08f28266b5e9b9c0c72dabb27b">getDiffuseFraction</a> () const</td></tr>
+<tr class="memdesc:a18fdaf08f28266b5e9b9c0c72dabb27b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the fraction of solar radiation flux that is diffuse using atmospheric conditions from the Context.  <br /></td></tr>
+<tr class="separator:a18fdaf08f28266b5e9b9c0c72dabb27b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a38e6a4e3281a9ac03f5014a364c8a5f2" id="r_a38e6a4e3281a9ac03f5014a364c8a5f2"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a38e6a4e3281a9ac03f5014a364c8a5f2">getAmbientLongwaveFlux</a> () const</td></tr>
+<tr class="memdesc:a38e6a4e3281a9ac03f5014a364c8a5f2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculate the ambient (sky) longwave radiation flux using atmospheric conditions from the Context.  <br /></td></tr>
+<tr class="separator:a38e6a4e3281a9ac03f5014a364c8a5f2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a78dfa1147eaf8b69fb4a3d8feac21eea" id="r_a78dfa1147eaf8b69fb4a3d8feac21eea"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a78dfa1147eaf8b69fb4a3d8feac21eea">calculateDirectSolarSpectrum</a> (const std::string &amp;label, float resolution_nm=1.0f)</td></tr>
+<tr class="memdesc:a78dfa1147eaf8b69fb4a3d8feac21eea"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculate direct beam solar spectrum and store in global data.  <br /></td></tr>
+<tr class="separator:a78dfa1147eaf8b69fb4a3d8feac21eea"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aabd1c1199000c2cc2950fa92936bafcf" id="r_aabd1c1199000c2cc2950fa92936bafcf"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aabd1c1199000c2cc2950fa92936bafcf">calculateDiffuseSolarSpectrum</a> (const std::string &amp;label, float resolution_nm=1.0f)</td></tr>
+<tr class="memdesc:aabd1c1199000c2cc2950fa92936bafcf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculate diffuse solar spectrum and store in global data.  <br /></td></tr>
+<tr class="separator:aabd1c1199000c2cc2950fa92936bafcf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3505411c0fa1af970d12c2b0108ef20d" id="r_a3505411c0fa1af970d12c2b0108ef20d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3505411c0fa1af970d12c2b0108ef20d">calculateGlobalSolarSpectrum</a> (const std::string &amp;label, float resolution_nm=1.0f)</td></tr>
+<tr class="memdesc:a3505411c0fa1af970d12c2b0108ef20d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculate global (total) solar spectrum and store in global data.  <br /></td></tr>
+<tr class="separator:a3505411c0fa1af970d12c2b0108ef20d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a900e5eb3d009edbe6859cb765404c9cb" id="r_a900e5eb3d009edbe6859cb765404c9cb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a900e5eb3d009edbe6859cb765404c9cb">enablePragueSkyModel</a> ()</td></tr>
+<tr class="memdesc:a900e5eb3d009edbe6859cb765404c9cb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable Prague sky model for atmospheric sky radiance computation.  <br /></td></tr>
+<tr class="separator:a900e5eb3d009edbe6859cb765404c9cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6709709e0f0c7fdfd1d8a415f13827ab" id="r_a6709709e0f0c7fdfd1d8a415f13827ab"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6709709e0f0c7fdfd1d8a415f13827ab">isPragueSkyModelEnabled</a> () const</td></tr>
+<tr class="memdesc:a6709709e0f0c7fdfd1d8a415f13827ab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if Prague sky model is enabled.  <br /></td></tr>
+<tr class="separator:a6709709e0f0c7fdfd1d8a415f13827ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac896ef45f38253c4f85b008df1ac236f" id="r_ac896ef45f38253c4f85b008df1ac236f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac896ef45f38253c4f85b008df1ac236f">updatePragueSkyModel</a> (float ground_albedo=0.33f)</td></tr>
+<tr class="memdesc:ac896ef45f38253c4f85b008df1ac236f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Update Prague sky model and store spectral-angular parameters in Context.  <br /></td></tr>
+<tr class="separator:ac896ef45f38253c4f85b008df1ac236f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab18530756e247296c959bdc425fe580c" id="r_ab18530756e247296c959bdc425fe580c"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab18530756e247296c959bdc425fe580c">pragueSkyModelNeedsUpdate</a> (float ground_albedo=0.33f, float sun_tolerance=0.01f, float turbidity_tolerance=0.02f, float albedo_tolerance=0.05f) const</td></tr>
+<tr class="memdesc:ab18530756e247296c959bdc425fe580c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if Prague sky model update is needed based on changed conditions.  <br /></td></tr>
+<tr class="separator:ab18530756e247296c959bdc425fe580c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
+Static Public Member Functions</h2></td></tr>
+<tr class="memitem:ab109ebcd68dcc3ef4e12c52cb9671150" id="r_ab109ebcd68dcc3ef4e12c52cb9671150"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab109ebcd68dcc3ef4e12c52cb9671150">selfTest</a> (int argc=0, char **argv=nullptr)</td></tr>
+<tr class="memdesc:ab109ebcd68dcc3ef4e12c52cb9671150"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to perform a self-test of model functions.  <br /></td></tr>
+<tr class="separator:ab109ebcd68dcc3ef4e12c52cb9671150"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="_solar_position_8h_source.html#l00021">21</a> of file <a class="el" href="_solar_position_8h_source.html">SolarPosition.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8h_source.html#l00025">25</a> of file <a class="el" href="_solar_position_8h_source.html">SolarPosition.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a25fa8345e4101fa2d63757ca1bc9fe10" name="a25fa8345e4101fa2d63757ca1bc9fe10"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a25fa8345e4101fa2d63757ca1bc9fe10">&#9670;&#160;</a></span>SolarPosition() <span class="overload">[1/2]</span></h2>
@@ -258,7 +337,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00021">21</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00022">22</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
@@ -302,16 +381,124 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00029">29</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00030">30</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="aabd1c1199000c2cc2950fa92936bafcf" name="aabd1c1199000c2cc2950fa92936bafcf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aabd1c1199000c2cc2950fa92936bafcf">&#9670;&#160;</a></span>calculateDiffuseSolarSpectrum()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void SolarPosition::calculateDiffuseSolarSpectrum </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>resolution_nm</em></span><span class="paramdefsep"> = </span><span class="paramdefval">1.0f</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Calculate diffuse solar spectrum and store in global data. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">label</td><td>User-defined label for storing spectral data in Context global data </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">resolution_nm</td><td>Wavelength resolution in nm (default: 1 nm). Must be &gt;= 1 nm and &lt;= 2300 nm. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>Computes diffuse spectral irradiance on horizontal surface from 300-2600 nm using the SSolar-GOA model (Cachorro et al. 2022). </dd>
+<dd>
+Stores result in Context global data as std::vector&lt;helios::vec2&gt; (wavelength_nm, W/m²/nm) with the specified label. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l01013">1013</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a78dfa1147eaf8b69fb4a3d8feac21eea" name="a78dfa1147eaf8b69fb4a3d8feac21eea"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a78dfa1147eaf8b69fb4a3d8feac21eea">&#9670;&#160;</a></span>calculateDirectSolarSpectrum()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void SolarPosition::calculateDirectSolarSpectrum </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>resolution_nm</em></span><span class="paramdefsep"> = </span><span class="paramdefval">1.0f</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Calculate direct beam solar spectrum and store in global data. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">label</td><td>User-defined label for storing spectral data in Context global data </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">resolution_nm</td><td>Wavelength resolution in nm (default: 1 nm). Must be &gt;= 1 nm and &lt;= 2300 nm. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>Computes spectral irradiance normal to sun direction from 300-2600 nm using the SSolar-GOA model (Cachorro et al. 2022). </dd>
+<dd>
+Stores result in Context global data as std::vector&lt;helios::vec2&gt; (wavelength_nm, W/m²/nm) with the specified label. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l01007">1007</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a3505411c0fa1af970d12c2b0108ef20d" name="a3505411c0fa1af970d12c2b0108ef20d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3505411c0fa1af970d12c2b0108ef20d">&#9670;&#160;</a></span>calculateGlobalSolarSpectrum()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void SolarPosition::calculateGlobalSolarSpectrum </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>resolution_nm</em></span><span class="paramdefsep"> = </span><span class="paramdefval">1.0f</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Calculate global (total) solar spectrum and store in global data. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">label</td><td>User-defined label for storing spectral data in Context global data </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">resolution_nm</td><td>Wavelength resolution in nm (default: 1 nm). Must be &gt;= 1 nm and &lt;= 2300 nm. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>Computes global spectral irradiance on horizontal surface from 300-2600 nm using the SSolar-GOA model (Cachorro et al. 2022). </dd>
+<dd>
+Stores result in Context global data as std::vector&lt;helios::vec2&gt; (wavelength_nm, W/m²/nm) with the specified label. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l01019">1019</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+
+</div>
+</div>
 <a id="aeefa73ede0d1797f94fd4ca2739f7f3e" name="aeefa73ede0d1797f94fd4ca2739f7f3e"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aeefa73ede0d1797f94fd4ca2739f7f3e">&#9670;&#160;</a></span>calibrateTurbidityFromTimeseries()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float SolarPosition::calibrateTurbidityFromTimeseries </td>
@@ -320,6 +507,11 @@ Public Member Functions</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Calculate the turbidity value based on a timeseries of net radiation measurements. </p>
@@ -332,7 +524,7 @@ Public Member Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Turbidity value </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>The net radiation flux measurements contained in the timeseries should be global shortwave radiation flux on a horizontal plane in W/m^2. The data should contain at least one day with clear sky conditions. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00394">394</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00390">390</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
@@ -353,7 +545,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Disable calibration of solar flux and diffuse fraction for clouds. </p>
 
-<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00446">446</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00442">442</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
@@ -380,15 +572,77 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00436">436</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00433">433</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a900e5eb3d009edbe6859cb765404c9cb" name="a900e5eb3d009edbe6859cb765404c9cb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a900e5eb3d009edbe6859cb765404c9cb">&#9670;&#160;</a></span>enablePragueSkyModel()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void SolarPosition::enablePragueSkyModel </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Enable Prague sky model for atmospheric sky radiance computation. </p>
+<dl class="section note"><dt>Note</dt><dd>The Prague Sky Model computes physically-based sky radiance distributions accounting for Rayleigh and Mie scattering. </dd>
+<dd>
+Uses the reduced dataset (360-1480 nm, ~27 MB) from plugins/solarposition/lib/prague_sky_model/PragueSkyModelReduced.dat </dd>
+<dd>
+Once enabled, call updatePragueSkyModel() to compute and store spectral-angular parameters in Context global data. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l01027">1027</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a38e6a4e3281a9ac03f5014a364c8a5f2" name="a38e6a4e3281a9ac03f5014a364c8a5f2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a38e6a4e3281a9ac03f5014a364c8a5f2">&#9670;&#160;</a></span>getAmbientLongwaveFlux() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float SolarPosition::getAmbientLongwaveFlux </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Calculate the ambient (sky) longwave radiation flux using atmospheric conditions from the Context. </p>
+<dl class="section note"><dt>Note</dt><dd>The longwave flux model is based on <a href="http://onlinelibrary.wiley.com/doi/10.1002/qj.49712253306/full">Prata (1996)</a>. </dd>
+<dd>
+Atmospheric conditions must be set using <a class="el" href="#adf82fc8cb5aeea3eb3bac729af032a8d">setAtmosphericConditions()</a> before calling this method. If not set, default values are used with a warning. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Ambient longwave flux in W/m^2 </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00548">548</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a30ee555eedece8b7e19855877a74da71" name="a30ee555eedece8b7e19855877a74da71"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a30ee555eedece8b7e19855877a74da71">&#9670;&#160;</a></span>getAmbientLongwaveFlux()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a30ee555eedece8b7e19855877a74da71">&#9670;&#160;</a></span>getAmbientLongwaveFlux() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float SolarPosition::getAmbientLongwaveFlux </td>
@@ -401,6 +655,11 @@ Public Member Functions</h2></td></tr>
           <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>humidity_rel</em></span>&#160;) const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Calculate the ambient (sky) longwave radiation flux. </p>
@@ -413,16 +672,96 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Ambient longwave flux in W/m^2 </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>The longwave flux model is based on <a href="http://onlinelibrary.wiley.com/doi/10.1002/qj.49712253306/full">Prata (1996)</a>. </dd></dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000008">Deprecated</a></b></dt><dd>Use setAtmosphericConditions() and the parameter-free getAmbientLongwaveFlux() instead </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00366">366</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00359">359</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2dd6417e7ad55d48621df29fafca663e" name="a2dd6417e7ad55d48621df29fafca663e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2dd6417e7ad55d48621df29fafca663e">&#9670;&#160;</a></span>getAtmosphericConditions()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void SolarPosition::getAtmosphericConditions </td>
+          <td>(</td>
+          <td class="paramtype">float &amp;</td>          <td class="paramname"><span class="paramname"><em>pressure_Pa</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float &amp;</td>          <td class="paramname"><span class="paramname"><em>temperature_K</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float &amp;</td>          <td class="paramname"><span class="paramname"><em>humidity_rel</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float &amp;</td>          <td class="paramname"><span class="paramname"><em>turbidity</em></span>&#160;) const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get atmospheric conditions from the Context. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">pressure_Pa</td><td>Atmospheric pressure near ground surface in Pascals </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">temperature_K</td><td>Air temperature near the ground surface in Kelvin </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">humidity_rel</td><td>Air relative humidity near the ground surface </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">turbidity</td><td>Ångström's aerosol turbidity coefficient (β), representing aerosol optical depth (AOD) at 500 nm </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>If atmospheric conditions have not been set via setAtmosphericConditions(), reasonable defaults are used: pressure=101325 Pa (1 atm), temperature=300 K (27°C), humidity=0.5 (50%), turbidity=0.02 (clear sky AOD) </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00468">468</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a18fdaf08f28266b5e9b9c0c72dabb27b" name="a18fdaf08f28266b5e9b9c0c72dabb27b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a18fdaf08f28266b5e9b9c0c72dabb27b">&#9670;&#160;</a></span>getDiffuseFraction() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float SolarPosition::getDiffuseFraction </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Get the fraction of solar radiation flux that is diffuse using atmospheric conditions from the Context. </p>
+<dl class="section note"><dt>Note</dt><dd>Atmospheric conditions must be set using <a class="el" href="#adf82fc8cb5aeea3eb3bac729af032a8d">setAtmosphericConditions()</a> before calling this method. If not set, default values are used with a warning. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Fraction of global radiation that is diffuse </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00536">536</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
 <a id="af8dbd15453ce775dab5b2c5a49b1c93b" name="af8dbd15453ce775dab5b2c5a49b1c93b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af8dbd15453ce775dab5b2c5a49b1c93b">&#9670;&#160;</a></span>getDiffuseFraction()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#af8dbd15453ce775dab5b2c5a49b1c93b">&#9670;&#160;</a></span>getDiffuseFraction() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float SolarPosition::getDiffuseFraction </td>
@@ -445,6 +784,11 @@ Public Member Functions</h2></td></tr>
           <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>turbidity</em></span>&#160;) const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Get the fraction of solar radiation flux that is diffuse. </p>
@@ -453,21 +797,60 @@ Public Member Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">pressure_Pa</td><td>Atmospheric pressure near ground surface in Pascals </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">temperature_K</td><td>Air temperature near the ground surface in Kelvin </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">humidity_rel</td><td>Air relative humidity near the ground surface </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">turbidity</td><td>Angstrom's aerosol turbidity coefficient </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">turbidity</td><td>Ångström's aerosol turbidity coefficient (AOD at 500 nm). Typical values: 0.02 (very clear), 0.05 (clear), 0.1 (hazy) </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Fraction of global radiation that is diffuse </dd></dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000007">Deprecated</a></b></dt><dd>Use setAtmosphericConditions() and the parameter-free getDiffuseFraction() instead </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00215">215</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00217">217</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+
+</div>
+</div>
+<a id="abf4ce53e74f9c0874a101dd4434f1fbb" name="abf4ce53e74f9c0874a101dd4434f1fbb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abf4ce53e74f9c0874a101dd4434f1fbb">&#9670;&#160;</a></span>getSolarFlux() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float SolarPosition::getSolarFlux </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Get the solar radiation flux perpendicular to the sun direction using atmospheric conditions from the Context. </p>
+<dl class="section note"><dt>Note</dt><dd>The flux given by this function is the flux normal to the sun direction. To get the flux on a horizontal surface, multiply the returned value by cos(theta), where theta can be found by calling the <a class="el" href="#a4c4ba4931d13c6cc2ad69e8eab90ac14">getSunZenith()</a> function. </dd>
+<dd>
+The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>. </dd>
+<dd>
+Atmospheric conditions must be set using <a class="el" href="#adf82fc8cb5aeea3eb3bac729af032a8d">setAtmosphericConditions()</a> before calling this method. If not set, default values are used with a warning. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Global solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2 </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00499">499</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a9701cb29a0336a11c445d285405b6956" name="a9701cb29a0336a11c445d285405b6956"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9701cb29a0336a11c445d285405b6956">&#9670;&#160;</a></span>getSolarFlux()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a9701cb29a0336a11c445d285405b6956">&#9670;&#160;</a></span>getSolarFlux() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float SolarPosition::getSolarFlux </td>
@@ -490,6 +873,11 @@ Public Member Functions</h2></td></tr>
           <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>turbidity</em></span>&#160;) const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Get the solar radiation flux perpendicular to the sun direction. </p>
@@ -498,7 +886,7 @@ Public Member Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">pressure_Pa</td><td>Atmospheric pressure near ground surface in Pascals </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">temperature_K</td><td>Air temperature near the ground surface in Kelvin </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">humidity_rel</td><td>Air relative humidity near the ground surface </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">turbidity</td><td>Angstrom's aerosol turbidity coefficient </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">turbidity</td><td>Ångström's aerosol turbidity coefficient (AOD at 500 nm). Typical values: 0.02 (very clear), 0.05 (clear), 0.1 (hazy) </td></tr>
   </table>
   </dd>
 </dl>
@@ -506,16 +894,55 @@ Public Member Functions</h2></td></tr>
 <dd>
 The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Global solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2 </dd></dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000004">Deprecated</a></b></dt><dd>Use setAtmosphericConditions() and the parameter-free getSolarFlux() instead </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00187">187</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00186">186</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a65e67a78b589ecb0b3050321fb73efcc" name="a65e67a78b589ecb0b3050321fb73efcc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a65e67a78b589ecb0b3050321fb73efcc">&#9670;&#160;</a></span>getSolarFluxNIR() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float SolarPosition::getSolarFluxNIR </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Get the near-infrared (NIR) component of solar radiation flux perpendicular to the sun direction using atmospheric conditions from the Context. </p>
+<dl class="section note"><dt>Note</dt><dd>The flux given by this function is the flux normal to the sun direction. To get the flux on a horizontal surface, multiply the returned value by cos(theta), where theta can be found by calling the <a class="el" href="#a4c4ba4931d13c6cc2ad69e8eab90ac14">getSunZenith()</a> function. </dd>
+<dd>
+The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>. </dd>
+<dd>
+Atmospheric conditions must be set using <a class="el" href="#adf82fc8cb5aeea3eb3bac729af032a8d">setAtmosphericConditions()</a> before calling this method. If not set, default values are used with a warning. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>NIR component of solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2 </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00524">524</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a611461f700df9efa7c56b6f4ee7712b7" name="a611461f700df9efa7c56b6f4ee7712b7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a611461f700df9efa7c56b6f4ee7712b7">&#9670;&#160;</a></span>getSolarFluxNIR()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a611461f700df9efa7c56b6f4ee7712b7">&#9670;&#160;</a></span>getSolarFluxNIR() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float SolarPosition::getSolarFluxNIR </td>
@@ -538,6 +965,11 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
           <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>turbidity</em></span>&#160;) const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Get the near-infrared (NIR) component of solar radiation flux perpendicular to the sun direction. </p>
@@ -546,7 +978,7 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
     <tr><td class="paramdir">[in]</td><td class="paramname">pressure_Pa</td><td>Atmospheric pressure near ground surface in Pascals </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">temperature_K</td><td>Air temperature near the ground surface in Kelvin </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">humidity_rel</td><td>Air relative humidity near the ground surface </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">turbidity</td><td>Angstrom's aerosol turbidity coefficient </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">turbidity</td><td>Ångström's aerosol turbidity coefficient (AOD at 500 nm). Typical values: 0.02 (very clear), 0.05 (clear), 0.1 (hazy) </td></tr>
   </table>
   </dd>
 </dl>
@@ -554,16 +986,55 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
 <dd>
 The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Global solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2 </dd></dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000006">Deprecated</a></b></dt><dd>Use setAtmosphericConditions() and the parameter-free getSolarFluxNIR() instead </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00206">206</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00207">207</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a171b3c31721d9e4734c228307b267c0d" name="a171b3c31721d9e4734c228307b267c0d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a171b3c31721d9e4734c228307b267c0d">&#9670;&#160;</a></span>getSolarFluxPAR() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float SolarPosition::getSolarFluxPAR </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Get the photosynthetically active (PAR) component of solar radiation flux perpendicular to the sun direction using atmospheric conditions from the Context. </p>
+<dl class="section note"><dt>Note</dt><dd>The flux given by this function is the flux normal to the sun direction. To get the flux on a horizontal surface, multiply the returned value by cos(theta), where theta can be found by calling the <a class="el" href="#a4c4ba4931d13c6cc2ad69e8eab90ac14">getSunZenith()</a> function. </dd>
+<dd>
+The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>. </dd>
+<dd>
+Atmospheric conditions must be set using <a class="el" href="#adf82fc8cb5aeea3eb3bac729af032a8d">setAtmosphericConditions()</a> before calling this method. If not set, default values are used with a warning. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>PAR component of solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2 </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00512">512</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a5c6635160944b5b8202ea9965da6de9d" name="a5c6635160944b5b8202ea9965da6de9d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5c6635160944b5b8202ea9965da6de9d">&#9670;&#160;</a></span>getSolarFluxPAR()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a5c6635160944b5b8202ea9965da6de9d">&#9670;&#160;</a></span>getSolarFluxPAR() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float SolarPosition::getSolarFluxPAR </td>
@@ -586,6 +1057,11 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
           <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>turbidity</em></span>&#160;) const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Get the photosynthetically active (PAR) component of solar radiation flux perpendicular to the sun direction. </p>
@@ -594,7 +1070,7 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
     <tr><td class="paramdir">[in]</td><td class="paramname">pressure_Pa</td><td>Atmospheric pressure near ground surface in Pascals </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">temperature_K</td><td>Air temperature near the ground surface in Kelvin </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">humidity_rel</td><td>Air relative humidity near the ground surface </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">turbidity</td><td>Angstrom's aerosol turbidity coefficient </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">turbidity</td><td>Ångström's aerosol turbidity coefficient (AOD at 500 nm). Typical values: 0.02 (very clear), 0.05 (clear), 0.1 (hazy) </td></tr>
   </table>
   </dd>
 </dl>
@@ -602,6 +1078,7 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
 <dd>
 The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>Global solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2 </dd></dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000005">Deprecated</a></b></dt><dd>Use setAtmosphericConditions() and the parameter-free getSolarFluxPAR() instead </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00197">197</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
@@ -612,6 +1089,9 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float SolarPosition::getSunAzimuth </td>
@@ -620,11 +1100,16 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Get the current sun azimuthal angle in radians for the current location. The sun angle is computed based on the current time and date set in the Helios context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00152">152</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00151">151</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
@@ -633,6 +1118,9 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1_spherical_coord.html">SphericalCoord</a> SolarPosition::getSunDirectionSpherical </td>
@@ -641,11 +1129,16 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Get a spherical coordinate vector pointing toward the sun for the current location. The sun angle is computed based on the current time and date set in the Helios context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00172">172</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00171">171</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
@@ -654,6 +1147,9 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1vec3.html">vec3</a> SolarPosition::getSunDirectionVector </td>
@@ -662,11 +1158,16 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Get a unit vector pointing toward the sun for the current location. The sun angle is computed based on the current time and date set in the Helios context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00162">162</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00161">161</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
@@ -675,6 +1176,9 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float SolarPosition::getSunElevation </td>
@@ -683,11 +1187,16 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Get the current sun elevation angle in radians for the current location. The sun angle is computed based on the current time and date set in the Helios context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00132">132</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00131">131</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
@@ -696,6 +1205,9 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1_time.html">Time</a> SolarPosition::getSunriseTime </td>
@@ -704,11 +1216,16 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Get the approximate time of sunrise at the current location. </p>
 
-<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00099">99</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00095">95</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
@@ -717,6 +1234,9 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="structhelios_1_1_time.html">Time</a> SolarPosition::getSunsetTime </td>
@@ -725,11 +1245,16 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Get the approximate time of sunset at the current location. </p>
 
-<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00116">116</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00113">113</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
@@ -738,6 +1263,9 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">float SolarPosition::getSunZenith </td>
@@ -746,32 +1274,182 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Get the current sun zenithal angle in radians for the current location. The sun angle is computed based on the current time and date set in the Helios context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00142">142</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00141">141</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
-<a id="aced032bb94f6fcff47e66747f7547396" name="aced032bb94f6fcff47e66747f7547396"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aced032bb94f6fcff47e66747f7547396">&#9670;&#160;</a></span>selfTest()</h2>
+<a id="a6709709e0f0c7fdfd1d8a415f13827ab" name="a6709709e0f0c7fdfd1d8a415f13827ab"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6709709e0f0c7fdfd1d8a415f13827ab">&#9670;&#160;</a></span>isPragueSkyModelEnabled()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">int SolarPosition::selfTest </td>
+          <td class="memname">bool SolarPosition::isPragueSkyModelEnabled </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Check if Prague sky model is enabled. </p>
+<dl class="section return"><dt>Returns</dt><dd>True if Prague model has been enabled via enablePragueSkyModel() </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l01046">1046</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab18530756e247296c959bdc425fe580c" name="ab18530756e247296c959bdc425fe580c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab18530756e247296c959bdc425fe580c">&#9670;&#160;</a></span>pragueSkyModelNeedsUpdate()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool SolarPosition::pragueSkyModelNeedsUpdate </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>ground_albedo</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0.33f</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>sun_tolerance</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0.01f</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>turbidity_tolerance</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0.02f</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>albedo_tolerance</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0.05f</span>&#160;) const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Check if Prague sky model update is needed based on changed conditions. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ground_albedo</td><td>Current ground albedo </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">sun_tolerance</td><td>Threshold for sun direction changes (default: 0.01 ≈ 0.57°) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">turbidity_tolerance</td><td>Relative threshold for turbidity (default: 0.02 = 2%) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">albedo_tolerance</td><td>Threshold for albedo changes (default: 0.05 = 5%) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if updatePragueSkyModel() should be called </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>This method enables lazy evaluation to avoid expensive Prague updates when conditions haven't changed significantly. </dd>
+<dd>
+Reads turbidity from Context atmospheric conditions for comparison. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l01123">1123</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab109ebcd68dcc3ef4e12c52cb9671150" name="ab109ebcd68dcc3ef4e12c52cb9671150"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab109ebcd68dcc3ef4e12c52cb9671150">&#9670;&#160;</a></span>selfTest()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">int SolarPosition::selfTest </td>
+          <td>(</td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>argc</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">char **</td>          <td class="paramname"><span class="paramname"><em>argv</em></span><span class="paramdefsep"> = </span><span class="paramdefval">nullptr</span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Function to perform a self-test of model functions. </p>
 
-<p class="definition">Definition at line <a class="el" href="plugins_2solarposition_2src_2self_test_8cpp_source.html#l00005">5</a> of file <a class="el" href="plugins_2solarposition_2src_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2solarposition_2tests_2self_test_8cpp_source.html#l00563">563</a> of file <a class="el" href="plugins_2solarposition_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="adf82fc8cb5aeea3eb3bac729af032a8d" name="adf82fc8cb5aeea3eb3bac729af032a8d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adf82fc8cb5aeea3eb3bac729af032a8d">&#9670;&#160;</a></span>setAtmosphericConditions()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void SolarPosition::setAtmosphericConditions </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>pressure_Pa</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>temperature_K</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>humidity_rel</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>turbidity</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set atmospheric conditions globally in the Context. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">pressure_Pa</td><td>Atmospheric pressure near ground surface in Pascals (must be &gt; 0) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">temperature_K</td><td>Air temperature near the ground surface in Kelvin (must be &gt; 0) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">humidity_rel</td><td>Air relative humidity near the ground surface (must be between 0 and 1) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">turbidity</td><td>Ångström's aerosol turbidity coefficient (β), representing aerosol optical depth (AOD) at 500 nm reference wavelength (must be &gt;= 0). Typical values: 0.02 (very clear sky), 0.05 (clear sky), 0.1 (light haze), 0.2-0.3 (hazy), &gt;0.4 (very hazy/polluted). <b>Note:</b> This is NOT Linke turbidity, which uses a different scale (typically 2-6). </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>This method sets global data in the Context with labels: atmosphere_pressure_Pa, atmosphere_temperature_K, atmosphere_humidity_rel, atmosphere_turbidity </dd>
+<dd>
+Input values are validated. Invalid values will throw helios_runtime_error. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00446">446</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
@@ -798,14 +1476,55 @@ The solar flux model is based on <a href="http://www.sciencedirect.com/science/a
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00182">182</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l00181">181</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ac896ef45f38253c4f85b008df1ac236f" name="ac896ef45f38253c4f85b008df1ac236f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac896ef45f38253c4f85b008df1ac236f">&#9670;&#160;</a></span>updatePragueSkyModel()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void SolarPosition::updatePragueSkyModel </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>ground_albedo</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0.33f</span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Update Prague sky model and store spectral-angular parameters in Context. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ground_albedo</td><td>Ground reflectance [0-1] (default: 0.33 for vegetation) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>Must call after solar position changes or atmospheric conditions change. </dd>
+<dd>
+Reads turbidity from Context atmospheric conditions (set via setAtmosphericConditions). If not set, uses default 0.02 (clear sky). </dd>
+<dd>
+Computationally intensive (~1100 model queries with OpenMP parallelization). Use lazy evaluation via pragueSkyModelNeedsUpdate() to avoid unnecessary updates. </dd>
+<dd>
+Stores the following in Context global data:<ul>
+<li>"prague_sky_spectral_params": vec&lt;float&gt; of size 1350 (225 wavelengths × 6 parameters)</li>
+<li>"prague_sky_sun_direction": vec3 sun direction</li>
+<li>"prague_sky_visibility_km": float visibility in km</li>
+<li>"prague_sky_ground_albedo": float ground albedo</li>
+<li>"prague_sky_valid": int validity flag (1=valid, 0=invalid) </li>
+</ul>
+</dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_solar_position_8cpp_source.html#l01050">1050</a> of file <a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a>.</p>
 
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>plugins/solarposition/include/<a class="el" href="_solar_position_8h_source.html">SolarPosition.h</a></li>
-<li>plugins/solarposition/src/<a class="el" href="plugins_2solarposition_2src_2self_test_8cpp_source.html">selfTest.cpp</a></li>
 <li>plugins/solarposition/src/<a class="el" href="_solar_position_8cpp_source.html">SolarPosition.cpp</a></li>
+<li>plugins/solarposition/tests/<a class="el" href="plugins_2solarposition_2tests_2self_test_8cpp_source.html">selfTest.cpp</a></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

@@ -31,11 +31,11 @@ int main() {
                     if ((j * size.x + i) % 2 == 0) {
                         UUID = context.addPatch(make_vec3(-0.5 * D + (i * subsize.x + ii) * dx.x, -0.5 * D + (j * subsize.y + jj) * dx.y, 0), dx, make_SphericalCoord(0.f, rot), RGB::silver);
                         rho = 0.f;
-                        context.setPrimitiveData(UUID, "reflectivity_SW", HELIOS_TYPE_FLOAT, 1, &rho);
+                        context.setPrimitiveData(UUID, "reflectivity_SW", rho);
                     } else {
                         UUID = context.addPatch(make_vec3(-0.5 * D + (i * subsize.x + ii) * dx.x, -0.5 * D + (j * subsize.y + jj) * dx.y, 0), dx, make_SphericalCoord(0.f, rot), RGB::white);
                         rho = 0.6f;
-                        context.setPrimitiveData(UUID, "reflectivity_SW", HELIOS_TYPE_FLOAT, 1, &rho);
+                        context.setPrimitiveData(UUID, "reflectivity_SW", rho);
                     }
                 }
             }

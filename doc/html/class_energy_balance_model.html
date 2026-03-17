@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: EnergyBalanceModel Class Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -158,7 +191,8 @@ $(function(){initNavTree('class_energy_balance_model.html',''); initResizable(tr
 
 <div class="header">
   <div class="summary">
-<a href="#pub-methods">Public Member Functions</a>  </div>
+<a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-static-methods">Static Public Member Functions</a>  </div>
   <div class="headertitle"><div class="title">EnergyBalanceModel Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -173,9 +207,6 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ad6c6f535390c7fcb4957a33cfc13b140" id="r_ad6c6f535390c7fcb4957a33cfc13b140"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad6c6f535390c7fcb4957a33cfc13b140">EnergyBalanceModel</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context)</td></tr>
 <tr class="memdesc:ad6c6f535390c7fcb4957a33cfc13b140"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor.  <br /></td></tr>
 <tr class="separator:ad6c6f535390c7fcb4957a33cfc13b140"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad4a1681ae6edd9f82d23e6a8ef3fc26c" id="r_ad4a1681ae6edd9f82d23e6a8ef3fc26c"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad4a1681ae6edd9f82d23e6a8ef3fc26c">selfTest</a> ()</td></tr>
-<tr class="memdesc:ad4a1681ae6edd9f82d23e6a8ef3fc26c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Self-test.  <br /></td></tr>
-<tr class="separator:ad4a1681ae6edd9f82d23e6a8ef3fc26c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a261480763ea918e133bb594ce9f3e14c" id="r_a261480763ea918e133bb594ce9f3e14c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a261480763ea918e133bb594ce9f3e14c">enableMessages</a> ()</td></tr>
 <tr class="memdesc:a261480763ea918e133bb594ce9f3e14c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable standard output from this plug-in (default)  <br /></td></tr>
 <tr class="separator:a261480763ea918e133bb594ce9f3e14c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -188,10 +219,10 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a5048dec148d795d76d10d331bdb35156" id="r_a5048dec148d795d76d10d331bdb35156"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5048dec148d795d76d10d331bdb35156">run</a> (float dt)</td></tr>
 <tr class="memdesc:a5048dec148d795d76d10d331bdb35156"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to run the dynamic /non steady state energy balance model for one timestep of length "dt" seconds.  <br /></td></tr>
 <tr class="separator:a5048dec148d795d76d10d331bdb35156"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2053c71e6ae107ba6ba612c56b245cf4" id="r_a2053c71e6ae107ba6ba612c56b245cf4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2053c71e6ae107ba6ba612c56b245cf4">run</a> (const std::vector&lt; uint &gt; &amp;UUIDs)</td></tr>
+<tr class="memitem:a2053c71e6ae107ba6ba612c56b245cf4" id="r_a2053c71e6ae107ba6ba612c56b245cf4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2053c71e6ae107ba6ba612c56b245cf4">run</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs)</td></tr>
 <tr class="memdesc:a2053c71e6ae107ba6ba612c56b245cf4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to run the energy balance model for a select set of primitives.  <br /></td></tr>
 <tr class="separator:a2053c71e6ae107ba6ba612c56b245cf4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4accc5ed86460c662db1352ef1857e0c" id="r_a4accc5ed86460c662db1352ef1857e0c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4accc5ed86460c662db1352ef1857e0c">run</a> (const std::vector&lt; uint &gt; &amp;UUIDs, float dt)</td></tr>
+<tr class="memitem:a4accc5ed86460c662db1352ef1857e0c" id="r_a4accc5ed86460c662db1352ef1857e0c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4accc5ed86460c662db1352ef1857e0c">run</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs, float dt)</td></tr>
 <tr class="memdesc:a4accc5ed86460c662db1352ef1857e0c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to run the energy balance model for a select set of primitives for one timestep of length "dt" seconds.  <br /></td></tr>
 <tr class="separator:a4accc5ed86460c662db1352ef1857e0c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7ce12c9b4baf734d49562fe45e7eb272" id="r_a7ce12c9b4baf734d49562fe45e7eb272"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7ce12c9b4baf734d49562fe45e7eb272">addRadiationBand</a> (const char *band)</td></tr>
@@ -209,7 +240,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ae03e52634367b225f5ae37104771c71a" id="r_ae03e52634367b225f5ae37104771c71a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae03e52634367b225f5ae37104771c71a">evaluateAirEnergyBalance</a> (float dt_sec, float time_advance_sec)</td></tr>
 <tr class="memdesc:ae03e52634367b225f5ae37104771c71a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Advance the air energy balance over time for all primitives in the Context.  <br /></td></tr>
 <tr class="separator:ae03e52634367b225f5ae37104771c71a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a09aba41f8e3fe64ccdab692742af4793" id="r_a09aba41f8e3fe64ccdab692742af4793"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a09aba41f8e3fe64ccdab692742af4793">evaluateAirEnergyBalance</a> (const std::vector&lt; uint &gt; &amp;UUIDs, float dt_sec, float time_advance_sec)</td></tr>
+<tr class="memitem:a09aba41f8e3fe64ccdab692742af4793" id="r_a09aba41f8e3fe64ccdab692742af4793"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a09aba41f8e3fe64ccdab692742af4793">evaluateAirEnergyBalance</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs, float dt_sec, float time_advance_sec)</td></tr>
 <tr class="memdesc:a09aba41f8e3fe64ccdab692742af4793"><td class="mdescLeft">&#160;</td><td class="mdescRight">Advance the air energy balance over time for primitives specified by UUIDs.  <br /></td></tr>
 <tr class="separator:a09aba41f8e3fe64ccdab692742af4793"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8fd349c962047a29384e3f8099f1a054" id="r_a8fd349c962047a29384e3f8099f1a054"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8fd349c962047a29384e3f8099f1a054">optionalOutputPrimitiveData</a> (const char *label)</td></tr>
@@ -218,9 +249,15 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a058d24583430bffdf78b53a8f9a5a851" id="r_a058d24583430bffdf78b53a8f9a5a851"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a058d24583430bffdf78b53a8f9a5a851">printDefaultValueReport</a> () const</td></tr>
 <tr class="memdesc:a058d24583430bffdf78b53a8f9a5a851"><td class="mdescLeft">&#160;</td><td class="mdescRight">Print a report detailing usage of default input values for all primitives in the Context.  <br /></td></tr>
 <tr class="separator:a058d24583430bffdf78b53a8f9a5a851"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa8f66c144733765289f7748dee193d5e" id="r_aa8f66c144733765289f7748dee193d5e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa8f66c144733765289f7748dee193d5e">printDefaultValueReport</a> (const std::vector&lt; uint &gt; &amp;UUIDs) const</td></tr>
+<tr class="memitem:aa8f66c144733765289f7748dee193d5e" id="r_aa8f66c144733765289f7748dee193d5e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa8f66c144733765289f7748dee193d5e">printDefaultValueReport</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs) const</td></tr>
 <tr class="memdesc:aa8f66c144733765289f7748dee193d5e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Print a report detailing usage of default input values based on a subset of primitive UUIDs.  <br /></td></tr>
 <tr class="separator:aa8f66c144733765289f7748dee193d5e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
+Static Public Member Functions</h2></td></tr>
+<tr class="memitem:a3e8031c7037a0ff672f4499b9a2f4c74" id="r_a3e8031c7037a0ff672f4499b9a2f4c74"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3e8031c7037a0ff672f4499b9a2f4c74">selfTest</a> (int argc=0, char **argv=nullptr)</td></tr>
+<tr class="memdesc:a3e8031c7037a0ff672f4499b9a2f4c74"><td class="mdescLeft">&#160;</td><td class="mdescRight">Self-test.  <br /></td></tr>
+<tr class="separator:a3e8031c7037a0ff672f4499b9a2f4c74"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Energy balance model class. </p>
@@ -251,7 +288,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00023">23</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00031">31</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -279,7 +316,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00494">494</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00510">510</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -306,7 +343,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00500">500</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00516">516</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -327,7 +364,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Disable standard output from this plug-in. </p>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00490">490</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00506">506</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -349,7 +386,7 @@ Public Member Functions</h2></td></tr>
 <p>Enable the air energy balance model, which computes the average air temperature and water vapor mole fraction based on the energy balance of the air layer in the canopy. </p>
 <p>Calling this version of enableAirEnergyBalance() will compute the canopy height based on a bounding box of all primitives in the Context, or the UUIDs based to evaluateAirEnergyBalance(). It also assumes that the reference height for ambient air temperature, humidity, and wind speed is at the canopy top. This routine sets primitive data 'air_temperature' and 'air_humidity' to the average air temperature and humidity in the canopy for all primitives. </p>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00506">506</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00522">522</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -381,7 +418,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00510">510</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00526">526</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -402,7 +439,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Enable standard output from this plug-in (default) </p>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00486">486</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00502">502</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -415,7 +452,7 @@ Public Member Functions</h2></td></tr>
         <tr>
           <td class="memname">void EnergyBalanceModel::evaluateAirEnergyBalance </td>
           <td>(</td>
-          <td class="paramtype">const std::vector&lt; uint &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span>, </td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -440,7 +477,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00091">91</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00156">156</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -472,7 +509,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00087">87</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00152">152</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -499,7 +536,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00523">523</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00539">539</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -520,7 +557,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Print a report detailing usage of default input values for all primitives in the Context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00533">533</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00548">548</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -533,7 +570,7 @@ Public Member Functions</h2></td></tr>
         <tr>
           <td class="memname">void EnergyBalanceModel::printDefaultValueReport </td>
           <td>(</td>
-          <td class="paramtype">const std::vector&lt; uint &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span></td><td>)</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span></td><td>)</td>
           <td> const</td>
         </tr>
       </table>
@@ -547,7 +584,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00537">537</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00552">552</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -568,7 +605,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Function to run the energy balance model for all primitives in the Context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00054">54</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00069">69</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -581,7 +618,7 @@ Public Member Functions</h2></td></tr>
         <tr>
           <td class="memname">void EnergyBalanceModel::run </td>
           <td>(</td>
-          <td class="paramtype">const std::vector&lt; uint &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span></td><td>)</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -595,7 +632,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00062">62</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00077">77</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -608,7 +645,7 @@ Public Member Functions</h2></td></tr>
         <tr>
           <td class="memname">void EnergyBalanceModel::run </td>
           <td>(</td>
-          <td class="paramtype">const std::vector&lt; uint &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span>, </td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -627,7 +664,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00067">67</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00082">82</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -654,37 +691,48 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00058">58</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_energy_balance_model_8cpp_source.html#l00073">73</a> of file <a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a>.</p>
 
 </div>
 </div>
-<a id="ad4a1681ae6edd9f82d23e6a8ef3fc26c" name="ad4a1681ae6edd9f82d23e6a8ef3fc26c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad4a1681ae6edd9f82d23e6a8ef3fc26c">&#9670;&#160;</a></span>selfTest()</h2>
+<a id="a3e8031c7037a0ff672f4499b9a2f4c74" name="a3e8031c7037a0ff672f4499b9a2f4c74"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3e8031c7037a0ff672f4499b9a2f4c74">&#9670;&#160;</a></span>selfTest()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">int EnergyBalanceModel::selfTest </td>
           <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>argc</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">char **</td>          <td class="paramname"><span class="paramname"><em>argv</em></span><span class="paramdefsep"> = </span><span class="paramdefval">nullptr</span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Self-test. </p>
 <dl class="section return"><dt>Returns</dt><dd>0 if test was successful, 1 if test failed. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="plugins_2energybalance_2src_2self_test_8cpp_source.html#l00005">5</a> of file <a class="el" href="plugins_2energybalance_2src_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2energybalance_2tests_2self_test_8cpp_source.html#l00588">588</a> of file <a class="el" href="plugins_2energybalance_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>plugins/energybalance/include/<a class="el" href="_energy_balance_model_8h_source.html">EnergyBalanceModel.h</a></li>
 <li>plugins/energybalance/src/<a class="el" href="_energy_balance_model_8cpp_source.html">EnergyBalanceModel.cpp</a></li>
-<li>plugins/energybalance/src/<a class="el" href="_energy_balance_model_8cu_source.html">EnergyBalanceModel.cu</a></li>
-<li>plugins/energybalance/src/<a class="el" href="plugins_2energybalance_2src_2self_test_8cpp_source.html">selfTest.cpp</a></li>
+<li>plugins/energybalance/tests/<a class="el" href="plugins_2energybalance_2tests_2self_test_8cpp_source.html">selfTest.cpp</a></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

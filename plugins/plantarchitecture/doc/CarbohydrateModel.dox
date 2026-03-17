@@ -1,0 +1,427 @@
+/*! \page CarbohydrateModelDoc Carbohydrate Model
+
+\section CarbIntro Overview
+
+The carbohydrate model is an optional feature in the PlantArchitecture plugin that simulates carbon allocation and its effects on plant growth dynamics. When enabled, the model mechanistically tracks carbohydrate pools in each shoot, accumulates photosynthate produced by leaves, accounts for maintenance and growth respiration costs, and dynamically adjusts growth rates based on carbon availability. This provides a physiologically-based mechanism to simulate source-sink relationships and carbon-limited growth.
+
+<b>Important architectural note:</b> Carbohydrate pools are calculated and maintained at the <b>whole-shoot level</b>, not at the individual phytomer level. This is a key distinction from other functional-structural plant models such as L-Peach, which track carbohydrate concentrations at the phytomer (or metamer) level. In the Helios carbohydrate model, all phytomers within a shoot share a common carbon pool, and the carbon concentration is uniform across all internodes in that shoot. This simplification reduces computational cost while still capturing the essential dynamics of carbon allocation and shoot-to-shoot transfer within the plant architecture.
+
+The model integrates with the Photosynthesis plugin to accumulate leaf-level net photosynthesis as a carbon source, and uses this carbon to support organ construction, maintenance respiration, and radial growth. When carbon becomes limiting, the model can slow or stop growth, abort organs (flowers, fruits, or entire shoots), and redistribute carbon between shoots to maintain plant viability.
+
+Key features of the carbohydrate model include:
+- Photosynthate accumulation from leaf-level photosynthesis
+- Maintenance and growth respiration costs
+- Carbon transfer between shoots based on concentration gradients
+- Dynamic modulation of phyllochron (leaf emergence rate)
+- Dynamic modulation of internode elongation and radial growth
+- Organ abortion (flowers, fruits, shoots) under carbon stress
+- User-configurable parameters for different species/conditions
+
+\section CarbEnable Enabling the Carbohydrate Model
+
+The carbohydrate model is disabled by default. To enable it, call the \ref PlantArchitecture::enableCarbohydrateModel() method before or after building plant instances:
+
+~~~~~~
+PlantArchitecture plantarchitecture(&context);
+
+// Enable the carbohydrate model
+plantarchitecture.enableCarbohydrateModel();
+
+// Load and build plants
+plantarchitecture.loadPlantModelFromLibrary("bean");
+uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(nullorigin, 0);
+~~~~~~
+
+The model can be disabled at any time using \ref PlantArchitecture::disableCarbohydrateModel(). Once enabled, the model automatically operates during each call to \ref PlantArchitecture::advanceTime().
+
+\section CarbParameters Model Parameters
+
+The behavior of the carbohydrate model is controlled by a comprehensive set of parameters stored in the \ref CarbohydrateParameters structure. Parameters can be set for individual plants or groups of plants using \ref PlantArchitecture::setPlantCarbohydrateModelParameters().
+
+\subsection CarbParamTable Parameter Descriptions
+
+Parameters in the \ref CarbohydrateParameters structure are organized into several categories. <b>Default values are based on almond trees (*Prunus dulcis*).</b>
+
+| Category | Parameter | Default Value | Units | Description |
+| ------| ------ | ------ | ------ | ------ |
+| **Stem/Wood Properties** |||||
+|| stem_density | 540000 | g/m³ | Density of mature internode wood tissue. |
+|| stem_carbon_percentage | 0.4559 | - | Fraction of stem dry weight that is carbon. |
+|| initial_density_ratio | 0.2 | - | Ratio of initial internode carbon density to mature density (0-1). |
+|| maturity_age | 180 | days | Age at which internode reaches full mature density. |
+|| shoot_root_ratio | 4.5 | - | Ratio of shoot biomass to root biomass. Used to partition carbon for belowground growth. |
+| **Leaf Properties** |||||
+|| SLA | 0.025 | m²/g | Specific leaf area (leaf area per unit dry mass). |
+|| leaf_carbon_percentage | 0.4444 | - | Fraction of leaf dry weight that is carbon. |
+| **Flower Properties** |||||
+|| total_flower_cost | 8.33e-4 | mol C | Carbon cost to construct a single flower. |
+| **Fruit Properties** |||||
+|| fruit_density | 525000 | g/m³ | Density of fruit tissue. |
+|| fruit_carbon_percentage | 0.4786 | - | Fraction of fruit dry weight that is carbon. |
+| **Respiration Rates** |||||
+|| stem_maintenance_respiration_rate | 3.5024e-5 | mol C/mol C/day | Daily maintenance respiration rate for stem tissue as fraction of stem carbon content. |
+|| root_maintenance_respiration_rate | 3.5024e-5 | mol C/mol C/day | Daily maintenance respiration rate for root tissue as fraction of root carbon content. |
+|| growth_respiration_fraction | 0.28 | - | Fraction of total carbon used during growth that goes toward respiration rather than structure. |
+| **Organ Abortion Thresholds** |||||
+|| carbohydrate_abortion_threshold | 0.1 | g C/g DW | Carbon concentration threshold below which fruits/flowers may be aborted. |
+|| carbohydrate_pruning_threshold | 0.01 | g C/g DW | Carbon concentration threshold below which entire shoots may be pruned. |
+|| bud_death_threshold_days | 2 | days | Duration of time below abortion threshold before fruits/flowers are aborted. |
+|| branch_death_threshold_days | 5 | days | Duration of time below pruning threshold before shoots are removed. |
+| **Growth Modulation Thresholds** |||||
+|| carbohydrate_phyllochron_threshold | 0.05 | g C/g DW | Carbon concentration below which phyllochron (leaf emergence rate) is slowed. |
+|| carbohydrate_vegetative_break_threshold | 0.15 | g C/g DW | Carbon concentration below which vegetative bud break probability is reduced. |
+|| carbohydrate_growth_threshold | 0.1 | g C/g DW | Carbon concentration below which radial growth rate is reduced. |
+| **Carbon Transfer** |||||
+|| carbohydrate_transfer_threshold | 0.05 | g C/g DW | Minimum carbon concentration required for a shoot to export carbon to other shoots. |
+|| carbon_conductance_down | 0.9 | - | Conductance coefficient for carbon transfer from child shoots to parent shoots (0-1). Typically larger than upward conductance. |
+|| carbon_conductance_up | 0.18 | - | Conductance coefficient for carbon transfer from parent shoots to child shoots (0-1). Typically smaller than downward conductance. |
+
+\subsection CarbParamSet Setting Parameters
+
+Parameters are set using the \ref PlantArchitecture::setPlantCarbohydrateModelParameters() method. Default parameter values are used unless explicitly modified:
+
+~~~~~~
+PlantArchitecture plantarchitecture(&context);
+plantarchitecture.enableCarbohydrateModel();
+
+// Create custom parameter set
+CarbohydrateParameters carb_params;
+carb_params.stem_density = 600000;  // Denser wood
+carb_params.SLA = 0.030;  // Different specific leaf area
+carb_params.carbohydrate_abortion_threshold = 0.12;  // More tolerant to low carbon
+carb_params.carbon_conductance_up = 0.25;  // Faster upward carbon transport
+
+// Load and build plant
+plantarchitecture.loadPlantModelFromLibrary("tomato");
+uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(nullorigin, 0);
+
+// Apply parameters to plant
+plantarchitecture.setPlantCarbohydrateModelParameters(plantID, carb_params);
+~~~~~~
+
+Parameters can also be set for multiple plants simultaneously:
+
+~~~~~~
+std::vector<uint> plantIDs = {plantID1, plantID2, plantID3};
+plantarchitecture.setPlantCarbohydrateModelParameters(plantIDs, carb_params);
+~~~~~~
+
+\section CarbInitialization Initializing Carbon Pools
+
+Before growing a plant with the carbohydrate model enabled, carbon pools must be initialized. This sets the initial carbon concentration in each shoot based on the volume of its internodes. Three initialization methods are available:
+
+**1. Initialize all plants:**
+~~~~~~
+// Initialize all plants in the simulation
+float initial_concentration = 1500.0;  // mol C/m³
+plantarchitecture.initializeCarbohydratePool(initial_concentration);
+~~~~~~
+
+**2. Initialize specific plant:**
+~~~~~~
+// Initialize a single plant
+plantarchitecture.initializePlantCarbohydratePool(plantID, initial_concentration);
+~~~~~~
+
+**3. Initialize specific shoot:**
+~~~~~~
+// Initialize a single shoot within a plant
+plantarchitecture.initializeShootCarbohydratePool(plantID, shootID, initial_concentration);
+~~~~~~
+
+The carbon pool for each shoot is calculated as:
+\f[
+\text{carbohydrate_pool} = C_{\text{conc}} \times V_{\text{internode}}
+\f]
+
+where \f$C_{\text{conc}}\f$ is the specified concentration (mol C/m³) and \f$V_{\text{internode}}\f$ is the total volume of internodes in the shoot (m³).
+
+**Important Notes:**
+- Carbon pools should be initialized after plant construction but before calling \ref PlantArchitecture::advanceTime()
+- The initial concentration should be high enough to support at least a few days of growth and maintenance respiration
+- Typical initial concentrations range from 1000-2000 mol C/m³, but this is species-dependent
+- If pools are not initialized, they default to zero and plants may immediately experience carbon stress
+
+\section CarbMechanisms Model Mechanisms
+
+\subsection CarbSources Carbon Sources
+
+The primary source of carbon in the model is leaf-level net photosynthesis calculated by the Photosynthesis plugin. The model reads primitive data labeled "net_photosynthesis" from leaf primitives, which should be in units of μmol CO₂ m⁻² s⁻¹.
+
+During each call to \ref PlantArchitecture::advanceTime(), the model:
+1. Accumulates photosynthesis over the timestep using an hourly time resolution
+2. Converts CO₂ uptake to carbon (1 mol CO₂ = 1 mol C)
+3. Adds accumulated carbon to the carbohydrate pool of the shoot containing each leaf
+
+If the "net_photosynthesis" data is not present on leaf primitives (e.g., Photosynthesis plugin not run), the model issues a warning and continues without adding photosynthate. This allows for testing of the model's carbon sink and transfer mechanisms independently.
+
+~~~~~~
+// Typical workflow integrating with Photosynthesis plugin
+PhotosynthesisModel photosynthesis(&context);
+PlantArchitecture plantarchitecture(&context);
+
+plantarchitecture.enableCarbohydrateModel();
+plantarchitecture.loadPlantModelFromLibrary("bean");
+uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(nullorigin, 0);
+plantarchitecture.initializePlantCarbohydratePool(plantID, 1500);
+
+// Growth loop
+for(int day = 0; day < 60; day++){
+    // Run photosynthesis model to calculate net photosynthesis
+    photosynthesis.run();
+
+    // Advance plant growth - automatically uses photosynthesis data
+    plantarchitecture.advanceTime(1.0);
+}
+~~~~~~
+
+\subsection CarbSinks Carbon Sinks
+
+Carbon from the carbohydrate pool is consumed by three main processes:
+
+\subsubsection CarbMaintResp Maintenance Respiration
+
+Maintenance respiration represents the carbon cost of maintaining existing tissue. It is calculated separately for shoot (stem) and root tissues:
+
+\f[
+R_{\text{maint}} = (r_{\text{stem}} \times C_{\text{stem}} + r_{\text{root}} \times C_{\text{root}}) \times \Delta t
+\f]
+
+where:
+- \f$r_{\text{stem}}\f$ is the stem maintenance respiration rate (mol C/mol C/day)
+- \f$r_{\text{root}}\f$ is the root maintenance respiration rate (mol C/mol C/day)
+- \f$C_{\text{stem}}\f$ is the carbon content of shoot stem tissue (mol C)
+- \f$C_{\text{root}}\f$ is the carbon content of root tissue (mol C), calculated from shoot carbon using the shoot-root ratio
+- \f$\Delta t\f$ is the timestep (days)
+
+Stem carbon content is calculated from internode volume and carbon density, which increases with age according to:
+
+\f[
+\rho_C(t) = \rho_{C,\text{initial}} + (\rho_{C,\text{mature}} - \rho_{C,\text{initial}}) \times \min\left(1, \frac{t}{t_{\text{maturity}}}\right)
+\f]
+
+where \f$\rho_{C,\text{initial}} = \rho_{C,\text{mature}} \times \text{initial_density_ratio}\f$.
+
+For dormant shoots, maintenance respiration is reduced by 80% (multiplied by 0.2).
+
+\subsubsection CarbGrowthResp Growth Respiration
+
+Growth respiration represents the carbon cost of synthesizing new tissue. It is calculated each time new organs are created or existing organs grow:
+
+**Leaf Construction:**
+\f[
+C_{\text{leaf}} = \frac{f_{\text{leaf,C}}}{M_C \times \text{SLA}} \times A_{\text{leaf}}
+\f]
+
+where \f$f_{\text{leaf,C}}\f$ is the leaf carbon percentage, \f$M_C\f$ is the molecular weight of carbon (12 g/mol), and \f$A_{\text{leaf}}\f$ is leaf area (m²).
+
+**Stem Construction:**
+\f[
+C_{\text{stem}} = \frac{\rho_{\text{stem}} \times f_{\text{stem,C}}}{M_C} \times \Delta V_{\text{stem}}
+\f]
+
+where \f$\rho_{\text{stem}}\f$ is stem density (g/m³), \f$f_{\text{stem,C}}\f$ is stem carbon percentage, and \f$\Delta V_{\text{stem}}\f$ is the change in stem volume (m³).
+
+**Flower Construction:**
+\f[
+C_{\text{flower}} = C_{\text{flower,total}} \times N_{\text{flowers}}
+\f]
+
+**Fruit Construction:**
+\f[
+C_{\text{fruit}} = \frac{\rho_{\text{fruit}} \times f_{\text{fruit,C}}}{M_C} \times \Delta V_{\text{fruit}}
+\f]
+
+**Root Allocation:**
+
+Root construction costs are added to the above-ground costs using the shoot-root ratio:
+\f[
+C_{\text{total}} = C_{\text{shoot}} \times \left(1 + \frac{1}{\text{shoot_root_ratio}}\right)
+\f]
+
+\subsubsection CarbRadialGrowth Radial Growth
+
+When the \ref ShootParameters::girth_area_factor parameter is non-zero, internodes increase in radius over time based on downstream leaf area. This radial growth requires carbon, which is subtracted from the carbohydrate pool. If the carbohydrate concentration is below the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_growth_threshold</span>\endhtmlonly, radial growth is reduced proportionally to carbon availability.
+
+\subsection CarbTransfer Carbon Transfer Between Shoots
+
+Carbon can be transferred between shoots within a plant to redistribute resources from carbon-rich to carbon-limited shoots. The transfer mechanism is <b>bidirectional</b> and <b>gradient-driven</b>, allowing carbon to flow in either direction based on concentration differences. Importantly, both upward (parent-to-child) and downward (child-to-parent) transfers occur simultaneously during each timestep, with the net flow direction determined by the concentration gradient and the asymmetric conductance parameters.
+
+This shoot-to-shoot transfer mechanism represents vascular transport of mobile carbohydrates (primarily sucrose) through the phloem. The conductance parameters can be tuned to match species-specific transport characteristics and the asymmetry between source-to-sink (upward) and sink-to-source (downward) flows.
+
+\subsubsection CarbTransferUp Upward Transfer (Parent to Child)
+
+Parent shoots can export carbon to their child shoots when the parent's carbon concentration exceeds the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_transfer_threshold</span>\endhtmlonly. This transfer represents the flow of photosynthate from established shoots to developing distal branches. The amount of carbon transferred depends on:
+
+1. The concentration gradient between parent and child
+2. The volume of the receiving child shoot
+3. The amount of carbon available above the transfer threshold
+
+The transfer is calculated as:
+
+\f[
+\Delta C_{\text{transfer}} = \min\left(\Delta C_{\text{demand}}, C_{\text{available}} \times f_{\text{child}}\right)
+\f]
+
+where the demand is:
+
+\f[
+\Delta C_{\text{demand}} = k_{\text{up}} \times \Delta C \times V_{\text{transfer}} \times f_{\text{child}} \times \Delta t
+\f]
+
+and:
+- \f$k_{\text{up}}\f$ is the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbon_conductance_up</span>\endhtmlonly parameter (dimensionless, 0-1)
+- \f$\Delta C = C_{\text{parent}} - C_{\text{child}}\f$ is the concentration gradient (mol C/m³)
+- \f$V_{\text{transfer}} = \min(V_{\text{parent}}, V_{\text{child}})\f$ is the effective transfer volume (m³)
+- \f$f_{\text{child}} = V_{\text{child}} / \sum V_{\text{children}}\f$ is the volume fraction of this child among all children
+- \f$C_{\text{available}}\f$ is the parent's available carbon pool above the transfer threshold (mol C)
+- \f$\Delta t\f$ is the timestep (days)
+
+Key features of upward transfer:
+- Transfer only occurs if \f$C_{\text{parent}} > C_{\text{child}}\f$ (concentration gradient favors upward flow)
+- Carbon is allocated to multiple child shoots proportionally based on their volume
+- Larger child shoots receive more carbon than smaller ones
+- Transfer is limited to carbon above the transfer threshold (shoots retain minimum reserves)
+
+\subsubsection CarbTransferDown Downward Transfer (Child to Parent)
+
+Child shoots can export carbon to their parent shoot when the child's concentration exceeds both the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_transfer_threshold</span>\endhtmlonly and the parent's concentration. This transfer represents the mobilization of carbohydrates from productive distal branches back to the main stem, which is characteristic of mature branches with high photosynthetic capacity.
+
+The downward transfer is simpler than upward transfer, with each child shoot transferring independently to its parent:
+
+\f[
+\Delta C_{\text{transfer}} = \min\left(\Delta C_{\text{demand}}, C_{\text{available}}\right)
+\f]
+
+where:
+
+\f[
+\Delta C_{\text{demand}} = k_{\text{down}} \times (C_{\text{child}} - C_{\text{parent}}) \times V_{\text{child}} \times \Delta t
+\f]
+
+and:
+- \f$k_{\text{down}}\f$ is the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbon_conductance_down</span>\endhtmlonly parameter (dimensionless, 0-1)
+- \f$C_{\text{child}}\f$ and \f$C_{\text{parent}}\f$ are the carbon concentrations (mol C/m³)
+- \f$V_{\text{child}}\f$ is the volume of the child shoot (m³)
+- \f$C_{\text{available}}\f$ is the child's available carbon pool above the transfer threshold (mol C)
+
+Key features of downward transfer:
+- Transfer only occurs if \f$C_{\text{child}} > C_{\text{parent}}\f$ (concentration gradient favors downward flow)
+- Each child transfers independently based on its own concentration gradient
+- The default \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbon_conductance_down</span>\endhtmlonly (0.9) is typically 5× larger than \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbon_conductance_up</span>\endhtmlonly (0.18)
+- This asymmetry reflects the generally faster phloem transport from mature source leaves to sink tissues
+
+\subsubsection CarbTransferBidirectional Bidirectional Dynamics
+
+During each timestep, <b>both upward and downward transfers are evaluated and executed</b>. This means that carbon can simultaneously flow:
+- From a carbon-rich parent to its carbon-poor children (upward)
+- From carbon-rich children to their carbon-poor parent (downward)
+- In opposite directions in different parts of the same plant
+
+The net flow direction in any parent-child pair depends on:
+1. Their relative carbon concentrations
+2. Whether each shoot's concentration exceeds the transfer threshold
+3. The asymmetric conductance parameters
+
+This bidirectional mechanism allows the plant to dynamically redistribute carbon throughout its architecture in response to local carbon availability, mimicking the complex source-sink dynamics of real plant vascular systems. Photosynthetically productive regions naturally become sources that export carbon, while growing regions with high respiration costs become sinks that import carbon.
+
+\subsection CarbGrowthMod Dynamic Growth Modulation
+
+The carbohydrate model dynamically adjusts growth rates based on carbon availability, providing a mechanistic link between carbon supply and plant development.
+
+\subsubsection CarbPhylloMod Phyllochron Modulation
+
+The phyllochron (time between successive leaf emergences) can be increased above its minimum value when carbon becomes limiting. The instantaneous phyllochron is calculated as:
+
+\f[
+\tau_{\text{phyl}} = \max\left(\tau_{\text{min}}, \frac{\tau_{\text{min}}}{r_{\text{carbon}} \times \Delta t}\right)
+\f]
+
+where \f$\tau_{\text{min}}\f$ is the \htmlonly<span style="font-family: Courier, monospace; color: blue;">phyllochron_min</span>\endhtmlonly parameter from \ref ShootParameters, \f$\Delta t\f$ is the timestep (days), and \f$r_{\text{carbon}}\f$ is the carbon availability ratio:
+
+\f[
+r_{\text{carbon}} = \frac{C_{\text{pool}}}{C_{\text{threshold}} \times \rho_{\text{stem}} \times V_{\text{shoot}} / M_C}
+\f]
+
+where \f$C_{\text{pool}}\f$ is the current carbon pool (mol C), \f$C_{\text{threshold}}\f$ is the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_phyllochron_threshold</span>\endhtmlonly (g C/g DW), \f$\rho_{\text{stem}}\f$ is the stem density (g/m³), \f$V_{\text{shoot}}\f$ is the shoot volume (m³), and \f$M_C\f$ is the molecular weight of carbon (12 g/mol).
+
+When carbon is abundant (ratio above 1.0), the phyllochron equals its minimum value (maximum growth rate). As carbon becomes limiting, the phyllochron increases, slowing the rate of leaf production. Note that the phyllochron adjustment is timestep-dependent, with smaller timesteps resulting in stronger adjustment.
+
+\subsubsection CarbElongMod Elongation Modulation
+
+Similarly, internode elongation is reduced when carbon is below the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_growth_threshold</span>\endhtmlonly. However, this modulation is currently not explicitly implemented in the code - elongation continues at the specified rate, but the construction costs are still subtracted from the carbon pool.
+
+\subsubsection CarbGirthMod Radial Growth Modulation
+
+When carbon concentration falls below the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_growth_threshold</span>\endhtmlonly, radial growth (girth increase) is slowed. The radial growth rate is scaled by the carbon availability ratio:
+
+\f[
+\frac{dr}{dt} = \frac{dr}{dt}\bigg|_{\text{max}} \times \max\left(0.05, r_{\text{carbon}}\right)
+\f]
+
+where the carbon availability ratio \f$r_{\text{carbon}}\f$ is calculated as described above. Growth is never reduced below 5% of the maximum rate (minimum scaling factor of 0.05).
+
+\subsubsection CarbBudMod Vegetative Bud Break Modulation
+
+The probability that a vegetative bud will break and produce a new shoot can be reduced when carbon is limiting. If the carbon concentration is below the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_vegetative_break_threshold</span>\endhtmlonly, the bud break probability is scaled linearly:
+
+\f[
+P_{\text{break}} = P_{\text{base}} \times \frac{C_{\text{conc}}}{C_{\text{threshold}}}
+\f]
+
+where \f$P_{\text{base}}\f$ is the base bud break probability from \ref ShootParameters and \f$C_{\text{threshold}}\f$ is the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_vegetative_break_threshold</span>\endhtmlonly. This allows the plant to suppress branching when carbon reserves are low.
+
+\subsection CarbAbortion Organ Abortion and Shoot Pruning
+
+When carbon stress persists, the model can abort individual organs or prune entire shoots to reduce carbon demand and maintain plant viability. This represents a plant's ability to shed organs under resource limitation.
+
+\subsubsection CarbFlowerFruitAbort Flower and Fruit Abortion
+
+If a shoot's carbon concentration falls below the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_abortion_threshold</span>\endhtmlonly for longer than \htmlonly<span style="font-family: Courier, monospace; color: blue;">bud_death_threshold_days</span>\endhtmlonly, fruits and flowers are progressively aborted:
+
+1. The model identifies the oldest (earliest-created) flower or fruit on the shoot
+2. The organ is removed from the Context (geometry deleted)
+3. Construction carbon is returned to the shoot's carbohydrate pool
+4. If carbon concentration remains below threshold, the process repeats for the next oldest organ
+
+This continues until either:
+- Carbon concentration rises above the threshold
+- All flowers and fruits are aborted
+
+\subsubsection CarbShootPrune Shoot Pruning
+
+If carbon stress is more severe and persists longer, entire shoots can be pruned. When a shoot's carbon concentration falls below the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_pruning_threshold</span>\endhtmlonly for longer than \htmlonly<span style="font-family: Courier, monospace; color: blue;">branch_death_threshold_days</span>\endhtmlonly, the entire shoot is removed using \ref PlantArchitecture::pruneBranch().
+
+Note that the pruning threshold is typically much lower than the abortion threshold (default 0.01 vs 0.1 g C/g DW), and the time threshold is longer (default 5 vs 2 days). This ensures that pruning only occurs under severe, prolonged carbon stress.
+
+\subsubsection CarbImmediateDeath Immediate Shoot Death
+
+In addition to time-based thresholds, shoots are immediately pruned if:
+1. **Negative carbon pool**: If respiration or growth costs drive the carbon pool negative
+2. **Zero productivity**: If the shoot has zero leaf area, zero child shoot volume, and is not dormant (i.e., cannot contribute to carbon balance)
+
+These conditions indicate that the shoot has become a pure carbon sink with no prospect of recovery.
+
+\section CarbOutput Output Data
+
+When the carbohydrate model is enabled, an optional output data field can be activated to visualize carbon concentrations:
+
+~~~~~~
+plantarchitecture.optionalOutputData("carbohydrate_concentration");
+~~~~~~
+
+This creates object data labeled "carbohydrate_concentration" with type \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly on internode tube objects. The value represents the carbon concentration in units of mol C/m³:
+
+\f[
+C_{\text{conc}} = \frac{C_{\text{pool}}}{V_{\text{shoot}}}
+\f]
+
+The concentration is constant along each shoot (all internodes in a shoot have the same value) and is zero for non-internode organs (leaves, petioles, flowers, fruit).
+
+This data can be used to:
+- Visualize carbon distribution across the plant architecture
+- Identify carbon-limited regions of the plant
+- Validate that carbon transfer is occurring as expected
+- Export for post-processing and analysis
+
+*/

@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: ShootParameters Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -194,10 +227,10 @@ Data Fields</h2></td></tr>
 <tr class="memdesc:ad2ab1efbad95344deeea66b8aece950b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cross-sectional area of internode in cm² branch area per m² downstream leaf area; set 0 to disable girth scaling.  <br /></td></tr>
 <tr class="separator:ad2ab1efbad95344deeea66b8aece950b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aac56cf0d2bb7c8ba8c6df5988bd9efe6" id="r_aac56cf0d2bb7c8ba8c6df5988bd9efe6"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aac56cf0d2bb7c8ba8c6df5988bd9efe6">insertion_angle_tip</a></td></tr>
-<tr class="memdesc:aac56cf0d2bb7c8ba8c6df5988bd9efe6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Angle (deg) of the child shoot with respect to the parent shoot at the tip of the parent shoot.  <br /></td></tr>
+<tr class="memdesc:aac56cf0d2bb7c8ba8c6df5988bd9efe6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Angle (deg) at which child shoots emerge from this parent shoot at the tip of the parent shoot.  <br /></td></tr>
 <tr class="separator:aac56cf0d2bb7c8ba8c6df5988bd9efe6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a451f15d619ebbf33bdf192a2397b79e9" id="r_a451f15d619ebbf33bdf192a2397b79e9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a451f15d619ebbf33bdf192a2397b79e9">insertion_angle_decay_rate</a></td></tr>
-<tr class="memdesc:a451f15d619ebbf33bdf192a2397b79e9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Rate (deg/node) at which the child insertion angle increases moving down the parent shoot.  <br /></td></tr>
+<tr class="memdesc:a451f15d619ebbf33bdf192a2397b79e9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Rate (deg/node) at which the child shoot insertion angle increases moving down this parent shoot.  <br /></td></tr>
 <tr class="separator:a451f15d619ebbf33bdf192a2397b79e9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afe1464fa9e5c6ed18754d73c5b3cb171" id="r_afe1464fa9e5c6ed18754d73c5b3cb171"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afe1464fa9e5c6ed18754d73c5b3cb171">internode_length_max</a></td></tr>
 <tr class="memdesc:afe1464fa9e5c6ed18754d73c5b3cb171"><td class="mdescLeft">&#160;</td><td class="mdescRight">Maximum internode length (m) of a child shoot.  <br /></td></tr>
@@ -229,6 +262,9 @@ Data Fields</h2></td></tr>
 <tr class="memitem:a4a8af02c66f9f111f03b0b35600db969" id="r_a4a8af02c66f9f111f03b0b35600db969"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4a8af02c66f9f111f03b0b35600db969">vegetative_bud_break_probability_min</a></td></tr>
 <tr class="memdesc:a4a8af02c66f9f111f03b0b35600db969"><td class="mdescLeft">&#160;</td><td class="mdescRight">Minimum probability that a bud will break and form a new shoot.  <br /></td></tr>
 <tr class="separator:a4a8af02c66f9f111f03b0b35600db969"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a06bd114df9fe7c91a22f6b450b466ee6" id="r_a06bd114df9fe7c91a22f6b450b466ee6"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a06bd114df9fe7c91a22f6b450b466ee6">vegetative_bud_break_probability_max</a></td></tr>
+<tr class="memdesc:a06bd114df9fe7c91a22f6b450b466ee6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Maximum probability that a bud will break and form a new shoot.  <br /></td></tr>
+<tr class="separator:a06bd114df9fe7c91a22f6b450b466ee6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abe60e69a5cf66199d1dfd6688e4d4ced" id="r_abe60e69a5cf66199d1dfd6688e4d4ced"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abe60e69a5cf66199d1dfd6688e4d4ced">vegetative_bud_break_probability_decay_rate</a></td></tr>
 <tr class="memdesc:abe60e69a5cf66199d1dfd6688e4d4ced"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decay rate (1/node) of the vegetative bud-break probability along the shoot; sign determines direction.  <br /></td></tr>
 <tr class="separator:abe60e69a5cf66199d1dfd6688e4d4ced"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -263,7 +299,7 @@ Friends</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00809">809</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00874">874</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="ab3003af230c520f6ff26010ca3ef850e" name="ab3003af230c520f6ff26010ca3ef850e"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ab3003af230c520f6ff26010ca3ef850e">&#9670;&#160;</a></span>ShootParameters() <span class="overload">[1/2]</span></h2>
@@ -282,7 +318,7 @@ Friends</h2></td></tr>
 
 <p>Default constructor - does not set random number generator. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00166">166</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00245">245</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -311,7 +347,7 @@ Friends</h2></td></tr>
 
 <p>Constructor - sets random number generator. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00168">168</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00248">248</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -345,7 +381,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>The sizes of the input vectors must match, and neither input vector can be empty. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00208">208</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8cpp_source.html#l00289">289</a> of file <a class="el" href="_plant_architecture_8cpp_source.html">PlantArchitecture.cpp</a>.</p>
 
 </div>
 </div>
@@ -372,7 +408,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00888">888</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00956">956</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -397,7 +433,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00944">944</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01014">1014</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -421,7 +457,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00945">945</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l01015">1015</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -440,7 +476,7 @@ Friends</h2></td></tr>
 
 <p>Roll angle (deg) of the shoot specifying the orientation of the first petiole relative to the parent shoot. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00843">843</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00908">908</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -458,7 +494,7 @@ Friends</h2></td></tr>
 
 <p>Yaw angle (deg) of the shoot relative to the parent shoot. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00845">845</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00910">910</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -476,7 +512,7 @@ Friends</h2></td></tr>
 
 <p>Flag indicating determinate shoot growth: true = stop after flowering, false = continue growth. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00874">874</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00942">942</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -494,7 +530,7 @@ Friends</h2></td></tr>
 
 <p>Maximum relative elongation rate (m · m⁻¹ · day⁻¹) of the shoot internode; actual rate may be reduced dynamically. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00856">856</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00921">921</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -512,7 +548,7 @@ Friends</h2></td></tr>
 
 <p>Probability that a phytomer will flower. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00864">864</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00932">932</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -530,7 +566,7 @@ Friends</h2></td></tr>
 
 <p>Flag indicating whether flower buds require a winter dormancy period to emerge. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00870">870</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00938">938</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -548,7 +584,7 @@ Friends</h2></td></tr>
 
 <p>Probability that a flower will set fruit. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00866">866</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00934">934</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -566,7 +602,7 @@ Friends</h2></td></tr>
 
 <p>Cross-sectional area of internode in cm² branch area per m² downstream leaf area; set 0 to disable girth scaling. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00831">831</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00896">896</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -584,7 +620,7 @@ Friends</h2></td></tr>
 
 <p>Gravitropic curvature (deg/m); positive values curve the shoot upward toward vertical. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00847">847</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00912">912</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -602,7 +638,7 @@ Friends</h2></td></tr>
 
 <p>Flag indicating whether vegetative buds require a winter dormancy period to emerge. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00872">872</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00940">940</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -618,9 +654,9 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Rate (deg/node) at which the child insertion angle increases moving down the parent shoot. </p>
+<p>Rate (deg/node) at which the child shoot insertion angle increases moving down this parent shoot. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00835">835</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00900">900</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -636,9 +672,9 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Angle (deg) of the child shoot with respect to the parent shoot at the tip of the parent shoot. </p>
+<p>Angle (deg) at which child shoots emerge from this parent shoot at the tip of the parent shoot. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00833">833</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00898">898</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -656,7 +692,7 @@ Friends</h2></td></tr>
 
 <p>Rate (m/node) at which internode length decreases moving down the parent shoot. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00841">841</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00906">906</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -674,7 +710,7 @@ Friends</h2></td></tr>
 
 <p>Maximum internode length (m) of a child shoot. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00837">837</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00902">902</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -692,7 +728,7 @@ Friends</h2></td></tr>
 
 <p>Minimum internode length (m) of a child shoot. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00839">839</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00904">904</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -710,7 +746,7 @@ Friends</h2></td></tr>
 
 <p>Maximum number of nodes/phytomers along a shoot. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00827">827</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00892">892</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -728,7 +764,7 @@ Friends</h2></td></tr>
 
 <p>Maximum number of nodes/phytomers that a shoot can produce in a single season (≤ max_nodes) </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00829">829</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00894">894</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -746,7 +782,7 @@ Friends</h2></td></tr>
 
 <p>FLAG: description not found in specification table – please advise. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00862">862</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00930">930</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -764,7 +800,7 @@ Friends</h2></td></tr>
 
 <p>Minimum time (days) between the emergence of successive phytomers along the shoot. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00854">854</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00919">919</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -783,7 +819,7 @@ Friends</h2></td></tr>
 <p>Stores parameters related to a phytomer in the shoot. </p>
 <dl class="section note"><dt>Note</dt><dd>This variable encapsulates properties and behaviors specific to the phytomers of a plant’s shoot system. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00822">822</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00887">887</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -801,7 +837,7 @@ Friends</h2></td></tr>
 
 <p>Standard deviation (deg · m⁻⁰·⁵) controlling random wiggle (tortuosity) along the shoot. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00849">849</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00914">914</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -819,7 +855,25 @@ Friends</h2></td></tr>
 
 <p>Decay rate (1/node) of the vegetative bud-break probability along the shoot; sign determines direction. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00860">860</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00928">928</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+
+</div>
+</div>
+<a id="a06bd114df9fe7c91a22f6b450b466ee6" name="a06bd114df9fe7c91a22f6b450b466ee6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a06bd114df9fe7c91a22f6b450b466ee6">&#9670;&#160;</a></span>vegetative_bud_break_probability_max</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_random_parameter__float.html">RandomParameter_float</a> ShootParameters::vegetative_bud_break_probability_max</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Maximum probability that a bud will break and form a new shoot. </p>
+
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00925">925</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -837,7 +891,7 @@ Friends</h2></td></tr>
 
 <p>Minimum probability that a bud will break and form a new shoot. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00858">858</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00923">923</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>
@@ -855,7 +909,7 @@ Friends</h2></td></tr>
 
 <p>Time (days) after bud creation or dormancy release before a vegetative bud breaks. </p>
 
-<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00868">868</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_plant_architecture_8h_source.html#l00936">936</a> of file <a class="el" href="_plant_architecture_8h_source.html">PlantArchitecture.h</a>.</p>
 
 </div>
 </div>

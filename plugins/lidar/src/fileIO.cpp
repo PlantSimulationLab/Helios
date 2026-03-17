@@ -52,8 +52,12 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
     // Using "pugixml" parser.  See pugixml.org
     pugi::xml_document xmldoc;
 
+    // Resolve file path using project-based resolution
+    std::filesystem::path resolved_path = resolveProjectFile(filename);
+    std::string resolved_filename = resolved_path.string();
+
     // load file
-    pugi::xml_parse_result result = xmldoc.load_file(filename);
+    pugi::xml_parse_result result = xmldoc.load_file(resolved_filename.c_str());
 
     // error checking
     if (!result) {
@@ -398,7 +402,11 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
 
 size_t LiDARcloud::loadASCIIFile(uint scanID, const std::string &ASCII_data_file) {
 
-    ifstream datafile(ASCII_data_file); // open the file
+    // Resolve file path using project-based resolution
+    std::filesystem::path resolved_path = resolveProjectFile(ASCII_data_file);
+    std::string resolved_filename = resolved_path.string();
+
+    ifstream datafile(resolved_filename); // open the file
 
     if (!datafile.is_open()) { // check that file exists
         helios_runtime_error("ERROR (LiDARcloud::loadASCIIFile): ASCII data file '" + ASCII_data_file + "' does not exist.");
@@ -812,7 +820,7 @@ void LiDARcloud::exportPointCloud(const char *filename) {
 
             std::string filename_a = filename;
             char scan[20];
-            sprintf(scan, "%d", i);
+            snprintf(scan, sizeof(scan), "%d", i);
 
             size_t dotindex = filename_a.find_last_of(".");
             if (dotindex == filename_a.size() - 1 || filename_a.size() - 1 - dotindex > 4) { // no file extension was provided
@@ -1138,9 +1146,8 @@ std::vector<uint> LiDARcloud::loadTreeQSM_impl(helios::Context *context, const s
 
             if (use_colormap) {
                 // Sample color from colormap based on branch ID
-                // Use branch_id as seed for consistent but pseudo-random color selection
-                std::srand(static_cast<unsigned int>(std::abs(branch_id)));
-                int color_index = std::rand() % colormap.size();
+                // Use branch_id modulo colormap size for deterministic color selection
+                int color_index = std::abs(branch_id) % colormap.size();
                 helios::RGBcolor branch_color = colormap[color_index];
 
                 // Create a color vector for all nodes in this branch

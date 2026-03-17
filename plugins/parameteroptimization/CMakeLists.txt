@@ -6,6 +6,8 @@ add_library(parameteroptimization STATIC "src/ParameterOptimization.cpp" "tests/
 
 target_include_directories(parameteroptimization PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" )
 
-add_executable( optimization_tests "tests/TestMain.cpp" )
-target_link_libraries( optimization_tests PRIVATE parameteroptimization )
-add_test( NAME optimization_tests COMMAND optimization_tests )
+if(BUILD_TESTS)
+    add_executable( parameteroptimization_tests "tests/TestMain.cpp" )
+    target_link_libraries( parameteroptimization_tests PRIVATE parameteroptimization )
+    add_test( NAME parameteroptimization_tests COMMAND parameteroptimization_tests )
+endif()

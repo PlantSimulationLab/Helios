@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: Tutorial 0: Context Self-Test Tutorial</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -171,8 +204,6 @@ $(function(){initNavTree('context_selftest_tutorial.html',''); initResizable(tru
 </ol>
 <h1><a class="anchor" id="program_1"></a>
 C++ Program</h1>
-<p><br  />
-</p>
 <p>We will first write a basic C++ program that uses types included as part of the Helios library. The program is written in the same way any C++ program, and contains a <a href="http://en.cppreference.com/w/cpp/language/main_function">main function</a>. Helios simply provides a group of data types and functions that manages model geometry and data. These types and functions are defined in the header file "Context.h", which must be included in any files that use Helios constructs.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
 <div class="line"> </div>
@@ -181,9 +212,8 @@ C++ Program</h1>
 <div class="line">  <span class="comment">//Write program here</span></div>
 <div class="line"> </div>
 <div class="line">}</div>
-</div><!-- fragment --><p>The above program does not actually perform any calculations. Next, we will declare and instance of the Helios context, which is a C++ <a href="http://en.cppreference.com/w/cpp/language/class">class</a> that contains a number of functions and data structures. We will declare an instance of the class, which we will give the arbitrary name of "context". <br  />
-</p>
-<p>Next, we will call the function within the Context class called <a class="el" href="classhelios_1_1_context.html#af55c655d7c570741080048ef28a0f750">selfTest()</a>, which performs a number of basic tests to ensure that the context is working properly.</p>
+</div><!-- fragment --><p>The above program does not actually perform any calculations. Next, we will declare and instance of the Helios context, which is a C++ <a href="http://en.cppreference.com/w/cpp/language/class">class</a> that contains a number of functions and data structures. We will declare an instance of the class, which we will give the arbitrary name of "context".</p>
+<p>Next, we will call the function within the Context class called <a class="el" href="classhelios_1_1_context.html#a6398fd151db3205721d94c3b3895afe9">selfTest()</a>, which performs a number of basic tests to ensure that the context is working properly.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_context_8h.html">Context.h</a>&quot;</span></div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">int</span> main(){</div>
@@ -192,7 +222,7 @@ C++ Program</h1>
 <div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a> context;</div>
 <div class="line"> </div>
 <div class="line">   <span class="comment">//Run the self-test</span></div>
-<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#af55c655d7c570741080048ef28a0f750" title="Run a self-test of the Context. The Context self-test runs through validation checks of Context-relat...">selfTest</a>(); </div>
+<div class="line">   context.<a class="code hl_function" href="classhelios_1_1_context.html#a6398fd151db3205721d94c3b3895afe9" title="Run a self-test of the Context. The Context self-test runs through validation checks of Context-relat...">selfTest</a>(); </div>
 <div class="line"> </div>
 <div class="line">}</div>
 </div><!-- fragment --><p>Note that the Context is within the "helios" <a href="http://en.cppreference.com/w/cpp/language/namespace">namespace</a>. Alternatively, we could use the "using namespace helios" directive before our main function to avoid the need to explicitly specify the namespace for each name (i.e., "helios::" no longer needed).</p>
@@ -202,16 +232,16 @@ Building, Compiling, and Running</h1>
 <p>Before building and compiling, please reference the <a class="el" href="_dependent_software.html">Install and Set-up</a> page to ensure you have installed all required dependent libraries.</p>
 <p>The files needed to build and compile this tutorial are located in the directory "samples/context_selftest". There is a "CMakeLists.txt" file that contains the information needed to build the project. There is also the file "main.cpp" which contains the source code for the program that we wrote previously, and there is a directory called "build" which will be used to hold the files and folders for the current build of the code. Note, however, that the build directory could be placed anywhere and have any name.</p>
 <p>To build the project, change into the build directory. Next, use the "cmake" command to build the code. The argument to the cmake command should be an absolute or relative path to the directory that contains the CMakeLists.txt file for the build. Given the directory structure used in this project, the CMakeLists.txt file is up one directory, so the relative path to this directory is "..". The following commands should build the project, assuming you are starting from the base Helios directory:</p>
-<div class="fragment"><div class="line">$ cd samples/context_selftest/build</div>
-<div class="line">$ cmake ..</div>
+<div class="fragment"><div class="line">cd samples/context_selftest/build</div>
+<div class="line">cmake ..</div>
 </div><!-- fragment --><p>If all goes well, the command should output many lines of information, the last of which is</p>
-<div class="fragment"><div class="line">$ -- Build files have been written to: /path/to/Helios/samples/context_selftest/build</div>
+<div class="fragment"><div class="line">-- Build files have been written to: /path/to/Helios/samples/context_selftest/build</div>
 </div><!-- fragment --><p>and there should be a file named "Makefile" now in the build directory. Use this makefile to complile the code into an executable</p>
-<div class="fragment"><div class="line">$ make</div>
+<div class="fragment"><div class="line">make</div>
 </div><!-- fragment --><p>This should produce an executable file named "context_selftest" that can be run:</p>
-<div class="fragment"><div class="line">$ ./context_selftest</div>
+<div class="fragment"><div class="line">./context_selftest</div>
 </div><!-- fragment --><p>which should produce the following output:</p>
-<div class="fragment"><div class="line">$ Running Context self-test...passed.</div>
+<div class="fragment"><div class="line">Running Context self-test...passed.</div>
 </div><!-- fragment --><p>So what determines the name of the executable file (i.e., why is it called "context_selftest")? This was specified in the CMakeLists.txt file. If you open up the CMakeLists.txt file, you will find several inputs on the first couple of lines:</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#-------- USER INPUTS ---------#</span></div>
 <div class="line"> </div>

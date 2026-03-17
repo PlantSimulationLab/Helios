@@ -133,7 +133,7 @@
  
  \subsection WPTCustom Custom Tree Library Files
 
- User-specified XML tree library files can be utilized via the \ref WeberPennTree::loadXML() function. The argument to this function is an absolute or relative path to the XML file to be loaded. Note that as always relative file paths are relative to the project's build directory.
+ User-specified XML tree library files can be utilized via the \ref WeberPennTree::loadXML() function. The argument to this function is an absolute or relative path to the XML file to be loaded. Note that relative file paths are relative to the current working directory.
 
  \section WPTreeXML Creating Custom XML Files
  

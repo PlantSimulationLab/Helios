@@ -1,6 +1,6 @@
 /** \file "ProjectBuilder.h" ProjectBuilder header.
 
-Copyright (C) 2016-2025 Brian Bailey
+Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -68,15 +68,12 @@ void InitializeSimulation(const std::string &xml_input_file, helios::Context *co
 #endif // SOLARPOSITION
 
 #ifdef ENABLE_HELIOS_VISUALIZER
-#include "glew.h"
 #include "Visualizer.h"
-// IMGUI
-#include "GLFW/glfw3.h"
-#include "backends/imgui_impl_glfw.h"
-#include "backends/imgui_impl_opengl3.h"
-#include "imgui.h"
-#include "imgui_internal.h"
-#include "misc/cpp/imgui_stdlib.h"
+// Forward declarations to avoid pulling in heavy OpenGL/ImGui headers
+struct ImVec2;
+struct ImVec4;
+struct ImGuiIO;
+struct ImFont;
 #endif // HELIOS_VISUALIZER
 
 
@@ -97,14 +94,6 @@ std::string vec_to_string(const helios::vec3 &v);
  * \param[in] v Vector input
  */
 std::string vec_to_string(const helios::int2 &v);
-
-//! Function to linearly space between two vectors
-/**
- * \param[in] a Start point coordinates
- * \param[in] b End point coordinates
- * \param[in] num_points Total number of points (including a & b)
- */
-[[nodiscard]] std::vector<helios::vec3> linspace(const helios::vec3 &a, const helios::vec3 &b, int num_points);
 
 //! Function to return interpolated vector based on keypoints
 /**
@@ -202,6 +191,7 @@ struct bandGroup {
     std::vector<std::string> bands;
     bool grayscale;
     bool norm;
+    bool hdr;
 };
 
 //! Canopy struct
@@ -224,6 +214,7 @@ struct canopy {
 //! Object struct
 struct object {
     int index;
+    uint objID;
     std::string name;
     std::string file;
     std::string data_group;
@@ -242,15 +233,21 @@ struct object {
 
 //! Rig struct
 struct rig {
+    int num_images;
     std::string label;
     std::vector<distribution> position_noise;
+    std::vector<distribution> lookat_noise;
     helios::RGBcolor color;
     helios::vec3 position;
     helios::vec3 lookat;
+    std::vector<helios::vec3> camera_positions;
+    std::vector<helios::vec3> camera_lookats;
+    std::vector<int> keypoint_frames;
     std::set<std::string> camera_labels;
     std::set<std::string> light_labels;
     bool write_depth;
     bool write_norm_depth;
+    bool write_segmentation_mask;
 };
 
 bool parse_distribution(const std::string &input_string, distribution &converted_distribution);
@@ -298,13 +295,13 @@ private:
     bool built = false;
 
     //! Absorbed PAR value
-    float PAR_absorbed;
+    float PAR_absorbed = 0.f;
 
     //! Absorbed NIR value
-    float NIR_absorbed;
+    float NIR_absorbed = 0.f;
 
     //! Absorbed LW value
-    float LW_absorbed;
+    float LW_absorbed = 0.f;
 
     //! Turbidity
     float turbidity;
@@ -409,6 +406,15 @@ private:
     std::map<std::string, bool> bounding_boxes = {
             {"plantID", false}, {"leafID", false}, {"peduncleID", false}, {"closedflowerID", false}, {"openflowerID", false}, {"fruitID", false}, {"rank", false}, {"age", false}, {"carbohydrate_concentration", false}};
 
+    //! Default bounding box objects
+    std::set<std::string> bounding_boxes_default = {"plantID", "leafID", "peduncleID", "closedflowerID", "openflowerID", "fruitID", "rank"};
+
+    //! Bounding box objects associated with a primitive type
+    std::set<std::string> bounding_boxes_primitive;
+
+    //! Bounding box objects associated with an object type
+    std::set<std::string> bounding_boxes_object;
+
     //! Bounding boxes map
     std::map<std::string, int> bounding_boxes_map;
 
@@ -445,6 +451,8 @@ private:
     //! Set of data group names
     std::set<std::string> data_groups_set = {"All"};
 
+    std::vector<std::string> data_groups = {"All"};
+
     //! Ground area
     float ground_area;
 
@@ -471,6 +479,8 @@ private:
 
     //! XML Error String
     std::string xml_error_string;
+
+    rig default_rig{1, "default_rig", {}, {}, helios::RGBcolor(1, 0, 0), helios::vec3(0, 0, 1), helios::vec3(0, 0, 0), {helios::vec3(0, 0, 1)}, {helios::vec3(0, 0, 0)}, {1}, {}, {}, false, false, false};
 
     //! Rig labels
     std::vector<std::string> rig_labels;
@@ -511,6 +521,9 @@ private:
     //! Map keyed by rig name that returns rig index
     std::map<std::string, int> rig_dict;
 
+    //! Map keyed by rig name that returns the corresponding rig struct.
+    std::map<std::string, rig> rig_dict_;
+
     //! Rig labels
     std::set<std::string> rig_labels_set;
 
@@ -519,6 +532,9 @@ private:
 
     //! Vector of bools representing whether to write norm depth images for each rig
     std::vector<bool> write_norm_depth;
+
+    //! Vector of bools representing whether to write segmentation masks for each rig
+    std::vector<bool> write_segmentation_mask;
 
     //! Rig position
     helios::vec3 camera_position = {0, 0, 0};
@@ -651,7 +667,7 @@ private:
     helios::int2 ground_resolution = {1, 1};
 
     //! Ground texture file
-    std::string ground_texture_file = "plugins/visualizer/textures/dirt.jpg";
+    std::string ground_texture_file = "plugins/projectbuilder/inputs/dirt.jpg";
 
     //! Use ground texture file (0 = manually enter color, 1 = texture file, 2 = model file)
     int ground_flag = 1;
@@ -1099,6 +1115,30 @@ private:
     //! Dictionary containing UUIDs for every camera model
     std::map<std::string, std::vector<uint>> camera_models_dict;
 
+    //! General tab
+    void generalTab();
+
+    //! Canopy tab
+    void canopyTab();
+
+    //! Camera tab
+    void cameraTab();
+
+    //! Calculation tab
+    void calculationTab();
+
+    //! Object tab
+    void objectTab();
+
+    //! Radiation tab
+    void radiationTab();
+
+    //! Rig tab
+    void rigTab();
+
+    //! Light tab
+    void lightTab();
+
     //! Function to delete arrows denoting rig movement
     void deleteArrows();
 
@@ -1257,6 +1297,79 @@ private:
     //! Number of tiles
     helios::int2 num_tiles{5, 5};
 
+    //! Calculation type
+    std::string calculation_type = "primitive";
+
+    //! Calculation types
+    std::vector<std::string> calculation_types{"primitive", "object", "data group"};
+
+    //! Calculation selection
+    std::map<std::string, bool> calculation_selection_datagroup{{"All", false}};
+
+    //! Calculation selection primitive
+    std::map<std::string, bool> calculation_selection_primitive{{"All", false}};
+
+    //! Calculation labels
+    std::set<std::string> calculation_variable_choices;
+
+    //! Calculation label
+    std::string calculation_variable_global;
+
+    //! Calculation labels global
+    std::vector<std::string> calculation_variables_global = {""};
+
+    //! Calculation labels by primitive
+    std::vector<std::string> calculation_variables_primitive = {""};
+
+    //! Calculation scalars global
+    std::vector<float> calculation_scalars_global = {1.0};
+
+    //! Calculation scalars by primitive
+    std::vector<float> calculation_scalars_primitive = {1.0};
+
+    //! Operators for global calculation
+    std::vector<std::string> calculation_operators_global = {};
+
+    //! Operators for calculation by primitive
+    std::vector<std::string> calculation_operators_primitive = {};
+
+    //! Caclulation operator choices
+    std::set<std::string> calculation_operators_choices = {"+", "-", "/", "x"};
+
+    //! Operation Choices
+    std::set<std::string> calculation_aggregation_choices = {"None", "Mean", "Sum", "Area Weighted Mean", "Area Weighted Sum"};
+
+    //! Helios numeric types
+    // std::set<helios::HeliosDataType> heliosNumericTypes = {helios::HELIOS_TYPE_INT, helios::HELIOS_TYPE_UINT,
+    //                                                        helios::HELIOS_TYPE_FLOAT, helios::HELIOS_TYPE_DOUBLE};
+    std::set<helios::HeliosDataType> heliosNumericTypes = {helios::HELIOS_TYPE_FLOAT};
+
+    //! Current operation
+    std::string curr_aggregation = "Mean";
+
+    std::vector<std::string> calculation_aggregations = {"Mean"};
+
+    bool by_primitive = false;
+
+    std::string calculation_name_primitive = "saved prim data";
+
+    std::string calculation_name_global = "saved global data";
+
+    //! Calculation Result
+    float calculation_result_global = 0.0f;
+
+    //! Refresh list of possible objects for bounding boxes
+    void refreshBoundingBoxObjectList();
+
+    //! Perform global calculation
+    void globalCalculation();
+
+    //! Save primitive calculation
+    void savePrimitiveCalculation();
+
+    //! Run radiation
+    void runRadiation();
+
 public:
     //! Context
     helios::Context *context = nullptr;
@@ -1286,7 +1399,7 @@ public:
     CameraProperties *cameraproperties = nullptr;
 
     //! Method to run through automated tests
-    static int selfTest(int argc = 0, char** argv = nullptr);
+    static int selfTest(int argc = 0, char **argv = nullptr);
 
     //! Function to update spectra based on saved information
     void updateSpectra();
@@ -1296,6 +1409,9 @@ public:
 
     //! Function to "record", or save camera images with bounding boxes for each rig
     void record();
+
+    //! Function to "reload" (unused)
+    void reload();
 
     //! Function to build context from XML
     void buildFromXML();
@@ -1656,6 +1772,7 @@ public:
      */
     void setNodeLabels(const std::string &label_name, const std::string &node_name, std::set<std::string> &labels_set);
 
+#ifdef ENABLE_HELIOS_VISUALIZER
     //! Function to create an ImGui Popup for randomizing a variable
     /**
      * \param[in] popup_name Name of the parameter being randomized
@@ -1669,6 +1786,10 @@ public:
      * \param[in] dist_vec Vector of noise distributions to be applied
      */
     void noisePopup(std::string popup_name, std::vector<distribution> &dist_vec);
+#else
+    void randomizePopup(std::string popup_name, taggedPtr ptr);
+    void noisePopup(std::string popup_name, std::vector<distribution> &dist_vec);
+#endif // ENABLE_HELIOS_VISUALIZER
 
     //! Function to apply random distribution to a variable
     /**
@@ -1691,11 +1812,15 @@ public:
      */
     void randomize(bool randomize_all);
 
+#ifdef ENABLE_HELIOS_VISUALIZER
     //! Get current randomization parameters for the given variable
     /**
      * \param[in] var_name Name of the variable being randomized
      */
     void randomizerParams(std::string var_name);
+#else
+    void randomizerParams(std::string var_name);
+#endif // ENABLE_HELIOS_VISUALIZER
 
     //! Set value of variable with random sample from respective distribution
     /**
@@ -1706,8 +1831,12 @@ public:
     //! Set value of all variables using random samples from their respective distributions
     void sampleAll();
 
+#ifdef ENABLE_HELIOS_VISUALIZER
     //! Output console as ImGui multiline text
     void outputConsole();
+#else
+    void outputConsole();
+#endif // ENABLE_HELIOS_VISUALIZER
 
     //! Update color of object, rig, etc.
     /**
@@ -1728,10 +1857,17 @@ public:
 
     //! Delete rig
     /**
-     * \param[in] curr_rig Rig to be deleted
+     * \param[in] curr_rig Name of rig to be deleted
      */
     void deleteRig(std::string curr_rig);
 
+    //! Add rig
+    /**
+     * \param[in] new_rig_label Name of rig to be added
+     */
+    void addRig(std::string new_rig_label);
+
+#ifdef ENABLE_HELIOS_VISUALIZER
     //! Create dropdown widget
     /**
      * \param[in] widget_name Name of dropdown widget (must be unique)
@@ -1747,15 +1883,28 @@ public:
      * \param[in] choices Possible selection options
      */
     void dropDown(std::string widget_name, std::string &selected, std::set<std::string> choices);
+#else
+    void dropDown(std::string widget_name, std::string &selected, std::vector<std::string> choices);
+    void dropDown(std::string widget_name, std::string &selected, std::set<std::string> choices);
+#endif // ENABLE_HELIOS_VISUALIZER
 
+#ifdef ENABLE_HELIOS_VISUALIZER
     //! Refresh visualizer context and display loading text
     void refreshVisualization();
 
     //! Refresh visualization types
     void refreshVisualizationTypes();
+#else
+    void refreshVisualization();
+    void refreshVisualizationTypes();
+#endif // ENABLE_HELIOS_VISUALIZER
 
+#ifdef ENABLE_HELIOS_VISUALIZER
     //! Popup that appears when right-clicking the "Record" button
     void recordPopup();
+#else
+    void recordPopup();
+#endif // ENABLE_HELIOS_VISUALIZER
 
     //! Update location
     void updateLocation();
@@ -1843,32 +1992,40 @@ public:
     ~ProjectBuilder() {
         std::cout.rdbuf(old_cout_stream_buf);
 
-        delete context;
+        // Delete plugins BEFORE context - they hold pointers to context
+        // and may access it during destruction
 
-#ifdef HELIOS_VISUALIZER
-        delete visualizer;
-#endif // HELIOS_VISUALIZER
+#ifdef ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL
+        delete boundarylayerconductance;
+#endif // ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL
 
-#ifdef PLANT_ARCHITECTURE
-        delete plantarchitecture;
-#endif // PLANT_ARCHITECTURE
+#ifdef ENABLE_ENERGYBALANCEMODEL
+        delete energybalancemodel;
+#endif // ENABLE_ENERGYBALANCEMODEL
 
-#ifdef RADIATION_MODEL
+#ifdef ENABLE_SOLARPOSITION
+        delete solarposition;
+#endif // ENABLE_SOLARPOSITION
+
+#ifdef ENABLE_RADIATION_MODEL
         delete radiation;
         delete cameraproperties;
-#endif // RADIATION_MODEL
+#endif // ENABLE_RADIATION_MODEL
 
-#ifdef SOLARPOSITION
-        delete solarposition;
-#endif // SOLARPOSITION
+#ifdef ENABLE_CANOPY_GENERATOR
+        delete canopygenerator;
+#endif // ENABLE_CANOPY_GENERATOR
 
-#ifdef ENERGYBALANCEMODEL
-        delete energybalancemodel;
-#endif // ENERGYBALANCEMODEL
+#ifdef ENABLE_PLANT_ARCHITECTURE
+        delete plantarchitecture;
+#endif // ENABLE_PLANT_ARCHITECTURE
 
-#ifdef BOUNDARYLAYERCONDUCTANCEMODEL
-        delete boundarylayerconductance;
-#endif // BOUNDARYLAYERCONDUCTANCEMODEL
+#ifdef ENABLE_HELIOS_VISUALIZER
+        delete visualizer;
+#endif // ENABLE_HELIOS_VISUALIZER
+
+        // Delete context LAST - all plugins depend on it
+        delete context;
     }
 };
 

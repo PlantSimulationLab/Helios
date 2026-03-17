@@ -1,6 +1,6 @@
 /** \file "AerialLiDAR.h" Header file for Aerial LiDAR plug-in dealing with aerial scans.
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -144,7 +144,7 @@ public:
     ~AerialLiDARcloud();
 
     //! Self-test (unit test) function
-    static int selfTest(int argc = 0, char** argv = nullptr);
+    static int selfTest(int argc = 0, char **argv = nullptr);
 
     //! Disable all print messages to the screen except for fatal error messages
     void disableMessages();

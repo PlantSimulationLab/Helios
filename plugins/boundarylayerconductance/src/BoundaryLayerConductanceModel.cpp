@@ -1,6 +1,6 @@
 /** \file "BoundaryLayerConductanceModel.cpp" Boundary-layer conductance  model plugin declarations.
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -114,15 +114,9 @@ void BLConductanceModel::run(const std::vector<uint> &UUIDs) {
             L = sqrt(context->getPrimitiveArea(UUID));
         }
 
-        // Number of primitive faces
-        char Nsides = 2; // default is 2
-        if (context->doesPrimitiveDataExist(UUID, "twosided_flag") && context->getPrimitiveDataType(UUID, "twosided_flag") == HELIOS_TYPE_UINT) {
-            uint flag;
-            context->getPrimitiveData(UUID, "twosided_flag", flag);
-            if (flag == 0) {
-                Nsides = 1;
-            }
-        }
+        // Number of primitive faces - check material first, then primitive data
+        uint twosided_flag = context->getPrimitiveTwosidedFlag(UUID, 1);
+        char Nsides = (twosided_flag == 0) ? 1 : 2;
 
         vec3 norm = context->getPrimitiveNormal(UUID);
         float inclination = cart2sphere(norm).zenith;

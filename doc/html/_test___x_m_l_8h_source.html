@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: core/tests/Test_XML.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -20,6 +21,33 @@
   DoxygenAwesomeParagraphLink.init()
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
+</script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
 </script>
 <script>
     try {
@@ -76,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -84,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.43</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -98,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -116,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -308,14 +344,14 @@ $(function(){initNavTree('_test___x_m_l_8h_source.html',''); initResizable(true)
 <div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>        ctx.setObjectData(box, <span class="stringliteral">&quot;object_data&quot;</span>, <span class="stringliteral">&quot;test_string&quot;</span>);</div>
 <div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>        ctx.setGlobalData(<span class="stringliteral">&quot;global_test&quot;</span>, 123);</div>
 <div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span> </div>
-<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>        <span class="comment">// Write to XML</span></div>
-<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *test_file = <span class="stringliteral">&quot;/tmp/helios_test.xml&quot;</span>;</div>
-<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file));</div>
+<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>        <span class="comment">// Write to XML (use quiet parameter to avoid output)</span></div>
+<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *test_file = <span class="stringliteral">&quot;helios_test.xml&quot;</span>;</div>
+<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, <span class="keyword">true</span>));</div>
 <div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span> </div>
-<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>        <span class="comment">// Create new context and load</span></div>
+<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>        <span class="comment">// Create new context and load (use quiet parameter)</span></div>
 <div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>        Context ctx2;</div>
 <div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>        std::vector&lt;uint&gt; loaded_uuids;</div>
-<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>        DOCTEST_CHECK_NOTHROW(loaded_uuids = ctx2.loadXML(test_file));</div>
+<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>        DOCTEST_CHECK_NOTHROW(loaded_uuids = ctx2.loadXML(test_file, <span class="keyword">true</span>));</div>
 <div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>        DOCTEST_CHECK(loaded_uuids.size() &gt;= 2);</div>
 <div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span> </div>
 <div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>        <span class="comment">// Verify loaded data</span></div>
@@ -350,63 +386,179 @@ $(function(){initNavTree('_test___x_m_l_8h_source.html',''); initResizable(true)
 <div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> box2 = ctx.addBoxObject(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(2, 0, 0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 1, 1), <a class="code hl_function" href="helios__vector__types_8h.html#a55971d7a623ad5c10a74e7eda37c2149" title="Make an int3 vector from three ints.">make_int3</a>(1, 1, 1));</div>
 <div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span> </div>
 <div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>        std::vector&lt;uint&gt; selected_objects = {box1};</div>
-<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *test_file = <span class="stringliteral">&quot;/tmp/helios_partial_test.xml&quot;</span>;</div>
+<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *test_file = <span class="stringliteral">&quot;helios_partial_test.xml&quot;</span>;</div>
 <div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span> </div>
-<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>        DOCTEST_CHECK_NOTHROW(ctx.writeXML_byobject(test_file, selected_objects));</div>
-<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span> </div>
-<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>        Context ctx2;</div>
-<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>        std::vector&lt;uint&gt; loaded_uuids = ctx2.loadXML(test_file);</div>
-<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span> </div>
-<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>        <span class="comment">// Should only have primitives from one box (6 faces)</span></div>
-<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>        DOCTEST_CHECK(loaded_uuids.size() == 6);</div>
-<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>        DOCTEST_CHECK(ctx2.getObjectCount() == 1);</div>
-<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span> </div>
-<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>        std::remove(test_file);</div>
-<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>    }</div>
-<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span> </div>
-<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>    SUBCASE(<span class="stringliteral">&quot;writeXML with specific UUIDs&quot;</span>) {</div>
-<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>        Context ctx;</div>
-<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p1 = ctx.addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1, 1));</div>
-<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p2 = ctx.addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 0, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1, 1));</div>
-<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p3 = ctx.addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(2, 0, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1, 1));</div>
-<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span> </div>
-<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>        std::vector&lt;uint&gt; selected_uuids = {p1, p3};</div>
-<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *test_file = <span class="stringliteral">&quot;/tmp/helios_uuid_test.xml&quot;</span>;</div>
-<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span> </div>
-<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, selected_uuids));</div>
-<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span> </div>
-<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>        Context ctx2;</div>
-<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>        std::vector&lt;uint&gt; loaded_uuids = ctx2.loadXML(test_file);</div>
-<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span> </div>
-<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>        DOCTEST_CHECK(loaded_uuids.size() == 2);</div>
+<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>        <span class="comment">// Use quiet parameter to avoid output</span></div>
+<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>        DOCTEST_CHECK_NOTHROW(ctx.writeXML_byobject(test_file, selected_objects, <span class="keyword">true</span>));</div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span> </div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>        Context ctx2;</div>
+<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>        std::vector&lt;uint&gt; loaded_uuids = ctx2.loadXML(test_file, <span class="keyword">true</span>);</div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span> </div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>        <span class="comment">// Should only have primitives from one box (6 faces)</span></div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>        DOCTEST_CHECK(loaded_uuids.size() == 6);</div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>        DOCTEST_CHECK(ctx2.getObjectCount() == 1);</div>
+<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span> </div>
+<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>        std::remove(test_file);</div>
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>    }</div>
+<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span> </div>
+<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>    SUBCASE(<span class="stringliteral">&quot;writeXML with specific UUIDs&quot;</span>) {</div>
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>        Context ctx;</div>
+<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p1 = ctx.addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1, 1));</div>
+<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p2 = ctx.addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 0, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1, 1));</div>
+<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p3 = ctx.addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(2, 0, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1, 1));</div>
+<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span> </div>
+<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>        std::vector&lt;uint&gt; selected_uuids = {p1, p3};</div>
+<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *test_file = <span class="stringliteral">&quot;helios_uuid_test.xml&quot;</span>;</div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span> </div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>        <span class="comment">// Use quiet parameter to avoid output</span></div>
+<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, selected_uuids, <span class="keyword">true</span>));</div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span> </div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>        Context ctx2;</div>
+<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>        std::vector&lt;uint&gt; loaded_uuids = ctx2.loadXML(test_file, <span class="keyword">true</span>);</div>
 <div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span> </div>
-<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>        std::remove(test_file);</div>
-<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>    }</div>
-<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span> </div>
-<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>    SUBCASE(<span class="stringliteral">&quot;getLoadedXMLFiles&quot;</span>) {</div>
-<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>        Context ctx;</div>
-<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span> </div>
-<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>        <span class="comment">// Initially should be empty</span></div>
-<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>        std::vector&lt;std::string&gt; files = ctx.getLoadedXMLFiles();</div>
-<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>        <span class="keywordtype">size_t</span> initial_count = files.size();</div>
-<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span> </div>
-<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>        <span class="comment">// Create and load a test file</span></div>
-<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> patch = ctx.addPatch();</div>
-<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *test_file = <span class="stringliteral">&quot;/tmp/helios_loaded_files_test.xml&quot;</span>;</div>
-<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span>        ctx.writeXML(test_file);</div>
-<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span> </div>
-<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>        Context ctx2;</div>
-<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>        ctx2.loadXML(test_file);</div>
+<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>        DOCTEST_CHECK(loaded_uuids.size() == 2);</div>
+<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span> </div>
+<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>        std::remove(test_file);</div>
+<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>    }</div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span> </div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>    SUBCASE(<span class="stringliteral">&quot;getLoadedXMLFiles&quot;</span>) {</div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>        Context ctx;</div>
+<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span> </div>
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>        <span class="comment">// Initially should be empty</span></div>
+<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>        std::vector&lt;std::string&gt; files = ctx.getLoadedXMLFiles();</div>
+<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>        <span class="keywordtype">size_t</span> initial_count = files.size();</div>
+<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span> </div>
+<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>        <span class="comment">// Create and load a test file using current working directory (cross-platform)</span></div>
+<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> patch = ctx.addPatch();</div>
+<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>        std::string test_file = <span class="stringliteral">&quot;helios_loaded_files_test.xml&quot;</span>;</div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>        <span class="comment">// Use quiet parameter to avoid output</span></div>
+<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>        ctx.writeXML(test_file.c_str(), <span class="keyword">true</span>);</div>
 <div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span> </div>
-<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>        std::vector&lt;std::string&gt; loaded_files = ctx2.getLoadedXMLFiles();</div>
-<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>        DOCTEST_CHECK(loaded_files.size() == initial_count + 1);</div>
-<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>        DOCTEST_CHECK(std::find(loaded_files.begin(), loaded_files.end(), test_file) != loaded_files.end());</div>
-<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span> </div>
-<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>        std::remove(test_file);</div>
-<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>    }</div>
-<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span> </div>
-<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>    <span class="comment">// Note: scanXMLForTag testing removed due to complex XML tag structure requirements</span></div>
-<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>}</div>
+<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>        Context ctx2;</div>
+<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>        ctx2.loadXML(test_file.c_str(), <span class="keyword">true</span>);</div>
+<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span> </div>
+<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>        std::vector&lt;std::string&gt; loaded_files = ctx2.getLoadedXMLFiles();</div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>        DOCTEST_CHECK(loaded_files.size() == initial_count + 1);</div>
+<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span> </div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>        <span class="comment">// Compare against the resolved path, not the original path</span></div>
+<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>        std::filesystem::path resolved_test_file = <a class="code hl_function" href="group__functions.html#gadadfa82538ea2c04ed2dea45fc07749e" title="Resolve file path using project-based resolution strategy.">resolveProjectFile</a>(test_file);</div>
+<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>        std::string resolved_test_file_str = resolved_test_file.string();</div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>        DOCTEST_CHECK(std::find(loaded_files.begin(), loaded_files.end(), resolved_test_file_str) != loaded_files.end());</div>
+<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span> </div>
+<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>        std::remove(test_file.c_str());</div>
+<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>    }</div>
+<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span> </div>
+<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>    SUBCASE(<span class="stringliteral">&quot;XML I/O quiet parameter&quot;</span>) {</div>
+<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>        Context ctx;</div>
+<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> patch = ctx.addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1, 1));</div>
+<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *test_file = <span class="stringliteral">&quot;helios_quiet_test.xml&quot;</span>;</div>
+<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span> </div>
+<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>        <span class="comment">// Test writeXML with quiet=false (should produce output)</span></div>
+<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>        {</div>
+<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span>            capture_cout cout_buffer;</div>
+<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>            ctx.writeXML(test_file, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>            DOCTEST_CHECK(cout_buffer.get_captured_output().find(<span class="stringliteral">&quot;Writing XML file&quot;</span>) != std::string::npos);</div>
+<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>        }</div>
+<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span> </div>
+<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>        <span class="comment">// Test loadXML with quiet=false (should produce output)</span></div>
+<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>        Context ctx2;</div>
+<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>        {</div>
+<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>            capture_cout cout_buffer;</div>
+<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>            ctx2.loadXML(test_file, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>            DOCTEST_CHECK(cout_buffer.get_captured_output().find(<span class="stringliteral">&quot;Loading XML file&quot;</span>) != std::string::npos);</div>
+<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>        }</div>
+<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span> </div>
+<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>        <span class="comment">// Test writeXML with quiet=true (should not produce output)</span></div>
+<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>        {</div>
+<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span>            capture_cout cout_buffer;</div>
+<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span>            ctx.writeXML(test_file, <span class="keyword">true</span>);</div>
+<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span>            DOCTEST_CHECK(cout_buffer.get_captured_output().find(<span class="stringliteral">&quot;Writing XML file&quot;</span>) == std::string::npos);</div>
+<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>        }</div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span> </div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span>        <span class="comment">// Test loadXML with quiet=true (should not produce output)</span></div>
+<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>        Context ctx3;</div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>        {</div>
+<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>            capture_cout cout_buffer;</div>
+<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>            ctx3.loadXML(test_file, <span class="keyword">true</span>);</div>
+<div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>            DOCTEST_CHECK(cout_buffer.get_captured_output().find(<span class="stringliteral">&quot;Loading XML file&quot;</span>) == std::string::npos);</div>
+<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>        }</div>
+<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span> </div>
+<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>        std::remove(test_file);</div>
+<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>    }</div>
+<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span> </div>
+<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>    SUBCASE(<span class="stringliteral">&quot;vector global data XML formatting&quot;</span>) {</div>
+<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>        Context ctx;</div>
+<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span> </div>
+<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>        <span class="comment">// Add various vector type global data</span></div>
+<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>        std::vector&lt;vec2&gt; vec2_data = {<a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(400, 0.0666747f), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(401, 0.0640556f), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(402, 0.0619332f)};</div>
+<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>        std::vector&lt;vec3&gt; vec3_data = {<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1.1f, 2.2f, 3.3f), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(4.4f, 5.5f, 6.6f)};</div>
+<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>        std::vector&lt;vec4&gt; vec4_data = {<a class="code hl_function" href="helios__vector__types_8h.html#aff3dc2aab916d45e0b9e1752192db22c" title="Make a vec4 from three floats.">make_vec4</a>(1.1f, 2.2f, 3.3f, 4.4f), <a class="code hl_function" href="helios__vector__types_8h.html#aff3dc2aab916d45e0b9e1752192db22c" title="Make a vec4 from three floats.">make_vec4</a>(5.5f, 6.6f, 7.7f, 8.8f)};</div>
+<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>        std::vector&lt;int2&gt; int2_data = {<a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(1, 2), <a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(3, 4)};</div>
+<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>        std::vector&lt;int3&gt; int3_data = {<a class="code hl_function" href="helios__vector__types_8h.html#a55971d7a623ad5c10a74e7eda37c2149" title="Make an int3 vector from three ints.">make_int3</a>(1, 2, 3), <a class="code hl_function" href="helios__vector__types_8h.html#a55971d7a623ad5c10a74e7eda37c2149" title="Make an int3 vector from three ints.">make_int3</a>(4, 5, 6)};</div>
+<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>        std::vector&lt;int4&gt; int4_data = {<a class="code hl_function" href="helios__vector__types_8h.html#ae958687268831dd88785688bc93254e6" title="Make an int4 vector from three ints.">make_int4</a>(1, 2, 3, 4), <a class="code hl_function" href="helios__vector__types_8h.html#ae958687268831dd88785688bc93254e6" title="Make an int4 vector from three ints.">make_int4</a>(5, 6, 7, 8)};</div>
+<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span> </div>
+<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span>        ctx.setGlobalData(<span class="stringliteral">&quot;test_vec2&quot;</span>, vec2_data);</div>
+<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>        ctx.setGlobalData(<span class="stringliteral">&quot;test_vec3&quot;</span>, vec3_data);</div>
+<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span>        ctx.setGlobalData(<span class="stringliteral">&quot;test_vec4&quot;</span>, vec4_data);</div>
+<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span>        ctx.setGlobalData(<span class="stringliteral">&quot;test_int2&quot;</span>, int2_data);</div>
+<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>        ctx.setGlobalData(<span class="stringliteral">&quot;test_int3&quot;</span>, int3_data);</div>
+<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>        ctx.setGlobalData(<span class="stringliteral">&quot;test_int4&quot;</span>, int4_data);</div>
+<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span> </div>
+<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *test_file = <span class="stringliteral">&quot;helios_vector_test.xml&quot;</span>;</div>
+<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>        ctx.writeXML(test_file, <span class="keyword">true</span>);</div>
+<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span> </div>
+<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>        <span class="comment">// Load and verify all vector data</span></div>
+<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>        Context ctx2;</div>
+<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>        ctx2.loadXML(test_file, <span class="keyword">true</span>);</div>
+<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span> </div>
+<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>        <span class="comment">// Verify vec2</span></div>
+<div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span>        std::vector&lt;vec2&gt; loaded_vec2;</div>
+<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>        ctx2.getGlobalData(<span class="stringliteral">&quot;test_vec2&quot;</span>, loaded_vec2);</div>
+<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>        DOCTEST_CHECK(loaded_vec2.size() == 3);</div>
+<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>        DOCTEST_CHECK(loaded_vec2[0].x == doctest::Approx(400.0f));</div>
+<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>        DOCTEST_CHECK(loaded_vec2[0].y == doctest::Approx(0.0666747f));</div>
+<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>        DOCTEST_CHECK(loaded_vec2[2].x == doctest::Approx(402.0f));</div>
+<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span> </div>
+<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>        <span class="comment">// Verify vec3</span></div>
+<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>        std::vector&lt;vec3&gt; loaded_vec3;</div>
+<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>        ctx2.getGlobalData(<span class="stringliteral">&quot;test_vec3&quot;</span>, loaded_vec3);</div>
+<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>        DOCTEST_CHECK(loaded_vec3.size() == 2);</div>
+<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>        DOCTEST_CHECK(loaded_vec3[0] == vec3(1.1f, 2.2f, 3.3f));</div>
+<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>        DOCTEST_CHECK(loaded_vec3[1] == vec3(4.4f, 5.5f, 6.6f));</div>
+<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span> </div>
+<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>        <span class="comment">// Verify vec4</span></div>
+<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>        std::vector&lt;vec4&gt; loaded_vec4;</div>
+<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>        ctx2.getGlobalData(<span class="stringliteral">&quot;test_vec4&quot;</span>, loaded_vec4);</div>
+<div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>        DOCTEST_CHECK(loaded_vec4.size() == 2);</div>
+<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>        DOCTEST_CHECK(loaded_vec4[0] == vec4(1.1f, 2.2f, 3.3f, 4.4f));</div>
+<div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>        DOCTEST_CHECK(loaded_vec4[1] == vec4(5.5f, 6.6f, 7.7f, 8.8f));</div>
+<div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span> </div>
+<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>        <span class="comment">// Verify int2</span></div>
+<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>        std::vector&lt;int2&gt; loaded_int2;</div>
+<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>        ctx2.getGlobalData(<span class="stringliteral">&quot;test_int2&quot;</span>, loaded_int2);</div>
+<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>        DOCTEST_CHECK(loaded_int2.size() == 2);</div>
+<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>        DOCTEST_CHECK(loaded_int2[0] == int2(1, 2));</div>
+<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>        DOCTEST_CHECK(loaded_int2[1] == int2(3, 4));</div>
+<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span> </div>
+<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>        <span class="comment">// Verify int3</span></div>
+<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>        std::vector&lt;int3&gt; loaded_int3;</div>
+<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>        ctx2.getGlobalData(<span class="stringliteral">&quot;test_int3&quot;</span>, loaded_int3);</div>
+<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>        DOCTEST_CHECK(loaded_int3.size() == 2);</div>
+<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>        DOCTEST_CHECK(loaded_int3[0] == int3(1, 2, 3));</div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>        DOCTEST_CHECK(loaded_int3[1] == int3(4, 5, 6));</div>
+<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span> </div>
+<div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>        <span class="comment">// Verify int4</span></div>
+<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>        std::vector&lt;int4&gt; loaded_int4;</div>
+<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>        ctx2.getGlobalData(<span class="stringliteral">&quot;test_int4&quot;</span>, loaded_int4);</div>
+<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>        DOCTEST_CHECK(loaded_int4.size() == 2);</div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>        DOCTEST_CHECK(loaded_int4[0] == int4(1, 2, 3, 4));</div>
+<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span>        DOCTEST_CHECK(loaded_int4[1] == int4(5, 6, 7, 8));</div>
+<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span> </div>
+<div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>        std::remove(test_file);</div>
+<div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span>    }</div>
+<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span> </div>
+<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>    <span class="comment">// Note: scanXMLForTag testing removed due to complex XML tag structure requirements</span></div>
+<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>}</div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

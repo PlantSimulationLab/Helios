@@ -165,10 +165,13 @@ TEST_CASE("Mathematical and Geometric Helpers") {
         DOCTEST_CHECK(res_end.z == doctest::Approx(p1.z));
 
         // Test clamping
-        capture_cerr cerr_buffer;
-        vec3 res_low = spline_interp3(-0.5f, p0, t0, p1, t1);
+        vec3 res_low, res_high;
+        {
+            capture_cerr cerr_buffer;
+            res_low = spline_interp3(-0.5f, p0, t0, p1, t1);
+            res_high = spline_interp3(1.5f, p0, t0, p1, t1);
+        }
         DOCTEST_CHECK(res_low.x == doctest::Approx(p0.x));
-        vec3 res_high = spline_interp3(1.5f, p0, t0, p1, t1);
         DOCTEST_CHECK(res_high.x == doctest::Approx(p1.x));
     }
     SUBCASE("Angle conversion helpers") {
@@ -244,7 +247,6 @@ TEST_CASE("Matrix and Transformation Helpers") {
     }
 
     SUBCASE("makeRotationMatrix invalid axis") {
-        capture_cerr cerr_buffer;
         float T[16];
         DOCTEST_CHECK_THROWS(makeRotationMatrix(0.5f, "w", T));
     }
@@ -367,8 +369,10 @@ TEST_CASE("String, File Path, and Parsing Utilities") {
         DOCTEST_CHECK_NOTHROW(result = separate_string_by_delimiter("", ","));
         DOCTEST_CHECK(result.size() == 1);
 
-        capture_cerr cerr_buffer;
-        DOCTEST_CHECK_THROWS(result = separate_string_by_delimiter("a,b,c", ""));
+        {
+            capture_cerr cerr_buffer;
+            DOCTEST_CHECK_THROWS(result = separate_string_by_delimiter("a,b,c", ""));
+        }
 
         DOCTEST_CHECK_NOTHROW(result = separate_string_by_delimiter(",", ","));
         DOCTEST_CHECK(result.size() == 2);
@@ -386,13 +390,13 @@ TEST_CASE("String, File Path, and Parsing Utilities") {
         DOCTEST_CHECK(string2int4("1 2 3 4") == int4(1, 2, 3, 4));
     }
     SUBCASE("string to vector conversions with invalid input") {
-        capture_cerr cerr_buffer;
         vec2 result_vec2;
         vec3 result_vec3;
         vec4 result_vec4;
         int2 result_int2;
         int3 result_int3;
         int4 result_int4;
+        // Error messages from invalid input are expected - don't suppress them
         DOCTEST_CHECK_THROWS(result_vec2 = string2vec2("1.5"));
         DOCTEST_CHECK_THROWS(result_vec3 = string2vec3("1.5 2.5"));
         DOCTEST_CHECK_THROWS(result_vec4 = string2vec4("1.5 2.5 3.5"));
@@ -416,8 +420,8 @@ TEST_CASE("String, File Path, and Parsing Utilities") {
         DOCTEST_CHECK(color.a == doctest::Approx(1.0f));
     }
     SUBCASE("string2RGBcolor with invalid input") {
-        capture_cerr cerr_buffer;
         RGBAcolor result;
+        // Error messages from invalid input are expected - don't suppress them
         DOCTEST_CHECK_THROWS(result = string2RGBcolor("0.1 0.2"));
         DOCTEST_CHECK_THROWS(result = string2RGBcolor("0.1 0.2 0.3 0.4 0.5"));
         DOCTEST_CHECK_THROWS(result = string2RGBcolor("a b c"));
@@ -454,6 +458,80 @@ TEST_CASE("String, File Path, and Parsing Utilities") {
         DOCTEST_CHECK(getFilePath("..", true).empty());
         DOCTEST_CHECK(getFileName("..") == "..");
         DOCTEST_CHECK(getFileStem("..") == "..");
+    }
+    SUBCASE("Directory path detection") {
+        // Test cases that should be detected as directories
+        DOCTEST_CHECK(isDirectoryPath("./annotations") == true); // The bug case
+        DOCTEST_CHECK(isDirectoryPath("./output") == true);
+        DOCTEST_CHECK(isDirectoryPath("results") == true);
+        DOCTEST_CHECK(isDirectoryPath("data/") == true);
+        DOCTEST_CHECK(isDirectoryPath("/path/to/dir/") == true);
+        DOCTEST_CHECK(isDirectoryPath("temp") == true);
+        DOCTEST_CHECK(isDirectoryPath("images") == true);
+        DOCTEST_CHECK(isDirectoryPath("..") == true);
+        DOCTEST_CHECK(isDirectoryPath(".") == true);
+
+        // Test cases that should be detected as files
+        DOCTEST_CHECK(isDirectoryPath("file.txt") == false);
+        DOCTEST_CHECK(isDirectoryPath("./test.cpp") == false);
+        DOCTEST_CHECK(isDirectoryPath("output.json") == false);
+        DOCTEST_CHECK(isDirectoryPath("/path/to/file.xml") == false);
+        DOCTEST_CHECK(isDirectoryPath("image.jpg") == false);
+        DOCTEST_CHECK(isDirectoryPath("data.csv") == false);
+        DOCTEST_CHECK(isDirectoryPath(".bashrc") == false);
+
+        // Edge cases
+        DOCTEST_CHECK(isDirectoryPath("") == false); // empty path
+
+        // Test with existing directories if they exist
+        if (std::filesystem::exists("core/tests")) {
+            DOCTEST_CHECK(isDirectoryPath("core/tests") == true);
+        }
+        if (std::filesystem::exists("core/include/global.h")) {
+            DOCTEST_CHECK(isDirectoryPath("core/include/global.h") == false);
+        }
+    }
+    SUBCASE("validateOutputPath adds trailing slash to directories") {
+        // Test that validateOutputPath adds trailing slash to directory paths without one
+        // This is a regression test for the radiation plugin image_path bug
+
+        // Create a temporary directory for testing
+        std::filesystem::path temp_dir = std::filesystem::temp_directory_path() / "helios_test_validatepath";
+        std::filesystem::create_directories(temp_dir);
+
+        // Test 1: Directory path without trailing slash (existing directory)
+        std::string path1 = temp_dir.string();
+        // Remove trailing slash if present
+        if (!path1.empty() && (path1.back() == '/' || path1.back() == '\\')) {
+            path1.pop_back();
+        }
+        DOCTEST_CHECK(validateOutputPath(path1) == true);
+        DOCTEST_CHECK(path1.back() == '/'); // Should now have trailing slash
+
+        // Test 2: Directory path with trailing slash (should remain unchanged)
+        std::string path2 = temp_dir.string() + "/";
+        DOCTEST_CHECK(validateOutputPath(path2) == true);
+        DOCTEST_CHECK(path2.back() == '/');
+
+        // Test 3: Non-existent directory without trailing slash that is detected as directory
+        // Note: "../somedir" pattern from the bug report
+        std::string path3 = temp_dir.string() + "_nonexistent";
+        if (!path3.empty() && (path3.back() == '/' || path3.back() == '\\')) {
+            path3.pop_back();
+        }
+        // This path doesn't exist but should be detected as a directory and get trailing slash
+        bool result3 = validateOutputPath(path3);
+        DOCTEST_CHECK(result3 == true); // Should succeed (creates directory)
+        DOCTEST_CHECK(path3.back() == '/'); // Should have trailing slash
+
+        // Test 4: File path should not get trailing slash
+        std::string path4 = temp_dir.string() + "/test.txt";
+        DOCTEST_CHECK(validateOutputPath(path4, {".txt"}) == true);
+        DOCTEST_CHECK(path4.back() != '/'); // Should NOT have trailing slash (it's a file)
+
+        // Clean up
+        std::filesystem::remove_all(temp_dir);
+        std::filesystem::remove_all(temp_dir.string() + "_nonexistent");
     }
     SUBCASE("Primitive Type Parsing") {
         float f;
@@ -513,7 +591,7 @@ TEST_CASE("String, File Path, and Parsing Utilities") {
         DOCTEST_CHECK(f == doctest::Approx(1.23f));
     }
     SUBCASE("parse_* invalid input") {
-        capture_cerr cerr_buffer;
+        // Error messages from invalid input are expected - don't suppress them
         int i;
         DOCTEST_CHECK(!parse_int("1.5", i));
         float f;
@@ -621,6 +699,65 @@ TEST_CASE("Vector Statistics and Manipulation") {
             std::vector<float> v3 = {1};
             DOCTEST_CHECK_THROWS(v1 + v3);
         }
+
+        SUBCASE("vector-scalar operators") {
+            std::vector<float> v = {1.f, 2.f, 3.f};
+            float s = 2.f;
+
+            // Addition: vector + scalar
+            std::vector<float> v_add = v + s;
+            DOCTEST_CHECK(v_add.size() == 3);
+            DOCTEST_CHECK(v_add[0] == doctest::Approx(3.f));
+            DOCTEST_CHECK(v_add[1] == doctest::Approx(4.f));
+            DOCTEST_CHECK(v_add[2] == doctest::Approx(5.f));
+
+            // Addition: scalar + vector
+            std::vector<float> v_add2 = s + v;
+            DOCTEST_CHECK(v_add2[0] == doctest::Approx(3.f));
+            DOCTEST_CHECK(v_add2[1] == doctest::Approx(4.f));
+            DOCTEST_CHECK(v_add2[2] == doctest::Approx(5.f));
+
+            // Subtraction: vector - scalar
+            std::vector<float> v_sub = v - s;
+            DOCTEST_CHECK(v_sub[0] == doctest::Approx(-1.f));
+            DOCTEST_CHECK(v_sub[1] == doctest::Approx(0.f));
+            DOCTEST_CHECK(v_sub[2] == doctest::Approx(1.f));
+
+            // Subtraction: scalar - vector
+            std::vector<float> v_sub2 = s - v;
+            DOCTEST_CHECK(v_sub2[0] == doctest::Approx(1.f));
+            DOCTEST_CHECK(v_sub2[1] == doctest::Approx(0.f));
+            DOCTEST_CHECK(v_sub2[2] == doctest::Approx(-1.f));
+
+            // Multiplication: vector * scalar
+            std::vector<float> v_mul = v * s;
+            DOCTEST_CHECK(v_mul[0] == doctest::Approx(2.f));
+            DOCTEST_CHECK(v_mul[1] == doctest::Approx(4.f));
+            DOCTEST_CHECK(v_mul[2] == doctest::Approx(6.f));
+
+            // Multiplication: scalar * vector
+            std::vector<float> v_mul2 = s * v;
+            DOCTEST_CHECK(v_mul2[0] == doctest::Approx(2.f));
+            DOCTEST_CHECK(v_mul2[1] == doctest::Approx(4.f));
+            DOCTEST_CHECK(v_mul2[2] == doctest::Approx(6.f));
+
+            // Division: vector / scalar
+            std::vector<float> v_div = v / s;
+            DOCTEST_CHECK(v_div[0] == doctest::Approx(0.5f));
+            DOCTEST_CHECK(v_div[1] == doctest::Approx(1.f));
+            DOCTEST_CHECK(v_div[2] == doctest::Approx(1.5f));
+
+            // Division: scalar / vector
+            std::vector<float> v_div2 = 6.f / v;
+            DOCTEST_CHECK(v_div2[0] == doctest::Approx(6.f));
+            DOCTEST_CHECK(v_div2[1] == doctest::Approx(3.f));
+            DOCTEST_CHECK(v_div2[2] == doctest::Approx(2.f));
+
+            // Empty vector
+            std::vector<float> empty;
+            std::vector<float> empty_result = empty + 1.f;
+            DOCTEST_CHECK(empty_result.empty());
+        }
     }
 }
 
@@ -637,9 +774,9 @@ TEST_CASE("Miscellaneous Utilities") {
         DOCTEST_CHECK(res == doctest::Approx(0.f));
     }
     SUBCASE("interp1 edge cases") {
-        capture_cerr cerr_buffer;
         float result;
         std::vector<vec2> empty_points;
+        // Error from empty input is expected - don't suppress it
         DOCTEST_CHECK_THROWS(result = interp1(empty_points, 0.5f));
 
         std::vector<vec2> single_point = {{1, 5}};
@@ -714,39 +851,664 @@ static float near_singular(float x, std::vector<float> &, const void *) {
 TEST_CASE("fzero") {
     SUBCASE("fzero finds positive quadratic root") {
         std::vector<float> v;
-        float root = helios::fzero(quadratic, v, nullptr, 1.0f, 1e-5f, 50);
+        float root = helios::fzero(quadratic, v, nullptr, 1.0f, 1e-5f, 50, nullptr);
         DOCTEST_CHECK(root == doctest::Approx(2.0f).epsilon(errtol));
     }
 
     SUBCASE("fzero finds root far from initial guess") {
         std::vector<float> v;
-        float root = helios::fzero(linear, v, nullptr, -10.0f, 1e-6f, 50);
+        float root = helios::fzero(linear, v, nullptr, -10.0f, 1e-6f, 50, nullptr);
         DOCTEST_CHECK(root == doctest::Approx(3.5f).epsilon(errtol));
     }
 
     SUBCASE("fzero handles function without zero") {
         std::vector<float> v;
-        capture_cerr cerr_buffer;
-        float root = helios::fzero(flat, v, nullptr, 0.0f, 1e-6f, 10);
+        WarningAggregator warnings;
+        float root = helios::fzero(flat, v, nullptr, 0.0f, 1e-6f, 10, &warnings);
         DOCTEST_CHECK(std::isfinite(root));
-        DOCTEST_CHECK(cerr_buffer.has_output());
+        // Should have a stagnation or convergence warning
+        bool has_stagnation = warnings.getCount("fzero_stagnation") > 0;
+        bool has_convergence = warnings.getCount("fzero_convergence_failure") > 0;
+        DOCTEST_CHECK((has_stagnation || has_convergence));
     }
 
     SUBCASE("fzero returns exact root at initial guess") {
         std::vector<float> v;
-        float root = helios::fzero(quadratic, v, nullptr, 2.0f, 1e-6f, 5);
+        float root = helios::fzero(quadratic, v, nullptr, 2.0f, 1e-6f, 5, nullptr);
         DOCTEST_CHECK(root == doctest::Approx(2.0f).epsilon(errtol));
     }
 
     SUBCASE("fzero finds a cubic root") {
         std::vector<float> v;
-        float root = helios::fzero(cubic, v, nullptr, 3.5f, 1e-5f, 80);
+        float root = helios::fzero(cubic, v, nullptr, 3.5f, 1e-5f, 80, nullptr);
         DOCTEST_CHECK(root == doctest::Approx(4.0f).epsilon(errtol));
     }
 
     SUBCASE("fzero copes with near-singular derivative") {
         std::vector<float> v;
-        float root = helios::fzero(near_singular, v, nullptr, 0.01f, 1e-4f, 50);
+        float root = helios::fzero(near_singular, v, nullptr, 0.01f, 1e-4f, 50, nullptr);
         DOCTEST_CHECK(std::fabs(near_singular(root, v, nullptr)) < 1e-4f);
+    }
+}
+
+TEST_CASE("linspace - Linearly Spaced Values") {
+    SUBCASE("linspace float basic functionality") {
+        std::vector<float> result = linspace(0.f, 10.f, 11);
+        DOCTEST_CHECK(result.size() == 11);
+        DOCTEST_CHECK(result[0] == doctest::Approx(0.f));
+        DOCTEST_CHECK(result[5] == doctest::Approx(5.f));
+        DOCTEST_CHECK(result[10] == doctest::Approx(10.f));
+
+        // Check uniformly spaced
+        for (size_t i = 1; i < result.size(); ++i) {
+            DOCTEST_CHECK(result[i] - result[i - 1] == doctest::Approx(1.f));
+        }
+    }
+
+    SUBCASE("linspace float with negative range") {
+        std::vector<float> result = linspace(-5.f, 5.f, 6);
+        DOCTEST_CHECK(result.size() == 6);
+        DOCTEST_CHECK(result[0] == doctest::Approx(-5.f));
+        DOCTEST_CHECK(result[2] == doctest::Approx(-1.f));
+        DOCTEST_CHECK(result[5] == doctest::Approx(5.f));
+
+        // Check spacing
+        for (size_t i = 1; i < result.size(); ++i) {
+            DOCTEST_CHECK(result[i] - result[i - 1] == doctest::Approx(2.f));
+        }
+    }
+
+    SUBCASE("linspace float single point") {
+        std::vector<float> result = linspace(5.f, 10.f, 1);
+        DOCTEST_CHECK(result.size() == 1);
+        DOCTEST_CHECK(result[0] == doctest::Approx(5.f));
+    }
+
+    SUBCASE("linspace float two points") {
+        std::vector<float> result = linspace(1.f, 3.f, 2);
+        DOCTEST_CHECK(result.size() == 2);
+        DOCTEST_CHECK(result[0] == doctest::Approx(1.f));
+        DOCTEST_CHECK(result[1] == doctest::Approx(3.f));
+    }
+
+    SUBCASE("linspace float reversed range") {
+        std::vector<float> result = linspace(10.f, 0.f, 6);
+        DOCTEST_CHECK(result.size() == 6);
+        DOCTEST_CHECK(result[0] == doctest::Approx(10.f));
+        DOCTEST_CHECK(result[2] == doctest::Approx(6.f));
+        DOCTEST_CHECK(result[5] == doctest::Approx(0.f));
+
+        // Check negative spacing
+        for (size_t i = 1; i < result.size(); ++i) {
+            DOCTEST_CHECK(result[i] - result[i - 1] == doctest::Approx(-2.f));
+        }
+    }
+
+    SUBCASE("linspace float error handling") {
+        std::vector<float> result;
+        // Error messages from invalid input are expected - don't suppress them
+        DOCTEST_CHECK_THROWS(result = linspace(0.f, 1.f, 0));
+        DOCTEST_CHECK_THROWS(result = linspace(0.f, 1.f, -1));
+    }
+
+    SUBCASE("linspace vec2 basic functionality") {
+        vec2 start(0.f, 1.f);
+        vec2 end(4.f, 5.f);
+        std::vector<vec2> result = linspace(start, end, 5);
+
+        DOCTEST_CHECK(result.size() == 5);
+        DOCTEST_CHECK(result[0].x == doctest::Approx(0.f));
+        DOCTEST_CHECK(result[0].y == doctest::Approx(1.f));
+        DOCTEST_CHECK(result[2].x == doctest::Approx(2.f));
+        DOCTEST_CHECK(result[2].y == doctest::Approx(3.f));
+        DOCTEST_CHECK(result[4].x == doctest::Approx(4.f));
+        DOCTEST_CHECK(result[4].y == doctest::Approx(5.f));
+    }
+
+    SUBCASE("linspace vec2 single point") {
+        vec2 start(1.f, 2.f);
+        vec2 end(3.f, 4.f);
+        std::vector<vec2> result = linspace(start, end, 1);
+
+        DOCTEST_CHECK(result.size() == 1);
+        DOCTEST_CHECK(result[0].x == doctest::Approx(start.x));
+        DOCTEST_CHECK(result[0].y == doctest::Approx(start.y));
+    }
+
+    SUBCASE("linspace vec2 error handling") {
+        std::vector<vec2> result;
+        vec2 start(0.f, 0.f);
+        vec2 end(1.f, 1.f);
+        // Error messages from invalid input are expected - don't suppress them
+        DOCTEST_CHECK_THROWS(result = linspace(start, end, 0));
+        DOCTEST_CHECK_THROWS(result = linspace(start, end, -5));
+    }
+
+    SUBCASE("linspace vec3 basic functionality") {
+        vec3 start(0.f, 0.f, 0.f);
+        vec3 end(3.f, 6.f, 9.f);
+        std::vector<vec3> result = linspace(start, end, 4);
+
+        DOCTEST_CHECK(result.size() == 4);
+        DOCTEST_CHECK(result[0].x == doctest::Approx(0.f));
+        DOCTEST_CHECK(result[0].y == doctest::Approx(0.f));
+        DOCTEST_CHECK(result[0].z == doctest::Approx(0.f));
+        DOCTEST_CHECK(result[1].x == doctest::Approx(1.f));
+        DOCTEST_CHECK(result[1].y == doctest::Approx(2.f));
+        DOCTEST_CHECK(result[1].z == doctest::Approx(3.f));
+        DOCTEST_CHECK(result[3].x == doctest::Approx(3.f));
+        DOCTEST_CHECK(result[3].y == doctest::Approx(6.f));
+        DOCTEST_CHECK(result[3].z == doctest::Approx(9.f));
+    }
+
+    SUBCASE("linspace vec3 with mixed positive/negative components") {
+        vec3 start(-1.f, 2.f, -3.f);
+        vec3 end(1.f, -2.f, 3.f);
+        std::vector<vec3> result = linspace(start, end, 3);
+
+        DOCTEST_CHECK(result.size() == 3);
+        DOCTEST_CHECK(result[0].x == doctest::Approx(-1.f));
+        DOCTEST_CHECK(result[0].y == doctest::Approx(2.f));
+        DOCTEST_CHECK(result[0].z == doctest::Approx(-3.f));
+        DOCTEST_CHECK(result[1].x == doctest::Approx(0.f));
+        DOCTEST_CHECK(result[1].y == doctest::Approx(0.f));
+        DOCTEST_CHECK(result[1].z == doctest::Approx(0.f));
+        DOCTEST_CHECK(result[2].x == doctest::Approx(1.f));
+        DOCTEST_CHECK(result[2].y == doctest::Approx(-2.f));
+        DOCTEST_CHECK(result[2].z == doctest::Approx(3.f));
+    }
+
+    SUBCASE("linspace vec3 error handling") {
+        std::vector<vec3> result;
+        vec3 start(0.f, 0.f, 0.f);
+        vec3 end(1.f, 1.f, 1.f);
+        // Error messages from invalid input are expected - don't suppress them
+        DOCTEST_CHECK_THROWS(result = linspace(start, end, 0));
+        DOCTEST_CHECK_THROWS(result = linspace(start, end, -10));
+    }
+
+    SUBCASE("linspace vec4 basic functionality") {
+        vec4 start(0.f, 1.f, 2.f, 3.f);
+        vec4 end(4.f, 9.f, 14.f, 19.f);
+        std::vector<vec4> result = linspace(start, end, 5);
+
+        DOCTEST_CHECK(result.size() == 5);
+        DOCTEST_CHECK(result[0].x == doctest::Approx(0.f));
+        DOCTEST_CHECK(result[0].y == doctest::Approx(1.f));
+        DOCTEST_CHECK(result[0].z == doctest::Approx(2.f));
+        DOCTEST_CHECK(result[0].w == doctest::Approx(3.f));
+        DOCTEST_CHECK(result[2].x == doctest::Approx(2.f));
+        DOCTEST_CHECK(result[2].y == doctest::Approx(5.f));
+        DOCTEST_CHECK(result[2].z == doctest::Approx(8.f));
+        DOCTEST_CHECK(result[2].w == doctest::Approx(11.f));
+        DOCTEST_CHECK(result[4].x == doctest::Approx(4.f));
+        DOCTEST_CHECK(result[4].y == doctest::Approx(9.f));
+        DOCTEST_CHECK(result[4].z == doctest::Approx(14.f));
+        DOCTEST_CHECK(result[4].w == doctest::Approx(19.f));
+    }
+
+    SUBCASE("linspace vec4 two points") {
+        vec4 start(1.f, 2.f, 3.f, 4.f);
+        vec4 end(5.f, 6.f, 7.f, 8.f);
+        std::vector<vec4> result = linspace(start, end, 2);
+
+        DOCTEST_CHECK(result.size() == 2);
+        DOCTEST_CHECK(result[0] == start);
+        DOCTEST_CHECK(result[1] == end);
+    }
+
+    SUBCASE("linspace vec4 error handling") {
+        std::vector<vec4> result;
+        vec4 start(0.f, 0.f, 0.f, 0.f);
+        vec4 end(1.f, 1.f, 1.f, 1.f);
+        // Error messages from invalid input are expected - don't suppress them
+        DOCTEST_CHECK_THROWS(result = linspace(start, end, 0));
+        DOCTEST_CHECK_THROWS(result = linspace(start, end, -1));
+    }
+
+    SUBCASE("linspace precision and endpoint accuracy") {
+        // Test that endpoints are exactly preserved despite floating point arithmetic
+        std::vector<float> result = linspace(0.1f, 0.9f, 9);
+        DOCTEST_CHECK(result[0] == doctest::Approx(0.1f));
+        DOCTEST_CHECK(result[8] == doctest::Approx(0.9f));
+
+        // Test with large values
+        result = linspace(1000000.f, 2000000.f, 11);
+        DOCTEST_CHECK(result[0] == doctest::Approx(1000000.f));
+        DOCTEST_CHECK(result[10] == doctest::Approx(2000000.f));
+
+        // Test with very small values
+        result = linspace(1e-6f, 2e-6f, 3);
+        DOCTEST_CHECK(result[0] == doctest::Approx(1e-6f));
+        DOCTEST_CHECK(result[2] == doctest::Approx(2e-6f));
+    }
+
+    SUBCASE("linspace zero-length intervals") {
+        // Test when start == end
+        std::vector<float> result = linspace(5.f, 5.f, 5);
+        DOCTEST_CHECK(result.size() == 5);
+        for (const auto &val: result) {
+            DOCTEST_CHECK(val == doctest::Approx(5.f));
+        }
+
+        // Test vec3 with zero-length interval
+        vec3 point(1.f, 2.f, 3.f);
+        std::vector<vec3> vec_result = linspace(point, point, 3);
+        DOCTEST_CHECK(vec_result.size() == 3);
+        for (const auto &v: vec_result) {
+            DOCTEST_CHECK(v.x == doctest::Approx(point.x));
+            DOCTEST_CHECK(v.y == doctest::Approx(point.y));
+            DOCTEST_CHECK(v.z == doctest::Approx(point.z));
+        }
+    }
+}
+
+TEST_CASE("Asset Resolution Functions") {
+    SUBCASE("resolveAssetPath basic functionality") {
+        // Test that resolveAssetPath works correctly - should throw for non-existent file
+        bool exception_thrown = false;
+        try {
+            [[maybe_unused]] auto path = resolveAssetPath("nonexistent_test_file.txt");
+        } catch (const std::runtime_error &) {
+            exception_thrown = true;
+        }
+        DOCTEST_CHECK(exception_thrown);
+    }
+
+    SUBCASE("resolvePluginAsset") {
+        // Test plugin-specific asset resolution - should throw for non-existent file
+        bool exception_thrown = false;
+        try {
+            [[maybe_unused]] auto path = resolvePluginAsset("visualizer", "nonexistent_font.ttf");
+        } catch (const std::runtime_error &) {
+            exception_thrown = true;
+        }
+        DOCTEST_CHECK(exception_thrown);
+    }
+
+
+    SUBCASE("resolveSpectraPath") {
+        // Test spectra path resolution - should throw for non-existent file
+        bool exception_thrown = false;
+        try {
+            [[maybe_unused]] auto path = resolveSpectraPath("nonexistent_spectra.xml");
+        } catch (const std::runtime_error &) {
+            exception_thrown = true;
+        }
+        DOCTEST_CHECK(exception_thrown);
+    }
+
+    SUBCASE("validateAssetPath with valid path") {
+        // Create a temporary file for testing
+        std::filesystem::path temp_path = std::filesystem::temp_directory_path() / "helios_test_asset.txt";
+        std::ofstream temp_file(temp_path);
+        temp_file << "test content";
+        temp_file.close();
+
+        // Test validation of existing file
+        DOCTEST_CHECK(validateAssetPath(temp_path) == true);
+
+        // Clean up
+        std::filesystem::remove(temp_path);
+    }
+
+    SUBCASE("validateAssetPath with invalid path") {
+        // Test validation of non-existent file
+        std::filesystem::path non_existent = "/this/path/does/not/exist.txt";
+        DOCTEST_CHECK(validateAssetPath(non_existent) == false);
+    }
+
+    SUBCASE("resolveAssetPath with empty string") {
+        // Test with empty input - should return a path (empty string is handled gracefully)
+        auto path = resolveAssetPath("");
+        DOCTEST_CHECK(!path.empty());
+        DOCTEST_CHECK(path.is_absolute());
+    }
+
+    SUBCASE("error message content") {
+        // Test that error messages contain helpful information
+        try {
+            [[maybe_unused]] auto path = resolveAssetPath("nonexistent_file.txt");
+            DOCTEST_FAIL("Expected exception was not thrown");
+        } catch (const std::runtime_error &e) {
+            std::string error_msg = e.what();
+            DOCTEST_CHECK(error_msg.find("Could not locate asset file") != std::string::npos);
+            DOCTEST_CHECK(error_msg.find("nonexistent_file.txt") != std::string::npos);
+        }
+    }
+
+    SUBCASE("asset resolution consistency") {
+        // Test that multiple calls with same input produce consistent error messages
+        std::string error1, error2;
+        try {
+            [[maybe_unused]] auto path1 = resolveAssetPath("test_consistency.txt");
+        } catch (const std::runtime_error &e) {
+            error1 = e.what();
+        }
+        try {
+            [[maybe_unused]] auto path2 = resolveAssetPath("test_consistency.txt");
+        } catch (const std::runtime_error &e) {
+            error2 = e.what();
+        }
+        DOCTEST_CHECK(error1 == error2);
+    }
+
+    SUBCASE("different plugin error messages") {
+        // Test that different plugins produce different error messages
+        std::string vis_error, rad_error;
+        try {
+            [[maybe_unused]] auto vis_path = resolvePluginAsset("visualizer", "test.txt");
+        } catch (const std::runtime_error &e) {
+            vis_error = e.what();
+        }
+        try {
+            [[maybe_unused]] auto rad_path = resolvePluginAsset("radiation", "test.txt");
+        } catch (const std::runtime_error &e) {
+            rad_error = e.what();
+        }
+        // Error messages should be different for different plugins
+        DOCTEST_CHECK(vis_error != rad_error);
+        DOCTEST_CHECK(vis_error.find("visualizer") != std::string::npos);
+        DOCTEST_CHECK(rad_error.find("radiation") != std::string::npos);
+    }
+}
+
+TEST_CASE("Project-based File Resolution") {
+    SUBCASE("findProjectRoot basic functionality") {
+        // Test from current working directory (which should contain CMakeLists.txt)
+        std::filesystem::path cwd = std::filesystem::current_path();
+        auto project_root = findProjectRoot(cwd);
+
+        // Should find a project root (not empty)
+        DOCTEST_CHECK(!project_root.empty());
+
+        // Project root should contain CMakeLists.txt
+        auto cmake_file = project_root / "CMakeLists.txt";
+        DOCTEST_CHECK(std::filesystem::exists(cmake_file));
+    }
+
+    SUBCASE("findProjectRoot with non-existent path") {
+        // Test with a path that doesn't exist
+        std::filesystem::path fake_path = "/this/path/does/not/exist";
+        auto project_root = findProjectRoot(fake_path);
+
+        // Should return empty path when no project found
+        DOCTEST_CHECK(project_root.empty());
+    }
+
+    SUBCASE("findProjectRoot from root directory") {
+        // Test from system root directory (should not find CMakeLists.txt)
+        std::filesystem::path root_path = "/";
+        auto project_root = findProjectRoot(root_path);
+
+        // Should return empty path when searching from root
+        DOCTEST_CHECK(project_root.empty());
+    }
+
+    SUBCASE("resolveProjectFile with existing file in cwd") {
+        // Create a temporary test file in current directory
+        std::string test_filename = "test_project_resolve.tmp";
+        std::ofstream test_file(test_filename);
+        test_file << "test content";
+        test_file.close();
+
+        try {
+            // Should find file in current working directory
+            auto resolved_path = resolveProjectFile(test_filename);
+            DOCTEST_CHECK(!resolved_path.empty());
+            DOCTEST_CHECK(std::filesystem::exists(resolved_path));
+        } catch (...) {
+            // Clean up even if test fails
+            std::filesystem::remove(test_filename);
+            throw;
+        }
+
+        // Clean up
+        std::filesystem::remove(test_filename);
+    }
+
+    SUBCASE("resolveProjectFile with non-existent file") {
+        // Test with file that doesn't exist in current directory or project
+        std::string fake_filename = "this_file_does_not_exist_anywhere.tmp";
+
+        std::string error_message;
+        try {
+            [[maybe_unused]] auto resolved_path = resolveProjectFile(fake_filename);
+        } catch (const std::runtime_error &e) {
+            error_message = e.what();
+        }
+
+        // Should throw runtime error for non-existent file
+        DOCTEST_CHECK(!error_message.empty());
+        DOCTEST_CHECK(error_message.find("Could not locate file") != std::string::npos);
+        DOCTEST_CHECK(error_message.find(fake_filename) != std::string::npos);
+    }
+
+    SUBCASE("resolveProjectFile with empty filename") {
+        // Test with empty filename
+        std::string error_message;
+        try {
+            [[maybe_unused]] auto resolved_path = resolveProjectFile("");
+        } catch (const std::runtime_error &e) {
+            error_message = e.what();
+        }
+
+        // Should handle empty filename gracefully
+        DOCTEST_CHECK(!error_message.empty());
+    }
+
+    SUBCASE("resolveProjectFile project directory fallback") {
+        // This test verifies the fallback to project directory works
+        // We'll create a test file in the project root and try to access it from a subdirectory
+        auto project_root = findProjectRoot(std::filesystem::current_path());
+        if (!project_root.empty()) {
+            std::string test_filename = "test_project_fallback.tmp";
+            auto test_file_path = project_root / test_filename;
+
+            // Create test file in project root
+            std::ofstream test_file(test_file_path);
+            test_file << "fallback test content";
+            test_file.close();
+
+            try {
+                // Should find file in project directory even if not in cwd
+                auto resolved_path = resolveProjectFile(test_filename);
+                DOCTEST_CHECK(!resolved_path.empty());
+                DOCTEST_CHECK(std::filesystem::exists(resolved_path));
+                DOCTEST_CHECK(resolved_path == test_file_path);
+            } catch (...) {
+                // Clean up even if test fails
+                std::filesystem::remove(test_file_path);
+                throw;
+            }
+
+            // Clean up
+            std::filesystem::remove(test_file_path);
+        }
+    }
+}
+
+TEST_CASE("WarningAggregator") {
+
+    SUBCASE("Basic accumulation") {
+        WarningAggregator agg;
+        agg.addWarning("test_category", "test message 1");
+        agg.addWarning("test_category", "test message 2");
+        agg.addWarning("test_category", "test message 3");
+
+        DOCTEST_CHECK(agg.getCount("test_category") == 3);
+        DOCTEST_CHECK(agg.getCount("nonexistent_category") == 0);
+    }
+
+    SUBCASE("Multiple categories") {
+        WarningAggregator agg;
+        agg.addWarning("category_a", "message A1");
+        agg.addWarning("category_a", "message A2");
+        agg.addWarning("category_b", "message B1");
+        agg.addWarning("category_b", "message B2");
+        agg.addWarning("category_b", "message B3");
+
+        DOCTEST_CHECK(agg.getCount("category_a") == 2);
+        DOCTEST_CHECK(agg.getCount("category_b") == 3);
+    }
+
+    SUBCASE("Enable and disable") {
+        WarningAggregator agg;
+
+        // Should be enabled by default
+        DOCTEST_CHECK(agg.isEnabled());
+
+        agg.addWarning("test", "message 1");
+        DOCTEST_CHECK(agg.getCount("test") == 1);
+
+        // Disable and add more warnings
+        agg.setEnabled(false);
+        DOCTEST_CHECK(!agg.isEnabled());
+        agg.addWarning("test", "message 2");
+        agg.addWarning("test", "message 3");
+
+        // Count should not increase when disabled
+        DOCTEST_CHECK(agg.getCount("test") == 1);
+
+        // Re-enable
+        agg.setEnabled(true);
+        agg.addWarning("test", "message 4");
+        DOCTEST_CHECK(agg.getCount("test") == 2);
+    }
+
+    SUBCASE("Clear warnings") {
+        WarningAggregator agg;
+        agg.addWarning("test", "message 1");
+        agg.addWarning("test", "message 2");
+        DOCTEST_CHECK(agg.getCount("test") == 2);
+
+        agg.clear();
+        DOCTEST_CHECK(agg.getCount("test") == 0);
+    }
+
+    SUBCASE("Report to stream") {
+        WarningAggregator agg;
+        agg.addWarning("convergence_failure", "fzero did not converge after 100 iterations.");
+        agg.addWarning("convergence_failure", "fzero did not converge after 100 iterations.");
+        agg.addWarning("convergence_failure", "fzero did not converge after 100 iterations.");
+
+        // Capture output using capture_cerr utility
+        std::ostringstream oss;
+        agg.report(oss);
+
+        std::string output = oss.str();
+
+        // Check that output contains key information
+        DOCTEST_CHECK(output.find("WARNING:") != std::string::npos);
+        DOCTEST_CHECK(output.find("3 instances") != std::string::npos);
+        DOCTEST_CHECK(output.find("convergence_failure") != std::string::npos);
+        DOCTEST_CHECK(output.find("showing first 3") != std::string::npos);
+
+        // After reporting, warnings should be cleared
+        DOCTEST_CHECK(agg.getCount("convergence_failure") == 0);
+    }
+
+    SUBCASE("Report with many warnings") {
+        WarningAggregator agg;
+
+        // Add more than 3 warnings to test "showing first 3" behavior
+        for (int i = 0; i < 10; i++) {
+            agg.addWarning("test_many", "Warning message " + std::to_string(i));
+        }
+
+        std::ostringstream oss;
+        agg.report(oss);
+
+        std::string output = oss.str();
+
+        DOCTEST_CHECK(output.find("10 instances") != std::string::npos);
+        DOCTEST_CHECK(output.find("showing first 3") != std::string::npos);
+
+        // Should show first 3 messages
+        DOCTEST_CHECK(output.find("Warning message 0") != std::string::npos);
+        DOCTEST_CHECK(output.find("Warning message 1") != std::string::npos);
+        DOCTEST_CHECK(output.find("Warning message 2") != std::string::npos);
+
+        // Should not show later messages in detail
+        DOCTEST_CHECK(output.find("Warning message 9") == std::string::npos);
+    }
+
+    SUBCASE("Empty report") {
+        WarningAggregator agg;
+
+        std::ostringstream oss;
+        agg.report(oss);
+
+        // Empty aggregator should produce no output
+        DOCTEST_CHECK(oss.str().empty());
+    }
+
+    SUBCASE("Thread safety with OpenMP") {
+#ifdef USE_OPENMP
+        WarningAggregator agg;
+
+        const int num_threads = 4;
+        const int warnings_per_thread = 250;
+
+#pragma omp parallel for num_threads(num_threads)
+        for (int i = 0; i < num_threads * warnings_per_thread; i++) {
+            agg.addWarning("parallel_test", "message from thread");
+        }
+
+        // All warnings should be accumulated correctly
+        DOCTEST_CHECK(agg.getCount("parallel_test") == num_threads * warnings_per_thread);
+#endif
+    }
+
+    SUBCASE("Maximum examples limit") {
+        WarningAggregator agg;
+
+        // Add more than MAX_EXAMPLES (100) warnings
+        for (int i = 0; i < 150; i++) {
+            agg.addWarning("many_warnings", "Warning " + std::to_string(i));
+        }
+
+        // Should count all warnings even though only MAX_EXAMPLES are stored
+        DOCTEST_CHECK(agg.getCount("many_warnings") == 150);
+
+        std::ostringstream oss;
+        agg.report(oss);
+
+        std::string output = oss.str();
+
+        // Output should indicate all 150 warnings were encountered
+        DOCTEST_CHECK(output.find("150 instances") != std::string::npos);
+        // Should also note that more than MAX_EXAMPLES were encountered
+        DOCTEST_CHECK(output.find("More than 100 warnings") != std::string::npos);
+    }
+
+    SUBCASE("Report with single vs multiple instances") {
+        WarningAggregator agg;
+
+        // Single instance
+        agg.addWarning("single", "Only one warning");
+
+        std::ostringstream oss1;
+        agg.report(oss1);
+        std::string output1 = oss1.str();
+
+        // Should say "1 instance" (singular)
+        DOCTEST_CHECK(output1.find("1 instance") != std::string::npos);
+        // Check it doesn't say "instances" in plural form after "1"
+        auto instances_pos = output1.find(" instances");
+        auto one_instance_pos = output1.find("1 instance");
+        bool is_singular = (instances_pos == std::string::npos) || (one_instance_pos < instances_pos);
+        DOCTEST_CHECK(is_singular);
+
+        // Multiple instances
+        agg.addWarning("multiple", "Warning 1");
+        agg.addWarning("multiple", "Warning 2");
+
+        std::ostringstream oss2;
+        agg.report(oss2);
+        std::string output2 = oss2.str();
+
+        // Should say "2 instances" (plural)
+        DOCTEST_CHECK(output2.find("2 instances") != std::string::npos);
     }
 }

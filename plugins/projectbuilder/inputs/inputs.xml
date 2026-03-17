@@ -7,7 +7,7 @@
 	<domain_origin>0 0 0</domain_origin>
 	<domain_extent>4 4</domain_extent>
 	<ground_resolution>25 25</ground_resolution>
-	<ground_texture_file>plugins/visualizer/textures/dirt.jpg</ground_texture_file>
+	<ground_texture_file>plugins/projectbuilder/inputs/dirt.jpg</ground_texture_file>
 	<camera_xml_library_file>plugins/radiation/spectral_data/camera_spectral_library.xml</camera_xml_library_file>
 	<light_xml_library_file>plugins/radiation/spectral_data/light_spectral_library.xml</light_xml_library_file>
 	<canopy_block label="canopy_0">

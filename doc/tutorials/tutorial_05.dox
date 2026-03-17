@@ -1,0 +1,119 @@
+/*! \page context_primdata_tutorial Tutorial 5: Primitive Data
+
+\section context_primdata_intro Introduction to Primitive Data
+
+Primitive data is information associated with a given primitive. This may be a physical propeerty of a primitive (e.g., reflectivity, roughness) or a the output of a model calculation (e.g., radiative flux, temperature). A few properites of primitive data is listed below:
+
+- Primitive data can be defined for some primitives but not others.
+- Primitive data can have types of float, double, int, uint, vec2, vec3, vec4, int2, int3, int4, and std::string.
+- Primitive data can have variable length.
+
+A graphical depiction of primitive data (green boxes) is given in the figure below.
+
+\image html images/Context_sketch.png
+
+\section context_primdata_scalar Creating Primitive Data (Scalars)
+
+Adding primitive data that is a single (scalar) value can be accomplished using the \ref helios::Context::setPrimitiveData() "setPrimitiveData()" function. We simply need to pass this function the UUID of a primitive, the name for this piece of data which the user can choose, and a piece of data with type float, double, int, uint, vec2, vec3, vec4, int2, int3, int4, or std::string. An example is given below where we add some data for a primitive called "my_data". We will add a sphere, which is comprised of many triangles, and add primitive data for one or more of these triangles.
+
+  ~~~~~~{.cpp}
+  #include "Context.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(){
+
+     Context context;  //Declare the "Context" class
+
+     vec3 center(0,0,0); //(x,y,z) position of sphere center
+     float r = 1; //radius of sphere
+
+     std::vector<uint> UUIDs; //vector to store UUIDs of sphere 
+
+     UUIDs = context.addSphere( 10, center, r ); //add a sphere to the Context
+     
+     float data = 10;
+
+     context.setPrimitiveData(UUIDs.at(0),"my_data",data); //add primitive data called my_data to only the first primitive with a value of 10
+
+     context.setPrimitiveData(UUIDs,"my_data",data); //we could also set the value of all primitives at once
+	 
+ }
+ ~~~~~~
+
+To retrieve the primitive value we set, we can use the \ref helios::Context::getPrimitiveData() "getPrimitiveData()" function as illustrated below.
+
+  ~~~~~~{.cpp}
+  #include "Context.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(){
+
+     Context context;  //Declare the "Context" class
+
+     vec3 center(0,0,0); //(x,y,z) position of sphere center
+     float r = 1; //radius of sphere
+
+     std::vector<uint> UUIDs; //vector to store UUIDs of sphere 
+
+     UUIDs = context.addSphere( 10, center, r ); //add a sphere to the Context
+     
+     float data = 10;
+
+     context.setPrimitiveData(UUIDs.at(0),"my_data",data); //add primitive data called my_data to only the first primitive with a value of 10
+
+     float data_new;
+
+     context.getPrimitiveData(UUIDs.at(0),"my_data",data_new); //get the primitive data and assign it to 'data_new'
+	 
+ }
+ ~~~~~~
+
+\section context_primdata_arrays Creating Primitive Data (Arrays)
+
+Adding primitive data that has length greater than one (array) requires a little extra information, namely the type of the data to be added and the length of the data array. The type is specified by one of the enumerations given in the table below;
+
+ <table>
+  <tr>	<th>Data type</th> <th>Enumeration (HeliosDataType)</th> </tr>
+  <tr>	<td>int</td><td>\ref helios::HELIOS_TYPE_INT "HELIOS_TYPE_INT"</td></tr>
+  <tr>	<td>uint</td> <td>\ref helios::HELIOS_TYPE_UINT "HELIOS_TYPE_UINT"</td></tr>
+  <tr>	<td>float</td> <td>\ref helios::HELIOS_TYPE_FLOAT "HELIOS_TYPE_FLOAT"</td> </tr>
+  <tr>	<td>double</td><td>\ref helios::HELIOS_TYPE_DOUBLE "HELIOS_TYPE_DOUBLE"</td> </tr>
+  <tr>	<td>vec2</td><td>\ref helios::HELIOS_TYPE_VEC2 "HELIOS_TYPE_VEC2"</td></tr>
+  <tr>	<td>vec3</td><td>\ref helios::HELIOS_TYPE_VEC3 "HELIOS_TYPE_VEC3"</td></tr>
+  <tr>	<td>vec4</td> <td>\ref helios::HELIOS_TYPE_VEC4 "HELIOS_TYPE_VEC4"</td></tr>
+  <tr>	<td>int2</td> <td>\ref helios::HELIOS_TYPE_INT2 "HELIOS_TYPE_INT2"</td> </tr>
+  <tr>	<td>int3</td> <td>\ref helios::HELIOS_TYPE_INT3 "HELIOS_TYPE_INT3"</td></tr>
+  <tr>	<td>int4</td><td>\ref helios::HELIOS_TYPE_INT4 "HELIOS_TYPE_INT4"</td></tr>
+  <tr>	<td>std::string</td><td>\ref helios::HELIOS_TYPE_STRING "HELIOS_TYPE_STRING"</td></tr>
+ </table>
+
+  ~~~~~~{.cpp}
+  #include "Context.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(){
+
+     Context context;  //Declare the "Context" class
+
+     vec3 center(0,0,0); //(x,y,z) position of sphere center
+     float r = 1; //radius of sphere
+
+     std::vector<uint> UUIDs; //vector to store UUIDs of sphere 
+
+     UUIDs = context.addSphere( 10, center, r ); //add a sphere to the Context
+     
+     float data[5] = {10, 11, 12, 13, 14};
+
+     context.setPrimitiveData(UUIDs.at(0),"my_data",HELIOS_TYPE_FLOAT,5,&data); //add primitive data called my_data to only the first primitive
+
+     std::vector<float> data_new;
+
+     context.getPrimitiveData(UUIDs.at(0),"my_data",data_new); //get the primitive data and assign it to 'data_new'
+	 
+ }
+ ~~~~~~
+
+*/

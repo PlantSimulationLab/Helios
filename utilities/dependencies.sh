@@ -13,14 +13,14 @@
 #           See below.
 #
 # OPTIONS
-#   BASE: Install GCC, G++, and CMake
+#   BASE: Install GCC, G++, CMake, and OpenMP
 #         Required to run Helios.
 #   VIS:  Install base dependencies + X11/xorg
 #         Required for Visualizer plugin.
 #   CUDA: Install base dependencies + CUDA
-#         Required for 1. Radiation, 2. Energy
-#         Balance, 3. LiDAR, 4. Aerial LiDAR,
-#         and 5. Voxel Intersection plugins.
+#         Required for Aerial LiDAR plugin.
+#         Optional for Radiation plugin (enables
+#         OptiX backend on NVIDIA systems).
 #   ALL:  Install dependencies for ALL plugins
 #
 # EXAMPLE
@@ -91,10 +91,8 @@ if [[ "$(uname -s)" == *"MINGW"* || "$(uname -s)" == *"CYGWIN"* ]]; then
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     echo -e "Installing $MODE dependencies for macOS host...\n"
     PACKAGE_MANAGER="brew"
-    DEPENDENCIES_PATH+=("pybind11")
-    if [[ "$MODE" == "all" || "$MODE" == "cuda" || "$MODE" == "vis" ]]; then
-        DEPENDENCIES_PATH+=("Caskroom" "cask")
-    fi
+    DEPENDENCIES_PATH+=("pybind11" "libomp")
+    # Note: Caskroom and cask are built into modern Homebrew, no need to install separately
     if [[ "$MODE" == "all" || "$MODE" == "vis" ]]; then
         DEPENDENCIES_PATH+=("xquartz")
     fi
@@ -127,6 +125,16 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     else
         echo "No package manager detected. Exiting..."
         exit 1
+    fi
+    # Add OpenMP development packages for Linux based on package manager
+    if command -v apt &> /dev/null; then
+        DEPENDENCIES_PATH+=("libomp-dev")
+    elif command -v yum &> /dev/null || command -v dnf &> /dev/null || command -v tdnf &> /dev/null; then
+        DEPENDENCIES_PATH+=("libgomp-devel")
+    elif command -v zypper &> /dev/null; then
+        DEPENDENCIES_PATH+=("libgomp-devel")
+    elif command -v pacman &> /dev/null; then
+        DEPENDENCIES_PATH+=("openmp")
     fi
     if [[ "$MODE" == "all" || "$MODE" == "vis" ]]; then
         DEPENDENCIES_PATH+=("libx11-dev" "xorg-dev" "libgl1-mesa-dev" "libglu1-mesa-dev" "libxrandr-dev" "python3-dev" "pybind11-dev")

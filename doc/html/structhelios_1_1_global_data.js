@@ -13,5 +13,6 @@ var structhelios_1_1_global_data =
     [ "global_data_vec3", "structhelios_1_1_global_data.html#afa64258678fd8cd207b5402bee765b97", null ],
     [ "global_data_vec4", "structhelios_1_1_global_data.html#a7777dfa8f6fa95e27f5b6208531d8cf4", null ],
     [ "size", "structhelios_1_1_global_data.html#a2ae4dd14076d1c936b043e8907396096", null ],
-    [ "type", "structhelios_1_1_global_data.html#aaaeff19f66532e98f44155ab6a9620b0", null ]
+    [ "type", "structhelios_1_1_global_data.html#aaaeff19f66532e98f44155ab6a9620b0", null ],
+    [ "version", "structhelios_1_1_global_data.html#ae785f2a56fed9b2803f6cbe39fcafeae", null ]
 ];

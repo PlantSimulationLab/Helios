@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: helios::vec2 Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -202,6 +235,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:af415fc7a5ac67950e95d554a7d8528b5" id="r_af415fc7a5ac67950e95d554a7d8528b5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af415fc7a5ac67950e95d554a7d8528b5">operator-=</a> (const <a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp;a) noexcept</td></tr>
 <tr class="memdesc:af415fc7a5ac67950e95d554a7d8528b5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decrement vec2 vector.  <br /></td></tr>
 <tr class="separator:af415fc7a5ac67950e95d554a7d8528b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adc8ae54509d5f0ece3f1b8b4d9930549" id="r_adc8ae54509d5f0ece3f1b8b4d9930549"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adc8ae54509d5f0ece3f1b8b4d9930549">operator*=</a> (float a) noexcept</td></tr>
+<tr class="memdesc:adc8ae54509d5f0ece3f1b8b4d9930549"><td class="mdescLeft">&#160;</td><td class="mdescRight">Multiplication assignment operator for vec2 vector.  <br /></td></tr>
+<tr class="separator:adc8ae54509d5f0ece3f1b8b4d9930549"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3d18a63fcf2314702472810d1043541f" id="r_a3d18a63fcf2314702472810d1043541f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3d18a63fcf2314702472810d1043541f">operator/=</a> (float a) noexcept</td></tr>
+<tr class="memdesc:a3d18a63fcf2314702472810d1043541f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Division assignment operator for vec2 vector.  <br /></td></tr>
+<tr class="separator:a3d18a63fcf2314702472810d1043541f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a829572bb47c6f129d0e6e7987da03066" id="r_a829572bb47c6f129d0e6e7987da03066"><td class="memItemLeft" align="right" valign="top">constexpr <a class="el" href="structhelios_1_1vec2.html">vec2</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a829572bb47c6f129d0e6e7987da03066">operator-</a> (const <a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp;a) const noexcept</td></tr>
 <tr class="memdesc:a829572bb47c6f129d0e6e7987da03066"><td class="mdescLeft">&#160;</td><td class="mdescRight">Difference of two vec2 vectors noexcept.  <br /></td></tr>
 <tr class="separator:a829572bb47c6f129d0e6e7987da03066"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -245,7 +284,7 @@ Friends</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Vector of two elements of type 'float'. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00681">681</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00692">692</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a85d463c5496898972ed1ade11d390e7f" name="a85d463c5496898972ed1ade11d390e7f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a85d463c5496898972ed1ade11d390e7f">&#9670;&#160;</a></span>vec2() <span class="overload">[1/4]</span></h2>
@@ -273,7 +312,7 @@ Friends</h2></td></tr>
 <p>Default constructor. </p>
 <p>initializes to zero </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00710">710</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00723">723</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -302,7 +341,7 @@ Friends</h2></td></tr>
 
 <p>Initialize vec2 using a vector of floats. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00713">713</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00727">727</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -331,7 +370,7 @@ Friends</h2></td></tr>
 
 <p>Initialize vec2 using an array of floats. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00721">721</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00735">735</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -364,7 +403,7 @@ Friends</h2></td></tr>
 
 <p>Initialize vec2 using two floats. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00724">724</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00739">739</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -395,7 +434,7 @@ Friends</h2></td></tr>
 <p>Compute the vector magnitude. </p>
 <dl class="section return"><dt>Returns</dt><dd>magnitude of vector </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00702">702</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00715">715</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -424,7 +463,7 @@ Friends</h2></td></tr>
 
 <p>Normalize vector components such that the magnitude is unity. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00690">690</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00701">701</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -453,7 +492,7 @@ Friends</h2></td></tr>
 
 <p>check for inequality of two vec2 vectors </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00838">838</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00869">869</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -482,7 +521,7 @@ Friends</h2></td></tr>
 
 <p>Dot (scalar) product of two vec2 vectors. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00781">781</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00800">800</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -511,7 +550,36 @@ Friends</h2></td></tr>
 
 <p>Multiply each element by scalar (scalar is multiplied on right: vec2*a) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00821">821</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00852">852</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+
+</div>
+</div>
+<a id="adc8ae54509d5f0ece3f1b8b4d9930549" name="adc8ae54509d5f0ece3f1b8b4d9930549"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adc8ae54509d5f0ece3f1b8b4d9930549">&#9670;&#160;</a></span>operator*=()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp; helios::vec2::operator*= </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>a</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Multiplication assignment operator for vec2 vector. </p>
+
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00820">820</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -540,7 +608,7 @@ Friends</h2></td></tr>
 
 <p>Sum of two vec2 vectors. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00785">785</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00804">804</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -569,7 +637,7 @@ Friends</h2></td></tr>
 
 <p>Add a scalar to each element (scalar is added on right: vec2+a) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00801">801</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00832">832</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -598,7 +666,7 @@ Friends</h2></td></tr>
 
 <p>Increment vec2 vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00789">789</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00808">808</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -627,7 +695,7 @@ Friends</h2></td></tr>
 
 <p>Multiply each element by -1. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00842">842</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00873">873</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -656,7 +724,7 @@ Friends</h2></td></tr>
 
 <p>Difference of two vec2 vectors noexcept. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00809">809</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00840">840</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -685,7 +753,7 @@ Friends</h2></td></tr>
 
 <p>Subtract a scalar from each element (scalar is subtracted on right: vec2-a) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00813">813</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00844">844</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -714,7 +782,7 @@ Friends</h2></td></tr>
 
 <p>Decrement vec2 vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00795">795</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00814">814</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -743,7 +811,36 @@ Friends</h2></td></tr>
 
 <p>Divide each element by scalar (scalar is divided on right: vec2/a) </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00829">829</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00860">860</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+
+</div>
+</div>
+<a id="a3d18a63fcf2314702472810d1043541f" name="a3d18a63fcf2314702472810d1043541f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3d18a63fcf2314702472810d1043541f">&#9670;&#160;</a></span>operator/=()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp; helios::vec2::operator/= </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>a</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Division assignment operator for vec2 vector. </p>
+
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00826">826</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -772,7 +869,7 @@ Friends</h2></td></tr>
 
 <p>check for equality of two vec2 vectors </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00834">834</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00865">865</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -806,7 +903,7 @@ Friends</h2></td></tr>
 
 <p>Write vec2 to output stream. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00752">752</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00772">772</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -825,7 +922,7 @@ Friends</h2></td></tr>
 
 <p>First element in vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00685">685</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00696">696</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>
@@ -843,7 +940,7 @@ Friends</h2></td></tr>
 
 <p>Second element in vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00687">687</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helios__vector__types_8h_source.html#l00698">698</a> of file <a class="el" href="helios__vector__types_8h_source.html">helios_vector_types.h</a>.</p>
 
 </div>
 </div>

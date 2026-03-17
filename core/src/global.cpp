@@ -1,7 +1,7 @@
 /**
  * \file "global.cpp" global declarations.
  *
- * Copyright (C) 2016-2025 Brian Bailey
+ * Copyright (C) 2016-2026 Brian Bailey
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -197,12 +197,9 @@ vec3 helios::rotatePointAboutLine(const vec3 &point, const vec3 &line_base, cons
 }
 
 float helios::calculateTriangleArea(const vec3 &v0, const vec3 &v1, const vec3 &v2) {
-    const float a = (v1 - v0).magnitude();
-    const float b = (v2 - v0).magnitude();
-    const float c = (v2 - v1).magnitude();
-
-    const float s = 0.5f * (a + b + c);
-    return sqrtf(s * (s - a) * (s - b) * (s - c));
+    vec3 edge1 = v1 - v0;
+    vec3 edge2 = v2 - v0;
+    return 0.5f * cross(edge1, edge2).magnitude();
 }
 
 int helios::Date::JulianDay() const {
@@ -388,6 +385,78 @@ bool helios::pointInPolygon(const vec2 &p, const std::vector<vec2> &poly) {
     }
 
     return (crossings & 1) == 1;
+}
+
+helios::ProgressBar::ProgressBar(size_t total, int width, bool enable, const std::string &progress_message) : total_steps(total), current_step(0), bar_width(width), enabled(enable), message(progress_message) {
+}
+
+void helios::ProgressBar::update() {
+    if (!enabled)
+        return;
+
+    current_step++;
+    double progress = (double) current_step / total_steps;
+    int filled = (int) (progress * bar_width);
+
+    std::cout << "\r" << message << ": [";
+    for (int i = 0; i < bar_width; ++i) {
+        if (i < filled)
+            std::cout << "=";
+        else if (i == filled)
+            std::cout << ">";
+        else
+            std::cout << " ";
+    }
+    std::cout << "] " << (int) (progress * 100) << "% (" << current_step << "/" << total_steps << ")";
+    std::cout.flush();
+
+    if (current_step >= total_steps) {
+        std::cout << std::endl;
+    }
+}
+
+void helios::ProgressBar::update(size_t step_number) {
+    if (!enabled)
+        return;
+
+    current_step = step_number;
+    if (current_step > total_steps) {
+        current_step = total_steps;
+    }
+
+    double progress = (double) current_step / total_steps;
+    int filled = (int) (progress * bar_width);
+
+    std::cout << "\r" << message << ": [";
+    for (int i = 0; i < bar_width; ++i) {
+        if (i < filled)
+            std::cout << "=";
+        else if (i == filled)
+            std::cout << ">";
+        else
+            std::cout << " ";
+    }
+    std::cout << "] " << (int) (progress * 100) << "% (" << current_step << "/" << total_steps << ")";
+    std::cout.flush();
+
+    if (current_step >= total_steps) {
+        std::cout << std::endl;
+    }
+}
+
+void helios::ProgressBar::finish() {
+    if (enabled && current_step < total_steps) {
+        current_step = total_steps;
+        update(current_step);
+    }
+}
+
+void helios::ProgressBar::setEnabled(bool enable) {
+    enabled = enable;
+}
+
+bool helios::ProgressBar::isEnabled() const {
+    return enabled;
 }
 
 void helios::wait(float seconds) {
@@ -685,7 +754,17 @@ float helios::atan2_2pi(float y, float x) {
 
 SphericalCoord helios::cart2sphere(const vec3 &Cartesian) {
     float radius = sqrtf(Cartesian.x * Cartesian.x + Cartesian.y * Cartesian.y + Cartesian.z * Cartesian.z);
-    return {radius, asin_safe(Cartesian.z / radius), atan2_2pi(Cartesian.x, Cartesian.y)};
+
+    // Add small epsilon to prevent singularity when vector is exactly vertical (x=0, y=0)
+    // This prevents gimbal lock for cameras pointing straight up/down
+    // Use positive y offset so atan2(0, eps) gives azimuth = 0 (pointing in +y direction)
+    float x_safe = Cartesian.x;
+    float y_safe = Cartesian.y;
+    if (fabsf(x_safe) < 1e-7f && fabsf(y_safe) < 1e-7f) {
+        y_safe = 1e-7f; // Positive offset gives azimuth = 0 (+y direction)
+    }
+
+    return {radius, asin_safe(Cartesian.z / radius), atan2_2pi(x_safe, y_safe)};
 }
 
 vec3 helios::sphere2cart(const SphericalCoord &Spherical) {
@@ -976,8 +1055,17 @@ bool helios::open_xml_file(const std::string &xml_file, pugi::xml_document &xmld
         return false;
     }
 
+    // Resolve file path using the build directory path resolution system
+    std::filesystem::path resolvedPath;
+    try {
+        resolvedPath = resolveFilePath(xml_file);
+    } catch (const std::runtime_error &e) {
+        error_string = std::string(e.what());
+        return false;
+    }
+
     // load file
-    pugi::xml_parse_result load_result = xmldoc.load_file(xml_file.c_str());
+    pugi::xml_parse_result load_result = xmldoc.load_file(resolvedPath.string().c_str());
 
     // error checking
     if (!load_result) {
@@ -1413,104 +1501,131 @@ std::vector<std::vector<bool>> helios::readPNGAlpha(const std::string &filename)
         helios_runtime_error("ERROR (readPNGAlpha): File " + fn + " has no extension.");
     }
     std::string ext = fn.substr(dot + 1);
-    if (ext != "png" && ext != "PNG") {
+    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return std::tolower(c); });
+    if (ext != "png") {
         helios_runtime_error("ERROR (readPNGAlpha): File " + fn + " is not PNG format.");
     }
 
-    int y;
-
     std::vector<std::vector<bool>> mask;
+    png_structp png_ptr = nullptr;
+    png_infop info_ptr = nullptr;
 
-    png_structp png_ptr;
-    png_infop info_ptr;
-
-    char header[8]; // 8 is the maximum size that can be checked
-
-    /* open file and test for it being a png */
-    FILE *fp = fopen(filename.c_str(), "rb");
-    if (!fp) {
-        helios_runtime_error("ERROR (readPNGAlpha): File " + std::string(filename) + " could not be opened for reading.");
-    }
-    size_t head = fread(header, 1, 8, fp);
-    // if (png_sig_cmp(header, 0, 8)){
-    //   std::cerr << "ERROR (read_png_alpha): File " << filename << " is not recognized as a PNG file." << std::endl;
-    //   exit(EXIT_FAILURE);
-    // }
-
-    /* initialize stuff */
-    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
-
-    if (!png_ptr) {
-        helios_runtime_error("ERROR (readPNGAlpha): png_create_read_struct failed.");
-    }
-
-    info_ptr = png_create_info_struct(png_ptr);
-    if (!info_ptr) {
-        helios_runtime_error("ERROR (readPNGAlpha): png_create_info_struct failed.");
-    }
-
-    if (setjmp(png_jmpbuf(png_ptr))) {
-        helios_runtime_error("ERROR (readPNGAlpha): init_io failed.");
-    }
-
-    png_init_io(png_ptr, fp);
-    png_set_sig_bytes(png_ptr, 8);
-
-    png_read_info(png_ptr, info_ptr);
-
-    uint width = png_get_image_width(png_ptr, info_ptr);
-    uint height = png_get_image_height(png_ptr, info_ptr);
-    png_byte color_type = png_get_color_type(png_ptr, info_ptr);
-    bool has_alpha = (color_type & PNG_COLOR_MASK_ALPHA) != 0 || png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS) != 0;
-
-    mask.resize(height);
-    for (uint i = 0; i < height; i++) {
-        mask.at(i).resize(width);
-    }
-
-    if (!has_alpha) {
-        for (uint j = 0; j < height; ++j) {
-            std::fill(mask.at(j).begin(), mask.at(j).end(), true);
+    try {
+        // RAII for FILE*
+        auto fileDeleter = [](FILE *f) {
+            if (f)
+                fclose(f);
+        };
+        std::unique_ptr<FILE, decltype(fileDeleter)> fp(fopen(filename.c_str(), "rb"), fileDeleter);
+        if (!fp) {
+            throw std::runtime_error("File " + filename + " could not be opened for reading.");
         }
-        fclose(fp);
-        png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
-        return mask;
-    }
 
-    //  number_of_passes = png_set_interlace_handling(png_ptr);
-    png_read_update_info(png_ptr, info_ptr);
+        // Read & validate PNG signature
+        unsigned char header[8];
+        if (fread(header, 1, 8, fp.get()) != 8) {
+            throw std::runtime_error("Failed to read PNG header from " + filename);
+        }
+        if (png_sig_cmp(header, 0, 8)) {
+            throw std::runtime_error("File " + filename + " is not a valid PNG.");
+        }
 
-    /* read file */
-    if (setjmp(png_jmpbuf(png_ptr))) {
-        helios_runtime_error("ERROR (readPNGAlpha): read_image failed.");
-    }
+        // Create libpng structs
+        png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+        if (!png_ptr) {
+            throw std::runtime_error("png_create_read_struct failed.");
+        }
 
-    auto *row_pointers = (png_bytep *) malloc(sizeof(png_bytep) * height);
-    for (y = 0; y < height; y++)
-        row_pointers[y] = (png_byte *) malloc(png_get_rowbytes(png_ptr, info_ptr));
+        info_ptr = png_create_info_struct(png_ptr);
+        if (!info_ptr) {
+            png_destroy_read_struct(&png_ptr, nullptr, nullptr);
+            throw std::runtime_error("png_create_info_struct failed.");
+        }
 
-    png_read_image(png_ptr, row_pointers);
+        // libpng error handling
+        if (setjmp(png_jmpbuf(png_ptr))) {
+            throw std::runtime_error("Error during PNG initialization.");
+        }
 
-    fclose(fp);
+        png_init_io(png_ptr, fp.get());
+        png_set_sig_bytes(png_ptr, 8);
+        png_read_info(png_ptr, info_ptr);
 
-    for (uint j = 0; j < height; j++) {
-        png_byte *row = row_pointers[j];
-        for (int i = 0; i < width; i++) {
-            png_byte *ba = &(row[i * 4]);
-            float alpha = ba[3];
-            if (alpha < 250) {
-                mask.at(j).at(i) = false;
-            } else {
-                mask.at(j).at(i) = true;
+        uint width = png_get_image_width(png_ptr, info_ptr);
+        uint height = png_get_image_height(png_ptr, info_ptr);
+        png_byte color_type = png_get_color_type(png_ptr, info_ptr);
+        png_byte bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+        bool has_alpha = (color_type & PNG_COLOR_MASK_ALPHA) != 0 || png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS) != 0;
+
+        mask.resize(height);
+        for (uint i = 0; i < height; i++) {
+            mask.at(i).resize(width);
+        }
+
+        if (!has_alpha) {
+            for (uint j = 0; j < height; ++j) {
+                std::fill(mask.at(j).begin(), mask.at(j).end(), true);
+            }
+            png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+            return mask;
+        }
+
+        // Apply transformations to ensure we get RGBA format (4 bytes per pixel)
+        if (bit_depth == 16) {
+            png_set_strip_16(png_ptr);
+        }
+        if (color_type == PNG_COLOR_TYPE_PALETTE) {
+            png_set_palette_to_rgb(png_ptr);
+        }
+        if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8) {
+            png_set_expand_gray_1_2_4_to_8(png_ptr);
+        }
+        if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) {
+            png_set_tRNS_to_alpha(png_ptr);
+        }
+        // Only add filler if we don't already have alpha from tRNS
+        if (!png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS) && (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_PALETTE)) {
+            png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
+        }
+        if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
+            png_set_gray_to_rgb(png_ptr);
+        }
+
+        png_set_interlace_handling(png_ptr);
+        png_read_update_info(png_ptr, info_ptr);
+
+        // Prepare row pointers using RAII containers
+        size_t rowbytes = png_get_rowbytes(png_ptr, info_ptr);
+        std::vector<std::vector<png_byte>> row_data(height, std::vector<png_byte>(rowbytes));
+        std::vector<png_bytep> row_pointers(height);
+        for (uint y = 0; y < height; ++y) {
+            row_pointers[y] = row_data[y].data();
+        }
+
+        // Read the image
+        if (setjmp(png_jmpbuf(png_ptr))) {
+            throw std::runtime_error("Error during PNG read.");
+        }
+        png_read_image(png_ptr, row_pointers.data());
+
+        // Extract alpha mask
+        for (uint j = 0; j < height; j++) {
+            png_byte *row = row_pointers[j];
+            for (uint i = 0; i < width; i++) {
+                png_byte *ba = &(row[i * 4]);
+                float alpha = ba[3];
+                mask.at(j).at(i) = (alpha >= 250);
             }
         }
+
+        png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+
+    } catch (const std::exception &e) {
+        if (png_ptr) {
+            png_destroy_read_struct(&png_ptr, info_ptr ? &info_ptr : nullptr, nullptr);
+        }
+        helios_runtime_error(std::string("ERROR (readPNGAlpha): ") + e.what());
     }
-
-    for (y = 0; y < height; y++)
-        png_free(png_ptr, row_pointers[y]);
-    png_free(png_ptr, row_pointers);
-    png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
-
 
     return mask;
 }
@@ -1589,8 +1704,8 @@ void helios::readPNG(const std::string &filename, uint &width, uint &height, std
         if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) {
             png_set_tRNS_to_alpha(png_ptr);
         }
-        // Ensure we have RGBA
-        if (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_PALETTE) {
+        // Ensure we have RGBA - but only add filler if we don't already have alpha from tRNS
+        if (!png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS) && (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_PALETTE)) {
             png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
         }
         if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
@@ -1778,7 +1893,7 @@ void helios::readJPEG(const std::string &filename, uint &width, uint &height, st
     try {
         jpeg_create_decompress(&cinfo);
         jpeg_stdio_src(&cinfo, infile.get());
-        (void) jpeg_read_header(&cinfo, TRUE);
+        (void) jpeg_read_header(&cinfo, (boolean) 1);
 
         (void) jpeg_start_decompress(&cinfo);
 
@@ -1839,7 +1954,7 @@ helios::int2 helios::getImageResolutionJPEG(const std::string &filename) {
     try {
         jpeg_create_decompress(&cinfo);
         jpeg_stdio_src(&cinfo, infile.get());
-        (void) jpeg_read_header(&cinfo, TRUE);
+        (void) jpeg_read_header(&cinfo, (boolean) 1);
         (void) jpeg_start_decompress(&cinfo);
 
         jpeg_destroy_decompress(&cinfo);
@@ -1899,9 +2014,9 @@ void helios::writeJPEG(const std::string &a_filename, uint width, uint height, c
 
     jpeg_set_defaults(&cinfo);
 
-    jpeg_set_quality(&cinfo, 100, TRUE /* limit to baseline-JPEG values */);
+    jpeg_set_quality(&cinfo, 100, (boolean) 1 /* limit to baseline-JPEG values */);
 
-    jpeg_start_compress(&cinfo, TRUE);
+    jpeg_start_compress(&cinfo, (boolean) 1);
 
     try {
         row_stride = width * 3; /* JSAMPLEs per row in image_buffer */
@@ -2130,9 +2245,10 @@ helios::RGBAcolor helios::XMLloadrgba(const pugi::xml_node node, const char *fie
     return value;
 }
 
-float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::vector<float> &vars, const void *params, float init_guess, float err_tol, int max_iter) {
-    constexpr float DELTA_SEED = 1e-4f;
-    constexpr float DENOM_EPS = 1e-12f;
+float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::vector<float> &vars, const void *params, float init_guess, float err_tol, int max_iter, WarningAggregator *warnings) {
+    constexpr float DELTA_SEED = 1e-3f; // Increased for better initial slope estimate
+    constexpr float DENOM_EPS = 1e-10f; // Relaxed flat function detection
+    constexpr float MAX_STEP_FACTOR = 0.5f; // Limit step size for stability
 
     /* ---- initial pair ---------------------------------------------- */
     float x0 = init_guess;
@@ -2141,27 +2257,72 @@ float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::
     float f0 = f(x0, vars, params);
     float f1 = f(x1, vars, params);
 
+    // If initial points have opposite signs, use bisection for robustness
+    bool use_bisection = (f0 * f1 < 0);
+    float bracket_low = use_bisection ? std::min(x0, x1) : 0;
+    float bracket_high = use_bisection ? std::max(x0, x1) : 0;
+
     for (int iter = 0; iter < max_iter; ++iter) {
 
         float denom = f1 - f0;
 
         /* ------- flat or nearly flat function ----------------------- */
         if (std::fabs(denom) < DENOM_EPS) {
-            if (std::fabs(f1) < err_tol) { // already “close enough”
+            if (std::fabs(f1) < err_tol) { // already "close enough"
                 return x1;
             }
-            std::cerr << "WARNING: fzero stagnated (|f'|≈0).\n";
+            // Try a different approach if function is flat
+            if (use_bisection) {
+                float x2 = 0.5f * (bracket_low + bracket_high);
+                if (std::fabs(x2 - x1) < err_tol * std::fabs(x2)) {
+                    return x2;
+                }
+                float f2 = f(x2, vars, params);
+                if (f1 * f2 < 0) {
+                    bracket_high = x1;
+                } else {
+                    bracket_low = x1;
+                }
+                x0 = x1;
+                f0 = f1;
+                x1 = x2;
+                f1 = f2;
+                continue;
+            }
+            if (warnings) {
+                warnings->addWarning("fzero_stagnation", "fzero stagnated (|f'|≈0).");
+            }
             return x1; // graceful exit, finite value
         }
 
-        /* ------- secant update  x₂ = x₁ − f₁ (x₁−x₀)/(f₁−f₀) -------- */
+        /* ------- secant update with step limiting -------------------- */
         float x2 = x1 - f1 * (x1 - x0) / denom;
+
+        // Limit step size for stability
+        float step = x2 - x1;
+        float max_step = MAX_STEP_FACTOR * std::max(std::fabs(x1), 1.0f);
+        if (std::fabs(step) > max_step) {
+            step = (step > 0) ? max_step : -max_step;
+            x2 = x1 + step;
+        }
+
         if (!std::isfinite(x2)) { // overflow / NaN safeguard
-            std::cerr << "WARNING: fzero produced non-finite iterate.\n";
+            if (warnings) {
+                warnings->addWarning("fzero_nonfinite", "fzero produced non-finite iterate.");
+            }
             return x1;
         }
 
         float f2 = f(x2, vars, params);
+
+        // Update brackets if using bisection fallback
+        if (use_bisection) {
+            if (f1 * f2 < 0) {
+                bracket_high = x1;
+            } else {
+                bracket_low = x1;
+            }
+        }
 
         /* ------- convergence criteria -------------------------------- */
         float rel_step = std::fabs(x2 - x1) / (std::fabs(x2) + 1.0f);
@@ -2176,7 +2337,105 @@ float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::
         f1 = f2;
     }
 
-    std::cerr << "WARNING: fzero did not converge after " << max_iter << " iterations.\n";
+    if (warnings) {
+        warnings->addWarning("fzero_convergence_failure", "fzero did not converge after " + std::to_string(max_iter) + " iterations.");
+    }
+    return x1; // best finite estimate
+}
+
+float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::vector<float> &vars, const void *params, float init_guess, bool &converged, float err_tol, int max_iter) {
+    constexpr float DELTA_SEED = 1e-3f; // Increased for better initial slope estimate
+    constexpr float DENOM_EPS = 1e-10f; // Relaxed flat function detection
+    constexpr float MAX_STEP_FACTOR = 0.5f; // Limit step size for stability
+
+    converged = false; // Initialize as not converged
+
+    /* ---- initial pair ---------------------------------------------- */
+    float x0 = init_guess;
+    float x1 = (std::fabs(init_guess) > 1.0f) ? init_guess * (1.0f + DELTA_SEED) : init_guess + DELTA_SEED;
+
+    float f0 = f(x0, vars, params);
+    float f1 = f(x1, vars, params);
+
+    // If initial points have opposite signs, use bisection for robustness
+    bool use_bisection = (f0 * f1 < 0);
+    float bracket_low = use_bisection ? std::min(x0, x1) : 0;
+    float bracket_high = use_bisection ? std::max(x0, x1) : 0;
+
+    for (int iter = 0; iter < max_iter; ++iter) {
+
+        float denom = f1 - f0;
+
+        /* ------- flat or nearly flat function ----------------------- */
+        if (std::fabs(denom) < DENOM_EPS) {
+            if (std::fabs(f1) < err_tol) { // already "close enough"
+                converged = true;
+                return x1;
+            }
+            // Try a different approach if function is flat
+            if (use_bisection) {
+                float x2 = 0.5f * (bracket_low + bracket_high);
+                if (std::fabs(x2 - x1) < err_tol * std::fabs(x2)) {
+                    converged = true;
+                    return x2;
+                }
+                float f2 = f(x2, vars, params);
+                if (f1 * f2 < 0) {
+                    bracket_high = x1;
+                } else {
+                    bracket_low = x1;
+                }
+                x0 = x1;
+                f0 = f1;
+                x1 = x2;
+                f1 = f2;
+                continue;
+            }
+            // Function is stagnated, not converged
+            return x1; // graceful exit, finite value
+        }
+
+        /* ------- secant update with step limiting -------------------- */
+        float x2 = x1 - f1 * (x1 - x0) / denom;
+
+        // Limit step size for stability
+        float step = x2 - x1;
+        float max_step = MAX_STEP_FACTOR * std::max(std::fabs(x1), 1.0f);
+        if (std::fabs(step) > max_step) {
+            step = (step > 0) ? max_step : -max_step;
+            x2 = x1 + step;
+        }
+
+        if (!std::isfinite(x2)) { // overflow / NaN safeguard
+            return x1;
+        }
+
+        float f2 = f(x2, vars, params);
+
+        // Update brackets if using bisection fallback
+        if (use_bisection) {
+            if (f1 * f2 < 0) {
+                bracket_high = x1;
+            } else {
+                bracket_low = x1;
+            }
+        }
+
+        /* ------- convergence criteria -------------------------------- */
+        float rel_step = std::fabs(x2 - x1) / (std::fabs(x2) + 1.0f);
+        if (std::fabs(f2) < err_tol && rel_step < err_tol) {
+            converged = true;
+            return x2;
+        }
+
+        /* ------- next iteration -------------------------------------- */
+        x0 = x1;
+        f0 = f1;
+        x1 = x2;
+        f1 = f2;
+    }
+
+    // Did not converge after max_iter iterations
     return x1; // best finite estimate
 }
 
@@ -2191,8 +2450,46 @@ float helios::interp1(const std::vector<helios::vec2> &points, float x) {
         return points[0].y;
     }
 
-    // Validate input: ensure x values are monotonic (either increasing or decreasing) and unique
+    // Fast path: check first if data is increasing (most common case)
+    // This avoids full validation for performance-critical applications
     constexpr float EPSILON = 1.0E-5f;
+    bool is_likely_increasing = points.size() < 2 || points[1].x > points[0].x;
+
+    if (is_likely_increasing) {
+        // Quick verification for increasing sequence
+        bool is_valid_increasing = true;
+        for (size_t i = 1; i < points.size() && is_valid_increasing; ++i) {
+            float deltaX = points[i].x - points[i - 1].x;
+            if (deltaX <= EPSILON) {
+                is_valid_increasing = false;
+            }
+        }
+
+        if (is_valid_increasing) {
+            // Handle extrapolation cases
+            if (x <= points.front().x) {
+                return points.front().y;
+            }
+            if (x >= points.back().x) {
+                return points.back().y;
+            }
+
+            // Optimized binary search for increasing sequence
+            auto it = std::lower_bound(points.begin(), points.end(), x, [](const vec2 &point, float value) { return point.x < value; });
+
+            size_t upper_idx = std::distance(points.begin(), it);
+            size_t lower_idx = upper_idx - 1;
+
+            const vec2 &p1 = points[lower_idx];
+            const vec2 &p2 = points[upper_idx];
+
+            // Linear interpolation
+            float t = (x - p1.x) / (p2.x - p1.x);
+            return p1.y + t * (p2.y - p1.y);
+        }
+    }
+
+    // Fallback: full validation for decreasing or invalid sequences
     bool is_increasing = true;
     bool is_decreasing = true;
 
@@ -2215,50 +2512,33 @@ float helios::interp1(const std::vector<helios::vec2> &points, float x) {
     }
 
     // Handle extrapolation cases
-    if (is_increasing) {
-        if (x <= points.front().x) {
-            return points.front().y; // Extrapolate to first point
-        }
-        if (x >= points.back().x) {
-            return points.back().y; // Extrapolate to last point
-        }
-    } else { // is_decreasing
+    if (is_decreasing) {
         if (x >= points.front().x) {
-            return points.front().y; // Extrapolate to first point
+            return points.front().y;
         }
         if (x <= points.back().x) {
-            return points.back().y; // Extrapolate to last point
+            return points.back().y;
         }
+
+        // Optimized binary search for decreasing sequence
+        auto it = std::lower_bound(points.begin(), points.end(), x, [](const vec2 &point, float value) { return point.x > value; });
+
+        size_t upper_idx = std::distance(points.begin(), it);
+        if (upper_idx == 0)
+            upper_idx = 1;
+        size_t lower_idx = upper_idx - 1;
+
+        const vec2 &p1 = points[lower_idx];
+        const vec2 &p2 = points[upper_idx];
+
+        // Linear interpolation
+        float t = (x - p1.x) / (p2.x - p1.x);
+        return p1.y + t * (p2.y - p1.y);
     }
 
-    // Find the interpolation interval
-    size_t lower_idx = 0;
-    size_t upper_idx = 1;
-
-    if (is_increasing) {
-        // Use binary search for increasing sequence
-        auto it = std::lower_bound(points.begin(), points.end(), x, [](const vec2 &point, float value) { return point.x < value; });
-
-        upper_idx = std::distance(points.begin(), it);
-        lower_idx = upper_idx - 1;
-    } else {
-        // At this point, it points to the first element with x >= target x
-        // For decreasing sequence, find the interval manually
-        for (size_t i = 1; i < points.size(); ++i) {
-            if (points[i].x <= x && x <= points[i - 1].x) {
-                lower_idx = i - 1;
-                upper_idx = i;
-                break;
-            }
-        }
-    }
-
-    const vec2 &p1 = points[lower_idx]; // Lower bound
-    const vec2 &p2 = points[upper_idx]; // Upper bound
-
-    // Linear interpolation
-    float t = (x - p1.x) / (p2.x - p1.x);
-    return p1.y + t * (p2.y - p1.y);
+    // This should never be reached due to earlier validation
+    helios_runtime_error("ERROR (interp1): Unexpected interpolation state.");
+    return 0.0f; // Suppress compiler warning (never reached)
 }
 
 std::string helios::getFileExtension(const std::string &filepath) {
@@ -2306,6 +2586,12 @@ bool helios::validateOutputPath(std::string &output_path, const std::vector<std:
         if (output_dir.find_last_of('/') != output_dir.length() - 1) {
             output_path += "/";
         }
+    } else if (isDirectoryPath(output_path)) {
+        // Path is a directory (either exists as one or is clearly intended to be one)
+        // Ensure it has a trailing slash so file concatenation works correctly
+        if (output_path.back() != '/' && output_path.back() != '\\') {
+            output_path += "/";
+        }
     }
 
     // Create the output directory if it does not exist
@@ -2330,6 +2616,217 @@ bool helios::validateOutputPath(std::string &output_path, const std::vector<std:
     }
 
     return true;
+}
+
+bool helios::isDirectoryPath(const std::string &path) {
+    if (path.empty()) {
+        return false;
+    }
+
+    // Check if path exists and is a directory
+    if (std::filesystem::exists(path) && std::filesystem::is_directory(path)) {
+        return true;
+    }
+
+    // If path doesn't exist, use heuristics to determine if it's intended to be a directory
+
+    // 1. Check for trailing slash (most reliable indicator)
+    if (path.back() == '/' || path.back() == '\\') {
+        return true;
+    }
+
+    // 2. Check if the last component has a file extension
+    std::filesystem::path path_obj(path);
+    std::string extension = path_obj.extension().string();
+
+    // If there's no extension, it's likely a directory
+    // (This handles cases like "./annotations" vs "./file.txt")
+    if (extension.empty()) {
+        std::string filename = path_obj.filename().string();
+
+        // Handle special cases: dotfiles are usually files, not directories
+        if (filename.front() == '.' && filename != "." && filename != "..") {
+            return false; // .bashrc, .gitignore, .hidden files, etc.
+        }
+
+        // For other cases without extension, assume it's a directory
+        // This fixes the bug where "./annotations" was treated as a file
+        return true;
+    }
+
+    // 3. If it has an extension, it's likely a file
+    return false;
+}
+
+//--------------------- HELIOS_BUILD PATH RESOLUTION -----------------------------------//
+
+//! Get build directory path - requires HELIOS_BUILD environment variable
+std::string getBuildDirectory() {
+    // Try HELIOS_BUILD environment variable (required)
+    if (const char *buildDir = std::getenv("HELIOS_BUILD")) {
+        return std::string(buildDir);
+    }
+
+    // Fallback: assume current working directory contains the build
+    // This is a simple fallback that should work for most use cases
+    std::filesystem::path currentPath = std::filesystem::current_path();
+
+    // If we're already in a build directory, use it
+    if (std::filesystem::exists(currentPath / "plugins")) {
+        return currentPath.string();
+    }
+
+    // If we're in a subdirectory, try going up to find build directory
+    std::filesystem::path parent = currentPath.parent_path();
+    if (std::filesystem::exists(parent / "plugins")) {
+        return parent.string();
+    }
+
+    // Last resort: use current directory
+    return currentPath.string();
+}
+
+std::filesystem::path helios::resolveAssetPath(const std::string &relativePath) {
+    // This function is deprecated but kept for compatibility
+    // It now just calls resolveFilePath
+    return resolveFilePath(relativePath);
+}
+
+std::filesystem::path helios::tryResolvePluginAsset(const std::string &pluginName, const std::string &assetPath) {
+    std::string pluginAssetPath = "plugins/" + pluginName + "/" + assetPath;
+    return tryResolveFilePath(pluginAssetPath);
+}
+
+std::filesystem::path helios::resolvePluginAsset(const std::string &pluginName, const std::string &assetPath) {
+    std::string pluginAssetPath = "plugins/" + pluginName + "/" + assetPath;
+    return resolveFilePath(pluginAssetPath);
+}
+
+
+std::filesystem::path helios::tryResolveFilePath(const std::string &filename) {
+    // Non-throwing version for probing file existence
+    if (filename.empty()) {
+        return {};
+    }
+
+    // 1. If absolute path, validate and return
+    std::filesystem::path filepath(filename);
+    if (filepath.is_absolute()) {
+        if (std::filesystem::exists(filepath)) {
+            return std::filesystem::canonical(filepath);
+        } else {
+            return {};
+        }
+    }
+
+    // 2. First try: Check relative to current working directory
+    std::filesystem::path currentDirPath = std::filesystem::current_path() / filename;
+    if (std::filesystem::exists(currentDirPath)) {
+        return std::filesystem::canonical(currentDirPath);
+    }
+
+    // 3. Second try: Resolve relative to build directory (fallback for HELIOS_BUILD)
+    std::string buildDir = getBuildDirectory();
+    std::filesystem::path buildDirPath = std::filesystem::path(buildDir) / filename;
+
+    if (std::filesystem::exists(buildDirPath)) {
+        return std::filesystem::canonical(buildDirPath);
+    }
+
+    // File not found in any location
+    return {};
+}
+
+std::filesystem::path helios::resolveFilePath(const std::string &filename) {
+    // Handle empty string case - return current working directory
+    if (filename.empty()) {
+        return std::filesystem::current_path();
+    }
+
+    // Try to resolve using the non-throwing version first
+    std::filesystem::path result = tryResolveFilePath(filename);
+
+    if (!result.empty()) {
+        return result;
+    }
+
+    // File not found - provide clear error message
+    std::filesystem::path currentDirPath = std::filesystem::current_path() / filename;
+    std::string buildDir = getBuildDirectory();
+    std::filesystem::path buildDirPath = std::filesystem::path(buildDir) / filename;
+
+    helios_runtime_error("ERROR (helios::resolveFilePath): Could not locate asset file: " + filename + " (checked: " + currentDirPath.string() + " and " + buildDirPath.string() + "). " +
+                         "Ensure file exists relative to current directory or HELIOS_BUILD path.");
+    return {}; // This line should never be reached due to helios_runtime_error throwing
+}
+
+std::filesystem::path helios::resolveSpectraPath(const std::string &spectraFile) {
+    // All spectral data files should be looked for in the radiation plugin's spectral_data directory
+    std::string spectraPath = "plugins/radiation/spectral_data/" + spectraFile;
+    return resolveFilePath(spectraPath);
+}
+
+bool helios::validateAssetPath(const std::filesystem::path &assetPath) {
+    return std::filesystem::exists(assetPath) && std::filesystem::is_regular_file(assetPath);
+}
+
+std::filesystem::path helios::findProjectRoot(const std::filesystem::path &startPath) {
+    std::filesystem::path currentPath = std::filesystem::absolute(startPath);
+
+    while (!currentPath.empty() && currentPath != currentPath.parent_path()) {
+        std::filesystem::path cmakeFile = currentPath / "CMakeLists.txt";
+        if (std::filesystem::exists(cmakeFile) && std::filesystem::is_regular_file(cmakeFile)) {
+            return currentPath;
+        }
+        currentPath = currentPath.parent_path();
+    }
+
+    return {}; // Return empty path if not found
+}
+
+std::filesystem::path helios::resolveProjectFile(const std::string &relativePath) {
+    // Handle empty path
+    if (relativePath.empty()) {
+        helios_runtime_error("ERROR (resolveProjectFile): Cannot resolve empty file path.");
+    }
+
+    // If it's already absolute, just validate and return it
+    std::filesystem::path inputPath(relativePath);
+    if (inputPath.is_absolute()) {
+        if (validateAssetPath(inputPath)) {
+            return inputPath;
+        } else {
+            helios_runtime_error("ERROR (resolveProjectFile): Absolute path '" + relativePath + "' does not exist or is not a regular file.");
+        }
+    }
+
+    // Strategy 1: Check current working directory
+    std::filesystem::path cwdPath = std::filesystem::current_path() / relativePath;
+    if (validateAssetPath(cwdPath)) {
+        return std::filesystem::absolute(cwdPath);
+    }
+
+    // Strategy 2: Check project directory
+    std::filesystem::path projectRoot = findProjectRoot();
+    if (!projectRoot.empty()) {
+        std::filesystem::path projectPath = projectRoot / relativePath;
+        if (validateAssetPath(projectPath)) {
+            return std::filesystem::absolute(projectPath);
+        }
+    }
+
+    // Strategy 3: Error - file not found in either location
+    std::string errorMsg = "ERROR (resolveProjectFile): Could not locate file '" + relativePath + "'. Searched in:\n";
+    errorMsg += "  - Current working directory: " + std::filesystem::current_path().string() + "\n";
+    if (!projectRoot.empty()) {
+        errorMsg += "  - Project directory: " + projectRoot.string() + "\n";
+    } else {
+        errorMsg += "  - Project directory: (not found - no CMakeLists.txt found in parent directories)\n";
+    }
+    errorMsg += "Ensure the file exists in one of these locations.";
+
+    helios_runtime_error(errorMsg);
+    return {}; // Never reached due to exception
 }
 
 std::vector<float> helios::importVectorFromFile(const std::string &filepath) {
@@ -2416,6 +2913,90 @@ float helios::sample_ellipsoidal_azimuth(float e, float phi0_degrees, std::minst
     return phi;
 }
 
+std::vector<float> helios::linspace(float start, float end, int num) {
+    if (num <= 0) {
+        helios_runtime_error("ERROR (linspace): Number of points must be greater than 0.");
+    }
+
+    if (num == 1) {
+        return {start};
+    }
+
+    std::vector<float> result(num);
+    float step = (end - start) / (num - 1);
+
+    for (int i = 0; i < num; ++i) {
+        result[i] = start + i * step;
+    }
+
+    result[num - 1] = end;
+
+    return result;
+}
+
+std::vector<vec2> helios::linspace(const vec2 &start, const vec2 &end, int num) {
+    if (num <= 0) {
+        helios_runtime_error("ERROR (linspace): Number of points must be greater than 0.");
+    }
+
+    if (num == 1) {
+        return {start};
+    }
+
+    std::vector<vec2> result(num);
+    vec2 step = (end - start) / float(num - 1);
+
+    for (int i = 0; i < num; ++i) {
+        result[i] = start + step * float(i);
+    }
+
+    result[num - 1] = end;
+
+    return result;
+}
+
+std::vector<vec3> helios::linspace(const vec3 &start, const vec3 &end, int num) {
+    if (num <= 0) {
+        helios_runtime_error("ERROR (linspace): Number of points must be greater than 0.");
+    }
+
+    if (num == 1) {
+        return {start};
+    }
+
+    std::vector<vec3> result(num);
+    vec3 step = (end - start) / float(num - 1);
+
+    for (int i = 0; i < num; ++i) {
+        result[i] = start + step * float(i);
+    }
+
+    result[num - 1] = end;
+
+    return result;
+}
+
+std::vector<vec4> helios::linspace(const vec4 &start, const vec4 &end, int num) {
+    if (num <= 0) {
+        helios_runtime_error("ERROR (linspace): Number of points must be greater than 0.");
+    }
+
+    if (num == 1) {
+        return {start};
+    }
+
+    std::vector<vec4> result(num);
+    vec4 step = (end - start) / float(num - 1);
+
+    for (int i = 0; i < num; ++i) {
+        result[i] = start + step * float(i);
+    }
+
+    result[num - 1] = end;
+
+    return result;
+}
+
 // float helios::sample_ellipsoidal_azimuth(
 //     float e,
 //     float phi0_degrees,
@@ -2440,6 +3021,90 @@ float helios::sample_ellipsoidal_azimuth(float e, float phi0_degrees, std::minst
 //
 //     // 4) rejection sampling: envelope = uniform φ, accept with ratio = (1–e²)/denominator
 //     std::uniform_real_distribution<float> dist01(0.f, 1.f);
+//--------- WarningAggregator Implementation ---------//
+
+void helios::WarningAggregator::addWarning(const std::string &category, const std::string &message) {
+    if (!enabled_) {
+        return;
+    }
+
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    // Increment total count (always)
+    counts_[category]++;
+
+    // Only store up to MAX_EXAMPLES messages to prevent memory issues
+    auto &messages = warnings_[category];
+    if (messages.size() < MAX_EXAMPLES) {
+        messages.push_back(message);
+    }
+}
+
+void helios::WarningAggregator::report(std::ostream &stream, bool compact) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    if (counts_.empty()) {
+        return; // Nothing to report
+    }
+
+    // Report each category
+    for (const auto &entry: counts_) {
+        const std::string &category = entry.first;
+        size_t count = entry.second;
+
+        stream << "WARNING: " << count << " instance" << (count > 1 ? "s" : "") << " of '" << category << "'";
+
+        if (!compact) {
+            // Original behavior: show examples
+            const auto &messages = warnings_[category];
+
+            // Show first few examples
+            size_t examples_to_show = std::min(size_t(3), messages.size());
+            stream << " (showing first " << examples_to_show << "):" << std::endl;
+
+            for (size_t i = 0; i < examples_to_show; ++i) {
+                stream << "  - " << messages[i] << std::endl;
+            }
+
+            if (count > MAX_EXAMPLES) {
+                stream << "  (Note: More than " << MAX_EXAMPLES << " warnings of this type were encountered)" << std::endl;
+            }
+            stream << std::endl;
+        } else {
+            // Compact mode: just the count
+            stream << std::endl;
+        }
+    }
+
+    // Clear after reporting
+    warnings_.clear();
+    counts_.clear();
+}
+
+size_t helios::WarningAggregator::getCount(const std::string &category) const {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    auto it = counts_.find(category);
+    if (it != counts_.end()) {
+        return it->second;
+    }
+    return 0;
+}
+
+void helios::WarningAggregator::clear() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    warnings_.clear();
+    counts_.clear();
+}
+
+void helios::WarningAggregator::setEnabled(bool enabled) {
+    enabled_ = enabled;
+}
+
+bool helios::WarningAggregator::isEnabled() const {
+    return enabled_;
+}
+
 //     while (true) {
 //         float phi = distPhi(*generator);
 //         float d   = phi - phi0;

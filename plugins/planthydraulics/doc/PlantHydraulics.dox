@@ -96,14 +96,14 @@ Water potential (\f$\psi\f$, MPa) as function of relative water content (\f$w\f$
 potentials, turgor pressure (\f$p\f$, MPa) and osmotic potential (\f$\pi\f$, MPa),
 
 \f[
-\psi(w)=p(w)+\pi(w) = -\pi_o \max\left(0,\frac{w-w_{tlp}}{1-w_{tlp}}\right)^\epsilon
+\psi(w)=p(w)+\pi(w) = \pi_o \max\left(0,\frac{w-w_{tlp}}{1-w_{tlp}}\right)^\epsilon
  - \frac{\pi_o}{w},
 \f]
 
 
 where turgor pressure is parameterized by a saturated turgor pressure equal to saturated osmotic pressure \f$-\pi_o\f$ at \f$w=1\f$,
-the relative water content at the turgor loss point, \f$w_{tlp}\f$ and an empirical compartmental wall elasticity,
-\f$\epsilon\f$ ([Sack et al. 2018](https://doi.org/10.1104/pp.17.01097)). Osmotic potential is given by the saturated osmotic pressure
+the relative water content at the turgor loss point, \f$w_{tlp}\f$ ([Sack et al. 2018](https://doi.org/10.1104/pp.17.01097)), and an empirical compartmental wall elasticity,
+\f$\epsilon\f$. Osmotic potential is given by the saturated osmotic pressure
 divided by relative water content, \f$\frac{-\pi_o}{w}\f$.
 
 Currently osmotic potential at full turgor is given as a single parameter but it can be estimated or updated by the user using a

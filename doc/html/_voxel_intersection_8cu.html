@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: plugins/voxelintersection/src/VoxelIntersection.cu File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -182,12 +215,12 @@ Functions</h2></td></tr>
 <tr class="separator:a0f62e8aedb21d83200a8190f593b4bc6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a35200012a45ca6589b750b95b1abb6db" id="r_a35200012a45ca6589b750b95b1abb6db"><td class="memItemLeft" align="right" valign="top">__device__ float3&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a35200012a45ca6589b750b95b1abb6db">d_rotatePoint_vi</a> (const float3 &amp;position, const float &amp;theta, const float &amp;phi)</td></tr>
 <tr class="separator:a35200012a45ca6589b750b95b1abb6db"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4f4e0e27b8eddd181a05768eef63d5b7" id="r_a4f4e0e27b8eddd181a05768eef63d5b7"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4f4e0e27b8eddd181a05768eef63d5b7">insideVolume_vi</a> (const uint Nhits, const float3 *d_hit_xyz, const uint Ngridcells, const float3 *d_grid_size, const float3 *d_grid_center, const float *d_grid_rotation, int *d_hit_vol)</td></tr>
+<tr class="memitem:a4f4e0e27b8eddd181a05768eef63d5b7" id="r_a4f4e0e27b8eddd181a05768eef63d5b7"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4f4e0e27b8eddd181a05768eef63d5b7">insideVolume_vi</a> (const <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> Nhits, const float3 *d_hit_xyz, const <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> Ngridcells, const float3 *d_grid_size, const float3 *d_grid_center, const float *d_grid_rotation, int *d_hit_vol)</td></tr>
 <tr class="separator:a4f4e0e27b8eddd181a05768eef63d5b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>CUDA-related functions for voxel-intersection plug-in</p>
-<p>Copyright (C) 2016-2025 Brian Bailey</p>
+<p>Copyright (C) 2016-2026 Brian Bailey</p>
 <p>This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 2.</p>
 <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. </p>
 
@@ -207,7 +240,9 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">{ gpuAssert((ans), __FILE__, __LINE__); }</div>
+<b>Value:</b><div class="fragment"><div class="line">    {                                                                                                                                                                                                                                                    \</div>
+<div class="line">        gpuAssert((ans), __FILE__, __LINE__);                                                                                                                                                                                                            \</div>
+<div class="line">    }</div>
 </div><!-- fragment -->
 <p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cu_source.html#l00018">18</a> of file <a class="el" href="_voxel_intersection_8cu_source.html">VoxelIntersection.cu</a>.</p>
 
@@ -238,7 +273,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cu_source.html#l00044">44</a> of file <a class="el" href="_voxel_intersection_8cu_source.html">VoxelIntersection.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cu_source.html#l00046">46</a> of file <a class="el" href="_voxel_intersection_8cu_source.html">VoxelIntersection.cu</a>.</p>
 
 </div>
 </div>
@@ -265,7 +300,7 @@ Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cu_source.html#l00036">36</a> of file <a class="el" href="_voxel_intersection_8cu_source.html">VoxelIntersection.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cu_source.html#l00038">38</a> of file <a class="el" href="_voxel_intersection_8cu_source.html">VoxelIntersection.cu</a>.</p>
 
 </div>
 </div>
@@ -306,7 +341,7 @@ Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cu_source.html#l00019">19</a> of file <a class="el" href="_voxel_intersection_8cu_source.html">VoxelIntersection.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cu_source.html#l00022">22</a> of file <a class="el" href="_voxel_intersection_8cu_source.html">VoxelIntersection.cu</a>.</p>
 
 </div>
 </div>
@@ -319,7 +354,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">__global__ void insideVolume_vi </td>
           <td>(</td>
-          <td class="paramtype">const uint</td>          <td class="paramname"><span class="paramname"><em>Nhits</em></span>, </td>
+          <td class="paramtype">const <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>Nhits</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -329,7 +364,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const uint</td>          <td class="paramname"><span class="paramname"><em>Ngridcells</em></span>, </td>
+          <td class="paramtype">const <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a></td>          <td class="paramname"><span class="paramname"><em>Ngridcells</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -354,7 +389,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cu_source.html#l00097">97</a> of file <a class="el" href="_voxel_intersection_8cu_source.html">VoxelIntersection.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cu_source.html#l00098">98</a> of file <a class="el" href="_voxel_intersection_8cu_source.html">VoxelIntersection.cu</a>.</p>
 
 </div>
 </div>
@@ -381,7 +416,7 @@ Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cu_source.html#l00028">28</a> of file <a class="el" href="_voxel_intersection_8cu_source.html">VoxelIntersection.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cu_source.html#l00030">30</a> of file <a class="el" href="_voxel_intersection_8cu_source.html">VoxelIntersection.cu</a>.</p>
 
 </div>
 </div>

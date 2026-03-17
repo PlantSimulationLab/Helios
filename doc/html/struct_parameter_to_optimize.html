@@ -6,8 +6,9 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.13.2"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Helios: my_error_mgr Struct Reference</title>
+<title>Helios: ParameterToOptimize Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -131,7 +164,7 @@ $(function() { codefold.init(0); });
 </div>
 <script type="text/javascript">
 /* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function(){initNavTree('structmy__error__mgr.html',''); initResizable(true); });
+$(function(){initNavTree('struct_parameter_to_optimize.html',''); initResizable(true); });
 /* @license-end */
 </script>
 <div id="doc-content">
@@ -159,62 +192,131 @@ $(function(){initNavTree('structmy__error__mgr.html',''); initResizable(true); }
 <div class="header">
   <div class="summary">
 <a href="#pub-attribs">Data Fields</a>  </div>
-  <div class="headertitle"><div class="title">my_error_mgr Struct Reference</div></div>
+  <div class="headertitle"><div class="title">ParameterToOptimize Struct Reference</div></div>
 </div><!--header-->
 <div class="contents">
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Data Fields</h2></td></tr>
-<tr class="memitem:aac1fb61cc51b4d8edbb44ba85fcccdb4" id="r_aac1fb61cc51b4d8edbb44ba85fcccdb4"><td class="memItemLeft" align="right" valign="top">struct jpeg_error_mgr&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aac1fb61cc51b4d8edbb44ba85fcccdb4">pub</a></td></tr>
-<tr class="separator:aac1fb61cc51b4d8edbb44ba85fcccdb4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a751138dd0c774fe1d41bb5465b3a7539" id="r_a751138dd0c774fe1d41bb5465b3a7539"><td class="memItemLeft" align="right" valign="top">jmp_buf&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a751138dd0c774fe1d41bb5465b3a7539">setjmp_buffer</a></td></tr>
-<tr class="separator:a751138dd0c774fe1d41bb5465b3a7539"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a448c80e5683d1562591d8d9aaebfcc78" id="r_a448c80e5683d1562591d8d9aaebfcc78"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a448c80e5683d1562591d8d9aaebfcc78">value</a></td></tr>
+<tr class="memdesc:a448c80e5683d1562591d8d9aaebfcc78"><td class="mdescLeft">&#160;</td><td class="mdescRight">Current value of the parameter.  <br /></td></tr>
+<tr class="separator:a448c80e5683d1562591d8d9aaebfcc78"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac5f6ba69168bbc3230b2bec3c7b19627" id="r_ac5f6ba69168bbc3230b2bec3c7b19627"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac5f6ba69168bbc3230b2bec3c7b19627">min</a></td></tr>
+<tr class="memdesc:ac5f6ba69168bbc3230b2bec3c7b19627"><td class="mdescLeft">&#160;</td><td class="mdescRight">Minimum allowed value (ignored for CATEGORICAL)  <br /></td></tr>
+<tr class="separator:ac5f6ba69168bbc3230b2bec3c7b19627"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a755706c258b93499dbf212391c992981" id="r_a755706c258b93499dbf212391c992981"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a755706c258b93499dbf212391c992981">max</a></td></tr>
+<tr class="memdesc:a755706c258b93499dbf212391c992981"><td class="mdescLeft">&#160;</td><td class="mdescRight">Maximum allowed value (ignored for CATEGORICAL)  <br /></td></tr>
+<tr class="separator:a755706c258b93499dbf212391c992981"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac5276077ced60c6bf0f28cf07c5dc8f4" id="r_ac5276077ced60c6bf0f28cf07c5dc8f4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="_parameter_optimization_8h.html#a4d63980e4031b0fc366e623868b27ed0">ParameterType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac5276077ced60c6bf0f28cf07c5dc8f4">type</a> = <a class="el" href="_parameter_optimization_8h.html#a4d63980e4031b0fc366e623868b27ed0ae738c26bf4ce1037fa81b039a915cbf6">ParameterType::FLOAT</a></td></tr>
+<tr class="memdesc:ac5276077ced60c6bf0f28cf07c5dc8f4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parameter type.  <br /></td></tr>
+<tr class="separator:ac5276077ced60c6bf0f28cf07c5dc8f4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4d6cfc9fdfe7639002ff1e53953826b8" id="r_a4d6cfc9fdfe7639002ff1e53953826b8"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4d6cfc9fdfe7639002ff1e53953826b8">categories</a></td></tr>
+<tr class="memdesc:a4d6cfc9fdfe7639002ff1e53953826b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allowed values for CATEGORICAL type (ignored otherwise)  <br /></td></tr>
+<tr class="separator:a4d6cfc9fdfe7639002ff1e53953826b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00043">43</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_parameter_optimization_8h_source.html#l00032">32</a> of file <a class="el" href="_parameter_optimization_8h_source.html">ParameterOptimization.h</a>.</p>
 </div><h2 class="groupheader">Field Documentation</h2>
-<a id="aac1fb61cc51b4d8edbb44ba85fcccdb4" name="aac1fb61cc51b4d8edbb44ba85fcccdb4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aac1fb61cc51b4d8edbb44ba85fcccdb4">&#9670;&#160;</a></span>pub</h2>
+<a id="a4d6cfc9fdfe7639002ff1e53953826b8" name="a4d6cfc9fdfe7639002ff1e53953826b8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4d6cfc9fdfe7639002ff1e53953826b8">&#9670;&#160;</a></span>categories</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">struct jpeg_error_mgr my_error_mgr::pub</td>
+          <td class="memname">std::vector&lt;float&gt; ParameterToOptimize::categories</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00044">44</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p>Allowed values for CATEGORICAL type (ignored otherwise) </p>
+
+<p class="definition">Definition at line <a class="el" href="_parameter_optimization_8h_source.html#l00037">37</a> of file <a class="el" href="_parameter_optimization_8h_source.html">ParameterOptimization.h</a>.</p>
 
 </div>
 </div>
-<a id="a751138dd0c774fe1d41bb5465b3a7539" name="a751138dd0c774fe1d41bb5465b3a7539"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a751138dd0c774fe1d41bb5465b3a7539">&#9670;&#160;</a></span>setjmp_buffer</h2>
+<a id="a755706c258b93499dbf212391c992981" name="a755706c258b93499dbf212391c992981"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a755706c258b93499dbf212391c992981">&#9670;&#160;</a></span>max</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">jmp_buf my_error_mgr::setjmp_buffer</td>
+          <td class="memname">float ParameterToOptimize::max</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_visualizer_8cpp_source.html#l00046">46</a> of file <a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a>.</p>
+<p>Maximum allowed value (ignored for CATEGORICAL) </p>
+
+<p class="definition">Definition at line <a class="el" href="_parameter_optimization_8h_source.html#l00035">35</a> of file <a class="el" href="_parameter_optimization_8h_source.html">ParameterOptimization.h</a>.</p>
+
+</div>
+</div>
+<a id="ac5f6ba69168bbc3230b2bec3c7b19627" name="ac5f6ba69168bbc3230b2bec3c7b19627"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac5f6ba69168bbc3230b2bec3c7b19627">&#9670;&#160;</a></span>min</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float ParameterToOptimize::min</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Minimum allowed value (ignored for CATEGORICAL) </p>
+
+<p class="definition">Definition at line <a class="el" href="_parameter_optimization_8h_source.html#l00034">34</a> of file <a class="el" href="_parameter_optimization_8h_source.html">ParameterOptimization.h</a>.</p>
+
+</div>
+</div>
+<a id="ac5276077ced60c6bf0f28cf07c5dc8f4" name="ac5276077ced60c6bf0f28cf07c5dc8f4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac5276077ced60c6bf0f28cf07c5dc8f4">&#9670;&#160;</a></span>type</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="_parameter_optimization_8h.html#a4d63980e4031b0fc366e623868b27ed0">ParameterType</a> ParameterToOptimize::type = <a class="el" href="_parameter_optimization_8h.html#a4d63980e4031b0fc366e623868b27ed0ae738c26bf4ce1037fa81b039a915cbf6">ParameterType::FLOAT</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Parameter type. </p>
+
+<p class="definition">Definition at line <a class="el" href="_parameter_optimization_8h_source.html#l00036">36</a> of file <a class="el" href="_parameter_optimization_8h_source.html">ParameterOptimization.h</a>.</p>
+
+</div>
+</div>
+<a id="a448c80e5683d1562591d8d9aaebfcc78" name="a448c80e5683d1562591d8d9aaebfcc78"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a448c80e5683d1562591d8d9aaebfcc78">&#9670;&#160;</a></span>value</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float ParameterToOptimize::value</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Current value of the parameter. </p>
+
+<p class="definition">Definition at line <a class="el" href="_parameter_optimization_8h_source.html#l00033">33</a> of file <a class="el" href="_parameter_optimization_8h_source.html">ParameterOptimization.h</a>.</p>
 
 </div>
 </div>
 <hr/>The documentation for this struct was generated from the following file:<ul>
-<li>plugins/visualizer/src/<a class="el" href="_visualizer_8cpp_source.html">Visualizer.cpp</a></li>
+<li>plugins/parameteroptimization/include/<a class="el" href="_parameter_optimization_8h_source.html">ParameterOptimization.h</a></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="structmy__error__mgr.html">my_error_mgr</a></li>
+    <li class="navelem"><a class="el" href="struct_parameter_to_optimize.html">ParameterToOptimize</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
   </ul>
 </div>

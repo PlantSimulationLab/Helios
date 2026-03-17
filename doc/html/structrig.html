@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Helios: rig Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <script type="text/javascript" src="clipboard.js"></script>
@@ -21,6 +22,33 @@
   DoxygenAwesomeTabs.init()
   DoxygenAwesomeInteractiveToc.init()
 </script>
+<script type="text/javascript">
+  // Mobile sidebar toggle functionality
+  function toggleMobileSidebar() {
+    var sidebar = document.getElementById('side-nav');
+    var overlay = document.getElementById('mobile-nav-overlay');
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var body = document.body;
+    if (sidebar && overlay && menuBtn) {
+      var isOpen = body.classList.contains('mobile-sidebar-open');
+      if (isOpen) {
+        body.classList.remove('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-label', 'Open navigation menu');
+      } else {
+        body.classList.add('mobile-sidebar-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.setAttribute('aria-label', 'Close navigation menu');
+      }
+    }
+  }
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-sidebar-open')) {
+      toggleMobileSidebar();
+    }
+  });
+</script>
 <script>
     try {
         // Remove the stored “last visited page” so the tree always starts fresh
@@ -28,14 +56,11 @@
         localStorage.removeItem('navpath');
         // Older Doxygen versions might use this key:
         localStorage.removeItem('nav-sync-path');
-        // Force panel synchronization on by default
-        localStorage.setItem('navsync', 'true');
-        // (fallback for some older builds)
-        localStorage.setItem('nav-sync', 'true');
     } catch(e) {
         /* storage unavailable? ignore */
     }
 </script>
+<script type="text/javascript" src="navsync-default.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="navtreedata.js"></script>
 <script type="text/javascript" src="navtree.js"></script>
@@ -79,6 +104,15 @@ window.MathJax = {
     gtag('config', 'G-3F0Y5Z6543');
 </script>
 <body>
+<!-- Mobile sidebar overlay -->
+<div id="mobile-nav-overlay" onclick="toggleMobileSidebar()"></div>
+<!-- Mobile hamburger menu button - must be outside #side-nav to avoid transform containment -->
+<button id="mobile-menu-btn" aria-label="Open navigation menu" onclick="toggleMobileSidebar()">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+<div id="side-nav" class="ui-resizable side-nav-resizable"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="5">
@@ -87,10 +121,11 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.36</span>
+       <span id="projectnumber">&#160;</span>
    </div>
   </td>
-     <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
+ </tr>
+   <tr><td colspan="2">        <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
           <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
           <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
@@ -101,8 +136,7 @@ window.MathJax = {
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
           </span>
         </div>
-</td>
- </tr>
+</td></tr>
  </tbody>
 </table>
 </div>
@@ -119,7 +153,6 @@ $(function() { codefold.init(0); });
 /* @license-end */
 </script>
 </div><!-- top -->
-<div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
     <div id="nav-tree-contents">
       <div id="nav-sync" class="sync"></div>
@@ -170,16 +203,26 @@ $(function(){initNavTree('structrig.html',''); initResizable(true); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Data Fields</h2></td></tr>
+<tr class="memitem:ac04f76a2ba9cb1bf90bfcb8fa07ea162" id="r_ac04f76a2ba9cb1bf90bfcb8fa07ea162"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac04f76a2ba9cb1bf90bfcb8fa07ea162">num_images</a></td></tr>
+<tr class="separator:ac04f76a2ba9cb1bf90bfcb8fa07ea162"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af340d0c577621da9858f40f912ea1ce8" id="r_af340d0c577621da9858f40f912ea1ce8"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af340d0c577621da9858f40f912ea1ce8">label</a></td></tr>
 <tr class="separator:af340d0c577621da9858f40f912ea1ce8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aff283f5f68f727ed606269bb39d9475f" id="r_aff283f5f68f727ed606269bb39d9475f"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structdistribution.html">distribution</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aff283f5f68f727ed606269bb39d9475f">position_noise</a></td></tr>
 <tr class="separator:aff283f5f68f727ed606269bb39d9475f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af555852d9178ad0fd9286fe060275582" id="r_af555852d9178ad0fd9286fe060275582"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structdistribution.html">distribution</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af555852d9178ad0fd9286fe060275582">lookat_noise</a></td></tr>
+<tr class="separator:af555852d9178ad0fd9286fe060275582"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3565fff56509d0c9b5260c872b502ddd" id="r_a3565fff56509d0c9b5260c872b502ddd"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1_r_g_bcolor.html">helios::RGBcolor</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3565fff56509d0c9b5260c872b502ddd">color</a></td></tr>
 <tr class="separator:a3565fff56509d0c9b5260c872b502ddd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4d76190c1a2b1d5bb033e0f1981ade0f" id="r_a4d76190c1a2b1d5bb033e0f1981ade0f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4d76190c1a2b1d5bb033e0f1981ade0f">position</a></td></tr>
 <tr class="separator:a4d76190c1a2b1d5bb033e0f1981ade0f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5984714c3460c51453762dd935631b22" id="r_a5984714c3460c51453762dd935631b22"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5984714c3460c51453762dd935631b22">lookat</a></td></tr>
 <tr class="separator:a5984714c3460c51453762dd935631b22"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6ba719863b2f13fc6872451e32a8d5cf" id="r_a6ba719863b2f13fc6872451e32a8d5cf"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6ba719863b2f13fc6872451e32a8d5cf">camera_positions</a></td></tr>
+<tr class="separator:a6ba719863b2f13fc6872451e32a8d5cf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4b327f566b75fa32ac76ad9592f4581a" id="r_a4b327f566b75fa32ac76ad9592f4581a"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4b327f566b75fa32ac76ad9592f4581a">camera_lookats</a></td></tr>
+<tr class="separator:a4b327f566b75fa32ac76ad9592f4581a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a71ddc1552b0b1e17d45f267419ac3275" id="r_a71ddc1552b0b1e17d45f267419ac3275"><td class="memItemLeft" align="right" valign="top">std::vector&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a71ddc1552b0b1e17d45f267419ac3275">keypoint_frames</a></td></tr>
+<tr class="separator:a71ddc1552b0b1e17d45f267419ac3275"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6ebf7a74c0ac29b73ff08195fb0f3adc" id="r_a6ebf7a74c0ac29b73ff08195fb0f3adc"><td class="memItemLeft" align="right" valign="top">std::set&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6ebf7a74c0ac29b73ff08195fb0f3adc">camera_labels</a></td></tr>
 <tr class="separator:a6ebf7a74c0ac29b73ff08195fb0f3adc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a47aaa64f690baae8792e9f5bb473f10c" id="r_a47aaa64f690baae8792e9f5bb473f10c"><td class="memItemLeft" align="right" valign="top">std::set&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a47aaa64f690baae8792e9f5bb473f10c">light_labels</a></td></tr>
@@ -188,11 +231,13 @@ Data Fields</h2></td></tr>
 <tr class="separator:ab40463cc0b6750a6cfdf68d99fc8f9d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a70818ce78aaf8db4298126e2e30bd63f" id="r_a70818ce78aaf8db4298126e2e30bd63f"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a70818ce78aaf8db4298126e2e30bd63f">write_norm_depth</a></td></tr>
 <tr class="separator:a70818ce78aaf8db4298126e2e30bd63f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4bdddfeea1761afd5d451355edd4d5ce" id="r_a4bdddfeea1761afd5d451355edd4d5ce"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4bdddfeea1761afd5d451355edd4d5ce">write_segmentation_mask</a></td></tr>
+<tr class="separator:a4bdddfeea1761afd5d451355edd4d5ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Rig struct. </p>
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00244">244</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00235">235</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 </div><h2 class="groupheader">Field Documentation</h2>
 <a id="a6ebf7a74c0ac29b73ff08195fb0f3adc" name="a6ebf7a74c0ac29b73ff08195fb0f3adc"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a6ebf7a74c0ac29b73ff08195fb0f3adc">&#9670;&#160;</a></span>camera_labels</h2>
@@ -206,7 +251,39 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00250">250</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00246">246</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+
+</div>
+</div>
+<a id="a4b327f566b75fa32ac76ad9592f4581a" name="a4b327f566b75fa32ac76ad9592f4581a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4b327f566b75fa32ac76ad9592f4581a">&#9670;&#160;</a></span>camera_lookats</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;<a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&gt; rig::camera_lookats</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00244">244</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+
+</div>
+</div>
+<a id="a6ba719863b2f13fc6872451e32a8d5cf" name="a6ba719863b2f13fc6872451e32a8d5cf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6ba719863b2f13fc6872451e32a8d5cf">&#9670;&#160;</a></span>camera_positions</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;<a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&gt; rig::camera_positions</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00243">243</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -222,7 +299,23 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00247">247</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00240">240</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+
+</div>
+</div>
+<a id="a71ddc1552b0b1e17d45f267419ac3275" name="a71ddc1552b0b1e17d45f267419ac3275"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a71ddc1552b0b1e17d45f267419ac3275">&#9670;&#160;</a></span>keypoint_frames</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;int&gt; rig::keypoint_frames</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00245">245</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -238,7 +331,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00245">245</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00237">237</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -254,7 +347,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00251">251</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00247">247</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -270,7 +363,39 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00249">249</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00242">242</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+
+</div>
+</div>
+<a id="af555852d9178ad0fd9286fe060275582" name="af555852d9178ad0fd9286fe060275582"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af555852d9178ad0fd9286fe060275582">&#9670;&#160;</a></span>lookat_noise</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;<a class="el" href="structdistribution.html">distribution</a>&gt; rig::lookat_noise</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00239">239</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+
+</div>
+</div>
+<a id="ac04f76a2ba9cb1bf90bfcb8fa07ea162" name="ac04f76a2ba9cb1bf90bfcb8fa07ea162"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac04f76a2ba9cb1bf90bfcb8fa07ea162">&#9670;&#160;</a></span>num_images</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int rig::num_images</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00236">236</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -286,7 +411,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00248">248</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00241">241</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -302,7 +427,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00246">246</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00238">238</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -318,7 +443,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00252">252</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00248">248</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
@@ -334,7 +459,23 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00253">253</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00249">249</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
+
+</div>
+</div>
+<a id="a4bdddfeea1761afd5d451355edd4d5ce" name="a4bdddfeea1761afd5d451355edd4d5ce"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4bdddfeea1761afd5d451355edd4d5ce">&#9670;&#160;</a></span>write_segmentation_mask</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool rig::write_segmentation_mask</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_project_builder_8h_source.html#l00250">250</a> of file <a class="el" href="_project_builder_8h_source.html">ProjectBuilder.h</a>.</p>
 
 </div>
 </div>
