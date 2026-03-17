@@ -1,5 +1,20 @@
 # Changelog
 
+# [1.3.69] 2026-03-16
+
+## Core
+- Removed redundant `setColor()` call in `addConeObject()` that was re-applying the color already set on individual triangles during construction.
+
+## Plant Architecture
+- Renamed generic `Material.002` material in `PetiolulePrototype` OBJ/MTL assets to descriptive `petiolule` label.
+
+## Radiation
+- Removed bundled OptiX 5.1 libraries and headers (linux64-5.1.0, windows64-5.1.1) and all legacy `OPTIX_VERSION_LEGACY` CMake code paths, since OptiX 5.1 support was superseded by OptiX 6.5 and 8.1 backends.
+- Fixed multi-tile camera rendering in the OptiX 8 backend where `__raygen__camera()` and `__raygen__pixel_label()` used per-tile resolution instead of full image resolution for ray direction computation, causing black pixels in tiles beyond the first (e.g., iPhone 12 Pro Max at 3024×4032 with 100 AA samples).
+- Fixed camera closest-hit for triangle primitives in the OptiX 8 backend to use the intersection program's face attribute instead of recomputing the surface normal from canonical patch vertices, which produced incorrect face orientation and black triangle pixels.
+- Fixed camera pixel buffer zeroing in the OptiX 6 backend so that multi-tile renders for the same camera accumulate correctly rather than re-zeroing between tiles.
+- Specular reflection was missing in OptiX 8 camera rendering path: camera-weighted source fluxes are now uploaded and specular contributions are accumulated per-camera in the direct miss program.
+
 # [1.3.68] 2026-03-15
 
 ## Core

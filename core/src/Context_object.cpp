@@ -1343,8 +1343,6 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
         getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
     }
 
-    cone_new->setColor(color);
-
     objects[currentObjectID] = cone_new;
     currentObjectID++;
 

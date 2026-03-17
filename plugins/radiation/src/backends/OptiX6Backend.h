@@ -392,6 +392,8 @@ namespace helios {
         size_t current_source_count = 0;
         size_t current_band_count = 0;
         size_t current_camera_count = 0;
+        uint32_t current_camera_launch_id = UINT32_MAX;
+        size_t current_launch_band_count = 0;
     };
 
 } // namespace helios

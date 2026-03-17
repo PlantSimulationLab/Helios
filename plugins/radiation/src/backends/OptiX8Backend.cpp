@@ -632,6 +632,21 @@ void OptiX8Backend::updateSources(const std::vector<RayTracingSource> &sources) 
     upload(d_source_widths,    widths.data(),    Nsources * sizeof(float2));
     upload(d_source_types,     types.data(),     Nsources * sizeof(uint32_t));
 
+    // Upload camera-weighted source fluxes (full 3D buffer [source][band][camera])
+    // This is needed during direct ray tracing for specular accumulation in __miss__direct.
+    // Layout matches OptiX 6: flattened as [src0_band0_cam0, src0_band0_cam1, ..., src0_band1_cam0, ...]
+    freeCUdeviceptr(d_source_fluxes_cam);
+    std::vector<float> fluxes_cam;
+    for (size_t i = 0; i < Nsources; i++) {
+        for (float f : sources[i].fluxes_cam) {
+            fluxes_cam.push_back(f);
+        }
+    }
+    if (!fluxes_cam.empty()) {
+        upload(d_source_fluxes_cam, fluxes_cam.data(), fluxes_cam.size() * sizeof(float));
+        h_params.source_fluxes_cam = reinterpret_cast<float *>(d_source_fluxes_cam);
+    }
+
     current_source_count = Nsources;
 
     h_params.Nsources         = static_cast<uint32_t>(Nsources);
@@ -1094,6 +1109,10 @@ void OptiX8Backend::zeroRadiationBuffers(size_t launch_band_count) {
                              std::to_string(launch_band_count) + ") exceeds current_band_count (" +
                              std::to_string(current_band_count) + "). Call updateMaterials() first.");
     }
+
+    // Reset camera launch ID so camera pixel buffers get re-zeroed in launchCameraRays()
+    current_camera_launch_id = 0xFFFFFFFFu;
+
     const size_t bytes = Nprims * launch_band_count * sizeof(float);
 
     if (d_radiation_in)         CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_radiation_in),         0, bytes));
@@ -1101,6 +1120,15 @@ void OptiX8Backend::zeroRadiationBuffers(size_t launch_band_count) {
     if (d_radiation_out_bottom) CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_radiation_out_bottom), 0, bytes));
     if (d_scatter_buff_top)     CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_scatter_buff_top),     0, bytes));
     if (d_scatter_buff_bottom)  CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_scatter_buff_bottom),  0, bytes));
+
+    // Zero specular buffer: [source × camera × primitive × launch_band_count]
+    const size_t specular_size = current_source_count * current_camera_count * Nprims * launch_band_count;
+    if (specular_size > 0) {
+        const size_t specular_bytes = specular_size * sizeof(float);
+        reallocDevice(d_radiation_specular, specular_bytes);
+        CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_radiation_specular), 0, specular_bytes));
+        h_params.radiation_specular = reinterpret_cast<float *>(d_radiation_specular);
+    }
 }
 
 void OptiX8Backend::zeroScatterBuffers() {

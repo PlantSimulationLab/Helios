@@ -510,6 +510,23 @@ extern "C" __global__ void __miss__direct() {
                 }
             }
         }
+
+        // Accumulate incident radiation for specular for ALL cameras (per source, camera-weighted).
+        // Direct rays are launched once (not per camera), so we must populate every camera's
+        // slot in radiation_specular here so each camera's closest-hit can read its own data.
+        if (params.radiation_specular && params.source_fluxes_cam && strength > 0.0) {
+            for (uint32_t cam = 0; cam < params.Ncameras; cam++) {
+                // source_fluxes_cam layout: [source][band][camera] (full 3D buffer uploaded in updateSources)
+                const uint32_t weight_idx = prd->source_ID * Nbands_launch * params.Ncameras
+                                          + (uint32_t)b * params.Ncameras + cam;
+                const float camera_weight = params.source_fluxes_cam[weight_idx];
+                // radiation_specular layout: [source][camera][primitive][band]
+                const uint32_t ind_specular = prd->source_ID * params.Ncameras * Nprims * Nbands_launch
+                                            + cam * Nprims * Nbands_launch
+                                            + origin_position * Nbands_launch + (uint32_t)b;
+                atomicFloatAdd(&params.radiation_specular[ind_specular], (float)(strength * camera_weight));
+            }
+        }
     }
 }
 
@@ -813,14 +830,20 @@ extern "C" __global__ void __closesthit__camera() {
     const float3   ray_origin    = optixGetWorldRayOrigin();
     const float3   ray_direction = optixGetWorldRayDirection();
 
-    // Determine which face of the hit primitive is visible
+    // Use face attribute from intersection program (correct for both patches and triangles)
+    const bool   face_top  = (optixGetAttribute_1() == 1u);
+
+    // Compute surface normal for specular reflection (needed for Blinn-Phong half-vector)
     float T[16];
     loadTransformMatrix(hit_position, T);
     float3 n0 = make_float3(0.f, 0.f, 0.f); d_transformPoint(T, n0);
     float3 n1 = make_float3(1.f, 0.f, 0.f); d_transformPoint(T, n1);
     float3 n2 = make_float3(0.f, 1.f, 0.f); d_transformPoint(T, n2);
-    const float3 normal    = normalize(cross(n1 - n0, n2 - n0));
-    const bool   face_top  = dot(normal, ray_direction) < 0.f;
+    float3 normal = normalize(cross(n1 - n0, n2 - n0));
+    // Ensure normal points toward the camera (consistent with face_top)
+    if (face_top != (dot(normal, ray_direction) < 0.f)) {
+        normal = make_float3(-normal.x, -normal.y, -normal.z);
+    }
 
     for (uint32_t b = 0; b < Nbands_l; b++) {
         // Radiance from hit surface (outgoing flux / pi = radiance)
@@ -1468,8 +1491,8 @@ extern "C" __global__ void __raygen__camera() {
     // sp.x = viewplane distance, sp.y/sp.z = horizontal/vertical offsets
     const float multiplier = 1.0f / params.FOV_aspect_ratio;
     float3 sp;
-    sp.y = -0.5f + ((float)ii + Rx) / (float)params.camera_resolution.x;
-    sp.z = ( 0.5f - ((float)jj + Ry) / (float)params.camera_resolution.y) * multiplier;
+    sp.y = -0.5f + ((float)ii + Rx) / (float)params.camera_resolution_full.x;
+    sp.z = ( 0.5f - ((float)jj + Ry) / (float)params.camera_resolution_full.y) * multiplier;
     sp.x = params.camera_viewplane_length;
 
     // Focal point on focus plane
@@ -1545,8 +1568,8 @@ extern "C" __global__ void __raygen__pixel_label() {
     // Center of pixel, no antialiasing jitter
     const float multiplier = 1.0f / params.FOV_aspect_ratio;
     float3 sp;
-    sp.y = -0.5f + ((float)ii + 0.5f) / (float)params.camera_resolution.x;
-    sp.z = ( 0.5f - ((float)jj + 0.5f) / (float)params.camera_resolution.y) * multiplier;
+    sp.y = -0.5f + ((float)ii + 0.5f) / (float)params.camera_resolution_full.x;
+    sp.z = ( 0.5f - ((float)jj + 0.5f) / (float)params.camera_resolution_full.y) * multiplier;
     sp.x = params.camera_viewplane_length;
 
     const float3 p = make_float3(

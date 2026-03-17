@@ -41,11 +41,7 @@ if(CUDAToolkit_FOUND AND NOT FORCE_VULKAN_BACKEND)
 	set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE})
 
 	# Set CUDA architectures before enabling CUDA language
-	if( OPTIX_VERSION_LEGACY )
-		set(CMAKE_CUDA_ARCHITECTURES "35")
-	else()
-		include("${CMAKE_BINARY_DIR}/lib/detect_GPU_compute.cmake")
-	endif()
+	include("${CMAKE_BINARY_DIR}/lib/detect_GPU_compute.cmake")
 
 	# Enable CUDA as a language (modern CMake approach)
 	enable_language(CUDA)
@@ -282,6 +278,7 @@ set(OPTIX8_IR_OUTPUT "${CMAKE_BINARY_DIR}/plugins/radiation/OptiX8DeviceCode.opt
 set(OPTIX8_NVCC_FLAGS
 	--optix-ir
 	--use_fast_math
+	-diag-suppress 20044
 	-I${CMAKE_CURRENT_SOURCE_DIR}/src/optix8
 	-I${CMAKE_CURRENT_SOURCE_DIR}/include
 	-I${_OPTIX8_INCLUDE}
@@ -359,28 +356,16 @@ endif()
 target_link_libraries(radiation PUBLIC CUDA::cudart_static)
 
 if(UNIX AND NOT APPLE)
-	if( OPTIX_VERSION_LEGACY )
-		set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib/OptiX/linux64-5.1.0/)
-		message("Using legacy OptiX version 5.1")
-	else()
-		set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib/OptiX/linux64-6.5.0/)
-		message("Using OptiX version 6.5")
-	endif()
+	set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib/OptiX/linux64-6.5.0/)
+	message(STATUS "[Radiation] Using OptiX version 6.5")
 	target_include_directories(radiation PUBLIC "${OPTIX_PATH}include" )
 	target_link_libraries( radiation PUBLIC ${OPTIX_PATH}lib64/liboptix.so )
 endif(UNIX AND NOT APPLE)
 if(WIN32)
-	if( OPTIX_VERSION_LEGACY )
-		set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib/OptiX/windows64-5.1.1/)
-		set(OPTIX_LIB "optix.51.lib")
-		set(OPTIX_DLL "optix.51.dll")
-		message("Using legacy OptiX version 5.1")
-	else()
-		set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib/OptiX/windows64-6.5.0/)
-		set(OPTIX_LIB "optix.6.5.0.lib")
-		set(OPTIX_DLL "optix.6.5.0.dll")
-		message("Using OptiX version 6.5")
-	endif()
+	set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib/OptiX/windows64-6.5.0/)
+	set(OPTIX_LIB "optix.6.5.0.lib")
+	set(OPTIX_DLL "optix.6.5.0.dll")
+	message(STATUS "[Radiation] Using OptiX version 6.5")
 	target_include_directories(radiation PUBLIC "${OPTIX_PATH}include" )
 	target_link_libraries( radiation PUBLIC "${OPTIX_PATH}lib64/${OPTIX_LIB}" )
 	add_custom_command( TARGET radiation POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${OPTIX_PATH}lib64/${OPTIX_LIB}" "${CMAKE_BINARY_DIR}/." )

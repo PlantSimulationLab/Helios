@@ -7018,15 +7018,11 @@ GPU_TEST_CASE("RadiationModel - Specular Reflection Camera Rendering") {
     context.setPrimitiveData(UUID, "twosided_flag", uint(1));
 
     // Set low diffuse reflectivity to isolate specular contribution
-    std::vector<helios::vec2> reflectivity;
-    reflectivity.push_back(make_vec2(400, 0.05f));
-    reflectivity.push_back(make_vec2(700, 0.05f));
+    std::vector<helios::vec2> reflectivity = {make_vec2(400, 0.05f), make_vec2(700, 0.05f)};
     context.setGlobalData("reflectivity", reflectivity);
     context.setPrimitiveData(UUID, "reflectivity_spectrum", "reflectivity");
 
-    std::vector<helios::vec2> zero_transmissivity;
-    zero_transmissivity.push_back(make_vec2(400, 0.0f));
-    zero_transmissivity.push_back(make_vec2(700, 0.0f));
+    std::vector<helios::vec2> zero_transmissivity = {make_vec2(400, 0.0f), make_vec2(700, 0.0f)};
     context.setGlobalData("zero_transmissivity", zero_transmissivity);
     context.setPrimitiveData(UUID, "transmissivity_spectrum", "zero_transmissivity");
 
@@ -7049,23 +7045,18 @@ GPU_TEST_CASE("RadiationModel - Specular Reflection Camera Rendering") {
     cam_props.lens_diameter = 0.0f;
     cam_props.focal_plane_distance = 2.0f;
     cam_props.HFOV = 30.0f;
-    radiation.addRadiationCamera("test_cam", {"SUN"}, camera_pos, camera_lookat, cam_props, 1);
+    radiation.addRadiationCamera("test_cam", {"SUN"}, camera_pos, camera_lookat, cam_props, 100);
 
-    // Set camera spectral response
-    std::vector<helios::vec2> camera_response;
-    camera_response.push_back(make_vec2(400, 1.0f));
-    camera_response.push_back(make_vec2(700, 1.0f));
+    std::vector<helios::vec2> camera_response = {make_vec2(400, 1.0f), make_vec2(700, 1.0f)};
     context.setGlobalData("camera_response", camera_response);
     radiation.setCameraSpectralResponse("test_cam", "SUN", "camera_response");
 
     // TEST 1: specular_exponent = -1 (disabled)
-    std::string output1;
     {
         capture_cout capture;
         context.setPrimitiveData(UUID, "specular_exponent", -1.0f);
         radiation.updateGeometry();
         radiation.runBand("SUN");
-        output1 = capture.get_captured_output();
     }
 
     std::vector<float> pixels_no_specular;
@@ -7075,16 +7066,14 @@ GPU_TEST_CASE("RadiationModel - Specular Reflection Camera Rendering") {
     for (float p: pixels_no_specular) {
         sum_no_specular += p;
     }
-    float avg_no_specular = sum_no_specular / pixels_no_specular.size();
+    float avg_no_specular = sum_no_specular / (float)pixels_no_specular.size();
 
     // TEST 2: specular_exponent = 50 (strong specular highlight)
-    std::string output2;
     {
         capture_cout capture;
         context.setPrimitiveData(UUID, "specular_exponent", 50.0f);
         radiation.updateGeometry();
         radiation.runBand("SUN");
-        output2 = capture.get_captured_output();
     }
 
     std::vector<float> pixels_with_specular;
@@ -7094,14 +7083,98 @@ GPU_TEST_CASE("RadiationModel - Specular Reflection Camera Rendering") {
     for (float p: pixels_with_specular) {
         sum_with_specular += p;
     }
-    float avg_with_specular = sum_with_specular / pixels_with_specular.size();
+    float avg_with_specular = sum_with_specular / (float)pixels_with_specular.size();
 
     float difference = avg_with_specular - avg_no_specular;
 
-    // Verify specular exponent changes camera intensity
-    DOCTEST_CHECK_MESSAGE(std::abs(difference) > 1.0f, "Specular exponent should affect camera intensity. "
+    DOCTEST_MESSAGE("No specular avg: " << avg_no_specular << ", With specular avg: " << avg_with_specular << ", Difference: " << difference);
+
+    // Specular should add a visible highlight when sun, camera, and normal are aligned
+    DOCTEST_CHECK_MESSAGE(difference > 5.0f, "Specular exponent should increase camera intensity. "
                                                        "No specular: "
                                                                << avg_no_specular << ", With specular: " << avg_with_specular << ", Difference: " << difference);
+}
+
+GPU_TEST_CASE("RadiationModel - Specular Reflection Multiple Cameras") {
+    // Test that specular reflection works correctly with multiple cameras.
+    // Each camera should independently see specular highlights based on its own
+    // viewing geometry relative to the light source.
+
+    Context context;
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    // Create patch at origin facing +Z
+    uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(UUID, "twosided_flag", uint(1));
+
+    std::vector<helios::vec2> reflectivity = {make_vec2(400, 0.05f), make_vec2(700, 0.05f)};
+    context.setGlobalData("reflectivity", reflectivity);
+    context.setPrimitiveData(UUID, "reflectivity_spectrum", "reflectivity");
+
+    std::vector<helios::vec2> zero_transmissivity = {make_vec2(400, 0.0f), make_vec2(700, 0.0f)};
+    context.setGlobalData("zero_transmissivity", zero_transmissivity);
+    context.setPrimitiveData(UUID, "transmissivity_spectrum", "zero_transmissivity");
+
+    context.setPrimitiveData(UUID, "specular_exponent", 50.0f);
+
+    radiation.addRadiationBand("SUN");
+    radiation.setScatteringDepth("SUN", 1);
+
+    helios::vec3 sun_direction = helios::make_vec3(0, 0, 1); // Sun directly above
+    uint source = radiation.addCollimatedRadiationSource(sun_direction);
+    radiation.setSourceFlux(source, "SUN", 1000.0f);
+    radiation.setDirectRayCount("SUN", 10000);
+    radiation.setDiffuseRayCount("SUN", 0);
+    radiation.disableEmission("SUN");
+
+    CameraProperties cam_props;
+    cam_props.camera_resolution = make_int2(32, 32);
+    cam_props.lens_diameter = 0.0f;
+    cam_props.focal_plane_distance = 2.0f;
+    cam_props.HFOV = 30.0f;
+
+    std::vector<helios::vec2> camera_response = {make_vec2(400, 1.0f), make_vec2(700, 1.0f)};
+    context.setGlobalData("camera_response", camera_response);
+
+    // Camera A: directly above, aligned with sun → strong specular
+    radiation.addRadiationCamera("cam_A", {"SUN"}, make_vec3(0, 0, 2), make_vec3(0, 0, 0), cam_props, 100);
+    radiation.setCameraSpectralResponse("cam_A", "SUN", "camera_response");
+
+    // Camera B: also directly above (different label) → should also see strong specular
+    radiation.addRadiationCamera("cam_B", {"SUN"}, make_vec3(0, 0, 2), make_vec3(0, 0, 0), cam_props, 100);
+    radiation.setCameraSpectralResponse("cam_B", "SUN", "camera_response");
+
+    {
+        capture_cout capture;
+        radiation.updateGeometry();
+        radiation.runBand("SUN");
+    }
+
+    // Get results for both cameras
+    std::vector<float> pixels_A, pixels_B;
+    context.getGlobalData("camera_cam_A_SUN", pixels_A);
+    context.getGlobalData("camera_cam_B_SUN", pixels_B);
+
+    float sum_A = 0.0f, sum_B = 0.0f;
+    for (float p : pixels_A) sum_A += p;
+    for (float p : pixels_B) sum_B += p;
+    float avg_A = sum_A / (float)pixels_A.size();
+    float avg_B = sum_B / (float)pixels_B.size();
+
+    // Pure diffuse baseline: reflectivity(0.05) * flux(1000) / pi ≈ 15.9
+    float diffuse_baseline = 15.0f;
+
+    DOCTEST_MESSAGE("Camera A avg: " << avg_A << ", Camera B avg: " << avg_B << ", Diffuse baseline ~" << diffuse_baseline);
+
+    // Both cameras should see specular (both are at the same position, both see the highlight)
+    DOCTEST_CHECK_MESSAGE(avg_A > diffuse_baseline * 2.0f, "Camera A should show specular highlight. avg_A: " << avg_A);
+    DOCTEST_CHECK_MESSAGE(avg_B > diffuse_baseline * 2.0f, "Camera B should show specular highlight. avg_B: " << avg_B);
+
+    // Both cameras are in the same position, so their values should be similar
+    float ratio = (avg_A > avg_B) ? avg_B / avg_A : avg_A / avg_B;
+    DOCTEST_CHECK_MESSAGE(ratio > 0.8f, "Both cameras should see similar specular intensity. "
+                                        "avg_A: " << avg_A << ", avg_B: " << avg_B << ", ratio: " << ratio);
 }
 
 GPU_TEST_CASE("RadiationModel More Than 4 Simultaneous Radiation Bands") {
@@ -7146,5 +7219,223 @@ GPU_TEST_CASE("RadiationModel More Than 4 Simultaneous Radiation Bands") {
         context.getPrimitiveData(UUID, ("radiation_flux_" + band_names[b]).c_str(), measured);
         float rel_error = std::abs(measured - expected_flux[b]) / expected_flux[b];
         DOCTEST_CHECK_MESSAGE(rel_error <= error_threshold, "Band " << band_names[b] << ": expected " << expected_flux[b] << ", got " << measured << " (error " << rel_error << ")");
+    }
+}
+
+// ===========================================================================
+// Bug regression tests for OptiX 8 camera rendering
+// ===========================================================================
+
+GPU_TEST_CASE("RadiationModel - Camera triangle vs patch rendering parity") {
+    // Regression test: triangles must produce non-zero camera radiance when lit,
+    // matching patch behavior. A bug in __closesthit__camera() computed the surface
+    // normal incorrectly for triangles (using patch canonical vertices instead of
+    // triangle canonical vertices), causing it to read radiation_out from the wrong
+    // face buffer and producing black pixels for all triangle primitives.
+
+    Context context;
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    // Create a patch and a triangle side by side at z=0, both facing up (+z).
+    // The patch is on the left (x<0), the triangle on the right (x>0).
+    float reflectivity = 0.5f;
+
+    uint patch_id = context.addPatch(make_vec3(-0.25f, 0, 0), make_vec2(0.4f, 0.4f));
+    context.setPrimitiveData(patch_id, "reflectivity_SW", reflectivity);
+    context.setPrimitiveData(patch_id, "twosided_flag", uint(0));
+
+    // Triangle covering roughly the same area as the patch, on the right side
+    uint tri_id = context.addTriangle(make_vec3(0.05f, -0.2f, 0),
+                                      make_vec3(0.45f, -0.2f, 0),
+                                      make_vec3(0.25f, 0.2f, 0));
+    context.setPrimitiveData(tri_id, "reflectivity_SW", reflectivity);
+
+    // Single radiation band with scattering
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    radiation.setDirectRayCount("SW", 250);
+    radiation.setDiffuseRayCount("SW", 100);
+    radiation.setScatteringDepth("SW", 1);
+
+    // Collimated source from above (zenith)
+    uint src = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceFlux(src, "SW", 500.f);
+
+    // Camera looking straight down at the scene
+    CameraProperties cam_props;
+    cam_props.camera_resolution = make_int2(64, 64);
+    cam_props.HFOV = 60.0f;
+    cam_props.lens_diameter = 0.0f;
+    radiation.addRadiationCamera("test_cam", {"SW"},
+                                 make_vec3(0, 0, 1.5f),   // above scene
+                                 make_vec3(0, 0, 0),       // look at center
+                                 cam_props, 50);
+
+    radiation.updateGeometry();
+    radiation.runBand("SW");
+
+    auto pixel_data = radiation.getCameraPixelData("test_cam", "SW");
+    DOCTEST_REQUIRE(pixel_data.size() == 64 * 64);
+
+    // Sample pixels over the patch region (left half, center rows).
+    // Camera image is flipped horizontally (ii = resolution.x - i - 1),
+    // so world-left (x<0) appears on the right side of the pixel buffer.
+    // With a 60-deg HFOV looking from z=1.5 at z=0, the viewable width is
+    // ~1.73m. The patch at x=-0.25 maps to approximately pixel column 48-56 (right side).
+    // The triangle at x=+0.25 maps to approximately pixel column 8-16 (left side).
+    float patch_sum = 0;
+    int patch_count = 0;
+    float tri_sum = 0;
+    int tri_count = 0;
+
+    // Patch region (right side of image = world left where patch is)
+    for (int j = 24; j < 40; j++) {
+        for (int i = 40; i < 56; i++) {
+            patch_sum += pixel_data[j * 64 + i];
+            patch_count++;
+        }
+    }
+
+    // Triangle region (left side of image = world right where triangle is)
+    for (int j = 24; j < 40; j++) {
+        for (int i = 8; i < 24; i++) {
+            tri_sum += pixel_data[j * 64 + i];
+            tri_count++;
+        }
+    }
+
+    float patch_avg = patch_sum / float(patch_count);
+    float tri_avg = tri_sum / float(tri_count);
+
+    // Both regions must have non-zero average radiance (lit surfaces)
+    DOCTEST_CHECK_MESSAGE(patch_avg > 0.0f,
+                          "Patch region average radiance should be > 0, got " << patch_avg);
+    DOCTEST_CHECK_MESSAGE(tri_avg > 0.0f,
+                          "Triangle region average radiance should be > 0, got " << tri_avg);
+
+    // Triangle and patch averages should be within the same order of magnitude
+    // (both have the same reflectivity and similar illumination geometry)
+    if (patch_avg > 0.0f && tri_avg > 0.0f) {
+        float ratio = tri_avg / patch_avg;
+        DOCTEST_CHECK_MESSAGE(ratio > 0.1f,
+                              "Triangle/patch radiance ratio too low: " << ratio
+                              << " (tri_avg=" << tri_avg << ", patch_avg=" << patch_avg << ")");
+        DOCTEST_CHECK_MESSAGE(ratio < 10.0f,
+                              "Triangle/patch radiance ratio too high: " << ratio
+                              << " (tri_avg=" << tri_avg << ", patch_avg=" << patch_avg << ")");
+    }
+}
+
+GPU_TEST_CASE("RadiationModel - Multi-tile camera rendering consistency") {
+    // Regression test: when camera resolution × antialiasing samples exceeds maxRays
+    // (~1 billion), the render is split into multiple tiles. A bug in __raygen__camera()
+    // used camera_resolution (tile dimensions) instead of camera_resolution_full (full
+    // image dimensions) when computing ray directions, causing pixels in tiles 2+ to
+    // point in the wrong direction and produce black output.
+    //
+    // The iPhone12ProMAX camera at 3024×4032 with 100 AA samples produces ~1.22 billion
+    // rays, triggering 2-tile rendering.
+
+    Context context;
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    // Minimal scene: single ground patch filling the camera view
+    std::vector<uint> ground = context.addTile(make_vec3(0, 0, 0), make_vec2(10.0f, 10.0f),
+                                               make_SphericalCoord(0, 0), make_int2(1, 1));
+    context.setPrimitiveData(ground, "reflectivity_red", 0.3f);
+    context.setPrimitiveData(ground, "reflectivity_green", 0.3f);
+    context.setPrimitiveData(ground, "reflectivity_blue", 0.3f);
+    context.setPrimitiveData(ground, "twosided_flag", uint(0));
+
+    // Sun source
+    SphericalCoord sun_dir = make_SphericalCoord(deg2rad(45), 0);
+    uint src = radiation.addSunSphereRadiationSource(sun_dir);
+    radiation.setSourceSpectrum(src, "solar_spectrum_ASTMG173");
+
+    // RGB bands with scattering (matching tutorial 12 setup)
+    radiation.addRadiationBand("red");
+    radiation.disableEmission("red");
+    radiation.setScatteringDepth("red", 1);
+    radiation.setDiffuseRadiationExtinctionCoeff("red", 0.2f, sun_dir);
+    radiation.copyRadiationBand("red", "green");
+    radiation.copyRadiationBand("red", "blue");
+
+    radiation.setDiffuseSpectrum("solar_spectrum_ASTMG173");
+    radiation.setDiffuseSpectrumIntegral(100.f);
+
+    // iPhone12ProMAX: 3024×4032, 100 AA → ~1.22B rays → triggers 2-tile rendering
+    vec3 cam_pos = make_vec3(0, -2, 3);
+    vec3 cam_lookat = make_vec3(0, 0, 0);
+
+    {
+        capture_cout capture;
+        radiation.addRadiationCameraFromLibrary("iphone_cam", "iPhone12ProMAX",
+                                                cam_pos, cam_lookat, 100);
+    }
+
+    radiation.updateGeometry();
+
+    {
+        capture_cout capture;
+        radiation.runBand({"red", "green", "blue"});
+    }
+
+    // Get camera resolution (should be 3024×4032)
+    CameraProperties props = radiation.getCameraParameters("iphone_cam");
+    int W = props.camera_resolution.x;
+    int H = props.camera_resolution.y;
+    DOCTEST_REQUIRE(W == 3024);
+    DOCTEST_REQUIRE(H == 4032);
+
+    auto pixel_red = radiation.getCameraPixelData("iphone_cam", "red");
+    DOCTEST_REQUIRE(pixel_red.size() == (size_t)W * H);
+
+    // With maxRays = 1B and 100 AA at 3024×4032:
+    //   rays_per_row = 100 × 3024 = 302,400
+    //   max_rows_per_tile = floor(1B / 302,400) = 3550
+    //   Tile 1: rows 0..3549 (3024×3550)
+    //   Tile 2: rows 3550..4031 (3024×482)
+    // With the bug, ALL pixels in tile 2 (rows 3550-4031) would be black.
+
+    // Sample pixels from tile 1 (top region, rows 500-600)
+    float tile1_sum = 0;
+    int tile1_count = 0;
+    for (int j = 500; j < 600; j++) {
+        for (int i = W / 4; i < 3 * W / 4; i += 10) { // sparse sampling for speed
+            tile1_sum += pixel_red[j * W + i];
+            tile1_count++;
+        }
+    }
+
+    // Sample pixels from tile 2 (bottom region, rows 3600-3700)
+    float tile2_sum = 0;
+    int tile2_count = 0;
+    for (int j = 3600; j < 3700; j++) {
+        for (int i = W / 4; i < 3 * W / 4; i += 10) { // sparse sampling for speed
+            tile2_sum += pixel_red[j * W + i];
+            tile2_count++;
+        }
+    }
+
+    float tile1_avg = tile1_sum / float(tile1_count);
+    float tile2_avg = tile2_sum / float(tile2_count);
+
+    // Both tile regions should have non-zero radiance (looking at a lit ground patch)
+    DOCTEST_CHECK_MESSAGE(tile1_avg > 0.0f,
+                          "Tile 1 (rows 500-600) average radiance should be > 0, got " << tile1_avg);
+    DOCTEST_CHECK_MESSAGE(tile2_avg > 0.0f,
+                          "Tile 2 (rows 3600-3700) average radiance should be > 0, got " << tile2_avg);
+
+    // The two regions should have similar radiance (same ground patch, similar viewing angle)
+    if (tile1_avg > 0.0f && tile2_avg > 0.0f) {
+        float ratio = tile2_avg / tile1_avg;
+        DOCTEST_CHECK_MESSAGE(ratio > 0.1f,
+                              "Tile 2/tile 1 radiance ratio too low: " << ratio
+                              << " (tile1=" << tile1_avg << ", tile2=" << tile2_avg << ")");
+        DOCTEST_CHECK_MESSAGE(ratio < 10.0f,
+                              "Tile 2/tile 1 radiance ratio too high: " << ratio
+                              << " (tile1=" << tile1_avg << ", tile2=" << tile2_avg << ")");
     }
 }
