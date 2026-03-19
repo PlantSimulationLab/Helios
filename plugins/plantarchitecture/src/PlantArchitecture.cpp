@@ -4452,8 +4452,59 @@ std::vector<uint> PlantArchitecture::getAllPlantObjectIDs(uint plantID) const {
     return objIDs;
 }
 
-std::vector<uint> PlantArchitecture::getAllPlantUUIDs(uint plantID) const {
-    return context_ptr->getObjectPrimitiveUUIDs(getAllPlantObjectIDs(plantID));
+std::vector<uint> PlantArchitecture::getAllPrototypeObjectIDs() const {
+    std::vector<uint> objIDs;
+    for (const auto &[key, prototype_vec] : unique_leaf_prototype_objIDs) {
+        for (const auto &leaflet_vec : prototype_vec) {
+            for (uint objID : leaflet_vec) {
+                if (context_ptr->doesObjectExist(objID)) {
+                    objIDs.push_back(objID);
+                }
+            }
+        }
+    }
+    for (const auto &[key, prototype_vec] : unique_closed_flower_prototype_objIDs) {
+        for (uint objID : prototype_vec) {
+            if (context_ptr->doesObjectExist(objID)) {
+                objIDs.push_back(objID);
+            }
+        }
+    }
+    for (const auto &[key, prototype_vec] : unique_open_flower_prototype_objIDs) {
+        for (uint objID : prototype_vec) {
+            if (context_ptr->doesObjectExist(objID)) {
+                objIDs.push_back(objID);
+            }
+        }
+    }
+    for (const auto &[key, prototype_vec] : unique_fruit_prototype_objIDs) {
+        for (uint objID : prototype_vec) {
+            if (context_ptr->doesObjectExist(objID)) {
+                objIDs.push_back(objID);
+            }
+        }
+    }
+    return objIDs;
+}
+
+void PlantArchitecture::deleteAllPrototypes() {
+    std::vector<uint> prototype_objIDs = getAllPrototypeObjectIDs();
+    for (uint objID : prototype_objIDs) {
+        context_ptr->deleteObject(objID);
+    }
+    unique_leaf_prototype_objIDs.clear();
+    unique_open_flower_prototype_objIDs.clear();
+    unique_closed_flower_prototype_objIDs.clear();
+    unique_fruit_prototype_objIDs.clear();
+}
+
+std::vector<uint> PlantArchitecture::getAllPlantUUIDs(uint plantID, bool include_hidden) const {
+    std::vector<uint> objIDs = getAllPlantObjectIDs(plantID);
+    if (include_hidden) {
+        std::vector<uint> prototype_objIDs = getAllPrototypeObjectIDs();
+        objIDs.insert(objIDs.end(), prototype_objIDs.begin(), prototype_objIDs.end());
+    }
+    return context_ptr->getObjectPrimitiveUUIDs(objIDs);
 }
 
 std::vector<uint> PlantArchitecture::getPlantInternodeObjectIDs(uint plantID) const {
@@ -4882,6 +4933,10 @@ void PlantArchitecture::deletePlantInstance(uint plantID) {
     context_ptr->deleteObject(getAllPlantObjectIDs(plantID));
 
     plant_instances.erase(plantID);
+
+    if (plant_instances.empty()) {
+        deleteAllPrototypes();
+    }
 }
 
 void PlantArchitecture::deletePlantInstance(const std::vector<uint> &plantIDs) {

@@ -1,5 +1,17 @@
 # Changelog
 
+# [1.3.70] 2026-03-19
+
+## Plant Architecture
+- `deletePlantInstance()` now cleans up hidden prototype primitives from the Context when all plant instances have been deleted, preventing orphaned hidden primitives and materials that could never be freed. Added optional `include_hidden` parameter to `getAllPlantUUIDs()` to allow querying hidden prototype primitives.
+
+## Radiation
+- Fixed camera pixel label UUID mapping where the CPU-side conversion from internal primitive indices to Helios UUIDs produced incorrect labels when `buildGeometryData` reordered primitives by parent object. The GPU intersection programs already store actual UUIDs directly, so the redundant conversion was removed.
+
+## Build System
+- CMake now verifies that the CUDA language can actually be enabled (e.g., Visual Studio MSBuild integration is installed) before attempting a GPU build in the radiation, collision detection, and energy balance plugins, preventing cryptic build failures when the CUDA toolkit is installed without Visual Studio integration.
+- Bundled Vulkan SDK headers and glslang 16.2.0 shader compiler source with the radiation plugin.
+
 # [1.3.69] 2026-03-16
 
 ## Core

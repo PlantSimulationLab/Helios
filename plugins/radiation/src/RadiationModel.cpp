@@ -3714,24 +3714,9 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 std::vector<float> dummy_pixel_data;
                 backend->getCameraResults(dummy_pixel_data, camera.second.pixel_label_UUID, camera.second.pixel_depth, cam, camera.second.resolution);
 
-                // Convert IDs to actual UUIDs
-                // Pixel labels contain position+1 (1-indexed), need to convert to UUIDs
-                for (uint ID = 0; ID < camera.second.pixel_label_UUID.size(); ID++) {
-                    if (camera.second.pixel_label_UUID.at(ID) > 0) {
-                        uint position = camera.second.pixel_label_UUID.at(ID) - 1; // Convert to 0-indexed position
-
-                        // Check if this is a bbox hit (position >= primitive_count)
-                        if (position >= context_UUIDs.size()) {
-                            // Bbox: calculate UUID directly (bbox_UUID = bbox_UUID_base + bbox_index)
-                            uint bbox_index = position - context_UUIDs.size();
-                            uint bbox_UUID = geometry_data.bbox_UUID_base + bbox_index;
-                            camera.second.pixel_label_UUID.at(ID) = bbox_UUID + 1; // Store as 1-indexed
-                        } else {
-                            // Real primitive: look up UUID from context_UUIDs
-                            camera.second.pixel_label_UUID.at(ID) = context_UUIDs.at(position) + 1;
-                        }
-                    }
-                }
+                // Pixel labels from GPU already contain Helios UUID+1 (1-indexed, 0=sky).
+                // No conversion needed - the intersection programs store actual primitive UUIDs
+                // directly from the geometry UUID buffers (patch_UUID, triangle_UUID, etc.).
 
                 // Store results in context (KEEP EXISTING LOGIC)
                 std::string data_label = "camera_" + camera_label + "_pixel_UUID";

@@ -1921,6 +1921,7 @@ public:
     //! Delete an existing plant instance
     /**
      * \param[in] plantID ID of the plant instance to be deleted.
+     * \note When all plant instances have been deleted, hidden prototype objects are also cleaned up from the Context.
      */
     void deletePlantInstance(uint plantID);
 
@@ -2653,9 +2654,10 @@ public:
     //! Get primitive UUIDs for all primitives in a given plant
     /**
      * \param[in] plantID ID of the plant instance.
-     * \return Vector of primitive UUIDs for all primitives in the plant.
+     * \param[in] include_hidden If true, also include UUIDs of hidden prototype primitives managed by this PlantArchitecture instance (prototypes are shared across all plant instances, not specific to one plant).
+     * \return Vector of primitive UUIDs for all primitives in the plant (and optionally hidden prototypes).
      */
-    [[nodiscard]] std::vector<uint> getAllPlantUUIDs(uint plantID) const;
+    [[nodiscard]] std::vector<uint> getAllPlantUUIDs(uint plantID, bool include_hidden = false) const;
 
     //! Get object IDs for all internode (Tube) objects for a given plant
     /**
@@ -3044,6 +3046,12 @@ protected:
     std::map<uint (*)(helios::Context *context_ptr, uint subdivisions, bool flower_is_open), std::vector<uint>> unique_closed_flower_prototype_objIDs;
     // Key is the prototype function pointer; value index is the unique fruit prototype
     std::map<uint (*)(helios::Context *context_ptr, uint subdivisions), std::vector<uint>> unique_fruit_prototype_objIDs;
+
+    //! Get object IDs for all hidden prototype objects managed by this PlantArchitecture instance
+    [[nodiscard]] std::vector<uint> getAllPrototypeObjectIDs() const;
+
+    //! Delete all hidden prototype objects from the Context and clear the prototype maps
+    void deleteAllPrototypes();
 
     bool build_context_geometry_internode = true;
     bool build_context_geometry_petiole = true;

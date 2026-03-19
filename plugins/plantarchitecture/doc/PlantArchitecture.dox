@@ -1125,7 +1125,7 @@ The Object IDs and Primitive UUIDs of an entire plant, or organ groups in the pl
     <tr> <td>\ref PlantArchitecture::getPlantFlowerObjectIDs()</td><td>Returns a vector of Object IDs for all flower objects.</td> </tr>
     <tr> <td>\ref PlantArchitecture::getPlantFruitObjectIDs()</td><td>Returns a vector of Object IDs for all fruit objects.</td> </tr>
     <tr> <td colspan=2> **Primitive UUIDs** </td> </tr>
-    <tr> <td>\ref PlantArchitecture::getAllPlantUUIDs()</td><td>Returns a vector of UUIDs for all primitives the entire plant.</td> </tr>
+    <tr> <td>\ref PlantArchitecture::getAllPlantUUIDs(uint, bool)</td><td>Returns a vector of UUIDs for all primitives in the entire plant. Optionally includes hidden prototype primitives when \p include_hidden is set to true.</td> </tr>
 </table>
 
 Note that individual methods to get UUIDs for all organ types are not provided. Instead, the user can query the Object IDs for each organ type and then get the corresponding UUIDs using the Context method \ref helios::Context::getObjectPrimitiveUUIDs().
