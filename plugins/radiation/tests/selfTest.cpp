@@ -6902,6 +6902,112 @@ GPU_TEST_CASE("RadiationModel - Data Label Maps Match Segmentation Mask Coordina
     std::remove(image_file.c_str());
 }
 
+GPU_TEST_CASE("RadiationModel - Pixel Label UUID Mapping With Non-Sequential Object Ordering") {
+    // Verifies that writePrimitiveDataLabelMap reports correct data values when
+    // buildGeometryData reorders primitives by parent object, causing the internal
+    // context_UUIDs ordering to differ from UUID assignment order.
+    //
+    // Setup: Create a polymesh object (objID > 0) on the LEFT with low UUIDs, then an
+    // orphan patch (objID 0) on the RIGHT with a higher UUID. buildGeometryData sorts by
+    // objID, placing the orphan (high UUID) before the polymesh (low UUIDs) in its internal
+    // ordering. The test checks spatial correctness: left pixels should have element_type=1
+    // (polymesh) and right pixels should have element_type=2 (orphan).
+
+    Context context;
+
+    SphericalCoord up_rotation = make_SphericalCoord(0, 0);
+
+    // Step 1: Create patches on the LEFT and group into a polymesh — gets low UUIDs, objID > 0
+    std::vector<uint> obj_patch_UUIDs;
+    for (int i = 0; i < 9; i++) {
+        float x = -1.5f + (i % 3) * 0.5f;
+        float y = (i / 3) * 0.5f - 0.5f;
+        obj_patch_UUIDs.push_back(context.addPatch(make_vec3(x, y, 0), make_vec2(0.45, 0.45), up_rotation));
+    }
+    context.addPolymeshObject(obj_patch_UUIDs);
+
+    // Step 2: Create orphan patch on the RIGHT — gets higher UUID, parent object ID = 0
+    uint orphan_UUID = context.addPatch(make_vec3(1.5, 0, 0), make_vec2(1.5, 1.5), up_rotation);
+
+    // Verify the setup creates the non-sequential ordering needed to trigger the bug
+    DOCTEST_REQUIRE_EQ(context.getPrimitiveParentObjectID(orphan_UUID), 0u);
+    DOCTEST_REQUIRE_GT(context.getPrimitiveParentObjectID(obj_patch_UUIDs.front()), 0u);
+    DOCTEST_REQUIRE_GT(orphan_UUID, obj_patch_UUIDs.back());
+
+    // Set distinct element_type values: 1 = polymesh (left), 2 = orphan (right)
+    context.setPrimitiveData(obj_patch_UUIDs, "element_type", 1u);
+    context.setPrimitiveData(orphan_UUID, "element_type", 2u);
+
+    // Set up radiation model with camera looking straight down
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiationmodel.disableMessages();
+
+    CameraProperties cam_props;
+    cam_props.camera_resolution = make_int2(64, 64);
+    cam_props.HFOV = 90;
+    cam_props.focal_plane_distance = 5;
+    cam_props.lens_diameter = 0.0f;
+
+    radiationmodel.addRadiationCamera("test_cam", {"SW"}, make_vec3(0, 0, 5), make_vec3(0, 0, 0), cam_props, 1);
+
+    radiationmodel.addRadiationBand("SW");
+    radiationmodel.setScatteringDepth("SW", 1);
+
+    uint source = radiationmodel.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiationmodel.setSourceFlux(source, "SW", 1000.f);
+
+    radiationmodel.updateGeometry();
+    radiationmodel.runBand("SW");
+
+    // Write the label map and read it back
+    radiationmodel.writePrimitiveDataLabelMap("test_cam", "element_type", "uuid_mapping_test", "./", 0, 0.0f);
+
+    std::ifstream label_file("test_cam_uuid_mapping_test_00000.txt");
+    DOCTEST_REQUIRE(label_file.is_open());
+    std::vector<float> labels;
+    float val;
+    while (label_file >> val) {
+        labels.push_back(val);
+    }
+    label_file.close();
+    DOCTEST_REQUIRE_EQ(labels.size(), 64u * 64u);
+
+    // Check spatial correctness: left-side pixels (columns 0-31) should be polymesh (1)
+    // or sky (nan), right-side pixels (columns 32-63) should be orphan (2) or sky (nan).
+    // The polymesh is at x=-1.5 (image left) and the orphan is at x=+1.5 (image right).
+    int left_polymesh = 0, left_orphan = 0;
+    int right_polymesh = 0, right_orphan = 0;
+
+    for (int j = 0; j < 64; j++) {
+        for (int i = 0; i < 64; i++) {
+            float label = labels[j * 64 + i];
+            if (std::isnan(label)) continue;
+
+            uint label_uint = static_cast<uint>(label);
+            bool is_left = (i < 32);
+
+            if (is_left) {
+                if (label_uint == 1u) left_polymesh++;
+                else if (label_uint == 2u) left_orphan++;
+            } else {
+                if (label_uint == 1u) right_polymesh++;
+                else if (label_uint == 2u) right_orphan++;
+            }
+        }
+    }
+
+    // Polymesh (element_type=1) should appear on the left, orphan (element_type=2) on the right.
+    // If the UUID mapping is broken, the values will be swapped.
+    DOCTEST_CHECK_MESSAGE(left_polymesh > 0, "Polymesh patches (element_type=1) should appear on the left side of the image");
+    DOCTEST_CHECK_MESSAGE(right_orphan > 0, "Orphan patch (element_type=2) should appear on the right side of the image");
+    DOCTEST_CHECK_MESSAGE(left_orphan == 0,
+        "No orphan labels should appear on the left side (got " << left_orphan << " — indicates UUID mapping error)");
+    DOCTEST_CHECK_MESSAGE(right_polymesh == 0,
+        "No polymesh labels should appear on the right side (got " << right_polymesh << " — indicates UUID mapping error)");
+
+    std::remove("test_cam_uuid_mapping_test_00000.txt");
+}
+
 GPU_TEST_CASE("Material Backend Migration - Spectrum Interpolation Integration") {
     // Test that spectrum interpolation configs are properly applied in buildMaterialData()
 
