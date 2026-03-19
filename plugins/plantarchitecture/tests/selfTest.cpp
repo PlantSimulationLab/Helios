@@ -2524,6 +2524,82 @@ DOCTEST_TEST_CASE("PlantArchitecture setProgressCallback") {
     }
 }
 
+DOCTEST_TEST_CASE("getAllPlantUUIDs with include_hidden parameter") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000);
+
+    std::vector<uint> uuids_default = plantarchitecture.getAllPlantUUIDs(plantID);
+    std::vector<uint> uuids_no_hidden = plantarchitecture.getAllPlantUUIDs(plantID, false);
+    std::vector<uint> uuids_with_hidden = plantarchitecture.getAllPlantUUIDs(plantID, true);
+
+    // Default behavior should match explicit false
+    DOCTEST_CHECK(uuids_default.size() == uuids_no_hidden.size());
+
+    // include_hidden=true should return more UUIDs (the hidden prototypes)
+    DOCTEST_CHECK(uuids_with_hidden.size() > uuids_no_hidden.size());
+}
+
+DOCTEST_TEST_CASE("deletePlantInstance cleans up prototypes when all plants deleted") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+
+    uint plantID1 = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000);
+    uint plantID2 = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(1, 0, 0), 5000);
+
+    // Identify hidden prototype UUIDs
+    std::vector<uint> all_uuids = plantarchitecture.getAllPlantUUIDs(plantID1, true);
+    std::vector<uint> visible_uuids = plantarchitecture.getAllPlantUUIDs(plantID1, false);
+    DOCTEST_CHECK(all_uuids.size() > visible_uuids.size());
+
+    // Collect prototype UUIDs (those in all but not in visible)
+    std::set<uint> visible_set(visible_uuids.begin(), visible_uuids.end());
+    std::vector<uint> prototype_uuids;
+    for (uint uuid : all_uuids) {
+        if (visible_set.find(uuid) == visible_set.end()) {
+            prototype_uuids.push_back(uuid);
+        }
+    }
+    DOCTEST_CHECK(prototype_uuids.size() > 0);
+
+    // Delete first plant — prototypes should survive
+    plantarchitecture.deletePlantInstance(plantID1);
+    for (uint uuid : prototype_uuids) {
+        DOCTEST_CHECK(context.doesPrimitiveExist(uuid));
+    }
+
+    // Delete second plant — prototypes should now be cleaned up
+    plantarchitecture.deletePlantInstance(plantID2);
+    for (uint uuid : prototype_uuids) {
+        DOCTEST_CHECK(!context.doesPrimitiveExist(uuid));
+    }
+}
+
+DOCTEST_TEST_CASE("deletePlantInstance preserves prototypes when plants remain") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+
+    uint plantID1 = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000);
+    uint plantID2 = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(1, 0, 0), 5000);
+
+    // Get prototype UUIDs via the second plant
+    std::vector<uint> uuids_with_hidden = plantarchitecture.getAllPlantUUIDs(plantID2, true);
+    std::vector<uint> uuids_without_hidden = plantarchitecture.getAllPlantUUIDs(plantID2, false);
+    DOCTEST_CHECK(uuids_with_hidden.size() > uuids_without_hidden.size());
+
+    // Delete first plant — prototypes should still be accessible for remaining plant
+    plantarchitecture.deletePlantInstance(plantID1);
+
+    std::vector<uint> uuids_after = plantarchitecture.getAllPlantUUIDs(plantID2, true);
+    DOCTEST_CHECK(uuids_after.size() > plantarchitecture.getAllPlantUUIDs(plantID2, false).size());
+}
+
 int PlantArchitecture::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }
