@@ -78,6 +78,62 @@ if(CUDAToolkit_FOUND AND NOT FORCE_VULKAN_BACKEND)
 		endif()
 	endif()
 
+	# ---- CUDA Toolkit vs Driver compatibility check ----
+	# The CUDA toolkit version must not exceed the driver's supported CUDA version,
+	# otherwise compiled device code (PTX/OptiXIR) will contain NVVM IR too new for
+	# the driver's JIT compiler, causing OPTIX_ERROR_INVALID_INPUT at runtime.
+	if(NOT SKIP_DRIVER_VERSION_CHECK AND NVIDIA_SMI_EXE)
+		execute_process(
+			COMMAND ${NVIDIA_SMI_EXE} --query-gpu=driver_version --format=csv,noheader,nounits
+			OUTPUT_VARIABLE _DRIVER_CUDA_CHECK
+			OUTPUT_STRIP_TRAILING_WHITESPACE
+			ERROR_QUIET
+			RESULT_VARIABLE _CUDA_CHECK_RESULT
+		)
+		if(_CUDA_CHECK_RESULT EQUAL 0)
+			# Query the maximum CUDA version supported by the driver
+			execute_process(
+				COMMAND ${NVIDIA_SMI_EXE}
+				OUTPUT_VARIABLE _SMI_FULL_OUTPUT
+				OUTPUT_STRIP_TRAILING_WHITESPACE
+				ERROR_QUIET
+			)
+			string(REGEX MATCH "CUDA Version: ([0-9]+)\\.([0-9]+)" _CUDA_VER_MATCH "${_SMI_FULL_OUTPUT}")
+			if(_CUDA_VER_MATCH)
+				set(_DRIVER_CUDA_MAJOR "${CMAKE_MATCH_1}")
+				set(_DRIVER_CUDA_MINOR "${CMAKE_MATCH_2}")
+				message(STATUS "[Radiation] Driver supports up to CUDA ${_DRIVER_CUDA_MAJOR}.${_DRIVER_CUDA_MINOR}")
+
+				# Compare with installed CUDA toolkit version
+				if(CUDAToolkit_VERSION_MAJOR AND CUDAToolkit_VERSION_MINOR)
+					if(CUDAToolkit_VERSION_MAJOR GREATER _DRIVER_CUDA_MAJOR OR
+					   (CUDAToolkit_VERSION_MAJOR EQUAL _DRIVER_CUDA_MAJOR AND CUDAToolkit_VERSION_MINOR GREATER _DRIVER_CUDA_MINOR))
+						message(FATAL_ERROR
+							"\n"
+							"======================================================================\n"
+							"CUDA Toolkit / Driver version mismatch!\n"
+							"\n"
+							"  Installed CUDA Toolkit:  ${CUDAToolkit_VERSION}\n"
+							"  Driver supports up to:   CUDA ${_DRIVER_CUDA_MAJOR}.${_DRIVER_CUDA_MINOR}\n"
+							"  NVIDIA driver version:   ${_DRIVER_VER}\n"
+							"\n"
+							"The CUDA ${CUDAToolkit_VERSION} compiler generates device code (NVVM IR)\n"
+							"that is too new for this driver's JIT compiler. This will cause\n"
+							"OPTIX_ERROR_INVALID_INPUT at runtime.\n"
+							"\n"
+							"Fix options:\n"
+							"  1. Update your NVIDIA driver to one that supports CUDA ${CUDAToolkit_VERSION_MAJOR}.${CUDAToolkit_VERSION_MINOR}+\n"
+							"  2. Install CUDA Toolkit ${_DRIVER_CUDA_MAJOR}.${_DRIVER_CUDA_MINOR} or older\n"
+							"  3. Use -DFORCE_VULKAN_BACKEND=ON to bypass OptiX entirely\n"
+							"  4. Use -DSKIP_DRIVER_VERSION_CHECK=ON to bypass this check\n"
+							"======================================================================\n"
+						)
+					endif()
+				endif()
+			endif()
+		endif()
+	endif()
+
 	# ---- Select OptiX version based on driver ----
 	# OptiX 8 requires driver >= 560 (OptiX 8.0 minimum). OptiX 6.5 unsupported on >= 590.
 	if(NOT OPTIX_VERSION_LEGACY AND (NVIDIA_DRIVER_MAJOR GREATER_EQUAL 560 OR NVIDIA_DRIVER_MAJOR EQUAL 0))
