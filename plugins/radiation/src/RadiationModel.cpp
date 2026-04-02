@@ -1115,7 +1115,7 @@ void RadiationModel::blendSpectra(const std::string &new_spectrum_label, const s
 
     if (spectrum_labels.size() != weights.size()) {
         helios_runtime_error("ERROR (RadiationModel::blendSpectra): number of spectra and weights must be equal");
-    } else if (sum(weights) != 1.f) {
+    } else if (fabsf(sum(weights) - 1.f) > 1e-5f) {
         helios_runtime_error("ERROR (RadiationModel::blendSpectra): weights must sum to 1");
     }
 

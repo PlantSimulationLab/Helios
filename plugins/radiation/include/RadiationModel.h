@@ -216,6 +216,12 @@ struct RadiationCamera {
     std::vector<uint> pixel_label_UUID;
     std::vector<float> pixel_depth;
 
+    //! Exposure gain that was actually applied to pixel data (1.0 if manual/no exposure)
+    float applied_exposure_gain = 1.0f;
+
+    //! White balance factors [R,G,B] that were actually applied to pixel data ({1,1,1} if off)
+    helios::vec3 applied_white_balance_factors = helios::make_vec3(1.f, 1.f, 1.f);
+
     //! Flag indicating whether lens flare rendering is enabled for this camera
     bool lens_flare_enabled = false;
 
@@ -478,6 +484,8 @@ struct CameraMetadata {
         float saturation_adjustment = 1.f; //!< Saturation adjustment factor (1.0 = no change)
         float brightness_adjustment = 1.f; //!< Brightness adjustment factor (1.0 = no change)
         float contrast_adjustment = 1.f; //!< Contrast adjustment factor (1.0 = no change)
+        float exposure_gain = 1.f; //!< Exposure gain that was applied to pixel data (1.0 = no gain)
+        helios::vec3 white_balance_factors = helios::make_vec3(1.f, 1.f, 1.f); //!< White balance per-channel multipliers [R,G,B] (1,1,1 = no correction)
         std::string color_space = "linear"; //!< Output color space: "linear" or "sRGB"
     } image_processing;
 

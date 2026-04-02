@@ -401,6 +401,8 @@ struct FloralBud {
     BudState state = BUD_DORMANT;
     // amount of time since the bud flowered (=0 if it has not yet flowered)
     float time_counter = 0;
+    // cumulative age since bud break (first transition out of dormant/active state)
+    float age = 0;
     //=0 for axillary buds, =1 for terminal buds
     bool isterminal = false;
     // For axillary buds: index of the petiole within the internode that this floral bud originates from
