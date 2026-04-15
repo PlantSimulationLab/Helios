@@ -1447,8 +1447,8 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     if (phytomer_index_in_shoot == 0) {
                         // First phytomer in this shoot
                         if (shoot_ptr->parent_shoot_ID < 0) {
-                            // Base shoot: use plant base (origin)
-                            internode_base = make_vec3(0, 0, 0);
+                            // Base shoot: use plant base position from plant instance
+                            internode_base = plant_instances.at(plantID).base_position;
                         } else {
                             // Child shoot: get base from SAVED parent internode tip (petioles not reconstructed yet)
                             // Note: Cannot use parent petiole tip because petioles are reconstructed later in the loop
@@ -2486,4 +2486,1795 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
         std::cout << "done." << std::endl;
     }
     return plantIDs;
+}
+
+// ---- USD Articulated Rigid Body Export for IsaacSim ---- //
+
+namespace {
+
+enum USDLinkType { USD_LINK_CAPSULE, USD_LINK_MESH };
+
+struct USDMaterial {
+    std::string name;          // Unique material name for USD prim
+    std::string texture_file;  // Absolute path to texture image (empty if color-only)
+    RGBcolor color;            // Diffuse color (used when no texture, or as fallback)
+};
+
+struct USDLink {
+    std::string name;
+    vec3 position;          // World-space centroid (capsule midpoint or mesh centroid)
+    float qw, qx, qy, qz;  // Orientation quaternion (rotation from Z-axis to segment axis)
+    float radius;
+    float half_length;       // Half-length of cylinder shaft
+    float mass;
+    vec3 inertia_diagonal;   // (Ixx, Iyy, Izz)
+    int parent_link_index;   // -1 for root
+    USDLinkType link_type = USD_LINK_CAPSULE;
+    int material_index = -1; // Index into ArticulationData::materials (-1 = default physics material)
+
+    // Mesh data (only used when link_type == USD_LINK_MESH)
+    std::vector<vec3> mesh_vertices;   // In local space (centroid at origin)
+    std::vector<vec2> mesh_uvs;        // Per-vertex UV coordinates
+    std::vector<int> mesh_face_vertex_counts;
+    std::vector<int> mesh_face_vertex_indices;
+};
+
+struct USDJoint {
+    std::string name;
+    int parent_link_index;
+    int child_link_index;
+    vec3 local_pos_parent;   // Joint anchor in parent local frame
+    vec3 local_pos_child;    // Joint anchor in child local frame
+    float stiffness;
+    float damping;
+    bool is_fixed;           // true for world anchor joint
+    // Orientation of joint frame in child body's local space.
+    // Encodes relative rotation so that zero joint angle reproduces the rest pose.
+    // localRot0 is always identity; localRot1 = inverse(child_quat) * parent_quat.
+    float local_rot1_w = 1, local_rot1_x = 0, local_rot1_y = 0, local_rot1_z = 0;
+};
+
+float computeCapsuleVolume(float radius, float half_length) {
+    float cylinder_vol = M_PI * radius * radius * 2.f * half_length;
+    float sphere_vol = (4.f / 3.f) * M_PI * radius * radius * radius;
+    return cylinder_vol + sphere_vol;
+}
+
+vec3 computeCapsuleInertia(float mass, float radius, float half_length) {
+    float L = 2.f * half_length;
+    float Ixx = mass * (3.f * radius * radius + L * L) / 12.f;
+    float Iyy = Ixx;
+    float Izz = mass * radius * radius / 2.f;
+    return {Ixx, Iyy, Izz};
+}
+
+vec3 computeSphereInertia(float mass, float radius) {
+    float I = 0.4f * mass * radius * radius;
+    return {I, I, I};
+}
+
+float computeJointStiffness(float E, float radius, float segment_length) {
+    float I = M_PI * radius * radius * radius * radius / 4.f;
+    return E * I / segment_length;
+}
+
+float computeJointDamping(float stiffness, float rotational_inertia, float damping_ratio) {
+    return damping_ratio * 2.f * std::sqrt(stiffness * rotational_inertia);
+}
+
+void axisToQuaternion(const vec3 &axis_dir, float &qw, float &qx, float &qy, float &qz) {
+    vec3 z_axis(0, 0, 1);
+    vec3 a = axis_dir;
+    float mag = a.magnitude();
+    if (mag < 1e-8f) {
+        qw = 1; qx = 0; qy = 0; qz = 0;
+        return;
+    }
+    a = a / mag;
+
+    float dot = z_axis.x * a.x + z_axis.y * a.y + z_axis.z * a.z;
+
+    if (dot > 0.9999f) {
+        qw = 1; qx = 0; qy = 0; qz = 0;
+        return;
+    }
+    if (dot < -0.9999f) {
+        qw = 0; qx = 1; qy = 0; qz = 0;
+        return;
+    }
+
+    vec3 cross_prod;
+    cross_prod.x = z_axis.y * a.z - z_axis.z * a.y;
+    cross_prod.y = z_axis.z * a.x - z_axis.x * a.z;
+    cross_prod.z = z_axis.x * a.y - z_axis.y * a.x;
+
+    qw = 1.f + dot;
+    qx = cross_prod.x;
+    qy = cross_prod.y;
+    qz = cross_prod.z;
+
+    float norm = std::sqrt(qw * qw + qx * qx + qy * qy + qz * qz);
+    qw /= norm;
+    qx /= norm;
+    qy /= norm;
+    qz /= norm;
+}
+
+// Quaternion multiplication: result = a * b (Hamilton product)
+void quatMultiply(float aw, float ax, float ay, float az,
+                  float bw, float bx, float by, float bz,
+                  float &rw, float &rx, float &ry, float &rz) {
+    rw = aw * bw - ax * bx - ay * by - az * bz;
+    rx = aw * bx + ax * bw + ay * bz - az * by;
+    ry = aw * by - ax * bz + ay * bw + az * bx;
+    rz = aw * bz + ax * by - ay * bx + az * bw;
+}
+
+// Compute localRot1 for a joint connecting parent_link to child_link.
+// localRot1 = inverse(child_quat) * parent_quat
+// This ensures zero joint angle reproduces the rest pose where both bodies
+// are at their authored world orientations.
+void computeJointLocalRot1(const USDLink &parent, const USDLink &child, USDJoint &joint) {
+    // conjugate of child quaternion = inverse for unit quaternions
+    float inv_cw = child.qw, inv_cx = -child.qx, inv_cy = -child.qy, inv_cz = -child.qz;
+    quatMultiply(inv_cw, inv_cx, inv_cy, inv_cz,
+                 parent.qw, parent.qx, parent.qy, parent.qz,
+                 joint.local_rot1_w, joint.local_rot1_x, joint.local_rot1_y, joint.local_rot1_z);
+}
+
+struct ArticulationData {
+    std::vector<USDLink> links;
+    std::vector<USDJoint> joints;
+    std::vector<USDMaterial> materials;
+    std::map<std::string, int> material_cache; // key -> material index
+};
+
+} // anonymous namespace (temporarily close to define GrowthFrameSnapshot)
+
+// GrowthFrameSnapshot: wraps ArticulationData for growth animation frame storage.
+// Defined outside the anonymous namespace so shared_ptr<GrowthFrameSnapshot> in the header works.
+struct GrowthFrameSnapshot {
+    float time;  // plant age in days at this frame
+    ArticulationData artic_data;
+};
+
+namespace {
+
+// Look up or create a material entry for the given texture/color combination.
+int getOrCreateMaterial(ArticulationData &data, const std::string &texture_file, const RGBcolor &color) {
+    std::string key = texture_file + "|" + std::to_string(color.r) + "," + std::to_string(color.g) + "," + std::to_string(color.b);
+    auto it = data.material_cache.find(key);
+    if (it != data.material_cache.end()) {
+        return it->second;
+    }
+    int idx = static_cast<int>(data.materials.size());
+    USDMaterial mat;
+    mat.name = "Material_" + std::to_string(idx);
+    mat.texture_file = texture_file;
+    mat.color = color;
+    data.materials.push_back(mat);
+    data.material_cache[key] = idx;
+    return idx;
+}
+
+// Get or create a material from a context object by looking up the texture and color
+// of its first primitive. Returns the material index.
+int getMaterialFromContextObject(Context *context_ptr, uint objID, ArticulationData &data) {
+    if (!context_ptr->doesObjectExist(objID)) {
+        return -1;
+    }
+    std::vector<uint> UUIDs = context_ptr->getObjectPrimitiveUUIDs(objID);
+    if (UUIDs.empty()) {
+        return -1;
+    }
+    std::string texture_file = context_ptr->getPrimitiveTextureFile(UUIDs[0]);
+    RGBcolor color = context_ptr->getPrimitiveColor(UUIDs[0]);
+    return getOrCreateMaterial(data, texture_file, color);
+}
+
+// Apply inverse quaternion rotation to transform a world-space point into the Xform's local frame.
+// The Xform has translate + orient, so local = inverseRotate(world - translate).
+// Uses the vector rotation formula: v' = v + 2*w*(u x v) + 2*(u x (u x v))
+// where q = (w, u) and we use the conjugate q* = (w, -u) for inverse rotation.
+vec3 worldToLocal(const vec3 &world_point, const vec3 &xform_position, float qw, float qx, float qy, float qz) {
+    vec3 v = world_point - xform_position;
+    // Conjugate quaternion for inverse rotation: (qw, -qx, -qy, -qz)
+    vec3 u(-qx, -qy, -qz);
+    vec3 uv;
+    uv.x = u.y * v.z - u.z * v.y;
+    uv.y = u.z * v.x - u.x * v.z;
+    uv.z = u.x * v.y - u.y * v.x;
+    vec3 uuv;
+    uuv.x = u.y * uv.z - u.z * uv.y;
+    uuv.y = u.z * uv.x - u.x * uv.z;
+    uuv.z = u.x * uv.y - u.y * uv.x;
+    vec3 result;
+    result.x = v.x + 2.f * (qw * uv.x + uuv.x);
+    result.y = v.y + 2.f * (qw * uv.y + uuv.y);
+    result.z = v.z + 2.f * (qw * uv.z + uuv.z);
+    return result;
+}
+
+// Build a visual mesh for a tube segment by extracting the primitives belonging to
+// that segment from the tube compound object. For a tube with N nodes and R radial
+// subdivisions, segment i (between node i and node i+1) has 2*R triangles.
+// The UUIDs are ordered: outer loop j=0..R-1, inner loop i=0..N-2, 2 triangles per (j,i).
+void buildTubeSegmentVisualMesh(Context *context_ptr, uint tube_objID, int segment_index,
+                                int total_segments, ArticulationData &data, USDLink &link) {
+
+    if (!context_ptr->doesObjectExist(tube_objID)) {
+        return;
+    }
+
+    uint radial_subdivs = context_ptr->getTubeObjectSubdivisionCount(tube_objID);
+    std::vector<uint> all_UUIDs = context_ptr->getObjectPrimitiveUUIDs(tube_objID);
+
+    // Collect UUIDs for this segment: for each radial strip j, grab 2 triangles at position (j, segment_index)
+    std::vector<uint> seg_UUIDs;
+    seg_UUIDs.reserve(2 * radial_subdivs);
+    for (uint j = 0; j < radial_subdivs; j++) {
+        int base = static_cast<int>(j) * 2 * total_segments + 2 * segment_index;
+        if (base + 1 < static_cast<int>(all_UUIDs.size())) {
+            seg_UUIDs.push_back(all_UUIDs[base]);
+            seg_UUIDs.push_back(all_UUIDs[base + 1]);
+        }
+    }
+
+    if (seg_UUIDs.empty()) {
+        return;
+    }
+
+    // Extract mesh data from these primitives
+    std::vector<vec3> world_vertices;
+    std::vector<vec2> all_uvs;
+    std::string texture_file;
+    RGBcolor color = make_RGBcolor(0.5f, 0.5f, 0.5f);
+
+    for (uint UUID : seg_UUIDs) {
+        std::vector<vec3> prim_verts = context_ptr->getPrimitiveVertices(UUID);
+        std::vector<vec2> prim_uvs = context_ptr->getPrimitiveTextureUV(UUID);
+        int base_idx = static_cast<int>(world_vertices.size());
+        link.mesh_face_vertex_counts.push_back(static_cast<int>(prim_verts.size()));
+        for (int i = 0; i < static_cast<int>(prim_verts.size()); i++) {
+            link.mesh_face_vertex_indices.push_back(base_idx + i);
+            world_vertices.push_back(prim_verts[i]);
+            if (i < static_cast<int>(prim_uvs.size())) {
+                all_uvs.push_back(prim_uvs[i]);
+            } else {
+                all_uvs.push_back(make_vec2(0, 0));
+            }
+        }
+
+        if (texture_file.empty()) {
+            texture_file = context_ptr->getPrimitiveTextureFile(UUID);
+            color = context_ptr->getPrimitiveColor(UUID);
+        }
+    }
+
+    // Convert to local space: translate to origin then apply inverse rotation
+    link.mesh_vertices.resize(world_vertices.size());
+    for (size_t i = 0; i < world_vertices.size(); i++) {
+        link.mesh_vertices[i] = worldToLocal(world_vertices[i], link.position, link.qw, link.qx, link.qy, link.qz);
+    }
+    link.mesh_uvs = all_uvs;
+
+    // Assign material
+    link.material_index = getOrCreateMaterial(data, texture_file, color);
+}
+
+// Build mesh data from a Helios context object. Vertices are stored in local space
+// (translated so the centroid is at origin). Returns the world-space centroid.
+// Also extracts UV coordinates and determines the material.
+vec3 buildMeshFromContextObject(Context *context_ptr, uint objID, ArticulationData &data,
+                                USDLink &link) {
+
+    std::vector<uint> UUIDs = context_ptr->getObjectPrimitiveUUIDs(objID);
+
+    // Collect all vertices, UVs, and faces
+    std::vector<vec3> world_vertices;
+    std::vector<vec2> all_uvs;
+    std::string texture_file;
+    RGBcolor color = make_RGBcolor(0.5f, 0.5f, 0.5f);
+
+    for (uint UUID : UUIDs) {
+        std::vector<vec3> prim_verts = context_ptr->getPrimitiveVertices(UUID);
+        std::vector<vec2> prim_uvs = context_ptr->getPrimitiveTextureUV(UUID);
+        int base_idx = static_cast<int>(world_vertices.size());
+        link.mesh_face_vertex_counts.push_back(static_cast<int>(prim_verts.size()));
+        for (int i = 0; i < static_cast<int>(prim_verts.size()); i++) {
+            link.mesh_face_vertex_indices.push_back(base_idx + i);
+            world_vertices.push_back(prim_verts[i]);
+            if (i < static_cast<int>(prim_uvs.size())) {
+                all_uvs.push_back(prim_uvs[i]);
+            } else {
+                all_uvs.push_back(make_vec2(0, 0));
+            }
+        }
+
+        // Get texture and color from first primitive
+        if (texture_file.empty()) {
+            texture_file = context_ptr->getPrimitiveTextureFile(UUID);
+            color = context_ptr->getPrimitiveColor(UUID);
+        }
+    }
+
+    // Compute centroid
+    vec3 centroid(0, 0, 0);
+    if (!world_vertices.empty()) {
+        for (const auto &v : world_vertices) {
+            centroid = centroid + v;
+        }
+        centroid = centroid / static_cast<float>(world_vertices.size());
+    }
+
+    // Convert to local space (centroid at origin)
+    link.mesh_vertices.resize(world_vertices.size());
+    for (size_t i = 0; i < world_vertices.size(); i++) {
+        link.mesh_vertices[i] = world_vertices[i] - centroid;
+    }
+    link.mesh_uvs = all_uvs;
+
+    // Assign material
+    link.material_index = getOrCreateMaterial(data, texture_file, color);
+
+    return centroid;
+}
+
+// Compute approximate inertia for a mesh by treating it as a collection of point masses
+vec3 computeMeshInertia(float mass, const std::vector<vec3> &local_vertices) {
+    if (local_vertices.empty()) {
+        return {0, 0, 0};
+    }
+    float mass_per_vertex = mass / static_cast<float>(local_vertices.size());
+    float Ixx = 0, Iyy = 0, Izz = 0;
+    for (const auto &v : local_vertices) {
+        Ixx += mass_per_vertex * (v.y * v.y + v.z * v.z);
+        Iyy += mass_per_vertex * (v.x * v.x + v.z * v.z);
+        Izz += mass_per_vertex * (v.x * v.x + v.y * v.y);
+    }
+    return {Ixx, Iyy, Izz};
+}
+
+std::string sanitizePrimName(const std::string &name) {
+    std::string result;
+    result.reserve(name.size());
+    for (char c : name) {
+        if (std::isalnum(c) || c == '_') {
+            result += c;
+        } else {
+            result += '_';
+        }
+    }
+    return result;
+}
+
+ArticulationData buildArticulationData(const PlantInstance &plant, const USDExportParameters &params, Context *context_ptr) {
+
+    ArticulationData data;
+
+    std::map<std::pair<int, int>, int> last_internode_link_index;
+    std::map<int, int> shoot_last_link_index;
+    std::map<std::pair<int, int>, int> shoot_node_link_index;
+
+    for (const auto &shoot : plant.shoot_tree) {
+
+        int prev_internode_link = -1;
+        vec3 last_internode_vertex;
+        bool has_last_internode_vertex = false;
+
+        // Compute total tube nodes/segments for this shoot's internode tube (for visual mesh extraction)
+        int total_tube_nodes = 0;
+        for (uint pi = 0; pi < shoot->shoot_internode_vertices.size(); pi++) {
+            total_tube_nodes += static_cast<int>(shoot->shoot_internode_vertices[pi].size());
+        }
+        int total_tube_segments = std::max(0, total_tube_nodes - 1);
+        int flat_node_offset = 0; // running offset into the flattened node array
+
+        int shoot_parent_link = -1;
+        if (shoot->parent_shoot_ID >= 0) {
+            // Try exact node match first
+            auto key = std::make_pair(shoot->parent_shoot_ID, static_cast<int>(shoot->parent_node_index));
+            auto it = shoot_node_link_index.find(key);
+            if (it != shoot_node_link_index.end()) {
+                shoot_parent_link = it->second;
+            } else {
+                // Exact node was filtered out — fall back to nearest upstream link on the parent shoot
+                auto shoot_it = shoot_last_link_index.find(shoot->parent_shoot_ID);
+                if (shoot_it != shoot_last_link_index.end()) {
+                    shoot_parent_link = shoot_it->second;
+                }
+                // If parent shoot produced no links at all, shoot_parent_link stays -1
+                // and this child shoot will become a new root (or be skipped if no segments survive)
+            }
+        }
+
+        for (uint phytomer_idx = 0; phytomer_idx < shoot->phytomers.size(); phytomer_idx++) {
+
+            const auto &vertices = shoot->shoot_internode_vertices[phytomer_idx];
+            const auto &radii = shoot->shoot_internode_radii[phytomer_idx];
+            const auto &phytomer = shoot->phytomers[phytomer_idx];
+
+            // Build list of segment vertex pairs, handling single-vertex phytomers
+            // by using the previous phytomer's last vertex as the start point.
+            // Also track the flat tube segment index for visual mesh extraction.
+            std::vector<std::pair<vec3, vec3>> segment_pairs;
+            std::vector<float> segment_radii;
+            std::vector<int> segment_tube_indices; // flat tube segment index for each segment
+
+            if (vertices.size() == 1 && has_last_internode_vertex) {
+                // Vertex-sharing: segment between previous phytomer's last node and this node
+                // In flat tube, that's segment (flat_node_offset - 1)
+                segment_pairs.push_back({last_internode_vertex, vertices[0]});
+                segment_radii.push_back(radii[0]);
+                segment_tube_indices.push_back(flat_node_offset - 1);
+            } else {
+                for (int seg = 0; seg < static_cast<int>(vertices.size()) - 1; seg++) {
+                    segment_pairs.push_back({vertices[seg], vertices[seg + 1]});
+                    segment_radii.push_back(radii[seg]);
+                    segment_tube_indices.push_back(flat_node_offset + seg);
+                }
+            }
+
+            flat_node_offset += static_cast<int>(vertices.size());
+
+            // Update last vertex for next phytomer's vertex sharing
+            if (!vertices.empty()) {
+                last_internode_vertex = vertices.back();
+                has_last_internode_vertex = true;
+            }
+
+            for (int seg = 0; seg < static_cast<int>(segment_pairs.size()); seg++) {
+                vec3 start = segment_pairs[seg].first;
+                vec3 end = segment_pairs[seg].second;
+                vec3 axis = end - start;
+                float length = axis.magnitude();
+
+                if (length < params.min_segment_length) {
+                    continue;
+                }
+
+                float seg_radius = segment_radii[seg];
+                if (!(seg_radius > 0) || seg_radius > length) {
+                    continue;
+                }
+
+                vec3 midpoint = (start + end) * 0.5f;
+                vec3 axis_normalized = axis / length;
+                float half_len = length / 2.f;
+
+                USDLink link;
+                link.name = "S" + std::to_string(shoot->ID) + "_P" + std::to_string(phytomer_idx) + "_Seg" + std::to_string(seg);
+                link.position = midpoint;
+                axisToQuaternion(axis_normalized, link.qw, link.qx, link.qy, link.qz);
+                link.radius = seg_radius;
+                link.half_length = half_len;
+                link.mass = params.wood_density * computeCapsuleVolume(seg_radius, half_len);
+                link.inertia_diagonal = computeCapsuleInertia(link.mass, seg_radius, half_len);
+
+                // Extract visual mesh from tube geometry for this segment
+                int tube_seg_idx = segment_tube_indices[seg];
+                if (tube_seg_idx >= 0 && tube_seg_idx < total_tube_segments) {
+                    buildTubeSegmentVisualMesh(context_ptr, shoot->internode_tube_objID,
+                                               tube_seg_idx, total_tube_segments, data, link);
+                }
+
+                int parent_idx;
+                if (prev_internode_link >= 0) {
+                    parent_idx = prev_internode_link;
+                } else if (shoot_parent_link >= 0) {
+                    parent_idx = shoot_parent_link;
+                } else {
+                    parent_idx = -1;
+                }
+                link.parent_link_index = parent_idx;
+
+                int this_link_idx = static_cast<int>(data.links.size());
+                data.links.push_back(link);
+
+                USDJoint joint;
+                joint.child_link_index = this_link_idx;
+
+                if (parent_idx < 0) {
+                    joint.name = "WorldAnchor";
+                    joint.parent_link_index = -1;
+                    joint.local_pos_parent = start;
+                    joint.local_pos_child = vec3(0, 0, -half_len);
+                    joint.stiffness = 0;
+                    joint.damping = 0;
+                    joint.is_fixed = true;
+                } else {
+                    joint.name = "J_" + data.links[parent_idx].name + "_to_" + link.name;
+                    joint.parent_link_index = parent_idx;
+                    joint.local_pos_parent = vec3(0, 0, data.links[parent_idx].half_length);
+                    joint.local_pos_child = vec3(0, 0, -half_len);
+
+                    float avg_radius = (data.links[parent_idx].radius + seg_radius) / 2.f;
+                    joint.stiffness = computeJointStiffness(params.elastic_modulus, avg_radius, length);
+                    float child_Izz = link.inertia_diagonal.x;
+                    joint.damping = computeJointDamping(joint.stiffness, child_Izz, params.damping_ratio);
+                    joint.is_fixed = false;
+                    computeJointLocalRot1(data.links[parent_idx], data.links[this_link_idx], joint);
+                }
+                data.joints.push_back(joint);
+
+                prev_internode_link = this_link_idx;
+            }
+
+            // Always record the best available link for this phytomer node, even if
+            // all its segments were filtered. This ensures child shoots attaching at this
+            // node can find the nearest upstream link.
+            if (prev_internode_link >= 0) {
+                last_internode_link_index[{shoot->ID, static_cast<int>(phytomer_idx)}] = prev_internode_link;
+                shoot_node_link_index[{shoot->ID, static_cast<int>(phytomer_idx)}] = prev_internode_link;
+                shoot_last_link_index[shoot->ID] = prev_internode_link;
+            }
+
+            // ---- Petioles (only if leaves are present) ---- //
+
+            int internode_attach_link = prev_internode_link;
+
+            for (uint petiole_idx = 0; petiole_idx < phytomer->petiole_vertices.size(); petiole_idx++) {
+
+                // Skip petioles that have no attached leaves
+                bool has_leaves = false;
+                if (petiole_idx < phytomer->leaf_objIDs.size()) {
+                    for (uint li = 0; li < phytomer->leaf_objIDs[petiole_idx].size(); li++) {
+                        if (phytomer->leaf_objIDs[petiole_idx][li] != 0) {
+                            has_leaves = true;
+                            break;
+                        }
+                    }
+                }
+                if (!has_leaves) {
+                    continue;
+                }
+
+                const auto &pet_verts = phytomer->petiole_vertices[petiole_idx];
+                const auto &pet_radii = phytomer->petiole_radii[petiole_idx];
+                int prev_petiole_link = -1;
+
+                for (int seg = 0; seg < static_cast<int>(pet_verts.size()) - 1; seg++) {
+                    vec3 start = pet_verts[seg];
+                    vec3 end = pet_verts[seg + 1];
+                    vec3 axis = end - start;
+                    float length = axis.magnitude();
+
+                    if (length < params.min_segment_length) {
+                        continue;
+                    }
+
+                    float seg_radius = pet_radii[seg];
+                    if (!(seg_radius > 0) || seg_radius > length) {
+                        continue;
+                    }
+
+                    vec3 midpoint = (start + end) * 0.5f;
+                    vec3 axis_normalized = axis / length;
+                    float half_len = length / 2.f;
+
+                    USDLink link;
+                    link.name = "S" + std::to_string(shoot->ID) + "_P" + std::to_string(phytomer_idx) + "_Pet" + std::to_string(petiole_idx) + "_Seg" + std::to_string(seg);
+                    link.position = midpoint;
+                    axisToQuaternion(axis_normalized, link.qw, link.qx, link.qy, link.qz);
+                    link.radius = seg_radius;
+                    link.half_length = half_len;
+                    link.mass = params.wood_density * computeCapsuleVolume(seg_radius, half_len);
+                    link.inertia_diagonal = computeCapsuleInertia(link.mass, seg_radius, half_len);
+
+                    // Extract visual mesh from petiole object, transforming to link's local frame
+                    if (petiole_idx < phytomer->petiole_objIDs.size() && seg < static_cast<int>(phytomer->petiole_objIDs[petiole_idx].size())) {
+                        uint pet_objID = phytomer->petiole_objIDs[petiole_idx][seg];
+                        if (context_ptr->doesObjectExist(pet_objID)) {
+                            USDLink temp_link;
+                            temp_link.position = link.position;
+                            buildMeshFromContextObject(context_ptr, pet_objID, data, temp_link);
+                            // Re-transform vertices into this link's rotated local frame
+                            link.mesh_vertices.resize(temp_link.mesh_vertices.size());
+                            for (size_t vi = 0; vi < temp_link.mesh_vertices.size(); vi++) {
+                                vec3 world_pos = temp_link.mesh_vertices[vi] + temp_link.position; // back to world
+                                link.mesh_vertices[vi] = worldToLocal(world_pos, link.position, link.qw, link.qx, link.qy, link.qz);
+                            }
+                            link.mesh_uvs = std::move(temp_link.mesh_uvs);
+                            link.mesh_face_vertex_counts = std::move(temp_link.mesh_face_vertex_counts);
+                            link.mesh_face_vertex_indices = std::move(temp_link.mesh_face_vertex_indices);
+                            link.material_index = temp_link.material_index;
+                        }
+                    }
+
+                    int parent_idx = (prev_petiole_link >= 0) ? prev_petiole_link : internode_attach_link;
+                    // Skip if no valid parent link exists (e.g., all internode segments were filtered)
+                    if (parent_idx < 0) {
+                        continue;
+                    }
+                    link.parent_link_index = parent_idx;
+
+                    int this_link_idx = static_cast<int>(data.links.size());
+                    data.links.push_back(link);
+
+                    USDJoint joint;
+                    joint.name = "J_" + data.links[parent_idx].name + "_to_" + link.name;
+                    joint.parent_link_index = parent_idx;
+                    joint.child_link_index = this_link_idx;
+                    joint.local_pos_parent = vec3(0, 0, data.links[parent_idx].half_length);
+                    joint.local_pos_child = vec3(0, 0, -half_len);
+                    float avg_radius = (data.links[parent_idx].radius + seg_radius) / 2.f;
+                    joint.stiffness = computeJointStiffness(params.elastic_modulus, avg_radius, length);
+                    float child_Izz = link.inertia_diagonal.x;
+                    joint.damping = computeJointDamping(joint.stiffness, child_Izz, params.damping_ratio);
+                    joint.is_fixed = false;
+                    computeJointLocalRot1(data.links[parent_idx], data.links[this_link_idx], joint);
+                    data.joints.push_back(joint);
+
+                    prev_petiole_link = this_link_idx;
+                }
+
+                // ---- Leaves on this petiole ---- //
+
+                if (petiole_idx < phytomer->leaf_bases.size()) {
+                    for (uint leaf_idx = 0; leaf_idx < phytomer->leaf_bases[petiole_idx].size(); leaf_idx++) {
+
+                        if (petiole_idx >= phytomer->leaf_objIDs.size() || leaf_idx >= phytomer->leaf_objIDs[petiole_idx].size()) {
+                            continue;
+                        }
+                        uint leaf_objID = phytomer->leaf_objIDs[petiole_idx][leaf_idx];
+                        if (leaf_objID == 0) {
+                            continue;
+                        }
+
+                        float leaf_area = phytomer->getLeafArea();
+                        uint total_leaves = 0;
+                        for (uint pi = 0; pi < phytomer->leaf_bases.size(); pi++) {
+                            total_leaves += phytomer->leaf_bases[pi].size();
+                        }
+                        if (total_leaves > 0) {
+                            leaf_area /= static_cast<float>(total_leaves);
+                        }
+
+                        float leaf_mass = params.leaf_mass_per_area * leaf_area;
+                        if (leaf_mass < 1e-6f) {
+                            continue;
+                        }
+
+                        USDLink link;
+                        link.name = "S" + std::to_string(shoot->ID) + "_P" + std::to_string(phytomer_idx) + "_Pet" + std::to_string(petiole_idx) + "_Leaf" + std::to_string(leaf_idx);
+                        link.link_type = USD_LINK_MESH;
+                        link.qw = 1; link.qx = 0; link.qy = 0; link.qz = 0;
+                        link.radius = 0;
+                        link.half_length = 0;
+                        link.mass = leaf_mass;
+
+                        link.position = buildMeshFromContextObject(context_ptr, leaf_objID, data, link);
+                        link.inertia_diagonal = computeMeshInertia(leaf_mass, link.mesh_vertices);
+
+                        int parent_idx = (prev_petiole_link >= 0) ? prev_petiole_link : internode_attach_link;
+                        // Skip if no valid parent link exists (e.g., all internode segments were filtered)
+                        if (parent_idx < 0) {
+                            continue;
+                        }
+                        link.parent_link_index = parent_idx;
+
+                        int this_link_idx = static_cast<int>(data.links.size());
+                        data.links.push_back(link);
+
+                        USDJoint joint;
+                        joint.name = "J_" + data.links[parent_idx].name + "_to_" + link.name;
+                        joint.parent_link_index = parent_idx;
+                        joint.child_link_index = this_link_idx;
+                        joint.local_pos_parent = vec3(0, 0, data.links[parent_idx].half_length);
+                        joint.local_pos_child = vec3(0, 0, 0);
+                        joint.stiffness = params.organ_spring_stiffness;
+                        joint.damping = params.organ_spring_damping;
+                        joint.is_fixed = false;
+                        computeJointLocalRot1(data.links[parent_idx], data.links[this_link_idx], joint);
+                        data.joints.push_back(joint);
+                    }
+                }
+            }
+
+            // ---- Peduncles and inflorescences (only if flowers/fruit are present) ---- //
+
+            for (uint petiole_idx = 0; petiole_idx < phytomer->floral_buds.size(); petiole_idx++) {
+                for (uint bud_idx = 0; bud_idx < phytomer->floral_buds[petiole_idx].size(); bud_idx++) {
+
+                    const auto &fbud = phytomer->floral_buds[petiole_idx][bud_idx];
+
+                    // Skip buds that have no flowers or fruit
+                    if (fbud.state != BUD_FRUITING && fbud.state != BUD_FLOWER_OPEN && fbud.state != BUD_FLOWER_CLOSED) {
+                        continue;
+                    }
+
+                    int prev_peduncle_link = -1;
+                    if (petiole_idx < phytomer->peduncle_vertices.size() && bud_idx < phytomer->peduncle_vertices[petiole_idx].size()) {
+
+                        const auto &ped_verts = phytomer->peduncle_vertices[petiole_idx][bud_idx];
+                        const auto &ped_radii = phytomer->peduncle_radii[petiole_idx][bud_idx];
+
+                        for (int seg = 0; seg < static_cast<int>(ped_verts.size()) - 1; seg++) {
+                            vec3 start = ped_verts[seg];
+                            vec3 end = ped_verts[seg + 1];
+                            vec3 axis = end - start;
+                            float length = axis.magnitude();
+
+                            if (length < params.min_segment_length) {
+                                continue;
+                            }
+
+                            float seg_radius = ped_radii[seg];
+                            if (!(seg_radius > 0) || seg_radius > length) {
+                                continue;
+                            }
+
+                            vec3 midpoint = (start + end) * 0.5f;
+                            vec3 axis_normalized = axis / length;
+                            float half_len = length / 2.f;
+
+                            USDLink link;
+                            link.name = "S" + std::to_string(shoot->ID) + "_P" + std::to_string(phytomer_idx) + "_Ped" + std::to_string(petiole_idx) + "_B" + std::to_string(bud_idx) + "_Seg" + std::to_string(seg);
+                            link.position = midpoint;
+                            axisToQuaternion(axis_normalized, link.qw, link.qx, link.qy, link.qz);
+                            link.radius = seg_radius;
+                            link.half_length = half_len;
+                            link.mass = params.wood_density * computeCapsuleVolume(seg_radius, half_len);
+                            link.inertia_diagonal = computeCapsuleInertia(link.mass, seg_radius, half_len);
+
+                            // Extract visual mesh from peduncle object, transforming to link's local frame
+                            if (seg < static_cast<int>(fbud.peduncle_objIDs.size())) {
+                                uint ped_objID = fbud.peduncle_objIDs[seg];
+                                if (context_ptr->doesObjectExist(ped_objID)) {
+                                    USDLink temp_link;
+                                    temp_link.position = link.position;
+                                    buildMeshFromContextObject(context_ptr, ped_objID, data, temp_link);
+                                    link.mesh_vertices.resize(temp_link.mesh_vertices.size());
+                                    for (size_t vi = 0; vi < temp_link.mesh_vertices.size(); vi++) {
+                                        vec3 world_pos = temp_link.mesh_vertices[vi] + temp_link.position;
+                                        link.mesh_vertices[vi] = worldToLocal(world_pos, link.position, link.qw, link.qx, link.qy, link.qz);
+                                    }
+                                    link.mesh_uvs = std::move(temp_link.mesh_uvs);
+                                    link.mesh_face_vertex_counts = std::move(temp_link.mesh_face_vertex_counts);
+                                    link.mesh_face_vertex_indices = std::move(temp_link.mesh_face_vertex_indices);
+                                    link.material_index = temp_link.material_index;
+                                }
+                            }
+
+                            int parent_idx = (prev_peduncle_link >= 0) ? prev_peduncle_link : internode_attach_link;
+                            // Skip if no valid parent link exists (e.g., all internode segments were filtered)
+                            if (parent_idx < 0) {
+                                continue;
+                            }
+                            link.parent_link_index = parent_idx;
+
+                            int this_link_idx = static_cast<int>(data.links.size());
+                            data.links.push_back(link);
+
+                            USDJoint joint;
+                            joint.name = "J_" + data.links[parent_idx].name + "_to_" + link.name;
+                            joint.parent_link_index = parent_idx;
+                            joint.child_link_index = this_link_idx;
+                            joint.local_pos_parent = vec3(0, 0, data.links[parent_idx].half_length);
+                            joint.local_pos_child = vec3(0, 0, -half_len);
+                            float avg_radius = (data.links[parent_idx].radius + seg_radius) / 2.f;
+                            joint.stiffness = computeJointStiffness(params.elastic_modulus, avg_radius, length);
+                            float child_Izz = link.inertia_diagonal.x;
+                            joint.damping = computeJointDamping(joint.stiffness, child_Izz, params.damping_ratio);
+                            joint.is_fixed = false;
+                            computeJointLocalRot1(data.links[parent_idx], data.links[this_link_idx], joint);
+                            data.joints.push_back(joint);
+
+                            prev_peduncle_link = this_link_idx;
+                        }
+                    }
+
+                    int organ_attach = (prev_peduncle_link >= 0) ? prev_peduncle_link : internode_attach_link;
+
+                    for (uint inf_idx = 0; inf_idx < fbud.inflorescence_bases.size(); inf_idx++) {
+
+                        if (inf_idx >= fbud.inflorescence_objIDs.size() || fbud.inflorescence_objIDs[inf_idx] == 0) {
+                            continue;
+                        }
+
+                        float organ_mass;
+                        std::string organ_label;
+                        if (fbud.state == BUD_FRUITING) {
+                            organ_mass = params.fruit_mass;
+                            organ_label = "Fruit";
+                        } else if (fbud.state == BUD_FLOWER_OPEN || fbud.state == BUD_FLOWER_CLOSED) {
+                            organ_mass = params.flower_mass;
+                            organ_label = "Flower";
+                        } else {
+                            continue;
+                        }
+
+                        // Skip if no valid parent link exists (e.g., all internode segments were filtered)
+                        if (organ_attach < 0) {
+                            continue;
+                        }
+
+                        uint organ_objID = fbud.inflorescence_objIDs[inf_idx];
+
+                        USDLink link;
+                        link.name = "S" + std::to_string(shoot->ID) + "_P" + std::to_string(phytomer_idx) + "_" + organ_label + std::to_string(inf_idx);
+                        link.link_type = USD_LINK_MESH;
+                        link.qw = 1; link.qx = 0; link.qy = 0; link.qz = 0;
+                        link.radius = 0;
+                        link.half_length = 0;
+                        link.mass = organ_mass;
+
+                        link.position = buildMeshFromContextObject(context_ptr, organ_objID, data, link);
+                        link.inertia_diagonal = computeMeshInertia(organ_mass, link.mesh_vertices);
+                        link.parent_link_index = organ_attach;
+
+                        int this_link_idx = static_cast<int>(data.links.size());
+                        data.links.push_back(link);
+
+                        USDJoint joint;
+                        joint.name = "J_" + data.links[organ_attach].name + "_to_" + link.name;
+                        joint.parent_link_index = organ_attach;
+                        joint.child_link_index = this_link_idx;
+                        joint.local_pos_parent = vec3(0, 0, data.links[organ_attach].half_length);
+                        joint.local_pos_child = vec3(0, 0, 0);
+                        joint.stiffness = params.organ_spring_stiffness;
+                        joint.damping = params.organ_spring_damping;
+                        joint.is_fixed = false;
+                        computeJointLocalRot1(data.links[organ_attach], data.links[this_link_idx], joint);
+                        data.joints.push_back(joint);
+                    }
+                }
+            }
+        }
+    }
+
+    return data;
+}
+
+void writeUSDAHeader(std::ofstream &out, const std::string &default_prim) {
+    out << "#usda 1.0\n";
+    out << "(\n";
+    out << "    defaultPrim = \"" << default_prim << "\"\n";
+    out << "    metersPerUnit = 1.0\n";
+    out << "    kilogramsPerUnit = 1.0\n";
+    out << "    upAxis = \"Z\"\n";
+    out << ")\n\n";
+}
+
+void writePhysicsScene(std::ofstream &out) {
+    out << "def PhysicsScene \"PhysicsScene\"\n";
+    out << "{\n";
+    out << "    vector3f physics:gravityDirection = (0, 0, -1)\n";
+    out << "    float physics:gravityMagnitude = 9.81\n";
+    out << "}\n\n";
+}
+
+void writePhysicsMaterial(std::ofstream &out, const USDExportParameters &params,
+                          const std::string &indent) {
+    out << indent << "def Scope \"PhysicsMaterials\"\n";
+    out << indent << "{\n";
+    out << indent << "    def Material \"WoodMaterial\" (\n";
+    out << indent << "        prepend apiSchemas = [\"PhysicsMaterialAPI\"]\n";
+    out << indent << "    )\n";
+    out << indent << "    {\n";
+    out << indent << "        float physics:staticFriction = " << params.static_friction << "\n";
+    out << indent << "        float physics:dynamicFriction = " << params.dynamic_friction << "\n";
+    out << indent << "        float physics:restitution = " << params.restitution << "\n";
+    out << indent << "    }\n";
+    out << indent << "}\n\n";
+}
+
+// Compute smooth per-vertex normals in faceVarying layout (one entry per face-vertex).
+// For each vertex, the normal is the area-weighted average of the normals of all faces
+// that share that vertex — this produces smooth shading across curved surfaces like tubes.
+// The result buffer has exactly sum(faceVertexCounts) entries, matching the faceVarying
+// interpolation contract required by USD and Isaac Sim.
+std::vector<vec3> computeFaceVaryingNormals(const std::vector<vec3> &verts,
+                                             const std::vector<int> &face_vertex_counts,
+                                             const std::vector<int> &face_vertex_indices) {
+
+    // Accumulate area-weighted face normals per vertex
+    std::vector<vec3> vertex_normals(verts.size(), make_vec3(0, 0, 0));
+
+    size_t idx_offset = 0;
+    for (int count : face_vertex_counts) {
+        if (count >= 3 && idx_offset + 2 < face_vertex_indices.size()) {
+            vec3 v0 = verts[face_vertex_indices[idx_offset + 0]];
+            vec3 v1 = verts[face_vertex_indices[idx_offset + 1]];
+            vec3 v2 = verts[face_vertex_indices[idx_offset + 2]];
+            // Cross product is proportional to face area — area-weighting comes for free
+            vec3 weighted_normal = cross(v1 - v0, v2 - v0);
+            for (int k = 0; k < count; k++) {
+                int vi = face_vertex_indices[idx_offset + k];
+                if (vi >= 0 && vi < static_cast<int>(vertex_normals.size())) {
+                    vertex_normals[vi] = vertex_normals[vi] + weighted_normal;
+                }
+            }
+        }
+        idx_offset += static_cast<size_t>(count);
+    }
+
+    // Normalize accumulated vertex normals
+    for (auto &n : vertex_normals) {
+        float len = n.magnitude();
+        if (len > 1e-10f) {
+            n = n / len;
+        } else {
+            n = make_vec3(0, 0, 1);  // degenerate vertex — emit up-vector
+        }
+    }
+
+    // Build faceVarying buffer: one entry per face-vertex
+    std::vector<vec3> normals;
+    normals.reserve(face_vertex_indices.size());
+    for (int vi : face_vertex_indices) {
+        if (vi >= 0 && vi < static_cast<int>(vertex_normals.size())) {
+            normals.push_back(vertex_normals[vi]);
+        } else {
+            normals.push_back(make_vec3(0, 0, 1));
+        }
+    }
+
+    return normals;
+}
+
+// Build indexed primvar: deduplicate values and return (unique_values, indices).
+// Reduces file size and satisfies the IndexedPrimvarChecker requirement.
+template <typename T>
+std::pair<std::vector<T>, std::vector<int>> buildIndexedPrimvar(const std::vector<T> &values) {
+    std::vector<T> unique_vals;
+    std::vector<int> indices;
+    indices.reserve(values.size());
+
+    // Simple linear search — meshes are small enough that this is fine
+    for (const auto &v : values) {
+        int found = -1;
+        for (int i = 0; i < static_cast<int>(unique_vals.size()); i++) {
+            if (unique_vals[i].x == v.x && unique_vals[i].y == v.y && unique_vals[i].z == v.z) {
+                found = i; break;
+            }
+        }
+        if (found < 0) {
+            found = static_cast<int>(unique_vals.size());
+            unique_vals.push_back(v);
+        }
+        indices.push_back(found);
+    }
+    return {unique_vals, indices};
+}
+
+// Specialisation for vec2 (UVs) — no z component
+std::pair<std::vector<vec2>, std::vector<int>> buildIndexedPrimvarVec2(const std::vector<vec2> &values) {
+    std::vector<vec2> unique_vals;
+    std::vector<int> indices;
+    indices.reserve(values.size());
+    for (const auto &v : values) {
+        int found = -1;
+        for (int i = 0; i < static_cast<int>(unique_vals.size()); i++) {
+            if (unique_vals[i].x == v.x && unique_vals[i].y == v.y) { found = i; break; }
+        }
+        if (found < 0) { found = static_cast<int>(unique_vals.size()); unique_vals.push_back(v); }
+        indices.push_back(found);
+    }
+    return {unique_vals, indices};
+}
+
+void writeMeshGeometry(std::ofstream &out, const USDLink &link,
+                       const std::vector<USDMaterial> &materials, const std::string &inner2,
+                       const std::string &plant_prim) {
+    // Points
+    out << inner2 << "point3f[] points = [\n";
+    for (size_t i = 0; i < link.mesh_vertices.size(); i++) {
+        out << inner2 << "    (" << link.mesh_vertices[i].x << ", " << link.mesh_vertices[i].y << ", " << link.mesh_vertices[i].z << ")";
+        if (i + 1 < link.mesh_vertices.size()) out << ",";
+        out << "\n";
+    }
+    out << inner2 << "]\n";
+
+    // Extent (bounding box) — required by ExtentsChecker
+    if (!link.mesh_vertices.empty()) {
+        float xmin = link.mesh_vertices[0].x, xmax = xmin;
+        float ymin = link.mesh_vertices[0].y, ymax = ymin;
+        float zmin = link.mesh_vertices[0].z, zmax = zmin;
+        for (const auto &v : link.mesh_vertices) {
+            xmin = std::min(xmin, v.x); xmax = std::max(xmax, v.x);
+            ymin = std::min(ymin, v.y); ymax = std::max(ymax, v.y);
+            zmin = std::min(zmin, v.z); zmax = std::max(zmax, v.z);
+        }
+        out << inner2 << "float3[] extent = [(" << xmin << ", " << ymin << ", " << zmin
+            << "), (" << xmax << ", " << ymax << ", " << zmax << ")]\n";
+    }
+
+    out << inner2 << "int[] faceVertexCounts = [";
+    for (size_t i = 0; i < link.mesh_face_vertex_counts.size(); i++) {
+        if (i > 0) out << ", ";
+        out << link.mesh_face_vertex_counts[i];
+    }
+    out << "]\n";
+
+    out << inner2 << "int[] faceVertexIndices = [";
+    for (size_t i = 0; i < link.mesh_face_vertex_indices.size(); i++) {
+        if (i > 0) out << ", ";
+        out << link.mesh_face_vertex_indices[i];
+    }
+    out << "]\n";
+
+    // Normals — indexed faceVarying
+    std::vector<vec3> normals = computeFaceVaryingNormals(link.mesh_vertices, link.mesh_face_vertex_counts, link.mesh_face_vertex_indices);
+    if (!normals.empty()) {
+        auto [unique_normals, normal_indices] = buildIndexedPrimvar(normals);
+        out << inner2 << "normal3f[] primvars:normals = [";
+        for (size_t i = 0; i < unique_normals.size(); i++) {
+            if (i > 0) out << ", ";
+            out << "(" << unique_normals[i].x << ", " << unique_normals[i].y << ", " << unique_normals[i].z << ")";
+        }
+        out << "] (\n";
+        out << inner2 << "    interpolation = \"faceVarying\"\n";
+        out << inner2 << ")\n";
+        out << inner2 << "int[] primvars:normals:indices = [";
+        for (size_t i = 0; i < normal_indices.size(); i++) {
+            if (i > 0) out << ", ";
+            out << normal_indices[i];
+        }
+        out << "]\n";
+    }
+
+    // UVs — indexed vertex
+    if (!link.mesh_uvs.empty()) {
+        auto [unique_uvs, uv_indices] = buildIndexedPrimvarVec2(link.mesh_uvs);
+        out << inner2 << "texCoord2f[] primvars:st = [";
+        for (size_t i = 0; i < unique_uvs.size(); i++) {
+            if (i > 0) out << ", ";
+            out << "(" << unique_uvs[i].x << ", " << unique_uvs[i].y << ")";
+        }
+        out << "] (\n";
+        out << inner2 << "    interpolation = \"vertex\"\n";
+        out << inner2 << ")\n";
+        out << inner2 << "int[] primvars:st:indices = [";
+        for (size_t i = 0; i < uv_indices.size(); i++) {
+            if (i > 0) out << ", ";
+            out << uv_indices[i];
+        }
+        out << "]\n";
+    }
+
+    if (link.material_index >= 0 && link.material_index < static_cast<int>(materials.size())) {
+        out << inner2 << "rel material:binding = </" << plant_prim << "/Materials/" << materials[link.material_index].name << ">\n";
+    }
+}
+
+void writeVisualMaterials(std::ofstream &out, const std::vector<USDMaterial> &materials,
+                          const std::string &output_dir, const std::string &plant_prim,
+                          const std::string &indent) {
+    if (materials.empty()) {
+        return;
+    }
+
+    std::string inner = indent + "    ";
+    std::string inner2 = inner + "    ";
+    std::string inner3 = inner2 + "    ";
+
+    out << indent << "def Scope \"Materials\"\n";
+    out << indent << "{\n";
+
+    // Copy texture files into a "textures" subdirectory beside the output file
+    // so the USDA is self-contained and portable to other machines.
+    std::filesystem::path tex_dir = std::filesystem::path(output_dir) / "textures";
+    bool textures_copied = false;
+
+    for (const auto &mat : materials) {
+        std::string tex_path;
+        if (!mat.texture_file.empty()) {
+            std::filesystem::path src(mat.texture_file);
+            if (std::filesystem::exists(src)) {
+                if (!textures_copied) {
+                    std::filesystem::create_directories(tex_dir);
+                    textures_copied = true;
+                }
+                std::filesystem::path dst = tex_dir / src.filename();
+                // Only copy if source and destination differ
+                if (!std::filesystem::exists(dst) || !std::filesystem::equivalent(src, dst)) {
+                    std::filesystem::copy_file(src, dst, std::filesystem::copy_options::overwrite_existing);
+                }
+                // USD relative path anchored to the file location
+                tex_path = "./textures/" + src.filename().string();
+            } else {
+                // Source file doesn't exist — write the path as-is and hope the user fixes it
+                tex_path = mat.texture_file;
+            }
+        }
+
+        std::string mat_base = "/" + plant_prim + "/Materials/" + mat.name;
+
+        out << inner << "def Material \"" << mat.name << "\"\n";
+        out << inner << "{\n";
+
+        out << inner2 << "token outputs:surface.connect = <" << mat_base << "/PreviewSurface.outputs:surface>\n";
+        out << "\n";
+
+        out << inner2 << "def Shader \"PreviewSurface\"\n";
+        out << inner2 << "{\n";
+        out << inner3 << "uniform token info:id = \"UsdPreviewSurface\"\n";
+        out << inner3 << "color3f inputs:diffuseColor = (" << mat.color.r << ", " << mat.color.g << ", " << mat.color.b << ")\n";
+
+        if (!tex_path.empty()) {
+            out << inner3 << "color3f inputs:diffuseColor.connect = <" << mat_base << "/DiffuseTexture.outputs:rgb>\n";
+            out << inner3 << "float inputs:opacity.connect = <" << mat_base << "/DiffuseTexture.outputs:a>\n";
+            out << inner3 << "float inputs:opacityThreshold = 0.5\n";
+        }
+
+        out << inner3 << "float inputs:roughness = 0.8\n";
+        out << inner3 << "float inputs:metallic = 0.0\n";
+        out << inner3 << "token outputs:surface\n";
+        out << inner2 << "}\n";
+
+        if (!tex_path.empty()) {
+            out << "\n";
+            out << inner2 << "def Shader \"DiffuseTexture\"\n";
+            out << inner2 << "{\n";
+            out << inner3 << "uniform token info:id = \"UsdUVTexture\"\n";
+            out << inner3 << "asset inputs:file = @" << tex_path << "@\n";
+            out << inner3 << "float2 inputs:st.connect = <" << mat_base << "/TexCoordReader.outputs:result>\n";
+            out << inner3 << "token inputs:wrapS = \"repeat\"\n";
+            out << inner3 << "token inputs:wrapT = \"repeat\"\n";
+            out << inner3 << "float3 outputs:rgb\n";
+            out << inner3 << "float outputs:a\n";
+            out << inner2 << "}\n";
+            out << "\n";
+            out << inner2 << "def Shader \"TexCoordReader\"\n";
+            out << inner2 << "{\n";
+            out << inner3 << "uniform token info:id = \"UsdPrimvarReader_float2\"\n";
+            out << inner3 << "string inputs:varname = \"st\"\n";
+            out << inner3 << "float2 outputs:result\n";
+            out << inner2 << "}\n";
+        }
+
+        out << inner << "}\n";
+    }
+
+    out << indent << "}\n\n";
+}
+
+void writeLinkPrim(std::ofstream &out, const USDLink &link, const std::vector<USDMaterial> &materials,
+                   const std::string &plant_prim, const std::string &indent) {
+    out << indent << "def Xform \"" << link.name << "\" (\n";
+    out << indent << "    prepend apiSchemas = [\"PhysicsRigidBodyAPI\", \"PhysicsMassAPI\"]\n";
+    out << indent << ")\n";
+    out << indent << "{\n";
+
+    std::string inner = indent + "    ";
+    std::string inner2 = inner + "    ";
+
+    out << std::fixed << std::setprecision(6);
+    out << inner << "point3f xformOp:translate = (" << link.position.x << ", " << link.position.y << ", " << link.position.z << ")\n";
+    out << inner << "quatf xformOp:orient = (" << link.qw << ", " << link.qx << ", " << link.qy << ", " << link.qz << ")\n";
+    out << inner << "uniform token[] xformOpOrder = [\"xformOp:translate\", \"xformOp:orient\"]\n";
+
+    // Enforce a minimum mass so PhysX doesn't get a zero-mass rigid body
+    float written_mass = std::max(link.mass, 1e-6f);
+    out << inner << "float physics:mass = " << written_mass << "\n";
+
+    // Only author diagonalInertia + principalAxes when all components are large enough
+    // to survive 6-decimal formatting. When omitted, PhysX auto-computes from the collision shape.
+    float inertia_floor = 1e-6f;
+    bool has_positive_inertia = link.inertia_diagonal.x > inertia_floor
+                             && link.inertia_diagonal.y > inertia_floor
+                             && link.inertia_diagonal.z > inertia_floor;
+    if (has_positive_inertia) {
+        out << inner << "float3 physics:diagonalInertia = (" << link.inertia_diagonal.x << ", " << link.inertia_diagonal.y << ", " << link.inertia_diagonal.z << ")\n";
+        out << inner << "quatf physics:principalAxes = (1, 0, 0, 0)\n";
+    }
+
+    out << "\n";
+
+    std::string phys_mat_path = "</" + plant_prim + "/PhysicsMaterials/WoodMaterial>";
+
+    if (link.link_type == USD_LINK_MESH && !link.mesh_vertices.empty()) {
+        // Visual mesh for rendering
+        out << inner << "def Mesh \"Visual\" (\n";
+        out << inner << "    prepend apiSchemas = [\"MaterialBindingAPI\"]\n";
+        out << inner << ")\n";
+        out << inner << "{\n";
+        out << inner2 << "uniform token subdivisionScheme = \"none\"\n";
+        out << inner2 << "bool doubleSided = 1\n";
+        writeMeshGeometry(out, link, materials, inner2, plant_prim);
+        out << inner << "}\n\n";
+
+        // Collision mesh for physics (convex hull approximation, hidden from rendering)
+        out << inner << "def Mesh \"Collision\" (\n";
+        out << inner << "    prepend apiSchemas = [\"MaterialBindingAPI\", \"PhysicsCollisionAPI\", \"PhysxCollisionAPI\"]\n";
+        out << inner << ")\n";
+        out << inner << "{\n";
+        out << inner2 << "uniform token subdivisionScheme = \"none\"\n";
+        out << inner2 << "uniform token purpose = \"guide\"\n";
+
+        out << inner2 << "point3f[] points = [\n";
+        for (size_t i = 0; i < link.mesh_vertices.size(); i++) {
+            out << inner2 << "    (" << link.mesh_vertices[i].x << ", " << link.mesh_vertices[i].y << ", " << link.mesh_vertices[i].z << ")";
+            if (i + 1 < link.mesh_vertices.size()) out << ",";
+            out << "\n";
+        }
+        out << inner2 << "]\n";
+
+        // Extent for collision mesh
+        {
+            float xmin = link.mesh_vertices[0].x, xmax = xmin;
+            float ymin = link.mesh_vertices[0].y, ymax = ymin;
+            float zmin = link.mesh_vertices[0].z, zmax = zmin;
+            for (const auto &v : link.mesh_vertices) {
+                xmin = std::min(xmin, v.x); xmax = std::max(xmax, v.x);
+                ymin = std::min(ymin, v.y); ymax = std::max(ymax, v.y);
+                zmin = std::min(zmin, v.z); zmax = std::max(zmax, v.z);
+            }
+            out << inner2 << "float3[] extent = [(" << xmin << ", " << ymin << ", " << zmin
+                << "), (" << xmax << ", " << ymax << ", " << zmax << ")]\n";
+        }
+
+        out << inner2 << "int[] faceVertexCounts = [";
+        for (size_t i = 0; i < link.mesh_face_vertex_counts.size(); i++) {
+            if (i > 0) out << ", ";
+            out << link.mesh_face_vertex_counts[i];
+        }
+        out << "]\n";
+
+        out << inner2 << "int[] faceVertexIndices = [";
+        for (size_t i = 0; i < link.mesh_face_vertex_indices.size(); i++) {
+            if (i > 0) out << ", ";
+            out << link.mesh_face_vertex_indices[i];
+        }
+        out << "]\n";
+
+        out << inner2 << "uniform token physics:approximation = \"convexHull\"\n";
+        out << inner2 << "rel material:binding:physics = " << phys_mat_path << "\n";
+        out << inner << "}\n";
+    } else if (link.link_type == USD_LINK_CAPSULE) {
+        // Visual mesh (if available from tube geometry)
+        if (!link.mesh_vertices.empty()) {
+            out << inner << "def Mesh \"Visual\" (\n";
+            out << inner << "    prepend apiSchemas = [\"MaterialBindingAPI\"]\n";
+            out << inner << ")\n";
+            out << inner << "{\n";
+            out << inner2 << "uniform token subdivisionScheme = \"none\"\n";
+            out << inner2 << "bool doubleSided = 1\n";
+            writeMeshGeometry(out, link, materials, inner2, plant_prim);
+            out << inner << "}\n\n";
+        }
+
+        // Collision capsule (hidden from rendering)
+        out << inner << "def Capsule \"Collision\" (\n";
+        out << inner << "    prepend apiSchemas = [\"MaterialBindingAPI\", \"PhysicsCollisionAPI\"]\n";
+        out << inner << ")\n";
+        out << inner << "{\n";
+        out << inner << "    uniform token purpose = \"guide\"\n";
+        out << inner << "    double radius = " << link.radius << "\n";
+        out << inner << "    double height = " << (2.f * link.half_length) << "\n";
+        out << inner << "    uniform token axis = \"Z\"\n";
+        out << inner << "    rel material:binding:physics = " << phys_mat_path << "\n";
+        out << inner << "}\n";
+    }
+
+    out << indent << "}\n";
+}
+
+void writeFixedJoint(std::ofstream &out, const USDJoint &joint, const std::vector<USDLink> &links, const std::string &plant_prim, const std::string &indent) {
+    out << indent << "def PhysicsFixedJoint \"" << joint.name << "\"\n";
+    out << indent << "{\n";
+
+    std::string inner = indent + "    ";
+    out << std::fixed << std::setprecision(6);
+    out << inner << "rel physics:body1 = </" << plant_prim << "/Links/" << links[joint.child_link_index].name << ">\n";
+    out << inner << "point3f physics:localPos0 = (" << joint.local_pos_parent.x << ", " << joint.local_pos_parent.y << ", " << joint.local_pos_parent.z << ")\n";
+    out << inner << "point3f physics:localPos1 = (" << joint.local_pos_child.x << ", " << joint.local_pos_child.y << ", " << joint.local_pos_child.z << ")\n";
+    out << inner << "quatf physics:localRot0 = (1, 0, 0, 0)\n";
+    out << inner << "quatf physics:localRot1 = (" << joint.local_rot1_w << ", " << joint.local_rot1_x << ", " << joint.local_rot1_y << ", " << joint.local_rot1_z << ")\n";
+    out << inner << "bool physics:collisionEnabled = false\n";
+    out << indent << "}\n";
+}
+
+void writeSphericalJoint(std::ofstream &out, const USDJoint &joint, const std::vector<USDLink> &links, const std::string &plant_prim, const std::string &indent) {
+    out << indent << "def PhysicsSphericalJoint \"" << joint.name << "\" (\n";
+    out << indent << "    prepend apiSchemas = [\"PhysicsLimitAPI:cone\", \"PhysicsDriveAPI:angular\"]\n";
+    out << indent << ")\n";
+    out << indent << "{\n";
+
+    std::string inner = indent + "    ";
+    out << std::fixed << std::setprecision(6);
+    out << inner << "rel physics:body0 = </" << plant_prim << "/Links/" << links[joint.parent_link_index].name << ">\n";
+    out << inner << "rel physics:body1 = </" << plant_prim << "/Links/" << links[joint.child_link_index].name << ">\n";
+    out << inner << "point3f physics:localPos0 = (" << joint.local_pos_parent.x << ", " << joint.local_pos_parent.y << ", " << joint.local_pos_parent.z << ")\n";
+    out << inner << "point3f physics:localPos1 = (" << joint.local_pos_child.x << ", " << joint.local_pos_child.y << ", " << joint.local_pos_child.z << ")\n";
+    out << inner << "quatf physics:localRot0 = (1, 0, 0, 0)\n";
+    out << inner << "quatf physics:localRot1 = (" << joint.local_rot1_w << ", " << joint.local_rot1_x << ", " << joint.local_rot1_y << ", " << joint.local_rot1_z << ")\n";
+    out << inner << "bool physics:collisionEnabled = false\n";
+
+    out << "\n";
+
+    // Cone limit: constrain swing range
+    out << inner << "float limit:cone:physics:yAngle = 60\n";
+    out << inner << "float limit:cone:physics:zAngle = 60\n";
+
+    out << "\n";
+
+    // Angular drive: spring-damper to restore rest pose
+    out << inner << "uniform token drive:angular:physics:type = \"force\"\n";
+    out << inner << "float drive:angular:physics:stiffness = " << joint.stiffness << "\n";
+    out << inner << "float drive:angular:physics:damping = " << joint.damping << "\n";
+    out << inner << "float drive:angular:physics:targetPosition = 0\n";
+
+    out << indent << "}\n";
+}
+
+} // anonymous namespace
+
+void PlantArchitecture::writePlantStructureUSD(uint plantID, const std::string &filename, const USDExportParameters &params) const {
+
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::writePlantStructureUSD): Plant ID " + std::to_string(plantID) + " does not exist.");
+    }
+
+    const auto &plant = plant_instances.at(plantID);
+
+    if (plant.shoot_tree.empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::writePlantStructureUSD): Plant has no shoots to export.");
+    }
+
+    std::string output_file = filename;
+    if (!validateOutputPath(output_file, {".usda", ".USDA"})) {
+        helios_runtime_error("ERROR (PlantArchitecture::writePlantStructureUSD): Could not open file " + filename + " for writing. Make sure the directory exists and is writable.");
+    } else if (getFileName(output_file).empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::writePlantStructureUSD): The output file given was a directory. This argument should be the path to a file.");
+    }
+
+    std::ofstream out(output_file);
+    if (!out.is_open()) {
+        helios_runtime_error("ERROR (PlantArchitecture::writePlantStructureUSD): Could not open file " + output_file + " for writing.");
+    }
+
+    ArticulationData artic = buildArticulationData(plant, params, context_ptr);
+
+    if (artic.links.empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::writePlantStructureUSD): No valid segments found in plant. All segments may be shorter than min_segment_length.");
+    }
+
+    std::string plant_prim = sanitizePrimName("Plant_" + std::to_string(plantID));
+
+    writeUSDAHeader(out, plant_prim);
+    writePhysicsScene(out);
+
+    out << "def Xform \"" << plant_prim << "\" (\n";
+    out << "    prepend apiSchemas = [\"PhysicsArticulationRootAPI\", \"PhysxArticulationAPI\"]\n";
+    out << ")\n";
+    out << "{\n";
+    out << "    bool physxArticulation:enabledSelfCollisions = false\n";
+    out << "    int physxArticulation:solverPositionIterationCount = " << params.solver_position_iterations << "\n";
+    out << "\n";
+
+    // Nest PhysicsMaterials and Materials inside the default prim so referencing it is self-contained
+    writePhysicsMaterial(out, params, "    ");
+    writeVisualMaterials(out, artic.materials, getFilePath(output_file), plant_prim, "    ");
+
+    out << "    def Xform \"Links\"\n";
+    out << "    {\n";
+    for (const auto &link : artic.links) {
+        writeLinkPrim(out, link, artic.materials, plant_prim, "        ");
+        out << "\n";
+    }
+    out << "    }\n";
+    out << "\n";
+
+    out << "    def Xform \"Joints\"\n";
+    out << "    {\n";
+    for (const auto &joint : artic.joints) {
+        if (joint.is_fixed) {
+            writeFixedJoint(out, joint, artic.links, plant_prim, "        ");
+        } else {
+            writeSphericalJoint(out, joint, artic.links, plant_prim, "        ");
+        }
+        out << "\n";
+    }
+    out << "    }\n";
+
+    out << "}\n";
+
+    out.close();
+
+    if (printmessages) {
+        std::cout << "Wrote USD articulated plant to " << output_file << " (" << artic.links.size() << " links, " << artic.joints.size() << " joints)" << std::endl;
+    }
+}
+
+// ============================================================================
+// Growth Animation USD Export
+// ============================================================================
+
+void PlantArchitecture::registerGrowthFrame(uint plantID, float min_segment_length) {
+
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::registerGrowthFrame): Plant ID " + std::to_string(plantID) + " does not exist.");
+    }
+
+    const auto &plant = plant_instances.at(plantID);
+
+    if (plant.shoot_tree.empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::registerGrowthFrame): Plant has no shoots to capture.");
+    }
+
+    USDExportParameters params;
+    params.min_segment_length = min_segment_length;
+
+    auto frame = std::make_shared<GrowthFrameSnapshot>();
+    frame->time = plant.current_age;
+    frame->artic_data = buildArticulationData(plant, params, context_ptr);
+
+    growth_animation_storage.plant_frames[plantID].push_back(std::move(frame));
+
+    if (printmessages) {
+        std::cout << "Registered growth frame " << growth_animation_storage.plant_frames[plantID].size()
+                  << " for plant " << plantID << " (age=" << plant.current_age << " days, "
+                  << growth_animation_storage.plant_frames[plantID].back()->artic_data.links.size() << " links)" << std::endl;
+    }
+}
+
+void PlantArchitecture::clearGrowthFrames(uint plantID) {
+    growth_animation_storage.plant_frames.erase(plantID);
+}
+
+uint PlantArchitecture::getGrowthFrameCount(uint plantID) const {
+    auto it = growth_animation_storage.plant_frames.find(plantID);
+    if (it == growth_animation_storage.plant_frames.end()) {
+        return 0;
+    }
+    return it->second.size();
+}
+
+void PlantArchitecture::writePlantGrowthUSD(uint plantID, const std::string &filename, float seconds_per_frame) const {
+
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::writePlantGrowthUSD): Plant ID " + std::to_string(plantID) + " does not exist.");
+    }
+
+    auto frames_it = growth_animation_storage.plant_frames.find(plantID);
+    if (frames_it == growth_animation_storage.plant_frames.end() || frames_it->second.empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::writePlantGrowthUSD): No growth frames registered for plant " + std::to_string(plantID) + ". Call registerGrowthFrame() first.");
+    }
+
+    const auto &frames = frames_it->second;
+    uint num_frames = frames.size();
+
+    std::string output_file = filename;
+    if (!validateOutputPath(output_file, {".usda", ".USDA"})) {
+        helios_runtime_error("ERROR (PlantArchitecture::writePlantGrowthUSD): Could not open file " + filename + " for writing. Make sure the directory exists and is writable.");
+    } else if (getFileName(output_file).empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::writePlantGrowthUSD): The output file given was a directory. This argument should be the path to a file.");
+    }
+
+    // --- Build superset topology ---
+    // Collect all unique link names across all frames, and for each link keep the data from the last frame it appears in (canonical data).
+    std::vector<std::string> link_order;  // ordered list of unique link names
+    std::map<std::string, USDLink> canonical_links;  // link name -> canonical mesh/material data
+    std::map<std::string, int> canonical_material_index;  // link name -> material index in merged material list
+
+    // Merged material list across all frames
+    std::vector<USDMaterial> all_materials;
+    std::map<std::string, int> material_merge_cache;  // key -> index in all_materials
+
+    // For each frame, track which links are present and their transforms
+    // link_presence[link_name][frame_idx] = true if link exists at that frame
+    std::map<std::string, std::vector<bool>> link_presence;
+    // link_transforms[link_name][frame_idx] = (position, quaternion)
+    struct LinkTransform {
+        vec3 position;
+        float qw, qx, qy, qz;
+    };
+    std::map<std::string, std::vector<LinkTransform>> link_transforms;
+
+    for (uint f = 0; f < num_frames; f++) {
+        const auto &artic = frames[f]->artic_data;
+
+        // Merge materials from this frame
+        std::map<int, int> frame_to_merged_mat;  // frame-local material index -> merged index
+        for (int m = 0; m < (int)artic.materials.size(); m++) {
+            const auto &mat = artic.materials[m];
+            std::string key = mat.texture_file + "|" + std::to_string(mat.color.r) + "," + std::to_string(mat.color.g) + "," + std::to_string(mat.color.b);
+            auto cache_it = material_merge_cache.find(key);
+            if (cache_it != material_merge_cache.end()) {
+                frame_to_merged_mat[m] = cache_it->second;
+            } else {
+                int idx = (int)all_materials.size();
+                all_materials.push_back(mat);
+                // Ensure unique material name
+                all_materials.back().name = sanitizePrimName("Mat_" + std::to_string(idx));
+                material_merge_cache[key] = idx;
+                frame_to_merged_mat[m] = idx;
+            }
+        }
+
+        for (const auto &link : artic.links) {
+            // Initialize presence/transform vectors if first time seeing this link
+            if (link_presence.find(link.name) == link_presence.end()) {
+                link_order.push_back(link.name);
+                link_presence[link.name].resize(num_frames, false);
+                link_transforms[link.name].resize(num_frames);
+            }
+
+            link_presence[link.name][f] = true;
+            link_transforms[link.name][f] = {link.position, link.qw, link.qx, link.qy, link.qz};
+
+            // Update canonical data (last frame where link appears has most developed geometry)
+            canonical_links[link.name] = link;
+            if (link.material_index >= 0) {
+                canonical_material_index[link.name] = frame_to_merged_mat[link.material_index];
+            } else {
+                canonical_material_index[link.name] = -1;
+            }
+        }
+    }
+
+    // --- Write USDA file ---
+    std::ofstream out(output_file);
+    if (!out.is_open()) {
+        helios_runtime_error("ERROR (PlantArchitecture::writePlantGrowthUSD): Could not open file " + output_file + " for writing.");
+    }
+
+    out << std::fixed;
+
+    std::string plant_prim = sanitizePrimName("Plant_" + std::to_string(plantID));
+
+    // Blender maps USD time codes 1:1 to Blender frames and uses framesPerSecond for playback.
+    // To make each growth frame last `seconds_per_frame` seconds, we space time codes by
+    // fps * seconds_per_frame. E.g., 6 frames at 1 sec/frame with 24fps ->
+    // time codes 0, 24, 48, 72, 96, 120 -> 5 seconds of animation at 24fps playback.
+    float fps = 24.0f;
+    float time_code_spacing = fps * seconds_per_frame;
+    std::vector<float> time_codes(num_frames);
+    for (uint f = 0; f < num_frames; f++) {
+        time_codes[f] = f * time_code_spacing;
+    }
+
+    // Header
+    out << "#usda 1.0\n";
+    out << "(\n";
+    out << "    defaultPrim = \"" << plant_prim << "\"\n";
+    out << "    metersPerUnit = 1.0\n";
+    out << "    upAxis = \"Z\"\n";
+    out << "    startTimeCode = 0\n";
+    out << "    endTimeCode = " << time_codes.back() << "\n";
+    out << "    framesPerSecond = " << fps << "\n";
+    out << "    timeCodesPerSecond = " << fps << "\n";
+    out << ")\n\n";
+
+    // Plant root Xform (Materials nested inside so referencing the default prim is self-contained)
+    out << "def Xform \"" << plant_prim << "\"\n";
+    out << "{\n";
+
+    if (!all_materials.empty()) {
+        writeVisualMaterials(out, all_materials, getFilePath(output_file), plant_prim, "    ");
+    }
+
+    // Write each link as a time-sampled Xform
+    for (const auto &link_name : link_order) {
+        const auto &presence = link_presence[link_name];
+        const auto &transforms = link_transforms[link_name];
+        const auto &canonical = canonical_links[link_name];
+        int mat_idx = canonical_material_index[link_name];
+
+        // Find the first frame where this link appears — used as the default position
+        // for frames before the link exists, so geometry doesn't cluster at the origin.
+        LinkTransform first_known = {canonical.position, canonical.qw, canonical.qx, canonical.qy, canonical.qz};
+        for (uint f = 0; f < num_frames; f++) {
+            if (presence[f]) {
+                first_known = transforms[f];
+                break;
+            }
+        }
+
+        std::string prim_name = sanitizePrimName(link_name);
+
+        out << "    def Xform \"" << prim_name << "\"\n";
+        out << "    {\n";
+
+        // For each transform property, we use "step" keyframing: before each growth frame's
+        // time code, we insert a "hold" keyframe 1 Blender frame earlier with the previous
+        // frame's value. This prevents Blender from smoothly interpolating between growth
+        // frames — all transitions are instantaneous.
+
+        // Time-sampled translate
+        out << "        point3f xformOp:translate.timeSamples = {\n";
+        {
+            bool first_entry = true;
+            for (uint f = 0; f < num_frames; f++) {
+                const auto &t = presence[f] ? transforms[f] : first_known;
+
+                // Hold keyframe: 1 Blender frame before this time code, hold the previous value
+                if (f > 0 && time_codes[f] > 0) {
+                    const auto &prev_t = presence[f - 1] ? transforms[f - 1] : first_known;
+                    if (!first_entry) out << ",\n";
+                    out << "            " << (time_codes[f] - 1.0f) << ": (" << prev_t.position.x << ", " << prev_t.position.y << ", " << prev_t.position.z << ")";
+                    first_entry = false;
+                }
+
+                if (!first_entry) out << ",\n";
+                out << "            " << time_codes[f] << ": (" << t.position.x << ", " << t.position.y << ", " << t.position.z << ")";
+                first_entry = false;
+            }
+            out << "\n        }\n";
+        }
+
+        // Time-sampled orient
+        out << "        quatf xformOp:orient.timeSamples = {\n";
+        {
+            bool first_entry = true;
+            for (uint f = 0; f < num_frames; f++) {
+                const auto &t = presence[f] ? transforms[f] : first_known;
+
+                if (f > 0 && time_codes[f] > 0) {
+                    const auto &prev_t = presence[f - 1] ? transforms[f - 1] : first_known;
+                    if (!first_entry) out << ",\n";
+                    out << "            " << (time_codes[f] - 1.0f) << ": (" << prev_t.qw << ", " << prev_t.qx << ", " << prev_t.qy << ", " << prev_t.qz << ")";
+                    first_entry = false;
+                }
+
+                if (!first_entry) out << ",\n";
+                out << "            " << time_codes[f] << ": (" << t.qw << ", " << t.qx << ", " << t.qy << ", " << t.qz << ")";
+                first_entry = false;
+            }
+            out << "\n        }\n";
+        }
+
+        // Time-sampled scale: (0,0,0) hides organs before they appear, (1,1,1) shows them.
+        out << "        float3 xformOp:scale.timeSamples = {\n";
+        {
+            bool first_entry = true;
+            for (uint f = 0; f < num_frames; f++) {
+                bool is_visible = presence[f];
+                bool was_visible = (f > 0) && presence[f - 1];
+
+                // Hold previous scale 1 frame before transition
+                if (f > 0 && time_codes[f] > 0) {
+                    if (!first_entry) out << ",\n";
+                    out << "            " << (time_codes[f] - 1.0f) << ": " << (was_visible ? "(1, 1, 1)" : "(0, 0, 0)");
+                    first_entry = false;
+                }
+
+                if (!first_entry) out << ",\n";
+                out << "            " << time_codes[f] << ": " << (is_visible ? "(1, 1, 1)" : "(0, 0, 0)");
+                first_entry = false;
+            }
+            out << "\n        }\n";
+        }
+
+        out << "        uniform token[] xformOpOrder = [\"xformOp:translate\", \"xformOp:orient\", \"xformOp:scale\"]\n";
+
+        // Time-sampled visibility (kept for USD-compliant readers; scale-to-zero handles Blender)
+        out << "        token visibility.timeSamples = {\n";
+        for (uint f = 0; f < num_frames; f++) {
+            out << "            " << time_codes[f] << ": \"" << (presence[f] ? "inherited" : "invisible") << "\"";
+            out << (f < num_frames - 1 ? ",\n" : "\n");
+        }
+        out << "        }\n";
+
+        // Static mesh from canonical frame
+        bool has_mesh = false;
+        if (canonical.link_type == USD_LINK_MESH && !canonical.mesh_vertices.empty()) {
+            has_mesh = true;
+        } else if (canonical.link_type == USD_LINK_CAPSULE && !canonical.mesh_vertices.empty()) {
+            has_mesh = true;
+        }
+
+        // Helper: write visibility time samples on the child visual prim too, since Blender's
+        // USD importer may not respect visibility inheritance from parent Xform.
+        auto writeChildVisibility = [&]() {
+            out << "            token visibility.timeSamples = {\n";
+            for (uint f2 = 0; f2 < num_frames; f2++) {
+                out << "                " << time_codes[f2] << ": \"" << (presence[f2] ? "inherited" : "invisible") << "\"";
+                out << (f2 < num_frames - 1 ? ",\n" : "\n");
+            }
+            out << "            }\n";
+        };
+
+        if (has_mesh) {
+            out << "\n";
+            out << "        def Mesh \"Visual\" (\n";
+            out << "            prepend apiSchemas = [\"MaterialBindingAPI\"]\n";
+            out << "        )\n";
+            out << "        {\n";
+
+            writeChildVisibility();
+            out << "            uniform token subdivisionScheme = \"none\"\n";
+            out << "            bool doubleSided = 1\n";
+
+            // Vertices
+            out << "            point3f[] points = [";
+            for (size_t v = 0; v < canonical.mesh_vertices.size(); v++) {
+                if (v > 0) out << ", ";
+                out << "(" << canonical.mesh_vertices[v].x << ", " << canonical.mesh_vertices[v].y << ", " << canonical.mesh_vertices[v].z << ")";
+            }
+            out << "]\n";
+
+            // Extent
+            if (!canonical.mesh_vertices.empty()) {
+                float xmn = canonical.mesh_vertices[0].x, xmx = xmn;
+                float ymn = canonical.mesh_vertices[0].y, ymx = ymn;
+                float zmn = canonical.mesh_vertices[0].z, zmx = zmn;
+                for (const auto &v : canonical.mesh_vertices) {
+                    xmn = std::min(xmn, v.x); xmx = std::max(xmx, v.x);
+                    ymn = std::min(ymn, v.y); ymx = std::max(ymx, v.y);
+                    zmn = std::min(zmn, v.z); zmx = std::max(zmx, v.z);
+                }
+                out << "            float3[] extent = [(" << xmn << ", " << ymn << ", " << zmn
+                    << "), (" << xmx << ", " << ymx << ", " << zmx << ")]\n";
+            }
+
+            // Face vertex counts
+            out << "            int[] faceVertexCounts = [";
+            for (size_t i = 0; i < canonical.mesh_face_vertex_counts.size(); i++) {
+                if (i > 0) out << ", ";
+                out << canonical.mesh_face_vertex_counts[i];
+            }
+            out << "]\n";
+
+            // Face vertex indices
+            out << "            int[] faceVertexIndices = [";
+            for (size_t i = 0; i < canonical.mesh_face_vertex_indices.size(); i++) {
+                if (i > 0) out << ", ";
+                out << canonical.mesh_face_vertex_indices[i];
+            }
+            out << "]\n";
+
+            // Normals — indexed faceVarying
+            {
+                std::vector<vec3> normals = computeFaceVaryingNormals(canonical.mesh_vertices, canonical.mesh_face_vertex_counts, canonical.mesh_face_vertex_indices);
+                if (!normals.empty()) {
+                    auto [unique_n, n_idx] = buildIndexedPrimvar(normals);
+                    out << "            normal3f[] primvars:normals = [";
+                    for (size_t i = 0; i < unique_n.size(); i++) {
+                        if (i > 0) out << ", ";
+                        out << "(" << unique_n[i].x << ", " << unique_n[i].y << ", " << unique_n[i].z << ")";
+                    }
+                    out << "] (\n                interpolation = \"faceVarying\"\n            )\n";
+                    out << "            int[] primvars:normals:indices = [";
+                    for (size_t i = 0; i < n_idx.size(); i++) { if (i > 0) out << ", "; out << n_idx[i]; }
+                    out << "]\n";
+                }
+            }
+
+            // UVs — indexed vertex
+            if (!canonical.mesh_uvs.empty()) {
+                auto [unique_uv, uv_idx] = buildIndexedPrimvarVec2(canonical.mesh_uvs);
+                out << "            texCoord2f[] primvars:st = [";
+                for (size_t i = 0; i < unique_uv.size(); i++) {
+                    if (i > 0) out << ", ";
+                    out << "(" << unique_uv[i].x << ", " << unique_uv[i].y << ")";
+                }
+                out << "] (\n                interpolation = \"vertex\"\n            )\n";
+                out << "            int[] primvars:st:indices = [";
+                for (size_t i = 0; i < uv_idx.size(); i++) { if (i > 0) out << ", "; out << uv_idx[i]; }
+                out << "]\n";
+            }
+
+            // Material binding — path is now nested under the default prim
+            if (mat_idx >= 0 && mat_idx < (int)all_materials.size()) {
+                out << "            rel material:binding = </" << plant_prim << "/Materials/" << all_materials[mat_idx].name << ">\n";
+            }
+
+            out << "        }\n";
+        } else if (canonical.link_type == USD_LINK_CAPSULE) {
+            // Write a capsule shape for visual representation
+            out << "\n";
+            out << "        def Capsule \"Visual\"\n";
+            out << "        {\n";
+            writeChildVisibility();
+            out << "            double radius = " << canonical.radius << "\n";
+            out << "            double height = " << (2.0 * canonical.half_length) << "\n";
+            out << "            uniform token axis = \"Z\"\n";
+            if (mat_idx >= 0 && mat_idx < (int)all_materials.size()) {
+                out << "            rel material:binding = </Materials/" << all_materials[mat_idx].name << ">\n";
+            }
+            out << "        }\n";
+        }
+
+        out << "    }\n\n";
+    }
+
+    out << "}\n";
+    out.close();
+
+    if (printmessages) {
+        std::cout << "Wrote USD growth animation to " << output_file << " (" << link_order.size() << " prims, " << num_frames << " frames)" << std::endl;
+    }
 }

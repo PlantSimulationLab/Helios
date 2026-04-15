@@ -469,7 +469,7 @@ size_t Visualizer::addPoint(const vec3 &position, const RGBAcolor &color, float 
     this->point_width = pointsize;
 
     size_t UUID = geometry_handler.sampleUUID();
-    geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_POINT, {position}, color, {}, -1, false, false, coordinate_system, true, false, pointsize);
+    geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_POINT, {position}, color, {}, -1, false, false, coordinate_system, true, false, false, pointsize);
     return UUID;
 }
 

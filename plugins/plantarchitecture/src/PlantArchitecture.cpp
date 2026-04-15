@@ -2529,6 +2529,11 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
     phytomer_parameters.inflorescence.flowers_per_peduncle.resample();
     phytomer_parameters.peduncle.roll.resample();
 
+    if (plantarchitecture_ptr->output_object_data.at("age")) {
+        context_ptr->setObjectData(fbud.inflorescence_objIDs, "age", fbud.age);
+        context_ptr->setObjectData(fbud.peduncle_objIDs, "age", fbud.age);
+    }
+
     if (plantarchitecture_ptr->output_object_data.at("rank")) {
         context_ptr->setObjectData(fbud.peduncle_objIDs, "rank", rank);
         context_ptr->setObjectData(fbud.inflorescence_objIDs, "rank", rank);
@@ -5169,6 +5174,10 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                         for (auto &fbud: petiole) {
                             if (fbud.state != BUD_DORMANT && fbud.state != BUD_DEAD) {
                                 fbud.time_counter += dt_max_days;
+                                // Accumulate age for any bud that has broken (past dormant/active state)
+                                if (fbud.state != BUD_ACTIVE) {
+                                    fbud.age += dt_max_days;
+                                }
                             }
 
                             // -- Flowering -- //
@@ -5506,12 +5515,20 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                     }
                 }
 
-                // Update each phytomer's petiole and leaf age
+                // Update each phytomer's petiole, leaf, and floral bud age
                 for (auto &phytomer: shoot->phytomers) {
                     if (phytomer->build_context_geometry_petiole) {
                         context_ptr->setObjectData(phytomer->petiole_objIDs, "age", phytomer->age);
                     }
                     context_ptr->setObjectData(phytomer->leaf_objIDs, "age", phytomer->age);
+                    for (auto &petiole: phytomer->floral_buds) {
+                        for (auto &fbud: petiole) {
+                            if (fbud.state != BUD_DORMANT && fbud.state != BUD_ACTIVE && fbud.state != BUD_DEAD) {
+                                context_ptr->setObjectData(fbud.inflorescence_objIDs, "age", fbud.age);
+                                context_ptr->setObjectData(fbud.peduncle_objIDs, "age", fbud.age);
+                            }
+                        }
+                    }
                 }
             }
         }

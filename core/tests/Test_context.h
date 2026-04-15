@@ -880,6 +880,28 @@ TEST_CASE("Data Management") {
         DOCTEST_CHECK(d1_r.day == date.day);
         ctx.setCurrentTimeseriesPoint("ts", 1);
         DOCTEST_CHECK(ctx.queryTimeseriesData("ts") == doctest::Approx(305.3f));
+
+        // updateTimeseriesData: replace value at an existing (date, time)
+        ctx.updateTimeseriesData("ts", date, time0, 999.9f);
+        DOCTEST_CHECK(ctx.queryTimeseriesData("ts", 0) == doctest::Approx(999.9f));
+        DOCTEST_CHECK(ctx.queryTimeseriesData("ts", date, time0) == doctest::Approx(999.9f));
+        // The other point should be untouched
+        DOCTEST_CHECK(ctx.queryTimeseriesData("ts", 1) == doctest::Approx(305.3f));
+        // Length is unchanged (update, not insert)
+        DOCTEST_CHECK(ctx.getTimeseriesLength("ts") == 2);
+
+        // Error: unknown label
+        {
+            capture_cerr cerr_buffer;
+            DOCTEST_CHECK_THROWS(ctx.updateTimeseriesData("nonexistent", date, time0, 0.f));
+        }
+
+        // Error: known label but (date, time) does not match any existing point
+        {
+            Time time_missing = make_Time(time0.hour, 0, 0);
+            capture_cerr cerr_buffer;
+            DOCTEST_CHECK_THROWS(ctx.updateTimeseriesData("ts", date, time_missing, 0.f));
+        }
     }
 
     SUBCASE("Primitive data") {

@@ -70,46 +70,38 @@ namespace helios {
         }
 
         // ========== Per-Primitive Buffer Sizing ==========
+        // Shared per-primitive arrays are sized to primitive_count only.
+        // Bbox data is stored separately in bboxes.UUIDs / bboxes.vertices and is NOT
+        // included in the shared arrays (see RadiationModel::buildGeometryData()).
 
-        // Calculate expected buffer size including bboxes
-        size_t expected_types_size = primitive_count + bbox_count;
-
-        // transform_matrices can be larger than primitive_count*16 if bboxes are present
-        if (transform_matrices.size() != expected_types_size * 16) {
-            helios_runtime_error("RayTracingGeometry validation failed: transform_matrices.size()=" + std::to_string(transform_matrices.size()) + " != (primitive_count+bbox_count)*16=" + std::to_string(expected_types_size * 16));
+        if (transform_matrices.size() != primitive_count * 16) {
+            helios_runtime_error("RayTracingGeometry validation failed: transform_matrices.size()=" + std::to_string(transform_matrices.size()) + " != primitive_count*16=" + std::to_string(primitive_count * 16));
         }
 
-        // primitive_types can be larger than primitive_count if bboxes are present
-        if (primitive_types.size() != expected_types_size) {
-            helios_runtime_error("RayTracingGeometry validation failed: primitive_types.size()=" + std::to_string(primitive_types.size()) + " != primitive_count+bbox_count=" + std::to_string(expected_types_size));
+        if (primitive_types.size() != primitive_count) {
+            helios_runtime_error("RayTracingGeometry validation failed: primitive_types.size()=" + std::to_string(primitive_types.size()) + " != primitive_count=" + std::to_string(primitive_count));
         }
 
-        // object_subdivisions can be larger than primitive_count if bboxes are present
-        if (object_subdivisions.size() != expected_types_size) {
-            helios_runtime_error("RayTracingGeometry validation failed: object_subdivisions.size()=" + std::to_string(object_subdivisions.size()) + " != primitive_count+bbox_count=" + std::to_string(expected_types_size));
+        if (object_subdivisions.size() != primitive_count) {
+            helios_runtime_error("RayTracingGeometry validation failed: object_subdivisions.size()=" + std::to_string(object_subdivisions.size()) + " != primitive_count=" + std::to_string(primitive_count));
         }
 
-        // twosided_flags can be larger than primitive_count if bboxes are present
-        if (twosided_flags.size() != expected_types_size) {
-            helios_runtime_error("RayTracingGeometry validation failed: twosided_flags.size()=" + std::to_string(twosided_flags.size()) + " != primitive_count+bbox_count=" + std::to_string(expected_types_size));
+        if (twosided_flags.size() != primitive_count) {
+            helios_runtime_error("RayTracingGeometry validation failed: twosided_flags.size()=" + std::to_string(twosided_flags.size()) + " != primitive_count=" + std::to_string(primitive_count));
         }
 
-        // solid_fractions can be larger than primitive_count if bboxes are present
-        if (solid_fractions.size() != expected_types_size) {
-            helios_runtime_error("RayTracingGeometry validation failed: solid_fractions.size()=" + std::to_string(solid_fractions.size()) + " != primitive_count+bbox_count=" + std::to_string(expected_types_size));
+        if (solid_fractions.size() != primitive_count) {
+            helios_runtime_error("RayTracingGeometry validation failed: solid_fractions.size()=" + std::to_string(solid_fractions.size()) + " != primitive_count=" + std::to_string(primitive_count));
         }
 
         // ========== Object ID Validation ==========
 
-        // object_IDs can be larger than primitive_count if bboxes are present
-        if (object_IDs.size() != expected_types_size) {
-            helios_runtime_error("RayTracingGeometry validation failed: object_IDs.size()=" + std::to_string(object_IDs.size()) + " != primitive_count+bbox_count=" + std::to_string(expected_types_size));
+        if (object_IDs.size() != primitive_count) {
+            helios_runtime_error("RayTracingGeometry validation failed: object_IDs.size()=" + std::to_string(object_IDs.size()) + " != primitive_count=" + std::to_string(primitive_count));
         }
 
-        // primitive_IDs must include bbox entries when periodic boundaries are enabled
-        size_t expected_primitive_IDs_size = primitive_count + bbox_count;
-        if (primitive_IDs.size() != expected_primitive_IDs_size) {
-            helios_runtime_error("RayTracingGeometry validation failed: primitive_IDs.size()=" + std::to_string(primitive_IDs.size()) + " != primitive_count+bbox_count=" + std::to_string(expected_primitive_IDs_size) +
+        if (primitive_IDs.size() != primitive_count) {
+            helios_runtime_error("RayTracingGeometry validation failed: primitive_IDs.size()=" + std::to_string(primitive_IDs.size()) + " != primitive_count=" + std::to_string(primitive_count) +
                                  " (COMMON BUG: Did you size by Nobjects instead of Nprimitives?)");
         }
 

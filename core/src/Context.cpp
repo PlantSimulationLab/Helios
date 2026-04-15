@@ -656,6 +656,25 @@ void Context::addTimeseriesData(const char *label, float value, const Date &date
     helios_runtime_error("ERROR (Context::addTimeseriesData): Failed to insert timeseries data for unknown reason.");
 }
 
+void Context::updateTimeseriesData(const char *label, const Date &date, const Time &time, float new_value) {
+    if (timeseries_data.find(label) == timeseries_data.end()) {
+        helios_runtime_error("ERROR (Context::updateTimeseriesData): Timeseries variable `" + std::string(label) + "' does not exist.");
+    }
+
+    double date_value = floor(date.year * 366.25) + date.JulianDay();
+    date_value += double(time.hour) / 24. + double(time.minute) / 1440. + double(time.second) / 86400.;
+
+    const std::vector<double> &datevalues = timeseries_datevalue.at(label);
+    for (uint i = 0; i < datevalues.size(); i++) {
+        if (datevalues.at(i) == date_value) {
+            timeseries_data.at(label).at(i) = new_value;
+            return;
+        }
+    }
+
+    helios_runtime_error("ERROR (Context::updateTimeseriesData): No timeseries data point exists at the specified date and time for variable `" + std::string(label) + "'.");
+}
+
 void Context::setCurrentTimeseriesPoint(const char *label, uint index) {
     if (timeseries_data.find(label) == timeseries_data.end()) { // does not exist
         helios_runtime_error("ERROR (setCurrentTimeseriesPoint): Timeseries variable `" + std::string(label) + "' does not exist.");

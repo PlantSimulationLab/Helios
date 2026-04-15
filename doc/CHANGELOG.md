@@ -1,5 +1,54 @@
 # Changelog
 
+# [1.3.71] 2026-04-14
+
+## Core
+- OBJ loader now generates unique material names when loading multiple OBJ files with colliding MTL material names (e.g., Blender's default "Material.001"), instead of silently reusing the first registered material.
+- Added `Context::updateTimeseriesData()` method to modify the value of an existing timeseries data point, identified by its (Date, Time) key. Throws a runtime error if the variable or specified timestamp does not exist.
+- `helios::writeEXR()` now maps common channel name aliases (`red`/`green`/`blue`/`alpha`, case-insensitive) to the standard EXR channel names `R`/`G`/`B`/`A` so that images written with descriptive band labels are recognized as RGB by external EXR viewers.
+
+## Plant Architecture
+- Added `writePlantStructureUSD()` method to export plant structures as USDA files with PhysX articulated rigid bodies for NVIDIA IsaacSim physics simulation. Each tube segment becomes a capsule-shaped rigid link connected by spherical joints whose local frames encode the rest-pose orientation (zero joint angle reproduces the authored pose), with spring/damper drives derived from beam bending stiffness. Visual meshes use smooth area-weighted faceVarying normals and indexed primvars, materials are nested under the default prim, and a single shared angular drive replaces the previous per-axis rotX/rotY drives.
+- Added `registerGrowthFrame()`, `writePlantGrowthUSD()`, `clearGrowthFrames()`, and `getGrowthFrameCount()` methods to capture per-step plant geometry snapshots and export them as a time-sampled USDA animation for Blender. Organs that appear during growth are toggled visible via scale/visibility keyframes, with step-style hold keyframes preventing interpolation between growth frames.
+- Fixed `readPlantStructureXML()` to use the plant instance's base position instead of the origin when reconstructing the first internode of the base shoot.
+- Fixed operator-precedence bug in `random_float()` helper used by Cowpea phytomer generation, where `RAND_MAX / (max - min)` was being divided before the cast instead of after, producing skewed random ranges.
+- Floral bud `age` is now tracked from the time of bud break and written as object data on inflorescence and peduncle objects (when the `age` output is enabled), so flower/fruit organs report a meaningful age rather than inheriting the parent phytomer's age.
+
+## Leaf Optics
+- `LeafOptics::run()` now assigns spectra to newly added primitives within an existing object, instead of skipping them when the object's nitrogen content has not changed enough to trigger a bin reassignment.
+
+## Photosynthesis
+- Reformulated TPU limitation in the Farquhar model to compare at the assimilation level (`A_TPU = 3*TPU - Rd`) rather than via `Wp = 3*TPU*Ci/(Ci - Gamma*)`, eliminating the singularity at `Ci = Gamma*` that produced non-physical assimilation values when intercellular CO2 approached the compensation point. Also fixed `evaluateCi_Farquhar()` to read `TPUflag` from the model coefficients struct instead of the (uninitialised) variables vector.
+
+## Plant Hydraulics
+- Fixed `computeCapacitance()` to use the first-derivative finite-difference stencil `(f2 - f0)/(2h)` instead of the second-derivative stencil `(f0 - 2f1 + f2)/h^2`, since hydraulic capacitance is defined as `Wsat / (dpsi/dw)`.
+- Fixed `setStemHydraulicConductanceTemperatureDependence()` to modify the stem conductance struct instead of the root conductance struct.
+- Fixed `setLeafHydraulicCapacitanceFromLibrary()` parameters: `PistachioFemale` had a positive (physically impossible) osmotic potential at full turgor and used Walnut's RWC at turgor loss; the unknown-species fallback claimed to be Walnut but used Western Redbud values.
+- Fixed per-primitive coefficient lookup in `updateLeafWaterPotentialsOfPlant()`, which indexed `modelcoeffs_map` by the loop counter instead of the primitive UUID, silently discarding any per-primitive coefficients set via `setModelCoefficients(coeffs, UUIDs)`.
+- Fixed non-steady-state leaf RWC update to divide the net flux by `saturated_specific_water_content`, so that leaves with a larger water reservoir respond more slowly (previously the dimensionless RWC was incremented by raw `mol/m^2` flux).
+- Fixed `computeConductance()` and `updateRootAndStemWaterPotentialsOfPlant()` convergence test to use `fabs()` instead of `abs()`, which on float arguments could resolve to the integer overload and truncate intermediate values (also caused `delta_psi` in the root/stem solver to be signed, allowing premature exit).
+- Added `setLeafHydraulicCapacitance()` overload that accepts an explicit `saturated_specific_water_content` argument.
+
+## Parameter Optimization
+- Added four new optimization algorithms: L-BFGS and BOBYQA (local, NLopt-backed), SLSQP (local constrained, NLopt-backed), and Adam/AdamW (noise-tolerant, no external dependency). The existing GA, BO, and CMA-ES algorithms are unchanged.
+- Added a composable gradient architecture (`GradientSource`, `makeGradientFunction()`, `makeFDGradientSource()`, `makeFDGradient()`) that lets users mix analytic/AD gradients with centered finite differences on a per-parameter basis, plus a `ConstrainedSimulation` overload that returns the objective, constraints, and all sensitivities in a single cached forward pass.
+- Added three new `ParameterOptimization::run()` overloads for gradient-based, constrained, and combined-simulation optimization, and an automatic default-algorithm selector chosen from parameter properties and the overload called.
+- NLopt 2.10.1 is now bundled under `plugins/parameteroptimization/lib/nlopt-2.10.1/` and built as a static library when CMake is configured; a system-installed NLopt is used as a fallback. If NLopt is unavailable, L-BFGS/BOBYQA/SLSQP are disabled and the remaining algorithms still build. Credit to Kyle Rizzo for developing the kernel-extraction/AD-enabling extensions.
+
+## Radiation
+- Added Basler acA2500-20gc (color, GigE) and acA2500-20gm (monochrome, GigE, base + 730 nm and 850 nm bandpass variants) to the camera library.
+- Fixed `RayTracingGeometry::validate()` to size shared per-primitive arrays (`primitive_types`, `transform_matrices`, `object_subdivisions`, `twosided_flags`, `solid_fractions`, `object_IDs`, `primitive_IDs`) by `primitive_count` only; bbox geometry is stored in its own `bboxes.UUIDs` / `bboxes.vertices` buffers, so the previous `primitive_count + bbox_count` expectations crashed validation in Debug builds with periodic boundaries enabled.
+- Vulkan backend now destroys the `band_map_buffer` during teardown, fixing a Vulkan resource leak on RadiationModel destruction.
+- `updateRadiativeProperties()` now writes reflectivity/transmissivity directly into the flat `material_data` buffers via index helpers, eliminating large nested `std::vector` temporaries (previously `O(Nsources * Nprimitives * Nbands * Ncameras)` of nested allocation followed by a redundant `flatten()` copy).
+- Camera output now records the actually applied exposure gain and white balance factors on the `RadiationCamera` and writes them to the camera metadata JSON, so downstream tools can recover the linear-radiance scaling that was applied to a saved image.
+- Fixed `blendSpectra()` weight-sum check to allow floating-point rounding (tolerance `1e-5`) instead of requiring exact equality to 1, which previously rejected mathematically valid weight combinations.
+
+## Visualizer
+- Fixed `addPoint()` argument list, which was passing the point size into the wrong parameter slot of `GeometryHandler::addGeometry()` after a recent signature change.
+
+## Build System
+- CMake now checks at configure time that the installed CUDA Toolkit version does not exceed the NVIDIA driver's supported CUDA version, preventing cryptic `OPTIX_ERROR_INVALID_INPUT` failures at runtime due to incompatible device code.
+
 # [1.3.70] 2026-03-19
 
 ## Plant Architecture

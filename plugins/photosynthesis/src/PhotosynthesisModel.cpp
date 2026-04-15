@@ -726,7 +726,7 @@ float PhotosynthesisModel::evaluateCi_Farquhar(float Ci, std::vector<float> &var
     float Q = variables[1];
     float TL = variables[2];
     float gM = variables[3];
-    int TPUflag = int(variables[4]);
+    int TPUflag = modelcoeffs.TPU_flag;
 
     float R = 0.0083144598; // molar gas constant (kJ/K/mol)
     float O = 213.5; // ambient oxygen concentration (mmol/mol)
@@ -787,18 +787,22 @@ float PhotosynthesisModel::evaluateCi_Farquhar(float Ci, std::vector<float> &var
 
     float Wc = Vcmax * Ci / (Ci + Kco);
     float Wj = J * Ci / (4.f * Ci + 8.f * Gamma_star);
-    float Wp = 3.f * TPU * Ci / (Ci - Gamma_star);
 
     float smooth_factor = 0.99f;
     float s = helios::clamp(0.5f + 0.5f * (Wc - Wj) / smooth_factor, 0.0f, 1.0f);
     float smooth_min = Wc * (1.f - s) + Wj * s - smooth_factor * s * (1.f - s);
 
-    if (TPUflag == 1) {
-        smooth_factor = 0.99f;
-        s = helios::clamp(0.5f + 0.5f * (smooth_min - Wp) / smooth_factor, 0.0f, 1.0f);
-        smooth_min = smooth_min * (1.f - s) + Wp * s - smooth_factor * s * (1.f - s);
-    }
     float A = (1.f - Gamma_star / Ci) * smooth_min - Rd;
+
+    // TPU comparison at assimilation level: A_TPU = 3*TPU - Rd (singularity-free)
+    // The Ci-dependent terms in Wp = 3*TPU*Ci/(Ci - Gamma*) cancel with (1 - Gamma*/Ci),
+    // so TPU-limited assimilation is simply a constant independent of Ci.
+    if (TPUflag == 1) {
+        float A_p = 3.f * TPU - Rd;
+        smooth_factor = 0.99f;
+        s = helios::clamp(0.5f + 0.5f * (A - A_p) / smooth_factor, 0.0f, 1.0f);
+        A = A * (1.f - s) + A_p * s - smooth_factor * s * (1.f - s);
+    }
 
 
     float limitation_state;

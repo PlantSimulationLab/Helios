@@ -1007,13 +1007,28 @@ void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties_
                 // Existing object: check for reassignment
                 ObjectAssignment &assignment = object_assignments[objID];
 
+                // Detect new primitives not in the previous assignment
+                std::set<uint> prev_UUIDs(assignment.primitive_UUIDs.begin(), assignment.primitive_UUIDs.end());
+                std::vector<uint> new_UUIDs;
+                for (uint UUID: obj_UUIDs) {
+                    if (prev_UUIDs.find(UUID) == prev_UUIDs.end()) {
+                        new_UUIDs.push_back(UUID);
+                    }
+                }
+
                 // Update primitive list (in case it changed)
                 assignment.primitive_UUIDs = obj_UUIDs;
                 for (uint UUID: obj_UUIDs) {
                     primitive_to_object[UUID] = objID;
                 }
 
-                if (shouldReassign(N_area, assignment.bin_index)) {
+                // Always assign spectra to new primitives using the current bin
+                if (!new_UUIDs.empty()) {
+                    uint best_bin = findNearestBin(N_area);
+                    assignSpectrumToPrimitives(new_UUIDs, best_bin);
+                    assignment.bin_index = best_bin;
+                    assignment.N_at_assignment = N_area;
+                } else if (shouldReassign(N_area, assignment.bin_index)) {
                     uint best_bin = findNearestBin(N_area);
 
                     if (best_bin != assignment.bin_index && isSignificantImprovement(N_area, assignment.bin_index, best_bin)) {

@@ -563,6 +563,64 @@ DOCTEST_TEST_CASE("FarquharModelCoefficients TPU Testing") {
     DOCTEST_CHECK(coeffs.TPU_flag == 1);
 }
 
+DOCTEST_TEST_CASE("Farquhar TPU Singularity Fix") {
+    // Regression test: The TPU limitation formula Wp = 3*TPU*Ci/(Ci - Gamma*) has a
+    // singularity at Ci = Gamma*. When Ci is forced near Gamma*, the old formulation
+    // produces non-physical assimilation values (huge or negative). The fix moves the
+    // TPU comparison to the assimilation level where A_TPU = 3*TPU - Rd is a constant.
+
+    Context context_test;
+    PhotosynthesisModel photomodel(&context_test);
+    photomodel.disableMessages();
+
+    // Use Olive coefficients (species with TPU, known to trigger the bug)
+    FarquharModelCoefficients coeffs = photomodel.getFarquharCoefficientsFromLibrary("Olive");
+    DOCTEST_CHECK(coeffs.TPU_flag == 1);
+
+    // Gamma* at 300K ≈ exp(19.02 - 37.83 / (0.0083144598 * 300)) ≈ 56.6 ppm
+    // Test Ci values that bracket the singularity
+    std::vector<float> Ci_values = {40.0f, 50.0f, 55.0f, 56.0f, 57.0f, 58.0f, 60.0f, 80.0f, 150.0f, 250.0f};
+    std::vector<float> A_values;
+
+    for (float Ci_val : Ci_values) {
+        uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+        photomodel.setModelCoefficients(coeffs, std::vector<uint>{UUID});
+        context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 1500.0f);  // Full sun
+        context_test.setPrimitiveData(UUID, "temperature", 300.0f);          // ~27C
+        context_test.setPrimitiveData(UUID, "air_CO2", 400.0f);
+        context_test.setPrimitiveData(UUID, "moisture_conductance", 0.3f);
+
+        // Force Ci to a specific value to directly probe the singularity region
+        photomodel.setCi(Ci_val, std::vector<uint>{UUID});
+
+        photomodel.run(std::vector<uint>{UUID});
+
+        float A;
+        context_test.getPrimitiveData(UUID, "net_photosynthesis", A);
+        A_values.push_back(A);
+    }
+
+    // Gamma* at 300K ≈ 56.6 ppm. Below this, A must be negative (plant is respiring).
+    // The buggy code produces A=25+ at Ci=40 due to the Wp singularity.
+    for (size_t i = 0; i < A_values.size(); i++) {
+        DOCTEST_CHECK_MESSAGE(std::isfinite(A_values[i]),
+            "Non-finite A at Ci=" << Ci_values[i] << ": A=" << A_values[i]);
+        if (Ci_values[i] < 55.0f) {
+            DOCTEST_CHECK_MESSAGE(A_values[i] < 0.0f,
+                "A should be negative below compensation point: Ci=" << Ci_values[i]
+                << " A=" << A_values[i]);
+        }
+    }
+
+    // A should be monotonically increasing with Ci
+    for (size_t i = 1; i < A_values.size(); i++) {
+        DOCTEST_CHECK_MESSAGE(A_values[i] >= A_values[i-1] - 0.5f,
+            "Non-monotonic A: A[Ci=" << Ci_values[i] << "]=" << A_values[i]
+            << " < A[Ci=" << Ci_values[i-1] << "]=" << A_values[i-1]);
+    }
+}
+
 DOCTEST_TEST_CASE("PhotosynthesisModel Complex Farquhar Testing") {
     Context context_test;
     uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));

@@ -5,3 +5,4 @@
 # Compiled outputs 
 samples/*/build/*
 projects/*/build/*
+plugins/*/build/*

@@ -4183,18 +4183,27 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
         std::string object;
     };
 
-    // Register all MTL materials in Context material system
+    // Register all MTL materials in Context material system.
+    // Material names from different OBJ files can collide (e.g., Blender's default "Material.001"),
+    // so we generate unique names when a collision occurs and track the mapping.
+    std::map<std::string, std::string> mtl_to_context_material;
     for (const auto &mat_entry : materials) {
         const std::string &matname = mat_entry.first;
         const OBJmaterial &mat = mat_entry.second;
-        if (!doesMaterialExist(matname)) {
-            addMaterial(matname);
-            setMaterialColor(matname, make_RGBAcolor(mat.color.r, mat.color.g, mat.color.b, 1));
-            if (!mat.texture.empty()) {
-                setMaterialTexture(matname, mat.texture);
-            }
-            setMaterialTextureColorOverride(matname, mat.textureColorIsOverridden);
+        std::string context_matname = matname;
+        if (doesMaterialExist(matname)) {
+            int suffix = 1;
+            do {
+                context_matname = matname + "_" + std::to_string(suffix++);
+            } while (doesMaterialExist(context_matname));
         }
+        addMaterial(context_matname);
+        setMaterialColor(context_matname, make_RGBAcolor(mat.color.r, mat.color.g, mat.color.b, 1));
+        if (!mat.texture.empty()) {
+            setMaterialTexture(context_matname, mat.texture);
+        }
+        setMaterialTextureColorOverride(context_matname, mat.textureColorIsOverridden);
+        mtl_to_context_material[matname] = context_matname;
     }
 
     std::vector<TriangleData> triangleDataList;
@@ -4264,7 +4273,7 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
                         triangleData.texture = texture;
                         triangleData.color = color;
                         triangleData.textureColorIsOverridden = textureColorIsOverridden;
-                        triangleData.materialname = materialname;
+                        triangleData.materialname = mtl_to_context_material.count(materialname) ? mtl_to_context_material.at(materialname) : materialname;
                         triangleData.object = objects.at(material_faces[i][0] - 1);
 
                         // Handle texture coordinates if present

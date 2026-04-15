@@ -33,9 +33,9 @@ The radiation model requires at least one ray-tracing backend. Two backends are 
     <tr>
         <th>Backend</th>
         <th>Package</th>
-        <td>\image html apple-logo.png</td>
-        <td>\image html unix-logo.png</td>
-        <td>\image html windows-logo.png</td>
+        <th>\image html apple-logo.png</th>
+        <th>\image html unix-logo.png</th>
+        <th>\image html windows-logo.png</th>
     </tr>
     <tr>
         <td><b>Vulkan</b> (all platforms)</td>
@@ -71,18 +71,6 @@ Useful OS-specific information for installing CUDA can be found here: \ref Depen
 If you are using a PC with the OptiX backend, it is likely you will need to increase the GPU timeout in the registry, otherwise calculations lasting longer than 2 secs. will timeout and kill your program. A guide on how to increase the timeout can be found here: \ref PCGPUTimeout
 
  \section RadKnownIssues Known Issues
-
- \subsection OptiXDriverIncompat OptiX Backend: NVIDIA Driver 590+ Incompatibility — <b>RESOLVED</b>
-
- <b>Status: Resolved.</b> This issue has been permanently fixed by the addition of the OptiX 8.1 backend (Helios 1.3.66+). On systems with NVIDIA driver ≥ 560, Helios now automatically uses the OptiX 8.1 backend, which is fully compatible with all modern NVIDIA drivers.
-
- <b>Historical context:</b> NVIDIA drivers 590.x and later removed support for the OptiX 6.5 API previously used by Helios. This caused build failures or runtime errors for users with modern NVIDIA drivers.
-
- <b>Resolution:</b> Helios now selects the correct OptiX backend automatically based on the detected driver version:
- - Driver ≥ 560: OptiX 8.1 backend is used (supports all modern drivers).
- - Driver &lt; 560: OptiX 6.5 backend is used (for older systems).
-
- If you are still seeing this issue, ensure you are using Helios 1.3.66 or later. If you must use an older Helios version, the Vulkan compute backend remains a fully-functional alternative (<tt>-DFORCE_VULKAN_BACKEND=ON</tt>).
 
  \subsection VulkanInstanceLimitation Vulkan Backend: Repeated RadiationModel Creation Limitation (Linux NVIDIA Drivers)
 
@@ -729,6 +717,42 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
      <td>3024 x 4032</td>
      <td>5.1 mm</td>
      <td>3.19 mm</td>
+   </tr>
+   <tr>
+     <td>Basler_acA2500-20gc</td>
+     <td>Basler</td>
+     <td>acA2500-20gc</td>
+     <td>12.44 mm</td>
+     <td>2592 x 2048</td>
+     <td>12.0 mm</td>
+     <td>8.57 mm</td>
+   </tr>
+   <tr>
+     <td>Basler_acA2500-20gm</td>
+     <td>Basler</td>
+     <td>acA2500-20gm</td>
+     <td>12.44 mm</td>
+     <td>2592 x 2048</td>
+     <td>12.0 mm</td>
+     <td>8.57 mm</td>
+   </tr>
+   <tr>
+     <td>Basler_acA2500-20gm_730nm</td>
+     <td>Basler</td>
+     <td>acA2500-20gm + 730nm filter</td>
+     <td>12.44 mm</td>
+     <td>2592 x 2048</td>
+     <td>12.0 mm</td>
+     <td>8.57 mm</td>
+   </tr>
+   <tr>
+     <td>Basler_acA2500-20gm_850nm</td>
+     <td>Basler</td>
+     <td>acA2500-20gm + 850nm filter</td>
+     <td>12.44 mm</td>
+     <td>2592 x 2048</td>
+     <td>12.0 mm</td>
+     <td>8.57 mm</td>
    </tr>
  </table>
 

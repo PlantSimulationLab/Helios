@@ -615,6 +615,10 @@ std::string RadiationModel::writeCameraImage(const std::string &camera, const st
         // Restore image_processing parameters
         metadata.image_processing = saved_image_processing;
 
+        // Copy applied exposure gain and white balance factors from camera object
+        metadata.image_processing.exposure_gain = cameras.at(camera).applied_exposure_gain;
+        metadata.image_processing.white_balance_factors = cameras.at(camera).applied_white_balance_factors;
+
         // Set color space based on channel count (sRGB for RGB, linear for grayscale)
         metadata.image_processing.color_space = is_rgb ? "sRGB" : "linear";
 
@@ -775,7 +779,7 @@ void RadiationModel::writeCameraImageDataEXR(const std::string &camera, const st
         }
     }
 
-    helios::writeEXR(outfile.str(), camera_resolution.x, camera_resolution.y, flipped_data, band);
+    helios::writeEXR(outfile.str(), camera_resolution.x, camera_resolution.y, flipped_data);
 }
 
 void RadiationModel::writeCameraImageDataEXR(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path, int frame) {
@@ -1343,7 +1347,7 @@ void RadiationModel::writeDepthImageDataEXR(const std::string &cameralabel, cons
         }
     }
 
-    helios::writeEXR(outfile.str(), camera_resolution.x, camera_resolution.y, flipped_data, "Z");
+    helios::writeEXR(outfile.str(), camera_resolution.x, camera_resolution.y, flipped_data);
 }
 
 void RadiationModel::writeNormDepthImage(const std::string &cameralabel, const std::string &imagefile_base, float max_depth, const std::string &image_path, int frame) {
@@ -3389,6 +3393,7 @@ void RadiationCamera::whiteBalanceSpectral(const std::string &red_band_label, co
     white_balance_factors.x = max_integrated / red_integrated;
     white_balance_factors.y = max_integrated / green_integrated;
     white_balance_factors.z = max_integrated / blue_integrated;
+    applied_white_balance_factors = white_balance_factors;
 
     // Apply white balance factors to pixel data
     auto &data_red = pixel_data.at(red_band_label);
@@ -3749,6 +3754,7 @@ void RadiationCamera::applyCameraExposure(helios::Context *context) {
             // Target 18% gray
             float target_median = 0.18f;
             float auto_gain = target_median / std::max(median_luminance, 1e-6f);
+            applied_exposure_gain = auto_gain;
 
             // Apply gain to all bands
             for (auto &band_pair: pixel_data) {
@@ -3774,6 +3780,7 @@ void RadiationCamera::applyCameraExposure(helios::Context *context) {
                 // Target 18% gray for each band independently
                 float target_median = 0.18f;
                 float band_gain = target_median / std::max(median_value, 1e-6f);
+                applied_exposure_gain = band_gain; // stores the last band's gain
 
                 // Apply gain to this band
                 for (std::size_t i = 0; i < N; ++i) {
@@ -3835,6 +3842,7 @@ void RadiationCamera::applyCameraExposure(helios::Context *context) {
 
         // Final exposure multiplier
         float exposure_multiplier = exposure * calibration_factor;
+        applied_exposure_gain = exposure_multiplier;
 
         // Apply exposure to all bands
         const std::size_t N = pixel_data.begin()->second.size();
@@ -4499,6 +4507,10 @@ std::string RadiationModel::writeCameraMetadataFile(const std::string &camera_la
 
     // Always include image_processing section with color_space
     const auto &img_proc = metadata.image_processing;
+    j["image_processing"]["exposure_gain"] = format_float(img_proc.exposure_gain, 4);
+    j["image_processing"]["white_balance_factors"] = {format_float(img_proc.white_balance_factors.x, 4),
+                                                      format_float(img_proc.white_balance_factors.y, 4),
+                                                      format_float(img_proc.white_balance_factors.z, 4)};
     j["image_processing"]["saturation_adjustment"] = format_float(img_proc.saturation_adjustment, 2);
     j["image_processing"]["brightness_adjustment"] = format_float(img_proc.brightness_adjustment, 2);
     j["image_processing"]["contrast_adjustment"] = format_float(img_proc.contrast_adjustment, 2);

@@ -46,9 +46,9 @@
  <table>
    <tr>	
       <th>Package</th>
-      <td>\image html apple-logo.png</td>
-      <td>\image html unix-logo.png</td>
-      <td>\image html windows-logo.png</td>
+      <th>\image html apple-logo.png</th>
+      <th>\image html unix-logo.png</th>
+      <th>\image html windows-logo.png</th>
    </tr>
    <tr>	
       <td>NVIDIA CUDA 9.0+</td>

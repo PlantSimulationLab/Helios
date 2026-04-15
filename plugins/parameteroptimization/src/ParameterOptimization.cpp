@@ -16,6 +16,10 @@ GNU General Public License for more details.
 #include "ParameterOptimization.h"
 #include <numeric>
 
+#ifdef HELIOS_HAVE_NLOPT
+#include <nlopt.hpp>
+#endif
+
 using namespace std;
 using namespace helios;
 
@@ -42,7 +46,13 @@ static int computeDisplayFrequency(int current_iter, int max_iterations) {
 
 // Validate parameters shared across all optimization algorithms.
 static void validateParameters(const ParametersToOptimize &parameters) {
+    if (parameters.empty()) {
+        helios_runtime_error("ERROR (ParameterOptimization): ParametersToOptimize is empty. At least one parameter is required.");
+    }
     for (const auto &[name, param]: parameters) {
+        if (param.type != ParameterType::CATEGORICAL && param.min == param.max) {
+            helios_runtime_error("ERROR (ParameterOptimization): Parameter '" + name + "' has min == max (" + std::to_string(param.min) + "). Range must be non-zero.");
+        }
         if (param.min > param.max) {
             helios_runtime_error("ERROR (ParameterOptimization): Parameter '" + name + "' has min (" + std::to_string(param.min) + ") > max (" + std::to_string(param.max) + ").");
         }
@@ -209,13 +219,15 @@ namespace {
     std::vector<float> solveTriangular(const std::vector<std::vector<float>> &L, const std::vector<float> &b, bool lower = true) {
         size_t n = b.size();
         std::vector<float> y(n);
+        constexpr float eps = 1e-30f;
         if (lower) {
             for (size_t i = 0; i < n; ++i) {
                 float sum = 0.0f;
                 for (size_t j = 0; j < i; ++j) {
                     sum += L[i][j] * y[j];
                 }
-                y[i] = (b[i] - sum) / L[i][i];
+                float diag = L[i][i];
+                y[i] = (b[i] - sum) / (std::fabs(diag) > eps ? diag : std::copysign(eps, diag));
             }
         } else {
             for (int i = n - 1; i >= 0; --i) {
@@ -223,7 +235,8 @@ namespace {
                 for (size_t j = i + 1; j < n; ++j) {
                     sum += L[i][j] * y[j];
                 }
-                y[i] = (b[i] - sum) / L[i][i];
+                float diag = L[i][i];
+                y[i] = (b[i] - sum) / (std::fabs(diag) > eps ? diag : std::copysign(eps, diag));
             }
         }
         return y;
@@ -575,6 +588,905 @@ ParametersToOptimize readParametersFromFile(const std::string &filename) {
     return params;
 }
 
+// --- makeFDGradientSource implementation ---
+
+GradientSource makeFDGradientSource(
+    const std::string& name,
+    const std::vector<std::string>& parameter_names,
+    ObjectiveFunction objective,
+    float step
+) {
+    GradientSource source;
+    source.name = name;
+    source.parameter_names = parameter_names;
+    source.compute = [parameter_names, objective, step](const ParametersToOptimize& params, ParameterGradient& gradient) {
+        for (const auto& pname : parameter_names) {
+            ParametersToOptimize params_plus = params;
+            ParametersToOptimize params_minus = params;
+            const auto& p = params.at(pname);
+            float h = step * std::max(std::fabs(p.value), 1.f);
+            params_plus.at(pname).value = std::min(p.value + h, p.max);
+            params_minus.at(pname).value = std::max(p.value - h, p.min);
+            float actual_step = params_plus.at(pname).value - params_minus.at(pname).value;
+            if (actual_step < 1e-30f) {
+                gradient[pname] = 0.f;  // parameter is pinned at a bound
+            } else {
+                float fp = objective(params_plus);
+                float fm = objective(params_minus);
+                gradient[pname] = (fp - fm) / actual_step;
+            }
+        }
+    };
+    return source;
+}
+
+// --- makeFDGradient convenience wrapper ---
+
+GradientFunction makeFDGradient(ObjectiveFunction objective, float step) {
+    return [objective, step](const ParametersToOptimize& params) -> ParameterGradient {
+        std::vector<std::string> all_names;
+        all_names.reserve(params.size());
+        for (const auto& [name, _] : params) {
+            all_names.push_back(name);
+        }
+        auto source = makeFDGradientSource("fd", all_names, objective, step);
+        ParameterGradient gradient;
+        source.compute(params, gradient);
+        return gradient;
+    };
+}
+
+// Exception type for gradient validation errors (distinguished from NLopt exceptions)
+struct GradientValidationError : public std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
+
+// --- Gradient-based optimization helpers ---
+
+namespace {
+
+    // Validate that all parameters are continuous (FLOAT) for gradient-based and NLopt-based methods
+    // (LBFGS, Adam, SLSQP require differentiability; BOBYQA requires continuous variables)
+    void validateContinuousParameters(const ParametersToOptimize &parameters) {
+        for (const auto &[name, param] : parameters) {
+            if (param.type == ParameterType::INTEGER) {
+                helios_runtime_error("ERROR (ParameterOptimization): This algorithm requires all parameters to be FLOAT type. Parameter '" + name + "' is INTEGER.");
+            }
+            if (param.type == ParameterType::CATEGORICAL) {
+                helios_runtime_error("ERROR (ParameterOptimization): This algorithm requires all parameters to be FLOAT type. Parameter '" + name + "' is CATEGORICAL.");
+            }
+        }
+    }
+
+    // Get sorted parameter names (consistent ordering for vector conversion)
+    std::vector<std::string> getOrderedParamNames(const ParametersToOptimize &parameters) {
+        std::vector<std::string> names;
+        names.reserve(parameters.size());
+        for (const auto &[name, _] : parameters) {
+            names.push_back(name);
+        }
+        std::sort(names.begin(), names.end());
+        return names;
+    }
+
+    // Convert named parameter map to dense vector in natural (unnormalized) space
+    std::vector<double> paramsToNaturalVector(const ParametersToOptimize &params, const std::vector<std::string> &param_names) {
+        std::vector<double> vec(param_names.size());
+        for (size_t i = 0; i < param_names.size(); ++i) {
+            vec[i] = static_cast<double>(params.at(param_names[i]).value);
+        }
+        return vec;
+    }
+
+    // Convert dense vector in natural space back to named parameter map
+    ParametersToOptimize naturalVectorToParams(const std::vector<double> &vec, const ParametersToOptimize &template_params, const std::vector<std::string> &param_names) {
+        ParametersToOptimize params = template_params;
+        for (size_t i = 0; i < param_names.size(); ++i) {
+            auto &p = params.at(param_names[i]);
+            p.value = static_cast<float>(vec[i]);
+            p.value = std::min(std::max(p.value, p.min), p.max);
+        }
+        return params;
+    }
+
+    // Convert ParameterGradient map to dense vector using the same name ordering
+    std::vector<double> gradientToNaturalVector(const ParameterGradient &gradient, const std::vector<std::string> &param_names) {
+        std::vector<double> vec(param_names.size());
+        for (size_t i = 0; i < param_names.size(); ++i) {
+            auto it = gradient.find(param_names[i]);
+            if (it == gradient.end()) {
+                // Use helios_runtime_error for the user-facing message, but this path
+                // should not be reached — validateGradientCompleteness catches it first.
+                helios_runtime_error("ERROR (ParameterOptimization): Gradient missing entry for parameter '" + param_names[i] + "'.");
+            }
+            vec[i] = static_cast<double>(it->second);
+        }
+        return vec;
+    }
+
+    // Validate that the gradient covers exactly the right parameters.
+    // Throws GradientValidationError (not helios_runtime_error) so it can be
+    // reliably distinguished from NLopt exceptions in the catch block.
+    void validateGradientCompleteness(const ParameterGradient &gradient, const std::vector<std::string> &param_names) {
+        for (const auto &name : param_names) {
+            if (gradient.find(name) == gradient.end()) {
+                throw GradientValidationError("ERROR (ParameterOptimization): Gradient missing entry for parameter '" + name + "'.");
+            }
+        }
+        for (const auto &[name, _] : gradient) {
+            bool found = false;
+            for (const auto &pname : param_names) {
+                if (pname == name) { found = true; break; }
+            }
+            if (!found) {
+                throw GradientValidationError("ERROR (ParameterOptimization): Gradient contains unknown parameter '" + name + "'.");
+            }
+        }
+    }
+
+} // anonymous namespace
+
+// --- L-BFGS implementation ---
+
+// Internal bundle for unified dispatch
+struct ObjectiveBundle {
+    ObjectiveFunction objective;
+    GradientFunction gradient;
+    bool has_gradient = false;
+};
+
+#ifdef HELIOS_HAVE_NLOPT
+
+static nlopt::algorithm getLBFGSAlgorithm() {
+    return nlopt::LD_LBFGS;
+}
+
+// NLopt callback adapter
+struct NLoptCallbackData {
+    const ObjectiveBundle *bundle;
+    const ParametersToOptimize *template_params;
+    const std::vector<std::string> *param_names;
+    int eval_count;
+    struct EvalRecord { int eval_num; float fitness; std::vector<double> params; };
+    std::vector<EvalRecord> eval_history;
+};
+
+static double nlopt_lbfgs_callback(unsigned n, const double* x, double* grad, void* data) {
+    auto* cb = static_cast<NLoptCallbackData*>(data);
+    cb->eval_count++;
+
+    // Convert positional vector to named parameters
+    std::vector<double> xvec(x, x + n);
+    ParametersToOptimize params = naturalVectorToParams(xvec, *cb->template_params, *cb->param_names);
+
+    // Evaluate objective
+    float value = cb->bundle->objective(params);
+    cb->eval_history.push_back({cb->eval_count, value, xvec});
+
+    // Compute gradient if requested
+    if (grad) {
+        ParameterGradient pg = cb->bundle->gradient(params);
+        std::vector<double> gvec = gradientToNaturalVector(pg, *cb->param_names);
+        for (unsigned i = 0; i < n; ++i) {
+            grad[i] = gvec[i];
+        }
+    }
+
+    return static_cast<double>(value);
+}
+
+#endif // HELIOS_HAVE_NLOPT
+
+static ParameterOptimization::Result runLBFGS(
+    const ObjectiveBundle &bundle,
+    const ParametersToOptimize &parameters,
+    const LBFGS &settings,
+    bool print_progress,
+    const std::string &write_progress_to_file,
+    const std::string &write_result_to_file,
+    std::ofstream &outProgress,
+    bool message_flag
+) {
+    validateParameters(parameters);
+    validateContinuousParameters(parameters);
+
+    std::vector<std::string> param_names = getOrderedParamNames(parameters);
+    unsigned n = param_names.size();
+
+    std::vector<double> initial = paramsToNaturalVector(parameters, param_names);
+    std::vector<double> lower_bounds(n), upper_bounds(n);
+    for (unsigned i = 0; i < n; ++i) {
+        const auto &p = parameters.at(param_names[i]);
+        lower_bounds[i] = static_cast<double>(p.min);
+        upper_bounds[i] = static_cast<double>(p.max);
+    }
+
+    helios::Timer timer;
+    timer.tic();
+
+    if (print_progress && !message_flag) {
+        std::cout << "\n========================================\n";
+        std::cout << "  L-BFGS Optimization\n";
+        std::cout << "  Parameters: " << n << "\n";
+        std::cout << "  Max iterations: " << settings.max_iterations << "\n";
+        std::cout << "  ftol_rel: " << settings.ftol_rel << "\n";
+        std::cout << "  xtol_rel: " << settings.xtol_rel << "\n";
+        std::cout << "========================================\n";
+    }
+
+    ParameterOptimization::Result result;
+    result.fitness = std::numeric_limits<float>::max();
+
+#ifdef HELIOS_HAVE_NLOPT
+
+    // Optionally wrap gradient with verification
+    ObjectiveBundle effective_bundle = bundle;
+    if (settings.verify_gradients) {
+        GradientFunction original_gradient = bundle.gradient;
+        ObjectiveFunction objective = bundle.objective;
+        double fd_step = settings.fd_step;
+        effective_bundle.gradient = [original_gradient, objective, fd_step, param_names, print_progress](const ParametersToOptimize &params) -> ParameterGradient {
+            ParameterGradient user_grad = original_gradient(params);
+
+            // Compute FD gradient for comparison
+            ParameterGradient fd_grad;
+            for (const auto &pname : param_names) {
+                ParametersToOptimize pp = params, pm = params;
+                pp.at(pname).value += static_cast<float>(fd_step);
+                pm.at(pname).value -= static_cast<float>(fd_step);
+                float fp = objective(pp);
+                float fm = objective(pm);
+                fd_grad[pname] = (fp - fm) / (2.f * static_cast<float>(fd_step));
+            }
+
+            // Report max relative error
+            double max_rel_err = 0.0;
+            std::string worst_param;
+            for (const auto &pname : param_names) {
+                double denom = std::max(static_cast<double>(std::fabs(fd_grad.at(pname))), 1e-12);
+                double rel_err = std::fabs(static_cast<double>(user_grad.at(pname) - fd_grad.at(pname))) / denom;
+                if (rel_err > max_rel_err) {
+                    max_rel_err = rel_err;
+                    worst_param = pname;
+                }
+            }
+            if (print_progress) {
+                std::cout << "[GradVerify] max_rel_err=" << max_rel_err
+                          << " (param '" << worst_param << "')"
+                          << " user=" << user_grad.at(worst_param)
+                          << " FD=" << fd_grad.at(worst_param) << std::endl;
+            }
+
+            return user_grad;
+        };
+    }
+
+    NLoptCallbackData cb_data;
+    cb_data.bundle = &effective_bundle;
+    cb_data.template_params = &parameters;
+    cb_data.param_names = &param_names;
+    cb_data.eval_count = 0;
+
+    // Eagerly validate gradient completeness before entering NLopt loop.
+    // This ensures missing-key errors throw as GradientValidationError
+    // rather than being swallowed by NLopt's internal exception handling.
+    {
+        ParameterGradient test_grad = effective_bundle.gradient(parameters);
+        validateGradientCompleteness(test_grad, param_names);
+    }
+
+    nlopt::opt opt(getLBFGSAlgorithm(), n);
+    opt.set_min_objective(nlopt_lbfgs_callback, &cb_data);
+    opt.set_lower_bounds(lower_bounds);
+    opt.set_upper_bounds(upper_bounds);
+    opt.set_ftol_rel(settings.ftol_rel);
+    opt.set_xtol_rel(settings.xtol_rel);
+    opt.set_maxeval(settings.max_iterations);
+
+    std::vector<double> optimal_params = initial;
+    double optimal_value = 0.0;
+    std::string result_message;
+
+    try {
+        int rc = static_cast<int>(opt.optimize(optimal_params, optimal_value));
+        switch (rc) {
+            case 1: result_message = "Success (generic)"; break;
+            case 2: result_message = "Converged (stopval reached)"; break;
+            case 3: result_message = "Converged (ftol reached)"; break;
+            case 4: result_message = "Converged (xtol reached)"; break;
+            case 5: result_message = "Max evaluations reached"; break;
+            case 6: result_message = "Max time reached"; break;
+            default: result_message = "NLopt return code " + std::to_string(rc);
+        }
+    } catch (const GradientValidationError &e) {
+        throw; // Always propagate gradient validation errors to the caller
+    } catch (const nlopt::roundoff_limited &) {
+        result_message = "Converged (roundoff limited)";
+    } catch (const nlopt::forced_stop &) {
+        result_message = "Forced stop";
+    } catch (const std::exception &e) {
+        result_message = std::string("NLopt exception: ") + e.what();
+    }
+
+    result.parameters = naturalVectorToParams(optimal_params, parameters, param_names);
+    result.fitness = static_cast<float>(optimal_value);
+
+    // Write progress file with actual per-evaluation parameters
+    if (outProgress.is_open()) {
+        for (const auto &rec : cb_data.eval_history) {
+            ParametersToOptimize eval_params = naturalVectorToParams(rec.params, parameters, param_names);
+            for (const auto &pname : param_names) {
+                outProgress << rec.eval_num << "," << rec.fitness << "," << pname << ","
+                            << eval_params.at(pname).value << ","
+                            << eval_params.at(pname).min << ","
+                            << eval_params.at(pname).max << "\n";
+            }
+        }
+    }
+
+    // Write result file
+    if (!write_result_to_file.empty()) {
+        std::ofstream outResult(write_result_to_file);
+        outResult << "parameter,value,min,max\n";
+        for (const auto &pname : param_names) {
+            const auto &p = result.parameters.at(pname);
+            outResult << pname << "," << p.value << "," << p.min << "," << p.max << "\n";
+        }
+    }
+
+    double elapsed = timer.toc();
+
+    if (print_progress) {
+        // Display convergence graph
+        std::vector<float> fitness_history;
+        fitness_history.reserve(cb_data.eval_history.size());
+        for (const auto &rec : cb_data.eval_history) {
+            fitness_history.push_back(rec.fitness);
+        }
+        if (!fitness_history.empty()) {
+            displayOptimizationGraph(fitness_history, cb_data.eval_count, settings.max_iterations, elapsed, true);
+        }
+
+        std::cout << "\n========================================\n";
+        std::cout << "  L-BFGS Complete: " << result_message << "\n";
+        std::cout << "  Evaluations: " << cb_data.eval_count << "\n";
+        std::cout << "  Best fitness: " << result.fitness << "\n";
+        std::cout << "  Elapsed: " << elapsed << " s\n";
+        for (const auto &pname : param_names) {
+            std::cout << "  " << pname << " = " << result.parameters.at(pname).value << "\n";
+        }
+        std::cout << "========================================\n";
+    }
+
+#else // HELIOS_HAVE_NLOPT
+
+    std::cerr << "ERROR (ParameterOptimization): L-BFGS requires NLopt. Install NLopt and rebuild." << std::endl;
+    result.parameters = parameters;
+    result.fitness = bundle.objective(parameters);
+
+#endif // HELIOS_HAVE_NLOPT
+
+    return result;
+}
+
+// --- Adam implementation (no external dependencies) ---
+
+static ParameterOptimization::Result runAdam(
+    const ObjectiveBundle &bundle,
+    const ParametersToOptimize &parameters,
+    const Adam &settings,
+    bool print_progress,
+    const std::string &write_progress_to_file,
+    const std::string &write_result_to_file,
+    std::ofstream &outProgress,
+    bool message_flag
+) {
+    validateParameters(parameters);
+    validateContinuousParameters(parameters);
+
+    std::vector<std::string> param_names = getOrderedParamNames(parameters);
+    unsigned n = param_names.size();
+
+    // Extract initial values and bounds in natural space
+    std::vector<double> x(n), lb(n), ub(n);
+    for (unsigned i = 0; i < n; ++i) {
+        const auto &p = parameters.at(param_names[i]);
+        x[i] = static_cast<double>(p.value);
+        lb[i] = static_cast<double>(p.min);
+        ub[i] = static_cast<double>(p.max);
+    }
+
+    // Eagerly validate gradient completeness
+    {
+        ParameterGradient test_grad = bundle.gradient(parameters);
+        validateGradientCompleteness(test_grad, param_names);
+    }
+
+    helios::Timer timer;
+    timer.tic();
+
+    if (print_progress && !message_flag) {
+        std::cout << "\n========================================\n";
+        std::cout << "  Adam Optimization\n";
+        std::cout << "  Parameters: " << n << "\n";
+        std::cout << "  Max iterations: " << settings.max_iterations << "\n";
+        std::cout << "  Learning rate: " << settings.learning_rate << "\n";
+        std::cout << "  beta1: " << settings.beta1 << "  beta2: " << settings.beta2 << "\n";
+        std::cout << "========================================\n";
+    }
+
+    // Adam state: first and second moment estimates (per parameter)
+    std::vector<double> m_vec(n, 0.0), v_vec(n, 0.0);
+
+    ParameterOptimization::Result best;
+    best.fitness = std::numeric_limits<float>::max();
+
+    struct EvalRecord { int iter; float fitness; std::vector<double> params; };
+    std::vector<EvalRecord> eval_history;
+
+    int stagnation_count = 0;
+    const int stagnation_limit = std::max(50, settings.max_iterations / 4);  // converge if best hasn't improved
+
+    for (int t = 1; t <= settings.max_iterations; ++t) {
+        // Convert current x to ParametersToOptimize
+        ParametersToOptimize current = naturalVectorToParams(x, parameters, param_names);
+
+        // Evaluate objective
+        float obj_val = bundle.objective(current);
+        eval_history.push_back({t, obj_val, x});
+
+        // Track best and stagnation
+        if (obj_val < best.fitness) {
+            double rel_improvement = std::fabs((double)best.fitness - (double)obj_val) / std::max(std::fabs((double)best.fitness), 1e-12);
+            best.fitness = obj_val;
+            best.parameters = current;
+            if (rel_improvement > settings.ftol_rel)
+                stagnation_count = 0;  // meaningful improvement
+            else
+                stagnation_count++;    // improvement below tolerance
+        } else {
+            stagnation_count++;
+        }
+
+        // Converge if best hasn't meaningfully improved for many iterations
+        if (stagnation_count >= stagnation_limit) {
+            if (print_progress)
+                std::cout << "  Adam converged (no improvement for " << stagnation_limit << " iterations) at iteration " << t << std::endl;
+            break;
+        }
+
+        // Compute gradient
+        ParameterGradient pg = bundle.gradient(current);
+        std::vector<double> g = gradientToNaturalVector(pg, param_names);
+
+        // Adam update
+        double max_rel_step = 0.0;
+        for (unsigned i = 0; i < n; ++i) {
+            // Update biased first and second moment estimates
+            m_vec[i] = settings.beta1 * m_vec[i] + (1.0 - settings.beta1) * g[i];
+            v_vec[i] = settings.beta2 * v_vec[i] + (1.0 - settings.beta2) * g[i] * g[i];
+
+            // Bias-corrected estimates
+            double m_hat = m_vec[i] / (1.0 - std::pow(settings.beta1, t));
+            double v_hat = v_vec[i] / (1.0 - std::pow(settings.beta2, t));
+
+            // AdamW update: decoupled weight decay applied directly to parameters
+            double step = settings.learning_rate * m_hat / (std::sqrt(v_hat) + settings.epsilon);
+            double x_new = x[i] - step - settings.learning_rate * settings.weight_decay * x[i];
+
+            // Clamp to bounds
+            x_new = std::max(lb[i], std::min(ub[i], x_new));
+
+            double rel_step = std::fabs(x_new - x[i]) / std::max(std::fabs(x[i]), 1e-12);
+            max_rel_step = std::max(max_rel_step, rel_step);
+            x[i] = x_new;
+        }
+
+        // Check convergence on parameter values
+        if (max_rel_step < settings.xtol_rel) {
+            if (print_progress)
+                std::cout << "  Adam converged (xtol) at iteration " << t << std::endl;
+            break;
+        }
+    }
+
+    // Final evaluation at converged point
+    ParametersToOptimize final_params = naturalVectorToParams(x, parameters, param_names);
+    float final_obj = bundle.objective(final_params);
+    if (final_obj < best.fitness) {
+        best.fitness = final_obj;
+        best.parameters = final_params;
+    }
+
+    // Write progress file
+    if (outProgress.is_open()) {
+        for (const auto &rec : eval_history) {
+            ParametersToOptimize ep = naturalVectorToParams(rec.params, parameters, param_names);
+            for (const auto &pname : param_names) {
+                outProgress << rec.iter << "," << rec.fitness << "," << pname << ","
+                            << ep.at(pname).value << ","
+                            << ep.at(pname).min << ","
+                            << ep.at(pname).max << "\n";
+            }
+        }
+    }
+
+    // Write result file
+    if (!write_result_to_file.empty()) {
+        std::ofstream outResult(write_result_to_file);
+        outResult << "parameter,value,min,max\n";
+        for (const auto &pname : param_names) {
+            const auto &p = best.parameters.at(pname);
+            outResult << pname << "," << p.value << "," << p.min << "," << p.max << "\n";
+        }
+    }
+
+    double elapsed = timer.toc();
+
+    if (print_progress) {
+        std::vector<float> fitness_history;
+        fitness_history.reserve(eval_history.size());
+        for (const auto &rec : eval_history) fitness_history.push_back(rec.fitness);
+        if (!fitness_history.empty())
+            displayOptimizationGraph(fitness_history, eval_history.size(), settings.max_iterations, elapsed, true);
+
+        std::cout << "\n========================================\n";
+        std::cout << "  Adam Complete\n";
+        std::cout << "  Iterations: " << eval_history.size() << "\n";
+        std::cout << "  Best fitness: " << best.fitness << "\n";
+        std::cout << "  Elapsed: " << elapsed << " s\n";
+        for (const auto &pname : param_names)
+            std::cout << "  " << pname << " = " << best.parameters.at(pname).value << "\n";
+        std::cout << "========================================\n";
+    }
+
+    return best;
+}
+
+// --- BOBYQA implementation (derivative-free local, NLopt) ---
+
+#ifdef HELIOS_HAVE_NLOPT
+
+struct BOBYQACallbackData {
+    const ObjectiveFunction *objective;
+    const ParametersToOptimize *template_params;
+    const std::vector<std::string> *param_names;
+    int eval_count;
+    struct EvalRecord { int eval_num; float fitness; std::vector<double> params; };
+    std::vector<EvalRecord> eval_history;
+};
+
+static double nlopt_bobyqa_callback(unsigned n, const double* x, double* /*grad*/, void* data) {
+    auto* cb = static_cast<BOBYQACallbackData*>(data);
+    cb->eval_count++;
+    std::vector<double> xvec(x, x + n);
+    ParametersToOptimize params = naturalVectorToParams(xvec, *cb->template_params, *cb->param_names);
+    float value = (*cb->objective)(params);
+    cb->eval_history.push_back({cb->eval_count, value, xvec});
+    return static_cast<double>(value);
+}
+
+#endif // HELIOS_HAVE_NLOPT
+
+static ParameterOptimization::Result runBOBYQA(
+    const ObjectiveFunction &objective,
+    const ParametersToOptimize &parameters,
+    const BOBYQA &settings,
+    bool print_progress,
+    const std::string &write_progress_to_file,
+    const std::string &write_result_to_file,
+    std::ofstream &outProgress,
+    bool message_flag
+) {
+    validateParameters(parameters);
+    validateContinuousParameters(parameters);
+
+    std::vector<std::string> param_names = getOrderedParamNames(parameters);
+    unsigned n = param_names.size();
+
+    std::vector<double> initial = paramsToNaturalVector(parameters, param_names);
+    std::vector<double> lower_bounds(n), upper_bounds(n);
+    for (unsigned i = 0; i < n; ++i) {
+        const auto &p = parameters.at(param_names[i]);
+        lower_bounds[i] = static_cast<double>(p.min);
+        upper_bounds[i] = static_cast<double>(p.max);
+    }
+
+    helios::Timer timer;
+    timer.tic();
+
+    if (print_progress && !message_flag) {
+        std::cout << "\n========================================\n";
+        std::cout << "  BOBYQA Optimization (derivative-free)\n";
+        std::cout << "  Parameters: " << n << "\n";
+        std::cout << "  Max iterations: " << settings.max_iterations << "\n";
+        std::cout << "========================================\n";
+    }
+
+    ParameterOptimization::Result result;
+    result.fitness = std::numeric_limits<float>::max();
+
+#ifdef HELIOS_HAVE_NLOPT
+
+    BOBYQACallbackData cb_data;
+    cb_data.objective = &objective;
+    cb_data.template_params = &parameters;
+    cb_data.param_names = &param_names;
+    cb_data.eval_count = 0;
+
+    nlopt::opt opt(nlopt::LN_BOBYQA, n);
+    opt.set_min_objective(nlopt_bobyqa_callback, &cb_data);
+    opt.set_lower_bounds(lower_bounds);
+    opt.set_upper_bounds(upper_bounds);
+    opt.set_ftol_rel(settings.ftol_rel);
+    opt.set_xtol_rel(settings.xtol_rel);
+    opt.set_maxeval(settings.max_iterations);
+
+    // Set initial step size
+    if (settings.initial_step > 0) {
+        std::vector<double> steps(n, settings.initial_step);
+        opt.set_initial_step(steps);
+    }
+
+    std::vector<double> optimal_params = initial;
+    double optimal_value = 0.0;
+    std::string result_message;
+
+    try {
+        int rc = static_cast<int>(opt.optimize(optimal_params, optimal_value));
+        switch (rc) {
+            case 1: result_message = "Success (generic)"; break;
+            case 2: result_message = "Converged (stopval reached)"; break;
+            case 3: result_message = "Converged (ftol reached)"; break;
+            case 4: result_message = "Converged (xtol reached)"; break;
+            case 5: result_message = "Max evaluations reached"; break;
+            case 6: result_message = "Max time reached"; break;
+            default: result_message = "NLopt return code " + std::to_string(rc);
+        }
+    } catch (const nlopt::roundoff_limited &) {
+        result_message = "Converged (roundoff limited)";
+    } catch (const std::exception &e) {
+        result_message = std::string("NLopt exception: ") + e.what();
+    }
+
+    result.parameters = naturalVectorToParams(optimal_params, parameters, param_names);
+    result.fitness = static_cast<float>(optimal_value);
+
+    if (outProgress.is_open()) {
+        for (const auto &rec : cb_data.eval_history) {
+            ParametersToOptimize ep = naturalVectorToParams(rec.params, parameters, param_names);
+            for (const auto &pname : param_names)
+                outProgress << rec.eval_num << "," << rec.fitness << "," << pname << ","
+                            << ep.at(pname).value << "," << ep.at(pname).min << "," << ep.at(pname).max << "\n";
+        }
+    }
+
+    if (!write_result_to_file.empty()) {
+        std::ofstream outResult(write_result_to_file);
+        outResult << "parameter,value,min,max\n";
+        for (const auto &pname : param_names) {
+            const auto &p = result.parameters.at(pname);
+            outResult << pname << "," << p.value << "," << p.min << "," << p.max << "\n";
+        }
+    }
+
+    double elapsed = timer.toc();
+    if (print_progress) {
+        std::vector<float> fh; fh.reserve(cb_data.eval_history.size());
+        for (const auto &rec : cb_data.eval_history) fh.push_back(rec.fitness);
+        if (!fh.empty()) displayOptimizationGraph(fh, cb_data.eval_count, settings.max_iterations, elapsed, true);
+
+        std::cout << "\n========================================\n";
+        std::cout << "  BOBYQA Complete: " << result_message << "\n";
+        std::cout << "  Evaluations: " << cb_data.eval_count << "\n";
+        std::cout << "  Best fitness: " << result.fitness << "\n";
+        std::cout << "  Elapsed: " << elapsed << " s\n";
+        for (const auto &pname : param_names)
+            std::cout << "  " << pname << " = " << result.parameters.at(pname).value << "\n";
+        std::cout << "========================================\n";
+    }
+
+#else
+    std::cerr << "ERROR (ParameterOptimization): BOBYQA requires NLopt. Install NLopt and rebuild." << std::endl;
+    result.parameters = parameters;
+    result.fitness = objective(parameters);
+#endif
+
+    return result;
+}
+
+// --- SLSQP implementation (gradient-based with nonlinear constraints, NLopt) ---
+
+#ifdef HELIOS_HAVE_NLOPT
+
+struct SLSQPCallbackData {
+    const ObjectiveBundle *bundle;
+    const ParametersToOptimize *template_params;
+    const std::vector<std::string> *param_names;
+    int eval_count;
+    struct EvalRecord { int eval_num; float fitness; std::vector<double> params; };
+    std::vector<EvalRecord> eval_history;
+};
+
+static double nlopt_slsqp_obj_callback(unsigned n, const double* x, double* grad, void* data) {
+    auto* cb = static_cast<SLSQPCallbackData*>(data);
+    cb->eval_count++;
+    std::vector<double> xvec(x, x + n);
+    ParametersToOptimize params = naturalVectorToParams(xvec, *cb->template_params, *cb->param_names);
+    float value = cb->bundle->objective(params);
+    cb->eval_history.push_back({cb->eval_count, value, xvec});
+
+    if (grad) {
+        ParameterGradient pg = cb->bundle->gradient(params);
+        std::vector<double> gvec = gradientToNaturalVector(pg, *cb->param_names);
+        for (unsigned i = 0; i < n; ++i) grad[i] = gvec[i];
+    }
+    return static_cast<double>(value);
+}
+
+struct SLSQPConstraintData {
+    const Constraint *constraint;
+    const ParametersToOptimize *template_params;
+    const std::vector<std::string> *param_names;
+};
+
+static double nlopt_slsqp_constraint_callback(unsigned n, const double* x, double* grad, void* data) {
+    auto* cd = static_cast<SLSQPConstraintData*>(data);
+    std::vector<double> xvec(x, x + n);
+    ParametersToOptimize params = naturalVectorToParams(xvec, *cd->template_params, *cd->param_names);
+    float value = cd->constraint->function(params);
+
+    if (grad) {
+        ParameterGradient pg = cd->constraint->gradient(params);
+        std::vector<double> gvec = gradientToNaturalVector(pg, *cd->param_names);
+        for (unsigned i = 0; i < n; ++i) grad[i] = gvec[i];
+    }
+    return static_cast<double>(value);
+}
+
+#endif // HELIOS_HAVE_NLOPT
+
+static ParameterOptimization::Result runSLSQP(
+    const ObjectiveBundle &bundle,
+    const ParametersToOptimize &parameters,
+    const SLSQP &settings,
+    const std::vector<Constraint> &constraints,
+    bool print_progress,
+    const std::string &write_progress_to_file,
+    const std::string &write_result_to_file,
+    std::ofstream &outProgress,
+    bool message_flag
+) {
+    validateParameters(parameters);
+    validateContinuousParameters(parameters);
+
+    std::vector<std::string> param_names = getOrderedParamNames(parameters);
+    unsigned n = param_names.size();
+
+    std::vector<double> initial = paramsToNaturalVector(parameters, param_names);
+    std::vector<double> lower_bounds(n), upper_bounds(n);
+    for (unsigned i = 0; i < n; ++i) {
+        const auto &p = parameters.at(param_names[i]);
+        lower_bounds[i] = static_cast<double>(p.min);
+        upper_bounds[i] = static_cast<double>(p.max);
+    }
+
+    // Eagerly validate gradient
+    {
+        ParameterGradient test_grad = bundle.gradient(parameters);
+        validateGradientCompleteness(test_grad, param_names);
+    }
+
+    helios::Timer timer;
+    timer.tic();
+
+    if (print_progress && !message_flag) {
+        std::cout << "\n========================================\n";
+        std::cout << "  SLSQP Optimization (constrained)\n";
+        std::cout << "  Parameters: " << n << "\n";
+        std::cout << "  Constraints: " << constraints.size() << "\n";
+        std::cout << "  Max iterations: " << settings.max_iterations << "\n";
+        std::cout << "========================================\n";
+    }
+
+    ParameterOptimization::Result result;
+    result.fitness = std::numeric_limits<float>::max();
+
+#ifdef HELIOS_HAVE_NLOPT
+
+    SLSQPCallbackData cb_data;
+    cb_data.bundle = &bundle;
+    cb_data.template_params = &parameters;
+    cb_data.param_names = &param_names;
+    cb_data.eval_count = 0;
+
+    nlopt::opt opt(nlopt::LD_SLSQP, n);
+    opt.set_min_objective(nlopt_slsqp_obj_callback, &cb_data);
+    opt.set_lower_bounds(lower_bounds);
+    opt.set_upper_bounds(upper_bounds);
+    opt.set_ftol_rel(settings.ftol_rel);
+    opt.set_xtol_rel(settings.xtol_rel);
+    opt.set_maxeval(settings.max_iterations);
+
+    // Add inequality constraints: c_i(x) <= 0
+    std::vector<SLSQPConstraintData> constraint_data(constraints.size());
+    for (size_t i = 0; i < constraints.size(); ++i) {
+        constraint_data[i].constraint = &constraints[i];
+        constraint_data[i].template_params = &parameters;
+        constraint_data[i].param_names = &param_names;
+        opt.add_inequality_constraint(nlopt_slsqp_constraint_callback, &constraint_data[i],
+                                       static_cast<double>(constraints[i].tolerance));
+    }
+
+    std::vector<double> optimal_params = initial;
+    double optimal_value = 0.0;
+    std::string result_message;
+
+    try {
+        int rc = static_cast<int>(opt.optimize(optimal_params, optimal_value));
+        switch (rc) {
+            case 1: result_message = "Success (generic)"; break;
+            case 2: result_message = "Converged (stopval reached)"; break;
+            case 3: result_message = "Converged (ftol reached)"; break;
+            case 4: result_message = "Converged (xtol reached)"; break;
+            case 5: result_message = "Max evaluations reached"; break;
+            case 6: result_message = "Max time reached"; break;
+            default: result_message = "NLopt return code " + std::to_string(rc);
+        }
+    } catch (const GradientValidationError &e) {
+        throw;
+    } catch (const nlopt::roundoff_limited &) {
+        result_message = "Converged (roundoff limited)";
+    } catch (const std::exception &e) {
+        result_message = std::string("NLopt exception: ") + e.what();
+    }
+
+    result.parameters = naturalVectorToParams(optimal_params, parameters, param_names);
+    result.fitness = static_cast<float>(optimal_value);
+
+    if (outProgress.is_open()) {
+        for (const auto &rec : cb_data.eval_history) {
+            ParametersToOptimize ep = naturalVectorToParams(rec.params, parameters, param_names);
+            for (const auto &pname : param_names)
+                outProgress << rec.eval_num << "," << rec.fitness << "," << pname << ","
+                            << ep.at(pname).value << "," << ep.at(pname).min << "," << ep.at(pname).max << "\n";
+        }
+    }
+
+    if (!write_result_to_file.empty()) {
+        std::ofstream outResult(write_result_to_file);
+        outResult << "parameter,value,min,max\n";
+        for (const auto &pname : param_names) {
+            const auto &p = result.parameters.at(pname);
+            outResult << pname << "," << p.value << "," << p.min << "," << p.max << "\n";
+        }
+    }
+
+    double elapsed = timer.toc();
+    if (print_progress) {
+        std::vector<float> fh; fh.reserve(cb_data.eval_history.size());
+        for (const auto &rec : cb_data.eval_history) fh.push_back(rec.fitness);
+        if (!fh.empty()) displayOptimizationGraph(fh, cb_data.eval_count, settings.max_iterations, elapsed, true);
+
+        std::cout << "\n========================================\n";
+        std::cout << "  SLSQP Complete: " << result_message << "\n";
+        std::cout << "  Evaluations: " << cb_data.eval_count << "\n";
+        std::cout << "  Best fitness: " << result.fitness << "\n";
+        std::cout << "  Elapsed: " << elapsed << " s\n";
+        for (const auto &pname : param_names)
+            std::cout << "  " << pname << " = " << result.parameters.at(pname).value << "\n";
+        std::cout << "========================================\n";
+    }
+
+#else
+    std::cerr << "ERROR (ParameterOptimization): SLSQP requires NLopt. Install NLopt and rebuild." << std::endl;
+    result.parameters = parameters;
+    result.fitness = bundle.objective(parameters);
+#endif
+
+    return result;
+}
+
 // Helper functions for Bayesian Optimization
 namespace {
     // Convert ParametersToOptimize to normalized vector [0,1]
@@ -818,7 +1730,7 @@ static ParameterOptimization::Result runBayesianOptimization(std::function<float
             // acq = -mean + kappa * std (higher is better)
             float acq = -mean + bo.ucb_kappa * std;
 
-            if (acq > best_acquisition) {
+            if (std::isfinite(acq) && acq > best_acquisition) {
                 best_acquisition = acq;
                 best_candidate = candidate;
             }
@@ -1392,12 +2304,25 @@ static ParameterOptimization::Result runCMAES(std::function<float(const Paramete
         bool chol_success = choleskyDecompose(L);
 
         if (!chol_success) {
-            // Add regularization to diagonal if Cholesky fails
-            for (size_t i = 0; i < n; ++i) {
-                C[i][i] += 1e-6f;
+            // Add escalating regularization to diagonal if Cholesky fails
+            float reg = 1e-6f;
+            bool recovered = false;
+            for (int attempt = 0; attempt < 5; ++attempt) {
+                for (size_t i = 0; i < n; ++i)
+                    C[i][i] += reg;
+                L = C;
+                if (choleskyDecompose(L)) {
+                    recovered = true;
+                    break;
+                }
+                reg *= 10.0f;  // escalate: 1e-6, 1e-5, 1e-4, 1e-3, 1e-2
             }
-            L = C;
-            choleskyDecompose(L);
+            if (!recovered) {
+                // Fallback: reset L to identity (isotropic sampling)
+                for (size_t i = 0; i < n; ++i)
+                    for (size_t j = 0; j < n; ++j)
+                        L[i][j] = (i == j) ? 1.0f : 0.0f;
+            }
         }
 
         for (size_t k = 0; k < lambda && total_evals < cmaes.max_evaluations; ++k) {
@@ -1626,21 +2551,70 @@ CMAES CMAES::exploit() {
 
 // setAlgorithm implementations
 void ParameterOptimization::setAlgorithm(const GeneticAlgorithm &algorithm) {
-    algorithm_ = algorithm;
+    algorithm_ = algorithm; algorithm_set_ = true;
 }
 
 void ParameterOptimization::setAlgorithm(const BayesianOptimization &algorithm) {
-    algorithm_ = algorithm;
+    algorithm_ = algorithm; algorithm_set_ = true;
 }
 
 void ParameterOptimization::setAlgorithm(const CMAES &algorithm) {
-    algorithm_ = algorithm;
+    algorithm_ = algorithm; algorithm_set_ = true;
 }
 
-// Main run dispatcher
-ParameterOptimization::Result ParameterOptimization::run(std::function<float(const ParametersToOptimize &)> simulation, const ParametersToOptimize &parameters) {
+void ParameterOptimization::setAlgorithm(const LBFGS &algorithm) {
+    algorithm_ = algorithm; algorithm_set_ = true;
+}
 
-    // Validate output file paths before starting optimization
+void ParameterOptimization::setAlgorithm(const Adam &algorithm) {
+    algorithm_ = algorithm; algorithm_set_ = true;
+}
+
+void ParameterOptimization::setAlgorithm(const BOBYQA &algorithm) {
+    algorithm_ = algorithm; algorithm_set_ = true;
+}
+
+void ParameterOptimization::setAlgorithm(const SLSQP &algorithm) {
+    algorithm_ = algorithm; algorithm_set_ = true;
+}
+
+// --- Default algorithm selection ---
+
+void ParameterOptimization::selectDefaultAlgorithm(const ParametersToOptimize &parameters, bool has_gradient, bool has_constraints) {
+    if (algorithm_set_) return;
+
+    bool has_discrete = false;
+    for (const auto &[name, p] : parameters) {
+        if (p.type == ParameterType::INTEGER || p.type == ParameterType::CATEGORICAL) {
+            has_discrete = true;
+            break;
+        }
+    }
+    size_t n = parameters.size();
+
+    if (has_constraints) {
+        if (has_discrete) {
+            helios_runtime_error("ERROR (ParameterOptimization::run): Constrained optimization with discrete (INTEGER/CATEGORICAL) parameters is not supported. "
+                                 "Use GA with a penalty term in the objective function instead (see documentation for details).");
+        }
+        algorithm_ = SLSQP{};
+    } else if (has_gradient) {
+        if (has_discrete) {
+            algorithm_ = GeneticAlgorithm{};  // only option for discrete; gradient is ignored
+        } else {
+            algorithm_ = Adam{};
+        }
+    } else {
+        if (has_discrete || n > 50) {
+            algorithm_ = GeneticAlgorithm{};
+        } else {
+            algorithm_ = CMAES{};
+        }
+    }
+}
+
+// Shared output path validation and progress file setup
+static void validateAndOpenProgress(const std::string &write_result_to_file, const std::string &write_progress_to_file, std::ofstream &outProgress) {
     if (!write_result_to_file.empty()) {
         std::string result_path = write_result_to_file;
         if (!validateOutputPath(result_path, {".csv", ".txt"})) {
@@ -1652,19 +2626,35 @@ ParameterOptimization::Result ParameterOptimization::run(std::function<float(con
         if (!validateOutputPath(progress_path, {".csv", ".txt"})) {
             helios_runtime_error("ERROR (ParameterOptimization::run): Invalid output path for write_progress_to_file '" + write_progress_to_file + "'. Check that the directory exists and you have write permission.");
         }
-    }
-
-    std::ofstream outProgress;
-    if (!write_progress_to_file.empty()) {
         outProgress = std::ofstream(write_progress_to_file);
         outProgress.clear();
         outProgress << "generation,fitness,parameter,value,min,max\n";
     }
+}
+
+// Derivative-free run (existing API)
+ParameterOptimization::Result ParameterOptimization::run(std::function<float(const ParametersToOptimize &)> simulation, const ParametersToOptimize &parameters) {
+
+    selectDefaultAlgorithm(parameters, false, false);
+
+    std::ofstream outProgress;
+    validateAndOpenProgress(write_result_to_file, write_progress_to_file, outProgress);
 
     return std::visit(
             [&](const auto &algo) -> Result {
                 using T = std::decay_t<decltype(algo)>;
-                if constexpr (std::is_same_v<T, BayesianOptimization>) {
+                if constexpr (std::is_same_v<T, LBFGS>) {
+                    helios_runtime_error("ERROR (ParameterOptimization::run): L-BFGS requires a gradient function. Use run(objective, parameters, gradient) instead.");
+                    return Result{}; // unreachable
+                } else if constexpr (std::is_same_v<T, Adam>) {
+                    helios_runtime_error("ERROR (ParameterOptimization::run): Adam requires a gradient function. Use run(objective, parameters, gradient) instead.");
+                    return Result{}; // unreachable
+                } else if constexpr (std::is_same_v<T, BOBYQA>) {
+                    return runBOBYQA(simulation, parameters, algo, print_progress, write_progress_to_file, write_result_to_file, outProgress, message_flag);
+                } else if constexpr (std::is_same_v<T, SLSQP>) {
+                    helios_runtime_error("ERROR (ParameterOptimization::run): SLSQP requires a gradient function and constraints. Use run(objective, parameters, gradient, constraints) instead.");
+                    return Result{}; // unreachable
+                } else if constexpr (std::is_same_v<T, BayesianOptimization>) {
                     return runBayesianOptimization(simulation, parameters, algo, print_progress, write_progress_to_file, outProgress, message_flag);
                 } else if constexpr (std::is_same_v<T, CMAES>) {
                     return runCMAES(simulation, parameters, algo, print_progress, write_progress_to_file, write_result_to_file, outProgress, message_flag);
@@ -1673,6 +2663,150 @@ ParameterOptimization::Result ParameterOptimization::run(std::function<float(con
                 }
             },
             algorithm_);
+}
+
+// Gradient-aware run
+ParameterOptimization::Result ParameterOptimization::run(ObjectiveFunction objective, const ParametersToOptimize &parameters, GradientFunction gradient) {
+
+    selectDefaultAlgorithm(parameters, true, false);
+
+    std::ofstream outProgress;
+    validateAndOpenProgress(write_result_to_file, write_progress_to_file, outProgress);
+
+    ObjectiveBundle bundle;
+    bundle.objective = objective;
+    bundle.gradient = gradient;
+    bundle.has_gradient = true;
+
+    return std::visit(
+            [&](const auto &algo) -> Result {
+                using T = std::decay_t<decltype(algo)>;
+                if constexpr (std::is_same_v<T, LBFGS>) {
+                    return runLBFGS(bundle, parameters, algo, print_progress, write_progress_to_file, write_result_to_file, outProgress, message_flag);
+                } else if constexpr (std::is_same_v<T, Adam>) {
+                    return runAdam(bundle, parameters, algo, print_progress, write_progress_to_file, write_result_to_file, outProgress, message_flag);
+                } else if constexpr (std::is_same_v<T, BOBYQA>) {
+                    return runBOBYQA(objective, parameters, algo, print_progress, write_progress_to_file, write_result_to_file, outProgress, message_flag);
+                } else if constexpr (std::is_same_v<T, SLSQP>) {
+                    // SLSQP without constraints — works like unconstrained gradient optimizer
+                    return runSLSQP(bundle, parameters, algo, {}, print_progress, write_progress_to_file, write_result_to_file, outProgress, message_flag);
+                } else if constexpr (std::is_same_v<T, BayesianOptimization>) {
+                    return runBayesianOptimization(objective, parameters, algo, print_progress, write_progress_to_file, outProgress, message_flag);
+                } else if constexpr (std::is_same_v<T, CMAES>) {
+                    return runCMAES(objective, parameters, algo, print_progress, write_progress_to_file, write_result_to_file, outProgress, message_flag);
+                } else {
+                    return runGeneticAlgorithm(objective, parameters, algo, print_progress, write_progress_to_file, write_result_to_file, read_input_from_file, outProgress, message_flag);
+                }
+            },
+            algorithm_);
+}
+
+// Constrained gradient-aware run (SLSQP)
+ParameterOptimization::Result ParameterOptimization::run(ObjectiveFunction objective, const ParametersToOptimize &parameters,
+                                                          GradientFunction gradient, const std::vector<Constraint> &constraints) {
+
+    selectDefaultAlgorithm(parameters, true, true);
+
+    std::ofstream outProgress;
+    validateAndOpenProgress(write_result_to_file, write_progress_to_file, outProgress);
+
+    ObjectiveBundle bundle;
+    bundle.objective = objective;
+    bundle.gradient = gradient;
+    bundle.has_gradient = true;
+
+    return std::visit(
+            [&](const auto &algo) -> Result {
+                using T = std::decay_t<decltype(algo)>;
+                if constexpr (std::is_same_v<T, SLSQP>) {
+                    return runSLSQP(bundle, parameters, algo, constraints, print_progress, write_progress_to_file, write_result_to_file, outProgress, message_flag);
+                } else {
+                    helios_runtime_error("ERROR (ParameterOptimization::run): Constrained optimization requires setAlgorithm(SLSQP{...}).");
+                    return Result{};
+                }
+            },
+            algorithm_);
+}
+
+// Combined constrained simulation run (SLSQP with caching)
+ParameterOptimization::Result ParameterOptimization::run(ConstrainedSimulation simulation, const ParametersToOptimize &parameters) {
+
+    selectDefaultAlgorithm(parameters, true, true);
+
+    if (!std::holds_alternative<SLSQP>(algorithm_)) {
+        helios_runtime_error("ERROR (ParameterOptimization::run): ConstrainedSimulation overload requires setAlgorithm(SLSQP{...}).");
+    }
+
+    // Cache: stores the last ConstrainedResult so NLopt's separate callbacks
+    // don't re-run the simulation at the same parameter point.
+    // Keyed on the natural-space parameter vector (double) for exact comparison.
+    struct Cache {
+        std::vector<double> last_x;
+        ConstrainedResult last_result;
+        bool valid = false;
+
+        const ConstrainedResult& evaluate(ConstrainedSimulation& sim,
+                                           const ParametersToOptimize& p,
+                                           const std::vector<std::string>& names) {
+            // Convert to double vector for cache key comparison
+            std::vector<double> x(names.size());
+            for (size_t i = 0; i < names.size(); ++i)
+                x[i] = static_cast<double>(p.at(names[i]).value);
+
+            if (valid && x == last_x) return last_result;
+            last_x = x;
+            last_result = sim(p);
+            valid = true;
+            return last_result;
+        }
+    };
+
+    auto cache = std::make_shared<Cache>();
+    auto sim_ref = std::make_shared<ConstrainedSimulation>(std::move(simulation));
+
+    // Capture by value to avoid dangling references
+    std::vector<std::string> param_names = getOrderedParamNames(parameters);
+    ParametersToOptimize param_template = parameters;
+
+    // Initial evaluation to determine constraint count and validate
+    ConstrainedResult init_eval = (*sim_ref)(parameters);
+    size_t n_constraints = init_eval.constraints.size();
+
+    if (init_eval.con_gradients.size() != n_constraints) {
+        helios_runtime_error("ERROR (ParameterOptimization::run): ConstrainedSimulation returned "
+                             + std::to_string(n_constraints) + " constraints but "
+                             + std::to_string(init_eval.con_gradients.size()) + " constraint gradients.");
+    }
+
+    // Seed the cache with the initial evaluation
+    cache->last_result = init_eval;
+    cache->last_x.resize(param_names.size());
+    for (size_t i = 0; i < param_names.size(); ++i)
+        cache->last_x[i] = static_cast<double>(parameters.at(param_names[i]).value);
+    cache->valid = true;
+
+    // Build separate callbacks that read from the cache (all captured by value)
+    ObjectiveFunction obj = [cache, sim_ref, param_template, param_names](const ParametersToOptimize& p) -> float {
+        return cache->evaluate(*sim_ref, p, param_names).objective;
+    };
+
+    GradientFunction grad = [cache, sim_ref, param_template, param_names](const ParametersToOptimize& p) -> ParameterGradient {
+        return cache->evaluate(*sim_ref, p, param_names).obj_gradient;
+    };
+
+    std::vector<Constraint> constraints(n_constraints);
+    for (size_t i = 0; i < n_constraints; ++i) {
+        constraints[i].function = [cache, sim_ref, param_template, param_names, i](const ParametersToOptimize& p) -> float {
+            return cache->evaluate(*sim_ref, p, param_names).constraints[i];
+        };
+        constraints[i].gradient = [cache, sim_ref, param_template, param_names, i](const ParametersToOptimize& p) -> ParameterGradient {
+            return cache->evaluate(*sim_ref, p, param_names).con_gradients[i];
+        };
+        constraints[i].tolerance = 1e-6f;
+    }
+
+    // Delegate to the existing separate-callbacks SLSQP path
+    return run(obj, parameters, grad, constraints);
 }
 
 int ParameterOptimization::selfTestVisualized(const std::string &output_dir) {
@@ -1749,8 +2883,10 @@ int ParameterOptimization::selfTestVisualized(const std::string &output_dir) {
         for (const auto &algo_config: algorithms) {
             std::cout << "  Running " << algo_config.name << "..." << std::endl;
 
-            // Setup parameters
-            ParametersToOptimize params = {{"x", {0.0f, test_func.bounds.first, test_func.bounds.second}}, {"y", {0.0f, test_func.bounds.first, test_func.bounds.second}}};
+            // Setup parameters — start away from optimum so all algorithms show trajectory
+            float x0 = test_func.bounds.first * 0.6f;  // 60% toward lower bound
+            float y0 = test_func.bounds.second * 0.8f;  // 80% toward upper bound
+            ParametersToOptimize params = {{"x", {x0, test_func.bounds.first, test_func.bounds.second}}, {"y", {y0, test_func.bounds.first, test_func.bounds.second}}};
 
             // Output filenames
             std::string pop_filename = output_dir + "/" + algo_config.name + "_" + test_func.name + "_population.csv";
@@ -1799,6 +2935,75 @@ int ParameterOptimization::selfTestVisualized(const std::string &output_dir) {
         }
         std::cout << std::endl;
     }
+
+#ifdef HELIOS_HAVE_NLOPT
+    // ---- LBFGS with analytical gradients ----
+    // Gradient functions for each test function
+    struct GradFunc {
+        std::string name;
+        std::function<std::pair<float,float>(float, float)> grad;
+    };
+    std::vector<GradFunc> grad_functions = {
+        {"sphere", [](float x, float y) -> std::pair<float,float> { return {2.f*x, 2.f*y}; }},
+        {"rosenbrock", [](float x, float y) -> std::pair<float,float> {
+            return {2.f*(x-1.f) - 400.f*x*(y - x*x), 200.f*(y - x*x)};
+        }}
+    };
+
+    for (size_t fi = 0; fi < test_functions.size(); fi++) {
+        const auto &test_func = test_functions[fi];
+        const auto &gf = grad_functions[fi];
+        std::cout << "  Running LBFGS on " << test_func.name << "..." << std::endl;
+
+        float x0 = test_func.bounds.first * 0.6f;
+        float y0 = test_func.bounds.second * 0.8f;
+        ParametersToOptimize params = {
+            {"x", {x0, test_func.bounds.first, test_func.bounds.second}},
+            {"y", {y0, test_func.bounds.first, test_func.bounds.second}}
+        };
+
+        std::vector<std::tuple<int, float, float, float>> eval_history;
+        int eval_count = 0;
+
+        ::ObjectiveFunction obj = [&](const ParametersToOptimize &p) -> float {
+            float x = p.at("x").value, y = p.at("y").value;
+            float fitness = test_func.func(x, y);
+            eval_history.push_back({eval_count++, x, y, fitness});
+            return fitness;
+        };
+
+        ::GradientFunction grad = [&](const ParametersToOptimize &p) -> ParameterGradient {
+            float x = p.at("x").value, y = p.at("y").value;
+            auto [gx, gy] = gf.grad(x, y);
+            return {{"x", gx}, {"y", gy}};
+        };
+
+        std::string pop_filename = output_dir + "/LBFGS_" + test_func.name + "_population.csv";
+        std::string best_filename = output_dir + "/LBFGS_" + test_func.name + "_best.csv";
+
+        ParameterOptimization optimizer;
+        optimizer.print_progress = false;
+        optimizer.write_progress_to_file = best_filename;
+        LBFGS lbfgs;
+        lbfgs.max_iterations = 200;
+        optimizer.setAlgorithm(lbfgs);
+        auto result = optimizer.run(obj, params, grad);
+
+        // Write population CSV (one eval per row, pop_size=1 for LBFGS)
+        std::ofstream outfile(pop_filename);
+        outfile << "iteration,individual_id,x,y,fitness\n";
+        for (size_t i = 0; i < eval_history.size(); i++) {
+            auto &[id, x, y, fit] = eval_history[i];
+            outfile << i << ",0," << x << "," << y << "," << fit << "\n";
+        }
+        outfile.close();
+
+        std::cout << "    Best fitness: " << result.fitness << " at (" << result.parameters.at("x").value << ", " << result.parameters.at("y").value << ")" << std::endl;
+        std::cout << "    Written " << eval_history.size() << " evaluations to " << pop_filename << std::endl;
+        std::cout << "    Written best-per-generation to " << best_filename << std::endl;
+    }
+    std::cout << std::endl;
+#endif
 
     std::cout << "Visualization test complete. Output files written to: " << output_dir << std::endl;
     std::cout << "Population CSV: iteration,individual_id,x,y,fitness" << std::endl;

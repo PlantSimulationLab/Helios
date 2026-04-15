@@ -401,6 +401,8 @@ struct FloralBud {
     BudState state = BUD_DORMANT;
     // amount of time since the bud flowered (=0 if it has not yet flowered)
     float time_counter = 0;
+    // cumulative age since bud break (first transition out of dormant/active state)
+    float age = 0;
     //=0 for axillary buds, =1 for terminal buds
     bool isterminal = false;
     // For axillary buds: index of the petiole within the internode that this floral bud originates from
@@ -1758,6 +1760,45 @@ struct PlantInstance {
     float attraction_obstacle_reduction_factor = 0.5f;
 };
 
+//! Parameters for USD articulated rigid body export for IsaacSim
+struct USDExportParameters {
+    //! Young's modulus (Pa) for joint stiffness calculation: K = E*I/L
+    float elastic_modulus = 5e9f;
+    //! Density (kg/m^3) for mass calculation from capsule volume
+    float wood_density = 800.f;
+    //! Damping ratio for joint drives (dimensionless). Damping = ratio * 2 * sqrt(K*I)
+    float damping_ratio = 0.1f;
+    //! Static friction coefficient for collision material
+    float static_friction = 0.5f;
+    //! Dynamic friction coefficient for collision material
+    float dynamic_friction = 0.3f;
+    //! Restitution (bounciness) for collision material
+    float restitution = 0.1f;
+    //! Spring stiffness (N*m/rad) for leaf/fruit/flower attachment joints
+    float organ_spring_stiffness = 10.f;
+    //! Damping (N*m*s/rad) for leaf/fruit/flower attachment joints
+    float organ_spring_damping = 1.f;
+    //! Leaf mass per unit area (kg/m^2) — used to compute leaf mass from leaf area
+    float leaf_mass_per_area = 0.05f;
+    //! Mass per fruit (kg)
+    float fruit_mass = 0.01f;
+    //! Mass per flower (kg)
+    float flower_mass = 0.002f;
+    //! PhysX articulation solver position iteration count
+    uint solver_position_iterations = 32;
+    //! Minimum segment length (m). Segments shorter than this are skipped.
+    float min_segment_length = 0.001f;
+};
+
+//! Opaque storage for a single growth animation frame snapshot (defined in InputOutput.cpp)
+struct GrowthFrameSnapshot;
+
+//! Storage container for growth animation frame data
+struct PlantGrowthAnimationStorage {
+    //! Map from plantID to vector of frame snapshots
+    std::map<uint, std::vector<std::shared_ptr<GrowthFrameSnapshot>>> plant_frames;
+};
+
 class PlantArchitecture {
 public:
     //! Main architectural model class constructor
@@ -2926,6 +2967,60 @@ public:
      */
     void writeQSMCylinderFile(uint plantID, const std::string &filename) const;
 
+    //! Write plant as a USD articulated rigid body for NVIDIA IsaacSim physics simulation.
+    /**
+     * Exports the plant structure (internodes, petioles, peduncles, leaves, fruits, flowers) as a
+     * PhysX articulation in USDA (ASCII USD) format. Each tube segment becomes a rigid link with a
+     * capsule collision shape, connected by D6 joints with rotational spring/damper drives derived
+     * from beam bending stiffness (E*I/L). Leaves, fruits, and flowers are represented as mass
+     * bodies attached by spring links at their base positions.
+     *
+     * \param[in] plantID ID of the plant instance to export.
+     * \param[in] filename Path to the output file (should have .usda extension).
+     * \param[in] params Export parameters controlling physics properties and scope.
+     */
+    void writePlantStructureUSD(uint plantID, const std::string &filename, const USDExportParameters &params = USDExportParameters()) const;
+
+    //! Register the current plant state as a growth animation frame.
+    /**
+     * Captures a snapshot of the plant's geometry (all links, transforms, meshes, and materials) at the
+     * current point in the growth simulation. Call this after each \ref advanceTime() step to record the
+     * plant's state for later animation export via \ref writePlantGrowthUSD().
+     *
+     * \param[in] plantID ID of the plant instance to capture.
+     * \param[in] min_segment_length Minimum segment length (m). Segments shorter than this are skipped.
+     */
+    void registerGrowthFrame(uint plantID, float min_segment_length = 0.001f);
+
+    //! Write all registered growth frames as a time-sampled USD animation file for Blender.
+    /**
+     * Exports a USDA file containing all growth frames registered via \ref registerGrowthFrame() as
+     * time-sampled Xform transforms. Each plant organ is an independent prim with animated position and
+     * orientation. Organs that appear during growth are toggled from invisible to visible at the
+     * appropriate time code. The resulting file can be imported directly into Blender.
+     *
+     * This is a visual-only export — no physics prims, joints, or collision shapes are written.
+     *
+     * \param[in] plantID ID of the plant instance to export.
+     * \param[in] filename Path to the output file (should have .usda extension).
+     * \param[in] seconds_per_frame Duration in seconds that each growth frame occupies in the animation (default: 1 second).
+     *   For example, with 6 frames and seconds_per_frame=1.0, the total animation is 5 seconds long.
+     */
+    void writePlantGrowthUSD(uint plantID, const std::string &filename, float seconds_per_frame = 1.0f) const;
+
+    //! Clear stored growth animation frames for a plant.
+    /**
+     * \param[in] plantID ID of the plant instance whose frames should be cleared.
+     */
+    void clearGrowthFrames(uint plantID);
+
+    //! Get the number of registered growth frames for a plant.
+    /**
+     * \param[in] plantID ID of the plant instance to query.
+     * \return Number of frames registered via \ref registerGrowthFrame().
+     */
+    [[nodiscard]] uint getGrowthFrameCount(uint plantID) const;
+
     /**
      * \brief Reads plant structure data from an XML file.
      *
@@ -3218,6 +3313,11 @@ protected:
 
     //! Flag to enable/disable console output messages
     bool printmessages = true;
+
+    // --- Growth Animation Frame Storage --- //
+
+    //! Storage for growth animation frames registered via registerGrowthFrame()
+    PlantGrowthAnimationStorage growth_animation_storage;
 
     // --- Plant Library --- //
 

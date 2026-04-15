@@ -168,6 +168,7 @@ namespace helios {
         destroyBuffer(solar_disk_radiance_buffer);
         destroyBuffer(debug_counters_buffer);
         destroyBuffer(bbox_vertices_buffer);
+        destroyBuffer(band_map_buffer);
 
         // Destroy command resources
         if (transfer_fence != VK_NULL_HANDLE)

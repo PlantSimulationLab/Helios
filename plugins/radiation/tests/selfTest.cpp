@@ -1290,6 +1290,29 @@ GPU_TEST_CASE("RadiationModel Homogeneous Canopy with Periodic Boundaries") {
     DOCTEST_CHECK(fabsf(intercepted_leaf_diffuse_12 - intercepted_theoretical_diffuse_12) <= 2.f * error_threshold);
 }
 
+GPU_TEST_CASE("RayTracingGeometry validation with periodic boundaries") {
+    // Minimal scene with periodic boundaries to exercise validate() with bbox_count > 0.
+    // Before fix, validate() checked shared arrays against primitive_count + bbox_count,
+    // but buildGeometryData() only populates them with primitive_count entries.
+    Context context;
+    context.addPatch(make_vec3(0, 0, 1), make_vec2(1, 1));
+    context.addPatch(make_vec3(1, 0, 1), make_vec2(1, 1));
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("PAR");
+    radiation.disableEmission("PAR");
+    radiation.setDiffuseRayCount("PAR", 100);
+    radiation.setScatteringDepth("PAR", 0);
+    radiation.enforcePeriodicBoundary("xy");
+
+    // updateGeometry() calls validateGeometryBeforeUpload() → validate()
+    // This crashed in Debug builds before the fix due to bbox_count size mismatch
+    radiation.updateGeometry();
+
+    DOCTEST_CHECK(true);
+}
+
 GPU_TEST_CASE("RadiationModel Texture-masked Tile Objects with Periodic Boundaries") {
     float error_threshold = 0.005;
 

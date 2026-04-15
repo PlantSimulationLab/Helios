@@ -90,7 +90,7 @@ float computeConductance(const HydraulicConductance &coeffs, float water_potenti
     if (a == 0.f || b == 0.f) {
         K = Ksat;
     } else {
-        K = Ksat / (1.f + pow(abs(psi / a), b));
+        K = Ksat / (1.f + pow(fabs(psi / a), b));
     }
 
     if (coeffs.temperature_dependence) {
@@ -110,7 +110,7 @@ float computeCapacitance(const HydraulicCapacitance &coeffs, float relative_wate
     float f0 = computeWaterPotential(coeffs, w - h);
     float f1 = computeWaterPotential(coeffs, w);
     float f2 = computeWaterPotential(coeffs, w + h);
-    float dpsidw = (f0 - 2.f * f1 + f2) / (h * h);
+    float dpsidw = (f2 - f0) / (2.f * h);
     C = Wsat / dpsidw; // mol/m2/MPa
     return C;
 }
@@ -317,7 +317,7 @@ void PlantHydraulicsModel::updateRootAndStemWaterPotentialsOfPlant(const std::ve
                 }
             }
 
-            delta_psi = max(root_water_potential_new - root_water_potential, stem_water_potential_new - stem_water_potential);
+            delta_psi = max(fabs(root_water_potential_new - root_water_potential), fabs(stem_water_potential_new - stem_water_potential));
 
             root_water_potential = root_water_potential_new;
             stem_water_potential = stem_water_potential_new;
@@ -344,12 +344,8 @@ void PlantHydraulicsModel::updateLeafWaterPotentialsOfPlant(const std::vector<ui
 
     if (steadystate) {
         for (uint i = 0; i < UUIDs.size(); i++) {
-            PlantHydraulicsModelCoefficients coeffs;
-            if (modelcoeffs_map.empty() || modelcoeffs_map.find(i) == modelcoeffs_map.end()) {
-                coeffs = modelcoeffs;
-            } else {
-                coeffs = modelcoeffs_map.at(i);
-            }
+            auto it = modelcoeffs_map.find(UUIDs.at(i));
+            const PlantHydraulicsModelCoefficients &coeffs = (it == modelcoeffs_map.end()) ? modelcoeffs : it->second;
 
             stem_water_potential = stemWaterPotentialsByPlantID.at(getPlantID(UUIDs.at(i)));
             leaf_water_potential = getOrInitializePrimitiveData(UUIDs.at(i), "water_potential", -0.001, false);
@@ -372,12 +368,8 @@ void PlantHydraulicsModel::updateLeafWaterPotentialsOfPlant(const std::vector<ui
     } else {
         // Non-steady-state
         for (uint i = 0; i < UUIDs.size(); i++) {
-            PlantHydraulicsModelCoefficients coeffs;
-            if (modelcoeffs_map.empty() || modelcoeffs_map.find(i) == modelcoeffs_map.end()) {
-                coeffs = modelcoeffs;
-            } else {
-                coeffs = modelcoeffs_map.at(i);
-            }
+            auto it = modelcoeffs_map.find(UUIDs.at(i));
+            const PlantHydraulicsModelCoefficients &coeffs = (it == modelcoeffs_map.end()) ? modelcoeffs : it->second;
 
             leaf_transpiration = getOrInitializePrimitiveData(UUIDs.at(i), "latent_flux", 0.f, false);
             leaf_temperature = getOrInitializePrimitiveData(UUIDs.at(i), "temperature", 300.f, false);
@@ -394,7 +386,7 @@ void PlantHydraulicsModel::updateLeafWaterPotentialsOfPlant(const std::vector<ui
                 C_leaf = computeCapacitance(coeffs.LeafHydraulicCapacitance, leaf_relative_water_content); // mol/m2/MPa
                 Fin = K_leaf * (stem_water_potential - leaf_water_potential); // mol/m2/s
                 Fout = leaf_transpiration; // mol/m2/s
-                leaf_relative_water_content += dt * (Fin - Fout);
+                leaf_relative_water_content += dt * (Fin - Fout) / coeffs.LeafHydraulicCapacitance.saturated_specific_water_content;
                 // printf("leaf_water_potential: %f, C_leaf: %f, Fin: %f, Fout: %f\n",leaf_water_potential,C_leaf,Fin,Fout);
                 //  leaf_relative_water_content += (Fin - Fout) * dt / (coeffs.LeafHydraulicCapacitance.saturated_specific_water_content);
                 leaf_relative_water_content = helios::clamp(leaf_relative_water_content, 0.02f, 1.f);
@@ -402,7 +394,7 @@ void PlantHydraulicsModel::updateLeafWaterPotentialsOfPlant(const std::vector<ui
                 leaf_osmotic_potential = computeOsmoticPotential(coeffs.LeafHydraulicCapacitance, leaf_relative_water_content);
                 leaf_water_potential = computeWaterPotential(leaf_turgor_pressure, leaf_osmotic_potential);
                 // printf("pi: %f + P: %f = %f\n",leaf_osmotic_potential,leaf_turgor_pressure,leaf_water_potential);
-                delta_psi = abs(leaf_water_potential - leaf_water_potential_old);
+                delta_psi = fabs(leaf_water_potential - leaf_water_potential_old);
 
                 timestep = adjustTimestep(dt, dt_min, dt_max, delta_psi, delta_psi_max);
             }

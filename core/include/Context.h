@@ -6753,6 +6753,17 @@ namespace helios {
          */
         void addTimeseriesData(const char *label, float value, const Date &date, const Time &time);
 
+        //! Update the value of an existing timeseries data point
+        /**
+         * \param[in] label Name of timeseries variable (e.g., temperature)
+         * \param[in] date Date vector of the point to update (must match an existing entry exactly, see \ref helios::Date "Date")
+         * \param[in] time Time vector of the point to update (must match an existing entry exactly, see \ref helios::Time "Time")
+         * \param[in] new_value Replacement value for the specified timeseries data point
+         * \note Throws a runtime error if `label' does not exist or if no point with the exact (date, time) is found. To append a new point, use \ref addTimeseriesData() instead.
+         * \ingroup timeseries
+         */
+        void updateTimeseriesData(const char *label, const Date &date, const Time &time, float new_value);
+
         //! Set the Context date and time by providing the index of a timeseries data point
         /**
          * \param[in] label Name of timeseries variable (e.g., temperature)

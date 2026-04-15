@@ -2147,13 +2147,30 @@ void helios::writeEXR(const std::string &filename, uint width, uint height, cons
 
     int num_channels = scast<int>(channel_data.size());
 
+    // Map band names to standard EXR channel names (R, G, B, A) for broad compatibility.
+    // Names that don't map to a standard channel are kept as-is.
+    auto mapChannelName = [](const std::string &name) -> std::string {
+        std::string lower = name;
+        std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+        if (lower == "r" || lower == "red") return "R";
+        if (lower == "g" || lower == "green") return "G";
+        if (lower == "b" || lower == "blue") return "B";
+        if (lower == "a" || lower == "alpha") return "A";
+        return name;
+    };
+
+    std::vector<std::string> exr_channel_names(num_channels);
+    for (int c = 0; c < num_channels; c++) {
+        exr_channel_names[c] = mapChannelName(channel_names[c]);
+    }
+
     // Sort channels alphabetically (EXR convention)
     std::vector<size_t> sort_indices(num_channels);
     for (size_t i = 0; i < sort_indices.size(); i++) {
         sort_indices[i] = i;
     }
     std::sort(sort_indices.begin(), sort_indices.end(), [&](size_t a, size_t b) {
-        return channel_names[a] < channel_names[b];
+        return exr_channel_names[a] < exr_channel_names[b];
     });
 
     EXRHeader header;
@@ -2178,7 +2195,7 @@ void helios::writeEXR(const std::string &filename, uint width, uint height, cons
     header.requested_pixel_types = scast<int *>(malloc(sizeof(int) * num_channels));
 
     for (int c = 0; c < num_channels; c++) {
-        strncpy(header.channels[c].name, channel_names[sort_indices[c]].c_str(), 255);
+        strncpy(header.channels[c].name, exr_channel_names[sort_indices[c]].c_str(), 255);
         header.channels[c].name[255] = '\0';
         header.pixel_types[c] = TINYEXR_PIXELTYPE_FLOAT;
         header.requested_pixel_types[c] = TINYEXR_PIXELTYPE_FLOAT;

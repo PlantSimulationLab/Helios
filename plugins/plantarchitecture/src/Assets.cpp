@@ -427,7 +427,7 @@ void CowpeaPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint sho
 
 // Function to generate random float between min and max
 float random_float(float min, float max) {
-    return min + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / (max - min)));
+    return min + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / (max - min));
 }
 
 // Function to check if two spheres overlap

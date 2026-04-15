@@ -1115,7 +1115,7 @@ void RadiationModel::blendSpectra(const std::string &new_spectrum_label, const s
 
     if (spectrum_labels.size() != weights.size()) {
         helios_runtime_error("ERROR (RadiationModel::blendSpectra): number of spectra and weights must be equal");
-    } else if (sum(weights) != 1.f) {
+    } else if (fabsf(sum(weights) - 1.f) > 1e-5f) {
         helios_runtime_error("ERROR (RadiationModel::blendSpectra): weights must sum to 1");
     }
 
@@ -1451,8 +1451,6 @@ void RadiationModel::updateRadiativeProperties() {
         scattering_iterations_needed[band.first] = false;
     }
 
-    std::vector<std::vector<std::vector<float>>> rho, tau; // first index is the source, second index is the primitive, third index is the band
-    std::vector<std::vector<std::vector<std::vector<float>>>> rho_cam, tau_cam; // Fourth index is the camera
     float eps;
 
     std::string prop;
@@ -1461,32 +1459,27 @@ void RadiationModel::updateRadiativeProperties() {
         band_labels.push_back(band.first);
     }
 
-    rho.resize(Nsources);
-    tau.resize(Nsources);
-    for (size_t s = 0; s < Nsources; s++) {
-        rho.at(s).resize(Nprimitives);
-        tau.at(s).resize(Nprimitives);
-        for (size_t p = 0; p < Nprimitives; p++) {
-            rho.at(s).at(p).resize(Nbands);
-            tau.at(s).at(p).resize(Nbands);
-        }
+    // Allocate flat arrays directly in material_data to avoid nested vector overhead and redundant copies
+    material_data.num_primitives = Nprimitives;
+    material_data.num_bands = Nbands;
+    material_data.num_sources = Nsources;
+    material_data.num_cameras = Ncameras;
+
+    size_t mat_size = (size_t)Nsources * Nprimitives * Nbands;
+    material_data.reflectivity.assign(mat_size, rho_default);
+    material_data.transmissivity.assign(mat_size, tau_default);
+
+    if (Ncameras > 0) {
+        size_t cam_size = (size_t)Nsources * Nprimitives * Nbands * Ncameras;
+        material_data.reflectivity_cam.assign(cam_size, rho_default);
+        material_data.transmissivity_cam.assign(cam_size, tau_default);
+    } else {
+        material_data.reflectivity_cam.clear();
+        material_data.transmissivity_cam.clear();
     }
-    if (Ncameras) {
-        rho_cam.resize(Nsources);
-        tau_cam.resize(Nsources);
-        for (size_t s = 0; s < Nsources; s++) {
-            rho_cam.at(s).resize(Nprimitives);
-            tau_cam.at(s).resize(Nprimitives);
-            for (size_t p = 0; p < Nprimitives; p++) {
-                rho_cam.at(s).at(p).resize(Nbands);
-                tau_cam.at(s).at(p).resize(Nbands);
-                for (size_t b = 0; b < Nbands; b++) {
-                    rho_cam.at(s).at(p).at(b).resize(Ncameras);
-                    tau_cam.at(s).at(p).at(b).resize(Ncameras);
-                }
-            }
-        }
-    }
+
+    MaterialPropertyIndexer mat_idx(Nsources, Nprimitives, Nbands);
+    CameraMaterialIndexer cam_idx(Nsources, Nprimitives, Nbands, Ncameras);
 
     // Cache all unique camera spectral responses for all cameras and bands
     std::vector<std::vector<std::vector<helios::vec2>>> camera_response_unique;
@@ -2080,41 +2073,43 @@ void RadiationModel::updateRadiativeProperties() {
                 }
 
                 for (uint s = 0; s < Nsources; s++) {
+                    float &rho_val = material_data.reflectivity[mat_idx(s, u, b)];
+
                     // if reflectivity was manually set, or a spectrum was given and the global data exists
                     if (rho_s != rho_default || spectrum_label.empty() || !context->doesGlobalDataExist(spectrum_label.c_str()) || rho_unique.find(spectrum_label) == rho_unique.end()) {
 
-                        rho.at(s).at(u).at(b) = rho_s;
+                        rho_val = rho_s;
 
                         // cameras
                         for (uint cam = 0; cam < Ncameras; cam++) {
-                            rho_cam.at(s).at(u).at(b).at(cam) = rho_s;
+                            material_data.reflectivity_cam[cam_idx(s, u, b, cam)] = rho_s;
                         }
 
                         // use spectrum
                     } else {
 
-                        rho.at(s).at(u).at(b) = rho_unique.at(spectrum_label).at(b).at(s);
+                        rho_val = rho_unique.at(spectrum_label).at(b).at(s);
 
                         // cameras
                         for (uint cam = 0; cam < Ncameras; cam++) {
-                            rho_cam.at(s).at(u).at(b).at(cam) = rho_cam_unique.at(spectrum_label).at(b).at(s).at(cam);
+                            material_data.reflectivity_cam[cam_idx(s, u, b, cam)] = rho_cam_unique.at(spectrum_label).at(b).at(s).at(cam);
                         }
                     }
 
                     // error checking
-                    if (rho.at(s).at(u).at(b) < 0) {
-                        rho.at(s).at(u).at(b) = 0.f;
+                    if (rho_val < 0) {
+                        rho_val = 0.f;
                         warnings.addWarning("reflectivity_negative_clamped", "Reflectivity cannot be less than 0. Clamping to 0 for band " + band + ".");
-                    } else if (rho.at(s).at(u).at(b) > 1.f) {
-                        rho.at(s).at(u).at(b) = 1.f;
+                    } else if (rho_val > 1.f) {
+                        rho_val = 1.f;
                         warnings.addWarning("reflectivity_exceeded_clamped", "Reflectivity cannot be greater than 1. Clamping to 1 for band " + band + ".");
                     }
-                    if (rho.at(s).at(u).at(b) != 0) {
+                    if (rho_val != 0) {
                         scattering_iterations_needed.at(band) = true;
                     }
                     for (auto &odata: output_prim_data) {
                         if (odata == "reflectivity") {
-                            context->setPrimitiveData(UUID, ("reflectivity_" + std::to_string(s) + "_" + band).c_str(), rho.at(s).at(u).at(b));
+                            context->setPrimitiveData(UUID, ("reflectivity_" + std::to_string(s) + "_" + band).c_str(), rho_val);
                         }
                     }
                 }
@@ -2143,40 +2138,42 @@ void RadiationModel::updateRadiativeProperties() {
                 }
 
                 for (uint s = 0; s < Nsources; s++) {
+                    float &tau_val = material_data.transmissivity[mat_idx(s, u, b)];
+
                     // if transmissivity was manually set, or a spectrum was given and the global data exists
                     if (tau_s != tau_default || spectrum_label.empty() || !context->doesGlobalDataExist(spectrum_label.c_str()) || tau_unique.find(spectrum_label) == tau_unique.end()) {
 
-                        tau.at(s).at(u).at(b) = tau_s;
+                        tau_val = tau_s;
 
                         // cameras
                         for (uint cam = 0; cam < Ncameras; cam++) {
-                            tau_cam.at(s).at(u).at(b).at(cam) = tau_s;
+                            material_data.transmissivity_cam[cam_idx(s, u, b, cam)] = tau_s;
                         }
 
                     } else {
 
-                        tau.at(s).at(u).at(b) = tau_unique.at(spectrum_label).at(b).at(s);
+                        tau_val = tau_unique.at(spectrum_label).at(b).at(s);
 
                         // cameras
                         for (uint cam = 0; cam < Ncameras; cam++) {
-                            tau_cam.at(s).at(u).at(b).at(cam) = tau_cam_unique.at(spectrum_label).at(b).at(s).at(cam);
+                            material_data.transmissivity_cam[cam_idx(s, u, b, cam)] = tau_cam_unique.at(spectrum_label).at(b).at(s).at(cam);
                         }
                     }
 
                     // error checking
-                    if (tau.at(s).at(u).at(b) < 0) {
-                        tau.at(s).at(u).at(b) = 0.f;
+                    if (tau_val < 0) {
+                        tau_val = 0.f;
                         warnings.addWarning("transmissivity_negative_clamped", "Transmissivity cannot be less than 0. Clamping to 0 for band " + band + ".");
-                    } else if (tau.at(s).at(u).at(b) > 1.f) {
-                        tau.at(s).at(u).at(b) = 1.f;
+                    } else if (tau_val > 1.f) {
+                        tau_val = 1.f;
                         warnings.addWarning("transmissivity_exceeded_clamped", "Transmissivity cannot be greater than 1. Clamping to 1 for band " + band + ".");
                     }
-                    if (tau.at(s).at(u).at(b) != 0) {
+                    if (tau_val != 0) {
                         scattering_iterations_needed.at(band) = true;
                     }
                     for (auto &odata: output_prim_data) {
                         if (odata == "transmissivity") {
-                            context->setPrimitiveData(UUID, ("transmissivity_" + std::to_string(s) + "_" + band).c_str(), tau.at(s).at(u).at(b));
+                            context->setPrimitiveData(UUID, ("transmissivity_" + std::to_string(s) + "_" + band).c_str(), tau_val);
                         }
                     }
                 }
@@ -2210,41 +2207,29 @@ void RadiationModel::updateRadiativeProperties() {
                 assert(doesBandExist(band));
 
                 for (uint s = 0; s < Nsources; s++) {
+                    float &rho_val = material_data.reflectivity[mat_idx(s, u, b)];
+                    float &tau_val = material_data.transmissivity[mat_idx(s, u, b)];
+
                     if (radiation_bands.at(band).emissionFlag) { // emission enabled
-                        if (eps != 1.f && rho.at(s).at(u).at(b) == 0 && tau.at(s).at(u).at(b) == 0) {
-                            rho.at(s).at(u).at(b) = 1.f - eps;
-                        } else if (eps + tau.at(s).at(u).at(b) + rho.at(s).at(u).at(b) != 1.f && eps > 0.f) {
+                        if (eps != 1.f && rho_val == 0 && tau_val == 0) {
+                            rho_val = 1.f - eps;
+                        } else if (eps + tau_val + rho_val != 1.f && eps > 0.f) {
                             helios_runtime_error("ERROR (RadiationModel): emissivity, transmissivity, and reflectivity must sum to 1 to ensure energy conservation. Band " + band + ", Primitive #" + std::to_string(UUID) + ": eps=" +
-                                                 std::to_string(eps) + ", tau=" + std::to_string(tau.at(s).at(u).at(b)) + ", rho=" + std::to_string(rho.at(s).at(u).at(b)) + ". It is also possible that you forgot to disable emission for this band.");
+                                                 std::to_string(eps) + ", tau=" + std::to_string(tau_val) + ", rho=" + std::to_string(rho_val) + ". It is also possible that you forgot to disable emission for this band.");
                         } else if (radiation_bands.at(band).scatteringDepth == 0 && eps != 1.f) {
                             eps = 1.f;
-                            rho.at(s).at(u).at(b) = 0.f;
-                            tau.at(s).at(u).at(b) = 0.f;
+                            rho_val = 0.f;
+                            tau_val = 0.f;
                         }
-                    } else if (tau.at(s).at(u).at(b) + rho.at(s).at(u).at(b) > 1.f) {
+                    } else if (tau_val + rho_val > 1.f) {
                         helios_runtime_error("ERROR (RadiationModel): transmissivity and reflectivity cannot sum to greater than 1 ensure energy conservation. Band " + band + ", Primitive #" + std::to_string(UUID) + ": eps=" + std::to_string(eps) +
-                                             ", tau=" + std::to_string(tau.at(s).at(u).at(b)) + ", rho=" + std::to_string(rho.at(s).at(u).at(b)) + ". It is also possible that you forgot to disable emission for this band.");
+                                             ", tau=" + std::to_string(tau_val) + ", rho=" + std::to_string(rho_val) + ". It is also possible that you forgot to disable emission for this band.");
                     }
                 }
                 b++;
             }
         }
     }
-
-    std::vector<float> rho_flat = flatten(rho);
-    std::vector<float> tau_flat = flatten(tau);
-    std::vector<float> rho_cam_flat = flatten(rho_cam);
-    std::vector<float> tau_cam_flat = flatten(tau_cam);
-
-    // Upload material properties to backend
-    material_data.num_primitives = Nprimitives;
-    material_data.num_bands = radiation_bands.size();
-    material_data.num_sources = radiation_sources.size();
-    material_data.num_cameras = cameras.size();
-    material_data.reflectivity = rho_flat;
-    material_data.transmissivity = tau_flat;
-    material_data.reflectivity_cam = rho_cam_flat;
-    material_data.transmissivity_cam = tau_cam_flat;
 
     // Specular reflection properties
     material_data.specular_exponent.resize(Nprimitives, -1.f);

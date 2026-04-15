@@ -251,7 +251,7 @@ public:
      * \param[in] temperature_dependence Toggle the temperature dependence of hydraulic conductance, i.e K(T) = K*(T/298.15)^7
      */
     void setStemHydraulicConductanceTemperatureDependence(bool temperature_dependence) {
-        this->RootHydraulicConductance.setTemperatureDependence(temperature_dependence);
+        this->StemHydraulicConductance.setTemperatureDependence(temperature_dependence);
     }
 
     //! Set root hydraulic conductance as a constant value
@@ -327,6 +327,17 @@ public:
         this->LeafHydraulicCapacitance = HydraulicCapacitance(osmotic_potential_at_full_turgor, relative_water_content_at_turgor_loss, cell_wall_elasticity_exponent);
     }
 
+    //! Set leaf hydraulic capacitance as a function of water content with pressure-volume curve derived parameters.
+    /**
+     * \param[in] osmotic_potential_at_full_turgor Osmotic potential at full turgor (also, -1*maximum turgor pressure) (MPa)
+     * \param[in] relative_water_content_at_turgor_loss Relative water content at the turgor loss point (unitless) Typical range 0.7-0.95.
+     * \param[in] cell_wall_elasticity_exponent Exponent of turgor pressure verse relative water content relationship (unitless) Typical range 1-2.
+     * \param[in] saturated_specific_water_content Saturated specific water content (mol/m²).
+     */
+    void setLeafHydraulicCapacitance(float osmotic_potential_at_full_turgor, float relative_water_content_at_turgor_loss, float cell_wall_elasticity_exponent, float saturated_specific_water_content) {
+        this->LeafHydraulicCapacitance = HydraulicCapacitance(osmotic_potential_at_full_turgor, relative_water_content_at_turgor_loss, cell_wall_elasticity_exponent, saturated_specific_water_content);
+    }
+
     //! Set leaf hydraulic capacitance as a function of water content with pressure-volume curve derived parameters from Helios library.
     /**
      * \param[in] species String of species name to select from parameter library
@@ -342,8 +353,8 @@ public:
             relative_water_content_at_turgor_loss = 0.7683;
             cell_wall_elasticity_exponent = 2.f;
         } else if (s == "PistachioFemale" || s == "pistachiofemale" || s == "pistachio_female" || s == "Pistachio_Female" || s == "Pistachio_female" || s == "pistachio" || s == "Pistachio") {
-            osmotic_potential_at_full_turgor = 0.7652;
-            relative_water_content_at_turgor_loss = 0.7683;
+            osmotic_potential_at_full_turgor = -3.096;
+            relative_water_content_at_turgor_loss = 0.7652;
             cell_wall_elasticity_exponent = 2.f;
         } else if (s == "Elderberry" || s == "elderberry" || s == "blue_elderberry") {
             osmotic_potential_at_full_turgor = -2.011;
@@ -355,9 +366,9 @@ public:
             cell_wall_elasticity_exponent = 1.5f;
         } else {
             std::cout << "WARNING (PlantHydraulicsModel::getModelCoefficientsFromLibrary): unknown species " << s << ". Setting default (Walnut)." << std::endl;
-            osmotic_potential_at_full_turgor = -2.1963;
-            relative_water_content_at_turgor_loss = 0.8872;
-            cell_wall_elasticity_exponent = 1.5f;
+            osmotic_potential_at_full_turgor = -1.6386;
+            relative_water_content_at_turgor_loss = 0.7683;
+            cell_wall_elasticity_exponent = 2.f;
         }
 
         this->LeafHydraulicCapacitance = HydraulicCapacitance(osmotic_potential_at_full_turgor, relative_water_content_at_turgor_loss, cell_wall_elasticity_exponent);

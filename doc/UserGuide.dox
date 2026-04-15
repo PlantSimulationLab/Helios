@@ -1581,6 +1581,13 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
  ~~~~~~{.cpp}
   uint N = context.getTimeseriesLength( "temperature" );
  ~~~~~~
+
+ The value of an existing timeseries data point can be replaced using \ref helios::Context::updateTimeseriesData() "updateTimeseriesData()", which locates the point by its (Date, Time) key and overwrites the value in place. This is useful for correcting or recomputing individual points without rebuilding the whole timeseries. The method throws a runtime error if the variable does not exist, or if no point has exactly the specified date and time.
+
+ ~~~~~~{.cpp}
+  time = make_Time( 13, 15, 00 );
+  context.updateTimeseriesData( "temperature", date, time, 302.10 ); // replaces the value at index #1
+ ~~~~~~
 	
 
 */

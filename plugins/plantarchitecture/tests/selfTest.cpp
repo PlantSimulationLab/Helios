@@ -2600,6 +2600,365 @@ DOCTEST_TEST_CASE("deletePlantInstance preserves prototypes when plants remain")
     DOCTEST_CHECK(uuids_after.size() > plantarchitecture.getAllPlantUUIDs(plantID2, false).size());
 }
 
+DOCTEST_TEST_CASE("USD export basic structure") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 500);
+
+    std::string filename = "test_usd_basic.usda";
+    plantarchitecture.writePlantStructureUSD(plantID, filename);
+
+    // Read the file and verify key structural elements
+    std::ifstream file(filename);
+    DOCTEST_CHECK(file.is_open());
+
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    file.close();
+    DOCTEST_CHECK(!content.empty());
+
+    // Check required USD elements
+    DOCTEST_CHECK(content.find("PhysicsArticulationRootAPI") != std::string::npos);
+    DOCTEST_CHECK(content.find("PhysxArticulationAPI") != std::string::npos);
+    DOCTEST_CHECK(content.find("PhysicsScene") != std::string::npos);
+    DOCTEST_CHECK(content.find("PhysicsMaterialAPI") != std::string::npos);
+    DOCTEST_CHECK(content.find("PhysicsFixedJoint") != std::string::npos);
+    DOCTEST_CHECK(content.find("PhysicsRigidBodyAPI") != std::string::npos);
+    DOCTEST_CHECK(content.find("PhysicsSphericalJoint") != std::string::npos);
+    DOCTEST_CHECK(content.find("PhysicsDriveAPI:angular") != std::string::npos);
+
+    // Count links (each has PhysicsRigidBodyAPI)
+    size_t link_count = 0;
+    size_t pos = 0;
+    while ((pos = content.find("PhysicsRigidBodyAPI", pos)) != std::string::npos) {
+        link_count++;
+        pos++;
+    }
+    DOCTEST_CHECK(link_count > 0);
+
+    // Verify exactly one fixed joint (world anchor)
+    size_t fixed_count = 0;
+    pos = 0;
+    while ((pos = content.find("PhysicsFixedJoint", pos)) != std::string::npos) {
+        fixed_count++;
+        pos++;
+    }
+    DOCTEST_CHECK(fixed_count == 1);
+
+    std::remove(filename.c_str());
+}
+
+DOCTEST_TEST_CASE("USD export physics properties") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 500);
+
+    USDExportParameters params;
+    params.elastic_modulus = 1e9f;
+    params.wood_density = 500.f;
+
+    std::string filename = "test_usd_physics.usda";
+    plantarchitecture.writePlantStructureUSD(plantID, filename, params);
+
+    // Read and verify physics values are present and positive
+    std::ifstream file(filename);
+    DOCTEST_CHECK(file.is_open());
+
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    file.close();
+
+    // Check that mass values exist and stiffness values exist
+    DOCTEST_CHECK(content.find("physics:mass") != std::string::npos);
+    DOCTEST_CHECK(content.find("drive:angular:physics:stiffness") != std::string::npos);
+    DOCTEST_CHECK(content.find("drive:angular:physics:damping") != std::string::npos);
+
+    // Check that gravity is correct
+    DOCTEST_CHECK(content.find("physics:gravityMagnitude = 9.81") != std::string::npos);
+
+    std::remove(filename.c_str());
+}
+
+DOCTEST_TEST_CASE("USD export branching topology") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Use almond which has branching structure
+    plantarchitecture.loadPlantModelFromLibrary("almond");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 500);
+
+    std::string filename = "test_usd_branching.usda";
+    plantarchitecture.writePlantStructureUSD(plantID, filename);
+
+    std::ifstream file(filename);
+    DOCTEST_CHECK(file.is_open());
+
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    file.close();
+
+    // Should have multiple links and joints
+    size_t link_count = 0;
+    size_t pos = 0;
+    while ((pos = content.find("PhysicsRigidBodyAPI", pos)) != std::string::npos) {
+        link_count++;
+        pos++;
+    }
+    DOCTEST_CHECK(link_count > 3);
+
+    // Check that body0 and body1 references exist (proper joint connectivity)
+    DOCTEST_CHECK(content.find("physics:body0") != std::string::npos);
+    DOCTEST_CHECK(content.find("physics:body1") != std::string::npos);
+
+    std::remove(filename.c_str());
+}
+
+DOCTEST_TEST_CASE("USD export error handling") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Invalid plant ID
+    DOCTEST_CHECK_THROWS(plantarchitecture.writePlantStructureUSD(9999, "test.usda"));
+
+    // Build a plant first, then test empty filename
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 500);
+
+    // Invalid file extension (only .usda/.USDA are accepted)
+    DOCTEST_CHECK_THROWS(plantarchitecture.writePlantStructureUSD(plantID, "test.txt"));
+}
+
+DOCTEST_TEST_CASE("USD export organs") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 500);
+
+    USDExportParameters params;
+    std::string filename = "test_usd_organs.usda";
+    plantarchitecture.writePlantStructureUSD(plantID, filename, params);
+
+    std::ifstream file(filename);
+    DOCTEST_CHECK(file.is_open());
+
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    file.close();
+
+    // Bean should have petiole segments
+    DOCTEST_CHECK(content.find("Pet") != std::string::npos);
+
+    // Bean should have leaves with both Visual and Collision mesh prims
+    DOCTEST_CHECK(content.find("Leaf") != std::string::npos);
+    DOCTEST_CHECK(content.find("def Mesh \"Visual\"") != std::string::npos);
+    DOCTEST_CHECK(content.find("def Mesh \"Collision\"") != std::string::npos);
+
+    // All mesh/capsule prims with material bindings must declare MaterialBindingAPI
+    DOCTEST_CHECK(content.find("\"MaterialBindingAPI\"") != std::string::npos);
+
+    // Visual meshes must have doubleSided and correct subdivision for Isaac Sim
+    DOCTEST_CHECK(content.find("bool doubleSided = 1") != std::string::npos);
+    DOCTEST_CHECK(content.find("subdivisionScheme = \"none\"") != std::string::npos);
+
+    // Normals must be present for correct shading
+    DOCTEST_CHECK(content.find("primvars:normals") != std::string::npos);
+
+    // Texture paths must be relative (no absolute paths starting with /)
+    DOCTEST_CHECK(content.find("asset inputs:file = @/") == std::string::npos);
+
+    std::remove(filename.c_str());
+}
+
+DOCTEST_TEST_CASE("USD export minimum segment filtering") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    // Use almond which has longer internode segments than bean, so both default and
+    // stricter filters always leave at least one surviving segment to export.
+    plantarchitecture.loadPlantModelFromLibrary("almond");
+
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 500);
+
+    // Export with default min_segment_length
+    USDExportParameters params_default;
+    std::string filename_default = "test_usd_filter_default.usda";
+    plantarchitecture.writePlantStructureUSD(plantID, filename_default, params_default);
+
+    // Export with larger min_segment_length — should produce fewer links
+    USDExportParameters params_strict;
+    params_strict.min_segment_length = 0.05f; // 5 cm — filters short segments
+    std::string filename_strict = "test_usd_filter_strict.usda";
+    plantarchitecture.writePlantStructureUSD(plantID, filename_strict, params_strict);
+
+    // Count links in each file
+    auto countOccurrences = [](const std::string &content, const std::string &token) {
+        size_t count = 0;
+        size_t pos = 0;
+        while ((pos = content.find(token, pos)) != std::string::npos) {
+            count++;
+            pos++;
+        }
+        return count;
+    };
+
+    std::ifstream f1(filename_default);
+    std::string content1((std::istreambuf_iterator<char>(f1)), std::istreambuf_iterator<char>());
+    f1.close();
+
+    std::ifstream f2(filename_strict);
+    std::string content2((std::istreambuf_iterator<char>(f2)), std::istreambuf_iterator<char>());
+    f2.close();
+
+    size_t links_default = countOccurrences(content1, "PhysicsRigidBodyAPI");
+    size_t links_strict = countOccurrences(content2, "PhysicsRigidBodyAPI");
+
+    // Stricter filtering should produce fewer or equal links
+    DOCTEST_CHECK(links_strict <= links_default);
+
+    std::remove(filename_default.c_str());
+    std::remove(filename_strict.c_str());
+}
+
+DOCTEST_TEST_CASE("Growth frame registration") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 500);
+
+    DOCTEST_CHECK(plantarchitecture.getGrowthFrameCount(plantID) == 0);
+
+    // Register a frame at initial state
+    plantarchitecture.registerGrowthFrame(plantID);
+    DOCTEST_CHECK(plantarchitecture.getGrowthFrameCount(plantID) == 1);
+
+    // Advance time and register more frames
+    plantarchitecture.advanceTime(10);
+    plantarchitecture.registerGrowthFrame(plantID);
+    DOCTEST_CHECK(plantarchitecture.getGrowthFrameCount(plantID) == 2);
+
+    plantarchitecture.advanceTime(10);
+    plantarchitecture.registerGrowthFrame(plantID);
+    DOCTEST_CHECK(plantarchitecture.getGrowthFrameCount(plantID) == 3);
+
+    // Clear frames
+    plantarchitecture.clearGrowthFrames(plantID);
+    DOCTEST_CHECK(plantarchitecture.getGrowthFrameCount(plantID) == 0);
+
+    // Query for non-existent plant returns 0
+    DOCTEST_CHECK(plantarchitecture.getGrowthFrameCount(9999) == 0);
+}
+
+DOCTEST_TEST_CASE("Growth USD export basic") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 500);
+
+    for (int i = 0; i < 3; i++) {
+        plantarchitecture.advanceTime(10);
+        plantarchitecture.registerGrowthFrame(plantID);
+    }
+
+    std::string filename = "test_growth_usd.usda";
+    // 1 second per growth frame -> time codes spaced by 24 (at 24fps)
+    plantarchitecture.writePlantGrowthUSD(plantID, filename, 1.0f);
+
+    // Read file and verify key USD attributes
+    std::ifstream f(filename);
+    DOCTEST_CHECK(f.is_open());
+    std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    f.close();
+
+    // Verify header fields
+    // 3 frames at 1 sec/frame with 24fps -> time codes 0, 24, 48 -> endTimeCode = 48
+    DOCTEST_CHECK(content.find("startTimeCode = 0") != std::string::npos);
+    DOCTEST_CHECK(content.find("endTimeCode = 48") != std::string::npos);
+    DOCTEST_CHECK(content.find("timeCodesPerSecond = 24") != std::string::npos);
+    DOCTEST_CHECK(content.find("framesPerSecond = 24") != std::string::npos);
+    DOCTEST_CHECK(content.find("upAxis = \"Z\"") != std::string::npos);
+
+    // Verify time-sampled transforms exist
+    DOCTEST_CHECK(content.find("xformOp:translate.timeSamples") != std::string::npos);
+    DOCTEST_CHECK(content.find("xformOp:orient.timeSamples") != std::string::npos);
+    DOCTEST_CHECK(content.find("visibility.timeSamples") != std::string::npos);
+
+    // Verify no physics prims are present
+    DOCTEST_CHECK(content.find("PhysicsArticulationRootAPI") == std::string::npos);
+    DOCTEST_CHECK(content.find("PhysicsRigidBodyAPI") == std::string::npos);
+    DOCTEST_CHECK(content.find("PhysicsJoint") == std::string::npos);
+
+    // Verify mesh data is present
+    DOCTEST_CHECK(content.find("def Mesh \"Visual\"") != std::string::npos);
+
+    std::remove(filename.c_str());
+}
+
+DOCTEST_TEST_CASE("Growth USD export visibility toggling") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+
+    // Build a very young plant so new organs appear during growth
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 1);
+    plantarchitecture.registerGrowthFrame(plantID);
+
+    // Advance significantly so new phytomers/organs appear
+    plantarchitecture.advanceTime(30);
+    plantarchitecture.registerGrowthFrame(plantID);
+
+    std::string filename = "test_growth_visibility.usda";
+    plantarchitecture.writePlantGrowthUSD(plantID, filename);
+
+    std::ifstream f(filename);
+    DOCTEST_CHECK(f.is_open());
+    std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    f.close();
+
+    // Organs that appeared in frame 2 but not frame 1 should have "invisible" at time 0
+    // and "inherited" at time 1. Both tokens should be present somewhere in the file.
+    DOCTEST_CHECK(content.find("\"invisible\"") != std::string::npos);
+    DOCTEST_CHECK(content.find("\"inherited\"") != std::string::npos);
+
+    std::remove(filename.c_str());
+}
+
+DOCTEST_TEST_CASE("Growth USD export error handling") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Error: invalid plant ID for registerGrowthFrame
+    bool threw = false;
+    try {
+        plantarchitecture.registerGrowthFrame(9999);
+    } catch (...) {
+        threw = true;
+    }
+    DOCTEST_CHECK(threw);
+
+    // Error: writePlantGrowthUSD with no frames registered
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 500);
+    threw = false;
+    try {
+        plantarchitecture.writePlantGrowthUSD(plantID, "test_no_frames.usda");
+    } catch (...) {
+        threw = true;
+    }
+    DOCTEST_CHECK(threw);
+}
+
 int PlantArchitecture::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }
