@@ -1583,6 +1583,182 @@ DOCTEST_TEST_CASE("PhotosynthesisModel C4 - Coefficient assignment per-UUID") {
     DOCTEST_CHECK(A1 > A2 + 1.f); // higher Vcmax should yield meaningfully higher A
 }
 
+// -----------------------------------------------------------------------------
+// C4 species parameter library tests
+// -----------------------------------------------------------------------------
+
+DOCTEST_TEST_CASE("PhotosynthesisModel C4 Library - Parameter switching") {
+    // Verify each library entry populates the expected characteristic fields and that entries
+    // are distinguishable from one another. Also exercise case-insensitive key matching.
+    Context context_test;
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    PhotosynthesisModel photomodel(&context_test);
+    photomodel.disableMessages();
+
+    SUBCASE("SetariaViridis_vC2021") {
+        DOCTEST_CHECK_NOTHROW(photomodel.setC4CoefficientsFromLibrary("SetariaViridis_vC2021"));
+        C4ModelCoefficients c = photomodel.getC4ModelCoefficients(UUID);
+        DOCTEST_CHECK(c.getVcmaxTempResponse().value_at_25C == doctest::Approx(40.f).epsilon(err_tol));
+        DOCTEST_CHECK(c.getVcmaxTempResponse().dHa == doctest::Approx(78.f).epsilon(err_tol));
+        DOCTEST_CHECK(c.getVpmaxTempResponse().value_at_25C == doctest::Approx(200.f).epsilon(err_tol));
+        DOCTEST_CHECK(c.getVpmaxTempResponse().dHa == doctest::Approx(50.1f).epsilon(err_tol));
+        DOCTEST_CHECK(c.getRdTempResponse().value_at_25C == doctest::Approx(0.4f).epsilon(err_tol));
+        DOCTEST_CHECK(c.getMesophyllConductance_gmTempResponse().value_at_25C == doctest::Approx(1.0f).epsilon(err_tol));
+        DOCTEST_CHECK(c.Kc_25 == doctest::Approx(1210.f).epsilon(err_tol));
+        DOCTEST_CHECK(c.Kp_25 == doctest::Approx(82.f).epsilon(err_tol));
+        DOCTEST_CHECK(c.dH_Kc == doctest::Approx(64.2f).epsilon(err_tol));
+        DOCTEST_CHECK(c.fcyc == doctest::Approx(0.3f).epsilon(err_tol));
+    }
+
+    SUBCASE("GenericC4_vC2000") {
+        DOCTEST_CHECK_NOTHROW(photomodel.setC4CoefficientsFromLibrary("GenericC4_vC2000"));
+        C4ModelCoefficients c = photomodel.getC4ModelCoefficients(UUID);
+        DOCTEST_CHECK(c.getVcmaxTempResponse().value_at_25C == doctest::Approx(60.f).epsilon(err_tol));
+        DOCTEST_CHECK(c.getVpmaxTempResponse().value_at_25C == doctest::Approx(120.f).epsilon(err_tol));
+        DOCTEST_CHECK(c.getJmaxTempResponse().value_at_25C == doctest::Approx(400.f).epsilon(err_tol));
+        DOCTEST_CHECK(c.getRdTempResponse().value_at_25C == doctest::Approx(1.0f).epsilon(err_tol));
+        // Q10 → Arrhenius: Ea ≈ 61.6 kJ/mol for Q10=2.3, 51.2 for Q10=2.0
+        DOCTEST_CHECK(c.getVcmaxTempResponse().dHa == doctest::Approx(61.6f).epsilon(err_tol));
+        DOCTEST_CHECK(c.getRdTempResponse().dHa == doctest::Approx(51.2f).epsilon(err_tol));
+        DOCTEST_CHECK(c.getMesophyllConductance_gmTempResponse().value_at_25C == doctest::Approx(1.0e4f).epsilon(err_tol));
+        DOCTEST_CHECK(c.Kp_25 == doctest::Approx(80.f).epsilon(err_tol));
+        DOCTEST_CHECK(c.fcyc == doctest::Approx(0.f).epsilon(err_tol));
+    }
+
+    SUBCASE("Maize_Massad2007") {
+        DOCTEST_CHECK_NOTHROW(photomodel.setC4CoefficientsFromLibrary("Maize_Massad2007"));
+        C4ModelCoefficients c = photomodel.getC4ModelCoefficients(UUID);
+        DOCTEST_CHECK(c.getVcmaxTempResponse().value_at_25C == doctest::Approx(60.f).epsilon(err_tol));
+        DOCTEST_CHECK(c.getVcmaxTempResponse().dHa == doctest::Approx(67.3f).epsilon(err_tol));
+        // Peaked-Arrhenius conversion of Massad's (Ea, Hd, dS) → Topt
+        DOCTEST_CHECK(c.getVcmaxTempResponse().Topt == doctest::Approx(273.15f + 32.3f).epsilon(err_tol));
+        DOCTEST_CHECK(c.getVpmaxTempResponse().Topt == doctest::Approx(273.15f + 43.1f).epsilon(err_tol));
+        DOCTEST_CHECK(c.getJmaxTempResponse().Topt == doctest::Approx(273.15f + 31.5f).epsilon(err_tol));
+        // Bernacchi 2001 C3-derived Kc/Ko — the critical internal-consistency constraint for Massad
+        DOCTEST_CHECK(c.Kc_25 == doctest::Approx(650.f).epsilon(err_tol));
+        DOCTEST_CHECK(c.Ko_25 == doctest::Approx(450000.f).epsilon(err_tol));
+        DOCTEST_CHECK(c.dH_Kc == doctest::Approx(79.43f).epsilon(err_tol));
+        DOCTEST_CHECK(c.Kp_25 == doctest::Approx(80.f).epsilon(err_tol));
+        DOCTEST_CHECK(c.getRdTempResponse().value_at_25C == doctest::Approx(0.6f).epsilon(err_tol));
+        DOCTEST_CHECK(c.getMesophyllConductance_gmTempResponse().value_at_25C == doctest::Approx(1.0e4f).epsilon(err_tol));
+        DOCTEST_CHECK(c.fcyc == doctest::Approx(0.f).epsilon(err_tol));
+    }
+
+    SUBCASE("Case-insensitive key matching") {
+        DOCTEST_CHECK_NOTHROW(photomodel.getC4CoefficientsFromLibrary("setariaviridis_vc2021"));
+        DOCTEST_CHECK_NOTHROW(photomodel.getC4CoefficientsFromLibrary("MAIZE_MASSAD2007"));
+        DOCTEST_CHECK_NOTHROW(photomodel.getC4CoefficientsFromLibrary("GenericC4"));
+    }
+
+    SUBCASE("Entries are distinguishable") {
+        // Key library invariant: the three entries must differ in at least one characteristic
+        // field each, otherwise picking between them has no effect on model behavior.
+        C4ModelCoefficients setaria = photomodel.getC4CoefficientsFromLibrary("SetariaViridis_vC2021");
+        C4ModelCoefficients generic = photomodel.getC4CoefficientsFromLibrary("GenericC4_vC2000");
+        C4ModelCoefficients maize = photomodel.getC4CoefficientsFromLibrary("Maize_Massad2007");
+
+        DOCTEST_CHECK(setaria.getVcmaxTempResponse().value_at_25C != generic.getVcmaxTempResponse().value_at_25C);
+        DOCTEST_CHECK(setaria.Kc_25 != maize.Kc_25); // 1210 vs 650 — the critical Massad/Bernacchi distinction
+        DOCTEST_CHECK(setaria.fcyc != generic.fcyc); // 0.3 vs 0
+        // Simple Arrhenius (no peak) stores Topt as a large sentinel (≥10000 K by construction of
+        // PhotosyntheticTemperatureResponseParameters); peaked Arrhenius stores an actual temperature in K.
+        DOCTEST_CHECK(generic.getVpmaxTempResponse().Topt > 9000.f); // generic = simple Arrhenius, sentinel Topt
+        DOCTEST_CHECK(maize.getVpmaxTempResponse().Topt < 400.f);    // maize = peaked Arrhenius, Topt ≈ 316 K
+    }
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel C4 Library - Reasonable photosynthesis values") {
+    // For each library entry, run the full model (with Ci→Cm coupling and stomatal balance) under
+    // realistic midday conditions and confirm net photosynthesis falls within a reasonable C4
+    // range, and that a low-light run produces smaller, still-positive A.
+    const std::vector<std::string> species = {"SetariaViridis_vC2021", "GenericC4_vC2000", "Maize_Massad2007"};
+
+    for (const auto &sp: species) {
+        Context context_test;
+        uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        PhotosynthesisModel photomodel(&context_test);
+        photomodel.disableMessages();
+        photomodel.setC4CoefficientsFromLibrary(sp);
+        photomodel.optionalOutputPrimitiveData("limitation_state");
+
+        context_test.setPrimitiveData(UUID, "temperature", 298.15f);
+        context_test.setPrimitiveData(UUID, "air_CO2", 400.f);
+
+        // High-light midday
+        context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 1800.f / 4.57f);
+        DOCTEST_CHECK_NOTHROW(photomodel.run());
+        float A_high = 0.f;
+        int limitation_state = 0;
+        context_test.getPrimitiveData(UUID, "net_photosynthesis", A_high);
+        context_test.getPrimitiveData(UUID, "limitation_state", limitation_state);
+        // Reasonable-range bounds are deliberately loose — the goal is to catch gross errors
+        // (A near zero, or A in the hundreds from a unit mix-up), not to pin exact values.
+        // Current implementation produces 34.6 (Setaria), 40.5 (Generic), 40.8 (Maize).
+        bool A_high_in_range = (A_high >= 10.f) && (A_high <= 60.f);
+        bool lim_valid = (limitation_state == 1) || (limitation_state == 2);
+        DOCTEST_CHECK_MESSAGE(A_high_in_range, sp << ": A at high PAR out of reasonable C4 range (" << A_high << ")");
+        DOCTEST_CHECK_MESSAGE(lim_valid, sp << ": unexpected limitation_state " << limitation_state);
+
+        // Low-light: should be positive and lower than high-light
+        context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 200.f / 4.57f);
+        DOCTEST_CHECK_NOTHROW(photomodel.run());
+        float A_low = 0.f;
+        context_test.getPrimitiveData(UUID, "net_photosynthesis", A_low);
+        bool A_low_valid = (A_low > 0.f) && (A_low < A_high);
+        DOCTEST_CHECK_MESSAGE(A_low_valid, sp << ": low-light A=" << A_low << " (should be 0<A<" << A_high << ")");
+    }
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel C4 Library - Temperature discrimination") {
+    // Setaria's Vcmax is simple Arrhenius (monotonic) while Maize's Vcmax is peaked at ~32 °C.
+    // Confirm both give positive A at 25 °C and 35 °C, and catch the degenerate case where
+    // switching species produces identical A (would indicate the library didn't actually switch).
+    auto run_once = [](const std::string &sp, float T_K) {
+        Context ctx;
+        uint UUID = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        PhotosynthesisModel pm(&ctx);
+        pm.disableMessages();
+        pm.setC4CoefficientsFromLibrary(sp);
+        ctx.setPrimitiveData(UUID, "temperature", T_K);
+        ctx.setPrimitiveData(UUID, "air_CO2", 400.f);
+        ctx.setPrimitiveData(UUID, "radiation_flux_PAR", 1800.f / 4.57f);
+        pm.run();
+        float A = 0.f;
+        ctx.getPrimitiveData(UUID, "net_photosynthesis", A);
+        return A;
+    };
+
+    float setaria_25 = run_once("SetariaViridis_vC2021", 298.15f);
+    float setaria_35 = run_once("SetariaViridis_vC2021", 308.15f);
+    float maize_25 = run_once("Maize_Massad2007", 298.15f);
+    float maize_35 = run_once("Maize_Massad2007", 308.15f);
+
+    // All four scenarios should produce positive A
+    DOCTEST_CHECK(setaria_25 > 0.f);
+    DOCTEST_CHECK(setaria_35 > 0.f);
+    DOCTEST_CHECK(maize_25 > 0.f);
+    DOCTEST_CHECK(maize_35 > 0.f);
+
+    // The two species must differ at both temperatures (otherwise the library didn't switch)
+    DOCTEST_CHECK(std::abs(setaria_25 - maize_25) > 0.5f);
+    DOCTEST_CHECK(std::abs(setaria_35 - maize_35) > 0.5f);
+
+    // Setaria: monotonic Arrhenius Vcmax → A should rise meaningfully from 25→35 °C
+    DOCTEST_CHECK(setaria_35 > setaria_25);
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel C4 Library - Unknown species raises error") {
+    Context context_test;
+    context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    PhotosynthesisModel photomodel(&context_test);
+    photomodel.disableMessages();
+
+    DOCTEST_CHECK_THROWS_AS(photomodel.getC4CoefficientsFromLibrary("NotARealSpecies"), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(photomodel.setC4CoefficientsFromLibrary(""), std::runtime_error);
+    // Typo should fail fast rather than silently fall back
+    DOCTEST_CHECK_THROWS_AS(photomodel.getC4CoefficientsFromLibrary("Maiz"), std::runtime_error);
+}
+
 
 int PhotosynthesisModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);

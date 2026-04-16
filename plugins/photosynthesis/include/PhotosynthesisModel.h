@@ -784,6 +784,36 @@ public:
      */
     void setModelCoefficients(const std::string &material_label, const C4ModelCoefficients &coeffs);
 
+    //! Set the von Caemmerer (2021) C4 model coefficients for all primitives based on a species from the C4 library.
+    /**
+     * \param[in] species Name of species from the C4 library (e.g. "SetariaViridis_vC2021", "GenericC4_vC2000", "Maize_Massad2007").
+     * \note Unknown species raises helios_runtime_error — lookup is case-insensitive but otherwise exact.
+     */
+    void setC4CoefficientsFromLibrary(const std::string &species);
+
+    //! Set the von Caemmerer (2021) C4 model coefficients for a subset of primitives based on a species from the C4 library.
+    /**
+     * \param[in] species Name of species from the C4 library.
+     * \param[in] UUIDs Vector of universal unique identifiers for primitives to be set.
+     */
+    void setC4CoefficientsFromLibrary(const std::string &species, const std::vector<uint> &UUIDs);
+
+    //! Set the von Caemmerer (2021) C4 model coefficients from the species library for a material.
+    /**
+     * \param[in] species Name of species from the C4 library.
+     * \param[in] material_label String identifier for the material.
+     * \note Unknown species raises helios_runtime_error, consistent with the other C4 library overloads.
+     */
+    void setC4CoefficientsFromLibrary(const std::string &species, const std::string &material_label);
+
+    //! Get von Caemmerer (2021) C4 model coefficients for a species from the C4 library.
+    /**
+     * \param[in] species Name of species from the C4 library.
+     * \return C4 model coefficients for the species (fully populated — including complementary Kc/Ko/Kp and scalar parameters that were held fixed in the source study).
+     * \note Unknown species raises helios_runtime_error.
+     */
+    C4ModelCoefficients getC4CoefficientsFromLibrary(const std::string &species);
+
     //! Run the model for all UUIDs in the Context
     void run();
 

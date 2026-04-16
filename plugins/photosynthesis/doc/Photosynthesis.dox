@@ -51,11 +51,13 @@
   ~~~~~~~~
 
  <table>
- <tr><th>Primitive Data Label</th><th>Symbol</th><th>Units</th><th>Data Type</th><th>Description</th></tr>
- <tr><td>Ci</td><td>\f$C_i\f$</td><td>\f$\mu\f$mol CO<sub>2</sub>/mol</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Intercellular CO<sub>2</sub> concentration.</td></tr>
-  <tr><td>Gamma\_CO2</td><td>\f$\Gamma\f$</td><td>\f$\mu\f$mol CO<sub>2</sub>/mol</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Photosynthetic CO<sub>2</sub> compensation point (including "dark respiration").</td></tr>
- <tr><td>limitation\_state</td><td>N/A</td><td>N/A</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>Photosynthesis limitation state. limitation_state=0 if photosynthesis is Rubisco-limited, limitation_state=1 if photosynthesis is electron transport limited.</td></tr>
- <tr><td>electron\_transport\_ratio</td><td>\f$J/J_{max}\f$</td><td>unitless</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Ratio of actual electron transport rate to maximum electron transport rate. Ranges from 0 (dark) to ~1 (light-saturated). Useful for computing fluorescence quantum yield.</td></tr>
+ <tr><th>Primitive Data Label</th><th>Symbol</th><th>Units</th><th>Data Type</th><th>Applicable Models</th><th>Description</th></tr>
+ <tr><td>Ci</td><td>\f$C_i\f$</td><td>\f$\mu\f$mol CO<sub>2</sub>/mol</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Farquhar (C<sub>3</sub>), C<sub>4</sub></td><td>Intercellular CO<sub>2</sub> concentration.</td></tr>
+ <tr><td>Gamma\_CO2</td><td>\f$\Gamma\f$</td><td>\f$\mu\f$mol CO<sub>2</sub>/mol</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Farquhar (C<sub>3</sub>)</td><td>Photosynthetic CO<sub>2</sub> compensation point (including "dark respiration").</td></tr>
+ <tr><td>limitation\_state</td><td>N/A</td><td>N/A</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>Farquhar (C<sub>3</sub>), C<sub>4</sub></td><td>Photosynthesis limitation state. For the C<sub>3</sub> Farquhar model: 0 = Rubisco-limited, 1 = electron-transport-limited. For the C<sub>4</sub> model: 1 = enzyme (\f$A_c\f$) limited, 2 = electron-transport (\f$A_j\f$) limited.</td></tr>
+ <tr><td>electron\_transport\_ratio</td><td>\f$J/J_{max}\f$</td><td>unitless</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Farquhar (C<sub>3</sub>)</td><td>Ratio of actual electron transport rate to maximum electron transport rate. Ranges from 0 (dark) to ~1 (light-saturated). Useful for computing fluorescence quantum yield.</td></tr>
+ <tr><td>Cm</td><td>\f$C_m\f$</td><td>\f$\mu\f$bar</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>C<sub>4</sub></td><td>Mesophyll cytosolic CO<sub>2</sub> partial pressure, \f$C_m = C_i - A/g_m\f$.</td></tr>
+ <tr><td>Vp</td><td>\f$V_p\f$</td><td>\f$\mu\f$mol CO<sub>2</sub>/m<sup>2</sup>/s</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>C<sub>4</sub></td><td>PEP carboxylation rate.</td></tr>
  </table>
 
  \subsection PhotoManualCi Manual Override of Intercellular CO2 (Testing)
@@ -80,9 +82,9 @@
 
  \section PhotoDescription Introduction
 
- The photosynthesis plug-in implements two types of models: the biochemical model of <a href="https://link.springer.com/article/10.1007/BF00386231">Farquhar, von Caemmerer, and Berry (1980)</a>, and an empirical model similar to that of <a href="../../plugins/photosynthesis/doc/Johnson_2010_PlantMod.pdf">Johnson (2010)</a>, which are described separately below.
+ The photosynthesis plug-in implements three types of models: the C<sub>3</sub> biochemical model of <a href="https://link.springer.com/article/10.1007/BF00386231">Farquhar, von Caemmerer, and Berry (1980)</a>, the C<sub>4</sub> biochemical model of <a href="https://doi.org/10.1093/jxb/erab266">von Caemmerer (2021)</a>, and an empirical model similar to that of <a href="../../plugins/photosynthesis/doc/Johnson_2010_PlantMod.pdf">Johnson (2010)</a>. Each is described separately below.
 
- By default, the plug-in uses the biochemical model. The model can either be set explicitly, as illustrated in the code below, or the model type will be inferred based on the model coefficients that are set (see descriptions below).
+ By default, the plug-in uses the C<sub>3</sub> Farquhar model. The model can either be set explicitly, as illustrated in the code below, or the model type will be inferred based on the model coefficients that are set (see descriptions below).
 
  ~~~~~~{.cpp}
   #include "PhotosynthesisModel.h"
@@ -90,12 +92,15 @@
   int main(){
 	PhotosynthesisModel photosynthesismodel(&context);
 
-	//Use the Farquahar-von Caemmerer-Berry model
+	//Use the C3 Farquhar-von Caemmerer-Berry model
 	photosynthesismodel.setModelType_Farquhar();
 
 	photosynthesismodel.run();
 
-	//Switch back to the empirical model
+	//Switch to the C4 von Caemmerer (2021) model
+	photosynthesismodel.setModelType_C4();
+
+	//Switch to the empirical model
 	photosynthesismodel.setModelType_Empirical();
   }
 ~~~~~~
@@ -306,8 +311,10 @@ photo_model.setFarquharCoefficientsFromLibrary("Almond", "almond_leaf");
 photo_model.setFarquharCoefficientsFromLibrary("Grape", "grape_leaf");
 
 // 3. Create primitives and assign materials
-std::vector<uint> almond_leaves = context.addPatch(...);
+std::vector<uint> almond_leaves = context.addTile(make_vec3(0, 0, 2), make_vec2(1, 1), nullrotation, make_int2(5, 5));
 context.assignMaterialToPrimitive(almond_leaves, "almond_leaf");
+uint grape_leaf = context.addPatch(make_vec3(2, 0, 2), make_vec2(0.5, 0.5));
+context.assignMaterialToPrimitive(grape_leaf, "grape_leaf");
 
 // 4. Run model - coefficients automatically applied based on material
 photo_model.run();
@@ -521,16 +528,24 @@ photo_model.run();
  <tr><td>f_spectral</td><td>\f$f\f$</td><td>unitless</td><td>0.15</td><td>Spectral-quality correction to absorbed PAR.</td></tr>
  </table>
 
- \subsection PhotoC4Outputs C4 Optional Output Primitive Data
+ \subsection PhotoC4Library C4 Species Parameter Library
+
+ Helios ships a small library of published C4 parameter sets accessible through \ref PhotosynthesisModel::getC4CoefficientsFromLibrary and \ref PhotosynthesisModel::setC4CoefficientsFromLibrary. Each library entry specifies <em>every</em> parameter the model reads — including the "complementary" kinetic constants (\f$K_c\f$, \f$K_o\f$, \f$K_p\f$) and scalar structural parameters that the source paper held fixed while fitting the headline rate constants. Mixing the headline values from one entry with the fixed-parameter assumptions of another will produce biased predictions, so treat each entry as atomic. Unknown species keys raise \c helios_runtime_error; key matching is case-insensitive.
 
  <table>
- <tr><th>Primitive Data Label</th><th>Symbol</th><th>Units</th><th>Data Type</th><th>Description</th></tr>
- <tr><td>Ci</td><td>\f$C_i\f$</td><td>μmol CO<sub>2</sub>/mol</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Intercellular CO<sub>2</sub> concentration.</td></tr>
- <tr><td>Cm</td><td>\f$C_m\f$</td><td>μbar</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Mesophyll cytosolic CO<sub>2</sub> partial pressure, \f$C_m = C_i - A/g_m\f$.</td></tr>
- <tr><td>Vp</td><td>\f$V_p\f$</td><td>μmol CO<sub>2</sub>/m²/s</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>PEP carboxylation rate.</td></tr>
- <tr><td>limitation\_state</td><td>N/A</td><td>N/A</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>For the C4 model: 1 = enzyme (A_c) limited, 2 = electron-transport (A_j) limited.</td></tr>
+ <tr><th>Species key</th><th>Subtype</th><th>Vcmax(25)<br/>μmol/m²/s</th><th>Vpmax(25)<br/>μmol/m²/s</th><th>Jmax(25)<br/>μmol/m²/s</th><th>Rd(25)<br/>μmol/m²/s</th><th>gm(25)<br/>mol/m²/s/bar</th><th>Kc(25)<br/>μbar</th><th>Ko(25)<br/>μbar</th><th>Kp(25)<br/>μbar</th><th>fcyc</th><th>T-response</th><th>Source</th></tr>
+ <tr><td>SetariaViridis_vC2021</td><td>NADP-ME</td><td>40</td><td>200</td><td>247.69</td><td>0.4</td><td>1.0</td><td>1210</td><td>292000</td><td>82</td><td>0.3</td><td>Arrhenius (Jmax peaked)</td><td>von Caemmerer (2021) Table 1; kinetics Boyd <em>et al.</em> (2015); gm Ubierna <em>et al.</em> (2017).</td></tr>
+ <tr><td>GenericC4_vC2000</td><td>NADP-ME</td><td>60</td><td>120</td><td>400</td><td>1.0</td><td>∞ (10<sup>4</sup>)</td><td>1210</td><td>292000</td><td>80</td><td>0</td><td>Q10=2.3 → Arrhenius Ea≈61.6</td><td>von Caemmerer (2000) <em>Biochemical Models of Leaf Photosynthesis</em>; plantecophys AciC4 defaults.</td></tr>
+ <tr><td>Maize_Massad2007</td><td>NADP-ME</td><td>60</td><td>120</td><td>400</td><td>0.6</td><td>∞ (10<sup>4</sup>)</td><td>650</td><td>450000</td><td>80</td><td>0</td><td>Peaked Arrhenius</td><td>Massad <em>et al.</em> (2007) <em>Plant Cell Environ.</em> 30:1191 (T-responses); plantecophys defaults at 25 °C.</td></tr>
  </table>
 
+ Entry-specific caveats:
+ - <b>SetariaViridis_vC2021</b> — the C4 struct's default constructor also carries this parameterization, except \f$R_d\f$: the library entry uses \f$R_d = 0.01 \cdot V_{cmax} = 0.4\f$ μmol/m²/s per the original paper's convention, while the struct constructor sets \f$R_d = 1.0\f$ for historical compatibility.
+ - <b>GenericC4_vC2000</b> — the original parameterization uses Q10 temperature responses. Helios approximates these with Arrhenius (\f$E_a = R \cdot T_{\mathrm{ref}}^2 \cdot \ln(Q_{10})/10\f$ with \f$T_{\mathrm{ref}} = 298.15\f$ K), which matches Q10 behavior within ~1% over 15–40 °C. \f$f_{cyc}=0\f$ recovers the linear-electron-flow ATP stoichiometry of the original vC2000 model.
+ - <b>Maize_Massad2007</b> — Massad fitted the headline rate constants against Bernacchi (2001) C3-derived \f$K_c\f$ and \f$K_o\f$ (much smaller than the Boyd 2015 C4 values used for Setaria). <b>Do not substitute Setaria's \f$K_c/K_o\f$ into this entry</b> — the \f$V_{cmax}\f$ value is only internally consistent with the Bernacchi values. The paper assumed infinite mesophyll conductance, so the entry sets \f$g_m = 10^4\f$ mol/m²/s/bar as an effectively infinite value. The \f$K_p\f$ temperature response in this entry is taken from Boyd (2015) rather than Massad's own Q10=2.1, since Massad's value is known to overestimate \f$K_p\f$ temperature sensitivity. The 0.6 μmol/m²/s default for \f$R_d\f$ is a library convention (0.01·\f$V_{cmax}\f$) — Massad themselves used \f$R_d = 0\f$ for their final fits and reported results as insensitive to the \f$R_d\f$ choice.
+
  \note The C4 model's \ref C4ModelCoefficients struct defaults match the paper's Table 1 for <em>Setaria viridis</em>. Two implementation notes distinguish Helios from the paper's supplementary spreadsheet: (1) the Jmax temperature response uses peaked Arrhenius (same API as C3) rather than the paper's Gaussian — Jmax(25 °C) = 247.69 matches the Gaussian at 25 °C; users who need exact Gaussian behavior at other temperatures should fit peaked-Arrhenius parameters or set Jmax as a constant. (2) The Vpr cap in Eq. 19 is always applied; the paper's spreadsheet omits it, so Helios gives slightly lower A at high C_m when V_p,MM > V_pr.
+
+ C4-specific optional output primitive data (\c Cm, \c Vp, plus C4-specific semantics for \c limitation_state) are listed in the \ref PhotoOptionalOutputData section near the top of this page.
 
 */

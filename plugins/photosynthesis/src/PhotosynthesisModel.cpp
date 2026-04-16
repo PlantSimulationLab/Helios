@@ -514,6 +514,108 @@ FarquharModelCoefficients PhotosynthesisModel::getFarquharCoefficientsFromLibrar
     return fmc;
 }
 
+// ---------------------------------------------------------------------------
+// von Caemmerer (2021) C4 model — species parameter library.
+//
+// Each entry is internally complete (temperature-responsive rates, kinetic
+// constants, and scalar structural parameters) so that results are not
+// distorted by silently mixing an entry's headline rate constants with a
+// different entry's fixed assumptions. The C3 library above falls back to the
+// default species with a warning when the key is unknown; the C4 library is
+// new and follows the fail-fast philosophy instead — unknown keys raise
+// helios_runtime_error with the list of supported entries.
+// ---------------------------------------------------------------------------
+
+void PhotosynthesisModel::setC4CoefficientsFromLibrary(const std::string &species) {
+    C4ModelCoefficients coeffs = getC4CoefficientsFromLibrary(species);
+    setModelCoefficients(coeffs);
+}
+
+void PhotosynthesisModel::setC4CoefficientsFromLibrary(const std::string &species, const std::vector<uint> &UUIDs) {
+    C4ModelCoefficients coeffs = getC4CoefficientsFromLibrary(species);
+    setModelCoefficients(coeffs, UUIDs);
+}
+
+void PhotosynthesisModel::setC4CoefficientsFromLibrary(const std::string &species, const std::string &material_label) {
+    C4ModelCoefficients coeffs = getC4CoefficientsFromLibrary(species);
+    setModelCoefficients(material_label, coeffs);
+}
+
+C4ModelCoefficients PhotosynthesisModel::getC4CoefficientsFromLibrary(const std::string &species) {
+    // Case-insensitive exact-key match.
+    std::string s = species;
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return std::tolower(c); });
+
+    C4ModelCoefficients c4;
+
+    if (s == "setariaviridis_vc2021" || s == "setariaviridis" || s == "setaria_viridis_vc2021") {
+        // Setaria viridis, NADP-ME. von Caemmerer (2021) JXB 72:6003 Table 1.
+        // Kinetics: Boyd et al. (2015) Plant Physiol 169:1850 (Vpmax, Vcmax, Rd, Kc, Ko, Kp, γ*).
+        // gm: Ubierna et al. (2017) New Phytol 214:66. Jmax T-response: peaked-Arrhenius refit of the
+        // paper's Gaussian (June et al. 2004) — value at 25 °C matches Gaussian exactly.
+        c4.setVpmax(200.f, 50.1f);
+        c4.setVcmax(40.f, 78.0f);
+        c4.setJmax(247.69f, 77.9f, 43.f, 260.f);
+        c4.setRd(0.4f, 66.4f); // spec: Rd = 0.01 · Vcmax
+        c4.setMesophyllConductance_gm(1.0f, 49.8f);
+        // Kinetic + scalar fields keep struct-constructor defaults (Kc=1210, Ko=292000, Kp=82,
+        // γ*=3.8168e-4 with dH=-31.1, Om=210000, dH_Kc=64.2, dH_Ko=10.5, dH_Kp=38.3, alpha_psII=0,
+        // x=0.4, Vpr=80, Rm_frac=0.5, fcyc=0.3, gbs=0.003, ao=0.047, absorptance=0.85, f_spectral=0.15).
+    } else if (s == "genericc4_vc2000" || s == "genericc4" || s == "generic_c4" || s == "generic_vc2000") {
+        // Generic NADP-ME fallback. von Caemmerer (2000) Biochemical Models of Leaf Photosynthesis
+        // (CSIRO) as encoded by the plantecophys R package (Duursma 2015) AciC4 defaults.
+        // Q10 → Arrhenius conversion: Ea ≈ R · T_ref² · ln(Q10) / 10 with T_ref = 298.15 K.
+        c4.setVcmax(60.f, 61.6f);  // Q10 = 2.3 → Ea = 8.314 · 298.15² · ln(2.3) / 10 ≈ 61.6 kJ/mol
+        c4.setVpmax(120.f, 61.6f); // Q10 = 2.3 → Ea ≈ 61.6 kJ/mol
+        c4.setJmax(400.f, 61.6f);  // Q10 = 2.3 → Ea ≈ 61.6 kJ/mol
+        c4.setRd(1.0f, 51.2f);     // Q10 = 2.0 → Ea = 8.314 · 298.15² · ln(2.0) / 10 ≈ 51.2 kJ/mol
+        c4.setMesophyllConductance_gm(1.0e4f); // no T-response; vC2000 has no gm term (effectively infinite)
+        c4.Kp_25 = 80.f;                       // vC2000 value (vs. Setaria 82); Kc/Ko/γ* left at Setaria defaults
+        c4.fcyc = 0.f;                         // vC2000 has no cyclic term
+    } else if (s == "maize_massad2007" || s == "maize" || s == "zea_mays_massad2007") {
+        // Zea mays cv. Chambord. Temperature responses: Massad, Tuzet, Bethenod (2007) Plant Cell
+        // Environ 30:1191 Fig. 6 (peaked Arrhenius: Ea, Hd, ΔS). 25 °C values: plantecophys AciC4
+        // defaults (consistent with Massad's "conform to literature" statement since the paper
+        // reports no single tabular point estimate).
+        //
+        // Massad (2007) Fig. 6 coefficients (for independent verification):
+        //   Vcmax: Ea = 67.294 kJ/mol, Hd = 144.568 kJ/mol, ΔS = 472 J/mol/K
+        //   Vpmax: Ea = 70.373 kJ/mol, Hd = 117.910 kJ/mol, ΔS = 376 J/mol/K
+        //   Jmax:  Ea = 77.900 kJ/mol, Hd = 191.929 kJ/mol, ΔS = 627 J/mol/K
+        //
+        // Convert (Ea, Hd, ΔS) → peaked-Arrhenius Topt via
+        //   Topt [K] = Hd / (ΔS − R · ln(Ea / (Hd − Ea)))    with R = 8.314 J/mol/K
+        // yielding Topt(Vcmax) ≈ 305.5 K (32.3 °C), Topt(Vpmax) ≈ 316.3 K (43.1 °C),
+        // Topt(Jmax) ≈ 304.6 K (31.5 °C). The Helios peaked-Arrhenius setter takes
+        // (value_at_25, dHa, Topt_°C, dHd).
+        c4.setVcmax(60.f, 67.3f, 32.3f, 144.6f);
+        c4.setVpmax(120.f, 70.4f, 43.1f, 117.9f);
+        c4.setJmax(400.f, 77.9f, 31.5f, 191.9f);
+        c4.setRd(0.6f, 66.4f);                  // 0.01·Vcmax vC2000 convention; Massad's own fits used Rd=0 — 0.6 is the library's usable default, not a Massad measurement
+        c4.setMesophyllConductance_gm(1.0e4f);  // Massad assumed infinite gm
+        // Massad fit against Bernacchi (2001) C3-derived Kc/Ko — these are ~2× smaller than the
+        // Boyd 2015 C4 values used for Setaria. Keeping Massad's fixed assumptions intact is
+        // required to avoid biasing the Vcmax / Vpmax estimates.
+        c4.Kc_25 = 650.f;
+        c4.Ko_25 = 450000.f;
+        c4.dH_Kc = 79.43f;
+        c4.dH_Ko = 36.38f;
+        // Kp: Massad assumed Q10=2.1. Per spec, replace with Boyd (2015) Arrhenius for internal
+        // consistency (25 °C value essentially unchanged at 80 μbar).
+        c4.Kp_25 = 80.f;
+        c4.dH_Kp = 38.3f;
+        c4.fcyc = 0.f; // implicit in Massad's vC&F (1999) parent framework
+    } else {
+        helios_runtime_error("ERROR (PhotosynthesisModel::getC4CoefficientsFromLibrary): unknown C4 species '" + species +
+                             "'. Available keys (case-insensitive): SetariaViridis_vC2021, GenericC4_vC2000, Maize_Massad2007.");
+    }
+
+    if (message_flag) {
+        std::cerr << "Setting C4 Photosynthesis Model Coefficients to " << species << std::endl;
+    }
+    return c4;
+}
+
 // Cached coefficient retrieval helpers
 
 EmpiricalModelCoefficients PhotosynthesisModel::getCoefficientsForPrimitive_Empirical(uint UUID) const {
