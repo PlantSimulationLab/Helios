@@ -155,6 +155,25 @@
  is the stomatal sidedness, which is the ratio of the stomatal density of the upper leaf surface to the sum of the upper and lower leaf surface densities, which is set by the primitive data value "stomatal_sidedness". For leaves, \f$\zeta=0\f$ corresponds to hypostomatous leaves (stomata on one side), and \f$\zeta=0.5\f$ to amphistomatous leaves (stomata equally on both sides). It is important to note that if \f$n_s=1\f$, then the value of \f$\zeta\f$ will be overridden and set to 0.
 
 
+\subsection FvCBmesophyll Mesophyll Conductance (optional)
+
+By default the implementation assumes the chloroplast CO<sub>2</sub> concentration equals the intercellular value, \f$C_c \equiv C_i\f$ (infinite mesophyll conductance). A finite mesophyll conductance \f$g_m\f$ (mol CO<sub>2</sub> m<sup>-2</sup> s<sup>-1</sup> bar<sup>-1</sup>) can be supplied to model diffusion from the intercellular airspace to the sites of carboxylation:
+
+\f[ C_c = C_i - \dfrac{A}{g_m}. \f]
+
+Substituting \f$C_c\f$ into the Rubisco-limited and electron-transport-limited forms of \f$A\f$ gives two quadratic equations in the net assimilation, one per branch, that are solved analytically following <a href="https://onlinelibrary.wiley.com/doi/10.1111/j.1365-3040.2004.01140.x">Ethier & Livingston (2004)</a> and <a href="https://onlinelibrary.wiley.com/doi/full/10.1111/j.1365-3040.2007.01710.x">Sharkey et al. (2007)</a>. The physically meaningful (smaller) root is selected and combined with \f$A_p = 3 \cdot TPU - R_d\f$ via the same smooth-min used elsewhere.
+
+\f$g_m\f$ has the same four setter overloads as every other temperature-responsive parameter (constant, Arrhenius, peaked with default \f$dH_d\f$, peaked with explicit \f$dH_d\f$):
+
+~~~~~~{.cpp}
+FarquharModelCoefficients fmc;
+fmc.setMesophyllConductance_gm(0.4f);           // constant gm = 0.4 mol/m^2/s/bar
+fmc.setMesophyllConductance_gm(0.4f, 49.8f);    // Arrhenius with dHa = 49.8 kJ/mol
+~~~~~~
+
+The default value is \f$g_m = +\infty\f$, which short-circuits the solver to the legacy \f$C_c \equiv C_i\f$ path and reproduces the original Farquhar model behavior bit-for-bit. This means existing code and parameter libraries that do not set \f$g_m\f$ are unaffected.
+
+
 \subsection FvCBtemperature Temperature response of model parameters
 
 Two different temperature response functions are commonly used in photosynthetic modeling and supported in the Photosynthesis Plugin. One is an Arrhenius equation, which is exponentially increasing with no decline in the region of use. The other is a modified Arrhenius equation with a peak or temperature optimum, beyond which there is a decline in the value of the function, representing a denaturing of an enzyme and subsequent reduction of its activity.
@@ -400,5 +419,118 @@ photo_model.run();
    The response of the assimilation rate is obtained using gas exchange measurements at saturating light levels and the reference temperature \f$T_{ref}\f$, but with varying external CO<sub>2</sub> concentration (which produces varying intercellular CO<sub>2</sub>).
 
    \image html images/CO2Response.png
-    
+
+
+ \section PhotoC4Model C4 Photosynthesis Model (von Caemmerer, 2021)
+
+ The plug-in also provides an implementation of the updated steady-state C4 photosynthesis model of <a href="https://doi.org/10.1093/jxb/erab266">von Caemmerer (2021)</a> (<em>Journal of Experimental Botany</em> 72:6003-6017), intended for C4 crop species (maize, sorghum, sugarcane, millet, switchgrass, etc.). The model couples PEP carboxylation (Vpmax / Kp) in the mesophyll with Rubisco fixation (Vcmax) in the bundle sheath, plus an electron-transport-limited rate. Net assimilation is \f$A = \min(A_c, A_j)\f$ where \f$A_c\f$ is the enzyme-limited rate and \f$A_j\f$ is the electron-transport-limited rate. Both are solutions of quadratic equations in A derived from steady-state balance between the C4 cycle, CO<sub>2</sub> leakage from the bundle sheath, and photorespiration.
+
+ Users enable the C4 model by calling \ref PhotosynthesisModel::setModelType_C4() followed by \ref PhotosynthesisModel::setModelCoefficients(const C4ModelCoefficients&) with a configured \ref C4ModelCoefficients struct. Default parameters correspond to <em>Setaria viridis</em> (NADP-ME subtype) per Table 1 of the paper.
+
+ \subsection PhotoC4Equations Model Equations
+
+ Symbols used: \f$C_m\f$ = mesophyll cytosolic CO<sub>2</sub> partial pressure (\f$\mu\f$bar); \f$C_i\f$ = intercellular CO<sub>2</sub> (\f$\mu\f$mol/mol ≡ \f$\mu\f$bar at 1 atm); \f$O_m\f$ = mesophyll O<sub>2</sub> (\f$\mu\f$bar); \f$V_{c,max}\f$, \f$V_{p,max}\f$, \f$J_{max}\f$ = maximum Rubisco / PEPC / electron-transport rates; \f$K_c, K_o, K_p\f$ = Michaelis constants for Rubisco (CO<sub>2</sub> and O<sub>2</sub>) and PEPC; \f$\gamma^* = 0.5 / S_{Rubisco}\f$; \f$g_m\f$ = mesophyll conductance; \f$g_{bs}\f$ = bundle-sheath conductance; \f$\alpha\f$ = fraction of PSII in the bundle sheath; \f$a_o\f$ = O<sub>2</sub>/CO<sub>2</sub> solubility–diffusivity ratio; \f$R_d\f$ = total leaf mitochondrial respiration; \f$R_m = R_{m,frac}\cdot R_d\f$ = mesophyll share of \f$R_d\f$; \f$x\f$ = fraction of linear electron transport partitioned to the mesophyll; \f$f_{cyc}\f$ = fraction of cyclic electron flow; \f$h\f$ = protons per ATP (= 4); \f$\theta\f$ = curvature of the J response; \f$f\f$ = spectral-quality correction; \f$V_{pr}\f$ = PEP regeneration cap.
+
+ \subsubsection PhotoC4CmCi Coupling between Ci and Cm (paper Eq. 50)
+
+ \f$C_m = C_i - A / g_m\f$
+
+ For a prescribed \f$C_i\f$ (supplied by the stomatal-conductance balance), the plug-in solves for \f$C_m\f$ by damped fixed-point iteration: starting from \f$C_m^{(0)} = C_i\f$, at each step compute \f$A(C_m)\f$ and update \f$C_m^{(k+1)} = 0.5\,C_m^{(k)} + 0.5\,(C_i - A / g_m)\f$ until convergence. When \f$C_m\f$ is supplied directly via \ref PhotosynthesisModel::setCm() (e.g., for spreadsheet validation) this iteration is skipped.
+
+ \subsubsection PhotoC4PEP PEP carboxylation (paper Eq. 19)
+
+ \f$V_p = \min\!\left(\dfrac{C_m V_{p,max}}{C_m + K_p},\ V_{pr}\right)\f$
+
+ \subsubsection PhotoC4ElectronTransport Electron transport capacity (paper Eqs. 31, 34, 35)
+
+ Incident PAR is converted to the PSII-absorbed rate \f$I_2 = I\cdot\mathrm{absorptance}\cdot\rho\cdot(1-f)\f$, with \f$\rho = (1 - f_{cyc}) / (2 - f_{cyc})\f$. The whole-chain linear electron-transport rate J is the smaller root of the non-rectangular hyperbola
+
+ \f$\theta J^2 - (I_2 + J_{max})\,J + I_2\,J_{max} = 0,\qquad J = \dfrac{(I_2 + J_{max}) - \sqrt{(I_2 + J_{max})^2 - 4\theta I_2 J_{max}}}{2\theta}\f$
+
+ The ATP/electron stoichiometry is \f$z = (3 - f_{cyc}) / (h\,(1 - f_{cyc)})\f$. ATP is partitioned between mesophyll and bundle sheath by \f$x\f$, giving \f$J_m = x J\f$ and \f$J_{bs} = (1-x) J\f$.
+
+ \subsubsection PhotoC4Ac Enzyme-limited rate (quadratic in A; paper Eqs. 20–24 + g_bs terms per reference spreadsheet)
+
+ \f$a_c A^2 + b_c A + c_c = 0\f$, with the smaller root \f$A_c = (-b_c - \sqrt{b_c^2 - 4 a_c c_c})/(2 a_c)\f$:
+
+ \f$a_c = 1 - \alpha K_c / (a_o K_o)\f$
+
+ \f$b_c = -\left[(V_p - R_m + g_{bs} C_m) + (V_{c,max} - R_d) + g_{bs} K_c (1 + O_m/K_o) + (\alpha/a_o)(\gamma^* V_{c,max} + R_d K_c / K_o)\right]\f$
+
+ \f$c_c = (V_{c,max} - R_d)(V_p - R_m + g_{bs} C_m) - g_{bs}\left[V_{c,max}\,\gamma^* O_m + R_d K_c (1 + O_m/K_o)\right]\f$
+
+ \subsubsection PhotoC4Aj Electron-transport-limited rate (quadratic in A; paper Eqs. 39–43)
+
+ \f$a_j A^2 + b_j A + c_j = 0\f$, with smaller root \f$A_j = (-b_j - \sqrt{b_j^2 - 4 a_j c_j})/(2 a_j)\f$:
+
+ \f$a_j = 1 - 7 \gamma^* \alpha / (3 a_o)\f$
+
+ \f$b_j = -\left[(J_m z / 2 - R_m + g_{bs} C_m) + (J_{bs} z / 3 - R_d) + g_{bs}\,7 \gamma^* O_m / 3 + (\alpha \gamma^*/a_o)\,(J_{bs} z / 3 + 7 R_d / 3)\right]\f$
+
+ \f$c_j = (J_m z / 2 - R_m + g_{bs} C_m)\,(J_{bs} z / 3 - R_d) - g_{bs}\,\gamma^* O_m\,(J_{bs} z / 3 + 7 R_d / 3)\f$
+
+ \subsubsection PhotoC4Net Net assimilation (paper Eq. 45)
+
+ \f$A = \min(A_c, A_j)\f$
+
+ \subsubsection PhotoC4Temp Temperature responses
+
+ All of \f$V_{p,max}, V_{c,max}, J_{max}, R_d, g_m\f$ use the same peaked-Arrhenius framework as the C3 Farquhar model (\ref PhotosyntheticTemperatureResponseParameters), with four setter overloads per parameter (constant / monotonic Arrhenius / peaked with default dHd / peaked with explicit dHd). The kinetic constants \f$K_c, K_o, K_p, \gamma^*\f$ use simple Arrhenius \f$K(T) = K_{25}\cdot\exp[\Delta H\cdot((1/298.15 - 1/T)/R)]\f$ — not user-settable via overloads, but the struct fields can be edited directly. The paper's Jmax Gaussian response \f$J_{max}(T) = J_{max}(T_o)\exp(-((T - T_o)/\Omega)^2)\f$ is approximated by peaked Arrhenius; at 25 °C the default \f$J_{max} = 247.69\f$ matches the Gaussian exactly, with peaked-Arrhenius parameters chosen to approximate the Gaussian elsewhere.
+
+ \subsection PhotoC4Usage Example: running the C4 model
+
+ ~~~~~~~~{.cpp}
+ PhotosynthesisModel photomodel(&context);
+ C4ModelCoefficients c4;
+ c4.setVpmax(200.f, 50.1f);           // Vpmax = 200 μmol/m²/s at 25 °C with Arrhenius E = 50.1 kJ/mol
+ c4.setVcmax(40.f, 78.0f);            // Vcmax = 40 μmol/m²/s at 25 °C, Ea = 78 kJ/mol
+ c4.setJmax(247.7f, 77.9f, 43.f, 260.f);  // Peaked Arrhenius (Topt = 43 °C)
+ c4.setRd(1.f, 66.4f);
+ c4.setMesophyllConductance_gm(1.0f, 49.8f);   // gm = 1 mol/m²/s/bar at 25 °C
+ photomodel.setModelCoefficients(c4);
+ photomodel.optionalOutputPrimitiveData("Cm");
+ photomodel.optionalOutputPrimitiveData("Vp");
+ photomodel.run();
+ ~~~~~~~~
+
+ \subsection PhotoC4Params C4 Model Parameters
+
+ <table>
+ <tr><th>Group</th><th>Parameter</th><th>Symbol</th><th>Units</th><th>Default (25 °C)</th><th>Notes</th></tr>
+ <tr><td rowspan="5">Temperature-responsive<br/>(full 4-overload API as in C3)</td>
+     <td>Vpmax</td><td>\f$V_{p,max}\f$</td><td>μmol/m²/s</td><td>200</td><td>PEP carboxylation capacity. Boyd et al. (2015) Arrhenius Ea = 50.1 kJ/mol.</td></tr>
+ <tr><td>Vcmax</td><td>\f$V_{c,max}\f$</td><td>μmol/m²/s</td><td>40</td><td>Rubisco activity. Ea = 78 kJ/mol.</td></tr>
+ <tr><td>Jmax</td><td>\f$J_{max}\f$</td><td>μmol e<sup>−</sup>/m²/s</td><td>247.69</td><td>Peaked-Arrhenius re-fit of the paper's Gaussian response; value at 25 °C matches the paper exactly, dHa / Topt / dHd chosen to approximate the Gaussian elsewhere.</td></tr>
+ <tr><td>Rd</td><td>\f$R_d\f$</td><td>μmol/m²/s</td><td>1.0</td><td>Leaf mitochondrial respiration. Ea = 66.4 kJ/mol.</td></tr>
+ <tr><td>gm</td><td>\f$g_m\f$</td><td>mol CO₂/m²/s/bar</td><td>1.0</td><td>Mesophyll conductance. Ubierna et al. (2017) Arrhenius Ea = 49.8 kJ/mol.</td></tr>
+ <tr><td rowspan="5">Kinetic constants<br/>(simple Arrhenius, not user-settable via overloads — edit the struct fields)</td>
+     <td>Kc_25, dH_Kc</td><td>\f$K_c\f$</td><td>μbar (=μmol/mol)</td><td>1210 / Ea=64.2</td><td>Rubisco Michaelis constant for CO<sub>2</sub>.</td></tr>
+ <tr><td>Ko_25, dH_Ko</td><td>\f$K_o\f$</td><td>μbar</td><td>292000 / Ea=10.5</td><td>Rubisco Michaelis constant for O<sub>2</sub> (=292 mbar).</td></tr>
+ <tr><td>Kp_25, dH_Kp</td><td>\f$K_p\f$</td><td>μbar</td><td>82 / Ea=38.3</td><td>PEPC Michaelis constant for CO<sub>2</sub>. Temperature response from Boyd et al. (2015) refit.</td></tr>
+ <tr><td>gamma_star_25, dH_gamma_star</td><td>\f$\gamma^*\f$</td><td>unitless</td><td>3.8168e-4 / Ea=−31.1</td><td>\f$0.5 / S_{Rubisco}\f$. Negative Ea in this parameterization — γ* decreases with temperature.</td></tr>
+ <tr><td>Om_25, dH_Om</td><td>\f$O_m\f$</td><td>μbar</td><td>210000 / Ea=0</td><td>Mesophyll O<sub>2</sub> partial pressure (=210 mbar = ambient).</td></tr>
+ <tr><td rowspan="9">User-tunable scalars</td>
+     <td>alpha_psII_fraction</td><td>\f$\alpha\f$</td><td>0..1</td><td>0</td><td>Fraction of PSII activity in the bundle sheath (0 for NADP-ME).</td></tr>
+ <tr><td>x_etr_partition</td><td>\f$x\f$</td><td>0..1</td><td>0.4</td><td>Fraction of linear electron transport partitioned to the mesophyll.</td></tr>
+ <tr><td>Vpr</td><td>\f$V_{pr}\f$</td><td>μmol/m²/s</td><td>80</td><td>PEP regeneration cap. \f$V_p = \min(C_m \cdot V_{p,max}/(C_m + K_p), V_{pr})\f$ (Eq. 19).</td></tr>
+ <tr><td>Rm_frac</td><td>—</td><td>unitless</td><td>0.5</td><td>Mesophyll respiration as a fraction of R_d: \f$R_m = R_{m,frac} \cdot R_d\f$.</td></tr>
+ <tr><td>fcyc</td><td>\f$f_{cyc}\f$</td><td>0..1</td><td>0.3</td><td>Fraction of cyclic electron flow (affects ATP/e<sup>−</sup> stoichiometry).</td></tr>
+ <tr><td>gbs</td><td>\f$g_{bs}\f$</td><td>mol/m²/s/bar</td><td>0.003</td><td>Bundle-sheath conductance to CO<sub>2</sub> (assumed constant with T).</td></tr>
+ <tr><td>ao</td><td>\f$a_o\f$</td><td>unitless</td><td>0.047</td><td>O<sub>2</sub>/CO<sub>2</sub> solubility–diffusivity ratio.</td></tr>
+ <tr><td>absorptance</td><td>—</td><td>unitless</td><td>0.85</td><td>Leaf PAR absorptance (see Eq. 35).</td></tr>
+ <tr><td>f_spectral</td><td>\f$f\f$</td><td>unitless</td><td>0.15</td><td>Spectral-quality correction to absorbed PAR.</td></tr>
+ </table>
+
+ \subsection PhotoC4Outputs C4 Optional Output Primitive Data
+
+ <table>
+ <tr><th>Primitive Data Label</th><th>Symbol</th><th>Units</th><th>Data Type</th><th>Description</th></tr>
+ <tr><td>Ci</td><td>\f$C_i\f$</td><td>μmol CO<sub>2</sub>/mol</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Intercellular CO<sub>2</sub> concentration.</td></tr>
+ <tr><td>Cm</td><td>\f$C_m\f$</td><td>μbar</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Mesophyll cytosolic CO<sub>2</sub> partial pressure, \f$C_m = C_i - A/g_m\f$.</td></tr>
+ <tr><td>Vp</td><td>\f$V_p\f$</td><td>μmol CO<sub>2</sub>/m²/s</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>PEP carboxylation rate.</td></tr>
+ <tr><td>limitation\_state</td><td>N/A</td><td>N/A</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>For the C4 model: 1 = enzyme (A_c) limited, 2 = electron-transport (A_j) limited.</td></tr>
+ </table>
+
+ \note The C4 model's \ref C4ModelCoefficients struct defaults match the paper's Table 1 for <em>Setaria viridis</em>. Two implementation notes distinguish Helios from the paper's supplementary spreadsheet: (1) the Jmax temperature response uses peaked Arrhenius (same API as C3) rather than the paper's Gaussian — Jmax(25 °C) = 247.69 matches the Gaussian at 25 °C; users who need exact Gaussian behavior at other temperatures should fit peaked-Arrhenius parameters or set Jmax as a constant. (2) The Vpr cap in Eq. 19 is always applied; the paper's spreadsheet omits it, so Helios gives slightly lower A at high C_m when V_p,MM > V_pr.
+
 */

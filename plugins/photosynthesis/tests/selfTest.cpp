@@ -103,6 +103,170 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Temperature Response Curve - Farquhar Mod
     }
 }
 
+DOCTEST_TEST_CASE("PhotosynthesisModel Farquhar gm setter overloads") {
+    FarquharModelCoefficients fq;
+
+    // Default is +infinity (sentinel: Cc ≡ Ci, no mesophyll limitation).
+    DOCTEST_CHECK(std::isinf(fq.getMesophyllConductance_gmTempResponse().value_at_25C));
+
+    SUBCASE("Constant gm") {
+        fq.setMesophyllConductance_gm(0.5f);
+        DOCTEST_CHECK(fq.getMesophyllConductance_gmTempResponse().value_at_25C == doctest::Approx(0.5f));
+        DOCTEST_CHECK(fq.getMesophyllConductance_gmTempResponse().dHa == doctest::Approx(0.f));
+    }
+    SUBCASE("Arrhenius gm") {
+        fq.setMesophyllConductance_gm(0.8f, 50.f);
+        DOCTEST_CHECK(fq.getMesophyllConductance_gmTempResponse().value_at_25C == doctest::Approx(0.8f));
+        DOCTEST_CHECK(fq.getMesophyllConductance_gmTempResponse().dHa == doctest::Approx(50.f));
+    }
+    SUBCASE("Peaked Arrhenius gm") {
+        fq.setMesophyllConductance_gm(0.4f, 45.f, 35.f);
+        DOCTEST_CHECK(fq.getMesophyllConductance_gmTempResponse().value_at_25C == doctest::Approx(0.4f));
+        DOCTEST_CHECK(fq.getMesophyllConductance_gmTempResponse().Topt == doctest::Approx(273.15f + 35.f));
+    }
+    SUBCASE("Peaked Arrhenius gm with explicit dHd") {
+        fq.setMesophyllConductance_gm(0.6f, 49.f, 40.f, 420.f);
+        DOCTEST_CHECK(fq.getMesophyllConductance_gmTempResponse().dHd == doctest::Approx(420.f));
+    }
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel Farquhar default gm = infinity preserves legacy A") {
+    // Reruns the three existing C3 reference sweeps (Light, CO2, Temperature) with
+    // the default-infinite gm. The solver must short-circuit to the legacy Cc ≡ Ci
+    // path and return values bit-for-bit identical (to within 1e-5) to the existing
+    // hardcoded expected values. This guards the short-circuit in evaluateCi_Farquhar.
+    const float strict_tol = 1e-5f;
+
+    auto make_coeffs = []() {
+        FarquharModelCoefficients fcoeffs;
+        fcoeffs.setVcmax(78.5f, 65.33f);
+        fcoeffs.setJmax(150.f, 43.54f);
+        fcoeffs.setRd(2.12f, 46.39f);
+        fcoeffs.setQuantumEfficiency_alpha(0.45f);
+        return fcoeffs;
+    };
+
+    SUBCASE("Light response") {
+        Context context_test;
+        uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        PhotosynthesisModel photomodel(&context_test);
+        float Qin[9] = {0, 50, 100, 200, 400, 800, 1200, 1500, 2000};
+        std::vector<float> AQ_expected{-2.37932f, 8.29752f, 12.5566f, 16.2075f, 16.7448f, 16.7448f, 16.7448f, 16.7448f, 16.7448f};
+        FarquharModelCoefficients fcoeffs = make_coeffs();
+        photomodel.setModelCoefficients(fcoeffs);
+        for (int i = 0; i < 9; i++) {
+            context_test.setPrimitiveData(UUID, "radiation_flux_PAR", Qin[i]);
+            photomodel.run();
+            float A;
+            context_test.getPrimitiveData(UUID, "net_photosynthesis", A);
+            DOCTEST_CHECK(A == doctest::Approx(AQ_expected[i]).epsilon(strict_tol));
+        }
+    }
+    SUBCASE("CO2 response") {
+        Context context_test;
+        uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        PhotosynthesisModel photomodel(&context_test);
+        float CO2[9] = {100, 200, 300, 400, 500, 600, 700, 800, 1000};
+        std::vector<float> ACi_expected{1.72714f, 7.32672f, 12.4749f, 17.199f, 21.5281f, 25.4923f, 28.4271f, 29.656f, 31.3813f};
+        FarquharModelCoefficients fcoeffs = make_coeffs();
+        photomodel.setModelCoefficients(fcoeffs);
+        context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 2000.0f);
+        for (int i = 0; i < 9; i++) {
+            context_test.setPrimitiveData(UUID, "air_CO2", CO2[i]);
+            photomodel.run();
+            float A;
+            context_test.getPrimitiveData(UUID, "net_photosynthesis", A);
+            DOCTEST_CHECK(A == doctest::Approx(ACi_expected[i]).epsilon(strict_tol));
+        }
+    }
+    SUBCASE("Temperature response") {
+        Context context_test;
+        uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        PhotosynthesisModel photomodel(&context_test);
+        float TL[7] = {270, 280, 290, 300, 310, 320, 330};
+        std::vector<float> AT_expected{3.87863f, 8.74928f, 14.4075f, 17.199f, 16.0928f, 11.6431f, 4.00821f};
+        FarquharModelCoefficients fcoeffs = make_coeffs();
+        photomodel.setModelCoefficients(fcoeffs);
+        context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 2000.0f);
+        context_test.setPrimitiveData(UUID, "air_CO2", 400.0f);
+        for (int i = 0; i < 7; i++) {
+            context_test.setPrimitiveData(UUID, "temperature", TL[i]);
+            photomodel.run();
+            float A;
+            context_test.getPrimitiveData(UUID, "net_photosynthesis", A);
+            DOCTEST_CHECK(A == doctest::Approx(AT_expected[i]).epsilon(strict_tol));
+        }
+    }
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel Farquhar very large gm reproduces legacy") {
+    // Force the finite-gm quadratic path (gm = 1e9, below the 1e6 short-circuit threshold
+    // is gm > 1e6; 1e9 keeps it finite with std::isfinite but above the threshold — so to
+    // actually enter the quadratic branch we use gm slightly below threshold, 9e5). The
+    // quadratic branch should agree with the legacy branch to within 1e-3.
+    Context context_test;
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    PhotosynthesisModel photo_legacy(&context_test);
+    PhotosynthesisModel photo_gm(&context_test);
+
+    FarquharModelCoefficients legacy_coeffs;
+    legacy_coeffs.setVcmax(80.f, 65.33f);
+    legacy_coeffs.setJmax(150.f, 43.54f);
+    legacy_coeffs.setRd(2.0f, 46.39f);
+    legacy_coeffs.setQuantumEfficiency_alpha(0.45f);
+
+    FarquharModelCoefficients gm_coeffs = legacy_coeffs;
+    gm_coeffs.setMesophyllConductance_gm(9.0e5f); // just below 1e6 guard → enters quadratic branch
+
+    photo_legacy.setModelCoefficients(legacy_coeffs);
+    photo_gm.setModelCoefficients(gm_coeffs);
+
+    context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 2000.f);
+    float Ci_sweep[5] = {200.f, 400.f, 600.f, 800.f, 1000.f};
+    for (float CO2: Ci_sweep) {
+        context_test.setPrimitiveData(UUID, "air_CO2", CO2);
+        photo_legacy.run();
+        float A_legacy;
+        context_test.getPrimitiveData(UUID, "net_photosynthesis", A_legacy);
+        photo_gm.run();
+        float A_gm;
+        context_test.getPrimitiveData(UUID, "net_photosynthesis", A_gm);
+        DOCTEST_CHECK(A_gm == doctest::Approx(A_legacy).epsilon(1e-3));
+    }
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel Farquhar gm finite regression") {
+    // Regression anchors for the finite-gm quadratic branch with gm = 0.2 mol/m^2/s/bar.
+    // Expected A values are produced by this implementation — not independent reference
+    // data — and serve only to detect future unintended drift.
+    Context context_test;
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    PhotosynthesisModel photomodel(&context_test);
+
+    FarquharModelCoefficients fcoeffs;
+    fcoeffs.setVcmax(80.f, 65.33f);
+    fcoeffs.setJmax(150.f, 43.54f);
+    fcoeffs.setRd(2.f, 46.39f);
+    fcoeffs.setQuantumEfficiency_alpha(0.45f);
+    fcoeffs.setMesophyllConductance_gm(0.2f);
+
+    photomodel.setModelCoefficients(fcoeffs);
+    context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 2000.f);
+
+    float CO2_sweep[6] = {100.f, 200.f, 400.f, 600.f, 800.f, 1000.f};
+    // Regression anchors: values produced by the current quadratic implementation.
+    // A is strictly less than the legacy (infinite-gm) value at each point — mesophyll
+    // diffusion limitation reduces net assimilation as expected.
+    float A_expected[6] = {1.43302f, 5.90503f, 14.192f, 21.6148f, 27.8598f, 30.2768f};
+    for (int i = 0; i < 6; ++i) {
+        context_test.setPrimitiveData(UUID, "air_CO2", CO2_sweep[i]);
+        photomodel.run();
+        float A;
+        context_test.getPrimitiveData(UUID, "net_photosynthesis", A);
+        DOCTEST_CHECK(A == doctest::Approx(A_expected[i]).epsilon(1e-3));
+    }
+}
+
 DOCTEST_TEST_CASE("PhotosynthesisModel Empirical Model Coefficients") {
     Context context_test;
     uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
@@ -1109,6 +1273,316 @@ DOCTEST_TEST_CASE("PhotosynthesisModel - Topt Parameter Validation") {
         DOCTEST_CHECK(jmax_params.Topt == doctest::Approx(373.15f).epsilon(err_tol));
     }
 }
+
+// -----------------------------------------------------------------------------
+// C4 Model tests — von Caemmerer (2021) JXB 72:6003
+// -----------------------------------------------------------------------------
+
+DOCTEST_TEST_CASE("PhotosynthesisModel C4 Model Type Setting and Defaults") {
+    Context context_test;
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    PhotosynthesisModel photomodel(&context_test);
+    photomodel.disableMessages();
+
+    DOCTEST_CHECK_NOTHROW(photomodel.setModelType_C4());
+
+    // Retrieve default C4 coefficients — paper Table 1 defaults for Setaria viridis
+    C4ModelCoefficients c4 = photomodel.getC4ModelCoefficients(UUID);
+
+    DOCTEST_CHECK(c4.Kc_25 == doctest::Approx(1210.f).epsilon(err_tol));
+    DOCTEST_CHECK(c4.Ko_25 == doctest::Approx(292000.f).epsilon(err_tol));
+    DOCTEST_CHECK(c4.Kp_25 == doctest::Approx(82.f).epsilon(err_tol));
+    DOCTEST_CHECK(c4.gamma_star_25 == doctest::Approx(3.81679e-4f).epsilon(err_tol));
+    DOCTEST_CHECK(c4.Om_25 == doctest::Approx(210000.f).epsilon(err_tol));
+    DOCTEST_CHECK(c4.alpha_psII_fraction == doctest::Approx(0.f).epsilon(err_tol));
+    DOCTEST_CHECK(c4.x_etr_partition == doctest::Approx(0.4f).epsilon(err_tol));
+    DOCTEST_CHECK(c4.Vpr == doctest::Approx(80.f).epsilon(err_tol));
+    DOCTEST_CHECK(c4.Rm_frac == doctest::Approx(0.5f).epsilon(err_tol));
+    DOCTEST_CHECK(c4.fcyc == doctest::Approx(0.3f).epsilon(err_tol));
+    DOCTEST_CHECK(c4.gbs == doctest::Approx(0.003f).epsilon(err_tol));
+    DOCTEST_CHECK(c4.ao == doctest::Approx(0.047f).epsilon(err_tol));
+
+    // Default temperature responses
+    DOCTEST_CHECK(c4.getVpmaxTempResponse().value_at_25C == doctest::Approx(200.f).epsilon(err_tol));
+    DOCTEST_CHECK(c4.getVcmaxTempResponse().value_at_25C == doctest::Approx(40.f).epsilon(err_tol));
+    DOCTEST_CHECK(c4.getJmaxTempResponse().value_at_25C == doctest::Approx(247.69f).epsilon(err_tol));
+    DOCTEST_CHECK(c4.getRdTempResponse().value_at_25C == doctest::Approx(1.f).epsilon(err_tol));
+    DOCTEST_CHECK(c4.getMesophyllConductance_gmTempResponse().value_at_25C == doctest::Approx(1.f).epsilon(err_tol));
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel C4 Setter Overloads - Temperature Response") {
+    C4ModelCoefficients c4;
+
+    SUBCASE("Constant Vpmax") {
+        c4.setVpmax(150.f);
+        DOCTEST_CHECK(c4.getVpmaxTempResponse().value_at_25C == doctest::Approx(150.f));
+        DOCTEST_CHECK(c4.getVpmaxTempResponse().dHa == doctest::Approx(0.f));
+    }
+    SUBCASE("Arrhenius Vcmax") {
+        c4.setVcmax(35.f, 70.f);
+        DOCTEST_CHECK(c4.getVcmaxTempResponse().value_at_25C == doctest::Approx(35.f));
+        DOCTEST_CHECK(c4.getVcmaxTempResponse().dHa == doctest::Approx(70.f));
+    }
+    SUBCASE("Peaked Arrhenius Jmax") {
+        c4.setJmax(220.f, 45.f, 40.f);
+        DOCTEST_CHECK(c4.getJmaxTempResponse().value_at_25C == doctest::Approx(220.f));
+        DOCTEST_CHECK(c4.getJmaxTempResponse().Topt == doctest::Approx(273.15f + 40.f));
+    }
+    SUBCASE("Peaked Arrhenius Rd with explicit dHd") {
+        c4.setRd(1.2f, 60.f, 42.f, 400.f);
+        DOCTEST_CHECK(c4.getRdTempResponse().dHd == doctest::Approx(400.f));
+    }
+    SUBCASE("gm setters") {
+        c4.setMesophyllConductance_gm(0.5f);
+        DOCTEST_CHECK(c4.getMesophyllConductance_gmTempResponse().value_at_25C == doctest::Approx(0.5f));
+        c4.setMesophyllConductance_gm(0.8f, 50.f);
+        DOCTEST_CHECK(c4.getMesophyllConductance_gmTempResponse().dHa == doctest::Approx(50.f));
+    }
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel C4 - von Caemmerer 2021 spreadsheet verification at T=25C") {
+    // Direct A vs Cm sweep at T=25 C, I=2000 umol/m²/s incident PAR. Reference values come from
+    // the spreadsheet "C4__model_setaria__11-06-2021.xlsm" (sheet "A vs cm", column V "Amin").
+    // Each test point supplies a Cm directly via setCm(), so the comparison tests the quadratic
+    // math (Ac, Aj) without involving the Ci = Cm + A/gm coupling or the stomatal balance.
+
+    Context context_test;
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    PhotosynthesisModel photomodel(&context_test);
+    photomodel.disableMessages();
+
+    // Use paper defaults with two spreadsheet-compatibility adjustments:
+    //  - Jmax(25 °C) set exactly to the Gaussian-evaluated value 247.6892 (peaked-Arrhenius fit matches only at 25 °C).
+    //  - Vpr raised above Vpmax to disable the Eq. 19 cap Vp = min(Vp_MM, Vpr). The reference spreadsheet omits
+    //    this cap, so our computed Ac at high Cm would diverge if we applied it. End-user defaults keep Vpr=80
+    //    per paper Table 1 — the separate "Vpr cap activates" test verifies that behavior.
+    C4ModelCoefficients c4;
+    c4.setJmax(247.6891682624015f);
+    c4.Vpr = 1.0e4f;
+
+    photomodel.setModelCoefficients(c4);
+
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "temperature", 298.15f));
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 2000.f / 4.57f));
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "air_CO2", 400.f));
+
+    struct C4TestPoint {
+        float Cm;
+        float A_expected;
+    };
+    // Values from spreadsheet sheet "A vs cm", column F (Cm) and V (Amin) — paper Table 1 defaults
+    const std::vector<C4TestPoint> points = {
+            {0.1f, -0.567410f}, // boundary: Vp ≈ 0, A ≈ -Rd, exercises the discriminant clamp at the low edge
+            {5.f,   8.695318f},  // Ac-limited (small Cm)
+            {10.f,  16.159569f},
+            {20.f,  25.628532f},
+            {30.f,  30.140492f},
+            {40.f,  32.364615f},
+            {50.f,  33.604065f},
+            {60.f,  34.375010f},
+            {80.f,  34.835899f}, // Aj-limited from here
+            {100.f, 34.862438f},
+            {150.f, 34.928111f},
+            {250.f, 35.056593f},
+            {500.f, 35.361352f},
+            {780.f, 35.675665f},
+    };
+
+    for (const auto &pt: points) {
+        photomodel.setCm(pt.Cm, {UUID});
+        DOCTEST_CHECK_NOTHROW(photomodel.run());
+        float A;
+        context_test.getPrimitiveData(UUID, "net_photosynthesis", A);
+        // 0.5% tolerance — tight since the only approximations are float precision and the Jmax
+        // peaked-Arrhenius-vs-Gaussian form (matched exactly at 25 °C).
+        DOCTEST_CHECK_MESSAGE(A == doctest::Approx(pt.A_expected).epsilon(0.005),
+                              "Cm=" << pt.Cm << " expected A=" << pt.A_expected << " got " << A);
+    }
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel C4 - setCm round-trip: Ci = Cm + A/gm") {
+    // When Cm is supplied directly, Ci is back-computed. Verify the relationship.
+    Context context_test;
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    PhotosynthesisModel photomodel(&context_test);
+    photomodel.disableMessages();
+    photomodel.setModelType_C4();
+    photomodel.optionalOutputPrimitiveData("Ci");
+    photomodel.optionalOutputPrimitiveData("Cm");
+
+    context_test.setPrimitiveData(UUID, "temperature", 298.15f);
+    context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 2000.f / 4.57f);
+    context_test.setPrimitiveData(UUID, "air_CO2", 400.f);
+
+    C4ModelCoefficients defaults;
+    const float gm_25 = defaults.getMesophyllConductance_gmTempResponse().value_at_25C;
+
+    for (float Cm_in: {20.f, 60.f, 120.f}) {
+        photomodel.setCm(Cm_in, {UUID});
+        DOCTEST_CHECK_NOTHROW(photomodel.run());
+        float A, Ci_out, Cm_out;
+        context_test.getPrimitiveData(UUID, "net_photosynthesis", A);
+        context_test.getPrimitiveData(UUID, "Ci", Ci_out);
+        context_test.getPrimitiveData(UUID, "Cm", Cm_out);
+        DOCTEST_CHECK(Cm_out == doctest::Approx(Cm_in).epsilon(1e-5));
+        DOCTEST_CHECK(Ci_out == doctest::Approx(Cm_in + A / gm_25).epsilon(1e-3));
+    }
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel C4 - Temperature response wires through to A") {
+    // Regression guard: catches the bug class "T-response getting silently disconnected from the C4 solver".
+    // The setter tests only verify struct storage; the spreadsheet test runs only at 25 °C where the
+    // Arrhenius factor degenerates to 1 regardless of dHa. This test runs at T = 308 K (35 °C),
+    // where every default temperature-response actually contributes.
+    Context context_test;
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    PhotosynthesisModel photomodel(&context_test);
+    photomodel.disableMessages();
+    photomodel.setModelType_C4();
+
+    context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 2000.f / 4.57f);
+    context_test.setPrimitiveData(UUID, "air_CO2", 400.f);
+    photomodel.setCm(80.f, {UUID});
+
+    // 25 °C baseline
+    context_test.setPrimitiveData(UUID, "temperature", 298.15f);
+    DOCTEST_CHECK_NOTHROW(photomodel.run());
+    float A_25;
+    context_test.getPrimitiveData(UUID, "net_photosynthesis", A_25);
+
+    // 35 °C — well below the Jmax peak (Topt = 43 °C) but with all rate constants substantially elevated
+    context_test.setPrimitiveData(UUID, "temperature", 308.15f);
+    DOCTEST_CHECK_NOTHROW(photomodel.run());
+    float A_35;
+    context_test.getPrimitiveData(UUID, "net_photosynthesis", A_35);
+
+    // Directional check: the bug we want to catch is the response being disconnected (A_25 == A_35).
+    // C4 is near its temperature optimum at 35 °C, so A should rise meaningfully.
+    DOCTEST_CHECK_MESSAGE(A_35 > A_25 * 1.1f,
+                          "T-response not wired through: A(35°C)=" << A_35 << " not meaningfully > A(25°C)=" << A_25);
+
+    // Tight regression anchors captured from the current implementation. Updating these is a deliberate
+    // act and signals a behavioral change in either the temperature-response framework or the C4 solver.
+    DOCTEST_CHECK(A_25 == doctest::Approx(34.012f).epsilon(0.005));
+    DOCTEST_CHECK(A_35 == doctest::Approx(60.687f).epsilon(0.005));
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel C4 - Vpr cap activates at high Cm") {
+    // Per paper Eq. 19, Vp = min(Cm·Vpmax/(Cm+Kp), Vpr). At Cm above roughly 55 μbar (with Vpmax=200, Kp=82),
+    // Vp_MM exceeds the default Vpr=80 and the cap must activate. Ensure the reported Vp never exceeds Vpr.
+    Context context_test;
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    PhotosynthesisModel photomodel(&context_test);
+    photomodel.disableMessages();
+    photomodel.setModelType_C4();
+    photomodel.optionalOutputPrimitiveData("Vp");
+
+    context_test.setPrimitiveData(UUID, "temperature", 298.15f);
+    context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 2000.f / 4.57f);
+    context_test.setPrimitiveData(UUID, "air_CO2", 400.f);
+    photomodel.setCi(600.f, {UUID});
+
+    DOCTEST_CHECK_NOTHROW(photomodel.run());
+    float Vp_out = 0.f;
+    context_test.getPrimitiveData(UUID, "Vp", Vp_out);
+    C4ModelCoefficients defaults;
+    DOCTEST_CHECK(Vp_out <= defaults.Vpr + 1e-4f);
+    DOCTEST_CHECK(Vp_out == doctest::Approx(defaults.Vpr).epsilon(1e-3)); // should hit the cap exactly at this Ci
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel C4 - Material-data caching round-trip") {
+    // Verify that C4 coefficients assigned via material label are correctly serialized to
+    // primitive-material data, retrieved on the next run(), and produce the same A as supplying
+    // the same coefficients via the per-UUID setModelCoefficients overload.
+    Context context_test;
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    PhotosynthesisModel photomodel(&context_test);
+    photomodel.disableMessages();
+
+    // Build a custom C4 coefficient set deliberately different from defaults
+    C4ModelCoefficients custom;
+    custom.setVcmax(60.f, 70.f);
+    custom.setJmax(300.f);
+    custom.Vpr = 1.0e4f; // disable cap so Vcmax differences register at Cm=50
+    custom.alpha_psII_fraction = 0.05f;
+
+    // Assign via material label
+    const std::string mat = "test_c4_material";
+    context_test.addMaterial(mat);
+    context_test.assignMaterialToPrimitive(UUID, mat);
+    photomodel.setModelCoefficients(mat, custom);
+
+    context_test.setPrimitiveData(UUID, "temperature", 298.15f);
+    context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 2000.f / 4.57f);
+    context_test.setPrimitiveData(UUID, "air_CO2", 400.f);
+    photomodel.setCm(50.f, {UUID});
+    DOCTEST_CHECK_NOTHROW(photomodel.run());
+    float A_material;
+    context_test.getPrimitiveData(UUID, "net_photosynthesis", A_material);
+
+    // Re-create scenario applying the same coefficients via per-UUID setter on a fresh context
+    Context ctx2;
+    uint UUID2 = ctx2.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    PhotosynthesisModel pm2(&ctx2);
+    pm2.disableMessages();
+    pm2.setModelCoefficients(custom, {UUID2});
+    ctx2.setPrimitiveData(UUID2, "temperature", 298.15f);
+    ctx2.setPrimitiveData(UUID2, "radiation_flux_PAR", 2000.f / 4.57f);
+    ctx2.setPrimitiveData(UUID2, "air_CO2", 400.f);
+    pm2.setCm(50.f, {UUID2});
+    DOCTEST_CHECK_NOTHROW(pm2.run());
+    float A_uuid;
+    ctx2.getPrimitiveData(UUID2, "net_photosynthesis", A_uuid);
+
+    // Two paths must agree to high precision (only difference is the serialization round-trip)
+    DOCTEST_CHECK(A_material == doctest::Approx(A_uuid).epsilon(1e-4));
+
+    // Round-trip the coefficients struct itself and spot-check a few fields
+    C4ModelCoefficients retrieved = photomodel.getC4ModelCoefficients(UUID);
+    DOCTEST_CHECK(retrieved.getVcmaxTempResponse().value_at_25C == doctest::Approx(60.f));
+    DOCTEST_CHECK(retrieved.getVcmaxTempResponse().dHa == doctest::Approx(70.f));
+    DOCTEST_CHECK(retrieved.getJmaxTempResponse().value_at_25C == doctest::Approx(300.f));
+    DOCTEST_CHECK(retrieved.Vpr == doctest::Approx(1.0e4f));
+    DOCTEST_CHECK(retrieved.alpha_psII_fraction == doctest::Approx(0.05f));
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel C4 - Coefficient assignment per-UUID") {
+    Context context_test;
+    uint UUID1 = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    uint UUID2 = context_test.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
+    PhotosynthesisModel photomodel(&context_test);
+    photomodel.disableMessages();
+
+    C4ModelCoefficients c4_hi;
+    c4_hi.setVcmax(80.f);
+    c4_hi.Vpr = 1.0e4f; // disable Vpr cap so Vcmax differences propagate to A in the Ac-limited regime
+    photomodel.setModelCoefficients(c4_hi, {UUID1});
+
+    C4ModelCoefficients c4_lo;
+    c4_lo.setVcmax(20.f);
+    c4_lo.Vpr = 1.0e4f;
+    photomodel.setModelCoefficients(c4_lo, {UUID2});
+
+    DOCTEST_CHECK(photomodel.getC4ModelCoefficients(UUID1).getVcmaxTempResponse().value_at_25C == doctest::Approx(80.f));
+    DOCTEST_CHECK(photomodel.getC4ModelCoefficients(UUID2).getVcmaxTempResponse().value_at_25C == doctest::Approx(20.f));
+
+    // Behavioral check: run the model on both UUIDs and confirm net_photosynthesis differs.
+    // At Cm = 50 with Vcmax = 80 vs 20, the Ac-limited rate should clearly diverge.
+    context_test.setPrimitiveData(UUID1, "temperature", 298.15f);
+    context_test.setPrimitiveData(UUID2, "temperature", 298.15f);
+    context_test.setPrimitiveData(UUID1, "radiation_flux_PAR", 2000.f / 4.57f);
+    context_test.setPrimitiveData(UUID2, "radiation_flux_PAR", 2000.f / 4.57f);
+    context_test.setPrimitiveData(UUID1, "air_CO2", 400.f);
+    context_test.setPrimitiveData(UUID2, "air_CO2", 400.f);
+    photomodel.setCm(50.f, {UUID1, UUID2});
+    DOCTEST_CHECK_NOTHROW(photomodel.run());
+
+    float A1, A2;
+    context_test.getPrimitiveData(UUID1, "net_photosynthesis", A1);
+    context_test.getPrimitiveData(UUID2, "net_photosynthesis", A2);
+    DOCTEST_CHECK(A1 > A2 + 1.f); // higher Vcmax should yield meaningfully higher A
+}
+
 
 int PhotosynthesisModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
