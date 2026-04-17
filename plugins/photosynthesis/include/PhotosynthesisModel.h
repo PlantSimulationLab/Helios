@@ -635,7 +635,17 @@ public:
     float dH_Kc = 64.2f;              //!< Activation energy for Kc (kJ/mol)
     float dH_Ko = 10.5f;              //!< Activation energy for Ko (kJ/mol)
     float dH_Kp = 38.3f;              //!< Activation energy for Kp (kJ/mol)
-    float dH_gamma_star = -31.1f;     //!< Activation energy for γ* (kJ/mol; negative per von Caemmerer 2021 spreadsheet — γ* decreases with T in this parameterization)
+    // IMPORTANT — DO NOT change dH_gamma_star back to a negative value.
+    // The von Caemmerer (2021) Setaria spreadsheet (C4__model_setaria__11-06-2021.xlsm, cell C17)
+    // lists -31.1 kJ/mol, but this is a transcription error: Boyd, Gandin & Cousins (2015)
+    // Plant Physiol 169:1850 Table I reports Ea = -31.1 kJ/mol for S_c/o (Rubisco specificity,
+    // which decreases with temperature). Because γ* = 0.5/S_c/o, the activation energy for γ*
+    // has the OPPOSITE sign: Ea(γ*) = -Ea(S_c/o) = +31.1 kJ/mol. The spreadsheet copied Boyd's
+    // S_c/o value into the γ* row without the required sign flip. Woodford, Ermakova, Furbank
+    // & von Caemmerer (2025, bioRxiv 10.1101/2025.06.03.657559) Table 1 silently corrects this
+    // to +31.1 kJ/mol. Positive is also consistent with Bernacchi et al. (2001) for C3
+    // (Ea(Γ*) ≈ +37.8 kJ/mol) and with the physical fact that photorespiration increases with T.
+    float dH_gamma_star = 31.1f;      //!< Activation energy for γ* (kJ/mol; positive — γ* increases with T because S_c/o decreases with T; see block comment above)
     float dH_Om = 0.f;                //!< Activation energy for Om (kJ/mol; ambient O2, assumed T-independent)
 
     // === (3) User-tunable scalar parameters (paper defaults in comments) ===
@@ -644,13 +654,22 @@ public:
     float x_etr_partition = 0.4f;     //!< x — fraction of linear electron-transport rate partitioned to the mesophyll
     float Vpr = 80.f;                 //!< PEP regeneration rate cap (μmol/m²/s)
     float Rm_frac = 0.5f;             //!< R_m = Rm_frac · R_d (mesophyll mitochondrial respiration as a fraction of total)
-    float fcyc = 0.3f;                //!< Fraction of linear electron flow that is cyclic (Table 1, von Caemmerer 2021)
+    float fcyc = 0.45f;               //!< Fraction of linear electron flow that is cyclic (Woodford et al. 2025 Table 1; updated from 0.3 in vC2021 to reflect NDH dominance — Ermakova 2024, Yin & Struik 2012)
     float gbs = 0.003f;               //!< Bundle-sheath conductance to CO2 (mol/m²/s/bar), constant with temperature
     float ao = 0.047f;                //!< O2/CO2 solubility-diffusivity ratio (a_o in Eq. 15)
     float absorptance = 0.85f;        //!< Leaf PAR absorptance (fraction of incident PAR absorbed)
     float f_spectral = 0.15f;         //!< Spectral-quality correction to absorbed PAR (Eq. 35)
     float theta_etr = 0.7f;           //!< Curvature of the J ~ I2 non-rectangular hyperbola (Eq. 34)
     float h_protons = 4.f;            //!< Protons required per ATP synthesized (Eq. 31)
+    // Proton stoichiometries for the z factor in the Aj quadratic (ATP / linear-e⁻ ratio).
+    // vC2021 originally collapsed H_J and H_Jcyc to a single "3" in the numerator of the z formula,
+    // which implicitly assumes H_Jcyc = 2 (PGR5-only cyclic flow). Woodford et al. (2025) argue NDH
+    // dominates Setaria cyclic flow (Ermakova 2024 methyl-viologen work), giving H_Jcyc = 3.4, and
+    // derive fcyc = 0.45 consistent with Bjorkman & Demmig 1987 / Yin & Struik 2012 quantum yields.
+    // Together these recover the paper Table 1 value z = 1.45 via the corrected formula in
+    // computeC4RatesFromCm: z = (H_J·(1−fcyc) + H_Jcyc·fcyc) / (h_protons·(1−fcyc)).
+    float H_J = 3.f;                  //!< Protons per electron for linear electron flow (H⁺/e⁻; Woodford et al. 2025 Table 1)
+    float H_Jcyc = 3.4f;              //!< Protons per electron for cyclic electron flow (H⁺/e⁻; Woodford et al. 2025 Table 1, reflecting NDH dominance)
 
 private:
     PhotosyntheticTemperatureResponseParameters VpmaxTempResponse;

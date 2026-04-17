@@ -514,14 +514,16 @@ photo_model.run();
      <td>Kc_25, dH_Kc</td><td>\f$K_c\f$</td><td>μbar (=μmol/mol)</td><td>1210 / Ea=64.2</td><td>Rubisco Michaelis constant for CO<sub>2</sub>.</td></tr>
  <tr><td>Ko_25, dH_Ko</td><td>\f$K_o\f$</td><td>μbar</td><td>292000 / Ea=10.5</td><td>Rubisco Michaelis constant for O<sub>2</sub> (=292 mbar).</td></tr>
  <tr><td>Kp_25, dH_Kp</td><td>\f$K_p\f$</td><td>μbar</td><td>82 / Ea=38.3</td><td>PEPC Michaelis constant for CO<sub>2</sub>. Temperature response from Boyd et al. (2015) refit.</td></tr>
- <tr><td>gamma_star_25, dH_gamma_star</td><td>\f$\gamma^*\f$</td><td>unitless</td><td>3.8168e-4 / Ea=−31.1</td><td>\f$0.5 / S_{Rubisco}\f$. Negative Ea in this parameterization — γ* decreases with temperature.</td></tr>
+ <tr><td>gamma_star_25, dH_gamma_star</td><td>\f$\gamma^*\f$</td><td>unitless</td><td>3.8168e-4 / Ea=+31.1</td><td>\f$0.5 / S_{Rubisco}\f$. Positive Ea — γ* increases with temperature because Rubisco specificity \f$S_{c/o}\f$ decreases with T. Note: the von Caemmerer (2021) Setaria spreadsheet lists −31.1, but this is a transcription error (it is Boyd 2015's Ea for \f$S_{c/o}\f$ entered without the required reciprocal sign flip for γ* = 0.5/\f$S_{c/o}\f$); Woodford <em>et al.</em> (2025) Table 1 silently corrects to +31.1.</td></tr>
  <tr><td>Om_25, dH_Om</td><td>\f$O_m\f$</td><td>μbar</td><td>210000 / Ea=0</td><td>Mesophyll O<sub>2</sub> partial pressure (=210 mbar = ambient).</td></tr>
- <tr><td rowspan="9">User-tunable scalars</td>
-     <td>alpha_psII_fraction</td><td>\f$\alpha\f$</td><td>0..1</td><td>0</td><td>Fraction of PSII activity in the bundle sheath (0 for NADP-ME).</td></tr>
+ <tr><td rowspan="11">User-tunable scalars</td>
+     <td>alpha_psII_fraction</td><td>\f$\alpha\f$</td><td>0..1</td><td>0</td><td>Fraction of PSII activity in the bundle sheath (0 for NADP-ME; 0.5 recommended for NAD-ME / PCK species per Woodford <em>et al.</em> 2025).</td></tr>
  <tr><td>x_etr_partition</td><td>\f$x\f$</td><td>0..1</td><td>0.4</td><td>Fraction of linear electron transport partitioned to the mesophyll.</td></tr>
  <tr><td>Vpr</td><td>\f$V_{pr}\f$</td><td>μmol/m²/s</td><td>80</td><td>PEP regeneration cap. \f$V_p = \min(C_m \cdot V_{p,max}/(C_m + K_p), V_{pr})\f$ (Eq. 19).</td></tr>
  <tr><td>Rm_frac</td><td>—</td><td>unitless</td><td>0.5</td><td>Mesophyll respiration as a fraction of R_d: \f$R_m = R_{m,frac} \cdot R_d\f$.</td></tr>
- <tr><td>fcyc</td><td>\f$f_{cyc}\f$</td><td>0..1</td><td>0.3</td><td>Fraction of cyclic electron flow (affects ATP/e<sup>−</sup> stoichiometry).</td></tr>
+ <tr><td>fcyc</td><td>\f$f_{cyc}\f$</td><td>0..1</td><td>0.45</td><td>Fraction of cyclic electron flow (affects ATP/e<sup>−</sup> stoichiometry). Updated from 0.3 (vC2021) to 0.45 (Woodford <em>et al.</em> 2025 Table 1) reflecting NDH-dominated cyclic flow.</td></tr>
+ <tr><td>H_J</td><td>\f$H_J\f$</td><td>H<sup>+</sup>/e<sup>−</sup></td><td>3</td><td>Protons per electron for linear electron flow (Woodford <em>et al.</em> 2025 Table 1).</td></tr>
+ <tr><td>H_Jcyc</td><td>\f$H_{Jcyc}\f$</td><td>H<sup>+</sup>/e<sup>−</sup></td><td>3.4</td><td>Protons per electron for cyclic electron flow (Woodford <em>et al.</em> 2025 Table 1; NDH-dominated). The vC2021 Eq. 31 value of 2 is the PGR5-only special case that this framework generalizes.</td></tr>
  <tr><td>gbs</td><td>\f$g_{bs}\f$</td><td>mol/m²/s/bar</td><td>0.003</td><td>Bundle-sheath conductance to CO<sub>2</sub> (assumed constant with T).</td></tr>
  <tr><td>ao</td><td>\f$a_o\f$</td><td>unitless</td><td>0.047</td><td>O<sub>2</sub>/CO<sub>2</sub> solubility–diffusivity ratio.</td></tr>
  <tr><td>absorptance</td><td>—</td><td>unitless</td><td>0.85</td><td>Leaf PAR absorptance (see Eq. 35).</td></tr>
@@ -534,7 +536,7 @@ photo_model.run();
 
  <table>
  <tr><th>Species key</th><th>Subtype</th><th>Vcmax(25)<br/>μmol/m²/s</th><th>Vpmax(25)<br/>μmol/m²/s</th><th>Jmax(25)<br/>μmol/m²/s</th><th>Rd(25)<br/>μmol/m²/s</th><th>gm(25)<br/>mol/m²/s/bar</th><th>Kc(25)<br/>μbar</th><th>Ko(25)<br/>μbar</th><th>Kp(25)<br/>μbar</th><th>fcyc</th><th>T-response</th><th>Source</th></tr>
- <tr><td>SetariaViridis_vC2021</td><td>NADP-ME</td><td>40</td><td>200</td><td>247.69</td><td>0.4</td><td>1.0</td><td>1210</td><td>292000</td><td>82</td><td>0.3</td><td>Arrhenius (Jmax peaked)</td><td>von Caemmerer (2021) Table 1; kinetics Boyd <em>et al.</em> (2015); gm Ubierna <em>et al.</em> (2017).</td></tr>
+ <tr><td>SetariaViridis_vC2021</td><td>NADP-ME</td><td>40</td><td>200</td><td>247.69</td><td>0.4</td><td>1.0</td><td>1210</td><td>292000</td><td>82</td><td>0.45</td><td>Arrhenius (Jmax peaked)</td><td>von Caemmerer (2021) Table 1; kinetics Boyd <em>et al.</em> (2015); gm Ubierna <em>et al.</em> (2017); fcyc / H_Jcyc updated per Woodford <em>et al.</em> (2025).</td></tr>
  <tr><td>GenericC4_vC2000</td><td>NADP-ME</td><td>60</td><td>120</td><td>400</td><td>1.0</td><td>∞ (10<sup>4</sup>)</td><td>1210</td><td>292000</td><td>80</td><td>0</td><td>Q10=2.3 → Arrhenius Ea≈61.6</td><td>von Caemmerer (2000) <em>Biochemical Models of Leaf Photosynthesis</em>; plantecophys AciC4 defaults.</td></tr>
  <tr><td>Maize_Massad2007</td><td>NADP-ME</td><td>60</td><td>120</td><td>400</td><td>0.6</td><td>∞ (10<sup>4</sup>)</td><td>650</td><td>450000</td><td>80</td><td>0</td><td>Peaked Arrhenius</td><td>Massad <em>et al.</em> (2007) <em>Plant Cell Environ.</em> 30:1191 (T-responses); plantecophys defaults at 25 °C.</td></tr>
  </table>

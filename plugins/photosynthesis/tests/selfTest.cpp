@@ -1298,7 +1298,9 @@ DOCTEST_TEST_CASE("PhotosynthesisModel C4 Model Type Setting and Defaults") {
     DOCTEST_CHECK(c4.x_etr_partition == doctest::Approx(0.4f).epsilon(err_tol));
     DOCTEST_CHECK(c4.Vpr == doctest::Approx(80.f).epsilon(err_tol));
     DOCTEST_CHECK(c4.Rm_frac == doctest::Approx(0.5f).epsilon(err_tol));
-    DOCTEST_CHECK(c4.fcyc == doctest::Approx(0.3f).epsilon(err_tol));
+    DOCTEST_CHECK(c4.fcyc == doctest::Approx(0.45f).epsilon(err_tol));
+    DOCTEST_CHECK(c4.H_J == doctest::Approx(3.f).epsilon(err_tol));
+    DOCTEST_CHECK(c4.H_Jcyc == doctest::Approx(3.4f).epsilon(err_tol));
     DOCTEST_CHECK(c4.gbs == doctest::Approx(0.003f).epsilon(err_tol));
     DOCTEST_CHECK(c4.ao == doctest::Approx(0.047f).epsilon(err_tol));
 
@@ -1345,20 +1347,29 @@ DOCTEST_TEST_CASE("PhotosynthesisModel C4 - von Caemmerer 2021 spreadsheet verif
     // the spreadsheet "C4__model_setaria__11-06-2021.xlsm" (sheet "A vs cm", column V "Amin").
     // Each test point supplies a Cm directly via setCm(), so the comparison tests the quadratic
     // math (Ac, Aj) without involving the Ci = Cm + A/gm coupling or the stomatal balance.
+    //
+    // This test explicitly pins the legacy vC2021 proton stoichiometry (fcyc=0.3, H_Jcyc=2)
+    // because the reference spreadsheet was generated before the Woodford et al. (2025) update.
+    // The new struct defaults (fcyc=0.45, H_Jcyc=3.4) are tested elsewhere. Keeping this test
+    // ensures the generalized z = (H_J·(1−fcyc) + H_Jcyc·fcyc)/(h·(1−fcyc)) formula reduces
+    // exactly to the vC2021 Eq. 31 form z = (3 − fcyc)/(h·(1−fcyc)) at H_J=3, H_Jcyc=2.
 
     Context context_test;
     uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
     PhotosynthesisModel photomodel(&context_test);
     photomodel.disableMessages();
 
-    // Use paper defaults with two spreadsheet-compatibility adjustments:
+    // Use paper defaults with three spreadsheet-compatibility adjustments:
     //  - Jmax(25 °C) set exactly to the Gaussian-evaluated value 247.6892 (peaked-Arrhenius fit matches only at 25 °C).
     //  - Vpr raised above Vpmax to disable the Eq. 19 cap Vp = min(Vp_MM, Vpr). The reference spreadsheet omits
     //    this cap, so our computed Ac at high Cm would diverge if we applied it. End-user defaults keep Vpr=80
     //    per paper Table 1 — the separate "Vpr cap activates" test verifies that behavior.
+    //  - fcyc and H_Jcyc set to the vC2021 Eq. 31 values (not Woodford 2025 defaults) to match the 2021 spreadsheet.
     C4ModelCoefficients c4;
     c4.setJmax(247.6891682624015f);
     c4.Vpr = 1.0e4f;
+    c4.fcyc = 0.3f;     // vC2021 Table 1 value; Woodford 2025 updates to 0.45.
+    c4.H_Jcyc = 2.0f;   // vC2021 Eq. 31 implicit value (PGR5-only cyclic flow); Woodford 2025 updates to 3.4.
 
     photomodel.setModelCoefficients(c4);
 
@@ -1395,6 +1406,64 @@ DOCTEST_TEST_CASE("PhotosynthesisModel C4 - von Caemmerer 2021 spreadsheet verif
         context_test.getPrimitiveData(UUID, "net_photosynthesis", A);
         // 0.5% tolerance — tight since the only approximations are float precision and the Jmax
         // peaked-Arrhenius-vs-Gaussian form (matched exactly at 25 °C).
+        DOCTEST_CHECK_MESSAGE(A == doctest::Approx(pt.A_expected).epsilon(0.005),
+                              "Cm=" << pt.Cm << " expected A=" << pt.A_expected << " got " << A);
+    }
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel C4 - Woodford 2025 default A vs Cm regression at T=25C") {
+    // Companion to the vC2021 spreadsheet test. Same A vs Cm sweep at 25 °C with the same
+    // Jmax/Vpr adjustments, but using the new struct defaults (fcyc=0.45, H_Jcyc=3.4, H_J=3)
+    // from Woodford et al. (2025). Ac-limited points (Cm < 80) are unchanged from the vC2021
+    // test because z does not appear in the Ac quadratic; Aj-limited points (Cm >= 80) shift
+    // upward because z = (H_J·(1−fcyc) + H_Jcyc·fcyc)/(h·(1−fcyc)) increases from 0.964 (vC2021)
+    // to 1.45 (Woodford), raising the ATP-driven component of Aj. Anchors captured from the
+    // current implementation; changes require a deliberate parameter or model update.
+
+    Context context_test;
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    PhotosynthesisModel photomodel(&context_test);
+    photomodel.disableMessages();
+
+    C4ModelCoefficients c4;
+    c4.setJmax(247.6891682624015f);
+    c4.Vpr = 1.0e4f;
+    // fcyc, H_J, H_Jcyc use the Woodford 2025 struct defaults (0.45, 3, 3.4).
+
+    photomodel.setModelCoefficients(c4);
+
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "temperature", 298.15f));
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 2000.f / 4.57f));
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "air_CO2", 400.f));
+
+    struct C4TestPoint {
+        float Cm;
+        float A_expected;
+    };
+    const std::vector<C4TestPoint> points = {
+            // Ac-limited: identical to vC2021 reference (z unused in Ac quadratic).
+            {0.1f, -0.567410f},
+            {5.f,   8.695318f},
+            {10.f,  16.159569f},
+            {20.f,  25.628532f},
+            {30.f,  30.140492f},
+            {40.f,  32.364615f},
+            {50.f,  33.604065f},
+            {60.f,  34.375010f},
+            // Aj-limited: elevated from vC2021 reference because z increases 0.964 → 1.45.
+            {80.f,  35.2687f},
+            {100.f, 35.7661f},
+            {150.f, 36.3845f},
+            {250.f, 36.8441f},
+            {500.f, 37.1729f},
+            {780.f, 37.2918f},
+    };
+
+    for (const auto &pt: points) {
+        photomodel.setCm(pt.Cm, {UUID});
+        DOCTEST_CHECK_NOTHROW(photomodel.run());
+        float A;
+        context_test.getPrimitiveData(UUID, "net_photosynthesis", A);
         DOCTEST_CHECK_MESSAGE(A == doctest::Approx(pt.A_expected).epsilon(0.005),
                               "Cm=" << pt.Cm << " expected A=" << pt.A_expected << " got " << A);
     }
@@ -1607,7 +1676,8 @@ DOCTEST_TEST_CASE("PhotosynthesisModel C4 Library - Parameter switching") {
         DOCTEST_CHECK(c.Kc_25 == doctest::Approx(1210.f).epsilon(err_tol));
         DOCTEST_CHECK(c.Kp_25 == doctest::Approx(82.f).epsilon(err_tol));
         DOCTEST_CHECK(c.dH_Kc == doctest::Approx(64.2f).epsilon(err_tol));
-        DOCTEST_CHECK(c.fcyc == doctest::Approx(0.3f).epsilon(err_tol));
+        DOCTEST_CHECK(c.fcyc == doctest::Approx(0.45f).epsilon(err_tol));
+        DOCTEST_CHECK(c.H_Jcyc == doctest::Approx(3.4f).epsilon(err_tol));
     }
 
     SUBCASE("GenericC4_vC2000") {
@@ -1659,7 +1729,7 @@ DOCTEST_TEST_CASE("PhotosynthesisModel C4 Library - Parameter switching") {
 
         DOCTEST_CHECK(setaria.getVcmaxTempResponse().value_at_25C != generic.getVcmaxTempResponse().value_at_25C);
         DOCTEST_CHECK(setaria.Kc_25 != maize.Kc_25); // 1210 vs 650 — the critical Massad/Bernacchi distinction
-        DOCTEST_CHECK(setaria.fcyc != generic.fcyc); // 0.3 vs 0
+        DOCTEST_CHECK(setaria.fcyc != generic.fcyc); // 0.45 vs 0
         // Simple Arrhenius (no peak) stores Topt as a large sentinel (≥10000 K by construction of
         // PhotosyntheticTemperatureResponseParameters); peaked Arrhenius stores an actual temperature in K.
         DOCTEST_CHECK(generic.getVpmaxTempResponse().Topt > 9000.f); // generic = simple Arrhenius, sentinel Topt

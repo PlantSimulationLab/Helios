@@ -101,6 +101,8 @@ namespace {
     constexpr const char *LABEL_C4_f_spectral = "photo_c4_f_spectral";
     constexpr const char *LABEL_C4_theta_etr = "photo_c4_theta_etr";
     constexpr const char *LABEL_C4_h_protons = "photo_c4_h_protons";
+    constexpr const char *LABEL_C4_H_J = "photo_c4_H_J";
+    constexpr const char *LABEL_C4_H_Jcyc = "photo_c4_H_Jcyc";
 } // namespace
 
 PhotosynthesisModel::PhotosynthesisModel(helios::Context *a_context) {
@@ -220,6 +222,8 @@ void PhotosynthesisModel::setModelCoefficients(const std::string &material_label
     context->setMaterialData(material_label, LABEL_C4_f_spectral, coeffs.f_spectral);
     context->setMaterialData(material_label, LABEL_C4_theta_etr, coeffs.theta_etr);
     context->setMaterialData(material_label, LABEL_C4_h_protons, coeffs.h_protons);
+    context->setMaterialData(material_label, LABEL_C4_H_J, coeffs.H_J);
+    context->setMaterialData(material_label, LABEL_C4_H_Jcyc, coeffs.H_Jcyc);
 
     // Invalidate the cache for this material so the next run() picks up the new values.
     uint matID = context->getMaterialIDFromLabel(material_label);
@@ -288,6 +292,8 @@ C4ModelCoefficients PhotosynthesisModel::getCoefficientsForPrimitive_C4(uint UUI
             if (mat.doesMaterialDataExist(LABEL_C4_f_spectral)) mat.getMaterialData(LABEL_C4_f_spectral, coeffs.f_spectral);
             if (mat.doesMaterialDataExist(LABEL_C4_theta_etr)) mat.getMaterialData(LABEL_C4_theta_etr, coeffs.theta_etr);
             if (mat.doesMaterialDataExist(LABEL_C4_h_protons)) mat.getMaterialData(LABEL_C4_h_protons, coeffs.h_protons);
+            if (mat.doesMaterialDataExist(LABEL_C4_H_J)) mat.getMaterialData(LABEL_C4_H_J, coeffs.H_J);
+            if (mat.doesMaterialDataExist(LABEL_C4_H_Jcyc)) mat.getMaterialData(LABEL_C4_H_Jcyc, coeffs.H_Jcyc);
 
             material_coefficient_cache_c4[materialID] = coeffs;
             found_in_material = true;
@@ -559,8 +565,13 @@ C4ModelCoefficients PhotosynthesisModel::getC4CoefficientsFromLibrary(const std:
         c4.setRd(0.4f, 66.4f); // spec: Rd = 0.01 · Vcmax
         c4.setMesophyllConductance_gm(1.0f, 49.8f);
         // Kinetic + scalar fields keep struct-constructor defaults (Kc=1210, Ko=292000, Kp=82,
-        // γ*=3.8168e-4 with dH=-31.1, Om=210000, dH_Kc=64.2, dH_Ko=10.5, dH_Kp=38.3, alpha_psII=0,
-        // x=0.4, Vpr=80, Rm_frac=0.5, fcyc=0.3, gbs=0.003, ao=0.047, absorptance=0.85, f_spectral=0.15).
+        // γ*=3.8168e-4 with dH=+31.1, Om=210000, dH_Kc=64.2, dH_Ko=10.5, dH_Kp=38.3, alpha_psII=0,
+        // x=0.4, Vpr=80, Rm_frac=0.5, fcyc=0.45, H_J=3, H_Jcyc=3.4, gbs=0.003, ao=0.047,
+        // absorptance=0.85, f_spectral=0.15).
+        // NOTE: dH_gamma_star=+31.1 deliberately differs from the vC2021 Setaria spreadsheet value
+        // of -31.1 — see block comment on dH_gamma_star in PhotosynthesisModel.h. The spreadsheet
+        // sign is an error (copies Boyd 2015 S_c/o activation energy without flipping for γ*=0.5/S_c/o).
+        // Do NOT "fix" this to match the spreadsheet.
     } else if (s == "genericc4_vc2000" || s == "genericc4" || s == "generic_c4" || s == "generic_vc2000") {
         // Generic NADP-ME fallback. von Caemmerer (2000) Biochemical Models of Leaf Photosynthesis
         // (CSIRO) as encoded by the plantecophys R package (Duursma 2015) AciC4 defaults.
@@ -1299,9 +1310,12 @@ namespace {
         const float radicand_J = std::max(sum_IJ * sum_IJ - 4.f * theta * I2 * Jmax, 0.f);
         const float J = (sum_IJ - std::sqrt(radicand_J)) / (2.f * theta);
 
-        // ATP / linear-electron-transport ratio  z = (3 − f_cyc) / (h · (1 − f_cyc))   Eq. 31
+        // ATP / linear-electron-transport ratio (vC2021 Eq. 31 generalized by Woodford et al. 2025):
+        //     z = (H_J · (1 − f_cyc) + H_Jcyc · f_cyc) / (h · (1 − f_cyc))
+        // vC2021's original form z = (3 − f_cyc) / (h · (1 − f_cyc)) is the H_J = 3, H_Jcyc = 2 special
+        // case. Woodford's H_Jcyc = 3.4 (NDH-dominated cyclic flow) with f_cyc = 0.45 gives z = 1.45.
         const float denom_z = std::max(p.h_protons * (1.f - p.fcyc), 1.0e-6f);
-        const float z = (3.f - p.fcyc) / denom_z;
+        const float z = (p.H_J * (1.f - p.fcyc) + p.H_Jcyc * p.fcyc) / denom_z;
 
         const float alpha = p.alpha_psII_fraction;
         const float ao = std::max(p.ao, 1.0e-6f);
