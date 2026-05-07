@@ -16,6 +16,7 @@ set(RADIATION_CORE_SOURCES
     "src/CameraCalibration.cpp"
     "src/LensFlare.cpp"
     "src/RayTracingTypes.cpp"
+    "src/FluspectB.cpp"
     "src/backends/BackendFactory.cpp"
     "tests/selfTest.cpp"
 )
@@ -242,13 +243,13 @@ if(EXISTS "${_VULKAN_BUNDLED_INCLUDE}/vulkan/vulkan.h")
 			message(STATUS "[Radiation] Using system Vulkan loader (installed by GPU drivers)")
 		endif()
 	elseif(NOT WIN32 AND NOT Vulkan_LIBRARIES)
-		# On Linux/macOS, fall back to default library name so the linker can resolve it
+		# Loader library not installed - disable the Vulkan backend rather than
+		# emit an unresolvable -lvulkan flag that breaks downstream linking.
+		set(HAVE_VULKAN FALSE)
 		if(APPLE)
-			set(Vulkan_LIBRARIES "vulkan")
-			message(STATUS "[Radiation] Vulkan loader not found. Install with: brew install vulkan-loader molten-vk")
+			message(STATUS "[Radiation] Vulkan loader not found - Vulkan backend disabled. To enable, install with: brew install vulkan-loader molten-vk")
 		else()
-			set(Vulkan_LIBRARIES "vulkan")
-			message(STATUS "[Radiation] Vulkan loader not found. Install with: sudo apt-get install libvulkan-dev")
+			message(STATUS "[Radiation] Vulkan loader not found - Vulkan backend disabled. To enable, install with: sudo apt-get install libvulkan-dev")
 		endif()
 	elseif(Vulkan_LIBRARIES)
 		message(STATUS "[Radiation] Vulkan loader library found: ${Vulkan_LIBRARIES}")
@@ -691,6 +692,7 @@ file( COPY include/disk.png DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/)
 file( COPY spectral_data DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/ )
 file( COPY camera_light_models DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/ )
 file( COPY camera_library DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/ )
+file( COPY tests/reference DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/tests/ )
 
 if(BUILD_TESTS)
     add_executable(radiation_tests "tests/TestMain.cpp")

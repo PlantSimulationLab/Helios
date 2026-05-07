@@ -1588,6 +1588,12 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
   time = make_Time( 13, 15, 00 );
   context.updateTimeseriesData( "temperature", date, time, 302.10 ); // replaces the value at index #1
  ~~~~~~
+
+ An entire timeseries variable (with all of its time points) can be removed using \ref helios::Context::deleteTimeseriesVariable() "deleteTimeseriesVariable()". If the variable does not exist a non-fatal warning is issued and the call is otherwise a no-op. To wipe every timeseries variable at once, use \ref helios::Context::clearTimeseriesData() "clearTimeseriesData()" instead.
+
+ ~~~~~~{.cpp}
+  context.deleteTimeseriesVariable( "temperature" ); // removes the variable and all of its data points
+ ~~~~~~
 	
 
 */

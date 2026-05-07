@@ -30,6 +30,26 @@ struct LeafOpticsProperties {
     float protein = 0.f; // g.cm-2
     float carbonconstituents = 0.f; // g.cm-2
 
+    // === Fluspect-B SIF parameters (optional) ===
+    // These are used by the radiation plugin's SIF (solar-induced fluorescence)
+    // pipeline when it is active. They are ignored by the pure reflectance/
+    // transmittance PROSPECT calculation performed by LeafOptics. When
+    // LeafOptics::run() is called, it writes these values alongside the PROSPECT
+    // parameters to global data keyed by the spectrum label so that the radiation
+    // model can look them up per primitive.
+
+    //! Violaxanthin-to-zeaxanthin conversion state, [0, 1]. 0 = dark-adapted
+    //! (all violaxanthin), 1 = light-stressed (all zeaxanthin). Drives the carotenoid
+    //! absorption term in Fluspect-B. Static per leaf-type; users wanting dynamic
+    //! V2Z should call LeafOptics::run() again with an updated value.
+    float V2Z = 0.f;
+
+    //! Intrinsic fluorescence quantum efficiency scalar. Defaults to 1 so the final
+    //! Fluspect emission is scaled by the radiation plugin's own per-leaf Phi_F
+    //! (van der Tol 2014). Users with a calibrated fqe can set it here, and the
+    //! radiation pipeline multiplies Phi_F × fqe at emission time.
+    float fqe = 1.f;
+
     // Default values for Prospect-D
     // float N=1.5;  float CHL= 30.0 ;  float CAR = 10.0;  float ANT = 1.0; float Brown=0.0; float EWT= 0.015; float LMA = 0.009;
 
@@ -80,6 +100,10 @@ struct LeafOpticsProperties_Nauto {
     float drymass = 0.006f; //!< Leaf mass per area (g/cm2)
     float protein = 0.0f; //!< Protein content (g/cm2) - for PROSPECT-PRO
     float carbonconstituents = 0.0f; //!< Carbon constituents (g/cm2) - for PROSPECT-PRO
+
+    // === Fluspect-B SIF parameters (optional, fixed per bin) ===
+    float V2Z = 0.f;   //!< Violaxanthin-zeaxanthin conversion state, [0, 1]. See LeafOpticsProperties.
+    float fqe = 1.f;   //!< Intrinsic fluorescence quantum efficiency scalar. See LeafOpticsProperties.
 
     // === Adaptive binning configuration ===
 

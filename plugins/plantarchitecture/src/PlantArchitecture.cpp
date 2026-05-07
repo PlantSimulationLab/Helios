@@ -1567,9 +1567,13 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     petiole_rotation_axis.resize(phytomer_parameters.petiole.petioles_per_internode);
     std::vector<float> dr_petiole(phytomer_parameters.petiole.petioles_per_internode);
     std::vector<float> dr_petiole_max(phytomer_parameters.petiole.petioles_per_internode);
+    // Per-petiole flag: if either radius or length is zero, suppress the petiole tube geometry but still compute vertices for leaf orientation
+    std::vector<bool> suppress_petiole_geometry(phytomer_parameters.petiole.petioles_per_internode, false);
     for (int p = 0; p < phytomer_parameters.petiole.petioles_per_internode; p++) {
         petiole_vertices.at(p).resize(Ndiv_petiole_length + 1);
         petiole_radii.at(p).resize(Ndiv_petiole_length + 1);
+
+        suppress_petiole_geometry.at(p) = (phytomer_parameters.petiole.radius.val() <= 0.f || phytomer_parameters.petiole.length.val() <= 0.f);
 
         petiole_length.at(p) = leaf_scale_factor_fraction * phytomer_parameters.petiole.length.val();
         if (petiole_length.at(p) <= 0.f) {
@@ -1856,10 +1860,11 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         vec3 petiole_axis = internode_axis;
 
         // petiole pitch rotation
-        // Check if this is the last phytomer on a shoot that has reached max_nodes
         if (shoot_index.y + 1 == shoot_index.z) {
-            // Last phytomer on shoot - set petiole pitch to 0
-            petiole_pitch.at(petiole) = 0.0f;
+            // Last phytomer on shoot - apply a small near-zero pitch so the petiole
+            // appears nearly parallel to the internode (e.g. the flag leaf in grasses)
+            // without leaving the petiole axis fully degenerate with the internode.
+            petiole_pitch.at(petiole) = deg2rad(5.f);
         } else {
             // Normal phytomer - use standard pitch calculation
             petiole_pitch.at(petiole) = deg2rad(phytomer_parameters.petiole.pitch.val());
@@ -1962,7 +1967,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             assert(!std::isnan(petiole_radii.at(petiole).at(j)) && std::isfinite(petiole_radii.at(petiole).at(j)));
         }
 
-        if (build_context_geometry_petiole) {
+        if (build_context_geometry_petiole && !suppress_petiole_geometry.at(petiole)) {
             petiole_objIDs.at(petiole) = makeTubeFromCones(Ndiv_petiole_radius, petiole_vertices.at(petiole), petiole_radii.at(petiole), petiole_colors, context_ptr);
             if (!petiole_objIDs.at(petiole).empty()) {
                 context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(petiole_objIDs.at(petiole)), "object_label", "petiole");
@@ -2076,10 +2081,14 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             // -- leaf rotations -- //
 
             // leaf roll rotation
+            // Roll-X here only applies the user-configured `leaf.roll` parameter; the
+            // curvature-driven blade-up correction is done after the pitch+yaw chain
+            // (see "blade-up correction" block below) so that it can roll about the
+            // leaf's actual length axis rather than about world X.
             float roll_rot = 0;
             if (leaves_per_petiole == 1) {
                 int sign = (shoot_index.x % 2 == 0) ? 1 : -1;
-                roll_rot = (acos_safe(internode_axis.z) - deg2rad(phytomer_parameters.leaf.roll.val())) * sign;
+                roll_rot = -deg2rad(phytomer_parameters.leaf.roll.val()) * sign;
             } else if (ind_from_tip != 0) {
                 roll_rot = (asin_safe(petiole_tip_axis.z) + deg2rad(phytomer_parameters.leaf.roll.val())) * compound_rotation / std::fabs(compound_rotation);
             }
@@ -2109,6 +2118,34 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
 
             // rotate leaf to azimuth of petiole
             context_ptr->rotateObject(objID_leaf, -std::atan2(petiole_tip_axis.y, petiole_tip_axis.x) + compound_rotation, "z");
+
+            // Curvature-aware blade-up correction: after the pitch-Y / yaw-Z chain, the
+            // leaf's blade normal lies in the vertical plane containing the petiole's
+            // length, but tilted from world-up by the angle between the petiole and
+            // world-up (= asin(petiole_tip.z)). Roll the leaf around its own length axis
+            // (= petiole_tip_axis in world space) to bring the blade normal back toward
+            // vertical. The amount of correction is scaled by petiole_length / leaf_size:
+            //   - long petioles (leaf held far from stem) → full correction (the leaf
+            //     can hang at its natural angle independent of stem curvature)
+            //   - short petioles (leaf hugs the stem) → little to no correction (the
+            //     leaf orientation is dictated by the stem)
+            // The total correction is also clamped to <90° to avoid extreme rolls when
+            // the stem is heavily curved.
+            if (leaves_per_petiole == 1) {
+                int sign = (shoot_index.x % 2 == 0) ? 1 : -1;
+                const float r_h = sqrtf(petiole_tip_axis.x * petiole_tip_axis.x + petiole_tip_axis.y * petiole_tip_axis.y);
+                if (r_h > 1e-4f) {
+                    float blade_correction = std::atan2(petiole_tip_axis.z * r_h, r_h * r_h);
+                    const float petiole_len = petiole_length.at(petiole);
+                    const float leaf_size_ref = std::max(leaf_size_max.at(petiole).at(leaf), 1e-6f);
+                    const float length_ratio = std::min(petiole_len / leaf_size_ref, 1.f);
+                    blade_correction *= length_ratio;
+                    const float max_correction = 0.5f * PI_F - deg2rad(1.f);
+                    if (blade_correction > max_correction) blade_correction = max_correction;
+                    if (blade_correction < -max_correction) blade_correction = -max_correction;
+                    context_ptr->rotateObject(objID_leaf, blade_correction * static_cast<float>(sign), petiole_tip_axis);
+                }
+            }
 
 
             // -- leaf translation -- //
@@ -2662,6 +2699,77 @@ void Phytomer::rotateLeaf(uint petiole_index, uint leaf_index, const AxisRotatio
     if (yaw != 0.f) {
         context_ptr->rotateObject(leaf_objIDs.at(petiole_index).at(leaf_index), yaw, leaf_bases.at(petiole_index).at(leaf_index), {0, 0, 1});
         leaf_rotation.at(petiole_index).at(leaf_index).yaw += yaw;
+    }
+}
+
+void Phytomer::rotatePetiole(uint petiole_index, const AxisRotation &rotation) {
+    if (petiole_index >= petiole_vertices.size()) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::rotatePetiole): Invalid petiole index.");
+    }
+    if (petiole_vertices.at(petiole_index).empty()) {
+        return;
+    }
+    if (rotation.pitch == 0.f && rotation.yaw == 0.f && rotation.roll == 0.f) {
+        return;
+    }
+
+    const vec3 base = petiole_vertices.at(petiole_index).at(0);
+    const vec3 internode_axis = getInternodeAxisVector(1.f);
+
+    auto applyRotation = [this, petiole_index, &base](float angle, const vec3 &axis) {
+        if (angle == 0.f) {
+            return;
+        }
+        if (!petiole_objIDs.at(petiole_index).empty()) {
+            context_ptr->rotateObject(petiole_objIDs.at(petiole_index), angle, base, axis);
+        }
+        if (petiole_index < leaf_objIDs.size() && !leaf_objIDs.at(petiole_index).empty()) {
+            context_ptr->rotateObject(leaf_objIDs.at(petiole_index), angle, base, axis);
+        }
+        for (auto &vertex: petiole_vertices.at(petiole_index)) {
+            vertex = rotatePointAboutLine(vertex, base, axis, angle);
+        }
+        if (petiole_index < leaf_bases.size()) {
+            for (auto &leaf_base: leaf_bases.at(petiole_index)) {
+                leaf_base = rotatePointAboutLine(leaf_base, base, axis, angle);
+            }
+        }
+        if (petiole_index < petiole_axis_initial.size()) {
+            petiole_axis_initial.at(petiole_index) = rotatePointAboutLine(petiole_axis_initial.at(petiole_index), nullorigin, axis, angle);
+        }
+    };
+
+    // pitch — tilt away from the internode using the same convention as construction:
+    // rotate about the stored petiole_rotation_axis by abs(pitch). This matches
+    // PlantArchitecture.cpp:~1876 (`rotatePointAboutLine(..., petiole_rotation_axis,
+    // std::abs(petiole_pitch))`), so a positive input pitch always tilts the petiole
+    // further from the internode regardless of which side petiole_rotation_axis fell
+    // on during phyllotactic accumulation.
+    if (rotation.pitch != 0.f && petiole_index < petiole_rotation_axis.size()) {
+        vec3 pitch_axis = petiole_rotation_axis.at(petiole_index);
+        if (pitch_axis.magnitude() > 1e-6f) {
+            pitch_axis.normalize();
+            applyRotation(std::abs(rotation.pitch), pitch_axis);
+            petiole_pitch.at(petiole_index) += std::abs(rotation.pitch);
+        }
+    }
+
+    // yaw — rotate around the internode axis (azimuth around the stem)
+    if (rotation.yaw != 0.f) {
+        vec3 yaw_axis = internode_axis;
+        if (yaw_axis.magnitude() > 1e-6f) {
+            yaw_axis.normalize();
+            applyRotation(rotation.yaw, yaw_axis);
+        }
+    }
+
+    // roll — rotate around the petiole's current length axis
+    if (rotation.roll != 0.f) {
+        vec3 roll_axis = getPetioleAxisVector(1.f, petiole_index);
+        if (roll_axis.magnitude() > 1e-6f) {
+            roll_axis.normalize();
+            applyRotation(rotation.roll, roll_axis);
+        }
     }
 }
 

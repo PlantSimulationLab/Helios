@@ -37,6 +37,26 @@ void RadiationModel::addRadiationCamera(const std::string &camera_label, const s
         helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera horizontal field of view must be between 0 and 180 degrees.");
     }
 
+    // Warn if any bound band has scattering depth 0 — such bands will not populate
+    // camera pixels, because camera ray paths rely on scattered flux from primitives.
+    // This is a common silent-failure mode when users set up a new camera.
+    // Aggregated so a camera with many zero-depth bands only prints one summary line.
+    {
+        helios::WarningAggregator warnings;
+        warnings.setEnabled(message_flag);
+        for (const auto &band : band_label) {
+            auto it = radiation_bands.find(band);
+            if (it != radiation_bands.end() && it->second.scatteringDepth == 0) {
+                warnings.addWarning("camera_band_zero_scattering_depth",
+                                    "Camera '" + camera_label + "' is bound to band '" + band +
+                                    "' which has scatteringDepth == 0. Camera pixels for this band will be "
+                                    "zero because camera ray tracing relies on scattered flux. Call "
+                                    "setScatteringDepth(\"" + band + "\", >=1) before runBand().");
+            }
+        }
+        warnings.report(std::cerr);
+    }
+
     // Auto-calculate FOV_aspect_ratio from camera resolution to ensure square pixels
     CameraProperties modified_properties = camera_properties;
     if (camera_properties.FOV_aspect_ratio != 0.f) {
@@ -3765,24 +3785,35 @@ void RadiationCamera::applyCameraExposure(helios::Context *context) {
             }
 
         } else if (cam_type == "spectral") {
-            // Spectral cameras: per-band normalization
+            // Spectral cameras: per-band normalization.
+            //
+            // We target a high percentile (not the median) as the exposure reference.
+            // Scientific spectral imagery (narrow fluorescence bands, thermal IR,
+            // Fraunhofer-line retrievals, etc.) frequently has most of the frame
+            // reading near-zero — sky, soil, outside-FOV, or bands where the
+            // subject barely emits. A median-based target drives the gain to
+            // astronomical values in that case and saturates the subject. Using
+            // the 95th percentile anchors the gain to the brightest meaningful
+            // signal in the scene, which is photographically and scientifically
+            // more sensible.
             for (auto &band_pair: pixel_data) {
                 auto &data = band_pair.second;
                 const std::size_t N = data.size();
 
-                // Calculate median for this band
                 std::vector<float> sorted_data = data;
                 std::sort(sorted_data.begin(), sorted_data.end());
 
-                std::size_t median_idx = N / 2;
-                float median_value = sorted_data[median_idx];
+                const std::size_t p95_idx = static_cast<std::size_t>(0.95f * (N - 1));
+                const float p95_value = sorted_data[p95_idx];
 
-                // Target 18% gray for each band independently
-                float target_median = 0.18f;
-                float band_gain = target_median / std::max(median_value, 1e-6f);
-                applied_exposure_gain = band_gain; // stores the last band's gain
+                // Map the 95th percentile to ~0.7 (a little below sRGB peak at 1.0)
+                // so the brightest 5% sit in the bright-but-not-clipped range. With
+                // lin→sRGB gamma applied downstream (writeCameraImage) this lands
+                // on roughly 215/255 after gamma correction.
+                const float target_p95 = 0.7f;
+                const float band_gain = target_p95 / std::max(p95_value, 1e-6f);
+                applied_exposure_gain = band_gain;
 
-                // Apply gain to this band
                 for (std::size_t i = 0; i < N; ++i) {
                     data[i] *= band_gain;
                 }

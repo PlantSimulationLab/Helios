@@ -2511,10 +2511,10 @@ void PlantArchitecture::initializeMaizeShoots() {
     leaf_prototype.lateral_curvature = -0.3f;
     ;
     leaf_prototype.petiole_roll = 0.04f;
-    leaf_prototype.wave_period = 0.1f;
+    leaf_prototype.wave_period = 0.15f;
     leaf_prototype.wave_amplitude = 0.1f;
     leaf_prototype.leaf_buckle_length.uniformDistribution(0.4, 0.6);
-    leaf_prototype.leaf_buckle_angle.uniformDistribution(40, 50);
+    leaf_prototype.leaf_buckle_angle.uniformDistribution(50, 60);
     leaf_prototype.subdivisions = 50;
     leaf_prototype.unique_prototypes = 10;
 
@@ -2523,7 +2523,7 @@ void PlantArchitecture::initializeMaizeShoots() {
     PhytomerParameters phytomer_parameters_maize(context_ptr->getRandomGenerator());
 
     phytomer_parameters_maize.internode.pitch = 0;
-    phytomer_parameters_maize.internode.phyllotactic_angle.uniformDistribution(170, 190);
+    phytomer_parameters_maize.internode.phyllotactic_angle.uniformDistribution(155, 205);
     phytomer_parameters_maize.internode.radius_initial = 0.0075;
     phytomer_parameters_maize.internode.color = make_RGBcolor(0.126, 0.182, 0.084);
     phytomer_parameters_maize.internode.length_segments = 2;
@@ -3378,9 +3378,9 @@ void PlantArchitecture::initializeSorghumShoots() {
     leaf_prototype.lateral_curvature = -0.3f;
     leaf_prototype.petiole_roll = 0.04f;
     leaf_prototype.wave_period = 0.1f;
-    leaf_prototype.wave_amplitude = 0.1f;
+    leaf_prototype.wave_amplitude = 0.15f;
     leaf_prototype.leaf_buckle_length.uniformDistribution(0.4, 0.6);
-    leaf_prototype.leaf_buckle_angle.uniformDistribution(45, 55);
+    leaf_prototype.leaf_buckle_angle.uniformDistribution(50, 60);
     leaf_prototype.subdivisions = 50;
     leaf_prototype.unique_prototypes = 10;
 
@@ -3389,7 +3389,7 @@ void PlantArchitecture::initializeSorghumShoots() {
     PhytomerParameters phytomer_parameters_sorghum(context_ptr->getRandomGenerator());
 
     phytomer_parameters_sorghum.internode.pitch = 0;
-    phytomer_parameters_sorghum.internode.phyllotactic_angle.uniformDistribution(170, 190);
+    phytomer_parameters_sorghum.internode.phyllotactic_angle.uniformDistribution(155, 205);
     phytomer_parameters_sorghum.internode.radius_initial = 0.003;
     phytomer_parameters_sorghum.internode.color = make_RGBcolor(0.09, 0.13, 0.06);
     phytomer_parameters_sorghum.internode.length_segments = 2;
@@ -3434,7 +3434,7 @@ void PlantArchitecture::initializeSorghumShoots() {
     shoot_parameters_mainstem.phyllochron_min = 2;
     shoot_parameters_mainstem.elongation_rate_max = 0.1;
     shoot_parameters_mainstem.girth_area_factor = 5.f;
-    shoot_parameters_mainstem.gravitropic_curvature.uniformDistribution(-1000, -400);
+    shoot_parameters_mainstem.gravitropic_curvature.uniformDistribution(-800, -200);
     shoot_parameters_mainstem.internode_length_max = 0.26;
     shoot_parameters_mainstem.internode_length_decay_rate = 0;
     shoot_parameters_mainstem.flowers_require_dormancy = false;

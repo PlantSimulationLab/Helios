@@ -947,6 +947,14 @@ std::vector<size_t> Visualizer::addColorbarByCenter(const char *title, const hel
         tick_values = generateNiceTicks(cmin, cmax, colorbar_integer_data, max_ticks);
     }
 
+    // Filter out ticks that fall outside the colorbar range [cmin, cmax].
+    // generateNiceTicks() may extend tick bounds to the next "nice" number past the data range,
+    // which is desirable for general axis labeling but produces orphaned labels on a fixed-range colorbar.
+    const float range_epsilon = 1e-4f * std::max(std::fabs(cmax - cmin), 1.0f);
+    tick_values.erase(std::remove_if(tick_values.begin(), tick_values.end(),
+                                     [cmin, cmax, range_epsilon](float v) { return v < cmin - range_epsilon || v > cmax + range_epsilon; }),
+                      tick_values.end());
+
     uint Nticks = tick_values.size();
 
     std::vector<size_t> UUIDs;

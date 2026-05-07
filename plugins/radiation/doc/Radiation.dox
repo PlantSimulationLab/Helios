@@ -33,9 +33,15 @@ The radiation model requires at least one ray-tracing backend. Two backends are 
     <tr>
         <th>Backend</th>
         <th>Package</th>
-        <th>\image html apple-logo.png</th>
-        <th>\image html unix-logo.png</th>
-        <th>\image html windows-logo.png</th>
+        <th>
+\image html apple-logo.png
+</th>
+        <th>
+\image html unix-logo.png
+</th>
+        <th>
+\image html windows-logo.png
+</th>
     </tr>
     <tr>
         <td><b>Vulkan</b> (all platforms)</td>
@@ -1026,6 +1032,24 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  ~~~~~~
 
  The model name will be automatically included in the exported JSON metadata.
+
+ \subsection SIFModeling Solar-Induced Chlorophyll Fluorescence (SIF)
+
+ The radiation plug-in includes a Fluspect-B-based pipeline for simulating solar-induced
+ chlorophyll fluorescence (SIF). Users add a \ref SIFCameraProperties "SIF camera" via
+ \ref RadiationModel::addSIFCamera() that references one or more user-defined emission
+ bands; Helios auto-generates the internal excitation bands covering 400–750 nm,
+ computes a per-leaf Fluspect-B excitation–emission kernel scaled by the van der Tol
+ (2014) quantum yield, and injects the resulting per-leaf source flux into the standard
+ \ref RadiationModel::runBand() "runBand()" emission loop so that escape probability
+ and canopy reabsorption emerge naturally from the 3D ray tracer.
+
+ \note <b>Full SIF documentation is on a dedicated page: \subpage SIFCameraDoc.</b>
+ That page covers the complete SIF pipeline — required call ordering, leaf biochemistry
+ authoring (via \ref LeafOptics or manually), the underlying physics (van der Tol \f$\Phi_F\f$
+ formulation and Fluspect-B kernel integration), \ref SIFCameraProperties parameters,
+ excitation-band memory footprint, multi-camera band-binding rules, output data, and
+ troubleshooting.
 
  \subsection RadRun Running Simulations
 

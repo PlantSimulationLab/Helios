@@ -1931,11 +1931,18 @@ namespace helios {
     }
 
     void VulkanComputeBackend::copyScatterToRadiation() {
-        if (primitive_count == 0 || band_count == 0) {
+        if (primitive_count == 0 || launch_band_count == 0) {
             return; // No geometry or bands
         }
 
-        size_t buffer_size = primitive_count * band_count * sizeof(float);
+        // Use launch_band_count (the count of bands in the current runBand dispatch),
+        // not the global band_count. The scatter and radiation_out buffers are sized
+        // to launch_band_count everywhere else (zeroScatterBuffers, zeroRadiationBuffers,
+        // launchDirectRays, launchDiffuseRays). Using band_count here would compute a
+        // larger size than the source buffer and crash via OOB read in memcpy whenever
+        // the launch is a strict subset of all bands (e.g. SIF emission dispatch after
+        // a recursive excitation-band dispatch raises the global band_count).
+        size_t buffer_size = primitive_count * launch_band_count * sizeof(float);
 
         // Create radiation_out_top/bottom buffers if they don't exist
         if (radiation_out_top_buffer.buffer == VK_NULL_HANDLE || radiation_out_top_buffer.size != buffer_size) {

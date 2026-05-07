@@ -1,0 +1,45 @@
+# Frozen SCOPE v2.0 reference output for Helios SIF Tier 2 intercomparison.
+# Provenance and regeneration instructions in this directory's README.md.
+# Do NOT hand-edit values — regenerate using generate_scope_reference.m.
+key,value,units,note
+scope_git_commit,e4c2e51,,SCOPE commit used to generate these values
+matlab_version,R2026a,,MATLAB used to run SCOPE
+run_date,2026-04-20,,YYYY-MM-DD
+# --- Scene parameters fed to SCOPE (input_data_default.csv) ---
+LAI,3.0,,leaf area index
+Cab,40.0,ug/cm^2,chlorophyll a+b content
+N_prospect,1.5,,PROSPECT mesophyll parameter
+LIDFa,-0.35,,leaf-inclination distribution function parameter a (spherical ~ (-0.35,-0.15))
+LIDFb,-0.15,,leaf-inclination distribution function parameter b
+SZA,30.0,deg,solar zenith angle (tts)
+VZA,0.0,deg,viewing zenith angle (tto)
+Rin,600.0,W/m^2,broadband incoming shortwave at top of canopy
+Ta,20.0,degC,air temperature
+fqe,0.01,,SCOPE intrinsic fluorescence quantum efficiency
+# --- Leaf optics at SIF band centres (from fluspect_B_CX) ---
+leaf_rho_685,0.04579,,leaf reflectance at 685 nm
+leaf_tau_685,0.01191,,leaf transmittance at 685 nm
+leaf_rho_740,0.39989,,leaf reflectance at 740 nm
+leaf_tau_740,0.42082,,leaf transmittance at 740 nm
+leaf_rho_band_red,0.06932,,leaf reflectance averaged over 680-700 nm (Helios SIF_red band)
+leaf_tau_band_red,0.04753,,leaf transmittance averaged over 680-700 nm
+leaf_rho_band_farred,0.40416,,leaf reflectance averaged over 730-760 nm (Helios SIF_farred band)
+leaf_tau_band_farred,0.42564,,leaf transmittance averaged over 730-760 nm
+# --- Soil directional-hemispherical reflectance (rsd.csv) ---
+soil_rho_685,0.01636,,soil reflectance at 685 nm
+soil_rho_740,0.31723,,soil reflectance at 740 nm
+soil_rho_band_red,0.02818,,soil reflectance averaged over 680-700 nm
+soil_rho_band_farred,0.32712,,soil reflectance averaged over 730-760 nm
+# --- SCOPE top-of-canopy fluorescence outputs ---
+sif_hemis_685,1.0654,W/m^2/um,hemispheric TOC fluorescence flux at 685 nm
+sif_hemis_740,6.6032,W/m^2/um,hemispheric TOC fluorescence flux at 740 nm
+sif_nadir_685,0.3037,W/m^2/um/sr,nadir TOC fluorescence radiance at 685 nm
+sif_nadir_740,1.7593,W/m^2/um/sr,nadir TOC fluorescence radiance at 740 nm
+sif_hemis_band_red,0.0243,W/m^2,hemispheric TOC fluorescence integrated over 680-700 nm (Helios SIF_red band)
+sif_hemis_band_farred,0.1817,W/m^2,hemispheric TOC fluorescence integrated over 730-760 nm (Helios SIF_farred band)
+# --- Pre-reabsorption emitted SIF (produced inside canopy, before leaf/canopy reabsorption) ---
+sif_emitted_band_red,1.6273,W/m^2,total SIF emission produced in 680-700 nm per m^2 ground (Lambertian * pi from fluorescence_ReabsCorr)
+sif_emitted_band_farred,1.4161,W/m^2,total SIF emission produced in 730-760 nm per m^2 ground
+# --- Canopy escape probability per band (the key Tier-2 comparison metric) ---
+f_esc_band_red,0.01493,,escape fraction for SIF_red = sif_hemis_band_red / sif_emitted_band_red
+f_esc_band_farred,0.12831,,escape fraction for SIF_farred = sif_hemis_band_farred / sif_emitted_band_farred

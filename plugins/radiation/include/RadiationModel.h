@@ -18,6 +18,7 @@
 
 #include "CameraCalibration.h"
 #include "Context.h"
+#include "FluspectB.h"
 #include "RayTracingBackend.h"
 #include "json.hpp"
 
@@ -107,6 +108,32 @@ struct CameraProperties {
                HFOV == rhs.HFOV && sensor_width_mm == rhs.sensor_width_mm && model == rhs.model && lens_make == rhs.lens_make && lens_model == rhs.lens_model && lens_specification == rhs.lens_specification && exposure == rhs.exposure &&
                shutter_speed == rhs.shutter_speed && white_balance == rhs.white_balance && camera_zoom == rhs.camera_zoom;
     }
+};
+
+//! Properties defining a solar-induced chlorophyll fluorescence (SIF) camera.
+/**
+ * SIFCameraProperties inherits from CameraProperties (same image geometry, resolution,
+ * spectral-response machinery) and adds controls for the Fluspect-B fluorescence model.
+ * Per-band per-pixel output is retrieved via the usual `getCameraPixelData()` API.
+ */
+struct SIFCameraProperties : public CameraProperties {
+
+    //! Excitation wavelength bin width in nm. Helios auto-creates internal radiation
+    //! bands spanning 400-750 nm at this resolution to compute per-leaf APAR across the
+    //! excitation range. Smaller values give more accurate fluorescence at the cost of
+    //! more band launches and more memory. Must be > 0.
+    float excitation_bin_width_nm = 10.f;
+
+    //! Scattering depth used for the auto-generated excitation bands that drive APAR.
+    //! At the default of 0, every ray that hits a leaf is treated as fully absorbed
+    //! regardless of leaf reflectivity/transmissivity — fast, but over-estimates APAR
+    //! (especially in the NIR excitation range where leaf rho+tau is large). Set to
+    //! >=1 to include inter-leaf scattering in the APAR calculation; each additional
+    //! scattering iteration roughly doubles the excitation-dispatch cost but captures
+    //! the contribution of reflected and transmitted light from neighboring leaves.
+    uint excitation_scattering_depth = 0;
+
+    SIFCameraProperties() : CameraProperties() {}
 };
 
 //! Properties defining lens flare rendering parameters
@@ -1197,6 +1224,75 @@ public:
     void addRadiationCamera(const std::string &camera_label, const std::vector<std::string> &band_label, const helios::vec3 &position, const helios::SphericalCoord &viewing_direction, const CameraProperties &camera_properties,
                             uint antialiasing_samples);
 
+    //! Add a solar-induced chlorophyll fluorescence (SIF) camera sensor.
+    /**
+     * Creates a camera whose per-band flux is sourced from the Fluspect-B leaf
+     * fluorescence model (Vilfan et al. 2016) rather than from scattered scene
+     * radiation. Geometry, spectral-response, and per-band per-pixel output work
+     * exactly like a regular radiation camera — only the emission physics differs.
+     *
+     * Each band in `emission_band_labels` must already exist (added via addRadiationBand
+     * prior to calling this method). Those bands are flagged internally as SIF-emitting
+     * and will use Fluspect-B-derived emission instead of Stefan-Boltzmann.
+     *
+     * Helios auto-creates internal radiation bands covering the Fluspect-B excitation
+     * range (400-750 nm) at the resolution specified by
+     * `camera_properties.excitation_bin_width_nm`, reusing a single excitation band set
+     * across cameras with matching bin widths.
+     *
+     * Each emission band is bound to exactly one excitation bin width — the one from the
+     * first camera that flags it. Re-flagging the same band with a different bin width
+     * from a subsequent camera raises a \ref helios_runtime_error. If you need two
+     * different excitation resolutions on the same scene, use disjoint emission bands
+     * for each resolution.
+     *
+     * The excitation-band scattering depth is controlled by
+     * `camera_properties.excitation_scattering_depth` (default 0). At depth 0, every ray
+     * that hits a leaf is treated as fully absorbed regardless of reflectivity and
+     * transmissivity — fast, but over-estimates APAR in the NIR excitation range where
+     * leaf rho+tau is large. Set >=1 to include inter-leaf scattering in APAR. When
+     * multiple SIF cameras share an excitation bin width, the highest requested
+     * scattering depth applies to the shared excitation bands.
+     *
+     * \note Memory footprint: per-leaf APAR storage scales as
+     * `O(N_leaves * N_excitation_bands)`, where `N_excitation_bands = ceil(350 / bin_width_nm)`.
+     * For 1 M primitives at 10 nm bin width, this is ~140 MB of float storage plus the
+     * corresponding per-band GPU ray-trace buffers. Choose a coarser bin width for very
+     * large canopies.
+     *
+     * \param[in] camera_label A label used to refer to this camera.
+     * \param[in] emission_band_labels Labels of radiation bands to include as image channels.
+     *            Each must have been added via addRadiationBand() with appropriate
+     *            wavelength bounds and scattering depth for the SIF measurement.
+     * \param[in] position Cartesian (x,y,z) location of the camera sensor.
+     * \param[in] lookat Cartesian (x,y,z) position at which the camera is pointed.
+     * \param[in] camera_properties SIFCameraProperties struct with intrinsic camera
+     *            parameters and excitation_bin_width_nm.
+     * \param[in] antialiasing_samples Number of ray samples per pixel (minimum 1).
+     */
+    void addSIFCamera(const std::string &camera_label, const std::vector<std::string> &emission_band_labels, const helios::vec3 &position, const helios::vec3 &lookat, const SIFCameraProperties &camera_properties,
+                      uint antialiasing_samples);
+
+    //! Add a solar-induced chlorophyll fluorescence (SIF) camera sensor using a spherical viewing direction.
+    /**
+     * Same as the `lookat`-based overload; see that method's documentation for details.
+     * \param[in] camera_label A label used to refer to this camera.
+     * \param[in] emission_band_labels Labels of radiation bands to include as image channels.
+     * \param[in] position Cartesian (x,y,z) location of the camera sensor.
+     * \param[in] viewing_direction Spherical direction in which the camera is pointed.
+     * \param[in] camera_properties SIFCameraProperties struct.
+     * \param[in] antialiasing_samples Number of ray samples per pixel.
+     */
+    void addSIFCamera(const std::string &camera_label, const std::vector<std::string> &emission_band_labels, const helios::vec3 &position, const helios::SphericalCoord &viewing_direction,
+                      const SIFCameraProperties &camera_properties, uint antialiasing_samples);
+
+    //! Check whether a camera was added via addSIFCamera (vs. addRadiationCamera).
+    /**
+     * \param[in] camera_label Label of the camera.
+     * \return true if the camera exists and is a SIF camera.
+     */
+    [[nodiscard]] bool isSIFCamera(const std::string &camera_label) const;
+
 
     //! Set the spectral response of a camera band based on reference to global data. This function version uses all the global data array to calculate the spectral response.
     /**
@@ -1946,6 +2042,104 @@ protected:
     uint64_t global_diffuse_spectrum_version = 0;
 
     std::map<std::string, bool> scattering_iterations_needed;
+
+    // --- Solar-induced fluorescence (SIF) v2 — Fluspect-B-based --- //
+
+    //! Per-primitive per-band SIF source emission on the top face (W/m²). Outer key:
+    //! emission band label. Inner key: primitive UUID. Populated by computeSIFEmission;
+    //! consumed by the emission loop in runBand() to override Stefan–Boltzmann.
+    std::map<std::string, std::unordered_map<uint, float>> sif_emission_buffer;
+
+    //! Per-primitive per-band SIF source emission on the bottom face (W/m²). Matches
+    //! sif_emission_buffer in layout; distinguished so two-sided leaves can emit an
+    //! asymmetric Mf (top) / Mb (bottom) split.
+    std::map<std::string, std::unordered_map<uint, float>> sif_emission_buffer_bottom;
+
+    //! Set of user-defined emission band labels that should source their flux from
+    //! Fluspect-B. Populated by addSIFCamera from each camera's emission-band list.
+    std::set<std::string> sif_emission_bands;
+
+    //! Per-band excitation bin width in nm. Each SIF emission band has one
+    //! authoritative bin width — the one from the first camera that flagged it.
+    //! Re-flagging the same band with a different bin width is an error.
+    std::map<std::string, float> sif_band_bin_width;
+
+    //! Labels of cameras registered via addSIFCamera (for isSIFCamera queries).
+    std::set<std::string> sif_cameras;
+
+    //! Fluspect-B cache key: biochemistry global-data label + excitation bin width.
+    //! The label is the authoritative identity (many primitives share one); excitation
+    //! bin width can vary across cameras, and each combination needs its own kernel.
+    struct FluspectCacheKey {
+        std::string biochem_label;
+        float excitation_step_nm;
+        bool operator==(const FluspectCacheKey &o) const noexcept;
+    };
+    struct FluspectCacheKeyHash {
+        std::size_t operator()(const FluspectCacheKey &k) const noexcept;
+    };
+    //! Cached Fluspect-B kernels, reused across leaves with identical biochemistry.
+    std::unordered_map<FluspectCacheKey, helios::FluspectKernel, FluspectCacheKeyHash> fluspect_cache;
+    //! Lazy-loaded Optipar coefficients (loaded on first SIF dispatch).
+    helios::FluspectOptipar fluspect_optipar;
+    bool fluspect_optipar_loaded = false;
+
+    //! Per-unique excitation bin-width: auto-generated band labels + per-primitive APAR buffer.
+    struct ExcitationSet {
+        float bin_width_nm;
+        uint scattering_depth = 0;             //!< Max requested by any bound SIF camera
+        std::vector<std::string> band_labels;  //!< Internal labels like "_SIF_exc_10_400_410"
+        std::vector<float> band_min_nm;        //!< wavelength_min of each band
+        std::vector<float> band_max_nm;        //!< wavelength_max of each band
+        //! Per-primitive per-band APAR (W/m²). Outer key: primitive UUID. Inner: band index.
+        std::unordered_map<uint, std::vector<float>> apar_buffer;
+        //! Whether the ray-trace for this set has already run in the current dispatch.
+        bool populated = false;
+    };
+    //! Keyed by rounded bin width (to 5 decimals). Created on demand by addSIFCamera.
+    std::map<float, ExcitationSet> excitation_sets;
+
+    //! Fluorescence quantum yield Φ_F from van der Tol et al. (2014) rate-coefficient model.
+    /**
+     * \param[in] J_over_Jmax Electron-transport-ratio (J/Jmax), expected in [0,1].
+     * \param[in] T_leaf_K Leaf temperature in Kelvin.
+     * \return Φ_F = kF / (kF + kD + kP + kN).
+     */
+    static float calculateFluorescenceYield(float J_over_Jmax, float T_leaf_K);
+
+    //! Ensure Optipar coefficients are loaded (idempotent).
+    void ensureFluspectOptiparLoaded();
+
+    //! Get or compute the Fluspect-B kernel for a primitive's leaf biochemistry, caching the result.
+    /**
+     * Reads Cab/Cca/Cw/Cdm/Cs/Cant/Cp/Cbc/N/V2Z/fqe primitive data (defaults applied for
+     * missing values). Returns a pointer to the cached kernel or nullptr if the primitive
+     * has no leaf biochemistry suitable for fluorescence (e.g., no Cab set).
+     */
+    const helios::FluspectKernel *getOrComputeFluspectKernel(uint UUID, float excitation_step_nm);
+
+    //! Auto-generate (or look up) an excitation set for a given bin width.
+    /**
+     * Creates radiation bands "_SIF_exc_<binwidth>_<minnm>_<maxnm>" covering 400-750 nm
+     * if the set doesn't already exist. Returns a reference to the set.
+     */
+    ExcitationSet &ensureExcitationSet(float bin_width_nm, uint scattering_depth = 0);
+
+    //! Fill ExcitationSet::apar_buffer from each excitation band's radiation_flux_<band>
+    //! primitive data, then clear the internal primitive data label (internal bands should
+    //! not pollute user-visible primitive data).
+    void populateExcitationAPAR(ExcitationSet &exc);
+
+    //! Run ray tracing for all auto-generated excitation bands in all excitation sets that
+    //! have not yet been populated this dispatch, and fill each set's apar_buffer.
+    void runExcitationBands();
+
+    //! For each primitive with leaf biochemistry, compute per-band SIF emission flux from
+    //! the Fluspect-B kernel × per-excitation-band APAR × Φ_F and write to sif_emission_buffer.
+    /**
+     * \param[in] emission_band Target SIF emission band label. Must be in sif_emission_bands.
+     */
+    void computeSIFEmission(const std::string &emission_band);
 
     // --- radiation source variables --- //
 

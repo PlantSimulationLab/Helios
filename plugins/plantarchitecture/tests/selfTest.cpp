@@ -2088,6 +2088,175 @@ DOCTEST_TEST_CASE("Nitrogen Model - Fruit Removal") {
     DOCTEST_CHECK(found_stress_factor);
 }
 
+DOCTEST_TEST_CASE("Nitrogen Model - Leaf-to-Fruit Translocation") {
+    // When the available nitrogen pool cannot cover fruit demand, removeFruitNitrogen draws the
+    // shortfall from leaves (old leaves first, then young leaves as fallback). To isolate
+    // translocation cleanly, we override remobilization_age_threshold to a value age_fraction
+    // never reaches, which disables the leaf-to-leaf remobilization pathway. With remobilization
+    // disabled and the available pool empty, the only mechanism that can reduce a leaf below the
+    // target N concentration is leaf-to-fruit translocation.
+
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.loadPlantModelFromLibrary("tomato");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+
+    // Disable leaf-to-leaf remobilization by setting an unreachable age threshold (age_fraction <= 1).
+    NitrogenParameters N_params; // defaults: target=1.5, minimum=0.5, efficiency=0.7
+    N_params.remobilization_age_threshold = 2.0f;
+    plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
+
+    // Grow plant well past fruit-set so fruits exist when we initialize and snapshot.
+    // Tomato in this library typically starts fruit set around day 40-50; advance past that.
+    plantarchitecture.advanceTime(plantID, 60.0f);
+
+    // Skip the test if the plant did not produce fruit in this run (random plant growth can
+    // sometimes produce no fruits within the window). The translocation pathway only exercises
+    // when fruits actively grow, so we need fruits to be present.
+    std::vector<uint> fruit_objIDs = plantarchitecture.getPlantFruitObjectIDs(plantID);
+    if (fruit_objIDs.empty()) {
+        // Try a longer window before giving up.
+        plantarchitecture.advanceTime(plantID, 30.0f);
+        fruit_objIDs = plantarchitecture.getPlantFruitObjectIDs(plantID);
+    }
+    if (fruit_objIDs.empty()) {
+        return; // No fruits formed in this run; nothing to test.
+    }
+
+    // Reset leaves to target N (overwrites any drainage that occurred during the warm-up advance);
+    // do NOT call addPlantNitrogen so the available pool stays empty and any further fruit demand
+    // must come from leaves via translocation.
+    plantarchitecture.initializePlantNitrogenPools(plantID, N_params.target_leaf_N_area);
+
+    // Trigger an output write so leaf_nitrogen_gN_m2 is materialized as object data
+    plantarchitecture.advanceTime(plantID, 0.1f);
+
+    // Sanity: at least one leaf is at the target initially
+    bool any_leaf_at_target_pre = false;
+    for (uint objID: plantarchitecture.getAllPlantObjectIDs(plantID)) {
+        if (context.doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
+            float leaf_N_area;
+            context.getObjectData(objID, "leaf_nitrogen_gN_m2", leaf_N_area);
+            if (std::abs(leaf_N_area - N_params.target_leaf_N_area) < 0.01f) {
+                any_leaf_at_target_pre = true;
+                break;
+            }
+        }
+    }
+    DOCTEST_CHECK(any_leaf_at_target_pre);
+
+    // Advance through ongoing fruit growth. With remobilization disabled and the pool empty, the
+    // only path that can drop a leaf below target is translocation to fruit.
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 30.0f));
+
+    // Look for evidence of translocation: at least one leaf that started at target now sits below
+    // it (but at or above the per-leaf floor). Newly grown leaves with N == 0 are excluded by
+    // requiring leaf_N_area > minimum_leaf_N_area.
+    bool any_leaf_drained_below_target = false;
+    float min_leaf_N_observed = std::numeric_limits<float>::infinity();
+    bool any_leaf_with_N = false;
+    for (uint objID: plantarchitecture.getAllPlantObjectIDs(plantID)) {
+        if (context.doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
+            float leaf_N_area;
+            context.getObjectData(objID, "leaf_nitrogen_gN_m2", leaf_N_area);
+            if (leaf_N_area > N_params.minimum_leaf_N_area && leaf_N_area < N_params.target_leaf_N_area - 0.01f) {
+                any_leaf_drained_below_target = true;
+            }
+            if (leaf_N_area > 1e-4f) {
+                min_leaf_N_observed = std::min(min_leaf_N_observed, leaf_N_area);
+                any_leaf_with_N = true;
+            }
+        }
+    }
+
+    // Confirm fruits still exist at the end of the test window (sanity check that fruit demand
+    // was active for at least part of the post-advance period).
+    fruit_objIDs = plantarchitecture.getPlantFruitObjectIDs(plantID);
+
+    // Translocation drained at least one initialized leaf below the target.
+    if (!fruit_objIDs.empty()) {
+        DOCTEST_CHECK(any_leaf_drained_below_target);
+    }
+
+    // Per-leaf floor: with translocation only able to remove (current - minimum) * efficiency, a
+    // fully drained leaf bottoms out at minimum + (initial - minimum)(1 - efficiency) = 0.8 g N/m²
+    // for the defaults. Assert at least minimum_leaf_N_area as a slack lower bound.
+    if (any_leaf_with_N) {
+        DOCTEST_CHECK(min_leaf_N_observed >= N_params.minimum_leaf_N_area - 1e-3f);
+    }
+
+    // Stress factor output still written
+    bool found_stress_factor = false;
+    for (uint objID: plantarchitecture.getAllPlantObjectIDs(plantID)) {
+        if (context.doesObjectDataExist(objID, "nitrogen_stress_factor")) {
+            found_stress_factor = true;
+            break;
+        }
+    }
+    DOCTEST_CHECK(found_stress_factor);
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - No Translocation When Pool Adequate") {
+    // Negative control: with leaf-to-leaf remobilization disabled (unreachable threshold) AND a
+    // well-stocked available pool, no drainage pathway should be active. Pre-existing leaves at
+    // target N must remain at target after fruiting (translocation never triggers because the pool
+    // covers demand). New leaves grown later may have lower N because accumulation is rate-limited,
+    // so we only check the pre-existing initialized leaves.
+
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.loadPlantModelFromLibrary("tomato");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+
+    NitrogenParameters N_params;
+    N_params.remobilization_age_threshold = 2.0f; // Disable leaf-to-leaf remobilization
+    plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
+
+    plantarchitecture.advanceTime(plantID, 30.0f);
+    plantarchitecture.initializePlantNitrogenPools(plantID, N_params.target_leaf_N_area);
+    plantarchitecture.addPlantNitrogen(plantID, 200.0f); // Generously stock so pool always covers fruit demand
+    plantarchitecture.advanceTime(plantID, 0.1f);        // Materialize object data
+
+    // Capture pre-existing leaves that are at the target N concentration
+    std::vector<uint> leaves_at_target_pre;
+    for (uint objID: plantarchitecture.getAllPlantObjectIDs(plantID)) {
+        if (context.doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
+            float leaf_N_area;
+            context.getObjectData(objID, "leaf_nitrogen_gN_m2", leaf_N_area);
+            if (std::abs(leaf_N_area - N_params.target_leaf_N_area) < 0.01f) {
+                leaves_at_target_pre.push_back(objID);
+            }
+        }
+    }
+    DOCTEST_CHECK(leaves_at_target_pre.size() > 0);
+
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 40.0f));
+
+    // Pre-existing leaves at target should remain at (or very near) target. With remobilization
+    // disabled and the pool adequate to cover fruit demand, no drainage pathway is active.
+    int leaves_intact = 0;
+    for (uint objID: leaves_at_target_pre) {
+        if (!context.doesObjectExist(objID)) {
+            continue;
+        }
+        if (!context.doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
+            continue;
+        }
+        float leaf_N_area;
+        context.getObjectData(objID, "leaf_nitrogen_gN_m2", leaf_N_area);
+        if (leaf_N_area >= N_params.target_leaf_N_area - 0.05f) {
+            leaves_intact++;
+        }
+    }
+    DOCTEST_CHECK(leaves_intact > 0);
+}
+
 DOCTEST_TEST_CASE("Nitrogen Model - Full Growth Cycle Integration") {
     Context context;
     PlantArchitecture plantarchitecture(&context);

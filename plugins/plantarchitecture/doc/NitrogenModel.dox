@@ -201,10 +201,13 @@ When fruit grows (detected by increase in fruit scale factor), nitrogen is deduc
 
 - Fruit area increment is calculated from scale factor changes
 - Nitrogen demand = area increment × `fruit_N_area` (g N/m²)
-- Nitrogen is removed from available pool (supply-limited)
+- Per-plant fruit demand is aggregated across all fruiting buds before withdrawal
+- Nitrogen is removed from available pool first (supply-limited)
 - This reduces nitrogen available for leaves, potentially creating competition
 
 Fruit nitrogen removal is only active when plants are fruiting.
+
+<b>Leaf-to-fruit translocation:</b> when the available pool cannot fully cover fruit demand, the remaining shortfall is satisfied by translocation from leaves. Old leaves (age ≥ `remobilization_age_threshold`) donate first; if their reserve is exhausted, younger leaves contribute as a fallback. The per-leaf reserve uses the same formula as leaf-to-leaf remobilization — `(current_N_area - minimum_leaf_N_area) × leaf_remobilization_efficiency` — so the `minimum_leaf_N_area` floor is respected. Withdrawal is distributed across source leaves proportionally to per-leaf availability. No stress-acceleration multiplier is applied here because translocation magnitude is governed by fruit demand rather than stress signaling. If even leaves cannot cover the demand, the residual shortfall is silently absorbed (mirroring the supply-limited treatment of the available pool).
 
 \subsection NitroStress 4. Nitrogen Stress Factor Calculation
 

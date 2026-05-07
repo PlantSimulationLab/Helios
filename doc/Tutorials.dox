@@ -26,9 +26,10 @@ The following provides a several tutorials to help in getting started with the c
 - \subpage radiation_basics_tutorial "Tutorial 10: Radiation model basics - tree light interception"
 - \subpage radiation_BeersLaw_tutorial "Tutorial 11: Light interception and fraction of sunlit/shaded leaf area for a homogeneous canopy"
 - \subpage radiation_segmentation_tutorial "Tutorial 12: Image segmentation and object detection using the radiation camera"
+- \subpage radiation_SIF_tutorial "Tutorial 13: Imaging solar-induced chlorophyll fluorescence (SIF) of a plant"
 
 \section WUETuts Canopy Water-Use Efficiency
-- \subpage canopy_WUE_tutorial "Tutorial 13: Canopy water-use efficiency - integrates many plug-ins, including radiation, energy balance, stomatal conductance, photosynthesis, etc.
+- \subpage canopy_WUE_tutorial "Tutorial 14: Canopy water-use efficiency - integrates many plug-ins, including radiation, energy balance, stomatal conductance, photosynthesis, etc.
 
 
 */

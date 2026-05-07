@@ -1454,6 +1454,14 @@ Visualizer::~Visualizer() {
         // CRITICAL for macOS: Process events to clean up window state before destroying
         // Without this, macOS Cocoa/NSGL backend leaves cached state that causes crashes
         // See: https://github.com/glfw/glfw/issues/1412, #1018, #721
+#if __APPLE__
+        // Block until all pending GPU work completes while the GL context is still
+        // current. After glfwDestroyWindow the context is gone and glFinish is a no-op,
+        // so this must happen first. Without it, in-flight Metal command buffers can
+        // outlive the window and accumulate in the per-process pool, eventually
+        // crashing later glReadPixels calls inside MTLResourceListPoolCreateResourceList.
+        glFinish();
+#endif
         glfwPollEvents();
 
         glfwDestroyWindow(scast<GLFWwindow *>(window));
@@ -1461,6 +1469,12 @@ Visualizer::~Visualizer() {
         // CRITICAL for macOS: Process events again after destroying to drain autorelease pool
         // This ensures all macOS window resources are properly cleaned up
         glfwPollEvents();
+#if __APPLE__
+        // Give the Metal/CGL backend a moment to release the destroyed window's
+        // command buffers before any subsequent Visualizer is constructed.
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        glfwPollEvents();
+#endif
 
         // Decrement reference count and only terminate GLFW when last Visualizer is destroyed
         // Keeping GLFW initialized avoids macOS issues with pixel format caching and context reinitialization

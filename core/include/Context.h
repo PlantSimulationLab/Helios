@@ -6838,6 +6838,14 @@ namespace helios {
         /** Removes all timeseries variables and their associated date/time values. */
         void clearTimeseriesData();
 
+        //! Delete an entire timeseries variable and all of its data points
+        /**
+         * \param[in] label Name of the timeseries variable to delete.
+         * \note If the variable does not exist, a non-fatal warning is issued to stderr and the call is otherwise a no-op.
+         * \ingroup timeseries
+         */
+        void deleteTimeseriesVariable(const char *label);
+
         //! Load tabular weather data from text file into timeseries
         /**
          * \param[in] data_file Path to the text file containing the tabular weather data.

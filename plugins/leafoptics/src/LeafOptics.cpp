@@ -331,6 +331,30 @@ void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties 
     context->setPrimitiveData(UUIDs, "transmissivity_spectrum", leaf_transmissivity_label);
     setProperties(UUIDs, leafproperties);
 
+    // Write Fluspect-B biochemistry parameters to global data under the same label
+    // so the radiation plugin's SIF pipeline can look them up per primitive via the
+    // "fluspect_spectrum" primitive-data key below. Field order is fixed by convention
+    // and documented in plugins/radiation/include/FluspectB.h. This write is harmless
+    // when SIF is not in use — it just sits as unused global data.
+    //
+    // Field order: Cab, Cca, Cw, Cdm, Cs, Cant, Cp, Cbc, N, V2Z, fqe (11 fields).
+    std::string fluspect_biochem_label = "fluspect_biochem_" + label;
+    std::vector<float> fluspect_biochem = {
+        leafproperties.chlorophyllcontent,  // Cab
+        leafproperties.carotenoidcontent,   // Cca
+        leafproperties.watermass,           // Cw
+        leafproperties.drymass,             // Cdm
+        leafproperties.brownpigments,       // Cs
+        leafproperties.anthocyancontent,    // Cant
+        leafproperties.protein,             // Cp
+        leafproperties.carbonconstituents,  // Cbc
+        leafproperties.numberlayers,        // N
+        leafproperties.V2Z,
+        leafproperties.fqe,
+    };
+    context->setGlobalData(fluspect_biochem_label.c_str(), fluspect_biochem);
+    context->setPrimitiveData(UUIDs, "fluspect_spectrum", fluspect_biochem_label);
+
     // Store parameters in map for later retrieval
     spectrum_parameters_map[label] = leafproperties;
 }
@@ -344,6 +368,18 @@ void LeafOptics::run(const LeafOpticsProperties &leafproperties, const std::stri
     std::string leaf_transmissivity_label = "leaf_transmissivity_" + label;
     context->setGlobalData(leaf_reflectivity_label.c_str(), reflectivities_fit);
     context->setGlobalData(leaf_transmissivity_label.c_str(), transmissivities_fit);
+
+    // Fluspect-B biochemistry parameters, written to global data under a parallel label
+    // so the radiation plugin's SIF pipeline can look them up. See the UUID-specific
+    // overload of run() for the field-order convention.
+    std::string fluspect_biochem_label = "fluspect_biochem_" + label;
+    std::vector<float> fluspect_biochem = {
+        leafproperties.chlorophyllcontent,  leafproperties.carotenoidcontent, leafproperties.watermass,
+        leafproperties.drymass,             leafproperties.brownpigments,     leafproperties.anthocyancontent,
+        leafproperties.protein,             leafproperties.carbonconstituents, leafproperties.numberlayers,
+        leafproperties.V2Z,                 leafproperties.fqe,
+    };
+    context->setGlobalData(fluspect_biochem_label.c_str(), fluspect_biochem);
 
     // Store parameters in map for later retrieval
     spectrum_parameters_map[label] = leafproperties;
@@ -700,6 +736,8 @@ LeafOpticsProperties LeafOptics::computePropertiesFromNitrogen(float N_area_gN_m
     props.drymass = params.drymass;
     props.protein = params.protein;
     props.carbonconstituents = params.carbonconstituents;
+    props.V2Z = params.V2Z;
+    props.fqe = params.fqe;
 
     return props;
 }
@@ -851,6 +889,12 @@ void LeafOptics::assignSpectrumToPrimitives(const std::vector<uint> &UUIDs, uint
 
     context->setPrimitiveData(UUIDs, "reflectivity_spectrum", refl_label);
     context->setPrimitiveData(UUIDs, "transmissivity_spectrum", trans_label);
+
+    // Stamp the Fluspect-B biochemistry label for this bin so the radiation plugin's
+    // SIF pipeline can find it. The bin's global data is written in ensureNitrogenBinsInitialized
+    // alongside the spectrum; here we just point the primitive at the right label.
+    std::string fluspect_label = "fluspect_biochem_" + label;
+    context->setPrimitiveData(UUIDs, "fluspect_spectrum", fluspect_label);
 
     // Write optional primitive data if any are enabled
     if (!output_prim_data.empty()) {

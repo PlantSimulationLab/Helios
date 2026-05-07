@@ -51,8 +51,8 @@ HitInfo intersect_triangle(vec3 ray_origin, vec3 ray_dir, vec3 v0, vec3 v1, vec3
 // Parameters:
 //   origin_prim_idx: Index of primitive shooting the ray (to skip self-intersection)
 // Returns: closest hit primitive index or UINT_MAX if miss
-// Outputs: closest_t (intersection distance), hit_prim_type, hit_uv (UV coordinates at hit point)
-uint traverse_bvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_idx, inout float closest_t, out uint hit_prim_type, out vec2 hit_uv) {
+// Outputs: closest_t (intersection distance)
+uint traverse_bvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_idx, inout float closest_t) {
 
     // Pre-compute inverse ray direction for AABB tests
     vec3 ray_dir_inv = vec3(1.0) / ray_dir;
@@ -63,8 +63,6 @@ uint traverse_bvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_i
 
     uint closest_prim = UINT_MAX;
     closest_t = 1e30;
-    hit_prim_type = 0;
-    hit_uv = vec2(0.0, 0.0);
 
     // Start at root (index 0)
     stack[stack_ptr++] = 0;
@@ -138,8 +136,6 @@ uint traverse_bvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_i
 
                     closest_t = hit.t;
                     closest_prim = prim_idx;
-                    hit_prim_type = prim_type;
-                    hit_uv = hit.uv;
                 }
             }
         } else {
@@ -176,7 +172,7 @@ const uint slot_masks[8] = uint[8](0x00u, 0x01u, 0x03u, 0x07u, 0x0Fu, 0x1Fu, 0x3
 // - Step 2: Read metadata + leaf data only for survivors (deferred reads)
 // - No sort arrays — process children in slot order, push internal nodes in near-first order
 // - Branchless byte extraction via bitfieldExtract
-uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_idx, inout float closest_t, out uint hit_prim_type, out vec2 hit_uv) {
+uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_idx, inout float closest_t) {
 
     vec3 ray_dir_inv = vec3(1.0) / ray_dir;
 
@@ -185,8 +181,6 @@ uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim
 
     uint closest_prim = UINT_MAX;
     closest_t = 1e30;
-    hit_prim_type = 0;
-    hit_uv = vec2(0.0, 0.0);
 
     // Start at root (index 0)
     stack[stack_ptr++] = 0;
@@ -283,9 +277,10 @@ uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim
                 // ---- Step 3: Read leaf data on demand (words 20+slot, 28-31) ----
                 uint first_prim = floatBitsToUint(bvh_buf.data[base + 20u + child_slot]);
 
-                // Read prim_count and prim_type from packed byte arrays
+                // Read prim_count from packed byte arrays. Per-prim type is read via
+                // prim_types_buf below (line ~296) — the BVH-packed prim_type word is
+                // intentionally not used here, so don't load it.
                 uint pc_word = floatBitsToUint(bvh_buf.data[base + 28u + (child_slot >> 2u)]);
-                uint pt_word = floatBitsToUint(bvh_buf.data[base + 30u + (child_slot >> 2u)]);
                 int bit_off = int((child_slot & 3u) * 8u);
                 uint prim_count = bitfieldExtract(pc_word, bit_off, 8);
 
@@ -323,8 +318,6 @@ uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim
                         }
                         closest_t = hit.t;
                         closest_prim = prim_idx;
-                        hit_prim_type = actual_prim_type;
-                        hit_uv = hit.uv;
                     }
                 }
             }

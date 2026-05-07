@@ -124,16 +124,11 @@ void Visualizer::buildContextGeometry_private() {
             }
         }
     } else if (!colorPrimitivesByObjectData.empty()) {
-        if (colorPrimitives_objIDs.empty()) { // load all primitives
-            std::vector<uint> ObjIDs = context->getAllObjectIDs();
-            for (uint objID: ObjIDs) {
-                if (context->doesObjectExist(objID)) {
-                    std::vector<uint> UUIDs = context->getObjectPrimitiveUUIDs(objID);
-                    for (uint UUID: UUIDs) {
-                        if (context->doesPrimitiveExist(UUID)) {
-                            colorPrimitives_UUIDs[UUID] = UUID;
-                        }
-                    }
+        if (colorPrimitives_objIDs.empty()) { // load all primitives, including orphans (no parent object) which are assigned a default object-data value of 0
+            std::vector<uint> all_UUIDs = context->getAllUUIDs();
+            for (uint UUID: all_UUIDs) {
+                if (context->doesPrimitiveExist(UUID)) {
+                    colorPrimitives_UUIDs[UUID] = UUID;
                 }
             }
         } else { // load primitives specified by user

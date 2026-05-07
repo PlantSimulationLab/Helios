@@ -1256,6 +1256,61 @@ DOCTEST_TEST_CASE("GeometryHandler::setVertices coordinate system transformation
     }
 }
 
+DOCTEST_TEST_CASE("Visualizer::colorContextPrimitivesByObjectData orphan primitives use colormap-at-0") {
+    // Regression test: when calling colorContextPrimitivesByObjectData(), primitives
+    // that are not part of any compound object should be colored as if their object-data
+    // value were 0 (so they get colormap-at-0), rather than rendering with their base RGBA.
+    Context context;
+
+    // An orphan patch with a deliberately distinctive base RGBA color (bright red).
+    // If the fix regresses, this red is what will appear in the rendered image.
+    const RGBcolor base_color = make_RGBcolor(1.f, 0.f, 0.f);
+    uint patch_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1.f, 1.f), nullrotation, base_color);
+    DOCTEST_CHECK(context.getPrimitiveParentObjectID(patch_UUID) == 0); // confirm it's an orphan
+
+    Visualizer visualizer(200, 200, 16, false, true); // headless
+    visualizer.disableMessages();
+    visualizer.setLightingModel(Visualizer::LIGHTING_NONE); // avoid shading skewing the rendered color
+
+    // Set an explicit colorbar range that does NOT include 0. With the default "hot"
+    // colormap, query(0) under range [1,2] is clamped to colormap-min = (0,0,0) (black).
+    visualizer.setColorbarRange(1.f, 2.f);
+
+    DOCTEST_CHECK_NOTHROW(visualizer.buildContextGeometry(&context));
+    DOCTEST_CHECK_NOTHROW(visualizer.colorContextPrimitivesByObjectData("nonexistent_object_data"));
+    // Disable the auto-enabled colorbar so it doesn't contribute red/yellow pixels from
+    // the high end of the "hot" colormap, which would otherwise contaminate the pixel counts.
+    DOCTEST_CHECK_NOTHROW(visualizer.disableColorbar());
+    DOCTEST_CHECK_NOTHROW(visualizer.plotUpdate(true));
+
+    std::string test_filename = "test_orphan_color_by_object_data.png";
+    DOCTEST_CHECK_NOTHROW(visualizer.printWindow(test_filename.c_str(), "png"));
+    DOCTEST_CHECK(std::filesystem::exists(test_filename));
+
+    std::vector<RGBAcolor> pixel_data;
+    uint width, height;
+    DOCTEST_CHECK_NOTHROW(helios::readPNG(test_filename, width, height, pixel_data));
+
+    // Walk all pixels: count red (base color leaking through — would mean fix regressed)
+    // vs near-black (colormap_hot at value 0 — the expected post-fix behavior).
+    int red_pixels = 0;
+    int black_patch_pixels = 0;
+    for (const auto &pixel: pixel_data) {
+        if (pixel.r > 0.5f && pixel.g < 0.2f && pixel.b < 0.2f) {
+            red_pixels++;
+        } else if (pixel.r < 0.1f && pixel.g < 0.1f && pixel.b < 0.1f) {
+            black_patch_pixels++;
+        }
+    }
+
+    DOCTEST_CHECK_MESSAGE(red_pixels == 0, "Orphan primitive rendered with its base RGBA (red) instead of colormap-at-0; got " << red_pixels << " red pixels");
+    DOCTEST_CHECK_MESSAGE(black_patch_pixels > 100, "Expected the orphan patch to render as near-black (colormap_hot at 0); only got " << black_patch_pixels << " black pixels");
+
+    if (std::filesystem::exists(test_filename)) {
+        std::filesystem::remove(test_filename);
+    }
+}
+
 int Visualizer::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

@@ -622,9 +622,9 @@ private:
         uint petioles_per_internode;
         //! Angle in degrees of the petiole base axis relative to its parent phytomer axis
         RandomParameter_float pitch;
-        //! Radius in meters of the petiole cross-section; a value of 0 suppresses petiole creation
+        //! Radius in meters of the petiole cross-section; if either radius or length is 0, no petiole geometry is created and leaves attach at the internode tip
         RandomParameter_float radius;
-        //! Length in meters of the petiole tube; a value of 0 suppresses petiole creation
+        //! Length in meters of the petiole tube; if either radius or length is 0, no petiole geometry is created and leaves attach at the internode tip
         RandomParameter_float length;
         //! Curvature in degrees per meter applied along the petiole length (positive bends upward, negative downward)
         RandomParameter_float curvature;
@@ -1252,6 +1252,24 @@ public:
      * \param[in] rotation AxisRotation object containing pitch, roll, and yaw values for the rotation
      */
     void rotateLeaf(uint petiole_index, uint leaf_index, const AxisRotation &rotation);
+
+    /**
+     * \brief Rotates a petiole and everything anchored to it (its leaves) about the petiole base.
+     *
+     * Performs a solid-body rotation: the petiole tube and all leaves attached to it rotate
+     * together so the leaves remain anchored at the petiole tip. The terminal floral bud and
+     * its peduncle/inflorescence are anchored to the internode (not the petiole) and are not
+     * affected.
+     *
+     * \param[in] petiole_index Index identifying the petiole within the phytomer
+     * \param[in] rotation AxisRotation. Pitch tilts the petiole further from the internode
+     *                     about the petiole's stored rotation axis at the petiole base; only
+     *                     the magnitude is used (matching the construction's convention of
+     *                     `abs(petiole_pitch)`). Yaw rotates the petiole around the internode
+     *                     axis (azimuth around the stem). Roll rolls the petiole around its
+     *                     own length axis.
+     */
+    void rotatePetiole(uint petiole_index, const AxisRotation &rotation);
 
     /**
      * \brief Sets the vegetative bud state for all axillary vegetative buds in the phytomer.

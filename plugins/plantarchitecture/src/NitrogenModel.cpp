@@ -409,10 +409,10 @@ void PlantArchitecture::removeFruitNitrogen() {
     for (auto &[plantID, plant]: plant_instances) {
         const NitrogenParameters &N_params = plant.nitrogen_parameters;
 
-        // Iterate through shoots to find fruit
+        // ---- Pass A: aggregate per-plant fruit nitrogen demand ----
+        float total_fruit_demand_gN = 0;
         for (auto &shoot: plant.shoot_tree) {
             for (auto &phytomer: shoot->phytomers) {
-                // Check each floral bud
                 for (auto &petiole: phytomer->floral_buds) {
                     for (auto &fbud: petiole) {
                         if (fbud.state != BUD_FRUITING) {
@@ -431,35 +431,115 @@ void PlantArchitecture::removeFruitNitrogen() {
                             if (!context_ptr->doesObjectExist(fruit_objID)) {
                                 continue;
                             }
-
-                            // Get current fruit area
                             float current_fruit_area = context_ptr->getObjectArea(fruit_objID);
-
-                            // Calculate mature (unscaled) fruit area
                             float mature_fruit_area = current_fruit_area / (fbud.current_fruit_scale_factor * fbud.current_fruit_scale_factor);
-
-                            // Calculate area increment (mature area × scale change × 2 for surface scaling)
                             float area_increment = mature_fruit_area * (fbud.current_fruit_scale_factor * fbud.current_fruit_scale_factor - fbud.previous_fruit_scale_factor * fbud.previous_fruit_scale_factor);
-
                             fruit_area_increment += area_increment;
                         }
 
                         if (fruit_area_increment > 0) {
-                            // Calculate N demand for fruit growth (g N/m² × m² = g N)
-                            float fruit_N_demand = fruit_area_increment * N_params.fruit_N_area;
-
-                            // Deduct from available pool (supply-limited)
-                            float N_removed = std::min(fruit_N_demand, plant.available_nitrogen_pool_gN);
-                            plant.available_nitrogen_pool_gN -= N_removed;
-
-                            // Safety clamp
-                            if (plant.available_nitrogen_pool_gN < 0) {
-                                plant.available_nitrogen_pool_gN = 0;
-                            }
+                            total_fruit_demand_gN += fruit_area_increment * N_params.fruit_N_area;
                         }
                     }
                 }
             }
         }
+
+        if (total_fruit_demand_gN <= 0) {
+            continue; // No fruit growth this timestep
+        }
+
+        // ---- Deduct from available pool first (supply-limited) ----
+        float pool_supply_gN = std::min(total_fruit_demand_gN, plant.available_nitrogen_pool_gN);
+        plant.available_nitrogen_pool_gN -= pool_supply_gN;
+        if (plant.available_nitrogen_pool_gN < 0) {
+            plant.available_nitrogen_pool_gN = 0; // Safety clamp
+        }
+        float leaf_shortfall_gN = total_fruit_demand_gN - pool_supply_gN;
+        if (leaf_shortfall_gN <= 0) {
+            continue; // Pool fully covered demand
+        }
+
+        // ---- Pass B: classify leaves into old (priority sources) and young (fallback sources) ----
+        // Translocation magnitude is governed by fruit demand, not stress signaling, so no stress-acceleration multiplier
+        // is applied here (unlike remobilizeNitrogen). Per-leaf availability uses the same formula:
+        //   max(0, (current_N_area - minimum_leaf_N_area) * leaf_remobilization_efficiency).
+        std::vector<std::pair<uint, uint>> old_sources;   // (shoot_idx, leaf_objID)
+        std::vector<std::pair<uint, uint>> young_sources; // (shoot_idx, leaf_objID)
+        std::map<uint, float> source_N_available_gN;      // leaf_objID -> available N (g N)
+        float total_old_available_gN = 0;
+        float total_young_available_gN = 0;
+
+        uint shoot_idx = 0;
+        for (auto &shoot: plant.shoot_tree) {
+            for (auto &phytomer: shoot->phytomers) {
+                float leaf_lifespan = plant.max_leaf_lifespan;
+                if (leaf_lifespan <= 0) {
+                    leaf_lifespan = 1e6; // Evergreen
+                }
+                float age_fraction = phytomer->age / leaf_lifespan;
+                bool is_old = (age_fraction >= N_params.remobilization_age_threshold);
+
+                for (uint petiole_idx = 0; petiole_idx < phytomer->leaf_objIDs.size(); petiole_idx++) {
+                    for (uint leaf_idx = 0; leaf_idx < phytomer->leaf_objIDs.at(petiole_idx).size(); leaf_idx++) {
+                        uint leaf_objID = phytomer->leaf_objIDs.at(petiole_idx).at(leaf_idx);
+                        if (!context_ptr->doesObjectExist(leaf_objID)) {
+                            continue;
+                        }
+                        if (!shoot->leaf_nitrogen_gN_m2.count(leaf_objID)) {
+                            continue;
+                        }
+                        float leaf_area = context_ptr->getObjectArea(leaf_objID);
+                        if (leaf_area <= 0) {
+                            continue;
+                        }
+                        float current_N_area = shoot->leaf_nitrogen_gN_m2.at(leaf_objID); // g N/m²
+                        float available_N_area = std::max(0.0f, (current_N_area - N_params.minimum_leaf_N_area) * N_params.leaf_remobilization_efficiency);
+                        float available_N_total = available_N_area * leaf_area;
+                        if (available_N_total <= 0) {
+                            continue;
+                        }
+
+                        source_N_available_gN[leaf_objID] = available_N_total;
+                        if (is_old) {
+                            old_sources.push_back({shoot_idx, leaf_objID});
+                            total_old_available_gN += available_N_total;
+                        } else {
+                            young_sources.push_back({shoot_idx, leaf_objID});
+                            total_young_available_gN += available_N_total;
+                        }
+                    }
+                }
+            }
+            shoot_idx++;
+        }
+
+        // ---- Pass C: withdraw shortfall from old leaves first, then young leaves as fallback ----
+        // Withdrawal is distributed proportionally to per-leaf available N (matches the remobilizeNitrogen pattern at lines 316-327).
+        // `plant` is passed by reference rather than captured to avoid the C++20-extension warning for capturing structured bindings.
+        PlantInstance &plant_ref = plant;
+        auto withdraw_from_sources = [&plant_ref, &source_N_available_gN, &leaf_shortfall_gN, this](const std::vector<std::pair<uint, uint>> &sources, float total_available_gN) {
+            if (leaf_shortfall_gN <= 0 || total_available_gN <= 0) {
+                return;
+            }
+            float withdraw_total_gN = std::min(leaf_shortfall_gN, total_available_gN);
+            for (auto &[idx, leaf_objID]: sources) {
+                float leaf_share = source_N_available_gN.at(leaf_objID) / total_available_gN;
+                float N_removed_total = withdraw_total_gN * leaf_share; // g N
+                float leaf_area = context_ptr->getObjectArea(leaf_objID);
+                if (leaf_area <= 0) {
+                    continue;
+                }
+                float N_removed_area = N_removed_total / leaf_area; // g N/m²
+                plant_ref.shoot_tree.at(idx)->leaf_nitrogen_gN_m2[leaf_objID] -= N_removed_area;
+            }
+            leaf_shortfall_gN -= withdraw_total_gN;
+        };
+
+        withdraw_from_sources(old_sources, total_old_available_gN);
+        withdraw_from_sources(young_sources, total_young_available_gN);
+
+        // Residual leaf_shortfall_gN (when even leaves cannot cover the demand) is silently absorbed,
+        // preserving the preexisting fail-soft behavior of fruit nitrogen accounting.
     }
 }

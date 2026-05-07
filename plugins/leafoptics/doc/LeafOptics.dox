@@ -46,7 +46,9 @@ The following object data is used by the nitrogen-based automatic mode (see \ref
 
 \subsection LOOutputGlobalData Output Global Data
 
-The plug-in creates global data containing the computed spectra:
+The plug-in creates global data containing the computed spectra and the Fluspect-B
+biochemistry vector consumed by the radiation plug-in's SIF pipeline (see
+\ref LOSIFIntegration):
 
 <table>
  <tr>
@@ -63,6 +65,11 @@ The plug-in creates global data containing the computed spectra:
     <td>leaf_transmissivity_*</td>
     <td><span style="font-family: Courier, monospace; color: green;">std::vector&lt;helios::vec2&gt;</span></td>
     <td>Transmissivity spectrum (wavelength in nm, transmissivity). The * is replaced by the user-specified label.</td>
+ </tr>
+ <tr>
+    <td>fluspect_biochem_*</td>
+    <td><span style="font-family: Courier, monospace; color: green;">std::vector&lt;float&gt;</span></td>
+    <td>11-element Fluspect-B biochemistry vector in fixed field order: \f$C_{ab}, C_{ca}, C_w, C_{dm}, C_s, C_{ant}, C_p, C_{bc}, N, V2Z, f_{qe}\f$. The * is replaced by the user-specified label. Consumed by the radiation plug-in's SIF pipeline (see \ref LOSIFIntegration).</td>
  </tr>
 </table>
 
@@ -85,6 +92,11 @@ The plug-in assigns the following primitive data to processed primitives:
     <td>transmissivity_spectrum</td>
     <td><span style="font-family: Courier, monospace; color: green;">std::string</span></td>
     <td>Label of the assigned transmissivity spectrum global data (e.g., "leaf_transmissivity_example")</td>
+ </tr>
+ <tr>
+    <td>fluspect_spectrum</td>
+    <td><span style="font-family: Courier, monospace; color: green;">std::string</span></td>
+    <td>Label of the assigned Fluspect-B biochemistry vector global data (e.g., "fluspect_biochem_example"). Used by the radiation plug-in to identify fluorescing leaves and look up their biochemistry; see \ref LOSIFIntegration.</td>
  </tr>
 </table>
 
@@ -242,6 +254,18 @@ model. See \ref LOModes for details on PROSPECT-D vs PROSPECT-PRO mode selection
  <tr><td>carbonconstituents</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Cellulose, lignin, and other carbon compounds (PROSPECT-PRO mode)</td><td>0</td></tr>
 </table>
 
+<table>
+ <tr><th colspan="4">Fluspect-B SIF Parameters (Optional, Used by the Radiation Plug-In)</th></tr>
+ <tr><th>Member</th><th>Units</th><th>Description</th><th>Default Value</th></tr>
+ <tr><td>V2Z</td><td>unitless [0-1]</td><td>Violaxanthin\f$\to\f$zeaxanthin de-epoxidation state. 0 = dark-adapted (all violaxanthin), 1 = light-stressed (all zeaxanthin). Drives the carotenoid absorption term in the Fluspect-B fluorescence kernel.</td><td>0</td></tr>
+ <tr><td>fqe</td><td>unitless</td><td>Intrinsic fluorescence quantum efficiency calibration scalar. Multiplies the Fluspect-B kernel at emission time, in addition to the per-leaf van der Tol \f$\Phi_F\f$ computed by the radiation plug-in. Leave at 1 unless you have a calibrated value.</td><td>1</td></tr>
+</table>
+
+These two fields are <b>ignored by the PROSPECT reflectance/transmittance computation</b>
+performed by LeafOptics — they are written verbatim into the
+<tt>fluspect_biochem_*</tt> global-data vector so that the radiation plug-in's SIF
+pipeline can pick them up. See \ref LOSIFIntegration for details.
+
 \section LOUse Using the LeafOptics Plug-in
 
 The model can be run to produce global spectra and, optionally, assign those
@@ -325,6 +349,84 @@ This ensures that code continues to run even if a species name is misspelled or 
 \subsection LOLibraryExtend Extending the Species Library
 
 To add new species to the library, edit the \ref LeafOptics::getPropertiesFromLibrary() method in `plugins/leafoptics/src/LeafOptics.cpp`. Follow the existing if-else pattern to add new species entries. The library supports both PROSPECT-D mode (using drymass) and PROSPECT-PRO mode (using protein and carbonconstituents).
+
+\section LOSIFIntegration Integration with the Radiation SIF Pipeline
+
+The radiation plug-in includes a Fluspect-B / van der Tol pipeline for simulating
+solar-induced chlorophyll fluorescence (SIF) — see the \ref SIFCameraDoc for full
+details. LeafOptics is the canonical way to author the per-leaf biochemistry that
+pipeline needs.
+
+\subsection LOSIFData What LeafOptics Writes for SIF
+
+Every overload of \ref LeafOptics::run() that takes a UUID list emits one extra global
+data entry and one extra primitive data label, in addition to the reflectance and
+transmittance outputs:
+
+- Global data <tt>fluspect_biochem_&lt;label&gt;</tt> — an 11-element
+  <tt>std::vector&lt;float&gt;</tt> with the Fluspect-B inputs in fixed order:
+  \f$C_{ab}, C_{ca}, C_w, C_{dm}, C_s, C_{ant}, C_p, C_{bc}, N, V2Z, f_{qe}\f$.
+- Primitive data <tt>fluspect_spectrum</tt> — the string
+  <tt>"fluspect_biochem_&lt;label&gt;"</tt> stamped on every UUID, pointing at the
+  global data entry above.
+
+The radiation plug-in reads <tt>fluspect_spectrum</tt> per primitive to identify
+fluorescing leaves; primitives without it are silently treated as non-fluorescing
+(stems, soil, etc.). The biochemistry vector is keyed by label, so leaves sharing a
+spectrum label share a single Fluspect-B kernel in the radiation plug-in's per-label
+kernel cache. This is automatic — there is no extra API to enable.
+
+The mapping between \ref LeafOpticsProperties members and Fluspect-B fields is:
+
+<table>
+ <tr><th>LeafOpticsProperties Member</th><th>Fluspect-B Field</th><th>Notes</th></tr>
+ <tr><td>chlorophyllcontent</td><td>\f$C_{ab}\f$</td><td>Drives the dominant red-edge absorption that emits at 685 nm.</td></tr>
+ <tr><td>carotenoidcontent</td><td>\f$C_{ca}\f$</td><td>Combined with V2Z controls absorption in the 400-550 nm excitation range.</td></tr>
+ <tr><td>watermass</td><td>\f$C_w\f$</td><td>Equivalent water thickness, cm.</td></tr>
+ <tr><td>drymass</td><td>\f$C_{dm}\f$</td><td>PROSPECT-D dry matter, g/cm². Set to 0 in PROSPECT-PRO mode.</td></tr>
+ <tr><td>brownpigments</td><td>\f$C_s\f$</td><td>Senescence/brown-pigment content.</td></tr>
+ <tr><td>anthocyancontent</td><td>\f$C_{ant}\f$</td><td></td></tr>
+ <tr><td>protein</td><td>\f$C_p\f$</td><td>PROSPECT-PRO only.</td></tr>
+ <tr><td>carbonconstituents</td><td>\f$C_{bc}\f$</td><td>PROSPECT-PRO only.</td></tr>
+ <tr><td>numberlayers</td><td>\f$N\f$</td><td>Mesophyll layer parameter.</td></tr>
+ <tr><td>V2Z</td><td>V2Z</td><td>SIF-only field; not used by PROSPECT.</td></tr>
+ <tr><td>fqe</td><td>\f$f_{qe}\f$</td><td>SIF-only field; not used by PROSPECT.</td></tr>
+</table>
+
+\subsection LOSIFExample Using LeafOptics with a SIF Camera
+
+Below is the minimum LeafOptics-side wiring to produce a scene that can be imaged by
+\ref RadiationModel::addSIFCamera(). Aside from the two SIF-only fields (V2Z, fqe),
+every input is a regular PROSPECT parameter — there is nothing SIF-specific to
+configure on this side:
+
+~~~~~~{.cpp}
+LeafOptics leafoptics(&context);
+
+LeafOpticsProperties props;
+props.chlorophyllcontent = 40.f;     // Cab, ug/cm^2
+props.carotenoidcontent  = 10.f;     // Cca, ug/cm^2
+props.numberlayers       = 1.5f;     // N
+props.watermass          = 0.009f;   // Cw, cm
+props.drymass            = 0.012f;   // Cdm, g/cm^2
+props.V2Z                = 0.f;      // dark-adapted; SIF-only
+props.fqe                = 1.f;      // no calibration scalar; SIF-only
+leafoptics.run(leaf_UUIDs, props, "myleaf");
+
+// At this point the radiation plug-in's SIF pipeline can find every leaf in
+// leaf_UUIDs via the "fluspect_spectrum" primitive data and look up its
+// biochemistry from the "fluspect_biochem_myleaf" global data.
+~~~~~~
+
+The \ref LeafOpticsProperties_Nauto path (see \ref LONitrogenAuto) drives a per-bin
+\f$C_{ab}\f$ from leaf nitrogen content and writes one
+<tt>fluspect_biochem_Nauto_&lt;i&gt;</tt> global-data vector per bin — useful when you
+want a per-leaf Cab gradient (and therefore a heterogeneous SIF response) driven by
+the nitrogen model rather than authored by hand. V2Z and fqe are fixed across bins.
+
+\note The reverse path \ref LeafOptics::getPropertiesFromSpectrum() does not currently
+populate V2Z or fqe as primitive data — these fields are SIF-only and are read by the
+radiation plug-in directly from the <tt>fluspect_biochem_*</tt> global-data vector.
 
 \section LORetrieve Retrieving PROSPECT Parameters from Spectra
 
@@ -446,6 +548,17 @@ Chlorophyll is clamped to the range [5, 80] \f$\mu g/cm^2\f$ to ensure physicall
  <tr><td>protein</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Protein content (PROSPECT-PRO mode)</td><td>0.0</td></tr>
  <tr><td>carbonconstituents</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Carbon constituents (PROSPECT-PRO mode)</td><td>0.0</td></tr>
 </table>
+
+<table>
+ <tr><th colspan="4">Fluspect-B SIF Parameters (Fixed Across Bins)</th></tr>
+ <tr><th>Member</th><th>Units</th><th>Description</th><th>Default</th></tr>
+ <tr><td>V2Z</td><td>unitless [0-1]</td><td>Violaxanthin\f$\to\f$zeaxanthin de-epoxidation state. See \ref LeafOpticsProperties::V2Z for details.</td><td>0</td></tr>
+ <tr><td>fqe</td><td>unitless</td><td>Intrinsic fluorescence quantum efficiency calibration scalar. See \ref LeafOpticsProperties::fqe for details.</td><td>1</td></tr>
+</table>
+
+These are written into every per-bin <tt>fluspect_biochem_Nauto_*</tt> global-data vector
+so all leaves share the same fluorescence-side parameters. The dominant per-bin variation
+in fluorescence is driven by the per-bin \f$C_{ab}\f$ derived from leaf nitrogen content.
 
 <table>
  <tr><th colspan="4">Adaptive Binning Configuration</th></tr>

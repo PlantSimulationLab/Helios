@@ -67,10 +67,13 @@ HELIOS_BASE_DIR="$(dirname "$SCRIPT_DIR")"
 # Change to the samples directory relative to the Helios base
 cd "$HELIOS_BASE_DIR/samples" || exit 1
 
-if [[ "${OSTYPE}" != "darwin"* ]] && [[ "${OSTYPE}" != "linux"* ]] && [[ "${OSTYPE}" != "msys"* ]];then
-  echo "UNSUPPORTED OPERATING SYSTEM"
-  exit 1
-fi
+case "${OSTYPE}" in
+  darwin*|linux*|msys*|cygwin*|mingw*) ;;
+  *)
+    echo "UNSUPPORTED OPERATING SYSTEM (OSTYPE='${OSTYPE}', uname -s='$(uname -s 2>/dev/null || echo unknown)')"
+    exit 1
+    ;;
+esac
 
 while [ $# -gt 0 ]; do
   case $1 in

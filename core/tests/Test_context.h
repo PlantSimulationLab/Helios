@@ -2122,6 +2122,41 @@ TEST_CASE("Missing Data and State Functions") {
         DOCTEST_CHECK(ctx.listTimeseriesVariables().empty());
     }
 
+    SUBCASE("deleteTimeseriesVariable") {
+        Context ctx;
+        Date date = make_Date(1, 1, 2025);
+        Time time0 = make_Time(0, 0, 12);
+        Time time1 = make_Time(1, 0, 12);
+
+        ctx.addTimeseriesData("temp", 25.5f, date, time0);
+        ctx.addTimeseriesData("temp", 26.5f, date, time1);
+        ctx.addTimeseriesData("humidity", 60.0f, date, time0);
+        DOCTEST_CHECK(ctx.listTimeseriesVariables().size() == 2);
+
+        // Delete one variable; the other must remain intact and queryable.
+        ctx.deleteTimeseriesVariable("temp");
+        DOCTEST_CHECK_FALSE(ctx.doesTimeseriesVariableExist("temp"));
+        DOCTEST_CHECK(ctx.doesTimeseriesVariableExist("humidity"));
+        DOCTEST_CHECK(ctx.getTimeseriesLength("humidity") == 1);
+        DOCTEST_CHECK(ctx.queryTimeseriesData("humidity", 0) == doctest::Approx(60.0f));
+
+        // Re-adding the same label after deletion creates a fresh series.
+        ctx.addTimeseriesData("temp", 99.9f, date, time0);
+        DOCTEST_CHECK(ctx.doesTimeseriesVariableExist("temp"));
+        DOCTEST_CHECK(ctx.getTimeseriesLength("temp") == 1);
+        DOCTEST_CHECK(ctx.queryTimeseriesData("temp", 0) == doctest::Approx(99.9f));
+
+        // Deleting a non-existent variable warns but does not throw.
+        std::string captured;
+        {
+            capture_cerr cerr_buffer;
+            DOCTEST_CHECK_NOTHROW(ctx.deleteTimeseriesVariable("nonexistent"));
+            captured = cerr_buffer.get_captured_output();
+        }
+        DOCTEST_CHECK(captured.find("WARNING") != std::string::npos);
+        DOCTEST_CHECK(captured.find("nonexistent") != std::string::npos);
+    }
+
     SUBCASE("getUniquePrimitiveParentObjectIDs") {
         Context ctx;
         uint obj1 = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));

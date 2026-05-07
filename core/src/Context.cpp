@@ -826,6 +826,16 @@ void Context::clearTimeseriesData() {
     timeseries_datevalue.clear();
 }
 
+void Context::deleteTimeseriesVariable(const char *label) {
+    auto it = timeseries_data.find(label);
+    if (it == timeseries_data.end()) {
+        std::cerr << "WARNING (Context::deleteTimeseriesVariable): Timeseries variable '" << label << "' does not exist. Nothing to delete." << std::endl;
+        return;
+    }
+    timeseries_data.erase(it);
+    timeseries_datevalue.erase(label);
+}
+
 void Context::getDomainBoundingBox(vec2 &xbounds, vec2 &ybounds, vec2 &zbounds) const {
     getDomainBoundingBox(getAllUUIDs(), xbounds, ybounds, zbounds);
 }

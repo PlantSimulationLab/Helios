@@ -1,0 +1,21 @@
+# Reference Fluspect-B kernel generated from SCOPE default biochemistry.
+# Used by Helios Tier 1 doctest to validate the C++ FluspectB port.
+key,value
+Cab,40
+Cca,10
+Cw,0.009
+Cdm,0.012
+Cs,0
+Cant,1
+Cp,0
+Cbc,0
+N,1.5
+fqe,0.01
+V2Z,0
+wle_min,400
+wle_max,750
+wle_step,5
+wlf_min,640
+wlf_max,848
+wlf_step,4
+ndub,15

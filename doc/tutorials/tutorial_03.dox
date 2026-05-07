@@ -42,6 +42,6 @@ Tabular CSV files can also be read with
 
 Indices may be accessed directly with \ref helios::Context::setCurrentTimeseriesPoint() "setCurrentTimeseriesPoint()" when iterating over a dataset.
 
-A complete example of using timeseries data can be found in \subpage canopy_WUE_tutorial "Tutorial 13".
+A complete example of using timeseries data can be found in \subpage canopy_WUE_tutorial "Tutorial 14".
 
 */

@@ -41,7 +41,8 @@
       <tab type="user" visible="yes" url="@ref radiation_basics_tutorial" title="Tutorial 10: Tree light interception"/>
       <tab type="user" visible="yes" url="@ref radiation_BeersLaw_tutorial" title="Tutorial 11: Light interception for a homogeneous canopy"/>
       <tab type="user" visible="yes" url="@ref radiation_segmentation_tutorial" title="Tutorial 12: Radaition camera and image annotation"/>
-      <tab type="user" visible="yes" url="@ref canopy_WUE_tutorial" title="Tutorial 13: Water-use efficiency for a canopy of spherical crowns"/>
+      <tab type="user" visible="yes" url="@ref radiation_SIF_tutorial" title="Tutorial 13: Imaging solar-induced chlorophyll fluorescence (SIF)"/>
+      <tab type="user" visible="yes" url="@ref canopy_WUE_tutorial" title="Tutorial 14: Water-use efficiency for a canopy of spherical crowns"/>
     </tab>
     <tab type="usergroup" visible="yes" url="@ref Benchmarks" title="Benchmarks">
       <tab type="user" visible="yes" url="@ref RadCanopyBenchmark" title="Homogeneous Canopy Radiation"/>

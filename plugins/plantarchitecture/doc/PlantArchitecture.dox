@@ -550,8 +550,8 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | --- **petiole** --- ||||
 | petioles_per_internode | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of petioles emanating from a single internode (e.g., for an 'opposite' growth pattern, = 2) |
 | pitch | RandomParameter_float | degrees | Angle of the petiole base axis with respect to its parent phytomer axis. |
-| radius | RandomParameter_float | meters | Radius of petiole cross-section. (radius = 0 does not create any petiole) |
-| length | RandomParameter_float | meters | Length of the petiole tube. (length = 0 does not create any petiole) |
+| radius | RandomParameter_float | meters | Radius of petiole cross-section. If either radius or length is 0, no petiole geometry is created and leaves attach directly at the internode tip. |
+| length | RandomParameter_float | meters | Length of the petiole tube. If either radius or length is 0, no petiole geometry is created and leaves attach directly at the internode tip. |
 | curvature | RandomParameter_float | degrees/meter | Curvature angle of the petiole per unit length of petiole. If curvature is positive, petiole curves upward toward vertical. If negative, curvature is downward. |
 | taper | RandomParameter_float | - | Ratio between the petiole radius at the tip to the radius at the base (e.g., =1 has no taper, =0 comes to a point at the tip). |
 | color | helios::RGBcolor | - | Diffuse color of the petiole tube. |
