@@ -251,7 +251,7 @@ void PlantArchitecture::initializeAlmondTreeShoots() {
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.005;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
     shoot_parameters_trunk.max_nodes = 50;
-    shoot_parameters_trunk.girth_area_factor = 8.f;
+    shoot_parameters_trunk.girth_area_factor = 5.f;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
     shoot_parameters_trunk.tortuosity = 1;
@@ -270,10 +270,10 @@ void PlantArchitecture::initializeAlmondTreeShoots() {
     shoot_parameters_proleptic.max_nodes_per_season = 35;
     shoot_parameters_proleptic.phyllochron_min = 1;
     shoot_parameters_proleptic.elongation_rate_max = 0.3;
-    shoot_parameters_proleptic.girth_area_factor = 8.f;
+    shoot_parameters_proleptic.girth_area_factor = 6.f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.0;
     shoot_parameters_proleptic.vegetative_bud_break_probability_max = 1.0;
-    shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.1;
+    shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.15;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
     shoot_parameters_proleptic.gravitropic_curvature = 200;
     shoot_parameters_proleptic.tortuosity = 3;
@@ -426,7 +426,7 @@ void PlantArchitecture::initializeAlmondTreeAldrichShoots() {
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.005;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
     shoot_parameters_trunk.max_nodes = 50;
-    shoot_parameters_trunk.girth_area_factor = 8.f;
+    shoot_parameters_trunk.girth_area_factor = 5.f;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
     shoot_parameters_trunk.tortuosity = .5;
@@ -448,7 +448,7 @@ void PlantArchitecture::initializeAlmondTreeAldrichShoots() {
     shoot_parameters_proleptic.girth_area_factor = 6.f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.0;
     shoot_parameters_proleptic.vegetative_bud_break_probability_max = 1.0;
-    shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.1;
+    shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.15;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
     shoot_parameters_proleptic.gravitropic_curvature = 450;
     shoot_parameters_proleptic.tortuosity = 2.5;
@@ -602,7 +602,7 @@ void PlantArchitecture::initializeAlmondTreeWoodColonyShoots() {
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.005;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
     shoot_parameters_trunk.max_nodes = 40;
-    shoot_parameters_trunk.girth_area_factor = 8.f;
+    shoot_parameters_trunk.girth_area_factor = 5.f;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
     shoot_parameters_trunk.tortuosity = 1;
@@ -624,7 +624,7 @@ void PlantArchitecture::initializeAlmondTreeWoodColonyShoots() {
     shoot_parameters_proleptic.girth_area_factor = 6.f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.0;
     shoot_parameters_proleptic.vegetative_bud_break_probability_max = 1.0;
-    shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.6;
+    shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.15;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
     shoot_parameters_proleptic.gravitropic_curvature = 150;
     shoot_parameters_proleptic.tortuosity = 3;
