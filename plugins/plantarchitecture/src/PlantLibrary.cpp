@@ -250,8 +250,8 @@ void PlantArchitecture::initializeAlmondTreeShoots() {
     shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle = 0;
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.005;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
-    shoot_parameters_trunk.max_nodes = 15;
-    shoot_parameters_trunk.girth_area_factor = 7.f;
+    shoot_parameters_trunk.max_nodes = 50;
+    shoot_parameters_trunk.girth_area_factor = 8.f;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
     shoot_parameters_trunk.tortuosity = 1;
@@ -266,24 +266,24 @@ void PlantArchitecture::initializeAlmondTreeShoots() {
     shoot_parameters_proleptic.phytomer_parameters.internode.radial_subdivisions = 5;
     shoot_parameters_proleptic.phytomer_parameters.phytomer_creation_function = AlmondPhytomerCreationFunction;
     shoot_parameters_proleptic.phytomer_parameters.phytomer_callback_function = AlmondPhytomerCallbackFunction;
-    shoot_parameters_proleptic.max_nodes = 25;
-    shoot_parameters_proleptic.max_nodes_per_season = 20;
+    shoot_parameters_proleptic.max_nodes = 50;
+    shoot_parameters_proleptic.max_nodes_per_season = 35;
     shoot_parameters_proleptic.phyllochron_min = 1;
     shoot_parameters_proleptic.elongation_rate_max = 0.3;
-    shoot_parameters_proleptic.girth_area_factor = 6.f;
+    shoot_parameters_proleptic.girth_area_factor = 8.f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.0;
     shoot_parameters_proleptic.vegetative_bud_break_probability_max = 1.0;
-    shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.6;
+    shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.1;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
     shoot_parameters_proleptic.gravitropic_curvature = 200;
     shoot_parameters_proleptic.tortuosity = 3;
     shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution(25, 30);
-    shoot_parameters_proleptic.insertion_angle_decay_rate = 15;
-    shoot_parameters_proleptic.internode_length_max = 0.015;
+    shoot_parameters_proleptic.insertion_angle_decay_rate = 7.5;
+    shoot_parameters_proleptic.internode_length_max = 0.03;
     shoot_parameters_proleptic.internode_length_min = 0.002;
     shoot_parameters_proleptic.internode_length_decay_rate = 0.002;
-    shoot_parameters_proleptic.fruit_set_probability = 0.4;
-    shoot_parameters_proleptic.flower_bud_break_probability = 0.3;
+    shoot_parameters_proleptic.fruit_set_probability = 1.;
+    shoot_parameters_proleptic.flower_bud_break_probability = 0.7;
     shoot_parameters_proleptic.max_terminal_floral_buds = 3;
     shoot_parameters_proleptic.flowers_require_dormancy = true;
     shoot_parameters_proleptic.growth_requires_dormancy = true;
@@ -311,7 +311,7 @@ void PlantArchitecture::initializeAlmondTreeShoots() {
     ShootParameters shoot_parameters_scaffold = shoot_parameters_proleptic;
     //    shoot_parameters_scaffold.phytomer_parameters.internode.color = RGB::blue;
     shoot_parameters_scaffold.phytomer_parameters.internode.radial_subdivisions = 10;
-    shoot_parameters_scaffold.max_nodes = 15;
+    shoot_parameters_scaffold.max_nodes = 50;
     shoot_parameters_scaffold.gravitropic_curvature = 150;
     shoot_parameters_scaffold.internode_length_max = 0.02;
     shoot_parameters_scaffold.tortuosity = 1.;
@@ -349,7 +349,7 @@ uint PlantArchitecture::buildAlmondTree(const helios::vec3 &base_position) {
     uint Nscaffolds = 4; // context_ptr->randu(4,5);
 
     for (int i = 0; i < Nscaffolds; i++) {
-        float pitch = context_ptr->randu(deg2rad(35), deg2rad(45));
+        float pitch = context_ptr->randu(deg2rad(15), deg2rad(45));
         uint uID_shoot = addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - i - 1, context_ptr->randu(7, 9), make_AxisRotation(pitch, (float(i) + context_ptr->randu(-0.2f, 0.2f)) / float(Nscaffolds) * 2 * M_PI, 0), 0.007, 0.06,
                                        1.f, 1.f, 0.5, "scaffold", 0);
     }
@@ -425,12 +425,12 @@ void PlantArchitecture::initializeAlmondTreeAldrichShoots() {
     shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle = 0;
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.005;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
-    shoot_parameters_trunk.max_nodes = 20;
+    shoot_parameters_trunk.max_nodes = 50;
     shoot_parameters_trunk.girth_area_factor = 8.f;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
     shoot_parameters_trunk.tortuosity = .5;
-    shoot_parameters_trunk.internode_length_max = 0.05;
+    shoot_parameters_trunk.internode_length_max = 0.04;
     shoot_parameters_trunk.internode_length_decay_rate = 0;
     shoot_parameters_trunk.defineChildShootTypes({"scaffold"}, {1});
 
@@ -441,20 +441,20 @@ void PlantArchitecture::initializeAlmondTreeAldrichShoots() {
     shoot_parameters_proleptic.phytomer_parameters.internode.radial_subdivisions = 5;
     shoot_parameters_proleptic.phytomer_parameters.phytomer_creation_function = AlmondPhytomerCreationFunction;
     shoot_parameters_proleptic.phytomer_parameters.phytomer_callback_function = AlmondPhytomerCallbackFunction;
-    shoot_parameters_proleptic.max_nodes = 25;
-    shoot_parameters_proleptic.max_nodes_per_season = 15;
+    shoot_parameters_proleptic.max_nodes = 50;
+    shoot_parameters_proleptic.max_nodes_per_season = 25;
     shoot_parameters_proleptic.phyllochron_min = 1;
     shoot_parameters_proleptic.elongation_rate_max = 0.3;
-    shoot_parameters_proleptic.girth_area_factor = 8.f;
+    shoot_parameters_proleptic.girth_area_factor = 6.f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.0;
     shoot_parameters_proleptic.vegetative_bud_break_probability_max = 1.0;
-    shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.6;
+    shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.1;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
     shoot_parameters_proleptic.gravitropic_curvature = 450;
     shoot_parameters_proleptic.tortuosity = 2.5;
     shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution(5, 30);
     shoot_parameters_proleptic.insertion_angle_decay_rate = 5;
-    shoot_parameters_proleptic.internode_length_max = 0.025;
+    shoot_parameters_proleptic.internode_length_max = 0.04;
     shoot_parameters_proleptic.internode_length_min = 0.002;
     shoot_parameters_proleptic.internode_length_decay_rate = 0.002;
     shoot_parameters_proleptic.fruit_set_probability = 0.4;
@@ -486,7 +486,7 @@ void PlantArchitecture::initializeAlmondTreeAldrichShoots() {
     ShootParameters shoot_parameters_scaffold = shoot_parameters_proleptic;
     //    shoot_parameters_scaffold.phytomer_parameters.internode.color = RGB::blue;
     shoot_parameters_scaffold.phytomer_parameters.internode.radial_subdivisions = 10;
-    shoot_parameters_scaffold.max_nodes = 20;
+    shoot_parameters_scaffold.max_nodes = 40;
     shoot_parameters_scaffold.gravitropic_curvature = 200;
     shoot_parameters_scaffold.internode_length_max = 0.02;
     shoot_parameters_scaffold.tortuosity = 0.5;
@@ -601,12 +601,12 @@ void PlantArchitecture::initializeAlmondTreeWoodColonyShoots() {
     shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle = 0;
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.005;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
-    shoot_parameters_trunk.max_nodes = 15;
-    shoot_parameters_trunk.girth_area_factor = 10.f;
+    shoot_parameters_trunk.max_nodes = 40;
+    shoot_parameters_trunk.girth_area_factor = 8.f;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
     shoot_parameters_trunk.tortuosity = 1;
-    shoot_parameters_trunk.internode_length_max = 0.0325;
+    shoot_parameters_trunk.internode_length_max = 0.04;
     shoot_parameters_trunk.internode_length_decay_rate = 0;
     shoot_parameters_trunk.defineChildShootTypes({"scaffold"}, {1});
 
@@ -617,11 +617,11 @@ void PlantArchitecture::initializeAlmondTreeWoodColonyShoots() {
     shoot_parameters_proleptic.phytomer_parameters.internode.radial_subdivisions = 5;
     shoot_parameters_proleptic.phytomer_parameters.phytomer_creation_function = AlmondPhytomerCreationFunction;
     shoot_parameters_proleptic.phytomer_parameters.phytomer_callback_function = AlmondPhytomerCallbackFunction;
-    shoot_parameters_proleptic.max_nodes = 20;
+    shoot_parameters_proleptic.max_nodes = 40;
     shoot_parameters_proleptic.max_nodes_per_season = 15;
     shoot_parameters_proleptic.phyllochron_min = 1;
     shoot_parameters_proleptic.elongation_rate_max = 0.3;
-    shoot_parameters_proleptic.girth_area_factor = 8.f;
+    shoot_parameters_proleptic.girth_area_factor = 6.f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.0;
     shoot_parameters_proleptic.vegetative_bud_break_probability_max = 1.0;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.6;
@@ -630,7 +630,7 @@ void PlantArchitecture::initializeAlmondTreeWoodColonyShoots() {
     shoot_parameters_proleptic.tortuosity = 3;
     shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution(30, 75);
     shoot_parameters_proleptic.insertion_angle_decay_rate = 17.5;
-    shoot_parameters_proleptic.internode_length_max = 0.02;
+    shoot_parameters_proleptic.internode_length_max = 0.025;
     shoot_parameters_proleptic.internode_length_min = 0.002;
     shoot_parameters_proleptic.internode_length_decay_rate = 0.002;
     shoot_parameters_proleptic.fruit_set_probability = 0.4;
@@ -662,7 +662,7 @@ void PlantArchitecture::initializeAlmondTreeWoodColonyShoots() {
     ShootParameters shoot_parameters_scaffold = shoot_parameters_proleptic;
     //    shoot_parameters_scaffold.phytomer_parameters.internode.color = RGB::blue;
     shoot_parameters_scaffold.phytomer_parameters.internode.radial_subdivisions = 10;
-    shoot_parameters_scaffold.max_nodes = 15;
+    shoot_parameters_scaffold.max_nodes = 30;
     shoot_parameters_scaffold.gravitropic_curvature = 100;
     shoot_parameters_scaffold.internode_length_max = 0.02;
     shoot_parameters_scaffold.tortuosity = 1.;

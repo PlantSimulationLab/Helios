@@ -312,7 +312,7 @@ std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::v
     for (int j = 0; j < plant_count_xy.y; j++) {
         for (int i = 0; i < plant_count_xy.x; i++) {
             if (context_ptr->randu() < germination_rate) {
-                plantIDs.push_back(buildPlantInstanceFromLibrary(canopy_center_position + make_vec3(-0.5f * canopy_extent.x + float(i) * plant_spacing_xy.x, -0.5f * canopy_extent.y + float(j) * plant_spacing_xy.y, 0), 0, build_parameters));
+                plantIDs.push_back(buildPlantInstanceFromLibrary(canopy_center_position + make_vec3(-0.5f * canopy_extent.x + float(i) * plant_spacing_xy.x, -0.5f * canopy_extent.y + float(j) * plant_spacing_xy.y, 0), 0));
             }
         }
     }
@@ -329,7 +329,7 @@ std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::v
     plantIDs.reserve(plant_count);
     for (int i = 0; i < plant_count; i++) {
         vec3 plant_origin = canopy_center_position + make_vec3((-0.5f + context_ptr->randu()) * canopy_extent_xy.x, (-0.5f + context_ptr->randu()) * canopy_extent_xy.y, 0);
-        plantIDs.push_back(buildPlantInstanceFromLibrary(plant_origin, age, build_parameters));
+        plantIDs.push_back(buildPlantInstanceFromLibrary(plant_origin, age));
     }
 
     return plantIDs;
@@ -514,13 +514,13 @@ void Phytomer::setFloralBudState(BudState state, FloralBud &fbud) {
         if (state == BUD_FLOWER_CLOSED || (fbud.state == BUD_ACTIVE && state == BUD_FLOWER_OPEN)) {
             // state went from active to closed flower or open flower
             float flower_cost = calculateFlowerConstructionCosts(fbud);
-            plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->carbohydrate_pool_molC -= flower_cost;
+            plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->sugar_pool_molC -= flower_cost;
         } else if (state == BUD_FRUITING) {
             // adding a fruit
             float fruit_cost = calculateFruitConstructionCosts(fbud);
             fbud.previous_fruit_scale_factor = fbud.current_fruit_scale_factor;
-            if (plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->carbohydrate_pool_molC > fruit_cost) {
-                plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->carbohydrate_pool_molC -= fruit_cost;
+            if (plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->sugar_pool_molC > fruit_cost) {
+                plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->sugar_pool_molC -= fruit_cost;
             } else {
                 setFloralBudState(BUD_DEAD, fbud);
             }
@@ -1181,10 +1181,6 @@ int Shoot::appendPhytomer(float internode_radius, float internode_length_max, fl
         phytomer_parameters.phytomer_creation_function(phytomer, current_node_number, this->parent_node_index, shoot_parameters.max_nodes.val(), plantarchitecture_ptr->plant_instances.at(plantID).current_age);
     }
 
-    // calculate fully expanded/elongated carbon costs
-    if (plantarchitecture_ptr->carbon_model_enabled) {
-        this->carbohydrate_pool_molC -= phytomer->calculatePhytomerConstructionCosts();
-    }
 
     return (int) phytomers.size() - 1;
 }
@@ -1304,10 +1300,10 @@ void Shoot::addTerminalFloralBud() {
 
 float Shoot::calculateShootInternodeVolume() const {
     float shoot_volume = 0;
-    for (const auto &phytomer: phytomers) {
-        if (context_ptr->doesObjectExist(internode_tube_objID)) {
-            shoot_volume += context_ptr->getTubeObjectVolume(internode_tube_objID);
-        }
+
+    for (int p = 0; p < phytomers.size(); p++) {
+        float phytomer_volume = phytomers.at(p)->calculatePhytomerVolume(p);
+        shoot_volume += phytomer_volume;
     }
     return shoot_volume;
 }
@@ -3031,7 +3027,7 @@ Shoot::Shoot(uint plant_ID, int shoot_ID, int parent_shoot_ID, uint parent_node,
              float internode_length_shoot_initial, ShootParameters &shoot_params, std::string shoot_type_label, PlantArchitecture *plant_architecture_ptr) :
     current_node_number(current_node_number), base_position(shoot_base_position), base_rotation(shoot_base_rotation), ID(shoot_ID), parent_shoot_ID(parent_shoot_ID), plantID(plant_ID), parent_node_index(parent_node), rank(rank),
     parent_petiole_index(parent_petiole_index), internode_length_max_shoot_initial(internode_length_shoot_initial), shoot_parameters(shoot_params), shoot_type_label(std::move(shoot_type_label)), plantarchitecture_ptr(plant_architecture_ptr) {
-    carbohydrate_pool_molC = 0;
+    sugar_pool_molC = 0;
     phyllochron_counter = 0;
     isdormant = true;
     gravitropic_curvature = shoot_params.gravitropic_curvature.val();
@@ -4053,6 +4049,10 @@ void PlantArchitecture::breakPlantDormancy(uint plantID) {
 
     for (auto &shoot: plant_instances.at(plantID).shoot_tree) {
         shoot->breakDormancy();
+        if (carbon_model_enabled)
+        {
+            shoot->mobilizeStarch();
+        }
     }
 }
 
@@ -5035,6 +5035,10 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 if (shoot->isdormant && plant_instance.time_since_dormancy >= plant_instance.dd_to_dormancy_break) {
                     shoot->phyllochron_counter = 0;
                     shoot->breakDormancy();
+                    if (carbon_model_enabled)
+                    {
+                        shoot->mobilizeStarch();
+                    }
                 }
 
                 if (shoot->isdormant) {
@@ -5278,7 +5282,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 if (carbon_model_enabled) {
                     if (output_object_data.find("carbohydrate_concentration") != output_object_data.end() && context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
                         float shoot_volume = shoot->calculateShootInternodeVolume();
-                        context_ptr->setObjectData(shoot->internode_tube_objID, "carbohydrate_concentration", shoot->carbohydrate_pool_molC / shoot_volume);
+                        context_ptr->setObjectData(shoot->internode_tube_objID, "carbohydrate_concentration", shoot->total_carbohydrate_pool_molC / shoot_volume);
                     }
                 }
             }
