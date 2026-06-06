@@ -4619,6 +4619,254 @@ GPU_TEST_CASE("RadiationModel - Camera Metadata Export") {
         }
     }
 
+    DOCTEST_SUBCASE("Embedded EXIF and XMP in written JPEG") {
+        // Use a Helios-convention longitude of +121.76 (Davis CA, West) so we can verify the
+        // sign flip at the EXIF boundary lands the longitude in the Western hemisphere with
+        // a reference of 'W'.
+        context.setDate(18, 5, 2026);
+        context.setTime(0, 30, 14);
+        context.setLocation(make_Location(38.55f, 121.76f, 8.0f, 30.f)); // +W convention, 30 m altitude
+
+        CameraProperties camera_props;
+        camera_props.camera_resolution = make_int2(64, 64);
+        camera_props.HFOV = 35.0f;
+        camera_props.sensor_width_mm = 36.0f;
+
+        radiationmodel.addRadiationCamera("exif_camera", {"RGB_R", "RGB_G", "RGB_B"},
+                                          make_vec3(0, -3, 1.5), make_vec3(0, 0, 0), camera_props, 1);
+
+        radiationmodel.updateGeometry();
+        radiationmodel.runBand("RGB_R");
+        radiationmodel.runBand("RGB_G");
+        radiationmodel.runBand("RGB_B");
+
+        const std::string image_path = radiationmodel.writeCameraImage(
+                "exif_camera", {"RGB_R", "RGB_G", "RGB_B"}, "test_exif");
+        DOCTEST_REQUIRE(!image_path.empty());
+
+        // Read the JPEG bytes and hand-parse its segment markers.
+        std::ifstream jpeg_in(image_path, std::ios::binary);
+        DOCTEST_REQUIRE(jpeg_in.is_open());
+        std::vector<unsigned char> bytes((std::istreambuf_iterator<char>(jpeg_in)), std::istreambuf_iterator<char>());
+        jpeg_in.close();
+
+        DOCTEST_REQUIRE(bytes.size() > 20);
+        DOCTEST_CHECK(bytes[0] == 0xFF);
+        DOCTEST_CHECK(bytes[1] == 0xD8);
+
+        bool found_exif = false;
+        bool found_xmp = false;
+        bool found_helios = false;
+        char gps_lon_ref = 0;
+        char gps_lat_ref = 0;
+
+        size_t i = 2;
+        while (i + 4 < bytes.size()) {
+            if (bytes[i] != 0xFF) break;
+            const unsigned char marker = bytes[i + 1];
+            if (marker == 0xD9 || marker == 0xDA) break;
+            const size_t seg_len = (static_cast<size_t>(bytes[i + 2]) << 8) | static_cast<size_t>(bytes[i + 3]);
+            if (seg_len < 2 || i + 2 + seg_len > bytes.size()) break;
+            if (marker == 0xE1) {
+                const size_t payload_off = i + 4;
+                const size_t payload_len = seg_len - 2;
+                if (payload_len >= 6 && bytes[payload_off + 0] == 'E' && bytes[payload_off + 1] == 'x' &&
+                    bytes[payload_off + 2] == 'i' && bytes[payload_off + 3] == 'f') {
+                    found_exif = true;
+                    // Search for "Helios" string in EXIF payload (Make and Software tags).
+                    const std::string exif_str(bytes.begin() + payload_off, bytes.begin() + payload_off + payload_len);
+                    if (exif_str.find("Helios") != std::string::npos) found_helios = true;
+
+                    // Walk IFD0 -> find GPS pointer (0x8825) -> walk GPS IFD for tag 0x0001/0x0003 refs.
+                    const size_t tiff_base = payload_off + 6; // skip "Exif\0\0"
+                    const size_t ifd0_off = tiff_base + 8;
+                    if (ifd0_off + 2 <= bytes.size()) {
+                        const uint16_t n0 = static_cast<uint16_t>(bytes[ifd0_off]) |
+                                            (static_cast<uint16_t>(bytes[ifd0_off + 1]) << 8);
+                        uint32_t gps_off = 0;
+                        for (uint16_t k = 0; k < n0; ++k) {
+                            const size_t e = ifd0_off + 2 + static_cast<size_t>(k) * 12;
+                            if (e + 12 > bytes.size()) break;
+                            const uint16_t tag = static_cast<uint16_t>(bytes[e]) |
+                                                 (static_cast<uint16_t>(bytes[e + 1]) << 8);
+                            if (tag == 0x8825) {
+                                gps_off = static_cast<uint32_t>(bytes[e + 8]) |
+                                          (static_cast<uint32_t>(bytes[e + 9]) << 8) |
+                                          (static_cast<uint32_t>(bytes[e + 10]) << 16) |
+                                          (static_cast<uint32_t>(bytes[e + 11]) << 24);
+                                break;
+                            }
+                        }
+                        if (gps_off > 0) {
+                            const size_t gps_abs = tiff_base + gps_off;
+                            if (gps_abs + 2 <= bytes.size()) {
+                                const uint16_t ng = static_cast<uint16_t>(bytes[gps_abs]) |
+                                                    (static_cast<uint16_t>(bytes[gps_abs + 1]) << 8);
+                                for (uint16_t k = 0; k < ng; ++k) {
+                                    const size_t e = gps_abs + 2 + static_cast<size_t>(k) * 12;
+                                    if (e + 12 > bytes.size()) break;
+                                    const uint16_t tag = static_cast<uint16_t>(bytes[e]) |
+                                                         (static_cast<uint16_t>(bytes[e + 1]) << 8);
+                                    if (tag == 0x0001) gps_lat_ref = static_cast<char>(bytes[e + 8]);
+                                    else if (tag == 0x0003) gps_lon_ref = static_cast<char>(bytes[e + 8]);
+                                }
+                            }
+                        }
+                    }
+                } else if (payload_len >= 29) {
+                    static const char NS_ID[] = "http://ns.adobe.com/xap/1.0/";
+                    bool match = true;
+                    for (size_t k = 0; k < 28; ++k) {
+                        if (bytes[payload_off + k] != static_cast<unsigned char>(NS_ID[k])) {
+                            match = false;
+                            break;
+                        }
+                    }
+                    if (match) {
+                        found_xmp = true;
+                        const std::string xmp_str(bytes.begin() + payload_off,
+                                                   bytes.begin() + payload_off + payload_len);
+                        DOCTEST_CHECK(xmp_str.find("Camera:Yaw") != std::string::npos);
+                    }
+                }
+            }
+            i = i + 2 + seg_len;
+        }
+
+        DOCTEST_CHECK(found_exif);
+        DOCTEST_CHECK(found_xmp);
+        DOCTEST_CHECK(found_helios);
+        // Helios's +W longitude convention (+121.76) must be flipped to standard +E (-121.76),
+        // so GPSLongitudeRef should be 'W' and GPSLatitudeRef should be 'N'.
+        DOCTEST_CHECK(gps_lat_ref == 'N');
+        DOCTEST_CHECK(gps_lon_ref == 'W');
+
+        std::remove(image_path.c_str());
+    }
+
+    DOCTEST_SUBCASE("Library camera writes correct EXIF Make and Model") {
+        // Load Canon_20D from the camera library: <manufacturer>Canon</manufacturer> + <model>EOS 20D</model>.
+        // After this loads, EXIF Make must be "Canon" and EXIF Model must be "EOS 20D" — verifying
+        // that library cameras don't get a hardcoded "Helios" Make tag.
+        {
+            capture_cout silence_band_warnings;
+            radiationmodel.addRadiationCameraFromLibrary("canon_lib_cam", "Canon_20D",
+                                                        make_vec3(0, -3, 1.5), make_vec3(0, 0, 0), 1);
+        }
+
+        radiationmodel.updateGeometry();
+        radiationmodel.runBand("red");
+        radiationmodel.runBand("green");
+        radiationmodel.runBand("blue");
+
+        const std::string image_path = radiationmodel.writeCameraImage(
+                "canon_lib_cam", {"red", "green", "blue"}, "test_library_exif");
+        DOCTEST_REQUIRE(!image_path.empty());
+
+        std::ifstream jpeg_in(image_path, std::ios::binary);
+        DOCTEST_REQUIRE(jpeg_in.is_open());
+        std::vector<unsigned char> bytes((std::istreambuf_iterator<char>(jpeg_in)), std::istreambuf_iterator<char>());
+        jpeg_in.close();
+
+        // Locate the EXIF APP1 segment and hand-parse IFD0 for Make (0x010F) and Model (0x0110).
+        DOCTEST_REQUIRE(bytes.size() > 20);
+        std::string make_value, model_value, lens_make_value, lens_model_value;
+        size_t i = 2;
+        while (i + 4 < bytes.size()) {
+            if (bytes[i] != 0xFF) break;
+            const unsigned char marker = bytes[i + 1];
+            if (marker == 0xD9 || marker == 0xDA) break;
+            const size_t seg_len = (static_cast<size_t>(bytes[i + 2]) << 8) | static_cast<size_t>(bytes[i + 3]);
+            if (seg_len < 2 || i + 2 + seg_len > bytes.size()) break;
+            if (marker == 0xE1) {
+                const size_t payload_off = i + 4;
+                const size_t payload_len = seg_len - 2;
+                if (payload_len >= 6 && bytes[payload_off + 0] == 'E' && bytes[payload_off + 1] == 'x' &&
+                    bytes[payload_off + 2] == 'i' && bytes[payload_off + 3] == 'f') {
+                    const size_t tiff_base = payload_off + 6;
+                    const size_t ifd0_off = tiff_base + 8;
+
+                    // Helper: read an ASCII tag from the IFD at the given absolute offset.
+                    auto readAsciiAt = [&](size_t ifd_off, uint16_t target_tag) -> std::string {
+                        if (ifd_off + 2 > bytes.size()) return std::string();
+                        const uint16_t n = static_cast<uint16_t>(bytes[ifd_off]) |
+                                           (static_cast<uint16_t>(bytes[ifd_off + 1]) << 8);
+                        for (uint16_t k = 0; k < n; ++k) {
+                            const size_t e = ifd_off + 2 + static_cast<size_t>(k) * 12;
+                            if (e + 12 > bytes.size()) break;
+                            const uint16_t tag = static_cast<uint16_t>(bytes[e]) |
+                                                 (static_cast<uint16_t>(bytes[e + 1]) << 8);
+                            if (tag != target_tag) continue;
+                            const uint16_t type = static_cast<uint16_t>(bytes[e + 2]) |
+                                                  (static_cast<uint16_t>(bytes[e + 3]) << 8);
+                            if (type != 2 /*ASCII*/) return std::string();
+                            const uint32_t count = static_cast<uint32_t>(bytes[e + 4]) |
+                                                   (static_cast<uint32_t>(bytes[e + 5]) << 8) |
+                                                   (static_cast<uint32_t>(bytes[e + 6]) << 16) |
+                                                   (static_cast<uint32_t>(bytes[e + 7]) << 24);
+                            size_t value_off;
+                            if (count <= 4) {
+                                value_off = e + 8;
+                            } else {
+                                const uint32_t off_in_tiff = static_cast<uint32_t>(bytes[e + 8]) |
+                                                             (static_cast<uint32_t>(bytes[e + 9]) << 8) |
+                                                             (static_cast<uint32_t>(bytes[e + 10]) << 16) |
+                                                             (static_cast<uint32_t>(bytes[e + 11]) << 24);
+                                value_off = tiff_base + off_in_tiff;
+                            }
+                            // count includes the trailing NUL.
+                            const size_t str_len = (count > 0) ? (count - 1) : 0;
+                            if (value_off + str_len > bytes.size()) return std::string();
+                            return std::string(bytes.begin() + value_off, bytes.begin() + value_off + str_len);
+                        }
+                        return std::string();
+                    };
+
+                    make_value = readAsciiAt(ifd0_off, 0x010F);
+                    model_value = readAsciiAt(ifd0_off, 0x0110);
+
+                    // Walk into the ExifSubIFD for LensMake / LensModel (0xA433 / 0xA434).
+                    if (ifd0_off + 2 <= bytes.size()) {
+                        const uint16_t n0 = static_cast<uint16_t>(bytes[ifd0_off]) |
+                                            (static_cast<uint16_t>(bytes[ifd0_off + 1]) << 8);
+                        uint32_t exif_sub_off = 0;
+                        for (uint16_t k = 0; k < n0; ++k) {
+                            const size_t e = ifd0_off + 2 + static_cast<size_t>(k) * 12;
+                            if (e + 12 > bytes.size()) break;
+                            const uint16_t tag = static_cast<uint16_t>(bytes[e]) |
+                                                 (static_cast<uint16_t>(bytes[e + 1]) << 8);
+                            if (tag == 0x8769) {
+                                exif_sub_off = static_cast<uint32_t>(bytes[e + 8]) |
+                                               (static_cast<uint32_t>(bytes[e + 9]) << 8) |
+                                               (static_cast<uint32_t>(bytes[e + 10]) << 16) |
+                                               (static_cast<uint32_t>(bytes[e + 11]) << 24);
+                                break;
+                            }
+                        }
+                        if (exif_sub_off > 0) {
+                            lens_make_value = readAsciiAt(tiff_base + exif_sub_off, 0xA433);
+                            lens_model_value = readAsciiAt(tiff_base + exif_sub_off, 0xA434);
+                        }
+                    }
+                    break;
+                }
+            }
+            i = i + 2 + seg_len;
+        }
+
+        // EXIF Make/Model must reflect the library camera's manufacturer and bare model name —
+        // NOT a hardcoded "Helios" Make. Photogrammetry tools look up sensor data by Make+Model.
+        DOCTEST_CHECK(make_value == "Canon");
+        DOCTEST_CHECK(model_value == "EOS 20D");
+        // Lens tags must propagate from the XML lens_make/lens_model fields.
+        DOCTEST_CHECK(lens_make_value == "Canon");
+        DOCTEST_CHECK(lens_model_value == "Canon EF-S 18-55mm f/3.5-5.6");
+
+        std::remove(image_path.c_str());
+        std::string json_path = image_path.substr(0, image_path.find_last_of(".")) + ".json";
+        std::remove(json_path.c_str());
+    }
+
     DOCTEST_SUBCASE("Manual metadata population") {
         CameraProperties camera_props;
         camera_props.camera_resolution = make_int2(128, 128);
@@ -5300,6 +5548,45 @@ GPU_TEST_CASE("RadiationModel Atmospheric Sky Model for Camera") {
         // If we get here, the atmospheric model successfully handled parameter changes
         DOCTEST_CHECK(true);
     }
+}
+
+GPU_TEST_CASE("RadiationModel - Camera samples sky longwave on emission band miss") {
+    // Cameras must sample the same isotropic sky longwave flux that regular diffuse ray
+    // transport already sees when emission is enabled. This smoke-tests that the
+    // emission-sky code path runs without error when a camera is bound to an emission band.
+    Context context;
+
+    // RadiationModel requires non-empty geometry; the patch is placed under the camera so
+    // it does not occlude the upward-looking sky-only frustum.
+    uint dummy_uuid = context.addPatch(helios::make_vec3(100, 100, -1000), helios::make_vec2(0.01f, 0.01f));
+    context.setPrimitiveData(dummy_uuid, "twosided_flag", uint(0));
+    context.setPrimitiveData(dummy_uuid, "emissivity_LW", 0.f);
+    context.setPrimitiveData(dummy_uuid, "temperature", 0.f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    const float sky_flux_LW = 400.f; // hemispherical W/m² (representative thermal longwave)
+
+    // Emission-enabled longwave band: per-band emission_flag should be uploaded as 1.
+    radiation.addRadiationBand("LW");
+    radiation.setDirectRayCount("LW", 0);
+    radiation.setDiffuseRayCount("LW", 0);
+    radiation.setScatteringDepth("LW", 1);
+    radiation.setDiffuseRadiationFlux("LW", sky_flux_LW);
+
+    CameraProperties camera_props;
+    camera_props.camera_resolution = helios::make_int2(8, 8);
+    camera_props.HFOV = 30.0f;
+    camera_props.lens_diameter = 0.f;
+    radiation.addRadiationCamera("sky_cam", {"LW"}, helios::make_vec3(0, 0, 0), helios::make_vec3(0, 0, 1), camera_props, 1);
+
+    radiation.updateGeometry();
+    radiation.runBand("LW");
+
+    // Smoke test: pipeline runs end-to-end and produces a pixel buffer of the right size.
+    auto pixels_LW = radiation.getCameraPixelData("sky_cam", "LW");
+    DOCTEST_CHECK(pixels_LW.size() == 8 * 8);
 }
 
 GPU_TEST_CASE("RadiationModel - Camera White Balance") {

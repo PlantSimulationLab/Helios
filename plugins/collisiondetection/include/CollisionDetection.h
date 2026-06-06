@@ -913,6 +913,14 @@ private:
         helios::PrimitiveType type;
         std::vector<helios::vec3> vertices;
 
+        //! Pointer to the texture transparency mask (row-major [y][x], true=opaque), or nullptr if the
+        //! primitive has no texture transparency channel. Owned by the Context's Texture objects.
+        const std::vector<std::vector<bool>> *transparency_mask = nullptr;
+        //! Texture resolution in pixels (x=width, y=height); only meaningful when transparency_mask != nullptr.
+        helios::int2 texture_size = helios::make_int2(0, 0);
+        //! Primitive texture (u,v) coordinates; empty means the default 0..1 mapping is used.
+        std::vector<helios::vec2> uv;
+
         CachedPrimitive() : type(helios::PRIMITIVE_TYPE_TRIANGLE) {
         }
         CachedPrimitive(helios::PrimitiveType t, const std::vector<helios::vec3> &v) : type(t), vertices(v) {
@@ -931,6 +939,20 @@ private:
      * \brief Thread-safe primitive intersection method using cached data
      */
     HitResult intersectPrimitiveThreadSafe(const helios::vec3 &origin, const helios::vec3 &direction, uint primitive_id, float max_distance);
+
+    /**
+     * \brief Test whether a hit point lies on an opaque texel of a textured primitive.
+     *
+     * Mirrors the texture-transparency handling of the OptiX ray tracer: a ray that strikes a
+     * transparent texel of a textured primitive should pass through (be treated as a miss) so that
+     * geometry behind it can be hit. Returns true when the primitive has no transparency mask, or
+     * when the hit lands on a solid (opaque) texel.
+     *
+     * \param[in] cached Cached primitive data (must contain transparency_mask/texture_size/uv when textured).
+     * \param[in] hit_point World-space intersection point on the primitive.
+     * \return True if the texel at the hit point is opaque (or the primitive has no transparency mask).
+     */
+    [[nodiscard]] bool isHitTexelOpaque(const CachedPrimitive &cached, const helios::vec3 &hit_point) const;
 
     /**
      * \brief Fast triangle intersection test (thread-safe)

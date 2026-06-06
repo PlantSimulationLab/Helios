@@ -547,6 +547,42 @@ DOCTEST_TEST_CASE("CollisionDetection Single Primitive Edge Case") {
     DOCTEST_CHECK(collision.isBVHValid() == true);
 }
 
+DOCTEST_TEST_CASE("CollisionDetection Texture Transparency Rejection") {
+    // A ray that strikes a transparent texel of a textured primitive must pass through (miss),
+    // while a ray striking an opaque texel must register a hit. disk_texture.png is a solid disk
+    // (opaque center, transparent corners) so the center is solid and the corners are transparent.
+    const char *texture = "lib/images/disk_texture.png";
+
+    Context context;
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.disableGPUAcceleration();
+
+    // 2x2 patch in the z=0 plane centered at the origin, textured with the disk.
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2), nullrotation, texture);
+    DOCTEST_CHECK(context.primitiveTextureHasTransparencyChannel(patch));
+
+    collision.buildBVH();
+
+    // Ray straight down through the center of the patch -> opaque texel -> HIT.
+    CollisionDetection::HitResult center_hit = collision.castRay(CollisionDetection::RayQuery(make_vec3(0, 0, 5), make_vec3(0, 0, -1), 10.0f));
+    DOCTEST_CHECK(center_hit.hit == true);
+    DOCTEST_CHECK(center_hit.primitive_UUID == patch);
+    DOCTEST_CHECK(center_hit.distance == doctest::Approx(5.0f));
+
+    // Ray straight down through a corner of the patch -> transparent texel -> MISS (passes through).
+    CollisionDetection::HitResult corner_hit = collision.castRay(CollisionDetection::RayQuery(make_vec3(0.95f, 0.95f, 5), make_vec3(0, 0, -1), 10.0f));
+    DOCTEST_CHECK(corner_hit.hit == false);
+
+    // A second, opaque patch placed behind the transparent corner must be hit through the gap,
+    // confirming the ray continues past the transparent texel rather than terminating.
+    uint backing = context.addPatch(make_vec3(0.95f, 0.95f, -2), make_vec2(1, 1));
+    collision.buildBVH();
+    CollisionDetection::HitResult through_hit = collision.castRay(CollisionDetection::RayQuery(make_vec3(0.95f, 0.95f, 5), make_vec3(0, 0, -1), 10.0f));
+    DOCTEST_CHECK(through_hit.hit == true);
+    DOCTEST_CHECK(through_hit.primitive_UUID == backing);
+}
+
 
 DOCTEST_TEST_CASE("CollisionDetection Overlapping AABB Primitives") {
     Context context;
@@ -5949,5 +5985,56 @@ DOCTEST_TEST_CASE("CollisionDetection GPU/CPU Ray Casting Parity") {
         DOCTEST_CHECK(hit_ratio > 0.95f);
         DOCTEST_CHECK(hit_ratio < 1.05f);
     }
+}
+
+DOCTEST_TEST_CASE("CollisionDetection Flat Single-Plane Mesh Ray Casting") {
+    // Regression guard: a perfectly flat (coplanar) mesh produces BVH nodes whose AABB has
+    // zero thickness along one axis. Verify that scanning such a mesh still produces hits,
+    // i.e. that the ray-AABB slab test handles degenerate (zero-extent) bounding boxes.
+    Context context;
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.disableGPUAcceleration(); // deterministic CPU path
+
+    // Build a flat sheet of many coplanar triangles in the z=0 plane (10x10 grid of quads
+    // split into triangles). Many primitives force a multi-level BVH whose internal nodes
+    // all have aabb_min.z == aabb_max.z == 0.
+    std::vector<uint> sheet_UUIDs;
+    const int N = 10;
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            float x = static_cast<float>(i);
+            float y = static_cast<float>(j);
+            sheet_UUIDs.push_back(context.addTriangle(make_vec3(x, y, 0), make_vec3(x + 1, y, 0), make_vec3(x + 1, y + 1, 0)));
+            sheet_UUIDs.push_back(context.addTriangle(make_vec3(x, y, 0), make_vec3(x + 1, y + 1, 0), make_vec3(x, y + 1, 0)));
+        }
+    }
+
+    collision.buildBVH();
+
+    // Cast a grid of top-down rays (direction perpendicular to the flat plane). Every ray that
+    // lands inside the sheet footprint must hit. If the BVH culled against a zero-thickness AABB
+    // incorrectly, these would all miss.
+    int hit_count = 0;
+    int total = 0;
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            vec3 origin = make_vec3(static_cast<float>(i) + 0.5f, static_cast<float>(j) + 0.5f, 5.0f);
+            CollisionDetection::HitResult result = collision.castRay(origin, make_vec3(0, 0, -1), 10.0f);
+            total++;
+            if (result.hit) {
+                hit_count++;
+                DOCTEST_CHECK(std::abs(result.intersection_point.z) < 1e-4f); // hit lands on the plane
+            }
+        }
+    }
+    DOCTEST_CHECK(hit_count == total); // every interior top-down ray hits the flat sheet
+
+    // Verify a shallow oblique ray (originating off the plane) still hits the flat sheet. This
+    // approaches the zero-thickness z-slab at a grazing angle but is not coplanar with it, which
+    // is the realistic LiDAR grazing-incidence case.
+    vec3 oblique_dir = normalize(make_vec3(0.0f, 1.0f, -0.05f));
+    CollisionDetection::HitResult oblique = collision.castRay(make_vec3(5.5f, -1.0f, 0.05f), oblique_dir, 20.0f);
+    DOCTEST_CHECK(oblique.hit == true);
 }
 

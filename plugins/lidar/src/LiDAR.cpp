@@ -15,8 +15,27 @@
 
 #include "LiDAR.h"
 
+#include <set>
+
 using namespace std;
 using namespace helios;
+
+namespace {
+    //! Column-format tokens that map to geometry/standard hit fields handled directly by file I/O.
+    //! Any other column-format label is treated as a primitive-data field to sample onto hits.
+    bool isStandardColumnToken(const std::string &label) {
+        static const std::set<std::string> standard_tokens = {
+            "x", "y", "z",
+            "r", "g", "b", "r255", "g255", "b255",
+            "row", "column",
+            "zenith", "azimuth", "zenith_rad", "azimuth_rad",
+            // "raydir" is reserved here so it is never treated as a primitive-data label,
+            // even though the ASCII file reader treats it as a generic scalar column.
+            "raydir"
+        };
+        return standard_tokens.find(label) != standard_tokens.end();
+    }
+}
 
 ScanMetadata::ScanMetadata() {
 
@@ -29,12 +48,14 @@ ScanMetadata::ScanMetadata() {
     phiMax = 2.f * M_PI;
     exitDiameter = 0;
     beamDivergence = 0;
+    rangeNoiseStdDev = 0;
+    angleNoiseStdDev = 0;
     columnFormat = {"x", "y", "z"};
 
     data_file = "";
 }
 
-ScanMetadata::ScanMetadata(const vec3 &a_origin, uint a_Ntheta, float a_thetaMin, float a_thetaMax, uint a_Nphi, float a_phiMin, float a_phiMax, float a_exitDiameter, float a_beamDivergence, const vector<string> &a_columnFormat) {
+ScanMetadata::ScanMetadata(const vec3 &a_origin, uint a_Ntheta, float a_thetaMin, float a_thetaMax, uint a_Nphi, float a_phiMin, float a_phiMax, float a_exitDiameter, float a_beamDivergence, float a_rangeNoiseStdDev, float a_angleNoiseStdDev, const vector<string> &a_columnFormat) {
 
     // Copy arguments into structure variables
     origin = a_origin;
@@ -46,6 +67,8 @@ ScanMetadata::ScanMetadata(const vec3 &a_origin, uint a_Ntheta, float a_thetaMin
     phiMax = a_phiMax;
     exitDiameter = a_exitDiameter;
     beamDivergence = a_beamDivergence;
+    rangeNoiseStdDev = a_rangeNoiseStdDev;
+    angleNoiseStdDev = a_angleNoiseStdDev;
     columnFormat = a_columnFormat;
 
     data_file = "";
@@ -335,6 +358,20 @@ float LiDARcloud::getScanBeamDivergence(uint scanID) const {
         helios_runtime_error("ERROR (LiDARcloud::getScanBeamDivergence): Cannot get beam divergence for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
     }
     return scans.at(scanID).beamDivergence;
+}
+
+float LiDARcloud::getScanRangeNoiseStdDev(uint scanID) const {
+    if (scanID >= scans.size()) {
+        helios_runtime_error("ERROR (LiDARcloud::getScanRangeNoiseStdDev): Cannot get range noise standard deviation for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
+    }
+    return scans.at(scanID).rangeNoiseStdDev;
+}
+
+float LiDARcloud::getScanAngleNoiseStdDev(uint scanID) const {
+    if (scanID >= scans.size()) {
+        helios_runtime_error("ERROR (LiDARcloud::getScanAngleNoiseStdDev): Cannot get angular noise standard deviation for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
+    }
+    return scans.at(scanID).angleNoiseStdDev;
 }
 
 std::vector<std::string> LiDARcloud::getScanColumnFormat(uint scanID) const {
@@ -1456,7 +1493,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
     std::sort(hit_table.begin(), hit_table.end(), sortcol1);
 
     int min_tindex = 1;
-    for (size_t r = 0; r < hit_table.size() - 1; r++) {
+    for (size_t r = 0; r + 1 < hit_table.size(); r++) {
 
         // this is to figure out if target indexing uses 0 or 1 offset
         if (min_tindex == 1 && doesHitDataExist(hit_table.at(r).at(0), "target_index") && doesHitDataExist(hit_table.at(r).at(0), "target_count")) {
@@ -1471,7 +1508,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
     int ndup_target = 0;
     // create new array without duplicate timestamps
     std::vector<std::vector<double>> hit_table_semiclean;
-    for (size_t r = 0; r < hit_table.size() - 1; r++) {
+    for (size_t r = 0; r + 1 < hit_table.size(); r++) {
 
         // only consider first hits
         if (doesHitDataExist(hit_table.at(r).at(0), "target_index") && doesHitDataExist(hit_table.at(r).at(0), "target_count")) {
@@ -1491,8 +1528,8 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
     //  re-calculating dt
 
     std::vector<double> dt_semiclean;
-    dt_semiclean.resize(hit_table_semiclean.size());
-    for (size_t r = 0; r < hit_table_semiclean.size() - 1; r++) {
+    dt_semiclean.resize(hit_table_semiclean.size(), 0.0);
+    for (size_t r = 0; r + 1 < hit_table_semiclean.size(); r++) {
 
         dt_semiclean.at(r) = hit_table_semiclean.at(r + 1).at(1) - hit_table_semiclean.at(r).at(1);
         // set the hit index of the new array
@@ -1504,7 +1541,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
     int ndup = 0;
     // create new array without duplicate timestamps
     std::vector<std::vector<double>> hit_table_clean;
-    for (size_t r = 0; r < hit_table_semiclean.size() - 1; r++) {
+    for (size_t r = 0; r + 1 < hit_table_semiclean.size(); r++) {
 
         // if there are still rows with duplicate timestamps, it probably means there is no "target_index" column, but multiple hits per timestamp are still included
         // proceed using this assumption, just get rid of the rows where dt = 0 for simplicity (last hits probably are what remain).
@@ -1516,15 +1553,27 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
         hit_table_clean.push_back(hit_table_semiclean.at(r));
     }
 
+    // The 2D-grid reconstruction below requires at least two cleaned hits to
+    // compute dt/dtheta between consecutive beams. Clouds loaded from ASCII files
+    // without row/column indices can collapse to zero or one cleaned hit after the
+    // duplicate-timestamp filter above; without this guard the subsequent
+    // `size() - 1` style loops underflow and read out of bounds.
+    if (hit_table_clean.size() < 2) {
+        if (printmessages) {
+            std::cout << "insufficient hits to reconstruct scan grid. Skipping gap fill." << std::endl;
+        }
+        return xyz_filled;  // Return empty vector
+    }
+
     // recalculate dt and dtheta with only one hit per beam
     // and calculate the minimum dt value
     std::vector<double> dt_clean;
     std::vector<float> dtheta_clean;
-    dt_clean.resize(hit_table_clean.size());
-    dtheta_clean.resize(hit_table_clean.size());
+    dt_clean.resize(hit_table_clean.size(), 0.0);
+    dtheta_clean.resize(hit_table_clean.size(), 0.f);
 
     double dt_clean_min = 1e6;
-    for (size_t r = 0; r < hit_table_clean.size() - 1; r++) {
+    for (size_t r = 0; r + 1 < hit_table_clean.size(); r++) {
 
         dt_clean.at(r) = hit_table_clean.at(r + 1).at(1) - hit_table_clean.at(r).at(1);
         dtheta_clean.at(r) = hit_table_clean.at(r + 1).at(2) - hit_table_clean.at(r).at(2);
@@ -1542,7 +1591,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
 
     int column = 0;
     hit_table2D.resize(1);
-    for (size_t r = 0; r < hit_table_clean.size() - 1; r++) {
+    for (size_t r = 0; r + 1 < hit_table_clean.size(); r++) {
 
         hit_table2D.at(column).push_back(hit_table_clean.at(r));
         // for small scans (like the rectangle test case, this needs to change to < 0 or some smaller angle (that is larger than noise))
@@ -1589,6 +1638,17 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
     // Calculate the average dtheta to use for extrapolation
     dtheta_avg = dtheta_avg / float(dtheta_sum);
 
+    // dt_avg and dt_clean_min are used below as divisors and gap-spacing thresholds.
+    // A degenerate scan grid (e.g. an ASCII cloud whose angular sampling can't be
+    // reconstructed) can leave them zero, negative, or non-finite, which makes the
+    // Ngap computation below blow up. Bail out rather than fill garbage.
+    if (!std::isfinite(dt_avg) || dt_avg <= 0.f || !std::isfinite(dt_clean_min) || dt_clean_min <= 0.0) {
+        if (printmessages) {
+            std::cout << "degenerate timestamp spacing. Skipping gap fill." << std::endl;
+        }
+        return xyz_filled;  // Return empty vector
+    }
+
     // Get theta range for grid position calculations (needed early for filled_positions)
     helios::vec2 theta_range = getScanRangeTheta(scanID);
 
@@ -1608,7 +1668,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
     for (int j = 0; j < hit_table2D.size(); j++) {
 
         if (hit_table2D.at(j).size() > 0) {
-            for (int i = 0; i < hit_table2D.at(j).size() - 1; i++) {
+            for (size_t i = 0; i + 1 < hit_table2D.at(j).size(); i++) {
 
                 double dt = hit_table2D.at(j).at(i + 1).at(1) - hit_table2D.at(j).at(i).at(1);
 
@@ -1616,6 +1676,14 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
 
                     // calculate number of missing hits
                     int Ngap = round(dt / dt_avg) - 1;
+
+                    // A gap can never span more beams than the scan has rows. Cap Ngap
+                    // to guard against a runaway fill loop if the reconstructed grid
+                    // spacing is much finer than the real one.
+                    int Ngap_max = (int)scans.at(scanID).Ntheta;
+                    if (Ngap > Ngap_max) {
+                        Ngap = Ngap_max;
+                    }
 
                     // fill missing points
                     for (int k = 1; k <= Ngap; k++) {
@@ -1635,6 +1703,14 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
                         // Convert to grid indices using proper direction2rc method
                         helios::SphericalCoord dir_to_check(gap_distance, 0.5 * M_PI - theta, phi);
                         helios::int2 rc = scans.at(scanID).direction2rc(dir_to_check);
+
+                        // Skip grid positions outside the scan's row/column range
+                        // (mirrors the bounds check in the extrapolation passes below).
+                        if (rc.x < 0 || rc.x >= (int)scans.at(scanID).Ntheta ||
+                            rc.y < 0 || rc.y >= (int)scans.at(scanID).Nphi) {
+                            continue;
+                        }
+
                         auto grid_key = std::make_pair(rc.x, rc.y);
 
                         // Only add if this grid position hasn't been filled yet
@@ -2985,6 +3061,9 @@ void LiDARcloud::backfillLeavesAlphaMask(const vector<float> &leaf_size, float l
     std::vector<int> deleted_groups;
     int backfill_count = 0;
 
+    helios::WarningAggregator backfill_warnings;
+    backfill_warnings.setEnabled(printmessages);
+
     // Get the total theoretical leaf area for each grid cell based on LiDAR scan
     for (uint v = 0; v < Ncells; v++) {
 
@@ -2993,14 +3072,10 @@ void LiDARcloud::backfillLeavesAlphaMask(const vector<float> &leaf_size, float l
         float reconstruct_frac = (leaf_area_total - leaf_area_current.at(v)) / leaf_area_total;
 
         if (leaf_area_total == 0 || reconstructed_alphamasks_size.size() == 0) { // no leaves in gridcell
-            if (printmessages) {
-                cout << "WARNING: skipping volume #" << v << " because it has no measured leaf area." << endl;
-            }
+            backfill_warnings.addWarning("volume_no_measured_leaf_area", "skipping volume #" + std::to_string(v) + " because it has no measured leaf area.");
             continue;
         } else if (getTriangleCount() == 0) {
-            if (printmessages) {
-                cout << "WARNING: skipping volume #" << v << " because it has no triangles." << endl;
-            }
+            backfill_warnings.addWarning("volume_no_triangles", "skipping volume #" + std::to_string(v) + " because it has no triangles.");
             continue;
         } else if (leaf_area_current.at(v) == 0) { // no directly reconstructed leaves in gridcell
 
@@ -3118,6 +3193,8 @@ void LiDARcloud::backfillLeavesAlphaMask(const vector<float> &leaf_size, float l
             reconstructed_alphamasks_direct_flag.pop_back();
         }
     }
+
+    backfill_warnings.report(std::cerr);
 
     if (printmessages) {
         cout << "done." << endl;
@@ -3330,7 +3407,8 @@ void LiDARcloud::computeGtheta(uint Ncells, uint Nscans,
 
 bool LiDARcloud::invertLAD(uint voxel_index, float P, float Gtheta,
                            const std::vector<float> &dr_samples, int min_voxel_hits,
-                           const helios::vec3 &gridsize, float &leaf_area) {
+                           const helios::vec3 &gridsize, float &leaf_area,
+                           helios::WarningAggregator &warnings) {
     
     // Validation checks
     if (Gtheta == 0 || Gtheta != Gtheta) { // Check for zero or NaN
@@ -3400,10 +3478,7 @@ bool LiDARcloud::invertLAD(uint voxel_index, float P, float Gtheta,
     bool used_fallback = false;
     
     if (!converged) {
-        if (printmessages) {
-            std::cout << "WARNING: LAD inversion failed for volume #" << voxel_index 
-                     << ". Using average dr formulation." << std::endl;
-        }
+        warnings.addWarning("invertLAD_did_not_converge", "LAD inversion failed for volume #" + std::to_string(voxel_index) + ". Using average dr formulation.");
         a = (1.f - P) / (dr_bar * Gtheta);
         used_fallback = true;
     }
@@ -3802,6 +3877,9 @@ void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits)
             std::cout << "Inverting to find LAD..." << std::flush;
         }
 
+        helios::WarningAggregator invertLAD_warnings;
+        invertLAD_warnings.setEnabled(printmessages);
+
         for (uint v = 0; v < Ncells; v++) {
             // Calculate P using equal weighting formula
             float P = 0.0f;
@@ -3831,11 +3909,13 @@ void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits)
             // Use shared invertLAD method
             float leaf_area = 0.0f;
             helios::vec3 gridsize = getCellSize(v);
-            invertLAD(v, P, Gtheta[v], dr_agg[v], min_voxel_hits, gridsize, leaf_area);
+            invertLAD(v, P, Gtheta[v], dr_agg[v], min_voxel_hits, gridsize, leaf_area, invertLAD_warnings);
 
             setCellLeafArea(leaf_area, v);
             setCellGtheta(Gtheta[v], v);
         }
+
+        invertLAD_warnings.report(std::cerr);
 
         if (printmessages) {
             std::cout << "done." << std::endl;
@@ -3998,9 +4078,12 @@ void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits)
     if (printmessages) {
         std::cout << "Inverting to find LAD..." << std::flush;
     }
-    
+
+    helios::WarningAggregator invertLAD_warnings;
+    invertLAD_warnings.setEnabled(printmessages);
+
     for (uint v = 0; v < Ncells; v++) {
-        
+
         // Stage F: Calculate transmission probability
         float P = 0.0f;
         if (hit_after_agg[v] - hit_before_agg[v] > 0) {
@@ -4011,12 +4094,14 @@ void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits)
         float leaf_area = 0.0f;
         helios::vec3 gridsize = getCellSize(v);
 
-        invertLAD(v, P, Gtheta[v], dr_agg[v], min_voxel_hits, gridsize, leaf_area);
+        invertLAD(v, P, Gtheta[v], dr_agg[v], min_voxel_hits, gridsize, leaf_area, invertLAD_warnings);
 
         setCellLeafArea(leaf_area, v);
         setCellGtheta(Gtheta[v], v);
     }
-    
+
+    invertLAD_warnings.report(std::cerr);
+
     if (printmessages) {
         std::cout << "done." << std::endl;
     }
@@ -4556,6 +4641,113 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
 
     // GPU allocations removed - texture data no longer copied to GPU
 
+    // Per-scan cache of decoded texture RGB pixel maps for sampling hit colors.
+    // Row 0 is the top of the texture (matches readPNG/readJPEG storage); UV y=0 is the bottom.
+    struct TextureColorMap {
+        uint width = 0;
+        uint height = 0;
+        std::vector<helios::RGBcolor> pixels;
+    };
+    std::map<std::string, TextureColorMap> texture_color_cache;
+
+    auto load_texture_colors = [&](const std::string &filename) -> const TextureColorMap & {
+        auto it = texture_color_cache.find(filename);
+        if (it != texture_color_cache.end()) {
+            return it->second;
+        }
+        TextureColorMap entry;
+        std::string ext;
+        size_t dot = filename.find_last_of('.');
+        if (dot != std::string::npos) {
+            ext = filename.substr(dot);
+            for (char &ch: ext) {
+                ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+            }
+        }
+        if (ext == ".png") {
+            std::vector<helios::RGBAcolor> rgba;
+            helios::readPNG(filename, entry.width, entry.height, rgba);
+            entry.pixels.resize(rgba.size());
+            for (size_t i = 0; i < rgba.size(); i++) {
+                entry.pixels[i] = helios::make_RGBcolor(rgba[i].r, rgba[i].g, rgba[i].b);
+            }
+        } else if (ext == ".jpg" || ext == ".jpeg") {
+            helios::readJPEG(filename, entry.width, entry.height, entry.pixels);
+        }
+        return texture_color_cache.emplace(filename, std::move(entry)).first->second;
+    };
+
+    auto sample_hit_color = [&](uint UUID, const helios::vec3 &hit_pos) -> helios::RGBcolor {
+        const std::string tex_file = context->getPrimitiveTextureFile(UUID);
+        if (tex_file.empty() || context->isPrimitiveTextureColorOverridden(UUID)) {
+            return context->getPrimitiveColor(UUID);
+        }
+        const TextureColorMap &tex = load_texture_colors(tex_file);
+        if (tex.pixels.empty()) {
+            return context->getPrimitiveColor(UUID);
+        }
+
+        std::vector<helios::vec3> verts = context->getPrimitiveVertices(UUID);
+        std::vector<helios::vec2> uvs = context->getPrimitiveTextureUV(UUID);
+        helios::vec2 uv;
+
+        helios::PrimitiveType ptype = context->getPrimitiveType(UUID);
+        if (ptype == helios::PRIMITIVE_TYPE_PATCH) {
+            // Patch corners are (BL, BR, TR, TL); project the hit onto the (BL->BR, BL->TL) basis.
+            helios::vec3 e1 = verts[1] - verts[0];
+            helios::vec3 e2 = verts[3] - verts[0];
+            helios::vec3 d = hit_pos - verts[0];
+            float e1_sq = e1 * e1;
+            float e2_sq = e2 * e2;
+            float s_param = (e1_sq > 0.f) ? (d * e1) / e1_sq : 0.f;
+            float t_param = (e2_sq > 0.f) ? (d * e2) / e2_sq : 0.f;
+            if (s_param < 0.f) s_param = 0.f;
+            else if (s_param > 1.f) s_param = 1.f;
+            if (t_param < 0.f) t_param = 0.f;
+            else if (t_param > 1.f) t_param = 1.f;
+            if (uvs.size() == 4) {
+                uv = (1.f - s_param) * (1.f - t_param) * uvs[0] + s_param * (1.f - t_param) * uvs[1] + s_param * t_param * uvs[2] + (1.f - s_param) * t_param * uvs[3];
+            } else {
+                uv = helios::make_vec2(s_param, t_param);
+            }
+        } else if (ptype == helios::PRIMITIVE_TYPE_TRIANGLE && uvs.size() == 3) {
+            helios::vec3 e1 = verts[1] - verts[0];
+            helios::vec3 e2 = verts[2] - verts[0];
+            helios::vec3 d = hit_pos - verts[0];
+            float dot11 = e1 * e1;
+            float dot12 = e1 * e2;
+            float dot22 = e2 * e2;
+            float dot1d = e1 * d;
+            float dot2d = e2 * d;
+            float denom = dot11 * dot22 - dot12 * dot12;
+            if (std::fabs(denom) < 1e-20f) {
+                return context->getPrimitiveColor(UUID);
+            }
+            float inv_denom = 1.f / denom;
+            float beta = (dot22 * dot1d - dot12 * dot2d) * inv_denom;
+            float gamma = (dot11 * dot2d - dot12 * dot1d) * inv_denom;
+            uv = uvs[0] + beta * (uvs[1] - uvs[0]) + gamma * (uvs[2] - uvs[0]);
+        } else {
+            return context->getPrimitiveColor(UUID);
+        }
+
+        // Wrap UV into [0,1) so repeat-style mappings sample correctly.
+        uv.x -= std::floor(uv.x);
+        uv.y -= std::floor(uv.y);
+
+        int px = static_cast<int>(uv.x * static_cast<float>(tex.width));
+        if (px < 0) px = 0;
+        if (px >= static_cast<int>(tex.width)) px = static_cast<int>(tex.width) - 1;
+        // Pixel rows: 0 at top, height-1 at bottom; UV y=0 at bottom.
+        int py = static_cast<int>((1.f - uv.y) * static_cast<float>(tex.height));
+        if (py < 0) py = 0;
+        if (py >= static_cast<int>(tex.height)) py = static_cast<int>(tex.height) - 1;
+        return tex.pixels[static_cast<size_t>(py) * tex.width + static_cast<size_t>(px)];
+    };
+
+    helios::WarningAggregator scan_warnings;
+    scan_warnings.setEnabled(printmessages);
+
     for (int s = 0; s < getScanCount(); s++) {
 
         helios::vec3 scan_origin = getScanOrigin(s);
@@ -4705,8 +4897,8 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
                     helios::vec3 p = scan_origin + dir * miss_dist;
                     addHitPoint(s, p, helios::cart2sphere(dir), helios::RGB::red, data);
                 }
-            } else if (printmessages) {
-                std::cout << "WARNING: Synthetic rays did not hit any primitives." << std::endl;
+            } else {
+                scan_warnings.addWarning("synthetic_rays_no_hit", "Synthetic rays did not hit any primitives.");
             }
             continue;  // Move to next scan
         }
@@ -4718,12 +4910,39 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
 
         float exit_diameter = getScanBeamExitDiameter(s);
         float beam_divergence = getScanBeamDivergence(s);
+        float range_noise_stddev = getScanRangeNoiseStdDev(s);
+        float angle_noise_stddev = getScanAngleNoiseStdDev(s);
+
+        // Apply angular (beam-pointing) jitter to the nominal direction of each beam. This is a per-pulse pointing error of
+        // the whole beam, distinct from beam divergence (which spreads sub-rays within a beam) and from range noise (which
+        // perturbs the distance along the beam). It contributes the across-beam component of the positional error, which
+        // grows with range. The jittered direction becomes the new nominal direction, so the divergence cone, finite
+        // aperture, and hit-point reconstruction all rotate together with the beam.
+        std::vector<helios::vec3> nominal_directions(N);
+        for (size_t beam = 0; beam < N; beam++) {
+            helios::vec3 base_dir = base_directions[beam];
+            if (angle_noise_stddev > 0) {
+                // Build an orthonormal tangent basis {u, v} perpendicular to the beam and apply a small-angle tilt with an
+                // independent zero-mean Gaussian offset (stddev = angle_noise_stddev) in each tangent direction.
+                helios::vec3 reference = (fabs(base_dir.z) < 0.9f) ? helios::make_vec3(0, 0, 1) : helios::make_vec3(1, 0, 0);
+                helios::vec3 u = helios::cross(base_dir, reference);
+                u.normalize();
+                helios::vec3 v = helios::cross(base_dir, u); // orthonormal since base_dir and u are orthonormal
+                float a = context->randn(0.f, angle_noise_stddev);
+                float b = context->randn(0.f, angle_noise_stddev);
+                helios::vec3 jittered = base_dir + u * a + v * b;
+                jittered.normalize();
+                nominal_directions[beam] = jittered;
+            } else {
+                nominal_directions[beam] = base_dir;
+            }
+        }
 
         // Generate N*Npulse perturbed ray directions using beam parameters
         helios::vec3 *direction = (helios::vec3 *) malloc(N * Npulse * sizeof(helios::vec3));
 
         for (size_t beam = 0; beam < N; beam++) {
-            helios::vec3 base_dir = base_directions[beam];
+            helios::vec3 base_dir = nominal_directions[beam];
 
             for (int p = 0; p < Npulse; p++) {
                 if (p == 0 || beam_divergence == 0.0f) {
@@ -4763,7 +4982,7 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
             float radius = exit_diameter * 0.5f;
 
             for (size_t beam = 0; beam < N; beam++) {
-                helios::vec3 base_dir = base_directions[beam];
+                helios::vec3 base_dir = nominal_directions[beam];
 
                 // Construct orthonormal basis {u, v, base_dir} for disk perpendicular to beam
                 helios::vec3 reference = (fabs(base_dir.z) < 0.9f) ? helios::make_vec3(0, 0, 1) : helios::make_vec3(1, 0, 0);
@@ -4934,6 +5153,15 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
                 // Check if this is a miss point
                 bool is_miss = (t_hit.at(hit).at(0) >= 0.98f * 1001.0f);
 
+                // Apply Gaussian range (along-beam) measurement noise to real returns. LiDAR positional error is anisotropic and
+                // dominated by an error in the measured range, so the noise is added to the scalar distance and the hit point is
+                // reconstructed along the nominal beam direction below, rather than perturbing (x,y,z) isotropically. Misses keep
+                // their sentinel distance so they are not displaced. Each return draws independently (per-return noise).
+                float measured_distance = t_hit.at(hit).at(0);
+                if (!is_miss && range_noise_stddev > 0) {
+                    measured_distance += context->randn(0.f, range_noise_stddev);
+                }
+
                 // Assign target_index: misses get 99, real hits get sequential index (0, 1, 2...)
                 if (is_miss) {
                     data["target_index"] = 99;  // Special value to exclude from triangulation
@@ -4943,39 +5171,74 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
                 }
 
                 data["target_count"] = t_hit.size();
-                data["deviation"] = fabs(t_hit.at(hit).at(0) - average);
+                data["deviation"] = fabs(measured_distance - average);
                 data["timestamp"] = pulse_scangrid_ij.at(r).y * Ntheta + pulse_scangrid_ij.at(r).x;
                 data["intensity"] = t_hit.at(hit).at(1);
-                data["distance"] = t_hit.at(hit).at(0);
+                data["distance"] = measured_distance;
                 data["nRaysHit"] = t_hit.at(hit).at(2);
 
                 float UUID = t_hit.at(hit).at(3);
-                if (UUID >= 0 && UUID < ID_mapping.size()) {
-                    UUID = ID_mapping.at(int(t_hit.at(hit).at(3)));
-                }
+
+                // Use base direction for this beam (first ray: r*Npulse+0)
+                helios::vec3 dir = direction[r * Npulse];
+                helios::vec3 p = scan_origin + dir * measured_distance;
 
                 helios::RGBcolor color = helios::RGB::red;
 
                 if (UUID >= 0 && context->doesPrimitiveExist(uint(UUID))) {
 
-                    color = context->getPrimitiveColor(uint(UUID));
+                    color = sample_hit_color(uint(UUID), p);
 
-                    if (context->doesPrimitiveDataExist(uint(UUID), "object_label") && context->getPrimitiveDataType("object_label") == helios::HELIOS_TYPE_INT) {
-                        int label;
-                        context->getPrimitiveData(uint(UUID), "object_label", label);
-                        data["object_label"] = double(label);
-                    }
+                    // Sample arbitrary primitive-data fields named in the scan's column format onto
+                    // this hit. The column format is the source of truth: add a (non-standard) label
+                    // to the scan's column format and the scanner copies that primitive data here.
+                    for (const std::string &label : column_format) {
+                        if (isStandardColumnToken(label)) {
+                            continue;
+                        }
+                        if (!context->doesPrimitiveDataExist(uint(UUID), label.c_str())) {
+                            continue;
+                        }
 
-                    if (context->doesPrimitiveDataExist(uint(UUID), "reflectivity_lidar") && context->getPrimitiveDataType("reflectivity_lidar") == helios::HELIOS_TYPE_FLOAT) {
-                        float rho;
-                        context->getPrimitiveData(uint(UUID), "reflectivity_lidar", rho);
-                        data.at("intensity") *= rho;
+                        double value;
+                        switch (context->getPrimitiveDataType(uint(UUID), label.c_str())) {
+                        case helios::HELIOS_TYPE_FLOAT: {
+                            float v;
+                            context->getPrimitiveData(uint(UUID), label.c_str(), v);
+                            value = double(v);
+                            break;
+                        }
+                        case helios::HELIOS_TYPE_DOUBLE: {
+                            double v;
+                            context->getPrimitiveData(uint(UUID), label.c_str(), v);
+                            value = v;
+                            break;
+                        }
+                        case helios::HELIOS_TYPE_INT: {
+                            int v;
+                            context->getPrimitiveData(uint(UUID), label.c_str(), v);
+                            value = double(v);
+                            break;
+                        }
+                        case helios::HELIOS_TYPE_UINT: {
+                            uint v;
+                            context->getPrimitiveData(uint(UUID), label.c_str(), v);
+                            value = double(v);
+                            break;
+                        }
+                        default:
+                            continue; // non-scalar primitive-data types are not transferable to hits
+                        }
+
+                        if (label == "reflectivity_lidar") {
+                            // Preserve historical semantics: reflectivity modulates intensity.
+                            data.at("intensity") *= value;
+                        } else {
+                            data[label] = value;
+                        }
                     }
                 }
 
-                // Use base direction for this beam (first ray: r*Npulse+0)
-                helios::vec3 dir = direction[r * Npulse];
-                helios::vec3 p = scan_origin + dir * t_hit.at(hit).at(0);
                 addHitPoint(s, p, helios::cart2sphere(dir), color, data);
 
                 Nhits++;
@@ -4993,6 +5256,8 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
             std::cout << "Created synthetic scan #" << s << " with " << Nhits << " hit points." << std::endl;
         }
     }
+
+    scan_warnings.report(std::cerr);
 
     // No device memory to free
     free(patch_vertex);

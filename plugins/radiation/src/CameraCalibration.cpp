@@ -555,6 +555,8 @@ void CameraCalibration::preprocessSpectra(const std::vector<std::string> &source
 
     std::map<std::string, std::map<std::string, std::vector<vec2>>> allspectra;
 
+    helios::WarningAggregator warnings;
+
     // Extract and check source spectra from global data
     std::map<std::string, std::vector<vec2>> Source_spectra;
     for (const std::string &sourcelable: sourcelabels) {
@@ -564,7 +566,7 @@ void CameraCalibration::preprocessSpectra(const std::vector<std::string> &source
             Source_spectra.emplace(sourcelable, Source_spectrum);
             wavelengthboundary(wavelengthrange.x, wavelengthrange.y, Source_spectrum);
         } else {
-            std::cout << "WARNING: Source (" << sourcelable << ") does not exist in global data" << std::endl;
+            warnings.addWarning("missing_source_spectrum", "Source (" + sourcelable + ") does not exist in global data");
         }
     }
     allspectra.emplace("source", Source_spectra);
@@ -578,7 +580,7 @@ void CameraCalibration::preprocessSpectra(const std::vector<std::string> &source
             Camera_spectra.emplace(cameralabel, Camera_spectrum);
             wavelengthboundary(wavelengthrange.x, wavelengthrange.y, Camera_spectrum);
         } else {
-            std::cout << "WARNING: Camera (" << cameralabel << ") does not exist in global data" << std::endl;
+            warnings.addWarning("missing_camera_spectrum", "Camera (" + cameralabel + ") does not exist in global data");
         }
     }
     allspectra.emplace("camera", Camera_spectra);
@@ -593,7 +595,7 @@ void CameraCalibration::preprocessSpectra(const std::vector<std::string> &source
                 Object_spectra.emplace(objectlable, Object_spectrum);
                 wavelengthboundary(wavelengthrange.x, wavelengthrange.y, Object_spectrum);
             } else {
-                std::cout << "WARNING: Object (" << objectlable << ") does not exist in global data" << std::endl;
+                warnings.addWarning("missing_object_spectrum", "Object (" + objectlable + ") does not exist in global data");
             }
         }
     }
@@ -621,7 +623,7 @@ void CameraCalibration::preprocessSpectra(const std::vector<std::string> &source
             if (context->doesGlobalDataExist(spectraltransmissivitylabel.c_str())) {
                 if (std::find(objectlabels.begin(), objectlabels.end(), spectraltransmissivitylabel) == objectlabels.end()) {
                     objectlabels.push_back(spectraltransmissivitylabel);
-                    std::cout << "WARNING: Spectrum (" << spectraltransmissivitylabel << ") has been added to UUID (" << UUID << ") but is not in the provided object labels" << std::endl;
+                    warnings.addWarning("spectrum_not_in_object_labels", "Spectrum (" + spectraltransmissivitylabel + ") has been added to UUID (" + std::to_string(UUID) + ") but is not in the provided object labels");
                     std::vector<vec2> Object_spectrum;
                     context->getGlobalData(spectraltransmissivitylabel.c_str(), Object_spectrum);
                     Object_spectra.emplace(spectraltransmissivitylabel, Object_spectrum);
@@ -631,6 +633,8 @@ void CameraCalibration::preprocessSpectra(const std::vector<std::string> &source
         }
     }
     allspectra.emplace("object", Object_spectra);
+
+    warnings.report(std::cerr);
 
     // interpolate spectra
     // set unifying wavelength resolution for all spectra according to resolution of target spectrum

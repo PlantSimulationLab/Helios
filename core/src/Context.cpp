@@ -836,6 +836,52 @@ void Context::deleteTimeseriesVariable(const char *label) {
     timeseries_datevalue.erase(label);
 }
 
+void Context::deleteTimeseriesDataPoint(const char *label, const Date &date, const Time &time) {
+    auto it_data = timeseries_data.find(label);
+    auto it_datevalue = timeseries_datevalue.find(label);
+    if (it_data == timeseries_data.end() || it_datevalue == timeseries_datevalue.end()) {
+        std::cerr << "WARNING (Context::deleteTimeseriesDataPoint): Timeseries variable '" << label << "' does not exist. Nothing to delete." << std::endl;
+        return;
+    }
+
+    double date_value = floor(date.year * 366.25) + date.JulianDay();
+    date_value += double(time.hour) / 24. + double(time.minute) / 1440. + double(time.second) / 86400.;
+
+    std::vector<double> &datevalues = it_datevalue->second;
+    std::vector<float> &values = it_data->second;
+    for (size_t i = 0; i < datevalues.size(); i++) {
+        if (datevalues[i] == date_value) {
+            datevalues.erase(datevalues.begin() + i);
+            values.erase(values.begin() + i);
+            return;
+        }
+    }
+
+    std::cerr << "WARNING (Context::deleteTimeseriesDataPoint): No timeseries data point exists at the specified date and time for variable '" << label << "'. Nothing to delete." << std::endl;
+}
+
+void Context::deleteTimeseriesDataPoint(const Date &date, const Time &time) {
+    double date_value = floor(date.year * 366.25) + date.JulianDay();
+    date_value += double(time.hour) / 24. + double(time.minute) / 1440. + double(time.second) / 86400.;
+
+    bool any_match = false;
+    for (auto &[label, datevalues]: timeseries_datevalue) {
+        std::vector<float> &values = timeseries_data.at(label);
+        for (size_t i = 0; i < datevalues.size(); i++) {
+            if (datevalues[i] == date_value) {
+                datevalues.erase(datevalues.begin() + i);
+                values.erase(values.begin() + i);
+                any_match = true;
+                break;
+            }
+        }
+    }
+
+    if (!any_match) {
+        std::cerr << "WARNING (Context::deleteTimeseriesDataPoint): No timeseries variable contains a data point at the specified date and time. Nothing to delete." << std::endl;
+    }
+}
+
 void Context::getDomainBoundingBox(vec2 &xbounds, vec2 &ybounds, vec2 &zbounds) const {
     getDomainBoundingBox(getAllUUIDs(), xbounds, ybounds, zbounds);
 }
@@ -1215,6 +1261,8 @@ std::vector<uint> Context::filterObjectsByData(const std::vector<uint> &IDs, con
     output_object_IDs.resize(IDs.size());
     uint passed_count = 0;
 
+    WarningAggregator warnings;
+
     for (uint i = 0; i < IDs.size(); i++) {
         if (doesObjectDataExist(IDs.at(i), object_data)) {
             HeliosDataType type = getObjectDataType(object_data);
@@ -1278,10 +1326,12 @@ std::vector<uint> Context::filterObjectsByData(const std::vector<uint> &IDs, con
                     }
                 }
             } else {
-                std::cerr << "WARNING: Object data not of type UINT, INT, or FLOAT. Filtering for other types not yet supported." << std::endl;
+                warnings.addWarning("object_data_wrong_type", "Object data not of type UINT, INT, or FLOAT. Filtering for other types not yet supported.");
             }
         }
     }
+
+    warnings.report(std::cerr);
 
     output_object_IDs.resize(passed_count);
 
@@ -1534,6 +1584,8 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, con
 
     std::vector<std::string> tex;
 
+    WarningAggregator warnings;
+
     for (uint ObjID: ObjIDs) {
 #ifdef HELIOS_DEBUG
         if (!doesObjectExist(ObjID)) {
@@ -1543,9 +1595,9 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, con
 
         // check if the object ID is a tile object and if it is add it the tile_ObjectIDs vector
         if (getObjectPointer_private(ObjID)->getObjectType() != OBJECT_TYPE_TILE) {
-            std::cerr << "WARNING (Context::setTileObjectSubdivisionCount): ObjectID " << ObjID << " is not a tile object. Skipping..." << std::endl;
+            warnings.addWarning("not_a_tile_object", "ObjectID " + std::to_string(ObjID) + " is not a tile object. Skipping...");
         } else if (!(getObjectPointer_private(ObjID)->arePrimitivesComplete())) {
-            std::cerr << "WARNING (Context::setTileObjectSubdivisionCount): ObjectID " << ObjID << " is missing primitives. Skipping..." << std::endl;
+            warnings.addWarning("tile_object_missing_primitives", "ObjectID " + std::to_string(ObjID) + " is missing primitives. Skipping...");
         } else {
             // test if the tile is textured and push into two different vectors
             Patch *p = getPatchPointer_private(getObjectPointer_private(ObjID)->getPrimitiveUUIDs().at(0));
@@ -1557,6 +1609,8 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, con
             }
         }
     }
+
+    warnings.report(std::cerr);
 
     // Here just call setSubdivisionCount directly for the non-textured tile objects
     for (unsigned int tile_ObjectID: tile_ObjectIDs) {
@@ -1655,6 +1709,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
     std::vector<uint> textured_tile_ObjectIDs;
 
     std::vector<std::string> tex;
+    WarningAggregator warnings;
     // for(uint i=1;i<ObjectIDs.size();i++)
     for (uint ObjID: ObjIDs) {
 #ifdef HELIOS_DEBUG
@@ -1665,9 +1720,9 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
 
         // check if the object ID is a tile object and if it is add it the tile_ObjectIDs vector
         if (getObjectPointer_private(ObjID)->getObjectType() != OBJECT_TYPE_TILE) {
-            std::cerr << "WARNING (Context::setTileObjectSubdivisionCount): ObjectID " << ObjID << " is not a tile object. Skipping..." << std::endl;
+            warnings.addWarning("not_a_tile_object", "ObjectID " + std::to_string(ObjID) + " is not a tile object. Skipping...");
         } else if (!(getObjectPointer_private(ObjID)->arePrimitivesComplete())) {
-            std::cerr << "WARNING (Context::setTileObjectSubdivisionCount): ObjectID " << ObjID << " is missing primitives. Skipping..." << std::endl;
+            warnings.addWarning("tile_object_missing_primitives", "ObjectID " + std::to_string(ObjID) + " is missing primitives. Skipping...");
         } else {
             // test if the tile is textured and push into two different vectors
             Patch *p = getPatchPointer_private(getObjectPointer_private(ObjID)->getPrimitiveUUIDs().at(0));
@@ -1679,6 +1734,8 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
             }
         }
     }
+
+    warnings.report(std::cerr);
 
     // Here just call setSubdivisionCount directly for the non-textured tile objects
     for (uint i = 0; i < tile_ObjectIDs.size(); i++) {

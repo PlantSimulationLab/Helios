@@ -83,6 +83,8 @@ rtBuffer<float, 1> Rsky;
 // Atmospheric sky radiance parameters (for camera miss rays)
 rtBuffer<float4, 1> sky_radiance_params; // Per-band: (circumsolar_strength, circumsolar_width, horizon_coeff, zenith_scale)
 rtBuffer<float, 1> camera_sky_radiance; // Per-band: base sky radiance (W/m²/sr) for camera atmospheric model
+rtBuffer<float, 1> camera_diffuse_flux; // Per-band: hemispherical diffuse sky flux for camera longwave/emission sky miss
+rtBuffer<unsigned int, 1> band_emission_flag; // Per-band: 1 if emission is enabled (gates camera longwave sky sampling)
 rtDeclareVariable(float3, sun_direction, , ); // Sun direction vector for sky radiance evaluation
 
 // Solar disk rendering for camera (lens flare support)

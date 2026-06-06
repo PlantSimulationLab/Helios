@@ -2071,7 +2071,7 @@ void RadiationModel::updateRadiativeProperties() {
 
                     } else if (context->getGlobalDataType(camera_response.c_str()) != helios::HELIOS_TYPE_VEC2 && context->getGlobalDataType(camera_response.c_str()) != helios::HELIOS_TYPE_STRING) {
                         camera_response.clear();
-                        std::cout << "WARNING (RadiationModel::runBand): Camera spectral response \"" << camera_response << "\" is not of type HELIOS_TYPE_VEC2 or HELIOS_TYPE_STRING. Assuming a uniform spectral response..." << std::endl;
+                        warnings.addWarning("camera_response_wrong_type", "Camera spectral response \"" + camera_response + "\" is not of type HELIOS_TYPE_VEC2 or HELIOS_TYPE_STRING. Assuming a uniform spectral response...");
                     }
                 }
             }
@@ -2329,7 +2329,7 @@ void RadiationModel::updateRadiativeProperties() {
 
                     } else if (context->getGlobalDataType(spectrum_label.c_str()) != helios::HELIOS_TYPE_VEC2 && context->getGlobalDataType(spectrum_label.c_str()) != helios::HELIOS_TYPE_STRING) {
                         spectrum_label.clear();
-                        std::cout << "WARNING (RadiationModel::runBand): Object spectral reflectivity \"" << spectrum_label << "\" is not of type HELIOS_TYPE_VEC2 or HELIOS_TYPE_STRING. Assuming a uniform spectral distribution..." << std::flush;
+                        warnings.addWarning("reflectivity_spectrum_wrong_type", "Object spectral reflectivity \"" + spectrum_label + "\" is not of type HELIOS_TYPE_VEC2 or HELIOS_TYPE_STRING. Assuming a uniform spectral distribution...");
                     }
                 }
             }
@@ -2355,7 +2355,7 @@ void RadiationModel::updateRadiativeProperties() {
 
                     } else if (context->getGlobalDataType(spectrum_label.c_str()) != helios::HELIOS_TYPE_VEC2 && context->getGlobalDataType(spectrum_label.c_str()) != helios::HELIOS_TYPE_STRING) {
                         spectrum_label.clear();
-                        std::cout << "WARNING (RadiationModel::runBand): Object spectral transmissivity \"" << spectrum_label << "\" is not of type HELIOS_TYPE_VEC2 or HELIOS_TYPE_STRING. Assuming a uniform spectral distribution..." << std::flush;
+                        warnings.addWarning("transmissivity_spectrum_wrong_type", "Object spectral transmissivity \"" + spectrum_label + "\" is not of type HELIOS_TYPE_VEC2 or HELIOS_TYPE_STRING. Assuming a uniform spectral distribution...");
                     }
                 }
             }
@@ -3615,14 +3615,17 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     // spectrum — a per-band warning would produce ~35 lines of noise. Instead,
     // runExcitationBands() emits ONE consolidated warning before dispatch covering
     // the entire excitation set.
+    helios::WarningAggregator scattering_disabled_warnings;
     for (int b = 0; b < Nbands_launch; b++) {
         const std::string &bname = band_labels.at(b);
         const bool is_sif_excitation_band = bname.size() >= 9 && bname.compare(0, 9, "_SIF_exc_") == 0;
         if (scattering_depth.at(b) == 0 && scattering_iterations_needed.at(bname) && !is_sif_excitation_band) {
-            std::cout << "WARNING (RadiationModel::runBand): Surface radiative properties for band " << bname
-                      << " are set to non-default values, but scattering iterations are disabled. Surface radiative properties will be ignored unless scattering depth is non-zero." << std::endl;
+            scattering_disabled_warnings.addWarning("scattering_disabled_for_band",
+                                                    "Surface radiative properties for band " + bname +
+                                                            " are set to non-default values, but scattering iterations are disabled. Surface radiative properties will be ignored unless scattering depth is non-zero.");
         }
     }
+    scattering_disabled_warnings.report(std::cerr);
 
     // Set diffuse flux for each band
     std::vector<float> diffuse_flux(Nbands_launch);
@@ -4286,10 +4289,19 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 // Get sky radiances for first camera (already computed above)
                 std::vector<float> sky_for_backend = updateAtmosphericSkyModel(band_labels, cameras.begin()->second);
 
+                // Build per-band diffuse flux and emission-flag vectors for camera longwave/emission sky sampling.
+                // For emission bands, getDiffuseFlux() returns the user-set sky thermal flux (W/m²).
+                std::vector<float> camera_diffuse_flux(Nbands_launch, 0.f);
+                std::vector<uint32_t> band_emission_flag(Nbands_launch, 0u);
+                for (size_t b = 0; b < Nbands_launch; b++) {
+                    camera_diffuse_flux[b] = getDiffuseFlux(band_labels[b]);
+                    band_emission_flag[b] = radiation_bands.at(band_labels[b]).emissionFlag ? 1u : 0u;
+                }
+
                 // Upload to backend
                 backend->updateSkyModel(prague_params, sky_for_backend, sun_dir, solar_radiances,
-                                        has_sun_source ? 0.999989f : 0.0f // solar_disk_cos_angle
-                );
+                                        has_sun_source ? 0.999989f : 0.0f, // solar_disk_cos_angle
+                                        camera_diffuse_flux, band_emission_flag);
             }
 
             uint cam = 0;

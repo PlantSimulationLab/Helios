@@ -1417,13 +1417,13 @@ private:
 
     Shader *currentShader;
 
-    uint framebufferID;
-    uint depthTexture;
+    uint framebufferID = 0;
+    uint depthTexture = 0;
 
     // Offscreen rendering support for CI testing
-    uint offscreenFramebufferID;
-    uint offscreenColorTexture;
-    uint offscreenDepthTexture;
+    uint offscreenFramebufferID = 0;
+    uint offscreenColorTexture = 0;
+    uint offscreenDepthTexture = 0;
 
     //! Lighting model for Context object primitives (default is LIGHTING_NONE)
     LightingModel primaryLightingModel;
@@ -1622,8 +1622,8 @@ private:
 
     GeometryHandler geometry_handler;
 
-    GLuint texArray;
-    size_t texture_array_layers;
+    GLuint texArray = 0;
+    size_t texture_array_layers = 0;
     bool textures_dirty;
 
     helios::uint2 maximum_texture_size;

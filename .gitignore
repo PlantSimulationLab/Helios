@@ -4,5 +4,6 @@
 .idea/*
 # Compiled outputs 
 samples/*/build/*
-projects/*/build/*
+samples/*/output/*
+projects/*
 plugins/*/build/*

@@ -1512,3 +1512,224 @@ TEST_CASE("WarningAggregator") {
         DOCTEST_CHECK(output2.find("2 instances") != std::string::npos);
     }
 }
+
+#include "exif_writer.h"
+
+TEST_CASE("EXIF writer byte layout") {
+    using helios::ImageEXIFData;
+
+    ImageEXIFData m;
+    m.model = "TestCam";
+    m.datetime = "2026:05:18 14:30:00";
+    m.datetime_original = m.datetime;
+    m.datetime_digitized = m.datetime;
+    m.offset_time = "-08:00";
+    m.focal_length_mm = 24.0f;
+    m.focal_plane_x_resolution = 1000.0f;
+    m.focal_plane_y_resolution = 1000.0f;
+    m.exposure_time_s = 0.01f;
+    m.iso = 100;
+    m.pixel_x_dimension = 64;
+    m.pixel_y_dimension = 48;
+    m.gps_valid = true;
+    m.latitude_deg = 38.5;
+    m.longitude_deg = -121.7; // standard +E convention
+    m.altitude_m = 30.0;
+    m.img_direction_deg = 90.0;
+    m.gps_datestamp = "2026:05:18";
+    m.gps_timestamp_hms = "22:30:00";
+    m.xmp_valid = true;
+    m.yaw_deg = 90.0;
+    m.pitch_deg = 0.0;
+    m.roll_deg = 0.0;
+
+    std::vector<unsigned char> buf = helios::detail::buildEXIFAppSegment(m);
+
+    SUBCASE("Identifier and TIFF header") {
+        REQUIRE(buf.size() > 14);
+        DOCTEST_CHECK(buf[0] == 'E');
+        DOCTEST_CHECK(buf[1] == 'x');
+        DOCTEST_CHECK(buf[2] == 'i');
+        DOCTEST_CHECK(buf[3] == 'f');
+        DOCTEST_CHECK(buf[4] == 0);
+        DOCTEST_CHECK(buf[5] == 0);
+        // Little-endian "II"
+        DOCTEST_CHECK(buf[6] == 'I');
+        DOCTEST_CHECK(buf[7] == 'I');
+        // 0x002A magic
+        DOCTEST_CHECK(buf[8] == 0x2A);
+        DOCTEST_CHECK(buf[9] == 0x00);
+        // IFD0 offset = 8 (relative to TIFF header start at buf[6])
+        DOCTEST_CHECK(buf[10] == 0x08);
+        DOCTEST_CHECK(buf[11] == 0x00);
+        DOCTEST_CHECK(buf[12] == 0x00);
+        DOCTEST_CHECK(buf[13] == 0x00);
+    }
+
+    SUBCASE("IFD0 contains required tags") {
+        // TIFF stream begins at buf[6]; IFD0 begins 8 bytes after that.
+        const size_t tiff_base = 6;
+        const size_t ifd0_off = tiff_base + 8;
+        REQUIRE(buf.size() > ifd0_off + 2);
+
+        const uint16_t ifd0_count = static_cast<uint16_t>(buf[ifd0_off]) | (static_cast<uint16_t>(buf[ifd0_off + 1]) << 8);
+        REQUIRE(ifd0_count >= 5);
+        REQUIRE(buf.size() >= ifd0_off + 2 + static_cast<size_t>(ifd0_count) * 12 + 4);
+
+        // Collect tag values present in IFD0.
+        std::set<uint16_t> tags;
+        uint32_t exif_subifd_offset = 0;
+        uint32_t gps_subifd_offset = 0;
+        for (uint16_t i = 0; i < ifd0_count; ++i) {
+            const size_t e = ifd0_off + 2 + static_cast<size_t>(i) * 12;
+            const uint16_t tag = static_cast<uint16_t>(buf[e]) | (static_cast<uint16_t>(buf[e + 1]) << 8);
+            tags.insert(tag);
+            if (tag == 0x8769) {
+                exif_subifd_offset = static_cast<uint32_t>(buf[e + 8]) | (static_cast<uint32_t>(buf[e + 9]) << 8) | (static_cast<uint32_t>(buf[e + 10]) << 16) | (static_cast<uint32_t>(buf[e + 11]) << 24);
+            } else if (tag == 0x8825) {
+                gps_subifd_offset = static_cast<uint32_t>(buf[e + 8]) | (static_cast<uint32_t>(buf[e + 9]) << 8) | (static_cast<uint32_t>(buf[e + 10]) << 16) | (static_cast<uint32_t>(buf[e + 11]) << 24);
+            }
+        }
+        DOCTEST_CHECK(tags.count(0x010F) == 1); // Make
+        DOCTEST_CHECK(tags.count(0x0110) == 1); // Model
+        DOCTEST_CHECK(tags.count(0x0131) == 1); // Software
+        DOCTEST_CHECK(tags.count(0x0132) == 1); // DateTime
+        DOCTEST_CHECK(tags.count(0x8769) == 1); // ExifSubIFD pointer
+        DOCTEST_CHECK(tags.count(0x8825) == 1); // GPS pointer
+        DOCTEST_CHECK(exif_subifd_offset > 0);
+        DOCTEST_CHECK(gps_subifd_offset > 0);
+    }
+
+    SUBCASE("GPS IFD round-trips lat/lon DMS") {
+        // Locate GPS IFD via IFD0 entry 0x8825.
+        const size_t tiff_base = 6;
+        const size_t ifd0_off = tiff_base + 8;
+        const uint16_t ifd0_count = static_cast<uint16_t>(buf[ifd0_off]) | (static_cast<uint16_t>(buf[ifd0_off + 1]) << 8);
+
+        uint32_t gps_off_in_tiff = 0;
+        for (uint16_t i = 0; i < ifd0_count; ++i) {
+            const size_t e = ifd0_off + 2 + static_cast<size_t>(i) * 12;
+            const uint16_t tag = static_cast<uint16_t>(buf[e]) | (static_cast<uint16_t>(buf[e + 1]) << 8);
+            if (tag == 0x8825) {
+                gps_off_in_tiff = static_cast<uint32_t>(buf[e + 8]) | (static_cast<uint32_t>(buf[e + 9]) << 8) | (static_cast<uint32_t>(buf[e + 10]) << 16) | (static_cast<uint32_t>(buf[e + 11]) << 24);
+                break;
+            }
+        }
+        REQUIRE(gps_off_in_tiff > 0);
+        const size_t gps_off = tiff_base + gps_off_in_tiff;
+        REQUIRE(buf.size() > gps_off + 2);
+
+        const uint16_t gps_count = static_cast<uint16_t>(buf[gps_off]) | (static_cast<uint16_t>(buf[gps_off + 1]) << 8);
+
+        auto readRationalAt = [&](size_t off) {
+            const uint32_t num = static_cast<uint32_t>(buf[off]) | (static_cast<uint32_t>(buf[off + 1]) << 8) | (static_cast<uint32_t>(buf[off + 2]) << 16) | (static_cast<uint32_t>(buf[off + 3]) << 24);
+            const uint32_t den = static_cast<uint32_t>(buf[off + 4]) | (static_cast<uint32_t>(buf[off + 5]) << 8) | (static_cast<uint32_t>(buf[off + 6]) << 16) | (static_cast<uint32_t>(buf[off + 7]) << 24);
+            return den == 0 ? 0.0 : static_cast<double>(num) / static_cast<double>(den);
+        };
+
+        char lat_ref = 0;
+        char lon_ref = 0;
+        double lat_dec = -1.0, lon_dec = -1.0;
+        for (uint16_t i = 0; i < gps_count; ++i) {
+            const size_t e = gps_off + 2 + static_cast<size_t>(i) * 12;
+            const uint16_t tag = static_cast<uint16_t>(buf[e]) | (static_cast<uint16_t>(buf[e + 1]) << 8);
+            if (tag == 0x0001) {
+                // GPSLatitudeRef: 2-byte ASCII inline ("N\0" or "S\0")
+                lat_ref = static_cast<char>(buf[e + 8]);
+            } else if (tag == 0x0003) {
+                lon_ref = static_cast<char>(buf[e + 8]);
+            } else if (tag == 0x0002 || tag == 0x0004) {
+                // RATIONAL[3] stored at offset; read 3 rationals.
+                const uint32_t off_in_tiff = static_cast<uint32_t>(buf[e + 8]) | (static_cast<uint32_t>(buf[e + 9]) << 8) | (static_cast<uint32_t>(buf[e + 10]) << 16) | (static_cast<uint32_t>(buf[e + 11]) << 24);
+                const size_t data_off = tiff_base + off_in_tiff;
+                REQUIRE(buf.size() >= data_off + 24);
+                const double d = readRationalAt(data_off);
+                const double mn = readRationalAt(data_off + 8);
+                const double sc = readRationalAt(data_off + 16);
+                const double dec = d + mn / 60.0 + sc / 3600.0;
+                if (tag == 0x0002) lat_dec = dec;
+                else lon_dec = dec;
+            }
+        }
+        DOCTEST_CHECK(lat_ref == 'N');
+        DOCTEST_CHECK(lon_ref == 'W');
+        DOCTEST_CHECK(lat_dec == doctest::Approx(38.5).epsilon(1e-5));
+        DOCTEST_CHECK(lon_dec == doctest::Approx(121.7).epsilon(1e-5));
+    }
+}
+
+TEST_CASE("writeJPEG with metadata embeds EXIF and XMP markers") {
+    using helios::ImageEXIFData;
+
+    ImageEXIFData m;
+    m.model = "TestCam";
+    m.focal_length_mm = 24.0f;
+    m.pixel_x_dimension = 16;
+    m.pixel_y_dimension = 16;
+    m.gps_valid = true;
+    m.latitude_deg = 38.5;
+    m.longitude_deg = -121.7;
+    m.altitude_m = 0.0;
+    m.gps_datestamp = "2026:05:18";
+    m.gps_timestamp_hms = "22:30:00";
+    m.xmp_valid = true;
+    m.yaw_deg = 45.0;
+
+    std::vector<RGBcolor> pix(16 * 16, make_RGBcolor(0.5f, 0.5f, 0.5f));
+
+    const std::filesystem::path tmp_file = std::filesystem::temp_directory_path() / "helios_exif_test.jpeg";
+    try {
+        writeJPEG(tmp_file.string(), 16, 16, pix, m);
+    } catch (...) {
+        std::filesystem::remove(tmp_file);
+        throw;
+    }
+
+    std::ifstream in(tmp_file, std::ios::binary);
+    REQUIRE(in.is_open());
+    std::vector<unsigned char> bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    in.close();
+    std::filesystem::remove(tmp_file);
+
+    REQUIRE(bytes.size() > 20);
+    // SOI marker
+    DOCTEST_CHECK(bytes[0] == 0xFF);
+    DOCTEST_CHECK(bytes[1] == 0xD8);
+
+    // Walk markers and confirm an EXIF APP1 and an XMP APP1 both appear.
+    bool found_exif = false;
+    bool found_xmp = false;
+    size_t i = 2;
+    while (i + 4 < bytes.size()) {
+        if (bytes[i] != 0xFF) break;
+        const unsigned char marker = bytes[i + 1];
+        if (marker == 0xD9 /*EOI*/ || marker == 0xDA /*SOS*/) break;
+        const size_t seg_len = (static_cast<size_t>(bytes[i + 2]) << 8) | static_cast<size_t>(bytes[i + 3]);
+        if (seg_len < 2 || i + 2 + seg_len > bytes.size()) break;
+        if (marker == 0xE1 /*APP1*/) {
+            const size_t payload_off = i + 4;
+            const size_t payload_len = seg_len - 2;
+            if (payload_len >= 6 && bytes[payload_off + 0] == 'E' && bytes[payload_off + 1] == 'x' && bytes[payload_off + 2] == 'i' && bytes[payload_off + 3] == 'f') {
+                found_exif = true;
+            } else if (payload_len >= 29) {
+                const char *xmp_ns = "http://ns.adobe.com/xap/1.0/";
+                bool match = true;
+                for (size_t k = 0; k < 28; ++k) {
+                    if (bytes[payload_off + k] != static_cast<unsigned char>(xmp_ns[k])) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) {
+                    found_xmp = true;
+                    // Confirm the XMP payload mentions the Pix4D Camera namespace yaw.
+                    std::string xmp_str(bytes.begin() + payload_off, bytes.begin() + payload_off + payload_len);
+                    DOCTEST_CHECK(xmp_str.find("Camera:Yaw") != std::string::npos);
+                }
+            }
+        }
+        i = i + 2 + seg_len;
+    }
+    DOCTEST_CHECK(found_exif);
+    DOCTEST_CHECK(found_xmp);
+}

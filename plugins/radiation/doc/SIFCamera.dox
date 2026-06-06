@@ -1,0 +1,490 @@
+/*! \page SIFCameraDoc Solar-Induced Chlorophyll Fluorescence (SIF)
+
+\tableofcontents
+
+\section SIFIntro Overview
+
+The radiation plug-in simulates solar-induced chlorophyll fluorescence (SIF) by coupling
+the <b>Fluspect-B</b> leaf fluorescence model (Vilfan et al. 2016) to the <b>van der Tol
+(2014)</b> rate-coefficient quantum-yield formulation, then injecting the per-leaf
+fluorescence emission as a source term into the standard 3D ray tracer. Escape probability
+and canopy reabsorption emerge naturally from the existing radiative-transfer machinery
+— SIF is just another emission band as far as the ray tracer is concerned.
+
+Users interact with SIF by adding a \ref SIFCameraProperties "SIF camera" via
+\ref RadiationModel::addSIFCamera() that references one or more user-defined emission
+bands (e.g. a red-peak band at 680–700 nm and a far-red-peak band at 730–760 nm). The
+camera flags those bands as SIF-emitting and triggers Helios to:
+
+1. Auto-generate a set of internal excitation bands covering 400–750 nm at the
+   user-chosen spectral resolution.
+2. Ray-trace those excitation bands using the configured radiation source(s) and
+   capture per-leaf absorbed PAR (APAR) per excitation bin.
+3. Compute a per-leaf Fluspect-B excitation–emission kernel from the leaf's
+   biochemistry, cache it, and integrate it against APAR to obtain a per-leaf
+   fluorescence emission spectrum.
+4. Scale that spectrum by the van der Tol (2014) quantum yield \f$\Phi_F\f$ and the
+   user's intrinsic-fluorescence calibration scalar \f$f_{qe}\f$.
+5. Integrate the spectrum over each user-defined SIF band → per-leaf source flux.
+6. Ray-trace each SIF band with the leaf as an emitting source, producing per-pixel
+   fluorescence radiance at the camera.
+
+The pipeline is keyed on two pieces of per-leaf data:
+- A <b>biochemistry label</b> (\c fluspect_spectrum primitive data — typically authored by
+  \ref LeafOptics::run()) pointing at a global-data \c std::vector<float> with the 11
+  Fluspect-B inputs.
+- An <b>electron-transport ratio</b> (\c electron_transport_ratio primitive data —
+  authored by \ref PhotosynthesisModel::run() when
+  \ref PhotosynthesisModel::optionalOutputPrimitiveData() is requested for that label).
+
+Primitives lacking either field are silently treated as non-fluorescing — stems, soil,
+and other non-photosynthetic surfaces simply do not contribute to SIF emission.
+
+\section SIFGettingStarted Getting Started
+
+\subsection SIFMinimalPipeline Minimal Working Example
+
+The example below grows a cowpea plant under the nitrogen model, generates per-leaf
+PROSPECT-D + Fluspect-B biochemistry from leaf nitrogen content via
+\ref LeafOptics::run(), runs photosynthesis to populate \c electron_transport_ratio,
+then captures a SIF image at the red and far-red SIF bands. This is the same pipeline
+shipped as the \c projects/SIF_camera sample project.
+
+~~~~~~{.cpp}
+#include "RadiationModel.h"
+#include "PlantArchitecture.h"
+#include "PhotosynthesisModel.h"
+#include "LeafOptics.h"
+
+using namespace helios;
+
+int main() {
+    Context context;
+
+    context.addTile(nullorigin, make_vec2(20, 20), nullrotation, make_int2(200, 200));
+
+    // 1. Build a plant. The nitrogen model populates "leaf_nitrogen_gN_m2" object data
+    //    on each leaf, which LeafOptics will read to derive Cab/Cca per leaf.
+    PlantArchitecture plantarch(&context);
+    plantarch.enableNitrogenModel();
+    plantarch.loadPlantModelFromLibrary("cowpea");
+    uint plantID = plantarch.buildPlantInstanceFromLibrary(nullorigin, 0);
+    plantarch.addPlantNitrogen(plantID, 1.0f);
+    plantarch.advanceTime(40.f);
+    std::vector<uint> leaf_UUIDs = plantarch.getAllLeafUUIDs();
+
+    // 2. Author leaf biochemistry. LeafOptics::run() in nitrogen-auto mode bins leaves
+    //    by N content, computes Cab/Cca from N for each bin, and stamps every leaf with
+    //    "fluspect_spectrum" primitive data pointing at its bin's biochemistry vector.
+    LeafOptics leafoptics(&context);
+    LeafOpticsProperties_Nauto N_props;
+    N_props.f_photosynthetic     = 0.50f;
+    N_props.N_to_Cab_coefficient = 0.40f;
+    N_props.Car_to_Cab_ratio     = 0.25f;
+    N_props.numberlayers         = 1.5f;
+    N_props.watermass            = 0.009f;
+    N_props.drymass              = 0.012f;
+    leafoptics.run(leaf_UUIDs, N_props);
+
+    // 3. Configure photosynthesis and request electron_transport_ratio output. This is
+    //    the J/Jmax field that drives the van der Tol fluorescence quantum yield.
+    PhotosynthesisModel photosynthesismodel(&context);
+    photosynthesismodel.optionalOutputPrimitiveData("electron_transport_ratio");
+
+    // 4. Configure the radiation model: source spectrum, PAR band, and the user-defined
+    //    SIF emission bands you want to image.
+    RadiationModel radiationmodel(&context);
+    uint sun_ID = radiationmodel.addCollimatedRadiationSource();
+    radiationmodel.setSourceSpectrum(sun_ID, "solar_spectrum_direct_ASTMG173");
+
+    radiationmodel.addRadiationBand("PAR", 400.f, 700.f);
+    radiationmodel.addRadiationBand("SIF_red",    680.f, 700.f);
+    radiationmodel.addRadiationBand("SIF_farred", 730.f, 760.f);
+    radiationmodel.disableEmission("PAR");
+    radiationmodel.setScatteringDepth("PAR",        3);
+    radiationmodel.setScatteringDepth("SIF_red",    3);
+    radiationmodel.setScatteringDepth("SIF_farred", 3);
+
+    // 5. Add a SIF camera. addSIFCamera() flags SIF_red/SIF_farred as SIF-emitting
+    //    and creates the internal 400-750 nm excitation-band set at 10 nm resolution.
+    SIFCameraProperties cam_props;
+    cam_props.camera_resolution         = make_int2(1024, 1024);
+    cam_props.HFOV                      = 30.f;
+    cam_props.lens_diameter             = 0.f;       // pinhole — no aperture dimming
+    cam_props.exposure                  = "auto";    // auto-exposure for ~1e-2 W/m^2 SIF flux
+    cam_props.excitation_bin_width_nm   = 10.f;      // 35 internal excitation bands
+    radiationmodel.addSIFCamera("SIF", {"SIF_red", "SIF_farred"},
+                                make_vec3(0.5f, 0.f, 1.5f), make_vec3(0.f, 0.f, 0.f),
+                                cam_props, 100);
+
+    // 6. Run PAR first to populate radiation_flux_PAR on each leaf. Photosynthesis
+    //    then reads it and writes electron_transport_ratio.
+    radiationmodel.runBand("PAR");
+    photosynthesismodel.run(leaf_UUIDs);
+
+    // 7. Run the SIF emission bands. Helios first ray-traces the internal excitation
+    //    bands (capturing per-leaf APAR), computes per-leaf Fluspect-B emission, then
+    //    ray-traces SIF_red and SIF_farred with the leaf as the emitting source.
+    radiationmodel.runBand(std::vector<std::string>{"SIF_red", "SIF_farred"});
+
+    // 8. Write a single-band PNG of the red SIF channel. Per-pixel data for any band
+    //    is also retrievable as a flat float array via getCameraPixelData().
+    radiationmodel.writeCameraImage("SIF", {"SIF_red"}, "red");
+
+    return 0;
+}
+~~~~~~
+
+The first \ref RadiationModel::runBand() "runBand()" call after
+\ref RadiationModel::addSIFCamera() "addSIFCamera()" runs the auto-generated excitation
+bands as part of the SIF dispatch — there is no separate API call to "prime" excitation.
+
+\subsection SIFOrdering Required Call Order
+
+The pipeline imposes a strict ordering on a few steps:
+
+| Step | Why it matters |
+|------|---------------|
+| \ref RadiationModel::setSourceSpectrum() before \ref RadiationModel::addSIFCamera() | \ref RadiationModel::addSIFCamera() integrates the source spectrum across each auto-generated excitation sub-band at creation time. A source whose spectrum is set later picks up zero flux on those internal bands. |
+| \ref LeafOptics::run() (or equivalent manual authoring) before \ref RadiationModel::addSIFCamera() | The diagnostic scan inside \ref RadiationModel::addSIFCamera() warns if no primitives carry \c fluspect_spectrum. The check at dispatch time is fatal-equivalent (zero SIF). |
+| \ref PhotosynthesisModel::optionalOutputPrimitiveData("electron_transport_ratio") followed by \ref PhotosynthesisModel::run() before the SIF \ref RadiationModel::runBand() "runBand()" | \c electron_transport_ratio (\f$J/J_{\max}\f$) is required input for \f$\Phi_F\f$. It must be present on every fluorescing leaf when the SIF runBand executes. |
+| The PAR \ref RadiationModel::runBand() "runBand()" before \ref PhotosynthesisModel::run() | Photosynthesis reads \c radiation_flux_PAR; if PAR has not yet been ray-traced, all leaves see zero light and \f$J/J_{\max}=0\f$ → \f$\Phi_F\f$ is small but the SIF signal is degenerate. |
+
+\section SIFAuthoring Authoring Leaf Biochemistry
+
+The radiation plug-in identifies fluorescing leaves by the presence of the
+\c fluspect_spectrum primitive-data label, which contains the <em>name</em> of a
+global-data \c std::vector<float> holding the 11 Fluspect-B biochemistry inputs (in
+fixed order: \f$C_{ab},\ C_{ca},\ C_w,\ C_{dm},\ C_s,\ C_{ant},\ C_p,\ C_{bc},\ N,\
+V2Z,\ f_{qe}\f$). All fluorescing primitives that share biochemistry should share a
+single label so that the Fluspect-B kernel is computed once and reused.
+
+\subsection SIFAuthoringLeafOptics Via the LeafOptics Plug-In (Recommended)
+
+\ref LeafOptics::run() is the canonical way to author the data the SIF pipeline needs.
+The UUID-taking overload \ref LeafOptics::run(const std::vector<uint>&, const LeafOpticsProperties&, const std::string&)
+"LeafOptics::run(UUIDs, props, label)" writes reflectance, transmittance, <em>and</em>
+Fluspect biochemistry to global data, and stamps each primitive's
+\c reflectivity_spectrum, \c transmissivity_spectrum, and \c fluspect_spectrum primitive
+data with the corresponding labels. The no-UUID overload
+\ref LeafOptics::run(const LeafOpticsProperties&, const std::string&) "LeafOptics::run(props, label)"
+writes the same global-data entries but does <em>not</em> stamp any primitives — call
+\c Context::setPrimitiveData() yourself for \c reflectivity_spectrum,
+\c transmissivity_spectrum, and \c fluspect_spectrum if you use that overload:
+
+~~~~~~{.cpp}
+LeafOptics leafoptics(&context);
+
+// Direct / per-species authoring with a fixed biochemistry vector.
+LeafOpticsProperties props;
+props.chlorophyllcontent = 40.f;   // ug/cm^2
+props.carotenoidcontent  = 10.f;
+props.numberlayers       = 1.5f;
+props.watermass          = 0.009f; // cm
+props.drymass            = 0.012f; // g/cm^2
+props.V2Z = 0.f;                   // de-epoxidation state, [0, 1]
+props.fqe = 1.f;                   // intrinsic fluorescence quantum efficiency
+leafoptics.run(leaf_UUIDs, props, "myleaf");
+~~~~~~
+
+Using the nitrogen-auto interface (\ref LeafOpticsProperties_Nauto) instead — passed to
+the two-argument overload \ref LeafOptics::run(const std::vector<uint>&, const LeafOpticsProperties_Nauto&)
+"LeafOptics::run(UUIDs, params)" — distributes leaves across spectrum bins by per-leaf
+nitrogen content and converts \f$N \to C_{ab}\f$ and \f$C_{ab} \to C_{ca}\f$ via the
+empirical relations:
+
+\f[ C_{ab}\,[\mu g/cm^2] = N_{\text{area}}\,[g/m^2] \times 100 \times f_{photo} \times k_{N\to Cab} \f]
+\f[ C_{ca}\,[\mu g/cm^2] = C_{ab} \times r_{Car/Cab} \f]
+
+This is the natural way to drive a per-leaf Cab gradient from the nitrogen model — see
+\ref LeafOpticsProperties_Nauto::f_photosynthetic, \ref LeafOpticsProperties_Nauto::N_to_Cab_coefficient,
+and \ref LeafOpticsProperties_Nauto::Car_to_Cab_ratio for the conversion coefficients,
+and \ref LeafOpticsProperties_Nauto::V2Z and \ref LeafOpticsProperties_Nauto::fqe for
+the Fluspect-B fields shared across all bins.
+
+\subsection SIFAuthoringManual Manual Authoring
+
+Authoring leaf biochemistry without LeafOptics is straightforward — write the 11-element
+biochemistry vector to global data once, then stamp each leaf with the corresponding label.
+The field order is fixed:
+
+~~~~~~{.cpp}
+//                                     Cab,  Cca,  Cw,    Cdm,   Cs,  Cant, Cp,  Cbc, N,    V2Z, fqe
+std::vector<float> biochem = {        40.f, 10.f, 0.009f, 0.012f, 0.f, 1.f, 0.f, 0.f, 1.5f, 0.f, 1.f };
+context.setGlobalData("fluspect_biochem_myleaf", biochem);
+context.setPrimitiveData(leaf_UUIDs, "fluspect_spectrum", "fluspect_biochem_myleaf");
+~~~~~~
+
+The radiation plug-in caches the Fluspect-B kernel keyed on the label, so reusing a single
+label across many leaves is far cheaper than authoring per-leaf vectors.
+
+\section SIFPhysics Physics
+
+\subsection SIFPhysicsYield Fluorescence Quantum Yield (van der Tol 2014)
+
+For each fluorescing leaf, the fluorescence quantum yield \f$\Phi_F\f$ is computed
+internally from four photosystem-II rate constants (units of inverse time, normalized
+so that \f$k_F + k_D + k_P + k_N\f$ is a meaningful denominator):
+
+\f[ \Phi_F = \frac{k_F}{k_F + k_D + k_P + k_N} \f]
+
+where:
+
+- \f$k_F = 0.05\f$ — constant fluorescence rate.
+- \f$k_D = \max(0.03\,T_C + 0.0773,\ 0.87)\f$ — temperature-dependent thermal dissipation,
+  with \f$T_C\f$ the leaf temperature in °C (read from the \c temperature primitive data
+  if present; defaulted to 25 °C otherwise).
+- \f$k_N\f$ — non-photochemical quenching, modeled as a piecewise-linear function of
+  \f$x = \mathrm{clamp}(1 - J/J_{\max},\ 0,\ 1)\f$:
+  \f[
+    k_N = \begin{cases}
+      0                       & x < 0.2 \\
+      \dfrac{2(x-0.2)}{0.4}    & 0.2 \le x < 0.6 \\
+      2 + \dfrac{4(x-0.6)}{0.4} & x \ge 0.6
+    \end{cases}
+  \f]
+- \f$k_P\f$ — photochemistry rate, back-solved from the photochemical-yield identity
+  \f$\Phi_P = k_P/(k_F + k_D + k_P + k_N)\f$:
+  \f[ k_P = (k_F + k_D + k_N)\,\frac{\Phi_P}{1 - \Phi_P}, \quad \Phi_P = (J/J_{\max})\,\Phi_{P,\max} \f]
+  with \f$\Phi_{P,\max} = 0.85\f$ and \f$\Phi_P\f$ clamped to \f$[0, 0.84]\f$ so the
+  denominator is well defined.
+
+The \f$J/J_{\max}\f$ ratio is read from the \c electron_transport_ratio primitive data,
+populated by the photosynthesis plug-in when
+\ref PhotosynthesisModel::optionalOutputPrimitiveData() is called with that label and
+\ref PhotosynthesisModel::run() is invoked.
+
+The computed \f$\Phi_F\f$ is written back to each leaf as the diagnostic primitive-data
+field \c fluorescence_yield, so it can be visualized or post-processed.
+
+\subsection SIFPhysicsKernel Fluspect-B Excitation–Emission Kernel
+
+For each leaf with a \c fluspect_spectrum label, the SIF dispatch retrieves a cached
+Fluspect-B kernel (or computes one on first use via
+\ref helios::computeFluspectKernel()). The kernel — a \ref helios::FluspectKernel struct
+— provides two excitation–emission matrices:
+
+- \f$M_f(\lambda_e, \lambda_f)\f$ — <b>forward</b> kernel: emission at \f$\lambda_f\f$
+  per unit excitation flux at \f$\lambda_e\f$, leaving the same face the excitation
+  arrived on.
+- \f$M_b(\lambda_e, \lambda_f)\f$ — <b>backward</b> kernel: emission leaving the opposite
+  face.
+
+The excitation grid \f$\{\lambda_e\}\f$ spans 400–750 nm at the user-chosen
+\ref SIFCameraProperties::excitation_bin_width_nm spacing; the emission grid
+\f$\{\lambda_f\}\f$ is fixed at 640–848 nm in 4 nm steps (Fluspect-B native).
+
+The per-leaf, per-emission-wavelength fluorescence radiance is the kernel-weighted sum
+of absorbed PAR across the excitation grid, scaled by the quantum yield:
+
+\f[ F(\lambda_f) = \Phi_F\, f_{qe} \sum_{\lambda_e} \mathrm{APAR}(\lambda_e)\, M(\lambda_e, \lambda_f) \f]
+
+with one such sum per face (using \f$M_f\f$ for the top face and \f$M_b\f$ for the bottom
+face). \f$\mathrm{APAR}(\lambda_e)\f$ is the per-leaf absorbed PAR (W/m²) on excitation
+sub-band \f$\lambda_e\f$, captured into the per-leaf APAR buffer by ray-tracing the
+auto-generated excitation bands. \f$f_{qe}\f$ is the user-calibrated intrinsic
+fluorescence quantum efficiency from the 11th biochemistry field — the kernel itself is
+computed with \f$f_{qe}=1\f$ so that leaves sharing biochemistry but differing in
+\f$J/J_{\max}\f$ can share a cached kernel and the user's calibration is applied at
+emission time.
+
+\subsection SIFPhysicsBandIntegration Per-Band Source Flux
+
+The per-band per-face source emission flux (W/m²) for a user-defined SIF emission band
+spanning \f$[\lambda_{\min}, \lambda_{\max}]\f$ is the trapezoidal integral of \f$F\f$
+over that interval, computed independently for the top and bottom faces:
+
+\f[ F_{\text{band}} = \int_{\lambda_{\min}}^{\lambda_{\max}} F(\lambda_f)\,d\lambda_f \f]
+
+The two values are stored in internal per-face buffers and consumed by the standard
+\ref RadiationModel::runBand() "runBand()" emission loop in place of the Stefan–Boltzmann
+\f$\varepsilon \sigma T^4\f$ source. Two-sided leaves therefore emit physically distinct
+upward and downward SIF lobes. From this point on, the SIF band is ray-traced exactly
+like any other emission band — escape probability, multiple scattering, and camera
+acquisition are handled by the existing radiative-transfer machinery and are configured
+via the regular \ref RadiationModel::setScatteringDepth() "setScatteringDepth()" and
+related calls on the SIF emission band.
+
+\section SIFCameraProps SIFCameraProperties
+
+\ref SIFCameraProperties inherits from \ref CameraProperties — geometry, resolution,
+exposure, white balance, and spectral response work identically — and adds two SIF-specific
+fields:
+
+<table>
+<tr><th>Field <th>Default <th>Description
+<tr>
+<td>\ref SIFCameraProperties::excitation_bin_width_nm "excitation_bin_width_nm"
+<td>10.0 nm
+<td>Spectral bin width in nm for the auto-generated excitation bands covering 400–750 nm.
+    Smaller bins give more accurate Fluspect-B integration; larger bins reduce ray-trace
+    cost and memory. Must be \f$> 0\f$.
+<tr>
+<td>\ref SIFCameraProperties::excitation_scattering_depth "excitation_scattering_depth"
+<td>0
+<td>Scattering depth applied to the auto-generated excitation bands when computing
+    APAR. At 0, every ray hitting a leaf is treated as fully absorbed regardless of
+    \f$\rho+\tau\f$ — fast, but over-estimates APAR (especially in the NIR excitation
+    range where leaf reflectance and transmittance are both large). Set to ≥ 1 to
+    include inter-leaf scattering. The highest value requested by any SIF camera bound
+    to a given excitation set wins for that set.
+</table>
+
+The standard inherited \ref CameraProperties fields apply unchanged. In particular:
+
+- Setting \ref CameraProperties::lens_diameter "lens_diameter" to 0 selects an idealized
+  pinhole camera (no aperture dimming, infinite depth of field) — useful for SIF imaging
+  because the absolute fluorescence flux is small (\f$\sim 10^{-2}\f$ W/m²) and aperture
+  dimming would compress dynamic range further.
+- Setting \ref CameraProperties::exposure "exposure" to \c "auto" engages per-band
+  auto-exposure. SIF cameras carry the \c "spectral" camera type (a spectral camera
+  typically has narrow bands where most of the frame reads near zero — sky, soil,
+  outside-FOV — so a luminance-/median-based gain would saturate the subject). The
+  spectral path therefore anchors each band's gain to the band's 95th-percentile
+  pixel value (mapped to ~0.7 in normalized 0–1 space), which lands the brightest
+  meaningful signal in the bright-but-not-clipped range after the linear→sRGB gamma
+  applied at image export.
+
+The scattering depth applied to each <em>user-defined</em> SIF emission band is
+configured via the regular \ref RadiationModel::setScatteringDepth() "setScatteringDepth()"
+call on the band label, independent of \ref SIFCameraProperties::excitation_scattering_depth.
+
+\section SIFExcitationBands Excitation Bands and Memory Footprint
+
+\ref RadiationModel::addSIFCamera() creates a single shared excitation set per unique
+\ref SIFCameraProperties::excitation_bin_width_nm value, regardless of how many SIF
+cameras share that bin width. Internal band labels follow the form
+<tt>_SIF_exc_&lt;binwidth&gt;_&lt;wmin&gt;_&lt;wmax&gt;</tt> and are added to the radiation
+model's regular band registry — they are real bands, just with the leading underscore
+flagging them as internal so that \ref RadiationModel::runBand() "runBand()" suppresses
+the per-band scattering-disabled warning for them. The number of internal bands is
+\f$\lceil 350 / \mathrm{bin\_width\_nm} \rceil\f$ — for example:
+
+| Bin width | Internal bands | Per-leaf APAR storage (per 1 M primitives) |
+|----------:|---------------:|------------------------------------------:|
+| 5 nm  | 70 | ~280 MB |
+| 10 nm | 35 | ~140 MB |
+| 25 nm | 14 |  ~56 MB |
+| 50 nm |  7 |  ~28 MB |
+
+GPU ray-trace cost scales linearly in the number of excitation bands. For very large
+canopies, prefer 25–50 nm; for canopies where a few-percent error in APAR matters (e.g.
+calibration studies), prefer 5–10 nm. The kernel itself is tabulated on the same
+excitation grid, so changing \c excitation_bin_width_nm also forces a kernel recompute
+the next time a leaf with the affected bin width is encountered.
+
+\subsection SIFBandBindings Band Binding Across Multiple Cameras
+
+Each user-defined SIF emission band is bound to <b>exactly one excitation bin width</b>
+— the bin width of the first \ref RadiationModel::addSIFCamera() call that flagged the
+band. A subsequent \ref RadiationModel::addSIFCamera() call that flags the same band with
+a different \c excitation_bin_width_nm raises a \c helios_runtime_error. The reason is
+that the per-leaf source flux into a given emission band must be unambiguous — two
+cameras viewing the same fluorescent canopy must agree on what each leaf is emitting.
+
+If two cameras genuinely need different excitation resolutions, give each its own
+disjoint emission bands:
+
+~~~~~~{.cpp}
+// 10 nm bin-width camera
+radiationmodel.addRadiationBand("SIF_red_fine", 680.f, 700.f);
+SIFCameraProperties cam_fine;
+cam_fine.excitation_bin_width_nm = 10.f;
+radiationmodel.addSIFCamera("camA", {"SIF_red_fine"}, posA, lookA, cam_fine, 100);
+
+// 25 nm bin-width camera, on a different (but identically-defined) band
+radiationmodel.addRadiationBand("SIF_red_coarse", 680.f, 700.f);
+SIFCameraProperties cam_coarse;
+cam_coarse.excitation_bin_width_nm = 25.f;
+radiationmodel.addSIFCamera("camB", {"SIF_red_coarse"}, posB, lookB, cam_coarse, 100);
+~~~~~~
+
+\section SIFOutputData Output Data
+
+The SIF pipeline produces the following outputs:
+
+<table>
+<tr><th>Where <th>Label <th>Type <th>Units <th>Description
+<tr>
+<td>Primitive data
+<td>\c fluorescence_yield
+<td>float
+<td>—
+<td>Diagnostic per-leaf van der Tol \f$\Phi_F\f$ written at each SIF dispatch. Useful
+    for sanity checks (typical range 0.005–0.05) and for post-hoc analysis of how stress
+    drove the imaged signal.
+<tr>
+<td>Primitive data
+<td>\c radiation_flux_&lt;band&gt;
+<td>float
+<td>W/m²
+<td>Per-leaf incident SIF flux in the named user-defined emission band. Layout is
+    identical to a regular \ref RadiationModel::runBand() "runBand()" output and can
+    be visualized via \ref Visualizer::colorContextPrimitivesByData().
+<tr>
+<td>Camera pixel data
+<td>(per band)
+<td>float[]
+<td>W/m²
+<td>Per-pixel per-band camera radiometric value (raw, before any spectral-response,
+    auto-exposure, or white-balance scaling), retrieved with
+    \ref RadiationModel::getCameraPixelData() "getCameraPixelData(camera_label, band_label)".
+    Layout matches a regular \ref RadiationCamera "radiation camera" pixel-data array.
+<tr>
+<td>Image file
+<td>(via \ref RadiationModel::writeCameraImage())
+<td>PNG / EXR
+<td>—
+<td>Single- or multi-band camera images written to disk. Identical API to a regular
+    radiation camera.
+</table>
+
+\ref RadiationModel::isSIFCamera() returns \c true for any camera registered through
+\ref RadiationModel::addSIFCamera() — useful for downstream tooling that needs to
+distinguish SIF cameras from regular multispectral cameras.
+
+\section SIFTrouble Diagnostics & Troubleshooting
+
+\ref RadiationModel::addSIFCamera() runs a setup-time diagnostic scan that flags the most
+common silent-failure modes (no source spectrum set, no leaf carries a
+\c fluspect_spectrum label) as warnings. The SIF dispatch path warns again at
+\ref RadiationModel::runBand() "runBand()" time about partial coverage — some leaves
+have biochemistry but lack \c electron_transport_ratio, or vice versa. Disable these
+warnings via \ref RadiationModel::disableMessages() if running batch jobs where the
+warning channel is otherwise too noisy.
+
+| Symptom | Likely Cause | Fix |
+|---------|--------------|-----|
+| All pixels are black; \c fluorescence_yield not written | No leaf has both \c fluspect_spectrum and \c electron_transport_ratio | Call \ref LeafOptics::run() (authors \c fluspect_spectrum) and \ref PhotosynthesisModel::optionalOutputPrimitiveData("electron_transport_ratio") followed by \ref PhotosynthesisModel::run() before the SIF \ref RadiationModel::runBand() "runBand()" |
+| All pixels are black; \c fluorescence_yield is written and finite | Excitation bands received zero flux | Check that at least one radiation source has a spectrum set (via \ref RadiationModel::setSourceSpectrum()) <em>before</em> \ref RadiationModel::addSIFCamera() is called |
+| Pixels far below expected magnitude in NIR-influenced bands | Excitation depth = 0 over-absorbs in NIR | Set \ref SIFCameraProperties::excitation_scattering_depth to ≥ 1 to include scattering of excitation light |
+| \c helios_runtime_error from \ref RadiationModel::addSIFCamera() about a "band already bound to bin width …" | Two cameras flagging the same band with different \c excitation_bin_width_nm | Either match \c excitation_bin_width_nm across cameras, or give each camera its own emission bands (see \ref SIFBandBindings) |
+| Visible flux but very small dynamic range in PNG output | SIF radiance is \f$\sim 10^{-2}\f$ W/m²; a linear 0–255 mapping will be near-black | Use \c exposure = "auto" in \ref SIFCameraProperties to engage auto-exposure, or write EXR via \ref RadiationModel::writeCameraImageDataEXR() to preserve the absolute scale |
+
+\section SIFReferences References
+
+1. Vilfan, N., van der Tol, C., Muller, O., Rascher, U., Verhoef, W. (2016).
+   "Fluspect-B: A model for leaf fluorescence, reflectance and transmittance spectra."
+   <em>Remote Sensing of Environment</em>, 186: 596–615.
+   <a href="https://doi.org/10.1016/j.rse.2016.09.017">https://doi.org/10.1016/j.rse.2016.09.017</a>
+
+2. van der Tol, C., Berry, J. A., Campbell, P. K. E., Rascher, U. (2014).
+   "Models of fluorescence and photosynthesis for interpreting measurements of solar-induced
+   chlorophyll fluorescence." <em>Journal of Geophysical Research: Biogeosciences</em>,
+   119(12): 2312–2327.
+   <a href="https://doi.org/10.1002/2014JG002713">https://doi.org/10.1002/2014JG002713</a>
+
+3. Féret, J.-B., Gitelson, A. A., Noble, S. D., Jacquemoud, S. (2017). "PROSPECT-D:
+   Towards modeling leaf optical properties through a complete lifecycle."
+   <em>Remote Sensing of Environment</em>, 193: 204–215.
+   <a href="https://doi.org/10.1016/j.rse.2017.03.004">https://doi.org/10.1016/j.rse.2017.03.004</a>
+
+4. Reference C++ Fluspect-B port lives in
+   <tt>plugins/radiation/include/FluspectB.h</tt> and
+   <tt>plugins/radiation/src/FluspectB.cpp</tt>. Optipar specific-absorption coefficients
+   are loaded from <tt>plugins/radiation/spectral_data/fluspect_B_optipar.xml</tt>.
+   This implementation tracks the <tt>fluspect_B_CX.m</tt> routine in SCOPE v2.0
+   (<a href="https://github.com/Christiaanvandertol/SCOPE">https://github.com/Christiaanvandertol/SCOPE</a>)
+   to within \f$\sim 10^{-6}\f$ per kernel element.
+
+*/

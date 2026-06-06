@@ -849,8 +849,8 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_CPU(const std::vector<uint
             context->getPrimitiveData(p, "air_pressure", pressure[u]);
             if (pressure[u] < 10000.f) {
                 if (message_flag) {
-                    std::cout << "WARNING (EnergyBalanceModel::run): Value of " << pressure[u] << " given in 'air_pressure' primitive data is very small. "
-                              << "Values should be given in units of Pascals. Assuming default value of " << pressure_default << std::endl;
+                    warnings.addWarning("air_pressure_out_of_range", "Value of " + std::to_string(pressure[u]) + " given in 'air_pressure' primitive data is very small. "
+                                                                             "Values should be given in units of Pascals. Assuming default value of " + std::to_string(pressure_default));
                 }
                 pressure[u] = pressure_default;
             }

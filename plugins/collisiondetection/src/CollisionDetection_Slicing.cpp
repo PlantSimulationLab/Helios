@@ -1452,7 +1452,7 @@ std::vector<uint> CollisionDetection::slicePrimitivesUsingGrid(const std::vector
         if (flag == false) {
             // Primitive doesn't fit in any cell - this is an error condition that should be reported
             if (this->printmessages) {
-                std::cerr << "WARNING (CollisionDetection::slicePrimitivesUsingGrid): Primitive " << UUIDs_to_slice.at(p) << " does not fit in any grid cell after slicing" << std::endl;
+                warnings.addWarning("slice_does_not_fit_grid_cell", "Primitive " + std::to_string(UUIDs_to_slice.at(p)) + " does not fit in any grid cell after slicing");
             }
         }
     }

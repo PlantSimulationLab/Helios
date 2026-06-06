@@ -36,6 +36,9 @@ extern "C" {
 #include "jpeglib.h"
 }
 
+// EXIF/XMP segment builders for the metadata-aware writeJPEG overload
+#include "exif_writer.h"
+
 using namespace helios;
 
 void helios::helios_runtime_error(const std::string &error_message) {
@@ -1987,10 +1990,10 @@ helios::int2 helios::getImageResolutionJPEG(const std::string &filename) {
     return make_int2(cinfo.output_width, cinfo.output_height);
 }
 
-void helios::writeJPEG(const std::string &a_filename, uint width, uint height, const std::vector<helios::RGBcolor> &pixel_data) {
+static void writeJPEGInternal(const std::string &a_filename, uint width, uint height, const std::vector<helios::RGBcolor> &pixel_data, const helios::ImageEXIFData *metadata) {
 
     std::string filename = a_filename;
-    auto file_extension = getFileExtension(filename);
+    auto file_extension = helios::getFileExtension(filename);
     if (file_extension != ".jpg" && file_extension != ".JPG" && file_extension != ".jpeg" && file_extension != ".JPEG") {
         filename.append(".jpeg");
     }
@@ -2004,9 +2007,9 @@ void helios::writeJPEG(const std::string &a_filename, uint width, uint height, c
 
     size_t ii = 0;
     for (size_t i = 0; i < width * height; i++) {
-        screen_shot_trans.at(ii) = (unsigned char) round(clamp(pixel_data.at(i).r, 0.f, 1.f) * 255);
-        screen_shot_trans.at(ii + 1) = (unsigned char) round(clamp(pixel_data.at(i).g, 0.f, 1.f) * 255);
-        screen_shot_trans.at(ii + 2) = (unsigned char) round(clamp(pixel_data.at(i).b, 0.f, 1.f) * 255);
+        screen_shot_trans.at(ii) = (unsigned char) round(helios::clamp(pixel_data.at(i).r, 0.f, 1.f) * 255);
+        screen_shot_trans.at(ii + 1) = (unsigned char) round(helios::clamp(pixel_data.at(i).g, 0.f, 1.f) * 255);
+        screen_shot_trans.at(ii + 2) = (unsigned char) round(helios::clamp(pixel_data.at(i).b, 0.f, 1.f) * 255);
         ii += 3;
     }
 
@@ -2039,6 +2042,16 @@ void helios::writeJPEG(const std::string &a_filename, uint width, uint height, c
 
     jpeg_start_compress(&cinfo, (boolean) 1);
 
+    if (metadata != nullptr) {
+        // EXIF APP1 first, then optionally XMP APP1.
+        std::vector<unsigned char> exif_seg = helios::detail::buildEXIFAppSegment(*metadata);
+        jpeg_write_marker(&cinfo, JPEG_APP0 + 1, exif_seg.data(), static_cast<unsigned int>(exif_seg.size()));
+        if (metadata->xmp_valid) {
+            std::vector<unsigned char> xmp_seg = helios::detail::buildXMPAppSegment(*metadata);
+            jpeg_write_marker(&cinfo, JPEG_APP0 + 1, xmp_seg.data(), static_cast<unsigned int>(xmp_seg.size()));
+        }
+    }
+
     try {
         row_stride = width * 3; /* JSAMPLEs per row in image_buffer */
 
@@ -2053,6 +2066,14 @@ void helios::writeJPEG(const std::string &a_filename, uint width, uint height, c
         jpeg_destroy_compress(&cinfo);
         throw;
     }
+}
+
+void helios::writeJPEG(const std::string &a_filename, uint width, uint height, const std::vector<helios::RGBcolor> &pixel_data) {
+    writeJPEGInternal(a_filename, width, height, pixel_data, nullptr);
+}
+
+void helios::writeJPEG(const std::string &a_filename, uint width, uint height, const std::vector<helios::RGBcolor> &pixel_data, const helios::ImageEXIFData &metadata) {
+    writeJPEGInternal(a_filename, width, height, pixel_data, &metadata);
 }
 
 void helios::writeJPEG(const std::string &a_filename, uint width, uint height, const std::vector<unsigned char> &pixel_data) {
@@ -2224,7 +2245,11 @@ helios::vec3 helios::spline_interp3(float u, const vec3 &x_start, const vec3 &ta
     // Perform interpolation between two 3D points using Cubic Hermite Spline
 
     if (u < 0 || u > 1.f) {
-        std::cerr << "WARNING (spline_interp3): Clamping query point 'u' to the interval (0,1)" << std::endl;
+        static bool spline_interp3_clamp_warning_shown = false;
+        if (!spline_interp3_clamp_warning_shown) {
+            std::cerr << "WARNING (spline_interp3): Clamping query point 'u' to the interval (0,1)" << std::endl;
+            spline_interp3_clamp_warning_shown = true;
+        }
         u = clamp(u, 0.f, 1.f);
     }
 

@@ -107,7 +107,9 @@ namespace helios {
                             const std::vector<float> &camera_sky_radiance,
                             const helios::vec3 &sun_direction,
                             const std::vector<float> &solar_disk_radiance,
-                            float solar_disk_cos_angle) override;
+                            float solar_disk_cos_angle,
+                            const std::vector<float> &camera_diffuse_flux,
+                            const std::vector<uint32_t> &band_emission_flag) override;
 
         // Ray launching
         void launchDirectRays(const RayTracingLaunchParams &params) override;
@@ -253,6 +255,8 @@ namespace helios {
         CUdeviceptr d_sky_radiance_params    = 0;
         CUdeviceptr d_camera_sky_radiance    = 0;
         CUdeviceptr d_solar_disk_radiance    = 0;
+        CUdeviceptr d_camera_diffuse_flux    = 0;
+        CUdeviceptr d_band_emission_flag     = 0;
 
         // ---- Band launch flag buffer ----
         CUdeviceptr d_band_launch_flag       = 0;

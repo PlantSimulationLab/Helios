@@ -351,6 +351,8 @@ void OptiX6Backend::initialize() {
     addBuffer("sky_radiance_params", sky_radiance_params_RTbuffer, sky_radiance_params_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT4, 1);
     addBuffer("camera_sky_radiance", camera_sky_radiance_RTbuffer, camera_sky_radiance_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("solar_disk_radiance", solar_disk_radiance_RTbuffer, solar_disk_radiance_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
+    addBuffer("camera_diffuse_flux", camera_diffuse_flux_RTbuffer, camera_diffuse_flux_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
+    addBuffer("band_emission_flag", band_emission_flag_RTbuffer, band_emission_flag_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
 
     // Band control buffers
     addBuffer("band_launch_flag", band_launch_flag_RTbuffer, band_launch_flag_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_BYTE, 1);
@@ -554,13 +556,14 @@ void OptiX6Backend::updateDiffuseRadiation(const std::vector<float> &flux, const
     diffuseToBuffers(flux, extinction, peak_dir, dist_norm, sky_energy);
 }
 
-void OptiX6Backend::updateSkyModel(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction, const std::vector<float> &solar_disk_radiance, float solar_disk_cos_angle) {
+void OptiX6Backend::updateSkyModel(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction, const std::vector<float> &solar_disk_radiance, float solar_disk_cos_angle,
+                                    const std::vector<float> &camera_diffuse_flux, const std::vector<uint32_t> &band_emission_flag) {
 
     if (!is_initialized) {
         helios_runtime_error("ERROR (OptiX6Backend::updateSkyModel): Backend not initialized.");
     }
 
-    skyModelToBuffers(sky_radiance_params, camera_sky_radiance, sun_direction, solar_disk_radiance, solar_disk_cos_angle);
+    skyModelToBuffers(sky_radiance_params, camera_sky_radiance, sun_direction, solar_disk_radiance, solar_disk_cos_angle, camera_diffuse_flux, band_emission_flag);
 }
 
 void OptiX6Backend::launchDirectRays(const RayTracingLaunchParams &params) {
@@ -1751,7 +1754,8 @@ void OptiX6Backend::diffuseToBuffers(const std::vector<float> &flux, const std::
     }
 }
 
-void OptiX6Backend::skyModelToBuffers(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction, const std::vector<float> &solar_disk_radiance, float solar_disk_cos_angle) {
+void OptiX6Backend::skyModelToBuffers(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction, const std::vector<float> &solar_disk_radiance, float solar_disk_cos_angle,
+                                       const std::vector<float> &camera_diffuse_flux, const std::vector<uint32_t> &band_emission_flag) {
     // Upload sky model parameters for camera rendering
 
     if (!sky_radiance_params.empty()) {
@@ -1767,6 +1771,15 @@ void OptiX6Backend::skyModelToBuffers(const std::vector<helios::vec4> &sky_radia
 
     if (!solar_disk_radiance.empty()) {
         initializeBuffer1Df(solar_disk_radiance_RTbuffer, solar_disk_radiance);
+    }
+
+    if (!camera_diffuse_flux.empty()) {
+        initializeBuffer1Df(camera_diffuse_flux_RTbuffer, camera_diffuse_flux);
+    }
+
+    if (!band_emission_flag.empty()) {
+        std::vector<uint> flags_u(band_emission_flag.begin(), band_emission_flag.end());
+        initializeBuffer1Dui(band_emission_flag_RTbuffer, flags_u);
     }
 
     // Set solar disk angular size

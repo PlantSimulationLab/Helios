@@ -251,7 +251,7 @@ public:
     //! Divergence angle of the laser beam in radians
     /**
      * \param[in] scanID ID of scan.
-     * \return Divergence angle of the beam.
+     * \return Divergence angle of the beam, in radians.
      */
     float getScanBeamDivergence(uint scanID) const;
 

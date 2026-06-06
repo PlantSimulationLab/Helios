@@ -80,6 +80,8 @@ layout(set = 2, binding = 10) readonly buffer RadiationSpecularBuffer { float ra
 layout(set = 3, binding = 4) readonly buffer SkyRadianceParamsBuffer { vec4 sky_radiance_params[]; };
 layout(set = 3, binding = 5) readonly buffer CameraSkyRadianceBuffer { float camera_sky_radiance[]; };
 layout(set = 3, binding = 6) readonly buffer SolarDiskRadianceBuffer { float solar_disk_radiance[]; };
+layout(set = 3, binding = 7) readonly buffer CameraDiffuseFluxBuffer { float camera_diffuse_flux[]; };
+layout(set = 3, binding = 8) readonly buffer BandEmissionFlagBuffer  { uint  band_emission_flag[]; };
 
 // ========== Include common shader utilities ==========
 #include "common/random.glsl"
@@ -471,6 +473,13 @@ void main() {
                     sky_radiance_params[b]
                 );
                 radiance = camera_sky_radiance[b] * angular_weight;
+            }
+
+            // Isotropic sky emission/longwave: when band has emission enabled, the user-set
+            // diffuse_flux represents hemispherical sky thermal/longwave irradiance.
+            // Convert hemispherical flux to isotropic radiance: L = E / pi.
+            if (band_emission_flag[b] != 0u && camera_diffuse_flux[b] > 0.0) {
+                radiance += camera_diffuse_flux[b] / PI;
             }
 
             if (radiance > 0.0) {

@@ -659,6 +659,13 @@ extern "C" __global__ void __miss__camera() {
                        evaluateDiffuseAngularDistribution(ray_dir, params.sun_direction, 0.0f, 1.0f, sky_p);
         }
 
+        // Isotropic sky emission/longwave: when band has emission enabled, the user-set diffuse_flux
+        // represents hemispherical sky thermal/longwave irradiance. Convert to isotropic radiance.
+        if (params.band_emission_flag && params.band_emission_flag[b] != 0u &&
+            params.camera_diffuse_flux && params.camera_diffuse_flux[b] > 0.0f) {
+            radiance += params.camera_diffuse_flux[b] / M_PI;
+        }
+
         if (radiance > 0.0f) {
             atomicFloatAdd(&params.radiation_in_camera[pixel_idx * Nbands_l + b],
                            radiance * (float)prd->strength);

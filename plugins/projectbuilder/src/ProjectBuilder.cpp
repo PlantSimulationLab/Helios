@@ -3757,7 +3757,7 @@ void ProjectBuilder::generalTab() {
     ImGui::OpenPopupOnItemClick("randomize_longitude", ImGuiPopupFlags_MouseButtonRight);
     // ####### UTC OFFSET ####### //
     ImGui::SetNextItemWidth(100);
-    ImGui::InputInt("UTC Offset", &UTC_offset);
+    ImGui::InputFloat("UTC Offset", &UTC_offset);
     randomizePopup("UTC_offset", createTaggedPtr(&UTC_offset));
     randomizerParams("UTC_offset");
     ImGui::OpenPopupOnItemClick("randomize_UTC_offset", ImGuiPopupFlags_MouseButtonRight);
@@ -6447,7 +6447,7 @@ void ProjectBuilder::updateLocation() {
     Location location;
     location.latitude_deg = latitude;
     location.longitude_deg = longitude;
-    location.UTC_offset = static_cast<float>(UTC_offset);
+    location.UTC_offset = UTC_offset;
     context->setLocation(location);
 }
 

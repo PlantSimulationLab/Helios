@@ -1138,7 +1138,11 @@ void Primitive::translate(const helios::vec3 &shift) {
 
 void Patch::rotate(float rotation_radians, const char *rotation_axis_xyz_string) {
     if (parent_object_ID != 0) {
-        std::cerr << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        static bool patch_rotate_axis_warning_shown = false;
+        if (!patch_rotate_axis_warning_shown) {
+            std::cerr << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+            patch_rotate_axis_warning_shown = true;
+        }
         return;
     }
     if (rotation_radians == 0) {
@@ -1165,7 +1169,11 @@ void Patch::rotate(float rotation_radians, const char *rotation_axis_xyz_string)
 
 void Patch::rotate(float rotation_radians, const helios::vec3 &rotation_axis_vector) {
     if (parent_object_ID != 0) {
-        std::cerr << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        static bool patch_rotate_vec_warning_shown = false;
+        if (!patch_rotate_vec_warning_shown) {
+            std::cerr << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+            patch_rotate_vec_warning_shown = true;
+        }
         return;
     }
     if (rotation_radians == 0) {
@@ -1180,7 +1188,11 @@ void Patch::rotate(float rotation_radians, const helios::vec3 &rotation_axis_vec
 
 void Patch::rotate(float rotation_radians, const helios::vec3 &origin, const helios::vec3 &rotation_axis_vector) {
     if (parent_object_ID != 0) {
-        std::cerr << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        static bool patch_rotate_origin_warning_shown = false;
+        if (!patch_rotate_origin_warning_shown) {
+            std::cerr << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+            patch_rotate_origin_warning_shown = true;
+        }
         return;
     }
     if (rotation_radians == 0) {
@@ -1195,7 +1207,11 @@ void Patch::rotate(float rotation_radians, const helios::vec3 &origin, const hel
 
 void Triangle::rotate(float rotation_radians, const char *rotation_axis_xyz_string) {
     if (parent_object_ID != 0) {
-        std::cerr << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        static bool triangle_rotate_axis_warning_shown = false;
+        if (!triangle_rotate_axis_warning_shown) {
+            std::cerr << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+            triangle_rotate_axis_warning_shown = true;
+        }
         return;
     }
     if (rotation_radians == 0) {
@@ -1222,7 +1238,11 @@ void Triangle::rotate(float rotation_radians, const char *rotation_axis_xyz_stri
 
 void Triangle::rotate(float rotation_radians, const helios::vec3 &rotation_axis_vector) {
     if (parent_object_ID != 0) {
-        std::cerr << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        static bool triangle_rotate_vec_warning_shown = false;
+        if (!triangle_rotate_vec_warning_shown) {
+            std::cerr << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+            triangle_rotate_vec_warning_shown = true;
+        }
         return;
     }
     if (rotation_radians == 0) {
@@ -1237,7 +1257,11 @@ void Triangle::rotate(float rotation_radians, const helios::vec3 &rotation_axis_
 
 void Triangle::rotate(float rotation_radians, const helios::vec3 &origin, const helios::vec3 &rotation_axis_vector) {
     if (parent_object_ID != 0) {
-        std::cerr << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+        static bool triangle_rotate_origin_warning_shown = false;
+        if (!triangle_rotate_origin_warning_shown) {
+            std::cerr << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
+            triangle_rotate_origin_warning_shown = true;
+        }
         return;
     }
     if (rotation_radians == 0) {

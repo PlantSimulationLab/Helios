@@ -2757,7 +2757,7 @@ namespace helios {
 
         void loadOData(pugi::xml_node p, uint ID);
 
-        void loadOsubPData(pugi::xml_node p, uint ID);
+        void loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator &warnings);
 
         void writeDataToXMLstream(const char *data_group, const std::vector<std::string> &data_labels, void *ptr, std::ofstream &outfile) const;
 
@@ -3696,6 +3696,13 @@ namespace helios {
          * \param[in] label Name/label associated with data
          */
         void clearPrimitiveData(const std::vector<uint> &UUIDs, const char *label);
+
+        //! Clear primitive data with the given label from every primitive in the Context (including hidden primitives), and release the registered data type for the label
+        /**
+         * \param[in] label Name/label associated with data
+         * \note After this call, the label may be re-registered with a different type by a subsequent setPrimitiveData() call.
+         */
+        void clearPrimitiveData(const char *label);
 
         //! Lists all primitive data labels that exist in the Context.
         /**
@@ -5106,6 +5113,13 @@ namespace helios {
          * \param[in] label Name/label associated with data
          */
         void clearObjectData(const std::vector<uint> &objIDs, const char *label);
+
+        //! Clear object data with the given label from every compound object in the Context (including hidden objects), and release the registered data type for the label
+        /**
+         * \param[in] label Name/label associated with data
+         * \note After this call, the label may be re-registered with a different type by a subsequent setObjectData() call.
+         */
+        void clearObjectData(const char *label);
 
         //! Lists all object data labels that exist in the Context.
         /**
@@ -6846,6 +6860,25 @@ namespace helios {
          */
         void deleteTimeseriesVariable(const char *label);
 
+        //! Delete a single timeseries data point at the specified date and time for a given variable
+        /**
+         * \param[in] label Name of the timeseries variable.
+         * \param[in] date Calendar date of the data point to delete.
+         * \param[in] time Time of day of the data point to delete.
+         * \note If the variable does not exist or no data point exists at the exact (date, time), a non-fatal warning is issued to stderr and the call is otherwise a no-op. Matching uses the same floating-point date/time encoding as \ref addTimeseriesData() and \ref updateTimeseriesData().
+         * \ingroup timeseries
+         */
+        void deleteTimeseriesDataPoint(const char *label, const Date &date, const Time &time);
+
+        //! Delete the timeseries data point at the specified date and time across all timeseries variables
+        /**
+         * \param[in] date Calendar date of the data point to delete.
+         * \param[in] time Time of day of the data point to delete.
+         * \note For each existing timeseries variable, any data point whose (date, time) matches is removed. Variables that have no matching point are left unchanged. If no variable contains a matching point, a non-fatal warning is issued to stderr.
+         * \ingroup timeseries
+         */
+        void deleteTimeseriesDataPoint(const Date &date, const Time &time);
+
         //! Load tabular weather data from text file into timeseries
         /**
          * \param[in] data_file Path to the text file containing the tabular weather data.
@@ -7261,13 +7294,13 @@ namespace helios {
          */
         [[nodiscard]] helios::Time getTime() const;
 
-        //! Set the location of the simulation (latitude, longitude, and UTC offset)
+        //! Set the location of the simulation (latitude, longitude, UTC offset, and altitude)
         /**
-         * \param[in] location Location vector
+         * \param[in] location Location vector. See \ref helios::Location for the longitude sign convention and altitude semantics.
          */
         void setLocation(const helios::Location &location);
 
-        //! Get the location of the simulation (latitude, longitude, and UTC offset)
+        //! Get the location of the simulation (latitude, longitude, UTC offset, and altitude)
         /**
          * \return Location vector
          */
@@ -7752,11 +7785,11 @@ namespace helios {
                 if (expected_type != data_type) {
                     // Types don't match - check if casting is possible
                     if (!isTypeCastingSupported(data_type, expected_type)) {
-                        helios_runtime_error("ERROR (Context::registerOrValidatePrimitiveDataType): Data type mismatch for label '" + label + "'. Expected " + dataTypeToString(expected_type) + " but got " + dataTypeToString(data_type) +
-                                             ". Type casting between these types is not supported.");
+                        helios_runtime_error("ERROR (Context::setPrimitiveData): Primitive data '" + label + "' already exists with type '" + dataTypeToString(expected_type) + "', so it cannot be assigned a value with type '" +
+                                             dataTypeToString(data_type) + "'. To assign a value of a different type, first remove the existing data from every primitive by calling Context::clearPrimitiveData(\"" + label + "\").");
                     } else {
-                        std::cerr << "WARNING (Context::registerOrValidatePrimitiveDataType): Type casting from " + dataTypeToString(data_type) + " to " + dataTypeToString(expected_type) + " for label '" + label +
-                                             "'. Consider using consistent types."
+                        std::cerr << "WARNING (Context::setPrimitiveData): Primitive data '" + label + "' already exists with type '" + dataTypeToString(expected_type) + "'; the assigned value of type '" + dataTypeToString(data_type) +
+                                             "' will be cast to '" + dataTypeToString(expected_type) + "'. Consider using consistent types."
                                   << std::endl;
                     }
                 }
@@ -7777,10 +7810,11 @@ namespace helios {
                 if (expected_type != data_type) {
                     // Types don't match - check if casting is possible
                     if (!isTypeCastingSupported(data_type, expected_type)) {
-                        helios_runtime_error("ERROR (Context::registerOrValidateObjectDataType): Data type mismatch for label '" + label + "'. Expected " + dataTypeToString(expected_type) + " but got " + dataTypeToString(data_type) +
-                                             ". Type casting between these types is not supported.");
+                        helios_runtime_error("ERROR (Context::setObjectData): Object data '" + label + "' already exists with type '" + dataTypeToString(expected_type) + "', so it cannot be assigned a value with type '" +
+                                             dataTypeToString(data_type) + "'. To assign a value of a different type, first remove the existing data from every object by calling Context::clearObjectData(\"" + label + "\").");
                     } else {
-                        std::cerr << "WARNING (Context::registerOrValidateObjectDataType): Type casting from " + dataTypeToString(data_type) + " to " + dataTypeToString(expected_type) + " for label '" + label + "'. Consider using consistent types."
+                        std::cerr << "WARNING (Context::setObjectData): Object data '" + label + "' already exists with type '" + dataTypeToString(expected_type) + "'; the assigned value of type '" + dataTypeToString(data_type) +
+                                             "' will be cast to '" + dataTypeToString(expected_type) + "'. Consider using consistent types."
                                   << std::endl;
                     }
                 }

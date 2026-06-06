@@ -50,8 +50,8 @@ SolarPosition::SolarPosition(float UTC_hrs, float latitude_deg, float longitude_
 
 SphericalCoord SolarPosition::calculateSunDirection(const helios::Time &time, const helios::Date &date) const {
 
-    int solstice_day, LSTM;
-    float Gamma, delta, time_dec, B, EoT, TC, LST, h, theta, phi, rad;
+    int solstice_day;
+    float Gamma, delta, time_dec, B, EoT, TC, LST, h, theta, phi, rad, LSTM;
 
     rad = M_PI / 180.f;
 

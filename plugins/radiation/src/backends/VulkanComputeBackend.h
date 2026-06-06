@@ -88,7 +88,8 @@ namespace helios {
         // ========== Diffuse/Sky Radiation ==========
         void updateDiffuseRadiation(const std::vector<float> &flux, const std::vector<float> &extinction, const std::vector<helios::vec3> &peak_dir, const std::vector<float> &dist_norm, const std::vector<float> &sky_energy) override;
 
-        void updateSkyModel(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction, const std::vector<float> &solar_disk_radiance, float solar_disk_cos_angle) override;
+        void updateSkyModel(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction, const std::vector<float> &solar_disk_radiance, float solar_disk_cos_angle,
+                            const std::vector<float> &camera_diffuse_flux, const std::vector<uint32_t> &band_emission_flag) override;
 
         // ========== Ray Launching ==========
         void launchDirectRays(const RayTracingLaunchParams &params) override;
@@ -187,6 +188,8 @@ namespace helios {
         Buffer sky_radiance_params_buffer;
         Buffer camera_sky_radiance_buffer; //!< Zenith sky radiance for camera miss shader
         Buffer solar_disk_radiance_buffer; //!< Solar disk radiance for camera miss shader
+        Buffer camera_diffuse_flux_buffer; //!< Per-band diffuse (hemispherical) sky flux for camera longwave/emission sky
+        Buffer band_emission_flag_buffer;  //!< Per-band emission flag (uint), gates camera_diffuse_flux sampling
 
         // Debug/profiling buffers (Set 4)
         Buffer debug_counters_buffer;

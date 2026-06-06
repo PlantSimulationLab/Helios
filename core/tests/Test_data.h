@@ -1581,8 +1581,9 @@ TEST_CASE("Data Type Consistency and Caching") {
         DOCTEST_CHECK(val2 == doctest::Approx(20.0f));
 
         // Should have generated a warning about type casting (captured by cerr_buffer)
-        DOCTEST_CHECK(cerr_buffer.get_captured_output().find("WARNING") != std::string::npos);
-        DOCTEST_CHECK(cerr_buffer.get_captured_output().find("Type casting") != std::string::npos);
+        std::string warning_output = cerr_buffer.get_captured_output();
+        DOCTEST_CHECK(warning_output.find("WARNING") != std::string::npos);
+        DOCTEST_CHECK(warning_output.find("will be cast") != std::string::npos);
     }
 
     SUBCASE("Type consistency enforcement - incompatible types") {
@@ -1597,6 +1598,68 @@ TEST_CASE("Data Type Consistency and Caching") {
 
         // This should throw an error because string and float are incompatible
         DOCTEST_CHECK_THROWS_AS(ctx.setObjectData(box2, "material", 3.14f), std::runtime_error);
+    }
+
+    SUBCASE("Type registry releases label after all data is cleared") {
+        // Regression: clearing all primitives that hold a label must release the
+        // type lock, so the label may be re-registered with a different type.
+        uint p1 = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        uint p2 = ctx.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
+
+        ctx.setPrimitiveData(p1, "object_label", std::string("ground"));
+        ctx.setPrimitiveData(p2, "object_label", std::string("ground"));
+        DOCTEST_CHECK(ctx.getPrimitiveDataType("object_label") == HELIOS_TYPE_STRING);
+
+        ctx.clearPrimitiveData(std::vector<uint>{p1, p2}, "object_label");
+
+        // After clearing, reassigning with a different type must succeed.
+        DOCTEST_CHECK_NOTHROW(ctx.setPrimitiveData(std::vector<uint>{p1, p2}, "object_label", 1));
+        DOCTEST_CHECK(ctx.getPrimitiveDataType("object_label") == HELIOS_TYPE_INT);
+
+        // Same expectation for object data.
+        uint b1 = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
+        ctx.setObjectData(b1, "tag", std::string("a"));
+        DOCTEST_CHECK(ctx.getObjectDataType("tag") == HELIOS_TYPE_STRING);
+        ctx.clearObjectData(b1, "tag");
+        DOCTEST_CHECK_NOTHROW(ctx.setObjectData(b1, "tag", 7));
+        DOCTEST_CHECK(ctx.getObjectDataType("tag") == HELIOS_TYPE_INT);
+    }
+
+    SUBCASE("clearPrimitiveData(label) clears hidden primitives") {
+        // Regression: clearPrimitiveData(getAllUUIDs(), label) misses hidden
+        // primitives, which leaves the type registry locked. The label-only
+        // overload must reach every primitive regardless of visibility.
+        uint visible = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        uint hidden = ctx.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
+
+        ctx.setPrimitiveData(visible, "object_label", std::string("leaf"));
+        ctx.setPrimitiveData(hidden, "object_label", std::string("leaf"));
+        ctx.hidePrimitive(hidden);
+
+        // The UUID-vector overload over only visible UUIDs leaves the hidden
+        // primitive's data in place, so the type lock survives.
+        ctx.clearPrimitiveData(ctx.getAllUUIDs(), "object_label");
+        DOCTEST_CHECK_THROWS_AS(ctx.setPrimitiveData(visible, "object_label", 1), std::runtime_error);
+
+        // The label-only overload clears every primitive (including hidden)
+        // and releases the type lock.
+        ctx.clearPrimitiveData("object_label");
+        DOCTEST_CHECK_NOTHROW(ctx.setPrimitiveData(visible, "object_label", 1));
+        DOCTEST_CHECK(ctx.getPrimitiveDataType("object_label") == HELIOS_TYPE_INT);
+
+        // Same expectation for object data with a hidden object.
+        uint visible_obj = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
+        uint hidden_obj = ctx.addBoxObject(make_vec3(2, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
+        ctx.setObjectData(visible_obj, "kind", std::string("a"));
+        ctx.setObjectData(hidden_obj, "kind", std::string("a"));
+        ctx.hideObject(hidden_obj);
+
+        ctx.clearObjectData(ctx.getAllObjectIDs(), "kind");
+        DOCTEST_CHECK_THROWS_AS(ctx.setObjectData(visible_obj, "kind", 1), std::runtime_error);
+
+        ctx.clearObjectData("kind");
+        DOCTEST_CHECK_NOTHROW(ctx.setObjectData(visible_obj, "kind", 1));
+        DOCTEST_CHECK(ctx.getObjectDataType("kind") == HELIOS_TYPE_INT);
     }
 
     SUBCASE("Multiple data labels per primitive/object") {

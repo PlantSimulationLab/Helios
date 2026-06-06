@@ -266,7 +266,10 @@ void RadiationModel::addRadiationCameraFromLibrary(const std::string &camera_lab
     // FOV aspect ratio will be auto-calculated
     camera_properties.FOV_aspect_ratio = 0.0f;
 
-    // Set model name
+    // Store manufacturer separately so EXIF can write a proper `Make` tag distinct from `Model`.
+    // The `model` field retains the legacy "<manufacturer> <model>" concatenation for backwards
+    // compatibility with the JSON sidecar metadata path.
+    camera_properties.manufacturer = manufacturer;
     camera_properties.model = manufacturer + " " + model;
 
     // Set lens metadata
@@ -462,6 +465,7 @@ CameraProperties RadiationModel::getCameraParameters(const std::string &camera_l
     camera_properties.focal_plane_distance = camera.focal_length;
     camera_properties.lens_focal_length = camera.lens_focal_length;
     camera_properties.sensor_width_mm = camera.sensor_width_mm;
+    camera_properties.manufacturer = camera.manufacturer;
     camera_properties.model = camera.model;
     camera_properties.lens_make = camera.lens_make;
     camera_properties.lens_model = camera.lens_model;
@@ -501,6 +505,7 @@ void RadiationModel::updateCameraParameters(const std::string &camera_label, con
     camera.focal_length = camera_properties.focal_plane_distance;
     camera.lens_focal_length = camera_properties.lens_focal_length;
     camera.sensor_width_mm = camera_properties.sensor_width_mm;
+    camera.manufacturer = camera_properties.manufacturer;
     camera.model = camera_properties.model;
     camera.exposure = camera_properties.exposure;
     camera.shutter_speed = camera_properties.shutter_speed;
@@ -616,7 +621,9 @@ std::string RadiationModel::writeCameraImage(const std::string &camera, const st
         }
     }
 
-    writeJPEG(outfile.str(), camera_resolution.x, camera_resolution.y, pixel_data_RGB);
+    helios::ImageEXIFData exif;
+    populateImageEXIF(camera, exif);
+    writeJPEG(outfile.str(), camera_resolution.x, camera_resolution.y, pixel_data_RGB, exif);
 
     std::string image_filepath = outfile.str();
 
@@ -2339,11 +2346,13 @@ void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel,
 
     // Check that all primitive data labels exist
     std::vector<std::string> all_primitive_data = context->listAllPrimitiveDataLabels();
+    helios::WarningAggregator missing_label_warnings;
     for (const auto &data_label: primitive_data_label) {
         if (std::find(all_primitive_data.begin(), all_primitive_data.end(), data_label) == all_primitive_data.end()) {
-            std::cerr << "WARNING (RadiationModel::writeImageSegmentationMasks): Primitive data label '" << data_label << "' does not exist in the context." << std::endl;
+            missing_label_warnings.addWarning("missing_primitive_data_label", "Primitive data label '" + data_label + "' does not exist in the context.");
         }
     }
+    missing_label_warnings.report(std::cerr);
 
     // Check that image file exists
     if (!std::filesystem::exists(image_file)) {
@@ -2600,11 +2609,13 @@ void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &c
 
     // Check that all object data labels exist
     std::vector<std::string> all_object_data = context->listAllObjectDataLabels();
+    helios::WarningAggregator missing_label_warnings;
     for (const auto &data_label: object_data_label) {
         if (std::find(all_object_data.begin(), all_object_data.end(), data_label) == all_object_data.end()) {
-            std::cerr << "WARNING (RadiationModel::writeImageSegmentationMasks_ObjectData): Object data label '" << data_label << "' does not exist in the context." << std::endl;
+            missing_label_warnings.addWarning("missing_object_data_label", "Object data label '" + data_label + "' does not exist in the context.");
         }
     }
+    missing_label_warnings.report(std::cerr);
 
     // Check that image file exists
     if (!std::filesystem::exists(image_file)) {

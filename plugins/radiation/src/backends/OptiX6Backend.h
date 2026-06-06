@@ -85,7 +85,8 @@ namespace helios {
         // Diffuse/sky radiation
         void updateDiffuseRadiation(const std::vector<float> &flux, const std::vector<float> &extinction, const std::vector<helios::vec3> &peak_dir, const std::vector<float> &dist_norm, const std::vector<float> &sky_energy) override;
 
-        void updateSkyModel(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction, const std::vector<float> &solar_disk_radiance, float solar_disk_cos_angle) override;
+        void updateSkyModel(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction, const std::vector<float> &solar_disk_radiance, float solar_disk_cos_angle,
+                            const std::vector<float> &camera_diffuse_flux, const std::vector<uint32_t> &band_emission_flag) override;
 
         // Ray launching
         void launchDirectRays(const RayTracingLaunchParams &params) override;
@@ -281,6 +282,10 @@ namespace helios {
         RTvariable camera_sky_radiance_RTvariable;
         RTbuffer solar_disk_radiance_RTbuffer;
         RTvariable solar_disk_radiance_RTvariable;
+        RTbuffer camera_diffuse_flux_RTbuffer;
+        RTvariable camera_diffuse_flux_RTvariable;
+        RTbuffer band_emission_flag_RTbuffer;
+        RTvariable band_emission_flag_RTvariable;
 
         // Buffers: Sources/Texture (9 buffers)
         RTbuffer source_positions_RTbuffer;
@@ -374,7 +379,8 @@ namespace helios {
         void materialsToBuffers(const RayTracingMaterial &materials);
         void sourcesToBuffers(const std::vector<RayTracingSource> &sources);
         void diffuseToBuffers(const std::vector<float> &flux, const std::vector<float> &extinction, const std::vector<helios::vec3> &peak_dir, const std::vector<float> &dist_norm, const std::vector<float> &sky_energy);
-        void skyModelToBuffers(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction, const std::vector<float> &solar_disk_radiance, float solar_disk_cos_angle);
+        void skyModelToBuffers(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction, const std::vector<float> &solar_disk_radiance, float solar_disk_cos_angle,
+                               const std::vector<float> &camera_diffuse_flux, const std::vector<uint32_t> &band_emission_flag);
         void launchParamsToVariables(const RayTracingLaunchParams &params);
 
         // Extraction methods: OptiX → backend-agnostic

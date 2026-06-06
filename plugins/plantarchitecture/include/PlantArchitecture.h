@@ -275,28 +275,28 @@ struct CarbohydrateParameters {
 
     // -- Stem Growth Parameters -- //
     //! mature internode (wood/stem) density (g m^-3)
-    float stem_density = 54000;
+    float stem_density = 675000;
     //! fraction of the dry weight of internode made up by carbon in mature shoot
-    float stem_carbon_percentage = 0.4559;
+    float stem_carbon_percentage = 0.457; //DeJong & Walton 1989
     //! mean fraction of the dry weight of internode composed of carbohydrates in mature shoot
-    float carbohydrate_percentage = 0.10;
-    //! fraction of carbohydrates composed of carbon
-    float carbohydrate_carbon_percentage = 0.4;
+    float stem_carbohydrate_percentage = 1 - (1 / 1.14); //DeJong & Walton 1989
     //! fraction of the dry weight of internode made up by structural carbon in mature shoot - Excludes fraction made up by carbohydrates
-    float stem_structural_carbon_percentage = stem_carbon_percentage - (carbohydrate_carbon_percentage * carbohydrate_percentage);
+    float stem_structural_carbon_percentage = stem_carbon_percentage - stem_carbohydrate_percentage;
     //! age at which stem reaches physiological maturity (days)
-    float maturity_age = 180;
+    float maturity_age = 120;
     //! starting fraction of the final stem carbon density in new growth
-    float initial_density_ratio = 0.2;
+    float initial_density_ratio = 0.25;
     //! ratio of shoot internode dry weight to root dry weight
     float shoot_root_ratio = 3;
 
     // -- Leaf Growth Parameters -- //
-    //! specific leaf area - ratio of leaf area to leaf dry mass (m^2 / g DW)
-    float SLA = 2.5e-2;
-    //! fraction of leaf dry weight made up by carbon
-    float leaf_carbon_percentage = 0.4444;
 
+    //! fraction of leaf dry weight made up by carbon
+    float leaf_total_carbon_percentage = 0.453; //DeJong & Walton 1989
+    //! specific leaf area - ratio of leaf area to leaf dry mass (m^2 / g DW)
+    float SLA = 9.2/10000/leaf_total_carbon_percentage*12.01; //AL Pica 2022
+    float leaf_carbohydrate_percentage = 1 - (1/1.13); //DeJong & Walton 1989
+    float leaf_carbon_percentage = leaf_total_carbon_percentage;
     // -- Flower Growth Parameters -- //
     //! carbon cost to produce a flower (mol C flower^-1)
     float total_flower_cost = 8.33e-4;
@@ -305,23 +305,21 @@ struct CarbohydrateParameters {
     //! density of fruit (g m^-3)
     float fruit_density = 525000;
     //! fraction of the dry weight of fruit made up by carbon
-    float fruit_carbon_percentage = 0.4786;
+    float fruit_carbon_percentage = 0.475; //DeJong & Walton 1989
 
     // -- Respiration Parameters -- //
-    //! maintenance respiration rate of stem (mol C respired/mol C in pool/day)
-    float stem_maintenance_respiration_rate = 3.5024e-05;
-    //! maintenance respiration rate of root (mol C respired/mol C in pool/day)
-    float root_maintenance_respiration_rate = 3.5024e-05;
+    //! maintenance respiration rate of stem at 20C (mol C respired/mol C in pool/day)
+    float r_m_w_20 = 5.25164e-05; // DeJong & Goudriaan 1989
+    //! maintenance respiration rate of root at 20C (mol C respired/mol C in pool/day)
+    float r_m_r_20 = 5.25164e-03; // DeJong & Goudriaan 1989
     //! fraction of wood composed of physiologically active tissue
     float living_wood_fraction = 0.5;
-    //! fraction of active respiration that occurs during dormancy
-    float dormant_respiration_fraction = 0.9;
     //! growth respiration cost (fraction of total carbon used during growth that goes toward respiration rather than structure)
-    float growth_respiration_fraction = 0.28;
+    float growth_respiration_fraction = 0.211; //DeJong & Goudriaan 1989
 
     // -- Organ Abortion Thresholds -- //
     //! carbohydrate concentration threshold to abort a flowering bud as a fraction of g C/ g DW in the stem
-    float carbohydrate_abortion_threshold = 0.15;
+    float carbohydrate_abortion_threshold = 0.1;
     //! carbohydrate concentration threshold to prune a shoot as a fraction of g C/ g DW in the stem
     float carbohydrate_pruning_threshold = 0.025;
     //! threshold time (days) to abort a bud (bud is aborted when the carbohydrate concentration is below carbohydrate_abortion_threshold for more than this time)
@@ -333,17 +331,18 @@ struct CarbohydrateParameters {
     //! carbohydrate concentration threshold to reduce phyllochron as a fraction of g C/ g DW in the stem
     float carbohydrate_phyllochron_threshold = 0.05;
     //! carbohydrate concentration threshold to reduce vegetative bud break probability as a fraction of g C/ g DW in the stem
-    float carbohydrate_vegetative_break_threshold = 0.15;
+    float carbohydrate_vegetative_break_threshold = 0.05;
 
     //! carbohydrate concentration threshold for radial growth as a fraction of g C/ g DW in the stem
-    float carbohydrate_growth_threshold = 0.15;
+    float carbohydrate_growth_threshold = 0.2;
 
     // -- Carbon Transfer Parameters -- //
     //! carbohydrate concentration threshold to transfer carbon to child shoots as a fraction of g C/ g DW in the stem
+    float starch_sequestration_ratio = 0.025;
     float carbohydrate_transfer_threshold_down = 0.025;
     float carbohydrate_transfer_threshold_up = 0.04;
-    float carbon_conductance_down = 0.75; //<= 1.0
-    float carbon_conductance_up = carbon_conductance_down; // Conductance of carbon from parent to child shoots << conductance from child to parent
+    float carbon_conductance_down = 0.95; //<= 1.0
+    float carbon_conductance_up = carbon_conductance_down * 0.5; // Conductance of carbon from parent to child shoots << conductance from child to parent
 };
 
 //! Parameters for the nitrogen model
@@ -1659,7 +1658,9 @@ struct Shoot {
     const uint rank;
     const uint parent_petiole_index;
 
-    float carbohydrate_pool_molC = 0; // mol C
+    float sugar_pool_molC = 0; // mol C
+    float starch_pool_molC = 0;
+    float total_carbohydrate_pool_molC = sugar_pool_molC + starch_pool_molC;
 
     //! Per-leaf nitrogen tracking - maps leaf objID to nitrogen content per unit area (g N/m²)
     std::map<uint, float> leaf_nitrogen_gN_m2;
@@ -1674,13 +1675,15 @@ struct Shoot {
     void breakDormancy();
     void makeDormant();
 
+    void mobilizeStarch();
+
     bool isdormant;
     uint dormancy_cycles = 0;
 
     bool meristem_is_alive = true;
 
     float phyllochron_counter = 0;
-    float phyllochron_min = 6.f;
+    float phyllochron_min = 3.f;
     float elongation_max = 0.25;
 
     float curvature_perturbation = 0;
@@ -1740,6 +1743,11 @@ struct PlantInstance {
     float max_age = 999;
 
     CarbohydrateParameters carb_parameters;
+
+    //! maintenance respiration rate of stem (mol C respired/mol C in pool/day)
+    float stem_maintenance_respiration_rate = carb_parameters.r_m_w_20;
+    //! maintenance respiration rate of root (mol C respired/mol C in pool/day)
+    float root_maintenance_respiration_rate = carb_parameters.r_m_r_20;
 
     // --- Nitrogen Model --- //
 
@@ -2073,6 +2081,15 @@ public:
      * \note This function performs area-based calculations and updates context-specific data for each leaf primitive.
      */
     void accumulateHourlyLeafPhotosynthesis() const;
+
+    //! Adjusts the plant's maintenance respiration rate based on the prevailing air temperature
+    /**
+     * This function iterates through all the plants in the architecture.
+     * It sets the plant's maintenance respiration rate for this timestep depending on the prevailing timeseries air temperature (K).
+     *
+     * \note Respiration rate defaults to that which occurs at 20C if not specified.
+     */
+    void adjustPlantMaintenanceRespiration(float Ta);
 
     // -- plant building methods -- //
 
@@ -3175,6 +3192,12 @@ protected:
     void validateShootTypes(ShootParameters &shoot_parameters, const std::map<std::string, ShootParameters> &shoot_types_ref) const;
 
     //! Register a plant model with its initialization and build functions
+    /**
+     * \param[in] name Plant model label used to look up the model.
+     * \param[in] shoot_init Function that initializes the model's shoot definitions.
+     * \param[in] plant_build Function that builds a plant instance at the given base position and returns its plant ID.
+     * \param[in] plant_type [optional] Category label written as "plant_type" object data when enabled (e.g. "tree", "weed"). Defaults to "herbaceous" when omitted.
+     */
     void registerPlantModel(const std::string &name, std::function<void()> shoot_init, std::function<uint(const helios::vec3 &)> plant_build, const std::string &plant_type = "herbaceous");
 
     //! Initialize all plant model registrations
@@ -3219,6 +3242,7 @@ protected:
     void accumulateShootPhotosynthesis() const;
 
     void subtractShootMaintenanceCarbon(float dt) const;
+
     void subtractShootGrowthCarbon();
 
     void checkCarbonPool_abortOrgans(float dt);

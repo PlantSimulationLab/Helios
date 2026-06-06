@@ -209,9 +209,18 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  RayTracingStats stats;
  std::vector<HitResult> results = collision.castRays(queries, &stats);
 
- std::cout << "Cast " << stats.total_rays_cast << " rays, " 
+ std::cout << "Cast " << stats.total_rays_cast << " rays, "
            << stats.total_hits << " hits" << std::endl;
  ~~~~~~
+
+ \note Ray casting respects texture transparency. When a ray strikes a primitive that is textured
+ with an image containing a transparency (alpha) channel, the texel at the intersection point is
+ tested against the texture's transparency mask. Hits on transparent texels are ignored so that the
+ ray passes through to any geometry behind the primitive, while hits on opaque texels are reported
+ normally. This matches the behavior of the GPU radiation ray tracer and ensures that, for example,
+ a leaf modeled as a textured rectangle is only "hit" within its opaque silhouette. Primitives
+ without a transparency channel (e.g. JPEG textures, or untextured primitives) are treated as fully
+ solid.
 
  \subsection CDConeQueries Cone-Based Spatial Queries
 
@@ -284,7 +293,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  }
  ~~~~~~
 
- \subsection CDRayTracing LiDAR Simulation
+ \subsection CDLiDARSimulation LiDAR Simulation
 
  Simulate realistic LiDAR scanning with ray tracing:
 

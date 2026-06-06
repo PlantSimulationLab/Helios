@@ -166,6 +166,8 @@ namespace helios {
         destroyBuffer(sky_radiance_params_buffer);
         destroyBuffer(camera_sky_radiance_buffer);
         destroyBuffer(solar_disk_radiance_buffer);
+        destroyBuffer(camera_diffuse_flux_buffer);
+        destroyBuffer(band_emission_flag_buffer);
         destroyBuffer(debug_counters_buffer);
         destroyBuffer(bbox_vertices_buffer);
         destroyBuffer(band_map_buffer);
@@ -695,7 +697,7 @@ namespace helios {
     }
 
     void VulkanComputeBackend::updateSkyModel(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction, const std::vector<float> &solar_disk_radiance,
-                                              float solar_disk_cos_angle) {
+                                              float solar_disk_cos_angle, const std::vector<float> &camera_diffuse_flux, const std::vector<uint32_t> &band_emission_flag) {
         // Store sun parameters for push constants
         cached_sun_direction = sun_direction;
         cached_solar_disk_cos_angle = solar_disk_cos_angle;
@@ -737,6 +739,32 @@ namespace helios {
                 descriptors_dirty = true;
             }
             uploadBufferData(solar_disk_radiance_buffer, solar_disk_radiance.data(), solar_size);
+        }
+
+        // Upload camera_diffuse_flux (per-band hemispherical sky flux for emission/longwave camera miss)
+        if (!camera_diffuse_flux.empty()) {
+            size_t flux_size = camera_diffuse_flux.size() * sizeof(float);
+            if (camera_diffuse_flux_buffer.buffer == VK_NULL_HANDLE || camera_diffuse_flux_buffer.size != flux_size) {
+                if (camera_diffuse_flux_buffer.buffer != VK_NULL_HANDLE) {
+                    destroyBuffer(camera_diffuse_flux_buffer);
+                }
+                camera_diffuse_flux_buffer = createBuffer(flux_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                descriptors_dirty = true;
+            }
+            uploadBufferData(camera_diffuse_flux_buffer, camera_diffuse_flux.data(), flux_size);
+        }
+
+        // Upload band_emission_flag (per-band, gates camera diffuse-flux sky sampling)
+        if (!band_emission_flag.empty()) {
+            size_t flag_size = band_emission_flag.size() * sizeof(uint32_t);
+            if (band_emission_flag_buffer.buffer == VK_NULL_HANDLE || band_emission_flag_buffer.size != flag_size) {
+                if (band_emission_flag_buffer.buffer != VK_NULL_HANDLE) {
+                    destroyBuffer(band_emission_flag_buffer);
+                }
+                band_emission_flag_buffer = createBuffer(flag_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                descriptors_dirty = true;
+            }
+            uploadBufferData(band_emission_flag_buffer, band_emission_flag.data(), flag_size);
         }
     }
 
@@ -2549,6 +2577,8 @@ namespace helios {
                 {4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // sky_radiance_params
                 {5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // camera_sky_radiance
                 {6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // solar_disk_radiance
+                {7, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // camera_diffuse_flux
+                {8, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // band_emission_flag
         };
 
         layout_info.bindingCount = static_cast<uint32_t>(sky_bindings.size());
@@ -2573,7 +2603,7 @@ namespace helios {
         // ========== Create Descriptor Pool ==========
 
         std::vector<VkDescriptorPoolSize> pool_sizes = {
-                {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 62}, // All sets: 18 geo + 11 mat + 11 result + 7 sky + 1 debug + margin
+                {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 64}, // All sets: 18 geo + 11 mat + 11 result + 9 sky + 1 debug + margin
         };
 
         VkDescriptorPoolCreateInfo pool_info{};
@@ -2629,6 +2659,10 @@ namespace helios {
         zeroBuffer(camera_sky_radiance_buffer);
         solar_disk_radiance_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         zeroBuffer(solar_disk_radiance_buffer);
+        camera_diffuse_flux_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(camera_diffuse_flux_buffer);
+        band_emission_flag_buffer = createBuffer(sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(band_emission_flag_buffer);
 
         // ========== Create placeholder camera result buffers ==========
         // MoltenVK requires these before pipeline creation (camera shaders reference them)
@@ -2735,6 +2769,24 @@ namespace helios {
 
         write.dstBinding = 6;
         write.pBufferInfo = &solar_disk_radiance_info;
+        descriptor_writes.push_back(write);
+
+        VkDescriptorBufferInfo camera_diffuse_flux_info{};
+        camera_diffuse_flux_info.buffer = camera_diffuse_flux_buffer.buffer;
+        camera_diffuse_flux_info.offset = 0;
+        camera_diffuse_flux_info.range = VK_WHOLE_SIZE;
+
+        write.dstBinding = 7;
+        write.pBufferInfo = &camera_diffuse_flux_info;
+        descriptor_writes.push_back(write);
+
+        VkDescriptorBufferInfo band_emission_flag_info{};
+        band_emission_flag_info.buffer = band_emission_flag_buffer.buffer;
+        band_emission_flag_info.offset = 0;
+        band_emission_flag_info.range = VK_WHOLE_SIZE;
+
+        write.dstBinding = 8;
+        write.pBufferInfo = &band_emission_flag_info;
         descriptor_writes.push_back(write);
 
         // Descriptor writes for camera result placeholder buffers (set_results bindings 5-9)
@@ -3791,6 +3843,41 @@ namespace helios {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &solar_disk_radiance_info;
+            descriptor_writes.push_back(write);
+        }
+
+        // Camera diffuse-flux + emission-flag buffers (bindings 7-8)
+        VkDescriptorBufferInfo camera_diffuse_flux_info{};
+        camera_diffuse_flux_info.buffer = camera_diffuse_flux_buffer.buffer;
+        camera_diffuse_flux_info.offset = 0;
+        camera_diffuse_flux_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo band_emission_flag_info{};
+        band_emission_flag_info.buffer = band_emission_flag_buffer.buffer;
+        band_emission_flag_info.offset = 0;
+        band_emission_flag_info.range = VK_WHOLE_SIZE;
+
+        if (camera_diffuse_flux_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_sky;
+            write.dstBinding = 7;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &camera_diffuse_flux_info;
+            descriptor_writes.push_back(write);
+        }
+
+        if (band_emission_flag_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_sky;
+            write.dstBinding = 8;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &band_emission_flag_info;
             descriptor_writes.push_back(write);
         }
 

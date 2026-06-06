@@ -1929,6 +1929,11 @@ namespace helios {
     //! Location vector
     /**
      * \ingroup vectors
+     * \note Helios uses a non-standard convention for longitude: positive values are in the
+     *       Western hemisphere and negative values are in the Eastern hemisphere. The standard
+     *       ISO 6709 / EXIF convention is the opposite (+E / -W). When this Location is written
+     *       into EXIF metadata via the radiation plugin, the longitude sign is automatically
+     *       flipped at that boundary.
      */
     struct Location {
 
@@ -1938,12 +1943,15 @@ namespace helios {
         float longitude_deg;
         //! Offset from UTC in hours (+moving West)
         float UTC_offset;
+        //! Altitude of the local Cartesian origin, in meters above sea level (default 0)
+        float altitude_m;
 
         //! Default constructor
         Location() {
             latitude_deg = 38.55f;
             longitude_deg = 121.76f;
             UTC_offset = 8;
+            altitude_m = 0.f;
         }
 
         //! latitude/longitude/UTC constructor
@@ -1957,6 +1965,22 @@ namespace helios {
             this->latitude_deg = latitude_deg;
             this->longitude_deg = longitude_deg;
             this->UTC_offset = UTC_offset;
+            this->altitude_m = 0.f;
+        }
+
+        //! latitude/longitude/UTC/altitude constructor
+        /**
+         * \param[in] latitude_deg Latitude in degrees (+northern hemisphere, -southern hemisphere)
+         * \param[in] longitude_deg Longitude in degrees (+western hemisphere, -eastern hemisphere)
+         * \param[in] UTC_offset Offset from UTC in hours (+moving West)
+         * \param[in] altitude_m Altitude of the local Cartesian origin, in meters above sea level
+         */
+        Location(float latitude_deg, float longitude_deg, float UTC_offset, float altitude_m) {
+
+            this->latitude_deg = latitude_deg;
+            this->longitude_deg = longitude_deg;
+            this->UTC_offset = UTC_offset;
+            this->altitude_m = altitude_m;
         }
 
         //! check for equality of two locations
@@ -1966,7 +1990,7 @@ namespace helios {
 
         //! Write Location to output stream
         friend std::ostream &operator<<(std::ostream &os, helios::Location const &t) {
-            return os << "<" << t.latitude_deg << "," << t.longitude_deg << "," << t.UTC_offset << ">";
+            return os << "<" << t.latitude_deg << "," << t.longitude_deg << "," << t.UTC_offset << "," << t.altitude_m << ">";
         }
     };
 
@@ -1981,12 +2005,24 @@ namespace helios {
         return {latitude_deg, longitude_deg, UTC_offset};
     }
 
+    //! Make a Location vector with altitude
+    /**
+     * \param[in] latitude_deg Latitude in degrees (+northern hemisphere, -southern hemisphere)
+     * \param[in] longitude_deg Longitude in degrees (+western hemisphere, -eastern hemisphere)
+     * \param[in] UTC_offset Offset from UTC in hours (+moving West)
+     * \param[in] altitude_m Altitude of the local Cartesian origin, in meters above sea level
+     * \ingroup vectors
+     */
+    inline Location make_Location(float latitude_deg, float longitude_deg, float UTC_offset, float altitude_m) {
+        return {latitude_deg, longitude_deg, UTC_offset, altitude_m};
+    }
+
     inline bool Location::operator==(const Location &c) const noexcept {
-        return c.latitude_deg == latitude_deg && c.longitude_deg == longitude_deg && c.UTC_offset == UTC_offset;
+        return c.latitude_deg == latitude_deg && c.longitude_deg == longitude_deg && c.UTC_offset == UTC_offset && c.altitude_m == altitude_m;
     }
 
     inline bool Location::operator!=(const Location &c) const noexcept {
-        return c.latitude_deg != latitude_deg || c.longitude_deg != longitude_deg || c.UTC_offset != UTC_offset;
+        return c.latitude_deg != latitude_deg || c.longitude_deg != longitude_deg || c.UTC_offset != UTC_offset || c.altitude_m != altitude_m;
     }
 
     //! Vector of spherical coordinates (elevation,azimuth)

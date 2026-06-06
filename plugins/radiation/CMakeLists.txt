@@ -13,6 +13,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Mo
 set(RADIATION_CORE_SOURCES
     "src/RadiationModel.cpp"
     "src/RadiationCamera.cpp"
+    "src/RadiationCameraEXIF.cpp"
     "src/CameraCalibration.cpp"
     "src/LensFlare.cpp"
     "src/RayTracingTypes.cpp"

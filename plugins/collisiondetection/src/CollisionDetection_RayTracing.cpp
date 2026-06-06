@@ -149,6 +149,17 @@ CollisionDetection::HitResult CollisionDetection::castRay(const vec3 &origin, co
                 continue;
             }
             hit = rayPrimitiveIntersection(origin, ray_direction, candidate_uuid, intersection_distance);
+
+            // Reject hits on transparent texels so the ray passes through to geometry behind.
+            if (hit && context->primitiveTextureHasTransparencyChannel(candidate_uuid)) {
+                CachedPrimitive temp_cached(context->getPrimitiveType(candidate_uuid), context->getPrimitiveVertices(candidate_uuid));
+                temp_cached.transparency_mask = context->getPrimitiveTextureTransparencyData(candidate_uuid);
+                temp_cached.texture_size = context->getPrimitiveTextureSize(candidate_uuid);
+                temp_cached.uv = context->getPrimitiveTextureUV(candidate_uuid);
+                if (!isHitTexelOpaque(temp_cached, origin + ray_direction * intersection_distance)) {
+                    hit = false;
+                }
+            }
         }
 
         if (hit) {
@@ -917,14 +928,27 @@ CollisionDetection::HitResult CollisionDetection::intersectPrimitive(const RayQu
 
     float distance;
     if (rayPrimitiveIntersection(query.origin, query.direction, primitive_id, distance)) {
-        result.hit = true;
-        result.distance = distance;
-        result.primitive_UUID = primitive_id;
-        result.intersection_point = query.origin + query.direction * distance;
+        vec3 intersection_point = query.origin + query.direction * distance;
 
         // Calculate surface normal directly from context (minimal overhead)
         PrimitiveType type = context->getPrimitiveType(primitive_id);
         std::vector<vec3> vertices = context->getPrimitiveVertices(primitive_id);
+
+        // Reject hits on transparent texels so the ray passes through to geometry behind.
+        if (context->primitiveTextureHasTransparencyChannel(primitive_id)) {
+            CachedPrimitive temp_cached(type, vertices);
+            temp_cached.transparency_mask = context->getPrimitiveTextureTransparencyData(primitive_id);
+            temp_cached.texture_size = context->getPrimitiveTextureSize(primitive_id);
+            temp_cached.uv = context->getPrimitiveTextureUV(primitive_id);
+            if (!isHitTexelOpaque(temp_cached, intersection_point)) {
+                return result; // result.hit is still false
+            }
+        }
+
+        result.hit = true;
+        result.distance = distance;
+        result.primitive_UUID = primitive_id;
+        result.intersection_point = intersection_point;
 
         if (type == PRIMITIVE_TYPE_TRIANGLE && vertices.size() >= 3) {
             vec3 edge1 = vertices[1] - vertices[0];
@@ -953,6 +977,74 @@ CollisionDetection::HitResult CollisionDetection::intersectPrimitive(const RayQu
     return result;
 }
 
+bool CollisionDetection::isHitTexelOpaque(const CachedPrimitive &cached, const vec3 &hit_point) const {
+
+    // No transparency mask -> primitive is fully solid.
+    if (cached.transparency_mask == nullptr || cached.texture_size.x <= 0 || cached.texture_size.y <= 0) {
+        return true;
+    }
+
+    const std::vector<vec2> &uvs = cached.uv;
+
+    // Compute the (u,v) texture coordinate at the hit point. The interpolation mirrors the
+    // verified logic in LiDARcloud::syntheticScan (sample_hit_color) so that the texel selected
+    // here matches the texel later used for hit-point coloring.
+    vec2 uv;
+    if (cached.type == PRIMITIVE_TYPE_PATCH && cached.vertices.size() >= 4) {
+        // Patch corners are (BL, BR, TR, TL); project the hit onto the (BL->BR, BL->TL) basis.
+        const vec3 e1 = cached.vertices[1] - cached.vertices[0];
+        const vec3 e2 = cached.vertices[3] - cached.vertices[0];
+        const vec3 d = hit_point - cached.vertices[0];
+        const float e1_sq = e1 * e1;
+        const float e2_sq = e2 * e2;
+        float s_param = (e1_sq > 0.f) ? (d * e1) / e1_sq : 0.f;
+        float t_param = (e2_sq > 0.f) ? (d * e2) / e2_sq : 0.f;
+        s_param = std::min(std::max(s_param, 0.f), 1.f);
+        t_param = std::min(std::max(t_param, 0.f), 1.f);
+        if (uvs.size() == 4) {
+            uv = (1.f - s_param) * (1.f - t_param) * uvs[0] + s_param * (1.f - t_param) * uvs[1] + s_param * t_param * uvs[2] + (1.f - s_param) * t_param * uvs[3];
+        } else {
+            uv = make_vec2(s_param, t_param);
+        }
+    } else if (cached.type == PRIMITIVE_TYPE_TRIANGLE && cached.vertices.size() >= 3 && uvs.size() == 3) {
+        const vec3 e1 = cached.vertices[1] - cached.vertices[0];
+        const vec3 e2 = cached.vertices[2] - cached.vertices[0];
+        const vec3 d = hit_point - cached.vertices[0];
+        const float dot11 = e1 * e1;
+        const float dot12 = e1 * e2;
+        const float dot22 = e2 * e2;
+        const float dot1d = e1 * d;
+        const float dot2d = e2 * d;
+        const float denom = dot11 * dot22 - dot12 * dot12;
+        if (std::fabs(denom) < 1e-20f) {
+            return true; // degenerate triangle - cannot map UV, treat as solid
+        }
+        const float inv_denom = 1.f / denom;
+        const float beta = (dot22 * dot1d - dot12 * dot2d) * inv_denom;
+        const float gamma = (dot11 * dot2d - dot12 * dot1d) * inv_denom;
+        uv = uvs[0] + beta * (uvs[1] - uvs[0]) + gamma * (uvs[2] - uvs[0]);
+    } else {
+        // Unsupported configuration (e.g. missing UVs) - cannot map the texel, treat as solid.
+        return true;
+    }
+
+    // Wrap UV into [0,1) so repeat-style mappings sample correctly.
+    uv.x -= std::floor(uv.x);
+    uv.y -= std::floor(uv.y);
+
+    int px = static_cast<int>(uv.x * static_cast<float>(cached.texture_size.x));
+    px = std::min(std::max(px, 0), cached.texture_size.x - 1);
+    // Mask rows are stored top-to-bottom (row 0 = top of image); UV y=0 is the bottom.
+    int py = static_cast<int>((1.f - uv.y) * static_cast<float>(cached.texture_size.y));
+    py = std::min(std::max(py, 0), cached.texture_size.y - 1);
+
+    const std::vector<std::vector<bool>> &mask = *cached.transparency_mask;
+    if (py >= static_cast<int>(mask.size()) || px >= static_cast<int>(mask[py].size())) {
+        return true; // out-of-bounds guard - treat as solid rather than dropping the hit
+    }
+    return mask[py][px]; // true => opaque/solid texel
+}
+
 CollisionDetection::HitResult CollisionDetection::intersectPrimitiveThreadSafe(const vec3 &origin, const vec3 &direction, uint primitive_id, float max_distance) {
     HitResult result;
 
@@ -965,14 +1057,28 @@ CollisionDetection::HitResult CollisionDetection::intersectPrimitiveThreadSafe(c
         // For parallel regions, this could cause issues, but it's better than crashing
         float distance;
         if (rayPrimitiveIntersection(origin, direction, primitive_id, distance)) {
-            result.hit = true;
-            result.distance = distance;
-            result.primitive_UUID = primitive_id;
-            result.intersection_point = origin + direction * distance;
+            vec3 intersection_point = origin + direction * distance;
 
             // Calculate surface normal for uncached primitive
             PrimitiveType type = context->getPrimitiveType(primitive_id);
             std::vector<vec3> vertices = context->getPrimitiveVertices(primitive_id);
+
+            // Reject hits on transparent texels (build a temporary cache entry from the Context;
+            // this fallback path is already thread-unsafe so the extra Context reads are acceptable).
+            if (context->primitiveTextureHasTransparencyChannel(primitive_id)) {
+                CachedPrimitive temp_cached(type, vertices);
+                temp_cached.transparency_mask = context->getPrimitiveTextureTransparencyData(primitive_id);
+                temp_cached.texture_size = context->getPrimitiveTextureSize(primitive_id);
+                temp_cached.uv = context->getPrimitiveTextureUV(primitive_id);
+                if (!isHitTexelOpaque(temp_cached, intersection_point)) {
+                    return result; // result.hit is still false
+                }
+            }
+
+            result.hit = true;
+            result.distance = distance;
+            result.primitive_UUID = primitive_id;
+            result.intersection_point = intersection_point;
 
             if (type == PRIMITIVE_TYPE_TRIANGLE && vertices.size() >= 3) {
                 vec3 edge1 = vertices[1] - vertices[0];
@@ -1019,10 +1125,17 @@ CollisionDetection::HitResult CollisionDetection::intersectPrimitiveThreadSafe(c
         float distance;
         if (triangleIntersect(origin, direction, cached.vertices[0], cached.vertices[1], cached.vertices[2], distance)) {
             if (distance > 1e-6f && (max_distance <= 0 || distance < max_distance)) {
+                vec3 intersection_point = origin + direction * distance;
+
+                // Reject hits on transparent texels so the ray passes through to geometry behind.
+                if (!isHitTexelOpaque(cached, intersection_point)) {
+                    return result; // result.hit is still false
+                }
+
                 result.hit = true;
                 result.distance = distance;
                 result.primitive_UUID = primitive_id;
-                result.intersection_point = origin + direction * distance;
+                result.intersection_point = intersection_point;
 
                 // Calculate triangle normal
                 vec3 edge1 = cached.vertices[1] - cached.vertices[0];
@@ -1045,10 +1158,17 @@ CollisionDetection::HitResult CollisionDetection::intersectPrimitiveThreadSafe(c
         float distance;
         if (patchIntersect(origin, direction, cached.vertices[0], cached.vertices[1], cached.vertices[2], cached.vertices[3], distance)) {
             if (distance > 1e-6f && (max_distance <= 0 || distance < max_distance)) {
+                vec3 intersection_point = origin + direction * distance;
+
+                // Reject hits on transparent texels so the ray passes through to geometry behind.
+                if (!isHitTexelOpaque(cached, intersection_point)) {
+                    return result; // result.hit is still false
+                }
+
                 result.hit = true;
                 result.distance = distance;
                 result.primitive_UUID = primitive_id;
-                result.intersection_point = origin + direction * distance;
+                result.intersection_point = intersection_point;
 
                 // Calculate patch normal (use v0, v1, v2 like the original code)
                 vec3 edge1 = cached.vertices[1] - cached.vertices[0];
@@ -1175,7 +1295,20 @@ void CollisionDetection::buildPrimitiveCache() {
                 PrimitiveType type = context->getPrimitiveType(primitive_id);
                 std::vector<vec3> vertices = context->getPrimitiveVertices(primitive_id);
 
-                primitive_cache[primitive_id] = CachedPrimitive(type, vertices);
+                CachedPrimitive cached(type, vertices);
+
+                // Cache texture transparency data so that ray hits on transparent texels can be
+                // rejected during traversal (mirrors the OptiX rtIgnoreIntersection behavior).
+                // Reading the Context here keeps the parallel traversal thread-safe. Primitives
+                // without a transparency channel (no texture, or e.g. JPEG) keep a null mask and
+                // are treated as fully solid, preserving the original behavior.
+                if (context->primitiveTextureHasTransparencyChannel(primitive_id)) {
+                    cached.transparency_mask = context->getPrimitiveTextureTransparencyData(primitive_id);
+                    cached.texture_size = context->getPrimitiveTextureSize(primitive_id);
+                    cached.uv = context->getPrimitiveTextureUV(primitive_id);
+                }
+
+                primitive_cache[primitive_id] = std::move(cached);
             } catch (const std::exception &e) {
                 // Skip this primitive if it no longer exists or can't be accessed
                 // This can happen when UUIDs from previous contexts persist
@@ -1349,6 +1482,9 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysGPU(const
     if (printmessages) {
     }
 
+    helios::WarningAggregator primitive_vertex_warnings;
+    primitive_vertex_warnings.setEnabled(printmessages);
+
     // Prepare primitive data arrays for GPU using existing primitive_indices
     size_t vertex_index = 0;
     for (size_t i = 0; i < primitive_indices.size(); i++) {
@@ -1369,9 +1505,7 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysGPU(const
                 primitive_vertices.push_back(make_float3(0, 0, 0)); // Padding
                 vertex_index += 4;
             } else {
-                if (printmessages) {
-                    std::cout << "WARNING: Triangle primitive " << primitive_indices[i] << " has " << vertices.size() << " vertices" << std::endl;
-                }
+                primitive_vertex_warnings.addWarning("triangle_wrong_vertex_count", "Triangle primitive " + std::to_string(primitive_indices[i]) + " has " + std::to_string(vertices.size()) + " vertices");
                 // Add zeros for invalid triangle
                 for (int v = 0; v < 4; v++) {
                     primitive_vertices.push_back(make_float3(0, 0, 0));
@@ -1387,9 +1521,7 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysGPU(const
                 }
                 vertex_index += 4;
             } else {
-                if (printmessages) {
-                    std::cout << "WARNING: Patch primitive " << primitive_indices[i] << " has " << vertices.size() << " vertices" << std::endl;
-                }
+                primitive_vertex_warnings.addWarning("patch_wrong_vertex_count", "Patch primitive " + std::to_string(primitive_indices[i]) + " has " + std::to_string(vertices.size()) + " vertices");
                 // Add zeros for invalid patch
                 for (int v = 0; v < 4; v++) {
                     primitive_vertices.push_back(make_float3(0, 0, 0));
@@ -1427,6 +1559,8 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysGPU(const
             vertex_index += 4;
         }
     }
+
+    primitive_vertex_warnings.report(std::cerr);
 
     if (printmessages) {
     }

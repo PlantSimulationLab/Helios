@@ -157,6 +157,7 @@ struct GridCell {
     helios::vec3 global_size;
     helios::int3 global_ijk;
     helios::int3 global_count;
+    //! Rotation of the grid cell about the z-axis in radians
     float azimuthal_rotation;
     float leaf_area;
     float Gtheta;
@@ -198,8 +199,13 @@ struct ScanMetadata {
      * \param[in] Nphi  Number of scan points in the phi (azimuthal) direction
      * \param[in] phiMin  Minimum scan angle in the phi (azimuthal) direction in radians
      * \param[in] phiMax  Maximum scan angle in the phi (azimuthal) direction in radians
+     * \param[in] exitDiameter  Diameter of the laser pulse at exit from the scanner in meters
+     * \param[in] beamDivergence  Divergence angle of the laser beam in radians
+     * \param[in] rangeNoiseStdDev  Standard deviation of Gaussian range (along-beam) measurement noise in meters (0 disables noise)
+     * \param[in] angleNoiseStdDev  Standard deviation of Gaussian angular (beam-pointing) jitter in radians (0 disables jitter)
+     * \param[in] columnFormat  Vector of strings specifying the columns of the scan ASCII file for input/output
      */
-    ScanMetadata(const helios::vec3 &origin, uint Ntheta, float thetaMin, float thetaMax, uint Nphi, float phiMin, float phiMax, float exitDiameter, float beamDivergence, const std::vector<std::string> &columnFormat);
+    ScanMetadata(const helios::vec3 &origin, uint Ntheta, float thetaMin, float thetaMax, uint Nphi, float phiMin, float phiMax, float exitDiameter, float beamDivergence, float rangeNoiseStdDev, float angleNoiseStdDev, const std::vector<std::string> &columnFormat);
 
     //! File containing hit point data
     std::string data_file;
@@ -208,7 +214,7 @@ struct ScanMetadata {
     uint Ntheta;
     //! Minimum zenithal angle of scan in radians
     /**
-     * \note Zenithal angles range from -pi/2 (downward) to +pi/2 (upward).
+     * \note Zenithal angles range from 0 (upward) to pi (downward).
      */
     float thetaMin;
     //! Maximum zenithal angle of scan in radians
@@ -244,6 +250,28 @@ struct ScanMetadata {
      * \note This is not needed for discrete return instruments, and is only used for synthetic scan generation.
      */
     float beamDivergence;
+
+    //! Standard deviation of Gaussian range (along-beam) measurement noise in meters
+    /**
+     * Realistic LiDAR positional error is anisotropic: it is dominated by an error in the measured range (distance), which
+     * displaces the hit point along the beam direction rather than isotropically in (x,y,z). During synthetic scan generation
+     * the measured range of each return is perturbed by a zero-mean Gaussian draw with this standard deviation, and the hit
+     * point is reconstructed along the nominal beam direction. A value of 0 disables range noise.
+     * \note This is only used for synthetic scan generation.
+     */
+    float rangeNoiseStdDev;
+
+    //! Standard deviation of Gaussian angular (beam-pointing) jitter in radians
+    /**
+     * Real LiDAR instruments have a small random error in the pointing direction of each emitted pulse. This contributes
+     * the across-beam (lateral) component of the per-point positional error, which grows with range as approximately
+     * range times this standard deviation, and is distinct from the within-beam spread produced by beam divergence. During
+     * synthetic scan generation the nominal beam direction of each pulse is perturbed by an independent zero-mean Gaussian
+     * angular offset with this standard deviation before ray tracing, so the whole beam (including any divergence cone and
+     * finite aperture) is rotated together. A value of 0 disables angular jitter.
+     * \note This is only used for synthetic scan generation.
+     */
+    float angleNoiseStdDev;
 
     //! Vector of strings specifying the columns of the scan ASCII file for input/output
     std::vector<std::string> columnFormat;
@@ -346,11 +374,13 @@ private:
      * \param[in] min_voxel_hits Minimum number of hits required
      * \param[in] gridsize Voxel dimensions (x, y, z)
      * \param[out] leaf_area Computed leaf area for this voxel
+     * \param[in,out] warnings Warning aggregator for per-voxel convergence warnings
      * \return True if inversion succeeded, false otherwise
      */
     bool invertLAD(uint voxel_index, float P, float Gtheta,
                    const std::vector<float> &dr_samples, int min_voxel_hits,
-                   const helios::vec3 &gridsize, float &leaf_area);
+                   const helios::vec3 &gridsize, float &leaf_area,
+                   helios::WarningAggregator &warnings);
 
     //! Filter rays by bounding box intersection (replaces intersectBoundingBox GPU kernel)
     /**
@@ -560,9 +590,23 @@ public:
     //! Divergence angle of the laser beam in radians
     /**
      * \param[in] scanID ID of scan.
-     * \return Divergence angle of the beam.
+     * \return Divergence angle of the beam, in radians.
      */
     float getScanBeamDivergence(uint scanID) const;
+
+    //! Standard deviation of Gaussian range (along-beam) measurement noise in meters
+    /**
+     * \param[in] scanID ID of scan.
+     * \return Standard deviation of the range measurement noise applied during synthetic scan generation, in meters (0 if disabled).
+     */
+    float getScanRangeNoiseStdDev(uint scanID) const;
+
+    //! Standard deviation of Gaussian angular (beam-pointing) jitter in radians
+    /**
+     * \param[in] scanID ID of scan.
+     * \return Standard deviation of the beam-pointing jitter applied during synthetic scan generation, in radians (0 if disabled).
+     */
+    float getScanAngleNoiseStdDev(uint scanID) const;
 
     //! Get (x,y,z) coordinate of hit point by index
     /**
@@ -663,7 +707,7 @@ public:
 
     //! Rotate all points in the point cloud about an arbitrary line
     /**
-     * \param[in] rotation Spherical rotation angle
+     * \param[in] rotation Rotation angle in radians
      * \param[in] line_base (x,y,z) coordinate of a point on the line about which points will be rotated
      * \param[in] line_direction Unit vector pointing in the direction of the line about which points will be rotated
      */
@@ -782,6 +826,13 @@ public:
      * \param[in] scanID Identifier of scan to be exported
      */
     void exportPointCloudPTX(const char *filename, uint scanID);
+
+    //! Export all scans in the point cloud to an XML metadata file plus one ASCII data file per scan
+    /**
+     * \param[in] filename Name of the XML metadata file to write (e.g. "output/scans.xml")
+     * \note One ASCII point cloud data file is auto-generated per scan, named by stripping the extension of \p filename and appending "_\<scanID>.xyz". For example, passing "output/scans.xml" with three scans produces "output/scans_0.xyz", "output/scans_1.xyz", and "output/scans_2.xyz" alongside the XML. The ASCII column format follows the per-scan \<ASCII_format>\</ASCII_format> tag, and the XML output can be re-loaded with \ref LiDARcloud::loadXML() when invoked from the same working directory used at export time.
+     */
+    void exportScans(const char *filename);
 
     // ------- VISUALIZER --------- //
 
@@ -1056,9 +1107,10 @@ public:
      */
     helios::vec3 getCellSize(uint index) const;
 
-    //! Get the size of a grid cell by its index
+    //! Get the rotation angle of a grid cell about the z-axis by its index
     /**
      * \param[in] index Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1.
+     * \return Rotation angle of the cell about the z-axis, in radians.
      */
     float getCellRotation(uint index) const;
 

@@ -800,6 +800,37 @@ TEST_CASE("Visualizer::PNG with transparent background") {
     }
 }
 
+TEST_CASE("Visualizer::headless render after windowed instance destroyed") {
+    // Smoke test for cross-mode instance ordering: a headless Visualizer constructed
+    // and rendered after a windowed Visualizer was created and destroyed in the same
+    // process must not crash. The windowed instance creates a shadow-map depth
+    // texture/framebuffer; a headless instance never creates these, so its
+    // depthTexture/framebufferID members must be zero-initialized (see Visualizer.h).
+    // If they were left uninitialized, the headless render path would bind a stale
+    // GL texture name as the shadow map, producing GL_INVALID_OPERATION and, on macOS,
+    // a driver-side crash. The original failure was allocator-layout dependent and only
+    // manifested reliably within the full suite, so this case guards the ordering rather
+    // than guaranteeing reproduction of the exact memory state.
+
+    // First, create and destroy a WINDOWED instance to populate freed memory with
+    // plausible GL handle values (mirrors the test-suite ordering that exposed the bug).
+    {
+        Visualizer windowed(200, 200, 0, true, false); // headless = false
+        windowed.disableMessages();
+    } // windowed destroyed here
+
+    // Now a HEADLESS instance whose render path binds the (default lighting) shadow map.
+    Visualizer headless(200, 200, 16, true, true); // headless = true
+    headless.disableMessages();
+
+    std::vector<helios::vec3> vertices{make_vec3(-0.3f, -0.3f, 0.f), make_vec3(0.3f, -0.3f, 0.f), make_vec3(0.3f, 0.3f, 0.f), make_vec3(-0.3f, 0.3f, 0.f)};
+    size_t rect_UUID;
+    DOCTEST_CHECK_NOTHROW(rect_UUID = headless.addRectangleByVertices(vertices, make_RGBcolor(0.f, 1.f, 0.f), Visualizer::COORDINATES_CARTESIAN));
+
+    // The render must complete without binding an uninitialized shadow-map texture.
+    DOCTEST_CHECK_NOTHROW(headless.plotUpdate(true));
+}
+
 TEST_CASE("Visualizer::PNG with transparent background (windowed mode)") {
     // Test PNG output with transparent background in WINDOWED mode (not headless)
     Context context;

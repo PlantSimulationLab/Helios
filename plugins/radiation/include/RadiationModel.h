@@ -52,6 +52,9 @@ struct CameraProperties {
     //! Physical sensor width in mm (default 35mm full-frame)
     float sensor_width_mm;
 
+    //! Camera manufacturer (e.g., "Canon", "Nikon", "Apple"). Maps to the EXIF Make tag (0x010F). Empty => "Helios" is written.
+    std::string manufacturer;
+
     //! Camera model name (e.g., "Nikon D700", "Canon EOS 5D")
     std::string model;
 
@@ -105,8 +108,8 @@ struct CameraProperties {
 
     bool operator==(const CameraProperties &rhs) const {
         return camera_resolution == rhs.camera_resolution && focal_plane_distance == rhs.focal_plane_distance && lens_focal_length == rhs.lens_focal_length && lens_diameter == rhs.lens_diameter && FOV_aspect_ratio == rhs.FOV_aspect_ratio &&
-               HFOV == rhs.HFOV && sensor_width_mm == rhs.sensor_width_mm && model == rhs.model && lens_make == rhs.lens_make && lens_model == rhs.lens_model && lens_specification == rhs.lens_specification && exposure == rhs.exposure &&
-               shutter_speed == rhs.shutter_speed && white_balance == rhs.white_balance && camera_zoom == rhs.camera_zoom;
+               HFOV == rhs.HFOV && sensor_width_mm == rhs.sensor_width_mm && manufacturer == rhs.manufacturer && model == rhs.model && lens_make == rhs.lens_make && lens_model == rhs.lens_model && lens_specification == rhs.lens_specification &&
+               exposure == rhs.exposure && shutter_speed == rhs.shutter_speed && white_balance == rhs.white_balance && camera_zoom == rhs.camera_zoom;
     }
 };
 
@@ -183,6 +186,7 @@ struct RadiationCamera {
         HFOV_degrees = camera_properties.HFOV;
         FOV_aspect_ratio = camera_properties.FOV_aspect_ratio;
         sensor_width_mm = camera_properties.sensor_width_mm;
+        manufacturer = camera_properties.manufacturer;
         model = camera_properties.model;
         lens_make = camera_properties.lens_make;
         lens_model = camera_properties.lens_model;
@@ -213,6 +217,8 @@ struct RadiationCamera {
     float FOV_aspect_ratio;
     // Physical sensor width in mm
     float sensor_width_mm;
+    //! Camera manufacturer (e.g., "Canon", "Nikon"). Maps to the EXIF Make tag; empty => "Helios" fallback.
+    std::string manufacturer;
     // Camera model name
     std::string model;
     // Lens make/manufacturer
@@ -1907,6 +1913,17 @@ private:
     void computeAgronomicProperties(const std::string &camera_label, CameraMetadata::AgronomicProperties &props) const;
     void populateCameraMetadata(const std::string &camera_label, CameraMetadata &metadata) const;
     std::string writeCameraMetadataFile(const std::string &camera_label, const std::string &output_path = "./") const;
+
+    //! Populate a `helios::ImageEXIFData` for the named camera using its properties and the Context's location/date/time.
+    /**
+     * Convention: +Y = geographic North, +X = East, +Z = up. The Helios `Location` longitude
+     * convention (+W) is automatically flipped to the standard +E EXIF convention. Camera roll
+     * is always 0 in this version (RadiationCamera has no up-vector).
+     *
+     * \param[in] camera_label Label of the target radiation camera.
+     * \param[out] exif Metadata struct populated in place.
+     */
+    void populateImageEXIF(const std::string &camera_label, helios::ImageEXIFData &exif) const;
 
 public:
     //! Set padding value for pixels do not have valid values

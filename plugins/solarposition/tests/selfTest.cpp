@@ -20,6 +20,34 @@ TEST_CASE("SolarPosition sun position Boulder") {
     DOCTEST_CHECK(std::fabs(phi_s - 154.18f) <= 5.0f);
 }
 
+TEST_CASE("SolarPosition fractional UTC offset") {
+    // A fractional UTC offset (e.g. +05:30 zones like India, Helios convention -5.5) must be
+    // honored rather than truncated to a whole hour. The local standard time meridian scales
+    // linearly with the offset, so the half-hour offset should fall between the two neighboring
+    // integer offsets and be very close to their average.
+    Context context_s;
+    DOCTEST_CHECK_NOTHROW(context_s.setDate(make_Date(80, 2023))); // near equinox
+    DOCTEST_CHECK_NOTHROW(context_s.setTime(make_Time(12, 0, 0)));
+
+    const float latitude = 28.6139f; // New Delhi
+    const float longitude = -77.2090f; // Helios convention: +West, so New Delhi is negative
+
+    SolarPosition sp_lo(5.f, latitude, longitude, &context_s);
+    SolarPosition sp_mid(5.5f, latitude, longitude, &context_s);
+    SolarPosition sp_hi(6.f, latitude, longitude, &context_s);
+
+    float az_lo = sp_lo.getSunAzimuth();
+    float az_mid = sp_mid.getSunAzimuth();
+    float az_hi = sp_hi.getSunAzimuth();
+
+    // The half-hour offset must differ from both whole-hour offsets (i.e. it was not truncated to
+    // a whole hour) and must lie strictly between them, since the local standard time meridian — and
+    // hence the computed sun azimuth — varies monotonically with the UTC offset over this 1-hour span.
+    DOCTEST_CHECK(std::fabs(az_mid - az_lo) > 1e-4f);
+    DOCTEST_CHECK(std::fabs(az_mid - az_hi) > 1e-4f);
+    DOCTEST_CHECK(((az_lo < az_mid && az_mid < az_hi) || (az_hi < az_mid && az_mid < az_lo)));
+}
+
 TEST_CASE("SolarPosition ambient longwave model") {
     Context context_s;
     DOCTEST_CHECK_NOTHROW(context_s.setDate(make_Date(5, 5, 2003)));

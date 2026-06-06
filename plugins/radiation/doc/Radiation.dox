@@ -1245,6 +1245,36 @@ The above example assumes that we have already added some geometry to the Contex
 
  \note The older method \ref RadiationModel::applyImageProcessingPipeline() is deprecated. Use \ref RadiationModel::applyCameraImageCorrections() instead.
 
+ \subsubsection RadCamEXIF Embedded EXIF and XMP Metadata
+
+ Every JPEG written by \ref RadiationModel::writeCameraImage() automatically embeds EXIF and XMP metadata describing the simulated camera. This makes the output images directly consumable by photogrammetry / structure-from-motion pipelines such as OpenDroneMap, COLMAP, Pix4D, and Agisoft Metashape without a sidecar file. There is no opt-in; every camera image gets metadata, including those produced for cameras added via \ref RadiationModel::addRadiationCameraFromLibrary().
+
+ The following EXIF tags are written when the corresponding data is available on the camera or in the Context:
+
+ - \b IFD0: Make, Model, Software (always "Helios"), DateTime, Orientation
+ - \b ExifSubIFD: DateTimeOriginal, DateTimeDigitized, OffsetTime, FocalLength, FocalLengthIn35mmFilm, FocalPlaneXResolution / YResolution / ResolutionUnit, FNumber, MaxApertureValue, SubjectDistance, ExposureTime, ExposureBiasValue, ExposureMode, WhiteBalance, ISOSpeedRatings, DigitalZoomRatio, PixelXDimension, PixelYDimension, LensMake, LensModel, LensSpecification
+ - \b GPS \b IFD: GPSLatitude/LatitudeRef, GPSLongitude/LongitudeRef, GPSAltitude/AltitudeRef, GPSImgDirection (true north), GPSDateStamp, GPSTimeStamp
+
+ The XMP packet uses the Pix4D `Camera` namespace (`http://pix4d.com/camera/1.0`) and writes `Camera:Yaw`, `Camera:Pitch`, and `Camera:Roll`.
+
+ \par Make / Model conventions
+ For cameras loaded from the library, the \b Make tag is the value of the `<manufacturer>` XML element (e.g., "Canon", "Nikon", "Apple") and the \b Model tag is the value of `<model>` (e.g., "EOS 20D"). For cameras created programmatically via \ref RadiationModel::addRadiationCamera() the \b Make tag is "Helios" unless `CameraProperties::manufacturer` is set explicitly. Photogrammetry tools key on Make and Model separately when looking up sensor calibration data, so setting them correctly matters.
+
+ \par Coordinate convention
+ GPS coordinates are derived by treating the Cartesian frame as a local tangent plane centered at the Context's lat/lon origin (see \ref helios::Context::setLocation()). The axis convention assumed is:
+ - \b +Y = geographic North
+ - \b +X = East
+ - \b +Z = up (altitude)
+
+ A flat-earth approximation is used to convert Cartesian offsets to lat/lon, which is sub-centimeter accurate at sub-kilometer scales and sub-meter accurate at the multi-kilometer scales typical of UAV surveys.
+
+ \par Longitude sign
+ The \ref helios::Location struct uses a non-standard longitude convention where positive values are Western and negative values are Eastern. Standard EXIF / ISO 6709 is the opposite. The longitude sign is automatically flipped at the EXIF boundary so the written GPSLongitude and GPSLongitudeRef values follow the standard convention. This is transparent to users.
+
+ \par Limitations
+ - Camera roll is always written as 0. \ref RadiationCamera does not currently store an up-vector, so the optical axis alone determines orientation. For nadir aerial scenes and ground-based imagery this is correct; for banked or tilted aerial captures, downstream tools will receive roll=0.
+ - Only JPEG output is metadata-aware. The EXR and depth-image writers do not yet embed equivalent metadata.
+
  \subsubsection RadCamSegmentation Writing Camera Image Segmentation Masks
 
  In addition to regular camera images, the radiation model can generate segmentation masks in COCO JSON format for machine learning applications. Segmentation masks identify and outline objects within camera images, providing pixel-level annotations that can be used for training object detection and segmentation models.

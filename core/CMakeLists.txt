@@ -13,6 +13,7 @@ set(HELIOS_SOURCES
         src/Context_object.cpp
         src/Context_fileIO.cpp
         src/Context_data.cpp
+        src/exif_writer.cpp
         src/global.cpp
         tests/selfTest.cpp
         lib/pugixml/pugixml.cpp

@@ -136,6 +136,8 @@ struct OptiX8LaunchParams {
     float4*   sky_radiance_params;    //!< [band]: (circumsolar_str, circumsolar_width, horiz_coeff, zenith_scale)
     float*    camera_sky_radiance;    //!< [band]
     float*    solar_disk_radiance;    //!< [band]
+    float*    camera_diffuse_flux;    //!< [band]: hemispherical diffuse flux for camera longwave/emission sky miss
+    uint32_t* band_emission_flag;     //!< [band]: 1 if band has emission enabled (gates camera longwave sky sampling)
 
     // ---- Band launch flags ----
     bool*     band_launch_flag;       //!< [Nbands_global]: which bands to process this launch

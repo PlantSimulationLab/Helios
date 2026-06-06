@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+
+<!--
+  Full-waveform (multi-return) synthetic scan of the leaf_cube_LAI2_lw0_01_spherical
+  geometry (LAI=2). Each hit carries per-pulse timestamp/target_index/target_count
+  and the ASCII format has NO row/column columns, so loadASCIIFile leaves the
+  scan-grid indices unset and gapfillMisses must reconstruct the (theta,phi) grid
+  from timestamps and ray angles. This is the path that historically crashed
+  non-deterministically; it is the regression fixture for that fix. The 1x1x1 m
+  voxel at (0,0,0.5) has true LAD=2.0 m^2/m^3 and G(theta)=0.5.
+-->
+
+<helios>
+
+<scan>
+  <filename> plugins/lidar/data/leafcube_multi.xyz </filename>
+  <ASCII_format> x y z timestamp target_index target_count </ASCII_format>
+  <origin> -5.000000 0.000000 0.500000 </origin>
+  <size> 800 1600 </size>
+</scan>
+
+<grid>
+  <center> 0 0 0.5 </center>
+  <size> 1 1 1 </size>
+  <Nx> 1 </Nx>
+  <Ny> 1 </Ny>
+  <Nz> 1 </Nz>
+</grid>
+
+</helios>

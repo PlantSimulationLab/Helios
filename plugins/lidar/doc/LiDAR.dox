@@ -95,6 +95,8 @@
  <tr><td>rotation (degrees)</td><td>\<rotation></td><td>Global spherical rotation (theta,phi) to be applied to the entire scan, including the origin and all hit points.</td><td>No rotation.</td></tr>
  <tr><td>beam exit diameter (meters)</td><td>\<exitDiameter></td><td>Effective diameter of laser beam exiting the instrument. Only used for full-waveform synthetic data generation.</td><td>0 (discrete return)</td></tr>
 <tr><td>beam divergence angle (rad)</td><td>\<beamDivergence></td><td>Angle of laser beam divergence after exiting the instrument. Only used for full-waveform synthetic data generation.</td><td>0</td></tr>
+<tr><td>range noise std. dev. (meters)</td><td>\<rangeNoiseStdDev></td><td>Standard deviation of zero-mean Gaussian noise added to the measured range (distance) of each return during synthetic scan generation. The hit point is displaced along the beam direction, producing realistic anisotropic positional error. Only used for synthetic data generation.</td><td>0 (no noise)</td></tr>
+<tr><td>angular noise std. dev. (rad)</td><td>\<angleNoiseStdDev></td><td>Standard deviation of zero-mean Gaussian jitter applied to the pointing direction of each pulse during synthetic scan generation. This produces the across-beam (lateral) component of the positional error, which grows with range. Only used for synthetic data generation.</td><td>0 (no jitter)</td></tr>
 <tr><td>ASCII point cloud file</td><td>\<filename></td><td>File containing point cloud data to be read.</td><td>No file will be read.</td></tr>
 <tr><td>ASCII file column format</td><td>\<ASCII_format></td><td>Labels for columns in ASCII point cloud file. See section below for possible values and examples. Labels should be separated by a space in the XML file.</td><td>x y z</td></tr>
  </table>
@@ -541,6 +543,44 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
   Synthetic hit points can be labeled based on the primitive they intersect based on the value of the primitive data "object_label" of type 'int'. Primitive groups can be labeled in any way by setting a common integer value for the "object_label" primitive data. In order to enable synthetic data labeling, the column "object_label" must be included within the \<ASCII_format> tag in the scan XML file. The object_label value for each hit point will be recorded and a column will be written if the point cloud is exported to file.
 
+  \subsection LiDARsynthnoise Synthetic measurement noise
+
+  By default, synthetic hit points lie exactly on the surface that the ray intersects. Real LiDAR instruments have finite measurement precision, so each recorded point contains random error. This error is \em anisotropic — it does not scatter equally in all three Cartesian directions — and is naturally decomposed into two components that act along orthogonal axes of the per-point error ellipsoid:
+
+  <ul>
+  <li><b>Range (along-beam) error</b> — an error in the measured distance, which displaces the point \em along the beam direction. This is usually the dominant term and, for most instruments, is roughly independent of range.</li>
+  <li><b>Angular (across-beam) error</b> — a small random error in the pointing direction of each pulse, which displaces the point \em across the beam. The resulting lateral error is approximately \f$\rho\,\sigma_\theta\f$ (range times the angular standard deviation), so it \em grows with range and tends to dominate at long range.</li>
+  </ul>
+
+  Adding isotropic noise directly to the (x,y,z) coordinates would not be physically realistic. The two components are configured independently:
+
+  <b>Range noise.</b> Specify the standard deviation of the range error (in meters) using the \<rangeNoiseStdDev> \</rangeNoiseStdDev> tags. During synthetic scan generation, the measured range of each return is perturbed by an independent zero-mean Gaussian draw with this standard deviation, and the hit point is reconstructed along the nominal beam direction. The recorded "distance" data value reflects the noisy range. Typical terrestrial laser scanner range precision is on the order of 0.002–0.012 m.
+
+  <b>Angular jitter.</b> Specify the standard deviation of the pointing error (in radians) using the \<angleNoiseStdDev> \</angleNoiseStdDev> tags. During synthetic scan generation, the nominal direction of each pulse is perturbed by an independent zero-mean Gaussian angular offset with this standard deviation before ray tracing, so the whole beam — including any divergence cone and finite aperture — is rotated together. Because the displacement scales with range, this is the across-beam component of the error ellipsoid.
+
+  Misses are not perturbed by either term. If a tag is omitted (or set to 0), that component is disabled; with both omitted, points lie exactly on the surface (the previous behavior). The appropriate magnitudes should be taken from the instrument datasheet.
+
+  For example, to emulate an instrument with a 3 mm range precision and 0.2 mrad pointing jitter:
+
+   ~~~~~~{.xml}
+   <helios>
+
+	<scan>
+	  <origin> 0 0 1.0 </origin>
+	  <size> 2500 4500 </size>
+	  <thetaMin> 30 </thetaMin>
+	  <thetaMax> 130 </thetaMax>
+	  <phiMin> 0 </phiMin>
+	  <phiMax> 360 </phiMax>
+	  <rangeNoiseStdDev> 0.003 </rangeNoiseStdDev>
+	  <angleNoiseStdDev> 0.0002 </angleNoiseStdDev>
+	</scan>
+
+   </helios>
+  ~~~~~~
+
+  \note Both noise components are applied to discrete-return and full-waveform synthetic scans, and are independent of the beam-divergence/exit-diameter footprint sampling (which models the within-beam spread, not measurement error). The noise draws use the Context's random number generator; call \ref helios::Context::seedRandomGenerator() before \ref LiDARcloud::syntheticScan() to obtain reproducible noisy scans.
+
   \section LiDARvis Visualizing results
 
   Results can be visualized using the Visualizer plug-in for Helios.  There are two possible means for doing so.  First, is to add the relevant geometry to the Context, then visualize primitives in the Context using the Visualizer.  This works for the triangulation and plant reconstructions, but cannot be used to visualize just the point cloud since there is no "point" primitive in the Context. The next section describes how to accomplish this.
@@ -590,6 +630,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
  <table>
  <tr><th>Function</th><th>Description</th></tr>
  <tr><td>\ref LiDARcloud::exportPointCloud( const char* filename ) </td><td>Write the entire point cloud to ASCII file (this is usually only used for generated synthetic data).</td></tr>
+ <tr><td>\ref LiDARcloud::exportScans( const char* filename ) </td><td>Write both an XML metadata file describing all scans and one ASCII point cloud file per scan. The output XML can be re-loaded with \ref LiDARcloud::loadXML().</td></tr>
  <tr><td>\ref LiDARcloud::exportTriangleNormals( const char* filename ) </td><td>Write the unit normal vectors [nx ny nz] of all triangles formed from triangulation.</td></tr>
  <tr><td>\ref LiDARcloud::exportTriangleNormals( const char* filename, const int gridcell ) </td><td>Write the unit normal vectors of triangles formed from triangulation that reside in a specified grid cell.</td></tr>
  <tr><td>\ref LiDARcloud::exportTriangleAreas( const char* filename ) </td><td>Write the areas of all triangles formed from triangulation.</td></tr>

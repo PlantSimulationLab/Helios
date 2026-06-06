@@ -119,9 +119,15 @@ namespace helios {
          * @param[in] sun_direction Direction to the sun
          * @param[in] solar_disk_radiance Solar disk radiance per band
          * @param[in] solar_disk_cos_angle Cosine of solar disk angular radius
+         * @param[in] camera_diffuse_flux Diffuse (hemispherical) sky flux per band, sampled by cameras
+         *            when band_emission_flag[b] is true. Allows cameras to see isotropic sky
+         *            longwave/thermal emission.
+         * @param[in] band_emission_flag Per-band flag (1 = emission enabled, 0 = disabled). Gates
+         *            whether cameras add the isotropic sky-emission contribution from
+         *            camera_diffuse_flux on a ray miss.
          */
         virtual void updateSkyModel(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction, const std::vector<float> &solar_disk_radiance,
-                                    float solar_disk_cos_angle) = 0;
+                                    float solar_disk_cos_angle, const std::vector<float> &camera_diffuse_flux, const std::vector<uint32_t> &band_emission_flag) = 0;
 
         // ========== Ray Launching ==========
 

@@ -963,7 +963,7 @@ void Context::loadOData(pugi::xml_node p, uint ID) {
     }
 }
 
-void Context::loadOsubPData(pugi::xml_node p, uint ID) {
+void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator &warnings) {
     assert(doesObjectExist(ID));
 
     std::vector<uint> prim_UUIDs = getObjectPointer_private(ID)->getPrimitiveUUIDs();
@@ -976,8 +976,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
-                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
                 break;
             }
 
@@ -1003,8 +1002,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
-                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
                 break;
             }
 
@@ -1030,8 +1028,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
-                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
                 break;
             }
 
@@ -1057,8 +1054,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
-                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
                 break;
             }
 
@@ -1084,8 +1080,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
-                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
                 break;
             }
 
@@ -1111,8 +1106,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
-                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
                 break;
             }
 
@@ -1138,8 +1132,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
-                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
                 break;
             }
 
@@ -1165,8 +1158,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
-                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
                 break;
             }
 
@@ -1192,8 +1184,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
-                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
                 break;
             }
 
@@ -1219,8 +1210,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
-                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
                 break;
             }
 
@@ -1246,8 +1236,7 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID) {
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
             if (u >= prim_UUIDs.size()) {
-                std::cerr << "WARNING (Context::loadXML): There was a problem with reading object primitive data \"" << label
-                          << "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values." << std::endl;
+                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
                 break;
             }
 
@@ -1311,6 +1300,8 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
     // if primitives are added that belong to an object, store their UUIDs here so that we can make sure their UUIDs are consistent
     std::map<uint, std::vector<uint>> object_prim_UUIDs;
+
+    WarningAggregator load_xml_warnings;
 
     //-------------- TIME/DATE ---------------//
 
@@ -1830,7 +1821,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         int2 subdiv;
         int result_subdiv = XMLparser::parse_subdivisions(p, subdiv);
         if (result_subdiv == 1) {
-            std::cerr << "WARNING (Context::loadXML): Number of subdivisions for tile was not provided. Assuming 1x1." << std::endl;
+            load_xml_warnings.addWarning("missing_subdivisions_tile", "Number of subdivisions for tile was not provided. Assuming 1x1.");
             subdiv = make_int2(1, 1);
         } else if (result_subdiv == 2) {
             helios_runtime_error("ERROR (Context::loadXML): Tile <subdivisions> node contains invalid data. ");
@@ -1879,7 +1870,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         // * Tile Sub-Patch Data * //
 
-        loadOsubPData(p, ID);
+        loadOsubPData(p, ID, load_xml_warnings);
 
         // * Tile Object Data * //
 
@@ -1928,7 +1919,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         uint subdiv;
         int result_subdiv = XMLparser::parse_subdivisions(p, subdiv);
         if (result_subdiv == 1) {
-            std::cerr << "WARNING (Context::loadXML): Number of subdivisions for sphere was not provided. Assuming 1x1." << std::endl;
+            load_xml_warnings.addWarning("missing_subdivisions_sphere", "Number of subdivisions for sphere was not provided. Assuming 1x1.");
             subdiv = 5;
         } else if (result_subdiv == 2) {
             helios_runtime_error("ERROR (Context::loadXML): Sphere <subdivisions> node contains invalid data. ");
@@ -1964,7 +1955,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         // * Sphere Sub-Triangle Data * //
 
-        loadOsubPData(p, ID);
+        loadOsubPData(p, ID, load_xml_warnings);
 
         // * Sphere Object Data * //
 
@@ -2004,7 +1995,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         uint subdiv;
         int result_subdiv = XMLparser::parse_subdivisions(p, subdiv);
         if (result_subdiv == 1) {
-            std::cerr << "WARNING (Context::loadXML): Number of subdivisions for tube was not provided. Assuming 1x1." << std::endl;
+            load_xml_warnings.addWarning("missing_subdivisions_tube", "Number of subdivisions for tube was not provided. Assuming 1x1.");
             subdiv = 5;
         } else if (result_subdiv == 2) {
             helios_runtime_error("ERROR (Context::loadXML): Tube <subdivisions> node contains invalid data. ");
@@ -2067,7 +2058,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         // * Tube Sub-Triangle Data * //
 
-        loadOsubPData(p, ID);
+        loadOsubPData(p, ID, load_xml_warnings);
 
         // * tube Object Data * //
 
@@ -2116,7 +2107,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         int3 subdiv;
         int result_subdiv = XMLparser::parse_subdivisions(p, subdiv);
         if (result_subdiv == 1) {
-            std::cerr << "WARNING (Context::loadXML): Number of subdivisions for box was not provided. Assuming 1x1." << std::endl;
+            load_xml_warnings.addWarning("missing_subdivisions_box", "Number of subdivisions for box was not provided. Assuming 1x1.");
             subdiv = make_int3(1, 1, 1);
         } else if (result_subdiv == 2) {
             helios_runtime_error("ERROR (Context::loadXML): Box <subdivisions> node contains invalid data. ");
@@ -2152,7 +2143,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         // * Box Sub-Patch Data * //
 
-        loadOsubPData(p, ID);
+        loadOsubPData(p, ID, load_xml_warnings);
 
         // * Box Object Data * //
 
@@ -2201,7 +2192,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         int2 subdiv;
         int result_subdiv = XMLparser::parse_subdivisions(p, subdiv);
         if (result_subdiv == 1) {
-            std::cerr << "WARNING (Context::loadXML): Number of subdivisions for disk was not provided. Assuming 1x1." << std::endl;
+            load_xml_warnings.addWarning("missing_subdivisions_disk", "Number of subdivisions for disk was not provided. Assuming 1x1.");
             subdiv = make_int2(5, 1);
         } else if (result_subdiv == 2) {
             helios_runtime_error("ERROR (Context::loadXML): Disk <subdivisions> node contains invalid data. ");
@@ -2237,7 +2228,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         // * Disk Sub-Triangle Data * //
 
-        loadOsubPData(p, ID);
+        loadOsubPData(p, ID, load_xml_warnings);
 
         // * Disk Object Data * //
 
@@ -2286,7 +2277,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         uint subdiv;
         int result_subdiv = XMLparser::parse_subdivisions(p, subdiv);
         if (result_subdiv == 1) {
-            std::cerr << "WARNING (Context::loadXML): Number of subdivisions for cone was not provided. Assuming 1x1." << std::endl;
+            load_xml_warnings.addWarning("missing_subdivisions_cone", "Number of subdivisions for cone was not provided. Assuming 1x1.");
             subdiv = 5;
         } else if (result_subdiv == 2) {
             helios_runtime_error("ERROR (Context::loadXML): Cone <subdivisions> node contains invalid data. ");
@@ -2329,7 +2320,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         // * Cone Sub-Triangle Data * //
 
-        loadOsubPData(p, ID);
+        loadOsubPData(p, ID, load_xml_warnings);
 
         // * Cone Object Data * //
 
@@ -2358,7 +2349,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         // * Polymesh Sub-Primitive Data * //
 
-        loadOsubPData(p, ID);
+        loadOsubPData(p, ID, load_xml_warnings);
 
         // * Polymesh Object Data * //
 
@@ -2606,6 +2597,8 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             addTimeseriesData(label, value, date, time);
         }
     }
+
+    load_xml_warnings.report(std::cerr);
 
     if (!quiet) {
         std::cout << "done." << std::endl;
@@ -5679,6 +5672,8 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
 
     bool utc_offset_set = false;
 
+    WarningAggregator csv_warnings;
+
     while (std::getline(datafile, line)) { // loop through file to read data
         row++;
 
@@ -5749,13 +5744,13 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
                 if (minutecol >= 0) {
                     if (!parse_int(line_separated.at(minutecol), minute)) {
                         minute = 0;
-                        std::cout << "WARNING (Context::loadTabularTimeseriesData): Could not parse minute string on line " << row << " of file " << data_file << ". Setting minute equal to 0." << std::endl;
+                        csv_warnings.addWarning("parse_minute_failed", "Could not parse minute string on line " + std::to_string(row) + " of file " + data_file + ". Setting minute equal to 0.");
                     }
                 }
                 if (secondcol >= 0) {
                     if (!parse_int(line_separated.at(secondcol), second)) {
                         second = 0;
-                        std::cout << "WARNING (Context::loadTabularTimeseriesData): Could not parse second string on line " << row << " of file " << data_file << ". Setting second equal to 0." << std::endl;
+                        csv_warnings.addWarning("parse_second_failed", "Could not parse second string on line " + std::to_string(row) + " of file " + data_file + ". Setting second equal to 0.");
                     }
                 }
                 time = make_Time(hour, minute, second);
@@ -5785,8 +5780,7 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
 
             float dataval;
             if (!parse_float(line_separated.at(col), dataval)) {
-                std::cout << "WARNING (Context::loadTabularTimeseriesData): Failed to parse data value as float on line "
-                          << row << ", column " << col + 1 << " of file " << data_file << ". Skipping this value..." << std::endl;
+                csv_warnings.addWarning("parse_data_value_failed", "Failed to parse data value as float on line " + std::to_string(row) + ", column " + std::to_string(col + 1) + " of file " + data_file + ". Skipping this value...");
                 continue;
             }
 
@@ -5797,6 +5791,8 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
             addTimeseriesData(label.c_str(), dataval, date, time);
         }
     }
+
+    csv_warnings.report(std::cerr);
 
     datafile.close();
 }

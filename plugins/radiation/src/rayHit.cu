@@ -795,6 +795,12 @@ RT_PROGRAM void miss_camera() {
             radiance = camera_sky_radiance[b] * angular_weight;
         }
 
+        // Isotropic sky emission/longwave: when band has emission enabled, the user-set diffuse_flux
+        // represents hemispherical sky thermal/longwave irradiance. Convert to isotropic radiance.
+        if (band_emission_flag[b] != 0u && camera_diffuse_flux[b] > 0.f) {
+            radiance += camera_diffuse_flux[b] / M_PI;
+        }
+
         if (radiance > 0.0f) {
             // Accumulate radiance directly (same as surface hits accumulate radiation_out)
             // Units: W/m²/sr

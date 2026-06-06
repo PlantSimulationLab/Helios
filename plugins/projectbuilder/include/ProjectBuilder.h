@@ -646,7 +646,7 @@ private:
     float longitude = 121.76;
 
     //! UTC offset
-    int UTC_offset = 8;
+    float UTC_offset = 8;
 
     //! CSV weather file path
     std::string csv_weather_file = "plugins/projectbuilder/inputs/weather_data.csv";

@@ -745,11 +745,12 @@ LeafOpticsProperties LeafOptics::computePropertiesFromNitrogen(float N_area_gN_m
 std::map<uint, std::vector<uint>> LeafOptics::groupPrimitivesByObject(const std::vector<uint> &UUIDs) {
     std::map<uint, std::vector<uint>> object_groups;
 
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(message_flag);
+
     for (uint UUID: UUIDs) {
         if (!context->doesPrimitiveExist(UUID)) {
-            if (message_flag) {
-                std::cerr << "WARNING (LeafOptics::groupPrimitivesByObject): Primitive UUID " << UUID << " does not exist, skipping." << std::endl;
-            }
+            warnings.addWarning("primitive_does_not_exist", "Primitive UUID " + std::to_string(UUID) + " does not exist, skipping.");
             continue;
         }
 
@@ -757,14 +758,14 @@ std::map<uint, std::vector<uint>> LeafOptics::groupPrimitivesByObject(const std:
 
         // Object ID 0 means no parent object
         if (objID == 0) {
-            if (message_flag) {
-                std::cerr << "WARNING (LeafOptics::groupPrimitivesByObject): Primitive UUID " << UUID << " has no parent object, skipping." << std::endl;
-            }
+            warnings.addWarning("primitive_no_parent_object", "Primitive UUID " + std::to_string(UUID) + " has no parent object, skipping.");
             continue;
         }
 
         object_groups[objID].push_back(UUID);
     }
+
+    warnings.report(std::cerr);
 
     return object_groups;
 }
@@ -1092,15 +1093,16 @@ void LeafOptics::updateNitrogenBasedSpectra() {
                              "Call run() with LeafOpticsProperties_Nauto first to initialize nitrogen mode.");
     }
 
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(message_flag);
+
     for (auto &pair: object_assignments) {
         uint objID = pair.first;
         ObjectAssignment &assignment = pair.second;
 
         // Read current nitrogen value
         if (!context->doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
-            if (message_flag) {
-                std::cerr << "WARNING (LeafOptics::updateNitrogenBasedSpectra): Object " << objID << " no longer has 'leaf_nitrogen_gN_m2' data, skipping." << std::endl;
-            }
+            warnings.addWarning("missing_nitrogen_data", "Object " + std::to_string(objID) + " no longer has 'leaf_nitrogen_gN_m2' data, skipping.");
             continue;
         }
 
@@ -1118,4 +1120,6 @@ void LeafOptics::updateNitrogenBasedSpectra() {
             }
         }
     }
+
+    warnings.report(std::cerr);
 }

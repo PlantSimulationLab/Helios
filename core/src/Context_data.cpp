@@ -27,6 +27,9 @@ void Context::decrementPrimitiveDataLabelCounter(const std::string &primitive_da
         it->second--;
         if (it->second == 0) {
             primitive_data_label_counts.erase(it);
+            // No primitives hold this data anymore — release the type lock so a
+            // subsequent setPrimitiveData() call may register a different type.
+            primitive_data_type_registry.erase(primitive_data_label);
         }
     }
 }
@@ -76,6 +79,9 @@ void Context::decrementObjectDataLabelCounter(const std::string &object_data_lab
         it->second--;
         if (it->second == 0) {
             object_data_label_counts.erase(it);
+            // No objects hold this data anymore — release the type lock so a
+            // subsequent setObjectData() call may register a different type.
+            object_data_type_registry.erase(object_data_label);
         }
     }
 }
@@ -296,6 +302,40 @@ void Context::clearPrimitiveData(const std::vector<uint> &UUIDs, const char *lab
         }
         primitives.at(UUID)->clearPrimitiveData(label);
     }
+}
+
+void Context::clearPrimitiveData(const char *label) {
+    // Iterate over every primitive in the Context, including hidden ones, so the
+    // label is fully removed and the type registry entry is released.
+    std::string label_str(label);
+    const bool caching_enabled = isPrimitiveDataValueCachingEnabled(label_str);
+    for (const auto &[UUID, primitive]: primitives) {
+        if (!primitive->doesPrimitiveDataExist(label)) {
+            continue;
+        }
+        if (caching_enabled) {
+            HeliosDataType data_type = primitive->getPrimitiveDataType(label);
+            if (data_type == HELIOS_TYPE_STRING) {
+                std::string cached_value;
+                primitive->getPrimitiveData(label, cached_value);
+                decrementPrimitiveValueRegistry(label_str, cached_value);
+            } else if (data_type == HELIOS_TYPE_INT) {
+                int cached_value;
+                primitive->getPrimitiveData(label, cached_value);
+                decrementPrimitiveValueRegistry(label_str, cached_value);
+            } else if (data_type == HELIOS_TYPE_UINT) {
+                uint cached_value;
+                primitive->getPrimitiveData(label, cached_value);
+                decrementPrimitiveValueRegistry(label_str, cached_value);
+            }
+        }
+        decrementPrimitiveDataLabelCounter(label);
+        primitive->clearPrimitiveData(label);
+    }
+    // Guard against any reference-count drift: the label is gone after this call,
+    // so the registry entry must be released even if the counter never reached zero.
+    primitive_data_label_counts.erase(label_str);
+    primitive_data_type_registry.erase(label_str);
 }
 
 void Context::copyPrimitiveData(uint sourceUUID, uint destinationUUID) {
@@ -1892,6 +1932,38 @@ void Context::clearObjectData(const std::vector<uint> &objIDs, const char *label
         }
         objects.at(objID)->clearObjectData(label);
     }
+}
+
+void Context::clearObjectData(const char *label) {
+    // Iterate over every object in the Context, including hidden ones, so the
+    // label is fully removed and the type registry entry is released.
+    std::string label_str(label);
+    const bool caching_enabled = isObjectDataValueCachingEnabled(label_str);
+    for (const auto &[objID, object]: objects) {
+        if (!object->doesObjectDataExist(label)) {
+            continue;
+        }
+        if (caching_enabled) {
+            HeliosDataType data_type = object->getObjectDataType(label);
+            if (data_type == HELIOS_TYPE_STRING) {
+                std::string cached_value;
+                object->getObjectData(label, cached_value);
+                decrementObjectValueRegistry(label_str, cached_value);
+            } else if (data_type == HELIOS_TYPE_INT) {
+                int cached_value;
+                object->getObjectData(label, cached_value);
+                decrementObjectValueRegistry(label_str, cached_value);
+            } else if (data_type == HELIOS_TYPE_UINT) {
+                uint cached_value;
+                object->getObjectData(label, cached_value);
+                decrementObjectValueRegistry(label_str, cached_value);
+            }
+        }
+        decrementObjectDataLabelCounter(label);
+        object->clearObjectData(label);
+    }
+    object_data_label_counts.erase(label_str);
+    object_data_type_registry.erase(label_str);
 }
 
 std::vector<std::string> Context::listObjectData(uint ObjID) const {

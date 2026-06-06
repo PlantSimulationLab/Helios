@@ -273,6 +273,8 @@ void OptiX8Backend::shutdown() {
     freePtr(d_sky_radiance_params);
     freePtr(d_camera_sky_radiance);
     freePtr(d_solar_disk_radiance);
+    freePtr(d_camera_diffuse_flux);
+    freePtr(d_band_emission_flag);
     freePtr(d_band_launch_flag);
     freePtr(d_mask_data);
     freePtr(d_mask_sizes);
@@ -704,7 +706,9 @@ void OptiX8Backend::updateSkyModel(const std::vector<helios::vec4> &sky_radiance
                                     const std::vector<float> &camera_sky_radiance,
                                     const helios::vec3 &sun_direction,
                                     const std::vector<float> &solar_disk_radiance,
-                                    float solar_disk_cos_angle) {
+                                    float solar_disk_cos_angle,
+                                    const std::vector<float> &camera_diffuse_flux,
+                                    const std::vector<uint32_t> &band_emission_flag) {
     // Upload sky_radiance_params (helios::vec4 → float4)
     freeCUdeviceptr(d_sky_radiance_params);
     if (!sky_radiance_params.empty()) {
@@ -734,9 +738,31 @@ void OptiX8Backend::updateSkyModel(const std::vector<helios::vec4> &sky_radiance
                               solar_disk_radiance.size() * sizeof(float), cudaMemcpyHostToDevice));
     }
 
+    // camera_diffuse_flux: per-band hemispherical sky flux sampled by cameras on a miss when
+    // band_emission_flag[b] is set. We keep this in a dedicated buffer (instead of reusing
+    // h_params.diffuse_flux) because launchCameraRays does not refresh diffuse_flux, so the
+    // global buffer can be stale or null in camera-only dispatches.
+    freeCUdeviceptr(d_camera_diffuse_flux);
+    if (!camera_diffuse_flux.empty()) {
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_camera_diffuse_flux),
+                              camera_diffuse_flux.size() * sizeof(float)));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_camera_diffuse_flux), camera_diffuse_flux.data(),
+                              camera_diffuse_flux.size() * sizeof(float), cudaMemcpyHostToDevice));
+    }
+
+    freeCUdeviceptr(d_band_emission_flag);
+    if (!band_emission_flag.empty()) {
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_band_emission_flag),
+                              band_emission_flag.size() * sizeof(uint32_t)));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_band_emission_flag), band_emission_flag.data(),
+                              band_emission_flag.size() * sizeof(uint32_t), cudaMemcpyHostToDevice));
+    }
+
     h_params.sky_radiance_params  = reinterpret_cast<float4 *>(d_sky_radiance_params);
     h_params.camera_sky_radiance  = reinterpret_cast<float *>(d_camera_sky_radiance);
     h_params.solar_disk_radiance  = reinterpret_cast<float *>(d_solar_disk_radiance);
+    h_params.camera_diffuse_flux  = reinterpret_cast<float *>(d_camera_diffuse_flux);
+    h_params.band_emission_flag   = reinterpret_cast<uint32_t *>(d_band_emission_flag);
     h_params.sun_direction        = make_float3(sun_direction.x, sun_direction.y, sun_direction.z);
     h_params.solar_disk_cos_angle = solar_disk_cos_angle;
 }

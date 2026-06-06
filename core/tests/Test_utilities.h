@@ -527,14 +527,27 @@ TEST_CASE("Date and Time Logic") {
     SUBCASE("Location struct") {
         Location l(1.f, 2.f, 3.f);
 
+        // 3-arg constructor leaves altitude at default 0
+        DOCTEST_CHECK(l.altitude_m == 0.f);
+
         // Operators
         DOCTEST_CHECK(l == Location(1.f, 2.f, 3.f));
         DOCTEST_CHECK(l != Location(1.f, 2.f, 4.f));
 
-        // Stream operator
+        // 4-arg constructor with altitude
+        Location l4(1.f, 2.f, 3.f, 100.f);
+        DOCTEST_CHECK(l4.altitude_m == 100.f);
+        DOCTEST_CHECK(l4 != l);
+        DOCTEST_CHECK(l4 == make_Location(1.f, 2.f, 3.f, 100.f));
+
+        // Stream operator now includes altitude as the 4th field
         std::stringstream ss;
         ss << l;
-        DOCTEST_CHECK(ss.str() == "<1,2,3>");
+        DOCTEST_CHECK(ss.str() == "<1,2,3,0>");
+
+        std::stringstream ss4;
+        ss4 << l4;
+        DOCTEST_CHECK(ss4.str() == "<1,2,3,100>");
     }
 
     SUBCASE("Julian day conversion") {

@@ -845,6 +845,8 @@ void AerialLiDARcloud::syntheticScan(helios::Context *context, const char *xml_f
     CUDA_CHECK_ERROR(cudaMalloc((void **) &d_masksize, Ntextures * sizeof(int2))); // allocate device memory
     CUDA_CHECK_ERROR(cudaMemcpy(d_masksize, masksize, Ntextures * sizeof(int2), cudaMemcpyHostToDevice));
 
+    helios::WarningAggregator scan_warnings;
+
     for (int s = 0; s < synthscan.getScanCount(); s++) {
 
         float coneangle = synthscan.getScanConeAngle(s);
@@ -935,7 +937,7 @@ void AerialLiDARcloud::syntheticScan(helios::Context *context, const char *xml_f
         N = Nbb;
 
         if (N == 0) {
-            std::cout << "WARNING: Synthetic rays did not hit any primitives for scan " << s << "." << std::endl;
+            scan_warnings.addWarning("synthetic_rays_no_hit", "Synthetic rays did not hit any primitives for scan " + std::to_string(s) + ".");
             continue;
         }
 
@@ -1109,6 +1111,8 @@ void AerialLiDARcloud::syntheticScan(helios::Context *context, const char *xml_f
             std::cout << "Created synthetic scan #" << s << " with " << Nhits << " hit points." << std::endl;
         }
     }
+
+    scan_warnings.report(std::cerr);
 
     if (printmessages) {
         std::cout << "done." << std::endl;

@@ -55,6 +55,7 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
     // Resolve file path using project-based resolution
     std::filesystem::path resolved_path = resolveProjectFile(filename);
     std::string resolved_filename = resolved_path.string();
+    std::filesystem::path xml_parent_dir = resolved_path.parent_path();
 
     // load file
     pugi::xml_parse_result result = xmldoc.load_file(resolved_filename.c_str());
@@ -209,6 +210,32 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
                 beamDivergence = fmax(0, atof(beamDivergence_str_lc));
             }
 
+            // ----- rangeNoiseStdDev ------//
+            const char *rangeNoise_str_uc = s.child_value("rangeNoiseStdDev");
+            const char *rangeNoise_str_lc = s.child_value("rangenoisestddev");
+
+            float rangeNoiseStdDev;
+            if (strlen(rangeNoise_str_uc) == 0 && strlen(rangeNoise_str_lc) == 0) {
+                rangeNoiseStdDev = 0;
+            } else if (strlen(rangeNoise_str_uc) > 0) {
+                rangeNoiseStdDev = fmax(0, atof(rangeNoise_str_uc));
+            } else {
+                rangeNoiseStdDev = fmax(0, atof(rangeNoise_str_lc));
+            }
+
+            // ----- angleNoiseStdDev ------//
+            const char *angleNoise_str_uc = s.child_value("angleNoiseStdDev");
+            const char *angleNoise_str_lc = s.child_value("anglenoisestddev");
+
+            float angleNoiseStdDev;
+            if (strlen(angleNoise_str_uc) == 0 && strlen(angleNoise_str_lc) == 0) {
+                angleNoiseStdDev = 0;
+            } else if (strlen(angleNoise_str_uc) > 0) {
+                angleNoiseStdDev = fmax(0, atof(angleNoise_str_uc));
+            } else {
+                angleNoiseStdDev = fmax(0, atof(angleNoise_str_lc));
+            }
+
             // ----- distanceFilter ------//
             const char *dFilter_str = s.child_value("distanceFilter");
 
@@ -233,7 +260,7 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
             }
 
             // create a temporary scan object
-            ScanMetadata scan(origin, size.x, thetaMin, thetaMax, size.y, phiMin, phiMax, exitDiameter, beamDivergence, column_format);
+            ScanMetadata scan(origin, size.x, thetaMin, thetaMax, size.y, phiMin, phiMax, exitDiameter, beamDivergence, rangeNoiseStdDev, angleNoiseStdDev, column_format);
 
             addScan(scan);
 
@@ -244,24 +271,30 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
 
             if (!data_filename.empty()) {
 
-                char str[100];
-                strcpy(str, "input/"); // first look in the input directory
-                strcat(str, data_filename.c_str());
-                ifstream f(str);
-                if (!f.good()) {
-
-                    // if not in input directory, try absolute path
-                    strcpy(str, data_filename.c_str());
-                    f.open(str);
-
-                    if (!f.good()) {
-                        cout << "failed.\n";
-                        helios_runtime_error("ERROR (LiDARcloud::loadXML): Data file `" + std::string(str) + "' given for scan #" + std::to_string(scan_count) + " does not exist.");
+                // Resolve the data file. Try in order:
+                //   1. input/<data_filename>     (legacy convention)
+                //   2. <data_filename>            (cwd-relative or absolute)
+                //   3. <xml_parent_dir>/<data_filename>  (sibling of the XML file)
+                std::string resolved_data_file;
+                std::vector<std::string> candidates;
+                candidates.push_back("input/" + data_filename);
+                candidates.push_back(data_filename);
+                if (!xml_parent_dir.empty()) {
+                    candidates.push_back((xml_parent_dir / data_filename).string());
+                }
+                for (const std::string &candidate : candidates) {
+                    ifstream f(candidate);
+                    if (f.good()) {
+                        resolved_data_file = candidate;
+                        break;
                     }
-                    f.close();
+                }
+                if (resolved_data_file.empty()) {
+                    cout << "failed.\n";
+                    helios_runtime_error("ERROR (LiDARcloud::loadXML): Data file `" + data_filename + "' given for scan #" + std::to_string(scan_count) + " does not exist.");
                 }
 
-                scan.data_file = str; // set the data file for the scan
+                scan.data_file = resolved_data_file; // set the data file for the scan
 
                 // add hit points to scan if data file was given
 
@@ -920,6 +953,86 @@ void LiDARcloud::exportPointCloud(const char *filename, uint scanID) {
     }
 
     file.close();
+}
+
+void LiDARcloud::exportScans(const char *filename) {
+
+    if (getScanCount() == 0) {
+        helios_runtime_error("ERROR (LiDARcloud::exportScans): No scans to export.");
+    }
+
+    ensureOutputDirectoryExists(filename);
+
+    std::filesystem::path xml_path(filename);
+    std::filesystem::path parent_dir = xml_path.parent_path();
+    std::string stem = xml_path.stem().string();
+
+    pugi::xml_document xmldoc;
+    pugi::xml_node helios_node = xmldoc.append_child("helios");
+
+    for (uint i = 0; i < getScanCount(); i++) {
+
+        std::string xyz_basename = stem + "_" + std::to_string(i) + ".xyz";
+        std::filesystem::path xyz_path = parent_dir / xyz_basename;
+        std::string xyz_path_str = xyz_path.string();
+
+        // Write the ASCII point cloud for this scan using the existing exporter
+        exportPointCloud(xyz_path_str.c_str(), i);
+
+        // Build the <scan> entry
+        pugi::xml_node scan_node = helios_node.append_child("scan");
+
+        vec3 origin = getScanOrigin(i);
+        uint Ntheta = getScanSizeTheta(i);
+        uint Nphi = getScanSizePhi(i);
+        vec2 theta_range = getScanRangeTheta(i);
+        vec2 phi_range = getScanRangePhi(i);
+        float exit_diameter = getScanBeamExitDiameter(i);
+        float beam_divergence = getScanBeamDivergence(i);
+        float range_noise_stddev = getScanRangeNoiseStdDev(i);
+        float angle_noise_stddev = getScanAngleNoiseStdDev(i);
+        std::vector<std::string> column_format = getScanColumnFormat(i);
+        if (column_format.empty()) {
+            column_format = {"x", "y", "z"};
+        }
+
+        auto append_text_child = [&](const char *tag, const std::string &text) {
+            pugi::xml_node child = scan_node.append_child(tag);
+            child.append_child(pugi::node_pcdata).set_value(text.c_str());
+        };
+
+        std::ostringstream origin_ss;
+        origin_ss << origin.x << " " << origin.y << " " << origin.z;
+        append_text_child("origin", origin_ss.str());
+
+        std::ostringstream size_ss;
+        size_ss << Ntheta << " " << Nphi;
+        append_text_child("size", size_ss.str());
+
+        append_text_child("thetaMin", std::to_string(theta_range.x * 180.f / float(M_PI)));
+        append_text_child("thetaMax", std::to_string(theta_range.y * 180.f / float(M_PI)));
+        append_text_child("phiMin", std::to_string(phi_range.x * 180.f / float(M_PI)));
+        append_text_child("phiMax", std::to_string(phi_range.y * 180.f / float(M_PI)));
+        append_text_child("exitDiameter", std::to_string(exit_diameter));
+        append_text_child("beamDivergence", std::to_string(beam_divergence));
+        append_text_child("rangeNoiseStdDev", std::to_string(range_noise_stddev));
+        append_text_child("angleNoiseStdDev", std::to_string(angle_noise_stddev));
+
+        std::ostringstream format_ss;
+        for (size_t c = 0; c < column_format.size(); c++) {
+            if (c > 0) {
+                format_ss << " ";
+            }
+            format_ss << column_format[c];
+        }
+        append_text_child("ASCII_format", format_ss.str());
+
+        append_text_child("filename", xyz_basename);
+    }
+
+    if (!xmldoc.save_file(filename)) {
+        helios_runtime_error("ERROR (LiDARcloud::exportScans): Could not write XML metadata file '" + std::string(filename) + "'.");
+    }
 }
 
 void LiDARcloud::exportPointCloudPTX(const char *filename, uint scanID) {

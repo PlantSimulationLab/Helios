@@ -2157,6 +2157,81 @@ TEST_CASE("Missing Data and State Functions") {
         DOCTEST_CHECK(captured.find("nonexistent") != std::string::npos);
     }
 
+    SUBCASE("deleteTimeseriesDataPoint by label") {
+        Context ctx;
+        Date date = make_Date(1, 1, 2025);
+        Time time0 = make_Time(0, 0, 12);
+        Time time1 = make_Time(1, 0, 12);
+        Time time2 = make_Time(2, 0, 12);
+
+        ctx.addTimeseriesData("temp", 25.5f, date, time0);
+        ctx.addTimeseriesData("temp", 26.5f, date, time1);
+        ctx.addTimeseriesData("temp", 27.5f, date, time2);
+        ctx.addTimeseriesData("humidity", 60.0f, date, time1);
+        DOCTEST_CHECK(ctx.getTimeseriesLength("temp") == 3);
+
+        // Delete the middle point of "temp"; other points remain and ordering is preserved.
+        ctx.deleteTimeseriesDataPoint("temp", date, time1);
+        DOCTEST_CHECK(ctx.getTimeseriesLength("temp") == 2);
+        DOCTEST_CHECK(ctx.queryTimeseriesData("temp", 0) == doctest::Approx(25.5f));
+        DOCTEST_CHECK(ctx.queryTimeseriesData("temp", 1) == doctest::Approx(27.5f));
+        // "humidity" is unaffected: deleting from one variable does not touch others.
+        DOCTEST_CHECK(ctx.getTimeseriesLength("humidity") == 1);
+        DOCTEST_CHECK(ctx.queryTimeseriesData("humidity", 0) == doctest::Approx(60.0f));
+
+        // Deleting at a non-matching (date,time) warns but does not throw.
+        std::string captured;
+        {
+            capture_cerr cerr_buffer;
+            DOCTEST_CHECK_NOTHROW(ctx.deleteTimeseriesDataPoint("temp", date, time1));
+            captured = cerr_buffer.get_captured_output();
+        }
+        DOCTEST_CHECK(captured.find("WARNING") != std::string::npos);
+        DOCTEST_CHECK(ctx.getTimeseriesLength("temp") == 2);
+
+        // Deleting from a non-existent variable warns but does not throw.
+        {
+            capture_cerr cerr_buffer;
+            DOCTEST_CHECK_NOTHROW(ctx.deleteTimeseriesDataPoint("nonexistent", date, time0));
+            captured = cerr_buffer.get_captured_output();
+        }
+        DOCTEST_CHECK(captured.find("WARNING") != std::string::npos);
+        DOCTEST_CHECK(captured.find("nonexistent") != std::string::npos);
+    }
+
+    SUBCASE("deleteTimeseriesDataPoint across all variables") {
+        Context ctx;
+        Date date = make_Date(1, 1, 2025);
+        Time time0 = make_Time(0, 0, 12);
+        Time time1 = make_Time(1, 0, 12);
+
+        ctx.addTimeseriesData("temp", 25.5f, date, time0);
+        ctx.addTimeseriesData("temp", 26.5f, date, time1);
+        ctx.addTimeseriesData("humidity", 60.0f, date, time0);
+        ctx.addTimeseriesData("humidity", 65.0f, date, time1);
+        ctx.addTimeseriesData("pressure", 1013.0f, date, time1);
+
+        // Delete the time0 point across all variables.
+        // "pressure" has no point at time0 — it should be silently left alone.
+        ctx.deleteTimeseriesDataPoint(date, time0);
+        DOCTEST_CHECK(ctx.getTimeseriesLength("temp") == 1);
+        DOCTEST_CHECK(ctx.queryTimeseriesData("temp", 0) == doctest::Approx(26.5f));
+        DOCTEST_CHECK(ctx.getTimeseriesLength("humidity") == 1);
+        DOCTEST_CHECK(ctx.queryTimeseriesData("humidity", 0) == doctest::Approx(65.0f));
+        DOCTEST_CHECK(ctx.getTimeseriesLength("pressure") == 1);
+        DOCTEST_CHECK(ctx.queryTimeseriesData("pressure", 0) == doctest::Approx(1013.0f));
+
+        // A (date,time) that matches no variable warns but does not throw.
+        std::string captured;
+        Time time_no_match = make_Time(23, 59, 59);
+        {
+            capture_cerr cerr_buffer;
+            DOCTEST_CHECK_NOTHROW(ctx.deleteTimeseriesDataPoint(date, time_no_match));
+            captured = cerr_buffer.get_captured_output();
+        }
+        DOCTEST_CHECK(captured.find("WARNING") != std::string::npos);
+    }
+
     SUBCASE("getUniquePrimitiveParentObjectIDs") {
         Context ctx;
         uint obj1 = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));

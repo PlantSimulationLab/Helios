@@ -65,6 +65,7 @@ constexpr To scast(From &&v) noexcept {
 
 
 #include "helios_vector_types.h"
+#include "image_metadata.h"
 
 // pugi XML parser
 #include "pugixml.hpp"
@@ -885,6 +886,21 @@ namespace helios {
      * \note The length of pixel_data must be width*height*3 (or if it is width*height*4, the last channel is ignored).
      */
     void writeJPEG(const std::string &filename, uint width, uint height, const std::vector<unsigned char> &pixel_data);
+
+    //! Function to write a JPEG image with embedded EXIF (APP1) and XMP (APP1) metadata
+    /**
+     * The metadata struct's populated fields are serialized into standard EXIF / XMP segments
+     * embedded in the JPEG output. Fields left at their default-empty/zero values are omitted.
+     * GPS tags are only written when `metadata.gps_valid` is true; XMP Camera:Yaw/Pitch/Roll
+     * are only written when `metadata.xmp_valid` is true.
+     *
+     * \param[in] filename Name of the JPEG image file
+     * \param[in] width Image width in pixels
+     * \param[in] height Image height in pixels
+     * \param[in] pixel_data Colors at each pixel (index at pixel_data[row*width+column])
+     * \param[in] metadata Populated `helios::ImageEXIFData` describing camera intrinsics, orientation, and GPS.
+     */
+    void writeJPEG(const std::string &filename, uint width, uint height, const std::vector<helios::RGBcolor> &pixel_data, const helios::ImageEXIFData &metadata);
 
     //! Write a single-channel float image to an EXR file with lossless ZIP compression
     /**

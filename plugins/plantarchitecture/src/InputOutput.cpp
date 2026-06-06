@@ -3337,10 +3337,15 @@ void writeUSDAHeader(std::ofstream &out, const std::string &default_prim) {
 }
 
 void writePhysicsScene(std::ofstream &out) {
-    out << "def PhysicsScene \"PhysicsScene\"\n";
+    out << "def PhysicsScene \"PhysicsScene\" (\n";
+    out << "    prepend apiSchemas = [\"PhysxSceneAPI\"]\n";
+    out << ")\n";
     out << "{\n";
     out << "    vector3f physics:gravityDirection = (0, 0, -1)\n";
     out << "    float physics:gravityMagnitude = 9.81\n";
+    out << "    bool physxScene:enableGPUDynamics = true\n";
+    out << "    uniform token physxScene:broadphaseType = \"GPU\"\n";
+    out << "    uniform token physxScene:solverType = \"TGS\"\n";
     out << "}\n\n";
 }
 
@@ -3641,7 +3646,7 @@ void writeLinkPrim(std::ofstream &out, const USDLink &link, const std::vector<US
     std::string inner2 = inner + "    ";
 
     out << std::fixed << std::setprecision(6);
-    out << inner << "point3f xformOp:translate = (" << link.position.x << ", " << link.position.y << ", " << link.position.z << ")\n";
+    out << inner << "float3 xformOp:translate = (" << link.position.x << ", " << link.position.y << ", " << link.position.z << ")\n";
     out << inner << "quatf xformOp:orient = (" << link.qw << ", " << link.qx << ", " << link.qy << ", " << link.qz << ")\n";
     out << inner << "uniform token[] xformOpOrder = [\"xformOp:translate\", \"xformOp:orient\"]\n";
 
@@ -3677,7 +3682,7 @@ void writeLinkPrim(std::ofstream &out, const USDLink &link, const std::vector<US
 
         // Collision mesh for physics (convex hull approximation, hidden from rendering)
         out << inner << "def Mesh \"Collision\" (\n";
-        out << inner << "    prepend apiSchemas = [\"MaterialBindingAPI\", \"PhysicsCollisionAPI\", \"PhysxCollisionAPI\"]\n";
+        out << inner << "    prepend apiSchemas = [\"MaterialBindingAPI\", \"PhysicsCollisionAPI\", \"PhysicsMeshCollisionAPI\", \"PhysxCollisionAPI\"]\n";
         out << inner << ")\n";
         out << inner << "{\n";
         out << inner2 << "uniform token subdivisionScheme = \"none\"\n";
@@ -4074,7 +4079,7 @@ void PlantArchitecture::writePlantGrowthUSD(uint plantID, const std::string &fil
         // frames — all transitions are instantaneous.
 
         // Time-sampled translate
-        out << "        point3f xformOp:translate.timeSamples = {\n";
+        out << "        float3 xformOp:translate.timeSamples = {\n";
         {
             bool first_entry = true;
             for (uint f = 0; f < num_frames; f++) {
