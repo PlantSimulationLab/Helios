@@ -16,7 +16,7 @@
   \section LiDARissues Known Issues
 
   - The LiDAR plug-in requires the Visualizer plug-in to be loaded in the CMakeLists.txt file.
-  - The current version of calculateLeafArea() handles both discrete-return and multi-return data automatically.
+  - The current version of calculateLeafArea() handles both single-return and multi-return data automatically.
 
   \section LiDARintro Introduction
 
@@ -67,15 +67,17 @@
 
  \image html RectangularScan.png "The rectangular scan pattern creates quadrilateral polygons between four neighboring points."
 
- \subsection LiDARreturn Difference between discrete-return and full-waveform LiDAR data
+ \subsection LiDARreturn Single-return vs. multi-return LiDAR data
 
  The laser beam emitted from a LiDAR instrument has some finite diameter, which increases with distance from the scanner. In many cases, the beam diameter may be larger than the width of individual leaves by the time it reaches the canopy. This means that a single laser pulse may intersect multiple objects along its path to the ground.
 
- For a "discrete-return" instrument, only one (or sometimes a few) hit points are recorded per laser pulse. The distance from the scanner recorded for the hit point is an effective average distance to all objects intersected by the beam.
+ LiDAR data is commonly classified along two independent axes that are easy to conflate. The first is the instrument's <em>detection method</em>: a <b>discrete-return</b> instrument detects peaks in the returning signal in real time and records a small number of discrete points per pulse, whereas a <b>full-waveform</b> instrument digitizes and stores the entire returned signal as a function of time (the "waveform"), from which the individual returns are later extracted. The second axis is the number of returns recorded per pulse: <b>single-return</b> (one hit point per pulse) versus <b>multi-return</b> (several hit points per pulse, e.g. first, second, ..., last). These two axes are independent: discrete-return instruments routinely record multiple returns per pulse, and full-waveform instruments also ultimately output discrete returns once the waveform is decomposed.
 
- By contrast "full-waveform" instruments are able to record multiple hit point locations along a single laser pulse by analyzing the return timeseries or "waveform". This class of instruments is able to process the timeseries of pulse returns into separate distances. Full-waveform instruments are preferred because they provide more information, particularly in dense canopies where a discrete-return instrument would rarely record the location of the ground. Technically, full-waveform instruments ultimately output discrete hit points, but for the purposes of this documentation we will consider discrete-return data to have a single hit point per laser pulse, and full-waveform data to have an unlimited number of hit points per laser pulse.
+ The Helios LiDAR plug-in works entirely with <b>discrete return points</b> - it does not produce, store, or export a digitized waveform. What it distinguishes, and what this documentation refers to throughout, is the number of returns recorded per pulse:
+ - <b>Single-return</b> data records a single hit point per laser pulse. The distance recorded for the hit point is an effective average distance to all objects intersected by the beam.
+ - <b>Multi-return</b> data records multiple hit point locations along a single laser pulse. Multi-return data is preferred in dense canopies, where a single-return measurement would rarely record the location of the ground beneath the foliage.
 
- There is sometimes ambiguity or inconsistency in usage of the terms discrete-return and full-waveform LiDAR data in the literature. For the purposes of this documentation, we will call "discrete-return" data as a scan that records only a single hit point per laser pulse, and "full-waveform" data as a scan that can record a large number of hit points per laser pulse.
+ Real instruments that produce multi-return data (such as the RIEGL VZ series) are often full-waveform internally, but the exported point cloud - and everything Helios simulates and processes - consists of discrete returns, not waveforms.
 
  \image html plugins/lidar/doc/images/WaveformSchematic.jpeg
 
@@ -83,23 +85,75 @@
 
  Each scan has a set of parameters or "metadata" that must be specified in order to process the data.  Some parameters are optional, while some are required.  The following metadata is needed to define the overall scan itself, in addition to individual scan hit points. Note that XML tags are case-sensitive.
 
+ The tags in the table below are common to <em>all</em> scan types. The tags that define the <em>geometry</em> of the scan depend on the scan pattern (selected with the \<scanPattern> tag) and are listed separately for each pattern in \ref ScanRaster and \ref ScanSpinningMultibeam below.
+
  <table>
  <tr><th>Metadata</th><th>XML tag</th><th>Description</th><th>Default behavior</th></tr>
  <tr><td>Scanner origin</td><td>\<origin></td><td>(x,y,z) coordinate of the scanner.  This is the position where the scanner rays are sent from. Values should be separated by a space in the XML file.</td><td>None: REQUIRED</td></tr>
- <tr><td>size</td><td>\<size></td><td>Number of scan points in the theta (zenithal) and phi (azimuthal) directions. Values should be separated by a space in the XML file.</td><td>None: REQUIRED</td></tr>
- <tr><td>\f$\theta\f$<sub>min</sub> (degrees)</td><td>\<thetaMin></td><td>Minimum scan theta (zenital) angle. \f$\theta\f$<sub>min</sub>=0 if the scan starts from upward vertical, \f$\theta\f$<sub>min</sub>=90 is the scan starts from horizontal, etc. </td><td>0</td></tr>
- <tr><td>\f$\theta\f$<sub>max</sub> (degrees)</td><td>\<thetaMax></td><td>Maximum scan theta (zenital) angle. \f$\theta\f$<sub>max</sub>=90 if the scan ends at horizontal, \f$\theta\f$<sub>min</sub>=180 is the scan ends at downward vertical, etc. </td><td>180</td></tr>
- <tr><td>\f$\varphi\f$<sub>min</sub> (degrees)</td><td>\<phiMin></td><td>Minimum scan phi (azimuthal) angle. \f$\varphi\f$<sub>min</sub>=0 if the scan starts pointing in the +y direction, \f$\varphi\f$<sub>min</sub>=90 if the scan starts pointing in the +x direction, etc. </td><td>0</td></tr>
- <tr><td>\f$\varphi\f$<sub>max</sub> (degrees)</td><td>\<phiMax></td><td>Maximum scan phi (azimuthal) angle. \f$\varphi\f$<sub>max</sub>=90 if the scan ends pointing in the +x direction, \f$\varphi\f$<sub>min</sub>=180 if the scan ends pointing in the -y direction, etc. NOTE: \f$\varphi\f$<sub>max</sub> could be greater than 360 if \f$\varphi\f$<sub>min</sub> > 0 and the scanner makes a full rotation in the in the azimuthal direction, in which case \f$\varphi\f$<sub>max</sub>=\f$\varphi\f$<sub>min</sub>+360.</td><td>360</td></tr>
+ <tr><td>scan pattern</td><td>\<scanPattern></td><td>Geometric pattern of beam directions: either <tt>raster</tt> (a uniform angular grid in zenith and azimuth - the default panoramic terrestrial-scanner pattern) or <tt>spinning_multibeam</tt> (a rotating multi-channel sensor such as a Velodyne, Ouster, or Hesai unit). The geometry of each pattern is defined by additional tags listed in \ref ScanRaster and \ref ScanSpinningMultibeam below.</td><td>raster</td></tr>
  <tr><td>translation</td><td>\<translation></td><td>Global (x,y,z) translation to be applied to entire scan, including the origin and all hit points.</td><td>No translation.</td></tr>
  <tr><td>rotation (degrees)</td><td>\<rotation></td><td>Global spherical rotation (theta,phi) to be applied to the entire scan, including the origin and all hit points.</td><td>No rotation.</td></tr>
- <tr><td>beam exit diameter (meters)</td><td>\<exitDiameter></td><td>Effective diameter of laser beam exiting the instrument. Only used for full-waveform synthetic data generation.</td><td>0 (discrete return)</td></tr>
-<tr><td>beam divergence angle (rad)</td><td>\<beamDivergence></td><td>Angle of laser beam divergence after exiting the instrument. Only used for full-waveform synthetic data generation.</td><td>0</td></tr>
+ <tr><td>beam exit diameter (meters)</td><td>\<exitDiameter></td><td>Effective diameter of laser beam exiting the instrument. Only used for multi-return synthetic data generation.</td><td>0 (single return)</td></tr>
+<tr><td>beam divergence angle (rad)</td><td>\<beamDivergence></td><td>Angle of laser beam divergence after exiting the instrument. Only used for multi-return synthetic data generation.</td><td>0</td></tr>
 <tr><td>range noise std. dev. (meters)</td><td>\<rangeNoiseStdDev></td><td>Standard deviation of zero-mean Gaussian noise added to the measured range (distance) of each return during synthetic scan generation. The hit point is displaced along the beam direction, producing realistic anisotropic positional error. Only used for synthetic data generation.</td><td>0 (no noise)</td></tr>
 <tr><td>angular noise std. dev. (rad)</td><td>\<angleNoiseStdDev></td><td>Standard deviation of zero-mean Gaussian jitter applied to the pointing direction of each pulse during synthetic scan generation. This produces the across-beam (lateral) component of the positional error, which grows with range. Only used for synthetic data generation.</td><td>0 (no jitter)</td></tr>
+<tr><td>scanner tilt (roll pitch, degrees)</td><td>\<scanTilt></td><td>Global scanner tilt applied to the entire scan frame about the scanner origin during synthetic scan generation. This models the residual tilt of the scanner spin axis away from true vertical (plumb) that a real terrestrial scanner's dual-axis inclinometer reports. Two angles are given, separated by a space: the first is the <b>roll</b> and the second is the <b>pitch</b>, applied in that order (roll first). The tilt uses a right-handed, Z-up body frame (matching commercial scanners such as those using the RIEGL SOCS convention): the body forward axis is the horizontal projection of the azimuth-zero (\f$\varphi\f$<sub>min</sub>) scan direction, and the body lateral axis completes the right-handed frame. Roll is a right-hand rotation about the lateral axis; pitch is a right-hand rotation about the forward axis. When \f$\varphi\f$<sub>min</sub>=0 the lateral axis is world +x and the forward axis is world +y. Note that commercial scanners do not share a universal inclinometer sign convention, so when matching a specific instrument the sign should be verified against that instrument. Only used for synthetic data generation.</td><td>0 0 (perfectly level)</td></tr>
 <tr><td>ASCII point cloud file</td><td>\<filename></td><td>File containing point cloud data to be read.</td><td>No file will be read.</td></tr>
 <tr><td>ASCII file column format</td><td>\<ASCII_format></td><td>Labels for columns in ASCII point cloud file. See section below for possible values and examples. Labels should be separated by a space in the XML file.</td><td>x y z</td></tr>
  </table>
+
+ \subsubsection ScanRaster Rectangular raster scan pattern
+
+ The default scan pattern (<tt>\<scanPattern> raster \</scanPattern></tt>, or simply omitting the \<scanPattern> tag) is a rectangular raster: a uniform angular grid of \f$\mathrm{N}_\theta\times\mathrm{N}_\varphi\f$ beam directions spanning the zenith range [\f$\theta\f$<sub>min</sub>,\f$\theta\f$<sub>max</sub>] and the azimuth range [\f$\varphi\f$<sub>min</sub>,\f$\varphi\f$<sub>max</sub>]. This corresponds to a panoramic terrestrial laser scanner operating in gridded mode (e.g. RIEGL VZ, Leica, FARO Focus). The geometry is defined by the following tags, in addition to the common tags above:
+
+ <table>
+ <tr><th>Metadata</th><th>XML tag</th><th>Description</th><th>Default behavior</th></tr>
+ <tr><td>size</td><td>\<size></td><td>Number of scan points in the theta (zenithal) and phi (azimuthal) directions, \f$\mathrm{N}_\theta\f$ and \f$\mathrm{N}_\varphi\f$. The two integers should be separated by a space.</td><td>None: REQUIRED</td></tr>
+ <tr><td>\f$\theta\f$<sub>min</sub> (degrees)</td><td>\<thetaMin></td><td>Minimum scan theta (zenithal) angle. \f$\theta\f$<sub>min</sub>=0 if the scan starts from upward vertical, \f$\theta\f$<sub>min</sub>=90 if the scan starts from horizontal, etc.</td><td>0</td></tr>
+ <tr><td>\f$\theta\f$<sub>max</sub> (degrees)</td><td>\<thetaMax></td><td>Maximum scan theta (zenithal) angle. \f$\theta\f$<sub>max</sub>=90 if the scan ends at horizontal, \f$\theta\f$<sub>max</sub>=180 if the scan ends at downward vertical, etc.</td><td>180</td></tr>
+ <tr><td>\f$\varphi\f$<sub>min</sub> (degrees)</td><td>\<phiMin></td><td>Minimum scan phi (azimuthal) angle. \f$\varphi\f$<sub>min</sub>=0 if the scan starts pointing in the +y direction, \f$\varphi\f$<sub>min</sub>=90 if the scan starts pointing in the +x direction, etc.</td><td>0</td></tr>
+ <tr><td>\f$\varphi\f$<sub>max</sub> (degrees)</td><td>\<phiMax></td><td>Maximum scan phi (azimuthal) angle. \f$\varphi\f$<sub>max</sub>=90 if the scan ends pointing in the +x direction, \f$\varphi\f$<sub>max</sub>=180 if the scan ends pointing in the -y direction, etc. NOTE: \f$\varphi\f$<sub>max</sub> can be greater than 360 if \f$\varphi\f$<sub>min</sub> > 0 and the scanner makes a full rotation in the azimuthal direction, in which case \f$\varphi\f$<sub>max</sub> = \f$\varphi\f$<sub>min</sub> + 360.</td><td>360</td></tr>
+ </table>
+
+ ~~~~~~{.xml}
+ <scan>
+   <origin> 0 0 0 </origin>
+   <size> 2500 4500 </size>
+   <thetaMin> 30 </thetaMin>
+   <thetaMax> 130 </thetaMax>
+   <phiMin> 0 </phiMin>
+   <phiMax> 360 </phiMax>
+ </scan>
+ ~~~~~~
+
+ \subsubsection ScanSpinningMultibeam Spinning multibeam scan pattern
+
+ Setting <tt>\<scanPattern> spinning_multibeam \</scanPattern></tt> models a rotating multi-channel sensor (e.g. Velodyne, Ouster, Hesai), which is the most common pattern for mobile and UAV plant scanning. \f$\mathrm{N}_\theta\f$ laser channels are each fixed at their own (generally non-uniformly spaced) elevation angle, and the whole head rotates through \f$\mathrm{N}_\varphi\f$ uniform azimuth steps. The pattern is represented internally as the same \f$\mathrm{N}_\theta\times\mathrm{N}_\varphi\f$ scan table used by a raster scan, except that each row uses its channel's zenith angle (from \<beamElevationAngles>) rather than a uniform step. Because the storage is shared, all downstream processing - ray tracing, hit tables, leaf-area and leaf-angle inversion - is identical to a raster scan. Each synthetic hit additionally records a <tt>channel</tt> data value giving the index of the laser channel (scan-table row) that produced it. The geometry is defined by the following tags, in addition to the common tags above:
+
+ <table>
+ <tr><th>Metadata</th><th>XML tag</th><th>Description</th><th>Default behavior</th></tr>
+ <tr><td>channel elevation angles (degrees)</td><td>\<beamElevationAngles></td><td>Space-separated list of per-channel elevation angles above the horizon, in degrees (e.g. a 16-channel sensor spanning \f$-15\f$ to \f$+15^\circ\f$). The number of entries sets the number of channels / zenithal rows \f$\mathrm{N}_\theta\f$. Each elevation angle is converted internally to a zenith angle (\f$\theta = 90^\circ - \f$ elevation).</td><td>None: REQUIRED</td></tr>
+ <tr><td>number of azimuth steps</td><td>\<Nphi></td><td>Number of azimuth steps (columns) \f$\mathrm{N}_\varphi\f$ per rotation. May alternatively be given as the second value of a \<size> tag; if both are present, \<Nphi> takes precedence.</td><td>None: REQUIRED</td></tr>
+ <tr><td>\f$\varphi\f$<sub>min</sub> (degrees)</td><td>\<phiMin></td><td>Minimum scan phi (azimuthal) angle. A full rotation spans \f$\varphi\f$<sub>min</sub>=0 to \f$\varphi\f$<sub>max</sub>=360.</td><td>0</td></tr>
+ <tr><td>\f$\varphi\f$<sub>max</sub> (degrees)</td><td>\<phiMax></td><td>Maximum scan phi (azimuthal) angle. For a full rotation use 360.</td><td>360</td></tr>
+ </table>
+
+ An example spinning multibeam scan, configured like a 16-channel sensor with 2-degree channel spacing making a full azimuth rotation:
+
+ ~~~~~~{.xml}
+ <scan>
+   <origin> 0 0 1.5 </origin>
+   <scanPattern> spinning_multibeam </scanPattern>
+   <beamElevationAngles> -15 -13 -11 -9 -7 -5 -3 -1 1 3 5 7 9 11 13 15 </beamElevationAngles>
+   <Nphi> 1800 </Nphi>
+   <phiMin> 0 </phiMin>
+   <phiMax> 360 </phiMax>
+ </scan>
+ ~~~~~~
+
+ \note Leaf-area inversion requires the population of transmitted (miss) beams. For raster scans loaded from real instruments these can be reconstructed with \ref LiDARcloud::gapfillMisses(), which assumes a regular angular grid. For non-raster patterns, generate synthetic scans with miss recording enabled by calling \ref LiDARcloud::syntheticScan(helios::Context*,bool,bool) "syntheticScan()" with <tt>record_misses=true</tt> (see also \ref LiDARsynthetic), which records the misses directly and does not rely on grid reconstruction.
+
+ \note The triangulation distance passed to \ref LiDARcloud::triangulateHitPoints() should be matched to the point spacing of the pattern. Spinning multibeam channels are spaced more coarsely in the vertical (zenithal) direction than a dense raster scan, so a larger triangulation distance may be needed for leaf-angle and leaf-area reconstruction.
 
  \subsection AddHits Hit point data
 
@@ -107,7 +161,7 @@
 
  For the processing algorithms to work, the scan direction associated with each hit point must also be known.  This can be specified directly as a (\f$\theta\f$,\f$\varphi\f$) spherical coordinate, or using the row (i.e., index in the scanline: 1...\f$\mathrm{N}_\theta\f$) and column (i.e., scanline index: 1...\f$\mathrm{N}_\varphi\f$). Otherwise, it will calculate the scan direction by drawing a line between the scan origin position and the hit point.
 
- For full-waveform data, additional information is needed about the hit points. Specifically, the total number of hit points along the pulse. IfThe index can start at 0 or 1 for the first hit along the pulse, it just should be consistent for all points.
+ For multi-return data, additional information is needed about the hit points. Specifically, the total number of hit points along the pulse. The index can start at 0 or 1 for the first hit along the pulse, it just should be consistent for all points.
 
 <!--
  <table>
@@ -115,16 +169,17 @@
  <tr><td>x position</td><td>x</td><td>x coordinate of the hit point relative to the scan origin (i.e., the location of the scanner head).</td><td>None: REQUIRED</td></tr>
  <tr><td>y position</td><td>y</td><td>x coordinate of the hit point relative to the scan origin (i.e., the location of the scanner head).</td><td>None: REQUIRED</td></tr>
  <tr><td>z position</td><td>z</td><td>x coordinate of the hit point relative to the scan origin (i.e., the location of the scanner head).</td><td>None: REQUIRED</td></tr>
- <tr><td>ray zenith direction</td><td>zenith or zenith_rad</td><td>Angle from zenith of the ray. For 'zenith' units are in degrees, and for 'zenith_rad' units are in radians. There could be multiple hits for a given ray direction if a full-waveform instrument is used in multiple return mode.</td><td>Calculated automatically using the scanner origin and the (x,y,z) hit position.</td></tr>
- <tr><td>ray azimuth direction</td><td>azimuth or azimuth_rad</td><td>Azimuthal angle of the ray. For 'azimuth' units are in degrees, and for 'azimuth_rad' units are in radians.  There could be multiple hits for a given ray direction if a full-waveform instrument is used in multiple return mode.</td><td>Calculated automatically using the scanner origin and the (x,y,z) hit position.</td></tr>
+ <tr><td>ray zenith direction</td><td>zenith or zenith_rad</td><td>Angle from zenith of the ray. For 'zenith' units are in degrees, and for 'zenith_rad' units are in radians. There could be multiple hits for a given ray direction if the scan records multiple returns per pulse (multi-return data).</td><td>Calculated automatically using the scanner origin and the (x,y,z) hit position.</td></tr>
+ <tr><td>ray azimuth direction</td><td>azimuth or azimuth_rad</td><td>Azimuthal angle of the ray. For 'azimuth' units are in degrees, and for 'azimuth_rad' units are in radians.  There could be multiple hits for a given ray direction if the scan records multiple returns per pulse (multi-return data).</td><td>Calculated automatically using the scanner origin and the (x,y,z) hit position.</td></tr>
  <tr><td>red</td><td>r or r255</td><td>red component of color of scan hit point. For 'r', values are normalized between 0 and 1, and for 'r255' values are normalized between 0 and 255.</td><td>red</td></tr>
  <tr><td>green</td><td>g or g255</td><td>green component of color of scan hit point. For 'g', values are normalized between 0 and 1, and for 'g255' values are normalized between 0 and 255.</td><td>red</td></tr>
  <tr><td>blue</td><td>b or b255</td><td>blue component of color of scan hit point. For 'b', values are normalized between 0 and 1, and for 'b255' values are normalized between 0 and 255.</td><td>red</td></tr>
- <tr><td>target count</td><td>target_count</td><td>Total number of hits for the pulse.</td><td>REQUIRED for full-waveform data</td></tr>
- <tr><td>target index</td><td>target_index</td><td>Index of hit along the pulse. Can be 0 or 1 offset.</td><td>REQUIRED for full-waveform data</td></tr>
- <tr><td>timestamp</td><td>timestamp</td><td>Unique timestamp for the hit point.</td><td>REQUIRED for full-waveform data</td></tr>
+ <tr><td>target count</td><td>target_count</td><td>Total number of hits for the pulse.</td><td>REQUIRED for multi-return data</td></tr>
+ <tr><td>target index</td><td>target_index</td><td>Index of hit along the pulse. Can be 0 or 1 offset.</td><td>REQUIRED for multi-return data</td></tr>
+ <tr><td>timestamp</td><td>timestamp</td><td>Unique timestamp for the hit point.</td><td>REQUIRED for multi-return data</td></tr>
  <tr><td>deviation</td><td>deviation</td><td>Indication of variability in return within a given hit point. Note: this is never used for real data, but can be output for synthetic data.</td><td>N/A</td></tr>
- <tr><td>intensity</td><td>intensity</td><td>Intensity of return. Note: this is never used for real data, but can be output for synthetic data.</td><td>N/A</td></tr>
+ <tr><td>intensity</td><td>intensity</td><td>Range-normalized intensity of return, equal to \f$\rho\,\cos\theta\f$ with the \f$1/R^2\f$ range loss normalized out so it is independent of scanner-to-target range (see \ref LiDARsynthetic). Note: this is never used for real data, but can be output for synthetic data.</td><td>N/A</td></tr>
+ <tr><td>reflectance</td><td>reflectance</td><td>Synthetic return reflectance in decibels, \f$10\,\log_{10}|I|\f$, where \f$I\f$ is the range-normalized intensity, reported relative to a perfect Lambertian reflector at normal incidence (0 dB). Computed only when "reflectance" is requested in the ASCII_format (see \ref LiDARsynthetic).</td><td>N/A</td></tr>
  <tr><td>data</td><td>user-defined</td><td>Floating point data values associated with the hit point.  This could be intensity, temperature, etc.</td><td>No data created.</td></tr>
  </table>
  -->
@@ -225,13 +280,18 @@
  <tr><td>r (or r255)</td><td>red component of (r,g,b) hit color.  If "r" tag is used, r is a floating point value between 0 and 1.  If "r255" is used, r is an integer and between 0 and 255.</td><td>r=1 or r255=255</td></tr>
  <tr><td>g (or g255)</td><td>green component of (r,g,b) hit color.  If "g" tag is used, g is a floating point value between 0 and 1.  If "g255" is used, g is an integer between 0 and 255.</td><td>g=0 or g255=0</td></tr>
  <tr><td>b (or b255)</td><td>blue component of (r,g,b) hit color.  If "b" tag is used, b is a floating point value between 0 and 1.  If "b255" is used, b is an integer between 0 and 255.</td><td>b=0 or b255=0</td></tr>
- <tr><td>target_count</td><td>Number of hits along scan pulse.</td><td>Assumed to be discrete return data.</td></tr>
- <tr><td>target_index</td><td>Index of hit along scan pulse.</td><td>Assumed to be discrete return data.</td></tr>
- <tr><td>timestamp</td><td>Unique timestamp of hit point.</td><td>Assumed to be discrete return data.</td></tr>
+ <tr><td>target_count</td><td>Number of hits along scan pulse.</td><td>Assumed to be single-return data.</td></tr>
+ <tr><td>target_index</td><td>Index of hit along scan pulse.</td><td>Assumed to be single-return data.</td></tr>
+ <tr><td>timestamp</td><td>Unique timestamp of hit point.</td><td>Assumed to be single-return data.</td></tr>
+ <tr><td>row</td><td>Scan-grid row index (zenithal/theta direction) of the hit point. Used by \ref LiDARcloud::gapfillMisses() to reconstruct miss directions when timestamps are unavailable (see below).</td><td>N/A</td></tr>
+ <tr><td>column</td><td>Scan-grid column index (azimuthal/phi direction) of the hit point. Used by \ref LiDARcloud::gapfillMisses() to reconstruct miss directions when timestamps are unavailable (see below).</td><td>N/A</td></tr>
  <tr><td>deviation</td><td>Indication of variability in return within a given hit point. Note: this is never used for real data, but can be output for synthetic data.</td><td>N/A</td></tr>
- <tr><td>intensity</td><td>Intensity of return. Note: this is never used for real data, but can be output for synthetic data.</td><td>N/A</td></tr>
+ <tr><td>intensity</td><td>Range-normalized intensity of return, equal to \f$\rho\,\cos\theta\f$ (per-primitive reflectivity times the incidence-angle cosine) with the \f$1/R^2\f$ range loss of the LiDAR range equation normalized out, so it is independent of the scanner-to-target range. Note: this is never used for real data, but can be output for synthetic data.</td><td>N/A</td></tr>
+ <tr><td>reflectance</td><td>Synthetic return reflectance in decibels, \f$10\,\log_{10}|I|\f$ where \f$I\f$ is the range-normalized intensity, relative to a perfect Lambertian reflector at normal incidence (0 dB). Output only when "reflectance" is listed in the ASCII_format. Note: this is computed for synthetic data only.</td><td>N/A</td></tr>
  <tr><td>(label)</td><td>User-defined floating-point data value.  "label" can be any string describing data.  For example, "temperature", etc. </td><td>N/A</td></tr>
  </table>
+
+ \note When a point cloud is written with \ref LiDARcloud::exportPointCloud() or \ref LiDARcloud::exportScans(), each ASCII data file begins with a comment-line header that starts with '#' and lists the column field names (the same fields given in the "ASCII_format" tag), for example <tt>\# x y z intensity reflectance</tt>. This makes the exported file self-describing and follows the conventional ASCII point-cloud header recognized by tools such as CloudCompare. The header is written by default; pass <tt>write_header = false</tt> to \ref LiDARcloud::exportPointCloud() to suppress it. When loading, any line beginning with '#' is treated as a comment and skipped, so headered files round-trip without modification.
 
  The XML file can be automatically loaded into the point cloud using the \ref LiDARcloud::loadXML() function, as illustrated below.
   
@@ -244,9 +304,122 @@
      LiDARcloud pointcloud; //Initialize the LiDAR point cloud
 
      pointcloud.loadXML("/path/to/file.xml");
-      
+
   }
  ~~~~~~
+
+ \subsection LiDARmisses Miss points (transmitted beams) and how to export them
+
+ \warning <b>This is the single most common source of inaccurate leaf-area results from real scan data.</b> The leaf-area inversion (\ref LiDARcloud::calculateLeafArea()) <b>requires</b> the population of <em>miss points</em> - laser pulses that were fired but did not return from any object, having passed through the canopy to the sky. The canopy gap fraction that the inversion is built on is, by definition, the number of pulses with no canopy return divided by the total number of pulses fired in that direction range, so the no-return pulses are an essential part of the measurement, not optional metadata. An ordinary point cloud contains <em>only</em> points where something was hit, so most instrument software <b>drops the no-return pulses when it exports a point cloud</b>. If you import such a "returns-only" file and run the leaf-area inversion without taking one of the steps below, the gap fraction has no valid denominator and the result will be badly biased. \ref LiDARcloud::calculateLeafArea() detects this case and raises an error rather than silently producing a wrong number.
+
+ A hit point is flagged as a miss with the per-hit <tt>is_miss</tt> data value (1 = miss, 0 = return). You can satisfy the requirement in one of three ways, listed from most to least faithful to the original measurement:
+
+ <table>
+ <tr><th>#</th><th>Approach</th><th>What you must provide in the imported ASCII file</th><th>When to use</th></tr>
+ <tr><td>1</td><td><b>Import the misses directly</b></td><td>An ASCII file that includes the no-return pulses, with an <tt>is_miss</tt> column (1 for the no-return pulses, 0 for returns) listed in the \<ASCII_format>. Including <tt>row</tt>/<tt>column</tt> or <tt>timestamp</tt> as well is recommended but not required once <tt>is_miss</tt> is present.</td><td><b>Preferred.</b> The true fired-beam geometry is used directly, with no reconstruction or assumptions. Requires that you can produce a file in which the no-return pulses survive (see below).</td></tr>
+ <tr><td>2</td><td><b>Reconstruct the misses</b> with \ref LiDARcloud::gapfillMisses()</td><td>A returns-only ASCII file that still carries either <tt>row</tt> and <tt>column</tt> scan-grid indices, or a per-return <tt>timestamp</tt>, in the \<ASCII_format>. \ref LiDARcloud::gapfillMisses() infers the empty (sky) directions of the scan grid from the returns and emits a miss for each (see \ref LiDARleafarea for the two reconstruction strategies).</td><td>When you cannot export the no-return pulses but <em>can</em> export the row/column indices or timestamps. Works only for a regular raster scan grid.</td></tr>
+ <tr><td>3</td><td><b>Generate a synthetic scan</b> with miss recording</td><td>Helios geometry plus a scan definition; call \ref LiDARcloud::syntheticScan(helios::Context*,bool,bool) "syntheticScan()" with <tt>record_misses=true</tt> (see \ref LiDARsynthetic).</td><td>When you are simulating, not importing, real data. Misses are recorded directly; this is the only option for non-raster (e.g. spinning-multibeam) patterns.</td></tr>
+ </table>
+
+ If you import a returns-only file with <em>none</em> of <tt>is_miss</tt>, <tt>row</tt>/<tt>column</tt>, or <tt>timestamp</tt>, there is no information from which the miss directions can be recovered, and neither approach 1 nor 2 is possible. The triangulation, leaf-angle, and plant-reconstruction routines do not require misses and will still run, but the leaf-area inversion cannot. In that case you must re-export the data from the original instrument project so that the necessary information is retained, because it was discarded at export time and cannot be reconstructed afterward.
+
+ \subsubsection LiDARmissexport Exporting from instrument software so that misses survive
+
+ Helios imports plain ASCII/text point-cloud files (see \ref LiDARcloud::loadXML() and the column table above); it does not read vendor binary formats (PTX, FLS, RDB, E57, LAS, etc.) directly. The task at export time is therefore to produce an ASCII file that satisfies approach 1 or 2 above. Exact menu names and options vary between software packages and versions, so the guidance below describes <em>what capability to look for</em> and how it maps to the Helios columns, rather than an exact click-path; verify the specifics against your software's current documentation.
+
+ <ul>
+ <li><b>FARO (SCENE, Focus).</b> The simplest path is approach 2: export the scan to ASCII <tt>XYZ</tt> with the <b>"Include row/col"</b> option enabled, which writes the scan-grid row and column index of each return as additional columns. This is an ordinary <em>unstructured</em> export - it contains only the returns, not the empty cells - but because every return is tagged with its grid row and column, \ref LiDARcloud::gapfillMisses() can reconstruct the empty (miss) directions. Map those columns to the Helios <tt>row</tt> and <tt>column</tt> tokens in the \<ASCII_format> (together with x, y, z and any intensity/color you want), then call \ref LiDARcloud::gapfillMisses(). Including the intensity ("raw reflections") column as well is useful but not required. Exporting the structured <tt>PTX</tt> grid (see the Leica bullet below) is an alternative that additionally captures the empty cells explicitly, but it is not necessary when the row/column columns are available.</li>
+ <li><b>Leica (Cyclone, RTC360 / ScanStation / BLK) and any scanner that exports a gridded PTX file.</b> The PTX format is an ASCII grid: its header records the number of columns and rows, and it then writes one line for <em>every</em> cell of the scan grid - including the no-return cells, which are written with zero coordinates and zero intensity (a line such as <tt>0 0 0 0</tt>) so that the full scan-line grid is preserved. (Ordered exports such as PTX retain the grid; unordered exports - XYZ Text, E57, PTS, etc. - do <em>not</em>, and drop the empty cells, unless they carry an explicit row/column column as in the FARO case above.) This is exactly the information Helios needs: the zero-coordinate cells are the misses, and a cell's position in the grid is its row and column. The practical workflow is to export the structured scan as PTX, then convert it to a Helios ASCII file with a short script that walks the PTX grid and writes, for each cell, the columns <tt>row column x y z</tt> plus <tt>is_miss</tt> (1 for a zero/no-return cell, 0 otherwise). With <tt>is_miss</tt> present you are using approach 1; with only <tt>row</tt>/<tt>column</tt> present you are using approach 2 and call \ref LiDARcloud::gapfillMisses().</li>
+ <li><b>RIEGL (RiSCAN PRO / RDB, V-Line scanners).</b> RiSCAN PRO's ASCII export has an option to omit invalid/no-return measurements, so the no-return pulses are easily lost; check that this option is <em>not</em> applied if you intend to export them directly. The most robust RIEGL path is approach 2 using timestamps: a RIEGL database stores a per-point timestamp, so export the per-return <tt>timestamp</tt> (mapped to the Helios <tt>timestamp</tt> column) along with x, y, z, and let \ref LiDARcloud::gapfillMisses() reconstruct the miss directions. Because the exact attribute names and export options depend on the RiSCAN PRO / RiPROCESS version, confirm against the current RIEGL documentation that the timestamp (and, if available, a no-return flag you can map to <tt>is_miss</tt>) is included in the export.</li>
+ <li><b>Mobile / UAV spinning sensors (Velodyne, Ouster, Hesai, etc.).</b> These do not produce a regular raster grid, so \ref LiDARcloud::gapfillMisses() cannot be used (it assumes a raster grid). Either export the no-return shots directly if the sensor driver emits them (some drivers output a zero-range or maximum-range point for a pulse that did not return - flag those as <tt>is_miss=1</tt>), or model the measurement as a synthetic scan in Helios with <tt>record_misses=true</tt>.</li>
+ <li><b>CloudCompare and generic ASCII/CSV tools.</b> These operate on returns only and have no concept of a transmitted/no-return beam, so they cannot create misses that were not already present in their input. Use them only to <em>re-save</em> a cloud that already carries the <tt>is_miss</tt> flag or the <tt>row</tt>/<tt>column</tt>/<tt>timestamp</tt> columns, and check that those columns survive the round-trip and that the column order matches the \<ASCII_format> tag used on import. (Helios writes a self-describing <tt>#</tt> header on its own ASCII exports; see the note above.)</li>
+ </ul>
+
+ \note If you only have a returns-only export and cannot regenerate it from the original instrument project, the leaf-area inversion cannot be made accurate for that data. Helios deliberately fails fast in this situation rather than returning a misleadingly precise but biased leaf area.
+
+ The example below shows the import-and-reconstruct workflow (approach 2) for a returns-only export that carries per-return timestamps:
+
+ ~~~~~~{.xml}
+ <helios>
+   <scan>
+     <filename> /path/to/data/returns_only.xyz </filename>
+     <ASCII_format> x y z timestamp target_index target_count </ASCII_format>
+     <origin> 0 0 0 </origin>
+     <size> 2500 4500 </size>
+     <thetaMin> 30 </thetaMin>
+     <thetaMax> 130 </thetaMax>
+     <phiMin> 0 </phiMin>
+     <phiMax> 360 </phiMax>
+   </scan>
+ </helios>
+ ~~~~~~
+
+ ~~~~~~{.cpp}
+   pointcloud.loadXML("/path/to/file.xml");
+   pointcloud.gapfillMisses();    // reconstruct transmitted-beam (miss) directions
+   pointcloud.triangulateHitPoints(0.05, 5);
+   pointcloud.calculateLeafArea(&context);
+ ~~~~~~
+
+ If the file already contains the misses (approach 1, e.g. converted from a PTX grid), include <tt>is_miss</tt> in the \<ASCII_format> and the \ref LiDARcloud::gapfillMisses() call can be omitted:
+
+ ~~~~~~{.xml}
+   <ASCII_format> row column x y z is_miss </ASCII_format>
+ ~~~~~~
+
+ \subsection ScanIOAPI Adding scan data programmatically
+
+ Scans do not have to be defined in an XML file - they can also be created entirely in code through the API, which is useful when scan parameters are computed at runtime, when hit points come from another source, or when building automated tests. A scan is defined by constructing a \ref ScanMetadata object and registering it with \ref LiDARcloud::addScan(), which returns the integer scan ID. Hit points are then added to that scan with <tt>addHitPoint()</tt>.
+
+ The example below creates a rectangular raster scan, adds it to the point cloud, and adds a single hit point. The \ref ScanMetadata constructor takes the scanner origin, the grid resolution (\f$\mathrm{N}_\theta\f$, \f$\mathrm{N}_\varphi\f$), the zenith and azimuth ranges (in <b>radians</b>), the beam optics, the range and angular noise standard deviations, and the ASCII column format.
+
+ ~~~~~~{.cpp}
+ #include "LiDAR.h"
+ using namespace helios;
+
+ int main(){
+
+    LiDARcloud pointcloud;
+
+    // Define a rectangular raster scan (angles in radians)
+    vec3 scan_origin(0.f, 0.f, 1.f);
+    uint Ntheta = 250;            // number of zenithal scan directions
+    uint Nphi = 450;              // number of azimuthal scan directions
+    float thetaMin = 0.f;         // zenith range [rad]
+    float thetaMax = M_PI;
+    float phiMin = 0.f;           // azimuth range [rad]
+    float phiMax = 2.f * M_PI;
+    std::vector<std::string> column_format = {"x", "y", "z"};
+
+    ScanMetadata scan(scan_origin, Ntheta, thetaMin, thetaMax, Nphi, phiMin, phiMax,
+                      0.f, 0.f, 0.f, 0.f, column_format);
+
+    uint scanID = pointcloud.addScan(scan);   // returns the scan ID
+
+    // Add a hit point to the scan (direction is given as a spherical coordinate)
+    vec3 hit_xyz(5.f, 0.f, 1.f);
+    SphericalCoord hit_direction = cart2sphere(hit_xyz - scan_origin);
+    pointcloud.addHitPoint(scanID, hit_xyz, hit_direction);
+
+ }
+ ~~~~~~
+
+ A spinning multibeam scan is created the same way, but with the \ref ScanMetadata constructor overload that takes a vector of per-channel zenith angles (in radians) in place of \f$\mathrm{N}_\theta\f$ and the zenith range:
+
+ ~~~~~~{.cpp}
+    // Define a 16-channel spinning multibeam scan spanning -15 deg to +15 deg elevation
+    std::vector<float> beam_zenith;
+    for (int e = -15; e <= 15; e += 2) {
+       beam_zenith.push_back(0.5f * float(M_PI) - float(e) * float(M_PI) / 180.f);  // elevation -> zenith
+    }
+    uint Nphi = 1800;             // azimuth steps per rotation
+
+    ScanMetadata scan(scan_origin, beam_zenith, Nphi, 0.f, 2.f * float(M_PI),
+                      0.f, 0.f, 0.f, 0.f, column_format);
+    uint scanID = pointcloud.addScan(scan);
+ ~~~~~~
+
+ The <tt>addHitPoint()</tt> method has several overloads that additionally accept a hit color (\ref helios::RGBcolor) and/or a map of named scalar data values (for example intensity, reflectance, or timestamp). For synthetic (simulated) scans, hit points are generated automatically by ray tracing the Helios geometry instead of being added by hand - see \ref LiDARsynthetic.
 
  \section LiDARgrid Establishing grid cells
 
@@ -369,7 +542,14 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
   Performing the calculations is simple and requires no inputs, which is illustrated with the following code sample. Note that the leaf area calculation requires that the triangulation has been performed beforehand.  If no triangulation is available, the plug-in will assume a uniformly distributed leaf angle orientation (\f$G=0.5\f$).  The leaf area calculation also requires that at least one grid cell was defined.
 
-  When using real LiDAR data, it is recommended to gapfill sky/miss points using the \ref LiDARcloud::gapfillMisses() method if this has not already been done by the scanner or in pre-processing. When a laser pulse does not intersect any object and reaches the sky, many scanners do not record any hit points. These miss points are important for accurate determination of leaf area.
+  The leaf area calculation <b>requires</b> that the point cloud contains "miss" points: fired pulses that did not intersect any object and reached the sky. Misses count the laser beams transmitted through each voxel, which is the denominator of the transmission-probability inversion; without them the inversion is ill-posed, so \ref LiDARcloud::calculateLeafArea() will raise an error if no misses are present. Many scanners do not record a hit point for a miss, so the misses must be supplied either by importing a scan format that retains them or by synthesizing them with the \ref LiDARcloud::gapfillMisses() method (which infers the sky/miss directions from the recorded returns). Misses are flagged with the per-hit `is_miss` data field (1 = miss, 0 = return), which is set automatically by \ref LiDARcloud::gapfillMisses() and \ref LiDARcloud::syntheticScan(helios::Context*) "syntheticScan()", and is carried through when present in imported data. <b>If you are importing real scan data, see \ref LiDARmisses for how to export your data from common instrument software (RIEGL, Leica, FARO, etc.) so that the misses - or the row/column/timestamp information needed to reconstruct them - are retained.</b>
+
+  \ref LiDARcloud::gapfillMisses() reconstructs the empty cells of the scan grid using one of two strategies, selected automatically per scan based on the data attached to the returns:
+  <ul>
+  <li><b>Row/column reconstruction</b> (used when the returns carry `row` and `column` hit data; preferred when both row/column and timestamp data are present). The native scan-grid indices give the 2D theta/phi raster directly. A robust per-row generative model is fit from the returns: each row's zenith is the median of the measured zeniths of its returns, and each row's azimuth is a robust (Theil-Sen) line fit \f$\mathrm{azimuth} = \mathrm{intercept}[\mathrm{row}] + \mathrm{slope}[\mathrm{row}]\cdot\mathrm{column}\f$. The per-row azimuth offset/slope absorbs the continuous azimuth sweep (azimuth shear across rows) and the per-row zenith absorbs scanner tilt, without requiring the scan to be perfectly level or regular. Rows with too few returns (including entirely blank near-zenith rows) inherit their model parameters by robustly extrapolating the per-row parameters across the row axis, so large blank regions are extrapolated rather than only interpolated. This path does not require timestamps. The `row`/`column` indices are read from the ASCII columns of the same name (see the ASCII format table above).</li>
+  <li><b>Timestamp reconstruction</b> (used when the returns carry `timestamp` data but not row/column). The scan grid is reconstructed by sorting returns by timestamp and detecting sweep boundaries from the angular sequence, then interpolating/extrapolating along the inferred sweeps.</li>
+  </ul>
+  If a scan's returns carry neither `row`/`column` nor `timestamp` data, \ref LiDARcloud::gapfillMisses() raises an error, since there is no information from which to reconstruct the miss directions. (A scan containing no returns at all is skipped gracefully.)
 
   ~~~~~~{.cpp}
   #include "LiDAR.h"
@@ -389,6 +569,86 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
   }
   ~~~~~~
+
+  \subsection LiDARleafareauncertainty Leaf area inversion uncertainty (confidence intervals)
+
+  In addition to the leaf-area point estimate, the plug-in can quantify the <b>statistical sampling
+  uncertainty</b> of the per-voxel leaf area density (LAD), following <a href="https://doi.org/10.1016/j.rse.2018.06.024">Pimont et al. (2018)</a>.
+  Each voxel is sampled by a finite number \f$N\f$ of beams, so the transmittance statistic used in
+  the inversion has sampling variance that depends on \f$N\f$, the optical depth, the spread of beam
+  path lengths, and the size of the vegetation elements. The variance has two components: a
+  finite-beam sampling term that decays as \f$1/N\f$, and an \f$N\f$-independent term arising from the
+  variability of element positions within the voxel.
+
+  \warning The confidence intervals reported here are <b>sampling uncertainty conditional on the
+  beams that entered the voxel</b>. They do NOT capture occlusion/coverage bias (voxels shadowed by
+  foreground vegetation so that beams never penetrate), which is a systematic coverage problem rather
+  than random sampling error and does not shrink with \f$N\f$.
+
+  \warning The interval is also <b>conditional on the projection coefficient</b> \f$G(\theta)\f$: it
+  quantifies the variance owing to the finite beam sample at a fixed \f$G(\theta)\f$, but does NOT
+  include the uncertainty in \f$G(\theta)\f$ itself (which Helios estimates per voxel from the
+  triangulation). Monte-Carlo testing on a homogeneous canopy shows that, at high beam density, the
+  \f$G(\theta)\f$-estimation variance can dominate the total per-voxel LAD scatter while the reported
+  (transmittance-sampling) interval correctly captures only the sampling component. This matches the
+  Pimont et al. (2018) framework, in which \f$G\f$ is likewise assumed known. The group-scale interval
+  is the robust quantity to report.
+
+  The element-position variance term requires a characteristic vegetation element width (e.g. mean
+  leaf width), supplied as an optional argument to \ref LiDARcloud::calculateLeafArea(helios::Context*,int,float) "calculateLeafArea()".
+  If a non-positive width is passed, that term is omitted and the reported uncertainty is
+  <b>sampling-only</b>. The leaf-area point estimate is identical regardless of this argument.
+
+  Single-voxel confidence intervals are routinely \f$\pm 50\f$-\f$100\%\f$ and are only valid in
+  specific \f$(L, L_1, N)\f$ ranges (Pimont et al. 2018, Table 3); the accessors refuse to emit an
+  interval outside that envelope. The <b>recommended path is the group-scale interval</b>
+  (\ref LiDARcloud::getGroupLADConfidenceInterval), which aggregates over a set of voxels (a vertical
+  slice, a whole plant) and yields much tighter intervals (\f$\pm 5\f$-\f$10\%\f$).
+
+  ~~~~~~{.cpp}
+  #include "LiDAR.h"
+
+  using namespace helios;
+
+  int main() {
+
+     Context context;
+     LiDARcloud pointcloud;
+
+     pointcloud.loadXML("/path/to/file.xml");
+     pointcloud.gapfillMisses();
+     pointcloud.triangulateHitPoints(0.05, 5);
+
+     // Calculate leaf area; the third argument is the mean element (leaf) width in meters,
+     // used for the element-position variance term. Pass <=0 for sampling-only uncertainty.
+     pointcloud.calculateLeafArea(&context, 1, 0.05f);
+
+     // Single-voxel confidence interval on leaf area (95%).
+     float lower, upper;
+     if (pointcloud.getCellLeafAreaConfidenceInterval(0, 0.95f, lower, upper)) {
+       std::cout << "Cell 0 leaf area 95% CI: [" << lower << ", " << upper << "] m^2" << std::endl;
+     }
+
+     // Recommended: group-scale confidence interval on mean LAD over a set of voxels.
+     std::vector<uint> group; // e.g. all voxels in a vertical slice
+     for (uint i = 0; i < pointcloud.getGridCellCount(); i++) {
+       group.push_back(i);
+     }
+     float mean_lad, glo, ghi;
+     if (pointcloud.getGroupLADConfidenceInterval(group, 0.95f, mean_lad, glo, ghi)) {
+       std::cout << "Mean LAD 95% CI: " << mean_lad << " in [" << glo << ", " << ghi << "] 1/m" << std::endl;
+     }
+
+     // Export per-voxel uncertainty (cell_index leaf_area beam_count I_rdi LAD_std_error ci_valid).
+     pointcloud.exportLeafAreaUncertainty("lad_uncertainty.txt");
+
+  }
+  ~~~~~~
+
+  The per-voxel sufficient statistics are also available individually via
+  \ref LiDARcloud::getCellBeamCount, \ref LiDARcloud::getCellRelativeDensityIndex,
+  \ref LiDARcloud::getCellMeanPathLength, and \ref LiDARcloud::getCellLADVariance (which is the
+  sampling variance of LAD in \f$(1/m)^2\f$, or \f$-1\f$ where undefined).
 
   \subsection LiDARresonstruction Plant reconstruction
 
@@ -427,24 +687,29 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
   \section LiDARsynthetic Generating Synthetic (Simulated) LiDAR Data
 
-  The LiDAR plug-in can simulate the measurements of discrete-return and full-waveform instruments based on the geometry in the Context. Ray-tracing is used to simulate the emission of radiation from the instrument, and based on ray-object intersection tests with primitive geometry in the model domain, the simulated hit points can be determined. Currently, only a rectangular scan pattern is supported.
+  The LiDAR plug-in can simulate single-return and multi-return measurements based on the geometry in the Context. Ray-tracing is used to simulate the emission of radiation from the instrument, and based on ray-object intersection tests with primitive geometry in the model domain, the simulated hit points can be determined. Both the rectangular raster and spinning multibeam scan patterns are supported (see \ref ScanRaster and \ref ScanSpinningMultibeam). Note that the simulated output consists of discrete return points; Helios does not generate or store a digitized waveform (see \ref LiDARreturn).
 
-  To simulate discrete-return instruments, each laser pulse is modeled by a single ray emanating from the scanner origin. Rays are launched according to the scan parameters currently specified in the \ref LiDARcloud. After calling the appropriate synthetic scan generation function (see below), the simulated scan data will be added to the \ref LiDARcloud as if it was imported from real LiDAR data. In addition to the (x,y,z) location of the ray intersection, the model also produces estimates of return intensity, deviation, and can return an identifier for the intersected object.
+  To simulate single-return data, each laser pulse is modeled by a single ray emanating from the scanner origin. Rays are launched according to the scan parameters currently specified in the \ref LiDARcloud. After calling the appropriate synthetic scan generation function (see below), the simulated scan data will be added to the \ref LiDARcloud as if it was imported from real LiDAR data. In addition to the (x,y,z) location of the ray intersection, the model also produces estimates of return intensity, deviation, and can return an identifier for the intersected object.
 
-  For full-waveform data simulation, multiple rays are cast for a single laser beam pulse. The density of rays is Gaussian, with the peak at the center of the beam. The model will also record the target count, target index, and timestamp associated with each hit point.
+  \par Return intensity (radiometric model)
+  The synthetic return intensity is computed as \f$I = \rho\,\cos\theta\f$, where \f$\rho\f$ is the per-primitive reflectivity (primitive data <tt>reflectivity_lidar</tt>, default 1) and \f$\theta\f$ is the angle between the laser beam and the surface normal at the hit point. This is the angular (incidence-angle) and reflectivity content of the LiDAR range equation. The intensity reported by Helios is <b>range-normalized</b>: the \f$1/R^2\f$ geometric loss that a real instrument's return amplitude incurs over the scanner-to-target range \f$R\f$ is normalized out, so a given surface produces the same intensity regardless of how far it is from the scanner. Equivalently, Helios reports the range-independent backscatter amplitude rather than the raw range-dependent signal a physical detector would record. For multi-return scans, the partial-footprint attenuation of sub-footprint targets is retained implicitly through the fraction of beam sub-rays that strike the target, as this reflects a target property rather than a range-geometry loss. The model does not currently include atmospheric attenuation, transmitted-pulse energy, detector gain, leaf transmittance, or multiple scattering.
+
+  If the ASCII_format of the scan includes the <tt>reflectance</tt> tag, the scanner additionally records the return reflectance in decibels, \f$10\,\log_{10}|I|\f$, where \f$I\f$ is the range-normalized intensity described above. This follows the convention used by terrestrial laser scanners (e.g.\ RIEGL), in which reflectance is reported relative to a perfect Lambertian reflector viewed at normal incidence: such a target has \f$I = 1\f$ and therefore a reflectance of 0 dB, while all real returns are negative. Returns with no detectable signal (misses, fully grazing, or back-facing hits) are floored at a large negative value rather than \f$-\infty\f$, mirroring a scanner's minimum detectable reflectance. The <tt>reflectance</tt> tag is meaningful only for synthetic scans; for imported real data the reflectance values come from the data file as-is.
+
+  For multi-return data simulation, multiple rays are cast for a single laser beam pulse. The density of rays is Gaussian, with the peak at the center of the beam. The model will also record the target count, target index, and timestamp associated with each hit point.
 
   \subsection LiDARsynthxml XML parameter file
 
-  To generate synthetic discrete-return LiDAR data, first add all desired model geometry to the Context. Then declare an instance of the \ref LiDARcloud class as above, and load an XML file containing the scan parameters. As in the case of importing a real point cloud dataset, the XML file must specify the scan origin and the scan resolution at a minimum (see above). However, in the case of synthetic data generation, you will not specify a filename to read containing point cloud data, as this data will be generated by the simulation. You can optionally specify the ASCII_format tag, which will determine which additional data fields should be recorded for each hit point. Valid hit point data fields are listed above in \ref ScanIO.
+  To generate synthetic single-return LiDAR data, first add all desired model geometry to the Context. Then declare an instance of the \ref LiDARcloud class as above, and load an XML file containing the scan parameters. As in the case of importing a real point cloud dataset, the XML file must specify the scan origin and the scan resolution at a minimum (see above). However, in the case of synthetic data generation, you will not specify a filename to read containing point cloud data, as this data will be generated by the simulation. You can optionally specify the ASCII_format tag, which will determine which additional data fields should be recorded for each hit point. Valid hit point data fields are listed above in \ref ScanIO.
   <!--Note that if you specify the name of a user-defined scalar data field, the synthetic scan will query intersected primitives for the primitive data matching the specified data field name. For example, if the field "temperature" was specified as a column in the ASCII_format tag, the value of primitive data "temperature" for the primitive corresponding to each hit point would be recorded. If the primitive data is not defined for a primitive, a value of -9999 will be recorded. -->
 
   If no ASCII_format tag is provided in the XML file, the default is to record the (x,y,z) position of the hit point. If the function \ref LiDARcloud::exportPointCloud() is called, it will export the simulated point cloud according to the provided ASCII_format tag (or the default if not provided).
 
   Note that you can add multiple \<scan>\</scan> blocks in a single XML file to perform multiple scans.
   
-  \subsection LiDARsynthdiscrete Synthetic discrete-return data
+  \subsection LiDARsynthdiscrete Synthetic single-return data
 
-  Once the \ref LiDARcloud has been declared, and an XML file containing the scan parameters has been read, a discrete-return synthetic scan can be performed by calling \ref LiDARcloud::syntheticScan( helios::Context* ). This version (i.e., without the optional rays_per_pulse and pulse_distance_threshold arguments) will perform a discrete-return synthetic scan.
+  Once the \ref LiDARcloud has been declared, and an XML file containing the scan parameters has been read, a single-return synthetic scan can be performed by calling \ref LiDARcloud::syntheticScan(helios::Context*). This version (i.e., without the optional rays_per_pulse and pulse_distance_threshold arguments) will perform a single-return synthetic scan.
 
   The code block below gives an example XML file. As a reminder, you can place this XML file anywhere, but the path given to the LiDARcloud::loadXML() function should either be absolute or relative to the directory in which the executable is being run (usually build/).
   
@@ -464,7 +729,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
   </helios>
  ~~~~~~
 
-  Example code is given below for generating synthetic discrete-return data and writing to an ASCII text file.
+  Example code is given below for generating synthetic single-return data and writing to an ASCII text file.
 
   ~~~~~~{.cpp}
   #include "LiDAR.h"
@@ -487,9 +752,9 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
   }
   ~~~~~~
 
-  \subsection LiDARsynthwaveform Synthetic waveform data
+  \subsection LiDARsynthwaveform Synthetic multi-return data
 
-  Generation of synthetic full-waveform data is similar to discrete-return, except that additional information is needed to define the scan and simulation. In the XML file, the user must specify the diameter of the laser beam at the scan origin using the \<exitDiameter> \</exitDiameter> tags, as well as the angle of beam divergence in radians using the \<beamDivergence> \</beamDivergence> tags. If the exit diameter value is not specified, the default value of 0 is used, which means that the model will revert to discrete-return data generation. If the beam divergence value is not specified, a default beam divergence of 0 will be assumed, which effectively just means that the beam will remain perfectly cylindrical with diameter of exitDiameter.
+  Generation of synthetic multi-return data is similar to single-return, except that additional information is needed to define the scan and simulation. In the XML file, the user must specify the diameter of the laser beam at the scan origin using the \<exitDiameter> \</exitDiameter> tags, as well as the angle of beam divergence in radians using the \<beamDivergence> \</beamDivergence> tags. If the exit diameter value is not specified, the default value of 0 is used, which means that the model will revert to single-return data generation. If the beam divergence value is not specified, a default beam divergence of 0 will be assumed, which effectively just means that the beam will remain perfectly cylindrical with diameter of exitDiameter.
 
   Contents of an example XML file is given below.
 
@@ -511,7 +776,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
   </helios>
  ~~~~~~
 
-  Running the synthetic data generation function requires the specification of parameters associated with the simulation. The first is the number of rays to use per laser pulse in performing ray-tracing calculations, which sets the maximum possible number of hits possible per pulse. Specifying 1 ray/pulse effectively creates a discrete-return simulation, because that would mean you could only have a maximum of 1 hit/pulse. Ideally, you want a large number of rays/pulse because it allows for more hits/pulse if needed and results in more accurate simulations. The drawback to a very high number of rays/pulse is that the simulation will take longer to run. A value on the order of 100 is usually reasonable.
+  Running the synthetic data generation function requires the specification of parameters associated with the simulation. The first is the number of rays to use per laser pulse in performing ray-tracing calculations, which sets the maximum possible number of hits possible per pulse. Specifying 1 ray/pulse effectively creates a single-return simulation, because that would mean you could only have a maximum of 1 hit/pulse. Ideally, you want a large number of rays/pulse because it allows for more hits/pulse if needed and results in more accurate simulations. The drawback to a very high number of rays/pulse is that the simulation will take longer to run. A value on the order of 100 is usually reasonable.
 
   Second, the user needs to specify the distance threshold for aggregation of similar ray hit distances. For each simulated laser pulse, the number of rays/pulse specified above are launched from the scan origin. When some or all of those rays intersect the same surface, they will record a distance from the scanner to the hit point that is slightly different for each ray. Similar distances, which are presumed to lie on the same surface, are aggregated into a single hit point if they are within this distance threshold of each other. This is similar to how a real LiDAR instrument works as indicated in the sketch above, in that it aggregates similar returns into a single hit point. Specifying too small of a distance threshold may result in many duplicate hit points on the same surface. Specifying too large of a threshold may result in hit points that lie in between two disconnected surfaces (e.g., leaves). A threshold value that is smaller than the leaf or branch with is usually reasonable.
 
@@ -542,6 +807,43 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
   ~~~~~~
 
   Synthetic hit points can be labeled based on the primitive they intersect based on the value of the primitive data "object_label" of type 'int'. Primitive groups can be labeled in any way by setting a common integer value for the "object_label" primitive data. In order to enable synthetic data labeling, the column "object_label" must be included within the \<ASCII_format> tag in the scan XML file. The object_label value for each hit point will be recorded and a column will be written if the point cloud is exported to file.
+
+  \subsection LiDARsynthmisses Recording miss points in a synthetic scan
+
+  \warning By default, a synthetic scan records <b>only the returns</b> - the pulses that hit something - and discards the pulses that passed through to the sky. The two convenience overloads used in the examples above, \ref LiDARcloud::syntheticScan(helios::Context*) "syntheticScan(context)" and \ref LiDARcloud::syntheticScan(helios::Context*,int,float) "syntheticScan(context, rays_per_pulse, pulse_distance_threshold)", both leave miss recording off. A point cloud generated this way has no miss points, so \ref LiDARcloud::calculateLeafArea() will reject it for the same reason a returns-only real scan is rejected (see \ref LiDARmisses). If you are generating synthetic data in order to run the leaf-area inversion - the most common reason to do so - you must turn miss recording on.
+
+  Miss recording is enabled by calling the overload that exposes the <tt>record_misses</tt> argument and passing <tt>true</tt>. There is no need to call \ref LiDARcloud::gapfillMisses() afterward: the misses are recorded directly along their true fired-beam directions, each flagged with <tt>is_miss=1</tt>, so no grid reconstruction is involved (this is also the only way to obtain misses for non-raster patterns such as spinning multibeam, where \ref LiDARcloud::gapfillMisses() does not apply). The companion <tt>scan_grid_only</tt> argument is an independent memory optimization (it restricts recording to rays that intersect the voxel grid) and can be left <tt>false</tt>.
+
+  ~~~~~~{.cpp}
+  #include "LiDAR.h"
+  using namespace helios;
+
+  int main(){
+
+     Context context;
+     context.addPatch(); // create some model geometry here
+
+     LiDARcloud pointcloud;
+     pointcloud.loadXML("/path/to/file.xml");
+
+     int rays_per_pulse = 100;
+     float pulse_distance_threshold = 0.02;
+     bool scan_grid_only = false;
+     bool record_misses = true;   // <-- record transmitted (miss) beams
+
+     // Multi-return synthetic scan WITH misses recorded:
+     pointcloud.syntheticScan( &context, rays_per_pulse, pulse_distance_threshold, scan_grid_only, record_misses );
+
+     // For a single-return scan with misses, use: pointcloud.syntheticScan( &context, scan_grid_only, record_misses );
+
+     // Misses are present, so no gapfillMisses() call is needed:
+     pointcloud.triangulateHitPoints( 0.05, 5 );
+     pointcloud.calculateLeafArea( &context );
+
+  }
+  ~~~~~~
+
+  \note Recording misses adds one hit point for every transmitted pulse, which can substantially increase the number of stored hits for a sparse canopy. If you only need the returns (for example for triangulation, leaf-angle distributions, or plant reconstruction, none of which require misses), leave <tt>record_misses</tt> off. It is specifically the leaf-area (gap-fraction) inversion that needs them.
 
   \subsection LiDARsynthnoise Synthetic measurement noise
 
@@ -579,7 +881,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
    </helios>
   ~~~~~~
 
-  \note Both noise components are applied to discrete-return and full-waveform synthetic scans, and are independent of the beam-divergence/exit-diameter footprint sampling (which models the within-beam spread, not measurement error). The noise draws use the Context's random number generator; call \ref helios::Context::seedRandomGenerator() before \ref LiDARcloud::syntheticScan() to obtain reproducible noisy scans.
+  \note Both noise components are applied to single-return and multi-return synthetic scans, and are independent of the beam-divergence/exit-diameter footprint sampling (which models the within-beam spread, not measurement error). The noise draws use the Context's random number generator; call \ref helios::Context::seedRandomGenerator() before \ref LiDARcloud::syntheticScan(helios::Context*) "syntheticScan()" to obtain reproducible noisy scans.
 
   \section LiDARvis Visualizing results
 
@@ -629,7 +931,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
  <table>
  <tr><th>Function</th><th>Description</th></tr>
- <tr><td>\ref LiDARcloud::exportPointCloud( const char* filename ) </td><td>Write the entire point cloud to ASCII file (this is usually only used for generated synthetic data).</td></tr>
+ <tr><td>\ref LiDARcloud::exportPointCloud( const char* filename, bool write_header ) </td><td>Write the entire point cloud to ASCII file (this is usually only used for generated synthetic data).</td></tr>
  <tr><td>\ref LiDARcloud::exportScans( const char* filename ) </td><td>Write both an XML metadata file describing all scans and one ASCII point cloud file per scan. The output XML can be re-loaded with \ref LiDARcloud::loadXML().</td></tr>
  <tr><td>\ref LiDARcloud::exportTriangleNormals( const char* filename ) </td><td>Write the unit normal vectors [nx ny nz] of all triangles formed from triangulation.</td></tr>
  <tr><td>\ref LiDARcloud::exportTriangleNormals( const char* filename, const int gridcell ) </td><td>Write the unit normal vectors of triangles formed from triangulation that reside in a specified grid cell.</td></tr>
@@ -637,6 +939,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
  <tr><td>\ref LiDARcloud::exportTriangleAreas( const char* filename, const int gridcell ) </td><td>Write the areas of triangles formed from triangulation that reside in a specified grid cell.</td></tr>
  <tr><td>\ref LiDARcloud::exportLeafAreas( const char* filename ) </td><td>Write the leaf area contained within each voxel.  Each line of the output file corresponds to the total leaf area within each voxel.</td></tr>
  <tr><td>\ref LiDARcloud::exportLeafAreaDensities( const char* filename ) </td><td>Write the leaf area density of each voxel.  Each line of the output file corresponds to the leaf area density of each voxel.</td></tr>
+ <tr><td>\ref LiDARcloud::exportLeafAreaUncertainty( const char* filename ) </td><td>Write the per-voxel leaf-area inversion sampling uncertainty (columns: cell_index leaf_area beam_count I_rdi LAD_std_error ci_valid). This is statistical sampling uncertainty conditional on the beams that entered each voxel; it does not capture occlusion/coverage bias.</td></tr>
  </table>
 
   The following code sample illustrates an example of how to write results to file.

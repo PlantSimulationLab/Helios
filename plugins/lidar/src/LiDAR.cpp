@@ -24,18 +24,41 @@ namespace {
     //! Column-format tokens that map to geometry/standard hit fields handled directly by file I/O.
     //! Any other column-format label is treated as a primitive-data field to sample onto hits.
     bool isStandardColumnToken(const std::string &label) {
-        static const std::set<std::string> standard_tokens = {
-            "x", "y", "z",
-            "r", "g", "b", "r255", "g255", "b255",
-            "row", "column",
-            "zenith", "azimuth", "zenith_rad", "azimuth_rad",
-            // "raydir" is reserved here so it is never treated as a primitive-data label,
-            // even though the ASCII file reader treats it as a generic scalar column.
-            "raydir"
-        };
+        static const std::set<std::string> standard_tokens = {"x", "y", "z", "r", "g", "b", "r255", "g255", "b255", "row", "column", "zenith", "azimuth", "zenith_rad", "azimuth_rad",
+                                                              // "raydir" is reserved here so it is never treated as a primitive-data label,
+                                                              // even though the ASCII file reader treats it as a generic scalar column.
+                                                              "raydir"};
         return standard_tokens.find(label) != standard_tokens.end();
     }
-}
+
+    //! Inverse of the standard normal CDF (quantile function), Acklam's rational approximation.
+    //! Returns z such that Phi(z) = p, for p in (0,1). Relative error < 1.15e-9.
+    //! Used to convert a confidence level into the two-sided z-multiplier z_{alpha/2}.
+    double normalQuantile(double p) {
+        if (p <= 0.0 || p >= 1.0) {
+            helios_runtime_error("ERROR (normalQuantile): probability must be strictly between 0 and 1.");
+        }
+        // Coefficients for Acklam's algorithm
+        static const double a[] = {-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02, 1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00};
+        static const double b[] = {-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02, 6.680131188771972e+01, -1.328068155288572e+01};
+        static const double c[] = {-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00, -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00};
+        static const double d[] = {7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00, 3.754408661907416e+00};
+        const double p_low = 0.02425;
+        const double p_high = 1.0 - p_low;
+        double q, r;
+        if (p < p_low) { // lower tail
+            q = std::sqrt(-2.0 * std::log(p));
+            return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0);
+        } else if (p <= p_high) { // central region
+            q = p - 0.5;
+            r = q * q;
+            return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1.0);
+        } else { // upper tail
+            q = std::sqrt(-2.0 * std::log(1.0 - p));
+            return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0);
+        }
+    }
+} // namespace
 
 ScanMetadata::ScanMetadata() {
 
@@ -50,12 +73,16 @@ ScanMetadata::ScanMetadata() {
     beamDivergence = 0;
     rangeNoiseStdDev = 0;
     angleNoiseStdDev = 0;
+    scanTilt_roll = 0;
+    scanTilt_pitch = 0;
     columnFormat = {"x", "y", "z"};
+    scanPattern = SCAN_PATTERN_RASTER;
 
     data_file = "";
 }
 
-ScanMetadata::ScanMetadata(const vec3 &a_origin, uint a_Ntheta, float a_thetaMin, float a_thetaMax, uint a_Nphi, float a_phiMin, float a_phiMax, float a_exitDiameter, float a_beamDivergence, float a_rangeNoiseStdDev, float a_angleNoiseStdDev, const vector<string> &a_columnFormat) {
+ScanMetadata::ScanMetadata(const vec3 &a_origin, uint a_Ntheta, float a_thetaMin, float a_thetaMax, uint a_Nphi, float a_phiMin, float a_phiMax, float a_exitDiameter, float a_beamDivergence, float a_rangeNoiseStdDev, float a_angleNoiseStdDev,
+                           const vector<string> &a_columnFormat, float a_scanTiltRoll, float a_scanTiltPitch) {
 
     // Copy arguments into structure variables
     origin = a_origin;
@@ -69,6 +96,37 @@ ScanMetadata::ScanMetadata(const vec3 &a_origin, uint a_Ntheta, float a_thetaMin
     beamDivergence = a_beamDivergence;
     rangeNoiseStdDev = a_rangeNoiseStdDev;
     angleNoiseStdDev = a_angleNoiseStdDev;
+    scanTilt_roll = a_scanTiltRoll;
+    scanTilt_pitch = a_scanTiltPitch;
+    columnFormat = a_columnFormat;
+    scanPattern = SCAN_PATTERN_RASTER;
+
+    data_file = "";
+}
+
+ScanMetadata::ScanMetadata(const vec3 &a_origin, const std::vector<float> &a_beamZenithAngles, uint a_Nphi, float a_phiMin, float a_phiMax, float a_exitDiameter, float a_beamDivergence, float a_rangeNoiseStdDev, float a_angleNoiseStdDev,
+                           const vector<string> &a_columnFormat, float a_scanTiltRoll, float a_scanTiltPitch) {
+
+    if (a_beamZenithAngles.empty()) {
+        helios_runtime_error("ERROR (ScanMetadata): A spinning multibeam scan requires at least one beam (channel) zenith angle, but the provided beamZenithAngles vector is empty.");
+    }
+
+    origin = a_origin;
+    scanPattern = SCAN_PATTERN_SPINNING_MULTIBEAM;
+    beamZenithAngles = a_beamZenithAngles;
+    Ntheta = uint(a_beamZenithAngles.size()); // one row per laser channel
+    // thetaMin/thetaMax bracket the channel angles so range queries and bounding logic remain valid for non-uniform spacing.
+    thetaMin = *std::min_element(a_beamZenithAngles.begin(), a_beamZenithAngles.end());
+    thetaMax = *std::max_element(a_beamZenithAngles.begin(), a_beamZenithAngles.end());
+    Nphi = a_Nphi;
+    phiMin = a_phiMin;
+    phiMax = a_phiMax;
+    exitDiameter = a_exitDiameter;
+    beamDivergence = a_beamDivergence;
+    rangeNoiseStdDev = a_rangeNoiseStdDev;
+    angleNoiseStdDev = a_angleNoiseStdDev;
+    scanTilt_roll = a_scanTiltRoll;
+    scanTilt_pitch = a_scanTiltPitch;
     columnFormat = a_columnFormat;
 
     data_file = "";
@@ -76,7 +134,14 @@ ScanMetadata::ScanMetadata(const vec3 &a_origin, uint a_Ntheta, float a_thetaMin
 
 helios::SphericalCoord ScanMetadata::rc2direction(uint row, uint column) const {
 
-    float zenith = thetaMin + (thetaMax - thetaMin) / float(Ntheta) * float(row);
+    float zenith;
+    if (scanPattern == SCAN_PATTERN_SPINNING_MULTIBEAM) {
+        // Each row is a laser channel fired at its own fixed (generally non-uniform) zenith angle.
+        uint clamped_row = (row < beamZenithAngles.size()) ? row : uint(beamZenithAngles.size()) - 1;
+        zenith = beamZenithAngles.at(clamped_row);
+    } else {
+        zenith = thetaMin + (thetaMax - thetaMin) / float(Ntheta) * float(row);
+    }
     float elevation = 0.5f * M_PI - zenith;
     float phi = phiMin - (phiMax - phiMin) / float(Nphi) * float(column);
     return make_SphericalCoord(1, elevation, phi);
@@ -87,7 +152,22 @@ helios::int2 ScanMetadata::direction2rc(const SphericalCoord &direction) const {
     float theta = direction.zenith;
     float phi = direction.azimuth;
 
-    int row = std::round((theta - thetaMin) / (thetaMax - thetaMin) * float(Ntheta));
+    int row;
+    if (scanPattern == SCAN_PATTERN_SPINNING_MULTIBEAM) {
+        // Channel zenith angles are not uniformly spaced, so map to the nearest channel rather than interpolating linearly.
+        int nearest = 0;
+        float best = std::fabs(theta - beamZenithAngles.at(0));
+        for (uint k = 1; k < beamZenithAngles.size(); k++) {
+            float d = std::fabs(theta - beamZenithAngles.at(k));
+            if (d < best) {
+                best = d;
+                nearest = int(k);
+            }
+        }
+        row = nearest;
+    } else {
+        row = std::round((theta - thetaMin) / (thetaMax - thetaMin) * float(Ntheta));
+    }
     int column = std::round(fabs(phi - phiMin) / (phiMax - phiMin) * float(Nphi));
 
     if (row <= -1) {
@@ -109,6 +189,10 @@ LiDARcloud::LiDARcloud() {
     Nhits = 0;
     hitgridcellcomputed = false;
     triangulationcomputed = false;
+    triangulation_candidate_count = 0;
+    triangulation_dropped_lmax = 0;
+    triangulation_dropped_aspect = 0;
+    triangulation_dropped_degenerate = 0;
     printmessages = true;
     collision_detection = nullptr;
 }
@@ -129,7 +213,7 @@ void LiDARcloud::initializeCollisionDetection(helios::Context *context) {
 }
 
 void LiDARcloud::performUnifiedRayTracing(helios::Context *context, size_t N, int Npulse, helios::vec3 *ray_origins, helios::vec3 *direction, float *hit_t, float *hit_fnorm, int *hit_ID) {
-    const float miss_distance = 1001.0f;
+    const float miss_distance = LIDAR_RAYTRACE_MISS_T;
 
     size_t total_rays = N * Npulse;
 
@@ -172,6 +256,23 @@ void LiDARcloud::performUnifiedRayTracing(helios::Context *context, size_t N, in
             hit_fnorm[i] = 1e6;
         }
     }
+}
+
+float LiDARcloud::applyRangeIntensityCorrection(float intensity, float distance) {
+    // Helios reports RANGE-NORMALIZED intensity: the range-independent return amplitude rho*cos(theta), as if the
+    // geometric 1/R^2 loss of the LiDAR range equation had been measured and then divided back out. Equivalently,
+    // the physical raw return rho*cos(theta)/R^2 is multiplied by R^2 to remove the range dependence:
+    //
+    //     I_norm = (rho*cos(theta) / R^2) * R^2 = rho*cos(theta)
+    //
+    // Because the synthetic intensity is generated directly as rho*cos(theta) (no 1/R^2 loss is ever applied), the
+    // two operations cancel and the normalization is the identity on the value. This helper makes that contract
+    // explicit and is the single place to change if the raw (range-dependent) convention is ever desired instead.
+    // The partial-footprint (point-target) attenuation of sub-footprint returns (in multi-return mode) is carried by the
+    // fraction of beam sub-rays that strike the target and is intentionally retained (it is a target property, not
+    // a range-geometry loss). The distance argument is accepted for interface symmetry and future raw-mode use.
+    (void) distance;
+    return intensity;
 }
 
 void LiDARcloud::enableMessages() {
@@ -374,11 +475,39 @@ float LiDARcloud::getScanAngleNoiseStdDev(uint scanID) const {
     return scans.at(scanID).angleNoiseStdDev;
 }
 
+float LiDARcloud::getScanTiltRoll(uint scanID) const {
+    if (scanID >= scans.size()) {
+        helios_runtime_error("ERROR (LiDARcloud::getScanTiltRoll): Cannot get scanner tilt roll for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
+    }
+    return scans.at(scanID).scanTilt_roll;
+}
+
+float LiDARcloud::getScanTiltPitch(uint scanID) const {
+    if (scanID >= scans.size()) {
+        helios_runtime_error("ERROR (LiDARcloud::getScanTiltPitch): Cannot get scanner tilt pitch for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
+    }
+    return scans.at(scanID).scanTilt_pitch;
+}
+
 std::vector<std::string> LiDARcloud::getScanColumnFormat(uint scanID) const {
     if (scanID >= scans.size()) {
         helios_runtime_error("ERROR (LiDARcloud::getScanColumnFormat): Cannot get column format for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
     }
     return scans.at(scanID).columnFormat;
+}
+
+ScanPattern LiDARcloud::getScanPattern(uint scanID) const {
+    if (scanID >= scans.size()) {
+        helios_runtime_error("ERROR (LiDARcloud::getScanPattern): Cannot get scan pattern for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
+    }
+    return scans.at(scanID).scanPattern;
+}
+
+std::vector<float> LiDARcloud::getScanBeamZenithAngles(uint scanID) const {
+    if (scanID >= scans.size()) {
+        helios_runtime_error("ERROR (LiDARcloud::getScanBeamZenithAngles): Cannot get beam zenith angles for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
+    }
+    return scans.at(scanID).beamZenithAngles;
 }
 
 helios::vec3 LiDARcloud::getHitXYZ(uint index) const {
@@ -562,6 +691,22 @@ void LiDARcloud::coordinateRotation(float rotation, const vec3 &line_base, const
 
 uint LiDARcloud::getTriangleCount() const {
     return triangles.size();
+}
+
+std::size_t LiDARcloud::getTriangulationCandidateCount() const {
+    return triangulation_candidate_count;
+}
+
+std::size_t LiDARcloud::getTriangulationDroppedByLmax() const {
+    return triangulation_dropped_lmax;
+}
+
+std::size_t LiDARcloud::getTriangulationDroppedByAspect() const {
+    return triangulation_dropped_aspect;
+}
+
+std::size_t LiDARcloud::getTriangulationDroppedByDegenerate() const {
+    return triangulation_dropped_degenerate;
 }
 
 Triangulation LiDARcloud::getTriangle(uint index) const {
@@ -1187,6 +1332,78 @@ bool sortcol1(const std::vector<double> &v0, const std::vector<double> &v1) {
     return v0.at(1) < v1.at(1);
 }
 
+namespace {
+
+    //! Median of a vector of doubles (modifies the input via nth_element). Caller guarantees non-empty.
+    double median_double(std::vector<double> &v) {
+        const size_t n = v.size();
+        const size_t mid = n / 2;
+        std::nth_element(v.begin(), v.begin() + mid, v.end());
+        const double hi = v.at(mid);
+        if (n % 2 == 1) {
+            return hi;
+        }
+        // even count: average the two central order statistics
+        const double lo = *std::max_element(v.begin(), v.begin() + mid);
+        return 0.5 * (lo + hi);
+    }
+
+    //! Robust line fit y = slope*x + intercept using the Theil-Sen estimator (median of pairwise slopes).
+    /**
+     * The slope is the median over all sample pairs of (y_j - y_i)/(x_j - x_i); the intercept is the
+     * median of (y_i - slope*x_i). Theil-Sen has a ~29% breakdown point and requires no tuning, which
+     * makes it well suited to noisy encoder angles with occasional gross outliers. Pairs with x_i == x_j
+     * are skipped. To bound the O(n^2) pair count, when the sample is large a deterministic strided subset
+     * of pairs is used (fixed stride, not RNG) so results are reproducible.
+     *
+     * \param[in] x Predictor samples (e.g. column index).
+     * \param[in] y Response samples (e.g. measured azimuth).
+     * \param[out] slope Fitted slope.
+     * \param[out] intercept Fitted intercept.
+     * \return true if a fit was produced (>=2 samples with distinct x), false otherwise.
+     */
+    bool theilSenFit(const std::vector<double> &x, const std::vector<double> &y, double &slope, double &intercept) {
+        const size_t n = x.size();
+        if (n < 2) {
+            return false;
+        }
+
+        // Cap the number of point pairs considered. The full estimator is O(n^2); above this many samples
+        // we walk pairs with a deterministic stride so the slope/intercept remain reproducible run-to-run.
+        const size_t pair_cap = 1000;
+        const size_t stride = (n > pair_cap) ? (n / pair_cap) : 1;
+
+        const size_t n_strided = n / stride + 1; // approximate number of sampled indices
+        std::vector<double> slopes;
+        slopes.reserve(n_strided * n_strided / 2);
+        for (size_t i = 0; i < n; i += stride) {
+            for (size_t j = i + 1; j < n; j += stride) {
+                const double dx = x.at(j) - x.at(i);
+                if (dx == 0.0) {
+                    continue;
+                }
+                slopes.push_back((y.at(j) - y.at(i)) / dx);
+            }
+        }
+
+        if (slopes.empty()) {
+            return false;
+        }
+
+        slope = median_double(slopes);
+
+        std::vector<double> intercepts;
+        intercepts.reserve(n);
+        for (size_t i = 0; i < n; i++) {
+            intercepts.push_back(y.at(i) - slope * x.at(i));
+        }
+        intercept = median_double(intercepts);
+
+        return true;
+    }
+
+} // namespace
+
 void LiDARcloud::maxPulseFilter(const char *scalar) {
 
     if (printmessages) {
@@ -1200,23 +1417,12 @@ void LiDARcloud::maxPulseFilter(const char *scalar) {
     for (std::size_t r = 0; r < getHitCount(); r++) {
 
         if (!doesHitDataExist(r, "timestamp")) {
-            std::cerr << "failed\nERROR (LiDARcloud::maxPulseFilter): Hit point " << r
-                      << " does not have scalar data "
-                         "timestamp"
-                         ", which is required for max pulse filtering. No filtering will be performed."
-                      << std::endl;
-            return;
+            helios_runtime_error("ERROR (LiDARcloud::maxPulseFilter): Hit point " + std::to_string(r) + " does not have scalar data 'timestamp', which is required for max pulse filtering.");
         } else if (!doesHitDataExist(r, scalar)) {
-            std::cerr << "failed\nERROR (LiDARcloud::maxPulseFilter): Hit point " << r
-                      << " does not have scalar data "
-                         ""
-                      << scalar
-                      << ""
-                         ".  No filtering will be performed."
-                      << std::endl;
-            return;
+            helios_runtime_error("ERROR (LiDARcloud::maxPulseFilter): Hit point " + std::to_string(r) + " does not have scalar data '" + scalar + "', which is required for max pulse filtering.");
         }
 
+        // Store the original hit index as double(r): see minPulseFilter for the precision rationale.
         std::vector<double> v{getHitData(r, "timestamp"), getHitData(r, scalar), double(r)};
 
         timestamps.at(r) = v;
@@ -1271,24 +1477,15 @@ void LiDARcloud::minPulseFilter(const char *scalar) {
     for (std::size_t r = 0; r < getHitCount(); r++) {
 
         if (!doesHitDataExist(r, "timestamp")) {
-            std::cerr << "failed\nERROR (LiDARcloud::maxPulseFilter): Hit point " << r
-                      << " does not have scalar data "
-                         "timestamp"
-                         ", which is required for max pulse filtering. No filtering will be performed."
-                      << std::endl;
-            return;
+            helios_runtime_error("ERROR (LiDARcloud::minPulseFilter): Hit point " + std::to_string(r) + " does not have scalar data 'timestamp', which is required for min pulse filtering.");
         } else if (!doesHitDataExist(r, scalar)) {
-            std::cerr << "failed\nERROR (LiDARcloud::maxPulseFilter): Hit point " << r
-                      << " does not have scalar data "
-                         ""
-                      << scalar
-                      << ""
-                         ".  No filtering will be performed."
-                      << std::endl;
-            return;
+            helios_runtime_error("ERROR (LiDARcloud::minPulseFilter): Hit point " + std::to_string(r) + " does not have scalar data '" + scalar + "', which is required for min pulse filtering.");
         }
 
-        std::vector<double> v{getHitData(r, "timestamp"), getHitData(r, scalar), float(r)};
+        // Store the original hit index as double(r), not float(r): the index round-trips
+        // through this double vector and is read back via int(...). float has only 24 bits of
+        // mantissa, so indices above 2^24 would alias and corrupt the delete mapping.
+        std::vector<double> v{getHitData(r, "timestamp"), getHitData(r, scalar), double(r)};
 
         timestamps.at(r) = v;
     }
@@ -1420,6 +1617,184 @@ void LiDARcloud::lastHitFilter() {
     }
 }
 
+std::vector<helios::vec3> LiDARcloud::gapfillMisses_rowcolumn(uint scanID, const bool add_flags) {
+
+    if (printmessages) {
+        std::cout << "Gap filling complete misses in scan " << scanID << " using row/column indices..." << std::flush;
+    }
+
+    const float gap_distance = LIDAR_MISS_DISTANCE; // place gapfilled miss points at the canonical miss distance
+    const helios::vec3 origin = getScanOrigin(scanID);
+    const int Ntheta = (int) scans.at(scanID).Ntheta;
+    const int Nphi = (int) scans.at(scanID).Nphi;
+
+    std::vector<helios::vec3> xyz_filled;
+
+    // ---- 1. Collect this scan's returns that carry row/column indices ---- //
+    // Per row, accumulate the measured (column, zenith, azimuth) of each return. The measured direction comes
+    // from getHitRaydir(), so the fit is grounded in the actual beam geometry (including tilt and sweep), not
+    // the idealized rc2direction model.
+    std::vector<std::vector<double>> row_cols(Ntheta); // column index per return, bucketed by row
+    std::vector<std::vector<double>> row_zeniths(Ntheta); // measured zenith per return, bucketed by row
+    std::vector<std::vector<double>> row_azimuths(Ntheta); // measured (unwrapped later) azimuth per return, bucketed by row
+    std::set<std::pair<int, int>> occupied; // (row,column) cells that already contain a return
+
+    for (size_t r = 0; r < getHitCount(); r++) {
+        if (getHitScanID(r) != (int) scanID) {
+            continue;
+        }
+
+        // Canonical miss flag: existing points are returns unless already flagged as misses.
+        if (!doesHitDataExist(r, "is_miss")) {
+            setHitData(r, "is_miss", 0.0);
+        }
+        if (add_flags) {
+            setHitData(r, "gapfillMisses_code", 0.0); // 0 = original point
+        }
+
+        if (!doesHitDataExist(r, "row") || !doesHitDataExist(r, "column")) {
+            continue;
+        }
+
+        const int row = (int) std::lround(getHitData(r, "row"));
+        const int col = (int) std::lround(getHitData(r, "column"));
+        if (row < 0 || row >= Ntheta || col < 0 || col >= Nphi) {
+            continue; // index out of declared scan grid; ignore
+        }
+
+        const helios::SphericalCoord raydir = getHitRaydir(r);
+        row_cols.at(row).push_back((double) col);
+        row_zeniths.at(row).push_back(raydir.zenith);
+        row_azimuths.at(row).push_back(raydir.azimuth);
+        occupied.insert(std::make_pair(row, col));
+    }
+
+    // ---- 2. Per-row robust fit of the generative model ---- //
+    // For each row with enough returns: zenith[row] = median(zeniths); azimuth = intercept[row] + slope[row]*column
+    // via Theil-Sen. The azimuth samples in a row are unwrapped about their median first so the 0/2pi seam does
+    // not corrupt the slope fit.
+    const int min_returns_for_fit = 4; // K: rows with fewer returns are filled by cross-row extrapolation
+    std::vector<double> zenith_lut(Ntheta, 0.0);
+    std::vector<double> az_intercept_lut(Ntheta, 0.0);
+    std::vector<double> az_slope_lut(Ntheta, 0.0);
+    std::vector<bool> row_fitted(Ntheta, false);
+
+    for (int row = 0; row < Ntheta; row++) {
+        if ((int) row_cols.at(row).size() < min_returns_for_fit) {
+            continue;
+        }
+
+        // robust zenith for this row
+        std::vector<double> zeniths_copy = row_zeniths.at(row);
+        const double zen = median_double(zeniths_copy);
+
+        // unwrap azimuths about a robust center so the seam does not split the samples
+        std::vector<double> az_center_copy = row_azimuths.at(row);
+        const double az_center = median_double(az_center_copy);
+        std::vector<double> az_unwrapped = row_azimuths.at(row);
+        for (double &a: az_unwrapped) {
+            while (a - az_center > M_PI) {
+                a -= 2.0 * M_PI;
+            }
+            while (a - az_center < -M_PI) {
+                a += 2.0 * M_PI;
+            }
+        }
+
+        double slope = 0.0, intercept = 0.0;
+        if (!theilSenFit(row_cols.at(row), az_unwrapped, slope, intercept)) {
+            continue; // e.g. all returns in one column; treat as unfitted, extrapolate later
+        }
+
+        zenith_lut.at(row) = zen;
+        az_slope_lut.at(row) = slope;
+        az_intercept_lut.at(row) = intercept;
+        row_fitted.at(row) = true;
+    }
+
+    // ---- 3. Extrapolate the per-row model across the row axis to cover sparse/empty rows ---- //
+    // Collect the directly-fitted rows and robustly fit zenith-vs-row and intercept-vs-row (Theil-Sen). The
+    // azimuth slope (sweep rate) is approximately constant across rows, so its robust median over fitted rows
+    // is used. Evaluating these across-row fits at every row index defines a complete model over the whole grid,
+    // including blank near-zenith rows (extrapolation).
+    std::vector<double> fitted_row_idx, fitted_zenith, fitted_intercept, fitted_slope;
+    for (int row = 0; row < Ntheta; row++) {
+        if (row_fitted.at(row)) {
+            fitted_row_idx.push_back((double) row);
+            fitted_zenith.push_back(zenith_lut.at(row));
+            fitted_intercept.push_back(az_intercept_lut.at(row));
+            fitted_slope.push_back(az_slope_lut.at(row));
+        }
+    }
+
+    if ((int) fitted_row_idx.size() < 2) {
+        helios_runtime_error("ERROR (LiDARcloud::gapfillMisses): scan " + std::to_string(scanID) + " has too few populated scan rows (" + std::to_string(fitted_row_idx.size()) +
+                             ") to robustly reconstruct the row/column scan-grid model. At least 2 rows with >= " + std::to_string(min_returns_for_fit) + " returns are required.");
+    }
+
+    double zen_slope = 0.0, zen_intercept = 0.0;
+    double int_slope = 0.0, int_intercept = 0.0;
+    const bool zen_ok = theilSenFit(fitted_row_idx, fitted_zenith, zen_slope, zen_intercept);
+    const bool int_ok = theilSenFit(fitted_row_idx, fitted_intercept, int_slope, int_intercept);
+    const double median_slope = median_double(fitted_slope);
+
+    for (int row = 0; row < Ntheta; row++) {
+        if (row_fitted.at(row)) {
+            continue;
+        }
+        zenith_lut.at(row) = zen_ok ? (zen_intercept + zen_slope * (double) row) : fitted_zenith.front();
+        az_intercept_lut.at(row) = int_ok ? (int_intercept + int_slope * (double) row) : fitted_intercept.front();
+        az_slope_lut.at(row) = median_slope;
+    }
+
+    // ---- 4. Emit a miss for every empty grid cell along its reconstructed direction ---- //
+    uint npoints_interior = 0;
+    uint npoints_extrapolated = 0;
+    for (int row = 0; row < Ntheta; row++) {
+        for (int col = 0; col < Nphi; col++) {
+
+            if (occupied.find(std::make_pair(row, col)) != occupied.end()) {
+                continue; // cell already has a return
+            }
+
+            const double zenith = zenith_lut.at(row);
+            double azimuth = az_intercept_lut.at(row) + az_slope_lut.at(row) * (double) col;
+            // wrap azimuth to [0, 2pi)
+            azimuth = std::fmod(azimuth, 2.0 * M_PI);
+            if (azimuth < 0.0) {
+                azimuth += 2.0 * M_PI;
+            }
+
+            const helios::SphericalCoord spherical(gap_distance, 0.5 * M_PI - (float) zenith, (float) azimuth);
+            const helios::vec3 xyz = origin + helios::sphere2cart(spherical);
+            xyz_filled.push_back(xyz);
+
+            std::map<std::string, double> data;
+            data.insert(std::make_pair("is_miss", 1.0)); // gapfilled points are misses (transmitted beams)
+            data.insert(std::make_pair("row", (double) row));
+            data.insert(std::make_pair("column", (double) col));
+            data.insert(std::make_pair("nRaysHit", 0.0)); // a miss: zero sub-rays of the pulse returned a hit
+            if (add_flags) {
+                // 1 = interior gapfill (row had its own direct fit); 4 = extrapolated row (model came from cross-row fit)
+                data.insert(std::make_pair("gapfillMisses_code", row_fitted.at(row) ? 1.0 : 4.0));
+            }
+
+            addHitPoint(scanID, xyz, spherical, data);
+            if (row_fitted.at(row)) {
+                npoints_interior++;
+            } else {
+                npoints_extrapolated++;
+            }
+        }
+    }
+
+    if (printmessages) {
+        std::cout << "filled " << xyz_filled.size() << " points (" << npoints_interior << " interior, " << npoints_extrapolated << " extrapolated-row)." << std::endl;
+    }
+
+    return xyz_filled;
+}
+
 std::vector<helios::vec3> LiDARcloud::gapfillMisses() {
     std::vector<helios::vec3> xyz_filled;
     for (uint scanID = 0; scanID < getScanCount(); scanID++) {
@@ -1437,15 +1812,62 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
 
     // Validate scanID
     if (scanID >= getScanCount()) {
-        helios_runtime_error("ERROR (LiDARcloud::gapfillMisses): Invalid scanID " + std::to_string(scanID) +
-                             ". Only " + std::to_string(getScanCount()) + " scans exist.");
+        helios_runtime_error("ERROR (LiDARcloud::gapfillMisses): Invalid scanID " + std::to_string(scanID) + ". Only " + std::to_string(getScanCount()) + " scans exist.");
     }
+
+    // Auto-detect which reconstruction path to use based on the data available on this scan's returns.
+    // The row/column path reconstructs miss directions from the native scan-grid indices and is robust to
+    // scanner tilt, angular noise, and azimuth sweep; the timestamp path reconstructs the grid from per-hit
+    // timestamps. When both are available we prefer row/column. When neither is available we fail fast, since
+    // there is no way to reconstruct miss directions.
+    bool has_rowcolumn = false;
+    bool has_timestamp = false;
+    size_t scan_hit_count = 0;
+    for (size_t r = 0; r < getHitCount(); r++) {
+        if (getHitScanID(r) != (int) scanID) {
+            continue;
+        }
+        scan_hit_count++;
+        if (doesHitDataExist(r, "row") && doesHitDataExist(r, "column")) {
+            has_rowcolumn = true;
+        }
+        if (doesHitDataExist(r, "timestamp")) {
+            has_timestamp = true;
+        }
+        if (has_rowcolumn && has_timestamp) {
+            break; // both present; row/column will be preferred
+        }
+    }
+
+    // A scan with no returns at all (e.g. rays that all missed empty geometry) has nothing to reconstruct;
+    // return gracefully. The fail-fast below applies only when returns exist but carry neither timestamp nor
+    // row/column indices, which is a genuine data-format problem.
+    if (scan_hit_count == 0) {
+        if (printmessages) {
+            std::cout << "Gap filling complete misses in scan " << scanID << "...scan has no hits. Skipping gap fill." << std::endl;
+        }
+        return {};
+    }
+
+    if (has_rowcolumn) {
+        return gapfillMisses_rowcolumn(scanID, add_flags);
+    } else if (has_timestamp) {
+        return gapfillMisses_timestamp(scanID, gapfill_grid_only, add_flags);
+    } else {
+        helios_runtime_error("ERROR (LiDARcloud::gapfillMisses): scan " + std::to_string(scanID) +
+                             " has neither 'timestamp' nor 'row'/'column' hit data; cannot reconstruct miss directions. "
+                             "Provide either per-hit timestamps or scan row/column indices.");
+        return {}; // unreachable; silences compiler warning
+    }
+}
+
+std::vector<helios::vec3> LiDARcloud::gapfillMisses_timestamp(uint scanID, const bool gapfill_grid_only, const bool add_flags) {
 
     if (printmessages) {
         std::cout << "Gap filling complete misses in scan " << scanID << "..." << std::flush;
     }
 
-    float gap_distance = 20000;
+    float gap_distance = LIDAR_MISS_DISTANCE; // place gapfilled miss points at the canonical miss distance
 
     helios::vec3 origin = getScanOrigin(scanID);
     std::vector<helios::vec3> xyz_filled;
@@ -1456,6 +1878,12 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
     for (size_t r = 0; r < getHitCount(); r++) {
         if (getHitScanID(r) == scanID) {
 
+            // Canonical miss flag: existing points are returns unless already flagged
+            // as misses (e.g. imported misses from a miss-retaining format).
+            if (!doesHitDataExist(r, "is_miss")) {
+                setHitData(r, "is_miss", 0.0);
+            }
+
             if (add_flags) {
                 // gapfillMisses_code = 0: original points
                 setHitData(r, "gapfillMisses_code", 0.0);
@@ -1464,8 +1892,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
             helios::SphericalCoord raydir = getHitRaydir(r);
 
             if (!doesHitDataExist(r, "timestamp")) {
-                helios_runtime_error("ERROR (LiDARcloud::gapfillMisses): Hit " + std::to_string(r) +
-                                     " is missing required 'timestamp' data. Cannot perform gap filling.");
+                helios_runtime_error("ERROR (LiDARcloud::gapfillMisses): Hit " + std::to_string(r) + " is missing required 'timestamp' data. Cannot perform gap filling.");
             }
 
             double timestamp = getHitData(r, "timestamp");
@@ -1484,7 +1911,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
         if (printmessages) {
             std::cout << "scan has no hits. Skipping gap fill." << std::endl;
         }
-        return xyz_filled;  // Return empty vector
+        return xyz_filled; // Return empty vector
     }
 
     // sorting, initial dt and dtheta calculations, and determining minimum target index in the scan
@@ -1493,7 +1920,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
     std::sort(hit_table.begin(), hit_table.end(), sortcol1);
 
     int min_tindex = 1;
-    for (size_t r = 0; r + 1 < hit_table.size(); r++) {
+    for (size_t r = 0; r < hit_table.size(); r++) {
 
         // this is to figure out if target indexing uses 0 or 1 offset
         if (min_tindex == 1 && doesHitDataExist(hit_table.at(r).at(0), "target_index") && doesHitDataExist(hit_table.at(r).at(0), "target_count")) {
@@ -1506,9 +1933,12 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
     // getting rid of points with target index greater than the minimum
 
     int ndup_target = 0;
-    // create new array without duplicate timestamps
+    // create new array without duplicate timestamps (keep only first hits). Iterate the full
+    // table - including the last element - so the target_index filter is applied uniformly; a
+    // previous version excluded the last element from the loop and then appended it unfiltered,
+    // which could admit a non-first-hit return.
     std::vector<std::vector<double>> hit_table_semiclean;
-    for (size_t r = 0; r + 1 < hit_table.size(); r++) {
+    for (size_t r = 0; r < hit_table.size(); r++) {
 
         // only consider first hits
         if (doesHitDataExist(hit_table.at(r).at(0), "target_index") && doesHitDataExist(hit_table.at(r).at(0), "target_count")) {
@@ -1519,10 +1949,6 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
         }
 
         hit_table_semiclean.push_back(hit_table.at(r));
-    }
-    // Add the last element (loop above stops at size()-1)
-    if (!hit_table.empty()) {
-        hit_table_semiclean.push_back(hit_table.back());
     }
 
     //  re-calculating dt
@@ -1562,7 +1988,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
         if (printmessages) {
             std::cout << "insufficient hits to reconstruct scan grid. Skipping gap fill." << std::endl;
         }
-        return xyz_filled;  // Return empty vector
+        return xyz_filled; // Return empty vector
     }
 
     // recalculate dt and dtheta with only one hit per beam
@@ -1631,7 +2057,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
         if (printmessages) {
             std::cout << "insufficient valid hit pairs. Skipping gap fill." << std::endl;
         }
-        return xyz_filled;  // Return empty vector
+        return xyz_filled; // Return empty vector
     }
 
     dt_avg = dt_avg / float(dt_sum);
@@ -1646,7 +2072,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
         if (printmessages) {
             std::cout << "degenerate timestamp spacing. Skipping gap fill." << std::endl;
         }
-        return xyz_filled;  // Return empty vector
+        return xyz_filled; // Return empty vector
     }
 
     // Get theta range for grid position calculations (needed early for filled_positions)
@@ -1680,7 +2106,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
                     // A gap can never span more beams than the scan has rows. Cap Ngap
                     // to guard against a runaway fill loop if the reconstructed grid
                     // spacing is much finer than the real one.
-                    int Ngap_max = (int)scans.at(scanID).Ntheta;
+                    int Ngap_max = (int) scans.at(scanID).Ntheta;
                     if (Ngap > Ngap_max) {
                         Ngap = Ngap_max;
                     }
@@ -1706,8 +2132,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
 
                         // Skip grid positions outside the scan's row/column range
                         // (mirrors the bounds check in the extrapolation passes below).
-                        if (rc.x < 0 || rc.x >= (int)scans.at(scanID).Ntheta ||
-                            rc.y < 0 || rc.y >= (int)scans.at(scanID).Nphi) {
+                        if (rc.x < 0 || rc.x >= (int) scans.at(scanID).Ntheta || rc.y < 0 || rc.y >= (int) scans.at(scanID).Nphi) {
                             continue;
                         }
 
@@ -1723,13 +2148,14 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
                             std::map<std::string, double> data;
                             data.insert(std::pair<std::string, double>("timestamp", timestep));
                             data.insert(std::pair<std::string, double>("target_index", min_tindex));
-                            data.insert(std::pair<std::string, double>("nRaysHit", 500));
+                            data.insert(std::pair<std::string, double>("nRaysHit", 0.0)); // a miss: zero sub-rays of the pulse returned a hit
+                            data.insert(std::pair<std::string, double>("is_miss", 1.0)); // gapfilled points are misses (transmitted beams)
                             if (add_flags) {
                                 // gapfillMisses_code = 1: gapfilled points
                                 data.insert(std::pair<std::string, double>("gapfillMisses_code", 1.0));
                             }
                             addHitPoint(scanID, xyz, spherical, data);
-                            filled_positions.insert(grid_key);  // Mark as filled
+                            filled_positions.insert(grid_key); // Mark as filled
                         }
                     }
                 }
@@ -1817,8 +2243,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
                     helios::int2 rc = scans.at(scanID).direction2rc(dir_to_check);
 
                     // Only add if this grid position is actually empty (avoid duplicates)
-                    if (rc.x >= 0 && rc.x < (int)scans.at(scanID).Ntheta &&
-                        rc.y >= 0 && rc.y < (int)scans.at(scanID).Nphi) {
+                    if (rc.x >= 0 && rc.x < (int) scans.at(scanID).Ntheta && rc.y >= 0 && rc.y < (int) scans.at(scanID).Nphi) {
 
                         // Check if this grid position has already been filled (avoid duplicates)
                         auto grid_key = std::make_pair(rc.x, rc.y);
@@ -1831,14 +2256,15 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
                             std::map<std::string, double> data;
                             data.insert(std::pair<std::string, double>("timestamp", timestep));
                             data.insert(std::pair<std::string, double>("target_index", min_tindex));
-                            data.insert(std::pair<std::string, double>("nRaysHit", 500));
+                            data.insert(std::pair<std::string, double>("nRaysHit", 0.0)); // a miss: zero sub-rays of the pulse returned a hit
+                            data.insert(std::pair<std::string, double>("is_miss", 1.0)); // gapfilled points are misses (transmitted beams)
                             if (add_flags) {
                                 // gapfillMisses_code = 3: upward edge points
                                 data.insert(std::pair<std::string, double>("gapfillMisses_code", 3.0));
                             }
 
                             addHitPoint(scanID, xyz, spherical, data);
-                            filled_positions.insert(grid_key);  // Mark this position as filled
+                            filled_positions.insert(grid_key); // Mark this position as filled
                         }
                     }
 
@@ -1863,8 +2289,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
                     helios::int2 rc = scans.at(scanID).direction2rc(dir_to_check);
 
                     // Only add if this grid position is actually empty (avoid duplicates)
-                    if (rc.x >= 0 && rc.x < (int)scans.at(scanID).Ntheta &&
-                        rc.y >= 0 && rc.y < (int)scans.at(scanID).Nphi) {
+                    if (rc.x >= 0 && rc.x < (int) scans.at(scanID).Ntheta && rc.y >= 0 && rc.y < (int) scans.at(scanID).Nphi) {
 
                         // Check if this grid position has already been filled (avoid duplicates)
                         auto grid_key = std::make_pair(rc.x, rc.y);
@@ -1877,14 +2302,15 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
                             std::map<std::string, double> data;
                             data.insert(std::pair<std::string, double>("timestamp", timestep));
                             data.insert(std::pair<std::string, double>("target_index", min_tindex));
-                            data.insert(std::pair<std::string, double>("nRaysHit", 500));
+                            data.insert(std::pair<std::string, double>("nRaysHit", 0.0)); // a miss: zero sub-rays of the pulse returned a hit
+                            data.insert(std::pair<std::string, double>("is_miss", 1.0)); // gapfilled points are misses (transmitted beams)
                             if (add_flags) {
                                 // gapfillMisses_code = 2: downward edge points
                                 data.insert(std::pair<std::string, double>("gapfillMisses_code", 2.0));
                             }
 
                             addHitPoint(scanID, xyz, spherical, data);
-                            filled_positions.insert(grid_key);  // Mark this position as filled
+                            filled_positions.insert(grid_key); // Mark this position as filled
                         }
                     }
 
@@ -1898,8 +2324,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses(uint scanID, const bool gapf
     uint npointsextrapolated = xyz_filled.size() - npointsfilled;
 
     if (printmessages) {
-        std::cout << "filled " << xyz_filled.size() << " points (" << npointsfilled << " interior, "
-                  << npointsextrapolated << " edge)." << std::endl;
+        std::cout << "filled " << xyz_filled.size() << " points (" << npointsfilled << " interior, " << npointsextrapolated << " edge)." << std::endl;
         std::cout << "  Processed " << hit_table2D.size() << " scan columns" << std::endl;
     }
     return xyz_filled;
@@ -1920,6 +2345,12 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio) {
     }
 
     int Ntriangles = 0;
+
+    // Reset triangulation diagnostics for this run (see getTriangulation* getters).
+    triangulation_candidate_count = 0;
+    triangulation_dropped_lmax = 0;
+    triangulation_dropped_aspect = 0;
+    triangulation_dropped_degenerate = 0;
 
     // For multi-return data, calculate adaptive separation ratio threshold
     bool use_adaptive_threshold = isMultiReturnData();
@@ -1961,20 +2392,24 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio) {
                 }
             }
 
-            if (pts_pass1.size() == 0) continue;
+            if (pts_pass1.size() == 0)
+                continue;
 
             // Handle coordinate wrapping
             float h[2] = {0, 0};
             for (int r = 0; r < pts_pass1.size(); r++) {
-                if (pts_pass1.at(r).c < 0.5 * M_PI) h[0] += 1.f;
-                else if (pts_pass1.at(r).c > 1.5 * M_PI) h[1] += 1.f;
+                if (pts_pass1.at(r).c < 0.5 * M_PI)
+                    h[0] += 1.f;
+                else if (pts_pass1.at(r).c > 1.5 * M_PI)
+                    h[1] += 1.f;
             }
             h[0] /= float(pts_pass1.size());
             h[1] /= float(pts_pass1.size());
             if (h[0] + h[1] > 0.4) {
                 for (int r = 0; r < pts_pass1.size(); r++) {
                     pts_pass1.at(r).c += M_PI;
-                    if (pts_pass1.at(r).c > 2.f * M_PI) pts_pass1.at(r).c -= 2.f * M_PI;
+                    if (pts_pass1.at(r).c > 2.f * M_PI)
+                        pts_pass1.at(r).c -= 2.f * M_PI;
                 }
             }
 
@@ -1982,19 +2417,13 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio) {
             de_duplicate(pts_pass1, dupes_pass1);
 
             std::vector<Triad> triads_pass1;
-            int success = 0, Ntries = 0;
-            while (success != 1 && Ntries < 3) {
-                Ntries++;
-                success = s_hull_pro(pts_pass1, triads_pass1);
-                if (success != 1) {
-                    for (int r = 0; r < pts_pass1.size(); r++) {
-                        pts_pass1.at(r).c += 0.25 * M_PI;
-                        if (pts_pass1.at(r).c > 2.f * M_PI) pts_pass1.at(r).c -= 2.f * M_PI;
-                    }
-                }
-            }
+            // CDT uses robust geometric predicates, so the s_hull-era
+            // rotate-and-retry recovery is no longer needed; a failure here is
+            // deterministic and the scan is skipped.
+            int success = triangulate_CDT(pts_pass1, triads_pass1);
 
-            if (success != 1) continue;
+            if (success != 1)
+                continue;
 
             // Collect separation ratios (pre-filter by edge length)
             for (int t = 0; t < triads_pass1.size(); t++) {
@@ -2110,11 +2539,14 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio) {
             }
         }
 
-        // Snap coordinates to fixed precision for cross-platform consistency
-        // This eliminates tiny floating-point differences that cause algorithmic divergence
-        // Using 1e-6 provides good balance between precision and robustness
+        // Snap coordinates to fixed precision for cross-platform consistency.
+        // Even with CDT's robust predicates (which make the triangulation
+        // deterministic for identical input), the upstream cart2sphere
+        // coordinates can differ at the ULP level across architectures
+        // (ARM64 vs x86_64); snapping collapses those so de_duplicate and the
+        // tessellation stay platform-independent.
         const float COORD_SNAP_PRECISION = 1e-6f;
-        for (auto& pt : pts) {
+        for (auto &pt: pts) {
             pt.r = std::round(pt.r / COORD_SNAP_PRECISION) * COORD_SNAP_PRECISION;
             pt.c = std::round(pt.c / COORD_SNAP_PRECISION) * COORD_SNAP_PRECISION;
         }
@@ -2129,27 +2561,10 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio) {
             std::cout << "starting triangulation for scan " << s << "..." << std::endl;
         }
 
-        int success = 0;
-        int Ntries = 0;
-        while (success != 1 && Ntries < 3) {
-            Ntries++;
-
-            success = s_hull_pro(pts, triads);
-
-            if (success != 1) {
-
-                // try a 90 degree coordinate shift
-                if (printmessages) {
-                    std::cout << "Shifting scan " << s << " (try " << Ntries << " of 3)" << std::endl;
-                }
-                for (int r = 0; r < pts.size(); r++) {
-                    pts.at(r).c += 0.25 * M_PI;
-                    if (pts.at(r).c > 2.f * M_PI) {
-                        pts.at(r).c -= 2.f * M_PI;
-                    }
-                }
-            }
-        }
+        // CDT uses robust geometric predicates, so the s_hull-era
+        // rotate-and-retry recovery is no longer needed; a failure here is
+        // deterministic and the scan is skipped.
+        int success = triangulate_CDT(pts, triads);
 
         if (success != 1) {
             if (printmessages) {
@@ -2159,6 +2574,8 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio) {
         } else if (printmessages) {
             std::cout << "finished triangulation" << std::endl;
         }
+
+        triangulation_candidate_count += triads.size();
 
         for (int t = 0; t < triads.size(); t++) {
 
@@ -2185,8 +2602,12 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio) {
 
             float aspect_ratio = max(max(L0, L1), L2) / min(min(L0, L1), L2);
 
-            // Apply adaptive filtering for multi-return data
-            bool filtered = (L0 > Lmax || L1 > Lmax || L2 > Lmax);
+            // Apply filtering. Attribute each dropped triangle to ONE primary
+            // reason in priority order (Lmax, then aspect/separation) so the
+            // diagnostic counts reconcile: candidates == kept + dropped_lmax +
+            // dropped_aspect + dropped_degenerate.
+            bool dropped_lmax = (L0 > Lmax || L1 > Lmax || L2 > Lmax);
+            bool dropped_aspect = false;
 
             if (use_adaptive_threshold) {
                 // Multi-return: use BOTH separation ratio filter AND aspect ratio filter
@@ -2199,13 +2620,18 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio) {
                 float ratio12 = L2 / (ang12 + 1e-6);
                 float max_sep_ratio = max(max(ratio01, ratio02), ratio12);
 
-                filtered = filtered || (max_sep_ratio > adaptive_sep_threshold) || (aspect_ratio > max_aspect_ratio);
+                dropped_aspect = (max_sep_ratio > adaptive_sep_threshold) || (aspect_ratio > max_aspect_ratio);
             } else {
                 // Single-return: use aspect ratio filter
-                filtered = filtered || (aspect_ratio > max_aspect_ratio);
+                dropped_aspect = (aspect_ratio > max_aspect_ratio);
             }
 
-            if (filtered) {
+            if (dropped_lmax) {
+                triangulation_dropped_lmax++;
+                continue;
+            }
+            if (dropped_aspect) {
+                triangulation_dropped_aspect++;
                 continue;
             }
 
@@ -2223,6 +2649,7 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio) {
             Triangulation tri(s, vertex0, vertex1, vertex2, ID0, ID1, ID2, color, gridcell);
 
             if (tri.area != tri.area) {
+                triangulation_dropped_degenerate++;
                 continue;
             }
 
@@ -2255,6 +2682,12 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const 
     }
 
     int Ntriangles = 0;
+
+    // Reset triangulation diagnostics for this run (see getTriangulation* getters).
+    triangulation_candidate_count = 0;
+    triangulation_dropped_lmax = 0;
+    triangulation_dropped_aspect = 0;
+    triangulation_dropped_degenerate = 0;
 
     // For multi-return data, calculate adaptive separation ratio threshold
     bool use_adaptive_threshold = isMultiReturnData();
@@ -2289,20 +2722,24 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const 
                 }
             }
 
-            if (pts_pass1.size() == 0) continue;
+            if (pts_pass1.size() == 0)
+                continue;
 
             // Handle coordinate wrapping
             float h[2] = {0, 0};
             for (int r = 0; r < pts_pass1.size(); r++) {
-                if (pts_pass1.at(r).c < 0.5 * M_PI) h[0] += 1.f;
-                else if (pts_pass1.at(r).c > 1.5 * M_PI) h[1] += 1.f;
+                if (pts_pass1.at(r).c < 0.5 * M_PI)
+                    h[0] += 1.f;
+                else if (pts_pass1.at(r).c > 1.5 * M_PI)
+                    h[1] += 1.f;
             }
             h[0] /= float(pts_pass1.size());
             h[1] /= float(pts_pass1.size());
             if (h[0] + h[1] > 0.4) {
                 for (int r = 0; r < pts_pass1.size(); r++) {
                     pts_pass1.at(r).c += M_PI;
-                    if (pts_pass1.at(r).c > 2.f * M_PI) pts_pass1.at(r).c -= 2.f * M_PI;
+                    if (pts_pass1.at(r).c > 2.f * M_PI)
+                        pts_pass1.at(r).c -= 2.f * M_PI;
                 }
             }
 
@@ -2310,19 +2747,13 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const 
             de_duplicate(pts_pass1, dupes_pass1);
 
             std::vector<Triad> triads_pass1;
-            int success = 0, Ntries = 0;
-            while (success != 1 && Ntries < 3) {
-                Ntries++;
-                success = s_hull_pro(pts_pass1, triads_pass1);
-                if (success != 1) {
-                    for (int r = 0; r < pts_pass1.size(); r++) {
-                        pts_pass1.at(r).c += 0.25 * M_PI;
-                        if (pts_pass1.at(r).c > 2.f * M_PI) pts_pass1.at(r).c -= 2.f * M_PI;
-                    }
-                }
-            }
+            // CDT uses robust geometric predicates, so the s_hull-era
+            // rotate-and-retry recovery is no longer needed; a failure here is
+            // deterministic and the scan is skipped.
+            int success = triangulate_CDT(pts_pass1, triads_pass1);
 
-            if (success != 1) continue;
+            if (success != 1)
+                continue;
 
             // Collect separation ratios (pre-filter by edge length)
             for (int t = 0; t < triads_pass1.size(); t++) {
@@ -2428,8 +2859,7 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const 
         }
 
         if (printmessages) {
-            std::cout << "Scan " << s << " triangulation: " << count << " points used, "
-                      << delete_count << " points filtered out";
+            std::cout << "Scan " << s << " triangulation: " << count << " points used, " << delete_count << " points filtered out";
             if (strlen(scalar_field) > 0) {
                 std::cout << " (filter: " << scalar_field << " " << comparator << " " << threshold << ")";
             }
@@ -2465,11 +2895,14 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const 
             }
         }
 
-        // Snap coordinates to fixed precision for cross-platform consistency
-        // This eliminates tiny floating-point differences that cause algorithmic divergence
-        // Using 1e-6 provides good balance between precision and robustness
+        // Snap coordinates to fixed precision for cross-platform consistency.
+        // Even with CDT's robust predicates (which make the triangulation
+        // deterministic for identical input), the upstream cart2sphere
+        // coordinates can differ at the ULP level across architectures
+        // (ARM64 vs x86_64); snapping collapses those so de_duplicate and the
+        // tessellation stay platform-independent.
         const float COORD_SNAP_PRECISION = 1e-6f;
-        for (auto& pt : pts) {
+        for (auto &pt: pts) {
             pt.r = std::round(pt.r / COORD_SNAP_PRECISION) * COORD_SNAP_PRECISION;
             pt.c = std::round(pt.c / COORD_SNAP_PRECISION) * COORD_SNAP_PRECISION;
         }
@@ -2484,27 +2917,10 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const 
             std::cout << "starting triangulation for scan " << s << "..." << std::endl;
         }
 
-        int success = 0;
-        int Ntries = 0;
-        while (success != 1 && Ntries < 3) {
-            Ntries++;
-
-            success = s_hull_pro(pts, triads);
-
-            if (success != 1) {
-
-                // try a 90 degree coordinate shift
-                if (printmessages) {
-                    std::cout << "Shifting scan " << s << " (try " << Ntries << " of 3)" << std::endl;
-                }
-                for (int r = 0; r < pts.size(); r++) {
-                    pts.at(r).c += 0.25 * M_PI;
-                    if (pts.at(r).c > 2.f * M_PI) {
-                        pts.at(r).c -= 2.f * M_PI;
-                    }
-                }
-            }
-        }
+        // CDT uses robust geometric predicates, so the s_hull-era
+        // rotate-and-retry recovery is no longer needed; a failure here is
+        // deterministic and the scan is skipped.
+        int success = triangulate_CDT(pts, triads);
 
         if (success != 1) {
             if (printmessages) {
@@ -2514,6 +2930,8 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const 
         } else if (printmessages) {
             std::cout << "finished triangulation" << std::endl;
         }
+
+        triangulation_candidate_count += triads.size();
 
         for (int t = 0; t < triads.size(); t++) {
 
@@ -2540,8 +2958,12 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const 
 
             float aspect_ratio = max(max(L0, L1), L2) / min(min(L0, L1), L2);
 
-            // Apply adaptive filtering for multi-return data
-            bool filtered = (L0 > Lmax || L1 > Lmax || L2 > Lmax);
+            // Apply filtering. Attribute each dropped triangle to ONE primary
+            // reason in priority order (Lmax, then aspect/separation) so the
+            // diagnostic counts reconcile: candidates == kept + dropped_lmax +
+            // dropped_aspect + dropped_degenerate.
+            bool dropped_lmax = (L0 > Lmax || L1 > Lmax || L2 > Lmax);
+            bool dropped_aspect = false;
 
             if (use_adaptive_threshold) {
                 // Multi-return: use BOTH separation ratio filter AND aspect ratio filter
@@ -2554,13 +2976,18 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const 
                 float ratio12 = L2 / (ang12 + 1e-6);
                 float max_sep_ratio = max(max(ratio01, ratio02), ratio12);
 
-                filtered = filtered || (max_sep_ratio > adaptive_sep_threshold) || (aspect_ratio > max_aspect_ratio);
+                dropped_aspect = (max_sep_ratio > adaptive_sep_threshold) || (aspect_ratio > max_aspect_ratio);
             } else {
                 // Single-return: use aspect ratio filter
-                filtered = filtered || (aspect_ratio > max_aspect_ratio);
+                dropped_aspect = (aspect_ratio > max_aspect_ratio);
             }
 
-            if (filtered) {
+            if (dropped_lmax) {
+                triangulation_dropped_lmax++;
+                continue;
+            }
+            if (dropped_aspect) {
+                triangulation_dropped_aspect++;
                 continue;
             }
 
@@ -2578,6 +3005,7 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const 
             Triangulation tri(s, vertex0, vertex1, vertex2, ID0, ID1, ID2, color, gridcell);
 
             if (tri.area != tri.area) {
+                triangulation_dropped_degenerate++;
                 continue;
             }
 
@@ -2775,6 +3203,122 @@ float LiDARcloud::getCellGtheta(uint index) const {
     }
 
     return grid_cells.at(index).Gtheta;
+}
+
+int LiDARcloud::getCellBeamCount(uint index) const {
+
+    if (index >= getGridCellCount()) {
+        helios_runtime_error("ERROR (LiDARcloud::getCellBeamCount): grid cell index out of range. Requested beam count of cell #" + std::to_string(index) + " but there are only " + std::to_string(getGridCellCount()) + " cells in the grid.");
+    }
+
+    return grid_cells.at(index).beam_count;
+}
+
+float LiDARcloud::getCellRelativeDensityIndex(uint index) const {
+
+    if (index >= getGridCellCount()) {
+        helios_runtime_error("ERROR (LiDARcloud::getCellRelativeDensityIndex): grid cell index out of range. Requested RDI of cell #" + std::to_string(index) + " but there are only " + std::to_string(getGridCellCount()) + " cells in the grid.");
+    }
+
+    return grid_cells.at(index).I_rdi;
+}
+
+float LiDARcloud::getCellMeanPathLength(uint index) const {
+
+    if (index >= getGridCellCount()) {
+        helios_runtime_error("ERROR (LiDARcloud::getCellMeanPathLength): grid cell index out of range. Requested mean path length of cell #" + std::to_string(index) + " but there are only " + std::to_string(getGridCellCount()) +
+                             " cells in the grid.");
+    }
+
+    return grid_cells.at(index).zbar_e;
+}
+
+float LiDARcloud::getCellLADVariance(uint index) const {
+
+    if (index >= getGridCellCount()) {
+        helios_runtime_error("ERROR (LiDARcloud::getCellLADVariance): grid cell index out of range. Requested LAD variance of cell #" + std::to_string(index) + " but there are only " + std::to_string(getGridCellCount()) + " cells in the grid.");
+    }
+
+    return grid_cells.at(index).LAD_variance;
+}
+
+bool LiDARcloud::getCellLeafAreaConfidenceInterval(uint index, float confidence_level, float &lower, float &upper) const {
+
+    if (index >= getGridCellCount()) {
+        helios_runtime_error("ERROR (LiDARcloud::getCellLeafAreaConfidenceInterval): grid cell index out of range. Requested cell #" + std::to_string(index) + " but there are only " + std::to_string(getGridCellCount()) + " cells in the grid.");
+    }
+    if (confidence_level <= 0.f || confidence_level >= 1.f) {
+        helios_runtime_error("ERROR (LiDARcloud::getCellLeafAreaConfidenceInterval): confidence_level must be strictly between 0 and 1.");
+    }
+
+    const GridCell &cell = grid_cells.at(index);
+    if (cell.LAD_variance < 0.f || cell.beam_count <= 0) {
+        return false; // variance undefined for this voxel
+    }
+
+    const float volume = cell.size.x * cell.size.y * cell.size.z;
+    const float a = (volume > 0.f) ? cell.leaf_area / volume : 0.f; // LAD point estimate
+    const float L = a * cell.Gtheta * cell.zbar_e; // voxel optical depth
+    if (!ciValidPimont(L, cell.L1_element, cell.beam_count, confidence_level)) {
+        return false; // outside the trustworthy regime -> refuse to emit an interval
+    }
+
+    // Two-sided z-multiplier for the requested confidence level.
+    const double z = normalQuantile(1.0 - (1.0 - (double) confidence_level) / 2.0);
+    const float lad_se = std::sqrt(cell.LAD_variance); // standard error of LAD [1/m]
+    const float half_width = (float) z * volume * lad_se; // converted to leaf-area scale [m^2]
+    lower = cell.leaf_area - half_width;
+    if (lower < 0.f) {
+        lower = 0.f; // leaf area is non-negative
+    }
+    upper = cell.leaf_area + half_width;
+    return true;
+}
+
+bool LiDARcloud::getGroupLADConfidenceInterval(const std::vector<uint> &indices, float confidence_level, float &mean_lad, float &lower, float &upper) const {
+
+    if (confidence_level <= 0.f || confidence_level >= 1.f) {
+        helios_runtime_error("ERROR (LiDARcloud::getGroupLADConfidenceInterval): confidence_level must be strictly between 0 and 1.");
+    }
+
+    // Aggregate over the valid voxels in the group (Pimont et al. 2018, Eq. 39): the CI on the mean
+    // LAD assumes voxel independence and uses the sum of the per-voxel LAD variances. Voxels outside
+    // the Table-3 validity envelope (or with undefined variance) are skipped.
+    double sum_lad = 0.0;
+    double sum_variance = 0.0;
+    uint n_valid = 0;
+    for (uint index: indices) {
+        if (index >= getGridCellCount()) {
+            helios_runtime_error("ERROR (LiDARcloud::getGroupLADConfidenceInterval): grid cell index out of range. Requested cell #" + std::to_string(index) + " but there are only " + std::to_string(getGridCellCount()) + " cells in the grid.");
+        }
+        const GridCell &cell = grid_cells.at(index);
+        if (cell.LAD_variance < 0.f || cell.beam_count <= 0) {
+            continue;
+        }
+        const float volume = cell.size.x * cell.size.y * cell.size.z;
+        const float a = (volume > 0.f) ? cell.leaf_area / volume : 0.f;
+        const float L = a * cell.Gtheta * cell.zbar_e;
+        if (!ciValidPimont(L, cell.L1_element, cell.beam_count, confidence_level)) {
+            continue;
+        }
+        sum_lad += a;
+        sum_variance += cell.LAD_variance;
+        n_valid++;
+    }
+
+    if (n_valid == 0) {
+        return false;
+    }
+
+    mean_lad = (float) (sum_lad / (double) n_valid);
+    const double z = normalQuantile(1.0 - (1.0 - (double) confidence_level) / 2.0);
+    const float half_width = (float) (z * std::sqrt(sum_variance) / (double) n_valid);
+    lower = mean_lad - half_width;
+    if (lower < 0.f) {
+        lower = 0.f;
+    }
+    upper = mean_lad + half_width;
+    return true;
 }
 
 void LiDARcloud::leafReconstructionFloodfill() {
@@ -3294,8 +3838,6 @@ void LiDARcloud::cropBeamsToGridAngleRange(uint source) {
         helios::vec3 direction_cart = grid_vertices.at(gg) - getScanOrigin(source);
         helios::SphericalCoord sc = cart2sphere(direction_cart);
 
-        std::cout << "azimuth " << sc.azimuth * (180 / M_PI) << ", zenith " << sc.zenith * (180 / M_PI) << std::endl;
-
         if (sc.azimuth < min_phi) {
             min_phi = sc.azimuth;
         }
@@ -3316,13 +3858,6 @@ void LiDARcloud::cropBeamsToGridAngleRange(uint source) {
     vec2 theta_range = helios::make_vec2(min_theta, max_theta);
     vec2 phi_range = helios::make_vec2(min_phi, max_phi);
 
-    std::cout << "theta_range = " << theta_range * (180.0 / M_PI) << std::endl;
-    std::cout << "phi_range = " << phi_range * (180.0 / M_PI) << std::endl;
-
-    std::cout << "original # hitpoints = " << getHitCount() << std::endl;
-
-    std::cout << "getHitScanID(getHitCount()-1) = " << getHitScanID(getHitCount() - 1) << " getHitScanID(0) = " << getHitScanID(0) << std::endl;
-
     for (int r = (getHitCount() - 1); r >= 0; r--) {
         if (getHitScanID(r) == source) {
             helios::SphericalCoord raydir = getHitRaydir(r);
@@ -3330,19 +3865,16 @@ void LiDARcloud::cropBeamsToGridAngleRange(uint source) {
             float this_phi = raydir.azimuth;
             double this_phi_d = double(this_phi);
             setHitData(r, "beam_azimuth", this_phi_d);
-            if (this_phi < phi_range.x || this_phi > phi_range.y || this_phi < phi_range.x || this_theta > theta_range.y) {
+            if (this_phi < phi_range.x || this_phi > phi_range.y || this_theta < theta_range.x || this_theta > theta_range.y) {
                 deleteHitPoint(r);
             }
         }
     }
-
-    std::cout << "# hitpoints remaining after crop = " << getHitCount() << std::endl;
 }
 
 // ========== SHARED METHODS FOR GPU AND CD IMPLEMENTATIONS ==========
 
-void LiDARcloud::computeGtheta(uint Ncells, uint Nscans,
-                               std::vector<float> &Gtheta, std::vector<float> &Gtheta_bar) {
+void LiDARcloud::computeGtheta(uint Ncells, uint Nscans, std::vector<float> &Gtheta, std::vector<float> &Gtheta_bar) {
 
     // Initialize output vectors
     Gtheta.resize(Ncells, 0.f);
@@ -3357,37 +3889,41 @@ void LiDARcloud::computeGtheta(uint Ncells, uint Nscans,
 
     // Compute G(theta) for each triangle
     for (size_t t = 0; t < Ntri; t++) {
-        
+
         Triangulation tri = getTriangle(t);
         int cell = tri.gridcell;
-        
+
         if (cell >= 0 && cell < Ncells) { // triangle is inside a grid cell
-            
+
             helios::vec3 t0 = tri.vertex0;
             helios::vec3 t1 = tri.vertex1;
             helios::vec3 t2 = tri.vertex2;
-            
+
             helios::vec3 v0 = t1 - t0;
             helios::vec3 v1 = t2 - t0;
             helios::vec3 v2 = t2 - t1;
-            
+
             float L0 = v0.magnitude();
             float L1 = v1.magnitude();
             float L2 = v2.magnitude();
-            
+
             // Heron's formula for triangle area
             float S = 0.5f * (L0 + L1 + L2);
             float area = sqrt(S * (S - L0) * (S - L1) * (S - L2));
-            
-            helios::vec3 normal = cross(v0, v2);
+
+            // Triangle normal from two edges sharing vertex t0 (standard convention). Sign is
+            // irrelevant here since only fabs(normal . raydir) is used below.
+            helios::vec3 normal = cross(v0, v1);
             normal.normalize();
-            
+
             helios::vec3 raydir = t0 - getScanOrigin(tri.scanID);
             raydir.normalize();
-            
+
             float theta = fabs(acos_safe(raydir.z));
-            
-            if (area == area) { // Check for NaN
+
+            // Skip degenerate triangles: Heron's formula yields NaN (slightly-negative radicand
+            // from float error) or zero area for collinear/zero-extent vertices.
+            if (std::isfinite(area) && area > 0.f) {
                 float normal_dot_ray = fabs(normal * raydir);
                 Gtheta.at(cell) += normal_dot_ray * area * fabs(sin(theta));
                 denom_sum.at(cell) += fabs(sin(theta)) * area;
@@ -3395,7 +3931,7 @@ void LiDARcloud::computeGtheta(uint Ncells, uint Nscans,
             }
         }
     }
-    
+
     // Normalize by denominator and average over scans
     for (uint v = 0; v < Ncells; v++) {
         if (cell_tri_count[v] > 0) {
@@ -3405,67 +3941,71 @@ void LiDARcloud::computeGtheta(uint Ncells, uint Nscans,
     }
 }
 
-bool LiDARcloud::invertLAD(uint voxel_index, float P, float Gtheta,
-                           const std::vector<float> &dr_samples, int min_voxel_hits,
-                           const helios::vec3 &gridsize, float &leaf_area,
-                           helios::WarningAggregator &warnings) {
-    
+bool LiDARcloud::invertLAD(uint voxel_index, float P, float Gtheta, const std::vector<float> &dr_samples, int min_voxel_hits, const helios::vec3 &gridsize, float &leaf_area, helios::WarningAggregator &warnings) {
+
     // Validation checks
     if (Gtheta == 0 || Gtheta != Gtheta) { // Check for zero or NaN
         leaf_area = 0.0f;
         return false;
     }
-    
+
     if (dr_samples.size() < min_voxel_hits) {
         leaf_area = 0.0f;
         return false;
     }
-    
+
     // Secant method parameters
     float etol = 5e-5f;
     uint maxiter = 100;
-    
+
+    // Relative-error denominator. P is a transmission probability in [0,1]; a fully
+    // intercepted voxel (P==0, dense closed canopy) is physically valid but would make
+    // the relative error fabs(mean-P)/P divide by zero. Clamp the denominator to a small
+    // positive value so the secant iteration stays finite; the analytic fallback below
+    // additionally guards -log(P).
+    const float P_error_denom = fmax(P, 1e-6f);
+
     // Initial guesses
     float a = 0.1f;
     float h = 0.01f;
-    
+
     // Compute initial error
     float mean = 0.f;
     for (size_t j = 0; j < dr_samples.size(); j++) {
         mean += exp(-a * dr_samples[j] * Gtheta);
     }
     mean /= float(dr_samples.size());
-    float error = fabs(mean - P) / P;
-    
+    float error = fabs(mean - P) / P_error_denom;
+
     float tmp = a;
     a = a + h;
-    
+
     // Secant method iteration
     uint iter = 0;
     float aold, eold;
     while (error > etol && iter < maxiter) {
-        
+
         aold = tmp;
         eold = error;
-        
+
         mean = 0.f;
         for (size_t j = 0; j < dr_samples.size(); j++) {
             mean += exp(-a * dr_samples[j] * Gtheta);
         }
         mean /= float(dr_samples.size());
-        error = fabs(mean - P) / P;
-        
+        error = fabs(mean - P) / P_error_denom;
+
         tmp = a;
-        
+
         if (error == eold) {
             break; // No progress
         }
-        
+
         // Secant update
         a = fabs((aold * error - a * eold) / (error - eold));
         iter++;
     }
-    
+
     // Calculate mean dr
     float dr_bar = 0.0f;
     for (size_t i = 0; i < dr_samples.size(); i++) {
@@ -3473,198 +4013,135 @@ bool LiDARcloud::invertLAD(uint voxel_index, float P, float Gtheta,
     }
     dr_bar /= float(dr_samples.size());
 
-    // Check convergence and use fallback if needed
-    bool converged = (iter < maxiter - 1 && a == a && a <= 100);
+    // Check convergence and use fallback if needed. The secant loop can terminate
+    // without finding a root (the "no progress" break at error == eold, or hitting
+    // maxiter), leaving 'a' near the 0.1 initial guess. Such a stall must NOT be
+    // treated as converged: require the achieved error to actually be below the
+    // tolerance, not merely that 'a' is finite. Otherwise a stalled solve silently
+    // returns leaf_area ~= 0.1 * volume instead of the physically-correct fallback.
+    bool converged = (error <= etol && a == a && a <= 100);
     bool used_fallback = false;
-    
+
     if (!converged) {
         warnings.addWarning("invertLAD_did_not_converge", "LAD inversion failed for volume #" + std::to_string(voxel_index) + ". Using average dr formulation.");
         a = (1.f - P) / (dr_bar * Gtheta);
         used_fallback = true;
     }
-    
+
     // Additional constraint for high LAD values
     if (a > 5) {
-        a = fmin((1.f - P) / dr_bar / Gtheta, -log(P) / dr_bar / Gtheta);
+        a = fmin((1.f - P) / dr_bar / Gtheta, -log(P_error_denom) / dr_bar / Gtheta);
     }
-    
+
     // Compute final leaf area
     leaf_area = a * gridsize.x * gridsize.y * gridsize.z;
 
     return true;
 }
 
-uint LiDARcloud::filterRaysByBoundingBox(const helios::vec3 &scan_origin,
-                                          const std::vector<helios::vec3> &ray_endpoints,
-                                          const helios::vec3 &bb_center,
-                                          const helios::vec3 &bb_size,
-                                          std::vector<uint> &filtered_indices) {
-    
-    filtered_indices.clear();
-    filtered_indices.reserve(ray_endpoints.size());
-    
-    // Compute bounding box min/max
-    float x0 = bb_center.x - 0.5f * bb_size.x;
-    float x1 = bb_center.x + 0.5f * bb_size.x;
-    float y0 = bb_center.y - 0.5f * bb_size.y;
-    float y1 = bb_center.y + 0.5f * bb_size.y;
-    float z0 = bb_center.z - 0.5f * bb_size.z;
-    float z1 = bb_center.z + 0.5f * bb_size.z;
-    
-    // Ray origin
-    float ox = scan_origin.x;
-    float oy = scan_origin.y;
-    float oz = scan_origin.z;
-    
-    // Test each ray
-    for (size_t i = 0; i < ray_endpoints.size(); i++) {
-        
-        // Check if origin is inside bounding box
-        if (ox >= x0 && ox <= x1 && oy >= y0 && oy <= y1 && oz >= z0 && oz <= z1) {
-            filtered_indices.push_back(i);
-            continue;
+LiDARcloud::LADInversionResult LiDARcloud::invertLADWithVariance(uint voxel_index, float P, float Gtheta, const std::vector<float> &dr_samples, float sum_frac_sq, float element_width, int min_voxel_hits, const helios::vec3 &gridsize,
+                                                                 helios::WarningAggregator &warnings) {
+
+    // The point estimate is produced by the existing Beer-Lambert inversion (unchanged). On top of
+    // it we compute the per-voxel statistical SAMPLING variance of LAD following Pimont et al.
+    // (2018), RSE 215:343-370. The point estimator solves mean(exp(-a*dr*Gtheta)) = P, which for
+    // equal path lengths is a = -log(1-I)/(dr_bar*Gtheta), i.e. the Beer-Lambert estimator with
+    // a = LAD (the projection coefficient Gtheta is folded into the exponent). We therefore use the
+    // Beer-Lambert delta-method variance, consistent with this estimator: with I = 1 - P,
+    //   d a / d I = 1 / ((1-I) * dr_bar * Gtheta)
+    //   var(a)    = var(I) / ((1-I)^2 * dr_bar^2 * Gtheta^2)
+    // and var(I) is the sum of (a) a finite-N sampling term and (b) an N-independent
+    // element-position-variability term.
+
+    LADInversionResult result;
+    result.beam_count = (int) dr_samples.size();
+    result.I_rdi = 1.f - P;
+
+    // Point estimate (unchanged behavior).
+    float leaf_area = 0.f;
+    bool ok = invertLAD(voxel_index, P, Gtheta, dr_samples, min_voxel_hits, gridsize, leaf_area, warnings);
+    result.leaf_area = leaf_area;
+    result.converged = ok;
+
+    // Mean and variance of the per-beam path lengths.
+    const int N = result.beam_count;
+    if (N > 0) {
+        float sum = 0.f;
+        for (float d: dr_samples) {
+            sum += d;
         }
-        
-        // Compute ray direction
-        helios::vec3 direction = ray_endpoints[i] - scan_origin;
-        direction.normalize();
-        
-        float dx = direction.x;
-        float dy = direction.y;
-        float dz = direction.z;
-        
-        // Slab method for ray-AABB intersection
-        float tx_min, ty_min, tz_min;
-        float tx_max, ty_max, tz_max;
-        
-        // X slab
-        float a = 1.0f / dx;
-        if (a >= 0) {
-            tx_min = (x0 - ox) * a;
-            tx_max = (x1 - ox) * a;
-        } else {
-            tx_min = (x1 - ox) * a;
-            tx_max = (x0 - ox) * a;
+        result.zbar_e = sum / float(N);
+        float ss = 0.f;
+        for (float d: dr_samples) {
+            ss += (d - result.zbar_e) * (d - result.zbar_e);
         }
-        
-        // Y slab
-        float b = 1.0f / dy;
-        if (b >= 0) {
-            ty_min = (y0 - oy) * b;
-            ty_max = (y1 - oy) * b;
-        } else {
-            ty_min = (y1 - oy) * b;
-            ty_max = (y0 - oy) * b;
-        }
-        
-        // Z slab
-        float c = 1.0f / dz;
-        if (c >= 0) {
-            tz_min = (z0 - oz) * c;
-            tz_max = (z1 - oz) * c;
-        } else {
-            tz_min = (z1 - oz) * c;
-            tz_max = (z0 - oz) * c;
-        }
-        
-        // Find largest entering t value
-        float t0 = tx_min;
-        if (ty_min > t0) t0 = ty_min;
-        if (tz_min > t0) t0 = tz_min;
-        
-        // Find smallest exiting t value
-        float t1 = tx_max;
-        if (ty_max < t1) t1 = ty_max;
-        if (tz_max < t1) t1 = tz_max;
-        
-        // Ray intersects if t0 < t1 and t1 > 0
-        if (t0 < t1 && t1 > 1e-6f) {
-            filtered_indices.push_back(i);
+        result.var_path = ss / float(N);
+    }
+
+    // Variance is only defined for a successful inversion with a usable geometry.
+    const float dr_bar = result.zbar_e;
+    if (!ok || N < min_voxel_hits || Gtheta <= 0.f || Gtheta != Gtheta || dr_bar <= 0.f) {
+        result.LAD_variance = -1.f;
+        return result;
+    }
+
+    const float I = result.I_rdi;
+    // Bounded RDI for numerical stability near the fully-intercepted (I -> 1) case (Pimont Eq. C26).
+    const float I_b = std::min(I, 1.f - 1.f / (2.f * float(N) + 2.f));
+
+    // --- Term (a): finite-beam sampling variance of the RDI ---
+    // Binomial variance I_b(1-I_b)/N is a provable upper bound on the variance of the per-beam
+    // transmittance mean (a [0,1]-bounded statistic). For multi-return data the per-beam fraction
+    // carries sub-beam information; we guard against model mismatch by taking the larger of the
+    // binomial bound and the empirical variance of the per-beam fractions (for single-return data
+    // the per-beam fraction is in {0,1}, so the empirical variance equals the binomial bound and
+    // the guard is a no-op).
+    const float binomial_varI = I_b * (1.f - I_b) / float(N);
+    float empirical_varI = (sum_frac_sq / float(N) - P * P) / float(N); // var of the per-beam mean
+    if (empirical_varI < 0.f) {
+        empirical_varI = 0.f; // floating-point guard
+    }
+    const float var_I_a = std::max(binomial_varI, empirical_varI);
+
+    // --- Term (b): N-independent element-position-variability variance of the RDI ---
+    // Requires the single-element optical depth L1 = lambda1*delta (Pimont Appendix A). For a flat
+    // leaf of width w the mean element cross section is S1 = pi*w^2/8, giving L1 = pi*w^2/(8*delta^2)
+    // with delta the characteristic voxel size. The asymptotic RDI variance is the empirical fit
+    // sigma2_Iinf = 0.23 * L1 * (1-I) * I^(1.9 - 2.3*L1) (valid L1 < 0.3; Pimont Fig. 2).
+    float var_I_b = 0.f;
+    if (element_width > 0.f) {
+        const float volume = gridsize.x * gridsize.y * gridsize.z;
+        const float delta = std::cbrt(volume); // characteristic voxel size [m]
+        const float L1 = (float) (M_PI) *element_width * element_width / (8.f * delta * delta);
+        result.L1_element = L1;
+        result.element_size_known = true;
+        if (L1 < 0.3f && I > 0.f && I < 1.f) {
+            var_I_b = 0.23f * L1 * (1.f - I) * std::pow(I, 1.9f - 2.3f * L1);
+            if (var_I_b < 0.f) {
+                var_I_b = 0.f;
+            }
         }
     }
-    
-    return filtered_indices.size();
+
+    // Delta-method propagation to var(a). Use the bounded RDI in the denominator to stay finite.
+    const float denom = (1.f - I_b) * (1.f - I_b) * dr_bar * dr_bar * Gtheta * Gtheta;
+    result.LAD_variance = (var_I_a + var_I_b) / denom;
+
+    return result;
 }
 
-void LiDARcloud::calculateVoxelPathLengths(const helios::vec3 &scan_origin,
-                                              const std::vector<helios::vec3> &ray_directions,
-                                              const std::vector<helios::vec3> &voxel_centers,
-                                              const std::vector<helios::vec3> &voxel_sizes,
-                                              const std::vector<float> &voxel_rotations,
-                                              std::vector<std::vector<float>> &dr_agg,
-                                              std::vector<float> &hit_before_agg,
-                                              std::vector<float> &hit_after_agg) {
-
-    const uint Ncells = voxel_centers.size();
-
-    // Initialize output arrays
-    dr_agg.resize(Ncells);
-    hit_before_agg.resize(Ncells, 0.0f);
-    hit_after_agg.resize(Ncells, 0.0f);
-
-    // Manual ray-voxel intersection (to track ray indices properly)
-    // This matches the GPU kernel behavior exactly
-
-    for (uint c = 0; c < Ncells; c++) {
-        helios::vec3 center = voxel_centers[c];
-        helios::vec3 size = voxel_sizes[c];
-        float rotation = voxel_rotations[c];
-
-        // For each ray, test intersection with this voxel
-        for (size_t r = 0; r < ray_directions.size(); r++) {
-
-            // Transform ray if voxel is rotated
-            helios::vec3 ray_origin = scan_origin;
-            helios::vec3 ray_dir = ray_directions[r];
-
-            if (fabs(rotation) > 1e-6f) {
-                // Inverse rotate (following GPU kernel pattern)
-                helios::vec3 endpoint = scan_origin + ray_directions[r] * 10000.f;
-                helios::vec3 anchor = center; // Using voxel center as anchor
-
-                ray_origin = rotatePointAboutLine(scan_origin - anchor, helios::make_vec3(0, 0, 0), helios::make_vec3(0, 0, 1), -rotation) + anchor;
-                helios::vec3 transformed_endpoint = rotatePointAboutLine(endpoint - anchor, helios::make_vec3(0, 0, 0), helios::make_vec3(0, 0, 1), -rotation) + anchor;
-
-                ray_dir = transformed_endpoint - ray_origin;
-                ray_dir.normalize();
-            }
-
-            // Ray-AABB intersection (slab method - matches GPU kernel)
-            helios::vec3 voxel_min = center - size * 0.5f;
-            helios::vec3 voxel_max = center + size * 0.5f;
-
-            float tx_min = (voxel_min.x - ray_origin.x) / ray_dir.x;
-            float tx_max = (voxel_max.x - ray_origin.x) / ray_dir.x;
-            if (tx_min > tx_max) std::swap(tx_min, tx_max);
-
-            float ty_min = (voxel_min.y - ray_origin.y) / ray_dir.y;
-            float ty_max = (voxel_max.y - ray_origin.y) / ray_dir.y;
-            if (ty_min > ty_max) std::swap(ty_min, ty_max);
-
-            float tz_min = (voxel_min.z - ray_origin.z) / ray_dir.z;
-            float tz_max = (voxel_max.z - ray_origin.z) / ray_dir.z;
-            if (tz_min > tz_max) std::swap(tz_min, tz_max);
-
-            float t0 = std::max({tx_min, ty_min, tz_min});
-            float t1 = std::min({tx_max, ty_max, tz_max});
-
-            // Ray intersects voxel if t0 < t1 and t1 > 0
-            if (t0 < t1 && t1 > 1e-6f) {
-                // Path length through voxel
-                float dr = fabs(t1 - t0);
-                dr_agg[c].push_back(dr);
-
-                // Weight for radiative transfer
-                float weight = 1.0f; // Simplified (Issue 4)
-                float zenith_weight = sin(acos_safe(ray_dir.z));
-
-                // All intersecting rays count toward hit_after
-                // (GPU kernel only adds to hit_after if hit is within/after voxel,
-                // but for empty voxels, all rays that pass through count)
-                hit_after_agg[c] += zenith_weight * weight;
-            }
-        }
+bool LiDARcloud::ciValidPimont(float L, float L1, int N, float confidence_level) const {
+    // Range-of-validity envelope for the confidence interval of the bias-corrected estimator
+    // (Pimont et al. 2018, Table 3). Outside these ranges the Wald interval is not trustworthy, so
+    // the caller refuses to emit one. When the element size was not supplied (L1 < 0) the
+    // element-position term was omitted, leaving a sampling-only variance; we gate as if elements
+    // were small (L1 = 0), which is the most favorable assumption (documented as sampling-only).
+    const float l1 = (L1 < 0.f) ? 0.f : L1;
+    if (confidence_level > 0.925f) { // 95% envelope
+        return (L <= 2.0f && l1 <= 0.05f && N >= 30) || (L <= 2.5f && l1 <= 0.01f && N >= 150) || (l1 <= 0.05f && N >= 150);
     }
+    // 90% envelope (also used as a conservative proxy for confidence levels below 0.90)
+    return (L >= 0.5f && L <= 2.0f && l1 <= 0.05f && N >= 40) || (l1 <= 0.01f && N >= 100) || (l1 <= 0.05f && N >= 200);
 }
 
 void LiDARcloud::calculateLeafArea(helios::Context *context) {
@@ -3672,6 +4149,13 @@ void LiDARcloud::calculateLeafArea(helios::Context *context) {
 }
 
 void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits) {
+    // Default characteristic element width of 5 cm (matches the leaf-reconstruction fallback). This
+    // feeds only the element-position term of the LAD sampling-uncertainty estimate; the leaf-area
+    // point estimate is independent of it.
+    calculateLeafArea(context, min_voxel_hits, 0.05f);
+}
+
+void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits, float element_width) {
 
     if (printmessages) {
         std::cout << "Calculating leaf area (CollisionDetection)..." << std::endl;
@@ -3692,38 +4176,38 @@ void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits)
     const uint Nscans = getScanCount();
     const uint Ncells = getGridCellCount();
 
-    // Auto-detect multi-return data and select appropriate algorithm
-    const bool use_equal_weighting = isMultiReturnData();
+    // Leaf-area inversion requires the full fired-beam population, including pulses
+    // that returned nothing (misses / transmitted beams) so that the per-voxel
+    // transmission probability has a valid denominator. Misses must be supplied
+    // upstream: either the imported scan format retains them, or gapfillMisses() was
+    // run to synthesize them. We fail fast (rather than silently producing biased LAD)
+    // if no misses are present. This single beam-based equal-weighting algorithm
+    // handles both single- and multi-return data: each pulse's returns are grouped
+    // into a beam (one return per beam for single-return data) and classified
+    // before/inside/after/miss relative to each voxel; P = E_after/(E_inside+E_after).
+    if (!hasMisses()) {
+        helios_runtime_error(
+                "ERROR (LiDARcloud::calculateLeafArea): No miss points found in the point cloud. Leaf area inversion requires fired pulses that returned nothing (misses) in order to count transmitted beams. Provide a scan format that retains misses, or call gapfillMisses() to synthesize them, before calling calculateLeafArea().");
+    }
 
     if (printmessages) {
-        if (use_equal_weighting) {
+        if (isMultiReturnData()) {
             std::cout << "Multi-return data detected - using beam-based equal weighting algorithm (CD)" << std::endl;
-
-            // Check if gap filling has been applied
-            bool has_gapfilled = false;
-            for (size_t r = 0; r < getHitCount(); r++) {
-                if (doesHitDataExist(r, "gapfillMisses_code")) {
-                    has_gapfilled = true;
-                    break;
-                }
-            }
-
-            if (!has_gapfilled) {
-                std::cout << "WARNING: Multi-return data detected but gap filling has not been applied." << std::endl;
-                std::cout << "         For best results with multi-return data, call gapfillMisses() before calculateLeafArea()." << std::endl;
-            }
         } else {
-            std::cout << "Single-return data - using standard weighting algorithm (CD)" << std::endl;
+            std::cout << "Single-return data with misses - using beam-based equal weighting algorithm (CD)" << std::endl;
         }
     }
 
-    // Branch to appropriate implementation
-    if (use_equal_weighting) {
-        // ============ MULTI-RETURN PATH (Equal Weighting Algorithm - CPU) ============
+    {
+        // ============ BEAM-BASED EQUAL WEIGHTING ALGORITHM (CPU) ============
 
         // Additional arrays for equal weighting P calculation
         std::vector<std::vector<float>> P_equal_numerator_array(Ncells);
         std::vector<std::vector<float>> P_equal_denominator_array(Ncells);
+        // Sum of squared per-beam transmittance fractions, per scan per voxel. Used by the
+        // LAD sampling-variance estimate to guard the binomial variance against the empirical
+        // spread of multi-return per-beam fractions (see invertLADWithVariance()).
+        std::vector<std::vector<float>> P_equal_sumsq_array(Ncells);
         std::vector<std::vector<float>> dr_array(Ncells);
 
         // Initialize aggregation arrays
@@ -3738,21 +4222,25 @@ void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits)
             // Collect hits for this scan
             std::vector<helios::vec3> this_scan_xyz;
             std::vector<uint> this_scan_index;
+            std::map<uint, uint> global_to_local; // global hit index -> local position in this scan's arrays
             for (size_t r = 0; r < getHitCount(); r++) {
                 if (getHitScanID(r) == s) {
+                    global_to_local[(uint) r] = (uint) this_scan_xyz.size();
                     this_scan_xyz.push_back(getHitXYZ(r));
                     this_scan_index.push_back(r);
                 }
             }
             size_t Nhits = this_scan_xyz.size();
-            if (Nhits == 0) continue;
+            if (Nhits == 0)
+                continue;
 
-            // Group hits by timestamp into beams
+            // Group hits by timestamp into beams. beam_array holds GLOBAL hit indices;
+            // the per-voxel classification arrays (dr, hit_location) are local to this
+            // scan, so beam members are mapped back to local positions below.
             BeamGrouping beams = groupHitsByTimestamp(this_scan_index);
             uint Nbeams = beams.Nbeams;
 
             helios::vec3 origin = getScanOrigin(s);
-            float scanner_range = 5000.0f;
 
             // CPU-based voxel intersection with hit_location classification
             std::vector<float> dr(Nhits, 0.0f);
@@ -3769,16 +4257,15 @@ void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits)
                 std::fill(dr.begin(), dr.end(), 0.0f);
                 std::fill(hit_location.begin(), hit_location.end(), 0);
 
-                // Test each hit against this voxel (CPU/OpenMP)
-                #pragma omp parallel for
+// Test each hit against this voxel (CPU/OpenMP)
+#pragma omp parallel for
                 for (int i = 0; i < static_cast<int>(Nhits); i++) {
                     helios::vec3 hit_xyz = this_scan_xyz[i];
 
                     // Inverse rotate if needed
                     if (fabs(rotation) > 1e-6f) {
                         helios::vec3 anchor = center;
-                        hit_xyz = rotatePointAboutLine(hit_xyz - anchor, helios::make_vec3(0,0,0),
-                                                       helios::make_vec3(0,0,1), -rotation) + anchor;
+                        hit_xyz = rotatePointAboutLine(hit_xyz - anchor, helios::make_vec3(0, 0, 0), helios::make_vec3(0, 0, 1), -rotation) + anchor;
                     }
 
                     // Ray from origin to hit
@@ -3793,29 +4280,43 @@ void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits)
                     // Ray-AABB intersection (slab method)
                     float tx_min = (voxel_min.x - origin.x) / direction.x;
                     float tx_max = (voxel_max.x - origin.x) / direction.x;
-                    if (tx_min > tx_max) std::swap(tx_min, tx_max);
+                    if (tx_min > tx_max)
+                        std::swap(tx_min, tx_max);
 
                     float ty_min = (voxel_min.y - origin.y) / direction.y;
                     float ty_max = (voxel_max.y - origin.y) / direction.y;
-                    if (ty_min > ty_max) std::swap(ty_min, ty_max);
+                    if (ty_min > ty_max)
+                        std::swap(ty_min, ty_max);
 
                     float tz_min = (voxel_min.z - origin.z) / direction.z;
                     float tz_max = (voxel_max.z - origin.z) / direction.z;
-                    if (tz_min > tz_max) std::swap(tz_min, tz_max);
+                    if (tz_min > tz_max)
+                        std::swap(tz_min, tz_max);
 
                     float t0 = std::max({tx_min, ty_min, tz_min});
                     float t1 = std::min({tx_max, ty_max, tz_max});
 
-                    // Classify hit location relative to voxel
+                    // Classify each hit/beam termination by where it lies along the beam
+                    // relative to this voxel's entry (t0) and exit (t1):
+                    //   1 = before voxel (return stopped short of it)
+                    //   2 = inside voxel (return terminated within it)
+                    //   3 = after voxel (beam passed through and terminated beyond the exit)
+                    // A "miss" (a fired pulse that returned nothing, placed far out along the
+                    // beam) is, geometrically, simply a beam that passed through and kept going,
+                    // so it is class-3 like any other transmitted beam. Classification is
+                    // therefore purely geometric and INDEPENDENT of the absolute placement
+                    // distance of the miss point: a miss at 1001 m and a miss at 20000 m both
+                    // classify as "after voxel" and contribute identically to the transmission
+                    // probability P. This is the correct Beer-Lambert treatment - a transmitted
+                    // beam is a transmission event regardless of where (or whether) it eventually
+                    // returned.
                     if (t0 < t1 && t1 > 1e-6f) {
                         dr[i] = fabs(t1 - t0);
 
                         if (hit_distance >= t0 && hit_distance <= t1) {
                             hit_location[i] = 2; // Inside voxel
-                        } else if (hit_distance > t1 && hit_distance < scanner_range) {
-                            hit_location[i] = 3; // After voxel (within range)
-                        } else if (hit_distance >= scanner_range) {
-                            hit_location[i] = 4; // Miss (beyond range)
+                        } else if (hit_distance > t1) {
+                            hit_location[i] = 3; // After voxel (transmitted through, incl. misses)
                         } else if (hit_distance < t0) {
                             hit_location[i] = 1; // Before voxel
                         }
@@ -3825,34 +4326,39 @@ void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits)
                 // Beam-level processing
                 float P_equal_numerator = 0;
                 float P_equal_denominator = 0;
+                float P_equal_sumsq = 0; // sum of squared per-beam fractions (for sampling-variance guard)
 
                 for (uint k = 0; k < Nbeams; k++) {
-                    float E_before = 0, E_inside = 0, E_after = 0, E_miss = 0;
+                    float E_before = 0, E_inside = 0, E_after = 0;
                     float drr = 0;
-                    int dr_count = 0;  // Count returns with dr > 0
+                    int dr_count = 0; // Count returns with dr > 0
 
-                    // Count returns in each location for this beam
+                    // Count returns in each location for this beam. Misses (transmitted beams)
+                    // are class-3 (after voxel), so they are folded into E_after here.
                     for (uint j = 0; j < beams.beam_array.at(k).size(); j++) {
-                        uint i = beams.beam_array.at(k).at(j);
+                        uint i = global_to_local.at(beams.beam_array.at(k).at(j)); // global -> local index
 
                         if (dr[i] > 0) {
                             drr += dr[i];
                             dr_count++;
                         }
 
-                        if (hit_location[i] == 1) E_before++;
-                        else if (hit_location[i] == 2) E_inside++;
-                        else if (hit_location[i] == 3) E_after++;
-                        else if (hit_location[i] == 4) E_miss++;
+                        if (hit_location[i] == 1)
+                            E_before++;
+                        else if (hit_location[i] == 2)
+                            E_inside++;
+                        else if (hit_location[i] == 3)
+                            E_after++;
                     }
 
                     // Equal weighting P calculation - simple average per Eq. 7
-                    // P = (1/B_tot) Σ[E_after / (E_inside + E_after)]
+                    // P = (1/B_tot) Σ[E_after / (E_inside + E_after)]. A fully-transmitted beam
+                    // (E_inside == 0, E_after >= 1) contributes frac = 1; a beam that only
+                    // terminated before the voxel (E_before only) contributes nothing.
                     if (E_inside != 0 || E_after != 0) {
-                        P_equal_numerator += (E_after / (E_inside + E_after));
-                        P_equal_denominator += 1;
-                    } else if (E_inside == 0 && E_after == 0 && E_before == 0 && E_miss != 0) {
-                        P_equal_numerator += 1;
+                        float frac = E_after / (E_inside + E_after);
+                        P_equal_numerator += frac;
+                        P_equal_sumsq += frac * frac;
                         P_equal_denominator += 1;
                     }
 
@@ -3865,6 +4371,7 @@ void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits)
 
                 P_equal_numerator_array.at(c).push_back(P_equal_numerator);
                 P_equal_denominator_array.at(c).push_back(P_equal_denominator);
+                P_equal_sumsq_array.at(c).push_back(P_equal_sumsq);
             }
         }
 
@@ -3883,10 +4390,11 @@ void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits)
         for (uint v = 0; v < Ncells; v++) {
             // Calculate P using equal weighting formula
             float P = 0.0f;
-            float P_num_sum = 0.0f, P_denom_sum = 0.0f;
+            float P_num_sum = 0.0f, P_denom_sum = 0.0f, P_sumsq_sum = 0.0f;
             for (uint s = 0; s < P_equal_numerator_array[v].size(); s++) {
                 P_num_sum += P_equal_numerator_array[v][s];
                 P_denom_sum += P_equal_denominator_array[v][s];
+                P_sumsq_sum += P_equal_sumsq_array[v][s];
             }
             if (P_denom_sum > 0) {
                 P = P_num_sum / P_denom_sum;
@@ -3903,16 +4411,36 @@ void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits)
             if (dr_agg[v].size() < min_voxel_hits) {
                 setCellLeafArea(0, v);
                 setCellGtheta(Gtheta[v], v);
+                grid_cells.at(v).beam_count = (int) dr_agg[v].size();
+                grid_cells.at(v).LAD_variance = -1.f;
+                grid_cells.at(v).ci_valid = false;
                 continue;
             }
 
-            // Use shared invertLAD method
-            float leaf_area = 0.0f;
+            // Invert for leaf area AND its sampling variance. The point estimate is unchanged from
+            // the shared invertLAD(); the additional output quantifies statistical sampling
+            // uncertainty (Pimont et al. 2018), which is stored on the grid cell.
             helios::vec3 gridsize = getCellSize(v);
-            invertLAD(v, P, Gtheta[v], dr_agg[v], min_voxel_hits, gridsize, leaf_area, invertLAD_warnings);
+            LADInversionResult inv = invertLADWithVariance(v, P, Gtheta[v], dr_agg[v], P_sumsq_sum, element_width, min_voxel_hits, gridsize, invertLAD_warnings);
 
-            setCellLeafArea(leaf_area, v);
+            setCellLeafArea(inv.leaf_area, v);
             setCellGtheta(Gtheta[v], v);
+
+            GridCell &cell = grid_cells.at(v);
+            cell.beam_count = inv.beam_count;
+            cell.I_rdi = inv.I_rdi;
+            cell.zbar_e = inv.zbar_e;
+            cell.var_path = inv.var_path;
+            cell.L1_element = inv.L1_element;
+            cell.LAD_variance = inv.LAD_variance;
+
+            // Pre-evaluate CI validity at the 95% level for export / quick filtering. Per-query
+            // accessors re-check validity at the requested confidence level. L = lambda*delta is the
+            // voxel optical depth: lambda = a*Gtheta and a = leaf_area/volume, so L = a*Gtheta*zbar_e.
+            const float volume = gridsize.x * gridsize.y * gridsize.z;
+            const float a = (volume > 0.f) ? inv.leaf_area / volume : 0.f;
+            const float L = a * Gtheta[v] * inv.zbar_e;
+            cell.ci_valid = (inv.LAD_variance >= 0.f) && ciValidPimont(L, inv.L1_element, inv.beam_count, 0.95f);
         }
 
         invertLAD_warnings.report(std::cerr);
@@ -3920,206 +4448,7 @@ void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits)
         if (printmessages) {
             std::cout << "done." << std::endl;
         }
-
-        return; // Exit after multi-return processing
     }
-
-    // ============ SINGLE-RETURN PATH (Standard Algorithm) ============
-    // Existing code continues below unchanged
-    
-    // Aggregation arrays
-    std::vector<std::vector<float>> dr_agg;
-    dr_agg.resize(Ncells);
-    std::vector<float> hit_before_agg;
-    hit_before_agg.resize(Ncells, 0);
-    std::vector<float> hit_after_agg;
-    hit_after_agg.resize(Ncells, 0);
-    std::vector<float> hit_inside_agg;
-    hit_inside_agg.resize(Ncells, 0);
-    std::vector<float> Gtheta_bar;
-    Gtheta_bar.resize(Ncells, 0.f);
-    
-    // Process each scan
-    for (uint s = 0; s < Nscans; s++) {
-        
-        const int Nt = getScanSizeTheta(s);
-        const int Np = getScanSizePhi(s);
-        const size_t Nmisses = Nt * Np;
-        
-        const helios::vec3 origin = getScanOrigin(s);
-        
-        // ----- STAGE B: BOUNDING BOX FILTERING ----- //
-        
-        // Generate all scan ray endpoints
-        std::vector<helios::vec3> scan_endpoints;
-        scan_endpoints.reserve(Nmisses);
-        
-        for (int j = 0; j < Np; j++) {
-            for (int i = 0; i < Nt; i++) {
-                helios::vec3 direction = sphere2cart(scans.at(s).rc2direction(i, j));
-                helios::vec3 endpoint = origin + direction * 10000.f;
-                scan_endpoints.push_back(endpoint);
-            }
-        }
-        
-        // Get global bounding box
-        helios::vec3 gboxmin, gboxmax;
-        getGridBoundingBox(gboxmin, gboxmax);
-        helios::vec3 bbcenter = gboxmin + 0.5f * (gboxmax - gboxmin);
-        helios::vec3 bbsize = gboxmax - gboxmin;
-        
-        // Filter rays that hit bounding box
-        std::vector<uint> bb_hit_indices;
-        uint Nmissesbb = filterRaysByBoundingBox(origin, scan_endpoints, bbcenter, bbsize, bb_hit_indices);
-        
-        if (Nmissesbb == 0) {
-            std::cerr << "ERROR (calculateLeafAreaCD): No scan rays passed through grid cells." << std::endl;
-            for (uint c = 0; c < Ncells; c++) {
-                setCellLeafArea(0, c);
-            }
-            return;
-        }
-
-        // Extract filtered ray directions
-        std::vector<helios::vec3> missesbb_directions;
-        missesbb_directions.reserve(Nmissesbb);
-        for (uint idx : bb_hit_indices) {
-            helios::vec3 direction = scan_endpoints[idx] - origin;
-            direction.normalize();
-            missesbb_directions.push_back(direction);
-        }
-        
-        // ----- STAGE C: VOXEL PATH LENGTHS ----- //
-
-        // Prepare voxel data arrays
-        std::vector<helios::vec3> voxel_centers_vec, voxel_sizes_vec;
-        std::vector<float> voxel_rotations_vec;
-        voxel_centers_vec.reserve(Ncells);
-        voxel_sizes_vec.reserve(Ncells);
-        voxel_rotations_vec.reserve(Ncells);
-
-        for (uint c = 0; c < Ncells; c++) {
-            voxel_centers_vec.push_back(getCellCenter(c));
-            voxel_sizes_vec.push_back(getCellSize(c));
-            voxel_rotations_vec.push_back(getCellRotation(c));
-        }
-
-        // Calculate path lengths using CollisionDetection
-        calculateVoxelPathLengths(origin, missesbb_directions,
-                                     voxel_centers_vec, voxel_sizes_vec, voxel_rotations_vec,
-                                     dr_agg, hit_before_agg, hit_after_agg);
-
-        // FIX: Calculate hit_before for occluded voxels
-        // For each hit from this scan, determine which voxels it occurred before
-        for (size_t r = 0; r < getHitCount(); r++) {
-            if (getHitScanID(r) != s) continue; // Only process hits from this scan
-
-            int hit_voxel = getHitGridCell(r);
-            if (hit_voxel < 0) continue; // Hit not in any grid voxel
-
-            helios::vec3 hit_xyz = getHitXYZ(r);
-            helios::vec3 ray_dir = (hit_xyz - origin);
-            float hit_distance = ray_dir.magnitude();
-            ray_dir.normalize();
-
-            // For each voxel, check if this hit occurred BEFORE entering that voxel
-            for (uint c = 0; c < Ncells; c++) {
-                if (c == hit_voxel) continue; // Hit is in this voxel, not before it
-
-                // Check if ray intersects this voxel
-                helios::vec3 voxel_min = voxel_centers_vec[c] - voxel_sizes_vec[c] * 0.5f;
-                helios::vec3 voxel_max = voxel_centers_vec[c] + voxel_sizes_vec[c] * 0.5f;
-
-                float tx_min = (voxel_min.x - origin.x) / ray_dir.x;
-                float tx_max = (voxel_max.x - origin.x) / ray_dir.x;
-                if (tx_min > tx_max) std::swap(tx_min, tx_max);
-
-                float ty_min = (voxel_min.y - origin.y) / ray_dir.y;
-                float ty_max = (voxel_max.y - origin.y) / ray_dir.y;
-                if (ty_min > ty_max) std::swap(ty_min, ty_max);
-
-                float tz_min = (voxel_min.z - origin.z) / ray_dir.z;
-                float tz_max = (voxel_max.z - origin.z) / ray_dir.z;
-                if (tz_min > tz_max) std::swap(tz_min, tz_max);
-
-                float t_enter = std::max({tx_min, ty_min, tz_min});
-                float t_exit = std::min({tx_max, ty_max, tz_max});
-
-                // Ray intersects this voxel
-                if (t_enter < t_exit && t_exit > 1e-6f) {
-                    // Check if hit occurred BEFORE entering this voxel
-                    if (hit_distance < t_enter) {
-                        float zenith_weight = sin(acos_safe(ray_dir.z));
-                        hit_before_agg[c] += zenith_weight;
-                    }
-                }
-            }
-        }
-    }
-
-    // ----- STAGE D: HIT CLASSIFICATION ----- //
-    
-    // Calculate hit_inside for all scans (same as GPU version)
-    for (size_t r = 0; r < getHitCount(); r++) {
-        if (getHitGridCell(r) >= 0) {
-            helios::vec3 direction = getHitXYZ(r) - getScanOrigin(getHitScanID(r));
-            direction.normalize();
-            hit_inside_agg.at(getHitGridCell(r)) += sin(acos_safe(direction.z));
-        }
-    }
-
-    // ----- STAGE E: G(THETA) CALCULATION ----- //
-    
-    std::vector<float> Gtheta;
-    computeGtheta(Ncells, Nscans, Gtheta, Gtheta_bar);
-    
-    // ----- STAGES F, G, H: TRANSMISSION, LAD INVERSION, FINAL LEAF AREA ----- //
-    
-    if (printmessages) {
-        std::cout << "Inverting to find LAD..." << std::flush;
-    }
-
-    helios::WarningAggregator invertLAD_warnings;
-    invertLAD_warnings.setEnabled(printmessages);
-
-    for (uint v = 0; v < Ncells; v++) {
-
-        // Stage F: Calculate transmission probability
-        float P = 0.0f;
-        if (hit_after_agg[v] - hit_before_agg[v] > 0) {
-            P = 1.f - float(hit_inside_agg[v]) / float(hit_after_agg[v] - hit_before_agg[v]);
-        }
-
-        // Stages G & H: LAD inversion and final leaf area
-        float leaf_area = 0.0f;
-        helios::vec3 gridsize = getCellSize(v);
-
-        invertLAD(v, P, Gtheta[v], dr_agg[v], min_voxel_hits, gridsize, leaf_area, invertLAD_warnings);
-
-        setCellLeafArea(leaf_area, v);
-        setCellGtheta(Gtheta[v], v);
-    }
-
-    invertLAD_warnings.report(std::cerr);
-
-    if (printmessages) {
-        std::cout << "done." << std::endl;
-    }
-}
-
-// Helper to find ray index by matching direction (Issue 1 workaround)
-size_t findRayIndexByDirection(const helios::vec3 &scan_origin, 
-                                 const helios::vec3 &intersection_point,
-                                 const std::vector<helios::vec3> &ray_directions) {
-    helios::vec3 hit_direction = intersection_point - scan_origin;
-    hit_direction.normalize();
-    
-    for (size_t i = 0; i < ray_directions.size(); i++) {
-        if ((hit_direction - ray_directions[i]).magnitude() < 1e-5f) {
-            return i;
-        }
-    }
-    return SIZE_MAX; // Not found
 }
 
 // Deprecated wrapper functions for backward compatibility
@@ -4144,46 +4473,45 @@ void LiDARcloud::disableGPUAcceleration() {
 }
 
 void LiDARcloud::calculateHitGridCell() {
-    
+
     if (printmessages) {
         std::cout << "Grouping hit points by grid cell (CPU)..." << std::flush;
     }
-    
+
     const size_t total_hits = getHitCount();
     const uint Ncells = getGridCellCount();
-    
+
     if (total_hits == 0) {
         std::cout << "WARNING (calculateHitGridCellCD): There are no hits currently in the point cloud. Skipping grid cell binning calculation." << std::endl;
         return;
     }
-    
-    // Process each hit point (parallelized with OpenMP)
-    #pragma omp parallel for schedule(dynamic, 1000)
+
+// Process each hit point (parallelized with OpenMP)
+#pragma omp parallel for schedule(dynamic, 1000)
     for (int r = 0; r < static_cast<int>(total_hits); r++) {
-        
+
         helios::vec3 hit_xyz = getHitXYZ(r);
         int assigned_cell = -1; // Default: not in any cell
-        
+
         // Test against each voxel
         for (uint c = 0; c < Ncells; c++) {
-            
+
             helios::vec3 center = getCellCenter(c);
             helios::vec3 anchor = getCellGlobalAnchor(c);
             helios::vec3 size = getCellSize(c);
             float rotation = getCellRotation(c);
-            
+
             // Inverse rotate hit point if voxel is rotated
             helios::vec3 hit_xyz_rot = hit_xyz;
             if (fabs(rotation) > 1e-6f) {
-                hit_xyz_rot = rotatePointAboutLine(hit_xyz - anchor, helios::make_vec3(0, 0, 0), 
-                                                   helios::make_vec3(0, 0, 1), -rotation) + anchor;
+                hit_xyz_rot = rotatePointAboutLine(hit_xyz - anchor, helios::make_vec3(0, 0, 0), helios::make_vec3(0, 0, 1), -rotation) + anchor;
             }
-            
+
             // Treat hit as a ray from origin for AABB test (matches GPU kernel)
             helios::vec3 origin = helios::make_vec3(0, 0, 0);
             helios::vec3 direction = hit_xyz_rot - origin;
             direction.normalize();
-            
+
             // AABB bounds
             float x0 = center.x - 0.5f * size.x;
             float x1 = center.x + 0.5f * size.x;
@@ -4191,23 +4519,26 @@ void LiDARcloud::calculateHitGridCell() {
             float y1 = center.y + 0.5f * size.y;
             float z0 = center.z - 0.5f * size.z;
             float z1 = center.z + 0.5f * size.z;
-            
+
             // Slab method for ray-AABB intersection
             float tx_min = (x0 - origin.x) / direction.x;
             float tx_max = (x1 - origin.x) / direction.x;
-            if (tx_min > tx_max) std::swap(tx_min, tx_max);
-            
+            if (tx_min > tx_max)
+                std::swap(tx_min, tx_max);
+
             float ty_min = (y0 - origin.y) / direction.y;
             float ty_max = (y1 - origin.y) / direction.y;
-            if (ty_min > ty_max) std::swap(ty_min, ty_max);
-            
+            if (ty_min > ty_max)
+                std::swap(ty_min, ty_max);
+
             float tz_min = (z0 - origin.z) / direction.z;
             float tz_max = (z1 - origin.z) / direction.z;
-            if (tz_min > tz_max) std::swap(tz_min, tz_max);
-            
+            if (tz_min > tz_max)
+                std::swap(tz_min, tz_max);
+
             float t0 = std::max({tx_min, ty_min, tz_min});
             float t1 = std::min({tx_max, ty_max, tz_max});
-            
+
             // Check if hit point is inside voxel
             if (t0 < t1 && t1 > 1e-6f) {
                 float T = (hit_xyz_rot - origin).magnitude();
@@ -4217,15 +4548,15 @@ void LiDARcloud::calculateHitGridCell() {
                 }
             }
         }
-        
+
         // Store result (thread-safe due to unique index per thread)
         setHitGridCell(r, assigned_cell);
     }
-    
+
     if (printmessages) {
         std::cout << "done." << std::endl;
     }
-    
+
     hitgridcellcomputed = true;
 }
 
@@ -4249,7 +4580,36 @@ bool LiDARcloud::isMultiReturnData() const {
     return false;
 }
 
-LiDARcloud::BeamGrouping LiDARcloud::groupHitsByTimestamp(const std::vector<uint>& scan_indices) const {
+bool LiDARcloud::isHitMiss(uint index) const {
+    // Canonical miss flag (matches the Python `is_miss` LAS extra dimension): a hit is
+    // a "miss" (the pulse was fired but returned nothing - transmitted to the sky) when
+    // is_miss == 1. This flag is the durable contract and is set by every path that
+    // produces misses (the importer, gapfillMisses(), and syntheticScan()), so the
+    // distance fallback below is not reached for any data Helios produces. Note that the
+    // placement distance of a miss point is path-dependent: gapfillMisses() uses
+    // LIDAR_MISS_DISTANCE, while syntheticScan() leaves misses at the ray-tracer no-hit
+    // distance LIDAR_RAYTRACE_MISS_T so they classify as transmitted-through beams in the
+    // leaf-area inversion. Miss classification must therefore key on the flag, not distance.
+    if (doesHitDataExist(index, "is_miss")) {
+        return getHitData(index, "is_miss") != 0.0;
+    }
+    // Interim fallback for legacy data that predates the is_miss flag: treat a return whose
+    // range from its scan origin reaches the gapfill miss sentinel distance as a miss. This
+    // only catches the gapfillMisses() convention; flagged data never reaches this line.
+    helios::vec3 d = getHitXYZ(index) - getScanOrigin(getHitScanID(index));
+    return d.magnitude() >= 0.98f * LIDAR_MISS_DISTANCE;
+}
+
+bool LiDARcloud::hasMisses() const {
+    for (size_t r = 0; r < getHitCount(); r++) {
+        if (isHitMiss(r)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+LiDARcloud::BeamGrouping LiDARcloud::groupHitsByTimestamp(const std::vector<uint> &scan_indices) const {
 
     BeamGrouping result;
 
@@ -4258,12 +4618,28 @@ LiDARcloud::BeamGrouping LiDARcloud::groupHitsByTimestamp(const std::vector<uint
         return result;
     }
 
+    // Timestamp groups multiple returns of one pulse into a single beam. When the
+    // data has no timestamp (e.g. single-return data where each pulse yields at most
+    // one return), there is nothing to group: each hit is its own one-return beam.
+    bool has_timestamp = true;
+    for (uint idx: scan_indices) {
+        if (!doesHitDataExist(idx, "timestamp")) {
+            has_timestamp = false;
+            break;
+        }
+    }
+    if (!has_timestamp) {
+        result.Nbeams = scan_indices.size();
+        result.beam_array.resize(result.Nbeams);
+        for (uint i = 0; i < scan_indices.size(); i++) {
+            result.beam_array.at(i).push_back(scan_indices[i]);
+        }
+        return result;
+    }
+
     // Sort indices by timestamp to group consecutive hits from same beam
     std::vector<uint> sorted_indices = scan_indices;
-    std::sort(sorted_indices.begin(), sorted_indices.end(),
-              [this](uint a, uint b) {
-                  return this->getHitData(a, "timestamp") < this->getHitData(b, "timestamp");
-              });
+    std::sort(sorted_indices.begin(), sorted_indices.end(), [this](uint a, uint b) { return this->getHitData(a, "timestamp") < this->getHitData(b, "timestamp"); });
 
     // Count unique beams by counting timestamp changes (now works correctly with sorted data)
     double previous_time = -1.0;
@@ -4292,44 +4668,43 @@ LiDARcloud::BeamGrouping LiDARcloud::groupHitsByTimestamp(const std::vector<uint
             previous_beam = current_beam;
         }
     }
-    
+
     return result;
 }
 
 std::vector<float> LiDARcloud::calculateSyntheticLeafArea(helios::Context *context) {
-    
+
     std::vector<uint> UUIDs_all = context->getAllUUIDs();
     const uint N = UUIDs_all.size();
     const uint Ncells = getGridCellCount();
-    
+
     // Result: which voxel each primitive belongs to (-1 if none)
     std::vector<int> prim_vol(N, -1);
-    
-    // CPU/OpenMP version of primitive-to-voxel assignment
-    #pragma omp parallel for
+
+// CPU/OpenMP version of primitive-to-voxel assignment
+#pragma omp parallel for
     for (int p = 0; p < static_cast<int>(N); p++) {
         std::vector<helios::vec3> verts = context->getPrimitiveVertices(UUIDs_all[p]);
         helios::vec3 prim_xyz = verts[0]; // Use first vertex
-        
+
         // Test against each voxel (same logic as calculateHitGridCellCD)
         for (uint c = 0; c < Ncells; c++) {
             helios::vec3 center = getCellCenter(c);
             helios::vec3 anchor = getCellGlobalAnchor(c);
             helios::vec3 size = getCellSize(c);
             float rotation = getCellRotation(c);
-            
+
             // Inverse rotate primitive position if voxel is rotated
             helios::vec3 prim_xyz_rot = prim_xyz;
             if (fabs(rotation) > 1e-6f) {
-                prim_xyz_rot = rotatePointAboutLine(prim_xyz - anchor, helios::make_vec3(0,0,0),
-                                                    helios::make_vec3(0,0,1), -rotation) + anchor;
+                prim_xyz_rot = rotatePointAboutLine(prim_xyz - anchor, helios::make_vec3(0, 0, 0), helios::make_vec3(0, 0, 1), -rotation) + anchor;
             }
-            
+
             // Point-in-AABB test (treating as ray from origin for consistency with GPU kernel)
             helios::vec3 origin_pt = helios::make_vec3(0, 0, 0);
             helios::vec3 direction = prim_xyz_rot - origin_pt;
             direction.normalize();
-            
+
             // AABB bounds
             float x0 = center.x - 0.5f * size.x;
             float x1 = center.x + 0.5f * size.x;
@@ -4337,23 +4712,26 @@ std::vector<float> LiDARcloud::calculateSyntheticLeafArea(helios::Context *conte
             float y1 = center.y + 0.5f * size.y;
             float z0 = center.z - 0.5f * size.z;
             float z1 = center.z + 0.5f * size.z;
-            
+
             // Slab method
             float tx_min = (x0 - origin_pt.x) / direction.x;
             float tx_max = (x1 - origin_pt.x) / direction.x;
-            if (tx_min > tx_max) std::swap(tx_min, tx_max);
-            
+            if (tx_min > tx_max)
+                std::swap(tx_min, tx_max);
+
             float ty_min = (y0 - origin_pt.y) / direction.y;
             float ty_max = (y1 - origin_pt.y) / direction.y;
-            if (ty_min > ty_max) std::swap(ty_min, ty_max);
-            
+            if (ty_min > ty_max)
+                std::swap(ty_min, ty_max);
+
             float tz_min = (z0 - origin_pt.z) / direction.z;
             float tz_max = (z1 - origin_pt.z) / direction.z;
-            if (tz_min > tz_max) std::swap(tz_min, tz_max);
-            
+            if (tz_min > tz_max)
+                std::swap(tz_min, tz_max);
+
             float t0 = std::max({tx_min, ty_min, tz_min});
             float t1 = std::min({tx_max, ty_max, tz_max});
-            
+
             // Check if primitive is inside voxel
             if (t0 < t1 && t1 > 1e-6f) {
                 float T = (prim_xyz_rot - origin_pt).magnitude();
@@ -4364,7 +4742,7 @@ std::vector<float> LiDARcloud::calculateSyntheticLeafArea(helios::Context *conte
             }
         }
     }
-    
+
     // Sum primitive areas per voxel
     std::vector<float> total_area(Ncells, 0.f);
     for (size_t p = 0; p < N; p++) {
@@ -4374,16 +4752,23 @@ std::vector<float> LiDARcloud::calculateSyntheticLeafArea(helios::Context *conte
             context->setPrimitiveData(UUIDs_all[p], "gridCell", gridcell);
         }
     }
-    
-    // Store as primitive data
+
+    // Per-voxel leaf area to return
     std::vector<float> output_LeafArea(Ncells);
-    for (int v = 0; v < Ncells; v++) {
+    for (uint v = 0; v < Ncells; v++) {
         output_LeafArea[v] = total_area[v];
-        if (context->doesPrimitiveDataExist(UUIDs_all[v], "gridCell")) {
-            context->setPrimitiveData(UUIDs_all[v], "synthetic_leaf_area", total_area[v]);
+    }
+
+    // Annotate each primitive with the total leaf area of its containing voxel. Iterate
+    // primitives (indexed 0..N), NOT cells: UUIDs_all is sized by primitive count, so
+    // indexing it by a cell index is out of bounds whenever Ncells > N and otherwise maps
+    // the wrong UUID to a voxel total.
+    for (size_t p = 0; p < N; p++) {
+        if (prim_vol[p] >= 0) {
+            context->setPrimitiveData(UUIDs_all[p], "synthetic_leaf_area", total_area[prim_vol[p]]);
         }
     }
-    
+
     return output_LeafArea;
 }
 
@@ -4438,9 +4823,9 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
 
     if (printmessages) {
         if (Npulse > 1) {
-            std::cout << "Performing full-waveform synthetic LiDAR scan..." << std::endl;
+            std::cout << "Performing multi-return synthetic LiDAR scan..." << std::endl;
         } else {
-            std::cout << "Performing discrete return synthetic LiDAR scan..." << std::endl;
+            std::cout << "Performing single-return synthetic LiDAR scan..." << std::endl;
         }
     }
 
@@ -4449,7 +4834,10 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         return;
     }
 
-    float miss_distance = 1001.0; // arbitrary distance from scanner for 'miss' points
+    // Ray-tracer no-hit threshold: a traced ray that intersects nothing returns this t value
+    // (see performUnifiedRayTracing). Used below to classify whether a beam hit a primitive.
+    // This is NOT where miss points are placed in the cloud (that is LIDAR_MISS_DISTANCE).
+    float miss_distance = LIDAR_RAYTRACE_MISS_T;
 
     helios::vec3 bb_center;
     helios::vec3 bb_size;
@@ -4701,10 +5089,14 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
             float e2_sq = e2 * e2;
             float s_param = (e1_sq > 0.f) ? (d * e1) / e1_sq : 0.f;
             float t_param = (e2_sq > 0.f) ? (d * e2) / e2_sq : 0.f;
-            if (s_param < 0.f) s_param = 0.f;
-            else if (s_param > 1.f) s_param = 1.f;
-            if (t_param < 0.f) t_param = 0.f;
-            else if (t_param > 1.f) t_param = 1.f;
+            if (s_param < 0.f)
+                s_param = 0.f;
+            else if (s_param > 1.f)
+                s_param = 1.f;
+            if (t_param < 0.f)
+                t_param = 0.f;
+            else if (t_param > 1.f)
+                t_param = 1.f;
             if (uvs.size() == 4) {
                 uv = (1.f - s_param) * (1.f - t_param) * uvs[0] + s_param * (1.f - t_param) * uvs[1] + s_param * t_param * uvs[2] + (1.f - s_param) * t_param * uvs[3];
             } else {
@@ -4736,12 +5128,16 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         uv.y -= std::floor(uv.y);
 
         int px = static_cast<int>(uv.x * static_cast<float>(tex.width));
-        if (px < 0) px = 0;
-        if (px >= static_cast<int>(tex.width)) px = static_cast<int>(tex.width) - 1;
+        if (px < 0)
+            px = 0;
+        if (px >= static_cast<int>(tex.width))
+            px = static_cast<int>(tex.width) - 1;
         // Pixel rows: 0 at top, height-1 at bottom; UV y=0 at bottom.
         int py = static_cast<int>((1.f - uv.y) * static_cast<float>(tex.height));
-        if (py < 0) py = 0;
-        if (py >= static_cast<int>(tex.height)) py = static_cast<int>(tex.height) - 1;
+        if (py < 0)
+            py = 0;
+        if (py >= static_cast<int>(tex.height))
+            py = static_cast<int>(tex.height) - 1;
         return tex.pixels[static_cast<size_t>(py) * tex.width + static_cast<size_t>(px)];
     };
 
@@ -4764,15 +5160,49 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
 
         std::vector<std::string> column_format = getScanColumnFormat(s);
 
+        // Global scanner tilt (models the residual tilt of the scanner spin axis reported by a real terrestrial scanner's
+        // dual-axis inclinometer). The tilt rotates the entire fan of ray directions about the scanner origin using
+        // right-hand-rule rotations, matching the right-handed, Z-up body frame used by commercial scanners (e.g. RIEGL SOCS).
+        // The tilt axes are defined relative to the scan's azimuth-zero (phiMin) facing direction, not the fixed world axes:
+        //   - the body "forward" axis is the horizontal projection of the phiMin scan direction (Y_body),
+        //   - the body "lateral" (right) axis completes the right-handed frame (X_body = Y_body x Z),
+        //   - roll  = right-hand rotation about X_body (the lateral axis),
+        //   - pitch = right-hand rotation about Y_body (the forward / azimuth-zero axis).
+        // Roll is applied first, then pitch. A perfectly level scanner has roll = pitch = 0. When phiMin = 0 the
+        // azimuth-zero direction is +y, so X_body = +x and Y_body = +y (tilt reduces to roll about world-x, pitch about world-y).
+        float scanTiltRoll = getScanTiltRoll(s);
+        float scanTiltPitch = getScanTiltPitch(s);
+        bool apply_tilt = (scanTiltRoll != 0.f || scanTiltPitch != 0.f);
+        const helios::vec3 tilt_pivot = helios::make_vec3(0, 0, 0); // rotate directions about the origin (pure rotation of the unit vector)
+        // Body frame from the azimuth-zero (phiMin) direction. sphere2cart with zero elevation gives the horizontal heading.
+        const helios::vec3 forward_axis = helios::make_vec3(sinf(phimin), cosf(phimin), 0.f); // Y_body: azimuth-zero heading
+        const helios::vec3 lateral_axis = helios::make_vec3(cosf(phimin), -sinf(phimin), 0.f); // X_body = Y_body x (0,0,1)
+
+        // Scan pattern determines how the (theta-index, phi-index) grid maps to zenith angles. For a raster scan the zenith is
+        // uniformly spaced over [thetamin,thetamax]; for a spinning multibeam scan each theta-index is a laser channel fired at
+        // its own fixed (generally non-uniform) zenith angle. Both patterns share the same azimuth sweep and grid storage.
+        const ScanMetadata &scan = scans.at(s);
+        const bool spinning_multibeam = (scan.scanPattern == SCAN_PATTERN_SPINNING_MULTIBEAM);
+
         std::vector<helios::vec3> raydir;
         raydir.resize(Ntheta * Nphi);
 
+        // Inclusive endpoint sampling: Nphi/Ntheta samples spanning [phimin,phimax] / [thetamin,thetamax].
+        // Guard the (N-1) denominator so a single-row/column scan (N==1) samples once at the minimum angle
+        // instead of dividing by zero and producing NaN ray directions.
+        const float dphi = (Nphi > 1) ? (phimax - phimin) / float(Nphi - 1) : 0.f;
+        const float dtheta = (Ntheta > 1) ? (thetamax - thetamin) / float(Ntheta - 1) : 0.f;
+
         for (uint j = 0; j < Nphi; j++) {
-            float phi = phimin + float(j) * (phimax - phimin) / float(Nphi - 1);
+            float phi = phimin + float(j) * dphi;
             for (uint i = 0; i < Ntheta; i++) {
-                float theta_z = thetamin + float(i) * (thetamax - thetamin) / float(Ntheta - 1);
+                float theta_z = spinning_multibeam ? scan.beamZenithAngles.at(i) : (thetamin + float(i) * dtheta);
                 float theta_elev = 0.5f * M_PI - theta_z;
                 helios::vec3 dir = sphere2cart(helios::make_SphericalCoord(1.f, theta_elev, phi));
+                if (apply_tilt) {
+                    dir = rotatePointAboutLine(dir, tilt_pivot, lateral_axis, scanTiltRoll); // roll about the lateral (X_body) axis
+                    dir = rotatePointAboutLine(dir, tilt_pivot, forward_axis, scanTiltPitch); // pitch about the forward (Y_body) axis
+                }
                 raydir.at(Ntheta * j + i) = dir;
             }
         }
@@ -4787,9 +5217,7 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         helios::vec3 bb_max = bb_center + bb_size * 0.5f;
 
         // Check if origin is inside bounding box
-        bool origin_inside_bb = (scan_origin.x >= bb_min.x && scan_origin.x <= bb_max.x &&
-                                 scan_origin.y >= bb_min.y && scan_origin.y <= bb_max.y &&
-                                 scan_origin.z >= bb_min.z && scan_origin.z <= bb_max.z);
+        bool origin_inside_bb = (scan_origin.x >= bb_min.x && scan_origin.x <= bb_max.x && scan_origin.y >= bb_min.y && scan_origin.y <= bb_max.y && scan_origin.z >= bb_min.z && scan_origin.z <= bb_max.z);
 
         for (size_t r = 0; r < N; r++) {
             // If origin inside BB, all rays automatically hit
@@ -4832,13 +5260,17 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
 
             // Find largest entering t value
             float t0 = tx_min;
-            if (ty_min > t0) t0 = ty_min;
-            if (tz_min > t0) t0 = tz_min;
+            if (ty_min > t0)
+                t0 = ty_min;
+            if (tz_min > t0)
+                t0 = tz_min;
 
             // Find smallest exiting t value
             float t1 = tx_max;
-            if (ty_max < t1) t1 = ty_max;
-            if (tz_max < t1) t1 = tz_max;
+            if (ty_max < t1)
+                t1 = ty_max;
+            if (tz_max < t1)
+                t1 = tz_max;
 
             if (t0 < t1 && t1 > 1e-6f) {
                 bb_hit[r] = 1;
@@ -4882,16 +5314,28 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         if (N == 0) {
             // If record_misses=true, record all rays as misses
             if (record_misses) {
-                float miss_dist = 1001.0f;
+                // Place miss points just beyond any real target at the ray-tracer no-hit distance.
+                // The exact placement distance is not significant: the leaf-area inversion classifies
+                // a miss geometrically as a beam transmitted through the voxel ("after voxel"),
+                // independent of how far out the point sits. The canonical miss marker is the
+                // is_miss flag set below.
+                float miss_dist = LIDAR_RAYTRACE_MISS_T;
                 for (int i = 0; i < Ntheta * Nphi; i++) {
                     std::map<std::string, double> data;
                     data["target_index"] = 0;
                     data["target_count"] = 1;
                     data["deviation"] = 0.0;
                     data["timestamp"] = i;
-                    data["intensity"] = 1.0;  // Full miss
+                    data["intensity"] = 1.0; // Full miss
                     data["distance"] = miss_dist;
-                    data["nRaysHit"] = Npulse;  // All rays in pulse missed together
+                    data["nRaysHit"] = Npulse; // All rays in pulse missed together
+                    data["is_miss"] = 1.0; // canonical miss flag
+                    if (spinning_multibeam) {
+                        data["channel"] = double(i % Ntheta); // laser channel index (scan-table row) that fired this beam
+                    }
+                    if (std::find(column_format.begin(), column_format.end(), "reflectance") != column_format.end()) {
+                        data["reflectance"] = 0.0; // 10*log10(1.0): full-miss sentinel intensity maps to 0 dB
+                    }
 
                     helios::vec3 dir = raydir.at(i);
                     helios::vec3 p = scan_origin + dir * miss_dist;
@@ -4900,7 +5344,7 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
             } else {
                 scan_warnings.addWarning("synthetic_rays_no_hit", "Synthetic rays did not hit any primitives.");
             }
-            continue;  // Move to next scan
+            continue; // Move to next scan
         }
 
         // Allocate host memory for results
@@ -4955,8 +5399,8 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
                     float ru = context->randu();
                     float rv = context->randu();
 
-                    float theta_offset = beam_divergence * sqrt(ru);  // radial angular distance
-                    float phi_offset = 2.0f * M_PI * rv;  // azimuthal angle
+                    float theta_offset = beam_divergence * sqrt(ru); // radial angular distance
+                    float phi_offset = 2.0f * M_PI * rv; // azimuthal angle
 
                     // Apply small angle perturbation in spherical coordinates
                     helios::SphericalCoord base_spherical = helios::cart2sphere(base_dir);
@@ -4988,13 +5432,13 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
                 helios::vec3 reference = (fabs(base_dir.z) < 0.9f) ? helios::make_vec3(0, 0, 1) : helios::make_vec3(1, 0, 0);
                 helios::vec3 u = helios::cross(base_dir, reference);
                 u.normalize();
-                helios::vec3 v = helios::cross(base_dir, u);  // Already normalized since base_dir and u are orthonormal
+                helios::vec3 v = helios::cross(base_dir, u); // Already normalized since base_dir and u are orthonormal
 
                 for (int p = 0; p < Npulse; p++) {
                     // Uniform sampling on disk using sqrt transform
                     float ru = context->randu();
                     float rv = context->randu();
-                    float r_sample = radius * sqrtf(ru);  // sqrt for uniform area distribution
+                    float r_sample = radius * sqrtf(ru); // sqrt for uniform area distribution
                     float theta = 2.0f * M_PI * rv;
                     float x_disk = r_sample * cosf(theta);
                     float y_disk = r_sample * sinf(theta);
@@ -5044,7 +5488,7 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
             if (t_pulse.size() == 0) {
                 // No hits for this beam
                 beams_with_zero_hits++;
-            } else if (t_pulse.size() == 1) { // this is discrete-return data, or we only had one hit for this pulse
+            } else if (t_pulse.size() == 1) { // this is single-return data, or we only had one hit for this pulse
                 beams_with_one_hit++;
 
                 float distance = t_pulse.front().at(0);
@@ -5061,9 +5505,7 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
             } else if (t_pulse.size() > 1) { // more than one hit for this pulse
                 beams_with_multi_hits++;
 
-                std::sort(t_pulse.begin(), t_pulse.end(), [](const std::vector<float> &a, const std::vector<float> &b) {
-                    return a[0] < b[0];
-                });
+                std::sort(t_pulse.begin(), t_pulse.end(), [](const std::vector<float> &a, const std::vector<float> &b) { return a[0] < b[0]; });
 
                 float t0 = t_pulse.at(0).at(0);
                 float d = t_pulse.at(0).at(0);
@@ -5085,7 +5527,7 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
                         float IDmap = t_pulse.at(hit - 1).at(2);
 
                         // test for full misses and set those to have intensity = 1
-                        if (nPulseHit == Npulse & distance >= 0.98f * miss_distance) {
+                        if (nPulseHit == Npulse && distance >= 0.98f * miss_distance) {
                             std::vector<float> v{distance, 1.0, nPulseHit, IDmap}; // included the ray count here
                             // Note: the last index of t_pulse (.at(2)) is the object identifier. We don't want object identifiers to be averaged, so we'll assign the hit identifier based on the last ray in the group
                             t_hit.push_back(v);
@@ -5107,7 +5549,7 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
                         float IDmap = t_pulse.at(hit - 1).at(2);
 
                         // test for full misses and set those to have intensity = 1
-                        if (nPulseHit == Npulse & distance >= 0.98f * miss_distance) {
+                        if (nPulseHit == Npulse && distance >= 0.98f * miss_distance) {
                             std::vector<float> v{distance, 1.0, nPulseHit, IDmap}; // included the ray count here
                             // Note: the last index of t_pulse (.at(2)) is the object identifier. We don't want object identifiers to be averaged, so we'll assign the hit identifier based on the last ray in the group
                             t_hit.push_back(v);
@@ -5140,7 +5582,7 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
             // Count non-miss returns for proper target_index assignment
             int non_miss_count = 0;
             for (size_t hit = 0; hit < t_hit.size(); hit++) {
-                if (t_hit.at(hit).at(0) < 0.98f * 1001.0f) {
+                if (t_hit.at(hit).at(0) < 0.98f * miss_distance) {
                     non_miss_count++;
                 }
             }
@@ -5151,12 +5593,12 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
                 std::map<std::string, double> data;
 
                 // Check if this is a miss point
-                bool is_miss = (t_hit.at(hit).at(0) >= 0.98f * 1001.0f);
+                bool is_miss = (t_hit.at(hit).at(0) >= 0.98f * miss_distance);
 
                 // Apply Gaussian range (along-beam) measurement noise to real returns. LiDAR positional error is anisotropic and
                 // dominated by an error in the measured range, so the noise is added to the scalar distance and the hit point is
                 // reconstructed along the nominal beam direction below, rather than perturbing (x,y,z) isotropically. Misses keep
-                // their sentinel distance so they are not displaced. Each return draws independently (per-return noise).
+                // their ray-tracer no-hit distance and are not noise-displaced. Each return draws independently (per-return noise).
                 float measured_distance = t_hit.at(hit).at(0);
                 if (!is_miss && range_noise_stddev > 0) {
                     measured_distance += context->randn(0.f, range_noise_stddev);
@@ -5164,18 +5606,24 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
 
                 // Assign target_index: misses get 99, real hits get sequential index (0, 1, 2...)
                 if (is_miss) {
-                    data["target_index"] = 99;  // Special value to exclude from triangulation
+                    data["target_index"] = 99; // Special value to exclude from triangulation
                 } else {
                     data["target_index"] = real_hit_index;
                     real_hit_index++;
                 }
 
+                data["is_miss"] = is_miss ? 1.0 : 0.0; // canonical miss flag
                 data["target_count"] = t_hit.size();
                 data["deviation"] = fabs(measured_distance - average);
                 data["timestamp"] = pulse_scangrid_ij.at(r).y * Ntheta + pulse_scangrid_ij.at(r).x;
-                data["intensity"] = t_hit.at(hit).at(1);
+                // Record range-normalized intensity: the range-independent return amplitude rho*cos(theta) with the
+                // 1/R^2 range loss of the LiDAR range equation normalized out (see applyRangeIntensityCorrection()).
+                data["intensity"] = applyRangeIntensityCorrection(t_hit.at(hit).at(1), measured_distance);
                 data["distance"] = measured_distance;
                 data["nRaysHit"] = t_hit.at(hit).at(2);
+                if (spinning_multibeam) {
+                    data["channel"] = double(pulse_scangrid_ij.at(r).x); // laser channel index (scan-table row) that fired this beam
+                }
 
                 float UUID = t_hit.at(hit).at(3);
 
@@ -5192,7 +5640,7 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
                     // Sample arbitrary primitive-data fields named in the scan's column format onto
                     // this hit. The column format is the source of truth: add a (non-standard) label
                     // to the scan's column format and the scanner copies that primitive data here.
-                    for (const std::string &label : column_format) {
+                    for (const std::string &label: column_format) {
                         if (isStandardColumnToken(label)) {
                             continue;
                         }
@@ -5201,42 +5649,63 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
                         }
 
                         double value;
-                        switch (context->getPrimitiveDataType(uint(UUID), label.c_str())) {
-                        case helios::HELIOS_TYPE_FLOAT: {
-                            float v;
-                            context->getPrimitiveData(uint(UUID), label.c_str(), v);
-                            value = double(v);
-                            break;
-                        }
-                        case helios::HELIOS_TYPE_DOUBLE: {
-                            double v;
-                            context->getPrimitiveData(uint(UUID), label.c_str(), v);
-                            value = v;
-                            break;
-                        }
-                        case helios::HELIOS_TYPE_INT: {
-                            int v;
-                            context->getPrimitiveData(uint(UUID), label.c_str(), v);
-                            value = double(v);
-                            break;
-                        }
-                        case helios::HELIOS_TYPE_UINT: {
-                            uint v;
-                            context->getPrimitiveData(uint(UUID), label.c_str(), v);
-                            value = double(v);
-                            break;
-                        }
-                        default:
-                            continue; // non-scalar primitive-data types are not transferable to hits
+                        switch (context->getPrimitiveDataType(label.c_str())) {
+                            case helios::HELIOS_TYPE_FLOAT: {
+                                float v;
+                                context->getPrimitiveData(uint(UUID), label.c_str(), v);
+                                value = double(v);
+                                break;
+                            }
+                            case helios::HELIOS_TYPE_DOUBLE: {
+                                double v;
+                                context->getPrimitiveData(uint(UUID), label.c_str(), v);
+                                value = v;
+                                break;
+                            }
+                            case helios::HELIOS_TYPE_INT: {
+                                int v;
+                                context->getPrimitiveData(uint(UUID), label.c_str(), v);
+                                value = double(v);
+                                break;
+                            }
+                            case helios::HELIOS_TYPE_UINT: {
+                                uint v;
+                                context->getPrimitiveData(uint(UUID), label.c_str(), v);
+                                value = double(v);
+                                break;
+                            }
+                            default:
+                                continue; // non-scalar primitive-data types are not transferable to hits
                         }
 
                         if (label == "reflectivity_lidar") {
                             // Preserve historical semantics: reflectivity modulates intensity.
                             data.at("intensity") *= value;
+                        } else if (label == "reflectance") {
+                            // "reflectance" is a computed synthetic output (see below), not a primitive-data field
+                            // to copy. Skip it here so it is not overwritten by (or silently zeroed from) primitive
+                            // data of the same name.
+                            continue;
                         } else {
                             data[label] = value;
                         }
                     }
+                }
+
+                // If the scan requests "reflectance", record reflectance in decibels. Following the convention used
+                // by terrestrial laser scanners (e.g. RIEGL), reflectance is reported relative to a perfect diffuse
+                // (Lambertian) reflector viewed at normal incidence, which corresponds to intensity = 1 (0 dB):
+                //
+                //     reflectance_dB = 10 * log10( |intensity| )
+                //
+                // where intensity is the range-normalized return amplitude rho*cos(theta) (see
+                // applyRangeIntensityCorrection()). Returns with non-positive intensity (misses, fully grazing or
+                // back-facing hits) have no detectable signal and are floored at REFLECTANCE_FLOOR_DB rather than
+                // -infinity, mirroring a scanner's minimum detectable reflectance.
+                if (std::find(column_format.begin(), column_format.end(), "reflectance") != column_format.end()) {
+                    constexpr double REFLECTANCE_FLOOR_DB = -999.0;
+                    double abs_intensity = fabs(data.at("intensity"));
+                    data["reflectance"] = (abs_intensity > 0.0) ? 10.0 * log10(abs_intensity) : REFLECTANCE_FLOOR_DB;
                 }
 
                 addHitPoint(s, p, helios::cart2sphere(dir), color, data);

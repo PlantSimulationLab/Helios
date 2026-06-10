@@ -2591,6 +2591,29 @@ public:
     [[nodiscard]] uint getShootNodeCount(uint plantID, uint shootID) const;
 
     /**
+     * \brief Retrieves the IDs of all shoots belonging to a specific plant.
+     *
+     * Shoot IDs are sequential indices (0-based) into the plant's shoot tree, in the order the shoots were created.
+     * The trunk/base-stem shoot is always shoot ID 0. The returned IDs can be passed to getPlantShoot(), getShootNodeCount(), getShootTaper(), etc.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \return Vector of shoot IDs for all shoots in the plant.
+     */
+    [[nodiscard]] std::vector<uint> getAllShootIDs(uint plantID) const;
+
+    /**
+     * \brief Retrieves a read-only handle to a specific shoot of a specific plant.
+     *
+     * Provides direct access to the Shoot structure, including its topology (rank, parent_shoot_ID, parent_node_index, childIDs) and woody internode geometry
+     * (shoot_internode_vertices, shoot_internode_radii). Intended for read-only inspection of the plant's ground-truth structure; the returned shoot should not be mutated.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \param[in] shootID The index of the shoot within the plant (see getAllShootIDs()).
+     * \return Const reference to the shared pointer holding the requested shoot.
+     */
+    [[nodiscard]] const std::shared_ptr<Shoot> &getPlantShoot(uint plantID, uint shootID) const;
+
+    /**
      * \brief Retrieves the taper of a shoot based on its radius measurements.
      *
      * \param[in] plantID The unique identifier of the plant.

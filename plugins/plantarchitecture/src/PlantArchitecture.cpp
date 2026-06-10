@@ -3533,6 +3533,13 @@ int PlantArchitecture::appendPhytomerToShoot(uint plantID, uint shootID, const P
                     if (fbud.isterminal) {
                         fbud.state = state;
                         current_shoot_ptr->phytomers.back()->updateInflorescence(fbud);
+                        if (state == BUD_FRUITING) {
+                            // Initialize the fruit at 25% scale so it grows in gradually, matching the behavior of
+                            // setFloralBudState(). Without this, current_fruit_scale_factor remains at its default of 1.0
+                            // and the fruit/panicle is created at full size, then abruptly snaps down to 25% on the first
+                            // fruit-growth step before regrowing.
+                            current_shoot_ptr->phytomers.back()->setInflorescenceScaleFraction(fbud, 0.25f);
+                        }
                     }
                 }
             }
@@ -4502,6 +4509,28 @@ uint PlantArchitecture::getShootNodeCount(uint plantID, uint shootID) const {
         helios_runtime_error("ERROR (PlantArchitecture::getShootNodeCount): Shoot ID is out of range.");
     }
     return plant_instances.at(plantID).shoot_tree.at(shootID)->current_node_number;
+}
+
+std::vector<uint> PlantArchitecture::getAllShootIDs(uint plantID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getAllShootIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    std::vector<uint> shootIDs;
+    shootIDs.reserve(plant_instances.at(plantID).shoot_tree.size());
+    for (uint shootID = 0; shootID < plant_instances.at(plantID).shoot_tree.size(); shootID++) {
+        shootIDs.push_back(shootID);
+    }
+    return shootIDs;
+}
+
+const std::shared_ptr<Shoot> &PlantArchitecture::getPlantShoot(uint plantID, uint shootID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantShoot): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    } else if (plant_instances.at(plantID).shoot_tree.size() <= shootID) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantShoot): Shoot ID is out of range.");
+    }
+    return plant_instances.at(plantID).shoot_tree.at(shootID);
 }
 
 float PlantArchitecture::getShootTaper(uint plantID, uint shootID) const {

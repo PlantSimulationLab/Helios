@@ -20,7 +20,7 @@
 #include "Context.h"
 #include "Visualizer.h"
 
-#include "s_hull_pro.h"
+#include "triangulation_cdt.h"
 
 template<class datatype>
 class HitTable {
@@ -52,16 +52,17 @@ public:
         if (i >= 0 && i < Ntheta && j >= 0 && j < Nphi) {
             return data.at(j).at(i);
         } else {
-            std::cerr << "ERROR (hit_map.get): get index out of range. Attempting to get index map at (" << i << "," << j << "), but size of scan is " << Ntheta << " x " << Nphi << "." << std::endl;
-            exit(EXIT_FAILURE);
+            helios::helios_runtime_error("ERROR (hit_map.get): get index out of range. Attempting to get index map at (" + std::to_string(i) + "," + std::to_string(j) + "), but size of scan is " + std::to_string(Ntheta) + " x " +
+                                         std::to_string(Nphi) + ".");
         }
+        return data.at(j).at(i); // unreachable; silences control-reaches-end-of-non-void-function warning
     }
     void set(const int i, const int j, const datatype value) {
         if (i >= 0 && i < Ntheta && j >= 0 && j < Nphi) {
             data.at(j).at(i) = value;
         } else {
-            std::cerr << "ERROR (hit_map.set): set index out of range. Attempting to set index map at (" << i << "," << j << "), but size of scan is " << Ntheta << " x " << Nphi << "." << std::endl;
-            exit(EXIT_FAILURE);
+            helios::helios_runtime_error("ERROR (hit_map.set): set index out of range. Attempting to set index map at (" + std::to_string(i) + "," + std::to_string(j) + "), but size of scan is " + std::to_string(Ntheta) + " x " +
+                                         std::to_string(Nphi) + ".");
         }
     }
     void resize(const int nx, const int ny, const datatype initval) {
@@ -164,6 +165,17 @@ struct GridCell {
     float ground_height;
     float vegetation_height;
     float maximum_height;
+    // ---- LAD inversion uncertainty (sufficient statistics + sampling variance) ----
+    // These quantify the statistical SAMPLING uncertainty of the leaf-area inversion,
+    // conditional on the beams that entered the voxel (Pimont et al. 2018, RSE 215:343-370).
+    // They do NOT capture occlusion/coverage bias (voxels shadowed so beams never penetrate).
+    int beam_count = -1; //!< N: number of beams that entered the voxel (-1 if not computed)
+    float I_rdi = 0.f; //!< Relative density index I = 1 - P (fraction of beams intercepted)
+    float zbar_e = 0.f; //!< Mean beam path length through the voxel [m]
+    float var_path = 0.f; //!< Empirical variance of per-beam path lengths [m^2]
+    float L1_element = -1.f; //!< Single-element optical depth L1 = lambda1*delta (-1 if element size unknown)
+    float LAD_variance = -1.f; //!< Sampling variance of LAD [1/m]^2 (terms a+b); -1 if undefined
+    bool ci_valid = false; //!< True if (L, L1, N) fall within the Pimont Table-3 CI-validity envelope
     GridCell(helios::vec3 __center, helios::vec3 __global_anchor, helios::vec3 __size, helios::vec3 __global_size, float __azimuthal_rotation, helios::int3 __global_ijk, helios::int3 __global_count) {
         center = __center;
         global_anchor = __global_anchor;
@@ -178,6 +190,22 @@ struct GridCell {
         vegetation_height = 0;
         maximum_height = 0;
     }
+};
+
+//! Geometric pattern that maps a scan's (row,column) table indices to beam directions
+/**
+ * Determines how the (row, column) scan-table indices are converted to beam directions. The default \ref SCAN_PATTERN_RASTER
+ * reproduces the original Helios behavior of a uniform angular grid in zenith and azimuth (panoramic terrestrial laser scanner).
+ * \ref SCAN_PATTERN_SPINNING_MULTIBEAM models a rotating multi-channel sensor (e.g. Velodyne, Ouster, Hesai) where each table
+ * row corresponds to a laser channel fired at a fixed - and generally non-uniformly spaced - zenith angle, while each column is
+ * a uniform azimuth step. Both patterns share the same Ntheta x Nphi table storage, so all downstream processing (ray tracing,
+ * hit tables, leaf-area and leaf-angle inversion) is common to both.
+ */
+enum ScanPattern {
+    //! Uniform angular grid: zenith uniformly spaced over [thetaMin, thetaMax], azimuth over [phiMin, phiMax]
+    SCAN_PATTERN_RASTER = 0,
+    //! Rotating multi-channel sensor: each row is a laser channel at a fixed zenith angle (see \ref ScanMetadata::beamZenithAngles), each column a uniform azimuth step
+    SCAN_PATTERN_SPINNING_MULTIBEAM = 1
 };
 
 //! Structure containing metadata for a terrestrial scan
@@ -204,8 +232,35 @@ struct ScanMetadata {
      * \param[in] rangeNoiseStdDev  Standard deviation of Gaussian range (along-beam) measurement noise in meters (0 disables noise)
      * \param[in] angleNoiseStdDev  Standard deviation of Gaussian angular (beam-pointing) jitter in radians (0 disables jitter)
      * \param[in] columnFormat  Vector of strings specifying the columns of the scan ASCII file for input/output
+     * \param[in] scanTiltRoll  Global scanner tilt roll angle in radians (right-hand rotation about the body lateral axis; 0 = perfectly level) [optional]
+     * \param[in] scanTiltPitch  Global scanner tilt pitch angle in radians (right-hand rotation about the body forward/azimuth-zero axis; 0 = perfectly level) [optional]
      */
-    ScanMetadata(const helios::vec3 &origin, uint Ntheta, float thetaMin, float thetaMax, uint Nphi, float phiMin, float phiMax, float exitDiameter, float beamDivergence, float rangeNoiseStdDev, float angleNoiseStdDev, const std::vector<std::string> &columnFormat);
+    ScanMetadata(const helios::vec3 &origin, uint Ntheta, float thetaMin, float thetaMax, uint Nphi, float phiMin, float phiMax, float exitDiameter, float beamDivergence, float rangeNoiseStdDev, float angleNoiseStdDev,
+                 const std::vector<std::string> &columnFormat, float scanTiltRoll = 0.f, float scanTiltPitch = 0.f);
+
+    //! Create a spinning multibeam LiDAR scan data structure (e.g. Velodyne/Ouster/Hesai rotating multi-channel sensor)
+    /**
+     * Each laser channel is fired at a fixed zenith angle (taken from \p beamZenithAngles) as the sensor head rotates through a
+     * uniform sequence of azimuth angles. The scan is stored as an Ntheta x Nphi table where Ntheta equals the number of channels
+     * (rows) and Nphi is the number of azimuth steps (columns), so all downstream processing is shared with raster scans. The
+     * \ref scanPattern is set to \ref SCAN_PATTERN_SPINNING_MULTIBEAM and \ref thetaMin / \ref thetaMax are set to the minimum and
+     * maximum of \p beamZenithAngles.
+     * \param[in] origin  (x,y,z) position of the scanner
+     * \param[in] beamZenithAngles  Per-channel zenith angles in radians (zenith convention: 0 = upward, pi/2 = horizontal, pi = downward). Its size sets Ntheta. Manufacturer spec sheets typically list channel angles as elevation above the horizon;
+     * zenith = pi/2 - elevation.
+     * \param[in] Nphi  Number of azimuth steps (columns) per rotation
+     * \param[in] phiMin  Minimum scan angle in the phi (azimuthal) direction in radians
+     * \param[in] phiMax  Maximum scan angle in the phi (azimuthal) direction in radians
+     * \param[in] exitDiameter  Diameter of the laser pulse at exit from the scanner in meters
+     * \param[in] beamDivergence  Divergence angle of the laser beam in radians
+     * \param[in] rangeNoiseStdDev  Standard deviation of Gaussian range (along-beam) measurement noise in meters (0 disables noise)
+     * \param[in] angleNoiseStdDev  Standard deviation of Gaussian angular (beam-pointing) jitter in radians (0 disables jitter)
+     * \param[in] columnFormat  Vector of strings specifying the columns of the scan ASCII file for input/output
+     * \param[in] scanTiltRoll  Global scanner tilt roll angle in radians (right-hand rotation about the body lateral axis; 0 = perfectly level) [optional]
+     * \param[in] scanTiltPitch  Global scanner tilt pitch angle in radians (right-hand rotation about the body forward/azimuth-zero axis; 0 = perfectly level) [optional]
+     */
+    ScanMetadata(const helios::vec3 &origin, const std::vector<float> &beamZenithAngles, uint Nphi, float phiMin, float phiMax, float exitDiameter, float beamDivergence, float rangeNoiseStdDev, float angleNoiseStdDev,
+                 const std::vector<std::string> &columnFormat, float scanTiltRoll = 0.f, float scanTiltPitch = 0.f);
 
     //! File containing hit point data
     std::string data_file;
@@ -241,13 +296,13 @@ struct ScanMetadata {
 
     //! Diameter of laser pulse at exit from the scanner
     /**
-     * \note This is not needed for discrete return instruments, and is only used for synthetic scan generation.
+     * \note This is not needed for single-return instruments, and is only used for synthetic scan generation.
      */
     float exitDiameter;
 
     //! Divergence angle of the laser beam in radians
     /**
-     * \note This is not needed for discrete return instruments, and is only used for synthetic scan generation.
+     * \note This is not needed for single-return instruments, and is only used for synthetic scan generation.
      */
     float beamDivergence;
 
@@ -273,8 +328,48 @@ struct ScanMetadata {
      */
     float angleNoiseStdDev;
 
+    //! Global scanner tilt roll angle in radians (right-hand rotation about the body lateral axis)
+    /**
+     * Real terrestrial laser scanners are never perfectly leveled; a dual-axis inclinometer reports the residual tilt of the
+     * scanner spin axis away from true vertical (plumb) as two orthogonal angles. This field is the roll component: a right-hand
+     * rotation of the entire scan frame (the fan of ray directions) about the body lateral axis, applied about the scanner
+     * origin during synthetic scan generation. The body frame is right-handed and Z-up, matching commercial scanners (e.g.
+     * RIEGL SOCS): the forward axis is the horizontal projection of the azimuth-zero (\ref phiMin) scan direction, and the
+     * lateral axis completes the right-handed frame. When \ref phiMin is 0 the lateral axis is the world +x axis. A value of 0
+     * corresponds to a perfectly level scanner.
+     * \note The sign convention is right-handed; commercial scanners do not share a universal inclinometer sign convention, so
+     *       when matching a specific instrument the sign should be verified against that instrument's reported tilt.
+     * \note This is only used for synthetic scan generation. See also \ref scanTilt_pitch.
+     */
+    float scanTilt_roll;
+
+    //! Global scanner tilt pitch angle in radians (right-hand rotation about the body forward/azimuth-zero axis)
+    /**
+     * Pitch component of the global scanner tilt (see \ref scanTilt_roll): a right-hand rotation of the entire scan frame about
+     * the body forward axis (the horizontal projection of the azimuth-zero / \ref phiMin scan direction), applied about the
+     * scanner origin during synthetic scan generation. When \ref phiMin is 0 the forward axis is the world +y axis. Together
+     * \ref scanTilt_roll and \ref scanTilt_pitch model the two angles reported by a real dual-axis inclinometer. A value of 0
+     * corresponds to a perfectly level scanner. Roll is applied before pitch.
+     * \note This is only used for synthetic scan generation.
+     */
+    float scanTilt_pitch;
+
     //! Vector of strings specifying the columns of the scan ASCII file for input/output
     std::vector<std::string> columnFormat;
+
+    //! Geometric pattern that maps scan-table (row,column) indices to beam directions
+    /** Defaults to \ref SCAN_PATTERN_RASTER (uniform angular grid). When set to \ref SCAN_PATTERN_SPINNING_MULTIBEAM the
+     *  per-channel zenith angles in \ref beamZenithAngles define the row directions instead of uniform [thetaMin,thetaMax] spacing.
+     */
+    ScanPattern scanPattern;
+
+    //! Per-channel zenith angles for a spinning multibeam scan, in radians
+    /** Used only when \ref scanPattern is \ref SCAN_PATTERN_SPINNING_MULTIBEAM. The number of entries equals \ref Ntheta (one per
+     *  laser channel / row) and the values need not be uniformly spaced. Zenith convention: 0 = upward, pi/2 = horizontal,
+     *  pi = downward. Manufacturer spec sheets typically list channel angles as elevation above the horizon, so zenith =
+     *  pi/2 - elevation. Empty for \ref SCAN_PATTERN_RASTER scans.
+     */
+    std::vector<float> beamZenithAngles;
 
     //! Convert the (row,column) of hit point in a scan to a direction vector
     /**
@@ -314,6 +409,15 @@ private:
     //! Flag denoting whether triangulation has been performed previously
     bool triangulationcomputed;
 
+    //! Diagnostics from the most recent \ref triangulateHitPoints() call. Each
+    //! dropped triangle is attributed to ONE primary reason (Lmax, then aspect,
+    //! then degenerate), so candidates == kept + dropped_lmax + dropped_aspect +
+    //! dropped_degenerate. `kept` mirrors triangles.size() for the run.
+    std::size_t triangulation_candidate_count;
+    std::size_t triangulation_dropped_lmax;
+    std::size_t triangulation_dropped_aspect;
+    std::size_t triangulation_dropped_degenerate;
+
     //! Flag denoting whether messages should be printed to screen
     bool printmessages;
 
@@ -344,15 +448,6 @@ private:
 
     void floodfill(size_t t, std::vector<Triangulation> &cloud_triangles, std::vector<int> &fill_flag, std::vector<std::vector<int>> &nodes, int tag, int depth, int maxdepth);
 
-    //! Perform inversion to estimate LAD
-    /**
-     * \param[in] P  Vector of floats where each element is the P value of a given grid cell
-     * \param[in] Gtheta  Vector of floats where each element is the Gtheta value of a given grid cell
-     * \param[in] dr_array   2D Vector of floats where the first index is the grid cell and the second index is the beam index
-     * \param[in] fillAnalytic  If true the analytic solution using mean dr will be used when the inversion fails. If false, LAD will be set as 999.
-     */
-    std::vector<float> LAD_inversion(std::vector<float> &P, std::vector<float> &Gtheta, std::vector<std::vector<float>> &dr_array, bool fillAnalytic);
-
     // -------- HELPERS --------- //
 
     //! Compute G(theta) values for all grid cells from triangulation data
@@ -362,8 +457,7 @@ private:
      * \param[out] Gtheta G(theta) value for each cell (size = Ncells)
      * \param[out] Gtheta_bar Average G(theta) for each cell (size = Ncells)
      */
-    void computeGtheta(uint Ncells, uint Nscans,
-                       std::vector<float> &Gtheta, std::vector<float> &Gtheta_bar);
+    void computeGtheta(uint Ncells, uint Nscans, std::vector<float> &Gtheta, std::vector<float> &Gtheta_bar);
 
     //! Perform LAD inversion for a single voxel using secant method
     /**
@@ -377,45 +471,48 @@ private:
      * \param[in,out] warnings Warning aggregator for per-voxel convergence warnings
      * \return True if inversion succeeded, false otherwise
      */
-    bool invertLAD(uint voxel_index, float P, float Gtheta,
-                   const std::vector<float> &dr_samples, int min_voxel_hits,
-                   const helios::vec3 &gridsize, float &leaf_area,
-                   helios::WarningAggregator &warnings);
+    bool invertLAD(uint voxel_index, float P, float Gtheta, const std::vector<float> &dr_samples, int min_voxel_hits, const helios::vec3 &gridsize, float &leaf_area, helios::WarningAggregator &warnings);
 
-    //! Filter rays by bounding box intersection (replaces intersectBoundingBox GPU kernel)
-    /**
-     * \param[in] scan_origin Origin point of the scan
-     * \param[in] ray_endpoints Vector of ray endpoint positions (far points)
-     * \param[in] bb_center Center of the bounding box
-     * \param[in] bb_size Size of the bounding box (x, y, z dimensions)
-     * \param[out] filtered_indices Output vector of indices that hit the bounding box
-     * \return Number of rays that intersect the bounding box
-     */
-    uint filterRaysByBoundingBox(const helios::vec3 &scan_origin,
-                                  const std::vector<helios::vec3> &ray_endpoints,
-                                  const helios::vec3 &bb_center,
-                                  const helios::vec3 &bb_size,
-                                  std::vector<uint> &filtered_indices);
+    //! Result of a per-voxel leaf-area-density inversion, including sampling uncertainty
+    struct LADInversionResult {
+        float leaf_area = 0.f; //!< Point estimate of leaf area in the voxel [m^2]
+        float LAD_variance = -1.f; //!< Sampling variance of LAD [1/m]^2 (terms a+b); -1 if undefined
+        int beam_count = 0; //!< N: beams that entered the voxel
+        float I_rdi = 0.f; //!< Relative density index I = 1 - P
+        float zbar_e = 0.f; //!< Mean beam path length through the voxel [m]
+        float var_path = 0.f; //!< Empirical variance of per-beam path lengths [m^2]
+        float L1_element = -1.f; //!< Single-element optical depth L1 (-1 if element size unknown)
+        bool converged = false; //!< True if the secant solve converged (false => fallback used)
+        bool element_size_known = false; //!< False => variance is sampling-only (term a; term b omitted)
+    };
 
-    //! Calculate voxel path lengths using CollisionDetection (replaces intersectGridcell GPU kernel)
-    /**
-     * \param[in] scan_origin Origin point of the scan
-     * \param[in] ray_directions Vector of ray directions (normalized)
-     * \param[in] voxel_centers Vector of voxel center positions
-     * \param[in] voxel_sizes Vector of voxel sizes
-     * \param[in] voxel_rotations Vector of voxel rotation angles (radians, around Z-axis)
-     * \param[out] dr_agg Vector of path length samples per voxel
-     * \param[out] hit_before_agg Weighted hit count before each voxel
-     * \param[out] hit_after_agg Weighted hit count after/inside each voxel
+    //! Invert Beer-Lambert per voxel for leaf area AND its statistical sampling variance
+    /** Wraps the point-estimate inversion (\ref invertLAD()) and additionally computes the
+        per-voxel sampling variance of LAD following Pimont et al. (2018), RSE 215:343-370.
+        The variance has two components: (a) a finite-beam sampling term that decays as 1/N, and
+        (b) an N-independent element-position-variability term that requires the element size.
+        \param[in] voxel_index Index of the voxel being inverted (for warning messages)
+        \param[in] P Transmission probability for this voxel
+        \param[in] Gtheta G(theta) value for this voxel
+        \param[in] dr_samples Per-beam path length samples through this voxel [m]
+        \param[in] sum_frac_sq Sum over beams of the squared per-beam transmittance fraction (for the empirical-variance guard)
+        \param[in] element_width Characteristic vegetation element width [m] (<=0 => term (b) omitted, sampling-only)
+        \param[in] min_voxel_hits Minimum number of beams required to attempt inversion
+        \param[in] gridsize Voxel dimensions (x, y, z) [m]
+        \param[in,out] warnings Warning aggregator for per-voxel convergence warnings
+        \return LADInversionResult with the point estimate and its sampling variance
      */
-    void calculateVoxelPathLengths(const helios::vec3 &scan_origin,
-                                      const std::vector<helios::vec3> &ray_directions,
-                                      const std::vector<helios::vec3> &voxel_centers,
-                                      const std::vector<helios::vec3> &voxel_sizes,
-                                      const std::vector<float> &voxel_rotations,
-                                      std::vector<std::vector<float>> &dr_agg,
-                                      std::vector<float> &hit_before_agg,
-                                      std::vector<float> &hit_after_agg);
+    LADInversionResult invertLADWithVariance(uint voxel_index, float P, float Gtheta, const std::vector<float> &dr_samples, float sum_frac_sq, float element_width, int min_voxel_hits, const helios::vec3 &gridsize,
+                                             helios::WarningAggregator &warnings);
+
+    //! Test whether a voxel's (L, L1, N) fall within the Pimont (2018) Table-3 CI-validity envelope
+    /** \param[in] L Voxel optical depth L = lambda*delta (= a*Gtheta*zbar_e)
+        \param[in] L1 Single-element optical depth L1 = lambda1*delta
+        \param[in] N Number of beams that entered the voxel
+        \param[in] confidence_level Confidence level (0.90 and 0.95 are tabulated; others use the 0.95 envelope)
+        \return True if the Wald confidence interval is trustworthy for this voxel
+     */
+    bool ciValidPimont(float L, float L1, int N, float confidence_level) const;
 
     // -------- MULTI-RETURN HELPERS --------- //
 
@@ -436,7 +533,7 @@ private:
      * \param[in] scan_indices Vector of hit indices for a specific scan
      * \return BeamGrouping structure with beam organization
      */
-    BeamGrouping groupHitsByTimestamp(const std::vector<uint>& scan_indices) const;
+    BeamGrouping groupHitsByTimestamp(const std::vector<uint> &scan_indices) const;
 
     //! Helper method for loading TreeQSM cylinder files with different coloring strategies
     /**
@@ -448,6 +545,31 @@ private:
      * \return Vector of tube object UUIDs that were created.
      */
     std::vector<uint> loadTreeQSM_impl(helios::Context *context, const std::string &filename, uint radial_subdivisions, bool use_colormap, const std::string &colormap_or_texture);
+
+    //! Timestamp-based implementation of gap filling (see \ref gapfillMisses). Reconstructs the scan grid from per-hit timestamps.
+    /**
+     * \param[in] scanID ID of scan to gapfill
+     * \param[in] gapfill_grid_only if true, missing points are gapfilled only within the axis-aligned bounding box of the voxel grid
+     * \param[in] add_flags if true, gapfillMisses_code is added as hitpoint data
+     * \return (x,y,z) of missing points added to the scan from gapfilling
+     */
+    std::vector<helios::vec3> gapfillMisses_timestamp(uint scanID, const bool gapfill_grid_only, const bool add_flags);
+
+    //! Row/column-based implementation of gap filling (see \ref gapfillMisses).
+    /**
+     * Reconstructs miss-pulse directions from the native scan-grid row/column indices when per-hit timestamps are
+     * unavailable. A robust per-row generative model is fit from the returns: each row's zenith is the median of the
+     * measured zeniths of its returns, and each row's azimuth is a robust (Theil-Sen) line fit azimuth = intercept + slope*column,
+     * which absorbs scanner tilt and the continuous azimuth sweep (azimuth shear across rows). Rows with too few returns
+     * inherit their model parameters by robustly extrapolating the per-row parameters across the row axis, which allows
+     * large blank near-zenith regions to be extrapolated rather than only interpolated. Every empty grid cell is then
+     * emitted as a miss along its reconstructed direction.
+     *
+     * \param[in] scanID ID of scan to gapfill
+     * \param[in] add_flags if true, gapfillMisses_code is added as hitpoint data (0 = original points, 1 = gapfilled interior, 4 = extrapolated row)
+     * \return (x,y,z) of missing points added to the scan from gapfilling
+     */
+    std::vector<helios::vec3> gapfillMisses_rowcolumn(uint scanID, const bool add_flags);
 
 public:
     //! LiDAR point cloud constructor
@@ -472,6 +594,24 @@ public:
 
     //! Perform unified ray-tracing using collision detection plugin (replaces CUDA kernels)
     void performUnifiedRayTracing(helios::Context *context, size_t N, int Npulse, helios::vec3 *ray_origins, helios::vec3 *direction, float *hit_t, float *hit_fnorm, int *hit_ID);
+
+    //! Normalize a synthetic return intensity for range
+    /** Helios reports <b>range-normalized</b> intensity: the range-independent return amplitude
+     * \f$\rho\,\cos\theta\f$ (per-primitive reflectivity times the incidence-angle cosine), as if the geometric
+     * \f$1/R^2\f$ loss of the LiDAR range equation had been measured and then divided back out
+     * (\f$(\rho\,\cos\theta/R^2)\cdot R^2 = \rho\,\cos\theta\f$). Two identical surfaces at different ranges
+     * therefore return the same intensity. Because \ref syntheticScan() generates intensity directly as
+     * \f$\rho\,\cos\theta\f$ without ever applying the \f$1/R^2\f$ loss, this normalization is the identity on
+     * the value; the helper exists to make the convention explicit and is the single place to change should the
+     * raw (range-dependent) convention be wanted instead. Partial-footprint attenuation of sub-footprint
+     * returns (in multi-return mode) is carried separately by the fraction of beam sub-rays that strike the target and is
+     * deliberately preserved, as it reflects a target property rather than a range-geometry loss.
+     * \param[in] intensity Return intensity (\f$\rho\,\cos\theta\f$).
+     * \param[in] distance Measured range from the scanner to the return, in meters (accepted for interface
+     * symmetry and future raw-mode use).
+     * \return Range-normalized intensity.
+     */
+    [[nodiscard]] static float applyRangeIntensityCorrection(float intensity, float distance);
 
     // ------- SCANS -------- //
 
@@ -587,6 +727,20 @@ public:
      */
     std::vector<std::string> getScanColumnFormat(uint scanID) const;
 
+    //! Get the geometric beam pattern of a scan
+    /**
+     * \param[in] scanID ID of scan.
+     * \return \ref SCAN_PATTERN_RASTER for a uniform angular grid, or \ref SCAN_PATTERN_SPINNING_MULTIBEAM for a rotating multi-channel sensor.
+     */
+    ScanPattern getScanPattern(uint scanID) const;
+
+    //! Get the per-channel zenith angles of a spinning multibeam scan
+    /**
+     * \param[in] scanID ID of scan.
+     * \return Vector of per-channel zenith angles in radians (one per row). Empty for a \ref SCAN_PATTERN_RASTER scan.
+     */
+    std::vector<float> getScanBeamZenithAngles(uint scanID) const;
+
     //! Divergence angle of the laser beam in radians
     /**
      * \param[in] scanID ID of scan.
@@ -607,6 +761,20 @@ public:
      * \return Standard deviation of the beam-pointing jitter applied during synthetic scan generation, in radians (0 if disabled).
      */
     float getScanAngleNoiseStdDev(uint scanID) const;
+
+    //! Get the global scanner tilt roll angle for a scan
+    /**
+     * \param[in] scanID ID of scan.
+     * \return Scanner tilt roll angle (rotation about the world x-axis) applied during synthetic scan generation, in radians (0 if level).
+     */
+    float getScanTiltRoll(uint scanID) const;
+
+    //! Get the global scanner tilt pitch angle for a scan
+    /**
+     * \param[in] scanID ID of scan.
+     * \return Scanner tilt pitch angle (rotation about the world y-axis) applied during synthetic scan generation, in radians (0 if level).
+     */
+    float getScanTiltPitch(uint scanID) const;
 
     //! Get (x,y,z) coordinate of hit point by index
     /**
@@ -642,6 +810,43 @@ public:
      * \param[in] label Label of the data value (e.g., "reflectance").
      */
     bool doesHitDataExist(uint index, const char *label) const;
+
+    //! Distance (m) at which a "miss" point is placed along its beam direction.
+    /** A fired pulse that returns nothing (transmitted to the sky) is represented as a
+     * point at this distance from the scan origin along the beam. The value is far beyond
+     * any real target so misses are unambiguously classified as transmitted beams in the
+     * leaf-area inversion. Shared by \ref gapfillMisses(), \ref syntheticScan(), and the
+     * miss classification (see \ref isHitMiss()). This is the distance at which the miss
+     * POINT is positioned in the cloud; it is distinct from \ref LIDAR_RAYTRACE_MISS_T,
+     * the ray-tracer's internal no-hit parameter. */
+    static constexpr float LIDAR_MISS_DISTANCE = 20000.f;
+
+    //! Ray-tracer "no hit" parameter (m): the maximum ray length passed to the backend.
+    /** A traced ray that intersects nothing returns this value as its hit distance t. The
+     * synthetic-scan miss detection compares the returned t against this sentinel to decide
+     * whether a beam hit a primitive. This is an internal ray-tracing threshold and is NOT
+     * the distance at which a miss point is placed in the cloud (that is
+     * \ref LIDAR_MISS_DISTANCE). Used by \ref performUnifiedRayTracing() and
+     * \ref syntheticScan(). */
+    static constexpr float LIDAR_RAYTRACE_MISS_T = 1001.f;
+
+    //! Determine whether a hit point is a "miss" (a fired pulse that returned nothing)
+    /**
+     * A miss represents a laser beam transmitted through the scene to the sky. Misses are
+     * stored as points placed along the beam direction at \ref LIDAR_MISS_DISTANCE.
+     * \param[in] index Hit point index
+     * \return True if the hit is flagged as a miss (per-hit `is_miss` data == 1), or, for
+     *         legacy data lacking the flag, if its range reaches \ref LIDAR_MISS_DISTANCE.
+     */
+    bool isHitMiss(uint index) const;
+
+    //! Determine whether the point cloud contains any miss points
+    /**
+     * Leaf-area inversion (\ref calculateLeafArea()) requires misses to count the beams
+     * transmitted through each voxel.
+     * \return True if at least one hit is a miss (see \ref isHitMiss()).
+     */
+    bool hasMisses() const;
 
     //! Get color of hit point
     /**
@@ -715,6 +920,25 @@ public:
 
     //! Get the number of triangles formed by the triangulation
     uint getTriangleCount() const;
+
+    //! Number of candidate triangles the Delaunay pass produced in the most
+    //! recent triangulateHitPoints() call, before edge-length/aspect/degenerate
+    //! filtering. Zero if triangulation has not been run.
+    std::size_t getTriangulationCandidateCount() const;
+
+    //! Number of candidate triangles dropped because an edge exceeded Lmax in
+    //! the most recent triangulateHitPoints() call.
+    std::size_t getTriangulationDroppedByLmax() const;
+
+    //! Number of candidate triangles dropped by the aspect-ratio test (and, for
+    //! multi-return data, the adaptive separation-ratio test) in the most recent
+    //! triangulateHitPoints() call. Triangles already dropped by Lmax are not
+    //! double-counted here.
+    std::size_t getTriangulationDroppedByAspect() const;
+
+    //! Number of candidate triangles dropped because their computed area was
+    //! degenerate (NaN) in the most recent triangulateHitPoints() call.
+    std::size_t getTriangulationDroppedByDegenerate() const;
 
     //! Get hit point corresponding to first vertex of triangle
     /**
@@ -806,19 +1030,32 @@ public:
      */
     void exportGtheta(const char *filename);
 
+    //! Export to file the per-voxel leaf-area inversion sampling uncertainty. Lines of the file correspond to each grid cell
+    /** Columns: cell_index leaf_area beam_count I_rdi LAD_std_error ci_valid. The standard error
+        column reports the SAMPLING standard error of LAD [1/m] (sqrt of the per-voxel variance);
+        undefined values are written as the sentinel -1. This is statistical sampling uncertainty
+        conditional on the beams that entered each voxel and does NOT capture occlusion/coverage bias.
+        \param[in] filename Name of file
+     */
+    void exportLeafAreaUncertainty(const char *filename);
+
     //! Export to file all points in the point cloud to an ASCII text file following the column format specified by the \<ASCII_format>\</ASCII_format> tag in the scan XML file
     /**
      * \param[in] filename Name of file
+     * \param[in] write_header [optional] If true (default), a leading comment line beginning with '#' that lists the column field names is written at the top of each file. The loader ignores '#' comment lines, so headered files round-trip through
+     * \ref loadXML().
      * \note If there are multiple scans in the point cloud, each scan will be exported to a different file with the scan ID appended to the filename. This is because different scans may have a different column format.
      */
-    void exportPointCloud(const char *filename);
+    void exportPointCloud(const char *filename, bool write_header = true);
 
     //! Export to file all points from a given scan to an ASCII text file following the column format specified by the \<ASCII_format>\</ASCII_format> tag in the scan XML file
     /**
      * \param[in] filename Name of file
      * \param[in] scanID Identifier of scan to be exported
+     * \param[in] write_header [optional] If true (default), a leading comment line beginning with '#' that lists the column field names is written at the top of the file. The loader ignores '#' comment lines, so headered files round-trip through
+     * \ref loadXML().
      */
-    void exportPointCloud(const char *filename, uint scanID);
+    void exportPointCloud(const char *filename, uint scanID, bool write_header = true);
 
     //! Export to file all points from a given scan to PTX file.
     /**
@@ -830,7 +1067,9 @@ public:
     //! Export all scans in the point cloud to an XML metadata file plus one ASCII data file per scan
     /**
      * \param[in] filename Name of the XML metadata file to write (e.g. "output/scans.xml")
-     * \note One ASCII point cloud data file is auto-generated per scan, named by stripping the extension of \p filename and appending "_\<scanID>.xyz". For example, passing "output/scans.xml" with three scans produces "output/scans_0.xyz", "output/scans_1.xyz", and "output/scans_2.xyz" alongside the XML. The ASCII column format follows the per-scan \<ASCII_format>\</ASCII_format> tag, and the XML output can be re-loaded with \ref LiDARcloud::loadXML() when invoked from the same working directory used at export time.
+     * \note One ASCII point cloud data file is auto-generated per scan, named by stripping the extension of \p filename and appending "_\<scanID>.xyz". For example, passing "output/scans.xml" with three scans produces "output/scans_0.xyz",
+     * "output/scans_1.xyz", and "output/scans_2.xyz" alongside the XML. The ASCII column format follows the per-scan \<ASCII_format>\</ASCII_format> tag, and the XML output can be re-loaded with \ref LiDARcloud::loadXML() when invoked from the same
+     * working directory used at export time.
      */
     void exportScans(const char *filename);
 
@@ -1007,30 +1246,30 @@ public:
      */
     void scalarFilter(const char *scalar_field, float threshold, const char *comparator);
 
-    //! Filter full-waveform data according to the maximum scalar value along each pulse. Any scalar value can be used, provided it is a field in the hit point data file. The resulting point cloud will have only one hit point per laser pulse.
+    //! Filter multi-return data according to the maximum scalar value along each pulse. Any scalar value can be used, provided it is a field in the hit point data file. The resulting point cloud will have only one hit point per laser pulse.
     /**
      * \param[in] scalar Name of hit point scalar data in the hit data file.
-     * \note This function is only applicable for full-waveform data and requires that the scalar field "timestamp" is provided in the ASCII hit point data file.
+     * \note This function is only applicable for multi-return data and requires that the scalar field "timestamp" is provided in the ASCII hit point data file.
      */
     void maxPulseFilter(const char *scalar);
 
-    //! Filter full-waveform data according to the minimum scalar value along each pulse. Any scalar value can be used, provided it is a field in the hit point data file. The resulting point cloud will have only one hit point per laser pulse.
+    //! Filter multi-return data according to the minimum scalar value along each pulse. Any scalar value can be used, provided it is a field in the hit point data file. The resulting point cloud will have only one hit point per laser pulse.
     /**
      * \param[in] scalar Name of hit point scalar data in the ASCII hit data file.
-     * \note This function is only applicable for full-waveform data and requires that the scalar field "timestamp" is provided in the hit point data file.
+     * \note This function is only applicable for multi-return data and requires that the scalar field "timestamp" is provided in the hit point data file.
      */
     void minPulseFilter(const char *scalar);
 
-    //! Filter full-waveform data to include only the first hit per laser pulse. The resulting point cloud will have only one hit point per laser pulse (first hits).
+    //! Filter multi-return data to include only the first hit per laser pulse. The resulting point cloud will have only one hit point per laser pulse (first hits).
     /**
-     * \note This function is only applicable for full-waveform data and requires that the scalar field "target_index" is provided in the hit point data file. The "target_index" values can start at 0 or 1 for first hits as long as it is consistent
+     * \note This function is only applicable for multi-return data and requires that the scalar field "target_index" is provided in the hit point data file. The "target_index" values can start at 0 or 1 for first hits as long as it is consistent
      * throughout the point cloud.
      */
     void firstHitFilter();
 
-    //! Filter full-waveform data to include only the last hit per laser pulse. The resulting point cloud will have only one hit point per laser pulse (last hits).
+    //! Filter multi-return data to include only the last hit per laser pulse. The resulting point cloud will have only one hit point per laser pulse (last hits).
     /**
-     * \note This function is only applicable for full-waveform data and requires that the scalar fields "target_index" and "target_count" are provided in the hit point data file. The "target_index" values can start at 0 or 1 for first hits as long
+     * \note This function is only applicable for multi-return data and requires that the scalar fields "target_index" and "target_count" are provided in the hit point data file. The "target_index" values can start at 0 or 1 for first hits as long
      * as it is consistent throughout the point cloud.
      */
     void lastHitFilter();
@@ -1116,20 +1355,22 @@ public:
 
     // ------- SYNTHETIC SCAN ------ //
 
-    //! Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns only one laser hit per pulse)
+    //! Run a single-return synthetic LiDAR scan based on scan parameters given in an XML file, returning one laser hit per pulse
     /**
      * \param[in] context Pointer to the Helios context
+     * \note This overload does NOT record miss points (transmitted beams). The resulting cloud cannot be used with calculateLeafArea(), which requires misses. To record misses, use the overload with the record_misses argument: syntheticScan(context,
+     * scan_grid_only, record_misses).
      */
     void syntheticScan(helios::Context *context);
 
-    //! Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns only one laser hit per pulse)
+    //! Run a single-return synthetic LiDAR scan based on scan parameters given in an XML file, returning one laser hit per pulse
     /**
      * \param[in] context Pointer to the Helios context
      * \param[in] append If true, new hit points are appended to existing data. If false, existing hit points are cleared before adding new ones.
      */
     void syntheticScan(helios::Context *context, bool append);
 
-    //! Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns only one laser hit per pulse)
+    //! Run a single-return synthetic LiDAR scan based on scan parameters given in an XML file, returning one laser hit per pulse
     /**
      * \param[in] context Pointer to the Helios context.
      * \param[in] scan_grid_only If true, only record hit points for rays that intersect the voxel grid.
@@ -1138,7 +1379,7 @@ public:
      */
     void syntheticScan(helios::Context *context, bool scan_grid_only, bool record_misses);
 
-    //! Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns only one laser hit per pulse)
+    //! Run a single-return synthetic LiDAR scan based on scan parameters given in an XML file, returning one laser hit per pulse
     /**
      * \param[in] context Pointer to the Helios context.
      * \param[in] scan_grid_only If true, only record hit points for rays that intersect the voxel grid.
@@ -1148,37 +1389,39 @@ public:
      */
     void syntheticScan(helios::Context *context, bool scan_grid_only, bool record_misses, bool append);
 
-    //! Run a full-waveform synthetic LiDAR scan based on scan parameters given in an XML file (returns multiple laser hits per pulse)
+    //! Run a multi-return synthetic LiDAR scan based on scan parameters given in an XML file, returning multiple laser hits per pulse
     /**
      * \param[in] context Pointer to the Helios context.
      * \param[in] rays_per_pulse Number of ray launches per laser pulse direction.
      * \param[in] pulse_distance_threshold Threshold distance for determining laser hit locations. Hits within pulse_distance_threshold of each other will be grouped into a single hit.
-     * \note Calling syntheticScan() with rays_per_pulse=1 will effectively run a discrete return synthetic scan.
+     * \note Calling syntheticScan() with rays_per_pulse=1 will effectively run a single-return synthetic scan.
+     * \note This overload does NOT record miss points (transmitted beams). The resulting cloud cannot be used with calculateLeafArea(), which requires misses. To record misses, use the overload with the record_misses argument: syntheticScan(context,
+     * rays_per_pulse, pulse_distance_threshold, scan_grid_only, record_misses).
      */
     void syntheticScan(helios::Context *context, int rays_per_pulse, float pulse_distance_threshold);
 
-    //! Run a full-waveform synthetic LiDAR scan based on scan parameters given in an XML file (returns multiple laser hits per pulse)
+    //! Run a multi-return synthetic LiDAR scan based on scan parameters given in an XML file, returning multiple laser hits per pulse
     /**
      * \param[in] context Pointer to the Helios context.
      * \param[in] rays_per_pulse Number of ray launches per laser pulse direction.
      * \param[in] pulse_distance_threshold Threshold distance for determining laser hit locations. Hits within pulse_distance_threshold of each other will be grouped into a single hit.
      * \param[in] append If true, new hit points are appended to existing data. If false, existing hit points are cleared before adding new ones.
-     * \note Calling syntheticScan() with rays_per_pulse=1 will effectively run a discrete return synthetic scan.
+     * \note Calling syntheticScan() with rays_per_pulse=1 will effectively run a single-return synthetic scan.
      */
     void syntheticScan(helios::Context *context, int rays_per_pulse, float pulse_distance_threshold, bool append);
 
-    //! Run a full-waveform synthetic LiDAR scan based on scan parameters given in an XML file (returns multiple laser hits per pulse)
+    //! Run a multi-return synthetic LiDAR scan based on scan parameters given in an XML file, returning multiple laser hits per pulse
     /**
      * \param[in] context Pointer to the Helios context.
      * \param[in] rays_per_pulse Number of ray launches per laser pulse direction.
      * \param[in] pulse_distance_threshold Threshold distance for determining laser hit locations. Hits within pulse_distance_threshold of each other will be grouped into a single hit.
      * \param[in] scan_grid_only If true, only considers context geometry within the scan grid. scan_grid_only=true can save substantial memory for contexts with large domains.
      * \param[in] record_misses If true, "miss" points (i.e., beam did not hit any primitives) are recorded in the scan.
-     * \note Calling syntheticScan() with rays_per_pulse=1 will effectively run a discrete return synthetic scan.
+     * \note Calling syntheticScan() with rays_per_pulse=1 will effectively run a single-return synthetic scan.
      */
     void syntheticScan(helios::Context *context, int rays_per_pulse, float pulse_distance_threshold, bool scan_grid_only, bool record_misses);
 
-    //! Run a full-waveform synthetic LiDAR scan based on scan parameters given in an XML file (returns multiple laser hits per pulse)
+    //! Run a multi-return synthetic LiDAR scan based on scan parameters given in an XML file, returning multiple laser hits per pulse
     /**
      * \param[in] context Pointer to the Helios context.
      * \param[in] rays_per_pulse Number of ray launches per laser pulse direction.
@@ -1186,7 +1429,7 @@ public:
      * \param[in] scan_grid_only If true, only considers context geometry within the scan grid. scan_grid_only=true can save substantial memory for contexts with large domains.
      * \param[in] record_misses If true, "miss" points (i.e., beam did not hit any primitives) are recorded in the scan.
      * \param[in] append If true, new hit points are appended to existing data. If false, existing hit points are cleared before adding new ones.
-     * \note Calling syntheticScan() with rays_per_pulse=1 will effectively run a discrete return synthetic scan.
+     * \note Calling syntheticScan() with rays_per_pulse=1 will effectively run a single-return synthetic scan.
      */
     void syntheticScan(helios::Context *context, int rays_per_pulse, float pulse_distance_threshold, bool scan_grid_only, bool record_misses, bool append);
 
@@ -1236,6 +1479,69 @@ public:
      */
     float getCellGtheta(uint index) const;
 
+    // -------- LEAF AREA INVERSION UNCERTAINTY -------- //
+    //
+    // The following accessors expose the per-voxel statistical SAMPLING uncertainty of the
+    // leaf-area inversion (Pimont et al. 2018, RSE 215:343-370). This is the uncertainty owing
+    // to the finite number of beams that sampled the voxel and to vegetation-element position
+    // variability. It is CONDITIONAL on the beams that entered the voxel and does NOT capture
+    // occlusion/coverage bias (voxels shadowed so that beams never penetrate). The group form
+    // (\ref getGroupLADConfidenceInterval()) is the recommended path: single-voxel intervals are
+    // routinely +-50-100%, whereas group intervals (a vertical slice, a whole plant) are +-5-10%.
+
+    //! Get the number of beams that entered a grid cell during the leaf-area inversion
+    /**
+     * \param[in] index Index of a grid cell.
+     * \return Beam count N, or -1 if \ref calculateLeafArea() has not been run for this cell.
+     */
+    int getCellBeamCount(uint index) const;
+
+    //! Get the relative density index of a grid cell
+    /** The relative density index is RDI = 1 - P, where P is the transmission probability.
+     * \param[in] index Index of a grid cell.
+     * \return RDI between 0 and 1 (the fraction of beams intercepted within the voxel).
+     */
+    float getCellRelativeDensityIndex(uint index) const;
+
+    //! Get the mean beam path length through a grid cell in meters
+    /**
+     * \param[in] index Index of a grid cell.
+     * \return Mean per-beam path length through the voxel [m].
+     */
+    float getCellMeanPathLength(uint index) const;
+
+    //! Get the sampling variance of leaf area density for a grid cell
+    /**
+     * \param[in] index Index of a grid cell.
+     * \return Sampling variance of LAD in (1/m)^2, or -1 if undefined (too few beams, etc.).
+     */
+    float getCellLADVariance(uint index) const;
+
+    //! Get the single-voxel sampling confidence interval on leaf area
+    /** Returns the interval centered on the cell's leaf-area point estimate. Returns false (no
+        interval written) when the voxel falls outside the Pimont (2018) Table-3 validity envelope,
+        rather than emitting an untrustworthy interval.
+        \param[in] index Index of a grid cell.
+        \param[in] confidence_level Confidence level in (0,1), e.g. 0.95.
+        \param[out] lower Lower bound of the leaf-area confidence interval [m^2].
+        \param[out] upper Upper bound of the leaf-area confidence interval [m^2].
+        \return True if a valid confidence interval was produced, false otherwise.
+     */
+    bool getCellLeafAreaConfidenceInterval(uint index, float confidence_level, float &lower, float &upper) const;
+
+    //! Get the group-scale sampling confidence interval on mean leaf area density - the recommended path
+    /** Computes the confidence interval on the mean LAD over a set of voxels, assuming voxel
+        independence (Pimont et al. 2018, Eq. 39): mean_LAD +- z * sqrt(sum(sigma^2)) / n_v.
+        Voxels outside the Table-3 validity envelope are skipped (not counted in n_v).
+        \param[in] indices Indices of the grid cells in the group.
+        \param[in] confidence_level Confidence level between 0 and 1, e.g. 0.95.
+        \param[out] mean_lad Mean leaf area density over the valid voxels in the group, in 1/m.
+        \param[out] lower Lower bound of the mean-LAD confidence interval, in 1/m.
+        \param[out] upper Upper bound of the mean-LAD confidence interval, in 1/m.
+        \return True if at least one valid voxel contributed and an interval was produced.
+     */
+    bool getGroupLADConfidenceInterval(const std::vector<uint> &indices, float confidence_level, float &mean_lad, float &lower, float &upper) const;
+
     //! For scans that are missing points (e.g., sky points), this function will attempt to fill in missing points for all scans. This increases the accuracy of LAD calculations because it makes sure all pulses are accounted for.
     /**
      * \return (x,y,z) of missing points added to the scan from gapfilling
@@ -1262,6 +1568,8 @@ public:
     //! Calculate the leaf area for each grid volume
     /**
      * \param[in] context Pointer to the Helios context
+     * \note Requires that the point cloud contains miss points (transmitted beams); see
+     *       \ref hasMisses() and \ref gapfillMisses(). Throws if no misses are present.
      */
     void calculateLeafArea(helios::Context *context);
 
@@ -1269,12 +1577,34 @@ public:
     /**
      * \param[in] context Pointer to the Helios context
      * \param[in] min_voxel_hits Minimum number of allowable LiDAR hits per voxel
+     * \note Requires that the point cloud contains miss points (transmitted beams), which
+     *       count the beams transmitted through each voxel for the transmission-probability
+     *       inversion. Supply them via a miss-retaining scan format or \ref gapfillMisses();
+     *       throws (fail-fast) if no misses are present. Misses are identified by the per-hit
+     *       `is_miss` flag (see \ref isHitMiss()). Handles single- and multi-return data with a
+     *       unified beam-based equal-weighting algorithm.
      */
     void calculateLeafArea(helios::Context *context, int min_voxel_hits);
 
+    //! Calculate the leaf area for each grid volume, with element size for uncertainty estimation
+    /**
+     * \param[in] context Pointer to the Helios context
+     * \param[in] min_voxel_hits Minimum number of allowable LiDAR hits per voxel
+     * \param[in] element_width Characteristic vegetation element width [m] (e.g. mean leaf width),
+     *            used by the per-voxel LAD sampling-uncertainty estimate (the element-position
+     *            variance term; Pimont et al. 2018, Appendix A). Pass a value <= 0 to omit that
+     *            term and report SAMPLING-ONLY uncertainty. The leaf-area point estimate is
+     *            identical regardless of this argument.
+     * \note Requires miss points; see the two-argument overload. After calling, per-voxel sampling
+     *       uncertainty is available via \ref getCellLADVariance, \ref getCellBeamCount,
+     *       \ref getCellLeafAreaConfidenceInterval, and \ref getGroupLADConfidenceInterval.
+     */
+    void calculateLeafArea(helios::Context *context, int min_voxel_hits, float element_width);
+
     //! Calculate the leaf area for each grid volume (DEPRECATED - use calculateLeafArea)
     /**
-     * \deprecated This function has been renamed to calculateLeafArea(). The GPU-specific implementation has been replaced with CollisionDetection plugin integration. Use calculateLeafArea() instead. For GPU acceleration, call enableCDGPUAcceleration() before calculateLeafArea().
+     * \deprecated This function has been renamed to calculateLeafArea(). The GPU-specific implementation has been replaced with CollisionDetection plugin integration. Use calculateLeafArea() instead. For GPU acceleration, call
+     * enableCDGPUAcceleration() before calculateLeafArea().
      * \param[in] context Pointer to the Helios context
      */
     [[deprecated("Use calculateLeafArea() instead. GPU functionality is now provided by the CollisionDetection plugin.")]]
@@ -1282,7 +1612,8 @@ public:
 
     //! Calculate the leaf area for each grid volume (DEPRECATED - use calculateLeafArea)
     /**
-     * \deprecated This function has been renamed to calculateLeafArea(). The GPU-specific implementation has been replaced with CollisionDetection plugin integration. Use calculateLeafArea() instead. For GPU acceleration, call enableCDGPUAcceleration() before calculateLeafArea().
+     * \deprecated This function has been renamed to calculateLeafArea(). The GPU-specific implementation has been replaced with CollisionDetection plugin integration. Use calculateLeafArea() instead. For GPU acceleration, call
+     * enableCDGPUAcceleration() before calculateLeafArea().
      * \param[in] context Pointer to the Helios context
      * \param[in] min_voxel_hits Minimum number of allowable LiDAR hits per voxel
      */

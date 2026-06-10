@@ -1,0 +1,5 @@
+CDT (Constrained Delaunay Triangulation)
+Upstream: https://github.com/artem-ogre/CDT
+Version: 1.4.4 (tag 1.4.4)
+License: MPL-2.0 (see LICENSE)
+Bundled header-only subset of CDT/include. No Boost required when compiled as C++11+.

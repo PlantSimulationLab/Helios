@@ -643,7 +643,7 @@
    vis.setColormap( Visualizer::COLORMAP_HOT );
   ~~~~~~
 
-  To set a custom color table, the same command is used with the \ref Visualizer::COLORMAP_CUSTOM argument, plus additional arguments that define the custom color table.  These arguments are 1) a vector of r-g-b colors defining various colors in the color table, and 2) a vector of values between 0 and 1 defining the relative positions of the colors in the table. The first position value must always be 0, and the last value must be 1. The visualizer interpolates between colors to populate the full color table. The table below shows how the `hot' color table is defined:
+  To set a custom color table, the same command is used with the \ref Visualizer::COLORMAP_CUSTOM argument, plus additional arguments that define the custom color table.  These arguments are 1) a vector of r-g-b colors defining various colors in the color table, and 2) a vector of values between 0 and 1 defining the relative positions of the colors in the table. The first position value must always be 0, and the last value must be 1. The visualizer interpolates between colors to populate the full color table. The table below shows how the 'hot' color table is defined:
 
  <table>
    <tr>

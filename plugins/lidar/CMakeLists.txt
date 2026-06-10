@@ -20,10 +20,10 @@ if(NOT "visualizer" IN_LIST PLUGINS AND NOT TARGET visualizer)
     target_link_libraries(visualizer PUBLIC helios)
 endif()
 
-add_library(lidar STATIC "src/LiDAR.cpp" "src/fileIO.cpp" "tests/selfTest.cpp" "../../core/lib/pugixml/pugixml.cpp" "lib/s_hull_pro/s_hull_pro.cpp")
+add_library(lidar STATIC "src/LiDAR.cpp" "src/fileIO.cpp" "tests/selfTest.cpp" "../../core/lib/pugixml/pugixml.cpp")
 
 target_include_directories(lidar PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_include_directories(lidar PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/s_hull_pro)
+target_include_directories(lidar PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/CDT/include)
 
 target_link_libraries(lidar PUBLIC visualizer collisiondetection)
 add_dependencies(lidar visualizer collisiondetection)

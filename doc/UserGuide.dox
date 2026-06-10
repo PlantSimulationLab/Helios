@@ -962,7 +962,7 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
 
  \subsection TextureColor Coloring Primitives by Texture Map
 
- Patches: To color a Patch  based on an image, simply pass the path to a PNG or JPEG image to the appropriate argument of the addPatch() command. Note that the path should either be absolute, or relative to the directory where the executable will be run (typically the `build' directory).
+ Patches: To color a Patch  based on an image, simply pass the path to a PNG or JPEG image to the appropriate argument of the addPatch() command. Note that the path should either be absolute, or relative to the directory where the executable will be run (typically the 'build' directory).
  
  ~~~~~~{.cpp}
   vec3 center = make_vec3(0,0,1);

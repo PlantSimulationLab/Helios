@@ -94,19 +94,80 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
 
             vec3 origin = string2vec3(origin_str); // note: pugi loads xml data as a character.  need to separate it into 3 floats
 
-            // ----- scan size (resolution) ------//
-            const char *size_str = s.child_value("size");
-
-            helios::int2 size;
-            if (strlen(size_str) == 0) {
-                cerr << "failed.\n";
-                helios_runtime_error("ERROR (LiDARcloud::loadXML): A size was not specified for scan #" + std::to_string(scan_count));
-            } else {
-                size = string2int2(size_str); // note: pugi loads xml data as a character.  need to separate it into 2 ints
+            // ----- scan pattern ------//
+            // Optional. Default is a raster scan (uniform angular grid). 'spinning_multibeam' models a rotating multi-channel
+            // sensor (e.g. Velodyne/Ouster/Hesai) whose channels are specified via <beamElevationAngles>.
+            std::string scan_pattern_str = deblank(s.child_value("scanPattern"));
+            if (scan_pattern_str.empty()) {
+                scan_pattern_str = deblank(s.child_value("scanpattern"));
             }
-            if (size.x <= 0 || size.y <= 0) {
+            std::transform(scan_pattern_str.begin(), scan_pattern_str.end(), scan_pattern_str.begin(), [](unsigned char ch) { return std::tolower(ch); });
+            const bool spinning_multibeam = (scan_pattern_str == "spinning_multibeam" || scan_pattern_str == "spinning-multibeam" || scan_pattern_str == "spinningmultibeam");
+            if (!scan_pattern_str.empty() && scan_pattern_str != "raster" && !spinning_multibeam) {
                 cerr << "failed.\n";
-                helios_runtime_error("ERROR (LiDARcloud::loadXML): The scan size must be positive (check scan #" + std::to_string(scan_count) + ").");
+                helios_runtime_error("ERROR (LiDARcloud::loadXML): Unrecognized scanPattern '" + scan_pattern_str + "' for scan #" + std::to_string(scan_count) + ". Valid values are 'raster' and 'spinning_multibeam'.");
+            }
+
+            // ----- beam (channel) elevation angles for spinning multibeam ------//
+            std::vector<float> beamZenithAngles;
+            if (spinning_multibeam) {
+                const char *beam_angles_str = s.child_value("beamElevationAngles");
+                if (strlen(beam_angles_str) == 0) {
+                    beam_angles_str = s.child_value("beamelevationangles");
+                }
+                if (strlen(beam_angles_str) == 0) {
+                    cerr << "failed.\n";
+                    helios_runtime_error("ERROR (LiDARcloud::loadXML): A spinning_multibeam scan (#" + std::to_string(scan_count) + ") requires <beamElevationAngles> (space-separated channel elevation angles, in degrees above the horizon).");
+                }
+                std::istringstream beam_stream(beam_angles_str);
+                float elev_deg;
+                while (beam_stream >> elev_deg) {
+                    // Manufacturer spec sheets list channel angles as elevation above the horizon; convert to Helios zenith (0 = up).
+                    beamZenithAngles.push_back(0.5f * float(M_PI) - elev_deg * float(M_PI) / 180.f);
+                }
+                if (beamZenithAngles.empty()) {
+                    cerr << "failed.\n";
+                    helios_runtime_error("ERROR (LiDARcloud::loadXML): Could not parse any channel angles from <beamElevationAngles> for scan #" + std::to_string(scan_count) + ".");
+                }
+            }
+
+            // ----- scan size (resolution) ------//
+            // Raster scans require <size> = "Ntheta Nphi". Spinning multibeam scans derive Ntheta from the number of channels
+            // (beamElevationAngles) and take the azimuth-step count Nphi from <Nphi> (or the second component of <size>).
+            helios::int2 size;
+            if (spinning_multibeam) {
+                size.x = int(beamZenithAngles.size()); // Ntheta = number of laser channels
+                const char *nphi_str = s.child_value("Nphi");
+                if (strlen(nphi_str) == 0) {
+                    nphi_str = s.child_value("nphi");
+                }
+                if (strlen(nphi_str) > 0) {
+                    size.y = atoi(nphi_str);
+                } else {
+                    const char *size_str = s.child_value("size");
+                    if (strlen(size_str) == 0) {
+                        cerr << "failed.\n";
+                        helios_runtime_error("ERROR (LiDARcloud::loadXML): A spinning_multibeam scan (#" + std::to_string(scan_count) + ") requires the number of azimuth steps, given as <Nphi> or the second component of <size>.");
+                    }
+                    size = string2int2(size_str);
+                    size.x = int(beamZenithAngles.size());
+                }
+                if (size.y <= 0) {
+                    cerr << "failed.\n";
+                    helios_runtime_error("ERROR (LiDARcloud::loadXML): The number of azimuth steps (Nphi) must be positive (check scan #" + std::to_string(scan_count) + ").");
+                }
+            } else {
+                const char *size_str = s.child_value("size");
+                if (strlen(size_str) == 0) {
+                    cerr << "failed.\n";
+                    helios_runtime_error("ERROR (LiDARcloud::loadXML): A size was not specified for scan #" + std::to_string(scan_count));
+                } else {
+                    size = string2int2(size_str); // note: pugi loads xml data as a character.  need to separate it into 2 ints
+                }
+                if (size.x <= 0 || size.y <= 0) {
+                    cerr << "failed.\n";
+                    helios_runtime_error("ERROR (LiDARcloud::loadXML): The scan size must be positive (check scan #" + std::to_string(scan_count) + ").");
+                }
             }
 
             // ----- scan translation ------//
@@ -236,6 +297,20 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
                 angleNoiseStdDev = fmax(0, atof(angleNoise_str_lc));
             }
 
+            // ----- scanTilt (global scanner tilt: roll pitch, in degrees) ------//
+            const char *scanTilt_str_uc = s.child_value("scanTilt");
+            const char *scanTilt_str_lc = s.child_value("scantilt");
+
+            float scanTiltRoll = 0.f;
+            float scanTiltPitch = 0.f;
+            const char *scanTilt_str = (strlen(scanTilt_str_uc) > 0) ? scanTilt_str_uc : scanTilt_str_lc;
+            if (strlen(scanTilt_str) > 0) {
+                vec2 scanTilt = string2vec2(scanTilt_str); // "roll pitch" in degrees
+                scanTilt = scanTilt * float(M_PI) / 180.f;
+                scanTiltRoll = scanTilt.x;
+                scanTiltPitch = scanTilt.y;
+            }
+
             // ----- distanceFilter ------//
             const char *dFilter_str = s.child_value("distanceFilter");
 
@@ -260,7 +335,8 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
             }
 
             // create a temporary scan object
-            ScanMetadata scan(origin, size.x, thetaMin, thetaMax, size.y, phiMin, phiMax, exitDiameter, beamDivergence, rangeNoiseStdDev, angleNoiseStdDev, column_format);
+            ScanMetadata scan = spinning_multibeam ? ScanMetadata(origin, beamZenithAngles, size.y, phiMin, phiMax, exitDiameter, beamDivergence, rangeNoiseStdDev, angleNoiseStdDev, column_format, scanTiltRoll, scanTiltPitch)
+                                                   : ScanMetadata(origin, size.x, thetaMin, thetaMax, size.y, phiMin, phiMax, exitDiameter, beamDivergence, rangeNoiseStdDev, angleNoiseStdDev, column_format, scanTiltRoll, scanTiltPitch);
 
             addScan(scan);
 
@@ -282,7 +358,7 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
                 if (!xml_parent_dir.empty()) {
                     candidates.push_back((xml_parent_dir / data_filename).string());
                 }
-                for (const std::string &candidate : candidates) {
+                for (const std::string &candidate: candidates) {
                     ifstream f(candidate);
                     if (f.good()) {
                         resolved_data_file = candidate;
@@ -457,7 +533,6 @@ size_t LiDARcloud::loadASCIIFile(uint scanID, const std::string &ASCII_data_file
     double temp_data;
     std::map<std::string, double> data;
 
-    vector<unsigned int> row, column;
     std::size_t hit_count = 0;
     while (datafile.good()) { // loop through file to read scan data
 
@@ -467,6 +542,19 @@ size_t LiDARcloud::loadASCIIFile(uint scanID, const std::string &ASCII_data_file
         temp_column = -1;
         temp_zenith = -9999;
         temp_azimuth = -9999;
+
+        // Skip comment/header lines (e.g. the '#'-prefixed column-name header written by
+        // exportPointCloud). The loader keys columns off the XML ASCII_format, so the header is
+        // informational and is simply discarded.
+        datafile >> std::ws;
+        if (datafile.peek() == '#') {
+            std::string discard;
+            std::getline(datafile, discard);
+            continue;
+        }
+        if (!datafile.good()) { // EOF reached after trailing whitespace
+            break;
+        }
 
         for (uint i = 0; i < scan_data.columnFormat.size(); i++) {
             if (scan_data.columnFormat.at(i) == "row") {
@@ -532,6 +620,16 @@ size_t LiDARcloud::loadASCIIFile(uint scanID, const std::string &ASCII_data_file
         SphericalCoord temp_direction(1.f, 0.5f * M_PI - temp_zenith, temp_azimuth);
         if (temp_direction.elevation == -9999 || temp_direction.azimuth == -9999) {
             temp_direction = cart2sphere(temp_xyz - scan_data.origin);
+        }
+
+        // Carry the native scan-grid row/column indices onto the hit as hit data so that
+        // the row/column-based gap filler (gapfillMisses) can reconstruct miss directions
+        // without timestamps. Only stored when the columns were actually present and read.
+        if (temp_row >= 0) {
+            data["row"] = temp_row;
+        }
+        if (temp_column >= 0) {
+            data["column"] = temp_column;
         }
 
         // add hit point to the scan
@@ -843,10 +941,35 @@ void LiDARcloud::exportGtheta(const char *filename) {
     file.close();
 }
 
-void LiDARcloud::exportPointCloud(const char *filename) {
+void LiDARcloud::exportLeafAreaUncertainty(const char *filename) {
+
+    ensureOutputDirectoryExists(filename);
+
+    ofstream file;
+
+    file.open(filename);
+
+    if (!file.is_open()) {
+        helios_runtime_error("ERROR (LiDARcloud::exportLeafAreaUncertainty): Could not open file '" + std::string(filename) + "' for writing.");
+    }
+
+    // SAMPLING uncertainty of the leaf-area inversion (Pimont et al. 2018), conditional on the
+    // beams that entered each voxel; does NOT capture occlusion/coverage bias. Undefined values
+    // are written as the sentinel -1.
+    file << "# cell_index leaf_area beam_count I_rdi LAD_std_error ci_valid" << std::endl;
+    for (uint i = 0; i < getGridCellCount(); i++) {
+        const float lad_variance = getCellLADVariance(i);
+        const float lad_std_error = (lad_variance >= 0.f) ? std::sqrt(lad_variance) : -1.f;
+        file << i << " " << getCellLeafArea(i) << " " << getCellBeamCount(i) << " " << grid_cells.at(i).I_rdi << " " << lad_std_error << " " << (grid_cells.at(i).ci_valid ? 1 : 0) << std::endl;
+    }
+
+    file.close();
+}
+
+void LiDARcloud::exportPointCloud(const char *filename, bool write_header) {
 
     if (getScanCount() == 1) {
-        exportPointCloud(filename, 0);
+        exportPointCloud(filename, 0, write_header);
     } else {
 
         for (int i = 0; i < getScanCount(); i++) {
@@ -863,13 +986,13 @@ void LiDARcloud::exportPointCloud(const char *filename) {
                 filename_a = filename_a.substr(0, dotindex) + "_" + scan + ext;
             }
 
-            exportPointCloud(filename_a.c_str(), i);
+            exportPointCloud(filename_a.c_str(), i, write_header);
         }
     }
 }
 
 
-void LiDARcloud::exportPointCloud(const char *filename, uint scanID) {
+void LiDARcloud::exportPointCloud(const char *filename, uint scanID, bool write_header) {
 
     ensureOutputDirectoryExists(filename);
 
@@ -903,6 +1026,18 @@ void LiDARcloud::exportPointCloud(const char *filename, uint scanID) {
         ASCII_format.push_back("x");
         ASCII_format.push_back("y");
         ASCII_format.push_back("z");
+    }
+
+    // Write a leading comment-line header listing the column field names. This follows the
+    // conventional '#'-prefixed ASCII point-cloud header (e.g. accepted by CloudCompare). The
+    // tokens are the resolved ASCII_format columns, so the header always matches the data
+    // columns, including any user-defined scalar fields. loadASCIIFile() skips '#' lines.
+    if (write_header) {
+        file << "#";
+        for (const std::string &col: ASCII_format) {
+            file << " " << col;
+        }
+        file << std::endl;
     }
 
     for (int r = 0; r < getHitCount(); r++) {
@@ -991,6 +1126,8 @@ void LiDARcloud::exportScans(const char *filename) {
         float beam_divergence = getScanBeamDivergence(i);
         float range_noise_stddev = getScanRangeNoiseStdDev(i);
         float angle_noise_stddev = getScanAngleNoiseStdDev(i);
+        float scan_tilt_roll = getScanTiltRoll(i);
+        float scan_tilt_pitch = getScanTiltPitch(i);
         std::vector<std::string> column_format = getScanColumnFormat(i);
         if (column_format.empty()) {
             column_format = {"x", "y", "z"};
@@ -1005,9 +1142,25 @@ void LiDARcloud::exportScans(const char *filename) {
         origin_ss << origin.x << " " << origin.y << " " << origin.z;
         append_text_child("origin", origin_ss.str());
 
-        std::ostringstream size_ss;
-        size_ss << Ntheta << " " << Nphi;
-        append_text_child("size", size_ss.str());
+        // Spinning multibeam scans store the per-channel zenith angles rather than a uniform theta range, so write the pattern
+        // and channel elevation angles (in degrees above the horizon) to round-trip the scan geometry on re-import.
+        if (getScanPattern(i) == SCAN_PATTERN_SPINNING_MULTIBEAM) {
+            append_text_child("scanPattern", "spinning_multibeam");
+            std::ostringstream elev_ss;
+            const std::vector<float> beam_zenith_angles = getScanBeamZenithAngles(i);
+            for (size_t c = 0; c < beam_zenith_angles.size(); c++) {
+                if (c > 0) {
+                    elev_ss << " ";
+                }
+                elev_ss << (0.5f * float(M_PI) - beam_zenith_angles[c]) * 180.f / float(M_PI); // zenith -> elevation (deg)
+            }
+            append_text_child("beamElevationAngles", elev_ss.str());
+            append_text_child("Nphi", std::to_string(Nphi));
+        } else {
+            std::ostringstream size_ss;
+            size_ss << Ntheta << " " << Nphi;
+            append_text_child("size", size_ss.str());
+        }
 
         append_text_child("thetaMin", std::to_string(theta_range.x * 180.f / float(M_PI)));
         append_text_child("thetaMax", std::to_string(theta_range.y * 180.f / float(M_PI)));
@@ -1017,6 +1170,12 @@ void LiDARcloud::exportScans(const char *filename) {
         append_text_child("beamDivergence", std::to_string(beam_divergence));
         append_text_child("rangeNoiseStdDev", std::to_string(range_noise_stddev));
         append_text_child("angleNoiseStdDev", std::to_string(angle_noise_stddev));
+
+        if (scan_tilt_roll != 0.f || scan_tilt_pitch != 0.f) {
+            std::ostringstream tilt_ss;
+            tilt_ss << scan_tilt_roll * 180.f / float(M_PI) << " " << scan_tilt_pitch * 180.f / float(M_PI);
+            append_text_child("scanTilt", tilt_ss.str());
+        }
 
         std::ostringstream format_ss;
         for (size_t c = 0; c < column_format.size(); c++) {

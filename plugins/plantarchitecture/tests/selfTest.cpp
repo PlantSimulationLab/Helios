@@ -147,6 +147,62 @@ DOCTEST_TEST_CASE("Material Naming - bean plant materials have descriptive names
     DOCTEST_CHECK(found_stem);
 }
 
+DOCTEST_TEST_CASE("Shoot Topology Accessors - getAllShootIDs and getPlantShoot") {
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 500);
+
+    // getAllShootIDs should return a contiguous, 0-based set of shoot IDs
+    std::vector<uint> shootIDs = plantarchitecture.getAllShootIDs(plantID);
+    DOCTEST_CHECK(shootIDs.size() > 0);
+    for (uint i = 0; i < shootIDs.size(); i++) {
+        DOCTEST_CHECK(shootIDs.at(i) == i);
+    }
+
+    // The base-stem shoot (ID 0) must be rank 0 and have no parent shoot
+    const std::shared_ptr<Shoot> &base_shoot = plantarchitecture.getPlantShoot(plantID, 0);
+    DOCTEST_CHECK(base_shoot->ID == 0);
+    DOCTEST_CHECK(base_shoot->rank == 0);
+    DOCTEST_CHECK(base_shoot->parent_shoot_ID == -1);
+    DOCTEST_CHECK(!base_shoot->shoot_internode_vertices.empty());
+    DOCTEST_CHECK(base_shoot->shoot_internode_vertices.size() == base_shoot->shoot_internode_radii.size());
+
+    // A shoot's rank is at least its parent's: a true branch (addChildShoot) is parent rank + 1,
+    // while an appended/continuation shoot (appendShoot) keeps the parent's rank. So a child's rank
+    // is either equal to or exactly one greater than its parent's.
+    for (uint shootID : shootIDs) {
+        const std::shared_ptr<Shoot> &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+        if (shoot->parent_shoot_ID >= 0) {
+            const std::shared_ptr<Shoot> &parent = plantarchitecture.getPlantShoot(plantID, static_cast<uint>(shoot->parent_shoot_ID));
+            DOCTEST_CHECK(shoot->rank >= parent->rank);
+            DOCTEST_CHECK(shoot->rank <= parent->rank + 1);
+        }
+    }
+
+    // Out-of-range / invalid IDs must throw rather than return a fallback. Each throwing call
+    // is invoked inside a tightly-scoped cerr capture (helios_runtime_error writes to cerr in
+    // debug builds before throwing); the resulting bool is asserted only after the capture is
+    // destroyed, so doctest failure output is never swallowed.
+    auto throws = [&](const std::function<void()> &fn) {
+        bool threw = false;
+        {
+            capture_cerr cerr_buffer;
+            try {
+                fn();
+            } catch (...) {
+                threw = true;
+            }
+        }
+        return threw;
+    };
+    DOCTEST_CHECK(throws([&]() { static_cast<void>(plantarchitecture.getAllShootIDs(plantID + 999)); }));
+    DOCTEST_CHECK(throws([&]() { static_cast<void>(plantarchitecture.getPlantShoot(plantID, static_cast<uint>(shootIDs.size()))); }));
+    DOCTEST_CHECK(throws([&]() { static_cast<void>(plantarchitecture.getPlantShoot(plantID + 999, 0)); }));
+}
+
 DOCTEST_TEST_CASE("Plant Library Model Building - cheeseweed") {
     Context context;
     PlantArchitecture plantarchitecture(&context);

@@ -612,7 +612,7 @@ The figure below provides some examples of how various shoot growth patterns (e.
 
 \subsection PlantArchOrgans Creating Plant Organ Prototypes
 
-The geometry of plant leaves, flowers, and fruit are defined based on `prototype' models that can be specified in a number of ways. Each time one of these organ types is to be generated in the model, a user-defined function is called to add the geometry. The user can write a function to add a \ref helios::Tile object, a mesh of triangles, load a polygon model from file, or any other desired method.
+The geometry of plant leaves, flowers, and fruit are defined based on 'prototype' models that can be specified in a number of ways. Each time one of these organ types is to be generated in the model, a user-defined function is called to add the geometry. The user can write a function to add a \ref helios::Tile object, a mesh of triangles, load a polygon model from file, or any other desired method.
 
 The size, position, and orientation of the prototype when it is created needs to follow a specific convention.
 
