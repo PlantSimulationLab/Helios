@@ -171,6 +171,9 @@ namespace helios {
         destroyBuffer(debug_counters_buffer);
         destroyBuffer(bbox_vertices_buffer);
         destroyBuffer(band_map_buffer);
+        destroyBuffer(is_glass_buffer);
+        destroyBuffer(glass_n_buffer);
+        destroyBuffer(glass_KL_buffer);
 
         // Destroy command resources
         if (transfer_fence != VK_NULL_HANDLE)
@@ -630,6 +633,44 @@ namespace helios {
             }
             specular_scale_buffer = createBuffer(materials.specular_scale.size() * sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
             uploadBufferData(specular_scale_buffer, materials.specular_scale.data(), materials.specular_scale.size() * sizeof(float));
+        }
+
+        // Upload translucent cover (glass/plastic) buffers. Same source-dimensioned layout as rho/tau;
+        // the shaders index the source-0 slice (glass properties are source-independent). The is_glass
+        // flag (char on host) is widened to uint for GPU access, matching the twosided_flags pattern.
+        if (!materials.is_glass.empty()) {
+            if (materials.is_glass.size() != expected_size) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): is_glass size mismatch. Expected " + std::to_string(expected_size) + " entries (Nsources * Nprims * Nbands), got " +
+                                     std::to_string(materials.is_glass.size()));
+            }
+            // Fail fast if the band count exceeds the per-thread cover-transmittance accumulator size
+            // (cover_tau[GLASS_MAX_BANDS] in the raygen shaders); otherwise glass attenuation would be
+            // silently dropped for bands >= GLASS_MAX_BANDS. Only enforced when glass is actually in use,
+            // mirroring the OptiX 8/6 backends.
+            bool any_glass = false;
+            for (char g: materials.is_glass) {
+                if (g != 0) {
+                    any_glass = true;
+                    break;
+                }
+            }
+            constexpr size_t glass_max_bands = 32; // must match GLASS_MAX_BANDS / HELIOS_MAX_RADIATION_BANDS
+            if (any_glass && materials.num_bands > glass_max_bands) {
+                helios_runtime_error("ERROR (VulkanComputeBackend): translucent cover (glass) materials are in use with " + std::to_string(materials.num_bands) + " radiation bands, which exceeds the compile-time maximum of " +
+                                     std::to_string(glass_max_bands) + " (GLASS_MAX_BANDS). Reduce the number of bands or increase the cap.");
+            }
+            std::vector<uint> is_glass_uint(materials.is_glass.begin(), materials.is_glass.end());
+            if (is_glass_buffer.buffer != VK_NULL_HANDLE) { destroyBuffer(is_glass_buffer); }
+            is_glass_buffer = createBuffer(is_glass_uint.size() * sizeof(uint), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            uploadBufferData(is_glass_buffer, is_glass_uint.data(), is_glass_uint.size() * sizeof(uint));
+
+            if (glass_n_buffer.buffer != VK_NULL_HANDLE) { destroyBuffer(glass_n_buffer); }
+            glass_n_buffer = createBuffer(materials.glass_n.size() * sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            uploadBufferData(glass_n_buffer, materials.glass_n.data(), materials.glass_n.size() * sizeof(float));
+
+            if (glass_KL_buffer.buffer != VK_NULL_HANDLE) { destroyBuffer(glass_KL_buffer); }
+            glass_KL_buffer = createBuffer(materials.glass_KL.size() * sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            uploadBufferData(glass_KL_buffer, materials.glass_KL.data(), materials.glass_KL.size() * sizeof(float));
         }
 
         descriptors_dirty = true; // Materials changed, need descriptor update
@@ -1791,64 +1832,67 @@ namespace helios {
             return; // No pixels
         }
 
-        // Download camera_radiation_buffer (pixel_data)
+        // Download camera buffers via the staging path (downloadBufferData): it GPU-copies into a
+        // CPU_ONLY (system-RAM) staging buffer that is always fully host-mappable. The camera buffers
+        // are created VMA_MEMORY_USAGE_AUTO_PREFER_HOST, which on NVIDIA can land in the device-local
+        // host-visible BAR heap; directly mapping and memcpy-ing a large (e.g. 12 MP × multi-band,
+        // ~146 MB) allocation from BAR faults partway through the copy. Going through staging avoids
+        // mapping the large BAR allocation on the host.
+        // The camera shader writes camera_radiation in BAND-MAJOR order [band][pixel] (so each band's
+        // per-pixel atomic accumulations are coalesced — see camera_raygen.comp). RadiationModel and
+        // the other backends expect PIXEL-MAJOR [pixel][band], so transpose on download.
         pixel_data.resize(total_pixels * launch_band_count);
-        if (camera_radiation_buffer.buffer != VK_NULL_HANDLE && !pixel_data.empty()) {
-            vkQueueWaitIdle(device->getComputeQueue()); // Ensure compute is done
-
-            void *mapped;
-            VkResult result = vmaMapMemory(device->getAllocator(), camera_radiation_buffer.allocation, &mapped);
-            if (result == VK_SUCCESS) {
-                vmaInvalidateAllocation(device->getAllocator(), camera_radiation_buffer.allocation, 0, VK_WHOLE_SIZE);
-                std::memcpy(pixel_data.data(), mapped, pixel_data.size() * sizeof(float));
-                vmaUnmapMemory(device->getAllocator(), camera_radiation_buffer.allocation);
+        const size_t radiation_bytes = pixel_data.size() * sizeof(float);
+        if (camera_radiation_buffer.buffer != VK_NULL_HANDLE && camera_radiation_buffer.size >= radiation_bytes && !pixel_data.empty()) {
+            if (launch_band_count <= 1) {
+                downloadBufferData(camera_radiation_buffer, pixel_data.data(), radiation_bytes);
             } else {
-                downloadBufferData(camera_radiation_buffer, pixel_data.data(), pixel_data.size() * sizeof(float));
+                std::vector<float> band_major(total_pixels * launch_band_count);
+                downloadBufferData(camera_radiation_buffer, band_major.data(), band_major.size() * sizeof(float));
+                for (uint32_t b = 0; b < launch_band_count; b++) {
+                    const float *src = band_major.data() + size_t(b) * total_pixels;
+                    for (size_t p = 0; p < total_pixels; p++) {
+                        pixel_data[p * launch_band_count + b] = src[p];
+                    }
+                }
             }
         } else {
             std::fill(pixel_data.begin(), pixel_data.end(), 0.0f);
         }
 
-        // Download camera_pixel_label_buffer (pixel_labels)
+        // Download camera_pixel_label_buffer (pixel_labels). The size guard is CRITICAL: these
+        // buffers start as tiny placeholders and are only resized to full resolution by
+        // zeroCameraPixelBuffers() during the pixel-label pass. RadiationModel::runBand() calls
+        // getCameraResults() once for the radiation image BEFORE that pass, so without the guard we
+        // would issue a full-resolution copy out of a 4-byte placeholder buffer (out-of-bounds GPU
+        // copy -> hang). Skip the download until the buffer is correctly sized.
         pixel_labels.resize(total_pixels);
-        if (camera_pixel_label_buffer.buffer != VK_NULL_HANDLE && !pixel_labels.empty()) {
-            void *mapped;
-            VkResult result = vmaMapMemory(device->getAllocator(), camera_pixel_label_buffer.allocation, &mapped);
-            if (result == VK_SUCCESS) {
-                vmaInvalidateAllocation(device->getAllocator(), camera_pixel_label_buffer.allocation, 0, VK_WHOLE_SIZE);
-                std::memcpy(pixel_labels.data(), mapped, pixel_labels.size() * sizeof(uint));
-                vmaUnmapMemory(device->getAllocator(), camera_pixel_label_buffer.allocation);
-            } else {
-                downloadBufferData(camera_pixel_label_buffer, pixel_labels.data(), pixel_labels.size() * sizeof(uint));
-            }
+        if (camera_pixel_label_buffer.buffer != VK_NULL_HANDLE && camera_pixel_label_buffer.size >= total_pixels * sizeof(uint) && !pixel_labels.empty()) {
+            downloadBufferData(camera_pixel_label_buffer, pixel_labels.data(), pixel_labels.size() * sizeof(uint));
         } else {
             std::fill(pixel_labels.begin(), pixel_labels.end(), 0u);
         }
 
-        // Download camera_pixel_depth_buffer (pixel_depths)
+        // Download camera_pixel_depth_buffer (pixel_depths) — same placeholder-size guard as labels.
         pixel_depths.resize(total_pixels);
-        if (camera_pixel_depth_buffer.buffer != VK_NULL_HANDLE && !pixel_depths.empty()) {
-            void *mapped;
-            VkResult result = vmaMapMemory(device->getAllocator(), camera_pixel_depth_buffer.allocation, &mapped);
-            if (result == VK_SUCCESS) {
-                vmaInvalidateAllocation(device->getAllocator(), camera_pixel_depth_buffer.allocation, 0, VK_WHOLE_SIZE);
-                std::memcpy(pixel_depths.data(), mapped, pixel_depths.size() * sizeof(float));
-                vmaUnmapMemory(device->getAllocator(), camera_pixel_depth_buffer.allocation);
-            } else {
-                downloadBufferData(camera_pixel_depth_buffer, pixel_depths.data(), pixel_depths.size() * sizeof(float));
-            }
+        if (camera_pixel_depth_buffer.buffer != VK_NULL_HANDLE && camera_pixel_depth_buffer.size >= total_pixels * sizeof(float) && !pixel_depths.empty()) {
+            downloadBufferData(camera_pixel_depth_buffer, pixel_depths.data(), pixel_depths.size() * sizeof(float));
         } else {
             std::fill(pixel_depths.begin(), pixel_depths.end(), 0.0f);
         }
     }
 
     void VulkanComputeBackend::zeroRadiationBuffers(size_t launch_band_count_param) {
-        if (primitive_count == 0 || band_count == 0) {
-            return; // No geometry or bands
-        }
-
-        // Store launch band count for this runBand() call
+        // Store the launch band count for this runBand() call up front, even when there is no
+        // geometry/bands to allocate buffers for. Other per-launch operations (notably
+        // uploadSourceFluxes()) validate their input sizes against launch_band_count, so it must
+        // always reflect the current launch — otherwise a launch over an empty scene would leave it
+        // stale at 0 and reject a correctly-sized (Nsources * Nbands_launch) flux upload.
         launch_band_count = static_cast<uint32_t>(launch_band_count_param);
+
+        if (primitive_count == 0 || band_count == 0) {
+            return; // No geometry or bands - nothing to allocate
+        }
 
         // Create or resize band_map buffer [launch_band_count × uint32]
         size_t band_map_size = launch_band_count * sizeof(uint32_t);
@@ -2537,6 +2581,9 @@ namespace helios {
                 {8, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Specular scale
                 {9, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Source fluxes (camera-weighted)
                 {10, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Band map
+                {11, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Translucent cover: is_glass (uint)
+                {12, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Translucent cover: glass_n (float)
+                {13, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Translucent cover: glass_KL (float)
         };
 
         layout_info.bindingCount = static_cast<uint32_t>(material_bindings.size());
@@ -2687,6 +2734,16 @@ namespace helios {
         zeroBuffer(source_fluxes_cam_buffer);
         radiation_specular_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         zeroBuffer(radiation_specular_buffer);
+
+        // ========== Create placeholder translucent-cover (glass) buffers ==========
+        // Bindings 11-13 of the material set are always referenced by the direct/diffuse shaders, so
+        // valid buffers must exist before pipeline creation. A zeroed is_glass means "no glass anywhere".
+        is_glass_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(is_glass_buffer);
+        glass_n_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(glass_n_buffer);
+        glass_KL_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(glass_KL_buffer);
 
         // ========== Create placeholder mask/UV buffers ==========
         // Same requirement as sky parameters — needed before pipeline creation for MoltenVK
@@ -3529,6 +3586,56 @@ namespace helios {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &band_map_info;
+            descriptor_writes.push_back(write);
+        }
+
+        // Translucent cover (glass/plastic) buffers: bindings 11 (is_glass), 12 (glass_n), 13 (glass_KL).
+        VkDescriptorBufferInfo is_glass_info{};
+        is_glass_info.buffer = is_glass_buffer.buffer;
+        is_glass_info.offset = 0;
+        is_glass_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo glass_n_info{};
+        glass_n_info.buffer = glass_n_buffer.buffer;
+        glass_n_info.offset = 0;
+        glass_n_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo glass_KL_info{};
+        glass_KL_info.buffer = glass_KL_buffer.buffer;
+        glass_KL_info.offset = 0;
+        glass_KL_info.range = VK_WHOLE_SIZE;
+
+        if (is_glass_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_materials;
+            write.dstBinding = 11;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &is_glass_info;
+            descriptor_writes.push_back(write);
+        }
+        if (glass_n_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_materials;
+            write.dstBinding = 12;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &glass_n_info;
+            descriptor_writes.push_back(write);
+        }
+        if (glass_KL_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_materials;
+            write.dstBinding = 13;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &glass_KL_info;
             descriptor_writes.push_back(write);
         }
 

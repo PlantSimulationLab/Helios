@@ -176,6 +176,8 @@ namespace helios {
         RTprogram miss_direct;
         RTprogram miss_diffuse;
         RTprogram miss_camera;
+        RTprogram any_hit_direct;
+        RTprogram any_hit_diffuse;
 
         // Buffers: Geometry/Topology (17 buffers)
         RTbuffer patch_vertices_RTbuffer;
@@ -238,6 +240,14 @@ namespace helios {
         RTvariable specular_scale_RTvariable;
         RTbuffer transform_matrix_RTbuffer;
         RTvariable transform_matrix_RTvariable;
+        // Translucent cover (glass/plastic) material buffers (same layout as rho/tau)
+        RTbuffer glass_n_RTbuffer;
+        RTvariable glass_n_RTvariable;
+        RTbuffer glass_KL_RTbuffer;
+        RTvariable glass_KL_RTvariable;
+        RTbuffer is_glass_RTbuffer;
+        RTvariable is_glass_RTvariable;
+        RTvariable glass_enabled_RTvariable;
 
         // Buffers: Radiation Energy (10 buffers)
         RTbuffer radiation_in_RTbuffer;

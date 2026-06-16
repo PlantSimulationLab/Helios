@@ -126,6 +126,20 @@ layout(set = 1, binding = 10) readonly buffer BandMapBuffer {
     uint map[]; // Maps launch band index → global band index
 } band_map_buf;
 
+// Translucent cover (glass/plastic) material. Same [prim * material_band_count + global_band] indexing
+// as reflectivity/transmissivity (source-0 slice; glass is source-independent).
+layout(set = 1, binding = 11) readonly buffer IsGlassBuffer {
+    uint is_glass[];
+} is_glass_buf;
+
+layout(set = 1, binding = 12) readonly buffer GlassNBuffer {
+    float glass_n[];
+} glass_n_buf;
+
+layout(set = 1, binding = 13) readonly buffer GlassKLBuffer {
+    float glass_KL[];
+} glass_KL_buf;
+
 // ========== Descriptor Set 2: Results ==========
 layout(set = 2, binding = 0) buffer RadiationInBuffer {
     float radiation_in[]; // [primitive * band_count + band]
@@ -155,6 +169,7 @@ layout(set = 2, binding = 10) buffer RadiationSpecularBuffer {
 #include "common/random.glsl"
 #include "common/transforms.glsl"
 #include "common/buffer_indexing.glsl"
+#include "common/glass_cover.glsl"
 #include "common/bvh_traversal.glsl"
 #include "common/periodic_boundary.glsl"
 #include "common/texture_mask.glsl"
@@ -569,39 +584,89 @@ void main() {
                     continue;
                 }
 
+                // Per-band translucent-cover transmittance accumulated as the ray passes through glass
+                // covers on its way to the source. Starts at 1 (no attenuation).
+                float cover_tau[GLASS_MAX_BANDS];
+                for (uint cb = 0; cb < pc.band_count && cb < uint(GLASS_MAX_BANDS); ++cb) {
+                    cover_tau[cb] = 1.0;
+                }
+
                 // Trace ray to check for occlusion (matches OptiX rtTrace in rayGeneration.cu:224)
-                // Periodic boundary wrap loop: if ray hits bbox face, wrap and re-trace (up to 10 wraps)
+                // Periodic boundary wrap loop + translucent-cover pass-through loop: a glass occluder is
+                // not a blocker — accumulate its angular transmittance, deposit its reflected/absorbed
+                // energy, and re-trace past it toward the source (bounded iterations).
                 float occlusion_t;
                 uint occluder;
                 vec3 trace_origin = ray_origin;
+                bool is_occluded = false;
 
-                for (int wrap = 0; wrap < 10; ++wrap) {
+                for (int step = 0; step < 32; ++step) {
                     occluder = traverse_cwbvh(trace_origin, ray_dir, 1e-4, prim_idx, occlusion_t);
 
-                    if (pc.bbox_count == 0) break; // No periodic boundaries
-
-                    vec3 wrapped_origin;
-                    bool hit_periodic = check_periodic_boundary(
-                        trace_origin, ray_dir, occlusion_t,
-                        pc.periodic_flag_x, pc.periodic_flag_y, pc.bbox_count,
-                        pc.domain_xmin, pc.domain_xmax, pc.domain_ymin, pc.domain_ymax,
-                        wrapped_origin);
-
-                    if (!hit_periodic) break; // Real hit or miss
-                    trace_origin = wrapped_origin;
-                    occluder = UINT_MAX; // Reset - bbox is not a real occluder
-                }
-
-                // Check if ray is blocked before reaching the source
-                bool is_occluded = false;
-                if (occluder != 0xFFFFFFFF) {
-                    if (source_type == 0) { // Collimated — any hit blocks (source at infinity)
-                        is_occluded = true;
-                    } else { // Sphere — blocked only if hit is closer than source
-                        float dist_to_source = length(source_pos - ray_origin);
-                        is_occluded = (occlusion_t < dist_to_source);
+                    // Periodic boundary wrap (bbox face is not a real occluder)
+                    if (pc.bbox_count != 0) {
+                        vec3 wrapped_origin;
+                        bool hit_periodic = check_periodic_boundary(
+                            trace_origin, ray_dir, occlusion_t,
+                            pc.periodic_flag_x, pc.periodic_flag_y, pc.bbox_count,
+                            pc.domain_xmin, pc.domain_xmax, pc.domain_ymin, pc.domain_ymax,
+                            wrapped_origin);
+                        if (hit_periodic) {
+                            trace_origin = wrapped_origin;
+                            occluder = UINT_MAX;
+                            continue;
+                        }
                     }
+
+                    if (occluder == 0xFFFFFFFF) break; // miss — reached the source
+
+                    // For a sphere source, a hit beyond the source does not block.
+                    if (source_type != 0) {
+                        float dist_to_source = length(source_pos - ray_origin);
+                        if (occlusion_t >= dist_to_source) break; // hit is past the source — unblocked
+                    }
+
+                    // Is this occluder a translucent cover for ALL launched bands? If so, pass through.
+                    bool all_glass = (occluder != prim_idx);
+                    for (uint band = 0; band < pc.band_count && band < uint(GLASS_MAX_BANDS); ++band) {
+                        uint gb = band_map_buf.map[band];
+                        if (is_glass_buf.is_glass[occluder * pc.material_band_count + gb] == 0u) {
+                            all_glass = false;
+                            break;
+                        }
+                    }
+
+                    if (!all_glass) { is_occluded = true; break; } // opaque blocker
+
+                    // Glass pass-through: accumulate per-band tau and deposit the cover's own rho/alpha.
+                    uint cov_nbase = occluder * 3;
+                    vec3 cov_normal = vec3(normals_buf.normals[cov_nbase], normals_buf.normals[cov_nbase + 1], normals_buf.normals[cov_nbase + 2]);
+                    float cov_cos = abs(dot(ray_dir, normalize(cov_normal)));
+                    bool cov_top = dot(cov_normal, ray_dir) < 0.0;
+
+                    for (uint band = 0; band < pc.band_count && band < uint(GLASS_MAX_BANDS); ++band) {
+                        uint gb = band_map_buf.map[band];
+                        uint gmi = occluder * pc.material_band_count + gb;
+                        vec3 tra = glass_tau_rho_alpha(cov_cos, glass_n_buf.glass_n[gmi], glass_KL_buf.glass_KL[gmi]);
+
+                        uint sflux_idx = src_idx * pc.band_count + band;
+                        float incoming = source_fluxes_buf.fluxes[sflux_idx] * strength * cover_tau[band];
+                        uint cov_rad_idx = index_prim_band(occluder, band, pc.band_count);
+                        // NOTE: this pass-through loop runs under divergent control flow (rays cross
+                        // different numbers of covers), so subgroup reductions are unsafe here — use
+                        // per-thread atomics directly.
+                        if (incoming > 0.0) {
+                            atomicAdd(rad_in_buf.radiation_in[cov_rad_idx], incoming * tra.z);
+                            if (cov_top) atomicAdd(scatter_top_buf.scatter_top[cov_rad_idx], incoming * tra.y);
+                            else         atomicAdd(scatter_bottom_buf.scatter_bottom[cov_rad_idx], incoming * tra.y);
+                        }
+                        cover_tau[band] *= tra.x;
+                    }
+
+                    // Advance just past the cover hit and continue toward the source.
+                    trace_origin = trace_origin + ray_dir * (occlusion_t + 1e-4);
                 }
+
                 if (is_occluded) {
                     continue; // Ray blocked - no direct illumination from this source
                 }
@@ -609,9 +674,10 @@ void main() {
                 // Direct illumination with occlusion
                 // Loop over all launched bands
                 for (uint band = 0; band < pc.band_count; ++band) {
-                    // Get source flux for this band
+                    // Get source flux for this band, attenuated by any translucent covers the ray crossed.
                     uint flux_idx = src_idx * pc.band_count + band;
-                    float flux = source_fluxes_buf.fluxes[flux_idx];
+                    float band_cover_tau = (band < uint(GLASS_MAX_BANDS)) ? cover_tau[band] : 1.0;
+                    float flux = source_fluxes_buf.fluxes[flux_idx] * band_cover_tau;
 
                     // Get material properties for this primitive and band
                     // Use global band index for material buffer access (material buffers use global stride)

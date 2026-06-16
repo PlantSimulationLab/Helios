@@ -166,6 +166,22 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
      <td>0</td>
    </tr>
    <tr>
+     <td>glass\_n\_*</td>
+     <td>unitless</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
+     <td>Refractive index of a translucent cover (glass/plastic) for band *. <b>Setting this activates the Fresnel+Bouguer angular-transmittance model for the primitive in that band</b>, overriding any constant reflectivity_*/transmissivity_*. See Sect. \ref RadGlass.</td>
+     <td>N/A</td>
+     <td>N/A (model off)</td>
+   </tr>
+   <tr>
+     <td>glass\_KL\_*</td>
+     <td>unitless</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
+     <td>Bouguer absorption product K·L (extinction coefficient × thickness) of a translucent cover for band *. Optional; only used when glass_n_* is set. Default 0 = lossless (non-absorbing) sheet. See Sect. \ref RadGlass.</td>
+     <td>N/A</td>
+     <td>0</td>
+   </tr>
+   <tr>
      <td>emissivity\_*</td>
      <td>unitless</td>
      <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
@@ -374,6 +390,68 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  ~~~~~~
 
  Note that in the above example, we did not add a radiative source or set its spectral distribution.
+
+ \subsection RadGlass Translucent Cover Materials (Glass/Plastic)
+
+ Greenhouse and shadehouse covers (glass, polyethylene film, polycarbonate, acrylic) are translucent
+ but, unlike a leaf, they transmit beam radiation in a largely <i>unscattered</i> direction. The
+ default reflectivity/transmissivity model in Helios treats all transmitted (and reflected) energy as
+ perfectly diffuse (Lambertian), which spreads beam sunlight in all directions and is physically wrong
+ for a cover. The translucent-cover material instead computes an <b>angle-dependent transmittance
+ \f$\tau(\theta)\f$</b> and lets the beam pass through the cover (nearly) undeviated, attenuated by the
+ physically-correct amount.
+
+ The model is the classic solar-glazing model (Duffie & Beckman): the transmittance, reflectance, and
+ absorptance of a single dielectric sheet are computed from <b>Fresnel reflection</b> at the two
+ interfaces (both polarizations, internal reflections summed in closed form) combined with
+ <b>Bouguer absorption</b> through the sheet. It is parameterized by just two numbers:
+
+ <ul>
+ <li><b>glass_n_[band]</b> — the refractive index \f$n\f$. Setting this primitive data activates the
+ model for that primitive and band.</li>
+ <li><b>glass_KL_[band]</b> — the Bouguer absorption product \f$K\,L\f$ (extinction coefficient times
+ thickness). Optional; default 0 = a lossless (non-absorbing) sheet for which
+ \f$\tau(\theta)+\rho(\theta)=1\f$.</li>
+ </ul>
+
+ ~~~~~~{.cpp}
+ // A single-layer low-iron glass greenhouse roof, shortwave band, treated as lossless:
+ context.setPrimitiveData( cover_UUID, "glass_n_SW", 1.52f );
+
+ // A polyethylene film cover with some absorption:
+ context.setPrimitiveData( film_UUID, "glass_n_SW", 1.51f );
+ context.setPrimitiveData( film_UUID, "glass_KL_SW", 0.05f );
+ ~~~~~~
+
+ Representative refractive indices from the literature: glass \f$\approx\f$ 1.52, polyethylene (PE)
+ \f$\approx\f$ 1.51, PMMA (acrylic) \f$\approx\f$ 1.49, polycarbonate \f$\approx\f$ 1.59. The angular
+ transmittance is nearly flat out to \f$\sim\f$40° and then drops sharply toward grazing incidence —
+ behavior a constant transmissivity cannot reproduce.
+
+ <b>Precedence:</b> if glass_n_[band] is set, the Fresnel+Bouguer model takes precedence and any
+ constant reflectivity_[band]/transmissivity_[band] on the same primitive is ignored (a warning is
+ emitted). The cover must be used with a non-zero scattering depth (see \ref RadScatter) so the
+ reflected/absorbed bookkeeping is active; the unscattered transmission itself is independent of the
+ scattering depth.
+
+ <b>Limitations (current version):</b>
+ <ul>
+ <li>The transmitted ray is <i>not</i> refracted (no Snell bending of the through-beam); only its
+ magnitude is attenuated by \f$\tau(\theta)\f$.</li>
+ <li>There is no separate forward-scattered diffuse (haze) lobe; transmitted energy is either
+ unscattered (the \f$\tau(\theta)\f$ component) or, for the reflected fraction, deposited as diffuse.</li>
+ <li>For anisotropic diffuse-sky radiation, the cover's own reflected/absorbed bookkeeping uses the
+ isotropic sky flux as an approximation; the transmittance delivered to surfaces below is exact.</li>
+ <li>Scattered (plant-to-plant) radiation that strikes the cover from below escapes attenuated but is
+ not re-injected with directional memory.</li>
+ <li>A primitive is treated as a translucent cover (beam pass-through) only if it is glass
+ (glass_n_[band]) in <i>every</i> band launched together in a single run. A single ray carries all
+ launched bands, so a primitive that is glass in some launched bands but opaque in others cannot be both
+ passed-through and blocked on the same ray; in that mixed case it is treated as a normal (opaque)
+ occluder for the whole ray (consistent across the OptiX 8, OptiX 6, and Vulkan backends). This is not a
+ concern for the common per-band workflow (runBand with one band) or for covers configured as glass in
+ every launched band.</li>
+ </ul>
 
  \subsection RadEmission Radiative Emission
 

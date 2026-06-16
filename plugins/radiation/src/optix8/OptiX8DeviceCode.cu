@@ -83,6 +83,64 @@ static __forceinline__ __device__ float asin_safe(float x) {
     return asinf(fmaxf(-1.f, fminf(1.f, x)));
 }
 
+// Translucent cover (glass/plastic) optical model: angular transmittance/reflectance/absorptance of a
+// single dielectric sheet via Fresnel reflection (two interfaces, both polarizations, internal
+// reflections summed in closed form) plus Bouguer absorption. This is the classic solar-glazing model
+// (Duffie & Beckman). Inputs: cos_theta = |cos| of the incidence angle, n = refractive index (>1),
+// KL = absorption product K*L (0 = lossless). Returns (tau, rho, alpha) with tau+rho+alpha == 1.
+static __forceinline__ __device__ float3 glass_tau_rho_alpha(float cos_theta, float n, float KL) {
+    cos_theta = fmaxf(1e-4f, fminf(1.f, cos_theta)); // guard grazing/degenerate
+    const float theta   = acos_safe(cos_theta);
+    const float sin_t   = sinf(theta);
+    const float sin_tr  = sin_t / n;                 // Snell
+    const float cos_tr  = sqrtf(fmaxf(0.f, 1.f - sin_tr * sin_tr));
+    const float theta_r = asin_safe(sin_tr);
+
+    // Fresnel interface reflectance for the two polarizations. As theta -> 0 the sin/tan ratios
+    // become 0/0, so fall back to the normal-incidence form r0 = ((n-1)/(n+1))^2.
+    float r_par, r_per;
+    if (theta < 1e-3f) {
+        const float r0 = ((n - 1.f) / (n + 1.f)) * ((n - 1.f) / (n + 1.f));
+        r_par = r0;
+        r_per = r0;
+    } else {
+        const float s_minus = sinf(theta_r - theta);
+        const float s_plus  = sinf(theta_r + theta);
+        const float t_minus = tanf(theta_r - theta);
+        const float t_plus  = tanf(theta_r + theta);
+        r_per = (s_minus * s_minus) / fmaxf(1e-12f, s_plus * s_plus); // perpendicular
+        r_par = (t_minus * t_minus) / fmaxf(1e-12f, t_plus * t_plus); // parallel
+    }
+
+    // Bouguer single-pass absorption through the angled path length L/cos_tr.
+    const float tau_a = (KL > 0.f) ? expf(-KL / fmaxf(1e-4f, cos_tr)) : 1.f;
+
+    // Per-polarization sheet transmittance/reflectance with internal reflections summed in closed form.
+    float tau = 0.f, rho = 0.f;
+    #pragma unroll
+    for (int pol = 0; pol < 2; pol++) {
+        const float r   = (pol == 0) ? r_per : r_par;
+        const float denom = fmaxf(1e-6f, 1.f - (r * tau_a) * (r * tau_a));
+        const float tau_i = tau_a * (1.f - r) * (1.f - r) / denom;
+        const float rho_i = r * (1.f + tau_a * tau_i);
+        tau += 0.5f * tau_i;
+        rho += 0.5f * rho_i;
+    }
+    tau = fmaxf(0.f, fminf(1.f, tau));
+    rho = fmaxf(0.f, fminf(1.f, rho));
+    float alpha = 1.f - tau - rho;
+    if (alpha < 0.f) { alpha = 0.f; } // numerical guard
+    return make_float3(tau, rho, alpha);
+}
+
+// Initialize the per-band translucent-cover transmittance accumulator to 1 (no attenuation yet).
+static __forceinline__ __device__ void initCoverTransmittance(PerRayData &prd) {
+    #pragma unroll
+    for (int i = 0; i < HELIOS_MAX_RADIATION_BANDS; i++) {
+        prd.cover_transmittance[i] = 1.f;
+    }
+}
+
 // Evaluates the diffuse angular distribution (fd factor).
 // Priority 1: Power-law (Harrison & Coombes) if extinction > 0
 // Priority 2: Prague sky model if sky_params.w > 0
@@ -357,8 +415,11 @@ extern "C" __global__ void __intersection__patch() {
             if (!sampleMask(msk_id, uv_u, uv_v)) return;
         }
 
+        // Report the intersection for BOTH faces. A one-sided primitive (twosided_flag==0) still
+        // occludes a ray hitting its back face — matching the canonical OptiX 6 and Vulkan backends.
+        // The hit face is recorded in face_attr (1 = front/top, 0 = back/bottom) for downstream
+        // energy/face bookkeeping; one-sidedness is enforced at ray launch (raygen), not here.
         uint32_t face_attr = (nd < 0.f) ? 1u : 0u;
-        if (!face_attr && !params.twosided_flag[pos]) return;
         optixReportIntersection(t, 0, uuid, face_attr);
 
     } else {
@@ -421,8 +482,9 @@ extern "C" __global__ void __intersection__patch() {
         float3 tri_nrm = make_float3(edge0.y * edge1.z - edge0.z * edge1.y,
                                      edge0.z * edge1.x - edge0.x * edge1.z,
                                      edge0.x * edge1.y - edge0.y * edge1.x);
+        // Report the intersection for BOTH faces (see note in the patch branch above): one-sided
+        // primitives still occlude back-face hits, matching the canonical OptiX 6 / Vulkan backends.
         uint32_t face_attr = (dot(ray_direction, tri_nrm) < 0.f) ? 1u : 0u;
-        if (!face_attr && !params.twosided_flag[pos]) return;
         optixReportIntersection(t, 0, uuid, face_attr);
     }
 }
@@ -476,7 +538,10 @@ extern "C" __global__ void __miss__direct() {
         const uint32_t flux_idx  = prd->source_ID * Nbands_launch + (uint32_t)b;
         const float source_flux  = params.source_fluxes[flux_idx];
 
-        const double strength  = prd->strength * (double)source_flux;
+        // Attenuation from any translucent covers (glass/plastic) the ray passed through, per band.
+        const float cover_tau  = (b < HELIOS_MAX_RADIATION_BANDS) ? prd->cover_transmittance[b] : 1.f;
+
+        const double strength  = prd->strength * (double)source_flux * (double)cover_tau;
         const float absorption = (float)(strength * (1.0 - t_rho - t_tau));
 
         atomicFloatAdd(&params.radiation_in[ind_origin], absorption);
@@ -561,7 +626,9 @@ extern "C" __global__ void __miss__diffuse() {
         const float  power_N = params.diffuse_dist_norm    ? params.diffuse_dist_norm[b]                  : 1.f;
 
         const float fd       = evaluateDiffuseAngularDistribution(ray_dir, peak_d, power_K, power_N, sky_p);
-        const float strength = fd * params.diffuse_flux[b] * (float)prd->strength;
+        // Attenuation from any translucent covers (glass/plastic) the sky ray passed through, per band.
+        const float cover_tau = (b < HELIOS_MAX_RADIATION_BANDS) ? prd->cover_transmittance[b] : 1.f;
+        const float strength = fd * params.diffuse_flux[b] * (float)prd->strength * cover_tau;
 
         const uint32_t ind_origin   = origin_position * Nbands_launch + (uint32_t)b;
         const uint32_t radprop_ind  = prd->source_ID * Nprims * Nbands_global
@@ -719,6 +786,128 @@ static __forceinline__ __device__ void handlePeriodicBoundaryHit(PerRayData *prd
         const float width = ymax - ymin;
         prd->periodic_hit.y += (bbox_local == y_base) ? width : -width;
     }
+}
+
+// ---------------------------------------------------------------------------
+// Translucent cover (glass/plastic) support
+// ---------------------------------------------------------------------------
+
+// Compute |cos(theta)| between the incoming ray and the surface normal of the hit primitive.
+// Mirrors the normal construction in __intersection__patch (3rd transform column for patch/tile,
+// edge cross-product for triangle). Returns a value in (0, 1]; degenerate cases return 1.
+static __forceinline__ __device__ float coverCosTheta(uint32_t hit_position, const float3 &ray_dir) {
+    const uint32_t ptype = params.primitive_type[hit_position];
+    float T[16];
+    loadTransformMatrix(hit_position, T);
+    float3 normal;
+    if (ptype == 1) { // triangle
+        const float3 v0 = make_float3(T[3], T[7], T[11]);
+        const float3 v1 = make_float3(T[1] + T[3], T[5] + T[7], T[9] + T[11]);
+        const float3 v2 = make_float3(T[0] + T[1] + T[3], T[4] + T[5] + T[7], T[8] + T[9] + T[11]);
+        const float3 e0 = make_float3(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z);
+        const float3 e1 = make_float3(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z);
+        normal = cross(e0, e1);
+    } else { // patch or tile: normal is the 3rd column of the rotation part
+        normal = make_float3(T[2], T[6], T[10]);
+    }
+    const float nmag = d_magnitude(normal);
+    if (nmag < 1e-12f) return 1.f;
+    return fminf(1.f, fabsf(dot(ray_dir, normal)) / nmag);
+}
+
+// Shared any-hit body for translucent covers. For a glass hit it accumulates the per-band
+// transmittance (so the ray continues attenuated toward the source/sky), deposits the cover's own
+// reflected and absorbed energy into its buffers, and ignores the intersection so traversal
+// continues. Non-glass hits are left to the normal closest-hit (occlusion) path.
+//   incoming_flux_for_band(b, b_global): the irradiance the ray delivers to the cover for launch-band
+//   b BEFORE this cover's attenuation (i.e. prd->strength * external_flux * prior cover_transmittance).
+static __forceinline__ __device__ void coverAnyHitBody(bool is_direct) {
+    const uint32_t hit_uuid = optixGetAttribute_0();
+    const uint32_t hit_position = params.primitive_positions[hit_uuid];
+    if (hit_position == UINT_MAX) return;
+    if (params.is_glass == nullptr) return; // glass model not configured this launch
+
+    PerRayData *prd = getPayloadPRD();
+
+    // Never let a cover attenuate a ray it launched itself.
+    if (hit_uuid == prd->origin_UUID) { optixIgnoreIntersection(); return; }
+
+    const uint32_t Nprims        = params.Nprimitives;
+    const uint32_t Nbands_global = params.Nbands_global;
+    const uint32_t Nbands_launch = params.Nbands_launch;
+
+    // A primitive is treated as a translucent cover (pass-through) only if it is glass in EVERY launched
+    // band. A single ray carries all launched bands, so a primitive that is glass in some launched bands
+    // but opaque in others cannot be both transmitted and blocked — we treat it as a normal (opaque)
+    // occluder for the whole ray (accept the hit). This matches the OptiX 6 and Vulkan backends.
+    {
+        int b_check = -1;
+        for (uint32_t b_global = 0; b_global < Nbands_global; b_global++) {
+            if (!params.band_launch_flag[b_global]) continue;
+            b_check++;
+            const uint32_t mat_ind = prd->source_ID * Nprims * Nbands_global + hit_position * Nbands_global + b_global;
+            if (params.is_glass[mat_ind] == 0) return; // opaque in this launched band → block the ray
+        }
+    }
+
+    const bool   face_top  = (optixGetAttribute_1() == 1u);
+    const float3 ray_dir   = optixGetWorldRayDirection();
+    const float  cos_theta = coverCosTheta(hit_position, ray_dir);
+
+    int b = -1;
+    for (uint32_t b_global = 0; b_global < Nbands_global; b_global++) {
+        if (!params.band_launch_flag[b_global]) continue;
+        b++;
+        if (b >= HELIOS_MAX_RADIATION_BANDS) break; // host guarantees this never trips
+
+        const uint32_t mat_ind = prd->source_ID * Nprims * Nbands_global
+                               + hit_position * Nbands_global + b_global;
+
+        const float n  = params.glass_n[mat_ind];
+        const float KL = params.glass_KL[mat_ind];
+        const float3 tra = glass_tau_rho_alpha(cos_theta, n, KL); // (tau, rho, alpha)
+
+        // Irradiance delivered to the cover for this band, before this cover's attenuation.
+        double ext_flux = 0.0;
+        if (is_direct) {
+            const uint32_t flux_idx = prd->source_ID * Nbands_launch + (uint32_t)b;
+            ext_flux = (double)params.source_fluxes[flux_idx];
+        } else {
+            // Diffuse: the cover's reflected/absorbed bookkeeping uses the isotropic sky flux as an
+            // approximation of the per-ray incident irradiance (the full miss-program angular
+            // distribution is not reproduced here). The transmittance accumulation below is exact and
+            // flux-independent; only this cover ρ/α deposit is approximate for anisotropic skies.
+            ext_flux = (params.diffuse_flux != nullptr) ? (double)params.diffuse_flux[b] : 0.0;
+        }
+        const double incoming = prd->strength * ext_flux * (double)prd->cover_transmittance[b];
+
+        // radiation_in / scatter buffers are indexed [prim * Nbands_launch + band_launch].
+        const uint32_t cov_ind = hit_position * Nbands_launch + (uint32_t)b;
+
+        if (incoming > 0.0) {
+            atomicFloatAdd(&params.radiation_in[cov_ind], (float)(incoming * (double)tra.z)); // absorbed
+            // Reflection leaves from the hit face; transmission continues out the far face.
+            if (face_top) {
+                atomicFloatAdd(&params.scatter_buff_top[cov_ind], (float)(incoming * (double)tra.y));
+            } else {
+                atomicFloatAdd(&params.scatter_buff_bottom[cov_ind], (float)(incoming * (double)tra.y));
+            }
+        }
+
+        // Attenuate the through-beam for this band.
+        prd->cover_transmittance[b] *= tra.x;
+    }
+
+    // All launched bands are glass: pass the (attenuated) ray through toward the source/sky.
+    optixIgnoreIntersection();
+}
+
+extern "C" __global__ void __anyhit__direct() {
+    coverAnyHitBody(true);
+}
+
+extern "C" __global__ void __anyhit__diffuse() {
+    coverAnyHitBody(false);
 }
 
 extern "C" __global__ void __closesthit__direct() {
@@ -1235,6 +1424,7 @@ extern "C" __global__ void __raygen__direct() {
                 prd.source_ID            = (unsigned char)rr;
                 prd.hit_periodic_boundary = false;
                 prd.face                 = (dot(ray_direction, normal) > 0.f);
+                initCoverTransmittance(prd); // translucent-cover attenuation starts at 1 (no covers crossed)
 
                 // Strength set above per source type
                 prd.strength = strength;
@@ -1419,6 +1609,7 @@ extern "C" __global__ void __raygen__diffuse() {
             prd.source_ID             = 0;
             prd.hit_periodic_boundary = false;
             prd.strength              = 1.0 / double(dimxy);
+            initCoverTransmittance(prd); // translucent-cover attenuation starts at 1 (no covers crossed)
 
             uint32_t u0, u1;
 

@@ -634,6 +634,7 @@ set(SHADER_COMMON_INCLUDES
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/intersections.glsl
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/texture_mask.glsl
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/sky_distribution.glsl
+	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/glass_cover.glsl
 )
 
 # Shader source files

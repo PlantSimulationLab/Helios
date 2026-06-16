@@ -2028,6 +2028,11 @@ void RadiationModel::updateRadiativeProperties() {
     material_data.reflectivity.assign(mat_size, rho_default);
     material_data.transmissivity.assign(mat_size, tau_default);
 
+    // Translucent cover (glass/plastic) material arrays. Default: not glass (is_glass=0), lossless (KL=0).
+    material_data.glass_n.assign(mat_size, 0.f);
+    material_data.glass_KL.assign(mat_size, 0.f);
+    material_data.is_glass.assign(mat_size, 0);
+
     if (Ncameras > 0) {
         size_t cam_size = (size_t)Nsources * Nprimitives * Nbands * Ncameras;
         material_data.reflectivity_cam.assign(cam_size, rho_default);
@@ -2739,6 +2744,57 @@ void RadiationModel::updateRadiativeProperties() {
                 b++;
             }
 
+            // Translucent cover (glass/plastic) material.
+            // Presence of primitive data "glass_n_<band>" activates the Fresnel+Bouguer angular
+            // transmittance model for this primitive+band. Optional "glass_KL_<band>" (default 0 =
+            // lossless) sets the Bouguer absorption product K*L. When active, the angular rho/tau are
+            // computed on-device, overriding any constant reflectivity_<band>/transmissivity_<band>.
+            b = 0;
+            for (const auto &band: band_labels) {
+
+                prop = "glass_n_" + band;
+                if (!context->doesPrimitiveDataExist(UUID, prop.c_str()) || context->getPrimitiveDataType(prop.c_str()) != HELIOS_TYPE_FLOAT) {
+                    b++;
+                    continue;
+                }
+
+                float n_s = 0.f;
+                context->getPrimitiveData(UUID, prop.c_str(), n_s);
+
+                if (n_s < 1.f) {
+                    warnings.addWarning("glass_n_invalid", "Refractive index glass_n_" + band + " must be >= 1. Ignoring glass material for this band.");
+                    b++;
+                    continue;
+                }
+
+                float KL_s = 0.f;
+                std::string KL_prop = "glass_KL_" + band;
+                if (context->doesPrimitiveDataExist(UUID, KL_prop.c_str()) && context->getPrimitiveDataType(KL_prop.c_str()) == HELIOS_TYPE_FLOAT) {
+                    context->getPrimitiveData(UUID, KL_prop.c_str(), KL_s);
+                    if (KL_s < 0.f) {
+                        KL_s = 0.f;
+                        warnings.addWarning("glass_KL_negative_clamped", "Absorption glass_KL_" + band + " cannot be less than 0. Clamping to 0.");
+                    }
+                }
+
+                // Warn (once) if a constant reflectivity/transmissivity was also set for this band: glass wins.
+                if (context->doesPrimitiveDataExist(UUID, ("reflectivity_" + band).c_str()) || context->doesPrimitiveDataExist(UUID, ("transmissivity_" + band).c_str())) {
+                    warnings.addWarning("glass_overrides_constant", "Primitive has both glass_n_" + band + " and a constant reflectivity/transmissivity for band " + band +
+                                                                            ". The glass (Fresnel+Bouguer) model takes precedence; the constant value is ignored.");
+                }
+
+                for (uint s = 0; s < Nsources; s++) {
+                    material_data.is_glass[mat_idx(s, u, b)] = 1;
+                    material_data.glass_n[mat_idx(s, u, b)] = n_s;
+                    material_data.glass_KL[mat_idx(s, u, b)] = KL_s;
+                }
+
+                // Glass requires the scattering machinery to be active so the diffuse-sky / reflected
+                // bookkeeping runs (the unscattered direct/sky attenuation itself is independent of depth).
+                scattering_iterations_needed.at(band) = true;
+                b++;
+            }
+
             // Emissivity (only for error checking)
 
             b = 0;
@@ -2770,6 +2826,12 @@ void RadiationModel::updateRadiativeProperties() {
                 for (uint s = 0; s < Nsources; s++) {
                     float &rho_val = material_data.reflectivity[mat_idx(s, u, b)];
                     float &tau_val = material_data.transmissivity[mat_idx(s, u, b)];
+
+                    // Glass primitives compute angle-dependent rho/tau on-device via the Fresnel+Bouguer
+                    // model, so the constant ε+ρ+τ=1 conservation constraint does not apply here.
+                    if (material_data.is_glass[mat_idx(s, u, b)] != 0) {
+                        continue;
+                    }
 
                     if (is_sif_band) {
                         // SIF bands source their emission from the Fluspect-B per-leaf
@@ -3741,6 +3803,25 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 break;
             }
         }
+    }
+
+    // Keep the device-side source_fluxes buffer consistent with Nsources for EVERY launch type.
+    // runBand() guarantees at least one source exists (a default collimated source is added above
+    // when none were created), so Nsources >= 1 here. The miss/closesthit device programs iterate
+    // [0, Nsources) and dereference source_fluxes[s*Nbands_launch + b] unconditionally. When no
+    // source has positive flux (rundirect == false) the direct-pass block below is skipped, but a
+    // camera trace still launches (e.g. an emission-only longwave band sampling the sky on a miss).
+    // Uploading the per-band fluxes here (zeros/unset values are harmlessly skipped device-side by
+    // the `flux <= 0` guard) prevents source_fluxes from being left null while Nsources > 0, which
+    // would otherwise cause an illegal memory access in the camera kernel.
+    if (Nsources > 0) {
+        std::vector<std::vector<float>> source_flux_values(Nsources, std::vector<float>(Nbands_launch, 0.f));
+        for (uint s = 0; s < Nsources; s++) {
+            for (uint b = 0; b < Nbands_launch; b++) {
+                source_flux_values.at(s).at(b) = getSourceFlux(s, band_labels.at(b));
+            }
+        }
+        backend->uploadSourceFluxes(flatten(source_flux_values));
     }
 
     if (Nsources > 0 && rundirect) {
@@ -5801,8 +5882,9 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
         // Solid fraction
         geometry_data.solid_fractions[prim_idx] = context->getPrimitiveSolidFraction(UUID);
 
-        // Two-sided flag
-        geometry_data.twosided_flags[prim_idx] = context->getPrimitiveTwosidedFlag(UUID, 1) ? 1 : 0;
+        // Two-sided flag. Store the raw value (0=one-sided, 1=two-sided, 2=transparent, 3=special/source-model)
+        // rather than collapsing to a boolean, so the backends receive the full semantics.
+        geometry_data.twosided_flags[prim_idx] = static_cast<char>(context->getPrimitiveTwosidedFlag(UUID, 1));
 
         if (parentID > 0 && context->getObjectType(parentID) == helios::OBJECT_TYPE_TILE) {
             // Tile subpatch: treat as individual patch for both OptiX and Vulkan backends.

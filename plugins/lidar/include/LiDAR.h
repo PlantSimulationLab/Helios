@@ -234,9 +234,10 @@ struct ScanMetadata {
      * \param[in] columnFormat  Vector of strings specifying the columns of the scan ASCII file for input/output
      * \param[in] scanTiltRoll  Global scanner tilt roll angle in radians (right-hand rotation about the body lateral axis; 0 = perfectly level) [optional]
      * \param[in] scanTiltPitch  Global scanner tilt pitch angle in radians (right-hand rotation about the body forward/azimuth-zero axis; 0 = perfectly level) [optional]
+     * \param[in] scanAzimuthOffset  Global scanner azimuth (heading) offset in radians (right-hand rotation about the world +z axis applied on top of the azimuth sweep; 0 = no offset) [optional]
      */
     ScanMetadata(const helios::vec3 &origin, uint Ntheta, float thetaMin, float thetaMax, uint Nphi, float phiMin, float phiMax, float exitDiameter, float beamDivergence, float rangeNoiseStdDev, float angleNoiseStdDev,
-                 const std::vector<std::string> &columnFormat, float scanTiltRoll = 0.f, float scanTiltPitch = 0.f);
+                 const std::vector<std::string> &columnFormat, float scanTiltRoll = 0.f, float scanTiltPitch = 0.f, float scanAzimuthOffset = 0.f);
 
     //! Create a spinning multibeam LiDAR scan data structure (e.g. Velodyne/Ouster/Hesai rotating multi-channel sensor)
     /**
@@ -258,9 +259,10 @@ struct ScanMetadata {
      * \param[in] columnFormat  Vector of strings specifying the columns of the scan ASCII file for input/output
      * \param[in] scanTiltRoll  Global scanner tilt roll angle in radians (right-hand rotation about the body lateral axis; 0 = perfectly level) [optional]
      * \param[in] scanTiltPitch  Global scanner tilt pitch angle in radians (right-hand rotation about the body forward/azimuth-zero axis; 0 = perfectly level) [optional]
+     * \param[in] scanAzimuthOffset  Global scanner azimuth (heading) offset in radians (right-hand rotation about the world +z axis applied on top of the azimuth sweep; 0 = no offset) [optional]
      */
     ScanMetadata(const helios::vec3 &origin, const std::vector<float> &beamZenithAngles, uint Nphi, float phiMin, float phiMax, float exitDiameter, float beamDivergence, float rangeNoiseStdDev, float angleNoiseStdDev,
-                 const std::vector<std::string> &columnFormat, float scanTiltRoll = 0.f, float scanTiltPitch = 0.f);
+                 const std::vector<std::string> &columnFormat, float scanTiltRoll = 0.f, float scanTiltPitch = 0.f, float scanAzimuthOffset = 0.f);
 
     //! File containing hit point data
     std::string data_file;
@@ -354,6 +356,22 @@ struct ScanMetadata {
      */
     float scanTilt_pitch;
 
+    //! Global scanner azimuth (heading) offset in radians (right-hand rotation about the world vertical +z axis)
+    /**
+     * Yaw component of the global scanner orientation that completes the roll/pitch/yaw (\ref scanTilt_roll,
+     * \ref scanTilt_pitch, azimuth) triad used by real instruments. While roll and pitch come from the dual-axis
+     * inclinometer, the azimuth (heading) is the compass orientation of the scanner about the local vertical. This field
+     * applies a right-hand rotation of the entire scan frame (the fan of ray directions and the tilt body axes) about the
+     * world +z axis, about the scanner origin, during synthetic scan generation. It is applied as a heading offset on top
+     * of the per-scan azimuth sweep [\ref phiMin, \ref phiMax]: the rotation order is yaw (azimuth) first, then pitch, then
+     * roll. A value of 0 leaves the azimuth-zero (\ref phiMin) direction unchanged.
+     * \note The sign convention is right-handed (counter-clockwise about +z when viewed from above). Commercial scanners do
+     *       not share a universal heading sign convention, so when matching a specific instrument the sign should be
+     *       verified against that instrument's reported azimuth.
+     * \note This is only used for synthetic scan generation. See also \ref scanTilt_roll and \ref scanTilt_pitch.
+     */
+    float scanTilt_azimuth;
+
     //! Vector of strings specifying the columns of the scan ASCII file for input/output
     std::vector<std::string> columnFormat;
 
@@ -385,6 +403,54 @@ struct ScanMetadata {
      * \return (row,column) table index for the given hit point
      */
     helios::int2 direction2rc(const helios::SphericalCoord &direction) const;
+
+    // ---- Moving-platform (mobile/airborne) scan support ----
+    // When isMoving is true the scanner pose is driven by a dense timestamped 6-DOF trajectory and the
+    // synthetic scan generates a per-pulse origin and orientation instead of a single static origin. The
+    // static scanTilt_roll/pitch/azimuth fields are NOT applied in this mode: attitude comes entirely from
+    // the trajectory quaternions composed with the fixed boresight misalignment. When isMoving is false the
+    // scan behaves exactly as before (single static origin). Populated via \ref LiDARcloud::addScanMoving().
+
+    //! Whether this scan uses a moving-platform trajectory (true) or a single static origin (false)
+    bool isMoving = false;
+
+    //! Monotonically increasing trajectory sample times in seconds (size M)
+    std::vector<double> traj_t;
+
+    //! Trajectory platform (body-frame origin) positions in world coordinates, one per \ref traj_t entry (size M)
+    std::vector<helios::vec3> traj_pos;
+
+    //! Trajectory platform orientations as quaternions (qx,qy,qz,qw), one per \ref traj_t entry (size M)
+    /**
+     * Hamilton convention, body->world: the quaternion rotates a vector expressed in the platform body frame
+     * into the world frame. Stored as (x,y,z,w) in a \ref helios::vec4.
+     */
+    std::vector<helios::vec4> traj_quat;
+
+    //! Position of the sensor optical center in the platform body frame, in meters (lever arm)
+    helios::vec3 lever_arm = helios::make_vec3(0, 0, 0);
+
+    //! Fixed sensor rotational misalignment (boresight) as roll/pitch/yaw in radians, in the body frame
+    helios::vec3 boresight_rpy = helios::make_vec3(0, 0, 0);
+
+    //! Time between consecutive pulses in seconds (= 1 / pulse_rate_hz). For static scans this defaults to 1.0
+    //! so per-pulse timestamps equal the historical pulse ordinal (i.e. no change to existing behavior).
+    double pulse_period = 1.0;
+
+    //! Time of the first pulse (pulse ordinal 0) in seconds. Relative time; no absolute GPS epoch.
+    double t0 = 0.0;
+
+    //! Interpolate the platform pose at trajectory time \p t (moving-platform scans only)
+    /**
+     * Brackets \p t in \ref traj_t by binary search, linearly interpolates \ref traj_pos, and spherically
+     * interpolates (SLERP) \ref traj_quat. Times outside [traj_t.front(), traj_t.back()] are clamped to the
+     * nearest endpoint. Throws via helios_runtime_error if the trajectory is empty, the three trajectory
+     * vectors differ in length, or \ref traj_t is not strictly increasing.
+     * \param[in] t  Query time in seconds.
+     * \param[out] pos  Interpolated platform position in world coordinates.
+     * \param[out] quat  Interpolated platform orientation quaternion (qx,qy,qz,qw), Hamilton body->world.
+     */
+    void poseAt(double t, helios::vec3 &pos, helios::vec4 &quat) const;
 };
 
 //! Primary class for terrestrial LiDAR scan
@@ -458,6 +524,26 @@ private:
      * \param[out] Gtheta_bar Average G(theta) for each cell (size = Ncells)
      */
     void computeGtheta(uint Ncells, uint Nscans, std::vector<float> &Gtheta, std::vector<float> &Gtheta_bar);
+
+    //! True if any scan in the cloud is a moving-platform scan (see \ref addScanMoving())
+    /**
+     * Used to guard functions that assume a single static scan origin (triangulation, ray-direction validation,
+     * distance filtering) and therefore cannot operate correctly on a moving-platform scan.
+     */
+    bool anyScanMoving() const;
+
+    //! Shared implementation of the beam-based leaf-area inversion (see the public \ref calculateLeafArea overloads)
+    /**
+     * Performs the per-voxel beam classification and Beer-Lambert LAD inversion. Beam geometry is computed from the
+     * per-pulse emission origin recorded on each hit (\ref getHitOrigin()), so it is correct for both static and
+     * moving-platform scans.
+     * \param[in] context Pointer to the Helios context
+     * \param[in] min_voxel_hits Minimum number of allowable LiDAR hits per voxel
+     * \param[in] element_width Characteristic vegetation element width [m] (<= 0 reports sampling-only uncertainty)
+     * \param[in] supplied_Gtheta If > 0, this G(theta) is used for every voxel and triangulation is NOT required. If <=
+     *            0 (the sentinel), G(theta) is computed per voxel from triangulation, which must have been performed.
+     */
+    void calculateLeafArea_inner(helios::Context *context, int min_voxel_hits, float element_width, float supplied_Gtheta);
 
     //! Perform LAD inversion for a single voxel using secant method
     /**
@@ -625,6 +711,51 @@ public:
      */
     uint addScan(ScanMetadata &newscan);
 
+    //! Add a moving-platform (mobile/airborne) LiDAR scan driven by a 6-DOF pose trajectory
+    /**
+     * Registers a scan whose scanner pose changes during the sweep. The synthetic scan generator (see
+     * \ref syntheticScan()) computes, for each pulse, its acquisition time \f$t = t_0 + \mathrm{ordinal}\cdot
+     * \mathrm{pulse\_period}\f$ (where pulse_period = 1/\p pulse_rate_hz and the ordinal is the pulse's position
+     * in the scan-grid firing sequence), interpolates the platform pose at that time via \ref ScanMetadata::poseAt(),
+     * and emits a per-pulse origin \f$\mathbf{o} = \mathbf{pos} + R(\mathbf{q})\,\mathbf{lever\_arm}\f$ and direction
+     * \f$\mathbf{d} = R(\mathbf{q})\,R(\mathbf{boresight})\,\mathbf{d}_{body}\f$. Every resulting hit and miss stores
+     * its own origin (data labels "origin_x"/"origin_y"/"origin_z"), real timestamp ("timestamp"), and firing index
+     * ("pulse_id"). The static \ref ScanMetadata::scanTilt_roll / scanTilt_pitch / scanTilt_azimuth fields are not
+     * applied in this mode and must be zero (attitude is defined entirely by \p traj_quat and \p boresight_rpy).
+     * \param[in] scan  Scan metadata defining the angular sampling grid and beam parameters (origin is ignored; the trajectory supplies position).
+     * \param[in] traj_t  Monotonically increasing trajectory sample times in seconds (size M).
+     * \param[in] traj_pos  Platform positions in world coordinates, one per \p traj_t entry (size M).
+     * \param[in] traj_quat  Platform orientation quaternions (qx,qy,qz,qw), Hamilton body->world, one per \p traj_t entry (size M).
+     * \param[in] lever_arm  Sensor optical center in the platform body frame (meters).
+     * \param[in] boresight_rpy  Fixed sensor rotational misalignment as roll/pitch/yaw in radians (body frame).
+     * \param[in] pulse_rate_hz  Pulse repetition rate in Hz (must be > 0); sets the time between consecutive pulses.
+     * \param[in] t0  Time of the first pulse in seconds (relative time; defaults to 0).
+     * \return ID for scan that was created
+     */
+    uint addScanMoving(ScanMetadata scan, const std::vector<double> &traj_t, const std::vector<helios::vec3> &traj_pos, const std::vector<helios::vec4> &traj_quat, const helios::vec3 &lever_arm, const helios::vec3 &boresight_rpy,
+                       float pulse_rate_hz, double t0 = 0.0);
+
+    //! Add a moving-platform (mobile/airborne) LiDAR scan with the orientation trajectory given as Euler angles
+    /**
+     * Convenience overload of \ref addScanMoving() that takes the per-sample platform orientation as roll/pitch/yaw
+     * Euler angles (radians) instead of quaternions. Each \p traj_rpy entry is converted to a Hamilton body->world
+     * quaternion using the same intrinsic Z-Y-X (yaw-pitch-roll) convention as \p boresight_rpy, then the scan is
+     * registered exactly as the quaternion overload. Use this when hand-authoring a trajectory; prefer the quaternion
+     * overload when the trajectory comes from an INS/IMU that natively reports quaternions (avoids a round-trip through
+     * Euler angles and the associated gimbal-lock ambiguity).
+     * \param[in] scan  Scan metadata defining the angular sampling grid and beam parameters (origin is ignored; the trajectory supplies position).
+     * \param[in] traj_t  Monotonically increasing trajectory sample times in seconds (size M).
+     * \param[in] traj_pos  Platform positions in world coordinates, one per \p traj_t entry (size M).
+     * \param[in] traj_rpy  Platform orientations as roll/pitch/yaw Euler angles in radians (intrinsic Z-Y-X), one per \p traj_t entry (size M).
+     * \param[in] lever_arm  Sensor optical center in the platform body frame (meters).
+     * \param[in] boresight_rpy  Fixed sensor rotational misalignment as roll/pitch/yaw in radians (body frame).
+     * \param[in] pulse_rate_hz  Pulse repetition rate in Hz (must be > 0); sets the time between consecutive pulses.
+     * \param[in] t0  Time of the first pulse in seconds (relative time; defaults to 0).
+     * \return ID for scan that was created
+     */
+    uint addScanMoving(ScanMetadata scan, const std::vector<double> &traj_t, const std::vector<helios::vec3> &traj_pos, const std::vector<helios::vec3> &traj_rpy, const helios::vec3 &lever_arm, const helios::vec3 &boresight_rpy,
+                       float pulse_rate_hz, double t0 = 0.0);
+
     //! Specify a scan point as a hit by providing the (x,y,z) coordinates and scan ray direction
     /**
      * \param[in] scanID ID of scan hit point to which hit point should be added.
@@ -776,11 +907,28 @@ public:
      */
     float getScanTiltPitch(uint scanID) const;
 
+    //! Get the global scanner azimuth (heading) offset for a scan
+    /**
+     * \param[in] scanID ID of scan.
+     * \return Scanner azimuth offset (right-hand rotation about the world z-axis) applied during synthetic scan generation, in radians (0 if none).
+     */
+    float getScanAzimuthOffset(uint scanID) const;
+
     //! Get (x,y,z) coordinate of hit point by index
     /**
      * \param [in] index Hit number
      */
     helios::vec3 getHitXYZ(uint index) const;
+
+    //! Get the (x,y,z) origin from which the beam producing this hit point was emitted
+    /**
+     * For moving-platform scans (see \ref addScanMoving()) each hit stores its own per-pulse emission origin in the
+     * data labels "origin_x"/"origin_y"/"origin_z"; this function returns that origin. For static scans (which store
+     * no per-hit origin) it falls back to the single scan origin \ref getScanOrigin() of the hit's scan.
+     * \param [in] index Hit number
+     * \return (x,y,z) world-coordinate origin of the beam that produced this hit.
+     */
+    helios::vec3 getHitOrigin(uint index) const;
 
     //! Get ray direction of hit point in the scan based on its index
     /**
@@ -1600,6 +1748,29 @@ public:
      *       \ref getCellLeafAreaConfidenceInterval, and \ref getGroupLADConfidenceInterval.
      */
     void calculateLeafArea(helios::Context *context, int min_voxel_hits, float element_width);
+
+    //! Calculate the leaf area for each grid volume using a caller-supplied G(theta), without requiring triangulation
+    /**
+     * Beam-based leaf-area inversion for scans that cannot be triangulated - in particular moving-platform
+     * (mobile/airborne) scans (see \ref addScanMoving()), whose pulses do not lie on a fixed theta-phi grid and so
+     * cannot be Delaunay-triangulated. Triangulation is normally required only to estimate the per-voxel mean
+     * leaf-projection coefficient G(theta); this overload takes G(theta) directly instead, so it does NOT require
+     * \ref triangulateHitPoints() to have been called.
+     *
+     * The inversion uses the per-pulse beam origin recorded on each hit (see \ref getHitOrigin()) when classifying
+     * beams against voxels, so it is geometrically correct for a scanner that moved during acquisition. For a static
+     * scan the per-hit origin equals the scan origin, so this overload also works (with a supplied G(theta)) there.
+     *
+     * \param[in] context Pointer to the Helios context
+     * \param[in] Gtheta Mean leaf-projection coefficient G(theta), applied to every voxel. Must be in (0,1]. Use 0.5
+     *            for a spherical (random) leaf-angle distribution; supply a measured/assumed value otherwise.
+     * \param[in] min_voxel_hits Minimum number of allowable LiDAR hits per voxel
+     * \param[in] element_width Characteristic vegetation element width [m]; see the three-argument overload. Pass <= 0
+     *            to report sampling-only uncertainty.
+     * \note Requires miss points (transmitted beams), like the other overloads; supply a miss-retaining scan format or
+     *       call \ref gapfillMisses() first.
+     */
+    void calculateLeafArea(helios::Context *context, float Gtheta, int min_voxel_hits, float element_width);
 
     //! Calculate the leaf area for each grid volume (DEPRECATED - use calculateLeafArea)
     /**

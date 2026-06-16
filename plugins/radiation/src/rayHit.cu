@@ -29,6 +29,98 @@ rtDeclareVariable(PerRayData, prd, rtPayload, );
 
 rtDeclareVariable(unsigned int, UUID, attribute UUID, );
 
+// ---------------------------------------------------------------------------
+// Translucent cover (glass/plastic) optical model
+// ---------------------------------------------------------------------------
+
+//! Angular transmittance/reflectance/absorptance of a single dielectric sheet via Fresnel reflection
+//! (two interfaces, both polarizations, internal reflections summed in closed form) plus Bouguer
+//! absorption (Duffie & Beckman solar-glazing model). Byte-for-byte port of glass_tau_rho_alpha() in
+//! optix8/OptiX8DeviceCode.cu and shaders/common/glass_cover.glsl — KEEP NUMERICALLY IDENTICAL.
+//! Inputs:  cos_theta = |cos| of incidence angle, n = refractive index (>1), KL = absorption product K*L.
+//! Returns: float3(tau, rho, alpha) with tau + rho + alpha == 1.
+static __device__ __inline__ float3 glass_tau_rho_alpha(float cos_theta, float n, float KL) {
+    cos_theta = fmaxf(1e-4f, fminf(1.f, cos_theta)); // guard grazing/degenerate
+    const float theta = acos_safe(cos_theta);
+    const float sin_t = sinf(theta);
+    const float sin_tr = sin_t / n; // Snell
+    const float cos_tr = sqrtf(fmaxf(0.f, 1.f - sin_tr * sin_tr));
+    const float theta_r = asin_safe(sin_tr);
+
+    float r_par, r_per;
+    if (theta < 1e-3f) {
+        const float r0 = ((n - 1.f) / (n + 1.f)) * ((n - 1.f) / (n + 1.f));
+        r_par = r0;
+        r_per = r0;
+    } else {
+        const float s_minus = sinf(theta_r - theta);
+        const float s_plus = sinf(theta_r + theta);
+        const float t_minus = tanf(theta_r - theta);
+        const float t_plus = tanf(theta_r + theta);
+        r_per = (s_minus * s_minus) / fmaxf(1e-12f, s_plus * s_plus); // perpendicular
+        r_par = (t_minus * t_minus) / fmaxf(1e-12f, t_plus * t_plus); // parallel
+    }
+
+    const float tau_a = (KL > 0.f) ? expf(-KL / fmaxf(1e-4f, cos_tr)) : 1.f; // Bouguer absorption
+
+    float tau = 0.f, rho = 0.f;
+    for (int pol = 0; pol < 2; pol++) {
+        const float r = (pol == 0) ? r_per : r_par;
+        const float denom = fmaxf(1e-6f, 1.f - (r * tau_a) * (r * tau_a));
+        const float tau_i = tau_a * (1.f - r) * (1.f - r) / denom;
+        const float rho_i = r * (1.f + tau_a * tau_i);
+        tau += 0.5f * tau_i;
+        rho += 0.5f * rho_i;
+    }
+    tau = fmaxf(0.f, fminf(1.f, tau));
+    rho = fmaxf(0.f, fminf(1.f, rho));
+    float alpha = 1.f - tau - rho;
+    if (alpha < 0.f) {
+        alpha = 0.f;
+    } // numerical guard
+    return make_float3(tau, rho, alpha);
+}
+
+//! Reconstruct the surface normal of primitive `hit_position` from its transform matrix and type,
+//! returning |cos(incidence angle)| and the hit face (face_top = true when the ray strikes the
+//! +normal/top side). Mirrors the normal logic in closest_hit_direct/diffuse and the OptiX 8
+//! coverCosTheta().
+static __device__ __inline__ float coverNormalFaceCos(uint hit_position, const float3 &ray_dir, bool &face_top) {
+    float m[16];
+    for (uint i = 0; i < 16; i++) {
+        m[i] = transform_matrix[optix::make_uint2(i, hit_position)];
+    }
+    float3 normal = make_float3(0.f, 0.f, 1.f);
+    const uint ptype = primitive_type[hit_position];
+    if (ptype == 0 || ptype == 3) { // patch or tile
+        float3 s0 = make_float3(0, 0, 0), s1 = make_float3(1, 0, 0), s2 = make_float3(0, 1, 0);
+        d_transformPoint(m, s0);
+        d_transformPoint(m, s1);
+        d_transformPoint(m, s2);
+        normal = cross(s1 - s0, s2 - s0);
+    } else if (ptype == 1) { // triangle
+        float3 v0 = make_float3(0, 0, 0), v1 = make_float3(0, 1, 0), v2 = make_float3(1, 1, 0);
+        d_transformPoint(m, v0);
+        d_transformPoint(m, v1);
+        d_transformPoint(m, v2);
+        normal = cross(v1 - v0, v2 - v0);
+    } else if (ptype == 2) { // disk
+        float3 v0 = make_float3(0, 0, 0), v1 = make_float3(1, 0, 0), v2 = make_float3(0, 1, 0);
+        d_transformPoint(m, v0);
+        d_transformPoint(m, v1);
+        d_transformPoint(m, v2);
+        normal = cross(v1 - v0, v2 - v0);
+    }
+    const float nmag = d_magnitude(normal);
+    if (nmag < 1e-12f) {
+        face_top = true;
+        return 1.f;
+    }
+    normal = normal / nmag;
+    face_top = dot(normal, ray_dir) < 0.f;
+    return fminf(1.f, fabsf(dot(ray_dir, normal)));
+}
+
 RT_PROGRAM void closest_hit_direct() {
 
     uint hit_position = primitive_positions[UUID];
@@ -536,6 +628,162 @@ RT_PROGRAM void closest_hit_pixel_label() {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Translucent cover (glass/plastic) any-hit programs
+// ---------------------------------------------------------------------------
+// A glass cover is not an occluder: the ray passes through it (rtIgnoreIntersection) attenuated by the
+// Fresnel+Bouguer tau(theta), which accumulates per band in prd.cover_transmittance and is applied to
+// the deposited flux in the miss programs. The cover's own reflected/absorbed energy is deposited here.
+// Mirrors coverAnyHitBody() in optix8/OptiX8DeviceCode.cu. Direct rays use the per-source flux; diffuse
+// rays use the (isotropic) sky flux for the cover's rho/alpha bookkeeping — the transmittance
+// accumulation itself is exact and flux-independent.
+
+RT_PROGRAM void any_hit_direct() {
+
+    if (glass_enabled == 0u) {
+        return; // glass model not in use this launch — accept the hit (normal occlusion)
+    }
+
+    uint hit_position = primitive_positions[UUID];
+    if (hit_position == UINT_MAX) {
+        return;
+    }
+    // The intersection program already skips self-hits (origin_UUID == UUID); guard defensively.
+    if (UUID == prd.origin_UUID) {
+        rtIgnoreIntersection();
+        return;
+    }
+
+    MaterialPropertyIndexer mat_indexer(Nsources, Nprimitives, Nbands_global);
+    RadiationBufferIndexer rad_indexer(Nprimitives, Nbands_launch);
+    SourceFluxIndexer source_flux_indexer(Nsources, Nbands_launch);
+
+    // Pass-through only if this primitive is glass in EVERY launched band. A single ray carries all
+    // launched bands, so a primitive that is glass in some launched bands but opaque in others cannot be
+    // both transmitted and blocked — treat it as a normal (opaque) occluder for the whole ray (accept
+    // the hit). This matches the OptiX 8 and Vulkan backends.
+    {
+        int b_check = -1;
+        for (int b_global = 0; b_global < Nbands_global; b_global++) {
+            if (band_launch_flag[b_global] == 0) {
+                continue;
+            }
+            b_check++;
+            size_t mat_ind = mat_indexer(prd.source_ID, hit_position, b_global);
+            if (is_glass[mat_ind] == 0.f) {
+                return; // opaque in this launched band → block the ray
+            }
+        }
+    }
+
+    bool face_top;
+    float cos_theta = coverNormalFaceCos(hit_position, ray.direction, face_top);
+
+    int b = -1;
+    for (int b_global = 0; b_global < Nbands_global; b_global++) {
+        if (band_launch_flag[b_global] == 0) {
+            continue;
+        }
+        b++;
+        if (b >= HELIOS_MAX_RADIATION_BANDS) {
+            break; // host guarantees this never trips
+        }
+
+        size_t mat_ind = mat_indexer(prd.source_ID, hit_position, b_global);
+        float3 tra = glass_tau_rho_alpha(cos_theta, glass_n[mat_ind], glass_KL[mat_ind]); // (tau, rho, alpha)
+
+        size_t flux_idx = source_flux_indexer(prd.source_ID, b);
+        double ext_flux = source_fluxes[flux_idx];
+        double incoming = prd.strength * ext_flux * (double) prd.cover_transmittance[b];
+
+        size_t cov_ind = rad_indexer(hit_position, b);
+        if (incoming > 0.0) {
+            atomicFloatAdd(&radiation_in[cov_ind], (float) (incoming * (double) tra.z)); // absorbed
+            // Reflection leaves from the hit face; transmission continues out the far face.
+            if (face_top) {
+                atomicFloatAdd(&scatter_buff_top[cov_ind], (float) (incoming * (double) tra.y));
+            } else {
+                atomicFloatAdd(&scatter_buff_bottom[cov_ind], (float) (incoming * (double) tra.y));
+            }
+        }
+
+        prd.cover_transmittance[b] *= tra.x; // attenuate the through-beam for this band
+    }
+
+    // All launched bands are glass: pass the (attenuated) ray through toward the source.
+    rtIgnoreIntersection();
+}
+
+RT_PROGRAM void any_hit_diffuse() {
+
+    if (glass_enabled == 0u) {
+        return;
+    }
+
+    uint hit_position = primitive_positions[UUID];
+    if (hit_position == UINT_MAX) {
+        return;
+    }
+    if (UUID == prd.origin_UUID) {
+        rtIgnoreIntersection();
+        return;
+    }
+
+    MaterialPropertyIndexer mat_indexer(Nsources, Nprimitives, Nbands_global);
+    RadiationBufferIndexer rad_indexer(Nprimitives, Nbands_launch);
+
+    // Pass-through only if glass in EVERY launched band; otherwise treat as opaque (accept → block).
+    // Matches the OptiX 8 and Vulkan backends.
+    {
+        int b_check = -1;
+        for (int b_global = 0; b_global < Nbands_global; b_global++) {
+            if (band_launch_flag[b_global] == 0) {
+                continue;
+            }
+            b_check++;
+            size_t mat_ind = mat_indexer(prd.source_ID, hit_position, b_global);
+            if (is_glass[mat_ind] == 0.f) {
+                return; // opaque in this launched band → block the ray
+            }
+        }
+    }
+
+    bool face_top;
+    float cos_theta = coverNormalFaceCos(hit_position, ray.direction, face_top);
+
+    int b = -1;
+    for (int b_global = 0; b_global < Nbands_global; b_global++) {
+        if (band_launch_flag[b_global] == 0) {
+            continue;
+        }
+        b++;
+        if (b >= HELIOS_MAX_RADIATION_BANDS) {
+            break;
+        }
+
+        size_t mat_ind = mat_indexer(prd.source_ID, hit_position, b_global);
+        float3 tra = glass_tau_rho_alpha(cos_theta, glass_n[mat_ind], glass_KL[mat_ind]);
+
+        double ext_flux = diffuse_flux[b];
+        double incoming = prd.strength * ext_flux * (double) prd.cover_transmittance[b];
+
+        size_t cov_ind = rad_indexer(hit_position, b);
+        if (incoming > 0.0) {
+            atomicFloatAdd(&radiation_in[cov_ind], (float) (incoming * (double) tra.z));
+            if (face_top) {
+                atomicFloatAdd(&scatter_buff_top[cov_ind], (float) (incoming * (double) tra.y));
+            } else {
+                atomicFloatAdd(&scatter_buff_bottom[cov_ind], (float) (incoming * (double) tra.y));
+            }
+        }
+
+        prd.cover_transmittance[b] *= tra.x;
+    }
+
+    // All launched bands are glass: pass the (attenuated) ray through toward the sky.
+    rtIgnoreIntersection();
+}
+
 RT_PROGRAM void miss_direct() {
 
     // Convert UUID to array position
@@ -568,7 +816,9 @@ RT_PROGRAM void miss_direct() {
         // Use BufferIndexer: [source][band]
         size_t flux_idx = source_flux_indexer(prd.source_ID, b);
         float source_flux = source_fluxes[flux_idx];
-        double strength = prd.strength * source_flux;
+        // Attenuation from any translucent covers (glass/plastic) the ray passed through, per band.
+        float cover_tau = (b < HELIOS_MAX_RADIATION_BANDS) ? prd.cover_transmittance[b] : 1.f;
+        double strength = prd.strength * source_flux * cover_tau;
         float absorption = strength * (1.f - t_rho - t_tau);
 
         // absorption
@@ -597,15 +847,21 @@ RT_PROGRAM void miss_direct() {
                     atomicFloatAdd(&scatter_buff_top_cam[ind_origin], strength * t_tau_cam); // transmission
                 }
             }
-            // Accumulate incident radiation for specular (per source, camera-weighted)
+            // Accumulate incident radiation for specular for ALL cameras (per source, camera-weighted).
+            // Direct rays are launched once (not per camera), so we must populate every camera's slot
+            // in radiation_specular here so each camera's closest-hit can read its own data. (Mirrors
+            // the OptiX 8 path in OptiX8DeviceCode.cu; without the camera loop only camera_ID==0 was
+            // populated and additional cameras saw no specular highlight.)
             // Apply camera spectral response weighting: ∫(source × camera) / ∫(source)
             if (strength > 0) {
-                // Use BufferIndexer: [source][band][camera]
-                size_t weight_ind = source_cam_flux_indexer(prd.source_ID, b, camera_ID);
-                float camera_weight = source_fluxes_cam[weight_ind];
-                // Use BufferIndexer: [source][camera][primitive][band] (note different order!)
-                size_t ind_specular = spec_indexer(prd.source_ID, camera_ID, origin_position, b);
-                atomicFloatAdd(&radiation_specular[ind_specular], strength * camera_weight);
+                for (unsigned int cam = 0; cam < Ncameras; cam++) {
+                    // Use BufferIndexer: [source][band][camera]
+                    size_t weight_ind = source_cam_flux_indexer(prd.source_ID, b, cam);
+                    float camera_weight = source_fluxes_cam[weight_ind];
+                    // Use BufferIndexer: [source][camera][primitive][band] (note different order!)
+                    size_t ind_specular = spec_indexer(prd.source_ID, cam, origin_position, b);
+                    atomicFloatAdd(&radiation_specular[ind_specular], strength * camera_weight);
+                }
             }
         }
     }
@@ -676,6 +932,9 @@ RT_PROGRAM void miss_diffuse() {
             float t_rho = rho[radprop_ind_global];
             float t_tau = tau[radprop_ind_global];
 
+            // Attenuation from any translucent covers (glass/plastic) the sky ray passed through, per band.
+            float cover_tau = (b < HELIOS_MAX_RADIATION_BANDS) ? prd.cover_transmittance[b] : 1.f;
+
             // Check if ray was launched from voxel (type 4)
             if (primitive_type[origin_position] == 4) { // ray was launched from voxel
 
@@ -684,17 +943,17 @@ RT_PROGRAM void miss_diffuse() {
                 float beta = kappa + sigma_s;
 
                 // absorption
-                atomicAdd(&radiation_in[ind_origin], diffuse_flux[b] * prd.strength * kappa / beta);
+                atomicAdd(&radiation_in[ind_origin], diffuse_flux[b] * prd.strength * cover_tau * kappa / beta);
 
                 // scattering
-                atomicAdd(&scatter_buff_top[ind_origin], diffuse_flux[b] * prd.strength * sigma_s / beta);
+                atomicAdd(&scatter_buff_top[ind_origin], diffuse_flux[b] * prd.strength * cover_tau * sigma_s / beta);
 
             } else { // ray was NOT launched from voxel
 
                 // Use unified distribution function (supports power-law, Prague, and isotropic modes)
                 float fd = evaluateDiffuseAngularDistribution(ray.direction, diffuse_peak_dir[b], diffuse_extinction[b], diffuse_dist_norm[b], sky_radiance_params[b]);
 
-                float strength = fd * diffuse_flux[b] * prd.strength;
+                float strength = fd * diffuse_flux[b] * prd.strength * cover_tau;
 
                 //  absorption
                 atomicAdd(&radiation_in[ind_origin], strength * (1.f - t_rho - t_tau));

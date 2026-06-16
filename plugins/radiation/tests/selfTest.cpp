@@ -238,6 +238,42 @@ GPU_TEST_CASE("RadiationModel Simple Direct") {
     DOCTEST_CHECK(error <= 0.01); // 1% tolerance
 }
 
+GPU_TEST_CASE("RadiationModel Multi-Band Stale Backend Geometry") {
+    // Regression test for a Vulkan-backend size-mismatch crash on a multi-band launch.
+    //
+    // Reproduces the scenario where the backend's primitive count is stale at 0 while the Context
+    // does have primitives: geometry is first initialized over an empty Context (backend
+    // primitive_count = 0, isgeometryinitialized = true), then primitives are added but
+    // updateGeometry() is NOT called again before runBand(). runBand() skips the re-upload because
+    // geometry is already "initialized", so the backend still sees 0 primitives.
+    //
+    // In that state zeroRadiationBuffers() must still record launch_band_count (= 3 here) even
+    // though it allocates no buffers; otherwise uploadSourceFluxes() rejects the correctly-sized
+    // (Nsources * Nbands_launch) flux buffer as a size mismatch.
+    Context context;
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    radiation.addRadiationBand("PAR");
+    radiation.addRadiationBand("NIR");
+    radiation.addRadiationBand("LW");
+
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceFlux(sun, "PAR", 500.0f);
+    radiation.setSourceFlux(sun, "NIR", 500.0f);
+
+    // Initialize geometry while the Context is empty: backend primitive_count = 0.
+    radiation.updateGeometry();
+
+    // Add geometry to the Context but do not re-run updateGeometry(): the backend's primitive
+    // count remains stale at 0 while context->getPrimitiveCount() > 0, so runBand() passes the
+    // model-level geometry guard but reaches the source-flux upload with no backend geometry.
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    DOCTEST_CHECK_NOTHROW(radiation.runBand({"PAR", "NIR", "LW"}));
+}
+
 GPU_TEST_CASE("RadiationModel 90 Degree Common-Edge Squares") {
     float error_threshold = 0.005;
     int Nensemble = 500;
@@ -5584,9 +5620,24 @@ GPU_TEST_CASE("RadiationModel - Camera samples sky longwave on emission band mis
     radiation.updateGeometry();
     radiation.runBand("LW");
 
-    // Smoke test: pipeline runs end-to-end and produces a pixel buffer of the right size.
+    // The pipeline must run end-to-end (this previously triggered an OptiX 8 illegal memory
+    // access: a default collimated source is auto-added with zero flux, so the direct pass is
+    // skipped and source_fluxes was left null while Nsources==1; the camera miss program then
+    // dereferenced the null source_fluxes buffer). Verify a pixel buffer of the right size, that
+    // every pixel is finite, and that the camera actually sampled the longwave sky (positive
+    // signal) rather than silently producing an all-zero image.
     auto pixels_LW = radiation.getCameraPixelData("sky_cam", "LW");
     DOCTEST_CHECK(pixels_LW.size() == 8 * 8);
+    bool all_finite = true;
+    float max_pixel = 0.f;
+    for (float v: pixels_LW) {
+        if (!std::isfinite(v)) {
+            all_finite = false;
+        }
+        max_pixel = std::max(max_pixel, v);
+    }
+    DOCTEST_CHECK(all_finite);
+    DOCTEST_CHECK(max_pixel > 0.f);
 }
 
 GPU_TEST_CASE("RadiationModel - Camera White Balance") {
@@ -8608,5 +8659,341 @@ GPU_TEST_CASE("SIF: excitation_scattering_depth propagates to excitation bands a
     radiation_b.updateGeometry();
     const std::vector<std::string> sif_bands_b = {"SIF_red"};
     DOCTEST_CHECK_NOTHROW(radiation_b.runBand(sif_bands_b));
+}
+
+// ============================================================================
+// Translucent cover (glass/plastic) material — Fresnel + Bouguer angular transmittance
+// ============================================================================
+
+// Host-side reference implementation of the angular transmittance/reflectance/absorptance of a
+// single dielectric sheet. This MUST stay numerically identical to the device implementations in
+// OptiX8DeviceCode.cu (glass_tau_rho_alpha) and shaders/common/glass_cover.glsl. Tests compare the
+// simulator against this independent reference, not against itself. Returns (tau, rho, alpha).
+static helios::vec3 glass_tau_rho_alpha_ref(float cos_theta, float n, float KL) {
+    cos_theta = std::fmax(1e-4f, std::fmin(1.f, cos_theta));
+    const float theta = std::acos(std::fmax(-1.f, std::fmin(1.f, cos_theta)));
+    const float sin_t = std::sin(theta);
+    const float sin_tr = sin_t / n;
+    const float cos_tr = std::sqrt(std::fmax(0.f, 1.f - sin_tr * sin_tr));
+    const float theta_r = std::asin(std::fmax(-1.f, std::fmin(1.f, sin_tr)));
+
+    float r_par, r_per;
+    if (theta < 1e-3f) {
+        const float r0 = ((n - 1.f) / (n + 1.f)) * ((n - 1.f) / (n + 1.f));
+        r_par = r0;
+        r_per = r0;
+    } else {
+        const float s_minus = std::sin(theta_r - theta);
+        const float s_plus = std::sin(theta_r + theta);
+        const float t_minus = std::tan(theta_r - theta);
+        const float t_plus = std::tan(theta_r + theta);
+        r_per = (s_minus * s_minus) / std::fmax(1e-12f, s_plus * s_plus);
+        r_par = (t_minus * t_minus) / std::fmax(1e-12f, t_plus * t_plus);
+    }
+
+    const float tau_a = (KL > 0.f) ? std::exp(-KL / std::fmax(1e-4f, cos_tr)) : 1.f;
+    float tau = 0.f, rho = 0.f;
+    for (int pol = 0; pol < 2; pol++) {
+        const float r = (pol == 0) ? r_per : r_par;
+        const float denom = std::fmax(1e-6f, 1.f - (r * tau_a) * (r * tau_a));
+        const float tau_i = tau_a * (1.f - r) * (1.f - r) / denom;
+        const float rho_i = r * (1.f + tau_a * tau_i);
+        tau += 0.5f * tau_i;
+        rho += 0.5f * rho_i;
+    }
+    tau = std::fmax(0.f, std::fmin(1.f, tau));
+    rho = std::fmax(0.f, std::fmin(1.f, rho));
+    return helios::make_vec3(tau, rho, std::fmax(0.f, 1.f - tau - rho));
+}
+
+// Pure-CPU test of the host reference math against hand-computed closed-form values. Runs on every
+// platform (no GPU needed), validating the physics independently of the ray-tracing integration.
+DOCTEST_TEST_CASE("Glass cover Fresnel+Bouguer reference math") {
+    // Normal incidence, lossless n=1.5: r0 = ((n-1)/(n+1))^2 = 0.04, tau(0) = (1-r0)/(1+r0) = 0.9231.
+    helios::vec3 t0 = glass_tau_rho_alpha_ref(1.0f, 1.5f, 0.0f);
+    DOCTEST_CHECK(t0.x == doctest::Approx(0.9231f).epsilon(0.002));
+    DOCTEST_CHECK(t0.z == doctest::Approx(0.0f).epsilon(0.001)); // lossless => zero absorption
+    DOCTEST_CHECK((t0.x + t0.y + t0.z) == doctest::Approx(1.0f).epsilon(1e-4)); // energy closure
+
+    // Angular monotonicity: transmittance is flat-ish then collapses toward grazing.
+    float tau_0 = glass_tau_rho_alpha_ref(std::cos(0.0f), 1.5f, 0.0f).x;
+    float tau_60 = glass_tau_rho_alpha_ref(std::cos(60.0f * float(M_PI) / 180.f), 1.5f, 0.0f).x;
+    float tau_75 = glass_tau_rho_alpha_ref(std::cos(75.0f * float(M_PI) / 180.f), 1.5f, 0.0f).x;
+    DOCTEST_CHECK(tau_0 > tau_60);
+    DOCTEST_CHECK(tau_60 > tau_75);
+    DOCTEST_CHECK(tau_75 < 0.7f); // substantially reduced near grazing
+
+    // Absorption: KL=0.05 at normal incidence multiplies transmittance by tau_a = exp(-0.05) = 0.9512.
+    helios::vec3 tA = glass_tau_rho_alpha_ref(1.0f, 1.5f, 0.05f);
+    DOCTEST_CHECK(tA.x < t0.x);                 // absorbing sheet transmits less
+    DOCTEST_CHECK(tA.z > 0.01f);                // nonzero absorption
+    DOCTEST_CHECK((tA.x + tA.y + tA.z) == doctest::Approx(1.0f).epsilon(1e-4));
+}
+
+// Quantitative end-to-end test: a horizontal glass cover above a fully-absorbing receiver, collimated
+// source straight down. The receiver's absorbed flux must match source_flux * tau(0) from the
+// independent reference. This proves the glass model attenuates the beam by the physically-correct
+// transmittance (a constant-tau model would also pass at normal incidence, but tests below add angle
+// and anisotropy which it cannot).
+GPU_TEST_CASE("RadiationModel Glass Cover Normal-Incidence Transmittance") {
+    Context context;
+    // Cover at z=1, receiver at z=0, both horizontal 2x2 (large enough to fully shadow the receiver).
+    uint cover = context.addPatch(make_vec3(0, 0, 1), make_vec2(4, 4));
+    uint receiver = context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+    context.setPrimitiveData(receiver, "twosided_flag", uint(0));    // one-sided, top only
+    context.setPrimitiveData(receiver, "reflectivity_SW", 0.0f);     // fully absorbing
+    context.setPrimitiveData(cover, "glass_n_SW", 1.5f);             // activate glass model, lossless
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1)); // straight down
+    radiation.setSourceFlux(sun, "SW", 1000.0f);
+    radiation.setDirectRayCount("SW", 10000);
+    radiation.setScatteringDepth("SW", 1);
+
+    radiation.updateGeometry();
+    radiation.runBand("SW");
+
+    float flux_receiver;
+    context.getPrimitiveData(receiver, "radiation_flux_SW", flux_receiver);
+
+    const float tau0 = glass_tau_rho_alpha_ref(1.0f, 1.5f, 0.0f).x; // ~0.9231
+    const float expected = 1000.0f * tau0;
+    DOCTEST_CHECK(flux_receiver == doctest::Approx(expected).epsilon(0.02)); // 2% MC tolerance
+}
+
+// Energy-closure + angular test: tilt the collimated source so it strikes the cover at a known
+// incidence angle, and verify the receiver flux tracks source_flux * cos(theta_incoming) * tau(theta)
+// from the reference. The cos term accounts for the receiver being horizontal while the beam is
+// oblique. This exercises the angle-dependent transmittance the feature exists for.
+GPU_TEST_CASE("RadiationModel Glass Cover Oblique Transmittance") {
+    // Source direction 30 deg from vertical (in x-z plane): dir = (sin30, 0, cos30).
+    const float theta = 30.0f * float(M_PI) / 180.f;
+    Context context;
+    uint cover = context.addPatch(make_vec3(0, 0, 1), make_vec2(8, 8));
+    uint receiver = context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+    context.setPrimitiveData(receiver, "twosided_flag", uint(0));
+    context.setPrimitiveData(receiver, "reflectivity_SW", 0.0f);
+    context.setPrimitiveData(cover, "glass_n_SW", 1.5f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    // Cover normal is +z, so incidence angle on the cover == source zenith angle theta.
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(std::sin(theta), 0.f, std::cos(theta)));
+    radiation.setSourceFlux(sun, "SW", 1000.0f);
+    radiation.setDirectRayCount("SW", 20000);
+    radiation.setScatteringDepth("SW", 1);
+
+    radiation.updateGeometry();
+    radiation.runBand("SW");
+
+    float flux_receiver;
+    context.getPrimitiveData(receiver, "radiation_flux_SW", flux_receiver);
+
+    const float tau_theta = glass_tau_rho_alpha_ref(std::cos(theta), 1.5f, 0.0f).x;
+    // Horizontal receiver sees beam reduced by cos(theta); cover reduces it by tau(theta).
+    const float expected = 1000.0f * std::cos(theta) * tau_theta;
+    DOCTEST_CHECK(flux_receiver == doctest::Approx(expected).epsilon(0.03));
+}
+
+// Precedence + warning: a primitive with BOTH glass_n and a constant transmissivity must use the
+// glass model and emit a warning. Confirms glass overrides the constant value.
+GPU_TEST_CASE("RadiationModel Glass Cover Overrides Constant Transmissivity") {
+    Context context;
+    uint cover = context.addPatch(make_vec3(0, 0, 1), make_vec2(4, 4));
+    uint receiver = context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+    context.setPrimitiveData(receiver, "twosided_flag", uint(0));
+    context.setPrimitiveData(receiver, "reflectivity_SW", 0.0f);
+    context.setPrimitiveData(cover, "glass_n_SW", 1.5f);
+    context.setPrimitiveData(cover, "transmissivity_SW", 0.2f); // should be ignored (glass wins)
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceFlux(sun, "SW", 1000.0f);
+    radiation.setDirectRayCount("SW", 10000);
+    radiation.setScatteringDepth("SW", 1);
+
+    radiation.updateGeometry();
+    radiation.runBand("SW");
+
+    float flux_receiver;
+    context.getPrimitiveData(receiver, "radiation_flux_SW", flux_receiver);
+
+    // Glass tau(0) ~0.9231, NOT the constant 0.2. If the constant won, flux would be ~200.
+    const float tau0 = glass_tau_rho_alpha_ref(1.0f, 1.5f, 0.0f).x;
+    DOCTEST_CHECK(flux_receiver == doctest::Approx(1000.0f * tau0).epsilon(0.02));
+    DOCTEST_CHECK(flux_receiver > 800.0f); // definitively not the 0.2 constant-tau result
+}
+
+// Anisotropy / direction-preservation — the core reason the feature exists. Two receivers below an
+// oblique-lit cover: one directly along the beam path, one offset laterally. The glass cover passes
+// the beam through (nearly) undeviated, so the in-path receiver gets the energy and the offset one
+// gets ~none. A legacy constant-tau cover would Lambertian-scatter and illuminate both.
+GPU_TEST_CASE("RadiationModel Glass Cover Preserves Beam Direction") {
+    // Direction-preservation via spatial shadow displacement. An OPAQUE ceiling with a small GLASS
+    // window is lit by an oblique collimated beam. Because the transmitted beam keeps its direction, it
+    // lands DISPLACED from the spot directly below the window by dz*tan(theta). We place an in-path
+    // receiver at that displaced spot and a control receiver directly below the window. Direct rays are
+    // launched from each receiver toward the sun: a receiver at x sees the sun through the window only
+    // if its ray reaches the window aperture (at x=0, z=dz), i.e. x = -dz*tan(theta). So the in-path
+    // receiver is lit (through glass) and the one directly below the window is blocked by opaque
+    // ceiling. A non-directional (Lambertian) transmission could not produce this displaced shadow.
+    const float theta = 45.0f * float(M_PI) / 180.f;
+    const float dz = 2.0f;
+    const float shift = dz * std::tan(theta);
+
+    Context context;
+    // Opaque ceiling spanning x in roughly [-1, +4], with a glass window gap around x=0.
+    // Build it from two opaque panels plus a small glass window patch covering the gap.
+    uint ceil_left = context.addPatch(make_vec3(-3.0f, 0, dz), make_vec2(4.0f, 6.0f));   // covers x in [-5,-1]
+    uint ceil_right = context.addPatch(make_vec3(3.0f, 0, dz), make_vec2(4.0f, 6.0f));   // covers x in [1,5]
+    uint window = context.addPatch(make_vec3(0, 0, dz), make_vec2(2.0f, 6.0f));          // glass, x in [-1,1]
+    context.setPrimitiveData(ceil_left, "twosided_flag", uint(1));
+    context.setPrimitiveData(ceil_right, "twosided_flag", uint(1));
+    context.setPrimitiveData(ceil_left, "reflectivity_SW", 0.0f);  // opaque absorber
+    context.setPrimitiveData(ceil_right, "reflectivity_SW", 0.0f);
+    context.setPrimitiveData(window, "glass_n_SW", 1.5f);          // glass window
+
+    // In-path receiver under the displaced beam exit; control receiver directly under the window.
+    uint receiver_inpath = context.addPatch(make_vec3(-shift, 0, 0), make_vec2(1.0f, 1.0f));
+    uint receiver_below = context.addPatch(make_vec3(0, 0, 0), make_vec2(1.0f, 1.0f));
+    context.setPrimitiveData(receiver_inpath, "twosided_flag", uint(0));
+    context.setPrimitiveData(receiver_below, "twosided_flag", uint(0));
+    context.setPrimitiveData(receiver_inpath, "reflectivity_SW", 0.0f);
+    context.setPrimitiveData(receiver_below, "reflectivity_SW", 0.0f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    radiation.addCollimatedRadiationSource(make_vec3(std::sin(theta), 0.f, std::cos(theta)));
+    radiation.setSourceFlux(0, "SW", 1000.0f);
+    radiation.setDirectRayCount("SW", 40000);
+    radiation.setScatteringDepth("SW", 1);
+
+    radiation.updateGeometry();
+    radiation.runBand("SW");
+
+    float flux_inpath, flux_below;
+    context.getPrimitiveData(receiver_inpath, "radiation_flux_SW", flux_inpath);
+    context.getPrimitiveData(receiver_below, "radiation_flux_SW", flux_below);
+
+    // In-path receiver sees the sun through the glass window: ~1000*cos(theta)*tau(theta).
+    const float tau_theta = glass_tau_rho_alpha_ref(std::cos(theta), 1.5f, 0.0f).x;
+    const float beam_expected = 1000.0f * std::cos(theta) * tau_theta;
+    DOCTEST_CHECK(flux_inpath == doctest::Approx(beam_expected).epsilon(0.08));
+    // Receiver directly below the window is blocked by the opaque ceiling (its sun-ward ray misses the
+    // window) — it gets only minor scattered light, far less than the in-path receiver.
+    DOCTEST_CHECK(flux_below < 0.4f * flux_inpath);
+}
+
+// Activation gating: a cover with no glass_n behaves exactly like a normal opaque/absorbing patch —
+// the feature is inert unless activated. Receiver below an opaque cover gets ~zero direct flux.
+GPU_TEST_CASE("RadiationModel Glass Cover Inactive Without glass_n") {
+    Context context;
+    uint cover = context.addPatch(make_vec3(0, 0, 1), make_vec2(4, 4));
+    uint receiver = context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+    context.setPrimitiveData(cover, "twosided_flag", uint(0));
+    context.setPrimitiveData(cover, "reflectivity_SW", 0.0f); // opaque absorber, NOT glass
+    context.setPrimitiveData(receiver, "twosided_flag", uint(0));
+    context.setPrimitiveData(receiver, "reflectivity_SW", 0.0f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceFlux(sun, "SW", 1000.0f);
+    radiation.setDirectRayCount("SW", 10000);
+    radiation.setScatteringDepth("SW", 0);
+
+    radiation.updateGeometry();
+    radiation.runBand("SW");
+
+    float flux_receiver;
+    context.getPrimitiveData(receiver, "radiation_flux_SW", flux_receiver);
+    DOCTEST_CHECK(flux_receiver < 5.0f); // opaque cover blocks the beam
+}
+
+// Double-layer multiplicativity: two stacked lossless glass covers should transmit tau(0)^2 (the
+// any-hit/pass-through accumulation is a multiplicative product, order-independent).
+GPU_TEST_CASE("RadiationModel Glass Cover Double Layer Multiplicative") {
+    Context context;
+    uint cover_hi = context.addPatch(make_vec3(0, 0, 2), make_vec2(4, 4));
+    uint cover_lo = context.addPatch(make_vec3(0, 0, 1), make_vec2(4, 4));
+    uint receiver = context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+    context.setPrimitiveData(receiver, "twosided_flag", uint(0));
+    context.setPrimitiveData(receiver, "reflectivity_SW", 0.0f);
+    context.setPrimitiveData(cover_hi, "glass_n_SW", 1.5f);
+    context.setPrimitiveData(cover_lo, "glass_n_SW", 1.5f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceFlux(sun, "SW", 1000.0f);
+    radiation.setDirectRayCount("SW", 10000);
+    radiation.setScatteringDepth("SW", 1);
+
+    radiation.updateGeometry();
+    radiation.runBand("SW");
+
+    float flux_receiver;
+    context.getPrimitiveData(receiver, "radiation_flux_SW", flux_receiver);
+
+    const float tau0 = glass_tau_rho_alpha_ref(1.0f, 1.5f, 0.0f).x;
+    const float expected = 1000.0f * tau0 * tau0; // two layers
+    DOCTEST_CHECK(flux_receiver == doctest::Approx(expected).epsilon(0.03));
+}
+
+GPU_TEST_CASE("RadiationModel Glass Cover Mixed Bands Treated As Opaque") {
+    // A single ray carries all launched bands. A primitive is treated as a translucent cover
+    // (beam pass-through) only if it is glass in EVERY launched band. Here the cover is glass in SW
+    // but opaque (no glass_n) in LW; launched together, it must act as a normal opaque occluder for the
+    // WHOLE ray, blocking BOTH bands at the receiver below — including SW, which would transmit (~923)
+    // if the cover were glass in all launched bands. This locks in the unified all-bands-glass rule
+    // across the OptiX 8, OptiX 6, and Vulkan backends.
+    Context context;
+    uint cover = context.addPatch(make_vec3(0, 0, 1), make_vec2(4, 4));
+    uint receiver = context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+    context.setPrimitiveData(receiver, "twosided_flag", uint(0));
+    context.setPrimitiveData(receiver, "reflectivity_SW", 0.0f);
+    context.setPrimitiveData(receiver, "reflectivity_LW", 0.0f);
+    context.setPrimitiveData(cover, "glass_n_SW", 1.5f); // glass in SW
+    context.setPrimitiveData(cover, "reflectivity_LW", 0.0f); // opaque (absorbing) in LW, NOT glass
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SW");
+    radiation.addRadiationBand("LW");
+    radiation.disableEmission("SW");
+    radiation.disableEmission("LW");
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceFlux(sun, "SW", 1000.0f);
+    radiation.setSourceFlux(sun, "LW", 1000.0f);
+    radiation.setDirectRayCount("SW", 10000);
+    radiation.setDirectRayCount("LW", 10000);
+    radiation.setScatteringDepth("SW", 1);
+    radiation.setScatteringDepth("LW", 1);
+
+    radiation.updateGeometry();
+    std::vector<std::string> mixed_bands = {"SW", "LW"};
+    radiation.runBand(mixed_bands); // both bands launched together (one ray carries both)
+
+    float flux_SW, flux_LW;
+    context.getPrimitiveData(receiver, "radiation_flux_SW", flux_SW);
+    context.getPrimitiveData(receiver, "radiation_flux_LW", flux_LW);
+
+    // Mixed cover acts opaque: both bands blocked (SW would be ~923 under an "any glass band" rule).
+    DOCTEST_CHECK(flux_SW < 5.0f);
+    DOCTEST_CHECK(flux_LW < 5.0f);
 }
 

@@ -160,24 +160,26 @@ void OptiX8Backend::initialize() {
     // which dispatches internally on primitive type. With a single GAS and numSbtRecords=1,
     // the SBT hit record index = sbt_offset from optixTrace (stride=0 for all ray types).
 
-    auto createHitGroup = [&](const char *ch_entry, const char *is_entry, OptixProgramGroup &pg) {
+    // ah_entry may be nullptr (no any-hit). The any-hit programs implement translucent-cover
+    // (glass/plastic) pass-through with attenuation for the direct and diffuse ray types.
+    auto createHitGroup = [&](const char *ch_entry, const char *is_entry, const char *ah_entry, OptixProgramGroup &pg) {
         OptixProgramGroupDesc desc = {};
         desc.kind                                   = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
         desc.hitgroup.moduleCH                      = optix_module;
         desc.hitgroup.entryFunctionNameCH           = ch_entry;
         desc.hitgroup.moduleIS                      = optix_module;
         desc.hitgroup.entryFunctionNameIS           = is_entry;
-        desc.hitgroup.moduleAH                      = nullptr;
-        desc.hitgroup.entryFunctionNameAH           = nullptr;
+        desc.hitgroup.moduleAH                      = ah_entry ? optix_module : nullptr;
+        desc.hitgroup.entryFunctionNameAH           = ah_entry;
         log_size = sizeof(log);
         OPTIX_CHECK(optixProgramGroupCreate(optix_context, &desc, 1, &pg_options, log, &log_size, &pg));
         (void)log_size;
     };
 
-    createHitGroup("__closesthit__direct",       "__intersection__patch", pg_hit_direct);
-    createHitGroup("__closesthit__diffuse",      "__intersection__patch", pg_hit_diffuse);
-    createHitGroup("__closesthit__camera",       "__intersection__patch", pg_hit_camera);
-    createHitGroup("__closesthit__pixel_label",  "__intersection__patch", pg_hit_pixel_label);
+    createHitGroup("__closesthit__direct",       "__intersection__patch", "__anyhit__direct",  pg_hit_direct);
+    createHitGroup("__closesthit__diffuse",      "__intersection__patch", "__anyhit__diffuse", pg_hit_diffuse);
+    createHitGroup("__closesthit__camera",       "__intersection__patch", nullptr,             pg_hit_camera);
+    createHitGroup("__closesthit__pixel_label",  "__intersection__patch", nullptr,             pg_hit_pixel_label);
 
     // ---- Create pipeline ----
     OptixProgramGroup all_groups[] = {
@@ -561,6 +563,25 @@ void OptiX8Backend::updateMaterials(const RayTracingMaterial &materials) {
     if (!materials.specular_scale.empty())
         upload(d_specular_scale, materials.specular_scale.data(), materials.specular_scale.size() * sizeof(float));
 
+    // Translucent cover (glass/plastic) buffers. Only uploaded if any primitive uses the glass model;
+    // otherwise the device pointers stay null and the any-hit programs early-return (no overhead).
+    bool any_glass = false;
+    for (char g : materials.is_glass) {
+        if (g != 0) { any_glass = true; break; }
+    }
+    if (any_glass) {
+        // The device per-band cover-transmittance accumulator is a fixed-size array. Fail fast if the
+        // band count exceeds it rather than silently corrupting energy.
+        if (materials.num_bands > (size_t)HELIOS_MAX_RADIATION_BANDS) {
+            helios_runtime_error("ERROR (OptiX8Backend): translucent cover (glass) materials are in use with " + std::to_string(materials.num_bands) +
+                                 " radiation bands, which exceeds the compile-time maximum of " + std::to_string(HELIOS_MAX_RADIATION_BANDS) +
+                                 " (HELIOS_MAX_RADIATION_BANDS). Reduce the number of bands or increase the cap.");
+        }
+        upload(d_glass_n,  materials.glass_n.data(),  materials.glass_n.size()  * sizeof(float));
+        upload(d_glass_KL, materials.glass_KL.data(), materials.glass_KL.size() * sizeof(float));
+        upload(d_is_glass, materials.is_glass.data(), materials.is_glass.size() * sizeof(char));
+    }
+
     // Allocate radiation energy buffers (Nprims × Nbands_global)
     const size_t Nprims = current_primitive_count;
     const size_t Nbands = materials.num_bands;
@@ -583,6 +604,9 @@ void OptiX8Backend::updateMaterials(const RayTracingMaterial &materials) {
     h_params.tau_cam              = reinterpret_cast<float *>(d_tau_cam);
     h_params.specular_exponent    = reinterpret_cast<float *>(d_specular_exponent);
     h_params.specular_scale       = reinterpret_cast<float *>(d_specular_scale);
+    h_params.glass_n              = reinterpret_cast<float *>(d_glass_n);
+    h_params.glass_KL             = reinterpret_cast<float *>(d_glass_KL);
+    h_params.is_glass             = reinterpret_cast<int8_t *>(d_is_glass);
     h_params.radiation_in         = reinterpret_cast<float *>(d_radiation_in);
     h_params.radiation_out_top    = reinterpret_cast<float *>(d_radiation_out_top);
     h_params.radiation_out_bottom = reinterpret_cast<float *>(d_radiation_out_bottom);
@@ -1242,22 +1266,25 @@ void OptiX8Backend::zeroCameraScatterBuffers(size_t launch_band_count) {
 
 void OptiX8Backend::uploadSourceFluxes(const std::vector<float> &fluxes) {
     freeCUdeviceptr(d_source_fluxes);
-    if (fluxes.empty()) return;
-
-    const size_t bytes = fluxes.size() * sizeof(float);
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_source_fluxes), bytes));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_source_fluxes), fluxes.data(), bytes, cudaMemcpyHostToDevice));
+    if (!fluxes.empty()) {
+        const size_t bytes = fluxes.size() * sizeof(float);
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_source_fluxes), bytes));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_source_fluxes), fluxes.data(), bytes, cudaMemcpyHostToDevice));
+    }
+    // Assign unconditionally so an empty upload yields nullptr (not a dangling freed pointer that
+    // would defeat the device-side null guards).
     h_params.source_fluxes = reinterpret_cast<float *>(d_source_fluxes);
 }
 
 void OptiX8Backend::uploadSourceFluxesCam(const std::vector<float> &fluxes_cam) {
     freeCUdeviceptr(d_source_fluxes_cam);
-    if (fluxes_cam.empty()) return;
-
-    const size_t bytes = fluxes_cam.size() * sizeof(float);
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_source_fluxes_cam), bytes));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_source_fluxes_cam), fluxes_cam.data(), bytes,
-                          cudaMemcpyHostToDevice));
+    if (!fluxes_cam.empty()) {
+        const size_t bytes = fluxes_cam.size() * sizeof(float);
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_source_fluxes_cam), bytes));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_source_fluxes_cam), fluxes_cam.data(), bytes,
+                              cudaMemcpyHostToDevice));
+    }
+    // Assign unconditionally so an empty upload yields nullptr (not a dangling freed pointer).
     h_params.source_fluxes_cam = reinterpret_cast<float *>(d_source_fluxes_cam);
 }
 
@@ -1327,6 +1354,9 @@ void OptiX8Backend::freeMaterialBuffers() {
     freeCUdeviceptr(d_tau_cam);
     freeCUdeviceptr(d_specular_exponent);
     freeCUdeviceptr(d_specular_scale);
+    freeCUdeviceptr(d_glass_n);
+    freeCUdeviceptr(d_glass_KL);
+    freeCUdeviceptr(d_is_glass);
 }
 
 void OptiX8Backend::reallocDevice(CUdeviceptr &ptr, size_t bytes) {

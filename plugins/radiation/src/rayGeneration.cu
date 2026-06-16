@@ -226,6 +226,7 @@ RT_PROGRAM void direct_raygen() {
                 prd.origin_UUID = UUID;
                 prd.source_ID = rr;
                 prd.hit_periodic_boundary = false;
+                initCoverTransmittance(prd); // translucent-cover attenuation starts at 1 (no covers crossed)
 
                 if (dot(ray_direction, normal) > 0) {
                     prd.face = 1;
@@ -432,9 +433,11 @@ RT_PROGRAM void diffuse_raygen() {
                 d_transformPoint(m_trans, ray_origin);
 
                 ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
+                initCoverTransmittance(prd);
                 rtTrace(top_object, ray, prd);
 
                 ray = optix::make_Ray(ray_origin, -ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
+                initCoverTransmittance(prd);
                 rtTrace(top_object, ray, prd);
 
             } else { // not a voxel
@@ -446,6 +449,7 @@ RT_PROGRAM void diffuse_raygen() {
                 prd.origin_UUID = UUID;
                 prd.source_ID = 0;
                 prd.hit_periodic_boundary = false;
+                initCoverTransmittance(prd); // translucent-cover attenuation starts at 1 (no covers crossed)
 
                 // ---- "top" surface launch -------
                 ray_origin = sp;

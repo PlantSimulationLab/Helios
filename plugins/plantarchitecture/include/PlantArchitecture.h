@@ -1742,6 +1742,11 @@ struct PlantInstance {
 
     float max_age = 999;
 
+    //! Tracks whether the Context geometry has been synced since the plant reached max_age.
+    //! Once a plant is static at max_age its geometry no longer changes, so it only needs to be
+    //! pushed to the Context once rather than rebuilt every subsequent timestep.
+    bool mature_geometry_synced = false;
+
     CarbohydrateParameters carb_parameters;
 
     //! maintenance respiration rate of stem (mol C respired/mol C in pool/day)

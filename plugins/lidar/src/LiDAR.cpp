@@ -58,6 +58,61 @@ namespace {
             return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0);
         }
     }
+
+    // ---- Quaternion math for moving-platform LiDAR ----
+    // Convention (pinned): Hamilton quaternions, body->world, stored as helios::vec4 components (x,y,z,w) = (qx,qy,qz,qw).
+    // quat_rotate(q, v) rotates a vector v expressed in the body frame into the world frame. quat_from_rpy builds a
+    // quaternion from intrinsic Z-Y-X (yaw-pitch-roll) Tait-Bryan angles: q = qz(yaw) * qy(pitch) * qx(roll), so the
+    // resulting rotation applies roll first, then pitch, then yaw (the standard aerospace convention). Helios stores
+    // geometry in single precision, so these operate on float vec4/vec3 to match the rest of the pipeline.
+
+    //! Rotate a body-frame vector into the world frame by a Hamilton quaternion (qx,qy,qz,qw).
+    helios::vec3 quat_rotate(const helios::vec4 &q, const helios::vec3 &v) {
+        // v' = v + 2*qw*(qv x v) + 2*(qv x (qv x v)), with qv = (qx,qy,qz). Assumes q is unit-norm.
+        const helios::vec3 qv = helios::make_vec3(q.x, q.y, q.z);
+        const helios::vec3 t = helios::cross(qv, v) * 2.f;
+        return v + t * q.w + helios::cross(qv, t);
+    }
+
+    //! Spherically interpolate (SLERP) between two Hamilton quaternions; falls back to normalized lerp when nearly parallel.
+    helios::vec4 quat_slerp(helios::vec4 q0, helios::vec4 q1, double u) {
+        q0.normalize();
+        q1.normalize();
+        double dot = double(q0.x) * q1.x + double(q0.y) * q1.y + double(q0.z) * q1.z + double(q0.w) * q1.w;
+        // Quaternions q and -q represent the same rotation; choose the shorter arc.
+        if (dot < 0.0) {
+            q1 = helios::make_vec4(-q1.x, -q1.y, -q1.z, -q1.w);
+            dot = -dot;
+        }
+        if (dot > 0.9995) {
+            // Nearly parallel: normalized linear interpolation avoids division by ~zero sin(theta).
+            helios::vec4 result = helios::make_vec4(q0.x + float(u) * (q1.x - q0.x), q0.y + float(u) * (q1.y - q0.y), q0.z + float(u) * (q1.z - q0.z), q0.w + float(u) * (q1.w - q0.w));
+            result.normalize();
+            return result;
+        }
+        const double theta_0 = std::acos(dot);
+        const double theta = theta_0 * u;
+        const double sin_theta_0 = std::sin(theta_0);
+        const double s0 = std::sin(theta_0 - theta) / sin_theta_0;
+        const double s1 = std::sin(theta) / sin_theta_0;
+        helios::vec4 result = helios::make_vec4(float(s0 * q0.x + s1 * q1.x), float(s0 * q0.y + s1 * q1.y), float(s0 * q0.z + s1 * q1.z), float(s0 * q0.w + s1 * q1.w));
+        result.normalize();
+        return result;
+    }
+
+    //! Build a Hamilton quaternion (qx,qy,qz,qw) from intrinsic Z-Y-X (yaw-pitch-roll) Tait-Bryan angles in radians.
+    helios::vec4 quat_from_rpy(float roll, float pitch, float yaw) {
+        const float cr = std::cos(roll * 0.5f), sr = std::sin(roll * 0.5f);
+        const float cp = std::cos(pitch * 0.5f), sp = std::sin(pitch * 0.5f);
+        const float cy = std::cos(yaw * 0.5f), sy = std::sin(yaw * 0.5f);
+        // q = qz(yaw) * qy(pitch) * qx(roll) (Hamilton product), components (x,y,z,w).
+        helios::vec4 q;
+        q.w = cr * cp * cy + sr * sp * sy;
+        q.x = sr * cp * cy - cr * sp * sy;
+        q.y = cr * sp * cy + sr * cp * sy;
+        q.z = cr * cp * sy - sr * sp * cy;
+        return q;
+    }
 } // namespace
 
 ScanMetadata::ScanMetadata() {
@@ -75,6 +130,7 @@ ScanMetadata::ScanMetadata() {
     angleNoiseStdDev = 0;
     scanTilt_roll = 0;
     scanTilt_pitch = 0;
+    scanTilt_azimuth = 0;
     columnFormat = {"x", "y", "z"};
     scanPattern = SCAN_PATTERN_RASTER;
 
@@ -82,7 +138,7 @@ ScanMetadata::ScanMetadata() {
 }
 
 ScanMetadata::ScanMetadata(const vec3 &a_origin, uint a_Ntheta, float a_thetaMin, float a_thetaMax, uint a_Nphi, float a_phiMin, float a_phiMax, float a_exitDiameter, float a_beamDivergence, float a_rangeNoiseStdDev, float a_angleNoiseStdDev,
-                           const vector<string> &a_columnFormat, float a_scanTiltRoll, float a_scanTiltPitch) {
+                           const vector<string> &a_columnFormat, float a_scanTiltRoll, float a_scanTiltPitch, float a_scanAzimuthOffset) {
 
     // Copy arguments into structure variables
     origin = a_origin;
@@ -98,6 +154,7 @@ ScanMetadata::ScanMetadata(const vec3 &a_origin, uint a_Ntheta, float a_thetaMin
     angleNoiseStdDev = a_angleNoiseStdDev;
     scanTilt_roll = a_scanTiltRoll;
     scanTilt_pitch = a_scanTiltPitch;
+    scanTilt_azimuth = a_scanAzimuthOffset;
     columnFormat = a_columnFormat;
     scanPattern = SCAN_PATTERN_RASTER;
 
@@ -105,7 +162,7 @@ ScanMetadata::ScanMetadata(const vec3 &a_origin, uint a_Ntheta, float a_thetaMin
 }
 
 ScanMetadata::ScanMetadata(const vec3 &a_origin, const std::vector<float> &a_beamZenithAngles, uint a_Nphi, float a_phiMin, float a_phiMax, float a_exitDiameter, float a_beamDivergence, float a_rangeNoiseStdDev, float a_angleNoiseStdDev,
-                           const vector<string> &a_columnFormat, float a_scanTiltRoll, float a_scanTiltPitch) {
+                           const vector<string> &a_columnFormat, float a_scanTiltRoll, float a_scanTiltPitch, float a_scanAzimuthOffset) {
 
     if (a_beamZenithAngles.empty()) {
         helios_runtime_error("ERROR (ScanMetadata): A spinning multibeam scan requires at least one beam (channel) zenith angle, but the provided beamZenithAngles vector is empty.");
@@ -127,6 +184,7 @@ ScanMetadata::ScanMetadata(const vec3 &a_origin, const std::vector<float> &a_bea
     angleNoiseStdDev = a_angleNoiseStdDev;
     scanTilt_roll = a_scanTiltRoll;
     scanTilt_pitch = a_scanTiltPitch;
+    scanTilt_azimuth = a_scanAzimuthOffset;
     columnFormat = a_columnFormat;
 
     data_file = "";
@@ -182,6 +240,55 @@ helios::int2 ScanMetadata::direction2rc(const SphericalCoord &direction) const {
     }
 
     return helios::make_int2(row, column);
+};
+
+void ScanMetadata::poseAt(double t, helios::vec3 &pos, helios::vec4 &quat) const {
+
+    const size_t M = traj_t.size();
+    if (M == 0) {
+        helios_runtime_error("ERROR (ScanMetadata::poseAt): the scan has no trajectory samples. This scan was not created as a moving-platform scan (see LiDARcloud::addScanMoving).");
+    }
+    if (traj_pos.size() != M || traj_quat.size() != M) {
+        helios_runtime_error("ERROR (ScanMetadata::poseAt): trajectory arrays have inconsistent lengths (traj_t=" + std::to_string(M) + ", traj_pos=" + std::to_string(traj_pos.size()) + ", traj_quat=" + std::to_string(traj_quat.size()) +
+                             "). All three must have the same number of samples.");
+    }
+
+    // Single sample: constant pose (also covers a degenerate zero-velocity trajectory).
+    if (M == 1) {
+        pos = traj_pos.at(0);
+        quat = traj_quat.at(0);
+        return;
+    }
+
+    // Clamp to the trajectory endpoints rather than extrapolating.
+    if (t <= traj_t.front()) {
+        pos = traj_pos.front();
+        quat = traj_quat.front();
+        return;
+    }
+    if (t >= traj_t.back()) {
+        pos = traj_pos.back();
+        quat = traj_quat.back();
+        return;
+    }
+
+    // Binary search for the bracketing interval [traj_t[i], traj_t[i+1]] containing t.
+    // upper_bound returns the first sample strictly greater than t, so the lower index is one before it.
+    const auto upper = std::upper_bound(traj_t.begin(), traj_t.end(), t);
+    const size_t i1 = size_t(upper - traj_t.begin());
+    const size_t i0 = i1 - 1;
+
+    const double t0_s = traj_t.at(i0);
+    const double t1_s = traj_t.at(i1);
+    const double denom = t1_s - t0_s;
+    if (denom <= 0.0) {
+        helios_runtime_error("ERROR (ScanMetadata::poseAt): trajectory times are not strictly increasing (traj_t[" + std::to_string(i0) + "]=" + std::to_string(t0_s) + " >= traj_t[" + std::to_string(i1) + "]=" + std::to_string(t1_s) + ").");
+    }
+    const double u = (t - t0_s) / denom;
+
+    // Linear interpolation of position; SLERP of orientation.
+    pos = traj_pos.at(i0) + (traj_pos.at(i1) - traj_pos.at(i0)) * float(u);
+    quat = quat_slerp(traj_quat.at(i0), traj_quat.at(i1), u);
 };
 
 LiDARcloud::LiDARcloud() {
@@ -279,7 +386,22 @@ void LiDARcloud::enableMessages() {
     printmessages = true;
 }
 
+bool LiDARcloud::anyScanMoving() const {
+    for (const auto &scan: scans) {
+        if (scan.isMoving) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void LiDARcloud::validateRayDirections() {
+
+    // This validation reconstructs each hit's direction from the single scan origin, which is not meaningful for a
+    // moving-platform scan (each pulse has its own origin). Fail fast rather than report spurious mismatches.
+    if (anyScanMoving()) {
+        helios_runtime_error("ERROR (LiDARcloud::validateRayDirections): ray-direction validation is not supported for moving-platform scans (see addScanMoving), because the per-pulse origins make a single-origin direction check meaningless.");
+    }
 
     for (uint s = 0; s < getScanCount(); s++) {
 
@@ -338,6 +460,85 @@ uint LiDARcloud::addScan(ScanMetadata &newscan) {
     scans.emplace_back(newscan);
 
     return scans.size() - 1;
+}
+
+uint LiDARcloud::addScanMoving(ScanMetadata scan, const std::vector<double> &traj_t, const std::vector<vec3> &traj_pos, const std::vector<vec4> &traj_quat, const vec3 &lever_arm, const vec3 &boresight_rpy, float pulse_rate_hz, double t0) {
+
+    const size_t M = traj_t.size();
+    if (M == 0) {
+        helios_runtime_error("ERROR (LiDARcloud::addScanMoving): the trajectory is empty. At least one pose sample is required.");
+    }
+    if (traj_pos.size() != M || traj_quat.size() != M) {
+        helios_runtime_error("ERROR (LiDARcloud::addScanMoving): trajectory arrays have inconsistent lengths (traj_t=" + std::to_string(M) + ", traj_pos=" + std::to_string(traj_pos.size()) + ", traj_quat=" + std::to_string(traj_quat.size()) +
+                             "). All three must have the same number of samples.");
+    }
+    for (size_t k = 1; k < M; k++) {
+        if (traj_t.at(k) <= traj_t.at(k - 1)) {
+            helios_runtime_error("ERROR (LiDARcloud::addScanMoving): trajectory times must be strictly increasing, but traj_t[" + std::to_string(k - 1) + "]=" + std::to_string(traj_t.at(k - 1)) + " >= traj_t[" + std::to_string(k) + "]=" +
+                                 std::to_string(traj_t.at(k)) + ".");
+        }
+    }
+    // Reject non-finite trajectory data up front: a single NaN/inf would otherwise propagate silently through the SLERP
+    // interpolation and produce NaN origins/directions for a whole range of pulses. Quaternions must also be non-zero so
+    // they can be normalized.
+    for (size_t k = 0; k < M; k++) {
+        if (!std::isfinite(traj_t.at(k))) {
+            helios_runtime_error("ERROR (LiDARcloud::addScanMoving): trajectory time traj_t[" + std::to_string(k) + "] is not finite (NaN or infinity).");
+        }
+        const helios::vec3 &p = traj_pos.at(k);
+        if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z)) {
+            helios_runtime_error("ERROR (LiDARcloud::addScanMoving): trajectory position traj_pos[" + std::to_string(k) + "] is not finite (NaN or infinity).");
+        }
+        const helios::vec4 &q = traj_quat.at(k);
+        if (!std::isfinite(q.x) || !std::isfinite(q.y) || !std::isfinite(q.z) || !std::isfinite(q.w)) {
+            helios_runtime_error("ERROR (LiDARcloud::addScanMoving): trajectory quaternion traj_quat[" + std::to_string(k) + "] is not finite (NaN or infinity).");
+        }
+        if (q.magnitude() < 1e-6f) {
+            helios_runtime_error("ERROR (LiDARcloud::addScanMoving): trajectory quaternion traj_quat[" + std::to_string(k) + "] has near-zero magnitude and cannot be normalized to a valid rotation.");
+        }
+    }
+    if (!std::isfinite(t0)) {
+        helios_runtime_error("ERROR (LiDARcloud::addScanMoving): t0 must be finite, but a non-finite value was provided.");
+    }
+    if (pulse_rate_hz <= 0.f) {
+        helios_runtime_error("ERROR (LiDARcloud::addScanMoving): pulse_rate_hz must be greater than 0, but " + std::to_string(pulse_rate_hz) + " was provided.");
+    }
+    // Trajectory replaces scanTilt: the static roll/pitch/yaw tilt is incompatible with a trajectory-driven attitude.
+    if (scan.scanTilt_roll != 0.f || scan.scanTilt_pitch != 0.f || scan.scanTilt_azimuth != 0.f) {
+        helios_runtime_error("ERROR (LiDARcloud::addScanMoving): the scan specifies a non-zero static tilt (scanTilt_roll/pitch/azimuth), which is not applied for moving-platform scans. Platform attitude must be supplied entirely "
+                             "through the trajectory quaternions and the boresight; leave the static tilt at zero.");
+    }
+
+    scan.isMoving = true;
+    scan.traj_t = traj_t;
+    scan.traj_pos = traj_pos;
+    scan.traj_quat = traj_quat;
+    scan.lever_arm = lever_arm;
+    scan.boresight_rpy = boresight_rpy;
+    scan.pulse_period = 1.0 / double(pulse_rate_hz);
+    scan.t0 = t0;
+    // The trajectory supplies position; the static origin field is unused for moving scans.
+    scan.origin = traj_pos.front();
+
+    return addScan(scan);
+}
+
+uint LiDARcloud::addScanMoving(ScanMetadata scan, const std::vector<double> &traj_t, const std::vector<vec3> &traj_pos, const std::vector<vec3> &traj_rpy, const vec3 &lever_arm, const vec3 &boresight_rpy, float pulse_rate_hz, double t0) {
+
+    // Convert the per-sample roll/pitch/yaw Euler angles to Hamilton body->world quaternions (intrinsic Z-Y-X, the same
+    // convention used for the boresight), then delegate to the quaternion overload so all validation lives in one place.
+    // The length check is duplicated here only so the error message names traj_rpy rather than the converted traj_quat.
+    if (traj_rpy.size() != traj_t.size()) {
+        helios_runtime_error("ERROR (LiDARcloud::addScanMoving): trajectory arrays have inconsistent lengths (traj_t=" + std::to_string(traj_t.size()) + ", traj_rpy=" + std::to_string(traj_rpy.size()) + "). All trajectory arrays must have the same number of samples.");
+    }
+
+    std::vector<vec4> traj_quat;
+    traj_quat.reserve(traj_rpy.size());
+    for (const vec3 &rpy: traj_rpy) {
+        traj_quat.push_back(quat_from_rpy(rpy.x, rpy.y, rpy.z));
+    }
+
+    return addScanMoving(scan, traj_t, traj_pos, traj_quat, lever_arm, boresight_rpy, pulse_rate_hz, t0);
 }
 
 void LiDARcloud::addHitPoint(uint scanID, const vec3 &xyz, const SphericalCoord &direction) {
@@ -489,6 +690,13 @@ float LiDARcloud::getScanTiltPitch(uint scanID) const {
     return scans.at(scanID).scanTilt_pitch;
 }
 
+float LiDARcloud::getScanAzimuthOffset(uint scanID) const {
+    if (scanID >= scans.size()) {
+        helios_runtime_error("ERROR (LiDARcloud::getScanAzimuthOffset): Cannot get scanner azimuth offset for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
+    }
+    return scans.at(scanID).scanTilt_azimuth;
+}
+
 std::vector<std::string> LiDARcloud::getScanColumnFormat(uint scanID) const {
     if (scanID >= scans.size()) {
         helios_runtime_error("ERROR (LiDARcloud::getScanColumnFormat): Cannot get column format for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
@@ -519,13 +727,30 @@ helios::vec3 LiDARcloud::getHitXYZ(uint index) const {
     return hits.at(index).position;
 }
 
+helios::vec3 LiDARcloud::getHitOrigin(uint index) const {
+
+    if (index >= hits.size()) {
+        helios_runtime_error("ERROR (LiDARcloud::getHitOrigin): Hit point index out of bounds. Requesting hit #" + std::to_string(index) + " but scan only has " + std::to_string(hits.size()) + " hits.");
+    }
+
+    // Moving-platform scans store the per-pulse emission origin on each hit. Static scans do not, so fall back to the
+    // single scan origin.
+    if (doesHitDataExist(index, "origin_x") && doesHitDataExist(index, "origin_y") && doesHitDataExist(index, "origin_z")) {
+        return helios::make_vec3(float(getHitData(index, "origin_x")), float(getHitData(index, "origin_y")), float(getHitData(index, "origin_z")));
+    }
+
+    return getScanOrigin(uint(getHitScanID(index)));
+}
+
 helios::SphericalCoord LiDARcloud::getHitRaydir(uint index) const {
 
     if (index >= hits.size()) {
         helios_runtime_error("ERROR (LiDARcloud::getHitRaydir): Hit point index out of bounds. Requesting hit #" + std::to_string(index) + " but scan only has " + std::to_string(hits.size()) + " hits.");
     }
 
-    vec3 direction_cart = getHitXYZ(index) - getScanOrigin(getHitScanID(index));
+    // Use the beam's own emission origin (per-pulse for moving-platform scans; the scan origin for static scans) so the
+    // recovered ray direction is correct regardless of platform motion.
+    vec3 direction_cart = getHitXYZ(index) - getHitOrigin(index);
     return cart2sphere(direction_cart);
 }
 
@@ -623,6 +848,35 @@ void LiDARcloud::setHitGridCell(uint index, int cell) {
     hits.at(index).gridcell = cell;
 }
 
+namespace {
+    //! Apply an in-place transform to a hit's per-pulse emission origin (data labels origin_x/origin_y/origin_z), if it
+    //! carries one. Moving-platform hits store their own origin, which must be transformed together with the hit
+    //! position so the two stay in the same coordinate frame. Static hits carry no such labels and are left unchanged.
+    void transformHitOrigin(HitPoint &hit, const std::function<helios::vec3(const helios::vec3 &)> &transform) {
+        auto itx = hit.data.find("origin_x");
+        auto ity = hit.data.find("origin_y");
+        auto itz = hit.data.find("origin_z");
+        if (itx != hit.data.end() && ity != hit.data.end() && itz != hit.data.end()) {
+            helios::vec3 o = helios::make_vec3(float(itx->second), float(ity->second), float(itz->second));
+            o = transform(o);
+            itx->second = o.x;
+            ity->second = o.y;
+            itz->second = o.z;
+        }
+    }
+
+    //! Return a hit's per-pulse origin if it carries one (data labels origin_x/y/z), else the supplied fallback origin.
+    helios::vec3 hitOriginOrFallback(const HitPoint &hit, const helios::vec3 &fallback) {
+        auto itx = hit.data.find("origin_x");
+        auto ity = hit.data.find("origin_y");
+        auto itz = hit.data.find("origin_z");
+        if (itx != hit.data.end() && ity != hit.data.end() && itz != hit.data.end()) {
+            return helios::make_vec3(float(itx->second), float(ity->second), float(itz->second));
+        }
+        return fallback;
+    }
+} // namespace
+
 void LiDARcloud::coordinateShift(const vec3 &shift) {
 
     for (auto &scan: scans) {
@@ -631,6 +885,7 @@ void LiDARcloud::coordinateShift(const vec3 &shift) {
 
     for (auto &hit: hits) {
         hit.position = hit.position + shift;
+        transformHitOrigin(hit, [&](const vec3 &o) { return o + shift; });
     }
 }
 
@@ -645,6 +900,7 @@ void LiDARcloud::coordinateShift(uint scanID, const vec3 &shift) {
     for (auto &hit: hits) {
         if (hit.scanID == scanID) {
             hit.position = hit.position + shift;
+            transformHitOrigin(hit, [&](const vec3 &o) { return o + shift; });
         }
     }
 }
@@ -657,7 +913,9 @@ void LiDARcloud::coordinateRotation(const SphericalCoord &rotation) {
 
     for (auto &hit: hits) {
         hit.position = rotatePoint(hit.position, rotation);
-        hit.direction = cart2sphere(hit.position - scans.at(hit.scanID).origin);
+        transformHitOrigin(hit, [&](const vec3 &o) { return rotatePoint(o, rotation); });
+        // Recompute the stored ray direction from the hit's own (transformed) origin so it remains correct for moving scans.
+        hit.direction = cart2sphere(hit.position - hitOriginOrFallback(hit, scans.at(hit.scanID).origin));
     }
 }
 
@@ -672,7 +930,8 @@ void LiDARcloud::coordinateRotation(uint scanID, const SphericalCoord &rotation)
     for (auto &hit: hits) {
         if (hit.scanID == scanID) {
             hit.position = rotatePoint(hit.position, rotation);
-            hit.direction = cart2sphere(hit.position - scans.at(scanID).origin);
+            transformHitOrigin(hit, [&](const vec3 &o) { return rotatePoint(o, rotation); });
+            hit.direction = cart2sphere(hit.position - hitOriginOrFallback(hit, scans.at(scanID).origin));
         }
     }
 }
@@ -685,7 +944,8 @@ void LiDARcloud::coordinateRotation(float rotation, const vec3 &line_base, const
 
     for (auto &hit: hits) {
         hit.position = rotatePointAboutLine(hit.position, line_base, line_direction, rotation);
-        hit.direction = cart2sphere(hit.position - scans.at(hit.scanID).origin);
+        transformHitOrigin(hit, [&](const vec3 &o) { return rotatePointAboutLine(o, line_base, line_direction, rotation); });
+        hit.direction = cart2sphere(hit.position - hitOriginOrFallback(hit, scans.at(hit.scanID).origin));
     }
 }
 
@@ -1215,8 +1475,8 @@ void LiDARcloud::distanceFilter(float maxdistance) {
     for (int i = (getHitCount() - 1); i >= 0; i--) {
 
         vec3 xyz = getHitXYZ(i);
-        uint scanID = getHitScanID(i);
-        vec3 r = xyz - getScanOrigin(scanID);
+        // Range is measured from the beam's own emission origin (per-pulse for moving scans, scan origin for static).
+        vec3 r = xyz - getHitOrigin(i);
 
         if (r.magnitude() > maxdistance) {
             deleteHitPoint(i);
@@ -1623,6 +1883,15 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses_rowcolumn(uint scanID, const
         std::cout << "Gap filling complete misses in scan " << scanID << " using row/column indices..." << std::flush;
     }
 
+    // The row/column path places filled misses from a single static scan origin and carries no per-point time from
+    // which a moving platform's pose could be recovered, so it cannot correctly place misses for a moving-platform
+    // scan. Moving scans carry per-pulse timestamps and are handled by the timestamp path (gapfillMisses_timestamp);
+    // fail fast here rather than synthesize misses at the wrong origin.
+    if (scans.at(scanID).isMoving) {
+        helios_runtime_error("ERROR (LiDARcloud::gapfillMisses): the row/column gap-filling path does not support moving-platform scans (see addScanMoving). A moving scan should be gap-filled via its per-pulse timestamps; ensure the scan "
+                             "data carries 'timestamp' (and not 'row'/'column') so the timestamp-based path is used.");
+    }
+
     const float gap_distance = LIDAR_MISS_DISTANCE; // place gapfilled miss points at the canonical miss distance
     const helios::vec3 origin = getScanOrigin(scanID);
     const int Ntheta = (int) scans.at(scanID).Ntheta;
@@ -1871,6 +2140,22 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses_timestamp(uint scanID, const
 
     helios::vec3 origin = getScanOrigin(scanID);
     std::vector<helios::vec3> xyz_filled;
+
+    // For a moving-platform scan each filled miss must be emitted from the platform pose at that miss's (interpolated)
+    // timestamp, not from the single static origin. originAtTime() returns the per-pulse origin for moving scans and the
+    // static scan origin otherwise; for moving scans the synthesized miss also stores its own origin_x/y/z so it carries
+    // correct beam geometry into the leaf-area inversion (which reads getHitOrigin()).
+    const ScanMetadata &gapfill_scan = scans.at(scanID);
+    const bool gapfill_is_moving = gapfill_scan.isMoving;
+    auto originAtTime = [&](double timestep) -> helios::vec3 {
+        if (!gapfill_is_moving) {
+            return origin;
+        }
+        helios::vec3 pos;
+        helios::vec4 quat;
+        gapfill_scan.poseAt(timestep, pos, quat);
+        return pos + quat_rotate(quat, gapfill_scan.lever_arm);
+    };
 
     // Populating a hit table for each scan:
     // Column 0 - hit index; Column 1 - timestamp; Column 2 - ray zenith; Column 3 - ray azimuth
@@ -2142,7 +2427,8 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses_timestamp(uint scanID, const
                         if (filled_positions.find(grid_key) == filled_positions.end()) {
 
                             helios::SphericalCoord spherical(gap_distance, 0.5 * M_PI - theta, phi);
-                            helios::vec3 xyz = origin + helios::sphere2cart(spherical);
+                            helios::vec3 fill_origin = originAtTime(timestep);
+                            helios::vec3 xyz = fill_origin + helios::sphere2cart(spherical);
                             xyz_filled.push_back(xyz);
 
                             std::map<std::string, double> data;
@@ -2150,6 +2436,12 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses_timestamp(uint scanID, const
                             data.insert(std::pair<std::string, double>("target_index", min_tindex));
                             data.insert(std::pair<std::string, double>("nRaysHit", 0.0)); // a miss: zero sub-rays of the pulse returned a hit
                             data.insert(std::pair<std::string, double>("is_miss", 1.0)); // gapfilled points are misses (transmitted beams)
+                            if (gapfill_is_moving) {
+                                // Store the per-pulse emission origin so the synthesized miss carries correct beam geometry (getHitOrigin).
+                                data.insert(std::pair<std::string, double>("origin_x", fill_origin.x));
+                                data.insert(std::pair<std::string, double>("origin_y", fill_origin.y));
+                                data.insert(std::pair<std::string, double>("origin_z", fill_origin.z));
+                            }
                             if (add_flags) {
                                 // gapfillMisses_code = 1: gapfilled points
                                 data.insert(std::pair<std::string, double>("gapfillMisses_code", 1.0));
@@ -2250,7 +2542,8 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses_timestamp(uint scanID, const
                         if (filled_positions.find(grid_key) == filled_positions.end()) {
 
                             helios::SphericalCoord spherical(gap_distance, 0.5 * M_PI - theta, phi);
-                            helios::vec3 xyz = origin + helios::sphere2cart(spherical);
+                            helios::vec3 fill_origin = originAtTime(timestep);
+                            helios::vec3 xyz = fill_origin + helios::sphere2cart(spherical);
                             xyz_filled.push_back(xyz);
 
                             std::map<std::string, double> data;
@@ -2258,6 +2551,11 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses_timestamp(uint scanID, const
                             data.insert(std::pair<std::string, double>("target_index", min_tindex));
                             data.insert(std::pair<std::string, double>("nRaysHit", 0.0)); // a miss: zero sub-rays of the pulse returned a hit
                             data.insert(std::pair<std::string, double>("is_miss", 1.0)); // gapfilled points are misses (transmitted beams)
+                            if (gapfill_is_moving) {
+                                data.insert(std::pair<std::string, double>("origin_x", fill_origin.x));
+                                data.insert(std::pair<std::string, double>("origin_y", fill_origin.y));
+                                data.insert(std::pair<std::string, double>("origin_z", fill_origin.z));
+                            }
                             if (add_flags) {
                                 // gapfillMisses_code = 3: upward edge points
                                 data.insert(std::pair<std::string, double>("gapfillMisses_code", 3.0));
@@ -2296,7 +2594,8 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses_timestamp(uint scanID, const
                         if (filled_positions.find(grid_key) == filled_positions.end()) {
 
                             helios::SphericalCoord spherical(gap_distance, 0.5 * M_PI - theta, phi);
-                            helios::vec3 xyz = origin + helios::sphere2cart(spherical);
+                            helios::vec3 fill_origin = originAtTime(timestep);
+                            helios::vec3 xyz = fill_origin + helios::sphere2cart(spherical);
                             xyz_filled.push_back(xyz);
 
                             std::map<std::string, double> data;
@@ -2304,6 +2603,11 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses_timestamp(uint scanID, const
                             data.insert(std::pair<std::string, double>("target_index", min_tindex));
                             data.insert(std::pair<std::string, double>("nRaysHit", 0.0)); // a miss: zero sub-rays of the pulse returned a hit
                             data.insert(std::pair<std::string, double>("is_miss", 1.0)); // gapfilled points are misses (transmitted beams)
+                            if (gapfill_is_moving) {
+                                data.insert(std::pair<std::string, double>("origin_x", fill_origin.x));
+                                data.insert(std::pair<std::string, double>("origin_y", fill_origin.y));
+                                data.insert(std::pair<std::string, double>("origin_z", fill_origin.z));
+                            }
                             if (add_flags) {
                                 // gapfillMisses_code = 2: downward edge points
                                 data.insert(std::pair<std::string, double>("gapfillMisses_code", 2.0));
@@ -2331,6 +2635,15 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses_timestamp(uint scanID, const
 }
 
 void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio) {
+
+    // Triangulation projects hits into the scan's (zenith, azimuth) grid space from a single origin. A moving-platform
+    // scan has no fixed theta-phi grid (each pulse fires from a different pose), so the projection is meaningless and
+    // would produce garbage triangles. Fail fast. For leaf-area inversion of a moving scan use the calculateLeafArea
+    // overload that takes a supplied G(theta), which does not require triangulation.
+    if (anyScanMoving()) {
+        helios_runtime_error("ERROR (LiDARcloud::triangulateHitPoints): triangulation is not supported for moving-platform scans (see addScanMoving), which have no fixed theta-phi scan grid to triangulate. For leaf-area inversion of a "
+                             "moving scan, call the calculateLeafArea overload that takes a G(theta) argument (it does not require triangulation).");
+    }
 
     if (printmessages && getScanCount() == 0) {
         cout << "WARNING (triangulateHitPoints): No scans have been added to the point cloud.  Skipping triangulation..." << endl;
@@ -2668,6 +2981,12 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio) {
 }
 
 void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const char *scalar_field, float threshold, const char *comparator) {
+
+    // See the two-argument overload: triangulation requires a fixed theta-phi scan grid that moving-platform scans lack.
+    if (anyScanMoving()) {
+        helios_runtime_error("ERROR (LiDARcloud::triangulateHitPoints): triangulation is not supported for moving-platform scans (see addScanMoving), which have no fixed theta-phi scan grid to triangulate. For leaf-area inversion of a "
+                             "moving scan, call the calculateLeafArea overload that takes a G(theta) argument (it does not require triangulation).");
+    }
 
     if (printmessages && getScanCount() == 0) {
         cout << "WARNING (triangulateHitPoints): No scans have been added to the point cloud.  Skipping triangulation..." << endl;
@@ -4156,14 +4475,31 @@ void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits)
 }
 
 void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits, float element_width) {
+    // Triangulation-derived G(theta) (the original behavior). Sentinel < 0 => compute G(theta) per voxel.
+    calculateLeafArea_inner(context, min_voxel_hits, element_width, -1.f);
+}
+
+void LiDARcloud::calculateLeafArea(helios::Context *context, float Gtheta, int min_voxel_hits, float element_width) {
+    // Caller-supplied G(theta) for scans that cannot be triangulated (e.g. moving-platform scans).
+    if (!(Gtheta > 0.f) || Gtheta > 1.f) {
+        helios_runtime_error("ERROR (LiDARcloud::calculateLeafArea): The supplied G(theta) must be in the range (0,1], but " + std::to_string(Gtheta) + " was provided. Use 0.5 for a spherical (random) leaf-angle distribution.");
+    }
+    calculateLeafArea_inner(context, min_voxel_hits, element_width, Gtheta);
+}
+
+void LiDARcloud::calculateLeafArea_inner(helios::Context *context, int min_voxel_hits, float element_width, float supplied_Gtheta) {
+
+    const bool use_supplied_Gtheta = (supplied_Gtheta > 0.f);
 
     if (printmessages) {
         std::cout << "Calculating leaf area (CollisionDetection)..." << std::endl;
     }
 
-    // Validation checks (same as GPU version)
-    if (!triangulationcomputed) {
-        helios_runtime_error("ERROR (LiDARcloud::calculateLeafAreaCD): Triangulation must be performed prior to leaf area calculation. See triangulateHitPoints().");
+    // Validation checks (same as GPU version). Triangulation is required only to estimate G(theta); when the caller
+    // supplies G(theta) directly (e.g. for a moving-platform scan, which cannot be triangulated) it is not needed.
+    if (!use_supplied_Gtheta && !triangulationcomputed) {
+        helios_runtime_error("ERROR (LiDARcloud::calculateLeafAreaCD): Triangulation must be performed prior to leaf area calculation. See triangulateHitPoints(). For scans that cannot be triangulated (e.g. moving-platform scans), use the "
+                             "calculateLeafArea overload that takes a G(theta) argument.");
     }
 
     if (!hitgridcellcomputed) {
@@ -4222,7 +4558,11 @@ void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits,
             // Collect hits for this scan
             std::vector<helios::vec3> this_scan_xyz;
             std::vector<uint> this_scan_index;
-            std::map<uint, uint> global_to_local; // global hit index -> local position in this scan's arrays
+            // global hit index -> local position in this scan's arrays. A flat vector (rather than a
+            // std::map) keeps the per-beam lookups in the classification loop below O(1) and cache-friendly:
+            // that loop performs ~Ncells * Nbeams lookups per scan (billions for a dense scan), so a
+            // red-black-tree lookup here dominates the whole inversion. Unused entries stay at the sentinel.
+            std::vector<uint> global_to_local(getHitCount(), 0);
             for (size_t r = 0; r < getHitCount(); r++) {
                 if (getHitScanID(r) == s) {
                     global_to_local[(uint) r] = (uint) this_scan_xyz.size();
@@ -4240,7 +4580,14 @@ void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits,
             BeamGrouping beams = groupHitsByTimestamp(this_scan_index);
             uint Nbeams = beams.Nbeams;
 
-            helios::vec3 origin = getScanOrigin(s);
+            // Per-hit beam emission origin. For a moving-platform scan each pulse was fired from a different position,
+            // so the beam geometry (direction and voxel entry/exit) must be measured from that pulse's own origin -
+            // getHitOrigin() returns the per-pulse origin for moving scans and the single scan origin for static scans.
+            // Precomputed once here (out of the Ncells x Nhits hot loop, which would otherwise repeat the map lookups).
+            std::vector<helios::vec3> this_scan_origin(Nhits);
+            for (size_t i = 0; i < Nhits; i++) {
+                this_scan_origin[i] = getHitOrigin(this_scan_index[i]);
+            }
 
             // CPU-based voxel intersection with hit_location classification
             std::vector<float> dr(Nhits, 0.0f);
@@ -4261,11 +4608,14 @@ void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits,
 #pragma omp parallel for
                 for (int i = 0; i < static_cast<int>(Nhits); i++) {
                     helios::vec3 hit_xyz = this_scan_xyz[i];
+                    helios::vec3 origin = this_scan_origin[i]; // this beam's emission origin (per-pulse for moving scans)
 
-                    // Inverse rotate if needed
+                    // Inverse rotate if needed. The voxel may be rotated about its center; apply the same inverse
+                    // rotation to BOTH the hit point and the beam origin so the ray-voxel geometry stays consistent.
                     if (fabs(rotation) > 1e-6f) {
                         helios::vec3 anchor = center;
                         hit_xyz = rotatePointAboutLine(hit_xyz - anchor, helios::make_vec3(0, 0, 0), helios::make_vec3(0, 0, 1), -rotation) + anchor;
+                        origin = rotatePointAboutLine(origin - anchor, helios::make_vec3(0, 0, 0), helios::make_vec3(0, 0, 1), -rotation) + anchor;
                     }
 
                     // Ray from origin to hit
@@ -4375,9 +4725,14 @@ void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits,
             }
         }
 
-        // Calculate G(theta) using shared method
+        // Obtain G(theta) per voxel. Normally computed from triangulation; when the caller supplied a value (e.g. for a
+        // moving-platform scan that cannot be triangulated), apply that single value to every voxel instead.
         std::vector<float> Gtheta;
-        computeGtheta(Ncells, Nscans, Gtheta, Gtheta_bar);
+        if (use_supplied_Gtheta) {
+            Gtheta.assign(Ncells, supplied_Gtheta);
+        } else {
+            computeGtheta(Ncells, Nscans, Gtheta, Gtheta_bar);
+        }
 
         // LAD inversion with equal weighting P
         if (printmessages) {
@@ -4486,6 +4841,23 @@ void LiDARcloud::calculateHitGridCell() {
         return;
     }
 
+    // Hoist the (constant) voxel geometry out of the per-hit loop into flat arrays. The inner loop
+    // below runs up to total_hits * Ncells times (billions for a dense scan), so re-fetching each
+    // cell's center/anchor/size/rotation through the bounds-checked getters every iteration dominates
+    // the cost. Caching them once in contiguous vectors keeps the hot loop reading from cache instead.
+    std::vector<helios::vec3> cell_min(Ncells), cell_max(Ncells), cell_anchor(Ncells);
+    std::vector<float> cell_rotation(Ncells);
+    std::vector<bool> cell_rotated(Ncells);
+    for (uint c = 0; c < Ncells; c++) {
+        helios::vec3 center = getCellCenter(c);
+        helios::vec3 size = getCellSize(c);
+        cell_min[c] = center - size * 0.5f;
+        cell_max[c] = center + size * 0.5f;
+        cell_anchor[c] = getCellGlobalAnchor(c);
+        cell_rotation[c] = getCellRotation(c);
+        cell_rotated[c] = (fabs(cell_rotation[c]) > 1e-6f);
+    }
+
 // Process each hit point (parallelized with OpenMP)
 #pragma omp parallel for schedule(dynamic, 1000)
     for (int r = 0; r < static_cast<int>(total_hits); r++) {
@@ -4493,59 +4865,24 @@ void LiDARcloud::calculateHitGridCell() {
         helios::vec3 hit_xyz = getHitXYZ(r);
         int assigned_cell = -1; // Default: not in any cell
 
-        // Test against each voxel
+        // Test against each voxel. The original ray-from-origin slab test reduces exactly to a
+        // point-in-AABB containment test: the ray is cast from the origin through the hit point P,
+        // so it passes through P at parameter T = |P|, and "T lies within the box's [t0,t1] entry/exit
+        // interval" is true iff P lies within the box bounds. (The old t1 > 1e-6 guard only excluded a
+        // box containing the origin, which cannot happen for a hit point away from the origin.)
         for (uint c = 0; c < Ncells; c++) {
 
-            helios::vec3 center = getCellCenter(c);
-            helios::vec3 anchor = getCellGlobalAnchor(c);
-            helios::vec3 size = getCellSize(c);
-            float rotation = getCellRotation(c);
-
-            // Inverse rotate hit point if voxel is rotated
-            helios::vec3 hit_xyz_rot = hit_xyz;
-            if (fabs(rotation) > 1e-6f) {
-                hit_xyz_rot = rotatePointAboutLine(hit_xyz - anchor, helios::make_vec3(0, 0, 0), helios::make_vec3(0, 0, 1), -rotation) + anchor;
+            // Inverse rotate hit point into the voxel's local axis-aligned frame if the voxel is rotated.
+            helios::vec3 p = hit_xyz;
+            if (cell_rotated[c]) {
+                p = rotatePointAboutLine(hit_xyz - cell_anchor[c], helios::make_vec3(0, 0, 0), helios::make_vec3(0, 0, 1), -cell_rotation[c]) + cell_anchor[c];
             }
 
-            // Treat hit as a ray from origin for AABB test (matches GPU kernel)
-            helios::vec3 origin = helios::make_vec3(0, 0, 0);
-            helios::vec3 direction = hit_xyz_rot - origin;
-            direction.normalize();
-
-            // AABB bounds
-            float x0 = center.x - 0.5f * size.x;
-            float x1 = center.x + 0.5f * size.x;
-            float y0 = center.y - 0.5f * size.y;
-            float y1 = center.y + 0.5f * size.y;
-            float z0 = center.z - 0.5f * size.z;
-            float z1 = center.z + 0.5f * size.z;
-
-            // Slab method for ray-AABB intersection
-            float tx_min = (x0 - origin.x) / direction.x;
-            float tx_max = (x1 - origin.x) / direction.x;
-            if (tx_min > tx_max)
-                std::swap(tx_min, tx_max);
-
-            float ty_min = (y0 - origin.y) / direction.y;
-            float ty_max = (y1 - origin.y) / direction.y;
-            if (ty_min > ty_max)
-                std::swap(ty_min, ty_max);
-
-            float tz_min = (z0 - origin.z) / direction.z;
-            float tz_max = (z1 - origin.z) / direction.z;
-            if (tz_min > tz_max)
-                std::swap(tz_min, tz_max);
-
-            float t0 = std::max({tx_min, ty_min, tz_min});
-            float t1 = std::min({tx_max, ty_max, tz_max});
-
-            // Check if hit point is inside voxel
-            if (t0 < t1 && t1 > 1e-6f) {
-                float T = (hit_xyz_rot - origin).magnitude();
-                if (T >= t0 && T <= t1) {
-                    assigned_cell = c;
-                    break; // Found the cell, stop searching
-                }
+            const helios::vec3 &lo = cell_min[c];
+            const helios::vec3 &hi = cell_max[c];
+            if (p.x >= lo.x && p.x <= hi.x && p.y >= lo.y && p.y <= hi.y && p.z >= lo.z && p.z <= hi.z) {
+                assigned_cell = c;
+                break; // Found the cell, stop searching
             }
         }
 
@@ -4850,6 +5187,19 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         bb_center = helios::make_vec3(xbounds.x + 0.5 * (xbounds.y - xbounds.x), ybounds.x + 0.5 * (ybounds.y - ybounds.x), zbounds.x + 0.5 * (zbounds.y - zbounds.x));
         bb_size = helios::make_vec3(xbounds.y - xbounds.x, ybounds.y - ybounds.x, zbounds.y - zbounds.x);
 
+        // Pad any degenerate (zero-extent) axis so the AABB slab cull does not reject every ray for planar/flat
+        // scene geometry (e.g. a single patch or a flat wall with no thickness). A zero-thickness axis forces the
+        // slab test's entry and exit parameters to coincide (t0 == t1), failing the strict t0 < t1 test below for
+        // any ray actually pointing at the plane. Giving the axis a tiny finite thickness keeps the slab test (and
+        // its 1/ray_dir division for axis-aligned rays) well-conditioned without affecting non-degenerate geometry.
+        const float bb_pad = 1e-4f;
+        if (bb_size.x < bb_pad)
+            bb_size.x = bb_pad;
+        if (bb_size.y < bb_pad)
+            bb_size.y = bb_pad;
+        if (bb_size.z < bb_pad)
+            bb_size.z = bb_pad;
+
     } else {
 
         // Determine bounding box for voxels instead of whole domain
@@ -4857,6 +5207,16 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         getGridBoundingBox(boxmin, boxmax);
         bb_center = helios::make_vec3(boxmin.x + 0.5 * (boxmax.x - boxmin.x), boxmin.y + 0.5 * (boxmax.y - boxmin.y), boxmin.z + 0.5 * (boxmax.z - boxmin.z));
         bb_size = helios::make_vec3(boxmax.x - boxmin.x, boxmax.y - boxmin.y, boxmax.z - boxmin.z);
+
+        // Pad any degenerate (zero-extent) axis so the AABB slab cull does not reject every ray for a single-layer
+        // (flat) voxel grid. See the matching note in the domain-bounding-box branch above.
+        const float bb_pad = 1e-4f;
+        if (bb_size.x < bb_pad)
+            bb_size.x = bb_pad;
+        if (bb_size.y < bb_pad)
+            bb_size.y = bb_pad;
+        if (bb_size.z < bb_pad)
+            bb_size.z = bb_pad;
     }
 
     // get geometry information and copy to GPU
@@ -5160,23 +5520,33 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
 
         std::vector<std::string> column_format = getScanColumnFormat(s);
 
-        // Global scanner tilt (models the residual tilt of the scanner spin axis reported by a real terrestrial scanner's
-        // dual-axis inclinometer). The tilt rotates the entire fan of ray directions about the scanner origin using
-        // right-hand-rule rotations, matching the right-handed, Z-up body frame used by commercial scanners (e.g. RIEGL SOCS).
-        // The tilt axes are defined relative to the scan's azimuth-zero (phiMin) facing direction, not the fixed world axes:
-        //   - the body "forward" axis is the horizontal projection of the phiMin scan direction (Y_body),
+        // Global scanner orientation. This models the full roll/pitch/yaw pose of a real terrestrial scanner:
+        //   - roll and pitch are the residual tilt of the scanner spin axis reported by the dual-axis inclinometer,
+        //   - the azimuth offset is the compass heading (yaw) of the instrument about the local vertical.
+        // The orientation rotates the entire fan of ray directions about the scanner origin using right-hand-rule
+        // rotations, matching the right-handed, Z-up body frame used by commercial scanners (e.g. RIEGL SOCS).
+        // The azimuth offset is a right-hand rotation about the world +z axis applied on top of the azimuth sweep; the
+        // roll/pitch body axes are defined relative to the scan's azimuth-zero (phiMin) facing direction and rotate with
+        // that heading:
+        //   - the body "forward" axis is the horizontal projection of the phiMin scan direction, after the azimuth offset (Y_body),
         //   - the body "lateral" (right) axis completes the right-handed frame (X_body = Y_body x Z),
         //   - roll  = right-hand rotation about X_body (the lateral axis),
         //   - pitch = right-hand rotation about Y_body (the forward / azimuth-zero axis).
-        // Roll is applied first, then pitch. A perfectly level scanner has roll = pitch = 0. When phiMin = 0 the
-        // azimuth-zero direction is +y, so X_body = +x and Y_body = +y (tilt reduces to roll about world-x, pitch about world-y).
+        // The rotation order is yaw (azimuth) first, then pitch, then roll. A level, north-facing scanner has
+        // roll = pitch = azimuth = 0. When phiMin + azimuth = 0 the azimuth-zero direction is +y, so X_body = +x and
+        // Y_body = +y (tilt reduces to roll about world-x, pitch about world-y).
         float scanTiltRoll = getScanTiltRoll(s);
         float scanTiltPitch = getScanTiltPitch(s);
+        float scanAzimuthOffset = getScanAzimuthOffset(s);
+        bool apply_azimuth = (scanAzimuthOffset != 0.f);
         bool apply_tilt = (scanTiltRoll != 0.f || scanTiltPitch != 0.f);
         const helios::vec3 tilt_pivot = helios::make_vec3(0, 0, 0); // rotate directions about the origin (pure rotation of the unit vector)
-        // Body frame from the azimuth-zero (phiMin) direction. sphere2cart with zero elevation gives the horizontal heading.
-        const helios::vec3 forward_axis = helios::make_vec3(sinf(phimin), cosf(phimin), 0.f); // Y_body: azimuth-zero heading
-        const helios::vec3 lateral_axis = helios::make_vec3(cosf(phimin), -sinf(phimin), 0.f); // X_body = Y_body x (0,0,1)
+        const helios::vec3 vertical_axis = helios::make_vec3(0.f, 0.f, 1.f); // world +z: azimuth (yaw) rotation axis
+        // Body frame from the azimuth-zero (phiMin) direction, offset by the scanner heading. sphere2cart with zero
+        // elevation gives the horizontal heading; adding scanAzimuthOffset rotates that heading about world +z.
+        const float heading = phimin + scanAzimuthOffset;
+        const helios::vec3 forward_axis = helios::make_vec3(sinf(heading), cosf(heading), 0.f); // Y_body: azimuth-zero heading (after offset)
+        const helios::vec3 lateral_axis = helios::make_vec3(cosf(heading), -sinf(heading), 0.f); // X_body = Y_body x (0,0,1)
 
         // Scan pattern determines how the (theta-index, phi-index) grid maps to zenith angles. For a raster scan the zenith is
         // uniformly spaced over [thetamin,thetamax]; for a spinning multibeam scan each theta-index is a laser channel fired at
@@ -5184,8 +5554,24 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         const ScanMetadata &scan = scans.at(s);
         const bool spinning_multibeam = (scan.scanPattern == SCAN_PATTERN_SPINNING_MULTIBEAM);
 
+        // Moving-platform support: when the scan carries a 6-DOF trajectory (see addScanMoving), each grid cell's pulse has
+        // its own acquisition time, emission origin, and orientation. The pulse time is t = t0 + ordinal*pulse_period, where
+        // the pulse ordinal is the cell's position in the firing sequence (ordinal = Ntheta*j + i), matching the value written
+        // to data["timestamp"]. For static scans is_moving is false, pulse_period defaults to 1.0 and t0 to 0.0, so the
+        // timestamp equals the historical pulse ordinal and the per-cell origin equals the single static scan_origin.
+        const bool is_moving = scan.isMoving;
+        const double pulse_period = scan.pulse_period;
+        const double pulse_t0 = scan.t0;
+        // Fixed sensor boresight misalignment (body frame), applied to every beam direction before the platform quaternion.
+        const helios::vec4 boresight_quat = quat_from_rpy(scan.boresight_rpy.x, scan.boresight_rpy.y, scan.boresight_rpy.z);
+
         std::vector<helios::vec3> raydir;
         raydir.resize(Ntheta * Nphi);
+
+        // Per-cell beam emission origin. For static scans every entry is scan_origin (preserving the original single-origin
+        // behavior); for moving scans each entry is the platform pose origin at that pulse's time.
+        std::vector<helios::vec3> raygrid_origin;
+        raygrid_origin.resize(Ntheta * Nphi, scan_origin);
 
         // Inclusive endpoint sampling: Nphi/Ntheta samples spanning [phimin,phimax] / [thetamin,thetamax].
         // Guard the (N-1) denominator so a single-row/column scan (N==1) samples once at the minimum angle
@@ -5199,9 +5585,26 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
                 float theta_z = spinning_multibeam ? scan.beamZenithAngles.at(i) : (thetamin + float(i) * dtheta);
                 float theta_elev = 0.5f * M_PI - theta_z;
                 helios::vec3 dir = sphere2cart(helios::make_SphericalCoord(1.f, theta_elev, phi));
-                if (apply_tilt) {
-                    dir = rotatePointAboutLine(dir, tilt_pivot, lateral_axis, scanTiltRoll); // roll about the lateral (X_body) axis
-                    dir = rotatePointAboutLine(dir, tilt_pivot, forward_axis, scanTiltPitch); // pitch about the forward (Y_body) axis
+                if (is_moving) {
+                    // Trajectory-driven pose. The static scanTilt is not applied here (addScanMoving requires it to be zero):
+                    // attitude is composed as dir_world = R(quat) * R(boresight) * dir_body, and the origin includes the lever arm.
+                    const size_t ordinal = size_t(Ntheta) * j + i;
+                    const double t = pulse_t0 + double(ordinal) * pulse_period;
+                    helios::vec3 pos;
+                    helios::vec4 quat;
+                    scan.poseAt(t, pos, quat);
+                    helios::vec3 dir_body = quat_rotate(boresight_quat, dir);
+                    dir = quat_rotate(quat, dir_body);
+                    dir.normalize();
+                    raygrid_origin.at(Ntheta * j + i) = pos + quat_rotate(quat, scan.lever_arm);
+                } else {
+                    if (apply_azimuth) {
+                        dir = rotatePointAboutLine(dir, tilt_pivot, vertical_axis, scanAzimuthOffset); // yaw about the world +z axis (heading offset)
+                    }
+                    if (apply_tilt) {
+                        dir = rotatePointAboutLine(dir, tilt_pivot, lateral_axis, scanTiltRoll); // roll about the lateral (X_body) axis
+                        dir = rotatePointAboutLine(dir, tilt_pivot, forward_axis, scanTiltPitch); // pitch about the forward (Y_body) axis
+                    }
                 }
                 raydir.at(Ntheta * j + i) = dir;
             }
@@ -5216,12 +5619,22 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         helios::vec3 bb_min = bb_center - bb_size * 0.5f;
         helios::vec3 bb_max = bb_center + bb_size * 0.5f;
 
-        // Check if origin is inside bounding box
-        bool origin_inside_bb = (scan_origin.x >= bb_min.x && scan_origin.x <= bb_max.x && scan_origin.y >= bb_min.y && scan_origin.y <= bb_max.y && scan_origin.z >= bb_min.z && scan_origin.z <= bb_max.z);
+        // Check if the (static) origin is inside the bounding box. For moving scans each pulse has its own origin, so this
+        // fast path is only taken for static scans; moving scans evaluate the per-pulse origin inside the loop below.
+        bool origin_inside_bb = !is_moving && (scan_origin.x >= bb_min.x && scan_origin.x <= bb_max.x && scan_origin.y >= bb_min.y && scan_origin.y <= bb_max.y && scan_origin.z >= bb_min.z && scan_origin.z <= bb_max.z);
 
         for (size_t r = 0; r < N; r++) {
             // If origin inside BB, all rays automatically hit
             if (origin_inside_bb) {
+                bb_hit[r] = 1;
+                continue;
+            }
+
+            // Per-pulse emission origin (equals scan_origin for static scans).
+            const helios::vec3 cell_origin = raygrid_origin.at(r);
+
+            // For a moving scan a pulse whose origin is inside the bounding box always interacts with the grid.
+            if (is_moving && cell_origin.x >= bb_min.x && cell_origin.x <= bb_max.x && cell_origin.y >= bb_min.y && cell_origin.y <= bb_max.y && cell_origin.z >= bb_min.z && cell_origin.z <= bb_max.z) {
                 bb_hit[r] = 1;
                 continue;
             }
@@ -5233,29 +5646,29 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
 
             float a = 1.0f / ray_dir.x;
             if (a >= 0) {
-                tx_min = (bb_min.x - scan_origin.x) * a;
-                tx_max = (bb_max.x - scan_origin.x) * a;
+                tx_min = (bb_min.x - cell_origin.x) * a;
+                tx_max = (bb_max.x - cell_origin.x) * a;
             } else {
-                tx_min = (bb_max.x - scan_origin.x) * a;
-                tx_max = (bb_min.x - scan_origin.x) * a;
+                tx_min = (bb_max.x - cell_origin.x) * a;
+                tx_max = (bb_min.x - cell_origin.x) * a;
             }
 
             float b = 1.0f / ray_dir.y;
             if (b >= 0) {
-                ty_min = (bb_min.y - scan_origin.y) * b;
-                ty_max = (bb_max.y - scan_origin.y) * b;
+                ty_min = (bb_min.y - cell_origin.y) * b;
+                ty_max = (bb_max.y - cell_origin.y) * b;
             } else {
-                ty_min = (bb_max.y - scan_origin.y) * b;
-                ty_max = (bb_min.y - scan_origin.y) * b;
+                ty_min = (bb_max.y - cell_origin.y) * b;
+                ty_max = (bb_min.y - cell_origin.y) * b;
             }
 
             float c = 1.0f / ray_dir.z;
             if (c >= 0) {
-                tz_min = (bb_min.z - scan_origin.z) * c;
-                tz_max = (bb_max.z - scan_origin.z) * c;
+                tz_min = (bb_min.z - cell_origin.z) * c;
+                tz_max = (bb_max.z - cell_origin.z) * c;
             } else {
-                tz_min = (bb_max.z - scan_origin.z) * c;
-                tz_max = (bb_min.z - scan_origin.z) * c;
+                tz_min = (bb_max.z - cell_origin.z) * c;
+                tz_max = (bb_min.z - cell_origin.z) * c;
             }
 
             // Find largest entering t value
@@ -5293,6 +5706,8 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         std::vector<helios::vec3> base_directions;
         base_directions.reserve(N);
         std::vector<helios::int2> pulse_scangrid_ij(N);
+        // Per-beam emission origin (equals scan_origin for static scans; the per-pulse platform origin for moving scans).
+        std::vector<helios::vec3> pulse_origin(N);
 
         int count = 0;
         for (int i = 0; i < Ntheta * Nphi; i++) {
@@ -5303,6 +5718,7 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
                 int jj = floor(i / Ntheta);
                 int ii = i - jj * Ntheta;
                 pulse_scangrid_ij[count] = helios::make_int2(ii, jj);
+                pulse_origin[count] = raygrid_origin.at(i);
 
                 count++;
             }
@@ -5325,7 +5741,9 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
                     data["target_index"] = 0;
                     data["target_count"] = 1;
                     data["deviation"] = 0.0;
-                    data["timestamp"] = i;
+                    // Real per-pulse acquisition time. The grid index i is the pulse ordinal (i = Ntheta*j + row), so this
+                    // matches the encoding used on the hit path and unifies miss/hit timestamps at the same scan-grid cell.
+                    data["timestamp"] = pulse_t0 + double(i) * pulse_period;
                     data["intensity"] = 1.0; // Full miss
                     data["distance"] = miss_dist;
                     data["nRaysHit"] = Npulse; // All rays in pulse missed together
@@ -5338,7 +5756,14 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
                     }
 
                     helios::vec3 dir = raydir.at(i);
-                    helios::vec3 p = scan_origin + dir * miss_dist;
+                    helios::vec3 cell_origin = raygrid_origin.at(i);
+                    if (is_moving) {
+                        data["pulse_id"] = double(i);
+                        data["origin_x"] = cell_origin.x;
+                        data["origin_y"] = cell_origin.y;
+                        data["origin_z"] = cell_origin.z;
+                    }
+                    helios::vec3 p = cell_origin + dir * miss_dist;
                     addHitPoint(s, p, helios::cart2sphere(dir), helios::RGB::red, data);
                 }
             } else {
@@ -5443,15 +5868,17 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
                     float x_disk = r_sample * cosf(theta);
                     float y_disk = r_sample * sinf(theta);
 
-                    // Transform disk point to world space
+                    // Transform disk point to world space (per-beam origin: scan_origin for static, platform pose for moving)
                     helios::vec3 offset = u * x_disk + v * y_disk;
-                    ray_origins[beam * Npulse + p] = scan_origin + offset;
+                    ray_origins[beam * Npulse + p] = pulse_origin[beam] + offset;
                 }
             }
         } else {
-            // Point source: all rays originate from scan_origin (backward compatibility)
-            for (size_t i = 0; i < N * Npulse; i++) {
-                ray_origins[i] = scan_origin;
+            // Point source: all rays originate from the beam's emission origin (scan_origin for static scans)
+            for (size_t beam = 0; beam < N; beam++) {
+                for (int p = 0; p < Npulse; p++) {
+                    ray_origins[beam * Npulse + p] = pulse_origin[beam];
+                }
             }
         }
 
@@ -5615,7 +6042,12 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
                 data["is_miss"] = is_miss ? 1.0 : 0.0; // canonical miss flag
                 data["target_count"] = t_hit.size();
                 data["deviation"] = fabs(measured_distance - average);
-                data["timestamp"] = pulse_scangrid_ij.at(r).y * Ntheta + pulse_scangrid_ij.at(r).x;
+                // Real per-pulse acquisition time. The pulse ordinal is its position in the firing sequence
+                // (ordinal = Ntheta*j + i); scaling by pulse_period and offsetting by t0 turns it into seconds. For static
+                // scans pulse_period=1 and t0=0, so this equals the historical grid ordinal. All returns of one pulse (this
+                // loop over `hit` for a fixed beam r) share the identical time, as required by groupHitsByTimestamp.
+                const size_t pulse_ordinal = size_t(pulse_scangrid_ij.at(r).y) * Ntheta + size_t(pulse_scangrid_ij.at(r).x);
+                data["timestamp"] = pulse_t0 + double(pulse_ordinal) * pulse_period;
                 // Record range-normalized intensity: the range-independent return amplitude rho*cos(theta) with the
                 // 1/R^2 range loss of the LiDAR range equation normalized out (see applyRangeIntensityCorrection()).
                 data["intensity"] = applyRangeIntensityCorrection(t_hit.at(hit).at(1), measured_distance);
@@ -5629,7 +6061,16 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
 
                 // Use base direction for this beam (first ray: r*Npulse+0)
                 helios::vec3 dir = direction[r * Npulse];
-                helios::vec3 p = scan_origin + dir * measured_distance;
+                // Reconstruct the hit point along the beam from its own emission origin (the per-pulse platform origin for
+                // moving scans; scan_origin for static scans). For moving scans, record the per-pulse origin and firing index.
+                const helios::vec3 beam_origin = pulse_origin[r];
+                helios::vec3 p = beam_origin + dir * measured_distance;
+                if (is_moving) {
+                    data["pulse_id"] = double(pulse_ordinal);
+                    data["origin_x"] = beam_origin.x;
+                    data["origin_y"] = beam_origin.y;
+                    data["origin_z"] = beam_origin.z;
+                }
 
                 helios::RGBcolor color = helios::RGB::red;
 

@@ -222,6 +222,9 @@ namespace helios {
         CUdeviceptr d_tau_cam                = 0;
         CUdeviceptr d_specular_exponent      = 0;
         CUdeviceptr d_specular_scale         = 0;
+        CUdeviceptr d_glass_n                = 0; //!< Translucent-cover refractive index
+        CUdeviceptr d_glass_KL               = 0; //!< Translucent-cover Bouguer absorption K*L
+        CUdeviceptr d_is_glass               = 0; //!< Translucent-cover material flag
 
         // ---- Radiation energy device buffers ----
         CUdeviceptr d_radiation_in           = 0;

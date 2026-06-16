@@ -24,6 +24,14 @@
 
 typedef unsigned int uint;
 
+//! Maximum number of radiation bands supported by the per-ray translucent-cover transmittance
+//! accumulator (PerRayData::cover_transmittance). Must match HELIOS_MAX_RADIATION_BANDS in
+//! OptiX8LaunchParams.h and GLASS_MAX_BANDS in shaders/common/glass_cover.glsl; the host fails fast
+//! if the launched band count exceeds it.
+#ifndef HELIOS_MAX_RADIATION_BANDS
+#define HELIOS_MAX_RADIATION_BANDS 32
+#endif
+
 // launch parameters
 rtDeclareVariable(rtObject, top_object, , );
 rtDeclareVariable(unsigned int, random_seed, , );
@@ -122,6 +130,15 @@ rtBuffer<float, 1> primitive_solid_fraction;
 rtBuffer<float, 1> rho, tau;
 rtBuffer<float, 1> rho_cam, tau_cam;
 
+// Translucent cover (glass/plastic) material. Same layout as rho/tau:
+// [source * Nprimitives * Nbands_global + primitive * Nbands_global + band_global].
+// When is_glass != 0 for an entry, the angular transmittance/reflectance is computed on-device from
+// glass_n (refractive index) and glass_KL (Bouguer absorption product K*L) via the Fresnel+Bouguer
+// model, overriding the constant rho/tau for that entry. glass_enabled is a cheap gate: when 0 (no
+// primitive uses the glass model) the any-hit programs early-return so non-glass scenes pay no cost.
+rtBuffer<float, 1> glass_n, glass_KL, is_glass;
+rtDeclareVariable(unsigned int, glass_enabled, , );
+
 rtBuffer<float, 1> specular_exponent;
 rtBuffer<float, 1> specular_scale;
 rtDeclareVariable(unsigned int, specular_reflection_enabled, , );
@@ -175,9 +192,22 @@ struct PerRayData {
     //! Flag to determine if ray hit a periodic boundary
     bool hit_periodic_boundary;
     optix::float3 periodic_hit;
+    //! Per-launch-band transmittance accumulated as the ray passes through translucent covers
+    //! (glass/plastic). Initialised to 1 in the raygen programs; multiplied by the Fresnel+Bouguer
+    //! tau(theta) in the any-hit programs; consumed (applied to the deposited flux) in the miss
+    //! programs. Indexed by launch-band b.
+    float cover_transmittance[HELIOS_MAX_RADIATION_BANDS];
 };
 
 static __device__ void init_state(PerRayData *prd);
+
+//! Reset the per-band translucent-cover transmittance accumulator to 1 (no covers crossed yet).
+//! Called in the raygen programs before each direct/diffuse-sky ray is traced.
+static __device__ __inline__ void initCoverTransmittance(PerRayData &p) {
+    for (int i = 0; i < HELIOS_MAX_RADIATION_BANDS; i++) {
+        p.cover_transmittance[i] = 1.f;
+    }
+}
 
 __device__ __inline__ void atomicFloatAdd(float *address, float val) {
 #if __CUDA_ARCH__ >= 200

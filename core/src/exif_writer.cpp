@@ -125,7 +125,9 @@ namespace helios::detail {
             e.type = TYPE_ASCII;
             e.count = static_cast<uint32_t>(s.size() + 1);
             std::vector<unsigned char> raw(s.size() + 1, 0);
-            std::memcpy(raw.data(), s.data(), s.size());
+            if (!s.empty()) {
+                std::memcpy(raw.data(), s.data(), s.size());
+            }
             finalizeEntry(e, raw);
             return e;
         }
@@ -623,10 +625,8 @@ namespace helios::detail {
         }
 
         // Compose final payload: "Exif\0\0" + tiff
-        std::vector<unsigned char> payload;
+        std::vector<unsigned char> payload = {'E', 'x', 'i', 'f', 0, 0};
         payload.reserve(6 + tiff.size());
-        const unsigned char header[] = {'E', 'x', 'i', 'f', 0, 0};
-        payload.insert(payload.end(), header, header + 6);
         payload.insert(payload.end(), tiff.begin(), tiff.end());
 
         if (payload.size() > APP1_MAX_PAYLOAD) {

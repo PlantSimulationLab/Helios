@@ -166,6 +166,9 @@ namespace helios {
         Buffer specular_scale_buffer; //!< Per-primitive specular scale coefficient
         Buffer source_fluxes_cam_buffer; //!< Camera spectral response weights [source × band]
         Buffer band_map_buffer; //!< Maps launch band index → global band index [launch_band_count]
+        Buffer is_glass_buffer; //!< Translucent-cover flag per [source][prim][band] (uint, source-0 slice used)
+        Buffer glass_n_buffer; //!< Translucent-cover refractive index per [source][prim][band]
+        Buffer glass_KL_buffer; //!< Translucent-cover Bouguer absorption K*L per [source][prim][band]
 
         // Result buffers (Set 2)
         Buffer radiation_in_buffer;

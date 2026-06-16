@@ -32,6 +32,14 @@
 
 typedef unsigned int uint;
 
+// Maximum number of radiation bands that may be launched together. Used to size the
+// per-band translucent-cover transmittance accumulator in the payload (the payload lives in a
+// per-thread pool, not registers, so this array adds no register pressure). The host validates
+// that the launch band count does not exceed this cap (fail-fast) before launching.
+#ifndef HELIOS_MAX_RADIATION_BANDS
+#define HELIOS_MAX_RADIATION_BANDS 32
+#endif
+
 // ---------------------------------------------------------------------------
 // Per-ray payload.  Passed by pointer-in-two-registers.
 // Allocated in a per-thread pool on the device.
@@ -44,6 +52,10 @@ struct PerRayData {
     unsigned char source_ID;   //!< Source index (max 255 sources)
     bool   hit_periodic_boundary;
     float3 periodic_hit;       //!< World-space hit on the periodic wall
+    //! Per-launch-band transmittance accumulated as the ray passes through translucent covers
+    //! (glass/plastic). Initialised to 1 in the raygen programs; multiplied by the Fresnel+Bouguer
+    //! tau(theta) in the any-hit programs; consumed in the miss programs. Indexed by launch-band b.
+    float  cover_transmittance[HELIOS_MAX_RADIATION_BANDS];
 };
 
 // ---------------------------------------------------------------------------
@@ -97,12 +109,17 @@ struct OptiX8LaunchParams {
     uint32_t* bbox_UUIDs;
 
     // ---- Material buffers ----
-    float*    rho;        //!< Reflectivity [source * Nbands_global * Nprims + band * Nprims + prim]
+    float*    rho;        //!< Reflectivity [source * Nprims * Nbands_global + prim * Nbands_global + band]
     float*    tau;        //!< Transmissivity (same layout)
     float*    rho_cam;    //!< Camera-weighted reflectivity
     float*    tau_cam;    //!< Camera-weighted transmissivity
     float*    specular_exponent;
     float*    specular_scale;
+
+    // ---- Translucent cover (glass/plastic) material buffers (same layout as rho/tau) ----
+    float*    glass_n;    //!< Refractive index [source * Nprims * Nbands_global + prim * Nbands_global + band]
+    float*    glass_KL;   //!< Bouguer absorption product K*L (same layout)
+    int8_t*   is_glass;   //!< 1 if this [source][prim][band] uses the glass model, else 0 (same layout)
 
     // ---- Radiation energy buffers ----
     float*    radiation_in;           //!< [prim * Nbands_global + band]

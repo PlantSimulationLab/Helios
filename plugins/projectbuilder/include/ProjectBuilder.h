@@ -1951,7 +1951,13 @@ public:
 
     //! Constructor
     ProjectBuilder() {
+#ifdef ENABLE_HELIOS_VISUALIZER
+        // Redirect std::cout into captured_cout so the GUI console (outputConsole()) can display it.
+        // Only do this when the visualizer is built: captured_cout is consumed exclusively by
+        // outputConsole(), so in headless/test builds the redirect would silently swallow all stdout
+        // (including doctest failure output) for the lifetime of this object.
         std::cout.rdbuf(captured_cout.rdbuf());
+#endif
         primitive_UUIDs = {{"ground", ground_UUIDs},     {"leaf", leaf_UUIDs},   {"petiolule", petiolule_UUIDs}, {"petiole", petiole_UUIDs}, {"internode", internode_UUIDs},
                            {"peduncle", peduncle_UUIDs}, {"petal", petal_UUIDs}, {"pedicel", pedicel_UUIDs},     {"fruit", fruit_UUIDs}};
         primitive_continuous = {{"All", {false, false, false}},       {"ground", {false, false, false}},   {"leaf", {false, false, false}},  {"petiolule", {false, false, false}}, {"petiole", {false, false, false}},
@@ -1990,7 +1996,9 @@ public:
 
     //! Destructor
     ~ProjectBuilder() {
+#ifdef ENABLE_HELIOS_VISUALIZER
         std::cout.rdbuf(old_cout_stream_buf);
+#endif
 
         // Delete plugins BEFORE context - they hold pointers to context
         // and may access it during destruction

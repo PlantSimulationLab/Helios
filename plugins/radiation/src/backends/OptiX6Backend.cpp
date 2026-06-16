@@ -98,6 +98,9 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, hit_ptx_path.c_str(), "miss_direct", &miss_direct));
     RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, hit_ptx_path.c_str(), "miss_diffuse", &miss_diffuse));
     RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, hit_ptx_path.c_str(), "miss_camera", &miss_camera));
+    // Translucent cover (glass/plastic) any-hit programs: let direct/diffuse rays pass through covers.
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, hit_ptx_path.c_str(), "any_hit_direct", &any_hit_direct));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, hit_ptx_path.c_str(), "any_hit_diffuse", &any_hit_diffuse));
 
     /* Set miss programs */
     RT_CHECK_ERROR(rtContextSetMissProgram(OptiX_Context, RAYTYPE_DIRECT, miss_direct));
@@ -170,6 +173,9 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(patch_material, RAYTYPE_DIFFUSE, closest_hit_diffuse));
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(patch_material, RAYTYPE_CAMERA, closest_hit_camera));
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(patch_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label));
+    // Translucent-cover pass-through (glass/plastic) for direct/diffuse rays only.
+    RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(patch_material, RAYTYPE_DIRECT, any_hit_direct));
+    RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(patch_material, RAYTYPE_DIFFUSE, any_hit_diffuse));
 
     // Triangle material
     RT_CHECK_ERROR(rtMaterialCreate(OptiX_Context, &triangle_material));
@@ -177,6 +183,8 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(triangle_material, RAYTYPE_DIFFUSE, closest_hit_diffuse));
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(triangle_material, RAYTYPE_CAMERA, closest_hit_camera));
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(triangle_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label));
+    RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(triangle_material, RAYTYPE_DIRECT, any_hit_direct));
+    RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(triangle_material, RAYTYPE_DIFFUSE, any_hit_diffuse));
 
     // Disk material
     RT_CHECK_ERROR(rtMaterialCreate(OptiX_Context, &disk_material));
@@ -184,6 +192,8 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(disk_material, RAYTYPE_DIFFUSE, closest_hit_diffuse));
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(disk_material, RAYTYPE_CAMERA, closest_hit_camera));
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(disk_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label));
+    RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(disk_material, RAYTYPE_DIRECT, any_hit_direct));
+    RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(disk_material, RAYTYPE_DIFFUSE, any_hit_diffuse));
 
     // Tile material
     RT_CHECK_ERROR(rtMaterialCreate(OptiX_Context, &tile_material));
@@ -191,6 +201,8 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(tile_material, RAYTYPE_DIFFUSE, closest_hit_diffuse));
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(tile_material, RAYTYPE_CAMERA, closest_hit_camera));
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(tile_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label));
+    RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(tile_material, RAYTYPE_DIRECT, any_hit_direct));
+    RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(tile_material, RAYTYPE_DIFFUSE, any_hit_diffuse));
 
     // Voxel material
     RT_CHECK_ERROR(rtMaterialCreate(OptiX_Context, &voxel_material));
@@ -318,6 +330,15 @@ void OptiX6Backend::initialize() {
     addBuffer("tau_cam", tau_cam_RTbuffer, tau_cam_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("specular_exponent", specular_exponent_RTbuffer, specular_exponent_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("specular_scale", specular_scale_RTbuffer, specular_scale_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
+
+    // Translucent cover (glass/plastic) material buffers (same [source][primitive][band] layout as rho/tau).
+    // is_glass is uploaded as float (1.0/0.0) widened from the host char vector.
+    addBuffer("glass_n", glass_n_RTbuffer, glass_n_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
+    addBuffer("glass_KL", glass_KL_RTbuffer, glass_KL_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
+    addBuffer("is_glass", is_glass_RTbuffer, is_glass_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
+    // Cheap gate: 0 = no primitive uses the glass model (any-hit programs early-return).
+    RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "glass_enabled", &glass_enabled_RTvariable));
+    RT_CHECK_ERROR(rtVariableSet1ui(glass_enabled_RTvariable, 0));
 
     // Radiation energy buffers
     addBuffer("radiation_in", radiation_in_RTbuffer, radiation_in_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
@@ -1691,6 +1712,39 @@ void OptiX6Backend::materialsToBuffers(const RayTracingMaterial &materials) {
     if (!materials.specular_scale.empty()) {
         initializeBuffer1Df(specular_scale_RTbuffer, materials.specular_scale);
     }
+
+    // Translucent cover (glass/plastic) material buffers. The host vectors are always full-size
+    // ([source][primitive][band]); upload them unconditionally so the device buffers are validly
+    // sized, and gate the any-hit work with glass_enabled.
+    bool any_glass = false;
+    for (char g: materials.is_glass) {
+        if (g != 0) {
+            any_glass = true;
+            break;
+        }
+    }
+    if (any_glass) {
+        // The device per-band cover-transmittance accumulator (PerRayData::cover_transmittance) is a
+        // fixed-size array of HELIOS_MAX_RADIATION_BANDS (32, defined in RayTracing.cuh). Fail fast if
+        // the band count exceeds it rather than silently corrupting energy.
+        constexpr size_t max_radiation_bands = 32; // must match HELIOS_MAX_RADIATION_BANDS / GLASS_MAX_BANDS
+        if (materials.num_bands > max_radiation_bands) {
+            helios_runtime_error("ERROR (OptiX6Backend): translucent cover (glass) materials are in use with " + std::to_string(materials.num_bands) + " radiation bands, which exceeds the compile-time maximum of " +
+                                 std::to_string(max_radiation_bands) + " (HELIOS_MAX_RADIATION_BANDS). Reduce the number of bands or increase the cap.");
+        }
+    }
+    if (!materials.glass_n.empty()) {
+        initializeBuffer1Df(glass_n_RTbuffer, materials.glass_n);
+    }
+    if (!materials.glass_KL.empty()) {
+        initializeBuffer1Df(glass_KL_RTbuffer, materials.glass_KL);
+    }
+    if (!materials.is_glass.empty()) {
+        // Widen char -> float (1.0/0.0) for the float-typed device buffer.
+        std::vector<float> is_glass_f(materials.is_glass.begin(), materials.is_glass.end());
+        initializeBuffer1Df(is_glass_RTbuffer, is_glass_f);
+    }
+    RT_CHECK_ERROR(rtVariableSet1ui(glass_enabled_RTvariable, any_glass ? 1u : 0u));
 }
 
 void OptiX6Backend::sourcesToBuffers(const std::vector<RayTracingSource> &sources) {

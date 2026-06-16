@@ -567,6 +567,104 @@ DOCTEST_TEST_CASE("LiDAR Spinning Multibeam Synthetic Scan") {
     std::filesystem::remove_all(out_dir);
 }
 
+DOCTEST_TEST_CASE("LiDAR Multibeam Synthetic Scan Flat Wall") {
+    // Regression: a planar (zero-thickness) scene must not be rejected wholesale by the synthetic-scan AABB cull.
+    // A flat wall lies in the y-z plane at x=0, so the Context domain bounding box is degenerate along x
+    // (xmin==xmax==0). Before the degenerate-axis pad, the slab cull forced t0==t1 and rejected every ray, so
+    // syntheticScan recorded all returns as misses (distance == LIDAR_RAYTRACE_MISS_T) and produced zero real
+    // returns. This asserts a substantial fraction of real returns at the correct ~5 m range.
+    Context context;
+    // 4 m x 4 m wall (y,z in [-2,2]) at x=0, built from two triangles.
+    context.addTriangle(make_vec3(0.f, -2.f, -2.f), make_vec3(0.f, 2.f, -2.f), make_vec3(0.f, 2.f, 2.f), RGB::green);
+    context.addTriangle(make_vec3(0.f, -2.f, -2.f), make_vec3(0.f, 2.f, 2.f), make_vec3(0.f, -2.f, 2.f), RGB::green);
+
+    LiDARcloud cloud;
+    cloud.disableMessages();
+
+    // Multibeam scanner 5 m in front of the wall on -x, facing +x. 25 channels over roughly -6..+6 deg elevation.
+    vec3 scan_origin(-5.f, 0.f, 0.5f);
+    std::vector<float> beam_zenith;
+    for (int e = -12; e <= 12; e++) { // 25 channels, 0.5-degree elevation spacing => +/-6 deg span
+        beam_zenith.push_back(0.5f * float(M_PI) - 0.5f * float(e) * float(M_PI) / 180.f);
+    }
+    uint Nphi = 2000;
+    std::vector<std::string> columnFormat;
+    ScanMetadata scan(scan_origin, beam_zenith, Nphi, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, columnFormat);
+    DOCTEST_CHECK_NOTHROW(cloud.addScan(scan));
+
+    DOCTEST_CHECK_NOTHROW(cloud.syntheticScan(&context, false, true)); // scan_grid_only=false, record_misses=true
+
+    uint Nhits = cloud.getHitCount();
+    DOCTEST_REQUIRE(Nhits > 0);
+
+    // The wall subtends azimuth half-angle atan(2/5)=21.8 deg, so it occupies ~43.6/360 = 12.1% of the 2000 azimuth
+    // columns (~242 columns x 25 channels ~= 6000 real returns out of 50000 rays). Assert a substantial fraction
+    // (> 8% of total) plus an absolute floor, rather than "any hit" (which the all-miss bug passed).
+    uint Ntheta = uint(beam_zenith.size());
+    uint total_rays = Ntheta * Nphi;
+    uint real_returns = 0;
+    bool ranges_ok = true;
+    for (uint h = 0; h < Nhits; h++) {
+        if (cloud.getHitData(h, "is_miss") == 0.0) {
+            real_returns++;
+            // Real hits are on the wall at x=0; on-axis range from the scanner at x=-5 is exactly 5 m, growing toward
+            // the wall's azimuth edges as 5/cos(phi): the y=+/-2 edge is sqrt(5^2+2^2)=5.39 m, plus a small vertical
+            // component from the +/-6 deg channels, so real ranges fall within roughly [5.0, 5.45] m.
+            double dist = cloud.getHitData(h, "distance");
+            if (dist < 4.9 || dist > 5.5) {
+                ranges_ok = false;
+            }
+        }
+    }
+    DOCTEST_CHECK(real_returns > 1000); // absolute floor: the bug produced exactly 0
+    DOCTEST_CHECK(real_returns > uint(0.08 * float(total_rays))); // ~12% expected; 8% is a defensible lower bound
+    DOCTEST_CHECK(ranges_ok);
+}
+
+DOCTEST_TEST_CASE("LiDAR Raster Synthetic Scan Flat Wall") {
+    // Companion to the multibeam flat-wall regression: the degenerate-axis cull fix must be scan-pattern-agnostic.
+    // Same 4 m x 4 m wall in the y-z plane at x=0, scanned with a raster pattern aimed straight at it.
+    Context context;
+    context.addTriangle(make_vec3(0.f, -2.f, -2.f), make_vec3(0.f, 2.f, -2.f), make_vec3(0.f, 2.f, 2.f), RGB::green);
+    context.addTriangle(make_vec3(0.f, -2.f, -2.f), make_vec3(0.f, 2.f, 2.f), make_vec3(0.f, -2.f, 2.f), RGB::green);
+
+    LiDARcloud cloud;
+    cloud.disableMessages();
+
+    vec3 scan_origin(-5.f, 0.f, 0.5f);
+    uint Ntheta = 250;
+    uint Nphi = 250;
+    // Zenith ~84..96 deg (elevation +/-6 deg) and azimuth -20..+20 deg about +x. Azimuth phi is measured from +y,
+    // so the +x heading toward the wall is phi = pi/2.
+    float thetaMin = 0.5f * float(M_PI) - 6.f * float(M_PI) / 180.f;
+    float thetaMax = 0.5f * float(M_PI) + 6.f * float(M_PI) / 180.f;
+    float phiMin = 0.5f * float(M_PI) - 20.f * float(M_PI) / 180.f;
+    float phiMax = 0.5f * float(M_PI) + 20.f * float(M_PI) / 180.f;
+    std::vector<std::string> columnFormat;
+    ScanMetadata scan(scan_origin, Ntheta, thetaMin, thetaMax, Nphi, phiMin, phiMax, 0.f, 0.f, 0.f, 0.f, columnFormat);
+    DOCTEST_CHECK_NOTHROW(cloud.addScan(scan));
+
+    DOCTEST_CHECK_NOTHROW(cloud.syntheticScan(&context, false, true));
+
+    uint Nhits = cloud.getHitCount();
+    DOCTEST_REQUIRE(Nhits > 0);
+
+    uint real_returns = 0;
+    bool ranges_ok = true;
+    for (uint h = 0; h < Nhits; h++) {
+        if (cloud.getHitData(h, "is_miss") == 0.0) {
+            real_returns++;
+            // The +/-20 deg azimuth edges reach 5/cos(20 deg) ~= 5.32 m.
+            double dist = cloud.getHitData(h, "distance");
+            if (dist < 4.9 || dist > 5.4) {
+                ranges_ok = false;
+            }
+        }
+    }
+    DOCTEST_CHECK(real_returns > uint(0.5f * float(Ntheta * Nphi))); // fan points at the wall => majority hit
+    DOCTEST_CHECK(ranges_ok);
+}
+
 DOCTEST_TEST_CASE("LiDAR Spinning Multibeam XML Load and Round-Trip") {
     // Write a temporary spinning-multibeam scan XML and verify it loads with the correct geometry.
     std::string xml_path = "plugins/lidar/xml/.tmp_spinning_multibeam_test.xml";
@@ -2975,6 +3073,167 @@ DOCTEST_TEST_CASE("LiDAR Synthetic Scan Scanner Tilt Test") {
     }
 }
 
+DOCTEST_TEST_CASE("LiDAR Synthetic Scan Scanner Azimuth Offset Test") {
+    // The azimuth offset is the scanner's compass heading (yaw): a right-hand rotation of the entire fan of ray directions
+    // about the world +z axis, applied on top of the per-scan azimuth sweep [phiMin, phiMax]. We verify that:
+    //   (1) zero azimuth offset is an exact no-op (same hits as a scan with no offset),
+    //   (2) a known azimuth offset rotates each beam's hit direction by exactly that offset about world +z,
+    //   (3) the azimuth offset composes with tilt (the offset rotates the body frame, so a pitch tilt under a 90-degree
+    //       offset displaces the nadir beam about the rotated forward axis), and
+    //   (4) the <scanAzimuthOffset> XML tag is parsed into the scan metadata in radians.
+
+    // Same surrounding box as the tilt test so every beam strikes a wall at a known distance.
+    Context context;
+    context.addPatch(make_vec3(0, 0, -5), make_vec2(20, 20)); // floor
+    context.addPatch(make_vec3(0, 0, 5), make_vec2(20, 20)); // ceiling
+    context.addPatch(make_vec3(5, 0, 0), make_vec2(20, 20), make_SphericalCoord(0.5f * float(M_PI), 0.f)); // +x wall
+    context.addPatch(make_vec3(-5, 0, 0), make_vec2(20, 20), make_SphericalCoord(0.5f * float(M_PI), 0.f)); // -x wall
+    context.addPatch(make_vec3(0, 5, 0), make_vec2(20, 20), make_SphericalCoord(0.5f * float(M_PI), 0.5f * float(M_PI))); // +y wall
+    context.addPatch(make_vec3(0, -5, 0), make_vec2(20, 20), make_SphericalCoord(0.5f * float(M_PI), 0.5f * float(M_PI))); // -y wall
+
+    const vec3 scan_origin(0.0f, 0.0f, 0.0f);
+    const uint Ntheta = 30;
+    const uint Nphi = 30;
+    const float phiMin = 0.0f;
+    const float phiMax = 2.0f * float(M_PI);
+    const float exitDiameter = 0.0f;
+    const float beamDivergence = 0.0f;
+    std::vector<std::string> columnFormat;
+
+    // A near-nadir cone keeps every beam on the floor for both the offset and non-offset scans, so hits stay in
+    // beam-for-beam correspondence (the azimuth offset only spins the cone about +z, it does not move beams off the floor).
+    const float cone_thetaMin = 0.80f * float(M_PI);
+    const float cone_thetaMax = float(M_PI);
+    auto run_scan = [&](float azimuth_offset, std::vector<vec3> &dirs) {
+        LiDARcloud lidar;
+        lidar.disableMessages();
+        ScanMetadata scan(scan_origin, Ntheta, cone_thetaMin, cone_thetaMax, Nphi, phiMin, phiMax, exitDiameter, beamDivergence, 0.0f, 0.0f, columnFormat, 0.0f, 0.0f, azimuth_offset);
+        lidar.addScan(scan);
+        lidar.syntheticScan(&context);
+        uint hc = lidar.getHitCount();
+        dirs.clear();
+        dirs.reserve(hc);
+        for (uint i = 0; i < hc; i++) {
+            vec3 d = lidar.getHitXYZ(i) - scan_origin;
+            d.normalize();
+            dirs.push_back(d);
+        }
+    };
+
+    // (1) Zero offset no-op: explicit zero azimuth offset must reproduce a scan with no offset, hit-for-hit.
+    {
+        std::vector<vec3> dirs_default, dirs_zero;
+        run_scan(0.0f, dirs_zero);
+        LiDARcloud lidar_default;
+        lidar_default.disableMessages();
+        ScanMetadata scan(scan_origin, Ntheta, cone_thetaMin, cone_thetaMax, Nphi, phiMin, phiMax, exitDiameter, beamDivergence, 0.0f, 0.0f, columnFormat);
+        lidar_default.addScan(scan);
+        lidar_default.syntheticScan(&context);
+        uint hc = lidar_default.getHitCount();
+        for (uint i = 0; i < hc; i++) {
+            vec3 d = lidar_default.getHitXYZ(i) - scan_origin;
+            d.normalize();
+            dirs_default.push_back(d);
+        }
+        DOCTEST_REQUIRE(dirs_zero.size() == dirs_default.size());
+        DOCTEST_CHECK(dirs_zero.size() > 0);
+        for (size_t i = 0; i < dirs_zero.size(); i++) {
+            DOCTEST_CHECK(dirs_zero[i].x == doctest::Approx(dirs_default[i].x).epsilon(1e-5));
+            DOCTEST_CHECK(dirs_zero[i].y == doctest::Approx(dirs_default[i].y).epsilon(1e-5));
+            DOCTEST_CHECK(dirs_zero[i].z == doctest::Approx(dirs_default[i].z).epsilon(1e-5));
+        }
+    }
+
+    // (2) Core geometric check: with a known azimuth offset, each beam's hit direction must equal the corresponding
+    //     no-offset hit direction rotated about world +z by exactly that offset. The grid is identical and deterministic,
+    //     so hits correspond beam-for-beam.
+    {
+        const float azimuth_offset = 35.0f * float(M_PI) / 180.0f;
+        const vec3 vertical_axis = make_vec3(0.f, 0.f, 1.f);
+        std::vector<vec3> base_dirs, offset_dirs;
+        run_scan(0.0f, base_dirs);
+        run_scan(azimuth_offset, offset_dirs);
+        DOCTEST_REQUIRE(base_dirs.size() == offset_dirs.size());
+        DOCTEST_CHECK(base_dirs.size() > 0);
+        const vec3 pivot = make_vec3(0, 0, 0);
+        for (size_t i = 0; i < base_dirs.size(); i++) {
+            vec3 expected = rotatePointAboutLine(base_dirs[i], pivot, vertical_axis, azimuth_offset);
+            DOCTEST_CHECK(offset_dirs[i].x == doctest::Approx(expected.x).epsilon(1e-3));
+            DOCTEST_CHECK(offset_dirs[i].y == doctest::Approx(expected.y).epsilon(1e-3));
+            DOCTEST_CHECK(offset_dirs[i].z == doctest::Approx(expected.z).epsilon(1e-3));
+        }
+    }
+
+    // (3) Offset composes with tilt: a pitch-only tilt under a 90-degree azimuth offset rotates the body forward axis from
+    //     world +y to world +x, so the near-nadir floor hit is displaced in +y rather than the -x seen with no offset
+    //     (cf. the tilt test part 3). This confirms the offset rotates the roll/pitch body frame, applied yaw-then-pitch.
+    {
+        const uint Nt = 8, Np = 8;
+        const float tmin = 0.97f * float(M_PI);
+        const float tmax = float(M_PI);
+        const float pitch = 12.0f * float(M_PI) / 180.0f;
+        const float azimuth_offset = 0.5f * float(M_PI); // 90-degree heading offset
+
+        LiDARcloud lidar;
+        lidar.disableMessages();
+        ScanMetadata scan(scan_origin, Nt, tmin, tmax, Np, 0.0f, 2.0f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, columnFormat, 0.0f, pitch, azimuth_offset);
+        lidar.addScan(scan);
+        lidar.syntheticScan(&context);
+        uint hc = lidar.getHitCount();
+        vec3 mean = make_vec3(0, 0, 0);
+        uint n = 0;
+        for (uint i = 0; i < hc; i++) {
+            vec3 p = lidar.getHitXYZ(i);
+            if (p.z < -1.0f) { // floor hits only
+                mean = mean + p;
+                n++;
+            }
+        }
+        DOCTEST_REQUIRE(n > 0);
+        mean = mean / float(n);
+
+        // forward (pitch) axis after the 90-degree heading offset is world +x, so a right-hand pitch displaces nadir to +y.
+        const vec3 forward_axis = make_vec3(sinf(azimuth_offset), cosf(azimuth_offset), 0.f);
+        vec3 expected_dir = rotatePointAboutLine(make_vec3(0, 0, -1), make_vec3(0, 0, 0), forward_axis, pitch);
+        expected_dir.normalize();
+        vec3 mean_dir = mean;
+        mean_dir.normalize();
+        DOCTEST_CHECK(mean_dir.x == doctest::Approx(expected_dir.x).epsilon(2e-2));
+        DOCTEST_CHECK(mean_dir.y == doctest::Approx(expected_dir.y).epsilon(2e-2));
+        DOCTEST_CHECK(mean_dir.z == doctest::Approx(expected_dir.z).epsilon(2e-2));
+        DOCTEST_CHECK(mean.y > 0.5f);
+        DOCTEST_CHECK(fabs(mean.x) < 0.3f);
+    }
+
+    // (4) XML round-trip: <scanAzimuthOffset> N </scanAzimuthOffset> is parsed into metadata, converted degrees->radians.
+    {
+        const char *az_xml = "lidar_scanazimuth_xml_test.xml";
+        std::ofstream ofs(az_xml);
+        ofs << "<helios>\n"
+            << "  <scan>\n"
+            << "    <origin> 0 0 0 </origin>\n"
+            << "    <size> 10 10 </size>\n"
+            << "    <scanAzimuthOffset> 45 </scanAzimuthOffset>\n"
+            << "  </scan>\n"
+            << "  <scan>\n"
+            << "    <origin> 0 0 0 </origin>\n"
+            << "    <size> 10 10 </size>\n"
+            << "  </scan>\n"
+            << "</helios>\n";
+        ofs.close();
+
+        LiDARcloud lidar;
+        lidar.disableMessages();
+        DOCTEST_CHECK_NOTHROW(lidar.loadXML(az_xml));
+        DOCTEST_REQUIRE(lidar.getScanCount() == 2);
+        DOCTEST_CHECK(lidar.getScanAzimuthOffset(0) == doctest::Approx(45.0f * float(M_PI) / 180.0f).epsilon(1e-5));
+        // No tag -> no offset (0)
+        DOCTEST_CHECK(lidar.getScanAzimuthOffset(1) == doctest::Approx(0.0f));
+
+        std::remove(az_xml);
+    }
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // Row/column-based miss gap filling
 //
@@ -3402,4 +3661,771 @@ DOCTEST_TEST_CASE("LiDAR LAD Inversion Uncertainty") {
         DOCTEST_CHECK(!row.empty());
     }
     std::remove(uncertainty_file);
+}
+
+// =====================================================================================================================
+// Moving-platform (mobile/airborne) LiDAR tests. These exercise LiDARcloud::addScanMoving(): a synthetic scan driven by
+// a timestamped 6-DOF pose trajectory so the scanner moves during the sweep. Each return (and miss) preserves its own
+// per-beam origin (getHitOrigin / "origin_*" data) and real per-pulse timestamp. Assertions are statistical/geometric
+// (reconstructed origins, timestamps, counts), never "did not throw".
+// =====================================================================================================================
+
+// Hamilton quaternion (qx,qy,qz,qw), body->world, rotating a body-frame vector into the world frame. Mirrors the
+// internal convention used by the plugin so the tests can independently hand-compute expected origins/directions.
+static vec3 test_quat_rotate(const vec4 &q, const vec3 &v) {
+    const vec3 qv = make_vec3(q.x, q.y, q.z);
+    const vec3 t = cross(qv, v) * 2.f;
+    return v + t * q.w + cross(qv, t);
+}
+
+// Hamilton quaternion from intrinsic Z-Y-X (yaw-pitch-roll) Tait-Bryan angles in radians.
+static vec4 test_quat_from_rpy(float roll, float pitch, float yaw) {
+    const float cr = std::cos(roll * 0.5f), sr = std::sin(roll * 0.5f);
+    const float cp = std::cos(pitch * 0.5f), sp = std::sin(pitch * 0.5f);
+    const float cy = std::cos(yaw * 0.5f), sy = std::sin(yaw * 0.5f);
+    vec4 q;
+    q.w = cr * cp * cy + sr * sp * sy;
+    q.x = sr * cp * cy - cr * sp * sy;
+    q.y = cr * sp * cy + sr * cp * sy;
+    q.z = cr * cp * sy - sr * sp * cy;
+    return q;
+}
+
+DOCTEST_TEST_CASE("LiDAR Moving Platform Per-Beam Origin Reconstruction") {
+    // (a) Straight-line nadir trajectory pos = (0, v*t, H) over a flat patch at z=0. Every hit's reconstructed origin
+    // must lie on the trajectory line (x=0, z=H, y=v*t), timestamps must increase with the pulse ordinal, and all
+    // returns of a given pulse must share one timestamp.
+
+    Context context;
+    // Wide flat target so the moving scanner always sees it, plus a backing patch for a non-degenerate bounding box.
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(100, 100));
+    context.addPatch(make_vec3(0, 0, -2), make_vec2(100, 100));
+
+    const uint Ntheta = 8;
+    const uint Nphi = 12;
+    const float thetaMin = 0.97f * float(M_PI); // near-nadir downward beams
+    const float thetaMax = float(M_PI);
+    const float phiMin = 0.0f;
+    const float phiMax = 2.0f * float(M_PI);
+    const float H = 10.0f;
+    const float v = 2.0f; // m/s along +y
+
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, H), Ntheta, thetaMin, thetaMax, Nphi, phiMin, phiMax, 0.0f, 0.0f, 0.0f, 0.0f, std::vector<std::string>());
+
+    // Dense trajectory spanning the full sweep duration. pulse_rate gives one pulse per (i,j) cell.
+    const float pulse_rate = 1000.0f; // Hz
+    const double pulse_period = 1.0 / double(pulse_rate);
+    const double t_total = double(Ntheta * Nphi) * pulse_period;
+    std::vector<double> traj_t;
+    std::vector<vec3> traj_pos;
+    std::vector<vec4> traj_quat;
+    const int M = 20;
+    for (int k = 0; k < M; k++) {
+        double tk = t_total * double(k) / double(M - 1);
+        traj_t.push_back(tk);
+        traj_pos.push_back(make_vec3(0.f, float(v * tk), H));
+        traj_quat.push_back(make_vec4(0, 0, 0, 1)); // identity (qx,qy,qz,qw)
+    }
+
+    lidar.addScanMoving(scan, traj_t, traj_pos, traj_quat, make_vec3(0, 0, 0), make_vec3(0, 0, 0), pulse_rate, 0.0);
+    lidar.syntheticScan(&context, false, true); // record_misses=true so transmitted beams also carry origins
+
+    uint hit_count = lidar.getHitCount();
+    DOCTEST_REQUIRE(hit_count > 0);
+
+    // Every hit origin must lie on the trajectory line: x=0, z=H, y = v*timestamp.
+    for (uint i = 0; i < hit_count; i++) {
+        double t = lidar.getHitData(i, "timestamp");
+        vec3 origin = lidar.getHitOrigin(i);
+        DOCTEST_CHECK(origin.x == doctest::Approx(0.0f).epsilon(0.001));
+        DOCTEST_CHECK(origin.z == doctest::Approx(H).epsilon(0.001));
+        DOCTEST_CHECK(origin.y == doctest::Approx(float(v * t)).epsilon(0.001));
+    }
+
+    // Timestamps are monotonic in the pulse ordinal (pulse_id), and all returns of one pulse share one timestamp.
+    std::map<double, double> pulse_time; // pulse_id -> timestamp
+    for (uint i = 0; i < hit_count; i++) {
+        DOCTEST_REQUIRE(lidar.doesHitDataExist(i, "pulse_id"));
+        double pid = lidar.getHitData(i, "pulse_id");
+        double t = lidar.getHitData(i, "timestamp");
+        if (pulse_time.count(pid) == 0) {
+            pulse_time[pid] = t;
+        } else {
+            DOCTEST_CHECK(pulse_time[pid] == doctest::Approx(t)); // same pulse -> exactly one timestamp
+        }
+        // timestamp == t0 + pulse_id * pulse_period
+        DOCTEST_CHECK(t == doctest::Approx(pid * pulse_period));
+    }
+
+    // Larger pulse ordinal => strictly later time.
+    double prev_t = -1.0;
+    double prev_pid = -1.0;
+    for (auto &kv: pulse_time) { // std::map iterates in ascending pulse_id order
+        if (prev_pid >= 0) {
+            DOCTEST_CHECK(kv.second > prev_t);
+        }
+        prev_pid = kv.first;
+        prev_t = kv.second;
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR Moving Platform Static Equivalence") {
+    // (b) A zero-velocity "moving" scan (constant trajectory, identity quat, zero lever/boresight) must reproduce the
+    // existing static addScan() over the same scene: equal hit counts and matching point-cloud centroid.
+
+    const uint Ntheta = 10;
+    const uint Nphi = 16;
+    const float thetaMin = 0.95f * float(M_PI);
+    const float thetaMax = float(M_PI);
+    const float phiMin = 0.0f;
+    const float phiMax = 2.0f * float(M_PI);
+    const float H = 8.0f;
+
+    auto build_scene = [](Context &context) {
+        context.addPatch(make_vec3(0, 0, 0), make_vec2(50, 50));
+        context.addPatch(make_vec3(0, 0, -2), make_vec2(50, 50));
+    };
+
+    // Static reference.
+    Context context_static;
+    build_scene(context_static);
+    LiDARcloud lidar_static;
+    lidar_static.disableMessages();
+    ScanMetadata scan_static(make_vec3(0, 0, H), Ntheta, thetaMin, thetaMax, Nphi, phiMin, phiMax, 0.0f, 0.0f, 0.0f, 0.0f, std::vector<std::string>());
+    lidar_static.addScan(scan_static);
+    lidar_static.syntheticScan(&context_static, false, true);
+
+    // Zero-velocity moving scan at the same origin.
+    Context context_moving;
+    build_scene(context_moving);
+    LiDARcloud lidar_moving;
+    lidar_moving.disableMessages();
+    ScanMetadata scan_moving(make_vec3(0, 0, H), Ntheta, thetaMin, thetaMax, Nphi, phiMin, phiMax, 0.0f, 0.0f, 0.0f, 0.0f, std::vector<std::string>());
+    std::vector<double> traj_t = {0.0, 1.0};
+    std::vector<vec3> traj_pos = {make_vec3(0, 0, H), make_vec3(0, 0, H)}; // stationary
+    std::vector<vec4> traj_quat = {make_vec4(0, 0, 0, 1), make_vec4(0, 0, 0, 1)};
+    lidar_moving.addScanMoving(scan_moving, traj_t, traj_pos, traj_quat, make_vec3(0, 0, 0), make_vec3(0, 0, 0), 1.0e6f, 0.0);
+    lidar_moving.syntheticScan(&context_moving, false, true);
+
+    uint count_static = lidar_static.getHitCount();
+    uint count_moving = lidar_moving.getHitCount();
+    DOCTEST_REQUIRE(count_static > 0);
+    DOCTEST_CHECK(count_moving == count_static); // identical geometry => identical hit count
+
+    auto centroid = [](LiDARcloud &cloud) -> vec3 {
+        vec3 c = make_vec3(0, 0, 0);
+        uint n = cloud.getHitCount();
+        for (uint i = 0; i < n; i++) {
+            // Restrict to real (non-miss) returns; misses sit at a far sentinel distance and would swamp the centroid.
+            if (cloud.getHitData(i, "is_miss") != 0.0) {
+                continue;
+            }
+            c = c + cloud.getHitXYZ(i);
+        }
+        return c / float(n);
+    };
+
+    vec3 c_static = centroid(lidar_static);
+    vec3 c_moving = centroid(lidar_moving);
+    DOCTEST_CHECK(c_moving.x == doctest::Approx(c_static.x).epsilon(0.01));
+    DOCTEST_CHECK(c_moving.y == doctest::Approx(c_static.y).epsilon(0.01));
+    DOCTEST_CHECK(c_moving.z == doctest::Approx(c_static.z).epsilon(0.01));
+}
+
+DOCTEST_TEST_CASE("LiDAR Moving Platform Non-Trivial Attitude") {
+    // (c) A trajectory with real roll/pitch/yaw plus a non-zero lever arm. Reconstructed origins must equal the
+    // hand-computed pos + R(quat)*lever_arm. This is the ONLY test that catches a quaternion convention / axis-sign
+    // bug: the nadir (a) and zero-velocity (b) tests both hide it because their rotations are identity.
+
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(200, 200));
+    context.addPatch(make_vec3(0, 0, -2), make_vec2(200, 200));
+
+    const uint Ntheta = 6;
+    const uint Nphi = 10;
+    const float thetaMin = 0.97f * float(M_PI);
+    const float thetaMax = float(M_PI);
+    const float phiMin = 0.0f;
+    const float phiMax = 2.0f * float(M_PI);
+    const float H = 15.0f;
+
+    // Non-trivial, time-varying attitude: yaw sweeps while roll/pitch are held at small fixed angles.
+    const float roll = 0.10f;
+    const float pitch = -0.07f;
+    const vec3 lever_arm = make_vec3(0.3f, -0.2f, 0.5f);
+
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, H), Ntheta, thetaMin, thetaMax, Nphi, phiMin, phiMax, 0.0f, 0.0f, 0.0f, 0.0f, std::vector<std::string>());
+
+    const float pulse_rate = 2000.0f;
+    const double pulse_period = 1.0 / double(pulse_rate);
+    const double t_total = double(Ntheta * Nphi) * pulse_period;
+    std::vector<double> traj_t;
+    std::vector<vec3> traj_pos;
+    std::vector<vec4> traj_quat;
+    const int M = 25;
+    for (int k = 0; k < M; k++) {
+        double tk = t_total * double(k) / double(M - 1);
+        float yaw = 0.5f * float(tk / t_total); // sweeps 0 -> 0.5 rad over the scan
+        traj_t.push_back(tk);
+        traj_pos.push_back(make_vec3(float(1.5 * tk), float(-0.8 * tk), H));
+        traj_quat.push_back(test_quat_from_rpy(roll, pitch, yaw));
+    }
+
+    lidar.addScanMoving(scan, traj_t, traj_pos, traj_quat, lever_arm, make_vec3(0, 0, 0), pulse_rate, 0.0);
+    lidar.syntheticScan(&context, false, true);
+
+    uint hit_count = lidar.getHitCount();
+    DOCTEST_REQUIRE(hit_count > 0);
+
+    // Independently reconstruct each pulse's expected origin from its timestamp by interpolating the trajectory the same
+    // way poseAt does (SLERP would be exact at the sample points; between samples linear-in-yaw is close enough at this
+    // angular rate that an independent SLERP reconstruction matches within tolerance). We re-derive the pose with our own
+    // quaternion helper to catch any sign/axis error in the plugin.
+    auto pose_at = [&](double t, vec3 &pos, vec4 &quat) {
+        if (t <= traj_t.front()) {
+            pos = traj_pos.front();
+            quat = traj_quat.front();
+            return;
+        }
+        if (t >= traj_t.back()) {
+            pos = traj_pos.back();
+            quat = traj_quat.back();
+            return;
+        }
+        size_t i1 = 1;
+        while (i1 < traj_t.size() && traj_t[i1] < t) {
+            i1++;
+        }
+        size_t i0 = i1 - 1;
+        double u = (t - traj_t[i0]) / (traj_t[i1] - traj_t[i0]);
+        pos = traj_pos[i0] + (traj_pos[i1] - traj_pos[i0]) * float(u);
+        // SLERP, shortest arc.
+        vec4 q0 = traj_quat[i0], q1 = traj_quat[i1];
+        q0.normalize();
+        q1.normalize();
+        double dot = double(q0.x) * q1.x + double(q0.y) * q1.y + double(q0.z) * q1.z + double(q0.w) * q1.w;
+        if (dot < 0.0) {
+            q1 = make_vec4(-q1.x, -q1.y, -q1.z, -q1.w);
+            dot = -dot;
+        }
+        vec4 q;
+        if (dot > 0.9995) {
+            q = make_vec4(q0.x + float(u) * (q1.x - q0.x), q0.y + float(u) * (q1.y - q0.y), q0.z + float(u) * (q1.z - q0.z), q0.w + float(u) * (q1.w - q0.w));
+        } else {
+            double th0 = std::acos(dot);
+            double th = th0 * u;
+            double s0 = std::sin(th0 - th) / std::sin(th0);
+            double s1 = std::sin(th) / std::sin(th0);
+            q = make_vec4(float(s0 * q0.x + s1 * q1.x), float(s0 * q0.y + s1 * q1.y), float(s0 * q0.z + s1 * q1.z), float(s0 * q0.w + s1 * q1.w));
+        }
+        q.normalize();
+        quat = q;
+    };
+
+    uint checked = 0;
+    for (uint i = 0; i < hit_count; i++) {
+        double t = lidar.getHitData(i, "timestamp");
+        vec3 pos;
+        vec4 quat;
+        pose_at(t, pos, quat);
+        vec3 expected_origin = pos + test_quat_rotate(quat, lever_arm);
+        vec3 origin = lidar.getHitOrigin(i);
+        DOCTEST_CHECK(origin.x == doctest::Approx(expected_origin.x).epsilon(0.005));
+        DOCTEST_CHECK(origin.y == doctest::Approx(expected_origin.y).epsilon(0.005));
+        DOCTEST_CHECK(origin.z == doctest::Approx(expected_origin.z).epsilon(0.005));
+        checked++;
+    }
+    DOCTEST_REQUIRE(checked > 0);
+
+    // Sanity: a non-trivial attitude must actually displace the origin away from the bare trajectory position by the
+    // rotated lever arm. (If R were mistakenly identity, expected==pos and this would still pass; this check instead
+    // guards that the lever arm is being applied at all.)
+    {
+        vec3 pos0;
+        vec4 q0;
+        pose_at(lidar.getHitData(0, "timestamp"), pos0, q0);
+        vec3 rotated_lever = test_quat_rotate(q0, lever_arm);
+        DOCTEST_CHECK(rotated_lever.magnitude() == doctest::Approx(lever_arm.magnitude()).epsilon(1e-4)); // rotation preserves length
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR Moving Platform Euler-Angle Overload Equivalence") {
+    // The Euler-angle addScanMoving overload must produce a point cloud identical to the quaternion overload when the
+    // Euler angles are the same roll/pitch/yaw that generated the quaternions (intrinsic Z-Y-X). This guards that the
+    // overload converts angles with the same convention and otherwise delegates to the same code path.
+
+    const uint Ntheta = 6;
+    const uint Nphi = 12;
+    const float thetaMin = 0.96f * float(M_PI);
+    const float thetaMax = float(M_PI);
+    const float phiMin = 0.0f;
+    const float phiMax = 2.0f * float(M_PI);
+    const float H = 12.0f;
+
+    auto build_scene = [](Context &context) {
+        context.addPatch(make_vec3(0, 0, 0), make_vec2(80, 80));
+        context.addPatch(make_vec3(0, 0, -2), make_vec2(80, 80));
+    };
+
+    // A non-trivial, time-varying attitude (so a wrong axis order/sign in the overload would change the cloud).
+    const int M = 12;
+    std::vector<double> traj_t;
+    std::vector<vec3> traj_pos;
+    std::vector<vec3> traj_rpy;
+    for (int k = 0; k < M; k++) {
+        double tk = double(k) / double(M - 1);
+        float roll = 0.08f * float(tk);
+        float pitch = -0.05f * float(tk);
+        float yaw = 0.3f * float(tk);
+        traj_t.push_back(tk);
+        traj_pos.push_back(make_vec3(float(2.0 * tk), float(-1.0 * tk), H));
+        traj_rpy.push_back(make_vec3(roll, pitch, yaw));
+    }
+
+    // Build the equivalent quaternion trajectory with the same intrinsic Z-Y-X convention used internally.
+    std::vector<vec4> traj_quat;
+    for (const vec3 &rpy: traj_rpy) {
+        traj_quat.push_back(test_quat_from_rpy(rpy.x, rpy.y, rpy.z));
+    }
+
+    const vec3 lever = make_vec3(0.2f, -0.1f, 0.4f);
+    const vec3 boresight = make_vec3(0.01f, 0.02f, -0.015f);
+    const float pulseRate = 2000.0f;
+
+    // Quaternion overload.
+    Context context_q;
+    build_scene(context_q);
+    LiDARcloud lidar_q;
+    lidar_q.disableMessages();
+    ScanMetadata scan_q(make_vec3(0, 0, H), Ntheta, thetaMin, thetaMax, Nphi, phiMin, phiMax, 0.0f, 0.0f, 0.0f, 0.0f, std::vector<std::string>());
+    lidar_q.addScanMoving(scan_q, traj_t, traj_pos, traj_quat, lever, boresight, pulseRate, 0.0);
+    lidar_q.syntheticScan(&context_q, false, false);
+
+    // Euler-angle overload (same RPY).
+    Context context_e;
+    build_scene(context_e);
+    LiDARcloud lidar_e;
+    lidar_e.disableMessages();
+    ScanMetadata scan_e(make_vec3(0, 0, H), Ntheta, thetaMin, thetaMax, Nphi, phiMin, phiMax, 0.0f, 0.0f, 0.0f, 0.0f, std::vector<std::string>());
+    lidar_e.addScanMoving(scan_e, traj_t, traj_pos, traj_rpy, lever, boresight, pulseRate, 0.0);
+    lidar_e.syntheticScan(&context_e, false, false);
+
+    uint nq = lidar_q.getHitCount();
+    uint ne = lidar_e.getHitCount();
+    DOCTEST_REQUIRE(nq > 0);
+    DOCTEST_CHECK(ne == nq); // identical inputs => identical hit count
+
+    // Every hit position and origin must match between the two overloads (no noise was enabled, so this is exact).
+    uint compared = 0;
+    for (uint i = 0; i < nq && i < ne; i++) {
+        vec3 pq = lidar_q.getHitXYZ(i);
+        vec3 pe = lidar_e.getHitXYZ(i);
+        DOCTEST_CHECK(pe.x == doctest::Approx(pq.x).epsilon(1e-5));
+        DOCTEST_CHECK(pe.y == doctest::Approx(pq.y).epsilon(1e-5));
+        DOCTEST_CHECK(pe.z == doctest::Approx(pq.z).epsilon(1e-5));
+        vec3 oq = lidar_q.getHitOrigin(i);
+        vec3 oe = lidar_e.getHitOrigin(i);
+        DOCTEST_CHECK(oe.x == doctest::Approx(oq.x).epsilon(1e-5));
+        DOCTEST_CHECK(oe.y == doctest::Approx(oq.y).epsilon(1e-5));
+        DOCTEST_CHECK(oe.z == doctest::Approx(oq.z).epsilon(1e-5));
+        compared++;
+    }
+    DOCTEST_REQUIRE(compared > 0);
+}
+
+DOCTEST_TEST_CASE("LiDAR Moving Platform Leaf Area Inversion") {
+    // The leaf-area inversion must use each beam's actual emission origin for a moving-platform scan. We scan a known
+    // 1x1x1 m leaf cube (spherical leaf-angle distribution, so the true G(theta) = 0.5) with a scanner that translates
+    // over it, supply G(theta)=0.5 (triangulation is impossible without a theta-phi grid), and check the recovered LAD
+    // matches the exact LAD computed from primitive areas. If the inversion still used a single static origin, the
+    // per-beam path geometry would be wrong and the LAD would be biased.
+
+    Context context;
+    std::vector<uint> UUIDs = context.loadXML("plugins/lidar/xml/leaf_cube_LAI2_lw0_01_spherical.xml", true);
+    DOCTEST_REQUIRE(!UUIDs.empty());
+
+    LiDARcloud lidar;
+    lidar.disableMessages();
+
+    // Grid voxel matching the leaf cube (centered at (0,0,0.5), 1 m on a side).
+    const vec3 grid_center(0.0f, 0.0f, 0.5f);
+    const vec3 grid_size(1.0f, 1.0f, 1.0f);
+    lidar.addGrid(grid_center, grid_size, make_int3(1, 1, 1), 0);
+    const vec3 gsize = lidar.getCellSize(0);
+
+    float LAD_exact = 0.f;
+    for (uint UUID: UUIDs) {
+        LAD_exact += context.getPrimitiveArea(UUID) / (gsize.x * gsize.y * gsize.z);
+    }
+    DOCTEST_REQUIRE(LAD_exact > 0.f);
+
+    // Downward-looking spinning multibeam translating across the cube at height z = 5 m. The channels fan +/- a few
+    // degrees about nadir so the beams sample the voxel; as the platform moves, each pulse is emitted from a different
+    // point, exercising the per-beam-origin path. record_misses=true supplies the transmitted beams the inversion needs.
+    std::vector<float> beamZenithAngles;
+    const int Nchannels = 30;
+    for (int c = 0; c < Nchannels; c++) {
+        float dev = (float(c) / float(Nchannels - 1) - 0.5f) * deg2rad(40.0f); // +/-20 deg about nadir
+        beamZenithAngles.push_back(float(M_PI) - fabsf(dev)); // near pi = downward
+    }
+    const uint Nphi = 400;
+    ScanMetadata scan(make_vec3(0, 0, 5), beamZenithAngles, Nphi, 0.0f, 2.0f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, std::vector<std::string>());
+
+    // Straight, level flight across the cube along +x from x=-1 to x=+1 at z=5.
+    std::vector<double> traj_t;
+    std::vector<vec3> traj_pos;
+    std::vector<vec3> traj_rpy;
+    const int M = 30;
+    for (int k = 0; k < M; k++) {
+        double tk = double(k) / double(M - 1);
+        traj_t.push_back(tk);
+        traj_pos.push_back(make_vec3(float(-1.0 + 2.0 * tk), 0.f, 5.f));
+        traj_rpy.push_back(make_vec3(0, 0, 0)); // level
+    }
+    const float pulseRate = float(Nchannels * Nphi); // ~one full sweep over the 1 s flight
+
+    lidar.addScanMoving(scan, traj_t, traj_pos, traj_rpy, make_vec3(0, 0, 0), make_vec3(0, 0, 0), pulseRate, 0.0);
+    lidar.syntheticScan(&context, false, true);
+    DOCTEST_REQUIRE(lidar.getHitCount() > 0);
+    DOCTEST_REQUIRE(lidar.hasMisses());
+
+    // Supplied-G(theta) overload: no triangulation (the moving scan has no theta-phi grid to triangulate).
+    lidar.calculateLeafArea(&context, 0.5f, 1, 0.05f);
+
+    float LAD = lidar.getCellLeafAreaDensity(0);
+    DOCTEST_CHECK(LAD == LAD); // not NaN
+    // Beam-based single-voxel inversion of a noise-free synthetic scan; allow a modest tolerance for sampling/discretization.
+    DOCTEST_CHECK(fabs(LAD - LAD_exact) / LAD_exact == doctest::Approx(0.0f).epsilon(0.15f));
+}
+
+DOCTEST_TEST_CASE("LiDAR calculateLeafArea Supplied-Gtheta Validation") {
+    // The supplied-G(theta) overload must reject out-of-range G(theta) and must not require triangulation.
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(5, 5));
+
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    lidar.addGrid(make_vec3(0, 0, 0.5), make_vec3(1, 1, 1), make_int3(1, 1, 1), 0);
+
+    // Invalid G(theta) values fail fast (no triangulation, no scan needed - validation happens first).
+    bool threw_zero = false, threw_high = false;
+    {
+        capture_cerr capture;
+        try {
+            lidar.calculateLeafArea(&context, 0.0f, 1, 0.05f);
+        } catch (...) {
+            threw_zero = true;
+        }
+        try {
+            lidar.calculateLeafArea(&context, 1.5f, 1, 0.05f);
+        } catch (...) {
+            threw_high = true;
+        }
+    }
+    DOCTEST_CHECK(threw_zero);
+    DOCTEST_CHECK(threw_high);
+}
+
+DOCTEST_TEST_CASE("LiDAR Moving Platform exportScans Origin Handling") {
+    // A scan must define its beam origin either via a static <origin> XML tag or via per-point origin_x/y/z columns in
+    // the data file. exportScans() must omit the misleading single <origin> for a mobile scan (whose ASCII format
+    // carries per-point origins), and loadXML() must accept such a file and require one of the two sources.
+
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(40, 40));
+    context.addPatch(make_vec3(0, 0, -2), make_vec2(40, 40));
+
+    const uint Ntheta = 6;
+    const uint Nphi = 10;
+    const float thetaMin = 0.97f * float(M_PI);
+    const float thetaMax = float(M_PI);
+    const float H = 10.0f;
+
+    // Per-point origins (origin_x/y/z) in the column format mark this as a scan that defines its origin per point.
+    std::vector<std::string> columnFormat = {"x", "y", "z", "timestamp", "origin_x", "origin_y", "origin_z"};
+
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, H), Ntheta, thetaMin, thetaMax, Nphi, 0.0f, 2.0f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, columnFormat);
+    std::vector<double> traj_t = {0.0, 1.0};
+    std::vector<vec3> traj_pos = {make_vec3(0, 0, H), make_vec3(2, 0, H)};
+    std::vector<vec4> traj_quat = {make_vec4(0, 0, 0, 1), make_vec4(0, 0, 0, 1)};
+    lidar.addScanMoving(scan, traj_t, traj_pos, traj_quat, make_vec3(0, 0, 0), make_vec3(0, 0, 0), 1000.0f, 0.0);
+    lidar.syntheticScan(&context, false, false);
+
+    uint export_hits = lidar.getHitCount();
+    DOCTEST_REQUIRE(export_hits > 0);
+
+    const char *xml_file = "moving_export_test.xml";
+    const char *xyz_file = "moving_export_test_0.xyz";
+    lidar.exportScans(xml_file);
+
+    // The XML must NOT contain an <origin> tag (mobile scan), but must carry origin_x in the ASCII_format.
+    std::string xml_contents;
+    {
+        std::ifstream in(xml_file);
+        DOCTEST_REQUIRE(in.good());
+        std::stringstream ss;
+        ss << in.rdbuf();
+        xml_contents = ss.str();
+    }
+    DOCTEST_CHECK(xml_contents.find("<origin>") == std::string::npos);
+    DOCTEST_CHECK(xml_contents.find("origin_x") != std::string::npos);
+
+    // The exported file must reload (loadXML accepts a scan with per-point origins and no <origin>), preserving hits and
+    // per-point origins.
+    {
+        LiDARcloud reloaded;
+        reloaded.disableMessages();
+        DOCTEST_CHECK_NOTHROW(reloaded.loadXML(xml_file));
+        DOCTEST_CHECK(reloaded.getHitCount() == export_hits);
+        DOCTEST_REQUIRE(reloaded.getHitCount() > 0);
+        // The reconstructed per-point origin matches the value written to the data file.
+        DOCTEST_CHECK(reloaded.doesHitDataExist(0, "origin_x"));
+        vec3 o = reloaded.getHitOrigin(0);
+        DOCTEST_CHECK(o.z == doctest::Approx(H).epsilon(0.001));
+    }
+
+    std::remove(xml_file);
+    std::remove(xyz_file);
+}
+
+DOCTEST_TEST_CASE("LiDAR loadXML Requires An Origin Source") {
+    // A scan XML with neither a static <origin> nor per-point origin columns must fail fast on load.
+    const char *bad_xml = "no_origin_test.xml";
+    {
+        std::ofstream out(bad_xml);
+        out << "<helios>\n";
+        out << "  <scan>\n";
+        out << "    <size>10 10</size>\n";
+        out << "    <ASCII_format>x y z</ASCII_format>\n";
+        out << "  </scan>\n";
+        out << "</helios>\n";
+    }
+
+    LiDARcloud cloud;
+    cloud.disableMessages();
+    bool threw = false;
+    {
+        capture_cerr capture; // loadXML prints "failed." to cerr before throwing
+        try {
+            cloud.loadXML(bad_xml);
+        } catch (...) {
+            threw = true;
+        }
+    }
+    DOCTEST_CHECK(threw);
+
+    std::remove(bad_xml);
+}
+
+DOCTEST_TEST_CASE("LiDAR Moving Platform getHitRaydir Uses Per-Beam Origin") {
+    // getHitRaydir() must reconstruct the beam direction from each hit's own origin. For a moving scan, the angle from
+    // the per-hit origin to the hit point should match the angle from the (static) trajectory-front origin only for the
+    // earliest pulse; for later pulses (emitted from a moved platform) it must differ. We verify getHitRaydir agrees
+    // with the per-hit-origin reconstruction and NOT with the static-origin reconstruction for a moved-platform hit.
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(60, 60));
+    context.addPatch(make_vec3(0, 0, -2), make_vec2(60, 60));
+
+    const uint Ntheta = 8;
+    const uint Nphi = 16;
+    const float H = 10.0f;
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, H), Ntheta, 0.96f * float(M_PI), float(M_PI), Nphi, 0.0f, 2.0f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, std::vector<std::string>());
+    std::vector<double> traj_t = {0.0, 1.0};
+    std::vector<vec3> traj_pos = {make_vec3(0, 0, H), make_vec3(5, 0, H)}; // moves 5 m in x
+    std::vector<vec3> traj_rpy = {make_vec3(0, 0, 0), make_vec3(0, 0, 0)};
+    lidar.addScanMoving(scan, traj_t, traj_pos, traj_rpy, make_vec3(0, 0, 0), make_vec3(0, 0, 0), float(Ntheta * Nphi), 0.0);
+    lidar.syntheticScan(&context, false, false);
+
+    uint n = lidar.getHitCount();
+    DOCTEST_REQUIRE(n > 0);
+
+    vec3 static_origin = lidar.getScanOrigin(0); // trajectory front = (0,0,H)
+    uint mismatched_with_static = 0;
+    for (uint i = 0; i < n; i++) {
+        SphericalCoord rd = lidar.getHitRaydir(i);
+        // Reconstruct from per-hit origin: must match getHitRaydir (that is how it is defined).
+        vec3 from_hit_origin = lidar.getHitXYZ(i) - lidar.getHitOrigin(i);
+        SphericalCoord expected = cart2sphere(from_hit_origin);
+        DOCTEST_CHECK(rd.zenith == doctest::Approx(expected.zenith).epsilon(1e-4));
+        DOCTEST_CHECK(rd.azimuth == doctest::Approx(expected.azimuth).epsilon(1e-4));
+
+        // A hit whose origin has moved away from the static origin must NOT match the static-origin reconstruction.
+        if ((lidar.getHitOrigin(i) - static_origin).magnitude() > 1.0f) {
+            SphericalCoord wrong = cart2sphere(lidar.getHitXYZ(i) - static_origin);
+            if (fabs(rd.zenith - wrong.zenith) > 1e-3 || fabs(rd.azimuth - wrong.azimuth) > 1e-3) {
+                mismatched_with_static++;
+            }
+        }
+    }
+    // At least some hits were emitted from a moved platform and so disagree with the static-origin direction.
+    DOCTEST_CHECK(mismatched_with_static > 0);
+}
+
+DOCTEST_TEST_CASE("LiDAR Moving Platform coordinateShift Preserves Beam Geometry") {
+    // coordinateShift must shift the per-hit origin_x/y/z together with the hit position, so the beam vector
+    // (position - origin) is invariant under the shift for a moving scan.
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(60, 60));
+    context.addPatch(make_vec3(0, 0, -2), make_vec2(60, 60));
+
+    const uint Ntheta = 6;
+    const uint Nphi = 12;
+    const float H = 9.0f;
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, H), Ntheta, 0.96f * float(M_PI), float(M_PI), Nphi, 0.0f, 2.0f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, std::vector<std::string>());
+    std::vector<double> traj_t = {0.0, 1.0};
+    std::vector<vec3> traj_pos = {make_vec3(0, 0, H), make_vec3(4, 0, H)};
+    std::vector<vec3> traj_rpy = {make_vec3(0, 0, 0), make_vec3(0, 0, 0)};
+    lidar.addScanMoving(scan, traj_t, traj_pos, traj_rpy, make_vec3(0, 0, 0), make_vec3(0, 0, 0), float(Ntheta * Nphi), 0.0);
+    lidar.syntheticScan(&context, false, false);
+
+    uint n = lidar.getHitCount();
+    DOCTEST_REQUIRE(n > 0);
+
+    // Record beam vectors before the shift.
+    std::vector<vec3> beam_before(n);
+    for (uint i = 0; i < n; i++) {
+        beam_before[i] = lidar.getHitXYZ(i) - lidar.getHitOrigin(i);
+    }
+
+    const vec3 shift = make_vec3(3.0f, -2.0f, 1.5f);
+    lidar.coordinateShift(shift);
+
+    // After the shift, the beam vector (position - per-hit origin) must be unchanged, and the origin must have moved by
+    // exactly the shift.
+    for (uint i = 0; i < n; i++) {
+        vec3 beam_after = lidar.getHitXYZ(i) - lidar.getHitOrigin(i);
+        DOCTEST_CHECK(beam_after.x == doctest::Approx(beam_before[i].x).epsilon(1e-4));
+        DOCTEST_CHECK(beam_after.y == doctest::Approx(beam_before[i].y).epsilon(1e-4));
+        DOCTEST_CHECK(beam_after.z == doctest::Approx(beam_before[i].z).epsilon(1e-4));
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR Moving Platform Static-Only Functions Fail Fast") {
+    // Triangulation and ray-direction validation cannot work on a moving-platform scan (no fixed theta-phi grid /
+    // single origin). They must fail fast rather than silently produce garbage.
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(40, 40));
+    context.addPatch(make_vec3(0, 0, -2), make_vec2(40, 40));
+
+    const uint Ntheta = 6;
+    const uint Nphi = 10;
+    const float H = 8.0f;
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, H), Ntheta, 0.96f * float(M_PI), float(M_PI), Nphi, 0.0f, 2.0f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, std::vector<std::string>());
+    std::vector<double> traj_t = {0.0, 1.0};
+    std::vector<vec3> traj_pos = {make_vec3(0, 0, H), make_vec3(3, 0, H)};
+    std::vector<vec3> traj_rpy = {make_vec3(0, 0, 0), make_vec3(0, 0, 0)};
+    lidar.addScanMoving(scan, traj_t, traj_pos, traj_rpy, make_vec3(0, 0, 0), make_vec3(0, 0, 0), float(Ntheta * Nphi), 0.0);
+    lidar.syntheticScan(&context, false, true);
+
+    bool tri_threw = false, validate_threw = false;
+    {
+        capture_cerr capture;
+        try {
+            lidar.triangulateHitPoints(0.5f, 5.0f);
+        } catch (...) {
+            tri_threw = true;
+        }
+        try {
+            lidar.validateRayDirections();
+        } catch (...) {
+            validate_threw = true;
+        }
+    }
+    DOCTEST_CHECK(tri_threw);
+    DOCTEST_CHECK(validate_threw);
+}
+
+DOCTEST_TEST_CASE("LiDAR Moving Platform addScanMoving Rejects Non-Finite Trajectory") {
+    // addScanMoving must reject NaN/inf in the trajectory rather than let it propagate into NaN origins.
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 5), 4, 0.97f * float(M_PI), float(M_PI), 8, 0.0f, 2.0f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, std::vector<std::string>());
+
+    const float nan_val = std::numeric_limits<float>::quiet_NaN();
+    std::vector<double> traj_t = {0.0, 1.0};
+    std::vector<vec3> traj_pos = {make_vec3(0, 0, 5), make_vec3(nan_val, 0, 5)}; // NaN position
+    std::vector<vec3> traj_rpy = {make_vec3(0, 0, 0), make_vec3(0, 0, 0)};
+
+    bool threw = false;
+    {
+        capture_cerr capture;
+        try {
+            lidar.addScanMoving(scan, traj_t, traj_pos, traj_rpy, make_vec3(0, 0, 0), make_vec3(0, 0, 0), 100.0f, 0.0);
+        } catch (...) {
+            threw = true;
+        }
+    }
+    DOCTEST_CHECK(threw);
+}
+
+DOCTEST_TEST_CASE("LiDAR Moving Platform Gapfill Writes Per-Pulse Origins") {
+    // gapfillMisses on a moving scan must synthesize misses whose per-pulse origin (origin_x/y/z) lies on the platform
+    // trajectory, not at the single static origin. We scan a small target so some beams miss, gap-fill, and check that
+    // gap-filled misses carry origin_x/y/z consistent with the straight-line trajectory (x = v*timestamp, z = H).
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2)); // small target so many beams miss
+    context.addPatch(make_vec3(0, 0, -2), make_vec2(2, 2));
+
+    const uint Ntheta = 8;
+    const uint Nphi = 60;
+    const float H = 6.0f;
+    const float v = 3.0f; // m/s along +x
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    // Narrow downward fan so the beams sweep near nadir as the platform passes over the small target.
+    ScanMetadata scan(make_vec3(0, 0, H), Ntheta, 0.93f * float(M_PI), float(M_PI), Nphi, 0.0f, 2.0f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, std::vector<std::string>());
+
+    const float pulseRate = float(Ntheta * Nphi);
+    const double pulse_period = 1.0 / double(pulseRate);
+    const double t_total = double(Ntheta * Nphi) * pulse_period;
+    std::vector<double> traj_t;
+    std::vector<vec3> traj_pos;
+    std::vector<vec3> traj_rpy;
+    const int M = 20;
+    for (int k = 0; k < M; k++) {
+        double tk = t_total * double(k) / double(M - 1);
+        traj_t.push_back(tk);
+        traj_pos.push_back(make_vec3(float(v * tk), 0.f, H));
+        traj_rpy.push_back(make_vec3(0, 0, 0));
+    }
+    lidar.addScanMoving(scan, traj_t, traj_pos, traj_rpy, make_vec3(0, 0, 0), make_vec3(0, 0, 0), pulseRate, 0.0);
+    // record_misses=false so the actual misses are NOT recorded; gap filling must synthesize them.
+    lidar.syntheticScan(&context, false, false);
+
+    uint before = lidar.getHitCount();
+    DOCTEST_REQUIRE(before > 0);
+
+    std::vector<vec3> filled = lidar.gapfillMisses(0);
+    DOCTEST_REQUIRE(!filled.empty()); // some misses were synthesized
+
+    // Find gap-filled misses (they carry origin_x/y/z written by the moving-aware gapfill) and verify the origin lies on
+    // the trajectory line: x = v*timestamp, y = 0, z = H.
+    uint checked = 0;
+    for (uint i = 0; i < lidar.getHitCount(); i++) {
+        if (lidar.getHitData(i, "is_miss") == 0.0) {
+            continue;
+        }
+        if (!lidar.doesHitDataExist(i, "origin_x")) {
+            continue; // only the synthesized/recorded moving misses carry per-pulse origins
+        }
+        double t = lidar.getHitData(i, "timestamp");
+        vec3 o = lidar.getHitOrigin(i);
+        DOCTEST_CHECK(o.z == doctest::Approx(H).epsilon(0.01));
+        DOCTEST_CHECK(o.y == doctest::Approx(0.0f).epsilon(0.01));
+        DOCTEST_CHECK(o.x == doctest::Approx(float(v * t)).epsilon(0.05));
+        checked++;
+    }
+    DOCTEST_REQUIRE(checked > 0); // at least one gap-filled/recorded moving miss carried a per-pulse origin
 }

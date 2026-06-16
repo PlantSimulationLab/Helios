@@ -85,14 +85,14 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
         for (pugi::xml_node s = helios.child("scan"); s; s = s.next_sibling("scan")) {
 
             // ----- scan origin ------//
+            // A scan must define its beam emission origin in one of two ways: a single static <origin> tag (a fixed
+            // scanner), or per-point origin columns (origin_x/origin_y/origin_z) in the ASCII data file (a moving
+            // platform, where each pulse has its own origin). Exactly which one is present is validated below, once the
+            // ASCII column format has been parsed. When only per-point origins are present the static origin is unused
+            // and defaults to (0,0,0).
             const char *origin_str = s.child_value("origin");
-
-            if (strlen(origin_str) == 0) {
-                cerr << "failed.\n";
-                helios_runtime_error("ERROR (LiDARcloud::loadXML): An origin was not specified for scan #" + std::to_string(scan_count));
-            }
-
-            vec3 origin = string2vec3(origin_str); // note: pugi loads xml data as a character.  need to separate it into 3 floats
+            const bool has_static_origin = (strlen(origin_str) != 0);
+            vec3 origin = has_static_origin ? string2vec3(origin_str) : make_vec3(0, 0, 0); // note: pugi loads xml as characters; split into 3 floats
 
             // ----- scan pattern ------//
             // Optional. Default is a raster scan (uniform angular grid). 'spinning_multibeam' models a rotating multi-channel
@@ -311,6 +311,16 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
                 scanTiltPitch = scanTilt.y;
             }
 
+            // ----- scanAzimuthOffset (global scanner azimuth/heading offset, in degrees) ------//
+            const char *scanAzimuth_str_uc = s.child_value("scanAzimuthOffset");
+            const char *scanAzimuth_str_lc = s.child_value("scanazimuthoffset");
+
+            float scanAzimuthOffset = 0.f;
+            const char *scanAzimuth_str = (strlen(scanAzimuth_str_uc) > 0) ? scanAzimuth_str_uc : scanAzimuth_str_lc;
+            if (strlen(scanAzimuth_str) > 0) {
+                scanAzimuthOffset = atof(scanAzimuth_str) * float(M_PI) / 180.f; // degrees -> radians
+            }
+
             // ----- distanceFilter ------//
             const char *dFilter_str = s.child_value("distanceFilter");
 
@@ -334,9 +344,19 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
                 }
             }
 
+            // Require an emission origin from one of the two sources: a static <origin> tag, or per-point origin columns
+            // in the ASCII data (origin_x/origin_y/origin_z). One of the two is mandatory for both static and mobile scans.
+            const bool has_perpoint_origin = (std::find(column_format.begin(), column_format.end(), "origin_x") != column_format.end() && std::find(column_format.begin(), column_format.end(), "origin_y") != column_format.end() &&
+                                              std::find(column_format.begin(), column_format.end(), "origin_z") != column_format.end());
+            if (!has_static_origin && !has_perpoint_origin) {
+                cerr << "failed.\n";
+                helios_runtime_error("ERROR (LiDARcloud::loadXML): Scan #" + std::to_string(scan_count) +
+                                     " has no beam origin. Specify either a static <origin> tag, or per-point origin columns (origin_x origin_y origin_z) in the <ASCII_format> and data file.");
+            }
+
             // create a temporary scan object
-            ScanMetadata scan = spinning_multibeam ? ScanMetadata(origin, beamZenithAngles, size.y, phiMin, phiMax, exitDiameter, beamDivergence, rangeNoiseStdDev, angleNoiseStdDev, column_format, scanTiltRoll, scanTiltPitch)
-                                                   : ScanMetadata(origin, size.x, thetaMin, thetaMax, size.y, phiMin, phiMax, exitDiameter, beamDivergence, rangeNoiseStdDev, angleNoiseStdDev, column_format, scanTiltRoll, scanTiltPitch);
+            ScanMetadata scan = spinning_multibeam ? ScanMetadata(origin, beamZenithAngles, size.y, phiMin, phiMax, exitDiameter, beamDivergence, rangeNoiseStdDev, angleNoiseStdDev, column_format, scanTiltRoll, scanTiltPitch, scanAzimuthOffset)
+                                                   : ScanMetadata(origin, size.x, thetaMin, thetaMax, size.y, phiMin, phiMax, exitDiameter, beamDivergence, rangeNoiseStdDev, angleNoiseStdDev, column_format, scanTiltRoll, scanTiltPitch, scanAzimuthOffset);
 
             addScan(scan);
 
@@ -1128,6 +1148,7 @@ void LiDARcloud::exportScans(const char *filename) {
         float angle_noise_stddev = getScanAngleNoiseStdDev(i);
         float scan_tilt_roll = getScanTiltRoll(i);
         float scan_tilt_pitch = getScanTiltPitch(i);
+        float scan_azimuth_offset = getScanAzimuthOffset(i);
         std::vector<std::string> column_format = getScanColumnFormat(i);
         if (column_format.empty()) {
             column_format = {"x", "y", "z"};
@@ -1138,9 +1159,16 @@ void LiDARcloud::exportScans(const char *filename) {
             child.append_child(pugi::node_pcdata).set_value(text.c_str());
         };
 
-        std::ostringstream origin_ss;
-        origin_ss << origin.x << " " << origin.y << " " << origin.z;
-        append_text_child("origin", origin_ss.str());
+        // Write a static <origin> only when the scan has no per-point origin columns. A moving-platform scan records a
+        // per-pulse origin (origin_x/origin_y/origin_z) in the data file, so a single static origin would be misleading;
+        // it is omitted and the per-point origins are the source of truth (loadXML accepts either, but requires one).
+        const bool has_perpoint_origin = (std::find(column_format.begin(), column_format.end(), "origin_x") != column_format.end() && std::find(column_format.begin(), column_format.end(), "origin_y") != column_format.end() &&
+                                          std::find(column_format.begin(), column_format.end(), "origin_z") != column_format.end());
+        if (!has_perpoint_origin) {
+            std::ostringstream origin_ss;
+            origin_ss << origin.x << " " << origin.y << " " << origin.z;
+            append_text_child("origin", origin_ss.str());
+        }
 
         // Spinning multibeam scans store the per-channel zenith angles rather than a uniform theta range, so write the pattern
         // and channel elevation angles (in degrees above the horizon) to round-trip the scan geometry on re-import.
@@ -1177,6 +1205,10 @@ void LiDARcloud::exportScans(const char *filename) {
             append_text_child("scanTilt", tilt_ss.str());
         }
 
+        if (scan_azimuth_offset != 0.f) {
+            append_text_child("scanAzimuthOffset", std::to_string(scan_azimuth_offset * 180.f / float(M_PI)));
+        }
+
         std::ostringstream format_ss;
         for (size_t c = 0; c < column_format.size(); c++) {
             if (c > 0) {
@@ -1201,6 +1233,13 @@ void LiDARcloud::exportPointCloudPTX(const char *filename, uint scanID) {
     if (scanID > getScanCount()) {
         std::cerr << "ERROR (LiDARcloud::exportPointCloudPTX): Cannot export scan " << scanID << " because this scan does not exist." << std::endl;
         throw 1;
+    }
+
+    // The PTX format encodes a single scanner position/transform per scan, which cannot represent a scanner that moved
+    // during acquisition. Fail fast rather than write a file with a misleading single origin. Use exportScans() /
+    // exportPointCloud() (which write the per-pulse origin columns) for a moving-platform scan instead.
+    if (scanID < scans.size() && scans.at(scanID).isMoving) {
+        helios_runtime_error("ERROR (LiDARcloud::exportPointCloudPTX): the PTX format cannot represent a moving-platform scan (see addScanMoving), which has no single scanner origin. Use exportScans() or exportPointCloud() instead.");
     }
 
     ofstream file;

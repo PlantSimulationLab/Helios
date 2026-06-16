@@ -5253,8 +5253,14 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
             if (plant_instance.current_age <= plant_instance.max_age && plant_instance.current_age + dt_max_days > plant_instance.max_age) {
             } else if (plant_instance.current_age >= plant_instance.max_age) {
-                // update Context geometry
-                shoot_tree->front()->updateShootNodes(true);
+                // The plant is static once it has reached max_age, so its geometry only needs to be
+                // pushed to the Context once rather than rebuilt on every subsequent timestep. Rebuilding
+                // it every step was an O(timesteps) waste that dominated runtime for plants advanced well
+                // past max_age (e.g. a 5000-day almond whose max_age is 1825).
+                if (!plant_instance.mature_geometry_synced) {
+                    shoot_tree->front()->updateShootNodes(true);
+                    plant_instance.mature_geometry_synced = true;
+                }
                 continue;
             }
 

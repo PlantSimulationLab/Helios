@@ -157,16 +157,25 @@ namespace helios {
     /**
      * @brief Material properties for ray tracing
      *
-     * Indexing: materials are indexed as [source * Nbands * Nprims + band * Nprims + prim]
-     * For camera materials: [camera * Nbands * Nprims + band * Nprims + prim]
+     * Indexing: materials are indexed as [source * Nprims * Nbands + prim * Nbands + band]
+     * (i.e. MaterialPropertyIndexer(Nsources, Nprims, Nbands)(source, prim, band); band is the
+     * fastest-varying dimension).
+     * For camera materials: CameraMaterialIndexer(Nsources, Nprims, Nbands, Ncameras).
      */
     struct RayTracingMaterial {
-        std::vector<float> reflectivity; //!< Reflectivity per [source][band][primitive]
-        std::vector<float> transmissivity; //!< Transmissivity per [source][band][primitive]
+        std::vector<float> reflectivity; //!< Reflectivity per [source][primitive][band]
+        std::vector<float> transmissivity; //!< Transmissivity per [source][primitive][band]
         std::vector<float> reflectivity_cam; //!< Camera-weighted reflectivity
         std::vector<float> transmissivity_cam; //!< Camera-weighted transmissivity
         std::vector<float> specular_exponent; //!< Specular reflection exponent per primitive
         std::vector<float> specular_scale; //!< Specular reflection scale coefficient per primitive
+
+        // Translucent cover (glass/plastic) material. When is_glass != 0 for a [source][primitive][band]
+        // entry, the angular transmittance/reflectance is computed on-device from glass_n and glass_KL
+        // via the Fresnel+Bouguer model, overriding reflectivity/transmissivity for that entry.
+        std::vector<float> glass_n; //!< Refractive index per [source][primitive][band] (0 = not glass)
+        std::vector<float> glass_KL; //!< Absorption product K*L per [source][primitive][band] (0 = lossless)
+        std::vector<char> is_glass; //!< Glass-material flag per [source][primitive][band] (0 = off, 1 = on)
 
         size_t num_bands = 0; //!< Number of spectral bands
         size_t num_sources = 0; //!< Number of radiation sources
