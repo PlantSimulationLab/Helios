@@ -1852,6 +1852,19 @@ public:
      */
     void setProgressCallback(std::function<void(float, const std::string&)> callback);
 
+    //! Register an external cancellation flag polled during long plant builds.
+    /**
+     * When the pointed-to int becomes non-zero, the canopy per-plant build loop
+     * and the advanceTime() growth loop stop early (returning whatever has been
+     * built so far), so a long generation can be aborted mid-build instead of
+     * running to completion. The flag is owned by the caller (e.g. a ctypes int
+     * shared with Python, written under the GIL while the build runs GIL-free)
+     * and must outlive the build; pass nullptr to clear. The per-iteration read
+     * is effectively free. Set this before the build call.
+     * \param[in] flag Pointer to a 0/non-zero cancellation flag, or nullptr.
+     */
+    void setCancelFlag(volatile int *flag);
+
     //! Add optional output object data values to the Context
     /**
      * \param[in] object_data_label Name of object data (e.g., "age", "rank")
@@ -3179,6 +3192,11 @@ protected:
     std::string current_plant_model;
 
     std::function<void(float, const std::string&)> progress_callback;
+
+    //! External cancellation flag polled during long builds (nullptr = none).
+    //! See setCancelFlag(); owned by the caller, read via volatile in the canopy
+    //! build loop and advanceTime().
+    volatile int *cancel_flag = nullptr;
 
     // Current build parameters for plant construction (set before calling builder functions)
     std::map<std::string, float> current_build_parameters;

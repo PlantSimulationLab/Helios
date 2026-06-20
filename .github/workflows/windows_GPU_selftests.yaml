@@ -12,6 +12,15 @@ permissions:
   id-token: write
   contents: read
 
+# Serialize runs of this workflow so concurrent runs do not race on the single shared
+# EC2 GPU instance. Previously, one run could try to start the instance while another
+# run's stop-gpu job was stopping it, leaving the instance in a transitional state that
+# broke start-gpu. New runs queue behind in-progress ones (rather than cancelling them),
+# so the instance is always fully released before the next run touches it.
+concurrency:
+  group: windows-gpu-ec2-instance
+  cancel-in-progress: false
+
 jobs:
 
   start-gpu:
@@ -22,36 +31,52 @@ jobs:
           role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
           aws-region: us-west-2
       - run: |
-          # Wait for instance to be in a state where it can be started (max 5 minutes)
-          echo "Waiting for instance to be in a startable state..."
-          timeout 300 bash -c '
-            while true; do
-              STATE=$(aws ec2 describe-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID_WIN }} --query "Reservations[0].Instances[0].State.Name" --output text)
-              echo "Current instance state: $STATE"
-              if [[ "$STATE" == "stopped" || "$STATE" == "running" ]]; then
-                echo "Instance is in a startable state: $STATE"
+          set -uo pipefail
+          INSTANCE_ID="${{ secrets.EC2_INSTANCE_ID_WIN }}"
+
+          # Drive the shared GPU instance to a 'running' state, tolerating transitional
+          # states and races with other runs. The previous implementation exited 1 whenever
+          # the instance was momentarily in 'stopping'/'pending', which made start-gpu fail
+          # before the build job ever ran. Here we keep polling until the instance is either
+          # 'running' or settles into 'stopped' (which we then start), bounded by a deadline.
+          deadline=$(( SECONDS + 600 ))   # up to 10 minutes
+          while true; do
+            STATE=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" \
+              --query "Reservations[0].Instances[0].State.Name" --output text 2>/dev/null || echo "unknown")
+            echo "Current instance state: $STATE"
+            case "$STATE" in
+              running)
+                echo "Instance is running."
                 break
-              fi
-              echo "Instance is in transitional state: $STATE. Waiting 10 seconds..."
-              sleep 10
-            done
-          ' || {
-            echo "Timeout waiting for instance to reach startable state"
-            exit 1
-          }
-          
-          # Only start if not already running
-          CURRENT_STATE=$(aws ec2 describe-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID_WIN }} --query "Reservations[0].Instances[0].State.Name" --output text)
-          if [[ "$CURRENT_STATE" == "stopped" ]]; then
-            echo "Starting instance..."
-            aws ec2 start-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID_WIN }}
-            aws ec2 wait instance-running --instance-ids ${{ secrets.EC2_INSTANCE_ID_WIN }}
-          elif [[ "$CURRENT_STATE" == "running" ]]; then
-            echo "Instance is already running"
-          else
-            echo "Unexpected instance state: $CURRENT_STATE"
-            exit 1
-          fi
+                ;;
+              stopped)
+                echo "Instance is stopped; issuing start-instances..."
+                # Tolerate a concurrent run that may have already started it.
+                aws ec2 start-instances --instance-ids "$INSTANCE_ID" >/dev/null \
+                  || echo "start-instances returned non-zero (likely a concurrent start); will keep polling."
+                ;;
+              pending|stopping)
+                echo "Instance is transitioning ('$STATE'); waiting for it to settle..."
+                ;;
+              shutting-down|terminated)
+                echo "Instance is '$STATE' and cannot be started." >&2
+                exit 1
+                ;;
+              *)
+                echo "Unexpected/empty instance state ('$STATE'); waiting and retrying..."
+                ;;
+            esac
+            if (( SECONDS >= deadline )); then
+              echo "Timed out waiting for instance to reach 'running' state." >&2
+              exit 1
+            fi
+            sleep 10
+          done
+
+          # Belt-and-suspenders: confirm AWS also reports the instance as running before
+          # handing off to the self-hosted runner job.
+          aws ec2 wait instance-running --instance-ids "$INSTANCE_ID"
+          echo "Instance is running and ready."
 
   run_samples_windows:
     runs-on: [self-hosted, Windows]
@@ -69,7 +94,7 @@ jobs:
             cat ../windows_GPU_selftests.log
             exit 1
           fi
-  
+
 
   stop-gpu:
     needs: run_samples_windows

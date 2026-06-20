@@ -3807,6 +3807,17 @@ void RadiationCamera::applyCameraExposure(helios::Context *context) {
             // the 95th percentile anchors the gain to the brightest meaningful
             // signal in the scene, which is photographically and scientifically
             // more sensible.
+            //
+            // The percentile must be measured over the signal pixels only. When the
+            // subject fills less than (100 - percentile)% of the frame, a percentile
+            // taken over the whole image lands on the near-zero background, the gain
+            // floor below takes over, and the real signal is amplified by ~1/floor
+            // (e.g. 0.7/1e-6 ≈ 7e5). The exposure then depends on how much of the
+            // frame the subject happens to occupy (camera distance, field of view)
+            // rather than on its radiance — a small/distant subject blows up while
+            // the same subject filling the frame exposes correctly. Restricting the
+            // percentile to pixels above a small fraction of the peak excludes the
+            // background and makes the exposure invariant to subject size.
             for (auto &band_pair: pixel_data) {
                 auto &data = band_pair.second;
                 const std::size_t N = data.size();
@@ -3814,8 +3825,22 @@ void RadiationCamera::applyCameraExposure(helios::Context *context) {
                 std::vector<float> sorted_data = data;
                 std::sort(sorted_data.begin(), sorted_data.end());
 
-                const std::size_t p95_idx = static_cast<std::size_t>(0.95f * (N - 1));
-                const float p95_value = sorted_data[p95_idx];
+                const float peak_value = sorted_data.back();
+
+                // Locate the first "signal" pixel (above a small fraction of the peak)
+                // so the percentile is taken over the subject, not the background.
+                const float signal_floor = 1e-4f * peak_value;
+                const std::size_t first_signal = static_cast<std::size_t>(std::upper_bound(sorted_data.begin(), sorted_data.end(), signal_floor) - sorted_data.begin());
+
+                float p95_value;
+                if (first_signal >= N) {
+                    // Band is entirely background — nothing to anchor to; leave unscaled.
+                    p95_value = peak_value;
+                } else {
+                    const std::size_t signal_count = N - first_signal;
+                    const std::size_t p95_idx = first_signal + static_cast<std::size_t>(0.95f * (signal_count - 1));
+                    p95_value = sorted_data[p95_idx];
+                }
 
                 // Map the 95th percentile to ~0.7 (a little below sRGB peak at 1.0)
                 // so the brightest 5% sit in the bright-but-not-clipped range. With

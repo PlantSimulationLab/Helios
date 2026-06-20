@@ -298,6 +298,60 @@ cleanup() {
 # Set up signal traps for cleanup on interruption only
 trap cleanup INT TERM
 
+# Validate requested test names up front so an invalid name (e.g. "core" instead of "context", or a
+# misspelled plugin) fails immediately with a clear message instead of building every other target
+# first and then dying on a cryptic "No rule to make target `<name>_tests'" from make.
+validate_test_name() {
+  local name="$1"
+  # "context" is the core test suite; it is valid but is not a plugin directory.
+  if [[ "$name" == "context" ]]; then
+    return 0
+  fi
+  # Any other name must be a plugin that actually provides a test (plugins/<name>/tests/selfTest.cpp).
+  if [ -f "$HELIOS_BASE_DIR/plugins/$name/tests/selfTest.cpp" ]; then
+    return 0
+  fi
+  return 1
+}
+
+report_invalid_test_name() {
+  local name="$1"
+  echo -e "\x1B[31mError: '$name' is not a valid test name.\x1B[39m"
+  # Catch the common core/context mix-up explicitly.
+  if [[ "$name" == "core" ]]; then
+    echo "  Did you mean 'context'? The core test suite is selected with --test context (not 'core')."
+  fi
+  echo "  Valid test names are 'context' (core tests) or a plugin that provides tests:"
+  local plugin
+  local available=""
+  for plugin in "$HELIOS_BASE_DIR"/plugins/*/tests/selfTest.cpp; do
+    [ -e "$plugin" ] || continue
+    plugin="${plugin#"$HELIOS_BASE_DIR"/plugins/}"
+    available="$available ${plugin%%/tests/selfTest.cpp}"
+  done
+  echo "    context$available"
+}
+
+INVALID_TEST_NAME=""
+if [ -n "$SPECIFIC_TEST" ]; then
+  if ! validate_test_name "$SPECIFIC_TEST"; then
+    INVALID_TEST_NAME="$SPECIFIC_TEST"
+  fi
+elif [ -n "$SPECIFIC_TESTS" ]; then
+  IFS=',' read -ra VALIDATE_ARRAY <<< "$SPECIFIC_TESTS"
+  for test in "${VALIDATE_ARRAY[@]}"; do
+    test=$(echo "$test" | xargs)  # trim whitespace
+    if ! validate_test_name "$test"; then
+      INVALID_TEST_NAME="$test"
+      break
+    fi
+  done
+fi
+if [ -n "$INVALID_TEST_NAME" ]; then
+  report_invalid_test_name "$INVALID_TEST_NAME"
+  exit 1
+fi
+
 # Determine which plugins are needed for current test selection
 PLUGINS_TO_BUILD=${TEST_PLUGINS}
 if [ -n "$SPECIFIC_TEST" ]; then

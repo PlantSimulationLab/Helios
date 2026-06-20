@@ -82,6 +82,12 @@ CollisionDetection::CollisionDetection(helios::Context *a_context) {
     // Initialize GPU memory pointers
     d_bvh_nodes = nullptr;
     d_primitive_indices = nullptr;
+    d_primitive_types = nullptr;
+    d_primitive_vertices = nullptr;
+    d_vertex_offsets = nullptr;
+    d_gpu_node_count = 0;
+    d_gpu_primitive_count = 0;
+    d_gpu_total_vertex_count = 0;
     gpu_memory_allocated = false;
 
     // Initialize BVH caching variables
@@ -750,6 +756,10 @@ void CollisionDetection::disableMessages() {
 
 void CollisionDetection::enableMessages() {
     printmessages = true;
+}
+
+void CollisionDetection::setCancelFlag(volatile int *flag) {
+    cancel_flag = flag;
 }
 
 size_t CollisionDetection::getPrimitiveCount() const {
@@ -1792,6 +1802,25 @@ void CollisionDetection::freeGPUMemory() {
         d_primitive_indices = nullptr;
     }
 
+    if (d_primitive_types) {
+        cudaFree(d_primitive_types);
+        d_primitive_types = nullptr;
+    }
+
+    if (d_primitive_vertices) {
+        cudaFree(d_primitive_vertices);
+        d_primitive_vertices = nullptr;
+    }
+
+    if (d_vertex_offsets) {
+        cudaFree(d_vertex_offsets);
+        d_vertex_offsets = nullptr;
+    }
+
+    d_gpu_node_count = 0;
+    d_gpu_primitive_count = 0;
+    d_gpu_total_vertex_count = 0;
+
     gpu_memory_allocated = false;
 }
 #endif
@@ -1845,6 +1874,120 @@ void CollisionDetection::transferBVHToGPU() {
     if (err != cudaSuccess) {
         helios_runtime_error("CUDA error transferring primitive indices: " + std::string(cudaGetErrorString(err)));
     }
+
+    // Upload the full scene geometry (primitive types, packed vertices, vertex offsets) so it stays resident on the
+    // device across many chunked ray casts. Previously every GPU ray batch re-extracted and re-uploaded all of this;
+    // making it resident is what keeps chunked synthetic scans from re-uploading the scene once per chunk.
+    std::vector<int> primitive_types;
+    std::vector<float> primitive_vertices_xyz; // flat xyz, 4 vertices (12 floats) per primitive
+    std::vector<unsigned int> vertex_offsets;
+    buildGPUGeometrySoA(primitive_types, primitive_vertices_xyz, vertex_offsets);
+
+    d_gpu_node_count = static_cast<int>(bvh_nodes.size());
+    d_gpu_primitive_count = static_cast<int>(primitive_indices.size());
+    d_gpu_total_vertex_count = static_cast<int>(primitive_vertices_xyz.size() / 3);
+
+    const size_t types_size = primitive_types.size() * sizeof(int);
+    const size_t vertices_size = primitive_vertices_xyz.size() * sizeof(float); // == total_vertex_count * sizeof(float3)
+    const size_t offsets_size = vertex_offsets.size() * sizeof(unsigned int);
+
+    if ((err = cudaMalloc(&d_primitive_types, types_size)) != cudaSuccess) {
+        helios_runtime_error("CUDA error allocating GPU primitive types: " + std::string(cudaGetErrorString(err)));
+    }
+    if ((err = cudaMalloc(&d_primitive_vertices, vertices_size)) != cudaSuccess) {
+        helios_runtime_error("CUDA error allocating GPU primitive vertices: " + std::string(cudaGetErrorString(err)));
+    }
+    if ((err = cudaMalloc(&d_vertex_offsets, offsets_size)) != cudaSuccess) {
+        helios_runtime_error("CUDA error allocating GPU vertex offsets: " + std::string(cudaGetErrorString(err)));
+    }
+
+    if ((err = cudaMemcpy(d_primitive_types, primitive_types.data(), types_size, cudaMemcpyHostToDevice)) != cudaSuccess) {
+        helios_runtime_error("CUDA error transferring primitive types: " + std::string(cudaGetErrorString(err)));
+    }
+    if ((err = cudaMemcpy(d_primitive_vertices, primitive_vertices_xyz.data(), vertices_size, cudaMemcpyHostToDevice)) != cudaSuccess) {
+        helios_runtime_error("CUDA error transferring primitive vertices: " + std::string(cudaGetErrorString(err)));
+    }
+    if ((err = cudaMemcpy(d_vertex_offsets, vertex_offsets.data(), offsets_size, cudaMemcpyHostToDevice)) != cudaSuccess) {
+        helios_runtime_error("CUDA error transferring vertex offsets: " + std::string(cudaGetErrorString(err)));
+    }
+}
+
+void CollisionDetection::buildGPUGeometrySoA(std::vector<int> &primitive_types, std::vector<float> &primitive_vertices_xyz, std::vector<unsigned int> &vertex_offsets) {
+    // Pack each primitive (in primitive_indices/BVH order) into exactly 4 vertices so vertex_offset == i*4. Triangles
+    // use 3 vertices + 1 pad, patches use 4, voxels store [min, max, pad, pad]. This mirrors the packing the kernel
+    // expects (CollisionDetection.cu rayPrimitiveBVHKernel) and the convention castRaysGPU previously built inline.
+    const size_t nprim = primitive_indices.size();
+    primitive_types.assign(nprim, 0);
+    vertex_offsets.assign(nprim, 0);
+    primitive_vertices_xyz.clear();
+    primitive_vertices_xyz.reserve(nprim * 4 * 3);
+
+    helios::WarningAggregator primitive_vertex_warnings;
+    primitive_vertex_warnings.setEnabled(printmessages);
+
+    auto push_vertex = [&](const helios::vec3 &v) {
+        primitive_vertices_xyz.push_back(v.x);
+        primitive_vertices_xyz.push_back(v.y);
+        primitive_vertices_xyz.push_back(v.z);
+    };
+    auto push_zero = [&]() { push_vertex(make_vec3(0, 0, 0)); };
+
+    unsigned int vertex_index = 0;
+    for (size_t i = 0; i < nprim; i++) {
+        vertex_offsets[i] = vertex_index;
+
+        PrimitiveType ptype = context->getPrimitiveType(primitive_indices[i]);
+        primitive_types[i] = static_cast<int>(ptype);
+
+        std::vector<vec3> vertices = context->getPrimitiveVertices(primitive_indices[i]);
+
+        if (ptype == PRIMITIVE_TYPE_TRIANGLE) {
+            if (vertices.size() >= 3) {
+                for (int v = 0; v < 3; v++) {
+                    push_vertex(vertices[v]);
+                }
+                push_zero(); // pad to 4
+            } else {
+                primitive_vertex_warnings.addWarning("triangle_wrong_vertex_count", "Triangle primitive " + std::to_string(primitive_indices[i]) + " has " + std::to_string(vertices.size()) + " vertices");
+                for (int v = 0; v < 4; v++) {
+                    push_zero();
+                }
+            }
+        } else if (ptype == PRIMITIVE_TYPE_PATCH) {
+            if (vertices.size() >= 4) {
+                for (int v = 0; v < 4; v++) {
+                    push_vertex(vertices[v]);
+                }
+            } else {
+                primitive_vertex_warnings.addWarning("patch_wrong_vertex_count", "Patch primitive " + std::to_string(primitive_indices[i]) + " has " + std::to_string(vertices.size()) + " vertices");
+                for (int v = 0; v < 4; v++) {
+                    push_zero();
+                }
+            }
+        } else if (ptype == PRIMITIVE_TYPE_VOXEL) {
+            vec3 voxel_min = vertices.empty() ? make_vec3(0, 0, 0) : vertices[0];
+            vec3 voxel_max = voxel_min;
+            for (const auto &vertex: vertices) {
+                voxel_min.x = std::min(voxel_min.x, vertex.x);
+                voxel_min.y = std::min(voxel_min.y, vertex.y);
+                voxel_min.z = std::min(voxel_min.z, vertex.z);
+                voxel_max.x = std::max(voxel_max.x, vertex.x);
+                voxel_max.y = std::max(voxel_max.y, vertex.y);
+                voxel_max.z = std::max(voxel_max.z, vertex.z);
+            }
+            push_vertex(voxel_min); // v0 = min
+            push_vertex(voxel_max); // v1 = max
+            push_zero();
+            push_zero();
+        } else {
+            for (int v = 0; v < 4; v++) {
+                push_zero();
+            }
+        }
+        vertex_index += 4;
+    }
+
+    primitive_vertex_warnings.report(std::cerr);
 }
 #endif
 

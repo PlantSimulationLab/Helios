@@ -73,11 +73,13 @@
 
  LiDAR data is commonly classified along two independent axes that are easy to conflate. The first is the instrument's <em>detection method</em>: a <b>discrete-return</b> instrument detects peaks in the returning signal in real time and records a small number of discrete points per pulse, whereas a <b>full-waveform</b> instrument digitizes and stores the entire returned signal as a function of time (the "waveform"), from which the individual returns are later extracted. The second axis is the number of returns recorded per pulse: <b>single-return</b> (one hit point per pulse) versus <b>multi-return</b> (several hit points per pulse, e.g. first, second, ..., last). These two axes are independent: discrete-return instruments routinely record multiple returns per pulse, and full-waveform instruments also ultimately output discrete returns once the waveform is decomposed.
 
- The Helios LiDAR plug-in works entirely with <b>discrete return points</b> - it does not produce, store, or export a digitized waveform. What it distinguishes, and what this documentation refers to throughout, is the number of returns recorded per pulse:
- - <b>Single-return</b> data records a single hit point per laser pulse. The distance recorded for the hit point is an effective average distance to all objects intersected by the beam.
+ The Helios LiDAR plug-in outputs <b>discrete return points</b>; it does not store or export a digitized waveform. Internally, however, synthetic multi-ray scans form an <em>analytic</em> waveform (a sparse sum of Gaussians, one per sub-ray hit) and detect returns from it, so the discrete points exhibit realistic signal-formation behavior such as range-resolution-limited merging and edge "ghost" points. What this documentation refers to throughout is the number of returns recorded per pulse:
+ - <b>Single-return</b> data records a single hit point per laser pulse. When the beam footprint straddles two surfaces closer than the pulse range-resolution, the single reported point lands at a blended range between them - the "ghost"/"mixed pixel" point that a real single-return instrument records at an edge.
  - <b>Multi-return</b> data records multiple hit point locations along a single laser pulse. Multi-return data is preferred in dense canopies, where a single-return measurement would rarely record the location of the ground beneath the foliage.
 
  Real instruments that produce multi-return data (such as the RIEGL VZ series) are often full-waveform internally, but the exported point cloud - and everything Helios simulates and processes - consists of discrete returns, not waveforms.
+
+ Synthetic scans select among three modes (see \ref LiDARsynthetic): an <b>idealized</b> mode (one ray per pulse) that reports the exact ray-surface intersection; a <b>limited (single/N)-return waveform</b> mode; and an <b>unlimited multi-return waveform</b> mode. The number of rays per pulse selects idealized (1) versus waveform processing (more than 1), and the \<returnMode> scan tag (or the \ref LiDARcloud::syntheticScan(helios::Context*,bool,bool) "syntheticScan()" return-mode argument) selects limited versus unlimited return. In limited (\<returnMode> <tt>single</tt>) mode the \<maxReturns> tag sets the cap on returns per pulse: 1 = single-return (the default), 2 = dual-return, N = N-return; when a pulse resolves more returns than the cap, the \<singleReturnSelection> policy chooses which to keep. A limited-mode pulse reports only real points (a transmitted-beam miss is recorded only when the pulse produces no real return), whereas unlimited multi-return mode records every detected return, including a transmitted-beam miss alongside real returns when miss recording is enabled - so multi-return mode is preferred when the resulting cloud will be used for leaf-area inversion.
 
  \image html plugins/lidar/doc/images/WaveformSchematic.jpeg
 
@@ -99,6 +101,11 @@
 <tr><td>angular noise std. dev. (rad)</td><td>\<angleNoiseStdDev></td><td>Standard deviation of zero-mean Gaussian jitter applied to the pointing direction of each pulse during synthetic scan generation. This produces the across-beam (lateral) component of the positional error, which grows with range. Only used for synthetic data generation.</td><td>0 (no jitter)</td></tr>
 <tr><td>scanner tilt (roll pitch, degrees)</td><td>\<scanTilt></td><td>Global scanner tilt applied to the entire scan frame about the scanner origin during synthetic scan generation. This models the residual tilt of the scanner spin axis away from true vertical (plumb) that a real terrestrial scanner's dual-axis inclinometer reports. Two angles are given, separated by a space: the first is the <b>roll</b> and the second is the <b>pitch</b>, applied in that order (roll first). The tilt uses a right-handed, Z-up body frame (matching commercial scanners such as those using the RIEGL SOCS convention): the body forward axis is the horizontal projection of the azimuth-zero (\f$\varphi\f$<sub>min</sub>) scan direction, and the body lateral axis completes the right-handed frame. Roll is a right-hand rotation about the lateral axis; pitch is a right-hand rotation about the forward axis. When \f$\varphi\f$<sub>min</sub>=0 the lateral axis is world +x and the forward axis is world +y. Note that commercial scanners do not share a universal inclinometer sign convention, so when matching a specific instrument the sign should be verified against that instrument. Only used for synthetic data generation.</td><td>0 0 (perfectly level)</td></tr>
 <tr><td>scanner azimuth offset (degrees)</td><td>\<scanAzimuthOffset></td><td>Global scanner azimuth (heading) offset applied to the entire scan frame about the scanner origin during synthetic scan generation. This is the yaw component that completes the roll/pitch/yaw orientation of a real scanner: while \<scanTilt> models the inclinometer roll and pitch, this models the compass heading of the instrument about the local vertical. It is a single angle giving a right-hand rotation about the world vertical (+z) axis, applied as a heading offset on top of the azimuth sweep [\f$\varphi\f$<sub>min</sub>, \f$\varphi\f$<sub>max</sub>]. When combined with a tilt, the rotation order is yaw (azimuth) first, then pitch, then roll, so the azimuth offset also rotates the roll/pitch body frame. Note that commercial scanners do not share a universal heading sign convention, so when matching a specific instrument the sign should be verified against that instrument. Only used for synthetic data generation.</td><td>0 (no offset)</td></tr>
+<tr><td>return mode</td><td>\<returnMode></td><td>How a pulse reports detected returns during analytic-waveform synthetic scan generation (more than one ray per pulse): <tt>multi</tt> reports every detected return with no limit (discrete multi-return instrument), while <tt>single</tt> reports a limited number of points per pulse - at most \<maxReturns> of them, selected by \<singleReturnSelection>. In single-return mode (maxReturns 1) two surfaces within the pulse range-resolution blend into one return at an intermediate range, reproducing the "ghost"/"mixed pixel" point a real single-return instrument records at an edge. A single ray per pulse always produces an idealized exact intersection regardless of this setting. Note <tt>multi</tt> mode records a transmitted-beam miss alongside real returns (when miss recording is on), whereas <tt>single</tt>/N-return mode records a miss only for a fully transmitted pulse - prefer <tt>multi</tt> for leaf-area inversion. Only used for synthetic data generation.</td><td>multi</td></tr>
+<tr><td>single-return selection</td><td>\<singleReturnSelection></td><td>Which return(s) are kept when \<returnMode> is <tt>single</tt> and more returns than \<maxReturns> are resolved: <tt>strongest</tt> (largest echo amplitude), <tt>first</tt> (nearest), or <tt>last</tt> (farthest). The kept returns are always reported nearest-first. Only used for synthetic data generation.</td><td>strongest</td></tr>
+<tr><td>maximum returns per pulse</td><td>\<maxReturns></td><td>Maximum number of returns reported per pulse when \<returnMode> is <tt>single</tt>: <tt>1</tt> = single-return, <tt>2</tt> = dual-return, <tt>N</tt> = N-return. When a pulse resolves more returns than this, the \<singleReturnSelection> policy chooses which to keep (always ordered nearest-first). Must be at least 1. Ignored when \<returnMode> is <tt>multi</tt>. Only used for synthetic data generation.</td><td>1 (single-return)</td></tr>
+<tr><td>pulse width / range resolution (meters)</td><td>\<pulseWidth></td><td>Range-resolution distance used to merge sub-ray hits into discrete returns during analytic-waveform synthetic scan generation: two surfaces closer than this distance fall within one transmit pulse and merge into a single return, reproducing the range-resolution (dead-zone) limit of a real instrument. Alternatively specify \<pulseDuration> (seconds), which is converted via range = c&middot;duration/2. When 0, the synthetic scanner uses the <tt>pulse_distance_threshold</tt> argument of \ref LiDARcloud::syntheticScan(helios::Context*,bool,bool) "syntheticScan()" instead. Only used for synthetic data generation.</td><td>0 (use syntheticScan argument)</td></tr>
+<tr><td>detection threshold (energy fraction)</td><td>\<detectionThreshold></td><td>Minimum return energy fraction (range-normalized echo amplitude as a fraction of total per-pulse beam energy) for a return to be detected during analytic-waveform synthetic scan generation. Returns weaker than this are discarded, modeling the noise floor of a real instrument. Only used for synthetic data generation.</td><td>0 (no suppression)</td></tr>
 <tr><td>ASCII point cloud file</td><td>\<filename></td><td>File containing point cloud data to be read.</td><td>No file will be read.</td></tr>
 <tr><td>ASCII file column format</td><td>\<ASCII_format></td><td>Labels for columns in ASCII point cloud file. See section below for possible values and examples. Labels should be separated by a space in the XML file.</td><td>x y z</td></tr>
  </table>
@@ -129,32 +136,93 @@
 
  \subsubsection ScanSpinningMultibeam Spinning multibeam scan pattern
 
- Setting <tt>\<scanPattern> spinning_multibeam \</scanPattern></tt> models a rotating multi-channel sensor (e.g. Velodyne, Ouster, Hesai), which is the most common pattern for mobile and UAV plant scanning. \f$\mathrm{N}_\theta\f$ laser channels are each fixed at their own (generally non-uniformly spaced) elevation angle, and the whole head rotates through \f$\mathrm{N}_\varphi\f$ uniform azimuth steps. The pattern is represented internally as the same \f$\mathrm{N}_\theta\times\mathrm{N}_\varphi\f$ scan table used by a raster scan, except that each row uses its channel's zenith angle (from \<beamElevationAngles>) rather than a uniform step. Because the storage is shared, all downstream processing - ray tracing, hit tables, leaf-area and leaf-angle inversion - is identical to a raster scan. Each synthetic hit additionally records a <tt>channel</tt> data value giving the index of the laser channel (scan-table row) that produced it. The geometry is defined by the following tags, in addition to the common tags above:
+ Setting <tt>\<scanPattern> spinning_multibeam \</scanPattern></tt> models a rotating multi-channel sensor (e.g. Velodyne, Ouster, Hesai), which is the most common pattern for mobile and UAV plant scanning. \f$\mathrm{N}_\theta\f$ laser channels are each fixed at their own (generally non-uniformly spaced) elevation angle, and the whole head rotates continuously through 360 degrees while the platform moves along a trajectory. The pattern is represented internally as the same \f$\mathrm{N}_\theta\times\mathrm{N}_\varphi\f$ scan table used by a raster scan, except that each row uses its channel's zenith angle (from \<beamElevationAngles>) rather than a uniform step. Because the storage is shared, all downstream processing - ray tracing, hit tables, leaf-area and leaf-angle inversion - is identical to a raster scan. Each synthetic hit additionally records a <tt>channel</tt> data value giving the index of the laser channel (scan-table row) that produced it.
 
- <table>
- <tr><th>Metadata</th><th>XML tag</th><th>Description</th><th>Default behavior</th></tr>
- <tr><td>channel elevation angles (degrees)</td><td>\<beamElevationAngles></td><td>Space-separated list of per-channel elevation angles above the horizon, in degrees (e.g. a 16-channel sensor spanning \f$-15\f$ to \f$+15^\circ\f$). The number of entries sets the number of channels / zenithal rows \f$\mathrm{N}_\theta\f$. Each elevation angle is converted internally to a zenith angle (\f$\theta = 90^\circ - \f$ elevation).</td><td>None: REQUIRED</td></tr>
- <tr><td>number of azimuth steps</td><td>\<Nphi></td><td>Number of azimuth steps (columns) \f$\mathrm{N}_\varphi\f$ per rotation. May alternatively be given as the second value of a \<size> tag; if both are present, \<Nphi> takes precedence.</td><td>None: REQUIRED</td></tr>
- <tr><td>\f$\varphi\f$<sub>min</sub> (degrees)</td><td>\<phiMin></td><td>Minimum scan phi (azimuthal) angle. A full rotation spans \f$\varphi\f$<sub>min</sub>=0 to \f$\varphi\f$<sub>max</sub>=360.</td><td>0</td></tr>
- <tr><td>\f$\varphi\f$<sub>max</sub> (degrees)</td><td>\<phiMax></td><td>Maximum scan phi (azimuthal) angle. For a full rotation use 360.</td><td>360</td></tr>
- </table>
-
- An example spinning multibeam scan, configured like a 16-channel sensor with 2-degree channel spacing making a full azimuth rotation:
-
- ~~~~~~{.xml}
- <scan>
-   <origin> 0 0 1.5 </origin>
-   <scanPattern> spinning_multibeam </scanPattern>
-   <beamElevationAngles> -15 -13 -11 -9 -7 -5 -3 -1 1 3 5 7 9 11 13 15 </beamElevationAngles>
-   <Nphi> 1800 </Nphi>
-   <phiMin> 0 </phiMin>
-   <phiMax> 360 </phiMax>
- </scan>
- ~~~~~~
+ A spinning sensor is set up from its physical parameters - channel elevation angles, azimuth resolution, pulse repetition rate (PRF), and a platform trajectory - not from a hand-sized azimuth grid. The point count is determined by the PRF and the acquisition time, and the number of azimuth steps and revolution count are derived internally; you never specify an azimuth range, a number of azimuth steps, or a number of revolutions. See \ref MovingSpinning below for the full setup, in both C++ (\ref LiDARcloud::addScanSpinning()) and XML (the \<azimuthStep>, \<PRF>, and trajectory tags).
 
  \note Leaf-area inversion requires the population of transmitted (miss) beams. For raster scans loaded from real instruments these can be reconstructed with \ref LiDARcloud::gapfillMisses(), which assumes a regular angular grid. For non-raster patterns, generate synthetic scans with miss recording enabled by calling \ref LiDARcloud::syntheticScan(helios::Context*,bool,bool) "syntheticScan()" with <tt>record_misses=true</tt> (see also \ref LiDARsynthetic), which records the misses directly and does not rely on grid reconstruction.
 
  \note The triangulation distance passed to \ref LiDARcloud::triangulateHitPoints() should be matched to the point spacing of the pattern. Spinning multibeam channels are spaced more coarsely in the vertical (zenithal) direction than a dense raster scan, so a larger triangulation distance may be needed for leaf-angle and leaf-area reconstruction.
+
+ \subsection MovingSpinning Moving-platform and spinning-multibeam scans (physical-parameter setup)
+
+ A real mobile, UAV, or airborne instrument is set up from its physical parameters, not from a flattened angular grid. Helios provides first-class entry points that take those parameters directly and derive the internal sampling grid, rotation rate, revolution count, and per-pulse timing. A scan created this way is self-describing: query \ref LiDARcloud::getScanMode(), \ref LiDARcloud::getScanRotationRate(), \ref LiDARcloud::getScanRevolutions(), and \ref LiDARcloud::getScanStepsPerRev() to introspect it.
+
+ \subsubsection SpinningPhysical Spinning multibeam (continuous rotation)
+
+ A spinning multibeam sensor rotates continuously through 360 degrees while the platform moves along a trajectory, so there is no partial-arc azimuth range - the only azimuth control is the angular resolution. Use \ref LiDARcloud::addScanSpinning() with the physical instrument parameters:
+
+ - <b>Per-channel beam elevation angles (radians)</b>, above the horizon. \note Unlike the lower-level \ref ScanMetadata spinning constructor (which takes zenith angles), this entry point takes elevation, matching manufacturer spec sheets (zenith = \f$\pi/2 - \f$ elevation).
+ - <b>Azimuth resolution</b> in radians per firing step (e.g. \f$0.2^\circ = 0.2\,\pi/180\f$).
+ - <b>Pulse repetition rate (PRF)</b> in Hz.
+ - <b>Trajectory</b>: timestamped 6-DOF poses (\ref LiDARcloud::addScanMoving conventions - Hamilton quaternions body->world, or the Euler overload).
+ - <b>Lever arm</b> and <b>boresight</b> (sensor offset and misalignment on the platform).
+
+ Helios derives: rotation rate = PRF / (channels \f$\times\f$ steps-per-rev); revolutions = rotation rate \f$\times\f$ trajectory duration; the number of points = PRF \f$\times\f$ duration; and the full multi-revolution azimuth sweep. Each pulse fires at the exact per-channel elevation.
+
+ ~~~~~~{.cpp}
+ std::vector<float> beam_elev; // radians above horizon, one per channel
+ for (int e = -15; e <= 15; e += 2) {
+    beam_elev.push_back(float(e) * float(M_PI) / 180.f);
+ }
+ float azimuth_step = 0.2f * float(M_PI) / 180.f; // 0.2 deg resolution
+ float PRF = 600000.f;                            // 600 kHz
+ // ... build traj_t, traj_pos, traj_quat for the flight line ...
+ uint scanID = pointcloud.addScanSpinning(beam_elev, azimuth_step, PRF, traj_t, traj_pos, traj_quat,
+                                          make_vec3(0,0,0) /*lever arm*/, make_vec3(0,0,0) /*boresight rpy*/,
+                                          0.f, 0.f, 0.f, 0.f /*optics+noise*/);
+ ~~~~~~
+
+ A free-spinning sensor cannot be held at a fixed pose without overlapping itself, so there is no separate "stationary" entry point. For a stationary capture (a spinning sensor on a tripod), supply a trajectory of two coincident poses - the same position and orientation - separated in time by the acquisition duration. The time gap determines how long the sensor spins, and therefore how many revolutions it makes, exactly as for a moving capture.
+
+ \subsubsection MovingRasterPhysical Moving raster (non-spinning sensor on a moving platform)
+
+ For a non-spinning sensor carried on a moving platform, use \ref LiDARcloud::addScanMovingRaster(): specify the per-frame angular fan resolution (\f$\mathrm{N}_\theta\times\mathrm{N}_\varphi\f$ over \f$[\theta_{min},\theta_{max}]\times[\varphi_{min},\varphi_{max}]\f$), the trajectory, and the PRF, and Helios derives the per-pulse time sampling along the trajectory.
+
+ \subsubsection PhysicalXML Authoring moving/spinning scans in XML
+
+ These scans can also be authored in a scan XML file. In addition to the common tags, a spinning multibeam scan uses:
+
+ <table>
+ <tr><th>Metadata</th><th>XML tag</th><th>Description</th></tr>
+ <tr><td>azimuth resolution (degrees/step)</td><td>\<azimuthStep></td><td>Azimuth angular resolution in degrees per firing step. Required for a spinning scan; the number of azimuth steps per revolution and the total azimuth sweep are derived internally.</td></tr>
+ <tr><td>pulse repetition rate (Hz)</td><td>\<PRF></td><td>Laser firing rate. (Alias: \<pulseRate>.)</td></tr>
+ <tr><td>lever arm (m)</td><td>\<leverArm></td><td>Sensor optical-center offset in the platform body frame, "x y z".</td></tr>
+ <tr><td>boresight (degrees)</td><td>\<boresight></td><td>Fixed sensor misalignment "roll pitch yaw".</td></tr>
+ <tr><td>trajectory (inline)</td><td>\<trajectory></td><td>Required for a spinning scan. A block of \<pose> children, each "t x y z qx qy qz qw" (quaternion) or "t x y z roll pitch yaw" (Euler degrees). For a stationary "spin in place" capture, give two coincident poses (same position and orientation) separated in time by the acquisition duration.</td></tr>
+ <tr><td>trajectory (file)</td><td>\<trajectoryFile></td><td>Path to a whitespace-separated trajectory file (same row format as inline poses; '#' comment lines ignored), resolved relative to the XML file.</td></tr>
+ </table>
+
+ A moving (flight-line) spinning scan, with the trajectory in a referenced file:
+
+ ~~~~~~{.xml}
+ <scan>
+   <scanPattern> spinning_multibeam </scanPattern>
+   <beamElevationAngles> -15 -13 -11 -9 -7 -5 -3 -1 1 3 5 7 9 11 13 15 </beamElevationAngles>
+   <azimuthStep> 0.2 </azimuthStep>
+   <PRF> 600000 </PRF>
+   <trajectoryFile> flightline.csv </trajectoryFile>
+   <ASCII_format> x y z origin_x origin_y origin_z timestamp </ASCII_format>
+ </scan>
+ ~~~~~~
+
+ A stationary spin in place: two coincident poses 2 seconds apart, so the sensor spins for 2 s at its derived rotation rate:
+
+ ~~~~~~{.xml}
+ <scan>
+   <scanPattern> spinning_multibeam </scanPattern>
+   <beamElevationAngles> -15 -13 -11 -9 -7 -5 -3 -1 1 3 5 7 9 11 13 15 </beamElevationAngles>
+   <azimuthStep> 0.2 </azimuthStep>
+   <PRF> 600000 </PRF>
+   <trajectory>
+     <pose> 0 0 0 1.5  0 0 0 1 </pose>
+     <pose> 2 0 0 1.5  0 0 0 1 </pose>
+   </trajectory>
+   <ASCII_format> x y z origin_x origin_y origin_z timestamp </ASCII_format>
+ </scan>
+ ~~~~~~
+
+ \note When exported with \ref LiDARcloud::exportScans(), a moving or spinning scan writes its trajectory to a sibling CSV file (referenced via \<trajectoryFile>) along with the physical tags, so the scan round-trips through \ref LiDARcloud::loadXML() back to the same physical-parameter setup.
 
  \subsection AddHits Hit point data
 
@@ -287,6 +355,7 @@
  <tr><td>row</td><td>Scan-grid row index (zenithal/theta direction) of the hit point. Used by \ref LiDARcloud::gapfillMisses() to reconstruct miss directions when timestamps are unavailable (see below).</td><td>N/A</td></tr>
  <tr><td>column</td><td>Scan-grid column index (azimuthal/phi direction) of the hit point. Used by \ref LiDARcloud::gapfillMisses() to reconstruct miss directions when timestamps are unavailable (see below).</td><td>N/A</td></tr>
  <tr><td>deviation</td><td>Indication of variability in return within a given hit point. Note: this is never used for real data, but can be output for synthetic data.</td><td>N/A</td></tr>
+ <tr><td>echo_width</td><td>Range spread (width) of the return in meters: the transmit pulse range-extent combined in quadrature with the range spread of the surfaces that merged into the return. Note: this is computed for synthetic data only.</td><td>N/A</td></tr>
  <tr><td>intensity</td><td>Range-normalized intensity of return, equal to \f$\rho\,\cos\theta\f$ (per-primitive reflectivity times the incidence-angle cosine) with the \f$1/R^2\f$ range loss of the LiDAR range equation normalized out, so it is independent of the scanner-to-target range. Note: this is never used for real data, but can be output for synthetic data.</td><td>N/A</td></tr>
  <tr><td>reflectance</td><td>Synthetic return reflectance in decibels, \f$10\,\log_{10}|I|\f$ where \f$I\f$ is the range-normalized intensity, relative to a perfect Lambertian reflector at normal incidence (0 dB). Output only when "reflectance" is listed in the ASCII_format. Note: this is computed for synthetic data only.</td><td>N/A</td></tr>
  <tr><td>(label)</td><td>User-defined floating-point data value.  "label" can be any string describing data.  For example, "temperature", etc. </td><td>N/A</td></tr>
@@ -697,7 +766,14 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
   If the ASCII_format of the scan includes the <tt>reflectance</tt> tag, the scanner additionally records the return reflectance in decibels, \f$10\,\log_{10}|I|\f$, where \f$I\f$ is the range-normalized intensity described above. This follows the convention used by terrestrial laser scanners (e.g.\ RIEGL), in which reflectance is reported relative to a perfect Lambertian reflector viewed at normal incidence: such a target has \f$I = 1\f$ and therefore a reflectance of 0 dB, while all real returns are negative. Returns with no detectable signal (misses, fully grazing, or back-facing hits) are floored at a large negative value rather than \f$-\infty\f$, mirroring a scanner's minimum detectable reflectance. The <tt>reflectance</tt> tag is meaningful only for synthetic scans; for imported real data the reflectance values come from the data file as-is.
 
-  For multi-return data simulation, multiple rays are cast for a single laser beam pulse. The density of rays is Gaussian, with the peak at the center of the beam. The model will also record the target count, target index, and timestamp associated with each hit point.
+  For multi-return data simulation, multiple sub-rays are cast for a single laser beam pulse, spread over the beam divergence cone and (if a finite \<exitDiameter> is given) the exit aperture. Each sub-ray carries a <b>Gaussian footprint weight</b> \f$w=\exp(-2(r/r_0)^2)\f$ set by its offset \f$r\f$ from the beam axis (with \f$r_0\f$ the 1/e\f$^2\f$ radius), so the beam has the Gaussian transverse irradiance profile of a real laser rather than a uniform "top-hat". These weights drive the energy-weighted range and intensity of each detected return.
+
+  The sorted sub-ray hits are treated as an <b>analytic sum-of-Gaussians waveform</b> (each hit is a Gaussian of range-extent equal to the pulse range-resolution and amplitude \f$w\cos\theta\f$), from which discrete returns are detected:
+  - Sub-ray hits separated by less than the <b>range-resolution</b> (the \<pulseWidth> scan tag, or the <tt>pulse_distance_threshold</tt> argument when \<pulseWidth> is 0) are unresolved and merge into a single return at the energy-weighted range. Two surfaces within one pulse width therefore blend into one return at an intermediate range - the physical origin of an edge "ghost"/"mixed pixel" point.
+  - A return whose intensity (a fraction of the total per-pulse beam energy) falls below the <b>detection threshold</b> (the \<detectionThreshold> scan tag) is discarded, modeling the noise floor of a real instrument. The default threshold of 0 disables suppression.
+  - In <b>single-return</b> mode (\<returnMode> <tt>single</tt>) exactly one return per pulse is reported, chosen by \<singleReturnSelection> (<tt>strongest</tt>, <tt>first</tt>, or <tt>last</tt>); in <b>multi-return</b> mode (the default) every surviving return is reported.
+
+  Note that single-return waveform mode is no cheaper than multi-return: the full sub-ray bundle is still traced to form the waveform; only the idealized one-ray-per-pulse mode avoids the bundle. In addition to the target count, target index, and timestamp, each hit point records an <tt>echo_width</tt> (the pulse-range-extent combined in quadrature with the range spread of the merged surfaces).
 
   \subsection LiDARsynthxml XML parameter file
 

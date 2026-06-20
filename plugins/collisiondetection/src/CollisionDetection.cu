@@ -17,9 +17,27 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
+#include <string>
 #include <vector>
 
 #include "helios_vector_types.h"
+
+// Forward declaration to avoid pulling the full helios global header (and its template-heavy transitive includes)
+// into the CUDA translation unit. Defined in core/src/global.cpp.
+namespace helios {
+    void helios_runtime_error(const std::string &error_message);
+}
+
+//! Fail-fast wrapper for CUDA runtime calls. Helios policy forbids silent fallbacks: a failed CUDA call throws a
+//! helios_runtime_error rather than the legacy fprintf(stderr)+return, which used to leave output arrays partially
+//! written. Used by the resident-scene launch path below.
+#define HELIOS_CUDA_CHECK(call)                                                                                                                                                                                                                 \
+    do {                                                                                                                                                                                                                                        \
+        cudaError_t _helios_cuda_err = (call);                                                                                                                                                                                                  \
+        if (_helios_cuda_err != cudaSuccess) {                                                                                                                                                                                                  \
+            helios::helios_runtime_error(std::string("CUDA error (") + #call + "): " + cudaGetErrorString(_helios_cuda_err));                                                                                                                    \
+        }                                                                                                                                                                                                                                       \
+    } while (0)
 
 /**
  * \brief GPU-friendly BVH node structure (Legacy AoS format)
@@ -340,27 +358,83 @@ __device__ bool rayVoxelIntersect(const float3 &ray_origin, const float3 &ray_di
     return distance > EPSILON;
 }
 
+/**
+ * \brief Compute the surface normal for a hit primitive, matching the CPU intersectPrimitiveThreadSafe convention.
+ *
+ * Triangles/patches use normalize(cross(v1-v0, v2-v0)) face-forwarded toward the ray origin (n flipped so it points
+ * back at the ray), exactly as the CPU SoA path does, so GPU and CPU normals (and the LiDAR hit_fnorm = dot(dir,n)
+ * derived from them) agree. Voxels use the axis-aligned face normal of the hit face (no face-forward, matching CPU).
+ * Degenerate/unknown primitives fall back to normalize(-direction).
+ */
+__device__ __forceinline__ float3 computeHitNormal(int ptype, const float3 *d_primitive_vertices, unsigned int vertex_offset, const float3 &ray_origin, const float3 &ray_direction, float hit_distance) {
+    float3 fallback = normalize(make_float3(-ray_direction.x, -ray_direction.y, -ray_direction.z));
+
+    if (ptype == 1 || ptype == 0) { // triangle or patch: cross of first two edges, face-forwarded
+        float3 v0 = d_primitive_vertices[vertex_offset + 0];
+        float3 v1 = d_primitive_vertices[vertex_offset + 1];
+        float3 v2 = d_primitive_vertices[vertex_offset + 2];
+        float3 n = cross(v1 - v0, v2 - v0);
+        float mag = sqrtf(n.x * n.x + n.y * n.y + n.z * n.z);
+        if (mag > 1e-8f) {
+            n = make_float3(n.x / mag, n.y / mag, n.z / mag);
+            float3 hit_point = make_float3(ray_origin.x + ray_direction.x * hit_distance, ray_origin.y + ray_direction.y * hit_distance, ray_origin.z + ray_direction.z * hit_distance);
+            float3 to_origin = make_float3(ray_origin.x - hit_point.x, ray_origin.y - hit_point.y, ray_origin.z - hit_point.z);
+            if (dot(n, to_origin) < 0.0f) {
+                n = make_float3(-n.x, -n.y, -n.z);
+            }
+            return n;
+        }
+        return fallback;
+    } else if (ptype == 2) { // voxel: axis-aligned face normal of the hit face
+        float3 vmin = d_primitive_vertices[vertex_offset + 0];
+        float3 vmax = d_primitive_vertices[vertex_offset + 1];
+        float3 hit_point = make_float3(ray_origin.x + ray_direction.x * hit_distance, ray_origin.y + ray_direction.y * hit_distance, ray_origin.z + ray_direction.z * hit_distance);
+        float3 center = make_float3((vmin.x + vmax.x) * 0.5f, (vmin.y + vmax.y) * 0.5f, (vmin.z + vmax.z) * 0.5f);
+        float3 extent = make_float3((vmax.x - vmin.x) * 0.5f, (vmax.y - vmin.y) * 0.5f, (vmax.z - vmin.z) * 0.5f);
+        float3 local = make_float3(hit_point.x - center.x, hit_point.y - center.y, hit_point.z - center.z);
+        float rel_x = fabsf(local.x) / extent.x;
+        float rel_y = fabsf(local.y) / extent.y;
+        float rel_z = fabsf(local.z) / extent.z;
+        if (rel_x >= rel_y && rel_x >= rel_z) {
+            return make_float3((local.x > 0.0f) ? 1.0f : -1.0f, 0.0f, 0.0f);
+        } else if (rel_y >= rel_z) {
+            return make_float3(0.0f, (local.y > 0.0f) ? 1.0f : -1.0f, 0.0f);
+        } else {
+            return make_float3(0.0f, 0.0f, (local.z > 0.0f) ? 1.0f : -1.0f);
+        }
+    }
+    return fallback;
+}
+
 __global__ void rayPrimitiveBVHKernel(GPUBVHNode *d_bvh_nodes, unsigned int *d_primitive_indices,
                                       int *d_primitive_types, // Type of each primitive (int for GPU compatibility)
                                       float3 *d_primitive_vertices, // All vertices for all primitives (variable count per primitive)
                                       unsigned int *d_vertex_offsets, // Starting index in vertices array for each primitive
-                                      float3 *d_ray_origins, float3 *d_ray_directions, float *d_ray_max_distances, int num_rays, int primitive_count, int total_vertex_count, float *d_hit_distances, unsigned int *d_hit_primitive_ids,
-                                      unsigned int *d_hit_counts, bool find_closest_hit) {
+                                      float3 *d_ray_origins, float3 *d_ray_directions, float *d_ray_max_distances, float uniform_max_distance, int num_rays, int primitive_count, int total_vertex_count, float *d_hit_distances,
+                                      unsigned int *d_hit_primitive_ids, unsigned int *d_hit_counts, float3 *d_hit_normals, bool find_closest_hit) {
     int ray_idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (ray_idx >= num_rays) {
         return;
     }
 
-    // Load ray data
+    // Load ray data. Directions are normalized here (the host passes them raw) so the returned t is a geometric
+    // distance, matching the CPU RayQuery semantics. d_ray_max_distances may be null, in which case every ray shares
+    // uniform_max_distance (avoids a per-ray host/device array when the caller's cutoff is constant).
     float3 ray_origin = d_ray_origins[ray_idx];
     float3 ray_direction = d_ray_directions[ray_idx];
-    float ray_max_distance = d_ray_max_distances[ray_idx];
+    float dmag = sqrtf(ray_direction.x * ray_direction.x + ray_direction.y * ray_direction.y + ray_direction.z * ray_direction.z);
+    if (dmag > 1e-8f) {
+        ray_direction = make_float3(ray_direction.x / dmag, ray_direction.y / dmag, ray_direction.z / dmag);
+    }
+    float ray_max_distance = (d_ray_max_distances != nullptr) ? d_ray_max_distances[ray_idx] : uniform_max_distance;
 
     // Initialize hit data
     float closest_hit_distance = ray_max_distance + 1.0f; // Initialize beyond max
     unsigned int hit_primitive_id = 0xFFFFFFFF; // Invalid ID
     unsigned int total_hits = 0;
+    int best_vertex_offset = -1; // packed-vertex offset of the current closest hit (for normal computation)
+    int best_ptype = -1; // primitive type of the current closest hit
 
     // Stack-based BVH traversal
     // Support up to 256 threads per block with 32 stack elements each = 8192 total elements
@@ -458,12 +532,17 @@ __global__ void rayPrimitiveBVHKernel(GPUBVHNode *d_bvh_nodes, unsigned int *d_p
                         if (hit_distance < closest_hit_distance) {
                             closest_hit_distance = hit_distance;
                             hit_primitive_id = primitive_id;
+                            best_vertex_offset = (int) vertex_offset;
+                            best_ptype = ptype;
                         }
                     } else {
                         // For collision detection, any hit is sufficient
                         d_hit_distances[ray_idx] = hit_distance;
                         d_hit_primitive_ids[ray_idx] = primitive_id;
                         d_hit_counts[ray_idx] = 1; // Found at least one hit
+                        if (d_hit_normals) {
+                            d_hit_normals[ray_idx] = computeHitNormal(ptype, d_primitive_vertices, vertex_offset, ray_origin, ray_direction, hit_distance);
+                        }
                         return; // Early exit for collision detection
                     }
                 }
@@ -486,15 +565,24 @@ __global__ void rayPrimitiveBVHKernel(GPUBVHNode *d_bvh_nodes, unsigned int *d_p
         d_hit_distances[ray_idx] = closest_hit_distance;
         d_hit_primitive_ids[ray_idx] = hit_primitive_id;
         d_hit_counts[ray_idx] = 1;
+        if (d_hit_normals) {
+            d_hit_normals[ray_idx] = computeHitNormal(best_ptype, d_primitive_vertices, (unsigned int) best_vertex_offset, ray_origin, ray_direction, closest_hit_distance);
+        }
     } else if (!find_closest_hit) {
         d_hit_distances[ray_idx] = ray_max_distance + 1.0f; // No hit
         d_hit_primitive_ids[ray_idx] = 0xFFFFFFFF;
         d_hit_counts[ray_idx] = 0;
+        if (d_hit_normals) {
+            d_hit_normals[ray_idx] = make_float3(0.0f, 0.0f, 0.0f);
+        }
     } else {
         // No hit found
         d_hit_distances[ray_idx] = ray_max_distance + 1.0f;
         d_hit_primitive_ids[ray_idx] = 0xFFFFFFFF;
         d_hit_counts[ray_idx] = 0;
+        if (d_hit_normals) {
+            d_hit_normals[ray_idx] = make_float3(0.0f, 0.0f, 0.0f);
+        }
     }
 }
 
@@ -502,240 +590,101 @@ __global__ void rayPrimitiveBVHKernel(GPUBVHNode *d_bvh_nodes, unsigned int *d_p
 extern "C" {
 
 /**
- * \brief Launch optimized ray-triangle intersection kernel for true ray tracing
+ * \brief Launch the ray-primitive intersection kernel against scene geometry that is ALREADY resident on the device.
  *
- * This kernel implements proper ray-triangle intersection using the Möller-Trumbore
- * algorithm with GPU optimizations for high-performance ray tracing.
+ * Only the per-call ray inputs and hit outputs are allocated, uploaded, and freed here; the BVH, primitive indices,
+ * types, packed vertices, and vertex offsets are passed in as device pointers owned by the caller (uploaded once per
+ * scan by transferBVHToGPU). This is what keeps chunked synthetic scans from re-uploading the whole scene per chunk.
+ * Pass h_hit_normals != nullptr to also read back the per-ray face-forwarded surface normal (flat xyz, 3 floats/ray).
+ * CUDA failures throw helios_runtime_error (fail-fast) rather than writing partial results.
  *
- * \param[in] h_bvh_nodes Host array of BVH nodes
+ * \param[in] d_bvh_nodes Device BVH nodes (resident)
  * \param[in] node_count Number of BVH nodes
- * \param[in] h_primitive_indices Host array of primitive indices
+ * \param[in] d_primitive_indices Device primitive indices (resident)
  * \param[in] primitive_count Number of primitives
- * \param[in] h_triangle_vertices Host array of triangle vertex data (9 floats per triangle: v0,v1,v2)
- * \param[in] h_ray_origins Host array of ray origins (3 floats per ray)
- * \param[in] h_ray_directions Host array of ray directions (3 floats per ray)
- * \param[in] h_ray_max_distances Host array of ray maximum distances
+ * \param[in] d_primitive_types Device per-primitive type codes (resident)
+ * \param[in] d_primitive_vertices Device packed primitive vertices (resident)
+ * \param[in] d_vertex_offsets Device per-primitive vertex offsets (resident)
+ * \param[in] total_vertex_count Number of packed vertices
+ * \param[in] h_ray_origins Host ray origins (3 floats per ray)
+ * \param[in] h_ray_directions Host ray directions (3 floats per ray)
+ * \param[in] h_ray_max_distances Host ray maximum distances
  * \param[in] num_rays Number of rays to process
- * \param[out] h_hit_distances Host array for hit distances (closest hit per ray)
+ * \param[out] h_hit_distances Host array for closest-hit distances
  * \param[out] h_hit_primitive_ids Host array for hit primitive IDs
- * \param[out] h_hit_counts Host array for number of hits per ray
- * \param[in] find_closest_hit If true, return only closest hit; if false, return all hits within distance
+ * \param[out] h_hit_counts Host array for per-ray hit counts (0 == miss)
+ * \param[out] h_hit_normals Host array for per-ray surface normals (3 floats per ray), or nullptr to skip
+ * \param[in] find_closest_hit If true, return only the closest hit
  */
-void launchRayPrimitiveIntersection(void *h_bvh_nodes, int node_count, unsigned int *h_primitive_indices, int primitive_count, int *h_primitive_types, float3 *h_primitive_vertices, unsigned int *h_vertex_offsets, int total_vertex_count,
-                                    float *h_ray_origins, float *h_ray_directions, float *h_ray_max_distances, int num_rays, float *h_hit_distances, unsigned int *h_hit_primitive_ids, unsigned int *h_hit_counts, bool find_closest_hit) {
+void launchRaysOnResidentScene(void *d_bvh_nodes, int node_count, unsigned int *d_primitive_indices, int primitive_count, int *d_primitive_types, float3 *d_primitive_vertices, unsigned int *d_vertex_offsets, int total_vertex_count,
+                               const float *h_ray_origins, const float *h_ray_directions, const float *h_ray_max_distances, float uniform_max_distance, int num_rays, float *h_hit_distances, unsigned int *h_hit_primitive_ids,
+                               unsigned int *h_hit_counts, float *h_hit_normals, bool find_closest_hit) {
     if (num_rays == 0) {
         return;
     }
 
-    size_t total_vertices = total_vertex_count;
-
-    // Allocate device memory
-    GPUBVHNode *d_bvh_nodes = nullptr;
-    unsigned int *d_primitive_indices = nullptr;
-    int *d_primitive_types = nullptr;
-    float3 *d_primitive_vertices = nullptr;
-    unsigned int *d_vertex_offsets = nullptr;
-    float3 *d_ray_origins = nullptr, *d_ray_directions = nullptr;
-    float *d_ray_max_distances = nullptr;
-    float *d_hit_distances = nullptr;
+    // Allocate ONLY the per-call ray + result buffers; the geometry pointers are resident and owned by the caller. Each
+    // optional host pointer that is null skips its device buffer / copy, so a caller writing straight into its own arrays
+    // (the SoA path) drives no extra host staging. d_hit_counts is always allocated because the kernel writes it.
+    float3 *d_ray_origins = nullptr, *d_ray_directions = nullptr, *d_hit_normals = nullptr;
+    float *d_ray_max_distances = nullptr, *d_hit_distances = nullptr;
     unsigned int *d_hit_primitive_ids = nullptr, *d_hit_counts = nullptr;
 
-    // Calculate memory sizes
-    size_t bvh_nodes_size = node_count * sizeof(GPUBVHNode);
-    size_t primitive_indices_size = primitive_count * sizeof(unsigned int);
-    size_t primitive_types_size = primitive_count * sizeof(int);
-    size_t primitive_vertices_size = total_vertices * sizeof(float3);
-    size_t vertex_offsets_size = primitive_count * sizeof(unsigned int);
-    size_t ray_data_size = num_rays * sizeof(float3);
-    size_t ray_distances_size = num_rays * sizeof(float);
-    size_t hit_results_size = num_rays * sizeof(unsigned int);
+    const size_t ray_data_size = size_t(num_rays) * sizeof(float3);
+    const size_t ray_distances_size = size_t(num_rays) * sizeof(float);
+    const size_t hit_results_size = size_t(num_rays) * sizeof(unsigned int);
 
-    // Allocate GPU memory with error checking
-    cudaError_t err;
-
-    err = cudaMalloc(&d_bvh_nodes, bvh_nodes_size);
-    if (err != cudaSuccess) {
-        fprintf(stderr, "CUDA malloc error for BVH nodes: %s\n", cudaGetErrorString(err));
-        return;
+    HELIOS_CUDA_CHECK(cudaMalloc(&d_ray_origins, ray_data_size));
+    HELIOS_CUDA_CHECK(cudaMalloc(&d_ray_directions, ray_data_size));
+    HELIOS_CUDA_CHECK(cudaMalloc(&d_hit_distances, ray_distances_size));
+    HELIOS_CUDA_CHECK(cudaMalloc(&d_hit_primitive_ids, hit_results_size));
+    HELIOS_CUDA_CHECK(cudaMalloc(&d_hit_counts, hit_results_size));
+    const bool per_ray_max = (h_ray_max_distances != nullptr);
+    if (per_ray_max) {
+        HELIOS_CUDA_CHECK(cudaMalloc(&d_ray_max_distances, ray_distances_size));
+    }
+    const bool want_normals = (h_hit_normals != nullptr);
+    if (want_normals) {
+        HELIOS_CUDA_CHECK(cudaMalloc(&d_hit_normals, ray_data_size));
     }
 
-    err = cudaMalloc(&d_primitive_indices, primitive_indices_size);
-    if (err != cudaSuccess) {
-        fprintf(stderr, "CUDA malloc error for primitive indices: %s\n", cudaGetErrorString(err));
-        cudaFree(d_bvh_nodes);
-        return;
+    // helios::vec3 and the caller's flat xyz arrays have the exact byte layout of float3, so the host ray buffers copy
+    // straight into the device float3 buffers with no host repack. Directions are normalized in the kernel.
+    HELIOS_CUDA_CHECK(cudaMemcpy(d_ray_origins, h_ray_origins, ray_data_size, cudaMemcpyHostToDevice));
+    HELIOS_CUDA_CHECK(cudaMemcpy(d_ray_directions, h_ray_directions, ray_data_size, cudaMemcpyHostToDevice));
+    if (per_ray_max) {
+        HELIOS_CUDA_CHECK(cudaMemcpy(d_ray_max_distances, h_ray_max_distances, ray_distances_size, cudaMemcpyHostToDevice));
     }
 
-    err = cudaMalloc(&d_primitive_types, primitive_types_size);
-    if (err != cudaSuccess) {
-        fprintf(stderr, "CUDA malloc error for primitive types: %s\n", cudaGetErrorString(err));
-        cudaFree(d_bvh_nodes);
-        cudaFree(d_primitive_indices);
-        return;
-    }
-
-    err = cudaMalloc(&d_primitive_vertices, primitive_vertices_size);
-    if (err != cudaSuccess) {
-        fprintf(stderr, "CUDA malloc error for primitive vertices: %s\n", cudaGetErrorString(err));
-        cudaFree(d_bvh_nodes);
-        cudaFree(d_primitive_indices);
-        cudaFree(d_primitive_types);
-        return;
-    }
-
-    err = cudaMalloc(&d_vertex_offsets, vertex_offsets_size);
-    if (err != cudaSuccess) {
-        fprintf(stderr, "CUDA malloc error for vertex offsets: %s\n", cudaGetErrorString(err));
-        cudaFree(d_bvh_nodes);
-        cudaFree(d_primitive_indices);
-        cudaFree(d_primitive_types);
-        cudaFree(d_primitive_vertices);
-        return;
-    }
-
-    err = cudaMalloc(&d_ray_origins, ray_data_size);
-    if (err != cudaSuccess) {
-        fprintf(stderr, "CUDA malloc error for ray origins: %s\n", cudaGetErrorString(err));
-        cudaFree(d_bvh_nodes);
-        cudaFree(d_primitive_indices);
-        cudaFree(d_primitive_types);
-        cudaFree(d_primitive_vertices);
-        cudaFree(d_vertex_offsets);
-        return;
-    }
-
-    err = cudaMalloc(&d_ray_directions, ray_data_size);
-    if (err != cudaSuccess) {
-        fprintf(stderr, "CUDA malloc error for ray directions: %s\n", cudaGetErrorString(err));
-        cudaFree(d_bvh_nodes);
-        cudaFree(d_primitive_indices);
-        cudaFree(d_primitive_types);
-        cudaFree(d_primitive_vertices);
-        cudaFree(d_vertex_offsets);
-        cudaFree(d_ray_origins);
-        return;
-    }
-
-    err = cudaMalloc(&d_ray_max_distances, ray_distances_size);
-    if (err != cudaSuccess) {
-        fprintf(stderr, "CUDA malloc error for ray distances: %s\n", cudaGetErrorString(err));
-        cudaFree(d_bvh_nodes);
-        cudaFree(d_primitive_indices);
-        cudaFree(d_primitive_types);
-        cudaFree(d_primitive_vertices);
-        cudaFree(d_vertex_offsets);
-        cudaFree(d_ray_origins);
-        cudaFree(d_ray_directions);
-        return;
-    }
-
-    err = cudaMalloc(&d_hit_distances, ray_distances_size);
-    if (err != cudaSuccess) {
-        fprintf(stderr, "CUDA malloc error for hit distances: %s\n", cudaGetErrorString(err));
-        cudaFree(d_bvh_nodes);
-        cudaFree(d_primitive_indices);
-        cudaFree(d_primitive_types);
-        cudaFree(d_primitive_vertices);
-        cudaFree(d_vertex_offsets);
-        cudaFree(d_ray_origins);
-        cudaFree(d_ray_directions);
-        cudaFree(d_ray_max_distances);
-        return;
-    }
-
-    err = cudaMalloc(&d_hit_primitive_ids, hit_results_size);
-    if (err != cudaSuccess) {
-        fprintf(stderr, "CUDA malloc error for hit primitive IDs: %s\n", cudaGetErrorString(err));
-        cudaFree(d_bvh_nodes);
-        cudaFree(d_primitive_indices);
-        cudaFree(d_primitive_types);
-        cudaFree(d_primitive_vertices);
-        cudaFree(d_vertex_offsets);
-        cudaFree(d_ray_origins);
-        cudaFree(d_ray_directions);
-        cudaFree(d_ray_max_distances);
-        cudaFree(d_hit_distances);
-        return;
-    }
-
-    err = cudaMalloc(&d_hit_counts, hit_results_size);
-    if (err != cudaSuccess) {
-        fprintf(stderr, "CUDA malloc error for hit counts: %s\n", cudaGetErrorString(err));
-        cudaFree(d_bvh_nodes);
-        cudaFree(d_primitive_indices);
-        cudaFree(d_primitive_types);
-        cudaFree(d_primitive_vertices);
-        cudaFree(d_vertex_offsets);
-        cudaFree(d_ray_origins);
-        cudaFree(d_ray_directions);
-        cudaFree(d_ray_max_distances);
-        cudaFree(d_hit_distances);
-        cudaFree(d_hit_primitive_ids);
-        return;
-    }
-
-    // Convert ray data to float3 format
-    std::vector<float3> ray_origins_vec(num_rays);
-    std::vector<float3> ray_directions_vec(num_rays);
-    for (int i = 0; i < num_rays; i++) {
-        ray_origins_vec[i] = make_float3(h_ray_origins[i * 3], h_ray_origins[i * 3 + 1], h_ray_origins[i * 3 + 2]);
-        ray_directions_vec[i] = make_float3(h_ray_directions[i * 3], h_ray_directions[i * 3 + 1], h_ray_directions[i * 3 + 2]);
-    }
-
-    // Copy all data to GPU
-    cudaMemcpy(d_bvh_nodes, h_bvh_nodes, bvh_nodes_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_primitive_indices, h_primitive_indices, primitive_indices_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_primitive_types, h_primitive_types, primitive_types_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_primitive_vertices, h_primitive_vertices, primitive_vertices_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_vertex_offsets, h_vertex_offsets, vertex_offsets_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_ray_origins, ray_origins_vec.data(), ray_data_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_ray_directions, ray_directions_vec.data(), ray_data_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_ray_max_distances, h_ray_max_distances, ray_distances_size, cudaMemcpyHostToDevice);
-
-    // Launch the new primitive kernel
     int threads_per_block = 256;
     int num_blocks = (num_rays + threads_per_block - 1) / threads_per_block;
 
-    rayPrimitiveBVHKernel<<<num_blocks, threads_per_block>>>(d_bvh_nodes, d_primitive_indices, d_primitive_types, d_primitive_vertices, d_vertex_offsets, d_ray_origins, d_ray_directions, d_ray_max_distances, num_rays, primitive_count,
-                                                             total_vertex_count, d_hit_distances, d_hit_primitive_ids, d_hit_counts, find_closest_hit);
+    rayPrimitiveBVHKernel<<<num_blocks, threads_per_block>>>((GPUBVHNode *) d_bvh_nodes, d_primitive_indices, d_primitive_types, d_primitive_vertices, d_vertex_offsets, d_ray_origins, d_ray_directions, d_ray_max_distances,
+                                                             uniform_max_distance, num_rays, primitive_count, total_vertex_count, d_hit_distances, d_hit_primitive_ids, d_hit_counts, d_hit_normals, find_closest_hit);
 
-    // Synchronize and check for errors
     cudaDeviceSynchronize();
-    err = cudaGetLastError();
-    if (err != cudaSuccess) {
-        fprintf(stderr, "Ray-primitive intersection kernel error: %s\n", cudaGetErrorString(err));
-        // Clean up GPU memory before returning
-        cudaFree(d_bvh_nodes);
-        cudaFree(d_primitive_indices);
-        cudaFree(d_primitive_types);
-        cudaFree(d_primitive_vertices);
-        cudaFree(d_vertex_offsets);
-        cudaFree(d_ray_origins);
-        cudaFree(d_ray_directions);
-        cudaFree(d_ray_max_distances);
-        cudaFree(d_hit_distances);
-        cudaFree(d_hit_primitive_ids);
-        cudaFree(d_hit_counts);
-        return;
+    HELIOS_CUDA_CHECK(cudaGetLastError());
+
+    HELIOS_CUDA_CHECK(cudaMemcpy(h_hit_distances, d_hit_distances, ray_distances_size, cudaMemcpyDeviceToHost));
+    HELIOS_CUDA_CHECK(cudaMemcpy(h_hit_primitive_ids, d_hit_primitive_ids, hit_results_size, cudaMemcpyDeviceToHost));
+    if (h_hit_counts != nullptr) {
+        HELIOS_CUDA_CHECK(cudaMemcpy(h_hit_counts, d_hit_counts, hit_results_size, cudaMemcpyDeviceToHost));
+    }
+    if (want_normals) {
+        HELIOS_CUDA_CHECK(cudaMemcpy(h_hit_normals, d_hit_normals, ray_data_size, cudaMemcpyDeviceToHost));
     }
 
-    // Copy results back to host
-    cudaMemcpy(h_hit_distances, d_hit_distances, ray_distances_size, cudaMemcpyDeviceToHost);
-    cudaMemcpy(h_hit_primitive_ids, d_hit_primitive_ids, hit_results_size, cudaMemcpyDeviceToHost);
-    cudaMemcpy(h_hit_counts, d_hit_counts, hit_results_size, cudaMemcpyDeviceToHost);
-
-    // Clean up GPU memory
-    cudaFree(d_bvh_nodes);
-    cudaFree(d_primitive_indices);
-    cudaFree(d_primitive_types);
-    cudaFree(d_primitive_vertices);
-    cudaFree(d_vertex_offsets);
     cudaFree(d_ray_origins);
     cudaFree(d_ray_directions);
-    cudaFree(d_ray_max_distances);
+    if (d_ray_max_distances) {
+        cudaFree(d_ray_max_distances);
+    }
     cudaFree(d_hit_distances);
     cudaFree(d_hit_primitive_ids);
     cudaFree(d_hit_counts);
+    if (d_hit_normals) {
+        cudaFree(d_hit_normals);
+    }
 }
 
 /**

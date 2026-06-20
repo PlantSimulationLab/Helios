@@ -359,6 +359,32 @@ public:
      */
     std::vector<HitResult> castRays(const std::vector<RayQuery> &ray_queries, RayTracingStats *stats = nullptr);
 
+    /**
+     * \brief Cast a batch of rays supplied as Structure-of-Arrays and write results directly into caller-owned arrays.
+     *
+     * This is a low-memory alternative to \ref castRays(const std::vector<RayQuery>&, RayTracingStats*) for very large
+     * batches. It takes the ray origins and directions as plain contiguous arrays and writes the per-ray results into
+     * caller-provided output arrays, avoiding the intermediate \ref RayQuery input vector and \ref HitResult output vector
+     * (which together cost ~96 bytes/ray of transient storage, including an unused per-ray target list). All rays share a
+     * single \p max_distance; per-ray target filtering is not supported on this path (use \ref castRays for that).
+     *
+     * A ray that misses every primitive is signalled by writing \p out_primitive_UUID = 0xFFFFFFFF for that ray; on a miss
+     * \p out_distance and \p out_normal are left unspecified (callers must check the UUID sentinel before using them). The
+     * BVH and primitive cache are ensured current internally, but automatic BVH rebuilds are NOT toggled here — when issuing
+     * many batched calls over static geometry, the caller should disable automatic rebuilds and \ref buildBVH once around the
+     * whole batch (see \ref disableAutomaticBVHRebuilds).
+     *
+     * \param[in] origins Array of ray origins (length \p count).
+     * \param[in] directions Array of ray directions (length \p count; need not be pre-normalized).
+     * \param[in] count Number of rays.
+     * \param[in] max_distance Maximum ray distance shared by all rays (negative = infinite).
+     * \param[out] out_distance Array (length \p count) receiving the hit distance for each ray (valid only where out_primitive_UUID != 0xFFFFFFFF).
+     * \param[out] out_normal Array (length \p count) receiving the surface normal at the hit (valid only where out_primitive_UUID != 0xFFFFFFFF).
+     * \param[out] out_primitive_UUID Array (length \p count) receiving the hit primitive UUID, or 0xFFFFFFFF for a miss.
+     * \param[out] stats Optional ray-tracing statistics.
+     */
+    void castRaysSoA(const helios::vec3 *origins, const helios::vec3 *directions, size_t count, float max_distance, float *out_distance, helios::vec3 *out_normal, uint *out_primitive_UUID, RayTracingStats *stats = nullptr);
+
     // -------- OPTIMIZATION METHODS --------
 
     /**
@@ -875,6 +901,19 @@ public:
     void enableMessages();
 
     /**
+     * \brief Register an external cancellation flag polled during ray casting.
+     *
+     * When the pointed-to int is non-zero, the parallel ray loop in castRaysSoA()
+     * skips its remaining work (each thread short-circuits its assigned chunk), so
+     * a long synthetic scan can be aborted mid-trace. The flag is owned by the
+     * caller (e.g. a ctypes int shared with Python, written under the GIL while
+     * this trace runs GIL-free) and must outlive the trace. It is a single-word
+     * 0->1 monotonic flag, read via volatile so the loop re-reads it each tick;
+     * pass nullptr to clear. The per-ray read is effectively free.
+     */
+    void setCancelFlag(volatile int *flag);
+
+    /**
      * \brief Get the number of primitives in the BVH
      * \return Number of primitives
      */
@@ -903,6 +942,10 @@ private:
 
     //! Flag to enable/disable console messages
     bool printmessages;
+
+    //! External cancellation flag polled during ray casting (nullptr = none).
+    //! See setCancelFlag(); owned by the caller, read via volatile in castRaysSoA.
+    volatile int *cancel_flag = nullptr;
 
     // -------- THREAD-SAFE PRIMITIVE CACHE --------
 
@@ -1129,6 +1172,20 @@ private:
 
     //! GPU memory for primitive indices
     uint *d_primitive_indices;
+
+    //! GPU memory for per-primitive type codes (resident scene geometry, uploaded once per BVH build)
+    int *d_primitive_types;
+
+    //! GPU memory for packed primitive vertices (4 float3 per primitive; stored as void* to keep CUDA types out of this header)
+    void *d_primitive_vertices;
+
+    //! GPU memory for per-primitive vertex offsets into d_primitive_vertices
+    uint *d_vertex_offsets;
+
+    //! Cached descriptors of the resident GPU geometry (valid only while gpu_memory_allocated)
+    int d_gpu_node_count;
+    int d_gpu_primitive_count;
+    int d_gpu_total_vertex_count;
 
     //! GPU memory allocated flag
     bool gpu_memory_allocated;
@@ -1628,7 +1685,32 @@ private:
      * \brief Transfer BVH data from CPU to GPU
      */
     void transferBVHToGPU();
+
+    /**
+     * \brief Build the GPU-resident geometry arrays (types, packed vertices, offsets) for the current BVH.
+     *
+     * Walks primitive_indices (preserving BVH order) and packs each primitive into 4 vertices (padded). Vertices
+     * are emitted as a flat xyz float array (12 floats per primitive) so this declaration stays free of CUDA types;
+     * the caller reinterprets the buffer as float3[] for the device upload.
+     *
+     * \param[out] primitive_types Per-primitive type code (length = primitive_indices.size())
+     * \param[out] primitive_vertices_xyz Flat packed vertices (length = primitive_indices.size()*4*3)
+     * \param[out] vertex_offsets Per-primitive starting vertex index (length = primitive_indices.size())
+     */
+    void buildGPUGeometrySoA(std::vector<int> &primitive_types, std::vector<float> &primitive_vertices_xyz, std::vector<unsigned int> &vertex_offsets);
 #endif
+
+    /**
+     * \brief Shared GPU-dispatch predicate used by both castRays() and castRaysSoA().
+     *
+     * Returns true when GPU acceleration is enabled, the ray batch is large enough to amortize the launch, and the
+     * resident scene geometry is uploaded. Always false on a non-CUDA build. Keeping this in one place ensures the
+     * vector and SoA cast paths never drift in how they choose GPU vs CPU.
+     *
+     * \param[in] ray_count Number of rays in the batch
+     * \return True if the GPU path should be used for this batch
+     */
+    [[nodiscard]] bool shouldUseGPU(size_t ray_count) const;
 
     /**
      * \brief Mark BVH as dirty (needs rebuilding)

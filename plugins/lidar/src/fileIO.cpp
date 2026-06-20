@@ -32,6 +32,98 @@ void ensureOutputDirectoryExists(const char *filename) {
     }
 }
 
+namespace {
+
+    //! Build a Hamilton quaternion (qx,qy,qz,qw) from intrinsic Z-Y-X (yaw-pitch-roll) Tait-Bryan angles in radians.
+    /** Mirror of the canonical helper in LiDAR.cpp (same pinned convention: Hamilton body->world, q = qz(yaw)*qy(pitch)*qx(roll)).
+     *  Duplicated here only so the XML trajectory loader can convert Euler-form rows without exposing LiDAR.cpp internals. */
+    helios::vec4 trajQuatFromRPY(float roll, float pitch, float yaw) {
+        const float cr = std::cos(roll * 0.5f), sr = std::sin(roll * 0.5f);
+        const float cp = std::cos(pitch * 0.5f), sp = std::sin(pitch * 0.5f);
+        const float cy = std::cos(yaw * 0.5f), sy = std::sin(yaw * 0.5f);
+        helios::vec4 q;
+        q.w = cr * cp * cy + sr * sp * sy;
+        q.x = sr * cp * cy - cr * sp * sy;
+        q.y = cr * sp * cy + sr * cp * sy;
+        q.z = cr * cp * sy - sr * sp * cy;
+        return q;
+    }
+
+    //! Convert per-channel zenith angles (Helios convention, radians) back to elevation above the horizon (radians).
+    /** The XML loader parses <beamElevationAngles> directly into zenith angles; addScanSpinning expects elevation, so
+     *  this inverts the conversion (elevation = pi/2 - zenith) without losing precision. */
+    std::vector<float> beamElevationAnglesRad(const std::vector<float> &beamZenithAngles) {
+        std::vector<float> elevation;
+        elevation.reserve(beamZenithAngles.size());
+        for (float zenith: beamZenithAngles) {
+            elevation.push_back(0.5f * float(M_PI) - zenith);
+        }
+        return elevation;
+    }
+
+    //! Parse a stream of whitespace-separated trajectory rows into (times, positions, quaternions).
+    /**
+     * Each non-empty, non-comment ('#') row is either 8 numbers (t x y z qx qy qz qw, quaternion form) or 7 numbers
+     * (t x y z roll pitch yaw, Euler form in DEGREES, intrinsic Z-Y-X). The row width is auto-detected per row but must
+     * be consistent across the whole stream. Euler rows are converted to Hamilton body->world quaternions. The caller
+     * supplies a context string (e.g. "scan #0") for error messages. Fails fast on ragged/short rows.
+     */
+    void parseTrajectoryStream(std::istream &stream, const std::string &context, std::vector<double> &traj_t, std::vector<helios::vec3> &traj_pos, std::vector<helios::vec4> &traj_quat) {
+
+        traj_t.clear();
+        traj_pos.clear();
+        traj_quat.clear();
+
+        int row_width = 0; // 0 = undetermined, otherwise 7 or 8
+        std::string line;
+        size_t line_number = 0;
+        while (std::getline(stream, line)) {
+            line_number++;
+            // Strip a trailing comment and skip blank/comment lines.
+            const size_t hash = line.find('#');
+            if (hash != std::string::npos) {
+                line = line.substr(0, hash);
+            }
+            std::istringstream ls(line);
+            std::vector<double> vals;
+            double v;
+            while (ls >> v) {
+                vals.push_back(v);
+            }
+            if (vals.empty()) {
+                continue; // blank or comment-only line
+            }
+            if (row_width == 0) {
+                if (vals.size() != 7 && vals.size() != 8) {
+                    helios_runtime_error("ERROR (LiDARcloud::loadXML): trajectory for " + context + " has a row with " + std::to_string(vals.size()) +
+                                         " numbers on line " + std::to_string(line_number) + ". Each row must have 8 numbers (t x y z qx qy qz qw) or 7 numbers (t x y z roll pitch yaw, degrees).");
+                }
+                row_width = int(vals.size());
+            } else if (int(vals.size()) != row_width) {
+                helios_runtime_error("ERROR (LiDARcloud::loadXML): trajectory for " + context + " is ragged: line " + std::to_string(line_number) + " has " + std::to_string(vals.size()) + " numbers but earlier rows have " +
+                                     std::to_string(row_width) + ". All trajectory rows must have the same number of columns.");
+            }
+
+            traj_t.push_back(vals[0]);
+            traj_pos.push_back(helios::make_vec3(float(vals[1]), float(vals[2]), float(vals[3])));
+            if (row_width == 8) {
+                traj_quat.push_back(helios::make_vec4(float(vals[4]), float(vals[5]), float(vals[6]), float(vals[7])));
+            } else {
+                // Euler degrees -> radians -> Hamilton body->world quaternion (intrinsic Z-Y-X).
+                const float roll = float(vals[4]) * float(M_PI) / 180.f;
+                const float pitch = float(vals[5]) * float(M_PI) / 180.f;
+                const float yaw = float(vals[6]) * float(M_PI) / 180.f;
+                traj_quat.push_back(trajQuatFromRPY(roll, pitch, yaw));
+            }
+        }
+
+        if (traj_t.empty()) {
+            helios_runtime_error("ERROR (LiDARcloud::loadXML): trajectory for " + context + " contains no pose rows.");
+        }
+    }
+
+} // namespace
+
 void LiDARcloud::loadXML(const char *filename) {
     loadXML(filename, false);
 }
@@ -132,30 +224,12 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
             }
 
             // ----- scan size (resolution) ------//
-            // Raster scans require <size> = "Ntheta Nphi". Spinning multibeam scans derive Ntheta from the number of channels
-            // (beamElevationAngles) and take the azimuth-step count Nphi from <Nphi> (or the second component of <size>).
-            helios::int2 size;
+            // Raster scans require <size> = "Ntheta Nphi". Spinning multibeam scans set Ntheta from the number of channels
+            // (beamElevationAngles) and derive the azimuth-step count Nphi internally from <azimuthStep>, <PRF>, and the
+            // trajectory (see the dispatch below), so they do not specify a <size>.
+            helios::int2 size = make_int2(0, 0);
             if (spinning_multibeam) {
                 size.x = int(beamZenithAngles.size()); // Ntheta = number of laser channels
-                const char *nphi_str = s.child_value("Nphi");
-                if (strlen(nphi_str) == 0) {
-                    nphi_str = s.child_value("nphi");
-                }
-                if (strlen(nphi_str) > 0) {
-                    size.y = atoi(nphi_str);
-                } else {
-                    const char *size_str = s.child_value("size");
-                    if (strlen(size_str) == 0) {
-                        cerr << "failed.\n";
-                        helios_runtime_error("ERROR (LiDARcloud::loadXML): A spinning_multibeam scan (#" + std::to_string(scan_count) + ") requires the number of azimuth steps, given as <Nphi> or the second component of <size>.");
-                    }
-                    size = string2int2(size_str);
-                    size.x = int(beamZenithAngles.size());
-                }
-                if (size.y <= 0) {
-                    cerr << "failed.\n";
-                    helios_runtime_error("ERROR (LiDARcloud::loadXML): The number of azimuth steps (Nphi) must be positive (check scan #" + std::to_string(scan_count) + ").");
-                }
             } else {
                 const char *size_str = s.child_value("size");
                 if (strlen(size_str) == 0) {
@@ -321,6 +395,79 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
                 scanAzimuthOffset = atof(scanAzimuth_str) * float(M_PI) / 180.f; // degrees -> radians
             }
 
+            // ----- returnMode (analytic-waveform return reporting: 'multi' (default) or 'single') ------//
+            std::string returnMode_str = deblank(s.child_value("returnMode"));
+            if (returnMode_str.empty()) {
+                returnMode_str = deblank(s.child_value("returnmode"));
+            }
+            std::transform(returnMode_str.begin(), returnMode_str.end(), returnMode_str.begin(), [](unsigned char ch) { return std::tolower(ch); });
+            ReturnMode returnMode = RETURN_MODE_MULTI;
+            if (returnMode_str == "single") {
+                returnMode = RETURN_MODE_SINGLE;
+            } else if (!returnMode_str.empty() && returnMode_str != "multi") {
+                cerr << "failed.\n";
+                helios_runtime_error("ERROR (LiDARcloud::loadXML): Unrecognized returnMode '" + returnMode_str + "' for scan #" + std::to_string(scan_count) + ". Valid values are 'multi' and 'single'.");
+            }
+
+            // ----- singleReturnSelection ('strongest' (default), 'first', 'last', or 'strongest_plus_last' / 'dual') ------//
+            std::string singleSel_str = deblank(s.child_value("singleReturnSelection"));
+            if (singleSel_str.empty()) {
+                singleSel_str = deblank(s.child_value("singlereturnselection"));
+            }
+            std::transform(singleSel_str.begin(), singleSel_str.end(), singleSel_str.begin(), [](unsigned char ch) { return std::tolower(ch); });
+            SingleReturnSelection singleReturnSelection = SINGLE_RETURN_STRONGEST;
+            if (singleSel_str == "first") {
+                singleReturnSelection = SINGLE_RETURN_FIRST;
+            } else if (singleSel_str == "last") {
+                singleReturnSelection = SINGLE_RETURN_LAST;
+            } else if (singleSel_str == "strongest_plus_last" || singleSel_str == "dual") {
+                singleReturnSelection = SINGLE_RETURN_STRONGEST_PLUS_LAST;
+            } else if (!singleSel_str.empty() && singleSel_str != "strongest") {
+                cerr << "failed.\n";
+                helios_runtime_error("ERROR (LiDARcloud::loadXML): Unrecognized singleReturnSelection '" + singleSel_str + "' for scan #" + std::to_string(scan_count) + ". Valid values are 'strongest', 'first', 'last', and 'strongest_plus_last' (alias 'dual').");
+            }
+
+            // ----- maxReturns (returns per pulse in single/limited mode: 1=single, 2=dual, N=N-return) ------//
+            int maxReturns = 1;
+            const char *maxReturns_str = s.child_value("maxReturns");
+            if (strlen(maxReturns_str) == 0) {
+                maxReturns_str = s.child_value("maxreturns");
+            }
+            if (strlen(maxReturns_str) > 0) {
+                maxReturns = atoi(maxReturns_str);
+                if (maxReturns < 1) {
+                    cerr << "failed.\n";
+                    helios_runtime_error("ERROR (LiDARcloud::loadXML): maxReturns must be at least 1, but '" + std::string(maxReturns_str) + "' was given for scan #" + std::to_string(scan_count) + ".");
+                }
+            }
+
+            // ----- pulseWidth (range resolution, meters) or pulseDuration (seconds, converted via c*tau/2) ------//
+            float pulseWidth = 0.f;
+            const char *pulseWidth_str = s.child_value("pulseWidth");
+            if (strlen(pulseWidth_str) == 0) {
+                pulseWidth_str = s.child_value("pulsewidth");
+            }
+            const char *pulseDuration_str = s.child_value("pulseDuration");
+            if (strlen(pulseDuration_str) == 0) {
+                pulseDuration_str = s.child_value("pulseduration");
+            }
+            if (strlen(pulseWidth_str) > 0) {
+                pulseWidth = fmax(0, atof(pulseWidth_str));
+            } else if (strlen(pulseDuration_str) > 0) {
+                // Round-trip range extent of a pulse of duration tau: R = c * tau / 2 (c = speed of light in m/s).
+                pulseWidth = fmax(0.f, float(atof(pulseDuration_str)) * 299792458.f * 0.5f);
+            }
+
+            // ----- detectionThreshold (minimum return energy fraction) ------//
+            float detectionThreshold = 0.f;
+            const char *detThresh_str = s.child_value("detectionThreshold");
+            if (strlen(detThresh_str) == 0) {
+                detThresh_str = s.child_value("detectionthreshold");
+            }
+            if (strlen(detThresh_str) > 0) {
+                detectionThreshold = fmax(0, atof(detThresh_str));
+            }
+
             // ----- distanceFilter ------//
             const char *dFilter_str = s.child_value("distanceFilter");
 
@@ -344,23 +491,176 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
                 }
             }
 
-            // Require an emission origin from one of the two sources: a static <origin> tag, or per-point origin columns
-            // in the ASCII data (origin_x/origin_y/origin_z). One of the two is mandatory for both static and mobile scans.
+            // Require an emission origin. A trajectory-driven scan (a spinning scan, or any scan with a <trajectory> /
+            // <trajectoryFile>) supplies the per-pulse origin from the trajectory, so it needs neither a static <origin>
+            // nor per-point origin columns. A static scan must provide one of: a static <origin> tag, or per-point origin
+            // columns (origin_x/origin_y/origin_z) in the ASCII data.
             const bool has_perpoint_origin = (std::find(column_format.begin(), column_format.end(), "origin_x") != column_format.end() && std::find(column_format.begin(), column_format.end(), "origin_y") != column_format.end() &&
                                               std::find(column_format.begin(), column_format.end(), "origin_z") != column_format.end());
-            if (!has_static_origin && !has_perpoint_origin) {
+            const bool has_trajectory_tag = (!s.child("trajectory").empty() || strlen(s.child_value("trajectoryFile")) != 0 || strlen(s.child_value("trajectoryfile")) != 0);
+            if (!has_static_origin && !has_perpoint_origin && !spinning_multibeam && !has_trajectory_tag) {
                 cerr << "failed.\n";
                 helios_runtime_error("ERROR (LiDARcloud::loadXML): Scan #" + std::to_string(scan_count) +
                                      " has no beam origin. Specify either a static <origin> tag, or per-point origin columns (origin_x origin_y origin_z) in the <ASCII_format> and data file.");
             }
 
-            // create a temporary scan object
-            ScanMetadata scan = spinning_multibeam ? ScanMetadata(origin, beamZenithAngles, size.y, phiMin, phiMax, exitDiameter, beamDivergence, rangeNoiseStdDev, angleNoiseStdDev, column_format, scanTiltRoll, scanTiltPitch, scanAzimuthOffset)
-                                                   : ScanMetadata(origin, size.x, thetaMin, thetaMax, size.y, phiMin, phiMax, exitDiameter, beamDivergence, rangeNoiseStdDev, angleNoiseStdDev, column_format, scanTiltRoll, scanTiltPitch, scanAzimuthOffset);
+            // ----- physical-parameter (moving-platform / spinning) tags ------//
+            // These describe a moving-platform or spinning-multibeam instrument using its physical parameters; when present,
+            // Helios derives the internal sampling grid (see addScanSpinning / addScanMovingRaster). Their presence switches
+            // the scan from the legacy static-grid path to the trajectory-driven path.
 
-            addScan(scan);
+            // Azimuth resolution (degrees per firing step) -> radians. Primary azimuth control for a spinning sensor.
+            float azimuthStep_rad = 0.f;
+            const char *azStep_str = s.child_value("azimuthStep");
+            if (strlen(azStep_str) == 0) {
+                azStep_str = s.child_value("azimuthstep");
+            }
+            if (strlen(azStep_str) > 0) {
+                azimuthStep_rad = float(atof(azStep_str)) * float(M_PI) / 180.f;
+            }
 
-            uint scanID = getScanCount() - 1;
+            // Pulse repetition frequency (Hz).
+            float PRF = 0.f;
+            const char *prf_str = s.child_value("PRF");
+            if (strlen(prf_str) == 0) {
+                prf_str = s.child_value("pulseRate");
+            }
+            if (strlen(prf_str) == 0) {
+                prf_str = s.child_value("pulserate");
+            }
+            if (strlen(prf_str) > 0) {
+                PRF = float(atof(prf_str));
+            }
+
+            // Lever arm (sensor optical center in the body frame, meters) and boresight (roll pitch yaw, degrees).
+            vec3 lever_arm = make_vec3(0, 0, 0);
+            const char *lever_str = s.child_value("leverArm");
+            if (strlen(lever_str) == 0) {
+                lever_str = s.child_value("leverarm");
+            }
+            if (strlen(lever_str) > 0) {
+                lever_arm = string2vec3(lever_str);
+            }
+            vec3 boresight_rpy = make_vec3(0, 0, 0);
+            const char *boresight_str = s.child_value("boresight");
+            if (strlen(boresight_str) > 0) {
+                boresight_rpy = string2vec3(boresight_str) * float(M_PI) / 180.f; // degrees -> radians
+            }
+
+            // t0 (time of first pulse, seconds). Optional; defaults to the trajectory start.
+            double t0 = 0.0;
+            bool t0_specified = false;
+            const char *t0_str = s.child_value("t0");
+            if (strlen(t0_str) > 0) {
+                t0 = atof(t0_str);
+                t0_specified = true;
+            }
+
+            // Trajectory: either an inline <trajectory> block of <pose> children, or a referenced <trajectoryFile>.
+            std::vector<double> traj_t;
+            std::vector<vec3> traj_pos;
+            std::vector<vec4> traj_quat;
+            bool has_trajectory = false;
+            pugi::xml_node traj_node = s.child("trajectory");
+            const char *trajFile_str = s.child_value("trajectoryFile");
+            if (strlen(trajFile_str) == 0) {
+                trajFile_str = s.child_value("trajectoryfile");
+            }
+            if (!traj_node.empty()) {
+                // Inline trajectory: concatenate the text of all <pose> children into a stream of rows.
+                std::ostringstream poses;
+                for (pugi::xml_node p = traj_node.child("pose"); p; p = p.next_sibling("pose")) {
+                    poses << p.child_value() << "\n";
+                }
+                std::istringstream traj_stream(poses.str());
+                parseTrajectoryStream(traj_stream, "scan #" + std::to_string(scan_count), traj_t, traj_pos, traj_quat);
+                has_trajectory = true;
+            } else if (strlen(trajFile_str) > 0) {
+                // Referenced trajectory file: resolve relative to the XML file, then cwd.
+                std::string resolved_traj;
+                std::vector<std::string> candidates;
+                candidates.emplace_back(trajFile_str);
+                if (!xml_parent_dir.empty()) {
+                    candidates.push_back((xml_parent_dir / trajFile_str).string());
+                }
+                candidates.push_back("input/" + std::string(trajFile_str));
+                for (const std::string &candidate: candidates) {
+                    ifstream tf(candidate);
+                    if (tf.good()) {
+                        resolved_traj = candidate;
+                        break;
+                    }
+                }
+                if (resolved_traj.empty()) {
+                    cerr << "failed.\n";
+                    helios_runtime_error("ERROR (LiDARcloud::loadXML): trajectory file `" + std::string(trajFile_str) + "' given for scan #" + std::to_string(scan_count) + " does not exist.");
+                }
+                ifstream tf(resolved_traj);
+                parseTrajectoryStream(tf, "scan #" + std::to_string(scan_count), traj_t, traj_pos, traj_quat);
+                has_trajectory = true;
+            }
+
+            // Dispatch by scan type. A spinning_multibeam scan is always set up from its physical parameters (channel
+            // elevations + <azimuthStep> + <PRF> + a trajectory); there is no static azimuth-grid form. A stationary "spin
+            // in place" capture is just a trajectory of two coincident poses whose time gap sets the acquisition duration.
+            // A non-spinning scan with a trajectory is a moving raster; otherwise it is a static raster.
+            const bool physical_moving_raster = !spinning_multibeam && has_trajectory && (PRF > 0.f);
+
+            uint scanID;
+
+            if (spinning_multibeam) {
+
+                if (azimuthStep_rad <= 0.f) {
+                    cerr << "failed.\n";
+                    helios_runtime_error("ERROR (LiDARcloud::loadXML): spinning_multibeam scan #" + std::to_string(scan_count) + " requires an azimuth resolution given as <azimuthStep> (degrees per firing step).");
+                }
+                if (PRF <= 0.f) {
+                    cerr << "failed.\n";
+                    helios_runtime_error("ERROR (LiDARcloud::loadXML): spinning_multibeam scan #" + std::to_string(scan_count) + " requires a pulse repetition rate given as <PRF> (Hz).");
+                }
+                if (!has_trajectory) {
+                    cerr << "failed.\n";
+                    helios_runtime_error("ERROR (LiDARcloud::loadXML): spinning_multibeam scan #" + std::to_string(scan_count) +
+                                         " requires a <trajectory> or <trajectoryFile>. For a stationary spin in place, give two coincident poses with the same position and orientation, separated in time by the acquisition duration.");
+                }
+
+                scanID = addScanSpinning(beamElevationAnglesRad(beamZenithAngles), azimuthStep_rad, PRF, traj_t, traj_pos, traj_quat, lever_arm, boresight_rpy, exitDiameter, beamDivergence, rangeNoiseStdDev, angleNoiseStdDev, column_format,
+                                         t0_specified ? t0 : (traj_t.empty() ? 0.0 : traj_t.front()));
+
+                // Apply analytic-waveform return parameters (not constructor arguments of the new entry points).
+                setScanReturnMode(scanID, returnMode);
+                setScanSingleReturnSelection(scanID, singleReturnSelection);
+                setScanMaxReturns(scanID, maxReturns);
+                setScanPulseWidth(scanID, pulseWidth);
+                setScanDetectionThreshold(scanID, detectionThreshold);
+
+            } else if (physical_moving_raster) {
+
+                scanID = addScanMovingRaster(size.x, thetaMin, thetaMax, size.y, phiMin, phiMax, PRF, traj_t, traj_pos, traj_quat, lever_arm, boresight_rpy, exitDiameter, beamDivergence, rangeNoiseStdDev, angleNoiseStdDev, column_format,
+                                             t0_specified ? t0 : (traj_t.empty() ? 0.0 : traj_t.front()));
+
+                setScanReturnMode(scanID, returnMode);
+                setScanSingleReturnSelection(scanID, singleReturnSelection);
+                setScanMaxReturns(scanID, maxReturns);
+                setScanPulseWidth(scanID, pulseWidth);
+                setScanDetectionThreshold(scanID, detectionThreshold);
+
+            } else {
+
+                // Static raster scan (single fixed origin, uniform Ntheta x Nphi angular grid).
+                ScanMetadata scan(origin, size.x, thetaMin, thetaMax, size.y, phiMin, phiMax, exitDiameter, beamDivergence, rangeNoiseStdDev, angleNoiseStdDev, column_format, scanTiltRoll, scanTiltPitch, scanAzimuthOffset);
+
+                // Analytic-waveform return parameters (not constructor arguments)
+                scan.returnMode = returnMode;
+                scan.singleReturnSelection = singleReturnSelection;
+                scan.maxReturns = maxReturns;
+                scan.pulseWidth = pulseWidth;
+                scan.detectionThreshold = detectionThreshold;
+
+                addScan(scan);
+
+                scanID = getScanCount() - 1;
+            }
 
             // ----- ASCII data file name ------//
             std::string data_filename = deblank(s.child_value("filename"));
@@ -390,11 +690,11 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
                     helios_runtime_error("ERROR (LiDARcloud::loadXML): Data file `" + data_filename + "' given for scan #" + std::to_string(scan_count) + " does not exist.");
                 }
 
-                scan.data_file = resolved_data_file; // set the data file for the scan
+                scans.at(scanID).data_file = resolved_data_file; // set the data file for the registered scan
 
                 // add hit points to scan if data file was given
 
-                total_hits += loadASCIIFile(scanID, scan.data_file);
+                total_hits += loadASCIIFile(scanID, scans.at(scanID).data_file);
 
                 if (translation.magnitude() > 0.f) {
                     coordinateShift(scanID, translation);
@@ -1029,16 +1329,12 @@ void LiDARcloud::exportPointCloud(const char *filename, uint scanID, bool write_
         helios_runtime_error("ERROR (LiDARcloud::exportPointCloud): Could not open file '" + std::string(filename) + "' for writing.");
     }
 
-    std::vector<std::string> hit_data;
-    for (int r = 0; r < getHitCount(); r++) {
-        std::map<std::string, double> data = hits.at(r).data;
-        for (std::map<std::string, double>::iterator iter = data.begin(); iter != data.end(); ++iter) {
-            std::vector<std::string>::iterator it = find(hit_data.begin(), hit_data.end(), iter->first);
-            if (it == hit_data.end()) {
-                hit_data.push_back(iter->first);
-            }
-        }
-    }
+    // The union of per-hit scalar-data labels is exactly the set of columns in the columnar store. This
+    // used to be computed by copying every hit's whole std::map and scanning it (an O(N*keys) pass that
+    // was a second hidden export hot spot); with columnar storage it is just the label list. (This
+    // collected list is presently unused downstream — the export columns come from getScanColumnFormat
+    // below — but is kept for parity with the prior behavior.)
+    std::vector<std::string> hit_data = hit_data_labels;
 
     std::vector<std::string> ASCII_format = getScanColumnFormat(scanID);
 
@@ -1060,6 +1356,55 @@ void LiDARcloud::exportPointCloud(const char *filename, uint scanID, bool write_
         file << std::endl;
     }
 
+    // Resolve every output column ONCE to either a built-in field code or a scalar-data column slot, so
+    // the per-hit inner loop does no string comparisons and no per-cell map/hash lookups. A scalar column
+    // resolves to its slot index in the columnar store (>= 0), or COL_ABSENT if the label is not a known
+    // column at all. Built-ins (x/y/z/r/g/b/...) get distinct negative codes.
+    enum ColCode {
+        COL_X = -1,
+        COL_Y = -2,
+        COL_Z = -3,
+        COL_R = -4,
+        COL_G = -5,
+        COL_B = -6,
+        COL_R255 = -7,
+        COL_G255 = -8,
+        COL_B255 = -9,
+        COL_ZENITH = -10,
+        COL_AZIMUTH = -11,
+        COL_ABSENT = -12
+    };
+    std::vector<int> col_resolved(ASCII_format.size());
+    for (size_t c = 0; c < ASCII_format.size(); c++) {
+        const std::string &tok = ASCII_format[c];
+        if (tok == "x") {
+            col_resolved[c] = COL_X;
+        } else if (tok == "y") {
+            col_resolved[c] = COL_Y;
+        } else if (tok == "z") {
+            col_resolved[c] = COL_Z;
+        } else if (tok == "r") {
+            col_resolved[c] = COL_R;
+        } else if (tok == "g") {
+            col_resolved[c] = COL_G;
+        } else if (tok == "b") {
+            col_resolved[c] = COL_B;
+        } else if (tok == "r255") {
+            col_resolved[c] = COL_R255;
+        } else if (tok == "g255") {
+            col_resolved[c] = COL_G255;
+        } else if (tok == "b255") {
+            col_resolved[c] = COL_B255;
+        } else if (tok == "zenith") {
+            col_resolved[c] = COL_ZENITH;
+        } else if (tok == "azimuth") {
+            col_resolved[c] = COL_AZIMUTH;
+        } else {
+            int slot = getHitDataColumnIndex(tok.c_str());
+            col_resolved[c] = (slot >= 0) ? slot : COL_ABSENT;
+        }
+    }
+
     for (int r = 0; r < getHitCount(); r++) {
 
         if (getHitScanID(r) != scanID) {
@@ -1071,31 +1416,36 @@ void LiDARcloud::exportPointCloud(const char *filename, uint scanID, bool write_
 
         for (int c = 0; c < ASCII_format.size(); c++) {
 
-            if (ASCII_format.at(c).compare("x") == 0) {
+            const int code = col_resolved[c];
+            if (code >= 0) { // scalar-data column slot
+                if (hit_data_present[code][r] != char(0)) {
+                    file << hit_data_columns[code][r];
+                } else {
+                    file << -9999;
+                }
+            } else if (code == COL_X) {
                 file << xyz.x;
-            } else if (ASCII_format.at(c).compare("y") == 0) {
+            } else if (code == COL_Y) {
                 file << xyz.y;
-            } else if (ASCII_format.at(c).compare("z") == 0) {
+            } else if (code == COL_Z) {
                 file << xyz.z;
-            } else if (ASCII_format.at(c).compare("r") == 0) {
+            } else if (code == COL_R) {
                 file << color.r;
-            } else if (ASCII_format.at(c).compare("g") == 0) {
+            } else if (code == COL_G) {
                 file << color.g;
-            } else if (ASCII_format.at(c).compare("b") == 0) {
+            } else if (code == COL_B) {
                 file << color.b;
-            } else if (ASCII_format.at(c).compare("r255") == 0) {
+            } else if (code == COL_R255) {
                 file << round(color.r * 255);
-            } else if (ASCII_format.at(c).compare("g255") == 0) {
+            } else if (code == COL_G255) {
                 file << round(color.g * 255);
-            } else if (ASCII_format.at(c).compare("b255") == 0) {
+            } else if (code == COL_B255) {
                 file << round(color.b * 255);
-            } else if (ASCII_format.at(c).compare("zenith") == 0) {
+            } else if (code == COL_ZENITH) {
                 file << getHitRaydir(r).zenith;
-            } else if (ASCII_format.at(c).compare("azimuth") == 0) {
+            } else if (code == COL_AZIMUTH) {
                 file << getHitRaydir(r).azimuth;
-            } else if (hits.at(r).data.find(ASCII_format.at(c)) != hits.at(r).data.end()) { // hit scalar data
-                file << getHitData(r, ASCII_format.at(c).c_str());
-            } else {
+            } else { // COL_ABSENT
                 file << -9999;
             }
 
@@ -1170,6 +1520,10 @@ void LiDARcloud::exportScans(const char *filename) {
             append_text_child("origin", origin_ss.str());
         }
 
+        const ScanMode scan_mode = getScanMode(i);
+        const bool is_spinning = (scan_mode == SCAN_MODE_SPINNING);
+        const bool is_moving_raster = (scan_mode == SCAN_MODE_MOVING_RASTER);
+
         // Spinning multibeam scans store the per-channel zenith angles rather than a uniform theta range, so write the pattern
         // and channel elevation angles (in degrees above the horizon) to round-trip the scan geometry on re-import.
         if (getScanPattern(i) == SCAN_PATTERN_SPINNING_MULTIBEAM) {
@@ -1183,21 +1537,101 @@ void LiDARcloud::exportScans(const char *filename) {
                 elev_ss << (0.5f * float(M_PI) - beam_zenith_angles[c]) * 180.f / float(M_PI); // zenith -> elevation (deg)
             }
             append_text_child("beamElevationAngles", elev_ss.str());
-            append_text_child("Nphi", std::to_string(Nphi));
-        } else {
+            // A spinning scan derives Nphi (and the azimuth sweep) internally from the azimuth resolution, PRF, and
+            // trajectory, which are written below; no <size>/<Nphi>/<phiMax> is emitted.
+        } else if (!is_moving_raster) {
             std::ostringstream size_ss;
             size_ss << Ntheta << " " << Nphi;
             append_text_child("size", size_ss.str());
         }
 
-        append_text_child("thetaMin", std::to_string(theta_range.x * 180.f / float(M_PI)));
-        append_text_child("thetaMax", std::to_string(theta_range.y * 180.f / float(M_PI)));
-        append_text_child("phiMin", std::to_string(phi_range.x * 180.f / float(M_PI)));
-        append_text_child("phiMax", std::to_string(phi_range.y * 180.f / float(M_PI)));
+        // The angular bounds describe the per-frame fan. For a physical spinning scan they are derived (phiMax encodes the
+        // multi-revolution sweep) and must NOT be written; for a moving raster the fan resolution is written via <size> below.
+        if (is_moving_raster) {
+            std::ostringstream size_ss;
+            size_ss << Ntheta << " " << Nphi;
+            append_text_child("size", size_ss.str());
+        }
+        if (!is_spinning) {
+            append_text_child("thetaMin", std::to_string(theta_range.x * 180.f / float(M_PI)));
+            append_text_child("thetaMax", std::to_string(theta_range.y * 180.f / float(M_PI)));
+            append_text_child("phiMin", std::to_string(phi_range.x * 180.f / float(M_PI)));
+            append_text_child("phiMax", std::to_string(phi_range.y * 180.f / float(M_PI)));
+        }
+
+        // ----- physical-parameter (moving / spinning) round-trip ------//
+        // Emit the physical instrument parameters and a trajectory sidecar CSV so a moving-platform or spinning scan
+        // reloads through the same physical-parameter path it was created with (addScanSpinning / addScanMovingRaster).
+        if (is_spinning || is_moving_raster) {
+            const ScanMetadata &sm = scans.at(i);
+
+            // PRF (Hz) from the per-pulse period.
+            if (sm.pulse_period > 0.0) {
+                append_text_child("PRF", std::to_string(1.0 / sm.pulse_period));
+            }
+            if (is_spinning && sm.steps_per_rev > 0) {
+                // Azimuth resolution in degrees per step (360 / steps_per_rev).
+                append_text_child("azimuthStep", std::to_string(360.0 / double(sm.steps_per_rev)));
+            }
+            if (sm.lever_arm.x != 0.f || sm.lever_arm.y != 0.f || sm.lever_arm.z != 0.f) {
+                std::ostringstream lever_ss;
+                lever_ss << sm.lever_arm.x << " " << sm.lever_arm.y << " " << sm.lever_arm.z;
+                append_text_child("leverArm", lever_ss.str());
+            }
+            if (sm.boresight_rpy.x != 0.f || sm.boresight_rpy.y != 0.f || sm.boresight_rpy.z != 0.f) {
+                std::ostringstream boresight_ss;
+                boresight_ss << sm.boresight_rpy.x * 180.f / float(M_PI) << " " << sm.boresight_rpy.y * 180.f / float(M_PI) << " " << sm.boresight_rpy.z * 180.f / float(M_PI);
+                append_text_child("boresight", boresight_ss.str());
+            }
+            if (sm.t0 != 0.0) {
+                append_text_child("t0", std::to_string(sm.t0));
+            }
+
+            // Trajectory sidecar CSV: "<stem>_<i>_traj.csv" alongside the XML, columns t x y z qx qy qz qw.
+            std::string traj_basename = stem + "_" + std::to_string(i) + "_traj.csv";
+            std::filesystem::path traj_path = parent_dir / traj_basename;
+            std::ofstream traj_file(traj_path.string());
+            if (!traj_file.is_open()) {
+                helios_runtime_error("ERROR (LiDARcloud::exportScans): Could not write trajectory file '" + traj_path.string() + "'.");
+            }
+            traj_file << "# t x y z qx qy qz qw\n";
+            for (size_t k = 0; k < sm.traj_t.size(); k++) {
+                const vec3 &p = sm.traj_pos.at(k);
+                const vec4 &q = sm.traj_quat.at(k);
+                traj_file << sm.traj_t.at(k) << " " << p.x << " " << p.y << " " << p.z << " " << q.x << " " << q.y << " " << q.z << " " << q.w << "\n";
+            }
+            traj_file.close();
+            append_text_child("trajectoryFile", traj_basename);
+        }
+
         append_text_child("exitDiameter", std::to_string(exit_diameter));
         append_text_child("beamDivergence", std::to_string(beam_divergence));
         append_text_child("rangeNoiseStdDev", std::to_string(range_noise_stddev));
         append_text_child("angleNoiseStdDev", std::to_string(angle_noise_stddev));
+
+        // Analytic-waveform return parameters: write only non-default values to keep the metadata file uncluttered.
+        if (getScanReturnMode(i) == RETURN_MODE_SINGLE) {
+            append_text_child("returnMode", "single");
+            SingleReturnSelection sel = getScanSingleReturnSelection(i);
+            if (sel == SINGLE_RETURN_FIRST) {
+                append_text_child("singleReturnSelection", "first");
+            } else if (sel == SINGLE_RETURN_LAST) {
+                append_text_child("singleReturnSelection", "last");
+            } else if (sel == SINGLE_RETURN_STRONGEST_PLUS_LAST) {
+                append_text_child("singleReturnSelection", "strongest_plus_last");
+            } else {
+                append_text_child("singleReturnSelection", "strongest");
+            }
+            if (getScanMaxReturns(i) != 1) {
+                append_text_child("maxReturns", std::to_string(getScanMaxReturns(i)));
+            }
+        }
+        if (getScanPulseWidth(i) > 0.f) {
+            append_text_child("pulseWidth", std::to_string(getScanPulseWidth(i)));
+        }
+        if (getScanDetectionThreshold(i) > 0.f) {
+            append_text_child("detectionThreshold", std::to_string(getScanDetectionThreshold(i)));
+        }
 
         if (scan_tilt_roll != 0.f || scan_tilt_pitch != 0.f) {
             std::ostringstream tilt_ss;
@@ -1295,7 +1729,7 @@ void LiDARcloud::exportPointCloudPTX(const char *filename, uint scanID) {
         }
 
         float intensity = 1.f;
-        if (hits.at(r).data.find("intensity") != hits.at(r).data.end()) {
+        if (doesHitDataExist(r, "intensity")) {
             intensity = getHitData(r, "intensity");
         }
 

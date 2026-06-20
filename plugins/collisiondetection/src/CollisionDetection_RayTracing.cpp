@@ -60,9 +60,11 @@ bool launchVoxelRayPathLengths(int num_rays, float *h_ray_origins, float *h_ray_
 // Warp-efficient GPU kernels
 void launchWarpEfficientBVH(void *h_bvh_soa_gpu, unsigned int *h_primitive_indices, int primitive_count, float *h_primitive_aabb_min, float *h_primitive_aabb_max, float *h_ray_origins, float *h_ray_directions, float *h_ray_max_distances,
                             int num_rays, unsigned int *h_results, unsigned int *h_result_counts, int max_results_per_ray);
-// High-performance ray-triangle intersection kernel
-void launchRayPrimitiveIntersection(void *h_bvh_nodes, int node_count, unsigned int *h_primitive_indices, int primitive_count, int *h_primitive_types, float3 *h_primitive_vertices, unsigned int *h_vertex_offsets, int total_vertex_count,
-                                    float *h_ray_origins, float *h_ray_directions, float *h_ray_max_distances, int num_rays, float *h_hit_distances, unsigned int *h_hit_primitive_ids, unsigned int *h_hit_counts, bool find_closest_hit);
+// High-performance ray-primitive intersection kernel against device-resident scene geometry. Only the per-call ray and
+// result buffers are uploaded/downloaded here; BVH/primitive geometry is passed in as resident device pointers.
+void launchRaysOnResidentScene(void *d_bvh_nodes, int node_count, unsigned int *d_primitive_indices, int primitive_count, int *d_primitive_types, float3 *d_primitive_vertices, unsigned int *d_vertex_offsets, int total_vertex_count,
+                               const float *h_ray_origins, const float *h_ray_directions, const float *h_ray_max_distances, float uniform_max_distance, int num_rays, float *h_hit_distances, unsigned int *h_hit_primitive_ids,
+                               unsigned int *h_hit_counts, float *h_hit_normals, bool find_closest_hit);
 }
 
 // Helper function to convert helios::vec3 to float3
@@ -218,6 +220,19 @@ CollisionDetection::HitResult CollisionDetection::castRay(const vec3 &origin, co
 }
 
 
+bool CollisionDetection::shouldUseGPU(size_t ray_count) const {
+#ifdef HELIOS_CUDA_AVAILABLE
+    // Use GPU only for large batches (amortize launch + transfer overhead) on a complex, already-resident scene.
+    // CPU is faster for small batches. Mirrors the thresholds the vector dispatch has always used.
+    constexpr size_t GPU_BATCH_THRESHOLD = 1000000; // batches >= 1M rays
+    constexpr size_t MIN_PRIMITIVES_FOR_GPU = 500; // minimum scene complexity
+    return gpu_acceleration_enabled && ray_count >= GPU_BATCH_THRESHOLD && d_bvh_nodes != nullptr && d_primitive_vertices != nullptr && !primitive_indices.empty() && primitive_indices.size() >= MIN_PRIMITIVES_FOR_GPU;
+#else
+    (void) ray_count;
+    return false;
+#endif
+}
+
 std::vector<CollisionDetection::HitResult> CollisionDetection::castRays(const std::vector<RayQuery> &ray_queries, RayTracingStats *stats) {
     std::vector<HitResult> results;
     results.reserve(ray_queries.size());
@@ -226,20 +241,13 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRays(const st
     RayTracingStats local_stats;
     local_stats.total_rays_cast = ray_queries.size();
 
-    // Smart CPU/GPU selection based on ray count and scene complexity
-    // Performance analysis shows CPU is faster for small batches (<1000 rays) due to
-    // GPU launch overhead, while GPU provides significant speedup for large batches
-    const size_t GPU_BATCH_THRESHOLD = 1000000; // Use GPU for batches larger than 1M rays
-    const size_t MIN_PRIMITIVES_FOR_GPU = 500; // Minimum scene complexity for GPU
-
+    // Smart CPU/GPU selection via the shared predicate (see shouldUseGPU): GPU only pays off for large batches on a
+    // sufficiently complex, GPU-resident scene. Keeping the predicate in one place ensures castRays and castRaysSoA
+    // never diverge in how they choose GPU vs CPU.
 #ifdef HELIOS_CUDA_AVAILABLE
-    bool use_gpu = gpu_acceleration_enabled && ray_queries.size() >= GPU_BATCH_THRESHOLD && d_bvh_nodes != nullptr && !primitive_indices.empty() && primitive_indices.size() >= MIN_PRIMITIVES_FOR_GPU;
-
-    if (use_gpu) {
-        // Use GPU acceleration for large batches with sufficient scene complexity
+    if (shouldUseGPU(ray_queries.size())) {
         castRaysGPU(ray_queries, results, local_stats);
     } else {
-        // Use CPU for small batches or simple scenes
         castRaysCPU(ray_queries, results, local_stats);
     }
 #else
@@ -544,6 +552,139 @@ CollisionDetection::MemoryUsageStats CollisionDetection::getBVHMemoryUsage() con
     return stats;
 }
 
+void CollisionDetection::castRaysSoA(const helios::vec3 *origins, const helios::vec3 *directions, size_t count, float max_distance, float *out_distance, helios::vec3 *out_normal, uint *out_primitive_UUID, RayTracingStats *stats) {
+
+    // Low-memory SoA batch cast: no intermediate RayQuery/HitResult vectors. Results are written straight into the
+    // caller-owned output arrays; a miss is signalled by out_primitive_UUID == MISS_UUID (out_distance/out_normal are
+    // then unspecified). Mirrors the parallel traversal of the vector-based castRaysSoA() but reuses the per-ray kernel
+    // castRaySoATraversal() directly.
+    constexpr uint MISS_UUID = 0xFFFFFFFFu;
+
+    RayTracingStats local_stats;
+    local_stats.total_rays_cast = count;
+
+    if (count == 0) {
+        if (stats != nullptr) {
+            *stats = local_stats;
+        }
+        return;
+    }
+
+    // Snapshot the external cancellation flag (see the vector-based castRaysSoA overload). When it is already set, or
+    // flips mid-trace, the batch short-circuits: the GPU launch is skipped entirely and the CPU loop drains its
+    // remaining indices cheaply, marking every un-traced ray as a miss so the caller frees the batch and stops.
+    volatile int *const cancel = cancel_flag;
+    if (cancel != nullptr && *cancel != 0) {
+        for (size_t i = 0; i < count; i++) {
+            out_primitive_UUID[i] = MISS_UUID;
+        }
+        if (stats != nullptr) {
+            *stats = local_stats;
+        }
+        return;
+    }
+
+    // Ensure the BVH and primitive cache are current (same prerequisites as castRaysOptimized()). Automatic BVH rebuilds
+    // are intentionally NOT toggled here — a caller issuing many batched calls over static geometry should disable
+    // automatic rebuilds and buildBVH() once around the whole batch.
+    ensureBVHCurrent();
+
+#ifdef HELIOS_CUDA_AVAILABLE
+    // GPU fast path: for large batches on a GPU-resident scene, trace on the device and write results straight into the
+    // caller arrays. The scene geometry is uploaded once per scan by buildBVH()/transferBVHToGPU() (driven by the
+    // LiDAR prepare/finish bracket), so only this batch's ray + result buffers move across the bus here — keeping a
+    // chunked synthetic scan from re-uploading the whole scene per chunk. shouldUseGPU() also guards that the scene is
+    // actually resident (d_primitive_vertices != nullptr); otherwise we fall through to the CPU traversal below.
+    if (shouldUseGPU(count)) {
+        // The CPU convention "max_distance <= 0 => unbounded" maps to a large finite kernel cutoff, broadcast to every
+        // ray (no per-ray distance array needed).
+        const float kernel_max_distance = (max_distance > 0) ? max_distance : std::numeric_limits<float>::max();
+
+        // helios::vec3 is three contiguous floats == float3, so the caller's origins/directions are passed straight to
+        // the device with no host repack (directions are normalized in the kernel). Results are written directly into the
+        // caller's out_distance / out_primitive_UUID / out_normal — no intermediate host staging. The kernel reports a
+        // miss as out_primitive_UUID == 0xFFFFFFFF, which is exactly the SoA MISS_UUID sentinel, and hit_counts is not
+        // needed (passed null) since the UUID already distinguishes hit from miss.
+        launchRaysOnResidentScene(d_bvh_nodes, d_gpu_node_count, d_primitive_indices, d_gpu_primitive_count, d_primitive_types, (float3 *) d_primitive_vertices, d_vertex_offsets, d_gpu_total_vertex_count,
+                                  reinterpret_cast<const float *>(origins), reinterpret_cast<const float *>(directions), /*h_ray_max_distances=*/nullptr, kernel_max_distance, static_cast<int>(count), out_distance, out_primitive_UUID,
+                                  /*h_hit_counts=*/nullptr, reinterpret_cast<float *>(out_normal), true);
+
+        // Stats only: out_distance / out_primitive_UUID / out_normal are already populated by the launch above. The kernel
+        // bounds every recorded hit by kernel_max_distance, so a non-sentinel UUID is exactly an in-range hit.
+        size_t total_hits = 0;
+        double dist_sum = 0.0;
+        for (size_t i = 0; i < count; i++) {
+            if (out_primitive_UUID[i] != MISS_UUID) {
+                total_hits++;
+                dist_sum += out_distance[i];
+            }
+        }
+        local_stats.total_hits = total_hits;
+        local_stats.average_ray_distance = (total_hits > 0) ? (dist_sum / static_cast<double>(total_hits)) : 0.0;
+        if (stats != nullptr) {
+            *stats = local_stats;
+        }
+        return;
+    }
+#endif
+
+    ensureOptimizedBVH();
+    if (primitive_cache.empty()) {
+        buildPrimitiveCache();
+    }
+
+    if (bvh_nodes_soa.node_count == 0) {
+        // No SoA BVH: every ray misses.
+        for (size_t i = 0; i < count; i++) {
+            out_primitive_UUID[i] = MISS_UUID;
+        }
+        if (stats != nullptr) {
+            *stats = local_stats;
+        }
+        return;
+    }
+
+#pragma omp parallel
+    {
+        RayTracingStats thread_stats = {}; // thread-local statistics
+
+#pragma omp for schedule(guided, 32)
+        for (long long i = 0; i < static_cast<long long>(count); ++i) {
+            if (cancel != nullptr && *cancel != 0) {
+                out_primitive_UUID[i] = MISS_UUID; // run cancelled — drain remaining indices cheaply as misses
+                continue;
+            }
+            RayQuery query(origins[i], directions[i], max_distance); // stack-local; empty target_UUIDs => all primitives
+            HitResult result = castRaySoATraversal(query, thread_stats);
+
+            if (result.hit) {
+                out_primitive_UUID[i] = result.primitive_UUID;
+                out_distance[i] = result.distance;
+                out_normal[i] = result.normal;
+                thread_stats.total_hits++;
+                thread_stats.average_ray_distance += result.distance;
+            } else {
+                out_primitive_UUID[i] = MISS_UUID;
+            }
+        }
+
+#pragma omp atomic
+        local_stats.total_hits += thread_stats.total_hits;
+#pragma omp atomic
+        local_stats.average_ray_distance += thread_stats.average_ray_distance;
+#pragma omp atomic
+        local_stats.bvh_nodes_visited += thread_stats.bvh_nodes_visited;
+    }
+
+    if (local_stats.total_hits > 0) {
+        local_stats.average_ray_distance /= local_stats.total_hits;
+    }
+
+    if (stats != nullptr) {
+        *stats = local_stats;
+    }
+}
+
 std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysSoA(const std::vector<RayQuery> &ray_queries, RayTracingStats &stats) {
     std::vector<HitResult> results;
     results.reserve(ray_queries.size());
@@ -565,6 +706,14 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysSoA(const
     // Resize results vector for parallel access
     results.resize(ray_queries.size());
 
+    // Snapshot the external cancellation flag so every thread reads the same
+    // pointer. When it flips non-zero mid-trace, each thread short-circuits its
+    // remaining loop indices (OpenMP forbids breaking out of a worksharing loop,
+    // so we skip-cheaply instead). The volatile load is re-read each iteration
+    // and is effectively free next to a BVH traversal; left-over results[i] for
+    // skipped rays stay default-constructed (no hit), which the caller discards.
+    volatile int *const cancel = cancel_flag;
+
 // OpenMP parallel ray processing for high-performance SoA traversal
 #pragma omp parallel
     {
@@ -572,6 +721,9 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysSoA(const
 
 #pragma omp for schedule(guided, 32)
         for (int i = 0; i < static_cast<int>(ray_queries.size()); ++i) {
+            if (cancel != nullptr && *cancel != 0) {
+                continue; // run cancelled — drain remaining indices cheaply
+            }
             HitResult result = castRaySoATraversal(ray_queries[i], local_stats);
             results[i] = result;
 
@@ -1434,230 +1586,74 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysGPU(const
         return castRaysSoA(ray_queries, stats); // Use CPU implementation
     }
 
-    auto start = std::chrono::high_resolution_clock::now();
-
-    // Ensure BVH is built for GPU acceleration
+    // Ensure the BVH is built. With GPU acceleration enabled, buildBVH() also uploads the scene geometry to the device
+    // (transferBVHToGPU) so it stays resident across many ray batches.
     if (bvh_nodes.empty()) {
-        if (printmessages) {
-        }
         buildBVH();
         if (bvh_nodes.empty()) {
             helios_runtime_error("ERROR: BVH construction failed - no geometry available for ray tracing. Ensure primitives are properly added to the collision detection system.");
         }
     }
 
-    // Prepare ray data for GPU
-    std::vector<float> ray_origins(ray_queries.size() * 3);
-    std::vector<float> ray_directions(ray_queries.size() * 3);
-    std::vector<float> ray_max_distances(ray_queries.size());
-
-    for (size_t i = 0; i < ray_queries.size(); i++) {
-        vec3 normalized_dir = ray_queries[i].direction;
-        if (normalized_dir.magnitude() > 1e-8f) {
-            normalized_dir = normalized_dir / normalized_dir.magnitude();
-        }
-
-        ray_origins[i * 3] = ray_queries[i].origin.x;
-        ray_origins[i * 3 + 1] = ray_queries[i].origin.y;
-        ray_origins[i * 3 + 2] = ray_queries[i].origin.z;
-
-        ray_directions[i * 3] = normalized_dir.x;
-        ray_directions[i * 3 + 1] = normalized_dir.y;
-        ray_directions[i * 3 + 2] = normalized_dir.z;
-
-        ray_max_distances[i] = ray_queries[i].max_distance;
+    // If the caller enabled GPU after the BVH was already built, the scene may not be resident yet; upload it now.
+    if (d_bvh_nodes == nullptr || d_primitive_vertices == nullptr) {
+        transferBVHToGPU();
     }
-
-    // CRITICAL: Use the SAME primitive_indices that the BVH was built with!
-    // Building a fresh array from getAllUUIDs() causes index mismatches
-    // because getAllUUIDs() order may differ from buildBVH() order
-    std::vector<int> primitive_types(primitive_indices.size());
-    std::vector<float3> primitive_vertices;
-    std::vector<unsigned int> vertex_offsets(primitive_indices.size());
-
-    size_t triangle_count = 0;
-    size_t patch_count = 0;
-    size_t voxel_count = 0;
-
-    if (printmessages) {
-    }
-
-    helios::WarningAggregator primitive_vertex_warnings;
-    primitive_vertex_warnings.setEnabled(printmessages);
-
-    // Prepare primitive data arrays for GPU using existing primitive_indices
-    size_t vertex_index = 0;
-    for (size_t i = 0; i < primitive_indices.size(); i++) {
-        vertex_offsets[i] = vertex_index;
-
-        PrimitiveType ptype = context->getPrimitiveType(primitive_indices[i]);
-        primitive_types[i] = static_cast<int>(ptype);
-
-        std::vector<vec3> vertices = context->getPrimitiveVertices(primitive_indices[i]);
-
-        if (ptype == PRIMITIVE_TYPE_TRIANGLE) {
-            triangle_count++;
-            if (vertices.size() >= 3) {
-                // Add 3 vertices for triangle, pad to 4 for alignment
-                for (int v = 0; v < 3; v++) {
-                    primitive_vertices.push_back(make_float3(vertices[v].x, vertices[v].y, vertices[v].z));
-                }
-                primitive_vertices.push_back(make_float3(0, 0, 0)); // Padding
-                vertex_index += 4;
-            } else {
-                primitive_vertex_warnings.addWarning("triangle_wrong_vertex_count", "Triangle primitive " + std::to_string(primitive_indices[i]) + " has " + std::to_string(vertices.size()) + " vertices");
-                // Add zeros for invalid triangle
-                for (int v = 0; v < 4; v++) {
-                    primitive_vertices.push_back(make_float3(0, 0, 0));
-                }
-                vertex_index += 4;
-            }
-        } else if (ptype == PRIMITIVE_TYPE_PATCH) {
-            patch_count++;
-            if (vertices.size() >= 4) {
-                // Add 4 vertices for patch
-                for (int v = 0; v < 4; v++) {
-                    primitive_vertices.push_back(make_float3(vertices[v].x, vertices[v].y, vertices[v].z));
-                }
-                vertex_index += 4;
-            } else {
-                primitive_vertex_warnings.addWarning("patch_wrong_vertex_count", "Patch primitive " + std::to_string(primitive_indices[i]) + " has " + std::to_string(vertices.size()) + " vertices");
-                // Add zeros for invalid patch
-                for (int v = 0; v < 4; v++) {
-                    primitive_vertices.push_back(make_float3(0, 0, 0));
-                }
-                vertex_index += 4;
-            }
-        } else if (ptype == PRIMITIVE_TYPE_VOXEL) {
-            voxel_count++;
-            // For voxels, compute AABB from 8 corner vertices
-            // vertices was already retrieved above, reuse it
-            vec3 voxel_min = vertices[0];
-            vec3 voxel_max = vertices[0];
-
-            // Find min/max coordinates from all 8 vertices
-            for (const auto &vertex: vertices) {
-                voxel_min.x = std::min(voxel_min.x, vertex.x);
-                voxel_min.y = std::min(voxel_min.y, vertex.y);
-                voxel_min.z = std::min(voxel_min.z, vertex.z);
-                voxel_max.x = std::max(voxel_max.x, vertex.x);
-                voxel_max.y = std::max(voxel_max.y, vertex.y);
-                voxel_max.z = std::max(voxel_max.z, vertex.z);
-            }
-
-            // Store as: [min.x, min.y, min.z, max.x, max.y, max.z, 0, 0]
-            primitive_vertices.push_back(make_float3(voxel_min.x, voxel_min.y, voxel_min.z)); // v0 = min
-            primitive_vertices.push_back(make_float3(voxel_max.x, voxel_max.y, voxel_max.z)); // v1 = max
-            primitive_vertices.push_back(make_float3(0, 0, 0)); // v2 = padding
-            primitive_vertices.push_back(make_float3(0, 0, 0)); // v3 = padding
-            vertex_index += 4;
-        } else {
-            // Unknown primitive type - add padding
-            for (int v = 0; v < 4; v++) {
-                primitive_vertices.push_back(make_float3(0, 0, 0));
-            }
-            vertex_index += 4;
-        }
-    }
-
-    primitive_vertex_warnings.report(std::cerr);
-
-    if (printmessages) {
-    }
-
-    if (primitive_indices.empty()) {
-        if (printmessages) {
-            std::cout << "No primitives found for GPU ray tracing, falling back to CPU" << std::endl;
-        }
+    // If the scene still could not be made resident (e.g. GPU disabled at runtime), fall back to the CPU path.
+    if (!gpu_acceleration_enabled || d_bvh_nodes == nullptr || d_primitive_vertices == nullptr || primitive_indices.empty()) {
         return castRaysSoA(ray_queries, stats);
     }
 
-
-    // Prepare result arrays
-    std::vector<float> hit_distances(ray_queries.size());
-    std::vector<unsigned int> hit_primitive_ids(ray_queries.size());
-    std::vector<unsigned int> hit_counts(ray_queries.size());
-
-    // Convert CPU BVH nodes to GPU format
-    std::vector<GPUBVHNode> gpu_bvh_nodes(bvh_nodes.size());
-    for (size_t i = 0; i < bvh_nodes.size(); i++) {
-        gpu_bvh_nodes[i].aabb_min = make_float3(bvh_nodes[i].aabb_min.x, bvh_nodes[i].aabb_min.y, bvh_nodes[i].aabb_min.z);
-        gpu_bvh_nodes[i].aabb_max = make_float3(bvh_nodes[i].aabb_max.x, bvh_nodes[i].aabb_max.y, bvh_nodes[i].aabb_max.z);
-        gpu_bvh_nodes[i].left_child = bvh_nodes[i].left_child;
-        gpu_bvh_nodes[i].right_child = bvh_nodes[i].right_child;
-        gpu_bvh_nodes[i].primitive_start = bvh_nodes[i].primitive_start;
-        gpu_bvh_nodes[i].primitive_count = bvh_nodes[i].primitive_count;
-        gpu_bvh_nodes[i].is_leaf = bvh_nodes[i].is_leaf ? 1 : 0;
-        gpu_bvh_nodes[i].padding = 0;
-
-        // Debug problematic BVH nodes
-        if (bvh_nodes[i].is_leaf && printmessages && i < 3) {
-            std::cout << "BVH leaf node " << i << ": primitive_start=" << bvh_nodes[i].primitive_start << ", primitive_count=" << bvh_nodes[i].primitive_count << ", max_index=" << (bvh_nodes[i].primitive_start + bvh_nodes[i].primitive_count - 1)
-                      << std::endl;
+    // Prepare host ray data with normalized directions (matching CPU RayQuery semantics). A non-positive max_distance
+    // means "unbounded" on the CPU path; translate it to a large finite value so the GPU AABB/closest-hit logic agrees.
+    const size_t num_rays = ray_queries.size();
+    std::vector<float> ray_origins(num_rays * 3);
+    std::vector<float> ray_directions(num_rays * 3);
+    std::vector<float> ray_max_distances(num_rays);
+    for (size_t i = 0; i < num_rays; i++) {
+        vec3 dir = ray_queries[i].direction;
+        float mag = dir.magnitude();
+        if (mag > 1e-8f) {
+            dir = dir / mag;
         }
+        ray_origins[i * 3] = ray_queries[i].origin.x;
+        ray_origins[i * 3 + 1] = ray_queries[i].origin.y;
+        ray_origins[i * 3 + 2] = ray_queries[i].origin.z;
+        ray_directions[i * 3] = dir.x;
+        ray_directions[i * 3 + 1] = dir.y;
+        ray_directions[i * 3 + 2] = dir.z;
+        ray_max_distances[i] = (ray_queries[i].max_distance > 0) ? ray_queries[i].max_distance : std::numeric_limits<float>::max();
     }
 
-    // Launch high-performance GPU ray intersection kernel
-    launchRayPrimitiveIntersection(gpu_bvh_nodes.data(), // BVH nodes
-                                   static_cast<int>(gpu_bvh_nodes.size()), // Node count
-                                   primitive_indices.data(), // Primitive indices
-                                   static_cast<int>(primitive_indices.size()), // Primitive count
-                                   primitive_types.data(), // Primitive types
-                                   primitive_vertices.data(), // Primitive vertices (all types)
-                                   vertex_offsets.data(), // Vertex offsets
-                                   static_cast<int>(primitive_vertices.size()),
-                                   ray_origins.data(), // Ray origins
-                                   ray_directions.data(), // Ray directions
-                                   ray_max_distances.data(), // Ray max distances
-                                   static_cast<int>(ray_queries.size()), // Number of rays
-                                   hit_distances.data(), // Output: hit distances
-                                   hit_primitive_ids.data(), // Output: hit primitive IDs
-                                   hit_counts.data(), // Output: hit counts
-                                   true // Find closest hit
-    );
+    std::vector<float> hit_distances(num_rays);
+    std::vector<unsigned int> hit_primitive_ids(num_rays);
+    std::vector<unsigned int> hit_counts(num_rays);
+    std::vector<float> hit_normals(num_rays * 3);
 
-    // Convert GPU results back to HitResult format
+    // Launch against the resident scene: only the ray + result buffers are uploaded/downloaded here. The vector path
+    // carries a per-ray max-distance array (RayQuery.max_distance may differ per ray), so uniform_max_distance is unused.
+    launchRaysOnResidentScene(d_bvh_nodes, d_gpu_node_count, d_primitive_indices, d_gpu_primitive_count, d_primitive_types, (float3 *) d_primitive_vertices, d_vertex_offsets, d_gpu_total_vertex_count, ray_origins.data(),
+                              ray_directions.data(), ray_max_distances.data(), /*uniform_max_distance=*/0.0f, static_cast<int>(num_rays), hit_distances.data(), hit_primitive_ids.data(), hit_counts.data(), hit_normals.data(), true);
+
     size_t hit_count = 0;
-    size_t filtered_count = 0;  // Hits found but filtered out
-    for (size_t i = 0; i < ray_queries.size(); i++) {
-        if (hit_counts[i] > 0 && hit_distances[i] <= ray_queries[i].max_distance) {
+    for (size_t i = 0; i < num_rays; i++) {
+        const float max_d = (ray_queries[i].max_distance > 0) ? ray_queries[i].max_distance : std::numeric_limits<float>::max();
+        if (hit_counts[i] > 0 && hit_distances[i] <= max_d) {
             results[i].hit = true;
             results[i].primitive_UUID = hit_primitive_ids[i];
             results[i].distance = hit_distances[i];
             results[i].intersection_point = ray_queries[i].origin + ray_queries[i].direction * hit_distances[i];
-
-            // Calculate normal for triangles and patches (required for LiDAR)
-            PrimitiveType ptype = context->getPrimitiveType(hit_primitive_ids[i]);
-            if (ptype == PRIMITIVE_TYPE_TRIANGLE || ptype == PRIMITIVE_TYPE_PATCH) {
-                std::vector<vec3> vertices = context->getPrimitiveVertices(hit_primitive_ids[i]);
-                if (vertices.size() >= 3) {
-                    vec3 edge1 = vertices[1] - vertices[0];
-                    vec3 edge2 = vertices[2] - vertices[0];
-                    results[i].normal = cross(edge1, edge2);
-                    if (results[i].normal.magnitude() > 1e-8f) {
-                        results[i].normal.normalize();
-                    }
-                }
-            }
-
+            results[i].normal = make_vec3(hit_normals[i * 3], hit_normals[i * 3 + 1], hit_normals[i * 3 + 2]);
             hit_count++;
         } else {
-            if (hit_counts[i] > 0) {
-                filtered_count++;  // Hit was found but distance exceeded max_distance
-            }
             results[i].hit = false;
             results[i].primitive_UUID = 0;
             results[i].distance = std::numeric_limits<float>::max();
         }
     }
 
-    auto end = std::chrono::high_resolution_clock::now();
-    double elapsed = std::chrono::duration<double, std::milli>(end - start).count();
-
-    stats.total_rays_cast = ray_queries.size();
+    stats.total_rays_cast = num_rays;
     stats.total_hits = hit_count;
-    double rays_per_second = ray_queries.size() / (elapsed / 1000.0);
-
 
     return results;
 }

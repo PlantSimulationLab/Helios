@@ -465,9 +465,11 @@ void helios::ProgressBar::update(size_t step_number) {
 }
 
 void helios::ProgressBar::finish() {
-    if (enabled && current_step < total_steps) {
-        current_step = total_steps;
-        update(current_step);
+    // Drive the bar to 100% so the terminal step is reported. This must not be gated on `enabled`: update() already
+    // suppresses console output internally when the bar is disabled, but it still fires the callback, which is a
+    // separate output channel that otherwise would never observe completion when console messages are turned off.
+    if (current_step < total_steps) {
+        update(total_steps);
     }
 }
 

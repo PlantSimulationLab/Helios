@@ -147,6 +147,10 @@ void PlantArchitecture::setProgressCallback(std::function<void(float, const std:
     progress_callback = std::move(callback);
 }
 
+void PlantArchitecture::setCancelFlag(volatile int *flag) {
+    cancel_flag = flag;
+}
+
 PlantArchitecture::~PlantArchitecture() {
     // Clean up owned CollisionDetection instance
     if (collision_detection_ptr != nullptr && owns_collision_detection) {
@@ -343,6 +347,11 @@ std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::v
     std::vector<uint> plantIDs;
     plantIDs.reserve(plant_count_xy.x * plant_count_xy.y);
     for (int j = 0; j < plant_count_xy.y; j++) {
+        // Cancellation checkpoint between plants: a cancelled canopy build stops
+        // here (per-plant build is monolithic) and returns what was built so far.
+        if (cancel_flag != nullptr && *cancel_flag != 0) {
+            return plantIDs;
+        }
         for (int i = 0; i < plant_count_xy.x; i++) {
             if (context_ptr->randu() < germination_rate) {
                 plantIDs.push_back(buildPlantInstanceFromLibrary(canopy_center_position + make_vec3(-0.5f * canopy_extent.x + float(i) * plant_spacing_xy.x, -0.5f * canopy_extent.y + float(j) * plant_spacing_xy.y, 0), 0));
@@ -361,6 +370,10 @@ std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::v
     std::vector<uint> plantIDs;
     plantIDs.reserve(plant_count);
     for (int i = 0; i < plant_count; i++) {
+        // Cancellation checkpoint between plants (see the spacing-based overload).
+        if (cancel_flag != nullptr && *cancel_flag != 0) {
+            return plantIDs;
+        }
         vec3 plant_origin = canopy_center_position + make_vec3((-0.5f + context_ptr->randu()) * canopy_extent_xy.x, (-0.5f + context_ptr->randu()) * canopy_extent_xy.y, 0);
         plantIDs.push_back(buildPlantInstanceFromLibrary(plant_origin, age));
     }
@@ -5211,6 +5224,13 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
     }
 
     for (int timestep = 0; timestep < Nsteps; timestep++) {
+
+        // Cancellation checkpoint between timesteps: a cancelled build stops the
+        // growth simulation here (each timestep is self-contained — the plants are
+        // simply aged less far) and falls through to progress_bar.finish() below.
+        if (cancel_flag != nullptr && *cancel_flag != 0) {
+            break;
+        }
 
         // Rebuild BVH periodically - less frequent for per-tree BVH since trees are isolated
         bool should_rebuild_bvh = false;

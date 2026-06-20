@@ -26,6 +26,130 @@ DOCTEST_TEST_CASE("LiDAR Single Voxel Sphere Test") {
     DOCTEST_CHECK(context_1.getPrimitiveCount() == 383);
 }
 
+DOCTEST_TEST_CASE("LiDAR syntheticScan Progress Callback") {
+    LiDARcloud cloud;
+    cloud.disableMessages();
+
+    // Two small scans so progress advances 1/2 -> 2/2 (small grid keeps this fast)
+    std::vector<std::string> columnFormat;
+    for (int i = 0; i < 2; i++) {
+        ScanMetadata scan(make_vec3(-5.0f, 0.0f, 0.5f), 100, 0.0f, M_PI, 200, 0.0f, 2.0f * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, columnFormat);
+        DOCTEST_CHECK_NOTHROW(cloud.addScan(scan));
+    }
+    DOCTEST_CHECK_NOTHROW(cloud.addGrid(make_vec3(0.0f, 0.0f, 0.5f), make_vec3(1.0f, 1.0f, 1.0f), make_int3(1, 1, 1), 0));
+
+    Context context;
+    DOCTEST_CHECK_NOTHROW(context.loadXML("plugins/lidar/xml/leaf_cube_LAI2_lw0_01_spherical.xml", true));
+
+    std::vector<float> progress_values;
+    std::vector<std::string> progress_messages;
+    cloud.setProgressCallback([&](float progress, const std::string &message) {
+        progress_values.push_back(progress);
+        progress_messages.push_back(message);
+    });
+
+    DOCTEST_CHECK_NOTHROW(cloud.syntheticScan(&context));
+
+    // Callback fired, reached completion, monotonic non-decreasing, message carried through
+    DOCTEST_CHECK(!progress_values.empty());
+    DOCTEST_CHECK(progress_values.back() == doctest::Approx(1.0f));
+    bool monotonic = true;
+    for (size_t i = 1; i < progress_values.size(); i++) {
+        if (progress_values[i] < progress_values[i - 1]) {
+            monotonic = false;
+        }
+    }
+    DOCTEST_CHECK(monotonic);
+    DOCTEST_CHECK(progress_messages.back() == "Synthetic scan");
+
+    // Clearing the callback prevents further firing
+    size_t fired_count = progress_values.size();
+    cloud.setProgressCallback({});
+    DOCTEST_CHECK_NOTHROW(cloud.syntheticScan(&context));
+    DOCTEST_CHECK(progress_values.size() == fired_count);
+
+    // Regression: the callback must still fire and reach 1.0 even when no rays hit any geometry, which takes the
+    // early "no rays hit the bounding box" continue inside the per-scan loop. Use a Context with no primitives so
+    // every scan takes that path, and disabled console messages so completion is delivered solely via the callback.
+    LiDARcloud empty_cloud;
+    empty_cloud.disableMessages();
+    for (int i = 0; i < 3; i++) {
+        ScanMetadata scan(make_vec3(-5.0f, 0.0f, 0.5f), 20, 0.0f, M_PI, 20, 0.0f, 2.0f * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, columnFormat);
+        DOCTEST_CHECK_NOTHROW(empty_cloud.addScan(scan));
+    }
+    Context empty_context;
+    std::vector<float> empty_progress;
+    empty_cloud.setProgressCallback([&](float progress, const std::string &) { empty_progress.push_back(progress); });
+    DOCTEST_CHECK_NOTHROW(empty_cloud.syntheticScan(&empty_context));
+    DOCTEST_CHECK(!empty_progress.empty());
+    DOCTEST_CHECK(empty_progress.back() == doctest::Approx(1.0f));
+}
+
+DOCTEST_TEST_CASE("LiDAR syntheticScan Cancel Flag") {
+    // A cancel flag set before the trace must short-circuit the ray loop so the
+    // scan records (essentially) no hits, while the same scan with the flag clear
+    // records many. This is the mechanism that lets a long scan be aborted
+    // mid-trace and its memory freed, instead of running to completion.
+    std::vector<std::string> columnFormat;
+
+    auto run = [&](bool cancel) -> std::size_t {
+        LiDARcloud cloud;
+        cloud.disableMessages();
+        ScanMetadata scan(make_vec3(-5.0f, 0.0f, 0.5f), 100, 0.0f, M_PI, 200, 0.0f, 2.0f * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, columnFormat);
+        cloud.addScan(scan);
+        cloud.addGrid(make_vec3(0.0f, 0.0f, 0.5f), make_vec3(1.0f, 1.0f, 1.0f), make_int3(1, 1, 1), 0);
+        Context context;
+        context.loadXML("plugins/lidar/xml/leaf_cube_LAI2_lw0_01_spherical.xml", true);
+        int flag = cancel ? 1 : 0;
+        cloud.setCancelFlag(&flag);
+        cloud.syntheticScan(&context);
+        return cloud.getHitCount();
+    };
+
+    std::size_t baseline = run(false);
+    std::size_t cancelled = run(true);
+    DOCTEST_CHECK(baseline > 0);
+    DOCTEST_CHECK(cancelled < baseline);
+    DOCTEST_CHECK(cancelled == 0);
+
+    // With record_misses=true, every fired pulse normally records a point (hit or miss), so an uncancelled scan fills
+    // the whole grid. A cancelled scan must abort the per-chunk/per-scan loops early instead of walking every chunk and
+    // recording a miss point for each beam, so it produces far fewer points than the full grid (ideally none).
+    auto run_record_misses = [&](bool cancel) -> std::size_t {
+        LiDARcloud cloud;
+        cloud.disableMessages();
+        ScanMetadata scan(make_vec3(-5.0f, 0.0f, 0.5f), 100, 0.0f, M_PI, 200, 0.0f, 2.0f * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, columnFormat);
+        cloud.addScan(scan);
+        cloud.addGrid(make_vec3(0.0f, 0.0f, 0.5f), make_vec3(1.0f, 1.0f, 1.0f), make_int3(1, 1, 1), 0);
+        Context context;
+        context.loadXML("plugins/lidar/xml/leaf_cube_LAI2_lw0_01_spherical.xml", true);
+        int flag = cancel ? 1 : 0;
+        cloud.setCancelFlag(&flag);
+        cloud.syntheticScan(&context, 1, 0, false /*scan_grid_only*/, true /*record_misses*/, true /*append*/);
+        return cloud.getHitCount();
+    };
+
+    std::size_t baseline_misses = run_record_misses(false);
+    std::size_t cancelled_misses = run_record_misses(true);
+    DOCTEST_CHECK(baseline_misses > 0);
+    DOCTEST_CHECK(cancelled_misses < baseline_misses);
+    DOCTEST_CHECK(cancelled_misses == 0);
+
+    // Clearing the flag (nullptr) restores normal behavior.
+    LiDARcloud cloud;
+    cloud.disableMessages();
+    ScanMetadata scan(make_vec3(-5.0f, 0.0f, 0.5f), 100, 0.0f, M_PI, 200, 0.0f, 2.0f * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, columnFormat);
+    cloud.addScan(scan);
+    cloud.addGrid(make_vec3(0.0f, 0.0f, 0.5f), make_vec3(1.0f, 1.0f, 1.0f), make_int3(1, 1, 1), 0);
+    Context context;
+    context.loadXML("plugins/lidar/xml/leaf_cube_LAI2_lw0_01_spherical.xml", true);
+    int flag = 1;
+    cloud.setCancelFlag(&flag);
+    cloud.setCancelFlag(nullptr); // cleared before the scan
+    DOCTEST_CHECK_NOTHROW(cloud.syntheticScan(&context));
+    DOCTEST_CHECK(cloud.getHitCount() > 0);
+}
+
 DOCTEST_TEST_CASE("LiDAR Single Voxel Isotropic Patches Test") {
     LiDARcloud synthetic_1;
     synthetic_1.disableMessages();
@@ -95,6 +219,127 @@ DOCTEST_TEST_CASE("LiDAR Single Voxel Isotropic Patches Test") {
     float Gtheta = synthetic_1.getCellGtheta(0);
     DOCTEST_CHECK(Gtheta == Gtheta); // Check for NaN
     DOCTEST_CHECK(fabs(Gtheta - Gtheta_exact) / Gtheta_exact == doctest::Approx(0.0f).epsilon(0.05f));
+}
+
+DOCTEST_TEST_CASE("LiDAR setExternalTriangulation Binning Test") {
+    // setExternalTriangulation() touches nothing that requires ray tracing: it ingests world-space
+    // triangles, bins each into a grid cell by centroid containment, drops degenerate triangles, and
+    // sets the triangulation-computed flag. Verify that contract directly on a tiny hand-built scene
+    // (no syntheticScan / XML), reading back the stored triangles via getTriangle().
+    LiDARcloud cloud;
+    cloud.disableMessages();
+
+    // A single static scan supplies a valid scanID and a scan origin for G(theta) provenance.
+    std::vector<std::string> columnFormat;
+    ScanMetadata scan(make_vec3(-5.0f, 0.0f, 0.5f), 10, 0.0f, M_PI, 10, 0.0f, 2.0f * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, columnFormat);
+    DOCTEST_CHECK_NOTHROW(cloud.addScan(scan));
+
+    // 1x1x1 cell centered at the origin -> covers [-0.5,0.5]^3.
+    DOCTEST_CHECK_NOTHROW(cloud.addGrid(make_vec3(0.0f, 0.0f, 0.0f), make_vec3(1.0f, 1.0f, 1.0f), make_int3(1, 1, 1), 0));
+
+    // Triangle A: centroid at the cell center -> binned into cell 0.
+    vec3 a0 = make_vec3(-0.1f, -0.1f, 0.0f);
+    vec3 a1 = make_vec3(0.2f, -0.1f, 0.0f);
+    vec3 a2 = make_vec3(-0.1f, 0.2f, 0.0f);
+    // Triangle B: centroid well outside the cell -> kept but assigned to no cell (gridcell == -1).
+    vec3 b0 = make_vec3(5.0f, 5.0f, 5.0f);
+    vec3 b1 = make_vec3(5.3f, 5.0f, 5.0f);
+    vec3 b2 = make_vec3(5.0f, 5.3f, 5.0f);
+
+    std::vector<vec3> triangle_vertices = {a0, a1, a2, b0, b1, b2};
+    std::vector<int> scanIDs = {0, 0};
+
+    DOCTEST_CHECK_NOTHROW(cloud.setExternalTriangulation(triangle_vertices, scanIDs));
+
+    // Both well-formed triangles are kept; counters reconcile (candidates == kept + degenerate-dropped).
+    DOCTEST_CHECK(cloud.getTriangleCount() == 2);
+    DOCTEST_CHECK(cloud.getTriangulationCandidateCount() == 2);
+    DOCTEST_CHECK(cloud.getTriangulationDroppedByDegenerate() == 0);
+
+    // The inside triangle is binned to cell 0; the outside one to no cell. Order is preserved.
+    Triangulation triA = cloud.getTriangle(0);
+    Triangulation triB = cloud.getTriangle(1);
+    DOCTEST_CHECK(triA.gridcell == 0);
+    DOCTEST_CHECK(triB.gridcell == -1);
+    DOCTEST_CHECK(triA.scanID == 0);
+    DOCTEST_CHECK(triA.vertex0 == a0); // vertices stored verbatim in world space
+    DOCTEST_CHECK(triA.vertex1 == a1);
+    DOCTEST_CHECK(triA.vertex2 == a2);
+}
+
+DOCTEST_TEST_CASE("LiDAR setExternalTriangulation Error Conditions Test") {
+    LiDARcloud cloud;
+    cloud.disableMessages();
+
+    std::vector<std::string> columnFormat;
+    ScanMetadata scan(make_vec3(-5.0f, 0.0f, 0.5f), 10, 0.0f, M_PI, 10, 0.0f, 2.0f * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, columnFormat);
+    DOCTEST_CHECK_NOTHROW(cloud.addScan(scan));
+
+    vec3 v0 = make_vec3(0.0f, 0.0f, 0.0f);
+    vec3 v1 = make_vec3(0.2f, 0.0f, 0.0f);
+    vec3 v2 = make_vec3(0.0f, 0.2f, 0.0f);
+
+    // No grid defined yet -> fail fast.
+    {
+        capture_cerr capture;
+        DOCTEST_CHECK_THROWS(cloud.setExternalTriangulation({v0, v1, v2}, {0}));
+    }
+
+    DOCTEST_CHECK_NOTHROW(cloud.addGrid(make_vec3(0.0f, 0.0f, 0.0f), make_vec3(1.0f, 1.0f, 1.0f), make_int3(1, 1, 1), 0));
+
+    // Vertex count not a multiple of 3 -> fail fast.
+    {
+        capture_cerr capture;
+        DOCTEST_CHECK_THROWS(cloud.setExternalTriangulation({v0, v1}, {0}));
+    }
+
+    // scanIDs size != triangle count -> fail fast.
+    {
+        capture_cerr capture;
+        DOCTEST_CHECK_THROWS(cloud.setExternalTriangulation({v0, v1, v2}, {0, 0}));
+    }
+
+    // scanID out of range -> fail fast (only scan 0 exists).
+    {
+        capture_cerr capture;
+        DOCTEST_CHECK_THROWS(cloud.setExternalTriangulation({v0, v1, v2}, {1}));
+    }
+    {
+        capture_cerr capture;
+        DOCTEST_CHECK_THROWS(cloud.setExternalTriangulation({v0, v1, v2}, {-1}));
+    }
+
+    // A valid single triangle succeeds and is kept.
+    DOCTEST_CHECK_NOTHROW(cloud.setExternalTriangulation({v0, v1, v2}, {0}));
+    DOCTEST_CHECK(cloud.getTriangleCount() == 1);
+}
+
+DOCTEST_TEST_CASE("LiDAR setExternalTriangulation Degenerate Dropping Test") {
+    LiDARcloud cloud;
+    cloud.disableMessages();
+
+    std::vector<std::string> columnFormat;
+    ScanMetadata scan(make_vec3(-5.0f, 0.0f, 0.5f), 10, 0.0f, M_PI, 10, 0.0f, 2.0f * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, columnFormat);
+    DOCTEST_CHECK_NOTHROW(cloud.addScan(scan));
+    DOCTEST_CHECK_NOTHROW(cloud.addGrid(make_vec3(0.0f, 0.0f, 0.0f), make_vec3(1.0f, 1.0f, 1.0f), make_int3(1, 1, 1), 0));
+
+    // One well-formed triangle and one degenerate (collinear -> zero/NaN area) triangle.
+    vec3 v0 = make_vec3(-0.1f, 0.0f, 0.0f);
+    vec3 v1 = make_vec3(0.1f, 0.0f, 0.0f);
+    vec3 v2 = make_vec3(0.0f, 0.2f, 0.0f);
+    vec3 d0 = make_vec3(0.0f, 0.0f, 0.0f);
+    vec3 d1 = make_vec3(0.1f, 0.0f, 0.0f);
+    vec3 d2 = make_vec3(0.2f, 0.0f, 0.0f); // collinear with d0, d1
+
+    std::vector<vec3> triangle_vertices = {v0, v1, v2, d0, d1, d2};
+    std::vector<int> scanIDs = {0, 0};
+
+    DOCTEST_CHECK_NOTHROW(cloud.setExternalTriangulation(triangle_vertices, scanIDs));
+
+    // The degenerate triangle is dropped; the diagnostic counters reconcile.
+    DOCTEST_CHECK(cloud.getTriangleCount() == 1);
+    DOCTEST_CHECK(cloud.getTriangulationCandidateCount() == 2);
+    DOCTEST_CHECK(cloud.getTriangulationDroppedByDegenerate() == 1);
 }
 
 DOCTEST_TEST_CASE("LiDAR Eight Voxel Isotropic Patches Test") {
@@ -495,14 +740,24 @@ DOCTEST_TEST_CASE("LiDAR Spinning Multibeam Synthetic Scan") {
     // Channels span the 1 m cube (at the near face, ~4.5 m range, the cube subtends about +/-6.3 deg). Use 0.5-degree channel
     // spacing so the vertical point spacing on the cube (~4 cm) is dense enough to triangulate alongside the azimuth sweep.
     vec3 scan_origin(-5.f, 0.f, 0.5f);
+    std::vector<float> beam_elev; // elevation above horizon (radians)
     std::vector<float> beam_zenith;
     for (int e = -24; e <= 24; e++) { // 49 channels, 0.5-degree elevation spacing (e in half-degrees)
+        beam_elev.push_back(0.5f * float(e) * float(M_PI) / 180.f);
         beam_zenith.push_back(0.5f * float(M_PI) - 0.5f * float(e) * float(M_PI) / 180.f);
     }
-    uint Nphi = 4000;
-    std::vector<std::string> columnFormat;
-    ScanMetadata scan(scan_origin, beam_zenith, Nphi, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, columnFormat);
-    DOCTEST_CHECK_NOTHROW(cloud.addScan(scan));
+    // Stationary spin for one revolution. azimuthStep = 0.09 deg -> 4000 steps/rev. A stationary spin in place is a
+    // trajectory of two coincident poses; the time gap is one rotation period (channels * steps_per_rev / PRF), so the
+    // sensor spins exactly once.
+    const uint channels = uint(beam_elev.size());
+    const float azimuthStep_rad = (360.f / 4000.f) * float(M_PI) / 180.f;
+    const uint Nphi = 4000;
+    const float PRF = 1.0e6f;
+    const double one_rev_duration = double(channels) * 4000.0 / double(PRF);
+    const std::vector<double> traj_t = {0.0, one_rev_duration};
+    const std::vector<vec3> traj_pos = {scan_origin, scan_origin};
+    const std::vector<vec4> traj_quat = {make_vec4(0, 0, 0, 1), make_vec4(0, 0, 0, 1)};
+    DOCTEST_CHECK_NOTHROW(cloud.addScanSpinning(beam_elev, azimuthStep_rad, PRF, traj_t, traj_pos, traj_quat, make_vec3(0, 0, 0), make_vec3(0, 0, 0), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>()));
 
     DOCTEST_CHECK_NOTHROW(cloud.addGrid(make_vec3(0.f, 0.f, 0.5f), make_vec3(1.f, 1.f, 1.f), make_int3(1, 1, 1), 0));
 
@@ -534,10 +789,10 @@ DOCTEST_TEST_CASE("LiDAR Spinning Multibeam Synthetic Scan") {
     DOCTEST_CHECK(channel_in_range);
     DOCTEST_CHECK(any_real_hit);
 
-    // Leaf-area inversion is scan-pattern-agnostic: it must run and yield a finite, positive leaf area density.
-    // Triangulation distance (6 cm) is matched to the ~4 cm vertical point spacing of the 0.5-degree channels.
-    DOCTEST_CHECK_NOTHROW(cloud.triangulateHitPoints(0.06, 10));
-    DOCTEST_CHECK_NOTHROW(cloud.calculateLeafArea(&context));
+    // A spinning scan is trajectory-driven, so it has no fixed theta-phi grid to triangulate; leaf-area inversion uses
+    // the moving-aware calculateLeafArea overload that takes a supplied G(theta) (0.5 for the spherical leaf distribution
+    // of this scene) instead of reconstructing leaf angles from a triangulation.
+    DOCTEST_CHECK_NOTHROW(cloud.calculateLeafArea(&context, 0.5f, 1, 0.05f));
     float LAD = cloud.getCellLeafAreaDensity(0);
     DOCTEST_CHECK(LAD == LAD); // not NaN
     DOCTEST_CHECK(LAD > 0.f);
@@ -553,6 +808,7 @@ DOCTEST_TEST_CASE("LiDAR Spinning Multibeam Synthetic Scan") {
     DOCTEST_CHECK_NOTHROW(reloaded.loadXML(xml_out.c_str()));
     DOCTEST_REQUIRE(reloaded.getScanCount() == 1);
     DOCTEST_CHECK(reloaded.getScanPattern(0) == SCAN_PATTERN_SPINNING_MULTIBEAM);
+    DOCTEST_CHECK(reloaded.getScanMode(0) == SCAN_MODE_SPINNING);
     DOCTEST_CHECK(reloaded.getScanSizeTheta(0) == Ntheta);
     DOCTEST_CHECK(reloaded.getScanSizePhi(0) == Nphi);
     std::vector<float> reloaded_angles = reloaded.getScanBeamZenithAngles(0);
@@ -665,19 +921,169 @@ DOCTEST_TEST_CASE("LiDAR Raster Synthetic Scan Flat Wall") {
     DOCTEST_CHECK(ranges_ok);
 }
 
-DOCTEST_TEST_CASE("LiDAR Spinning Multibeam XML Load and Round-Trip") {
-    // Write a temporary spinning-multibeam scan XML and verify it loads with the correct geometry.
+DOCTEST_TEST_CASE("LiDAR Synthetic Scan Beam Chunking Equivalence") {
+    // The per-scan beam fan-out is traced in memory-bounded chunks; a multi-chunk run must produce exactly the same point
+    // cloud as the default single-chunk run. Beam divergence and noise are disabled so the per-pulse sub-rays are the
+    // deterministic nominal direction (no RNG draws during ray generation), making the comparison exact regardless of how
+    // the beams are split into chunks. A multi-return scan (rays_per_pulse > 1) exercises the waveform reduction path.
+    Context context;
+    context.addTriangle(make_vec3(0.f, -2.f, -2.f), make_vec3(0.f, 2.f, -2.f), make_vec3(0.f, 2.f, 2.f), RGB::green);
+    context.addTriangle(make_vec3(0.f, -2.f, -2.f), make_vec3(0.f, 2.f, 2.f), make_vec3(0.f, -2.f, 2.f), RGB::green);
+
+    vec3 scan_origin(-5.f, 0.f, 0.5f);
+    uint Ntheta = 60;
+    uint Nphi = 60;
+    float thetaMin = 0.5f * float(M_PI) - 6.f * float(M_PI) / 180.f;
+    float thetaMax = 0.5f * float(M_PI) + 6.f * float(M_PI) / 180.f;
+    float phiMin = 0.5f * float(M_PI) - 20.f * float(M_PI) / 180.f;
+    float phiMax = 0.5f * float(M_PI) + 20.f * float(M_PI) / 180.f;
+    std::vector<std::string> columnFormat;
+
+    const int rays_per_pulse = 10;
+    const float pulse_distance_threshold = 0.3f;
+
+    // Default budget: the whole scan fits in a single chunk.
+    LiDARcloud cloud_single;
+    cloud_single.disableMessages();
+    ScanMetadata scan_single(scan_origin, Ntheta, thetaMin, thetaMax, Nphi, phiMin, phiMax, 0.f /*exitDiameter*/, 0.f /*beamDivergence*/, 0.f /*rangeNoise*/, 0.f /*angleNoise*/, columnFormat);
+    DOCTEST_CHECK_NOTHROW(cloud_single.addScan(scan_single));
+    DOCTEST_CHECK_NOTHROW(cloud_single.syntheticScan(&context, rays_per_pulse, pulse_distance_threshold, RETURN_MODE_MULTI, false /*scan_grid_only*/, true /*record_misses*/, false /*append*/));
+    uint Nhits_single = cloud_single.getHitCount();
+    DOCTEST_REQUIRE(Nhits_single > 0);
+
+    // Tiny budget: forces the beams to be processed in many chunks.
+    LiDARcloud cloud_chunked;
+    cloud_chunked.disableMessages();
+    DOCTEST_CHECK_NOTHROW(cloud_chunked.setSyntheticScanMemoryBudget(4096)); // a few KB => clamped to >=1 beam/chunk, many chunks
+    DOCTEST_CHECK(cloud_chunked.getSyntheticScanMemoryBudget() == 4096);
+    ScanMetadata scan_chunked(scan_origin, Ntheta, thetaMin, thetaMax, Nphi, phiMin, phiMax, 0.f, 0.f, 0.f, 0.f, columnFormat);
+    DOCTEST_CHECK_NOTHROW(cloud_chunked.addScan(scan_chunked));
+    DOCTEST_CHECK_NOTHROW(cloud_chunked.syntheticScan(&context, rays_per_pulse, pulse_distance_threshold, RETURN_MODE_MULTI, false, true, false));
+    uint Nhits_chunked = cloud_chunked.getHitCount();
+
+    // Identical hit count and identical per-hit distances/positions (no RNG in ray-gen => exact match).
+    DOCTEST_CHECK(Nhits_chunked == Nhits_single);
+    if (Nhits_chunked == Nhits_single) {
+        bool all_match = true;
+        for (uint h = 0; h < Nhits_single; h++) {
+            if (cloud_chunked.getHitData(h, "is_miss") != cloud_single.getHitData(h, "is_miss")) {
+                all_match = false;
+                break;
+            }
+            if (std::fabs(cloud_chunked.getHitData(h, "distance") - cloud_single.getHitData(h, "distance")) > 1e-6) {
+                all_match = false;
+                break;
+            }
+            vec3 p_single = cloud_single.getHitXYZ(h);
+            vec3 p_chunked = cloud_chunked.getHitXYZ(h);
+            if ((p_single - p_chunked).magnitude() > 1e-5f) {
+                all_match = false;
+                break;
+            }
+        }
+        DOCTEST_CHECK(all_match);
+    }
+
+    // The setter rejects a zero budget.
+    LiDARcloud cloud_validate;
+    cloud_validate.disableMessages();
+    DOCTEST_CHECK_THROWS(cloud_validate.setSyntheticScanMemoryBudget(0));
+}
+
+DOCTEST_TEST_CASE("LiDAR Synthetic Scan Beam Chunking Equivalence (GPU dispatch)") {
+    // Like the test above, but sized so the per-scan sub-ray batches cross the collision-detection GPU dispatch
+    // threshold (>= 1M rays on a >= 500-primitive scene). On a CUDA build the single-chunk scan runs entirely on the
+    // GPU, and each >= 1M-ray chunk of the multi-chunk scan also runs on the GPU (bit-identical to the single-chunk
+    // result, since a ray's result is independent of how beams are batched). Any final sub-1M remainder chunk falls
+    // back to the CPU traversal, whose Moller-Trumbore-vs-CPU floating-point differences are bounded well within the
+    // tolerances below; hit counts must match exactly. On a non-CUDA build everything runs on the CPU and the
+    // comparison is simply exact-within-tolerance. This guards the resident-scene GPU path under chunking.
+    Context context;
+
+    // A large triangulated wall at x=0 (800 triangles >= MIN_PRIMITIVES_FOR_GPU) that fully covers the scan FOV so
+    // every beam hits squarely (no grazing => stable hit counts between the GPU and CPU paths).
+    const int gy = 20, gz = 20;
+    const float ymin = -3.f, ymax = 3.f, zmin = -2.5f, zmax = 3.5f;
+    const float dy = (ymax - ymin) / float(gy);
+    const float dz = (zmax - zmin) / float(gz);
+    for (int iy = 0; iy < gy; iy++) {
+        for (int iz = 0; iz < gz; iz++) {
+            float y = ymin + iy * dy;
+            float z = zmin + iz * dz;
+            context.addTriangle(make_vec3(0.f, y, z), make_vec3(0.f, y + dy, z), make_vec3(0.f, y + dy, z + dz), RGB::green);
+            context.addTriangle(make_vec3(0.f, y, z), make_vec3(0.f, y + dy, z + dz), make_vec3(0.f, y, z + dz), RGB::green);
+        }
+    }
+
+    vec3 scan_origin(-5.f, 0.f, 0.5f);
+    uint Ntheta = 120;
+    uint Nphi = 120;
+    float thetaMin = 0.5f * float(M_PI) - 6.f * float(M_PI) / 180.f;
+    float thetaMax = 0.5f * float(M_PI) + 6.f * float(M_PI) / 180.f;
+    float phiMin = 0.5f * float(M_PI) - 20.f * float(M_PI) / 180.f;
+    float phiMax = 0.5f * float(M_PI) + 20.f * float(M_PI) / 180.f;
+    std::vector<std::string> columnFormat;
+
+    const int rays_per_pulse = 100; // 120*120*100 = 1.44M sub-rays => single chunk crosses the 1M GPU threshold
+    const float pulse_distance_threshold = 0.3f;
+
+    // Single chunk (default budget): the whole 1.44M-ray scan dispatches to the GPU.
+    LiDARcloud cloud_single;
+    cloud_single.disableMessages();
+    ScanMetadata scan_single(scan_origin, Ntheta, thetaMin, thetaMax, Nphi, phiMin, phiMax, 0.f, 0.f, 0.f, 0.f, columnFormat);
+    DOCTEST_CHECK_NOTHROW(cloud_single.addScan(scan_single));
+    DOCTEST_CHECK_NOTHROW(cloud_single.syntheticScan(&context, rays_per_pulse, pulse_distance_threshold, RETURN_MODE_MULTI, false, true, false));
+    uint Nhits_single = cloud_single.getHitCount();
+    DOCTEST_REQUIRE(Nhits_single > 0);
+
+    // Multi-chunk: an ~8 MB budget floors each chunk at ~1.05M sub-rays, so chunks still hit the GPU path; the trailing
+    // remainder chunk may fall to the CPU.
+    LiDARcloud cloud_chunked;
+    cloud_chunked.disableMessages();
+    DOCTEST_CHECK_NOTHROW(cloud_chunked.setSyntheticScanMemoryBudget(8u * 1024u * 1024u));
+    ScanMetadata scan_chunked(scan_origin, Ntheta, thetaMin, thetaMax, Nphi, phiMin, phiMax, 0.f, 0.f, 0.f, 0.f, columnFormat);
+    DOCTEST_CHECK_NOTHROW(cloud_chunked.addScan(scan_chunked));
+    DOCTEST_CHECK_NOTHROW(cloud_chunked.syntheticScan(&context, rays_per_pulse, pulse_distance_threshold, RETURN_MODE_MULTI, false, true, false));
+    uint Nhits_chunked = cloud_chunked.getHitCount();
+
+    DOCTEST_CHECK(Nhits_chunked == Nhits_single);
+    if (Nhits_chunked == Nhits_single) {
+        size_t mismatches = 0;
+        for (uint h = 0; h < Nhits_single; h++) {
+            if (cloud_chunked.getHitData(h, "is_miss") != cloud_single.getHitData(h, "is_miss")) {
+                mismatches++;
+                continue;
+            }
+            if (std::fabs(cloud_chunked.getHitData(h, "distance") - cloud_single.getHitData(h, "distance")) > 1e-3) {
+                mismatches++;
+                continue;
+            }
+            if ((cloud_single.getHitXYZ(h) - cloud_chunked.getHitXYZ(h)).magnitude() > 1e-2f) {
+                mismatches++;
+            }
+        }
+        DOCTEST_CHECK(mismatches == 0);
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR Spinning Multibeam XML Load Geometry") {
+    // Write a temporary spinning-multibeam scan XML (physical-parameter form: stationary spin for one revolution, expressed
+    // as two coincident poses one rotation period apart) and verify it loads with the correct channel geometry. The azimuth
+    // grid and revolution count are derived from <azimuthStep> + <PRF> + the trajectory duration, not hand-supplied.
+    // 7 channels * 720 steps/rev / 100000 Hz = 0.0504 s for exactly one revolution.
     std::string xml_path = "plugins/lidar/xml/.tmp_spinning_multibeam_test.xml";
     {
         std::ofstream f(xml_path);
         f << "<helios>\n";
         f << "  <scan>\n";
-        f << "    <origin> 0 0 1 </origin>\n";
         f << "    <scanPattern> spinning_multibeam </scanPattern>\n";
         f << "    <beamElevationAngles> -15 -10 -5 0 5 10 15 </beamElevationAngles>\n";
-        f << "    <Nphi> 720 </Nphi>\n";
-        f << "    <phiMin> 0 </phiMin>\n";
-        f << "    <phiMax> 360 </phiMax>\n";
+        f << "    <azimuthStep> 0.5 </azimuthStep>\n"; // 0.5 deg/step -> 720 steps/rev
+        f << "    <PRF> 100000 </PRF>\n";
+        f << "    <trajectory>\n";
+        f << "      <pose> 0.0    0 0 1  0 0 0 1 </pose>\n";
+        f << "      <pose> 0.0504 0 0 1  0 0 0 1 </pose>\n";
+        f << "    </trajectory>\n";
         f << "  </scan>\n";
         f << "</helios>\n";
     }
@@ -687,8 +1093,10 @@ DOCTEST_TEST_CASE("LiDAR Spinning Multibeam XML Load and Round-Trip") {
     DOCTEST_CHECK_NOTHROW(cloud.loadXML(xml_path.c_str()));
     DOCTEST_REQUIRE(cloud.getScanCount() == 1);
     DOCTEST_CHECK(cloud.getScanPattern(0) == SCAN_PATTERN_SPINNING_MULTIBEAM);
+    DOCTEST_CHECK(cloud.getScanMode(0) == SCAN_MODE_SPINNING);
     DOCTEST_CHECK(cloud.getScanSizeTheta(0) == 7); // 7 channels
-    DOCTEST_CHECK(cloud.getScanSizePhi(0) == 720);
+    DOCTEST_CHECK(cloud.getScanStepsPerRev(0) == 720); // 360 / 0.5
+    DOCTEST_CHECK(cloud.getScanSizePhi(0) == 720); // one revolution -> exactly steps_per_rev columns
 
     std::vector<float> angles = cloud.getScanBeamZenithAngles(0);
     DOCTEST_REQUIRE(angles.size() == 7);
@@ -1465,7 +1873,7 @@ DOCTEST_TEST_CASE("LiDAR Synthetic Scan Angular Jitter Test") {
     DOCTEST_CHECK(identical);
 }
 
-DOCTEST_TEST_CASE("LiDAR Multi-Return Equal Weighting Test") {
+DOCTEST_TEST_CASE("LiDAR Multi-Return Gaussian Weighting Test") {
     LiDARcloud lidar;
     lidar.disableMessages();
 
@@ -1572,7 +1980,7 @@ DOCTEST_TEST_CASE("LiDAR Multi-Return Equal Weighting Test") {
     float LAD_single = lidar_single.getCellLeafAreaDensity(0);
     float G_single = lidar_single.getCellGtheta(0);
 
-    // Multi-return equal weighting should match expected LAD within 2%
+    // Multi-return Gaussian weighting should match expected LAD within 2%
     DOCTEST_CHECK(LAD_multi > LAD_exact * 0.98f);
     DOCTEST_CHECK(LAD_multi < LAD_exact * 1.02f);
 
@@ -1581,9 +1989,12 @@ DOCTEST_TEST_CASE("LiDAR Multi-Return Equal Weighting Test") {
     DOCTEST_CHECK(fabs(Gtheta_multi - Gtheta_exact) / Gtheta_exact == doctest::Approx(0.0f).epsilon(0.05f));
 }
 
-DOCTEST_TEST_CASE("LiDAR Eight Voxel Multi-Return Equal Weighting Test") {
+DOCTEST_TEST_CASE("LiDAR Eight Voxel Multi-Return Gaussian Weighting Test") {
     // Test multi-return LiDAR with 8-voxel grid (2x2x2)
-    // Validates equal-weighting algorithm handles partial occlusion correctly
+    // Validates the Gaussian-footprint-weighting algorithm handles partial occlusion correctly. Leaf-area density (RMSE)
+    // is conserved; the leaf-angle G(theta) inversion is more sensitive because energy weighting places a return that
+    // merges sub-rays across surfaces at the energy-weighted centroid rather than the geometric midpoint, so its
+    // tolerance is looser than the area tolerance.
 
     LiDARcloud synthetic_mr8;
     synthetic_mr8.disableMessages();
@@ -1738,8 +2149,124 @@ DOCTEST_TEST_CASE("LiDAR Eight Voxel Multi-Return Equal Weighting Test") {
         if (LAD_grid_true[i] > 0.001f && G_exact > 0) {
             DOCTEST_CHECK(G == G); // Check for NaN
             DOCTEST_CHECK(G_exact == G_exact); // Check for NaN
-            DOCTEST_CHECK(fabs(G - G_exact) / G_exact == doctest::Approx(0.0f).epsilon(0.05f));
+            DOCTEST_CHECK(fabs(G - G_exact) / G_exact == doctest::Approx(0.0f).epsilon(0.1f));
         }
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR LAD DDA vs Brute-Force Equivalence") {
+    // The leaf-area inversion has two code paths that must produce identical results: the fast per-beam
+    // 3D-DDA traversal (used for regular addGrid() lattices) and the brute-force per-cell slab loop
+    // (fallback for non-lattice grids). forceBruteForceLeafArea() forces the latter so we can A/B them
+    // on identical input. Every per-cell output (leaf area, G(theta), beam count, LAD variance) must match
+    // to floating-point tolerance. Several grid geometries are exercised: cubic multi-cell, non-cubic with
+    // an off-center origin, a single-return scan, and a multi-return scan.
+
+    auto run_pair = [](int3 divisions, const vec3 &grid_center, const vec3 &grid_size, bool multi_return) {
+        // Build identical clouds twice and invert one with DDA, the other forced to brute-force.
+        auto build_and_invert = [&](bool force_bruteforce, std::vector<float> &leaf_area, std::vector<float> &gtheta, std::vector<int> &beam_count, std::vector<float> &lad_var) {
+            LiDARcloud lidar;
+            lidar.disableMessages();
+
+            vec3 scan_origin(-5.0f, 0.0f, 0.5f);
+            ScanMetadata scan(scan_origin, 4000, 0.0f, M_PI, 6000, 0.0f, 2.0f * M_PI, 0.0f, multi_return ? 0.0004f : 0.0f, 0.0f, 0.0f, std::vector<std::string>{});
+            lidar.addScan(scan);
+            lidar.addGrid(grid_center, grid_size, divisions, 0);
+
+            Context context;
+            context.seedRandomGenerator(0);
+            context.loadXML("plugins/lidar/xml/leaf_cube_LAI2_lw0_01_spherical.xml", true);
+
+            if (multi_return) {
+                lidar.syntheticScan(&context, 30, 0.1f, true, true);
+            } else {
+                lidar.syntheticScan(&context, true, true); // scan_grid_only, record_misses
+            }
+            lidar.triangulateHitPoints(0.04, 10);
+
+            lidar.forceBruteForceLeafArea(force_bruteforce);
+            lidar.calculateLeafArea(&context);
+
+            uint Ncells = lidar.getGridCellCount();
+            leaf_area.resize(Ncells);
+            gtheta.resize(Ncells);
+            beam_count.resize(Ncells);
+            lad_var.resize(Ncells);
+            for (uint c = 0; c < Ncells; c++) {
+                leaf_area[c] = lidar.getCellLeafArea(c);
+                gtheta[c] = lidar.getCellGtheta(c);
+                beam_count[c] = lidar.getCellBeamCount(c);
+                lad_var[c] = lidar.getCellLADVariance(c);
+            }
+        };
+
+        std::vector<float> la_dda, g_dda, var_dda;
+        std::vector<int> bc_dda;
+        std::vector<float> la_bf, g_bf, var_bf;
+        std::vector<int> bc_bf;
+        build_and_invert(false, la_dda, g_dda, bc_dda, var_dda); // fast DDA path
+        build_and_invert(true, la_bf, g_bf, bc_bf, var_bf); // forced brute-force path
+
+        DOCTEST_REQUIRE(la_dda.size() == la_bf.size());
+        for (size_t c = 0; c < la_dda.size(); c++) {
+            DOCTEST_CHECK_MESSAGE(la_dda[c] == doctest::Approx(la_bf[c]).epsilon(1e-4f), "leaf_area mismatch in cell " << c);
+            DOCTEST_CHECK_MESSAGE(g_dda[c] == doctest::Approx(g_bf[c]).epsilon(1e-4f), "Gtheta mismatch in cell " << c);
+            DOCTEST_CHECK_MESSAGE(bc_dda[c] == bc_bf[c], "beam_count mismatch in cell " << c << " (" << bc_dda[c] << " vs " << bc_bf[c] << ")");
+            // LAD_variance is -1 for under-sampled cells; compare exactly there, approx otherwise.
+            if (var_dda[c] < 0.f || var_bf[c] < 0.f) {
+                DOCTEST_CHECK_MESSAGE(var_dda[c] == var_bf[c], "LAD_variance sign mismatch in cell " << c);
+            } else {
+                DOCTEST_CHECK_MESSAGE(var_dda[c] == doctest::Approx(var_bf[c]).epsilon(1e-3f), "LAD_variance mismatch in cell " << c);
+            }
+        }
+    };
+
+    // Cubic 2x2x2 grid, single return
+    run_pair(make_int3(2, 2, 2), vec3(0.0f, 0.0f, 0.5f), vec3(1.0f, 1.0f, 1.0f), false);
+    // Cubic 2x2x2 grid, multi return
+    run_pair(make_int3(2, 2, 2), vec3(0.0f, 0.0f, 0.5f), vec3(1.0f, 1.0f, 1.0f), true);
+    // Non-cubic grid with non-uniform divisions and a larger extent (cells are not cubes)
+    run_pair(make_int3(3, 2, 4), vec3(0.0f, 0.0f, 0.5f), vec3(1.5f, 1.0f, 1.2f), false);
+}
+
+DOCTEST_TEST_CASE("LiDAR LAD Non-Lattice Fallback") {
+    // A grid assembled cell-by-cell with mismatched cell sizes does NOT form a regular lattice, so the
+    // inversion must use the brute-force fallback. Verify it runs and produces finite results, and that
+    // forcing brute-force explicitly gives the same answer (the DDA path should not engage here at all).
+
+    auto build = [](bool force_bruteforce, std::vector<float> &leaf_area) {
+        LiDARcloud lidar;
+        lidar.disableMessages();
+
+        ScanMetadata scan(vec3(-5.0f, 0.0f, 0.5f), 3000, 0.0f, M_PI, 5000, 0.0f, 2.0f * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, std::vector<std::string>{});
+        lidar.addScan(scan);
+
+        // Two manually-added cells of DIFFERENT sizes -> not a regular lattice (global_count defaults to 1x1x1
+        // for each, so total cell count != product, and sizes differ).
+        lidar.addGridCell(vec3(-0.25f, 0.0f, 0.5f), vec3(0.5f, 1.0f, 1.0f), 0.f);
+        lidar.addGridCell(vec3(0.35f, 0.0f, 0.5f), vec3(0.7f, 1.0f, 1.0f), 0.f);
+
+        Context context;
+        context.loadXML("plugins/lidar/xml/leaf_cube_LAI2_lw0_01_spherical.xml", true);
+        lidar.syntheticScan(&context, true, true);
+        lidar.triangulateHitPoints(0.04, 10);
+
+        lidar.forceBruteForceLeafArea(force_bruteforce);
+        lidar.calculateLeafArea(&context);
+
+        leaf_area.resize(lidar.getGridCellCount());
+        for (uint c = 0; c < lidar.getGridCellCount(); c++) {
+            leaf_area[c] = lidar.getCellLeafArea(c);
+            DOCTEST_CHECK(leaf_area[c] == leaf_area[c]); // not NaN
+        }
+    };
+
+    std::vector<float> la_auto, la_forced;
+    build(false, la_auto); // detection should select fallback automatically
+    build(true, la_forced); // explicitly forced
+    DOCTEST_REQUIRE(la_auto.size() == la_forced.size());
+    for (size_t c = 0; c < la_auto.size(); c++) {
+        DOCTEST_CHECK(la_auto[c] == doctest::Approx(la_forced[c]).epsilon(1e-4f));
     }
 }
 
@@ -1953,9 +2480,11 @@ DOCTEST_TEST_CASE("LiDAR Multi-Return with Beam Spreading") {
     DOCTEST_CHECK(LAD > LAD_exact * 0.9f);
     DOCTEST_CHECK(LAD < LAD_exact * 1.1f);
 
-    // G(theta) should be close to 0.5 for spherical distribution
-    DOCTEST_CHECK(Gtheta > 0.45f);
-    DOCTEST_CHECK(Gtheta < 0.55f);
+    // G(theta) should be close to 0.5 for a spherical leaf-angle distribution. The band is slightly wider than the
+    // ideal +/-0.05 because Gaussian footprint weighting places returns that merge sub-rays across surfaces at the
+    // energy-weighted centroid, shifting the leaf-angle inversion by a few percent relative to equal weighting.
+    DOCTEST_CHECK(Gtheta > 0.42f);
+    DOCTEST_CHECK(Gtheta < 0.58f);
 }
 
 DOCTEST_TEST_CASE("LiDAR Exit Diameter - Comparative Spread Test") {
@@ -2080,6 +2609,669 @@ DOCTEST_TEST_CASE("LiDAR Exit Diameter - Combined with Beam Divergence") {
 
     // Combined should produce wider spread than divergence alone
     DOCTEST_CHECK(spread_both > spread_div * 1.01f);
+}
+
+DOCTEST_TEST_CASE("LiDAR Idealized Single-Ray Exact Intersection") {
+    // rays_per_pulse=1 is the idealized mode: a single ray reports the exact ray-surface intersection.
+    Context context;
+    context.addPatch(make_vec3(0, 0, 2.0f), make_vec2(2.0f, 2.0f)); // horizontal patch, normal +z
+
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {}); // single beam straight down
+    lidar.addScan(scan);
+    DOCTEST_CHECK_NOTHROW(lidar.syntheticScan(&context, 1, 0.5f)); // single ray per pulse
+
+    DOCTEST_REQUIRE(lidar.getHitCount() == 1);
+    vec3 p = lidar.getHitXYZ(0);
+    DOCTEST_CHECK(fabs(p.x) < 1e-3f);
+    DOCTEST_CHECK(fabs(p.y) < 1e-3f);
+    DOCTEST_CHECK(p.z == doctest::Approx(2.0f).epsilon(1e-3f));
+    DOCTEST_CHECK(lidar.getHitData(0, "target_count") == 1);
+}
+
+DOCTEST_TEST_CASE("LiDAR Single-Return Waveform - Ghost Point at Edge") {
+    // A divergent beam straddles a near surface (covering the +x half of the footprint) and a far surface behind it.
+    // With the two surfaces separated (0.3 m) by less than the pulse range-resolution (0.5 m), single-return waveform
+    // processing must report ONE point at an intermediate, blended range between the surfaces: a "ghost"/"mixed pixel".
+    Context context;
+    context.addPatch(make_vec3(0.5f, 0.f, 2.0f), make_vec2(1.0f, 1.0f)); // near, covers +x half of footprint, z=2.0
+    context.addPatch(make_vec3(0.f, 0.f, 1.7f), make_vec2(2.0f, 2.0f)); // far, covers full footprint, z=1.7
+
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+    uint scanID = lidar.addScan(scan);
+    lidar.setScanPulseWidth(scanID, 0.5f); // 0.5 m > 0.3 m separation -> the two surfaces merge into a single return
+
+    DOCTEST_CHECK_NOTHROW(lidar.syntheticScan(&context, 400, 0.5f, RETURN_MODE_SINGLE));
+
+    DOCTEST_REQUIRE(lidar.getHitCount() == 1);
+    vec3 p = lidar.getHitXYZ(0);
+    // The single reported point must lie strictly between the two surfaces (a ghost point), not on either one.
+    DOCTEST_CHECK(p.z > 1.71f);
+    DOCTEST_CHECK(p.z < 1.99f);
+    DOCTEST_CHECK(lidar.getHitData(0, "target_count") == 1);
+    // The echo is broadened by the spread of the two merged surfaces beyond the bare pulse width.
+    DOCTEST_CHECK(lidar.getHitData(0, "echo_width") > 0.5f);
+}
+
+DOCTEST_TEST_CASE("LiDAR Multi-Return Waveform - Resolved Returns") {
+    // The same straddling geometry but with the surfaces separated (1.5 m) by more than the range-resolution (0.5 m):
+    // multi-return waveform processing must resolve them as two separate returns on the two real surfaces.
+    Context context;
+    context.addPatch(make_vec3(0.5f, 0.f, 2.0f), make_vec2(1.0f, 1.0f)); // near, +x half, z=2.0
+    context.addPatch(make_vec3(0.f, 0.f, 0.5f), make_vec2(2.0f, 2.0f)); // far, full, z=0.5
+
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+    uint scanID = lidar.addScan(scan);
+    lidar.setScanPulseWidth(scanID, 0.5f); // 0.5 m < 1.5 m separation -> the two surfaces resolve
+
+    DOCTEST_CHECK_NOTHROW(lidar.syntheticScan(&context, 400, 0.5f, RETURN_MODE_MULTI));
+
+    DOCTEST_REQUIRE(lidar.getHitCount() == 2);
+    float znear = fmax(lidar.getHitXYZ(0).z, lidar.getHitXYZ(1).z);
+    float zfar = fmin(lidar.getHitXYZ(0).z, lidar.getHitXYZ(1).z);
+    DOCTEST_CHECK(znear == doctest::Approx(2.0f).epsilon(0.03f)); // on the near surface, not blended
+    DOCTEST_CHECK(zfar == doctest::Approx(0.5f).epsilon(0.03f)); // on the far surface, not blended
+    DOCTEST_CHECK(lidar.getHitData(0, "target_count") == 2);
+}
+
+DOCTEST_TEST_CASE("LiDAR Single-Return Waveform - Selection Policy") {
+    // Near surface (z=2.0) covers only a +x sliver of the footprint (weaker, nearer return); far surface (z=0.5) covers
+    // the full footprint (stronger, farther return). STRONGEST and FIRST must select different surfaces.
+    Context context;
+    context.addPatch(make_vec3(0.55f, 0.f, 2.0f), make_vec2(1.0f, 1.0f)); // near sliver (x in [0.05, 1.05])
+    context.addPatch(make_vec3(0.f, 0.f, 0.5f), make_vec2(2.0f, 2.0f)); // far, full footprint
+
+    // Multi-return first: confirm both surfaces are detected and identify which return is stronger.
+    LiDARcloud lidar_multi;
+    lidar_multi.disableMessages();
+    ScanMetadata scan_m(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+    uint id_m = lidar_multi.addScan(scan_m);
+    lidar_multi.setScanPulseWidth(id_m, 0.5f);
+    lidar_multi.syntheticScan(&context, 400, 0.5f, RETURN_MODE_MULTI);
+    DOCTEST_REQUIRE(lidar_multi.getHitCount() == 2);
+    int inear = (lidar_multi.getHitXYZ(0).z > lidar_multi.getHitXYZ(1).z) ? 0 : 1;
+    int ifar = 1 - inear;
+    float znear = lidar_multi.getHitXYZ(inear).z;
+    float zfar = lidar_multi.getHitXYZ(ifar).z;
+    DOCTEST_REQUIRE(fabs(lidar_multi.getHitData(ifar, "intensity")) > fabs(lidar_multi.getHitData(inear, "intensity")));
+
+    // STRONGEST selection -> the far (full-footprint) surface.
+    LiDARcloud lidar_str;
+    lidar_str.disableMessages();
+    ScanMetadata scan_s(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+    uint id_s = lidar_str.addScan(scan_s);
+    lidar_str.setScanPulseWidth(id_s, 0.5f);
+    lidar_str.setScanSingleReturnSelection(id_s, SINGLE_RETURN_STRONGEST);
+    lidar_str.syntheticScan(&context, 400, 0.5f, RETURN_MODE_SINGLE);
+    DOCTEST_REQUIRE(lidar_str.getHitCount() == 1);
+    DOCTEST_CHECK(lidar_str.getHitXYZ(0).z == doctest::Approx(zfar).epsilon(0.05f));
+
+    // FIRST selection -> the near surface.
+    LiDARcloud lidar_first;
+    lidar_first.disableMessages();
+    ScanMetadata scan_f(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+    uint id_f = lidar_first.addScan(scan_f);
+    lidar_first.setScanPulseWidth(id_f, 0.5f);
+    lidar_first.setScanSingleReturnSelection(id_f, SINGLE_RETURN_FIRST);
+    lidar_first.syntheticScan(&context, 400, 0.5f, RETURN_MODE_SINGLE);
+    DOCTEST_REQUIRE(lidar_first.getHitCount() == 1);
+    DOCTEST_CHECK(lidar_first.getHitXYZ(0).z == doctest::Approx(znear).epsilon(0.05f));
+}
+
+DOCTEST_TEST_CASE("LiDAR Waveform - Detection Threshold") {
+    // Asymmetric scene: weak near return (z=2.0, +x sliver) and strong far return (z=0.5, full footprint). A detection
+    // threshold set between the two echo strengths must suppress the weak return.
+    Context context;
+    context.addPatch(make_vec3(0.55f, 0.f, 2.0f), make_vec2(1.0f, 1.0f)); // weak near
+    context.addPatch(make_vec3(0.f, 0.f, 0.5f), make_vec2(2.0f, 2.0f)); // strong far
+
+    // Baseline: no detection threshold -> both returns are detected.
+    LiDARcloud base;
+    base.disableMessages();
+    ScanMetadata scan_b(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+    uint id_b = base.addScan(scan_b);
+    base.setScanPulseWidth(id_b, 0.5f);
+    base.syntheticScan(&context, 400, 0.5f, RETURN_MODE_MULTI);
+    DOCTEST_REQUIRE(base.getHitCount() == 2);
+    float I0 = fabs(base.getHitData(0, "intensity"));
+    float I1 = fabs(base.getHitData(1, "intensity"));
+    float Iweak = fmin(I0, I1);
+    float Istrong = fmax(I0, I1);
+    DOCTEST_REQUIRE(Istrong > Iweak);
+
+    // Threshold between the two echo strengths -> only the strong return survives.
+    LiDARcloud filt;
+    filt.disableMessages();
+    ScanMetadata scan_f(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+    uint id_f = filt.addScan(scan_f);
+    filt.setScanPulseWidth(id_f, 0.5f);
+    filt.setScanDetectionThreshold(id_f, 0.5f * (Iweak + Istrong));
+    filt.syntheticScan(&context, 400, 0.5f, RETURN_MODE_MULTI);
+    DOCTEST_REQUIRE(filt.getHitCount() == 1);
+    DOCTEST_CHECK(fabs(filt.getHitData(0, "intensity")) == doctest::Approx(Istrong).epsilon(0.15f));
+}
+
+DOCTEST_TEST_CASE("LiDAR Return-Mode XML Load and Round-Trip") {
+    // Verify the new analytic-waveform scan tags load from XML and survive an exportScans round-trip.
+    std::string xml_path = "plugins/lidar/xml/.tmp_returnmode_test.xml";
+    {
+        std::ofstream f(xml_path);
+        f << "<helios>\n  <scan>\n";
+        f << "    <origin> 0 0 5 </origin>\n";
+        f << "    <size> 10 10 </size>\n";
+        f << "    <returnMode> single </returnMode>\n";
+        f << "    <singleReturnSelection> first </singleReturnSelection>\n";
+        f << "    <maxReturns> 3 </maxReturns>\n";
+        f << "    <pulseWidth> 0.4 </pulseWidth>\n";
+        f << "    <detectionThreshold> 0.15 </detectionThreshold>\n";
+        f << "  </scan>\n</helios>\n";
+    }
+
+    LiDARcloud cloud;
+    cloud.disableMessages();
+    DOCTEST_CHECK_NOTHROW(cloud.loadXML(xml_path.c_str()));
+    DOCTEST_REQUIRE(cloud.getScanCount() == 1);
+    DOCTEST_CHECK(cloud.getScanReturnMode(0) == RETURN_MODE_SINGLE);
+    DOCTEST_CHECK(cloud.getScanSingleReturnSelection(0) == SINGLE_RETURN_FIRST);
+    DOCTEST_CHECK(cloud.getScanMaxReturns(0) == 3);
+    DOCTEST_CHECK(cloud.getScanPulseWidth(0) == doctest::Approx(0.4f));
+    DOCTEST_CHECK(cloud.getScanDetectionThreshold(0) == doctest::Approx(0.15f));
+
+    // Populate some hits so exportScans writes a complete scan, then reload and confirm the tags persist.
+    Context context;
+    context.addPatch(make_vec3(0, 0, 2.0f), make_vec2(2.0f, 2.0f));
+    cloud.syntheticScan(&context, 10, 0.5f, false, false);
+
+    const std::string out_dir = "lidar_returnmode_export_tmp";
+    std::filesystem::remove_all(out_dir);
+    const std::string xml_out = out_dir + "/scans.xml";
+    DOCTEST_CHECK_NOTHROW(cloud.exportScans(xml_out.c_str()));
+
+    LiDARcloud reloaded;
+    reloaded.disableMessages();
+    DOCTEST_CHECK_NOTHROW(reloaded.loadXML(xml_out.c_str()));
+    DOCTEST_REQUIRE(reloaded.getScanCount() == 1);
+    DOCTEST_CHECK(reloaded.getScanReturnMode(0) == RETURN_MODE_SINGLE);
+    DOCTEST_CHECK(reloaded.getScanSingleReturnSelection(0) == SINGLE_RETURN_FIRST);
+    DOCTEST_CHECK(reloaded.getScanMaxReturns(0) == 3);
+    DOCTEST_CHECK(reloaded.getScanPulseWidth(0) == doctest::Approx(0.4f));
+    DOCTEST_CHECK(reloaded.getScanDetectionThreshold(0) == doctest::Approx(0.15f));
+
+    std::filesystem::remove_all(out_dir);
+    std::remove(xml_path.c_str());
+}
+
+DOCTEST_TEST_CASE("LiDAR Strongest-Plus-Last XML Round-Trip") {
+    // The 'strongest_plus_last' selection parses (case-insensitively), accepts the 'dual' alias, and survives export/reload.
+    auto load_selection = [](const std::string &spelling) {
+        std::string xml_path = "plugins/lidar/xml/.tmp_spl_test.xml";
+        {
+            std::ofstream f(xml_path);
+            f << "<helios>\n  <scan>\n";
+            f << "    <origin> 0 0 5 </origin>\n";
+            f << "    <size> 10 10 </size>\n";
+            f << "    <returnMode> single </returnMode>\n";
+            f << "    <singleReturnSelection> " << spelling << " </singleReturnSelection>\n";
+            f << "  </scan>\n</helios>\n";
+        }
+        LiDARcloud cloud;
+        cloud.disableMessages();
+        cloud.loadXML(xml_path.c_str());
+        SingleReturnSelection sel = cloud.getScanSingleReturnSelection(0);
+        std::remove(xml_path.c_str());
+        return sel;
+    };
+
+    DOCTEST_CHECK(load_selection("strongest_plus_last") == SINGLE_RETURN_STRONGEST_PLUS_LAST);
+    DOCTEST_CHECK(load_selection("Strongest_Plus_Last") == SINGLE_RETURN_STRONGEST_PLUS_LAST); // case-insensitive
+    DOCTEST_CHECK(load_selection("dual") == SINGLE_RETURN_STRONGEST_PLUS_LAST); // alias
+
+    // Export then reload preserves the value.
+    LiDARcloud cloud;
+    cloud.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+    uint id = cloud.addScan(scan);
+    cloud.setScanReturnMode(id, RETURN_MODE_SINGLE);
+    cloud.setScanSingleReturnSelection(id, SINGLE_RETURN_STRONGEST_PLUS_LAST);
+    Context context;
+    context.addPatch(make_vec3(0, 0, 2.0f), make_vec2(2.0f, 2.0f));
+    cloud.syntheticScan(&context, 10, 0.5f, RETURN_MODE_SINGLE);
+
+    const std::string out_dir = "lidar_spl_export_tmp";
+    std::filesystem::remove_all(out_dir);
+    const std::string xml_out = out_dir + "/scans.xml";
+    DOCTEST_CHECK_NOTHROW(cloud.exportScans(xml_out.c_str()));
+
+    LiDARcloud reloaded;
+    reloaded.disableMessages();
+    DOCTEST_CHECK_NOTHROW(reloaded.loadXML(xml_out.c_str()));
+    DOCTEST_REQUIRE(reloaded.getScanCount() == 1);
+    DOCTEST_CHECK(reloaded.getScanSingleReturnSelection(0) == SINGLE_RETURN_STRONGEST_PLUS_LAST);
+
+    std::filesystem::remove_all(out_dir);
+}
+
+DOCTEST_TEST_CASE("LiDAR N-Return - maxReturns Default and Validation") {
+    // The default maxReturns is 1 (classic single-return), and the setter fail-fasts on values below 1.
+    Context context;
+    context.addPatch(make_vec3(0, 0, 2.0f), make_vec2(2.0f, 2.0f));
+
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+    uint scanID = lidar.addScan(scan);
+    DOCTEST_CHECK(lidar.getScanMaxReturns(scanID) == 1); // default
+
+    DOCTEST_CHECK_NOTHROW(lidar.setScanMaxReturns(scanID, 2));
+    DOCTEST_CHECK(lidar.getScanMaxReturns(scanID) == 2);
+
+    {
+        capture_cerr cerr_buffer;
+        DOCTEST_CHECK_THROWS(lidar.setScanMaxReturns(scanID, 0));
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR N-Return Waveform - Keeps Exactly N (stacked surfaces)") {
+    // Three resolvable returns from one divergent pulse. The two nearer surfaces are laterally-offset slivers that each
+    // cover only part of the ~0.3 m footprint (so the beam reaches all three depths); the farthest covers the rest.
+    // Separated by > pulseWidth so multi-return resolves all three; limiting maxReturns=2 must report exactly two.
+    auto buildScene = [](Context &context) {
+        context.addPatch(make_vec3(0.13f, 0.f, 2.5f), make_vec2(0.10f, 0.4f)); // nearest sliver (+x strip), z=2.5
+        context.addPatch(make_vec3(-0.12f, 0.f, 1.5f), make_vec2(0.16f, 0.4f)); // middle sliver (-x strip), z=1.5
+        context.addPatch(make_vec3(0.f, 0.f, 0.4f), make_vec2(2.0f, 2.0f)); // farthest, full footprint, z=0.4
+    };
+
+    // Multi-return baseline: all three surfaces resolve.
+    Context ctx_multi;
+    buildScene(ctx_multi);
+    LiDARcloud lidar_multi;
+    lidar_multi.disableMessages();
+    ScanMetadata scan_m(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+    uint id_m = lidar_multi.addScan(scan_m);
+    lidar_multi.setScanPulseWidth(id_m, 0.5f); // 0.5 m < 1.3 m separation -> all resolve
+    lidar_multi.syntheticScan(&ctx_multi, 400, 0.5f, RETURN_MODE_MULTI);
+    DOCTEST_REQUIRE(lidar_multi.getHitCount() == 3);
+
+    // Limited to two returns.
+    Context ctx_two;
+    buildScene(ctx_two);
+    LiDARcloud lidar_two;
+    lidar_two.disableMessages();
+    ScanMetadata scan_t(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+    uint id_t = lidar_two.addScan(scan_t);
+    lidar_two.setScanPulseWidth(id_t, 0.5f);
+    lidar_two.setScanMaxReturns(id_t, 2);
+    lidar_two.setScanSingleReturnSelection(id_t, SINGLE_RETURN_FIRST);
+    lidar_two.syntheticScan(&ctx_two, 400, 0.5f, RETURN_MODE_SINGLE);
+
+    DOCTEST_REQUIRE(lidar_two.getHitCount() == 2);
+    DOCTEST_CHECK(lidar_two.getHitData(0, "target_count") == 2);
+    DOCTEST_CHECK(lidar_two.getHitData(1, "target_count") == 2);
+    // FIRST policy keeps the two nearest (z=2.5 and z=1.5), reported nearest-first (target_index 0 nearer than 1).
+    int idx0 = (lidar_two.getHitData(0, "target_index") == 0) ? 0 : 1;
+    int idx1 = 1 - idx0;
+    DOCTEST_CHECK(lidar_two.getHitXYZ(idx0).z > lidar_two.getHitXYZ(idx1).z); // nearer (larger z) first
+    DOCTEST_CHECK(lidar_two.getHitXYZ(idx0).z == doctest::Approx(2.5f).epsilon(0.05f));
+    DOCTEST_CHECK(lidar_two.getHitXYZ(idx1).z == doctest::Approx(1.5f).epsilon(0.05f));
+}
+
+DOCTEST_TEST_CASE("LiDAR N-Return Waveform - Selection Policy with N=2") {
+    // Three resolvable returns of differing range and strength from one divergent pulse. The near surface is a narrow
+    // +x sliver (weakest); the middle is a wider -x strip (medium); the far surface covers the residual full footprint
+    // (strongest). Verify each N=2 selection policy keeps the right pair and ALWAYS reports them nearest-first (the
+    // critical ordering invariant, especially for STRONGEST, where selection is by amplitude, not range).
+    auto buildScene = [](Context &context) {
+        context.addPatch(make_vec3(0.13f, 0.f, 2.5f), make_vec2(0.10f, 0.4f)); // near narrow sliver (weak), z=2.5
+        context.addPatch(make_vec3(-0.12f, 0.f, 1.5f), make_vec2(0.16f, 0.4f)); // middle wider strip (medium), z=1.5
+        context.addPatch(make_vec3(0.f, 0.f, 0.4f), make_vec2(2.0f, 2.0f)); // far residual footprint (strongest), z=0.4
+    };
+
+    // Identify per-surface intensity ranking from a multi-return baseline.
+    Context ctx_b;
+    buildScene(ctx_b);
+    LiDARcloud base;
+    base.disableMessages();
+    ScanMetadata scan_b(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+    uint id_b = base.addScan(scan_b);
+    base.setScanPulseWidth(id_b, 0.5f);
+    base.syntheticScan(&ctx_b, 400, 0.5f, RETURN_MODE_MULTI);
+    DOCTEST_REQUIRE(base.getHitCount() == 3);
+
+    auto runPolicy = [&](SingleReturnSelection policy) {
+        Context ctx;
+        buildScene(ctx);
+        LiDARcloud lidar;
+        lidar.disableMessages();
+        ScanMetadata scan(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+        uint id = lidar.addScan(scan);
+        lidar.setScanPulseWidth(id, 0.5f);
+        lidar.setScanMaxReturns(id, 2);
+        lidar.setScanSingleReturnSelection(id, policy);
+        lidar.syntheticScan(&ctx, 400, 0.5f, RETURN_MODE_SINGLE);
+        return lidar;
+    };
+
+    // Helper: returns the two kept z-values ordered as reported (by target_index).
+    auto keptZ = [](LiDARcloud &lidar) {
+        DOCTEST_REQUIRE(lidar.getHitCount() == 2);
+        int i0 = (lidar.getHitData(0, "target_index") == 0) ? 0 : 1;
+        int i1 = 1 - i0;
+        return std::make_pair(lidar.getHitXYZ(i0).z, lidar.getHitXYZ(i1).z);
+    };
+
+    // FIRST -> the two nearest surfaces: z=2.5 then z=1.5 (nearest-first).
+    {
+        LiDARcloud lidar = runPolicy(SINGLE_RETURN_FIRST);
+        auto z = keptZ(lidar);
+        DOCTEST_CHECK(z.first > z.second); // nearest-first
+        DOCTEST_CHECK(z.first == doctest::Approx(2.5f).epsilon(0.05f));
+        DOCTEST_CHECK(z.second == doctest::Approx(1.5f).epsilon(0.05f));
+    }
+    // LAST -> the two farthest surfaces: z=1.5 then z=0.4 (still nearest-first in the report).
+    {
+        LiDARcloud lidar = runPolicy(SINGLE_RETURN_LAST);
+        auto z = keptZ(lidar);
+        DOCTEST_CHECK(z.first > z.second); // nearest-first
+        DOCTEST_CHECK(z.first == doctest::Approx(1.5f).epsilon(0.05f));
+        DOCTEST_CHECK(z.second == doctest::Approx(0.4f).epsilon(0.05f));
+    }
+    // STRONGEST -> the two highest-amplitude surfaces (middle strip + far full): z=1.5 then z=0.4. The near narrow sliver
+    // is weakest and is dropped. CRITICAL: even though selection is by intensity, the kept pair is reported nearest-first.
+    {
+        LiDARcloud lidar = runPolicy(SINGLE_RETURN_STRONGEST);
+        auto z = keptZ(lidar);
+        DOCTEST_CHECK(z.first > z.second); // nearest-first regardless of selection key
+        DOCTEST_CHECK(z.first == doctest::Approx(1.5f).epsilon(0.05f));
+        DOCTEST_CHECK(z.second == doctest::Approx(0.4f).epsilon(0.05f));
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR Strongest-Plus-Last Dual Return - Three Surfaces") {
+    // SINGLE_RETURN_STRONGEST_PLUS_LAST reports the strongest echo AND the farthest (last) echo of the pulse. For a
+    // 3-surface pulse this differs from every single-key cap. Scene: three laterally-disjoint strips at distinct ranges,
+    // arranged so echo strength DECREASES with range (the nearest strip is centered where the divergent beam's rays are
+    // densest -> strongest echo; farther strips are progressively more peripheral -> weaker). Then strongest == near and
+    // last == far, so
+    //   strongest+last = {near (strongest), far (last)}   -- drops the middle
+    // which neither STRONGEST-cap-2 ({near, middle}, the two largest amplitudes) nor LAST-cap-2 ({middle, far}, the two
+    // farthest) produces. The policy also ignores maxReturns (it intrinsically yields 1 or 2 returns).
+    const float znear = 2.5f, zmid = 1.5f, zfar = 0.4f;
+    const std::vector<std::string> columnFormat = {"reflectivity_lidar"}; // recorded-intensity column
+
+    auto buildScene = [&](Context &context) {
+        context.addPatch(make_vec3(0.0f, 0.f, znear), make_vec2(0.12f, 0.5f)); // near, centered (dense rays) -> strongest
+        context.addPatch(make_vec3(0.13f, 0.f, zmid), make_vec2(0.14f, 0.5f)); // middle, +x offset -> medium
+        context.addPatch(make_vec3(-0.17f, 0.f, zfar), make_vec2(0.10f, 0.5f)); // far, -x peripheral -> weakest
+    };
+
+    auto runScan = [&](ReturnMode mode, SingleReturnSelection policy, int maxReturns) {
+        Context ctx;
+        // Seed the Context RNG so the synthetic scan's per-beam ray sampling (context->randu() inside syntheticScan) is
+        // deterministic. Without this the Context seeds from wall-clock time, so the recorded intensities — and hence the
+        // I_near > I_mid > I_far ordering this test's STRONGEST-cap-2 logic depends on — vary run-to-run; the middle/far
+        // separation in this scene is small enough that an unseeded run occasionally inverts it. A fixed seed pins the
+        // sampling pattern identically on every machine and every CPU/GPU trace path.
+        ctx.seedRandomGenerator(0);
+        buildScene(ctx);
+        LiDARcloud lidar;
+        lidar.disableMessages();
+        ScanMetadata scan(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, columnFormat);
+        uint id = lidar.addScan(scan);
+        lidar.setScanPulseWidth(id, 0.5f);
+        lidar.setScanMaxReturns(id, maxReturns);
+        lidar.setScanSingleReturnSelection(id, policy);
+        lidar.syntheticScan(&ctx, 400, 0.5f, mode);
+        return lidar;
+    };
+
+    // Mark which of the three surfaces a cloud's returns landed on (by z), so assertions are structural, not coordinate-exact.
+    auto classify = [&](LiDARcloud &c, bool &hit_near, bool &hit_mid, bool &hit_far) {
+        hit_near = hit_mid = hit_far = false;
+        for (uint i = 0; i < c.getHitCount(); i++) {
+            float z = c.getHitXYZ(i).z;
+            if (fabs(z - znear) < 0.2f)
+                hit_near = true;
+            else if (fabs(z - zmid) < 0.2f)
+                hit_mid = true;
+            else if (fabs(z - zfar) < 0.2f)
+                hit_far = true;
+        }
+    };
+
+    // Multi-return baseline: all three surfaces resolve, and the recorded intensities confirm near > middle > far.
+    LiDARcloud base = runScan(RETURN_MODE_MULTI, SINGLE_RETURN_STRONGEST, 1);
+    DOCTEST_REQUIRE(base.getHitCount() == 3);
+    double I_near = 0.0, I_mid = 0.0, I_far = 0.0;
+    for (uint i = 0; i < base.getHitCount(); i++) {
+        float z = base.getHitXYZ(i).z;
+        DOCTEST_REQUIRE(base.doesHitDataExist(i, "intensity"));
+        double I = fabs((double)base.getHitData(i, "intensity"));
+        if (fabs(z - znear) < 0.2f)
+            I_near = I;
+        else if (fabs(z - zmid) < 0.2f)
+            I_mid = I;
+        else if (fabs(z - zfar) < 0.2f)
+            I_far = I;
+    }
+    DOCTEST_REQUIRE(I_near > 0.0);
+    DOCTEST_REQUIRE(I_mid > 0.0);
+    DOCTEST_REQUIRE(I_far > 0.0);
+    DOCTEST_REQUIRE(I_near > I_mid); // scene precondition: near is strongest
+    DOCTEST_REQUIRE(I_mid > I_far); //                     far is weakest
+
+    // Strongest+last: keeps the near (strongest) and far (last) surfaces, NOT the middle. maxReturns=1 must be ignored.
+    LiDARcloud spl = runScan(RETURN_MODE_SINGLE, SINGLE_RETURN_STRONGEST_PLUS_LAST, 1);
+    DOCTEST_REQUIRE(spl.getHitCount() == 2); // two returns despite maxReturns=1
+    bool sn, sm, sf;
+    classify(spl, sn, sm, sf);
+    DOCTEST_CHECK(sn); // strongest
+    DOCTEST_CHECK(sf); // last
+    DOCTEST_CHECK_FALSE(sm); // middle dropped -- the distinguishing point
+    // Reported nearest-first: target_index 0 is the nearer (larger z) surface.
+    DOCTEST_CHECK(spl.getHitData(0, "target_count") == 2);
+    DOCTEST_CHECK(spl.getHitData(1, "target_count") == 2);
+    int i0 = (spl.getHitData(0, "target_index") == 0) ? 0 : 1;
+    int i1 = 1 - i0;
+    DOCTEST_CHECK(spl.getHitXYZ(i0).z > spl.getHitXYZ(i1).z);
+    DOCTEST_CHECK(spl.getHitXYZ(i0).z == doctest::Approx(znear).epsilon(0.05f));
+    DOCTEST_CHECK(spl.getHitXYZ(i1).z == doctest::Approx(zfar).epsilon(0.05f));
+
+    // Contrast against the single-key caps on the SAME scene: both keep a different pair, proving the policy is distinct.
+    LiDARcloud strong2 = runScan(RETURN_MODE_SINGLE, SINGLE_RETURN_STRONGEST, 2);
+    DOCTEST_REQUIRE(strong2.getHitCount() == 2);
+    bool tn, tm, tf;
+    classify(strong2, tn, tm, tf);
+    DOCTEST_CHECK(tn); // STRONGEST-cap-2 keeps the two largest amplitudes: near + middle
+    DOCTEST_CHECK(tm);
+    DOCTEST_CHECK_FALSE(tf); // far (weakest) dropped -- differs from strongest+last
+
+    LiDARcloud last2 = runScan(RETURN_MODE_SINGLE, SINGLE_RETURN_LAST, 2);
+    DOCTEST_REQUIRE(last2.getHitCount() == 2);
+    bool ln, lm, lf;
+    classify(last2, ln, lm, lf);
+    DOCTEST_CHECK_FALSE(ln); // LAST-cap-2 keeps the two farthest: middle + far
+    DOCTEST_CHECK(lm);
+    DOCTEST_CHECK(lf); // near dropped -- differs from strongest+last
+}
+
+DOCTEST_TEST_CASE("LiDAR Strongest-Plus-Last Dual Return - Dedup To Single") {
+    // When the strongest return IS the farthest, strongest+last collapses to a single reported point (not a doubled one).
+    // Two surfaces: a weak near peripheral sliver (few rays) and a strong far full-footprint surface that catches the dense
+    // central rays, so the far surface is both the strongest echo and the last (farthest) return.
+    const float znear = 2.0f, zfar = 0.5f;
+    const std::vector<std::string> columnFormat = {"reflectivity_lidar"}; // recorded-intensity column
+
+    auto buildScene = [&](Context &context) {
+        context.addPatch(make_vec3(0.13f, 0.f, znear), make_vec2(0.10f, 0.5f)); // near, peripheral sliver -> weak
+        context.addPatch(make_vec3(0.f, 0.f, zfar), make_vec2(2.0f, 2.0f)); // far, full footprint -> strongest & last
+    };
+
+    auto runScan = [&](ReturnMode mode, SingleReturnSelection policy) {
+        Context ctx;
+        buildScene(ctx);
+        LiDARcloud lidar;
+        lidar.disableMessages();
+        ScanMetadata scan(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, columnFormat);
+        uint id = lidar.addScan(scan);
+        lidar.setScanPulseWidth(id, 0.5f);
+        lidar.setScanSingleReturnSelection(id, policy);
+        lidar.syntheticScan(&ctx, 400, 0.5f, mode);
+        return lidar;
+    };
+
+    // Baseline: both surfaces resolve and the far surface is the strongest echo.
+    LiDARcloud base = runScan(RETURN_MODE_MULTI, SINGLE_RETURN_STRONGEST);
+    DOCTEST_REQUIRE(base.getHitCount() == 2);
+    double I_near = 0.0, I_far = 0.0;
+    for (uint i = 0; i < base.getHitCount(); i++) {
+        float z = base.getHitXYZ(i).z;
+        DOCTEST_REQUIRE(base.doesHitDataExist(i, "intensity"));
+        double I = fabs((double)base.getHitData(i, "intensity"));
+        if (fabs(z - znear) < 0.3f)
+            I_near = I;
+        else if (fabs(z - zfar) < 0.3f)
+            I_far = I;
+    }
+    DOCTEST_REQUIRE(I_near > 0.0);
+    DOCTEST_REQUIRE(I_far > 0.0);
+    DOCTEST_REQUIRE(I_far > I_near); // the strongest return IS the farthest
+
+    // Strongest+last must dedup to exactly one point at the far surface.
+    LiDARcloud spl = runScan(RETURN_MODE_SINGLE, SINGLE_RETURN_STRONGEST_PLUS_LAST);
+    DOCTEST_REQUIRE(spl.getHitCount() == 1); // dedup: strongest == last -> single point
+    DOCTEST_CHECK(spl.getHitXYZ(0).z == doctest::Approx(zfar).epsilon(0.05f));
+    DOCTEST_CHECK(spl.getHitData(0, "target_count") == 1);
+}
+
+DOCTEST_TEST_CASE("LiDAR Dual-Return Is N=2") {
+    // Two resolvable surfaces: maxReturns=2 must keep both, matching the multi-return result for a 2-surface scene.
+    // The near surface covers only the +x half of the footprint so the divergent beam also reaches the far surface.
+    auto buildScene = [](Context &context) {
+        context.addPatch(make_vec3(0.5f, 0.f, 2.0f), make_vec2(1.0f, 1.0f)); // near, +x half
+        context.addPatch(make_vec3(0.f, 0.f, 0.5f), make_vec2(2.0f, 2.0f)); // far, full footprint
+    };
+
+    Context ctx;
+    buildScene(ctx);
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+    uint id = lidar.addScan(scan);
+    lidar.setScanPulseWidth(id, 0.5f);
+    lidar.setScanMaxReturns(id, 2);
+    lidar.syntheticScan(&ctx, 400, 0.5f, RETURN_MODE_SINGLE);
+
+    DOCTEST_REQUIRE(lidar.getHitCount() == 2);
+    float znear = fmax(lidar.getHitXYZ(0).z, lidar.getHitXYZ(1).z);
+    float zfar = fmin(lidar.getHitXYZ(0).z, lidar.getHitXYZ(1).z);
+    DOCTEST_CHECK(znear == doctest::Approx(2.0f).epsilon(0.03f));
+    DOCTEST_CHECK(zfar == doctest::Approx(0.5f).epsilon(0.03f));
+}
+
+DOCTEST_TEST_CASE("LiDAR N-Return - Full Miss Preserved") {
+    // A pulse that hits nothing (fully transmitted beam) must record a single miss even in N-return mode, so the cloud
+    // remains usable for leaf-area inversion.
+    Context context; // empty scene -> all rays miss
+
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+    uint id = lidar.addScan(scan);
+    lidar.setScanPulseWidth(id, 0.5f);
+    lidar.setScanReturnMode(id, RETURN_MODE_SINGLE);
+    lidar.setScanMaxReturns(id, 3);
+    lidar.syntheticScan(&context, 400, 0.5f, false, true); // record_misses=true
+
+    DOCTEST_REQUIRE(lidar.getHitCount() == 1);
+    DOCTEST_CHECK(lidar.getHitData(0, "is_miss") == 1.0);
+    DOCTEST_CHECK(lidar.getHitData(0, "target_index") == 99);
+}
+
+DOCTEST_TEST_CASE("LiDAR N-Return - Partial Miss Dropped") {
+    // A divergent beam partially hits a near surface (covering the +x half of the footprint) and partially transmits
+    // past it. In limited (N-return) mode the transmitted-beam miss is dropped (only real points are reported), whereas
+    // unlimited multi-return mode keeps it.
+    auto buildScene = [](Context &context) {
+        context.addPatch(make_vec3(-0.13f, 0.f, 2.0f), make_vec2(0.35f, 0.6f)); // straddles center, leaves +x footprint open
+    };
+
+    // Multi-return with misses recorded: the partial transmission yields a real return AND a miss row.
+    Context ctx_multi;
+    buildScene(ctx_multi);
+    LiDARcloud lidar_multi;
+    lidar_multi.disableMessages();
+    ScanMetadata scan_m(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+    uint id_m = lidar_multi.addScan(scan_m);
+    lidar_multi.setScanPulseWidth(id_m, 0.5f);
+    lidar_multi.setScanReturnMode(id_m, RETURN_MODE_MULTI);
+    lidar_multi.syntheticScan(&ctx_multi, 400, 0.5f, false, true); // record_misses=true
+    // Multi-return keeps both the real return and the transmitted-beam miss.
+    int multi_real = 0, multi_miss = 0;
+    for (uint i = 0; i < lidar_multi.getHitCount(); i++) {
+        if (lidar_multi.getHitData(i, "is_miss") == 1.0) {
+            multi_miss++;
+        } else {
+            multi_real++;
+        }
+    }
+    DOCTEST_REQUIRE(multi_real >= 1);
+    DOCTEST_REQUIRE(multi_miss == 1);
+
+    // N-return (limited) mode: the same partial-transmission pulse reports only real points, no miss row.
+    Context ctx_lim;
+    buildScene(ctx_lim);
+    LiDARcloud lidar_lim;
+    lidar_lim.disableMessages();
+    ScanMetadata scan_l(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+    uint id_l = lidar_lim.addScan(scan_l);
+    lidar_lim.setScanPulseWidth(id_l, 0.5f);
+    lidar_lim.setScanReturnMode(id_l, RETURN_MODE_SINGLE);
+    lidar_lim.setScanMaxReturns(id_l, 3);
+    lidar_lim.syntheticScan(&ctx_lim, 400, 0.5f, false, true); // record_misses=true
+    int lim_miss = 0;
+    for (uint i = 0; i < lidar_lim.getHitCount(); i++) {
+        if (lidar_lim.getHitData(i, "is_miss") == 1.0) {
+            lim_miss++;
+        }
+    }
+    DOCTEST_REQUIRE(lidar_lim.getHitCount() >= 1);
+    DOCTEST_CHECK(lim_miss == 0); // partial-transmission miss dropped in limited mode
+}
+
+DOCTEST_TEST_CASE("LiDAR N-Return - Backward Compatibility (single/multi unchanged)") {
+    // With the default maxReturns=1, single- and multi-return modes behave exactly as before.
+    // Single-return ghost point: two surfaces within the pulse width blend to one point.
+    {
+        Context context;
+        context.addPatch(make_vec3(0.5f, 0.f, 2.0f), make_vec2(1.0f, 1.0f));
+        context.addPatch(make_vec3(0.f, 0.f, 1.7f), make_vec2(2.0f, 2.0f));
+        LiDARcloud lidar;
+        lidar.disableMessages();
+        ScanMetadata scan(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+        uint id = lidar.addScan(scan);
+        DOCTEST_CHECK(lidar.getScanMaxReturns(id) == 1); // default
+        lidar.setScanPulseWidth(id, 0.5f);
+        lidar.syntheticScan(&context, 400, 0.5f, RETURN_MODE_SINGLE);
+        DOCTEST_CHECK(lidar.getHitCount() == 1);
+    }
+    // Multi-return resolved returns: two well-separated surfaces resolve to two points.
+    {
+        Context context;
+        context.addPatch(make_vec3(0.5f, 0.f, 2.0f), make_vec2(1.0f, 1.0f));
+        context.addPatch(make_vec3(0.f, 0.f, 0.5f), make_vec2(2.0f, 2.0f));
+        LiDARcloud lidar;
+        lidar.disableMessages();
+        ScanMetadata scan(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+        uint id = lidar.addScan(scan);
+        lidar.setScanPulseWidth(id, 0.5f);
+        lidar.syntheticScan(&context, 400, 0.5f, RETURN_MODE_MULTI);
+        DOCTEST_CHECK(lidar.getHitCount() == 2);
+    }
 }
 
 DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Grid Position Verification") {
@@ -2705,6 +3897,184 @@ DOCTEST_TEST_CASE("LiDAR exportPointCloud header") {
     DOCTEST_CHECK(mf == doctest::Approx(100.0));
 
     std::filesystem::remove_all(out_dir);
+}
+
+DOCTEST_TEST_CASE("LiDAR Columnar Hit Data - Bulk Getter Matches Per-Hit") {
+    // The columnar bulk getter getHitDataColumn() must return, for every hit, exactly what the per-hit
+    // getHitData()/doesHitDataExist() path returns, including the absent-value placement for hits that
+    // lack a label. Build a cloud where a custom label is present on only some hits.
+    const std::vector<std::string> columnFormat = {"x", "y", "z", "intensity", "sparse_field"};
+    LiDARcloud cloud;
+    cloud.disableMessages();
+
+    ScanMetadata scan(vec3(0.0f, 0.0f, 0.0f), 4, 0.25f * float(M_PI), 0.75f * float(M_PI), 4, 0.0f, 2.0f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, columnFormat);
+    DOCTEST_CHECK_NOTHROW(cloud.addScan(scan));
+
+    const uint Nhits = 7;
+    for (uint i = 0; i < Nhits; i++) {
+        std::map<std::string, double> data;
+        data["intensity"] = 0.5 + 0.1 * i; // present on every hit
+        if (i % 2 == 0) {
+            data["sparse_field"] = 1000.0 + i; // present only on even hits
+        }
+        SphericalCoord dir(1.f, 0.0f, 0.1f * i);
+        DOCTEST_CHECK_NOTHROW(cloud.addHitPoint(0, vec3(float(i), 0.2f * i, 1.0f), dir, data));
+    }
+    DOCTEST_CHECK(cloud.getHitCount() == Nhits);
+
+    const double absent = -9999.0;
+
+    // intensity: present everywhere.
+    std::vector<double> intensity_bulk;
+    DOCTEST_CHECK_NOTHROW(cloud.getHitDataColumn("intensity", intensity_bulk, absent));
+    DOCTEST_CHECK(intensity_bulk.size() == Nhits);
+    for (uint i = 0; i < Nhits; i++) {
+        const double expected = cloud.doesHitDataExist(i, "intensity") ? cloud.getHitData(i, "intensity") : absent;
+        DOCTEST_CHECK(intensity_bulk[i] == doctest::Approx(expected));
+    }
+
+    // sparse_field: present only on even hits, absent (= -9999) on odd hits.
+    std::vector<double> sparse_bulk;
+    DOCTEST_CHECK_NOTHROW(cloud.getHitDataColumn("sparse_field", sparse_bulk, absent));
+    DOCTEST_CHECK(sparse_bulk.size() == Nhits);
+    for (uint i = 0; i < Nhits; i++) {
+        const double expected = cloud.doesHitDataExist(i, "sparse_field") ? cloud.getHitData(i, "sparse_field") : absent;
+        DOCTEST_CHECK(sparse_bulk[i] == doctest::Approx(expected));
+        if (i % 2 == 0) {
+            DOCTEST_CHECK(sparse_bulk[i] == doctest::Approx(1000.0 + i));
+        } else {
+            DOCTEST_CHECK(sparse_bulk[i] == doctest::Approx(absent));
+        }
+    }
+
+    // A label that was never set on any hit must be all-absent and report column index -1.
+    DOCTEST_CHECK(cloud.getHitDataColumnIndex("never_set") == -1);
+    std::vector<double> missing_bulk;
+    DOCTEST_CHECK_NOTHROW(cloud.getHitDataColumn("never_set", missing_bulk, absent));
+    DOCTEST_CHECK(missing_bulk.size() == Nhits);
+    for (uint i = 0; i < Nhits; i++) {
+        DOCTEST_CHECK(missing_bulk[i] == doctest::Approx(absent));
+    }
+    DOCTEST_CHECK(cloud.getHitDataColumnIndex("intensity") >= 0);
+}
+
+DOCTEST_TEST_CASE("LiDAR Columnar Hit Data - Delete Lockstep") {
+    // deleteHitPoint() uses swap-and-pop; the columnar scalar data must move in lockstep so each
+    // surviving hit's columns still correspond to its position/color. Tag each hit with a unique id
+    // equal to its position, delete several, and verify every survivor's column value still matches the
+    // id encoded in its XYZ position.
+    const std::vector<std::string> columnFormat = {"x", "y", "z", "id"};
+    LiDARcloud cloud;
+    cloud.disableMessages();
+
+    ScanMetadata scan(vec3(0.0f, 0.0f, 0.0f), 4, 0.25f * float(M_PI), 0.75f * float(M_PI), 4, 0.0f, 2.0f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, columnFormat);
+    DOCTEST_CHECK_NOTHROW(cloud.addScan(scan));
+
+    const uint Nhits = 10;
+    for (uint i = 0; i < Nhits; i++) {
+        std::map<std::string, double> data;
+        data["id"] = double(i);
+        SphericalCoord dir(1.f, 0.0f, 0.05f * i);
+        // Encode the id in the x position so we can cross-check column vs. position after swaps.
+        DOCTEST_CHECK_NOTHROW(cloud.addHitPoint(0, vec3(double(i), 0.f, 1.f), dir, data));
+    }
+
+    // Delete hits 2, 5, 8 (descending so indices stay valid - mirrors the filter delete loops).
+    DOCTEST_CHECK_NOTHROW(cloud.deleteHitPoint(8));
+    DOCTEST_CHECK_NOTHROW(cloud.deleteHitPoint(5));
+    DOCTEST_CHECK_NOTHROW(cloud.deleteHitPoint(2));
+    DOCTEST_CHECK(cloud.getHitCount() == Nhits - 3);
+
+    for (uint i = 0; i < cloud.getHitCount(); i++) {
+        const double id = cloud.getHitData(i, "id");
+        const double x = cloud.getHitXYZ(i).x;
+        // The id column value must equal the x position for the SAME hit - proving columns didn't desync.
+        DOCTEST_CHECK(id == doctest::Approx(x));
+        // None of the deleted ids (2,5,8) should survive.
+        DOCTEST_CHECK(id != doctest::Approx(2.0));
+        DOCTEST_CHECK(id != doctest::Approx(5.0));
+        DOCTEST_CHECK(id != doctest::Approx(8.0));
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR Columnar Hit Data - Mid-Cloud New Label Back-Fill") {
+    // setHitData() introducing a brand-new label on a late hit must create a full-length column that is
+    // absent for all earlier hits and present only where set - matching the old per-hit map semantics.
+    LiDARcloud cloud;
+    cloud.disableMessages();
+
+    const std::vector<std::string> columnFormat = {"x", "y", "z"};
+    ScanMetadata scan(vec3(0.0f, 0.0f, 0.0f), 4, 0.25f * float(M_PI), 0.75f * float(M_PI), 4, 0.0f, 2.0f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, columnFormat);
+    DOCTEST_CHECK_NOTHROW(cloud.addScan(scan));
+
+    const uint Nhits = 6;
+    for (uint i = 0; i < Nhits; i++) {
+        std::map<std::string, double> data; // no scalar data initially
+        SphericalCoord dir(1.f, 0.0f, 0.05f * i);
+        DOCTEST_CHECK_NOTHROW(cloud.addHitPoint(0, vec3(double(i), 0.f, 1.f), dir, data));
+    }
+
+    // The label does not exist yet anywhere.
+    DOCTEST_CHECK(cloud.getHitDataColumnIndex("late_label") == -1);
+    for (uint i = 0; i < Nhits; i++) {
+        DOCTEST_CHECK(cloud.doesHitDataExist(i, "late_label") == false);
+    }
+
+    // Set it on a single late hit (index 4).
+    DOCTEST_CHECK_NOTHROW(cloud.setHitData(4, "late_label", 42.0));
+
+    DOCTEST_CHECK(cloud.getHitDataColumnIndex("late_label") >= 0);
+    for (uint i = 0; i < Nhits; i++) {
+        if (i == 4) {
+            DOCTEST_CHECK(cloud.doesHitDataExist(i, "late_label") == true);
+            DOCTEST_CHECK(cloud.getHitData(i, "late_label") == doctest::Approx(42.0));
+        } else {
+            DOCTEST_CHECK(cloud.doesHitDataExist(i, "late_label") == false);
+        }
+    }
+
+    // getHitData on an absent hit must throw the same "does not exist" error as before.
+    {
+        capture_cerr capture;
+        DOCTEST_CHECK_THROWS(cloud.getHitData(0, "late_label"));
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR Columnar Hit Data - Origin Survives coordinateShift") {
+    // Moving-platform hits carry their own per-pulse origin in labels origin_x/y/z (all-three-or-none).
+    // coordinateShift must transform that origin in lockstep with the hit position. With columnar
+    // storage the origin helpers operate by hit index; verify a shifted moving-style hit keeps its
+    // origin consistent while a static hit (no origin labels) is unaffected.
+    LiDARcloud cloud;
+    cloud.disableMessages();
+
+    const std::vector<std::string> columnFormat = {"x", "y", "z"};
+    ScanMetadata scan(vec3(0.0f, 0.0f, 0.0f), 4, 0.25f * float(M_PI), 0.75f * float(M_PI), 4, 0.0f, 2.0f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, columnFormat);
+    DOCTEST_CHECK_NOTHROW(cloud.addScan(scan));
+
+    // Hit 0: moving-style, carries an explicit origin.
+    std::map<std::string, double> moving;
+    moving["origin_x"] = 1.0;
+    moving["origin_y"] = 2.0;
+    moving["origin_z"] = 3.0;
+    DOCTEST_CHECK_NOTHROW(cloud.addHitPoint(0, vec3(5.f, 6.f, 7.f), SphericalCoord(1.f, 0.f, 0.f), moving));
+
+    // Hit 1: static, no origin labels.
+    std::map<std::string, double> stat;
+    DOCTEST_CHECK_NOTHROW(cloud.addHitPoint(0, vec3(10.f, 10.f, 10.f), SphericalCoord(1.f, 0.f, 0.f), stat));
+
+    const vec3 shift = make_vec3(100.f, 200.f, 300.f);
+    DOCTEST_CHECK_NOTHROW(cloud.coordinateShift(shift));
+
+    // Moving hit: origin labels must have shifted by the same amount as the position.
+    DOCTEST_CHECK(cloud.getHitData(0, "origin_x") == doctest::Approx(1.0 + 100.0));
+    DOCTEST_CHECK(cloud.getHitData(0, "origin_y") == doctest::Approx(2.0 + 200.0));
+    DOCTEST_CHECK(cloud.getHitData(0, "origin_z") == doctest::Approx(3.0 + 300.0));
+    DOCTEST_CHECK(cloud.getHitXYZ(0).x == doctest::Approx(5.f + 100.f));
+
+    // Static hit: still carries no origin labels.
+    DOCTEST_CHECK(cloud.doesHitDataExist(1, "origin_x") == false);
+    DOCTEST_CHECK(cloud.getHitXYZ(1).x == doctest::Approx(10.f + 100.f));
 }
 
 DOCTEST_TEST_CASE("LiDAR Synthetic Scan Texture Color Sampling") {
@@ -4428,4 +5798,255 @@ DOCTEST_TEST_CASE("LiDAR Moving Platform Gapfill Writes Per-Pulse Origins") {
         checked++;
     }
     DOCTEST_REQUIRE(checked > 0); // at least one gap-filled/recorded moving miss carried a per-pulse origin
+}
+
+// =====================================================================================================================
+// Spinning multibeam physical-parameter setup (addScanSpinning). These exercise the first-class entry point where the
+// user supplies physical instrument parameters (channel elevations, azimuth resolution, PRF, trajectory) and Helios
+// derives the internal grid, rotation rate, and revolution count. A stationary capture is two coincident trajectory poses.
+// =====================================================================================================================
+
+DOCTEST_TEST_CASE("LiDAR Spinning Multibeam Multi-Revolution Derivation") {
+    // A spinning sensor carried along a straight trajectory for several revolutions. Verify that the derived rotation
+    // rate, revolution count, and Nphi match the physical parameters, and that each pulse fires at the EXACT per-channel
+    // elevation (not a resampled uniform theta grid).
+
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(200, 200));
+    context.addPatch(make_vec3(0, 0, -2), make_vec2(200, 200));
+
+    // 8 channels, +/-15 degree elevation. 10-degree azimuth steps -> 36 steps per revolution.
+    std::vector<float> beam_elev_rad;
+    const std::vector<float> elev_deg = {-15.f, -11.f, -7.f, -3.f, 3.f, 7.f, 11.f, 15.f};
+    for (float d: elev_deg) {
+        beam_elev_rad.push_back(d * float(M_PI) / 180.f);
+    }
+    const uint channels = uint(beam_elev_rad.size());
+    const float azimuthStep_rad = 10.f * float(M_PI) / 180.f; // 36 steps/rev
+    const uint expected_steps_per_rev = 36;
+
+    // Choose PRF and duration so we get ~3 revolutions. rotation_rate = PRF/(channels*steps_per_rev).
+    // For 3 revolutions over duration D: PRF * D = channels * steps_per_rev * 3.
+    const float H = 30.0f;
+    const float v = 2.0f;
+    const double duration = 0.6; // s
+    const double target_revs = 3.0;
+    const float PRF = float(double(channels) * double(expected_steps_per_rev) * target_revs / duration);
+
+    std::vector<double> traj_t = {0.0, duration};
+    std::vector<vec3> traj_pos = {make_vec3(0, 0, H), make_vec3(0, float(v * duration), H)};
+    std::vector<vec4> traj_quat = {make_vec4(0, 0, 0, 1), make_vec4(0, 0, 0, 1)}; // identity orientation
+
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    uint scanID = lidar.addScanSpinning(beam_elev_rad, azimuthStep_rad, PRF, traj_t, traj_pos, traj_quat, make_vec3(0, 0, 0), make_vec3(0, 0, 0), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>(), 0.0);
+
+    // Derived descriptors.
+    DOCTEST_CHECK(lidar.getScanMode(scanID) == SCAN_MODE_SPINNING);
+    DOCTEST_CHECK(lidar.getScanPattern(scanID) == SCAN_PATTERN_SPINNING_MULTIBEAM);
+    DOCTEST_CHECK(lidar.getScanStepsPerRev(scanID) == expected_steps_per_rev);
+    DOCTEST_CHECK(lidar.getScanSizeTheta(scanID) == channels);
+    DOCTEST_CHECK(lidar.getScanRevolutions(scanID) == doctest::Approx(target_revs).epsilon(0.001));
+    const double expected_rotation_rate = double(PRF) / (double(channels) * double(expected_steps_per_rev));
+    DOCTEST_CHECK(lidar.getScanRotationRate(scanID) == doctest::Approx(expected_rotation_rate).epsilon(0.001));
+    DOCTEST_CHECK(lidar.getScanSizePhi(scanID) == uint(std::lround(double(expected_steps_per_rev) * target_revs)));
+
+    lidar.syntheticScan(&context, false, false);
+    uint hit_count = lidar.getHitCount();
+    DOCTEST_REQUIRE(hit_count > 0);
+
+    // Per-channel fidelity: with identity platform orientation, each hit's world beam zenith (origin -> hit) must equal
+    // one of the EXACT channel zenith angles, not a uniform grid value between channels.
+    std::vector<float> channel_zenith;
+    for (float er: beam_elev_rad) {
+        channel_zenith.push_back(0.5f * float(M_PI) - er);
+    }
+    uint checked = 0;
+    for (uint i = 0; i < hit_count; i++) {
+        vec3 origin = lidar.getHitOrigin(i);
+        vec3 dir = lidar.getHitXYZ(i) - origin;
+        if (dir.magnitude() < 1e-6f) {
+            continue;
+        }
+        SphericalCoord sc = cart2sphere(dir);
+        float zenith = 0.5f * float(M_PI) - sc.elevation; // elevation -> zenith
+        float best = 1e9f;
+        for (float cz: channel_zenith) {
+            best = std::min(best, std::fabs(zenith - cz));
+        }
+        DOCTEST_CHECK(best < 1e-3f); // matches an exact channel angle
+        checked++;
+    }
+    DOCTEST_REQUIRE(checked > 0);
+
+    // Timestamps: all returns of a pulse share one timestamp; t == t0 + pulse_id*pulse_period.
+    const double pulse_period = 1.0 / double(PRF);
+    for (uint i = 0; i < hit_count; i++) {
+        DOCTEST_REQUIRE(lidar.doesHitDataExist(i, "pulse_id"));
+        double pid = lidar.getHitData(i, "pulse_id");
+        double t = lidar.getHitData(i, "timestamp");
+        DOCTEST_CHECK(t == doctest::Approx(pid * pulse_period));
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR Spinning Multibeam Stationary Seam") {
+    // A stationary spin of exactly one revolution (two coincident poses one rotation period apart) must sample exactly
+    // steps_per_rev distinct azimuths with no duplicated wrap column (the periodic dphi = phimax/Nphi fix). We check the
+    // azimuth grid via rc2direction.
+
+    std::vector<float> beam_elev_rad = {-5.f * float(M_PI) / 180.f, 5.f * float(M_PI) / 180.f};
+    const float azimuthStep_rad = 10.f * float(M_PI) / 180.f; // 36 steps/rev
+    const uint expected_steps_per_rev = 36;
+    const float PRF = 1000.f;
+    // 2 channels * 36 steps/rev / 1000 Hz = 0.072 s for exactly one revolution.
+    const double one_rev_duration = 2.0 * double(expected_steps_per_rev) / double(PRF);
+    const std::vector<double> traj_t = {0.0, one_rev_duration};
+    const std::vector<vec3> traj_pos = {make_vec3(0, 0, 1), make_vec3(0, 0, 1)};
+    const std::vector<vec4> traj_quat = {make_vec4(0, 0, 0, 1), make_vec4(0, 0, 0, 1)};
+
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    uint scanID = lidar.addScanSpinning(beam_elev_rad, azimuthStep_rad, PRF, traj_t, traj_pos, traj_quat, make_vec3(0, 0, 0), make_vec3(0, 0, 0), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>(), 0.0);
+
+    DOCTEST_CHECK(lidar.getScanStepsPerRev(scanID) == expected_steps_per_rev);
+    DOCTEST_CHECK(lidar.getScanRevolutions(scanID) == doctest::Approx(1.0).epsilon(0.001));
+    DOCTEST_CHECK(lidar.getScanSizePhi(scanID) == expected_steps_per_rev); // one revolution -> exactly steps_per_rev columns
+
+    // Reconstruct the same spinning grid as a local ScanMetadata (Nphi columns over phiMax = 1 revolution * 2*pi) and
+    // collect the distinct azimuth angles over one revolution (row 0). With the periodic convention they are uniformly
+    // spaced by 2*pi/steps_per_rev with no duplicated 0 / 2*pi seam.
+    std::vector<float> beam_zenith = {0.5f * float(M_PI) - beam_elev_rad[0], 0.5f * float(M_PI) - beam_elev_rad[1]};
+    ScanMetadata grid(make_vec3(0, 0, 1), beam_zenith, lidar.getScanSizePhi(scanID), 0.f, 1.f * 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>());
+    std::vector<float> phis;
+    for (uint col = 0; col < lidar.getScanSizePhi(scanID); col++) {
+        SphericalCoord d = grid.rc2direction(0, col);
+        phis.push_back(d.azimuth);
+    }
+    // No two columns coincide (modulo 2*pi).
+    bool seam_duplicate = false;
+    for (size_t a = 0; a < phis.size(); a++) {
+        for (size_t b = a + 1; b < phis.size(); b++) {
+            float diff = std::fabs(std::fmod(phis[a] - phis[b], 2.f * float(M_PI)));
+            diff = std::min(diff, 2.f * float(M_PI) - diff);
+            if (diff < 1e-4f) {
+                seam_duplicate = true;
+            }
+        }
+    }
+    DOCTEST_CHECK(!seam_duplicate);
+}
+
+DOCTEST_TEST_CASE("LiDAR Spinning Multibeam Fail-Fast Validation") {
+    // The physical-parameter entry point fails fast (no silent fallback) on invalid inputs.
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    std::vector<float> elev = {-5.f * float(M_PI) / 180.f, 5.f * float(M_PI) / 180.f};
+    std::vector<double> traj_t = {0.0, 0.5};
+    std::vector<vec3> traj_pos = {make_vec3(0, 0, 10), make_vec3(0, 1, 10)};
+    std::vector<vec4> traj_quat = {make_vec4(0, 0, 0, 1), make_vec4(0, 0, 0, 1)};
+
+    // Empty channels.
+    DOCTEST_CHECK_THROWS(lidar.addScanSpinning(std::vector<float>(), 10.f * float(M_PI) / 180.f, 1000.f, traj_t, traj_pos, traj_quat, make_vec3(0, 0, 0), make_vec3(0, 0, 0), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>(), 0.0));
+    // Non-positive azimuth step.
+    DOCTEST_CHECK_THROWS(lidar.addScanSpinning(elev, 0.f, 1000.f, traj_t, traj_pos, traj_quat, make_vec3(0, 0, 0), make_vec3(0, 0, 0), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>(), 0.0));
+    // Non-positive PRF.
+    DOCTEST_CHECK_THROWS(lidar.addScanSpinning(elev, 10.f * float(M_PI) / 180.f, 0.f, traj_t, traj_pos, traj_quat, make_vec3(0, 0, 0), make_vec3(0, 0, 0), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>(), 0.0));
+    // Mismatched trajectory array lengths must throw a clear error rather than dereferencing traj_pos.front() on a short
+    // array (which seeds the ScanMetadata origin before addScanMoving validates the lengths).
+    std::vector<vec3> traj_pos_short = {make_vec3(0, 0, 10)};
+    DOCTEST_CHECK_THROWS(lidar.addScanSpinning(elev, 10.f * float(M_PI) / 180.f, 1000.f, traj_t, traj_pos_short, traj_quat, make_vec3(0, 0, 0), make_vec3(0, 0, 0), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>(), 0.0));
+    std::vector<vec4> traj_quat_short = {make_vec4(0, 0, 0, 1)};
+    DOCTEST_CHECK_THROWS(lidar.addScanSpinning(elev, 10.f * float(M_PI) / 180.f, 1000.f, traj_t, traj_pos, traj_quat_short, make_vec3(0, 0, 0), make_vec3(0, 0, 0), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>(), 0.0));
+    // Empty traj_pos with non-empty traj_t (the worst case: traj_pos.front() would be UB).
+    DOCTEST_CHECK_THROWS(lidar.addScanSpinning(elev, 10.f * float(M_PI) / 180.f, 1000.f, traj_t, std::vector<vec3>(), traj_quat, make_vec3(0, 0, 0), make_vec3(0, 0, 0), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>(), 0.0));
+}
+
+DOCTEST_TEST_CASE("LiDAR Azimuth Warning Gated To Static Raster") {
+    // The ">2pi azimuth" warning must fire for a static raster scan with phiMax >> 2pi (a likely degrees/radians mistake)
+    // but NOT for a spinning scan, which legitimately encodes phiMax = n_revolutions*2pi.
+
+    // Spinning multi-revolution scan: no warning.
+    std::string spinning_err;
+    {
+        LiDARcloud lidar;
+        // messages enabled so the warning would be captured if emitted
+        std::vector<float> elev = {-5.f * float(M_PI) / 180.f, 5.f * float(M_PI) / 180.f};
+        std::vector<double> traj_t = {0.0, 0.5};
+        std::vector<vec3> traj_pos = {make_vec3(0, 0, 10), make_vec3(0, 1, 10)};
+        std::vector<vec4> traj_quat = {make_vec4(0, 0, 0, 1), make_vec4(0, 0, 0, 1)};
+        capture_cerr capture;
+        lidar.addScanSpinning(elev, 1.f * float(M_PI) / 180.f, 100000.f, traj_t, traj_pos, traj_quat, make_vec3(0, 0, 0), make_vec3(0, 0, 0), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>(), 0.0);
+        spinning_err = capture.get_captured_output();
+    }
+    DOCTEST_CHECK(spinning_err.find("greater than 2pi") == std::string::npos);
+
+    // Static raster scan with phiMax = 6*pi: warning emitted.
+    std::string raster_err;
+    {
+        LiDARcloud lidar;
+        ScanMetadata scan(make_vec3(0, 0, 1), 4, 0.f, float(M_PI), 8, 0.f, 6.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>());
+        capture_cerr capture;
+        lidar.addScan(scan);
+        raster_err = capture.get_captured_output();
+    }
+    DOCTEST_CHECK(raster_err.find("greater than 2pi") != std::string::npos);
+}
+
+DOCTEST_TEST_CASE("LiDAR Spinning Multibeam XML Load And Export Round-Trip") {
+    // Author a spinning scan in XML with an inline trajectory + physical parameters, load it, run a synthetic scan,
+    // export it, and reload the exported XML. The reloaded scan must reproduce the derived descriptors.
+
+    const std::string dir = "lidar_spin_xml_test";
+    std::filesystem::create_directories(dir);
+    const std::string xml_path = dir + "/spin.xml";
+
+    {
+        std::ofstream xml(xml_path);
+        xml << "<helios>\n";
+        xml << "  <scan>\n";
+        xml << "    <origin> 0 0 30 </origin>\n";
+        xml << "    <scanPattern> spinning_multibeam </scanPattern>\n";
+        xml << "    <beamElevationAngles> -85 -80 -75 -70 </beamElevationAngles>\n"; // steep downward channels
+        xml << "    <azimuthStep> 10 </azimuthStep>\n";
+        xml << "    <PRF> 576 </PRF>\n"; // 4 channels * 36 steps/rev * 2 rev / 0.5 s = 576
+        xml << "    <trajectory>\n";
+        xml << "      <pose> 0.0 0 0 30 0 0 0 1 </pose>\n";
+        xml << "      <pose> 0.5 0 1 30 0 0 0 1 </pose>\n";
+        xml << "    </trajectory>\n";
+        xml << "    <ASCII_format> x y z origin_x origin_y origin_z timestamp </ASCII_format>\n";
+        xml << "  </scan>\n";
+        xml << "</helios>\n";
+    }
+
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(200, 200));
+    context.addPatch(make_vec3(0, 0, -2), make_vec2(200, 200));
+
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    lidar.loadXML(xml_path.c_str());
+
+    DOCTEST_REQUIRE(lidar.getScanCount() == 1);
+    DOCTEST_CHECK(lidar.getScanMode(0) == SCAN_MODE_SPINNING);
+    DOCTEST_CHECK(lidar.getScanStepsPerRev(0) == 36);
+    DOCTEST_CHECK(lidar.getScanSizeTheta(0) == 4);
+    DOCTEST_CHECK(lidar.getScanRevolutions(0) == doctest::Approx(2.0).epsilon(0.001));
+
+    lidar.syntheticScan(&context, false, false);
+    DOCTEST_REQUIRE(lidar.getHitCount() > 0);
+
+    // Export and reload; the round-tripped scan reproduces the derived descriptors.
+    const std::string export_path = dir + "/spin_export.xml";
+    lidar.exportScans(export_path.c_str());
+
+    LiDARcloud lidar2;
+    lidar2.disableMessages();
+    lidar2.loadXML(export_path.c_str());
+    DOCTEST_REQUIRE(lidar2.getScanCount() == 1);
+    DOCTEST_CHECK(lidar2.getScanMode(0) == SCAN_MODE_SPINNING);
+    DOCTEST_CHECK(lidar2.getScanStepsPerRev(0) == 36);
+    DOCTEST_CHECK(lidar2.getScanSizeTheta(0) == 4);
+    DOCTEST_CHECK(lidar2.getScanRevolutions(0) == doctest::Approx(2.0).epsilon(0.001));
+
+    std::filesystem::remove_all(dir);
 }

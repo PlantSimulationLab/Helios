@@ -14,6 +14,43 @@ DOCTEST_TEST_CASE("PlantArchitecture Constructor") {
     DOCTEST_CHECK_NOTHROW(PlantArchitecture pa_test(&context));
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture Cancel Flag") {
+    // A cancel flag set before a canopy build must short-circuit the per-plant
+    // build loop (no plants built), while the same build with the flag clear
+    // builds the full grid. This is the mechanism that lets a long generation be
+    // aborted mid-build instead of running to completion.
+    auto build = [](bool cancel) -> std::size_t {
+        Context context;
+        PlantArchitecture pa(&context);
+        pa.disableMessages();
+        pa.loadPlantModelFromLibrary("bean");
+        int flag = cancel ? 1 : 0;
+        pa.setCancelFlag(&flag);
+        std::vector<uint> ids = pa.buildPlantCanopyFromLibrary(make_vec3(0, 0, 0), make_vec2(0.5f, 0.5f), make_int2(3, 3), 0.f, 1.f);
+        return ids.size();
+    };
+    DOCTEST_CHECK(build(false) == 9);
+    DOCTEST_CHECK(build(true) == 0);
+
+    // A cancel flag set before advanceTime() must stop the growth loop, leaving
+    // the plant far shorter than a full grow.
+    auto grow_height = [](bool cancel) -> float {
+        Context context;
+        PlantArchitecture pa(&context);
+        pa.disableMessages();
+        pa.loadPlantModelFromLibrary("bean");
+        uint pid = pa.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0.f);
+        int flag = cancel ? 1 : 0;
+        pa.setCancelFlag(&flag);
+        pa.advanceTime(40.f);
+        return pa.getPlantHeight(pid);
+    };
+    float full = grow_height(false);
+    float cancelled = grow_height(true);
+    DOCTEST_CHECK(full > 0.f);
+    DOCTEST_CHECK(cancelled < full);
+}
+
 DOCTEST_TEST_CASE("ShootParameters defineChildShootTypes valid input") {
     ShootParameters sp_test;
     std::vector<std::string> labels = {"typeA", "typeB"};

@@ -22,6 +22,8 @@
 
 #include "triangulation_cdt.h"
 
+#include <functional>
+
 template<class datatype>
 class HitTable {
 public:
@@ -86,9 +88,13 @@ struct HitPoint {
     helios::SphericalCoord direction;
     helios::int2 row_column;
     helios::RGBcolor color;
-    std::map<std::string, double> data;
     int gridcell;
     int scanID;
+    // NOTE: per-hit scalar data (intensity, distance, timestamp, custom labels, ...) is NOT stored
+    // here. It lives in cloud-level columnar storage on LiDARcloud (hit_data_columns/hit_data_present),
+    // indexed by the hit's position in the `hits` vector. Storing it as N independent
+    // std::map<std::string,double> trees (one per hit) made bulk field extraction O(K*N) cache-cold
+    // tree descents and dominated export time. See LiDARcloud::getHitData / getHitDataColumn.
     HitPoint(void) {
         position = helios::make_vec3(0, 0, 0);
         direction = helios::make_SphericalCoord(0, 0);
@@ -97,13 +103,13 @@ struct HitPoint {
         gridcell = -2;
         scanID = -1;
     }
-    HitPoint(int __scanID, helios::vec3 __position, helios::SphericalCoord __direction, helios::int2 __row_column, helios::RGBcolor __color, std::map<std::string, double> __data) {
+    HitPoint(int __scanID, helios::vec3 __position, helios::SphericalCoord __direction, helios::int2 __row_column, helios::RGBcolor __color) {
         scanID = __scanID;
         position = __position;
         direction = __direction;
         row_column = __row_column;
         color = __color;
-        data = __data;
+        gridcell = -2;
     }
 };
 
@@ -208,10 +214,67 @@ enum ScanPattern {
     SCAN_PATTERN_SPINNING_MULTIBEAM = 1
 };
 
-//! Structure containing metadata for a terrestrial scan
-/** A scan is initialized by providing 1) the origin of the scan (see \ref origin), 2) the number of zenithal scan directions (see \ref Ntheta), 3) the range of zenithal scan angles (see \ref thetaMin, \ref thetaMax), 4) the number of azimuthal scan
-directions (see \ref Nphi), 5) the range of azimuthal scan angles (see \ref phiMin, \ref phiMax). This creates a grid of Ntheta x Nphi scan points which are all initialized as misses.  Points are set as hits using the addHitPoint() function. There
-are various functions to query the scan data.
+//! High-level, introspective descriptor of how a scan was acquired
+/**
+ * Combines the geometric beam pattern (see \ref ScanPattern) and the platform motion into a single descriptor so a scan
+ * can be queried ("how was this acquired?") without reverse-engineering it from \ref ScanMetadata::isMoving,
+ * \ref ScanMetadata::scanPattern, and \ref ScanMetadata::phiMax. It is set by the scan-creation entry points and is
+ * purely descriptive: the underlying mechanism is still driven by \ref ScanMetadata::scanPattern and
+ * \ref ScanMetadata::isMoving.
+ */
+enum ScanMode {
+    //! Uniform angular grid acquired from a single fixed origin (static terrestrial / tripod scan)
+    SCAN_MODE_STATIC_RASTER = 0,
+    //! Uniform angular grid acquired while the platform moves along a trajectory (mobile/airborne raster sensor)
+    SCAN_MODE_MOVING_RASTER = 1,
+    //! Continuously-spinning multi-channel sensor (always trajectory-driven; a stationary capture is two coincident poses)
+    SCAN_MODE_SPINNING = 2
+};
+
+//! How the analytic-waveform synthetic scanner reports the returns detected along each pulse
+/**
+ * Selects how many points a pulse contributes when synthetic-scan waveform processing is active (more than one ray per
+ * pulse; see \ref LiDARcloud::syntheticScan). With \ref RETURN_MODE_MULTI every detected return above the detection
+ * threshold is reported (discrete multi-return instrument with no return limit). With \ref RETURN_MODE_SINGLE a limited
+ * number of returns per pulse is reported - at most \ref ScanMetadata::maxReturns of them (default 1 = classic
+ * single-return, 2 = dual-return, N = N-return) - selected by \ref SingleReturnSelection. In single-return mode (maxReturns
+ * = 1) two surfaces falling within the pulse range-resolution merge into one blended return at an intermediate range,
+ * reproducing the "ghost"/"mixed pixel" point that a real single-return instrument records at an edge. A single ray per
+ * pulse always produces an idealized exact intersection regardless of mode.
+ */
+enum ReturnMode {
+    //! Report every detected return above the detection threshold (discrete multi-return, no return limit)
+    RETURN_MODE_MULTI = 0,
+    //! Report at most \ref ScanMetadata::maxReturns detector-selected returns per pulse (see \ref SingleReturnSelection)
+    RETURN_MODE_SINGLE = 1
+};
+
+//! Which return(s) a limited-return instrument reports when a pulse resolves more returns than the return limit
+/** Used only when \ref ReturnMode is \ref RETURN_MODE_SINGLE. When a pulse produces more returns than
+ *  \ref ScanMetadata::maxReturns, this policy selects which subset to keep (the kept subset is always reported nearest-first).
+ *  Mirrors the configurable first/last/strongest selection of real discrete-return scanners. \ref SINGLE_RETURN_STRONGEST,
+ *  \ref SINGLE_RETURN_FIRST and \ref SINGLE_RETURN_LAST each keep the top \ref ScanMetadata::maxReturns returns by a single
+ *  key; \ref SINGLE_RETURN_STRONGEST_PLUS_LAST instead keeps the strongest-plus-last pair (1 or 2 returns) and ignores
+ *  \ref ScanMetadata::maxReturns. */
+enum SingleReturnSelection {
+    //! Keep the return(s) with the largest intensity (echo amplitude)
+    SINGLE_RETURN_STRONGEST = 0,
+    //! Keep the nearest return(s) (smallest range)
+    SINGLE_RETURN_FIRST = 1,
+    //! Keep the farthest return(s) (largest range)
+    SINGLE_RETURN_LAST = 2,
+    //! Dual return: keep the strongest return AND the last (farthest) return of the pulse, deduplicated to one when they
+    //! are the same return. Models the "strongest + last" dual-return mode of real discrete-return scanners. Intrinsically
+    //! yields 1 or 2 returns and ignores \ref ScanMetadata::maxReturns.
+    SINGLE_RETURN_STRONGEST_PLUS_LAST = 3
+};
+
+//! Structure containing metadata for a scan
+/** A static raster scan is initialized by providing 1) the origin of the scan (see \ref origin), 2) the number of zenithal scan directions (see \ref Ntheta), 3) the range of zenithal scan angles (see \ref thetaMin, \ref thetaMax), 4) the number of
+azimuthal scan directions (see \ref Nphi), 5) the range of azimuthal scan angles (see \ref phiMin, \ref phiMax). This creates a grid of Ntheta x Nphi scan points which are all initialized as misses.  Points are set as hits using the addHitPoint()
+function. There are various functions to query the scan data. The same Ntheta x Nphi grid storage backs the other scan patterns and modes (see \ref ScanPattern and \ref ScanMode): a spinning multibeam scan stores per-channel zenith angles in
+\ref beamZenithAngles, and a moving-platform scan additionally carries a 6-DOF trajectory (\ref traj_t, \ref traj_pos, \ref traj_quat) with the derived rotation rate and revolution count (\ref rotation_rate, \ref n_revolutions). Prefer the
+high-level entry points \ref LiDARcloud::addScanSpinning() and \ref LiDARcloud::addScanMovingRaster() to set up moving/spinning scans from physical instrument parameters.
 */
 struct ScanMetadata {
 
@@ -246,6 +309,9 @@ struct ScanMetadata {
      * (rows) and Nphi is the number of azimuth steps (columns), so all downstream processing is shared with raster scans. The
      * \ref scanPattern is set to \ref SCAN_PATTERN_SPINNING_MULTIBEAM and \ref thetaMin / \ref thetaMax are set to the minimum and
      * maximum of \p beamZenithAngles.
+     * \note This is the low-level grid primitive. To set up a spinning multibeam scan from physical instrument parameters
+     * (channel elevations, azimuth resolution, PRF, trajectory) with the azimuth grid, rotation rate, and revolution count
+     * derived internally, use \ref LiDARcloud::addScanSpinning() instead.
      * \param[in] origin  (x,y,z) position of the scanner
      * \param[in] beamZenithAngles  Per-channel zenith angles in radians (zenith convention: 0 = upward, pi/2 = horizontal, pi = downward). Its size sets Ntheta. Manufacturer spec sheets typically list channel angles as elevation above the horizon;
      * zenith = pi/2 - elevation.
@@ -329,6 +395,56 @@ struct ScanMetadata {
      * \note This is only used for synthetic scan generation.
      */
     float angleNoiseStdDev;
+
+    //! Return-reporting mode for analytic-waveform synthetic scans
+    /**
+     * Selects whether a pulse reports all detected returns (\ref RETURN_MODE_MULTI, the default) or a single
+     * detector-selected return (\ref RETURN_MODE_SINGLE). Only takes effect when more than one ray per pulse is fired (see
+     * \ref LiDARcloud::syntheticScan); a single ray per pulse always produces an idealized exact intersection.
+     * \note This is only used for synthetic scan generation.
+     */
+    ReturnMode returnMode = RETURN_MODE_MULTI;
+
+    //! Which return(s) to keep in single/limited-return mode (see \ref SingleReturnSelection)
+    /**
+     * Used only when \ref returnMode is \ref RETURN_MODE_SINGLE. When a pulse resolves more returns than \ref maxReturns,
+     * this policy selects which subset to keep (\ref SINGLE_RETURN_FIRST keeps the nearest, \ref SINGLE_RETURN_LAST the
+     * farthest, \ref SINGLE_RETURN_STRONGEST the highest-amplitude). \ref SINGLE_RETURN_STRONGEST_PLUS_LAST is special: it
+     * keeps the strongest return plus the last (farthest) return (deduplicated to one when they coincide) and ignores
+     * \ref maxReturns, reporting 1 or 2 returns.
+     * \note This is only used for synthetic scan generation.
+     */
+    SingleReturnSelection singleReturnSelection = SINGLE_RETURN_STRONGEST;
+
+    //! Maximum number of returns reported per pulse in single/limited-return mode
+    /**
+     * Used only when \ref returnMode is \ref RETURN_MODE_SINGLE. 1 = classic single-return (the default), 2 = dual-return,
+     * N = N-return; the kept returns are the subset chosen by \ref singleReturnSelection, always ordered nearest-first.
+     * Ignored when \ref returnMode is \ref RETURN_MODE_MULTI (which reports every detected return), and also ignored when
+     * \ref singleReturnSelection is \ref SINGLE_RETURN_STRONGEST_PLUS_LAST (which intrinsically reports 1 or 2 returns).
+     * Must be >= 1.
+     * \note This is only used for synthetic scan generation.
+     */
+    int maxReturns = 1;
+
+    //! Range resolution (transmit pulse range-extent) in meters, used to merge sub-ray hits into discrete returns
+    /**
+     * Two surfaces separated by less than this distance fall within one transmit pulse and merge into a single detected
+     * return at the energy-weighted range, reproducing the range-resolution / dead-zone limit of a real instrument (roughly
+     * c*pulse_duration/2). When 0 the synthetic scanner falls back to the pulse_distance_threshold argument of
+     * \ref LiDARcloud::syntheticScan.
+     * \note This is only used for synthetic scan generation.
+     */
+    float pulseWidth = 0.f;
+
+    //! Minimum return energy fraction for a return to be detected (noise floor)
+    /**
+     * A detected return whose intensity (range-normalized echo amplitude, expressed as a fraction of the total per-pulse
+     * beam energy) is below this value is discarded, modeling the minimum detectable signal above the noise floor of a real
+     * instrument. A value of 0 (the default) disables suppression so every return is reported.
+     * \note This is only used for synthetic scan generation.
+     */
+    float detectionThreshold = 0.f;
 
     //! Global scanner tilt roll angle in radians (right-hand rotation about the body lateral axis)
     /**
@@ -440,6 +556,26 @@ struct ScanMetadata {
     //! Time of the first pulse (pulse ordinal 0) in seconds. Relative time; no absolute GPS epoch.
     double t0 = 0.0;
 
+    // ---- Self-describing acquisition descriptors ----
+    // These make a scan introspectable ("how was it acquired / how fast did it spin / how many revolutions?")
+    // without reverse-engineering the answer from scanPattern, isMoving, and phiMax. They are set by the
+    // high-level scan-creation entry points (\ref LiDARcloud::addScanSpinning, \ref LiDARcloud::addScanMovingRaster,
+    // etc.) and are purely descriptive; the underlying mechanism is still scanPattern + isMoving.
+
+    //! High-level acquisition-mode descriptor (see \ref ScanMode)
+    ScanMode scanMode = SCAN_MODE_STATIC_RASTER;
+
+    //! Number of azimuth firing steps per full 360-degree revolution (spinning multibeam scans only; 0 otherwise)
+    uint steps_per_rev = 0;
+
+    //! Sensor-head rotation rate in revolutions per second (spinning multibeam scans only; 0 otherwise)
+    /** Derived internally as PRF / (channels * steps_per_rev). */
+    double rotation_rate = 0.0;
+
+    //! Total number of full 360-degree revolutions collected (spinning multibeam scans only; may be fractional; 0 otherwise)
+    /** Derived internally as rotation_rate * trajectory_duration. */
+    double n_revolutions = 0.0;
+
     //! Interpolate the platform pose at trajectory time \p t (moving-platform scans only)
     /**
      * Brackets \p t in \ref traj_t by binary search, linearly interpolates \ref traj_pos, and spherically
@@ -462,7 +598,44 @@ private:
 
     std::vector<HitPoint> hits;
 
+    // ---- Columnar per-hit scalar data ----
+    // Per-hit scalar fields are stored column-wise (one contiguous array per label) rather than as one
+    // std::map<std::string,double> per hit. This makes bulk field extraction a cache-linear pass instead
+    // of N cache-cold red-black-tree lookups, matching the speed of XYZ/RGB export.
+    // INVARIANT: every column in hit_data_columns and every mask in hit_data_present has length
+    // hits.size() at all times. Column slot `s` holds label hit_data_labels[s]; a value is meaningful
+    // only where hit_data_present[s][i] != 0 (a hit may be missing a value for a label). The values
+    // for slot s of hit i are hit_data_columns[s][i]. These structures are kept in lockstep with the
+    // `hits` vector everywhere it is mutated (addHitPoint, deleteHitPoint's swap-and-pop, clearHits).
+    std::vector<std::string> hit_data_labels; //!< Column order; hit_data_labels[s] is the label of slot s.
+    std::unordered_map<std::string, size_t> hit_data_label_index; //!< label -> column slot.
+    std::vector<std::vector<double>> hit_data_columns; //!< [slot][hit_index] scalar values.
+    std::vector<std::vector<char>> hit_data_present; //!< [slot][hit_index] presence flag (0 = absent).
+
+    //! Resolve a label to its column slot, creating a new full-length, absent-back-filled column if it
+    //! does not yet exist. Returns the slot index.
+    size_t getOrCreateHitDataColumn(const std::string &label);
+
+    //! Append one hit's scalar data as a new row across all columns. Call AFTER the HitPoint has been
+    //! pushed onto `hits` (it uses index hits.size()-1). Keeps every column length-aligned with `hits`.
+    void appendHitData(const std::map<std::string, double> &data);
+
+    //! Clear all hits AND their columnar scalar data, keeping the two in lockstep.
+    void clearHits();
+
+    //! Apply an in-place transform to hit `index`'s per-pulse emission origin (labels origin_x/y/z), if
+    //! it carries one. All-three-or-none semantics. Used by coordinateShift/coordinateRotation.
+    void transformHitOrigin(uint index, const std::function<helios::vec3(const helios::vec3 &)> &transform);
+
+    //! Return hit `index`'s per-pulse origin if it carries one (labels origin_x/y/z), else `fallback`.
+    helios::vec3 hitOriginOrFallback(uint index, const helios::vec3 &fallback) const;
+
     std::vector<GridCell> grid_cells;
+
+    //! Test/diagnostic hook: when true, \ref calculateLeafArea_inner() uses the brute-force per-cell slab loop even for
+    //! regular lattices that would otherwise use the fast DDA path. Used by the self-tests to A/B the two paths against
+    //! each other; has no effect on results, only on which code path computes them.
+    bool force_bruteforce_LAD = false;
 
     std::vector<Triangulation> triangles;
 
@@ -484,11 +657,38 @@ private:
     std::size_t triangulation_dropped_aspect;
     std::size_t triangulation_dropped_degenerate;
 
+    //! Return the index of the grid cell containing point \p p, or -1 if \p p lies outside every
+    //! cell. Uses the same axis-aligned containment test (with inverse rotation for rotated cells)
+    //! as \ref calculateHitGridCell(), so hit-point binning and external-triangle binning agree.
+    int getContainingGridCell(const helios::vec3 &p) const;
+
     //! Flag denoting whether messages should be printed to screen
     bool printmessages;
 
+    //! Optional callback fired with (progress_fraction, message) during syntheticScan
+    std::function<void(float, const std::string &)> progress_callback;
+
+    //! Soft cap (bytes) on the transient ray-tracing buffers held live at once during \ref syntheticScan. The per-scan beam
+    //! fan-out is processed in chunks so that only chunk_beams * rays_per_pulse sub-rays are materialized simultaneously,
+    //! bounding peak working memory to roughly this budget regardless of scan size. See \ref setSyntheticScanMemoryBudget.
+    //! A value of 0 (the default) selects an automatic, path-dependent cap: \ref SYNTHETIC_SCAN_DEFAULT_BUDGET_GPU on a
+    //! GPU build (the GPU ray-tracer handles larger batches efficiently) and \ref SYNTHETIC_SCAN_DEFAULT_BUDGET_CPU
+    //! otherwise. This bounds only the trace-time scratch buffers; the output point cloud grows with the number of
+    //! recorded returns and is not affected by this setting.
+    size_t synthetic_scan_memory_budget_bytes = 0; // 0 => automatic (see syntheticScan)
+
+    //! Automatic \ref syntheticScan memory cap used on the CPU/OpenMP ray-tracing path when no explicit budget is set.
+    static constexpr size_t SYNTHETIC_SCAN_DEFAULT_BUDGET_CPU = size_t(4) * 1024 * 1024 * 1024; // 4 GiB
+
+    //! Automatic \ref syntheticScan memory cap used on the GPU ray-tracing path when no explicit budget is set.
+    static constexpr size_t SYNTHETIC_SCAN_DEFAULT_BUDGET_GPU = size_t(8) * 1024 * 1024 * 1024; // 8 GiB
+
     //! Collision detection plugin for unified ray-tracing
     CollisionDetection *collision_detection;
+
+    //! External cancellation flag forwarded to the collision-detection ray loop
+    //! so a long syntheticScan can be aborted mid-trace (nullptr = none).
+    volatile int *cancel_flag = nullptr;
 
     // -------- I/O --------- //
 
@@ -608,10 +808,20 @@ private:
      */
     bool isMultiReturnData() const;
 
-    //! Beam grouping structure for multi-return data
+    //! Beam grouping structure for multi-return data (compressed-sparse-row layout)
+    /** A pulse ("beam") may produce several returns. Rather than a vector-of-vectors (one small heap allocation per
+        beam - prohibitive for the tens of millions of beams in a dense scan), the returns are stored CSR-style: \ref
+        beam_members holds every return's global hit index, grouped contiguously by beam, and \ref beam_offsets gives
+        the [start,end) range of each beam within it. Beam \c k owns members[beam_offsets[k] .. beam_offsets[k+1]). */
     struct BeamGrouping {
-        uint Nbeams;
-        std::vector<std::vector<uint>> beam_array;
+        uint Nbeams = 0;
+        std::vector<uint> beam_members; //!< All returns' global hit indices, grouped contiguously by beam
+        std::vector<uint> beam_offsets; //!< Size Nbeams+1; beam k spans beam_members[beam_offsets[k] .. beam_offsets[k+1])
+
+        //! Number of returns in beam \p k
+        uint beamSize(uint k) const {
+            return beam_offsets[k + 1] - beam_offsets[k];
+        }
     };
 
     //! Group hit points by timestamp into beams
@@ -620,6 +830,46 @@ private:
      * \return BeamGrouping structure with beam organization
      */
     BeamGrouping groupHitsByTimestamp(const std::vector<uint> &scan_indices) const;
+
+    //! Description of a regular voxel lattice reconstructed from the grid cells, used by the fast LAD inversion path
+    /** When every grid cell shares a common anchor, size, division count, and azimuthal rotation (the case produced by
+        \ref addGrid()), the cells form a regular axis-aligned lattice and the leaf-area inversion can walk each beam
+        through only the voxels it pierces (3D-DDA) instead of testing every hit against every voxel. \ref detectVoxelLattice()
+        validates this and fills in the geometry below. \p valid is false when the cells do not form such a lattice (e.g. a
+        grid assembled cell-by-cell with mixed sizes/rotations), in which case the inversion falls back to the brute-force
+        per-cell slab test. */
+    struct VoxelLattice {
+        bool valid = false; //!< True if the cells form a regular lattice that the DDA path can use
+        helios::vec3 origin; //!< Minimum corner of the lattice in the un-rotated lattice frame (= global_anchor - 0.5*global_size)
+        helios::vec3 anchor; //!< Rotation pivot (= shared global_anchor)
+        helios::vec3 cell_extent; //!< Per-cell dimensions (= global_size / global_count)
+        float rotation = 0.f; //!< Shared azimuthal rotation about z [rad]
+        helios::int3 count; //!< Number of cells along each axis (= global_count)
+        std::vector<int> ijk_to_index; //!< Dense (i,j,k)->cell-index map (size count.x*count.y*count.z); -1 if no cell occupies that slot
+    };
+
+    //! Detect whether the current grid cells form a regular lattice and reconstruct its geometry
+    /** \return A \ref VoxelLattice with \p valid set appropriately. When valid, the DDA fast path in
+        \ref calculateLeafArea_inner() is used; otherwise the brute-force fallback is used. */
+    VoxelLattice detectVoxelLattice() const;
+
+    //! Accumulate one beam's already-classified returns into the equal-weighting transmission statistics for a voxel
+    /** Shared by both the DDA fast path and the brute-force fallback in \ref calculateLeafArea_inner() so the two paths
+        produce identical results. The caller classifies each of the beam's returns relative to the voxel and supplies the
+        per-return path length \p dr (\c |t1-t0|, 0 if the return's ray misses the voxel) and \p hit_location
+        (0=miss-voxel, 1=before, 2=inside, 3=after). This helper folds those into the per-beam transmittance fraction
+        P = E_after/(E_inside+E_after) (Eq. 7) and the per-voxel path-length sample (mean dr over the beam's intersecting
+        returns), exactly mirroring the original inlined logic.
+        \param[in] return_indices Pointer to this beam's return indices (into \p dr / \p hit_location)
+        \param[in] Nreturns Number of returns belonging to this beam
+        \param[in] dr Path length through the voxel per return index [m] (0 if that return's ray does not intersect the voxel)
+        \param[in] hit_location Classification per return index (0=miss-voxel, 1=before, 2=inside, 3=after)
+        \param[in,out] P_equal_numerator Running sum of per-beam transmittance fractions for this voxel
+        \param[in,out] P_equal_denominator Running count of beams contributing to this voxel
+        \param[in,out] P_equal_sumsq Running sum of squared per-beam fractions (sampling-variance guard)
+        \param[in,out] dr_array_cell Per-voxel path-length samples (one push_back per contributing beam) */
+    static void accumulateBeamCell(const uint *return_indices, size_t Nreturns, const std::vector<float> &dr, const std::vector<uint> &hit_location, float &P_equal_numerator, float &P_equal_denominator, float &P_equal_sumsq,
+                                   std::vector<float> &dr_array_cell);
 
     //! Helper method for loading TreeQSM cylinder files with different coloring strategies
     /**
@@ -675,8 +925,54 @@ public:
     //! Enable all print messages to the screen
     void enableMessages();
 
+    //! Register a callback to receive progress updates during syntheticScan
+    /**
+     * progress_fraction is in [0, 1]. message describes the current operation phase.
+     * Pass an empty std::function to clear the callback.
+     * \param[in] callback Function that receives (progress_fraction, message_string).
+     */
+    void setProgressCallback(std::function<void(float, const std::string &)> callback);
+
+    //! Register an external cancellation flag polled during syntheticScan's ray trace
+    /**
+     * When the pointed-to int becomes non-zero, the parallel ray loop aborts and
+     * syntheticScan returns early (with whatever hits were recorded so far). The
+     * flag is owned by the caller (e.g. a ctypes int shared with Python) and must
+     * outlive the scan; pass nullptr to clear. Set this before calling syntheticScan().
+     * \param[in] flag Pointer to a 0/non-zero cancellation flag, or nullptr.
+     */
+    void setCancelFlag(volatile int *flag);
+
     //! Initialize collision detection plugin for unified ray-tracing (called automatically when needed)
     void initializeCollisionDetection(helios::Context *context);
+
+    //! Prepare the collision-detection engine for a batch of ray-tracing calls over static geometry.
+    /**
+     * Initializes the collision-detection plugin, disables automatic BVH rebuilds, and builds the BVH once. Use this once
+     * before issuing many \ref castRaysUnified() calls (e.g. one per beam chunk) so the BVH is not rebuilt on every call;
+     * pair with \ref finishUnifiedRayTracing() after the batch. The geometry must not change between prepare and finish.
+     * \param[in] context Pointer to the Helios context.
+     */
+    void prepareUnifiedRayTracing(helios::Context *context);
+
+    //! Re-enable automatic BVH rebuilds after a batch of ray-tracing calls (see \ref prepareUnifiedRayTracing).
+    void finishUnifiedRayTracing();
+
+    //! Trace a batch of already-prepared rays into the caller's result buffers (no BVH (re)build).
+    /**
+     * Casts total_rays rays and writes per-ray results into hit_t/hit_fnorm/hit_ID using the low-memory SoA path
+     * (\ref CollisionDetection::castRaysSoA), avoiding any per-call full-length RayQuery/HitResult vectors. A miss writes
+     * hit_t = \ref LIDAR_RAYTRACE_MISS_T, hit_ID = -1, hit_fnorm = 1e6; a hit writes the hit distance, primitive UUID, and
+     * the dot product of the ray direction with the surface normal. The BVH must already be current — call
+     * \ref prepareUnifiedRayTracing() once before the first batch.
+     * \param[in] total_rays Number of rays to trace.
+     * \param[in] ray_origins Array of ray origins (length total_rays).
+     * \param[in] direction Array of ray directions (length total_rays).
+     * \param[out] hit_t Array (length total_rays) receiving the hit distance (or miss sentinel) per ray.
+     * \param[out] hit_fnorm Array (length total_rays) receiving dot(direction, normal) per hit (1e6 on a miss).
+     * \param[out] hit_ID Array (length total_rays) receiving the hit primitive UUID (-1 on a miss).
+     */
+    void castRaysUnified(size_t total_rays, helios::vec3 *ray_origins, helios::vec3 *direction, float *hit_t, float *hit_fnorm, int *hit_ID);
 
     //! Perform unified ray-tracing using collision detection plugin (replaces CUDA kernels)
     void performUnifiedRayTracing(helios::Context *context, size_t N, int Npulse, helios::vec3 *ray_origins, helios::vec3 *direction, float *hit_t, float *hit_fnorm, int *hit_ID);
@@ -755,6 +1051,102 @@ public:
      */
     uint addScanMoving(ScanMetadata scan, const std::vector<double> &traj_t, const std::vector<helios::vec3> &traj_pos, const std::vector<helios::vec3> &traj_rpy, const helios::vec3 &lever_arm, const helios::vec3 &boresight_rpy,
                        float pulse_rate_hz, double t0 = 0.0);
+
+    //! Add a continuously-spinning multibeam (Velodyne/Ouster/Hesai-style) scan driven by a 6-DOF platform trajectory
+    /**
+     * Sets up a rotating multi-channel sensor from its physical instrument parameters; Helios derives the internal
+     * sampling grid, rotation rate, and revolution count rather than requiring the caller to hand-flatten them into an
+     * Ntheta x Nphi grid. A spinning sensor rotates continuously through 360 degrees while the platform moves along the
+     * trajectory, so there is no partial-arc azimuth range: the only azimuth control is the angular resolution
+     * (\p azimuthStep_rad). The number of points is dictated by the pulse repetition rate and the total trajectory
+     * duration: n_pulses = pulse_rate_hz * (traj_t.back() - traj_t.front()), distributed across the channels and the
+     * derived number of azimuth steps.
+     *
+     * From the physical parameters Helios derives: steps_per_rev = round(2*pi / azimuthStep_rad);
+     * rotation_rate = pulse_rate_hz / (channels * steps_per_rev); n_revolutions = rotation_rate * duration;
+     * Nphi = round(steps_per_rev * n_revolutions); Ntheta = number of channels. The per-pulse timestamp, origin, and
+     * orientation are produced exactly as in \ref addScanMoving(), and each pulse fires at the EXACT per-channel
+     * elevation (not a resampled uniform grid).
+     *
+     * \note This is the only way to set up a spinning scan. A stationary "spin in place" capture (e.g. a tripod) is
+     * expressed as a trajectory of two coincident poses with the same position and orientation, separated in time by the
+     * desired acquisition duration; the duration determines the number of revolutions, exactly as for a moving capture.
+     *
+     * \param[in] beamElevationAngles  Per-channel beam elevation angles above the horizon, in radians (zenith = pi/2 - elevation). Its size sets the channel count. \note This is ELEVATION, unlike the zenith-angle \ref ScanMetadata spinning constructor.
+     * \param[in] azimuthStep_rad  Azimuth angular resolution in radians per firing step (e.g. 0.2 degrees = 0.2*pi/180). Must be > 0.
+     * \param[in] pulse_rate_hz  Pulse repetition rate (PRF) in Hz (must be > 0).
+     * \param[in] traj_t  Monotonically increasing trajectory sample times in seconds (size M).
+     * \param[in] traj_pos  Platform positions in world coordinates, one per \p traj_t entry (size M).
+     * \param[in] traj_quat  Platform orientation quaternions (qx,qy,qz,qw), Hamilton body->world, one per \p traj_t entry (size M).
+     * \param[in] lever_arm  Sensor optical center in the platform body frame (meters).
+     * \param[in] boresight_rpy  Fixed sensor rotational misalignment as roll/pitch/yaw in radians (body frame).
+     * \param[in] exitDiameter  Diameter of the laser pulse at exit from the scanner in meters.
+     * \param[in] beamDivergence  Divergence angle of the laser beam in radians.
+     * \param[in] rangeNoiseStdDev  Standard deviation of Gaussian range (along-beam) measurement noise in meters (0 disables).
+     * \param[in] angleNoiseStdDev  Standard deviation of Gaussian angular (beam-pointing) jitter in radians (0 disables).
+     * \param[in] columnFormat  Vector of strings specifying the columns of the scan ASCII file for input/output.
+     * \param[in] t0  Time of the first pulse (pulse ordinal 0) in seconds (relative time; defaults to 0).
+     * \return ID for scan that was created
+     */
+    uint addScanSpinning(const std::vector<float> &beamElevationAngles, float azimuthStep_rad, float pulse_rate_hz, const std::vector<double> &traj_t, const std::vector<helios::vec3> &traj_pos, const std::vector<helios::vec4> &traj_quat,
+                         const helios::vec3 &lever_arm, const helios::vec3 &boresight_rpy, float exitDiameter, float beamDivergence, float rangeNoiseStdDev, float angleNoiseStdDev,
+                         const std::vector<std::string> &columnFormat = {"x", "y", "z"}, double t0 = 0.0);
+
+    //! Add a continuously-spinning multibeam scan with the orientation trajectory given as Euler angles
+    /**
+     * Convenience overload of \ref addScanSpinning() that takes the per-sample platform orientation as roll/pitch/yaw
+     * Euler angles (radians, intrinsic Z-Y-X) instead of quaternions. Each \p traj_rpy entry is converted to a Hamilton
+     * body->world quaternion, then the scan is registered exactly as the quaternion overload.
+     * \param[in] beamElevationAngles  Per-channel beam elevation angles above the horizon, in radians.
+     * \param[in] azimuthStep_rad  Azimuth angular resolution in radians per firing step. Must be > 0.
+     * \param[in] pulse_rate_hz  Pulse repetition rate (PRF) in Hz (must be > 0).
+     * \param[in] traj_t  Monotonically increasing trajectory sample times in seconds (size M).
+     * \param[in] traj_pos  Platform positions in world coordinates, one per \p traj_t entry (size M).
+     * \param[in] traj_rpy  Platform orientations as roll/pitch/yaw Euler angles in radians (intrinsic Z-Y-X), one per \p traj_t entry (size M).
+     * \param[in] lever_arm  Sensor optical center in the platform body frame (meters).
+     * \param[in] boresight_rpy  Fixed sensor rotational misalignment as roll/pitch/yaw in radians (body frame).
+     * \param[in] exitDiameter  Diameter of the laser pulse at exit from the scanner in meters.
+     * \param[in] beamDivergence  Divergence angle of the laser beam in radians.
+     * \param[in] rangeNoiseStdDev  Standard deviation of Gaussian range (along-beam) measurement noise in meters (0 disables).
+     * \param[in] angleNoiseStdDev  Standard deviation of Gaussian angular (beam-pointing) jitter in radians (0 disables).
+     * \param[in] columnFormat  Vector of strings specifying the columns of the scan ASCII file for input/output.
+     * \param[in] t0  Time of the first pulse (pulse ordinal 0) in seconds (relative time; defaults to 0).
+     * \return ID for scan that was created
+     */
+    uint addScanSpinning(const std::vector<float> &beamElevationAngles, float azimuthStep_rad, float pulse_rate_hz, const std::vector<double> &traj_t, const std::vector<helios::vec3> &traj_pos, const std::vector<helios::vec3> &traj_rpy,
+                         const helios::vec3 &lever_arm, const helios::vec3 &boresight_rpy, float exitDiameter, float beamDivergence, float rangeNoiseStdDev, float angleNoiseStdDev,
+                         const std::vector<std::string> &columnFormat = {"x", "y", "z"}, double t0 = 0.0);
+
+    //! Add a moving-platform raster scan: a fixed uniform angular fan swept while the platform moves along a trajectory
+    /**
+     * Convenience wrapper around \ref addScanMoving() for a non-spinning sensor on a moving platform. The caller specifies
+     * the per-frame angular fan resolution (Ntheta x Nphi over [thetaMin,thetaMax] x [phiMin,phiMax]) plus the trajectory
+     * and PRF, and Helios derives the per-pulse time sampling along the trajectory (t = t0 + ordinal/pulse_rate_hz). Unlike
+     * the low-level \ref addScanMoving(), the caller does not pre-build a \ref ScanMetadata or compute pulse
+     * counts to make the sweep span the flight. Sets the scan's \ref ScanMode to \ref SCAN_MODE_MOVING_RASTER.
+     * \param[in] Ntheta  Number of zenith samples in the angular fan.
+     * \param[in] thetaMin  Minimum zenith angle in radians.
+     * \param[in] thetaMax  Maximum zenith angle in radians.
+     * \param[in] Nphi  Number of azimuth samples in the angular fan.
+     * \param[in] phiMin  Minimum azimuth angle in radians.
+     * \param[in] phiMax  Maximum azimuth angle in radians.
+     * \param[in] pulse_rate_hz  Pulse repetition rate (PRF) in Hz (must be > 0).
+     * \param[in] traj_t  Monotonically increasing trajectory sample times in seconds (size M).
+     * \param[in] traj_pos  Platform positions in world coordinates, one per \p traj_t entry (size M).
+     * \param[in] traj_quat  Platform orientation quaternions (qx,qy,qz,qw), Hamilton body->world, one per \p traj_t entry (size M).
+     * \param[in] lever_arm  Sensor optical center in the platform body frame (meters).
+     * \param[in] boresight_rpy  Fixed sensor rotational misalignment as roll/pitch/yaw in radians (body frame).
+     * \param[in] exitDiameter  Diameter of the laser pulse at exit from the scanner in meters.
+     * \param[in] beamDivergence  Divergence angle of the laser beam in radians.
+     * \param[in] rangeNoiseStdDev  Standard deviation of Gaussian range (along-beam) measurement noise in meters (0 disables).
+     * \param[in] angleNoiseStdDev  Standard deviation of Gaussian angular (beam-pointing) jitter in radians (0 disables).
+     * \param[in] columnFormat  Vector of strings specifying the columns of the scan ASCII file for input/output.
+     * \param[in] t0  Time of the first pulse (pulse ordinal 0) in seconds (relative time; defaults to 0).
+     * \return ID for scan that was created
+     */
+    uint addScanMovingRaster(uint Ntheta, float thetaMin, float thetaMax, uint Nphi, float phiMin, float phiMax, float pulse_rate_hz, const std::vector<double> &traj_t, const std::vector<helios::vec3> &traj_pos,
+                             const std::vector<helios::vec4> &traj_quat, const helios::vec3 &lever_arm, const helios::vec3 &boresight_rpy, float exitDiameter, float beamDivergence, float rangeNoiseStdDev, float angleNoiseStdDev,
+                             const std::vector<std::string> &columnFormat = {"x", "y", "z"}, double t0 = 0.0);
 
     //! Specify a scan point as a hit by providing the (x,y,z) coordinates and scan ray direction
     /**
@@ -872,6 +1264,34 @@ public:
      */
     std::vector<float> getScanBeamZenithAngles(uint scanID) const;
 
+    //! Get the high-level acquisition-mode descriptor of a scan
+    /**
+     * \param[in] scanID ID of scan.
+     * \return \ref SCAN_MODE_STATIC_RASTER, \ref SCAN_MODE_MOVING_RASTER, or \ref SCAN_MODE_SPINNING.
+     */
+    ScanMode getScanMode(uint scanID) const;
+
+    //! Get the number of azimuth firing steps per full 360-degree revolution of a spinning multibeam scan
+    /**
+     * \param[in] scanID ID of scan.
+     * \return Azimuth steps per revolution. 0 for scans that are not \ref SCAN_MODE_SPINNING.
+     */
+    uint getScanStepsPerRev(uint scanID) const;
+
+    //! Get the sensor-head rotation rate of a spinning multibeam scan
+    /**
+     * \param[in] scanID ID of scan.
+     * \return Rotation rate in revolutions per second (PRF / (channels * steps_per_rev)). 0 for non-spinning scans.
+     */
+    double getScanRotationRate(uint scanID) const;
+
+    //! Get the total number of full 360-degree revolutions collected by a spinning multibeam scan
+    /**
+     * \param[in] scanID ID of scan.
+     * \return Number of revolutions (may be fractional). 0 for non-spinning scans.
+     */
+    double getScanRevolutions(uint scanID) const;
+
     //! Divergence angle of the laser beam in radians
     /**
      * \param[in] scanID ID of scan.
@@ -892,6 +1312,76 @@ public:
      * \return Standard deviation of the beam-pointing jitter applied during synthetic scan generation, in radians (0 if disabled).
      */
     float getScanAngleNoiseStdDev(uint scanID) const;
+
+    //! Get the return-reporting mode of a scan
+    /**
+     * \param[in] scanID ID of scan.
+     * \return \ref RETURN_MODE_MULTI or \ref RETURN_MODE_SINGLE used during analytic-waveform synthetic scan generation.
+     */
+    ReturnMode getScanReturnMode(uint scanID) const;
+
+    //! Set the return-reporting mode of a scan
+    /**
+     * \param[in] scanID ID of scan.
+     * \param[in] returnMode \ref RETURN_MODE_MULTI to report all detected returns, or \ref RETURN_MODE_SINGLE for one return per pulse.
+     */
+    void setScanReturnMode(uint scanID, ReturnMode returnMode);
+
+    //! Get the single-return selection policy of a scan
+    /**
+     * \param[in] scanID ID of scan.
+     * \return The \ref SingleReturnSelection used when \ref getScanReturnMode is \ref RETURN_MODE_SINGLE.
+     */
+    SingleReturnSelection getScanSingleReturnSelection(uint scanID) const;
+
+    //! Set the single-return selection policy of a scan
+    /**
+     * \param[in] scanID ID of scan.
+     * \param[in] selection Which return to report in single-return mode (\ref SINGLE_RETURN_STRONGEST, \ref SINGLE_RETURN_FIRST, \ref SINGLE_RETURN_LAST, or \ref SINGLE_RETURN_STRONGEST_PLUS_LAST).
+     */
+    void setScanSingleReturnSelection(uint scanID, SingleReturnSelection selection);
+
+    //! Get the maximum number of returns reported per pulse in single/limited-return mode
+    /**
+     * \param[in] scanID ID of scan.
+     * \return Maximum returns per pulse used when \ref getScanReturnMode is \ref RETURN_MODE_SINGLE (1 = single-return, 2 = dual-return, N = N-return). Ignored in \ref RETURN_MODE_MULTI.
+     */
+    int getScanMaxReturns(uint scanID) const;
+
+    //! Set the maximum number of returns reported per pulse in single/limited-return mode
+    /**
+     * \param[in] scanID ID of scan.
+     * \param[in] maxReturns Maximum returns per pulse (must be >= 1): 1 = single-return, 2 = dual-return, N = N-return. The kept returns are the subset chosen by \ref setScanSingleReturnSelection. Ignored in \ref RETURN_MODE_MULTI.
+     */
+    void setScanMaxReturns(uint scanID, int maxReturns);
+
+    //! Get the range resolution (transmit pulse range-extent) of a scan in meters
+    /**
+     * \param[in] scanID ID of scan.
+     * \return Range resolution used to merge sub-ray hits into discrete returns, in meters (0 if the syntheticScan pulse_distance_threshold argument is used instead).
+     */
+    float getScanPulseWidth(uint scanID) const;
+
+    //! Set the range resolution (transmit pulse range-extent) of a scan in meters
+    /**
+     * \param[in] scanID ID of scan.
+     * \param[in] pulseWidth Range resolution in meters; surfaces closer than this merge into one return. 0 falls back to the syntheticScan pulse_distance_threshold argument.
+     */
+    void setScanPulseWidth(uint scanID, float pulseWidth);
+
+    //! Get the detection threshold (minimum return energy fraction) of a scan
+    /**
+     * \param[in] scanID ID of scan.
+     * \return Minimum return energy fraction below which a return is discarded (0 if suppression is disabled).
+     */
+    float getScanDetectionThreshold(uint scanID) const;
+
+    //! Set the detection threshold (minimum return energy fraction) of a scan
+    /**
+     * \param[in] scanID ID of scan.
+     * \param[in] detectionThreshold Minimum return energy fraction in [0,1]; returns weaker than this are discarded. 0 disables suppression.
+     */
+    void setScanDetectionThreshold(uint scanID, float detectionThreshold);
 
     //! Get the global scanner tilt roll angle for a scan
     /**
@@ -958,6 +1448,28 @@ public:
      * \param[in] label Label of the data value (e.g., "reflectance").
      */
     bool doesHitDataExist(uint index, const char *label) const;
+
+    //! Get the internal column index for a hit-data label.
+    /**
+     * Per-hit scalar data is stored column-wise (see \ref getHitDataColumn()). This returns the column
+     * slot for a label, which is useful for repeated bulk access without re-resolving the label.
+     * \param[in] label Label of the data value (e.g., "intensity").
+     * \return Column index for the label, or -1 if the label has never been set on any hit.
+     */
+    int getHitDataColumnIndex(const char *label) const;
+
+    //! Bulk-read a per-hit scalar field across all hits into a contiguous array.
+    /**
+     * This is the fast path for extracting a whole scalar field from a large cloud: it is a single
+     * cache-linear pass over the field's storage column, equivalent in cost to \ref getHitXYZ over all
+     * hits, rather than N separate \ref getHitData lookups. The output has one entry per hit, in hit-index
+     * order; hits that have no value for the label receive `absent_value`.
+     * \param[in] label Label of the data value (e.g., "intensity").
+     * \param[out] data Filled with one value per hit (resized to \ref getHitCount()).
+     * \param[in] absent_value Value written for hits that lack the label (default -9999, matching the
+     *            sentinel used by ASCII export).
+     */
+    void getHitDataColumn(const char *label, std::vector<double> &data, double absent_value = -9999) const;
 
     //! Distance (m) at which a "miss" point is placed along its beam direction.
     /** A fired pulse that returns nothing (transmitted to the sky) is represented as a
@@ -1443,6 +1955,31 @@ public:
      */
     void triangulateHitPoints(float Lmax, float max_aspect_ratio, const char *scalar_field, float threshold, const char *comparator);
 
+    //! Replace the internal triangulation with an externally-supplied world-space mesh
+    /**
+     * Bypasses the internal Constrained-Delaunay triangulation so a mesh produced elsewhere
+     * (e.g. a re-used Helios triangulation, or a per-scan open3d Ball-Pivot mesh) can drive
+     * leaf-area inversion. Leaf-area inversion only consumes triangulation through the per-voxel
+     * G(theta) leaf-angle term (see \ref calculateLeafArea()), which needs each triangle's three
+     * vertices, its source scan (to recover the ray zenith from \ref getScanOrigin()), and the
+     * grid cell its centroid falls in -- nothing about the triangulation topology. This method
+     * supplies exactly that, then sets the triangulation-computed flag so \ref calculateLeafArea()
+     * runs unchanged.
+     *
+     * A grid must already be defined (see \ref addGrid()). Each triangle's grid cell is determined
+     * by centroid containment; triangles whose centroid lies outside every cell are kept but
+     * contribute to no cell (same as the internal path). Degenerate (zero/NaN-area) triangles are
+     * dropped. Any previously-computed triangulation is discarded.
+     *
+     * \param[in] triangle_vertices Flat list of triangle vertices in world coordinates, three
+     *            consecutive entries (v0, v1, v2) per triangle. Size must be a multiple of 3.
+     * \param[in] scanIDs Source scan index for each triangle (size = triangle_vertices.size()/3).
+     *            Used to recover the ray direction for G(theta); every entry must be a valid scan
+     *            index in [0, getScanCount()). Per-scan provenance is required -- a merged mesh
+     *            with no scan association is not a valid input for leaf-area inversion.
+     */
+    void setExternalTriangulation(const std::vector<helios::vec3> &triangle_vertices, const std::vector<int> &scanIDs);
+
 
     //! Add triangle geometry to Helios context
     /**
@@ -1581,6 +2118,50 @@ public:
      */
     void syntheticScan(helios::Context *context, int rays_per_pulse, float pulse_distance_threshold, bool scan_grid_only, bool record_misses, bool append);
 
+    //! Run a synthetic LiDAR scan with an explicit return-reporting mode (analytic-waveform processing)
+    /**
+     * Fires \p rays_per_pulse sub-rays per pulse and forms an analytic (sum-of-Gaussians) waveform whose detected returns are
+     * reported according to \p return_mode. With \ref RETURN_MODE_MULTI all detected returns are reported; with
+     * \ref RETURN_MODE_SINGLE up to the scan's \ref getScanMaxReturns returns per pulse are reported (see
+     * \ref setScanSingleReturnSelection), and (in single-return mode, maxReturns=1) two surfaces within the pulse
+     * range-resolution blend into one return at an intermediate range (a "ghost"/"mixed pixel" point). The range-resolution
+     * used to merge returns is the scan's \ref getScanPulseWidth when set, otherwise \p pulse_distance_threshold; the noise
+     * floor is the scan's \ref getScanDetectionThreshold. This overrides each scan's stored \ref getScanReturnMode for this
+     * call only (the stored value is restored afterward); the per-scan \ref getScanMaxReturns and selection policy still apply.
+     * \param[in] context Pointer to the Helios context.
+     * \param[in] rays_per_pulse Number of ray launches per laser pulse direction. A value of 1 produces an idealized exact-intersection scan regardless of \p return_mode.
+     * \param[in] pulse_distance_threshold Range-resolution distance used to merge sub-ray hits into returns when the scan's pulse width is 0. Hits within this distance merge into one return.
+     * \param[in] return_mode \ref RETURN_MODE_MULTI to report all detected returns, or \ref RETURN_MODE_SINGLE for one return per pulse.
+     * \param[in] scan_grid_only If true, only considers context geometry within the scan grid. [optional]
+     * \param[in] record_misses If true, "miss" points (beam did not hit any primitives) are recorded in the scan. [optional]
+     * \param[in] append If true, new hit points are appended to existing data; if false, existing hit points are cleared first. [optional]
+     */
+    void syntheticScan(helios::Context *context, int rays_per_pulse, float pulse_distance_threshold, ReturnMode return_mode, bool scan_grid_only = false, bool record_misses = false, bool append = true);
+
+    //! Set the soft memory budget (in bytes) for the transient ray-tracing buffers used during \ref syntheticScan.
+    /**
+     * \ref syntheticScan fans each laser pulse out into rays_per_pulse sub-rays; for a large multi-return scan the
+     * total number of simultaneously-traced sub-rays (beams x rays_per_pulse) can demand tens of gigabytes if traced in
+     * one batch. To bound this, the per-scan beam fan-out is processed in chunks sized so that the live trace buffers stay
+     * near this budget, independent of the scan resolution. Larger rays_per_pulse automatically yields fewer beams per
+     * chunk. The budget bounds only the transient scratch buffers, not the output point cloud (which grows with the number
+     * of recorded returns). A very small budget is clamped up internally so each chunk still contains at least one beam and
+     * stays large enough for efficient batched ray tracing.
+     *
+     * If never called, the budget is automatic and path-dependent: \ref SYNTHETIC_SCAN_DEFAULT_BUDGET_GPU (8 GiB) on a
+     * GPU build and \ref SYNTHETIC_SCAN_DEFAULT_BUDGET_CPU (4 GiB) otherwise. Call this to override that with a fixed cap
+     * (typically to lower peak memory on a constrained host).
+     * \param[in] bytes Soft cap in bytes on the live ray-tracing scratch buffers. Must be > 0.
+     */
+    void setSyntheticScanMemoryBudget(size_t bytes);
+
+    //! Get the soft memory budget (in bytes) for the transient ray-tracing buffers used during \ref syntheticScan.
+    /**
+     * \return The explicitly configured budget in bytes, or 0 if using the automatic path-dependent default (8 GiB on a
+     * GPU build, 4 GiB otherwise; see \ref setSyntheticScanMemoryBudget).
+     */
+    [[nodiscard]] size_t getSyntheticScanMemoryBudget() const;
+
     //! Calculate the surface area of all primitives in the context
     /**
      * \param[in] context Pointer to the Helios context
@@ -1712,6 +2293,15 @@ public:
      */
     std::vector<helios::vec3> gapfillMisses(uint scanID, const bool gapfill_grid_only, const bool add_flags);
 
+
+    //! Test/diagnostic hook: force the leaf-area inversion to use the brute-force per-cell slab loop
+    /** By default \ref calculateLeafArea() uses a fast per-beam 3D-DDA traversal of the voxel lattice. When this is set
+        true, the slower brute-force per-cell path is used instead (it produces identical results). This exists so the
+        self-tests can verify the two paths agree; it is not needed in normal use.
+        \param[in] force True to force the brute-force path, false (default) to use the fast DDA path when applicable. */
+    void forceBruteForceLeafArea(bool force) {
+        force_bruteforce_LAD = force;
+    }
 
     //! Calculate the leaf area for each grid volume
     /**

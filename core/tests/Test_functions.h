@@ -1513,6 +1513,55 @@ TEST_CASE("WarningAggregator") {
     }
 }
 
+TEST_CASE("ProgressBar") {
+
+    SUBCASE("Callback reaches completion when console output is disabled") {
+        // Regression: finish() must drive the bar to 100% and notify the callback even when the bar is disabled.
+        // The callback is a separate output channel from console messages; disabling console must not suppress it.
+        std::vector<float> progress;
+        helios::ProgressBar bar(4, 50, false, "Test"); // enable=false: no console output
+        bar.setCallback([&](float p, const std::string &) { progress.push_back(p); });
+
+        bar.update(); // 1/4
+        bar.update(); // 2/4
+        bar.finish(); // must jump to 4/4 and fire the callback at 1.0
+
+        DOCTEST_CHECK(!progress.empty());
+        DOCTEST_CHECK(progress.back() == doctest::Approx(1.0f));
+        bool monotonic = true;
+        for (size_t i = 1; i < progress.size(); i++) {
+            if (progress[i] < progress[i - 1]) {
+                monotonic = false;
+            }
+        }
+        DOCTEST_CHECK(monotonic);
+    }
+
+    SUBCASE("Disabled bar produces no console output") {
+        std::string out;
+        {
+            capture_cout capture;
+            helios::ProgressBar bar(2, 50, false, "Test");
+            bar.update();
+            bar.finish();
+            out = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(out.empty());
+    }
+
+    SUBCASE("finish() on an already-complete bar does not over-report") {
+        std::vector<float> progress;
+        helios::ProgressBar bar(2, 50, false, "Test");
+        bar.setCallback([&](float p, const std::string &) { progress.push_back(p); });
+        bar.update(); // 1/2
+        bar.update(); // 2/2 -> fires 1.0
+        size_t fired = progress.size();
+        bar.finish(); // already at total: must be a no-op
+        DOCTEST_CHECK(progress.size() == fired);
+        DOCTEST_CHECK(progress.back() == doctest::Approx(1.0f));
+    }
+}
+
 #include "exif_writer.h"
 
 TEST_CASE("EXIF writer byte layout") {

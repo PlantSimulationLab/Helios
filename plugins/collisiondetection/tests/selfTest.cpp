@@ -3236,6 +3236,171 @@ DOCTEST_TEST_CASE("CollisionDetection Batch Ray Casting") {
     }
 }
 
+DOCTEST_TEST_CASE("CollisionDetection SoA Batch Ray Casting Equivalence") {
+    // The low-memory SoA batch cast (castRaysSoA writing into caller arrays) must produce results identical to the
+    // reference vector-based castRays() for the same scene and rays.
+    Context context;
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    uint triangle = context.addTriangle(make_vec3(-1, 0, -1), make_vec3(1, 0, -1), make_vec3(0, 0, 1));
+    uint sphere_first = context.addSphere(8, make_vec3(0, 4, 0), 1.0f).front(); // second target to exercise multiple primitives
+
+    // Same ray set as the reference batch test, plus one aimed at the sphere.
+    std::vector<helios::vec3> origins = {make_vec3(0, -1, 0), make_vec3(2, -1, 0), make_vec3(-0.5f, -1, 0), make_vec3(0.5f, -1, 0), make_vec3(0, -1, 0)};
+    std::vector<helios::vec3> directions = {normalize(make_vec3(0, 1, 0)), normalize(make_vec3(0, 1, 0)), normalize(make_vec3(0, 1, 0)), normalize(make_vec3(0, 1, 0)), normalize(make_vec3(0, 1, 0))};
+    const size_t count = origins.size();
+    const float max_distance = -1.0f;
+
+    // Reference path.
+    std::vector<CollisionDetection::RayQuery> queries;
+    queries.reserve(count);
+    for (size_t i = 0; i < count; i++) {
+        queries.emplace_back(origins[i], directions[i], max_distance);
+    }
+    std::vector<CollisionDetection::HitResult> ref_results = collision.castRays(queries);
+
+    // SoA path writing into caller-owned arrays.
+    constexpr uint MISS_UUID = 0xFFFFFFFFu;
+    std::vector<float> soa_distance(count, -1.0f);
+    std::vector<helios::vec3> soa_normal(count);
+    std::vector<uint> soa_uuid(count, MISS_UUID);
+    CollisionDetection::RayTracingStats soa_stats;
+    DOCTEST_CHECK_NOTHROW(collision.castRaysSoA(origins.data(), directions.data(), count, max_distance, soa_distance.data(), soa_normal.data(), soa_uuid.data(), &soa_stats));
+
+    DOCTEST_CHECK(soa_stats.total_rays_cast == count);
+
+    size_t soa_hits = 0;
+    for (size_t i = 0; i < count; i++) {
+        bool soa_hit = (soa_uuid[i] != MISS_UUID);
+        DOCTEST_CHECK(soa_hit == ref_results[i].hit); // same hit/miss classification ray-for-ray
+        if (soa_hit) {
+            soa_hits++;
+            DOCTEST_CHECK(soa_uuid[i] == ref_results[i].primitive_UUID);
+            DOCTEST_CHECK(soa_distance[i] == doctest::Approx(ref_results[i].distance));
+            DOCTEST_CHECK(soa_normal[i].x == doctest::Approx(ref_results[i].normal.x));
+            DOCTEST_CHECK(soa_normal[i].y == doctest::Approx(ref_results[i].normal.y));
+            DOCTEST_CHECK(soa_normal[i].z == doctest::Approx(ref_results[i].normal.z));
+        }
+    }
+    DOCTEST_CHECK(soa_stats.total_hits == soa_hits);
+
+    // Zero-count is a valid no-op (must not touch the output arrays or crash).
+    DOCTEST_CHECK_NOTHROW(collision.castRaysSoA(origins.data(), directions.data(), 0, max_distance, soa_distance.data(), soa_normal.data(), soa_uuid.data(), nullptr));
+
+    (void) triangle;
+    (void) sphere_first;
+}
+
+DOCTEST_TEST_CASE("CollisionDetection SoA Batch Ray Casting GPU/CPU Equivalence") {
+    // The SoA batch cast must produce identical results on the GPU and CPU paths. The GPU dispatch is forced by
+    // exceeding the 1M-ray batch threshold on a >=500-primitive resident scene (see shouldUseGPU); we then compare the
+    // GPU SoA result against the CPU SoA result ray-for-ray. On a non-CUDA build both runs execute on the CPU and the
+    // comparison is trivially satisfied, so this test is safe everywhere.
+    Context context;
+
+    // A grid of 5041 SEPARATED triangles at x=0 (>= MIN_PRIMITIVES_FOR_GPU). One triangle per cell, inset with gaps so
+    // no two triangles share an edge or are otherwise coplanar-adjacent. Because each ray (below) is aimed at exactly
+    // one triangle's interior centroid, the closest hit is unambiguous and its UUID/distance/normal are identical
+    // between CPU and GPU (no coplanar tie-break to disagree on). Centroids are recorded for ray targeting.
+    const int grid = 71;
+    const float extent = 2.0f;
+    const float c = extent / float(grid); // cell size
+    std::vector<helios::vec3> centroids;
+    centroids.reserve(size_t(grid) * size_t(grid));
+    for (int a = 0; a < grid; a++) {
+        for (int b = 0; b < grid; b++) {
+            float by = -extent / 2.0f + a * c;
+            float bz = -extent / 2.0f + b * c;
+            vec3 v0(0, by + 0.2f * c, bz + 0.2f * c);
+            vec3 v1(0, by + 0.8f * c, bz + 0.2f * c);
+            vec3 v2(0, by + 0.5f * c, bz + 0.8f * c);
+            context.addTriangle(v0, v1, v2);
+            centroids.push_back(make_vec3(0.0f, by + 0.5f * c, bz + 0.4f * c)); // interior point (avg of the three)
+        }
+    }
+    const size_t num_tri = centroids.size();
+
+    // 1,102,500 rays (> 1M threshold) shooting +x. Each ray targets one triangle's interior centroid, so it hits that
+    // triangle and only that triangle. A sparse subset is shifted far off the grid to force genuine misses.
+    const int rays_per_dim = 1050;
+    const size_t count = size_t(rays_per_dim) * size_t(rays_per_dim);
+    std::vector<helios::vec3> origins(count), directions(count);
+    for (size_t idx = 0; idx < count; idx++) {
+        const helios::vec3 &target = centroids[idx % num_tri];
+        bool make_miss = (idx % 53 == 0);
+        origins[idx] = make_vec3(-2.0f, make_miss ? target.y + 100.0f : target.y, target.z);
+        directions[idx] = make_vec3(1.0f, 0.0f, 0.0f);
+    }
+    const float max_distance = 10.0f;
+    constexpr uint MISS_UUID = 0xFFFFFFFFu;
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    // CPU SoA reference (GPU disabled forces the OpenMP traversal regardless of batch size).
+    collision.disableGPUAcceleration();
+    collision.buildBVH();
+    std::vector<float> cpu_d(count, -1.0f);
+    std::vector<helios::vec3> cpu_n(count);
+    std::vector<uint> cpu_u(count, MISS_UUID);
+    DOCTEST_CHECK_NOTHROW(collision.castRaysSoA(origins.data(), directions.data(), count, max_distance, cpu_d.data(), cpu_n.data(), cpu_u.data()));
+
+    // GPU SoA: enabling GPU + buildBVH uploads the resident scene; the >1M batch then dispatches to the device.
+    collision.enableGPUAcceleration();
+    collision.buildBVH();
+    std::vector<float> gpu_d(count, -1.0f);
+    std::vector<helios::vec3> gpu_n(count);
+    std::vector<uint> gpu_u(count, MISS_UUID);
+    CollisionDetection::RayTracingStats gpu_stats;
+    DOCTEST_CHECK_NOTHROW(collision.castRaysSoA(origins.data(), directions.data(), count, max_distance, gpu_d.data(), gpu_n.data(), gpu_u.data(), &gpu_stats));
+    DOCTEST_CHECK(gpu_stats.total_rays_cast == count);
+
+    // HELIOS_CUDA_AVAILABLE is a *compile-time* flag (the CUDA toolkit was present at build time); it does NOT guarantee a
+    // usable device at *runtime*. When the toolkit is compiled in but no working GPU exists (e.g. a dead/absent NVIDIA
+    // driver on a CI runner), allocateGPUMemory() correctly logs a warning and flips gpu_acceleration_enabled back to
+    // false, and the cast above transparently falls back to the CPU traversal. In that case the "GPU" run below is really
+    // a second CPU run, so the CPU/GPU equivalence comparison is trivially satisfied and still meaningful — we just can't
+    // claim the device path was exercised. Only assert the GPU path was genuinely taken when GPU acceleration survived
+    // the buildBVH() upload (i.e. a working device was actually present).
+#ifdef HELIOS_CUDA_AVAILABLE
+    if (collision.isGPUAccelerationEnabled()) {
+        DOCTEST_MESSAGE("GPU path exercised (working CUDA device present)");
+    } else {
+        DOCTEST_MESSAGE("SKIPPED GPU-path assertion: no usable CUDA device at runtime; comparison ran CPU-vs-CPU");
+    }
+#endif
+
+    // Aggregate the per-ray comparison (1.1M rays => count discrepancies rather than emit a check per ray).
+    size_t cpu_hits = 0, gpu_hits = 0, classify_mismatch = 0, uuid_mismatch = 0, dist_mismatch = 0, normal_mismatch = 0;
+    for (size_t i = 0; i < count; i++) {
+        bool ch = (cpu_u[i] != MISS_UUID);
+        bool gh = (gpu_u[i] != MISS_UUID);
+        if (ch)
+            cpu_hits++;
+        if (gh)
+            gpu_hits++;
+        if (ch != gh) {
+            classify_mismatch++;
+            continue;
+        }
+        if (ch) {
+            if (gpu_u[i] != cpu_u[i])
+                uuid_mismatch++;
+            if (std::fabs(gpu_d[i] - cpu_d[i]) > 1e-3f)
+                dist_mismatch++;
+            if ((gpu_n[i] - cpu_n[i]).magnitude() > 1e-3f)
+                normal_mismatch++;
+        }
+    }
+    DOCTEST_CHECK(cpu_hits > 0);
+    DOCTEST_CHECK(gpu_hits == cpu_hits);
+    DOCTEST_CHECK(classify_mismatch == 0);
+    DOCTEST_CHECK(uuid_mismatch == 0);
+    DOCTEST_CHECK(dist_mismatch == 0);
+    DOCTEST_CHECK(normal_mismatch == 0);
+}
+
 DOCTEST_TEST_CASE("CollisionDetection Grid Ray Intersection") {
     Context context;
     CollisionDetection collision(&context);
