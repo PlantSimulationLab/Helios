@@ -1576,14 +1576,85 @@ std::vector<float> Context::getTileObjectAreaRatio(const std::vector<uint> &ObjI
     return AreaRatios;
 }
 
+void Context::regenerateTileObjectSubpatches(uint ObjID, const int2 &new_subdiv) {
+    Tile *tile = getTileObjectPointer_private(ObjID);
+    const std::vector<uint> UUIDs_old = tile->getPrimitiveUUIDs();
+    const int2 old_subdiv = tile->getSubdivisionCount();
+
+    // The tile's transformation matrix maps the canonical unit tile (1x1, centered at the origin in the
+    // x-y plane) to world space, and so fully captures its size, orientation and position. Reconstructing
+    // this mapping from the tile normal alone is lossy (it discards in-plane rotation and is ambiguous for
+    // horizontal tiles), so instead we build the new sub-patches in canonical space and reapply the
+    // existing transform.
+    float M[16];
+    tile->getTransformationMatrix(M);
+
+    Patch *first_patch = getPatchPointer_private(UUIDs_old.front());
+    const bool textured = first_patch->hasTexture();
+
+    // Build a canonical unit-tile template with the requested subdivision count.
+    uint template_ObjID;
+    if (textured) {
+        template_ObjID = addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, new_subdiv, tile->getTextureFile().c_str());
+    } else {
+        RGBcolor color = getPrimitiveColor(UUIDs_old.front());
+        template_ObjID = addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, new_subdiv, color);
+    }
+
+    // The addTileObject() call may down-correct the subdivision count (e.g. for low-resolution textures),
+    // so read it back from the template rather than assuming new_subdiv.
+    const std::vector<uint> template_UUIDs = getTileObjectPointer_private(template_ObjID)->getPrimitiveUUIDs();
+    const int2 corrected_subdiv = getTileObjectPointer_private(template_ObjID)->getSubdivisionCount();
+    std::vector<uint> UUIDs_new = copyPrimitive(template_UUIDs); // index-aligned with template_UUIDs
+
+    // Map each new sub-patch from canonical unit space into the original tile's frame.
+    float T_prim[16];
+    for (uint UUID: UUIDs_new) {
+        getPrimitiveTransformationMatrix(UUID, T_prim);
+        matmult(M, T_prim, T_prim);
+        setPrimitiveTransformationMatrix(UUID, T_prim);
+        getPrimitivePointer_private(UUID)->setParentObjectID(ObjID);
+    }
+
+    // Preserve per-sub-patch primitive data. Because the subdivision count may change, there is no 1:1
+    // mapping between old and new sub-patches, so each new sub-patch inherits all data from the old
+    // sub-patch whose grid cell contains the new sub-patch's center (an exact index-for-index copy when
+    // the count is unchanged). The template patches live in canonical [-0.5,0.5] space, so their centers
+    // map directly to a cell of the old subdivision grid without inverting the transform.
+    bool any_old_has_data = false;
+    for (uint UUID: UUIDs_old) {
+        if (!listPrimitiveData(UUID).empty()) {
+            any_old_has_data = true;
+            break;
+        }
+    }
+    if (any_old_has_data) {
+        for (size_t k = 0; k < UUIDs_new.size(); k++) {
+            const vec3 canonical_center = getPatchCenter(template_UUIDs.at(k)); // canonical space (z=0)
+            const float u = canonical_center.x + 0.5f; // -> [0,1)
+            const float v = canonical_center.y + 0.5f;
+            int old_i = static_cast<int>(std::floor(u * scast<float>(old_subdiv.x)));
+            int old_j = static_cast<int>(std::floor(v * scast<float>(old_subdiv.y)));
+            old_i = std::max(0, std::min(old_subdiv.x - 1, old_i));
+            old_j = std::max(0, std::min(old_subdiv.y - 1, old_j));
+            const size_t old_index = scast<size_t>(old_j) * scast<size_t>(old_subdiv.x) + scast<size_t>(old_i); // row-major, matches addTileObject
+            if (old_index < UUIDs_old.size() && doesPrimitiveExist(UUIDs_old.at(old_index))) {
+                copyPrimitiveData(UUIDs_old.at(old_index), UUIDs_new.at(k));
+            }
+        }
+    }
+
+    tile->setPrimitiveUUIDs(UUIDs_new);
+    tile->setSubdivisionCount(corrected_subdiv);
+    tile->setTransformationMatrix(M);
+
+    deleteObject(template_ObjID);
+    deletePrimitive(UUIDs_old);
+}
+
 void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, const int2 &new_subdiv) {
-    // check that all objects are Tile Objects, and get vector of texture files
+    // collect the valid tile objects to regenerate
     std::vector<uint> tile_ObjectIDs;
-    std::vector<uint> textured_tile_ObjectIDs;
-
-
-    std::vector<std::string> tex;
-
     WarningAggregator warnings;
 
     for (uint ObjID: ObjIDs) {
@@ -1593,124 +1664,32 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, con
         }
 #endif
 
-        // check if the object ID is a tile object and if it is add it the tile_ObjectIDs vector
         if (getObjectPointer_private(ObjID)->getObjectType() != OBJECT_TYPE_TILE) {
             warnings.addWarning("not_a_tile_object", "ObjectID " + std::to_string(ObjID) + " is not a tile object. Skipping...");
         } else if (!(getObjectPointer_private(ObjID)->arePrimitivesComplete())) {
             warnings.addWarning("tile_object_missing_primitives", "ObjectID " + std::to_string(ObjID) + " is missing primitives. Skipping...");
         } else {
-            // test if the tile is textured and push into two different vectors
-            Patch *p = getPatchPointer_private(getObjectPointer_private(ObjID)->getPrimitiveUUIDs().at(0));
-            if (!p->hasTexture()) { // no texture
-                tile_ObjectIDs.push_back(ObjID);
-            } else { // texture
-                textured_tile_ObjectIDs.push_back(ObjID);
-                tex.push_back(p->getTextureFile());
-            }
+            tile_ObjectIDs.push_back(ObjID);
         }
     }
 
     warnings.report(std::cerr);
 
-    // Here just call setSubdivisionCount directly for the non-textured tile objects
-    for (unsigned int tile_ObjectID: tile_ObjectIDs) {
-        Tile *current_object_pointer = getTileObjectPointer_private(tile_ObjectID);
-        const std::vector<uint> &UUIDs_old = current_object_pointer->getPrimitiveUUIDs();
-
-        vec2 size = current_object_pointer->getSize();
-        vec3 center = current_object_pointer->getCenter();
-        vec3 normal = current_object_pointer->getNormal();
-        SphericalCoord rotation = cart2sphere(normal);
-        RGBcolor color = getPrimitiveColor(UUIDs_old.front());
-
-        std::vector<uint> UUIDs_new = addTile(center, size, rotation, new_subdiv, color);
-
-        for (uint UUID: UUIDs_new) {
-            getPrimitivePointer_private(UUID)->setParentObjectID(tile_ObjectID);
-        }
-
-        current_object_pointer->setPrimitiveUUIDs(UUIDs_new);
-        current_object_pointer->setSubdivisionCount(new_subdiv);
-        deletePrimitive(UUIDs_old);
+    // Regenerate the sub-patches preserving each tile's orientation (texture handled per-tile in the helper).
+    for (uint tile_ObjectID: tile_ObjectIDs) {
+        regenerateTileObjectSubpatches(tile_ObjectID, new_subdiv);
     }
-
-    // get a vector of unique texture files that are represented in the input tile objects
-    sort(tex.begin(), tex.end());
-    std::vector<std::string>::iterator it;
-    it = std::unique(tex.begin(), tex.end());
-    tex.resize(std::distance(tex.begin(), it));
-
-    // create object templates for all the unique texture files
-    std::vector<uint> object_templates;
-    std::vector<std::vector<uint>> template_primitives;
-    for (uint j = 0; j < tex.size(); j++) {
-        // create a template object for the current texture
-        uint object_template = addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, new_subdiv, tex.at(j).c_str());
-        object_templates.emplace_back(object_template);
-        std::vector<uint> object_primitives = getTileObjectPointer_private(object_template)->getPrimitiveUUIDs();
-        template_primitives.emplace_back(object_primitives);
-    }
-
-    // keep loop over objects on the outside, otherwise need to update textured_tile_ObjectIDs vector all the time
-    // for each textured tile object
-    for (uint i = 0; i < textured_tile_ObjectIDs.size(); i++) {
-        // get info from current object
-        Tile *current_object_pointer = getTileObjectPointer_private(textured_tile_ObjectIDs.at(i));
-        std::string current_texture_file = current_object_pointer->getTextureFile();
-
-        std::vector<uint> UUIDs_old = current_object_pointer->getPrimitiveUUIDs();
-
-        vec2 size = current_object_pointer->getSize();
-        vec3 center = current_object_pointer->getCenter();
-        vec3 normal = current_object_pointer->getNormal();
-        SphericalCoord rotation = cart2sphere(normal);
-
-        // for unique textures
-        for (uint j = 0; j < tex.size(); j++) {
-            // if the current tile object has the same texture file as the current unique texture file
-            if (current_texture_file == tex.at(j)) {
-                // copy the template primitives and create a new tile with them
-                std::vector<uint> new_primitives = copyPrimitive(template_primitives.at(j));
-
-                // change the objectID for the new primitives
-                setPrimitiveParentObjectID(new_primitives, textured_tile_ObjectIDs.at(i));
-                current_object_pointer->setPrimitiveUUIDs(new_primitives);
-                current_object_pointer->setSubdivisionCount(new_subdiv);
-
-                // delete the original object primitives
-                deletePrimitive(UUIDs_old);
-
-                float IM[16];
-                makeIdentityMatrix(IM);
-                current_object_pointer->setTransformationMatrix(IM);
-
-                current_object_pointer->scale(make_vec3(size.x, size.y, 1));
-
-                // transform based on original object data
-                if (rotation.elevation != 0) {
-                    current_object_pointer->rotate(-rotation.elevation, "x");
-                }
-                if (rotation.azimuth != 0) {
-                    current_object_pointer->rotate(rotation.azimuth, "z");
-                }
-                current_object_pointer->translate(center);
-            }
-        }
-    }
-
-
-    // delete the template (objects and primitives)
-    deleteObject(object_templates);
 }
 
 void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, float area_ratio) {
-    // check that all objects are Tile Objects, and get vector of texture files
-    std::vector<uint> tile_ObjectIDs;
-    std::vector<uint> textured_tile_ObjectIDs;
+    // The area ratio is (total tile area / individual sub-patch area), which cannot be less than 1.
+    if (area_ratio < 1.f) {
+        helios_runtime_error("ERROR (Context::setTileObjectSubdivisionCount): Area ratio must be greater than or equal to 1 (it is the ratio of the whole tile area to an individual sub-patch area). Received " + std::to_string(area_ratio) + ".");
+    }
 
-    std::vector<std::string> tex;
+    // collect the valid tile objects to regenerate
+    std::vector<uint> tile_ObjectIDs;
     WarningAggregator warnings;
-    // for(uint i=1;i<ObjectIDs.size();i++)
     for (uint ObjID: ObjIDs) {
 #ifdef HELIOS_DEBUG
         if (!doesObjectExist(ObjID)) {
@@ -1718,36 +1697,23 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
         }
 #endif
 
-        // check if the object ID is a tile object and if it is add it the tile_ObjectIDs vector
         if (getObjectPointer_private(ObjID)->getObjectType() != OBJECT_TYPE_TILE) {
             warnings.addWarning("not_a_tile_object", "ObjectID " + std::to_string(ObjID) + " is not a tile object. Skipping...");
         } else if (!(getObjectPointer_private(ObjID)->arePrimitivesComplete())) {
             warnings.addWarning("tile_object_missing_primitives", "ObjectID " + std::to_string(ObjID) + " is missing primitives. Skipping...");
         } else {
-            // test if the tile is textured and push into two different vectors
-            Patch *p = getPatchPointer_private(getObjectPointer_private(ObjID)->getPrimitiveUUIDs().at(0));
-            if (!p->hasTexture()) { // no texture
-                tile_ObjectIDs.push_back(ObjID);
-            } else { // texture
-                textured_tile_ObjectIDs.push_back(ObjID);
-                tex.push_back(p->getTextureFile());
-            }
+            tile_ObjectIDs.push_back(ObjID);
         }
     }
 
     warnings.report(std::cerr);
 
-    // Here just call setSubdivisionCount directly for the non-textured tile objects
-    for (uint i = 0; i < tile_ObjectIDs.size(); i++) {
-        Tile *current_object_pointer = getTileObjectPointer_private(tile_ObjectIDs.at(i));
-        std::vector<uint> UUIDs_old = current_object_pointer->getPrimitiveUUIDs();
+    // Regenerate the sub-patches for every tile object, choosing per-tile a subdivision count that yields
+    // the requested area ratio (total tile area / individual sub-patch area), while preserving orientation.
+    for (uint tile_ObjectID: tile_ObjectIDs) {
+        Tile *current_object_pointer = getTileObjectPointer_private(tile_ObjectID);
 
         vec2 size = current_object_pointer->getSize();
-        vec3 center = current_object_pointer->getCenter();
-        vec3 normal = current_object_pointer->getNormal();
-        SphericalCoord rotation = cart2sphere(normal);
-        RGBcolor color = getPrimitiveColor(UUIDs_old.front());
-
         float tile_area = current_object_pointer->getArea();
 
         // subpatch dimensions needed to keep the correct ratio and have the solid fraction area = the input area
@@ -1767,124 +1733,8 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
             new_subdiv = make_int2(floor(subpatch_per_x), ceil(subpatch_per_y));
         }
 
-
-        std::vector<uint> UUIDs_new = addTile(center, size, rotation, new_subdiv, color);
-
-        for (uint UUID: UUIDs_new) {
-            getPrimitivePointer_private(UUID)->setParentObjectID(tile_ObjectIDs.at(i));
-        }
-
-        current_object_pointer->setPrimitiveUUIDs(UUIDs_new);
-        current_object_pointer->setSubdivisionCount(new_subdiv);
-        deletePrimitive(UUIDs_old);
+        regenerateTileObjectSubpatches(tile_ObjectID, new_subdiv);
     }
-
-    // get a vector of unique texture files that are represented in the input tile objects
-    sort(tex.begin(), tex.end());
-    std::vector<std::string>::iterator it;
-    it = std::unique(tex.begin(), tex.end());
-    tex.resize(std::distance(tex.begin(), it));
-
-    // create object templates for all the unique texture files
-    //  the assumption here is that all tile objects with the same texture have the same aspect ratio
-    // if this is not true then the copying method won't work well because a new template will need to be created for each texture/aspect ratio combination
-
-    std::vector<uint> object_templates;
-    std::vector<std::vector<uint>> template_primitives;
-    for (uint j = 0; j < tex.size(); j++) {
-        // here we just want to get one tile object with the matching texture
-        uint ii;
-        for (uint i = 0; i < textured_tile_ObjectIDs.size(); i++) {
-            // get info from current object
-            Tile *current_object_pointer_b = getTileObjectPointer_private(textured_tile_ObjectIDs.at(i));
-            std::string current_texture_file_b = current_object_pointer_b->getTextureFile();
-            // if the current tile object has the same texture file as the current unique texture file
-            if (current_texture_file_b == tex.at(j)) {
-                ii = i;
-                break;
-            }
-        }
-
-        // get info from current object
-        Tile *current_object_pointer = getTileObjectPointer_private(textured_tile_ObjectIDs.at(ii));
-        vec2 tile_size = current_object_pointer->getSize();
-        float tile_area = current_object_pointer->getArea();
-
-        // subpatch dimensions needed to keep the correct ratio and have the solid fraction area = the input area
-        float subpatch_dimension = sqrtf(tile_area / area_ratio);
-        float subpatch_per_x = tile_size.x / subpatch_dimension;
-        float subpatch_per_y = tile_size.y / subpatch_dimension;
-
-        float option_1_AR = (tile_area / (tile_size.x / ceil(subpatch_per_x) * tile_size.y / floor(subpatch_per_y))) - area_ratio;
-        float option_2_AR = (tile_area / (tile_size.x / floor(subpatch_per_x) * tile_size.y / ceil(subpatch_per_y))) - area_ratio;
-
-        int2 new_subdiv;
-        if ((int) area_ratio == 1) {
-            new_subdiv = make_int2(1, 1);
-        } else if (option_1_AR >= option_2_AR) {
-            new_subdiv = make_int2(ceil(subpatch_per_x), floor(subpatch_per_y));
-        } else {
-            new_subdiv = make_int2(floor(subpatch_per_x), ceil(subpatch_per_y));
-        }
-
-        // create a template object for the current texture
-        uint object_template = addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, new_subdiv, tex.at(j).c_str());
-        object_templates.emplace_back(object_template);
-        std::vector<uint> object_primitives = getTileObjectPointer_private(object_template)->getPrimitiveUUIDs();
-        template_primitives.emplace_back(object_primitives);
-    }
-
-    // keep loop over objects on the outside, otherwise need to update textured_tile_ObjectIDs vector all the time
-    // for each textured tile object
-    for (uint i = 0; i < textured_tile_ObjectIDs.size(); i++) {
-        // get info from current object
-        Tile *current_object_pointer = getTileObjectPointer_private(textured_tile_ObjectIDs.at(i));
-        // std::string current_texture_file = getPrimitivePointer_private(current_object_pointer->getPrimitiveUUIDs().at(0))->getTextureFile();
-        std::string current_texture_file = current_object_pointer->getTextureFile();
-        // std::cout << "current_texture_file for ObjID " << textured_tile_ObjectIDs.at(i) << " = " << current_texture_file << std::endl;
-        std::vector<uint> UUIDs_old = current_object_pointer->getPrimitiveUUIDs();
-
-        vec2 size = current_object_pointer->getSize();
-        vec3 center = current_object_pointer->getCenter();
-        vec3 normal = current_object_pointer->getNormal();
-        SphericalCoord rotation = cart2sphere(normal);
-
-        // for unique textures
-        for (uint j = 0; j < tex.size(); j++) {
-            // if the current tile object has the same texture file as the current unique texture file
-            if (current_texture_file == tex.at(j)) {
-                // copy the template primitives and create a new tile with them
-                std::vector<uint> new_primitives = copyPrimitive(template_primitives.at(j));
-
-                // change the objectID for the new primitives
-                setPrimitiveParentObjectID(new_primitives, textured_tile_ObjectIDs.at(i));
-
-                int2 new_subdiv = getTileObjectPointer_private(object_templates.at(j))->getSubdivisionCount();
-                current_object_pointer->setPrimitiveUUIDs(new_primitives);
-                current_object_pointer->setSubdivisionCount(new_subdiv);
-
-                // delete the original object primitives
-                deletePrimitive(UUIDs_old);
-
-                float IM[16];
-                makeIdentityMatrix(IM);
-                current_object_pointer->setTransformationMatrix(IM);
-
-                current_object_pointer->scale(make_vec3(size.x, size.y, 1));
-
-                if (rotation.elevation != 0) {
-                    current_object_pointer->rotate(-rotation.elevation, "x");
-                }
-                if (rotation.azimuth != 0) {
-                    current_object_pointer->rotate(rotation.azimuth, "z");
-                }
-                current_object_pointer->translate(center);
-            }
-        }
-    }
-
-    // delete the template (objects and primitives)
-    deleteObject(object_templates);
 }
 
 

@@ -177,6 +177,7 @@ struct GeneticAlgorithm {
     size_t population_size = 20; //!< Size of the population
     float crossover_rate = 0.5f; //!< Probability of crossover
     float elitism_rate = 0.05f; //!< Fraction of top individuals kept in next generation
+    unsigned int random_seed = 0; //!< RNG seed for reproducibility (0 = nondeterministic seed from std::random_device)
 
     //! Crossover operator selection (default: BLX-alpha)
     std::variant<BLXAlphaCrossover, BLXPCACrossover> crossover;
@@ -198,6 +199,7 @@ struct BayesianOptimization {
     float ucb_kappa = 2.0f; //!< Exploration parameter for UCB acquisition (higher = more exploration)
     size_t max_gp_samples = 200; //!< Maximum samples to keep in GP (for memory efficiency)
     size_t acquisition_samples = 1000; //!< Random samples for acquisition optimization
+    unsigned int random_seed = 0; //!< RNG seed for reproducibility (0 = nondeterministic seed from std::random_device)
 
     //! Exploration-biased preset (high kappa, many samples)
     static BayesianOptimization explore();
@@ -211,6 +213,7 @@ struct CMAES {
     size_t max_evaluations = 200; //!< Total number of function evaluations
     size_t lambda = 0; //!< Population size (0 = auto: 4+floor(3*ln(n)))
     float sigma = 0.3f; //!< Initial step size (typical: 0.3)
+    unsigned int random_seed = 0; //!< RNG seed for reproducibility (0 = nondeterministic seed from std::random_device)
 
     //! Exploration-biased preset (large sigma)
     static CMAES explore();

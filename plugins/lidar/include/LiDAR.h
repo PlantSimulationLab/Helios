@@ -204,14 +204,21 @@ struct GridCell {
  * reproduces the original Helios behavior of a uniform angular grid in zenith and azimuth (panoramic terrestrial laser scanner).
  * \ref SCAN_PATTERN_SPINNING_MULTIBEAM models a rotating multi-channel sensor (e.g. Velodyne, Ouster, Hesai) where each table
  * row corresponds to a laser channel fired at a fixed - and generally non-uniformly spaced - zenith angle, while each column is
- * a uniform azimuth step. Both patterns share the same Ntheta x Nphi table storage, so all downstream processing (ray tracing,
- * hit tables, leaf-area and leaf-angle inversion) is common to both.
+ * a uniform azimuth step. \ref SCAN_PATTERN_RISLEY_PRISM models a rotating-Risley-prism scanner (the optical mechanism used by
+ * Livox rosette-pattern sensors such as the Mid-40/Mid-70/Avia): a single beam is refracted through a stack of continuously
+ * rotating wedge prisms, tracing a non-repetitive rosette inside a circular field of view. It is non-separable - each column is
+ * one pulse whose direction comes from the prism optics at that pulse's time, not from a row x column angular grid - so it is
+ * stored as an Ntheta=1 (single-row) table and is always trajectory-driven. The raster and spinning patterns share the same
+ * Ntheta x Nphi table storage, so all downstream processing (ray tracing, hit tables, leaf-area and leaf-angle inversion) is
+ * common to both.
  */
 enum ScanPattern {
     //! Uniform angular grid: zenith uniformly spaced over [thetaMin, thetaMax], azimuth over [phiMin, phiMax]
     SCAN_PATTERN_RASTER = 0,
     //! Rotating multi-channel sensor: each row is a laser channel at a fixed zenith angle (see \ref ScanMetadata::beamZenithAngles), each column a uniform azimuth step
-    SCAN_PATTERN_SPINNING_MULTIBEAM = 1
+    SCAN_PATTERN_SPINNING_MULTIBEAM = 1,
+    //! Rotating-Risley-prism scanner (Livox-style rosette): each column is one pulse whose body-frame direction is computed by refracting the beam through the rotating prisms (see \ref ScanMetadata::risley_prisms) at that pulse's time. Stored as a single-row (Ntheta=1) table; always trajectory-driven.
+    SCAN_PATTERN_RISLEY_PRISM = 2
 };
 
 //! High-level, introspective descriptor of how a scan was acquired
@@ -228,7 +235,9 @@ enum ScanMode {
     //! Uniform angular grid acquired while the platform moves along a trajectory (mobile/airborne raster sensor)
     SCAN_MODE_MOVING_RASTER = 1,
     //! Continuously-spinning multi-channel sensor (always trajectory-driven; a stationary capture is two coincident poses)
-    SCAN_MODE_SPINNING = 2
+    SCAN_MODE_SPINNING = 2,
+    //! Rotating-Risley-prism rosette sensor (Livox-style; always trajectory-driven; a stationary capture is two coincident poses separated in time by the acquisition duration)
+    SCAN_MODE_RISLEY_PRISM = 3
 };
 
 //! How the analytic-waveform synthetic scanner reports the returns detected along each pulse
@@ -269,10 +278,48 @@ enum SingleReturnSelection {
     SINGLE_RETURN_STRONGEST_PLUS_LAST = 3
 };
 
+//! A single rotating wedge prism in a Risley-prism beam deflector
+/**
+ * One element of the rotating-prism stack used by a \ref SCAN_PATTERN_RISLEY_PRISM scan. Each prism is a glass wedge with one
+ * face perpendicular to the optical axis and one face tilted by the wedge angle; it deflects the transmitted beam by refraction
+ * and rotates continuously about the optical axis. A pair of such prisms with different (and generally incommensurate) rotation
+ * rates traces the characteristic non-repetitive rosette of a Livox sensor. The beam direction is computed by non-paraxial ray
+ * tracing - refracting the beam through both faces of each prism with the vector form of Snell's law - so the maximum beam
+ * deflection, and therefore the circular field of view, is an emergent property of the wedge angles and refractive indices,
+ * not a directly specified parameter.
+ */
+struct RisleyPrism {
+
+    //! Default Risley prism (no deflection)
+    RisleyPrism() : wedge_angle(0.0), refractive_index(1.0), rotor_rate(0.0), phase(0.0) {
+    }
+
+    //! Construct a Risley prism
+    /**
+     * \param[in] wedge_angle  Wedge (inclination) angle of the prism in radians
+     * \param[in] refractive_index  Refractive index of the prism glass
+     * \param[in] rotor_rate  Rotation rate of the prism about the optical axis in radians per second (the sign sets the direction of rotation; a counter-rotating pair traces a rosette)
+     * \param[in] phase  Initial clocking angle of the wedge about the optical axis in radians at scan time t=0 (defaults to 0)
+     */
+    RisleyPrism(double wedge_angle, double refractive_index, double rotor_rate, double phase = 0.0) : wedge_angle(wedge_angle), refractive_index(refractive_index), rotor_rate(rotor_rate), phase(phase) {
+    }
+
+    //! Wedge (inclination) angle of the prism in radians
+    double wedge_angle;
+    //! Refractive index of the prism glass
+    double refractive_index;
+    //! Rotation rate of the prism about the optical axis in radians per second (sign sets the rotation direction)
+    double rotor_rate;
+    //! Initial clocking angle of the wedge about the optical axis in radians at scan time t=0
+    double phase;
+};
+
 //! Structure containing metadata for a scan
 /** A static raster scan is initialized by providing 1) the origin of the scan (see \ref origin), 2) the number of zenithal scan directions (see \ref Ntheta), 3) the range of zenithal scan angles (see \ref thetaMin, \ref thetaMax), 4) the number of
 azimuthal scan directions (see \ref Nphi), 5) the range of azimuthal scan angles (see \ref phiMin, \ref phiMax). This creates a grid of Ntheta x Nphi scan points which are all initialized as misses.  Points are set as hits using the addHitPoint()
-function. There are various functions to query the scan data. The same Ntheta x Nphi grid storage backs the other scan patterns and modes (see \ref ScanPattern and \ref ScanMode): a spinning multibeam scan stores per-channel zenith angles in
+function. There are various functions to query the scan data. \note During synthetic scan generation the raster pattern models the continuous azimuth rotation of a real terrestrial scanner: the azimuth drifts across each zenith column by one column step
+((phiMax-phiMin)/(Nphi-1)), so the emitted zenith columns are slightly skewed (tilted) rather than perfectly vertical. The drift is sub-cell ((phiMax-phiMin)/((Nphi-1)*Ntheta) per zenith step) and is not reflected in the nominal (row,column) grid
+mapping used by \ref rc2direction() / \ref direction2rc(). The same Ntheta x Nphi grid storage backs the other scan patterns and modes (see \ref ScanPattern and \ref ScanMode): a spinning multibeam scan stores per-channel zenith angles in
 \ref beamZenithAngles, and a moving-platform scan additionally carries a 6-DOF trajectory (\ref traj_t, \ref traj_pos, \ref traj_quat) with the derived rotation rate and revolution count (\ref rotation_rate, \ref n_revolutions). Prefer the
 high-level entry points \ref LiDARcloud::addScanSpinning() and \ref LiDARcloud::addScanMovingRaster() to set up moving/spinning scans from physical instrument parameters.
 */
@@ -441,10 +488,17 @@ struct ScanMetadata {
     /**
      * A detected return whose intensity (range-normalized echo amplitude, expressed as a fraction of the total per-pulse
      * beam energy) is below this value is discarded, modeling the minimum detectable signal above the noise floor of a real
-     * instrument. A value of 0 (the default) disables suppression so every return is reported.
+     * instrument. Set to 0 to disable suppression so every return is reported.
+     *
+     * The default of 0.05 models a realistic ~5% noise floor and pairs with the recommended ~40 rays/pulse: with N
+     * sub-rays the weakest possible return is 1/N of pulse energy (a single sub-ray), so a 0.05 threshold at N=40 keeps
+     * only returns supported by at least ~2 sub-rays. This suppresses the single-sub-ray "phantom" returns whose Bernoulli
+     * appearance/disappearance otherwise forces very high ray counts to converge, letting ~40 rays/pulse reach a stable
+     * multi-return statistic. Raise N if you lower this threshold below ~1/N (a threshold under 1/N has no effect, since no
+     * return can be weaker than one sub-ray); a value of 0 reproduces the previous "report every return" behavior.
      * \note This is only used for synthetic scan generation.
      */
-    float detectionThreshold = 0.f;
+    float detectionThreshold = 0.05f;
 
     //! Global scanner tilt roll angle in radians (right-hand rotation about the body lateral axis)
     /**
@@ -504,6 +558,18 @@ struct ScanMetadata {
      *  pi/2 - elevation. Empty for \ref SCAN_PATTERN_RASTER scans.
      */
     std::vector<float> beamZenithAngles;
+
+    //! Rotating wedge prisms of a Risley-prism (Livox-style rosette) scan
+    /** Used only when \ref scanPattern is \ref SCAN_PATTERN_RISLEY_PRISM. The beam is refracted in order through each prism in
+     *  this stack (a Livox sensor uses two counter-rotating prisms; the underlying model supports any number). The per-pulse
+     *  body-frame beam direction is computed by full Snell's-law refraction through the rotating prisms at the pulse's time
+     *  (see \ref rc2direction). Empty for the other scan patterns.
+     */
+    std::vector<RisleyPrism> risley_prisms;
+
+    //! Refractive index of the medium surrounding the Risley prisms (air)
+    /** Used only when \ref scanPattern is \ref SCAN_PATTERN_RISLEY_PRISM. Defaults to 1.0 (vacuum/air). */
+    double risley_refractive_index_air = 1.0;
 
     //! Convert the (row,column) of hit point in a scan to a direction vector
     /**
@@ -689,6 +755,44 @@ private:
     //! External cancellation flag forwarded to the collision-detection ray loop
     //! so a long syntheticScan can be aborted mid-trace (nullptr = none).
     volatile int *cancel_flag = nullptr;
+
+    //! Optional caller-owned counter that syntheticScan writes the index of the
+    //! scan currently being ray-traced into (0-based), updated at the start of each
+    //! scan (nullptr = none). Lets a host poll per-scan progress from another thread
+    //! while the blocking syntheticScan call runs. Not owned by LiDARcloud — the
+    //! caller manages its lifetime.
+    volatile int *synthetic_scan_progress = nullptr;
+
+    //! Prepare the collision-detection engine for a batch of ray-tracing calls over static geometry.
+    /**
+     * Initializes the collision-detection plugin, disables automatic BVH rebuilds, and builds the BVH once. Use this once
+     * before issuing many \ref castRaysUnified() calls (e.g. one per beam chunk) so the BVH is not rebuilt on every call;
+     * pair with \ref finishUnifiedRayTracing() after the batch. The geometry must not change between prepare and finish.
+     * \param[in] context Pointer to the Helios context.
+     */
+    void prepareUnifiedRayTracing(helios::Context *context);
+
+    //! Re-enable automatic BVH rebuilds after a batch of ray-tracing calls (see \ref prepareUnifiedRayTracing).
+    void finishUnifiedRayTracing();
+
+    //! Trace a batch of already-prepared rays into the caller's result buffers (no BVH (re)build).
+    /**
+     * Casts total_rays rays and writes per-ray results into hit_t/hit_fnorm/hit_ID using the low-memory SoA path
+     * (\ref CollisionDetection::castRaysSoA), avoiding any per-call full-length RayQuery/HitResult vectors. A miss writes
+     * hit_t = \ref LIDAR_RAYTRACE_MISS_T, hit_ID = -1, hit_fnorm = 1e6; a hit writes the hit distance, primitive UUID, and
+     * the dot product of the ray direction with the surface normal. The BVH must already be current — call
+     * \ref prepareUnifiedRayTracing() once before the first batch.
+     * \param[in] total_rays Number of rays to trace.
+     * \param[in] ray_origins Array of ray origins (length total_rays).
+     * \param[in] direction Array of ray directions (length total_rays).
+     * \param[out] hit_t Array (length total_rays) receiving the hit distance (or miss sentinel) per ray.
+     * \param[out] hit_fnorm Array (length total_rays) receiving dot(direction, normal) per hit (1e6 on a miss).
+     * \param[out] hit_ID Array (length total_rays) receiving the hit primitive UUID (-1 on a miss).
+     * \param[in] packet_size Rays per coherent packet (the rays are laid out so each consecutive group of packet_size
+     *                        rays is one pulse's sub-rays). >1 enables coherent packet traversal
+     *                        (\ref CollisionDetection::castRaysSoA_packets); 1 (default) uses per-ray traversal.
+     */
+    void castRaysUnified(size_t total_rays, helios::vec3 *ray_origins, helios::vec3 *direction, float *hit_t, float *hit_fnorm, int *hit_ID, size_t packet_size = 1);
 
     // -------- I/O --------- //
 
@@ -933,46 +1037,31 @@ public:
      */
     void setProgressCallback(std::function<void(float, const std::string &)> callback);
 
-    //! Register an external cancellation flag polled during syntheticScan's ray trace
+    //! Register an external cancellation flag polled during long-running operations
     /**
-     * When the pointed-to int becomes non-zero, the parallel ray loop aborts and
-     * syntheticScan returns early (with whatever hits were recorded so far). The
-     * flag is owned by the caller (e.g. a ctypes int shared with Python) and must
-     * outlive the scan; pass nullptr to clear. Set this before calling syntheticScan().
+     * When the pointed-to int becomes non-zero, the current long-running operation aborts at the
+     * next poll point. \ref syntheticScan() stops its parallel ray loop and returns early with
+     * whatever hits were recorded so far; \ref triangulateHitPoints() discards any partial mesh
+     * and returns an empty triangulation. The flag is owned by the caller (e.g. a ctypes int
+     * shared with Python) and must outlive the operation; pass nullptr to clear. Set this before
+     * calling the operation to be cancelled.
      * \param[in] flag Pointer to a 0/non-zero cancellation flag, or nullptr.
      */
     void setCancelFlag(volatile int *flag);
 
+    //! Register an external counter for per-scan syntheticScan progress
+    /**
+     * syntheticScan writes the 0-based index of the scan it is currently ray-tracing
+     * into the pointed-to int, updated at the start of each scan, and sets it to
+     * getScanCount() when the batch finishes. The counter is owned by the caller
+     * (e.g. a ctypes int shared with Python) and must outlive the scan; pass nullptr
+     * to clear. Set this before calling syntheticScan().
+     * \param[in] ptr Pointer to a caller-owned progress counter, or nullptr.
+     */
+    void setSyntheticScanProgressPointer(volatile int *ptr);
+
     //! Initialize collision detection plugin for unified ray-tracing (called automatically when needed)
     void initializeCollisionDetection(helios::Context *context);
-
-    //! Prepare the collision-detection engine for a batch of ray-tracing calls over static geometry.
-    /**
-     * Initializes the collision-detection plugin, disables automatic BVH rebuilds, and builds the BVH once. Use this once
-     * before issuing many \ref castRaysUnified() calls (e.g. one per beam chunk) so the BVH is not rebuilt on every call;
-     * pair with \ref finishUnifiedRayTracing() after the batch. The geometry must not change between prepare and finish.
-     * \param[in] context Pointer to the Helios context.
-     */
-    void prepareUnifiedRayTracing(helios::Context *context);
-
-    //! Re-enable automatic BVH rebuilds after a batch of ray-tracing calls (see \ref prepareUnifiedRayTracing).
-    void finishUnifiedRayTracing();
-
-    //! Trace a batch of already-prepared rays into the caller's result buffers (no BVH (re)build).
-    /**
-     * Casts total_rays rays and writes per-ray results into hit_t/hit_fnorm/hit_ID using the low-memory SoA path
-     * (\ref CollisionDetection::castRaysSoA), avoiding any per-call full-length RayQuery/HitResult vectors. A miss writes
-     * hit_t = \ref LIDAR_RAYTRACE_MISS_T, hit_ID = -1, hit_fnorm = 1e6; a hit writes the hit distance, primitive UUID, and
-     * the dot product of the ray direction with the surface normal. The BVH must already be current — call
-     * \ref prepareUnifiedRayTracing() once before the first batch.
-     * \param[in] total_rays Number of rays to trace.
-     * \param[in] ray_origins Array of ray origins (length total_rays).
-     * \param[in] direction Array of ray directions (length total_rays).
-     * \param[out] hit_t Array (length total_rays) receiving the hit distance (or miss sentinel) per ray.
-     * \param[out] hit_fnorm Array (length total_rays) receiving dot(direction, normal) per hit (1e6 on a miss).
-     * \param[out] hit_ID Array (length total_rays) receiving the hit primitive UUID (-1 on a miss).
-     */
-    void castRaysUnified(size_t total_rays, helios::vec3 *ray_origins, helios::vec3 *direction, float *hit_t, float *hit_fnorm, int *hit_ID);
 
     //! Perform unified ray-tracing using collision detection plugin (replaces CUDA kernels)
     void performUnifiedRayTracing(helios::Context *context, size_t N, int Npulse, helios::vec3 *ray_origins, helios::vec3 *direction, float *hit_t, float *hit_fnorm, int *hit_ID);
@@ -1148,6 +1237,72 @@ public:
                              const std::vector<helios::vec4> &traj_quat, const helios::vec3 &lever_arm, const helios::vec3 &boresight_rpy, float exitDiameter, float beamDivergence, float rangeNoiseStdDev, float angleNoiseStdDev,
                              const std::vector<std::string> &columnFormat = {"x", "y", "z"}, double t0 = 0.0);
 
+    //! Add a rotating-Risley-prism (Livox-style rosette) scan from physical instrument parameters
+    /**
+     * Sets up a non-repetitive rosette scan produced by a stack of continuously rotating wedge prisms (the optical mechanism
+     * used by Livox rosette-pattern sensors such as the Mid-40, Mid-70, and Avia). Each pulse fires a single beam that is
+     * refracted through the rotating prisms; with the prisms rotating at different (and generally incommensurate) rates the
+     * beam traces a non-repetitive pattern that fills a circular field of view, denser toward the center. The body-frame beam
+     * direction of each pulse is computed by full Snell's-law refraction through the prisms at that pulse's time, then composed
+     * with the boresight and platform-trajectory orientation exactly as in \ref addScanMoving(). The scan is stored as an
+     * Ntheta=1, Nphi=Npulses table (one direction per pulse), where Npulses = round(pulse_rate_hz * trajectory_duration). The
+     * \ref ScanPattern is set to \ref SCAN_PATTERN_RISLEY_PRISM and the \ref ScanMode to \ref SCAN_MODE_RISLEY_PRISM.
+     *
+     * Like a spinning scan, a Risley-prism scan is always trajectory-driven. A stationary capture (e.g. on a tripod) is
+     * expressed as a trajectory of two coincident poses with the same position and orientation, separated in time by the
+     * desired acquisition duration; the duration determines how many pulses (and how much of the rosette) are collected.
+     *
+     * \note Only the rotating-Risley-prism rosette mechanism is modeled. Livox's deterministic line-scan mode and the newer
+     *       non-Risley (MEMS/galvanometer) non-repetitive patterns are different mechanisms not covered by this entry point.
+     * \note The field of view is an emergent property of the prism wedge angles and refractive indices; it is not specified
+     *       directly. The beam direction is computed by non-paraxial ray tracing through the rotating wedges (vector-form
+     *       Snell's law at each face).
+     *
+     * \param[in] prisms  Rotating wedge prisms in the order the beam passes through them (see \ref RisleyPrism). At least one is required; a Livox sensor uses two counter-rotating prisms.
+     * \param[in] refractive_index_air  Refractive index of the medium surrounding the prisms (typically 1.0 for air).
+     * \param[in] pulse_rate_hz  Pulse repetition rate (PRF) in Hz (must be > 0).
+     * \param[in] traj_t  Monotonically increasing trajectory sample times in seconds (size M).
+     * \param[in] traj_pos  Platform positions in world coordinates, one per \p traj_t entry (size M).
+     * \param[in] traj_quat  Platform orientation quaternions (qx,qy,qz,qw), Hamilton body->world, one per \p traj_t entry (size M).
+     * \param[in] lever_arm  Sensor optical center in the platform body frame (meters).
+     * \param[in] boresight_rpy  Fixed sensor rotational misalignment as roll/pitch/yaw in radians (body frame).
+     * \param[in] exitDiameter  Diameter of the laser pulse at exit from the scanner in meters.
+     * \param[in] beamDivergence  Divergence angle of the laser beam in radians.
+     * \param[in] rangeNoiseStdDev  Standard deviation of Gaussian range (along-beam) measurement noise in meters (0 disables).
+     * \param[in] angleNoiseStdDev  Standard deviation of Gaussian angular (beam-pointing) jitter in radians (0 disables).
+     * \param[in] columnFormat  Vector of strings specifying the columns of the scan ASCII file for input/output.
+     * \param[in] t0  Time of the first pulse (pulse ordinal 0) in seconds (relative time; defaults to 0).
+     * \return ID for scan that was created
+     */
+    uint addScanRisley(const std::vector<RisleyPrism> &prisms, double refractive_index_air, float pulse_rate_hz, const std::vector<double> &traj_t, const std::vector<helios::vec3> &traj_pos, const std::vector<helios::vec4> &traj_quat,
+                       const helios::vec3 &lever_arm, const helios::vec3 &boresight_rpy, float exitDiameter, float beamDivergence, float rangeNoiseStdDev, float angleNoiseStdDev, const std::vector<std::string> &columnFormat = {"x", "y", "z"},
+                       double t0 = 0.0);
+
+    //! Add a rotating-Risley-prism (Livox-style rosette) scan with the orientation trajectory given as Euler angles
+    /**
+     * Convenience overload of \ref addScanRisley() that takes the per-sample platform orientation as roll/pitch/yaw Euler
+     * angles (radians, intrinsic Z-Y-X) instead of quaternions; it converts each to a quaternion and delegates to the
+     * quaternion overload.
+     * \param[in] prisms  Rotating wedge prisms in the order the beam passes through them (see \ref RisleyPrism).
+     * \param[in] refractive_index_air  Refractive index of the medium surrounding the prisms (typically 1.0 for air).
+     * \param[in] pulse_rate_hz  Pulse repetition rate (PRF) in Hz (must be > 0).
+     * \param[in] traj_t  Monotonically increasing trajectory sample times in seconds (size M).
+     * \param[in] traj_pos  Platform positions in world coordinates, one per \p traj_t entry (size M).
+     * \param[in] traj_rpy  Platform orientations as roll/pitch/yaw Euler angles in radians, one per \p traj_t entry (size M).
+     * \param[in] lever_arm  Sensor optical center in the platform body frame (meters).
+     * \param[in] boresight_rpy  Fixed sensor rotational misalignment as roll/pitch/yaw in radians (body frame).
+     * \param[in] exitDiameter  Diameter of the laser pulse at exit from the scanner in meters.
+     * \param[in] beamDivergence  Divergence angle of the laser beam in radians.
+     * \param[in] rangeNoiseStdDev  Standard deviation of Gaussian range (along-beam) measurement noise in meters (0 disables).
+     * \param[in] angleNoiseStdDev  Standard deviation of Gaussian angular (beam-pointing) jitter in radians (0 disables).
+     * \param[in] columnFormat  Vector of strings specifying the columns of the scan ASCII file for input/output.
+     * \param[in] t0  Time of the first pulse (pulse ordinal 0) in seconds (relative time; defaults to 0).
+     * \return ID for scan that was created
+     */
+    uint addScanRisley(const std::vector<RisleyPrism> &prisms, double refractive_index_air, float pulse_rate_hz, const std::vector<double> &traj_t, const std::vector<helios::vec3> &traj_pos, const std::vector<helios::vec3> &traj_rpy,
+                       const helios::vec3 &lever_arm, const helios::vec3 &boresight_rpy, float exitDiameter, float beamDivergence, float rangeNoiseStdDev, float angleNoiseStdDev, const std::vector<std::string> &columnFormat = {"x", "y", "z"},
+                       double t0 = 0.0);
+
     //! Specify a scan point as a hit by providing the (x,y,z) coordinates and scan ray direction
     /**
      * \param[in] scanID ID of scan hit point to which hit point should be added.
@@ -1267,7 +1422,7 @@ public:
     //! Get the high-level acquisition-mode descriptor of a scan
     /**
      * \param[in] scanID ID of scan.
-     * \return \ref SCAN_MODE_STATIC_RASTER, \ref SCAN_MODE_MOVING_RASTER, or \ref SCAN_MODE_SPINNING.
+     * \return \ref SCAN_MODE_STATIC_RASTER, \ref SCAN_MODE_MOVING_RASTER, \ref SCAN_MODE_SPINNING, or \ref SCAN_MODE_RISLEY_PRISM.
      */
     ScanMode getScanMode(uint scanID) const;
 
@@ -1291,6 +1446,20 @@ public:
      * \return Number of revolutions (may be fractional). 0 for non-spinning scans.
      */
     double getScanRevolutions(uint scanID) const;
+
+    //! Get the rotating wedge prisms of a Risley-prism (Livox-style rosette) scan
+    /**
+     * \param[in] scanID ID of scan.
+     * \return The prism stack in beam-traversal order (see \ref RisleyPrism). Empty for scans that are not \ref SCAN_MODE_RISLEY_PRISM.
+     */
+    std::vector<RisleyPrism> getScanRisleyPrisms(uint scanID) const;
+
+    //! Get the refractive index of the medium surrounding the prisms of a Risley-prism scan
+    /**
+     * \param[in] scanID ID of scan.
+     * \return Refractive index of air (typically 1.0). Returns 1.0 for non-Risley scans.
+     */
+    double getScanRisleyRefractiveIndexAir(uint scanID) const;
 
     //! Divergence angle of the laser beam in radians
     /**
@@ -1940,6 +2109,8 @@ public:
     /**
      * \param[in] Lmax Maximum allowable length of triangle sides.
      * \param[in] max_aspect_ratio Maximum allowable aspect ratio of triangles.
+     * \note This call honors the cancellation flag registered via \ref setCancelFlag(): if the flag becomes non-zero (set from another thread) the triangulation aborts, discards any partial mesh, and returns an empty triangulation
+     * (\ref getTriangleCount() == 0) rather than running to completion.
      */
     void triangulateHitPoints(float Lmax, float max_aspect_ratio);
 
@@ -1952,6 +2123,8 @@ public:
      * \param[in] threshold Value for filter threshold
      * \param[in] comparator Points will not be used in triangulation if "scalar (comparator) threshold", where (comparator) is one of ">", "<", or "="
      * \note As an example, imagine we wanted to remove all hit points where the deviation is greater than 15 for the purposes of the triangulation. In this case we would call triangulateHitPoints(Lmax, max_aspect_ratio, "deviation", 15, ">" );
+     * \note This call honors the cancellation flag registered via \ref setCancelFlag(): if the flag becomes non-zero (set from another thread) the triangulation aborts, discards any partial mesh, and returns an empty triangulation
+     * (\ref getTriangleCount() == 0) rather than running to completion.
      */
     void triangulateHitPoints(float Lmax, float max_aspect_ratio, const char *scalar_field, float threshold, const char *comparator);
 
@@ -2045,6 +2218,8 @@ public:
      * \param[in] context Pointer to the Helios context
      * \note This overload does NOT record miss points (transmitted beams). The resulting cloud cannot be used with calculateLeafArea(), which requires misses. To record misses, use the overload with the record_misses argument: syntheticScan(context,
      * scan_grid_only, record_misses).
+     * \note Any non-standard label listed in the scan column format is used to label each hit point with that scalar data field of the intersected primitive. The value is taken from the primitive's own primitive data when present, otherwise from
+     * the object data of the primitive's parent compound object (per-primitive data takes precedence). See \ref LiDARsynthetic.
      */
     void syntheticScan(helios::Context *context);
 
@@ -2386,6 +2561,16 @@ public:
 
     //! Disable GPU acceleration in CollisionDetection plugin (use CPU/OpenMP only)
     void disableGPUAcceleration();
+
+    //! Check whether a CUDA-capable GPU is available for acceleration
+    /** Returns true only if the CollisionDetection plugin was compiled with CUDA support, a
+        CUDA device is present at runtime, and the GPU path is not disabled via the
+        HELIOS_NO_GPU environment variable. Reports capability; use isGPUAccelerationEnabled()
+        to query whether GPU acceleration is currently toggled on. */
+    [[nodiscard]] bool isGPUAvailable() const;
+
+    //! Check whether GPU acceleration is currently enabled
+    [[nodiscard]] bool isGPUAccelerationEnabled() const;
 
     //! Determine which grid cell each hit point resides in
     void calculateHitGridCell();

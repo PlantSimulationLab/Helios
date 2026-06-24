@@ -31,8 +31,14 @@
   To enable GPU acceleration for faster processing of large point clouds:
   \code
   LiDARcloud pointcloud;
-  pointcloud.enableCDGPUAcceleration();  // Enable GPU acceleration before running scans
+  if( pointcloud.isGPUAvailable() ){          // true only if a CUDA device is present and HELIOS_NO_GPU is unset
+      pointcloud.enableGPUAcceleration();     // Enable GPU acceleration before running scans
+  }
   \endcode
+
+  isGPUAvailable() reports GPU capability, while isGPUAccelerationEnabled() reports whether
+  acceleration is currently toggled on. Setting the <tt>HELIOS_NO_GPU</tt> environment variable
+  forces the CPU path (isGPUAvailable() then returns false).
 
 
 \section LiDARConstructor Class Constructor
@@ -92,7 +98,7 @@
  <table>
  <tr><th>Metadata</th><th>XML tag</th><th>Description</th><th>Default behavior</th></tr>
  <tr><td>Scanner origin</td><td>\<origin></td><td>(x,y,z) coordinate of the scanner.  This is the position where the scanner rays are sent from. Values should be separated by a space in the XML file.</td><td>None: REQUIRED</td></tr>
- <tr><td>scan pattern</td><td>\<scanPattern></td><td>Geometric pattern of beam directions: either <tt>raster</tt> (a uniform angular grid in zenith and azimuth - the default panoramic terrestrial-scanner pattern) or <tt>spinning_multibeam</tt> (a rotating multi-channel sensor such as a Velodyne, Ouster, or Hesai unit). The geometry of each pattern is defined by additional tags listed in \ref ScanRaster and \ref ScanSpinningMultibeam below.</td><td>raster</td></tr>
+ <tr><td>scan pattern</td><td>\<scanPattern></td><td>Geometric pattern of beam directions: <tt>raster</tt> (a uniform angular grid in zenith and azimuth - the default panoramic terrestrial-scanner pattern), <tt>spinning_multibeam</tt> (a rotating multi-channel sensor such as a Velodyne, Ouster, or Hesai unit), or <tt>risley</tt> (a rotating-Risley-prism rosette scanner, the optical mechanism of Livox rosette sensors such as the Mid-40/Mid-70/Avia). The geometry of each pattern is defined by additional tags listed in \ref ScanRaster, \ref ScanSpinningMultibeam, and \ref ScanRisleyPrism below.</td><td>raster</td></tr>
  <tr><td>translation</td><td>\<translation></td><td>Global (x,y,z) translation to be applied to entire scan, including the origin and all hit points.</td><td>No translation.</td></tr>
  <tr><td>rotation (degrees)</td><td>\<rotation></td><td>Global spherical rotation (theta,phi) to be applied to the entire scan, including the origin and all hit points.</td><td>No rotation.</td></tr>
  <tr><td>beam exit diameter (meters)</td><td>\<exitDiameter></td><td>Effective diameter of laser beam exiting the instrument. Only used for multi-return synthetic data generation.</td><td>0 (single return)</td></tr>
@@ -123,6 +129,8 @@
  <tr><td>\f$\varphi\f$<sub>max</sub> (degrees)</td><td>\<phiMax></td><td>Maximum scan phi (azimuthal) angle. \f$\varphi\f$<sub>max</sub>=90 if the scan ends pointing in the +x direction, \f$\varphi\f$<sub>max</sub>=180 if the scan ends pointing in the -y direction, etc. NOTE: \f$\varphi\f$<sub>max</sub> can be greater than 360 if \f$\varphi\f$<sub>min</sub> > 0 and the scanner makes a full rotation in the azimuthal direction, in which case \f$\varphi\f$<sub>max</sub> = \f$\varphi\f$<sub>min</sub> + 360.</td><td>360</td></tr>
  </table>
 
+ \note A real terrestrial scanner sweeps the beam through the zenith range with a fast mirror while the entire head rotates <em>continuously</em> in azimuth, so the azimuth advances slightly during each zenith sweep and the zenith columns are slightly skewed (tilted) rather than perfectly vertical. The synthetic raster scan models this continuous-azimuth motion: the azimuth drifts across each zenith column by exactly one column step (\f$\Delta\varphi = (\varphi_\mathrm{max}-\varphi_\mathrm{min})/(\mathrm{N}_\varphi-1)\f$), so the top of one column meets the bottom of the next with no azimuth gap or overlap. The drift is sub-cell (\f$\Delta\varphi/\mathrm{N}_\theta\f$ per zenith step) and is automatically reflected in the synthetic point positions; no XML tag is required.
+
  ~~~~~~{.xml}
  <scan>
    <origin> 0 0 0 </origin>
@@ -143,6 +151,16 @@
  \note Leaf-area inversion requires the population of transmitted (miss) beams. For raster scans loaded from real instruments these can be reconstructed with \ref LiDARcloud::gapfillMisses(), which assumes a regular angular grid. For non-raster patterns, generate synthetic scans with miss recording enabled by calling \ref LiDARcloud::syntheticScan(helios::Context*,bool,bool) "syntheticScan()" with <tt>record_misses=true</tt> (see also \ref LiDARsynthetic), which records the misses directly and does not rely on grid reconstruction.
 
  \note The triangulation distance passed to \ref LiDARcloud::triangulateHitPoints() should be matched to the point spacing of the pattern. Spinning multibeam channels are spaced more coarsely in the vertical (zenithal) direction than a dense raster scan, so a larger triangulation distance may be needed for leaf-angle and leaf-area reconstruction.
+
+ \subsubsection ScanRisleyPrism Risley-prism (Livox-style rosette) scan pattern
+
+ Setting <tt>\<scanPattern> risley \</scanPattern></tt> models a rotating-Risley-prism scanner - the optical mechanism used by Livox rosette-pattern sensors such as the Mid-40, Mid-70, and Avia. A single beam is refracted through a stack of continuously rotating wedge prisms; when the prisms rotate at different (and generally incommensurate) rates, the exit beam traces a non-repetitive rosette that fills a circular field of view, denser toward the center. Each pulse's body-frame direction is computed by non-paraxial ray tracing - refracting the beam through both faces of each rotating wedge with the vector form of Snell's law - so the maximum deflection, and therefore the circular field of view, is an emergent property of the wedge angles and refractive indices rather than a directly specified parameter.
+
+ Because the pattern is non-separable (each pulse has its own direction as a function of time, not a row \f$\times\f$ column angular grid), a Risley scan is stored as a single-row table (\f$\mathrm{N}_\theta = 1\f$) with one column per pulse, and it is always trajectory-driven (like a spinning scan). The number of pulses is \f$\mathrm{PRF}\times\f$ acquisition duration. Each synthetic hit records the moving-platform <tt>timestamp</tt>, <tt>pulse_id</tt>, and per-pulse <tt>origin_x/origin_y/origin_z</tt> (it does not record a <tt>channel</tt>, which is meaningful only for a spinning multibeam scan).
+
+ \note Only the rotating-Risley-prism rosette mechanism is modeled. Livox's deterministic line-scan mode and the newer non-Risley (MEMS / galvanometer) non-repetitive patterns on units such as the Mid-360 and HAP are different mechanisms and are not covered by this pattern; they are candidates for separate scan patterns in the future.
+
+ \note A Risley scan has no row/column angular grid, so the (row,column) hit-table coordinate is meaningless for it (\ref LiDARcloud::triangulateHitPoints() and the grid-based \ref LiDARcloud::gapfillMisses() reject trajectory-driven scans). Generate synthetic Risley scans with miss recording enabled (\ref LiDARcloud::syntheticScan(helios::Context*,bool,bool) "syntheticScan()" with <tt>record_misses=true</tt>) so leaf-area inversion has the population of transmitted beams.
 
  \subsection MovingSpinning Moving-platform and spinning-multibeam scans (physical-parameter setup)
 
@@ -179,6 +197,26 @@
 
  For a non-spinning sensor carried on a moving platform, use \ref LiDARcloud::addScanMovingRaster(): specify the per-frame angular fan resolution (\f$\mathrm{N}_\theta\times\mathrm{N}_\varphi\f$ over \f$[\theta_{min},\theta_{max}]\times[\varphi_{min},\varphi_{max}]\f$), the trajectory, and the PRF, and Helios derives the per-pulse time sampling along the trajectory.
 
+ \subsubsection RisleyPhysical Risley-prism rosette (Livox-style)
+
+ Use \ref LiDARcloud::addScanRisley() with the physical optics of the prism head. Each prism is described by a \ref RisleyPrism (wedge angle, glass refractive index, and rotor rate - the sign of the rotor rate sets the rotation direction, so a counter-rotating pair traces a rosette). The field of view is not specified directly; it emerges from the optics. Like a spinning scan, a Risley scan is always trajectory-driven, and a stationary capture is a trajectory of two coincident poses separated in time by the acquisition duration.
+
+ ~~~~~~{.cpp}
+ std::vector<RisleyPrism> prisms = {
+    // wedge angle (rad), refractive index, rotor rate (rad/s, signed)
+    RisleyPrism(18.7f * float(M_PI) / 180.f, 1.51, -2.0 * M_PI * 121.57), // ~ -121.6 Hz
+    RisleyPrism(18.0f * float(M_PI) / 180.f, 1.51,  2.0 * M_PI *  77.74)  // ~  +77.7 Hz
+ };
+ float PRF = 100000.f; // 100 kHz point rate
+ // Stationary capture: two coincident poses 0.5 s apart (the sensor "spins" for 0.5 s).
+ std::vector<double> traj_t  = {0.0, 0.5};
+ std::vector<vec3>   traj_pos = {make_vec3(0,0,1.5), make_vec3(0,0,1.5)};
+ std::vector<vec4>   traj_quat = {make_vec4(0,0,0,1), make_vec4(0,0,0,1)};
+ uint scanID = pointcloud.addScanRisley(prisms, 1.0 /*air index*/, PRF, traj_t, traj_pos, traj_quat,
+                                        make_vec3(0,0,0) /*lever arm*/, make_vec3(0,0,0) /*boresight rpy*/,
+                                        0.f, 0.f, 0.f, 0.f /*optics+noise*/);
+ ~~~~~~
+
  \subsubsection PhysicalXML Authoring moving/spinning scans in XML
 
  These scans can also be authored in a scan XML file. In addition to the common tags, a spinning multibeam scan uses:
@@ -192,6 +230,30 @@
  <tr><td>trajectory (inline)</td><td>\<trajectory></td><td>Required for a spinning scan. A block of \<pose> children, each "t x y z qx qy qz qw" (quaternion) or "t x y z roll pitch yaw" (Euler degrees). For a stationary "spin in place" capture, give two coincident poses (same position and orientation) separated in time by the acquisition duration.</td></tr>
  <tr><td>trajectory (file)</td><td>\<trajectoryFile></td><td>Path to a whitespace-separated trajectory file (same row format as inline poses; '#' comment lines ignored), resolved relative to the XML file.</td></tr>
  </table>
+
+ A Risley-prism (<tt>risley</tt>) scan instead lists its rotating prisms. It uses \<PRF>, the trajectory tags above, and:
+
+ <table>
+ <tr><th>Metadata</th><th>XML tag</th><th>Description</th></tr>
+ <tr><td>rotating prism</td><td>\<prism></td><td>One per rotating wedge, in the order the beam passes through them: "wedgeAngle(deg) refractiveIndex rotorRate(Hz, signed) [phase(deg)]". The sign of the rotor rate sets the rotation direction; the optional fourth value is the initial clocking angle (default 0). At least one is required; a Livox-style sensor uses two counter-rotating prisms.</td></tr>
+ <tr><td>air refractive index</td><td>\<refractiveIndexAir></td><td>Refractive index of the medium surrounding the prisms (default 1.0). Optional.</td></tr>
+ </table>
+
+ A stationary Livox-style rosette capture (two counter-rotating prisms), spinning in place for 0.5 s:
+
+ ~~~~~~{.xml}
+ <scan>
+   <scanPattern> risley </scanPattern>
+   <prism> 18.75 1.51 -121.57 </prism>
+   <prism> 17.96 1.51  77.74 </prism>
+   <PRF> 100000 </PRF>
+   <trajectory>
+     <pose> 0   0 0 1.5  0 0 0 1 </pose>
+     <pose> 0.5 0 0 1.5  0 0 0 1 </pose>
+   </trajectory>
+   <ASCII_format> x y z origin_x origin_y origin_z timestamp </ASCII_format>
+ </scan>
+ ~~~~~~
 
  A moving (flight-line) spinning scan, with the trajectory in a referenced file:
 
@@ -246,7 +308,7 @@
  <tr><td>target count</td><td>target_count</td><td>Total number of hits for the pulse.</td><td>REQUIRED for multi-return data</td></tr>
  <tr><td>target index</td><td>target_index</td><td>Index of hit along the pulse. Can be 0 or 1 offset.</td><td>REQUIRED for multi-return data</td></tr>
  <tr><td>timestamp</td><td>timestamp</td><td>Unique timestamp for the hit point.</td><td>REQUIRED for multi-return data</td></tr>
- <tr><td>deviation</td><td>deviation</td><td>Indication of variability in return within a given hit point. Note: this is never used for real data, but can be output for synthetic data.</td><td>N/A</td></tr>
+ <tr><td>deviation</td><td>deviation</td><td>Dimensionless pulse-shape deviation: a measure of how broadened/distorted a return is relative to a clean transmit pulse, analogous to the RIEGL "pulse shape deviation" confidence metric (small for a clean single-surface return, large for a mixed/sloped/blended return). Computed as the within-return range spread in excess of the transmit pulse width, normalized by the pulse width. Note: this is never used for real data, but can be output for synthetic data.</td><td>N/A</td></tr>
  <tr><td>intensity</td><td>intensity</td><td>Range-normalized intensity of return, equal to \f$\rho\,\cos\theta\f$ with the \f$1/R^2\f$ range loss normalized out so it is independent of scanner-to-target range (see \ref LiDARsynthetic). Note: this is never used for real data, but can be output for synthetic data.</td><td>N/A</td></tr>
  <tr><td>reflectance</td><td>reflectance</td><td>Synthetic return reflectance in decibels, \f$10\,\log_{10}|I|\f$, where \f$I\f$ is the range-normalized intensity, reported relative to a perfect Lambertian reflector at normal incidence (0 dB). Computed only when "reflectance" is requested in the ASCII_format (see \ref LiDARsynthetic).</td><td>N/A</td></tr>
  <tr><td>data</td><td>user-defined</td><td>Floating point data values associated with the hit point.  This could be intensity, temperature, etc.</td><td>No data created.</td></tr>
@@ -778,7 +840,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
   \subsection LiDARsynthxml XML parameter file
 
   To generate synthetic single-return LiDAR data, first add all desired model geometry to the Context. Then declare an instance of the \ref LiDARcloud class as above, and load an XML file containing the scan parameters. As in the case of importing a real point cloud dataset, the XML file must specify the scan origin and the scan resolution at a minimum (see above). However, in the case of synthetic data generation, you will not specify a filename to read containing point cloud data, as this data will be generated by the simulation. You can optionally specify the ASCII_format tag, which will determine which additional data fields should be recorded for each hit point. Valid hit point data fields are listed above in \ref ScanIO.
-  <!--Note that if you specify the name of a user-defined scalar data field, the synthetic scan will query intersected primitives for the primitive data matching the specified data field name. For example, if the field "temperature" was specified as a column in the ASCII_format tag, the value of primitive data "temperature" for the primitive corresponding to each hit point would be recorded. If the primitive data is not defined for a primitive, a value of -9999 will be recorded. -->
+  If you specify the name of a user-defined scalar data field as a column in the ASCII_format tag, the synthetic scan will label each hit point with the value of that data field for the intersected primitive. The label is resolved from the intersected primitive's <em>primitive data</em> first; if the primitive has no primitive data of that name, the scanner falls back to the <em>object data</em> of the primitive's parent compound object. This lets a hit be labeled with a field carried either per-primitive or by the parent object (for example, a per-object classification or branch order). When a label exists on both, the more specific per-primitive value is used. For example, if the field "temperature" is listed in the ASCII_format tag, the value of primitive data (or, failing that, object data) "temperature" for the primitive corresponding to each hit point is recorded. Only scalar data types (float, double, int, uint) can be transferred to a hit point; non-scalar types (vectors, strings) and labels that exist on neither the primitive nor its parent object are skipped for that hit.
 
   If no ASCII_format tag is provided in the XML file, the default is to record the (x,y,z) position of the hit point. If the function \ref LiDARcloud::exportPointCloud() is called, it will export the simulated point cloud according to the provided ASCII_format tag (or the default if not provided).
 

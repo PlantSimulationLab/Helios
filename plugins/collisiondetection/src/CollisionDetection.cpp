@@ -74,7 +74,7 @@ CollisionDetection::CollisionDetection(helios::Context *a_context) {
     printmessages = true;
 
 #ifdef HELIOS_CUDA_AVAILABLE
-    gpu_acceleration_enabled = true;
+    gpu_acceleration_enabled = isGPUAvailable();
 #else
     gpu_acceleration_enabled = false;
 #endif
@@ -85,6 +85,13 @@ CollisionDetection::CollisionDetection(helios::Context *a_context) {
     d_primitive_types = nullptr;
     d_primitive_vertices = nullptr;
     d_vertex_offsets = nullptr;
+    d_mask_data = nullptr;
+    d_mask_offsets = nullptr;
+    d_mask_sizes = nullptr;
+    d_mask_IDs = nullptr;
+    d_uv_data = nullptr;
+    d_uv_IDs = nullptr;
+    d_gpu_has_masks = false;
     d_gpu_node_count = 0;
     d_gpu_primitive_count = 0;
     d_gpu_total_vertex_count = 0;
@@ -459,6 +466,11 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
     bvh_nodes_soa.clear();
     bvh_nodes_soa.node_count = 0;
 
+    // The dense, BVH-leaf-ordered primitive cache is keyed by primitive_indices order, which buildBVHRecursive
+    // just reordered (even if the primitive set is unchanged and primitive_cache was kept). Drop it so the next
+    // ray cast rebuilds it in the new order via ensurePrimitiveCacheCurrent().
+    primitive_cache_dense.clear();
+
     // Transfer to GPU if acceleration is enabled
 #ifdef HELIOS_CUDA_AVAILABLE
     if (gpu_acceleration_enabled) {
@@ -728,6 +740,13 @@ bool CollisionDetection::isBVHValid() const {
 
 void CollisionDetection::enableGPUAcceleration() {
 #ifdef HELIOS_CUDA_AVAILABLE
+    if (!isGPUAvailable()) {
+        if (printmessages) {
+            std::cerr << "WARNING: GPU acceleration requested but no usable GPU is available (no CUDA device or HELIOS_NO_GPU is set). Using CPU-only mode." << std::endl;
+        }
+        gpu_acceleration_enabled = false;
+        return;
+    }
     gpu_acceleration_enabled = true;
     if (!bvh_nodes.empty()) {
         transferBVHToGPU();
@@ -748,6 +767,30 @@ void CollisionDetection::disableGPUAcceleration() {
 
 bool CollisionDetection::isGPUAccelerationEnabled() const {
     return gpu_acceleration_enabled;
+}
+
+bool CollisionDetection::isGPUAvailable() {
+    static bool checked = false;
+    static bool available = false;
+    if (checked) {
+        return available;
+    }
+    checked = true;
+
+#ifdef HELIOS_CUDA_AVAILABLE
+    // Allow forcing the CPU path for headless/CI simulation, mirroring the radiation plugin.
+    const char *no_gpu = std::getenv("HELIOS_NO_GPU");
+    if (no_gpu && std::string(no_gpu) != "0") {
+        available = false;
+        return available;
+    }
+    int deviceCount = 0;
+    cudaError_t err = cudaGetDeviceCount(&deviceCount);
+    available = (err == cudaSuccess && deviceCount > 0);
+#else
+    available = false;
+#endif
+    return available;
 }
 
 void CollisionDetection::disableMessages() {
@@ -889,12 +932,13 @@ void CollisionDetection::buildBVHRecursive(uint node_index, size_t primitive_sta
         }
     }
 
-    // Stopping criteria - make this a leaf
-    // TEMPORARY: Very aggressive stopping for large scenes to prevent timeout
-    const int MAX_PRIMITIVES_PER_LEAF = (primitive_indices.size() > 500000) ? 500 : 100; // Much larger leaves for big scenes
-    const int MAX_DEPTH = (primitive_indices.size() > 500000) ? 6 : 10; // Shallower trees for big scenes
+    // Stopping criteria - make this a leaf. The leaf-size threshold is the primary stop; the depth cap is only a
+    // backstop against pathological inputs. A binned-SAH builder produces well-balanced trees, so the previous
+    // very-shallow large-scene cap (depth 6 -> up to thousands of primitives per leaf) is no longer needed.
+    const int MAX_PRIMITIVES_PER_LEAF = 8;
+    const int MAX_DEPTH = 64; // backstop only; SAH + leaf threshold normally stop far sooner
 
-    if (primitive_count <= MAX_PRIMITIVES_PER_LEAF || depth >= MAX_DEPTH) {
+    if (primitive_count <= static_cast<size_t>(MAX_PRIMITIVES_PER_LEAF) || depth >= MAX_DEPTH) {
         // Make leaf node
         node.is_leaf = true;
         node.primitive_start = primitive_start;
@@ -904,50 +948,194 @@ void CollisionDetection::buildBVHRecursive(uint node_index, size_t primitive_sta
         return;
     }
 
-    // Find best split using Surface Area Heuristic (simplified)
-    vec3 extent = node.aabb_max - node.aabb_min;
-    int split_axis = 0; // Split along longest axis
-    if (extent.y > extent.x)
-        split_axis = 1;
-    if (extent.z > (split_axis == 0 ? extent.x : extent.y))
-        split_axis = 2;
+    // ---- Binned Surface Area Heuristic (SAH) split ----
+    // Standard approach (PBRT): for each axis, bin primitive centroids over the node's centroid bounds, accumulate
+    // per-bin counts and AABBs, then evaluate the SAH cost C(split) = SA(left)*N_left + SA(right)*N_right at each of
+    // the (NUM_BINS-1) bin boundaries. Pick the axis+boundary with the lowest cost. Falls back to a median split when
+    // the centroid bounds are degenerate (all centroids coincident on every axis).
+    constexpr int NUM_BINS = 16;
 
-    // In-place sort using pre-cached centroids to avoid temporary vector allocations
-    // This is critical for memory efficiency during recursive BVH construction
-    std::sort(primitive_indices.begin() + primitive_start, primitive_indices.begin() + primitive_start + primitive_count, [&](uint a, uint b) {
-        // Use cache lookup with bounds checking for safety
-        auto it_a = primitive_aabbs_cache.find(a);
-        auto it_b = primitive_aabbs_cache.find(b);
-        if (it_a == primitive_aabbs_cache.end() || it_b == primitive_aabbs_cache.end()) {
-            return a < b; // Fallback to UUID ordering for missing primitives
+    auto centroid_of = [&](uint uuid, vec3 &out) -> bool {
+        auto it = primitive_aabbs_cache.find(uuid);
+        if (it == primitive_aabbs_cache.end()) {
+            return false;
+        }
+        out = (it->second.first + it->second.second) * 0.5f;
+        return true;
+    };
+
+    // Centroid bounds of this node's primitives.
+    vec3 centroid_min = make_vec3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+    vec3 centroid_max = make_vec3(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
+    for (size_t i = 0; i < primitive_count; i++) {
+        vec3 c;
+        if (!centroid_of(primitive_indices[primitive_start + i], c)) {
+            continue;
+        }
+        centroid_min.x = std::min(centroid_min.x, c.x);
+        centroid_min.y = std::min(centroid_min.y, c.y);
+        centroid_min.z = std::min(centroid_min.z, c.z);
+        centroid_max.x = std::max(centroid_max.x, c.x);
+        centroid_max.y = std::max(centroid_max.y, c.y);
+        centroid_max.z = std::max(centroid_max.z, c.z);
+    }
+    const vec3 centroid_extent = centroid_max - centroid_min;
+
+    auto surface_area = [](const vec3 &mn, const vec3 &mx) -> float {
+        const vec3 d = mx - mn;
+        if (d.x < 0.f || d.y < 0.f || d.z < 0.f) {
+            return 0.f; // empty
+        }
+        return 2.0f * (d.x * d.y + d.y * d.z + d.z * d.x);
+    };
+
+    int split_axis = -1;
+    float best_cost = std::numeric_limits<float>::max();
+    int best_bin_boundary = -1; // primitives with bin < boundary go left
+
+    // Evaluate each axis whose centroid extent is non-degenerate.
+    for (int axis = 0; axis < 3; axis++) {
+        const float axis_extent = (axis == 0) ? centroid_extent.x : (axis == 1) ? centroid_extent.y : centroid_extent.z;
+        if (axis_extent <= 0.f) {
+            continue; // all centroids share this coordinate; no useful split on this axis
+        }
+        const float axis_min = (axis == 0) ? centroid_min.x : (axis == 1) ? centroid_min.y : centroid_min.z;
+        const float scale = float(NUM_BINS) / axis_extent;
+
+        int bin_counts[NUM_BINS] = {0};
+        vec3 bin_min[NUM_BINS];
+        vec3 bin_max[NUM_BINS];
+        for (int b = 0; b < NUM_BINS; b++) {
+            bin_min[b] = make_vec3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+            bin_max[b] = make_vec3(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
         }
 
-        const auto &aabb_a = it_a->second;
-        const auto &aabb_b = it_b->second;
-
-        // Compute centroids inline to avoid vec3 temporaries
-        float centroid_a_coord, centroid_b_coord;
-        if (split_axis == 0) {
-            centroid_a_coord = 0.5f * (aabb_a.first.x + aabb_a.second.x);
-            centroid_b_coord = 0.5f * (aabb_b.first.x + aabb_b.second.x);
-        } else if (split_axis == 1) {
-            centroid_a_coord = 0.5f * (aabb_a.first.y + aabb_a.second.y);
-            centroid_b_coord = 0.5f * (aabb_b.first.y + aabb_b.second.y);
-        } else {
-            centroid_a_coord = 0.5f * (aabb_a.first.z + aabb_a.second.z);
-            centroid_b_coord = 0.5f * (aabb_b.first.z + aabb_b.second.z);
+        // Bin every primitive by its centroid coordinate on this axis.
+        for (size_t i = 0; i < primitive_count; i++) {
+            const uint uuid = primitive_indices[primitive_start + i];
+            auto it = primitive_aabbs_cache.find(uuid);
+            if (it == primitive_aabbs_cache.end()) {
+                continue;
+            }
+            const vec3 c = (it->second.first + it->second.second) * 0.5f;
+            const float c_axis = (axis == 0) ? c.x : (axis == 1) ? c.y : c.z;
+            int bin = int((c_axis - axis_min) * scale);
+            if (bin < 0)
+                bin = 0;
+            if (bin >= NUM_BINS)
+                bin = NUM_BINS - 1;
+            bin_counts[bin]++;
+            const vec3 &pmin = it->second.first;
+            const vec3 &pmax = it->second.second;
+            bin_min[bin].x = std::min(bin_min[bin].x, pmin.x);
+            bin_min[bin].y = std::min(bin_min[bin].y, pmin.y);
+            bin_min[bin].z = std::min(bin_min[bin].z, pmin.z);
+            bin_max[bin].x = std::max(bin_max[bin].x, pmax.x);
+            bin_max[bin].y = std::max(bin_max[bin].y, pmax.y);
+            bin_max[bin].z = std::max(bin_max[bin].z, pmax.z);
         }
 
-        // Add stable tiebreaker using UUID to ensure deterministic BVH construction
-        // This prevents non-deterministic behavior when primitives have equal centroids
-        if (centroid_a_coord == centroid_b_coord) {
-            return a < b;
+        // Prefix (left) and suffix (right) sweeps to get count + AABB on each side of every boundary.
+        int left_count[NUM_BINS];
+        float left_area[NUM_BINS];
+        vec3 acc_min = make_vec3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+        vec3 acc_max = make_vec3(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
+        int running = 0;
+        for (int b = 0; b < NUM_BINS; b++) {
+            if (bin_counts[b] > 0) {
+                acc_min.x = std::min(acc_min.x, bin_min[b].x);
+                acc_min.y = std::min(acc_min.y, bin_min[b].y);
+                acc_min.z = std::min(acc_min.z, bin_min[b].z);
+                acc_max.x = std::max(acc_max.x, bin_max[b].x);
+                acc_max.y = std::max(acc_max.y, bin_max[b].y);
+                acc_max.z = std::max(acc_max.z, bin_max[b].z);
+            }
+            running += bin_counts[b];
+            left_count[b] = running;
+            left_area[b] = (running > 0) ? surface_area(acc_min, acc_max) : 0.f;
         }
-        return centroid_a_coord < centroid_b_coord;
-    });
 
-    // Split in middle
-    size_t split_index = primitive_count / 2;
+        acc_min = make_vec3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+        acc_max = make_vec3(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
+        running = 0;
+        // Boundary b separates bins [0..b] (left) from [b+1..NUM_BINS-1] (right), b in [0, NUM_BINS-2].
+        for (int b = NUM_BINS - 1; b >= 1; b--) {
+            if (bin_counts[b] > 0) {
+                acc_min.x = std::min(acc_min.x, bin_min[b].x);
+                acc_min.y = std::min(acc_min.y, bin_min[b].y);
+                acc_min.z = std::min(acc_min.z, bin_min[b].z);
+                acc_max.x = std::max(acc_max.x, bin_max[b].x);
+                acc_max.y = std::max(acc_max.y, bin_max[b].y);
+                acc_max.z = std::max(acc_max.z, bin_max[b].z);
+            }
+            running += bin_counts[b];
+            const int right_count = running;
+            const float right_area = (right_count > 0) ? surface_area(acc_min, acc_max) : 0.f;
+            const int lc = left_count[b - 1];
+            if (lc == 0 || right_count == 0) {
+                continue; // degenerate (all on one side); not a valid split
+            }
+            const float cost = left_area[b - 1] * float(lc) + right_area * float(right_count);
+            if (cost < best_cost) {
+                best_cost = cost;
+                split_axis = axis;
+                best_bin_boundary = b - 1; // primitives in bins [0..best_bin_boundary] go left
+            }
+        }
+    }
+
+    size_t split_index;
+    if (split_axis < 0) {
+        // No valid SAH split found (e.g. all centroids coincident). Fall back to a median split along the longest
+        // spatial extent so construction still makes progress deterministically.
+        vec3 extent = node.aabb_max - node.aabb_min;
+        int median_axis = 0;
+        if (extent.y > extent.x)
+            median_axis = 1;
+        if (extent.z > (median_axis == 0 ? extent.x : extent.y))
+            median_axis = 2;
+        std::sort(primitive_indices.begin() + primitive_start, primitive_indices.begin() + primitive_start + primitive_count, [&](uint a, uint b) {
+            vec3 ca, cb;
+            const bool oka = centroid_of(a, ca);
+            const bool okb = centroid_of(b, cb);
+            if (!oka || !okb) {
+                return a < b;
+            }
+            const float va = (median_axis == 0) ? ca.x : (median_axis == 1) ? ca.y : ca.z;
+            const float vb = (median_axis == 0) ? cb.x : (median_axis == 1) ? cb.y : cb.z;
+            if (va == vb) {
+                return a < b; // stable tiebreaker -> deterministic build
+            }
+            return va < vb;
+        });
+        split_index = primitive_count / 2;
+    } else {
+        // Partition primitives by the chosen axis+boundary. std::partition keeps construction O(n) per node (no full
+        // sort). A stable tiebreaker is not needed for partition determinism, but the bin assignment is a pure
+        // function of geometry so the partition is deterministic for a fixed primitive set.
+        const float axis_min = (split_axis == 0) ? centroid_min.x : (split_axis == 1) ? centroid_min.y : centroid_min.z;
+        const float axis_extent = (split_axis == 0) ? centroid_extent.x : (split_axis == 1) ? centroid_extent.y : centroid_extent.z;
+        const float scale = float(NUM_BINS) / axis_extent;
+        const int boundary = best_bin_boundary;
+        auto mid = std::partition(primitive_indices.begin() + primitive_start, primitive_indices.begin() + primitive_start + primitive_count, [&](uint uuid) {
+            vec3 c;
+            if (!centroid_of(uuid, c)) {
+                return true; // keep missing-AABB primitives on the left
+            }
+            const float c_axis = (split_axis == 0) ? c.x : (split_axis == 1) ? c.y : c.z;
+            int bin = int((c_axis - axis_min) * scale);
+            if (bin < 0)
+                bin = 0;
+            if (bin >= NUM_BINS)
+                bin = NUM_BINS - 1;
+            return bin <= boundary;
+        });
+        split_index = size_t(std::distance(primitive_indices.begin() + primitive_start, mid));
+        // Guard against a partition that put everything on one side (floating-point edge case): fall back to median.
+        if (split_index == 0 || split_index == primitive_count) {
+            split_index = primitive_count / 2;
+        }
+    }
 
     // Allocate child nodes from pre-allocated array (no resizing needed)
     uint left_child_index = next_available_node_index++;
@@ -1737,13 +1925,11 @@ void CollisionDetection::allocateGPUMemory() {
     d_bvh_nodes = nullptr;
     d_primitive_indices = nullptr;
 
-    // Check if CUDA is actually available at runtime
-    int deviceCount = 0;
-    cudaError_t err = cudaGetDeviceCount(&deviceCount);
-    if (err != cudaSuccess || deviceCount == 0) {
-        // CUDA not available - disable GPU acceleration and fall back to CPU
+    // Check if a usable GPU is actually available at runtime (also honors HELIOS_NO_GPU)
+    if (!isGPUAvailable()) {
+        // No usable GPU - disable GPU acceleration and fall back to CPU
         if (printmessages) {
-            std::cout << "WARNING (CollisionDetection::allocateGPUMemory): CUDA runtime unavailable (" << cudaGetErrorString(err) << "). Falling back to CPU-only mode." << std::endl;
+            std::cout << "WARNING (CollisionDetection::allocateGPUMemory): No usable GPU available. Falling back to CPU-only mode." << std::endl;
         }
         gpu_acceleration_enabled = false;
         return;
@@ -1759,7 +1945,7 @@ void CollisionDetection::allocateGPUMemory() {
     }
 
     // Allocate BVH nodes
-    err = cudaMalloc(&d_bvh_nodes, bvh_size);
+    cudaError_t err = cudaMalloc(&d_bvh_nodes, bvh_size);
     if (err != cudaSuccess) {
         // GPU allocation failed - fall back to CPU instead of crashing
         if (printmessages) {
@@ -1816,6 +2002,32 @@ void CollisionDetection::freeGPUMemory() {
         cudaFree(d_vertex_offsets);
         d_vertex_offsets = nullptr;
     }
+
+    if (d_mask_data) {
+        cudaFree(d_mask_data);
+        d_mask_data = nullptr;
+    }
+    if (d_mask_offsets) {
+        cudaFree(d_mask_offsets);
+        d_mask_offsets = nullptr;
+    }
+    if (d_mask_sizes) {
+        cudaFree(d_mask_sizes);
+        d_mask_sizes = nullptr;
+    }
+    if (d_mask_IDs) {
+        cudaFree(d_mask_IDs);
+        d_mask_IDs = nullptr;
+    }
+    if (d_uv_data) {
+        cudaFree(d_uv_data);
+        d_uv_data = nullptr;
+    }
+    if (d_uv_IDs) {
+        cudaFree(d_uv_IDs);
+        d_uv_IDs = nullptr;
+    }
+    d_gpu_has_masks = false;
 
     d_gpu_node_count = 0;
     d_gpu_primitive_count = 0;
@@ -1881,7 +2093,13 @@ void CollisionDetection::transferBVHToGPU() {
     std::vector<int> primitive_types;
     std::vector<float> primitive_vertices_xyz; // flat xyz, 4 vertices (12 floats) per primitive
     std::vector<unsigned int> vertex_offsets;
-    buildGPUGeometrySoA(primitive_types, primitive_vertices_xyz, vertex_offsets);
+    std::vector<unsigned char> mask_data;
+    std::vector<unsigned int> mask_offsets;
+    std::vector<int> mask_sizes;
+    std::vector<int> mask_IDs;
+    std::vector<float> uv_data;
+    std::vector<int> uv_IDs;
+    buildGPUGeometrySoA(primitive_types, primitive_vertices_xyz, vertex_offsets, mask_data, mask_offsets, mask_sizes, mask_IDs, uv_data, uv_IDs);
 
     d_gpu_node_count = static_cast<int>(bvh_nodes.size());
     d_gpu_primitive_count = static_cast<int>(primitive_indices.size());
@@ -1910,9 +2128,61 @@ void CollisionDetection::transferBVHToGPU() {
     if ((err = cudaMemcpy(d_vertex_offsets, vertex_offsets.data(), offsets_size, cudaMemcpyHostToDevice)) != cudaSuccess) {
         helios_runtime_error("CUDA error transferring vertex offsets: " + std::string(cudaGetErrorString(err)));
     }
+
+    // Upload the texture-transparency SoA so the kernel can reject hits on transparent texels (parity with the CPU
+    // isHitTexelOpaque path). The per-primitive mask_IDs/uv arrays always upload (one int per primitive, cheap); the
+    // potentially-large mask pixel data and per-mask metadata only upload when at least one primitive has a mask.
+    d_gpu_has_masks = !mask_offsets.empty();
+
+    const size_t mask_IDs_size = mask_IDs.size() * sizeof(int);
+    const size_t uv_data_size = uv_data.size() * sizeof(float);
+    const size_t uv_IDs_size = uv_IDs.size() * sizeof(int);
+    if ((err = cudaMalloc(&d_mask_IDs, mask_IDs_size)) != cudaSuccess) {
+        helios_runtime_error("CUDA error allocating GPU mask IDs: " + std::string(cudaGetErrorString(err)));
+    }
+    if ((err = cudaMalloc(&d_uv_data, uv_data_size)) != cudaSuccess) {
+        helios_runtime_error("CUDA error allocating GPU UV data: " + std::string(cudaGetErrorString(err)));
+    }
+    if ((err = cudaMalloc(&d_uv_IDs, uv_IDs_size)) != cudaSuccess) {
+        helios_runtime_error("CUDA error allocating GPU UV IDs: " + std::string(cudaGetErrorString(err)));
+    }
+    if ((err = cudaMemcpy(d_mask_IDs, mask_IDs.data(), mask_IDs_size, cudaMemcpyHostToDevice)) != cudaSuccess) {
+        helios_runtime_error("CUDA error transferring mask IDs: " + std::string(cudaGetErrorString(err)));
+    }
+    if ((err = cudaMemcpy(d_uv_data, uv_data.data(), uv_data_size, cudaMemcpyHostToDevice)) != cudaSuccess) {
+        helios_runtime_error("CUDA error transferring UV data: " + std::string(cudaGetErrorString(err)));
+    }
+    if ((err = cudaMemcpy(d_uv_IDs, uv_IDs.data(), uv_IDs_size, cudaMemcpyHostToDevice)) != cudaSuccess) {
+        helios_runtime_error("CUDA error transferring UV IDs: " + std::string(cudaGetErrorString(err)));
+    }
+
+    if (d_gpu_has_masks) {
+        const size_t mask_data_size = mask_data.size() * sizeof(unsigned char);
+        const size_t mask_offsets_size = mask_offsets.size() * sizeof(unsigned int);
+        const size_t mask_sizes_size = mask_sizes.size() * sizeof(int);
+        if ((err = cudaMalloc(&d_mask_data, mask_data_size)) != cudaSuccess) {
+            helios_runtime_error("CUDA error allocating GPU mask data: " + std::string(cudaGetErrorString(err)));
+        }
+        if ((err = cudaMalloc(&d_mask_offsets, mask_offsets_size)) != cudaSuccess) {
+            helios_runtime_error("CUDA error allocating GPU mask offsets: " + std::string(cudaGetErrorString(err)));
+        }
+        if ((err = cudaMalloc(&d_mask_sizes, mask_sizes_size)) != cudaSuccess) {
+            helios_runtime_error("CUDA error allocating GPU mask sizes: " + std::string(cudaGetErrorString(err)));
+        }
+        if ((err = cudaMemcpy(d_mask_data, mask_data.data(), mask_data_size, cudaMemcpyHostToDevice)) != cudaSuccess) {
+            helios_runtime_error("CUDA error transferring mask data: " + std::string(cudaGetErrorString(err)));
+        }
+        if ((err = cudaMemcpy(d_mask_offsets, mask_offsets.data(), mask_offsets_size, cudaMemcpyHostToDevice)) != cudaSuccess) {
+            helios_runtime_error("CUDA error transferring mask offsets: " + std::string(cudaGetErrorString(err)));
+        }
+        if ((err = cudaMemcpy(d_mask_sizes, mask_sizes.data(), mask_sizes_size, cudaMemcpyHostToDevice)) != cudaSuccess) {
+            helios_runtime_error("CUDA error transferring mask sizes: " + std::string(cudaGetErrorString(err)));
+        }
+    }
 }
 
-void CollisionDetection::buildGPUGeometrySoA(std::vector<int> &primitive_types, std::vector<float> &primitive_vertices_xyz, std::vector<unsigned int> &vertex_offsets) {
+void CollisionDetection::buildGPUGeometrySoA(std::vector<int> &primitive_types, std::vector<float> &primitive_vertices_xyz, std::vector<unsigned int> &vertex_offsets, std::vector<unsigned char> &mask_data, std::vector<unsigned int> &mask_offsets,
+                                             std::vector<int> &mask_sizes, std::vector<int> &mask_IDs, std::vector<float> &uv_data, std::vector<int> &uv_IDs) {
     // Pack each primitive (in primitive_indices/BVH order) into exactly 4 vertices so vertex_offset == i*4. Triangles
     // use 3 vertices + 1 pad, patches use 4, voxels store [min, max, pad, pad]. This mirrors the packing the kernel
     // expects (CollisionDetection.cu rayPrimitiveBVHKernel) and the convention castRaysGPU previously built inline.
@@ -1921,6 +2191,18 @@ void CollisionDetection::buildGPUGeometrySoA(std::vector<int> &primitive_types, 
     vertex_offsets.assign(nprim, 0);
     primitive_vertices_xyz.clear();
     primitive_vertices_xyz.reserve(nprim * 4 * 3);
+
+    // Texture-transparency SoA, mirroring the CPU isHitTexelOpaque() path so a GPU ray passes through transparent texels.
+    // Masks are de-duplicated by texture file (many leaf patches share one PNG), so mask_offsets/mask_sizes index a small
+    // set of distinct masks while mask_IDs is per-primitive. uv_data carries 4 vec2 per primitive (xy floats, padded);
+    // uv_IDs[i] >= 0 marks a primitive that has explicit per-vertex UVs (else parametric for patches, opaque for triangles).
+    mask_data.clear();
+    mask_offsets.clear();
+    mask_sizes.clear();
+    mask_IDs.assign(nprim, -1);
+    uv_data.assign(nprim * 4 * 2, 0.f);
+    uv_IDs.assign(nprim, -1);
+    std::map<std::string, int> texture_to_mask_idx; // texture file -> index into mask_offsets/mask_sizes
 
     helios::WarningAggregator primitive_vertex_warnings;
     primitive_vertex_warnings.setEnabled(printmessages);
@@ -1936,10 +2218,48 @@ void CollisionDetection::buildGPUGeometrySoA(std::vector<int> &primitive_types, 
     for (size_t i = 0; i < nprim; i++) {
         vertex_offsets[i] = vertex_index;
 
-        PrimitiveType ptype = context->getPrimitiveType(primitive_indices[i]);
+        const uint UUID = primitive_indices[i];
+        PrimitiveType ptype = context->getPrimitiveType(UUID);
         primitive_types[i] = static_cast<int>(ptype);
 
-        std::vector<vec3> vertices = context->getPrimitiveVertices(primitive_indices[i]);
+        // Texture transparency: only patches/triangles carry a mask. De-duplicate the flattened mask by texture file.
+        if ((ptype == PRIMITIVE_TYPE_PATCH || ptype == PRIMITIVE_TYPE_TRIANGLE) && context->primitiveTextureHasTransparencyChannel(UUID)) {
+            const std::string texfile = context->getPrimitiveTextureFile(UUID);
+            auto cached = texture_to_mask_idx.find(texfile);
+            int mask_idx;
+            if (cached != texture_to_mask_idx.end()) {
+                mask_idx = cached->second;
+            } else {
+                const std::vector<std::vector<bool>> *trans = context->getPrimitiveTextureTransparencyData(UUID);
+                helios::int2 tex_size = context->getPrimitiveTextureSize(UUID);
+                mask_idx = static_cast<int>(mask_offsets.size());
+                mask_offsets.push_back(static_cast<unsigned int>(mask_data.size()));
+                mask_sizes.push_back(tex_size.x);
+                mask_sizes.push_back(tex_size.y);
+                // Flatten row-major [y][x] (row 0 = top) into bytes, matching the kernel's offset + y*width + x lookup.
+                for (int y = 0; y < tex_size.y; y++) {
+                    for (int x = 0; x < tex_size.x; x++) {
+                        mask_data.push_back((trans != nullptr && y < static_cast<int>(trans->size()) && x < static_cast<int>((*trans)[y].size()) && (*trans)[y][x]) ? 1u : 0u);
+                    }
+                }
+                texture_to_mask_idx[texfile] = mask_idx;
+            }
+            mask_IDs[i] = mask_idx;
+
+            // Store per-vertex UVs when present (patch needs 4, triangle needs 3) so the kernel reproduces the CPU
+            // interpolation. Missing/short UV sets leave uv_IDs[i] = -1 (patch falls back to parametric, triangle to solid).
+            std::vector<vec2> uv = context->getPrimitiveTextureUV(UUID);
+            const size_t need = (ptype == PRIMITIVE_TYPE_PATCH) ? 4 : 3;
+            if (uv.size() >= need) {
+                for (size_t v = 0; v < need; v++) {
+                    uv_data[i * 8 + v * 2 + 0] = uv[v].x;
+                    uv_data[i * 8 + v * 2 + 1] = uv[v].y;
+                }
+                uv_IDs[i] = 1;
+            }
+        }
+
+        std::vector<vec3> vertices = context->getPrimitiveVertices(UUID);
 
         if (ptype == PRIMITIVE_TYPE_TRIANGLE) {
             if (vertices.size() >= 3) {
@@ -3278,9 +3598,7 @@ void CollisionDetection::calculateVoxelRayPathLengths(const vec3 &grid_center, c
     // Ensure BVH and primitive cache are built before parallel section
     // This prevents thread-safety issues when multiple threads try to build them
     ensureBVHCurrent();
-    if (primitive_cache.empty()) {
-        buildPrimitiveCache();
-    }
+    ensurePrimitiveCacheCurrent();
 
     // Choose GPU or CPU implementation based on acceleration setting
 #ifdef HELIOS_CUDA_AVAILABLE
@@ -4091,11 +4409,9 @@ void CollisionDetection::calculateVoxelRayPathLengths_CPU(const std::vector<vec3
 
 #ifdef HELIOS_CUDA_AVAILABLE
 bool CollisionDetection::calculateVoxelRayPathLengths_GPU(const std::vector<vec3> &ray_origins, const std::vector<vec3> &ray_directions) {
-    // Check if GPU is actually available at runtime
-    int deviceCount = 0;
-    cudaError_t err = cudaGetDeviceCount(&deviceCount);
-    if (err != cudaSuccess || deviceCount == 0) {
-        // No GPU hardware available - return false to trigger CPU fallback
+    // Check if a usable GPU is actually available at runtime (also honors HELIOS_NO_GPU)
+    if (!isGPUAvailable()) {
+        // No usable GPU - return false to trigger CPU fallback
         return false;
     }
 

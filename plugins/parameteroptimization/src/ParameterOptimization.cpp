@@ -1582,6 +1582,16 @@ namespace {
 } // namespace
 
 
+// Construct a Mersenne Twister from a user-supplied seed. A seed of 0 requests a
+// nondeterministic seed from std::random_device; any nonzero value produces a
+// reproducible RNG stream (used for testing and repeatable optimization runs).
+static std::mt19937 makeRNG(unsigned int random_seed) {
+    if (random_seed == 0) {
+        return std::mt19937(std::random_device{}());
+    }
+    return std::mt19937(random_seed);
+}
+
 static ParameterOptimization::Result evaluatePopulation(const std::vector<ParametersToOptimize> &pop, const std::function<float(const ParametersToOptimize &)> &simulation) {
 
     ParameterOptimization::Result best;
@@ -1599,7 +1609,7 @@ static ParameterOptimization::Result evaluatePopulation(const std::vector<Parame
 static ParameterOptimization::Result runBayesianOptimization(std::function<float(const ParametersToOptimize &)> simulation, const ParametersToOptimize &parameters, const BayesianOptimization &bo, bool print_progress,
                                                              const std::string &write_progress_to_file, std::ofstream &outProgress, bool message_flag) {
 
-    std::mt19937 rng(std::random_device{}());
+    std::mt19937 rng = makeRNG(bo.random_seed);
     helios::Timer timer;
     timer.tic();
 
@@ -1792,7 +1802,7 @@ static ParameterOptimization::Result runGeneticAlgorithm(std::function<float(con
     helios::Timer timer;
     timer.tic();
 
-    std::mt19937 rng(std::random_device{}());
+    std::mt19937 rng = makeRNG(ga.random_seed);
     std::uniform_real_distribution<float> uni01(0.f, 1.f);
 
     validateParameters(parameters);
@@ -2224,7 +2234,7 @@ static ParameterOptimization::Result runGeneticAlgorithm(std::function<float(con
 static ParameterOptimization::Result runCMAES(std::function<float(const ParametersToOptimize &)> simulation, const ParametersToOptimize &parameters, const CMAES &cmaes, bool print_progress, const std::string &write_progress_to_file,
                                               const std::string &write_result_to_file, std::ofstream &outProgress, bool message_flag) {
 
-    std::mt19937 rng(std::random_device{}());
+    std::mt19937 rng = makeRNG(cmaes.random_seed);
     helios::Timer timer;
     timer.tic();
 

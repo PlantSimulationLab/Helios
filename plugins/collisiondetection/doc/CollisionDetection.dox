@@ -222,6 +222,15 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  without a transparency channel (e.g. JPEG textures, or untextured primitives) are treated as fully
  solid.
 
+ \note For large batches of *coherent* rays — rays that share an origin and nearly the same direction, such as the
+ sub-rays of a single LiDAR pulse — the CPU path offers a packet variant, \ref CollisionDetection::castRaysSoA_packets.
+ It takes the same inputs and outputs as \ref CollisionDetection::castRaysSoA plus a \p packet_size, and traverses each
+ contiguous group of \p packet_size rays against a single shared BVH stack: each node is fetched and descended once for
+ the whole packet and each leaf primitive is fetched once and tested against every member ray, amortizing node and
+ primitive memory traffic across the packet. Results are identical to the per-ray path (closest-hit distance is the
+ order-independent invariant; coincident primitives at an exact tie may be reported in a different order). A
+ \p packet_size of 1 simply reproduces the per-ray traversal.
+
  \subsection CDConeQueries Cone-Based Spatial Queries
 
  Find optimal paths through cones for directional obstacle avoidance:
@@ -370,19 +379,29 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  Control GPU acceleration and monitor system status:
 
  ~~~~~~{.cpp}
- // Check GPU acceleration status
+ // Check whether a usable GPU is present (capability). Returns false on CPU-only builds,
+ // when no CUDA device is found, or when the HELIOS_NO_GPU environment variable is set.
+ if( CollisionDetection::isGPUAvailable() ){
+     std::cout << "A GPU is available for acceleration" << std::endl;
+ }
+
+ // Check whether GPU acceleration is currently toggled on
  if( collision.isGPUAccelerationEnabled() ){
      std::cout << "GPU acceleration is active" << std::endl;
  }
 
  // Control GPU acceleration
  collision.disableGPUAcceleration();  // Force CPU mode
- collision.enableGPUAcceleration();   // Re-enable GPU (if available)
+ collision.enableGPUAcceleration();   // Re-enable GPU (no-op if no GPU is available)
 
  // Message control for debugging
  collision.enableMessages();   // Show GPU/CPU usage messages (default)
  collision.disableMessages();  // Suppress diagnostic output
  ~~~~~~
+
+ \note Set the <tt>HELIOS_NO_GPU</tt> environment variable to a non-zero value to force the
+ CPU path for headless/CI runs; isGPUAvailable() then reports false and enableGPUAcceleration()
+ becomes a no-op, so the reported availability always matches the executed path.
 
  \section CDTroubleshooting Troubleshooting
 

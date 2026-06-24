@@ -2528,6 +2528,21 @@ namespace helios {
          */
         [[nodiscard]] Tile *getTileObjectPointer_private(uint ObjID) const;
 
+        //! Rebuild the sub-patch primitives of a tile object for a new subdivision count, preserving its orientation
+        /**
+         * The tile's existing transformation matrix fully describes its mapping from the canonical unit
+         * tile (1x1, centered at the origin, lying in the x-y plane) to world space. New sub-patches are
+         * generated in this canonical space and then mapped through the existing transform, so the tile's
+         * position, size, orientation (including any in-plane rotation) and color/texture are preserved
+         * exactly. Per-sub-patch primitive data is preserved by transferring it from the old sub-patch
+         * whose grid cell contains each new sub-patch's center (an exact index-for-index copy when the
+         * subdivision count is unchanged). The old sub-patch primitives are deleted.
+         * \param[in] ObjID ID of the tile object to rebuild.
+         * \param[in] new_subdiv New number of sub-patch subdivisions in the x- and y-directions.
+         * @private
+         */
+        void regenerateTileObjectSubpatches(uint ObjID, const int2 &new_subdiv);
+
         //! Get a pointer to a Sphere Object from the Context
         /**
          * \param[in] ObjID ID of Sphere Object
@@ -5782,13 +5797,15 @@ namespace helios {
         /**
          * \param[in] ObjIDs object IDs of the tile objects to change
          * \param[in] new_subdiv the new subdivisions desired
+         * \note The tile's position, size and orientation (including any in-plane rotation) are preserved.
          */
         void setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, const int2 &new_subdiv);
 
         //! change the subdivisions of a tile object
         /**
          * \param[in] ObjIDs object IDs of the tile objects to change
-         * \param[in] area_ratio the approximate ratio between individual tile object area and individual subpatch area desired
+         * \param[in] area_ratio the approximate ratio between individual tile object area and individual subpatch area desired. Must be greater than or equal to 1.
+         * \note The tile's position, size and orientation (including any in-plane rotation) are preserved.
          */
         void setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, float area_ratio);
 

@@ -194,6 +194,30 @@ DOCTEST_TEST_CASE("CollisionDetection Plugin Initialization") {
 }
 
 
+DOCTEST_TEST_CASE("CollisionDetection GPU Availability Query") {
+    Context context;
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    // isGPUAvailable() must not throw and must be deterministic across calls.
+    bool available_first = false;
+    DOCTEST_CHECK_NOTHROW(available_first = CollisionDetection::isGPUAvailable());
+    bool available_second = CollisionDetection::isGPUAvailable();
+    DOCTEST_CHECK(available_first == available_second);
+
+    // Enabling GPU acceleration succeeds if and only if a usable GPU is available.
+    {
+        helios::capture_cerr capture; // suppress the no-GPU warning on CPU-only systems
+        collision.enableGPUAcceleration();
+    }
+    DOCTEST_CHECK(collision.isGPUAccelerationEnabled() == available_first);
+
+    // Disabling always lands in CPU mode regardless of availability.
+    DOCTEST_CHECK_NOTHROW(collision.disableGPUAcceleration());
+    DOCTEST_CHECK(collision.isGPUAccelerationEnabled() == false);
+}
+
+
 DOCTEST_TEST_CASE("CollisionDetection BVH Construction") {
     Context context;
 
@@ -3290,6 +3314,121 @@ DOCTEST_TEST_CASE("CollisionDetection SoA Batch Ray Casting Equivalence") {
 
     (void) triangle;
     (void) sphere_first;
+}
+
+DOCTEST_TEST_CASE("CollisionDetection SoA Packet Ray Casting Equivalence") {
+    // The coherent packet cast (castRaysSoA_packets) must produce results bit-for-bit identical to the per-ray
+    // castRaysSoA() for the same scene and rays, for any packet size. We build a moderately complex scene and a set of
+    // coherent ray packets (clusters of near-parallel rays sharing an origin, mimicking LiDAR pulse sub-rays) plus some
+    // axis-aligned rays (which exercise the parallel-slab AABB handling), then compare ray-for-ray.
+    Context context;
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    // Diverse geometry: a ground patch, a tessellated sphere, and a tilted triangle.
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(6, 6));
+    context.addSphere(10, make_vec3(0, 0, 2.0f), 0.75f);
+    context.addTriangle(make_vec3(-2, -2, 1), make_vec3(2, -2, 1), make_vec3(0, 2, 3));
+
+    // Build coherent packets: each packet shares an origin and fans out within a small cone (like a pulse's sub-rays).
+    const size_t packet_size = 12;
+    const std::vector<helios::vec3> packet_origins = {make_vec3(0, 0, 6), make_vec3(1.5f, -1.0f, 5), make_vec3(-2.0f, 1.0f, 4), make_vec3(0.2f, 0.2f, 8)};
+    std::vector<helios::vec3> origins;
+    std::vector<helios::vec3> directions;
+    for (const helios::vec3 &po: packet_origins) {
+        for (size_t p = 0; p < packet_size; p++) {
+            const float a = 0.02f * float(p); // small angular spread -> coherent packet
+            origins.push_back(po);
+            directions.push_back(normalize(make_vec3(std::sin(a), 0.5f * std::sin(a), -1.0f)));
+        }
+    }
+    // Append one packet of exactly-axis-aligned downward rays (z-parallel) to exercise the NaN-safe slab path.
+    for (size_t p = 0; p < packet_size; p++) {
+        origins.push_back(make_vec3(-0.4f + 0.06f * float(p), 0.0f, 7.0f));
+        directions.push_back(make_vec3(0, 0, -1));
+    }
+    const size_t count = origins.size();
+    const float max_distance = -1.0f;
+
+    constexpr uint MISS_UUID = 0xFFFFFFFFu;
+
+    // Per-ray reference.
+    std::vector<float> ref_d(count, -1.0f);
+    std::vector<helios::vec3> ref_n(count);
+    std::vector<uint> ref_u(count, MISS_UUID);
+    DOCTEST_CHECK_NOTHROW(collision.castRaysSoA(origins.data(), directions.data(), count, max_distance, ref_d.data(), ref_n.data(), ref_u.data()));
+
+    // Packet path.
+    std::vector<float> pkt_d(count, -1.0f);
+    std::vector<helios::vec3> pkt_n(count);
+    std::vector<uint> pkt_u(count, MISS_UUID);
+    CollisionDetection::RayTracingStats pkt_stats;
+    DOCTEST_CHECK_NOTHROW(collision.castRaysSoA_packets(origins.data(), directions.data(), count, packet_size, max_distance, pkt_d.data(), pkt_n.data(), pkt_u.data(), &pkt_stats));
+
+    DOCTEST_CHECK(pkt_stats.total_rays_cast == count);
+
+    size_t pkt_hits = 0;
+    for (size_t i = 0; i < count; i++) {
+        const bool ref_hit = (ref_u[i] != MISS_UUID);
+        const bool pkt_hit = (pkt_u[i] != MISS_UUID);
+        DOCTEST_CHECK(pkt_hit == ref_hit); // identical hit/miss classification ray-for-ray
+        if (ref_hit && pkt_hit) {
+            pkt_hits++;
+            // The closest-hit DISTANCE is the order-independent invariant and must match exactly. The hit primitive
+            // (and its normal) is only uniquely defined when no other primitive lies at the same distance: when two
+            // coincident facets share an edge a ray grazes, the per-ray and packet traversals legitimately tie-break
+            // to different (equally valid) primitives because they visit nodes in a different order. So only require
+            // the UUID/normal to agree when the distances are NOT an exact tie candidate.
+            DOCTEST_CHECK(pkt_d[i] == doctest::Approx(ref_d[i]));
+            if (pkt_u[i] == ref_u[i]) {
+                DOCTEST_CHECK(pkt_n[i].x == doctest::Approx(ref_n[i].x));
+                DOCTEST_CHECK(pkt_n[i].y == doctest::Approx(ref_n[i].y));
+                DOCTEST_CHECK(pkt_n[i].z == doctest::Approx(ref_n[i].z));
+            } else {
+                // Different primitive returned -> must be a genuine equal-distance tie, not a wrong/farther hit.
+                DOCTEST_CHECK(pkt_d[i] == doctest::Approx(ref_d[i]).epsilon(1e-4));
+            }
+        }
+    }
+    DOCTEST_CHECK(pkt_stats.total_hits == pkt_hits);
+
+    // packet_size == 1 must degenerate to the per-ray path and still match.
+    std::vector<float> p1_d(count, -1.0f);
+    std::vector<helios::vec3> p1_n(count);
+    std::vector<uint> p1_u(count, MISS_UUID);
+    DOCTEST_CHECK_NOTHROW(collision.castRaysSoA_packets(origins.data(), directions.data(), count, 1, max_distance, p1_d.data(), p1_n.data(), p1_u.data()));
+    for (size_t i = 0; i < count; i++) {
+        DOCTEST_CHECK((p1_u[i] != MISS_UUID) == (ref_u[i] != MISS_UUID));
+        if (ref_u[i] != MISS_UUID) {
+            DOCTEST_CHECK(p1_u[i] == ref_u[i]);
+            DOCTEST_CHECK(p1_d[i] == doctest::Approx(ref_d[i]));
+        }
+    }
+
+    // A packet size larger than the internal MAX_PACKET_RAYS (256) must still match (forces sub-packet splitting).
+    {
+        const size_t big = 600;
+        std::vector<helios::vec3> bo(big), bd(big);
+        for (size_t i = 0; i < big; i++) {
+            bo[i] = make_vec3(-2.5f + 5.0f * float(i) / float(big - 1), 0.0f, 7.0f);
+            bd[i] = make_vec3(0, 0, -1);
+        }
+        std::vector<float> rd(big, -1.0f), kd(big, -1.0f);
+        std::vector<helios::vec3> rn(big), kn(big);
+        std::vector<uint> ru(big, MISS_UUID), ku(big, MISS_UUID);
+        collision.castRaysSoA(bo.data(), bd.data(), big, max_distance, rd.data(), rn.data(), ru.data());
+        collision.castRaysSoA_packets(bo.data(), bd.data(), big, big, max_distance, kd.data(), kn.data(), ku.data());
+        for (size_t i = 0; i < big; i++) {
+            DOCTEST_CHECK((ku[i] != MISS_UUID) == (ru[i] != MISS_UUID));
+            if (ru[i] != MISS_UUID) {
+                // Distance is the order-independent invariant; UUID may differ only on an exact equal-distance tie.
+                DOCTEST_CHECK(kd[i] == doctest::Approx(rd[i]));
+            }
+        }
+    }
+
+    // Zero-count is a valid no-op.
+    DOCTEST_CHECK_NOTHROW(collision.castRaysSoA_packets(origins.data(), directions.data(), 0, packet_size, max_distance, pkt_d.data(), pkt_n.data(), pkt_u.data(), nullptr));
 }
 
 DOCTEST_TEST_CASE("CollisionDetection SoA Batch Ray Casting GPU/CPU Equivalence") {

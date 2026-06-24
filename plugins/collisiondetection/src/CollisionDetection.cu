@@ -56,6 +56,18 @@ struct GPUBVHNode {
     unsigned int padding; //!< Padding for alignment (4 bytes)
 };
 
+//! Per-thread BVH traversal stack capacity. An iterative DFS that pushes both children holds at most ~one node per tree
+//! level, so the capacity must exceed the host builder's MAX_DEPTH (64, see buildBVHRecursive). 128 mirrors the CPU
+//! STACK_CAPACITY (CollisionDetection_RayTracing.cpp) and leaves generous headroom; the guarded push in each kernel is a
+//! defensive backstop that must never actually trigger for a valid tree. The stack lives in per-thread local memory (it is
+//! thread-private, so the previous block-shared array gave no sharing benefit while capping occupancy at 32 KiB/block).
+#define BVH_TRAVERSAL_STACK_CAPACITY 128
+
+//! Device flag raised (atomically) by a traversal kernel if a child push would exceed BVH_TRAVERSAL_STACK_CAPACITY. The
+//! host launch wrappers reset it before launch and throw helios_runtime_error after the kernel if it is set, mirroring the
+//! CPU invariant that a valid SAH tree never overflows the stack (fail-fast instead of silently dropping primitives).
+__device__ unsigned int d_bvh_stack_overflow = 0;
+
 /**
  * \brief GPU-optimized SoA BVH structure for warp-efficient traversal
  *
@@ -184,10 +196,23 @@ __device__ __forceinline__ bool rayTriangleIntersect(const float3 &ray_origin, c
  * \param[in] max_dist Maximum ray distance
  * \return True if ray intersects AABB within max_dist
  */
+//! Sign-preserving reciprocal of a ray direction for slab-method AABB tests. Clamps each near-zero component to
+//! +/-PARALLEL_EPS before the reciprocal so an axis-aligned ray lying exactly on a box face computes
+//! (bound - origin == 0) * huge == 0 (finite) instead of (bound - origin == 0) * inf == NaN, which would corrupt the
+//! fminf/fmaxf slab interval and spuriously reject a box the ray actually crosses. Mirrors the CPU aabbIntersectSoA SSE
+//! path (CollisionDetection_RayTracing.cpp).
+__device__ __forceinline__ float3 safeRayInvDir(const float3 &dir) {
+    constexpr float PARALLEL_EPS = 1e-8f;
+    float dx = (fabsf(dir.x) < PARALLEL_EPS) ? copysignf(PARALLEL_EPS, dir.x) : dir.x;
+    float dy = (fabsf(dir.y) < PARALLEL_EPS) ? copysignf(PARALLEL_EPS, dir.y) : dir.y;
+    float dz = (fabsf(dir.z) < PARALLEL_EPS) ? copysignf(PARALLEL_EPS, dir.z) : dir.z;
+    return make_float3(1.0f / dx, 1.0f / dy, 1.0f / dz);
+}
+
 __device__ __forceinline__ bool warpRayAABBIntersect(const float3 &ray_origin, const float3 &ray_dir, const float3 &aabb_min, const float3 &aabb_max, float max_dist) {
     // Optimized ray-AABB intersection using slab method
-    // Compute intersection distances for each axis
-    float3 inv_dir = make_float3(1.0f / ray_dir.x, 1.0f / ray_dir.y, 1.0f / ray_dir.z);
+    // Compute intersection distances for each axis (sign-preserving reciprocal avoids 0*inf=NaN for axis-aligned rays).
+    float3 inv_dir = safeRayInvDir(ray_dir);
 
     float3 t_min = make_float3((aabb_min.x - ray_origin.x) * inv_dir.x, (aabb_min.y - ray_origin.y) * inv_dir.y, (aabb_min.z - ray_origin.z) * inv_dir.z);
 
@@ -319,8 +344,8 @@ __device__ __forceinline__ bool rayPatchIntersect(const float3 &origin, const fl
 __device__ bool rayVoxelIntersect(const float3 &ray_origin, const float3 &ray_direction, const float3 &aabb_min, const float3 &aabb_max, float &distance) {
     const float EPSILON = 1e-5f;  // Match triangle/patch epsilon for consistency
 
-    // Calculate t values for each slab using optimized method
-    float3 inv_dir = make_float3(1.0f / ray_direction.x, 1.0f / ray_direction.y, 1.0f / ray_direction.z);
+    // Calculate t values for each slab (sign-preserving reciprocal avoids 0*inf=NaN for axis-aligned rays grazing a face).
+    float3 inv_dir = safeRayInvDir(ray_direction);
 
     float3 t_min = make_float3((aabb_min.x - ray_origin.x) * inv_dir.x, (aabb_min.y - ray_origin.y) * inv_dir.y, (aabb_min.z - ray_origin.z) * inv_dir.z);
 
@@ -406,10 +431,96 @@ __device__ __forceinline__ float3 computeHitNormal(int ptype, const float3 *d_pr
     return fallback;
 }
 
+//! Sample a texture transparency mask at UV (u,v); returns true if the texel is opaque (hit should count), false if
+//! transparent (ray passes through). Mirrors the CPU CollisionDetection::isHitTexelOpaque() texel lookup: wrap UV into
+//! [0,1), px = u*width, py = (1-v)*height (mask rows are top-to-bottom, UV y=0 is the bottom), clamp, fetch the byte.
+__device__ __forceinline__ bool sampleMaskOpaqueGPU(int mask_id, float u, float v, const unsigned char *d_mask_data, const unsigned int *d_mask_offsets, const int *d_mask_sizes) {
+    if (mask_id < 0 || d_mask_data == nullptr) {
+        return true; // no mask -> fully solid
+    }
+    const int width = d_mask_sizes[mask_id * 2];
+    const int height = d_mask_sizes[mask_id * 2 + 1];
+    if (width <= 0 || height <= 0) {
+        return true;
+    }
+    const unsigned int offset = d_mask_offsets[mask_id];
+
+    u -= floorf(u); // wrap repeat-style mappings into [0,1)
+    v -= floorf(v);
+
+    int px = (int) (u * (float) width);
+    px = max(0, min(px, width - 1));
+    int py = (int) ((1.f - v) * (float) height);
+    py = max(0, min(py, height - 1));
+
+    return d_mask_data[offset + (unsigned int) (py * width + px)] != 0u;
+}
+
+//! Decide whether a ray-primitive hit lands on an opaque texel. Computes the (u,v) at the hit point with the SAME
+//! interpolation as the CPU CollisionDetection::isHitTexelOpaque() (patch: BL->BR / BL->TL basis projection; triangle:
+//! barycentric Cramer solve) so the GPU and CPU synthetic scans reject identical texels. Voxels / mask-less primitives
+//! and degenerate/missing-UV configurations are treated as solid, exactly as the CPU path does.
+__device__ __forceinline__ bool isHitOpaqueGPU(int ptype, const float3 *verts, int mask_id, int uv_id, const float *uv4, const float3 &hit_point, const unsigned char *d_mask_data, const unsigned int *d_mask_offsets, const int *d_mask_sizes) {
+    if (mask_id < 0) {
+        return true;
+    }
+    float u, v;
+    if (ptype == 0) { // patch: corners (BL, BR, TR, TL)
+        const float3 v0 = verts[0];
+        const float3 e1 = verts[1] - v0;
+        const float3 e2 = verts[3] - v0;
+        const float3 d = hit_point - v0;
+        const float e1_sq = dot(e1, e1);
+        const float e2_sq = dot(e2, e2);
+        float s = (e1_sq > 0.f) ? dot(d, e1) / e1_sq : 0.f;
+        float t = (e2_sq > 0.f) ? dot(d, e2) / e2_sq : 0.f;
+        s = fminf(fmaxf(s, 0.f), 1.f);
+        t = fminf(fmaxf(t, 0.f), 1.f);
+        if (uv_id >= 0) {
+            u = (1.f - s) * (1.f - t) * uv4[0] + s * (1.f - t) * uv4[2] + s * t * uv4[4] + (1.f - s) * t * uv4[6];
+            v = (1.f - s) * (1.f - t) * uv4[1] + s * (1.f - t) * uv4[3] + s * t * uv4[5] + (1.f - s) * t * uv4[7];
+        } else {
+            u = s;
+            v = t;
+        }
+    } else if (ptype == 1) { // triangle
+        if (uv_id < 0) {
+            return true; // no UVs -> cannot map texel, treat as solid (matches CPU)
+        }
+        const float3 v0 = verts[0];
+        const float3 e1 = verts[1] - v0;
+        const float3 e2 = verts[2] - v0;
+        const float3 d = hit_point - v0;
+        const float dot11 = dot(e1, e1);
+        const float dot12 = dot(e1, e2);
+        const float dot22 = dot(e2, e2);
+        const float dot1d = dot(e1, d);
+        const float dot2d = dot(e2, d);
+        const float denom = dot11 * dot22 - dot12 * dot12;
+        if (fabsf(denom) < 1e-20f) {
+            return true; // degenerate triangle
+        }
+        const float inv = 1.f / denom;
+        const float beta = (dot22 * dot1d - dot12 * dot2d) * inv;
+        const float gamma = (dot11 * dot2d - dot12 * dot1d) * inv;
+        u = uv4[0] + beta * (uv4[2] - uv4[0]) + gamma * (uv4[4] - uv4[0]);
+        v = uv4[1] + beta * (uv4[3] - uv4[1]) + gamma * (uv4[5] - uv4[1]);
+    } else {
+        return true; // voxel / unknown -> solid
+    }
+    return sampleMaskOpaqueGPU(mask_id, u, v, d_mask_data, d_mask_offsets, d_mask_sizes);
+}
+
 __global__ void rayPrimitiveBVHKernel(GPUBVHNode *d_bvh_nodes, unsigned int *d_primitive_indices,
                                       int *d_primitive_types, // Type of each primitive (int for GPU compatibility)
                                       float3 *d_primitive_vertices, // All vertices for all primitives (variable count per primitive)
                                       unsigned int *d_vertex_offsets, // Starting index in vertices array for each primitive
+                                      const unsigned char *d_mask_data, // Texture transparency: flattened mask bytes (or null)
+                                      const unsigned int *d_mask_offsets, // Per-mask start index into d_mask_data
+                                      const int *d_mask_sizes, // Per-mask width/height (2 ints per mask)
+                                      const int *d_mask_IDs, // Per-primitive mask index (-1 = none)
+                                      const float *d_uv_data, // Per-primitive UVs (4 vec2 = 8 floats per primitive)
+                                      const int *d_uv_IDs, // Per-primitive UV flag (-1 = parametric/none)
                                       float3 *d_ray_origins, float3 *d_ray_directions, float *d_ray_max_distances, float uniform_max_distance, int num_rays, int primitive_count, int total_vertex_count, float *d_hit_distances,
                                       unsigned int *d_hit_primitive_ids, unsigned int *d_hit_counts, float3 *d_hit_normals, bool find_closest_hit) {
     int ray_idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -436,11 +547,10 @@ __global__ void rayPrimitiveBVHKernel(GPUBVHNode *d_bvh_nodes, unsigned int *d_p
     int best_vertex_offset = -1; // packed-vertex offset of the current closest hit (for normal computation)
     int best_ptype = -1; // primitive type of the current closest hit
 
-    // Stack-based BVH traversal
-    // Support up to 256 threads per block with 32 stack elements each = 8192 total elements
-    __shared__ unsigned int node_stack[8192];
-    int thread_stack_start = threadIdx.x * 32;
-    unsigned int *thread_stack = &node_stack[thread_stack_start];
+    // Stack-based BVH traversal. Per-thread local stack (thread-private; sized to BVH_TRAVERSAL_STACK_CAPACITY so it exceeds
+    // the host builder's MAX_DEPTH). The old block-shared 32-entry-per-thread array silently dropped children once the new
+    // deeper SAH trees pushed past depth 31, causing missed/farther hits that diverged from the CPU result.
+    unsigned int thread_stack[BVH_TRAVERSAL_STACK_CAPACITY];
     int stack_size = 0;
 
     // Start from root node
@@ -525,6 +635,18 @@ __global__ void rayPrimitiveBVHKernel(GPUBVHNode *d_bvh_nodes, unsigned int *d_p
                 // Process hit if found
 
                 if (hit && hit_distance > 1e-5f && hit_distance <= ray_max_distance) {
+
+                    // Texture transparency: if this primitive has a mask and the hit lands on a transparent texel, the ray
+                    // passes through it (skip without recording) so traversal continues to geometry behind, matching the
+                    // CPU isHitTexelOpaque() path. mask_IDs/uv_data are indexed by primitive_index (BVH order), like vertices.
+                    const int mask_id = (d_mask_IDs != nullptr) ? d_mask_IDs[primitive_index] : -1;
+                    if (mask_id >= 0) {
+                        const float3 hit_point = make_float3(ray_origin.x + ray_direction.x * hit_distance, ray_origin.y + ray_direction.y * hit_distance, ray_origin.z + ray_direction.z * hit_distance);
+                        if (!isHitOpaqueGPU(ptype, &d_primitive_vertices[vertex_offset], mask_id, d_uv_IDs[primitive_index], &d_uv_data[primitive_index * 8], hit_point, d_mask_data, d_mask_offsets, d_mask_sizes)) {
+                            continue; // transparent texel -> not a hit
+                        }
+                    }
+
                     total_hits++;
 
                     if (find_closest_hit) {
@@ -548,14 +670,24 @@ __global__ void rayPrimitiveBVHKernel(GPUBVHNode *d_bvh_nodes, unsigned int *d_p
                 }
             }
         } else {
-            // Add child nodes to stack (add right child first for left-first traversal)
-            if (node.right_child != 0xFFFFFFFF && stack_size < 31) {
-                thread_stack[stack_size] = node.right_child;
-                stack_size++;
+            // Add child nodes to stack (add right child first for left-first traversal). The capacity is sized well above
+            // the tree depth; if a push would overflow, raise the device flag (the host throws) rather than silently
+            // dropping the child and reporting a wrong/missed hit.
+            if (node.right_child != 0xFFFFFFFF) {
+                if (stack_size < BVH_TRAVERSAL_STACK_CAPACITY) {
+                    thread_stack[stack_size] = node.right_child;
+                    stack_size++;
+                } else {
+                    atomicMax(&d_bvh_stack_overflow, 1u);
+                }
             }
-            if (node.left_child != 0xFFFFFFFF && stack_size < 31) {
-                thread_stack[stack_size] = node.left_child;
-                stack_size++;
+            if (node.left_child != 0xFFFFFFFF) {
+                if (stack_size < BVH_TRAVERSAL_STACK_CAPACITY) {
+                    thread_stack[stack_size] = node.left_child;
+                    stack_size++;
+                } else {
+                    atomicMax(&d_bvh_stack_overflow, 1u);
+                }
             }
         }
     }
@@ -605,6 +737,12 @@ extern "C" {
  * \param[in] d_primitive_types Device per-primitive type codes (resident)
  * \param[in] d_primitive_vertices Device packed primitive vertices (resident)
  * \param[in] d_vertex_offsets Device per-primitive vertex offsets (resident)
+ * \param[in] d_mask_data Device texture transparency mask bytes, or null when the scene has no masks (resident)
+ * \param[in] d_mask_offsets Device per-mask start index into d_mask_data (resident)
+ * \param[in] d_mask_sizes Device per-mask width/height (resident)
+ * \param[in] d_mask_IDs Device per-primitive mask index, -1 = none (resident)
+ * \param[in] d_uv_data Device per-primitive UVs, 4 vec2 per primitive (resident)
+ * \param[in] d_uv_IDs Device per-primitive UV flag, -1 = parametric/none (resident)
  * \param[in] total_vertex_count Number of packed vertices
  * \param[in] h_ray_origins Host ray origins (3 floats per ray)
  * \param[in] h_ray_directions Host ray directions (3 floats per ray)
@@ -616,9 +754,9 @@ extern "C" {
  * \param[out] h_hit_normals Host array for per-ray surface normals (3 floats per ray), or nullptr to skip
  * \param[in] find_closest_hit If true, return only the closest hit
  */
-void launchRaysOnResidentScene(void *d_bvh_nodes, int node_count, unsigned int *d_primitive_indices, int primitive_count, int *d_primitive_types, float3 *d_primitive_vertices, unsigned int *d_vertex_offsets, int total_vertex_count,
-                               const float *h_ray_origins, const float *h_ray_directions, const float *h_ray_max_distances, float uniform_max_distance, int num_rays, float *h_hit_distances, unsigned int *h_hit_primitive_ids,
-                               unsigned int *h_hit_counts, float *h_hit_normals, bool find_closest_hit) {
+void launchRaysOnResidentScene(void *d_bvh_nodes, int node_count, unsigned int *d_primitive_indices, int primitive_count, int *d_primitive_types, float3 *d_primitive_vertices, unsigned int *d_vertex_offsets, const unsigned char *d_mask_data,
+                               const unsigned int *d_mask_offsets, const int *d_mask_sizes, const int *d_mask_IDs, const float *d_uv_data, const int *d_uv_IDs, int total_vertex_count, const float *h_ray_origins, const float *h_ray_directions,
+                               const float *h_ray_max_distances, float uniform_max_distance, int num_rays, float *h_hit_distances, unsigned int *h_hit_primitive_ids, unsigned int *h_hit_counts, float *h_hit_normals, bool find_closest_hit) {
     if (num_rays == 0) {
         return;
     }
@@ -659,11 +797,23 @@ void launchRaysOnResidentScene(void *d_bvh_nodes, int node_count, unsigned int *
     int threads_per_block = 256;
     int num_blocks = (num_rays + threads_per_block - 1) / threads_per_block;
 
-    rayPrimitiveBVHKernel<<<num_blocks, threads_per_block>>>((GPUBVHNode *) d_bvh_nodes, d_primitive_indices, d_primitive_types, d_primitive_vertices, d_vertex_offsets, d_ray_origins, d_ray_directions, d_ray_max_distances,
-                                                             uniform_max_distance, num_rays, primitive_count, total_vertex_count, d_hit_distances, d_hit_primitive_ids, d_hit_counts, d_hit_normals, find_closest_hit);
+    // Reset the traversal-stack overflow flag before launch; checked after sync (fail-fast on a deeper-than-expected tree).
+    const unsigned int stack_overflow_reset = 0;
+    HELIOS_CUDA_CHECK(cudaMemcpyToSymbol(d_bvh_stack_overflow, &stack_overflow_reset, sizeof(unsigned int)));
+
+    rayPrimitiveBVHKernel<<<num_blocks, threads_per_block>>>((GPUBVHNode *) d_bvh_nodes, d_primitive_indices, d_primitive_types, d_primitive_vertices, d_vertex_offsets, d_mask_data, d_mask_offsets, d_mask_sizes, d_mask_IDs, d_uv_data, d_uv_IDs,
+                                                             d_ray_origins, d_ray_directions, d_ray_max_distances, uniform_max_distance, num_rays, primitive_count, total_vertex_count, d_hit_distances, d_hit_primitive_ids, d_hit_counts,
+                                                             d_hit_normals, find_closest_hit);
 
     cudaDeviceSynchronize();
     HELIOS_CUDA_CHECK(cudaGetLastError());
+
+    unsigned int stack_overflow_flag = 0;
+    HELIOS_CUDA_CHECK(cudaMemcpyFromSymbol(&stack_overflow_flag, d_bvh_stack_overflow, sizeof(unsigned int)));
+    if (stack_overflow_flag != 0) {
+        helios::helios_runtime_error("ERROR (CollisionDetection GPU): BVH traversal stack overflow in rayPrimitiveBVHKernel - tree depth exceeded BVH_TRAVERSAL_STACK_CAPACITY (" + std::to_string(BVH_TRAVERSAL_STACK_CAPACITY) +
+                                     "). This must not happen for a valid SAH tree; raise BVH_TRAVERSAL_STACK_CAPACITY or check the BVH build.");
+    }
 
     HELIOS_CUDA_CHECK(cudaMemcpy(h_hit_distances, d_hit_distances, ray_distances_size, cudaMemcpyDeviceToHost));
     HELIOS_CUDA_CHECK(cudaMemcpy(h_hit_primitive_ids, d_hit_primitive_ids, hit_results_size, cudaMemcpyDeviceToHost));
@@ -715,13 +865,10 @@ __global__ void bvhTraversalKernel(GPUBVHNode *d_nodes, unsigned int *d_primitiv
     unsigned int result_count = 0;
     unsigned int *query_results = &d_results[query_idx * max_results_per_query];
 
-    // Stack-based traversal using shared memory for better performance
-    __shared__ unsigned int node_stack[8192]; // Shared among threads in block
+    // Stack-based traversal. Per-thread local stack (thread-private; sized to BVH_TRAVERSAL_STACK_CAPACITY > MAX_DEPTH). The
+    // old block-shared 32-entry-per-thread array silently dropped children on deep SAH trees, missing real collisions.
+    unsigned int thread_stack[BVH_TRAVERSAL_STACK_CAPACITY];
     int stack_size = 0;
-
-    // Each thread gets its own portion of the shared stack
-    int thread_stack_start = threadIdx.x * 32; // 32 entries per thread
-    unsigned int *thread_stack = &node_stack[thread_stack_start];
 
     // Start traversal from root node
     thread_stack[0] = 0;
@@ -761,14 +908,23 @@ __global__ void bvhTraversalKernel(GPUBVHNode *d_nodes, unsigned int *d_primitiv
                 }
             }
         } else {
-            // Add child nodes to stack
-            if (node.left_child != 0xFFFFFFFF && stack_size < 32) {
-                thread_stack[stack_size] = node.left_child;
-                stack_size++;
+            // Add child nodes to stack. Capacity is sized well above tree depth; an overflow raises the device flag (the
+            // host throws) rather than silently dropping a child and under-reporting collisions.
+            if (node.left_child != 0xFFFFFFFF) {
+                if (stack_size < BVH_TRAVERSAL_STACK_CAPACITY) {
+                    thread_stack[stack_size] = node.left_child;
+                    stack_size++;
+                } else {
+                    atomicMax(&d_bvh_stack_overflow, 1u);
+                }
             }
-            if (node.right_child != 0xFFFFFFFF && stack_size < 32) {
-                thread_stack[stack_size] = node.right_child;
-                stack_size++;
+            if (node.right_child != 0xFFFFFFFF) {
+                if (stack_size < BVH_TRAVERSAL_STACK_CAPACITY) {
+                    thread_stack[stack_size] = node.right_child;
+                    stack_size++;
+                } else {
+                    atomicMax(&d_bvh_stack_overflow, 1u);
+                }
             }
         }
     }
@@ -842,6 +998,10 @@ void launchBVHTraversal(void *h_nodes, int node_count, unsigned int *h_primitive
     int block_size = 256;
     int num_blocks = (num_queries + block_size - 1) / block_size;
 
+    // Reset the traversal-stack overflow flag before launch; checked after sync (fail-fast on a deeper-than-expected tree).
+    const unsigned int stack_overflow_reset = 0;
+    cudaMemcpyToSymbol(d_bvh_stack_overflow, &stack_overflow_reset, sizeof(unsigned int));
+
     bvhTraversalKernel<<<num_blocks, block_size>>>((GPUBVHNode *) h_nodes, (unsigned int *) h_primitive_indices, d_primitive_min, d_primitive_max, d_query_min, d_query_max, d_results, d_result_counts, num_queries, max_results_per_query);
 
     cudaDeviceSynchronize();
@@ -858,6 +1018,19 @@ void launchBVHTraversal(void *h_nodes, int node_count, unsigned int *h_primitive
         cudaFree(d_results);
         cudaFree(d_result_counts);
         return;
+    }
+
+    unsigned int stack_overflow_flag = 0;
+    cudaMemcpyFromSymbol(&stack_overflow_flag, d_bvh_stack_overflow, sizeof(unsigned int));
+    if (stack_overflow_flag != 0) {
+        cudaFree(d_query_min);
+        cudaFree(d_query_max);
+        cudaFree(d_primitive_min);
+        cudaFree(d_primitive_max);
+        cudaFree(d_results);
+        cudaFree(d_result_counts);
+        helios::helios_runtime_error("ERROR (CollisionDetection GPU): BVH traversal stack overflow in bvhTraversalKernel - tree depth exceeded BVH_TRAVERSAL_STACK_CAPACITY (" + std::to_string(BVH_TRAVERSAL_STACK_CAPACITY) +
+                                     "). This must not happen for a valid SAH tree; raise BVH_TRAVERSAL_STACK_CAPACITY or check the BVH build.");
     }
 
     // Copy results back

@@ -1482,8 +1482,241 @@ TEST_CASE("Tile Object Advanced Features") {
         DOCTEST_CHECK(area_ratio > 0.f);
 
         ctx.setTileObjectSubdivisionCount({tile}, make_int2(4, 4));
+        DOCTEST_CHECK(ctx.getTileObjectSubdivisionCount(tile) == make_int2(4, 4));
 
-        ctx.setTileObjectSubdivisionCount({tile}, 0.5f);
+        // a 4x4 tile subdivided so that each sub-patch is ~1x1 gives an area ratio of ~16
+        ctx.setTileObjectSubdivisionCount({tile}, 16.f);
+        DOCTEST_CHECK(ctx.getTileObjectAreaRatio(tile) == doctest::Approx(16.f).epsilon(0.25f));
+
+        // area ratio less than 1 is physically impossible and must fail fast
+        {
+            capture_cerr capture;
+            DOCTEST_CHECK_THROWS(ctx.setTileObjectSubdivisionCount({tile}, 0.5f));
+        }
+    }
+
+    SUBCASE("subdivision update preserves flat tile orientation") {
+        // Regression test: updating the subdivision count of a horizontal (ground) tile must not flip
+        // its orientation. Reconstructing the rotation from the tile normal via cart2sphere() previously
+        // produced elevation=90deg for a flat tile, tilting the regenerated tile to vertical.
+        Context ctx;
+        vec3 center = make_vec3(1, 2, 3);
+        vec2 size = make_vec2(4, 6);
+        uint tile = ctx.addTileObject(center, size, nullrotation, make_int2(2, 2));
+
+        vec3 normal_before = ctx.getPrimitiveNormal(ctx.getObjectPrimitiveUUIDs(tile).front());
+        DOCTEST_CHECK(normal_before.z == doctest::Approx(1.f).epsilon(errtol));
+
+        ctx.setTileObjectSubdivisionCount({tile}, make_int2(5, 3));
+
+        DOCTEST_CHECK(ctx.getTileObjectSubdivisionCount(tile) == make_int2(5, 3));
+
+        vec3 normal_after = ctx.getPrimitiveNormal(ctx.getObjectPrimitiveUUIDs(tile).front());
+        DOCTEST_CHECK(normal_after.x == doctest::Approx(0.f).epsilon(errtol));
+        DOCTEST_CHECK(normal_after.y == doctest::Approx(0.f).epsilon(errtol));
+        DOCTEST_CHECK(normal_after.z == doctest::Approx(1.f).epsilon(errtol));
+
+        // center and size must be preserved
+        vec3 center_after = ctx.getTileObjectCenter(tile);
+        DOCTEST_CHECK(center_after.x == doctest::Approx(center.x).epsilon(errtol));
+        DOCTEST_CHECK(center_after.y == doctest::Approx(center.y).epsilon(errtol));
+        DOCTEST_CHECK(center_after.z == doctest::Approx(center.z).epsilon(errtol));
+        vec2 size_after = ctx.getTileObjectSize(tile);
+        DOCTEST_CHECK(size_after.x == doctest::Approx(size.x).epsilon(errtol));
+        DOCTEST_CHECK(size_after.y == doctest::Approx(size.y).epsilon(errtol));
+    }
+
+    SUBCASE("subdivision update preserves arbitrary tile orientation") {
+        // A tile rotated about multiple axes must retain its exact orientation after a subdivision update.
+        Context ctx;
+        SphericalCoord rotation = make_SphericalCoord(0.6f, 1.1f);
+        uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(3, 3), rotation, make_int2(2, 2));
+
+        vec3 normal_before = ctx.getTileObjectNormal(tile);
+
+        ctx.setTileObjectSubdivisionCount({tile}, make_int2(4, 4));
+
+        vec3 normal_after = ctx.getTileObjectNormal(tile);
+        DOCTEST_CHECK(normal_after.x == doctest::Approx(normal_before.x).epsilon(errtol));
+        DOCTEST_CHECK(normal_after.y == doctest::Approx(normal_before.y).epsilon(errtol));
+        DOCTEST_CHECK(normal_after.z == doctest::Approx(normal_before.z).epsilon(errtol));
+    }
+
+    SUBCASE("subdivision update preserves textured tile orientation") {
+        // The textured regeneration path must preserve orientation just like the non-textured path.
+        Context ctx;
+        vec3 center = make_vec3(2, -1, 4);
+        vec2 size = make_vec2(2, 2);
+        SphericalCoord rotation = make_SphericalCoord(0.4f, 0.9f);
+        uint tile = ctx.addTileObject(center, size, rotation, make_int2(2, 2), "lib/images/disk_texture.png");
+
+        vec3 normal_before = ctx.getTileObjectNormal(tile);
+        vec3 center_before = ctx.getTileObjectCenter(tile);
+
+        ctx.setTileObjectSubdivisionCount({tile}, make_int2(4, 4));
+
+        DOCTEST_CHECK(ctx.getTileObjectSubdivisionCount(tile) == make_int2(4, 4));
+
+        vec3 normal_after = ctx.getTileObjectNormal(tile);
+        DOCTEST_CHECK(normal_after.x == doctest::Approx(normal_before.x).epsilon(errtol));
+        DOCTEST_CHECK(normal_after.y == doctest::Approx(normal_before.y).epsilon(errtol));
+        DOCTEST_CHECK(normal_after.z == doctest::Approx(normal_before.z).epsilon(errtol));
+
+        vec3 center_after = ctx.getTileObjectCenter(tile);
+        DOCTEST_CHECK(center_after.x == doctest::Approx(center_before.x).epsilon(errtol));
+        DOCTEST_CHECK(center_after.y == doctest::Approx(center_before.y).epsilon(errtol));
+        DOCTEST_CHECK(center_after.z == doctest::Approx(center_before.z).epsilon(errtol));
+    }
+
+    SUBCASE("subdivision update of multiple tiles and object data survival") {
+        // Updating several tiles in one call must regenerate each independently and leave the tile objects
+        // (and their object-level data) intact. The new sub-patches must be correctly re-parented.
+        Context ctx;
+        uint tile_a = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(2, 2), nullrotation, make_int2(1, 1));
+        uint tile_b = ctx.addTileObject(make_vec3(10, 0, 0), make_vec2(4, 2), make_SphericalCoord(0.3f, 0.0f), make_int2(2, 2));
+
+        ctx.setObjectData(tile_a, "plot_id", 7);
+        ctx.setObjectData(tile_b, "plot_id", 9);
+
+        ctx.setTileObjectSubdivisionCount({tile_a, tile_b}, make_int2(3, 3));
+
+        // both objects still exist and have the requested subdivision
+        DOCTEST_CHECK(ctx.doesObjectExist(tile_a));
+        DOCTEST_CHECK(ctx.doesObjectExist(tile_b));
+        DOCTEST_CHECK(ctx.getTileObjectSubdivisionCount(tile_a) == make_int2(3, 3));
+        DOCTEST_CHECK(ctx.getTileObjectSubdivisionCount(tile_b) == make_int2(3, 3));
+
+        // each tile owns exactly 9 sub-patches, all re-parented to the correct object
+        std::vector<uint> uuids_a = ctx.getObjectPrimitiveUUIDs(tile_a);
+        std::vector<uint> uuids_b = ctx.getObjectPrimitiveUUIDs(tile_b);
+        DOCTEST_CHECK(uuids_a.size() == 9);
+        DOCTEST_CHECK(uuids_b.size() == 9);
+        for (uint UUID: uuids_a) {
+            DOCTEST_CHECK(ctx.getPrimitiveParentObjectID(UUID) == tile_a);
+        }
+        for (uint UUID: uuids_b) {
+            DOCTEST_CHECK(ctx.getPrimitiveParentObjectID(UUID) == tile_b);
+        }
+
+        // object-level data survives the in-place regeneration
+        int plot_a, plot_b;
+        ctx.getObjectData(tile_a, "plot_id", plot_a);
+        ctx.getObjectData(tile_b, "plot_id", plot_b);
+        DOCTEST_CHECK(plot_a == 7);
+        DOCTEST_CHECK(plot_b == 9);
+
+        // the two tiles must retain their distinct sizes (independent per-tile regeneration)
+        DOCTEST_CHECK(ctx.getTileObjectSize(tile_a).x == doctest::Approx(2.f).epsilon(errtol));
+        DOCTEST_CHECK(ctx.getTileObjectSize(tile_b).x == doctest::Approx(4.f).epsilon(errtol));
+    }
+
+    SUBCASE("per-subpatch data preserved on 1:1 resolution call") {
+        // When the subdivision count is unchanged the data transfer is an exact index-for-index copy.
+        Context ctx;
+        uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(2, 2), nullrotation, make_int2(2, 2));
+
+        std::vector<uint> uuids_before = ctx.getObjectPrimitiveUUIDs(tile);
+        DOCTEST_CHECK(uuids_before.size() == 4);
+        // tag each sub-patch with its center so we can verify the value follows the geometry
+        for (uint UUID: uuids_before) {
+            vec3 c = ctx.getPatchCenter(UUID);
+            ctx.setPrimitiveData(UUID, "tag_x", c.x);
+            ctx.setPrimitiveData(UUID, "tag_y", c.y);
+        }
+
+        ctx.setTileObjectSubdivisionCount({tile}, make_int2(2, 2));
+
+        std::vector<uint> uuids_after = ctx.getObjectPrimitiveUUIDs(tile);
+        DOCTEST_CHECK(uuids_after.size() == 4);
+        for (uint UUID: uuids_after) {
+            vec3 c = ctx.getPatchCenter(UUID);
+            DOCTEST_CHECK(ctx.doesPrimitiveDataExist(UUID, "tag_x"));
+            float tag_x, tag_y;
+            ctx.getPrimitiveData(UUID, "tag_x", tag_x);
+            ctx.getPrimitiveData(UUID, "tag_y", tag_y);
+            // the tag must match the patch's own location (data followed geometry)
+            DOCTEST_CHECK(tag_x == doctest::Approx(c.x).epsilon(errtol));
+            DOCTEST_CHECK(tag_y == doctest::Approx(c.y).epsilon(errtol));
+        }
+    }
+
+    SUBCASE("per-subpatch data spatially remapped on refine") {
+        // Refining 2x2 -> 4x4: each old quadrant maps to a 2x2 block of new sub-patches that all inherit
+        // the quadrant's data. We label each old sub-patch with a quadrant id derived from its center sign.
+        Context ctx;
+        uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(4, 4), nullrotation, make_int2(2, 2));
+
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(tile)) {
+            vec3 c = ctx.getPatchCenter(UUID);
+            int quadrant = (c.x < 0 ? 0 : 1) + (c.y < 0 ? 0 : 2); // 0..3 by sign of (x,y)
+            ctx.setPrimitiveData(UUID, "quadrant", quadrant);
+        }
+
+        ctx.setTileObjectSubdivisionCount({tile}, make_int2(4, 4));
+
+        std::vector<uint> uuids_after = ctx.getObjectPrimitiveUUIDs(tile);
+        DOCTEST_CHECK(uuids_after.size() == 16);
+        for (uint UUID: uuids_after) {
+            vec3 c = ctx.getPatchCenter(UUID);
+            int expected_quadrant = (c.x < 0 ? 0 : 1) + (c.y < 0 ? 0 : 2);
+            DOCTEST_CHECK(ctx.doesPrimitiveDataExist(UUID, "quadrant"));
+            int q;
+            ctx.getPrimitiveData(UUID, "quadrant", q);
+            DOCTEST_CHECK(q == expected_quadrant);
+        }
+    }
+
+    SUBCASE("per-subpatch data spatially remapped on coarsen") {
+        // Coarsening 4x4 -> 2x2: each new sub-patch takes the data of the old cell containing its center.
+        Context ctx;
+        uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(4, 4), nullrotation, make_int2(4, 4));
+
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(tile)) {
+            vec3 c = ctx.getPatchCenter(UUID);
+            int quadrant = (c.x < 0 ? 0 : 1) + (c.y < 0 ? 0 : 2);
+            ctx.setPrimitiveData(UUID, "quadrant", quadrant);
+        }
+
+        ctx.setTileObjectSubdivisionCount({tile}, make_int2(2, 2));
+
+        std::vector<uint> uuids_after = ctx.getObjectPrimitiveUUIDs(tile);
+        DOCTEST_CHECK(uuids_after.size() == 4);
+        for (uint UUID: uuids_after) {
+            vec3 c = ctx.getPatchCenter(UUID);
+            int expected_quadrant = (c.x < 0 ? 0 : 1) + (c.y < 0 ? 0 : 2);
+            int q;
+            ctx.getPrimitiveData(UUID, "quadrant", q);
+            DOCTEST_CHECK(q == expected_quadrant);
+        }
+    }
+
+    SUBCASE("multiple primitive data types preserved across resolution change") {
+        // float, string and vec3 data must all survive the regeneration.
+        Context ctx;
+        uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(2, 2), nullrotation, make_int2(1, 1));
+        uint patch = ctx.getObjectPrimitiveUUIDs(tile).front();
+
+        ctx.setPrimitiveData(patch, "f", 3.5f);
+        ctx.setPrimitiveData(patch, "s", std::string("hello"));
+        ctx.setPrimitiveData(patch, "v", make_vec3(1, 2, 3));
+
+        ctx.setTileObjectSubdivisionCount({tile}, make_int2(3, 3));
+
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(tile)) {
+            float f;
+            std::string s;
+            vec3 v;
+            DOCTEST_CHECK(ctx.doesPrimitiveDataExist(UUID, "f"));
+            DOCTEST_CHECK(ctx.doesPrimitiveDataExist(UUID, "s"));
+            DOCTEST_CHECK(ctx.doesPrimitiveDataExist(UUID, "v"));
+            ctx.getPrimitiveData(UUID, "f", f);
+            ctx.getPrimitiveData(UUID, "s", s);
+            ctx.getPrimitiveData(UUID, "v", v);
+            DOCTEST_CHECK(f == doctest::Approx(3.5f).epsilon(errtol));
+            DOCTEST_CHECK(s == "hello");
+            DOCTEST_CHECK(v.x == doctest::Approx(1.f).epsilon(errtol));
+            DOCTEST_CHECK(v.z == doctest::Approx(3.f).epsilon(errtol));
+        }
     }
 }
 

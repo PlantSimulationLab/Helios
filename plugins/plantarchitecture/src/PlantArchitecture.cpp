@@ -1363,6 +1363,16 @@ float Shoot::calculateShootLength() const {
 }
 
 void Shoot::updateShootNodes(bool update_context_geometry) {
+    // A pruned shoot is left in the shoot_tree as an empty shell: its phytomers and internode vertices
+    // were cleared (see Phytomer::deletePhytomer). It is still reachable here through the parent's childIDs
+    // recursion below, so bail out before dereferencing the now-empty shoot_internode_vertices. All
+    // descendants of a pruned shoot are likewise empty, so skipping the child recursion loses nothing.
+    // Note: test phytomers rather than internode_tube_objID existence, since the tube object is legitimately
+    // absent when internode context geometry is disabled (build_context_geometry_internode == false).
+    if (phytomers.empty()) {
+        return;
+    }
+
     // make shoot origin consistent with parent shoot node position
     if (parent_shoot_ID >= 0) {
         // only if not the base shoot
@@ -4858,7 +4868,7 @@ void PlantArchitecture::updateShootFruitCounts(uint plantID) const {
 
 std::vector<uint> PlantArchitecture::getShootInternodeObjectIDs(uint plantID) const {
     if (plant_instances.find(plantID) == plant_instances.end()) {
-        helios_runtime_error("ERROR (PlantArchitecture::getPlantInflorescenceObjectIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+        helios_runtime_error("ERROR (PlantArchitecture::getShootInternodeObjectIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
 
     std::vector<uint> objIDs;
@@ -4866,7 +4876,12 @@ std::vector<uint> PlantArchitecture::getShootInternodeObjectIDs(uint plantID) co
     auto &shoot_tree = plant_instances.at(plantID).shoot_tree;
 
     for (auto &shoot: shoot_tree) {
-        objIDs.push_back(shoot->internode_tube_objID);
+        // Skip pruned shoots (whose internode tube object was deleted, leaving a dangling ID) and shoots
+        // whose internode geometry was never built (sentinel ID). Returning those would hand the caller
+        // object IDs that don't exist in the Context.
+        if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
+            objIDs.push_back(shoot->internode_tube_objID);
+        }
     }
 
     return objIDs;
@@ -5605,6 +5620,11 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
             // Assign current volume as old volume for your next timestep
             for (auto &shoot: *shoot_tree) {
+                // Pruned shoots are left in the shoot_tree as empty shells with a deleted internode tube
+                // object. Skip them: they have no geometry to update and their internode_tube_objID is dangling.
+                if (!context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
+                    continue;
+                }
                 float shoot_volume = plant_instances.at(plantID).shoot_tree.at(shoot->ID)->calculateShootInternodeVolume();
                 // Find current volume for each shoot in the plant
                 float volume_ratio = shoot->old_shoot_volume/shoot_volume;

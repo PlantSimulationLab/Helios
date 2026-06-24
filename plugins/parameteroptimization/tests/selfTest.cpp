@@ -145,6 +145,7 @@ DOCTEST_TEST_CASE("ParameterOptimization fitness caching") {
     GeneticAlgorithm ga;
     ga.generations = 10;
     ga.population_size = 20;
+    ga.random_seed = 12345; // deterministic so the evaluation count is reproducible across platforms
     popt.setAlgorithm(ga);
 
     ParameterOptimization::Result result;
@@ -155,12 +156,52 @@ DOCTEST_TEST_CASE("ParameterOptimization fitness caching") {
     // Elite individuals carried forward are also cache hits.
     // Real evaluations: initial pop (20) + ~19 new offspring per generation * 10 gens ≈ 210
     // Without caching, evaluatePopulation + pre-compute would double-count everything.
+    // ga.random_seed makes the mt19937 stream deterministic, but std::uniform_real_distribution
+    // and std::shuffle differ between libstdc++ and libc++, so the exact count still varies by
+    // platform. The window below brackets that cross-STL variation (libc++/macOS observed at 156).
     size_t max_expected = 250;
     size_t min_expected = 100;
 
     DOCTEST_INFO("Actual evaluations: ", evaluation_count, " (informational: caching effectiveness test)");
     DOCTEST_CHECK(evaluation_count >= min_expected);
     DOCTEST_CHECK(evaluation_count <= max_expected);
+}
+
+// Test 4b: A fixed random_seed makes the GA reproducible (identical result + evaluation count)
+DOCTEST_TEST_CASE("ParameterOptimization deterministic seed reproducibility") {
+    auto make_sim = [](size_t &counter) {
+        return [&counter](const ParametersToOptimize &p) {
+            counter++;
+            float x = p.at("x").value;
+            float y = p.at("y").value;
+            return (x - 3.f) * (x - 3.f) + (y + 1.f) * (y + 1.f);
+        };
+    };
+
+    ParametersToOptimize params = {{"x", {0.f, -5.f, 5.f}}, {"y", {0.f, -5.f, 5.f}}};
+
+    GeneticAlgorithm ga;
+    ga.generations = 10;
+    ga.population_size = 20;
+    ga.random_seed = 777;
+
+    size_t count_a = 0;
+    ParameterOptimization popt_a;
+    popt_a.setAlgorithm(ga);
+    ParameterOptimization::Result result_a;
+    DOCTEST_CHECK_NOTHROW(result_a = popt_a.run(make_sim(count_a), params));
+
+    size_t count_b = 0;
+    ParameterOptimization popt_b;
+    popt_b.setAlgorithm(ga);
+    ParameterOptimization::Result result_b;
+    DOCTEST_CHECK_NOTHROW(result_b = popt_b.run(make_sim(count_b), params));
+
+    // Same seed => identical search trajectory => identical result and evaluation count.
+    DOCTEST_CHECK(count_a == count_b);
+    DOCTEST_CHECK(result_a.fitness == doctest::Approx(result_b.fitness));
+    DOCTEST_CHECK(result_a.parameters.at("x").value == doctest::Approx(result_b.parameters.at("x").value));
+    DOCTEST_CHECK(result_a.parameters.at("y").value == doctest::Approx(result_b.parameters.at("y").value));
 }
 
 // Test 5: Caching with more expensive function still converges
@@ -188,6 +229,7 @@ DOCTEST_TEST_CASE("ParameterOptimization caching with expensive function") {
     GeneticAlgorithm ga;
     ga.generations = 10;
     ga.population_size = 20;
+    ga.random_seed = 12345; // deterministic so the evaluation count is reproducible across platforms
     popt.setAlgorithm(ga);
 
     ParameterOptimization::Result result;

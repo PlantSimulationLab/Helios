@@ -510,6 +510,48 @@ DOCTEST_TEST_CASE("PlantArchitecture pruneSolidBoundaryCollisions no boundaries"
     DOCTEST_CHECK(final_count >= initial_count);
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture advanceTime after pruneBranch leaves empty shoot shell") {
+    // Pruning a branch at node 0 deletes all of its phytomers and its internode tube object, but
+    // leaves the (now empty) Shoot in the shoot_tree and a stale entry in the parent's childIDs.
+    // advanceTime must tolerate these empty shells: the per-shoot volume bookkeeping loop and the
+    // recursive Shoot::updateShootNodes both used to dereference the cleared geometry / write to the
+    // deleted tube object and crash. This reproduces the user-reported crash.
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 365);
+
+    // Find a child shoot of the trunk (shoot 0) that still has phytomers, then prune it from node 0.
+    const std::shared_ptr<Shoot> trunk = plantarchitecture.getPlantShoot(plantID, 0);
+    int branchID = -1;
+    for (const auto &[node_index, shootIDs]: trunk->childIDs) {
+        for (const int shootID: shootIDs) {
+            if (!plantarchitecture.getPlantShoot(plantID, shootID)->phytomers.empty()) {
+                branchID = shootID;
+                break;
+            }
+        }
+        if (branchID >= 0) {
+            break;
+        }
+    }
+    DOCTEST_REQUIRE(branchID >= 0);
+
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.pruneBranch(plantID, (uint) branchID, 0));
+    DOCTEST_CHECK(plantarchitecture.getPlantShoot(plantID, (uint) branchID)->phytomers.empty());
+
+    // getShootInternodeObjectIDs must not return the dangling tube object ID of the pruned shell.
+    std::vector<uint> internode_objIDs = plantarchitecture.getShootInternodeObjectIDs(plantID);
+    for (uint objID: internode_objIDs) {
+        DOCTEST_CHECK(context.doesObjectExist(objID));
+    }
+
+    // The crash occurred here, inside advanceTime, while iterating over the empty pruned shoot.
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 365));
+}
+
 DOCTEST_TEST_CASE("PlantArchitecture hard collision avoidance base stem protection") {
     Context context;
     PlantArchitecture plantarchitecture(&context);

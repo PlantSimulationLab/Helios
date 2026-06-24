@@ -385,6 +385,33 @@ public:
      */
     void castRaysSoA(const helios::vec3 *origins, const helios::vec3 *directions, size_t count, float max_distance, float *out_distance, helios::vec3 *out_normal, uint *out_primitive_UUID, RayTracingStats *stats = nullptr);
 
+    //! Coherent (packet) variant of \ref castRaysSoA that exploits intra-packet ray coherence.
+    /**
+     * Identical inputs, outputs, and closest-hit semantics as \ref castRaysSoA, but the \p count rays are processed in
+     * contiguous packets of \p packet_size rays (the final packet may be smaller). Rays within a packet are traversed
+     * against a single shared BVH stack: each node is fetched and descended once for the whole packet (visited if ANY
+     * member ray's own AABB test passes, using that ray's running closest-hit distance), and each leaf primitive is
+     * fetched once and tested against every member ray. This amortizes node/primitive memory traffic and traversal
+     * control flow across the packet, which is a large win for highly coherent packets such as a LiDAR pulse's
+     * sub-rays (shared origin, sub-degree direction cone).
+     *
+     * Results are bit-for-bit identical to the per-ray path: a node is never skipped for a ray that would have visited
+     * it alone, so each ray finds the same closest hit. Intended for the CPU path; callers may pass any packet_size
+     * (1 degenerates to the per-ray traversal). Per-ray target filtering is not supported.
+     *
+     * \param[in] origins Array of ray origins (length \p count), grouped so rays [g*packet_size, (g+1)*packet_size) form packet g.
+     * \param[in] directions Array of ray directions (length \p count; need not be pre-normalized).
+     * \param[in] count Number of rays.
+     * \param[in] packet_size Number of contiguous rays per packet (>=1).
+     * \param[in] max_distance Maximum ray distance shared by all rays (negative = infinite).
+     * \param[out] out_distance Array (length \p count) receiving per-ray hit distance (valid where out_primitive_UUID != 0xFFFFFFFF).
+     * \param[out] out_normal Array (length \p count) receiving per-ray surface normal (valid where out_primitive_UUID != 0xFFFFFFFF).
+     * \param[out] out_primitive_UUID Array (length \p count) receiving per-ray hit primitive UUID, or 0xFFFFFFFF for a miss.
+     * \param[out] stats Optional ray-tracing statistics.
+     */
+    void castRaysSoA_packets(const helios::vec3 *origins, const helios::vec3 *directions, size_t count, size_t packet_size, float max_distance, float *out_distance, helios::vec3 *out_normal, uint *out_primitive_UUID,
+                             RayTracingStats *stats = nullptr);
+
     // -------- OPTIMIZATION METHODS --------
 
     /**
@@ -888,6 +915,21 @@ public:
      */
     [[nodiscard]] bool isGPUAccelerationEnabled() const;
 
+    /**
+     * \brief Check whether a CUDA-capable GPU is available for acceleration.
+     *
+     * Returns true only if the plugin was compiled with CUDA support, at least one CUDA
+     * device is present at runtime, and the GPU path is not disabled via the HELIOS_NO_GPU
+     * environment variable. The result is cached after the first call.
+     *
+     * Note: this reports GPU capability. Whether a given calculation actually uses the GPU
+     * also depends on batch size and scene complexity (see shouldUseGPU). Use
+     * isGPUAccelerationEnabled() to query whether GPU acceleration is currently toggled on.
+     *
+     * \return True if a usable GPU is available.
+     */
+    [[nodiscard]] static bool isGPUAvailable();
+
     // -------- UTILITY METHODS --------
 
     /**
@@ -956,6 +998,10 @@ private:
         helios::PrimitiveType type;
         std::vector<helios::vec3> vertices;
 
+        //! UUID of the primitive this entry caches. Stored so the dense, BVH-ordered cache
+        //! (\ref primitive_cache_dense) can report the hit primitive_UUID without a reverse lookup.
+        uint UUID = 0xFFFFFFFFu;
+
         //! Pointer to the texture transparency mask (row-major [y][x], true=opaque), or nullptr if the
         //! primitive has no texture transparency channel. Owned by the Context's Texture objects.
         const std::vector<std::vector<bool>> *transparency_mask = nullptr;
@@ -970,8 +1016,16 @@ private:
         }
     };
 
-    //! Cache of primitive data for thread-safe access (maps primitive_id -> cached data)
+    //! Cache of primitive data for thread-safe access (maps primitive_id -> cached data).
+    //! Used by the cold/fallback intersection paths; the hot BVH-leaf loop uses
+    //! \ref primitive_cache_dense instead to avoid a hash lookup per primitive test.
     std::unordered_map<uint, CachedPrimitive> primitive_cache;
+
+    //! Dense, BVH-leaf-ordered primitive cache aligned 1:1 with \ref primitive_indices: slot i caches
+    //! the primitive primitive_indices[i]. The SoA BVH leaves store contiguous [primitive_start,
+    //! primitive_start+primitive_count) ranges into this vector, so the hot traversal loop indexes it
+    //! directly (no unordered_map lookup). Rebuilt in lockstep with primitive_cache by buildPrimitiveCache().
+    std::vector<CachedPrimitive> primitive_cache_dense;
 
     /**
      * \brief Build primitive cache for thread-safe ray casting
@@ -979,9 +1033,35 @@ private:
     void buildPrimitiveCache();
 
     /**
+     * \brief Rebuild the dense, BVH-leaf-ordered primitive cache (\ref primitive_cache_dense) from the UUID-keyed
+     * \ref primitive_cache to match the current \ref primitive_indices ordering.
+     *
+     * Must be called whenever primitive_indices is (re)ordered. Cheap: copies already-cached entries, no Context reads.
+     */
+    void rebuildDensePrimitiveCache();
+
+    /**
+     * \brief Ensure both the UUID-keyed and dense primitive caches are current before a ray cast.
+     *
+     * Builds the full cache on first use; otherwise rebuilds only the dense ordering if it is out of sync with
+     * primitive_indices (e.g. after a BVH rebuild over an unchanged primitive set).
+     */
+    void ensurePrimitiveCacheCurrent();
+
+    /**
      * \brief Thread-safe primitive intersection method using cached data
      */
     HitResult intersectPrimitiveThreadSafe(const helios::vec3 &origin, const helios::vec3 &direction, uint primitive_id, float max_distance);
+
+    /**
+     * \brief Thread-safe primitive intersection against a dense-cache slot (hot path).
+     *
+     * Identical geometry/transparency/normal logic to \ref intersectPrimitiveThreadSafe, but takes the
+     * already-resolved \ref CachedPrimitive by reference (indexed from \ref primitive_cache_dense) so the
+     * per-primitive unordered_map lookup is eliminated from the innermost BVH-leaf loop. The hit
+     * primitive_UUID is taken from cached.UUID.
+     */
+    HitResult intersectCachedPrimitive(const helios::vec3 &origin, const helios::vec3 &direction, const CachedPrimitive &cached, float max_distance) const;
 
     /**
      * \brief Test whether a hit point lies on an opaque texel of a textured primitive.
@@ -1000,9 +1080,9 @@ private:
     /**
      * \brief Fast triangle intersection test (thread-safe)
      */
-    bool triangleIntersect(const helios::vec3 &origin, const helios::vec3 &direction, const helios::vec3 &v0, const helios::vec3 &v1, const helios::vec3 &v2, float &distance);
+    bool triangleIntersect(const helios::vec3 &origin, const helios::vec3 &direction, const helios::vec3 &v0, const helios::vec3 &v1, const helios::vec3 &v2, float &distance) const;
 
-    bool patchIntersect(const helios::vec3 &origin, const helios::vec3 &direction, const helios::vec3 &v0, const helios::vec3 &v1, const helios::vec3 &v2, const helios::vec3 &v3, float &distance);
+    bool patchIntersect(const helios::vec3 &origin, const helios::vec3 &direction, const helios::vec3 &v0, const helios::vec3 &v1, const helios::vec3 &v2, const helios::vec3 &v3, float &distance) const;
 
     // -------- BVH DATA STRUCTURES --------
 
@@ -1181,6 +1261,24 @@ private:
 
     //! GPU memory for per-primitive vertex offsets into d_primitive_vertices
     uint *d_vertex_offsets;
+
+    //! GPU texture-transparency buffers (resident scene geometry, uploaded alongside the geometry SoA). Mirror the layout
+    //! used by the radiation plugin so the kernel can reject ray hits that land on a transparent texel, matching the CPU
+    //! isHitTexelOpaque() path. All null / zero-count when no primitive in the scene has a transparency channel.
+    //! Flattened mask bytes for every distinct mask, contiguous (1=opaque, 0=transparent), row 0 = top of image
+    void *d_mask_data;
+    //! Per-mask start index into d_mask_data
+    uint *d_mask_offsets;
+    //! Per-mask width/height (2 ints per mask: [k*2]=width, [k*2+1]=height)
+    int *d_mask_sizes;
+    //! Per-primitive mask index (-1 = no transparency mask)
+    int *d_mask_IDs;
+    //! Per-primitive UV coordinates, 4 vec2 per primitive (pos*4 + vertex); stored as void* to keep CUDA types out of the header
+    void *d_uv_data;
+    //! Per-primitive UV flag (-1 = use parametric UV, >=0 = custom UV present)
+    int *d_uv_IDs;
+    //! True when any primitive in the resident scene has a transparency mask (else the mask buffers are skipped)
+    bool d_gpu_has_masks;
 
     //! Cached descriptors of the resident GPU geometry (valid only while gpu_memory_allocated)
     int d_gpu_node_count;
@@ -1693,11 +1791,22 @@ private:
      * are emitted as a flat xyz float array (12 floats per primitive) so this declaration stays free of CUDA types;
      * the caller reinterprets the buffer as float3[] for the device upload.
      *
+     * Also emits the per-primitive texture-transparency arrays (masks de-duplicated by texture file) used to reject ray
+     * hits on transparent texels on the device, mirroring the CPU isHitTexelOpaque() path. When no primitive has a
+     * transparency channel, the mask/uv arrays are emitted with all-(-1) IDs and empty mask data.
+     *
      * \param[out] primitive_types Per-primitive type code (length = primitive_indices.size())
      * \param[out] primitive_vertices_xyz Flat packed vertices (length = primitive_indices.size()*4*3)
      * \param[out] vertex_offsets Per-primitive starting vertex index (length = primitive_indices.size())
+     * \param[out] mask_data Flattened mask bytes for every distinct mask (1=opaque, 0=transparent), row 0 = top
+     * \param[out] mask_offsets Per-mask start index into mask_data
+     * \param[out] mask_sizes Per-mask width/height (2 ints per mask)
+     * \param[out] mask_IDs Per-primitive mask index (-1 = no transparency mask)
+     * \param[out] uv_data Per-primitive UVs, 4 vec2 per primitive flattened as xy floats (length = nprim*4*2)
+     * \param[out] uv_IDs Per-primitive UV flag (-1 = parametric UV, >=0 = custom UV present)
      */
-    void buildGPUGeometrySoA(std::vector<int> &primitive_types, std::vector<float> &primitive_vertices_xyz, std::vector<unsigned int> &vertex_offsets);
+    void buildGPUGeometrySoA(std::vector<int> &primitive_types, std::vector<float> &primitive_vertices_xyz, std::vector<unsigned int> &vertex_offsets, std::vector<unsigned char> &mask_data, std::vector<unsigned int> &mask_offsets,
+                             std::vector<int> &mask_sizes, std::vector<int> &mask_IDs, std::vector<float> &uv_data, std::vector<int> &uv_IDs);
 #endif
 
     /**
@@ -1791,6 +1900,16 @@ private:
     HitResult castRaySoATraversal(const RayQuery &query, RayTracingStats &stats);
 
     /**
+     * \brief Coherent packet traversal of rays [begin, end) against the SoA BVH (shared stack).
+     *
+     * Traverses a contiguous group of rays together: each node is fetched/descended once for the packet (visited if any
+     * member ray's AABB test passes, using that ray's running closest distance) and each leaf primitive is fetched once
+     * and tested against every member ray. Produces results bit-identical to per-ray \ref castRaySoATraversal. Writes
+     * per-ray outputs at indices [begin, end). See \ref castRaysSoA_packets.
+     */
+    void castPacketSoATraversal(const helios::vec3 *origins, const helios::vec3 *directions, size_t begin, size_t end, float max_distance, float *out_distance, helios::vec3 *out_normal, uint *out_primitive_UUID, RayTracingStats &stats);
+
+    /**
      * \brief Basic BVH traversal (fallback when optimized structures not available)
      * This method provides the critical early miss detection that was missing from brute-force approach
      */
@@ -1800,6 +1919,14 @@ private:
      * \brief Optimized AABB intersection tests
      */
     inline bool aabbIntersectSoA(const helios::vec3 &ray_origin, const helios::vec3 &ray_direction, float max_distance, size_t node_index) const;
+
+    /**
+     * \brief Ray entry distance (t_near, clamped >=0) into a SoA BVH node's AABB; +inf on miss.
+     *
+     * Used to order the two children of an internal node for near-first traversal so the farther subtree can be
+     * pruned by the running closest-hit distance.
+     */
+    float aabbEntryDistanceSoA(const helios::vec3 &ray_origin, const helios::vec3 &ray_direction, size_t node_index) const;
 
     /**
      * \brief Basic ray-AABB intersection test

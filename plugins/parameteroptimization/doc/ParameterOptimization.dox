@@ -209,6 +209,7 @@ Each optimization algorithm has its own settings struct. To select an algorithm,
 | elitism_rate | Fraction of best individuals preserved unchanged to next generation | 0.05 |
 | crossover | Crossover operator selection (see \ref PO_Crossover) | BLXAlphaCrossover{} |
 | mutation | Mutation operator selection (see \ref PO_Mutation) | PerGeneMutation{} |
+| random_seed | RNG seed for reproducibility. 0 = nondeterministic seed from std::random_device | 0 |
 
 \subsection PO_Settings_BO BayesianOptimization
 
@@ -219,6 +220,7 @@ Each optimization algorithm has its own settings struct. To select an algorithm,
 | ucb_kappa | Exploration parameter for UCB acquisition function. Higher values favor exploration | 2.0 |
 | max_gp_samples | Maximum samples retained in GP model (for memory efficiency) | 200 |
 | acquisition_samples | Number of random candidates evaluated when optimizing acquisition function | 1000 |
+| random_seed | RNG seed for reproducibility. 0 = nondeterministic seed from std::random_device | 0 |
 
 \subsection PO_Settings_CMAES CMAES
 
@@ -227,6 +229,7 @@ Each optimization algorithm has its own settings struct. To select an algorithm,
 | max_evaluations | Total number of function evaluations | 200 |
 | lambda | Population size. 0 = auto: 4 + floor(3*ln(d)) | 0 (auto) |
 | sigma | Initial step-size controlling search radius | 0.3 |
+| random_seed | RNG seed for reproducibility. 0 = nondeterministic seed from std::random_device | 0 |
 
 \subsection PO_Settings_LBFGS LBFGS
 

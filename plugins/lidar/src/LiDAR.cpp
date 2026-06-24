@@ -15,6 +15,7 @@
 
 #include "LiDAR.h"
 
+#include <random> // per-beam range-noise RNG in the parallelized syntheticScan post-processing
 #include <set>
 
 #ifdef _OPENMP
@@ -33,6 +34,78 @@ namespace {
                                                               // even though the ASCII file reader treats it as a generic scalar column.
                                                               "raydir"};
         return standard_tokens.find(label) != standard_tokens.end();
+    }
+
+    //! Resolve a scalar (FLOAT/DOUBLE/INT/UINT) data field named `label` for the hit primitive `UUID`, as a double.
+    /** Resolution precedence: the hit primitive's own primitive data is checked first; if the label is not present
+        there, the data of the primitive's parent compound object is checked. This lets a synthetic-scan column label
+        be sampled from either primitive data or object data (e.g. a per-object "branch_order"), with the more specific
+        per-primitive value winning when a label exists on both. Returns true and sets `value` on success; returns false
+        if neither source carries the label or the stored data is a non-scalar type (vector/string), which cannot be
+        transferred to a scalar hit field. */
+    bool resolveScalarHitData(helios::Context *context, uint UUID, const std::string &label, double &value) {
+        if (context->doesPrimitiveDataExist(UUID, label.c_str())) {
+            switch (context->getPrimitiveDataType(label.c_str())) {
+                case helios::HELIOS_TYPE_FLOAT: {
+                    float v;
+                    context->getPrimitiveData(UUID, label.c_str(), v);
+                    value = double(v);
+                    return true;
+                }
+                case helios::HELIOS_TYPE_DOUBLE: {
+                    context->getPrimitiveData(UUID, label.c_str(), value);
+                    return true;
+                }
+                case helios::HELIOS_TYPE_INT: {
+                    int v;
+                    context->getPrimitiveData(UUID, label.c_str(), v);
+                    value = double(v);
+                    return true;
+                }
+                case helios::HELIOS_TYPE_UINT: {
+                    uint v;
+                    context->getPrimitiveData(UUID, label.c_str(), v);
+                    value = double(v);
+                    return true;
+                }
+                default:
+                    return false; // non-scalar primitive-data types are not transferable to hits
+            }
+        }
+
+        // Fall back to the hit primitive's parent object data. Primitives with no parent object have object id 0;
+        // guard with doesObjectExist() because doesObjectDataExist() only checks object existence under HELIOS_DEBUG.
+        uint objID = context->getPrimitiveParentObjectID(UUID);
+        if (context->doesObjectExist(objID) && context->doesObjectDataExist(objID, label.c_str())) {
+            switch (context->getObjectDataType(label.c_str())) {
+                case helios::HELIOS_TYPE_FLOAT: {
+                    float v;
+                    context->getObjectData(objID, label.c_str(), v);
+                    value = double(v);
+                    return true;
+                }
+                case helios::HELIOS_TYPE_DOUBLE: {
+                    context->getObjectData(objID, label.c_str(), value);
+                    return true;
+                }
+                case helios::HELIOS_TYPE_INT: {
+                    int v;
+                    context->getObjectData(objID, label.c_str(), v);
+                    value = double(v);
+                    return true;
+                }
+                case helios::HELIOS_TYPE_UINT: {
+                    uint v;
+                    context->getObjectData(objID, label.c_str(), v);
+                    value = double(v);
+                    return true;
+                }
+                default:
+                    return false; // non-scalar object-data types are not transferable to hits
+            }
+        }
+
+        return false;
     }
 
     //! Inverse of the standard normal CDF (quantile function), Acklam's rational approximation.
@@ -117,6 +190,14 @@ namespace {
         q.z = cr * cp * sy - sr * sp * cy;
         return q;
     }
+
+    //! Test a caller-owned cancellation flag (the one registered via LiDARcloud::setCancelFlag).
+    //! Returns true when the pointed-to int is non-zero, i.e. the caller has requested an abort.
+    //! Cheap enough to call from the top of a loop; in hot inner loops it is gated behind a coarse
+    //! iteration-count guard so the read happens only every ~128k iterations.
+    inline bool triangulationCancelled(volatile int *cancel_flag) {
+        return cancel_flag != nullptr && *cancel_flag != 0;
+    }
 } // namespace
 
 ScanMetadata::ScanMetadata() {
@@ -194,7 +275,123 @@ ScanMetadata::ScanMetadata(const vec3 &a_origin, const std::vector<float> &a_bea
     data_file = "";
 }
 
+namespace {
+
+    //! Minimal double-precision 3-vector for the Risley-prism refraction math (kept in double precision so the rotation phase rotor_rate*t stays accurate over a long acquisition).
+    struct dvec3 {
+        double x, y, z;
+    };
+    inline dvec3 operator-(const dvec3 &v) {
+        return {-v.x, -v.y, -v.z};
+    }
+    inline double dot(const dvec3 &a, const dvec3 &b) {
+        return a.x * b.x + a.y * b.y + a.z * b.z;
+    }
+    inline dvec3 normalize(const dvec3 &v) {
+        double m = std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+        return {v.x / m, v.y / m, v.z / m};
+    }
+
+    //! Refract a unit ray at a planar interface using the vector form of Snell's law.
+    /**
+     * Standard non-paraxial refraction: given a unit incident direction \p incident, the unit surface normal \p normal pointing
+     * back toward the medium the ray is leaving, and the indices on the two sides, the transmitted unit direction is
+     *   t = r*d + (r*c - sqrt(1 - r^2*(1 - c^2)))*n,   r = n_from/n_to,   c = -(n . d),
+     * which is the textbook vector form of Snell's law (e.g. Glassner, "An Introduction to Ray Tracing", 1989). A negative
+     * radicand means the critical angle is exceeded; the function returns false (total internal reflection - the ray does not
+     * pass) in that case.
+     * \param[in] incident  Unit incident ray direction.
+     * \param[in] normal  Unit interface normal, oriented toward the incoming medium.
+     * \param[in] n_from  Refractive index of the medium the ray is leaving.
+     * \param[in] n_to  Refractive index of the medium the ray is entering.
+     * \param[out] refracted  Unit transmitted ray direction (unchanged on total internal reflection).
+     * \return true if the ray is transmitted, false on total internal reflection.
+     */
+    bool refractRay(const dvec3 &incident, const dvec3 &normal, double n_from, double n_to, dvec3 &refracted) {
+        const double r = n_from / n_to;
+        const double c = -dot(normal, incident); // cosine of the incidence angle
+        const double radicand = 1.0 - r * r * (1.0 - c * c);
+        if (radicand < 0.0) {
+            return false; // total internal reflection
+        }
+        const double k = r * c - std::sqrt(radicand);
+        refracted = normalize({r * incident.x + k * normal.x, r * incident.y + k * normal.y, r * incident.z + k * normal.z});
+        return true;
+    }
+
+    //! Body-frame unit beam direction of a single pulse of a Risley-prism (Livox-style rosette) scan.
+    /**
+     * Models a stack of rotating wedge prisms by non-paraxial ray tracing: the transmitted beam is propagated through each
+     * prism by refracting it at the prism's two faces in turn with the vector form of Snell's law (see \ref refractRay). Each
+     * prism is a glass wedge with one face perpendicular to the optical axis and one face tilted by the wedge angle; the prism
+     * spins about the optical axis, so at pulse time t its tilted face has rolled to the clocking angle
+     * phi = phase + rotor_rate*t. With two (or more) prisms rotating at different, generally incommensurate, rates the exit
+     * beam sweeps a non-repetitive rosette inside a circular field of view, denser toward the center - the characteristic
+     * Livox pattern. This ray-tracing-through-wedges treatment is the standard non-paraxial Risley-prism model (e.g. Li,
+     * "Third-order theory of the Risley-prism-based beam steering system", Appl. Opt. 2011).
+     *
+     * The optical axis (the un-deflected incident beam) is +y, which is exactly the Helios LiDAR body-forward axis: the
+     * azimuth-zero, horizontal direction produced by sphere2cart at phi=0, zenith=pi/2, and the same forward axis the
+     * moving-platform path rotates by the boresight and trajectory quaternions. The lateral axis is +x and the up axis is +z,
+     * so the tilted-face normal lies on a cone of half-angle (pi/2 - wedge) about +y and rolls in the x-z plane with phi. The
+     * pulse time is t = pulse_index * pulse_period, scan-relative: the prism clocking is referenced to the start of the scan,
+     * independent of the trajectory t0.
+     *
+     * The maximum deflection (and hence the circular field of view) is an emergent property of the wedge angles and refractive
+     * indices, not a specified parameter: a single ~18.7 deg wedge at n=1.51 deflects the beam ~9.8 deg, so a counter-rotating
+     * pair fills a ~38 deg circular FoV.
+     *
+     * On total internal reflection at any face the beam does not exit; the un-deflected optical axis (+y) is returned (this
+     * does not occur for physical Livox-class wedge angles and indices).
+     */
+    helios::vec3 risleyBodyDirection(const ScanMetadata &scan, size_t pulse_index) {
+
+        const double t = double(pulse_index) * scan.pulse_period;
+        const double n_air = scan.risley_refractive_index_air;
+
+        // Incident beam along the optical axis (+y, the Helios body-forward axis). The flat face is perpendicular to this axis.
+        dvec3 beam = {0.0, 1.0, 0.0};
+        const dvec3 flat_normal = {0.0, -1.0, 0.0}; // entry face normal, oriented back toward the incoming (+y) beam
+
+        for (const RisleyPrism &prism : scan.risley_prisms) {
+            const double phi = prism.phase + prism.rotor_rate * t; // clocking angle of this prism's wedge at pulse time t
+            const double sinW = std::sin(prism.wedge_angle);
+            const double cosW = std::cos(prism.wedge_angle);
+
+            // Tilted (exit) face normal: the face is inclined by the wedge angle from the plane perpendicular to the optical
+            // axis, so its outward normal sits at angle wedge off the +y axis and rolls around it with the clocking angle phi.
+            // Built directly from the rotation geometry (no external code): axial component cos(wedge) along +y, transverse
+            // component sin(wedge) in the x-z plane at angle phi.
+            const dvec3 tilted_normal = normalize({sinW * std::cos(phi), cosW, sinW * std::sin(phi)});
+
+            // Refract through the flat entry face (air -> glass), then the tilted exit face (glass -> air). The normal handed to
+            // refractRay points back toward the medium the ray is leaving, so the exit-face normal is negated.
+            dvec3 in_glass;
+            if (!refractRay(beam, flat_normal, n_air, prism.refractive_index, in_glass)) {
+                return helios::make_vec3(0.f, 1.f, 0.f); // total internal reflection: return the optical axis (+y)
+            }
+            dvec3 out_glass;
+            if (!refractRay(in_glass, -tilted_normal, prism.refractive_index, n_air, out_glass)) {
+                return helios::make_vec3(0.f, 1.f, 0.f);
+            }
+            beam = out_glass;
+        }
+
+        beam = normalize(beam);
+        return helios::make_vec3(float(beam.x), float(beam.y), float(beam.z));
+    }
+
+} // namespace
+
 helios::SphericalCoord ScanMetadata::rc2direction(uint row, uint column) const {
+
+    if (scanPattern == SCAN_PATTERN_RISLEY_PRISM) {
+        // A Risley-prism scan is non-separable: each column is one pulse whose body-frame direction comes from the rotating
+        // prism optics at that pulse's time, not from a row x column angular grid. The single source of truth is
+        // risleyBodyDirection(); rc2direction returns its spherical form so callers that reason in (zenith,azimuth) stay
+        // consistent with the ray generator.
+        return cart2sphere(risleyBodyDirection(*this, column));
+    }
 
     float zenith;
     if (scanPattern == SCAN_PATTERN_SPINNING_MULTIBEAM) {
@@ -210,6 +407,14 @@ helios::SphericalCoord ScanMetadata::rc2direction(uint row, uint column) const {
 };
 
 helios::int2 ScanMetadata::direction2rc(const SphericalCoord &direction) const {
+
+    if (scanPattern == SCAN_PATTERN_RISLEY_PRISM) {
+        // A Risley-prism scan has no row x column angular grid (it is stored as a single row, one pulse per column), and it is
+        // always trajectory-driven so the direction passed here is in world coordinates and cannot be inverted back to a pulse
+        // index. Row/column is meaningless for this pattern; return (0,0). Downstream, moving scans identify points by
+        // timestamp / pulse_id / origin rather than (row,column), and triangulation / gap-filling reject moving scans outright.
+        return helios::make_int2(0, 0);
+    }
 
     float theta = direction.zenith;
     float phi = direction.azimuth;
@@ -334,6 +539,10 @@ void LiDARcloud::setCancelFlag(volatile int *flag) {
     }
 }
 
+void LiDARcloud::setSyntheticScanProgressPointer(volatile int *ptr) {
+    synthetic_scan_progress = ptr;
+}
+
 void LiDARcloud::prepareUnifiedRayTracing(helios::Context *context) {
     initializeCollisionDetection(context);
     // Disable automatic BVH rebuilds for the whole batch (geometry is static during a scan) and build the BVH once. When
@@ -346,7 +555,7 @@ void LiDARcloud::finishUnifiedRayTracing() {
     collision_detection->enableAutomaticBVHRebuilds();
 }
 
-void LiDARcloud::castRaysUnified(size_t total_rays, helios::vec3 *ray_origins, helios::vec3 *direction, float *hit_t, float *hit_fnorm, int *hit_ID) {
+void LiDARcloud::castRaysUnified(size_t total_rays, helios::vec3 *ray_origins, helios::vec3 *direction, float *hit_t, float *hit_fnorm, int *hit_ID, size_t packet_size) {
     const float miss_distance = LIDAR_RAYTRACE_MISS_T;
     constexpr uint MISS_UUID = 0xFFFFFFFFu; // sentinel written by castRaysSoA for a miss
 
@@ -360,7 +569,13 @@ void LiDARcloud::castRaysUnified(size_t total_rays, helios::vec3 *ray_origins, h
     std::vector<uint> uuid(total_rays);
     std::vector<helios::vec3> normal(total_rays);
     // hit_t is reused as the SoA distance output array (float, length total_rays) to avoid a separate allocation.
-    collision_detection->castRaysSoA(ray_origins, direction, total_rays, miss_distance, hit_t, normal.data(), uuid.data());
+    // When the rays are grouped into coherent pulses (packet_size > 1) the packet traversal amortizes node/primitive
+    // fetches across each pulse's sub-rays; results are identical to the per-ray path.
+    if (packet_size > 1) {
+        collision_detection->castRaysSoA_packets(ray_origins, direction, total_rays, packet_size, miss_distance, hit_t, normal.data(), uuid.data());
+    } else {
+        collision_detection->castRaysSoA(ray_origins, direction, total_rays, miss_distance, hit_t, normal.data(), uuid.data());
+    }
 
     // Convert the SoA results to the LiDAR per-ray format expected by the waveform reduction.
     for (size_t i = 0; i < total_rays; i++) {
@@ -382,7 +597,7 @@ void LiDARcloud::performUnifiedRayTracing(helios::Context *context, size_t N, in
     // automatic rebuilds. The chunked syntheticScan path instead calls prepareUnifiedRayTracing() once and
     // castRaysUnified() per chunk to build the BVH only once across the whole scan.
     prepareUnifiedRayTracing(context);
-    castRaysUnified(N * size_t(Npulse), ray_origins, direction, hit_t, hit_fnorm, hit_ID);
+    castRaysUnified(N * size_t(Npulse), ray_origins, direction, hit_t, hit_fnorm, hit_ID, size_t(Npulse));
     finishUnifiedRayTracing();
 }
 
@@ -678,6 +893,99 @@ uint LiDARcloud::addScanMovingRaster(uint Ntheta, float thetaMin, float thetaMax
     return addScanMoving(scan, traj_t, traj_pos, traj_quat, lever_arm, boresight_rpy, pulse_rate_hz, t0);
 }
 
+uint LiDARcloud::addScanRisley(const std::vector<RisleyPrism> &prisms, double refractive_index_air, float pulse_rate_hz, const std::vector<double> &traj_t, const std::vector<vec3> &traj_pos, const std::vector<vec4> &traj_quat,
+                               const vec3 &lever_arm, const vec3 &boresight_rpy, float exitDiameter, float beamDivergence, float rangeNoiseStdDev, float angleNoiseStdDev, const std::vector<std::string> &columnFormat, double t0) {
+
+    // Physical-parameter setup for a rotating-Risley-prism (Livox-style rosette) sensor. The caller supplies the prism stack
+    // and PRF; the pulse count Npulses is derived from the PRF and the trajectory duration, and the scan is stored as an
+    // Ntheta=1, Nphi=Npulses table (one beam direction per pulse). The heavy lifting (per-pulse time/pose, trajectory
+    // validation) is delegated to addScanMoving once the single-row grid is built.
+
+    if (prisms.empty()) {
+        helios_runtime_error("ERROR (LiDARcloud::addScanRisley): the prism stack is empty. A Risley-prism scanner requires at least one rotating wedge prism (a Livox-style sensor uses two counter-rotating prisms).");
+    }
+    if (pulse_rate_hz <= 0.f) {
+        helios_runtime_error("ERROR (LiDARcloud::addScanRisley): pulse_rate_hz must be greater than 0, but " + std::to_string(pulse_rate_hz) + " was provided.");
+    }
+    if (refractive_index_air <= 0.0) {
+        helios_runtime_error("ERROR (LiDARcloud::addScanRisley): refractive_index_air must be greater than 0, but " + std::to_string(refractive_index_air) + " was provided.");
+    }
+    for (size_t k = 0; k < prisms.size(); k++) {
+        if (prisms.at(k).refractive_index <= 0.0) {
+            helios_runtime_error("ERROR (LiDARcloud::addScanRisley): prism " + std::to_string(k) + " has a non-positive refractive index (" + std::to_string(prisms.at(k).refractive_index) + ").");
+        }
+    }
+    const size_t M = traj_t.size();
+    if (M == 0) {
+        helios_runtime_error("ERROR (LiDARcloud::addScanRisley): the trajectory is empty. At least one pose sample is required (a stationary capture is expressed as two coincident poses separated by the acquisition duration).");
+    }
+    // Validate the trajectory array lengths here, before traj_pos.front() is used to seed the ScanMetadata origin below.
+    // addScanMoving() also validates these, but it runs only after that dereference, so an empty/short traj_pos would be
+    // undefined behavior rather than a clear error. Fail fast with an actionable message instead.
+    if (traj_pos.size() != M || traj_quat.size() != M) {
+        helios_runtime_error("ERROR (LiDARcloud::addScanRisley): trajectory arrays have inconsistent lengths (traj_t=" + std::to_string(M) + ", traj_pos=" + std::to_string(traj_pos.size()) + ", traj_quat=" + std::to_string(traj_quat.size()) +
+                             "). All trajectory arrays must have the same number of samples.");
+    }
+
+    const double duration = traj_t.back() - traj_t.front();
+    if (duration <= 0.0) {
+        helios_runtime_error("ERROR (LiDARcloud::addScanRisley): the trajectory duration (traj_t.back() - traj_t.front() = " + std::to_string(duration) + ") must be greater than 0.");
+    }
+
+    // One pulse per firing of the PRF over the acquisition. Stored as a single-row (Ntheta=1) table so the existing pulse
+    // ordinal k = Ntheta*column + row collapses to k = column = pulse index, and every per-pulse quantity (time, origin) is
+    // derived exactly as for any other moving scan.
+    const uint Npulses = uint(std::lround(double(pulse_rate_hz) * duration));
+    if (Npulses == 0) {
+        helios_runtime_error("ERROR (LiDARcloud::addScanRisley): the derived pulse count is zero (PRF=" + std::to_string(pulse_rate_hz) + " Hz over a " + std::to_string(duration) +
+                             " s trajectory yields less than one pulse). Increase the PRF or the trajectory duration.");
+    }
+
+    // Build the single-row Risley-prism ScanMetadata, then attach the prism stack. The angular bounds are not used for ray
+    // generation (the Risley branch of the ray generator computes each direction from the prism optics), but are populated
+    // with the emergent circular field of view so range queries and bounding logic stay meaningful. The maximum half-angle is
+    // estimated by sampling the rosette - the field of view is an emergent property of the optics, not an input.
+    ScanMetadata scan(traj_pos.front(), 1u, 0.f, float(M_PI), Npulses, 0.f, float(2.0 * M_PI), exitDiameter, beamDivergence, rangeNoiseStdDev, angleNoiseStdDev, columnFormat);
+    scan.scanPattern = SCAN_PATTERN_RISLEY_PRISM;
+    scan.scanMode = SCAN_MODE_RISLEY_PRISM;
+    scan.risley_prisms = prisms;
+    scan.risley_refractive_index_air = refractive_index_air;
+    scan.pulse_period = 1.0 / double(pulse_rate_hz); // set early so risleyBodyDirection() below uses the real per-pulse time
+
+    // Estimate the emergent circular field of view by sampling the rosette over a bounded number of pulses, then set the
+    // zenith bounds to a cone of that half-angle about the optical axis (+y, zenith pi/2). Clamped to [0, pi].
+    const size_t Nsample = std::min<size_t>(Npulses, 20000);
+    float max_halfangle = 0.f;
+    for (size_t k = 0; k < Nsample; k++) {
+        helios::vec3 dir = risleyBodyDirection(scan, k);
+        float halfangle = std::acos(std::max(-1.f, std::min(1.f, dir.y))); // angle from the +y optical axis
+        if (halfangle > max_halfangle) {
+            max_halfangle = halfangle;
+        }
+    }
+    scan.thetaMin = std::max(0.f, 0.5f * float(M_PI) - max_halfangle);
+    scan.thetaMax = std::min(float(M_PI), 0.5f * float(M_PI) + max_halfangle);
+
+    return addScanMoving(scan, traj_t, traj_pos, traj_quat, lever_arm, boresight_rpy, pulse_rate_hz, t0);
+}
+
+uint LiDARcloud::addScanRisley(const std::vector<RisleyPrism> &prisms, double refractive_index_air, float pulse_rate_hz, const std::vector<double> &traj_t, const std::vector<vec3> &traj_pos, const std::vector<vec3> &traj_rpy,
+                               const vec3 &lever_arm, const vec3 &boresight_rpy, float exitDiameter, float beamDivergence, float rangeNoiseStdDev, float angleNoiseStdDev, const std::vector<std::string> &columnFormat, double t0) {
+
+    // Convert the per-sample roll/pitch/yaw Euler angles to quaternions, then delegate to the quaternion overload.
+    if (traj_rpy.size() != traj_t.size()) {
+        helios_runtime_error("ERROR (LiDARcloud::addScanRisley): trajectory arrays have inconsistent lengths (traj_t=" + std::to_string(traj_t.size()) + ", traj_rpy=" + std::to_string(traj_rpy.size()) + "). All trajectory arrays must have the same number of samples.");
+    }
+
+    std::vector<vec4> traj_quat;
+    traj_quat.reserve(traj_rpy.size());
+    for (const vec3 &rpy: traj_rpy) {
+        traj_quat.push_back(quat_from_rpy(rpy.x, rpy.y, rpy.z));
+    }
+
+    return addScanRisley(prisms, refractive_index_air, pulse_rate_hz, traj_t, traj_pos, traj_quat, lever_arm, boresight_rpy, exitDiameter, beamDivergence, rangeNoiseStdDev, angleNoiseStdDev, columnFormat, t0);
+}
+
 void LiDARcloud::addHitPoint(uint scanID, const vec3 &xyz, const SphericalCoord &direction) {
 
     // default color
@@ -750,7 +1058,7 @@ void LiDARcloud::addHitPoint(uint scanID, const vec3 &xyz, const SphericalCoord 
         helios_runtime_error("ERROR (LiDARcloud::addHitPoint): Hit point cannot be added to scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
     }
 
-    ScanMetadata scan = scans.at(scanID);
+    const ScanMetadata &scan = scans.at(scanID); // reference, not a per-hit copy (ScanMetadata holds vectors)
     int2 row_column = scan.direction2rc(direction);
 
     HitPoint hit(scanID, xyz, direction, row_column, color);
@@ -761,7 +1069,7 @@ void LiDARcloud::addHitPoint(uint scanID, const vec3 &xyz, const SphericalCoord 
 
 void LiDARcloud::addHitPoint(uint scanID, const vec3 &xyz, const int2 &row_column, const RGBcolor &color, const map<string, double> &data) {
 
-    ScanMetadata scan = scans.at(scanID);
+    const ScanMetadata &scan = scans.at(scanID); // reference, not a per-hit copy (ScanMetadata holds vectors)
     SphericalCoord direction = scan.rc2direction(row_column.x, row_column.y);
 
     HitPoint hit(scanID, xyz, direction, row_column, color);
@@ -1006,6 +1314,20 @@ double LiDARcloud::getScanRevolutions(uint scanID) const {
         helios_runtime_error("ERROR (LiDARcloud::getScanRevolutions): Cannot get revolution count for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
     }
     return scans.at(scanID).n_revolutions;
+}
+
+std::vector<RisleyPrism> LiDARcloud::getScanRisleyPrisms(uint scanID) const {
+    if (scanID >= scans.size()) {
+        helios_runtime_error("ERROR (LiDARcloud::getScanRisleyPrisms): Cannot get Risley prisms for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
+    }
+    return scans.at(scanID).risley_prisms;
+}
+
+double LiDARcloud::getScanRisleyRefractiveIndexAir(uint scanID) const {
+    if (scanID >= scans.size()) {
+        helios_runtime_error("ERROR (LiDARcloud::getScanRisleyRefractiveIndexAir): Cannot get the Risley air refractive index for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
+    }
+    return scans.at(scanID).risley_refractive_index_air;
 }
 
 helios::vec3 LiDARcloud::getHitXYZ(uint index) const {
@@ -3108,12 +3430,26 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio) {
     // Second pass: perform triangulation with adaptive filtering
     for (uint s = 0; s < getScanCount(); s++) {
 
+        // Cancellation checkpoint between scans: a cancelled run discards any mesh built so far and
+        // returns empty (triangulationcomputed stays false) rather than starting the next scan.
+        if (triangulationCancelled(cancel_flag)) {
+            triangles.clear();
+            return;
+        }
+
         std::vector<int> Delaunay_inds;
 
         std::vector<Shx> pts, pts_copy;
 
         int count = 0;
         for (int r = 0; r < getHitCount(); r++) {
+
+            // Coarse cancellation poll inside the gather loop (~every 128k hits) so a huge single
+            // scan can be aborted before it even reaches the Delaunay call.
+            if ((r & 0x1FFFF) == 0 && triangulationCancelled(cancel_flag)) {
+                triangles.clear();
+                return;
+            }
 
             if (getHitScanID(r) == s && getHitGridCell(r) >= 0) {
                 // Auto-filter first returns for multi-return data
@@ -3192,10 +3528,24 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio) {
             std::cout << "starting triangulation for scan " << s << "..." << std::endl;
         }
 
+        // Cancellation poll immediately before the (uninterruptible) Delaunay call: if the caller
+        // already requested an abort, skip this scan's CDT work entirely and return empty.
+        if (triangulationCancelled(cancel_flag)) {
+            triangles.clear();
+            return;
+        }
+
         // CDT uses robust geometric predicates, so the s_hull-era
         // rotate-and-retry recovery is no longer needed; a failure here is
         // deterministic and the scan is skipped.
         int success = triangulate_CDT(pts, triads);
+
+        // Cancellation poll immediately after CDT: bail before building the output mesh so a run
+        // cancelled during the (one-scan-bounded) tessellation still aborts promptly.
+        if (triangulationCancelled(cancel_flag)) {
+            triangles.clear();
+            return;
+        }
 
         if (success != 1) {
             if (printmessages) {
@@ -3209,6 +3559,12 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio) {
         triangulation_candidate_count += triads.size();
 
         for (int t = 0; t < triads.size(); t++) {
+
+            // Coarse cancellation poll inside the triad-build loop (~every 128k triangles).
+            if ((t & 0x1FFFF) == 0 && triangulationCancelled(cancel_flag)) {
+                triangles.clear();
+                return;
+            }
 
             int ID0 = Delaunay_inds.at(triads.at(t).a);
             int ID1 = Delaunay_inds.at(triads.at(t).b);
@@ -3536,6 +3892,13 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const 
     // Second pass: perform triangulation with adaptive filtering
     for (uint s = 0; s < getScanCount(); s++) {
 
+        // Cancellation checkpoint between scans: a cancelled run discards any mesh built so far and
+        // returns empty (triangulationcomputed stays false) rather than starting the next scan.
+        if (triangulationCancelled(cancel_flag)) {
+            triangles.clear();
+            return;
+        }
+
         std::vector<int> Delaunay_inds;
 
         std::vector<Shx> pts, pts_copy;
@@ -3545,6 +3908,12 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const 
 
         for (int r = 0; r < getHitCount(); r++) {
 
+            // Coarse cancellation poll inside the gather loop (~every 128k hits) so a huge single
+            // scan can be aborted before it even reaches the Delaunay call.
+            if ((r & 0x1FFFF) == 0 && triangulationCancelled(cancel_flag)) {
+                triangles.clear();
+                return;
+            }
 
             if (getHitScanID(r) == s && getHitGridCell(r) >= 0) {
 
@@ -3646,10 +4015,24 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const 
             std::cout << "starting triangulation for scan " << s << "..." << std::endl;
         }
 
+        // Cancellation poll immediately before the (uninterruptible) Delaunay call: if the caller
+        // already requested an abort, skip this scan's CDT work entirely and return empty.
+        if (triangulationCancelled(cancel_flag)) {
+            triangles.clear();
+            return;
+        }
+
         // CDT uses robust geometric predicates, so the s_hull-era
         // rotate-and-retry recovery is no longer needed; a failure here is
         // deterministic and the scan is skipped.
         int success = triangulate_CDT(pts, triads);
+
+        // Cancellation poll immediately after CDT: bail before building the output mesh so a run
+        // cancelled during the (one-scan-bounded) tessellation still aborts promptly.
+        if (triangulationCancelled(cancel_flag)) {
+            triangles.clear();
+            return;
+        }
 
         if (success != 1) {
             if (printmessages) {
@@ -3663,6 +4046,12 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const 
         triangulation_candidate_count += triads.size();
 
         for (int t = 0; t < triads.size(); t++) {
+
+            // Coarse cancellation poll inside the triad-build loop (~every 128k triangles).
+            if ((t & 0x1FFFF) == 0 && triangulationCancelled(cancel_flag)) {
+                triangles.clear();
+                return;
+            }
 
             int ID0 = Delaunay_inds.at(triads.at(t).a);
             int ID1 = Delaunay_inds.at(triads.at(t).b);
@@ -5599,6 +5988,16 @@ void LiDARcloud::disableGPUAcceleration() {
     }
 }
 
+bool LiDARcloud::isGPUAvailable() const {
+    return CollisionDetection::isGPUAvailable(); // static - valid even before the instance exists
+}
+
+bool LiDARcloud::isGPUAccelerationEnabled() const {
+    // collision_detection is created lazily; before then the effective state is the
+    // constructor default, which is isGPUAvailable().
+    return collision_detection != nullptr ? collision_detection->isGPUAccelerationEnabled() : CollisionDetection::isGPUAvailable();
+}
+
 void LiDARcloud::calculateHitGridCell() {
 
     if (printmessages) {
@@ -6477,7 +6876,17 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         progress_bar.setCallback(progress_callback);
     }
 
+    if (synthetic_scan_progress != nullptr) {
+        *synthetic_scan_progress = 0;
+    }
+
     for (int s = 0; s < getScanCount(); s++) {
+
+        // Surface the current scan index on the caller-registered polling counter (if any) at the very top of the loop,
+        // before any early-continue, so a host thread watching it advances even for scans whose rays miss the scene.
+        if (synthetic_scan_progress != nullptr) {
+            *synthetic_scan_progress = s;
+        }
 
         // Report progress at the start of each scan iteration. Using the absolute step (number of scans already
         // completed) keeps the callback firing on every code path through the loop body, including the early
@@ -6511,7 +6920,7 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         //   - roll  = right-hand rotation about X_body (the lateral axis),
         //   - pitch = right-hand rotation about Y_body (the forward / azimuth-zero axis).
         // The rotation order is yaw (azimuth) first, then pitch, then roll. A level, north-facing scanner has
-        // roll = pitch = azimuth = 0. When phiMin + azimuth = 0 the azimuth-zero direction is +y, so X_body = +x and
+        // roll = pitch = azimuth = 0. When phiMin - azimuth = 0 the azimuth-zero direction is +y, so X_body = +x and
         // Y_body = +y (tilt reduces to roll about world-x, pitch about world-y).
         float scanTiltRoll = getScanTiltRoll(s);
         float scanTiltPitch = getScanTiltPitch(s);
@@ -6521,8 +6930,12 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         const helios::vec3 tilt_pivot = helios::make_vec3(0, 0, 0); // rotate directions about the origin (pure rotation of the unit vector)
         const helios::vec3 vertical_axis = helios::make_vec3(0.f, 0.f, 1.f); // world +z: azimuth (yaw) rotation axis
         // Body frame from the azimuth-zero (phiMin) direction, offset by the scanner heading. sphere2cart with zero
-        // elevation gives the horizontal heading; adding scanAzimuthOffset rotates that heading about world +z.
-        const float heading = phimin + scanAzimuthOffset;
+        // elevation gives the horizontal heading; the azimuth offset then rotates that heading about world +z by the
+        // SAME right-hand rotation applied to the ray directions below. Because phi is measured CW-from-+y while the
+        // offset is a CCW (right-hand) rotation about +z, advancing the heading by the offset SUBTRACTS it from the
+        // phi-angle: rotating (sin phiMin, cos phiMin) CCW by az gives (sin(phiMin-az), cos(phiMin-az)). Using +az here
+        // reflected the body frame about the un-offset heading, so any tilt leaned the wrong way once a heading was set.
+        const float heading = phimin - scanAzimuthOffset;
         const helios::vec3 forward_axis = helios::make_vec3(sinf(heading), cosf(heading), 0.f); // Y_body: azimuth-zero heading (after offset)
         const helios::vec3 lateral_axis = helios::make_vec3(cosf(heading), -sinf(heading), 0.f); // X_body = Y_body x (0,0,1)
 
@@ -6531,6 +6944,10 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         // its own fixed (generally non-uniform) zenith angle. Both patterns share the same azimuth sweep and grid storage.
         const ScanMetadata &scan = scans.at(s);
         const bool spinning_multibeam = (scan.scanPattern == SCAN_PATTERN_SPINNING_MULTIBEAM);
+        // A Risley-prism (Livox-style rosette) scan is non-separable: each column is one pulse whose body-frame direction comes
+        // from the rotating prism optics at that pulse's time. It is stored as a single row (Ntheta=1), so the (i,j) loop below
+        // visits one direction per column; the per-pulse direction replaces the raster/spinning theta-phi computation.
+        const bool risley = (scan.scanPattern == SCAN_PATTERN_RISLEY_PRISM);
 
         // Moving-platform support: when the scan carries a 6-DOF trajectory (see addScanMoving), each grid cell's pulse has
         // its own acquisition time, emission origin, and orientation. The pulse time is t = t0 + ordinal*pulse_period, where
@@ -6557,16 +6974,37 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         // A continuously-spinning multibeam scan samples a periodic azimuth: the columns are uniformly spaced with no
         // duplicated wrap column, so dphi = (phimax-phimin)/Nphi (exclusive endpoint). This matches the periodic
         // convention already used by ScanMetadata::rc2direction()/direction2rc(). A raster scan samples inclusive
-        // endpoints (dphi = (phimax-phimin)/(Nphi-1)) and is left unchanged.
+        // endpoints (dphi = (phimax-phimin)/(Nphi-1)); dphi is the column-to-column azimuth step and also sets the
+        // continuous-azimuth drift applied within each column below.
         const float dphi = spinning_multibeam ? (phimax - phimin) / float(Nphi) : ((Nphi > 1) ? (phimax - phimin) / float(Nphi - 1) : 0.f);
         const float dtheta = (Ntheta > 1) ? (thetamax - thetamin) / float(Ntheta - 1) : 0.f;
+
+        // Continuous-azimuth (skewed-column) raster sweep. A real terrestrial scanner sweeps the beam vertically with a fast
+        // mirror while the entire head rotates continuously in azimuth, so the azimuth advances during each zenith sweep and the
+        // zenith columns are slightly skewed (tilted) rather than perfectly vertical. We model this for the raster pattern by
+        // drifting the azimuth across the inner (zenith) loop: over one full column (i = 0..Ntheta-1) the azimuth advances by
+        // exactly one column step dphi, so row i of column j ends where row 0 of column j+1 begins (seamless continuous rotation,
+        // no azimuth gaps or overlap). The per-row increment is therefore dphi/Ntheta. This drift is intentionally NOT reflected
+        // in the nominal ScanMetadata::rc2direction()/direction2rc() grid mapping: it is sub-cell (dphi/Ntheta per step) and
+        // hit-point binning uses the nominal grid. The skew is disabled for spinning multibeam (all channels in a column fire at
+        // one azimuth; azimuth steps between firings) and for Risley (non-separable, no zenith/azimuth grid).
+        const float dphi_per_row = (!spinning_multibeam && !risley && Ntheta > 0) ? dphi / float(Ntheta) : 0.f;
 
         for (uint j = 0; j < Nphi; j++) {
             float phi = phimin + float(j) * dphi;
             for (uint i = 0; i < Ntheta; i++) {
-                float theta_z = spinning_multibeam ? scan.beamZenithAngles.at(i) : (thetamin + float(i) * dtheta);
-                float theta_elev = 0.5f * M_PI - theta_z;
-                helios::vec3 dir = sphere2cart(helios::make_SphericalCoord(1.f, theta_elev, phi));
+                helios::vec3 dir;
+                if (risley) {
+                    // Body-frame beam direction from the rotating prism optics at this pulse's time. With Ntheta=1 the column j
+                    // is the pulse index; the direction then flows into the same is_moving composition as every other pattern.
+                    dir = risleyBodyDirection(scan, j);
+                } else {
+                    float theta_z = spinning_multibeam ? scan.beamZenithAngles.at(i) : (thetamin + float(i) * dtheta);
+                    float theta_elev = 0.5f * M_PI - theta_z;
+                    // Skewed azimuth for the raster sweep (dphi_per_row is zero for spinning multibeam, leaving fixed-azimuth columns).
+                    float phi_skew = phi + float(i) * dphi_per_row;
+                    dir = sphere2cart(helios::make_SphericalCoord(1.f, theta_elev, phi_skew));
+                }
                 if (is_moving) {
                     // Trajectory-driven pose. The static scanTilt is not applied here (addScanMoving requires it to be zero):
                     // attitude is composed as dir_world = R(quat) * R(boresight) * dir_body, and the origin includes the lever arm.
@@ -6849,6 +7287,57 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
             helios_runtime_error("ERROR (LiDARcloud::syntheticScan): failed to allocate ray-tracing scratch buffers for a beam chunk of " + std::to_string(chunk_capacity) + " sub-rays. Lower the synthetic-scan memory budget (setSyntheticScanMemoryBudget) or reduce rays_per_pulse.");
         }
 
+        // Pre-warm the texture color cache (serial) so the parallelized per-beam post-processing below performs only
+        // read-only lookups into it. load_texture_colors() lazily inserts into a shared std::map, which would be a data
+        // race under OpenMP; warming every used texture up front makes the in-loop sample_hit_color() calls race-free.
+        // Untextured scenes collect no filenames, so this is a no-op.
+        {
+            std::set<std::string> warm_tex_files;
+            std::vector<uint> all_uuids = context->getAllUUIDs();
+            for (uint warm_uuid: all_uuids) {
+                std::string tf = context->getPrimitiveTextureFile(warm_uuid);
+                if (!tf.empty()) {
+                    warm_tex_files.insert(tf);
+                }
+            }
+            for (const std::string &tf: warm_tex_files) {
+                load_texture_colors(tf);
+            }
+        }
+
+        // Salt for the per-beam range-noise RNG seeds (only used when range noise is enabled). Drawn once from the Context
+        // RNG so the now thread-parallel range noise stays controllable via Context::seedRandomGenerator and reproducible;
+        // each beam's seed = salt + global beam index, making the realization independent of thread count / scheduling.
+        const unsigned int range_noise_seed_salt = (range_noise_stddev > 0.f) ? static_cast<unsigned int>(context->randu() * 4294967000.0f) : 0u;
+
+        // Per-beam post-processing outputs, collected in parallel then appended to the point cloud in beam order below.
+        struct SyntheticBeamHit {
+            helios::vec3 xyz;
+            helios::RGBcolor color;
+            std::map<std::string, double> data;
+        };
+        struct SyntheticBeamOutput {
+            std::vector<SyntheticBeamHit> hits;
+            helios::SphericalCoord dir_sph;
+            int npulse_hits = 0; // number of sub-ray hits forming this beam's waveform (drives the zero/one/multi counters)
+        };
+
+        // Constants/helpers for the stratified Gaussian footprint sampler (used by the per-sub-ray generation below).
+        // GOLDEN_ANGLE = pi*(3 - sqrt(5)): the azimuthal increment that spreads successive sub-rays maximally evenly
+        // around the footprint (Vogel/sunflower spiral), shared by the divergence-cone and exit-aperture samplers.
+        constexpr float GOLDEN_ANGLE = 2.39996322972865332f; // pi*(3 - sqrt(5))
+        // Base-2 radical inverse (van der Corput). The aperture radial strata are driven by this low-discrepancy
+        // sequence while the divergence radial strata use linear strata; using two different sequences decorrelates
+        // the two independent Gaussian radial dimensions so the joint footprint stays an even disk (no diagonal smear).
+        auto radicalInverse2 = [](uint32_t i) -> float {
+            i = (i << 16) | (i >> 16);
+            i = ((i & 0x55555555u) << 1) | ((i & 0xAAAAAAAAu) >> 1);
+            i = ((i & 0x33333333u) << 2) | ((i & 0xCCCCCCCCu) >> 2);
+            i = ((i & 0x0F0F0F0Fu) << 4) | ((i & 0xF0F0F0F0u) >> 4);
+            i = ((i & 0x00FF00FFu) << 8) | ((i & 0xFF00FF00u) >> 8);
+            return float(i) * 2.3283064365386963e-10f; // / 2^32
+        };
+
         for (size_t chunk_begin = 0; chunk_begin < N; chunk_begin += chunk_beams) {
             // Cancellation checkpoint between chunks. castRaysUnified() already short-circuits an in-flight trace to all
             // misses when the flag is set, but without breaking here the loop would still generate rays and run the
@@ -6862,101 +7351,155 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
             const size_t chunk_end = std::min(chunk_begin + chunk_beams, N);
             const size_t chunk_N = chunk_end - chunk_begin; // beams in this chunk
 
-            // Generate chunk_N*Npulse perturbed ray directions + Gaussian footprint weights for this chunk's beams.
-            // Per-sub-ray Gaussian footprint weight: a real laser beam has a Gaussian transverse irradiance profile rather
-            // than the top-hat implied by equal sub-ray weighting, so each sub-ray carries a weight w = exp(-2 (r/r0)^2)
-            // (r0 = the 1/e^2 radius). The divergence-cone and aperture offsets contribute independent Gaussian factors; the
-            // center ray and zero-spread beams have unit weight. These weights drive the energy-weighted range centroid and
-            // intensity (energy fraction) in the merge below. subray_weight is reset to 1 for the live range each chunk.
-            std::fill(subray_weight.begin(), subray_weight.begin() + chunk_N * size_t(Npulse), 1.0f);
+            // Generate this chunk's chunk_N*Npulse sub-ray directions, origins, and (unit) footprint weights. The
+            // expensive part is the per-sub-ray trigonometry (cart2sphere/sphere2cart/cos/sin/sqrt/normalize), which is
+            // parallelized over beams below.
+            //
+            // The beam footprint is importance-sampled: rather than drawing sub-rays uniformly over a disk and then
+            // re-weighting each by a Gaussian envelope (which wastes the outer, near-zero-weight rays and hard-truncates
+            // the beam at its 1/e^2 radius), each radial offset is drawn FROM the Gaussian via the Rayleigh inverse-CDF
+            // -- the Gaussian irradiance profile I(r) ~ exp(-2 (r/r0)^2) now lives in the sample DENSITY, so every
+            // sub-ray carries unit weight and the beam wings are sampled in proportion to their energy. Coverage is made
+            // even and stripe-free with stratification: linear radial strata + golden-angle azimuth for the divergence
+            // cone, and a base-2 van der Corput radial sequence + golden-angle azimuth for the exit aperture (the two
+            // independent radial dimensions use different sequences so the joint footprint does not develop a diagonal
+            // artifact). The per-beam stratum offsets are Cranley-Patterson rotations (one random radial shift + one
+            // random azimuth base per beam) so the pattern is decorrelated pulse-to-pulse rather than a fixed lattice.
+            //
+            // The random per-beam offsets are drawn FIRST, serially, into divergence_rand/aperture_rand because the
+            // generation loop below is OpenMP-parallel and Context's mt19937 (context->randu()) is not thread-safe;
+            // pre-drawing also keeps a seeded Context (Context::seedRandomGenerator) reproducible independent of thread
+            // count/scheduling. NOTE: this sampler intentionally changes the RNG consumption (two draws per BEAM, not per
+            // sub-ray) and the sub-ray pattern relative to the previous uniform+weight sampler -- it is NOT bit-identical
+            // to the old output by design. subray_weight stays at its initialized value of 1 in every new path; the array
+            // and its plumbing are retained as a fallback for future non-Gaussian beam profiles that need explicit weights.
+            const bool draw_divergence = (beam_divergence != 0.0f && Npulse > 1);
+            const bool draw_aperture = (exit_diameter > 0.0f);
 
-            for (size_t local = 0; local < chunk_N; local++) {
-                helios::vec3 base_dir = nominal_directions[chunk_begin + local]; // length-N array: global index
-
-                for (int p = 0; p < Npulse; p++) {
-                    if (p == 0 || beam_divergence == 0.0f) {
-                        // First ray OR zero divergence: use nominal direction
-                        // When beam_divergence=0, all rays should be identical to avoid floating-point precision errors
-                        direction[local * Npulse + p] = base_dir;
-                    } else {
-                        // Subsequent rays with non-zero divergence: apply perturbation
-                        // Sample random angular offset within divergence cone using Context's RNG
-                        float ru = context->randu();
-                        float rv = context->randu();
-
-                        float theta_offset = beam_divergence * sqrt(ru); // radial angular distance
-                        float phi_offset = 2.0f * M_PI * rv; // azimuthal angle
-
-                        // Gaussian beam profile: weight this sub-ray by its angular offset from the beam axis, treating
-                        // beam_divergence as the 1/e^2 half-angle.
-                        float ratio_ang = theta_offset / beam_divergence;
-                        subray_weight[local * Npulse + p] *= expf(-2.0f * ratio_ang * ratio_ang);
-
-                        // Apply small angle perturbation in spherical coordinates
-                        helios::SphericalCoord base_spherical = helios::cart2sphere(base_dir);
-
-                        // Perturb in elevation space (constructor takes elevation, not zenith)
-                        float new_elevation = base_spherical.elevation + theta_offset * cos(phi_offset);
-                        float new_azimuth = base_spherical.azimuth + theta_offset * sin(phi_offset) / fmax(cos(base_spherical.elevation), 1e-6f);
-
-                        // Create perturbed direction
-                        helios::vec3 perturbed_dir = helios::sphere2cart(helios::SphericalCoord(1.0f, new_elevation, new_azimuth));
-                        perturbed_dir.normalize();
-
-                        direction[local * Npulse + p] = perturbed_dir;
-                    }
+            // Serial RNG pre-draw: two values per BEAM for each enabled footprint dimension -- a radial stratum shift and
+            // an azimuth base rotation (the divergence azimuth and aperture azimuth use independent rotations, so only the
+            // radial dimension needs the separate van der Corput sequence to decorrelate). Buffers stay empty when no
+            // sampling is needed (rays_per_pulse==1, zero divergence, point source).
+            std::vector<float> divergence_rand, aperture_rand;
+            if (draw_divergence) {
+                divergence_rand.resize(chunk_N * 2, 0.f);
+                for (size_t local = 0; local < chunk_N; local++) {
+                    divergence_rand[local * 2] = context->randu(); // xi_r: radial stratum jitter
+                    divergence_rand[local * 2 + 1] = 2.0f * float(M_PI) * context->randu(); // phi0: azimuth base rotation
                 }
             }
-
-            // Generate ray origins for this chunk based on exit diameter
-            if (exit_diameter > 0.0f) {
-                // Finite aperture: distribute ray origins across disk perpendicular to beam direction
-                float radius = exit_diameter * 0.5f;
-
+            if (draw_aperture) {
+                aperture_rand.resize(chunk_N * 2, 0.f);
                 for (size_t local = 0; local < chunk_N; local++) {
-                    helios::vec3 base_dir = nominal_directions[chunk_begin + local];
-
-                    // Construct orthonormal basis {u, v, base_dir} for disk perpendicular to beam
-                    helios::vec3 reference = (fabs(base_dir.z) < 0.9f) ? helios::make_vec3(0, 0, 1) : helios::make_vec3(1, 0, 0);
-                    helios::vec3 u = helios::cross(base_dir, reference);
-                    u.normalize();
-                    helios::vec3 v = helios::cross(base_dir, u); // Already normalized since base_dir and u are orthonormal
-
-                    for (int p = 0; p < Npulse; p++) {
-                        // Uniform sampling on disk using sqrt transform
-                        float ru = context->randu();
-                        float rv = context->randu();
-                        float r_sample = radius * sqrtf(ru); // sqrt for uniform area distribution
-                        float theta = 2.0f * M_PI * rv;
-                        float x_disk = r_sample * cosf(theta);
-                        float y_disk = r_sample * sinf(theta);
-
-                        // Gaussian beam profile across the finite aperture: weight by the radial offset on the exit disk,
-                        // treating the aperture radius as the 1/e^2 radius. Combines multiplicatively with the divergence weight.
-                        float ratio_ap = r_sample / radius;
-                        subray_weight[local * Npulse + p] *= expf(-2.0f * ratio_ap * ratio_ap);
-
-                        // Transform disk point to world space (per-beam origin: scan_origin for static, platform pose for moving)
-                        helios::vec3 offset = u * x_disk + v * y_disk;
-                        ray_origins[local * Npulse + p] = pulse_origin[chunk_begin + local] + offset;
-                    }
+                    aperture_rand[local * 2] = context->randu(); // xi_ap: aperture radial Cranley-Patterson offset
+                    aperture_rand[local * 2 + 1] = 2.0f * float(M_PI) * context->randu(); // phi0_ap: aperture azimuth rotation
                 }
-            } else {
-                // Point source: all rays originate from the beam's emission origin (scan_origin for static scans)
-                for (size_t local = 0; local < chunk_N; local++) {
-                    for (int p = 0; p < Npulse; p++) {
-                        ray_origins[local * Npulse + p] = pulse_origin[chunk_begin + local];
+            }
+            // Truncate the Gaussian footprint sampling at the detectability radius. The radial irradiance falls off as
+            // exp(-2 r^2/r0^2); beyond the radius where it drops below the detection threshold, no return there could
+            // clear detectReturnsFromSubrays' detection_threshold, so sampling further out only spends rays and injects
+            // tail shot-noise -- with unit weights a lone outer sub-ray would otherwise create a full 1/Npulse-weight
+            // return at a location the real (attenuated) beam could never illuminate enough to detect. The radial CDF is
+            // F(r) = 1 - exp(-2 r^2/r0^2), so truncating at that radius means stratifying the uniform CDF variate over
+            // [0, 1 - thr] rather than [0, 1) -- this also removes the previous hard 3*r0 clamp and its tail pile-up.
+            // When no detection threshold is set, trim only the negligible outer 0.1% of beam energy (~1.86 r0) as a safe
+            // default. The 0.5 cap keeps the beam core sampled even if an aggressive (>50%) threshold is requested.
+            const float footprint_trim = fminf(0.5f, (detection_threshold > 0.f) ? detection_threshold : 1.0e-3f);
+            const float u_max_foot = 1.0f - footprint_trim; // upper bound of the kept CDF interval (1 - exp(-2 R_max^2/r0^2))
+
+            const float aperture_radius = 0.5f * exit_diameter;
+#pragma omp parallel for schedule(dynamic, 256)
+            for (int local = 0; local < static_cast<int>(chunk_N); local++) {
+                const size_t global_r = chunk_begin + local; // length-N array index
+                const helios::vec3 base_dir = nominal_directions[global_r];
+                const helios::vec3 beam_origin = pulse_origin[global_r];
+
+                // Orthonormal disk basis {u, v} perpendicular to the beam, for finite-aperture origins (constant per beam).
+                helios::vec3 u, v;
+                if (draw_aperture) {
+                    const helios::vec3 reference = (fabs(base_dir.z) < 0.9f) ? helios::make_vec3(0, 0, 1) : helios::make_vec3(1, 0, 0);
+                    u = helios::cross(base_dir, reference);
+                    u.normalize();
+                    v = helios::cross(base_dir, u); // already unit (base_dir and u are orthonormal)
+                }
+                // Beam-axis spherical coordinates for the divergence perturbation (constant per beam).
+                const helios::SphericalCoord base_spherical = helios::cart2sphere(base_dir);
+
+                for (int p = 0; p < Npulse; p++) {
+                    const size_t idx = local * size_t(Npulse) + size_t(p);
+                    float w = 1.0f;
+
+                    // Sub-ray direction (stratified Gaussian-warped, importance-sampled): the first ray and zero-divergence
+                    // beams use the nominal axis (exact center ray, no floating-point spread); other sub-rays are drawn
+                    // FROM the divergence-cone Gaussian so each carries unit weight.
+                    if (p == 0 || beam_divergence == 0.0f) {
+                        direction[idx] = base_dir;
+                    } else {
+                        const float xi_r = divergence_rand[local * 2]; // per-beam radial stratum jitter
+                        const float phi0 = divergence_rand[local * 2 + 1]; // per-beam azimuth base rotation
+                        const int j = p - 1; // p==0 is reserved for the center ray
+                        const int M = Npulse - 1; // number of stratified sub-rays
+                        float uu = (float(j) + 0.5f) / float(M) + xi_r; // Cranley-Patterson-rotated radial stratum
+                        uu -= floorf(uu); // wrap into [0,1)
+                        uu *= u_max_foot; // map onto [0, u_max_foot): truncate the undetectable Gaussian tail (no pile-up)
+                        // Rayleigh inverse-CDF for P(R<=theta)=1-exp(-2 theta^2/D^2), D=beam_divergence (the 1/e^2 half-angle):
+                        // density ~ Gaussian irradiance, so the Gaussian lives in the sample density and the weight stays 1.
+                        // 1 - uu >= footprint_trim > 0, so logf is always finite (no separate guard needed).
+                        float theta_offset = beam_divergence * sqrtf(-0.5f * logf(1.0f - uu));
+                        const float phi_offset = phi0 + float(j) * GOLDEN_ANGLE; // golden-angle azimuth
+                        // Perturb in elevation space (SphericalCoord takes elevation, not zenith).
+                        const float new_elevation = base_spherical.elevation + theta_offset * cosf(phi_offset);
+                        const float new_azimuth = base_spherical.azimuth + theta_offset * sinf(phi_offset) / fmaxf(cosf(base_spherical.elevation), 1e-6f);
+                        helios::vec3 perturbed_dir = helios::sphere2cart(helios::SphericalCoord(1.0f, new_elevation, new_azimuth));
+                        perturbed_dir.normalize();
+                        direction[idx] = perturbed_dir;
                     }
+
+                    // Sub-ray origin (stratified Gaussian-warped, importance-sampled over the exit aperture): point source
+                    // (exit_diameter==0) emits all rays from beam_origin; otherwise origins are drawn FROM the aperture
+                    // Gaussian so each carries unit weight. The radial dimension uses a base-2 van der Corput sequence
+                    // (radicalInverse2) so it decorrelates from the divergence radial strata above.
+                    if (draw_aperture) {
+                        if (p == 0) {
+                            ray_origins[idx] = beam_origin; // axial ray: aperture center
+                        } else {
+                            const float xi_ap = aperture_rand[local * 2]; // per-beam radial CP offset
+                            const float phi0_ap = aperture_rand[local * 2 + 1]; // per-beam azimuth rotation
+                            const int j = p - 1; // mirror the direction sampler's center-ray reservation
+                            float s = radicalInverse2((uint32_t)(j + 1)) + xi_ap;
+                            s -= floorf(s); // wrap into [0,1)
+                            s *= u_max_foot; // truncate the undetectable aperture tail at the same detectability radius (no pile-up)
+                            // Rayleigh inverse-CDF, aperture_radius = the 1/e^2 radius (matches the existing convention).
+                            float r_sample = aperture_radius * sqrtf(-0.5f * logf(1.0f - s));
+                            const float theta = phi0_ap + float(j) * GOLDEN_ANGLE; // golden-angle azimuth
+                            const float x_disk = r_sample * cosf(theta);
+                            const float y_disk = r_sample * sinf(theta);
+                            const helios::vec3 offset = u * x_disk + v * y_disk;
+                            ray_origins[idx] = beam_origin + offset;
+                        }
+                    } else {
+                        ray_origins[idx] = beam_origin;
+                    }
+
+                    subray_weight[idx] = w; // w == 1 in every path above; Gaussian is now carried by the sample density
                 }
             }
 
             // Trace this chunk's rays into the scratch result buffers (BVH already built by prepareUnifiedRayTracing).
-            castRaysUnified(chunk_N * size_t(Npulse), ray_origins, direction, hit_t, hit_fnorm, hit_ID);
+            // The chunk buffers are laid out pulse-contiguously (sub-ray p of beam local at local*Npulse + p), so passing
+            // Npulse as the packet size lets the collision layer traverse each pulse's coherent sub-rays together.
+            castRaysUnified(chunk_N * size_t(Npulse), ray_origins, direction, hit_t, hit_fnorm, hit_ID, size_t(Npulse));
 
-            // looping over beams in this chunk
-            for (size_t local = 0; local < chunk_N; local++) {
+            // Post-process beams in this chunk. The per-beam waveform reduction, color/primitive-data sampling, and per-hit
+            // data-map construction are independent and run in parallel into per-beam output slots; the results are then
+            // merged into the shared point cloud (the merge below pre-sizes the columnar storage and scatters hits into
+            // distinct rows, so it is also parallel while reproducing the serial recorded values).
+            std::vector<SyntheticBeamOutput> beam_outputs(chunk_N);
+#pragma omp parallel for schedule(dynamic, 256)
+            for (int local = 0; local < static_cast<int>(chunk_N); local++) {
                 const size_t r = local; // index into the per-chunk scratch buffers
                 const size_t global_r = chunk_begin + local; // index into the length-N beam arrays
+                SyntheticBeamOutput &beam_out = beam_outputs[local];
 
             // Sub-ray hits for this beam, each row {t, cos, ID, weight}. The Gaussian footprint weight is carried through
             // so the analytic-waveform return detection (detectReturnsFromSubrays) can form energy-weighted ranges and
@@ -6981,22 +7524,12 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
                 }
             }
 
-            if (t_pulse.size() == 0) {
-                beams_with_zero_hits++;
-            } else if (t_pulse.size() == 1) {
-                beams_with_one_hit++;
-            } else {
-                beams_with_multi_hits++;
-            }
+            // Record this beam's sub-ray-hit class; the shared zero/one/multi counters are tallied in the serial merge.
+            beam_out.npulse_hits = int(t_pulse.size());
 
             // Detect discrete returns from the analytic sum-of-Gaussians waveform. Returns rows
             // {distance, intensity, nPulseHit, IDmap, echo_width}.
             std::vector<std::vector<float>> t_hit = detectReturnsFromSubrays(t_pulse, total_pulse_weight, Npulse, range_resolution, detection_threshold, max_returns, single_return_selection, miss_distance);
-
-            float average = 0;
-            for (size_t hit = 0; hit < t_hit.size(); hit++) {
-                average += t_hit.at(hit).at(0) / float(t_hit.size());
-            }
 
             // Count non-miss returns for proper target_index assignment
             int non_miss_count = 0;
@@ -7004,6 +7537,16 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
                 if (t_hit.at(hit).at(0) < 0.98f * miss_distance) {
                     non_miss_count++;
                 }
+            }
+
+            // Per-beam range-noise RNG, constructed only when noise is enabled and seeded deterministically by the global
+            // beam index so the (thread-parallel) noise is reproducible and independent of thread count. When
+            // range_noise_stddev==0 no random numbers are drawn and the output is bit-identical to the serial path.
+            std::mt19937 beam_rng;
+            std::normal_distribution<float> range_noise_dist;
+            if (range_noise_stddev > 0.f) {
+                beam_rng.seed(range_noise_seed_salt + static_cast<unsigned int>(global_r));
+                range_noise_dist = std::normal_distribution<float>(0.f, range_noise_stddev);
             }
 
             int real_hit_index = 0;
@@ -7019,8 +7562,8 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
                 // reconstructed along the nominal beam direction below, rather than perturbing (x,y,z) isotropically. Misses keep
                 // their ray-tracer no-hit distance and are not noise-displaced. Each return draws independently (per-return noise).
                 float measured_distance = t_hit.at(hit).at(0);
-                if (!is_miss && range_noise_stddev > 0) {
-                    measured_distance += context->randn(0.f, range_noise_stddev);
+                if (!is_miss && range_noise_stddev > 0.f) {
+                    measured_distance += range_noise_dist(beam_rng);
                 }
 
                 // Assign target_index: misses get 99, real hits get sequential index (0, 1, 2...)
@@ -7033,7 +7576,19 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
 
                 data["is_miss"] = is_miss ? 1.0 : 0.0; // canonical miss flag
                 data["target_count"] = t_hit.size();
-                data["deviation"] = fabs(measured_distance - average);
+                // Pulse-shape deviation: a dimensionless measure of how distorted (broadened) this return's pulse is
+                // relative to a clean transmit pulse, analogous to the RIEGL "pulse shape deviation" confidence metric
+                // (small = clean single-surface return, large = mixed/sloped/blended return). echo_width is the
+                // pulse-width-convolved range spread, echo_width = sqrt(range_resolution^2 + var), so sqrt(var) is the
+                // excess broadening beyond the transmit pulse and dividing by range_resolution makes it dimensionless.
+                // 0 for misses, clean returns, and the degenerate no-pulse-width case (no reference pulse to deviate from).
+                const float echo_width = t_hit.at(hit).at(4);
+                float deviation = 0.f;
+                if (!is_miss && range_resolution > 0.f) {
+                    const float excess_var = echo_width * echo_width - range_resolution * range_resolution;
+                    deviation = (excess_var > 0.f) ? sqrtf(excess_var) / range_resolution : 0.f;
+                }
+                data["deviation"] = deviation;
                 // Real per-pulse acquisition time. The pulse ordinal is its position in the firing sequence
                 // (ordinal = Ntheta*j + i); scaling by pulse_period and offsetting by t0 turns it into seconds. For static
                 // scans pulse_period=1 and t0=0, so this equals the historical grid ordinal. All returns of one pulse (this
@@ -7073,45 +7628,19 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
 
                     color = sample_hit_color(uint(UUID), p);
 
-                    // Sample arbitrary primitive-data fields named in the scan's column format onto
-                    // this hit. The column format is the source of truth: add a (non-standard) label
-                    // to the scan's column format and the scanner copies that primitive data here.
+                    // Sample arbitrary data fields named in the scan's column format onto this hit. The column
+                    // format is the source of truth: add a (non-standard) label to the scan's column format and the
+                    // scanner copies that data here. Each label is resolved from the hit primitive's own primitive
+                    // data first, then (on a miss) from the primitive's parent-object data, so a label may be sourced
+                    // from either primitive or object data.
                     for (const std::string &label: column_format) {
                         if (isStandardColumnToken(label)) {
                             continue;
                         }
-                        if (!context->doesPrimitiveDataExist(uint(UUID), label.c_str())) {
-                            continue;
-                        }
 
                         double value;
-                        switch (context->getPrimitiveDataType(label.c_str())) {
-                            case helios::HELIOS_TYPE_FLOAT: {
-                                float v;
-                                context->getPrimitiveData(uint(UUID), label.c_str(), v);
-                                value = double(v);
-                                break;
-                            }
-                            case helios::HELIOS_TYPE_DOUBLE: {
-                                double v;
-                                context->getPrimitiveData(uint(UUID), label.c_str(), v);
-                                value = v;
-                                break;
-                            }
-                            case helios::HELIOS_TYPE_INT: {
-                                int v;
-                                context->getPrimitiveData(uint(UUID), label.c_str(), v);
-                                value = double(v);
-                                break;
-                            }
-                            case helios::HELIOS_TYPE_UINT: {
-                                uint v;
-                                context->getPrimitiveData(uint(UUID), label.c_str(), v);
-                                value = double(v);
-                                break;
-                            }
-                            default:
-                                continue; // non-scalar primitive-data types are not transferable to hits
+                        if (!resolveScalarHitData(context, uint(UUID), label, value)) {
+                            continue;
                         }
 
                         if (label == "reflectivity_lidar") {
@@ -7144,11 +7673,97 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
                     data["reflectance"] = (abs_intensity > 0.0) ? 10.0 * log10(abs_intensity) : REFLECTANCE_FLOOR_DB;
                 }
 
-                addHitPoint(s, p, helios::cart2sphere(dir), color, data);
-
-                Nhits++;
+                // Stage this hit in the beam's output slot; appended to the cloud in beam order in the serial merge below.
+                beam_out.dir_sph = helios::cart2sphere(dir);
+                beam_out.hits.push_back(SyntheticBeamHit{p, color, std::move(data)});
             }
-            } // end per-beam loop for this chunk
+            } // end per-beam (parallel) loop for this chunk
+
+            // Merge the staged per-beam hits into the shared columnar point-cloud storage. The serial equivalent is a
+            // per-hit addHitPoint()/appendHitData() loop whose cost (string-keyed column lookups + per-hit column
+            // extension for millions of hits) dominates a GPU-fast scan. Instead: (1) collect the union of hit-data
+            // labels and pre-create every column once, (2) pre-size `hits` and all columns to their final length, then
+            // (3) scatter each hit into its final row in parallel. Each hit owns a distinct, precomputed row (beam-order
+            // prefix sum) and each label a distinct column slot, so the parallel writes are race-free and the recorded
+            // values are identical to the serial path. Column slot order is the sorted label union rather than strict
+            // first-appearance order; for a synthetic scan every hit carries the same standard label set, so the first
+            // hit would create those columns in (alphabetical) std::map order anyway -> identical order in the common
+            // case. The only observable effect of the difference is the column order of a no-explicit-columnFormat ASCII
+            // export when sparse per-primitive-data labels appear only on later hits; recorded values are unaffected.
+            {
+                // (1) Union of hit-data labels across this chunk (parallel collect into per-thread sets, then merge).
+                std::vector<std::set<std::string>> thread_label_sets(static_cast<size_t>(omp_get_max_threads()));
+#pragma omp parallel for schedule(dynamic, 256)
+                for (int local = 0; local < static_cast<int>(chunk_N); local++) {
+                    std::set<std::string> &my_labels = thread_label_sets[static_cast<size_t>(omp_get_thread_num())];
+                    for (const SyntheticBeamHit &bh: beam_outputs[local].hits) {
+                        for (const auto &kv: bh.data) {
+                            my_labels.insert(kv.first);
+                        }
+                    }
+                }
+                std::set<std::string> all_labels;
+                for (const std::set<std::string> &ts: thread_label_sets) {
+                    all_labels.insert(ts.begin(), ts.end());
+                }
+
+                // Pre-create all columns (sorted order via std::set) and resolve label -> slot once.
+                std::unordered_map<std::string, size_t> slot_of;
+                for (const std::string &lbl: all_labels) {
+                    slot_of[lbl] = getOrCreateHitDataColumn(lbl);
+                }
+
+                // (2) Beam-order row offsets + final sizes; tally the beam-class counters in the same pass.
+                std::vector<size_t> row_offset(chunk_N + 1, 0);
+                for (size_t local = 0; local < chunk_N; local++) {
+                    const SyntheticBeamOutput &beam_out = beam_outputs[local];
+                    if (beam_out.npulse_hits == 0) {
+                        beams_with_zero_hits++;
+                    } else if (beam_out.npulse_hits == 1) {
+                        beams_with_one_hit++;
+                    } else {
+                        beams_with_multi_hits++;
+                    }
+                    row_offset[local + 1] = row_offset[local] + beam_out.hits.size();
+                }
+                const size_t chunk_hits = row_offset[chunk_N];
+                const size_t old_n = hits.size();
+                const size_t new_n = old_n + chunk_hits;
+
+                hits.resize(new_n); // default-constructed HitPoints (gridcell=-2), overwritten below
+                for (size_t sl = 0; sl < hit_data_columns.size(); sl++) {
+                    hit_data_columns[sl].resize(new_n, 0.0); // every column stays length-aligned with `hits`
+                    hit_data_present[sl].resize(new_n, char(0));
+                }
+
+                // (3) Scatter each beam's hits into their final rows in parallel (distinct rows/slots => race-free).
+                const ScanMetadata &scan = scans.at(s);
+#pragma omp parallel for schedule(dynamic, 256)
+                for (int local = 0; local < static_cast<int>(chunk_N); local++) {
+                    SyntheticBeamOutput &beam_out = beam_outputs[local];
+                    if (beam_out.hits.empty()) {
+                        continue;
+                    }
+                    const helios::int2 rc = scan.direction2rc(beam_out.dir_sph);
+                    const size_t base = old_n + row_offset[local];
+                    for (size_t h = 0; h < beam_out.hits.size(); h++) {
+                        SyntheticBeamHit &bh = beam_out.hits[h];
+                        const size_t row = base + h;
+                        HitPoint &hp = hits[row];
+                        hp.position = bh.xyz;
+                        hp.direction = beam_out.dir_sph;
+                        hp.row_column = rc;
+                        hp.color = bh.color;
+                        hp.scanID = int(s);
+                        for (const auto &kv: bh.data) {
+                            const size_t sl = slot_of.at(kv.first); // concurrent read-only lookup (no inserts here)
+                            hit_data_columns[sl][row] = kv.second;
+                            hit_data_present[sl][row] = char(1);
+                        }
+                    }
+                }
+                Nhits += chunk_hits;
+            }
         } // end chunk loop
 
         // Restore automatic BVH rebuilds now that this scan's batched ray tracing is complete.
@@ -7170,6 +7785,11 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         if (cancel_flag != nullptr && *cancel_flag != 0) {
             break;
         }
+    }
+
+    // Signal completion on the polling counter (host also learns this from the call returning).
+    if (synthetic_scan_progress != nullptr) {
+        *synthetic_scan_progress = getScanCount();
     }
 
     progress_bar.finish();

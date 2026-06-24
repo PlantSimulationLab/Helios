@@ -195,9 +195,47 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
             }
             std::transform(scan_pattern_str.begin(), scan_pattern_str.end(), scan_pattern_str.begin(), [](unsigned char ch) { return std::tolower(ch); });
             const bool spinning_multibeam = (scan_pattern_str == "spinning_multibeam" || scan_pattern_str == "spinning-multibeam" || scan_pattern_str == "spinningmultibeam");
-            if (!scan_pattern_str.empty() && scan_pattern_str != "raster" && !spinning_multibeam) {
+            // 'risley' / 'risley_prism' models a rotating-Risley-prism (Livox-style rosette) scanner whose prisms are specified
+            // via <prism> children.
+            const bool risley = (scan_pattern_str == "risley" || scan_pattern_str == "risley_prism" || scan_pattern_str == "risley-prism" || scan_pattern_str == "risleyprism");
+            if (!scan_pattern_str.empty() && scan_pattern_str != "raster" && !spinning_multibeam && !risley) {
                 cerr << "failed.\n";
-                helios_runtime_error("ERROR (LiDARcloud::loadXML): Unrecognized scanPattern '" + scan_pattern_str + "' for scan #" + std::to_string(scan_count) + ". Valid values are 'raster' and 'spinning_multibeam'.");
+                helios_runtime_error("ERROR (LiDARcloud::loadXML): Unrecognized scanPattern '" + scan_pattern_str + "' for scan #" + std::to_string(scan_count) + ". Valid values are 'raster', 'spinning_multibeam', and 'risley'.");
+            }
+
+            // ----- Risley prism stack ------//
+            // A risley scan refracts a single beam through a stack of rotating wedge prisms, each given as a <prism> child with
+            // "wedgeAngle(deg) refractiveIndex rotorRate(Hz, signed) [phase(deg)]". The optional <refractiveIndexAir> sets the
+            // surrounding medium index (default 1.0).
+            std::vector<RisleyPrism> risley_prisms;
+            double risley_refractive_index_air = 1.0;
+            if (risley) {
+                const char *air_str = s.child_value("refractiveIndexAir");
+                if (strlen(air_str) == 0) {
+                    air_str = s.child_value("refractiveindexair");
+                }
+                if (strlen(air_str) > 0) {
+                    risley_refractive_index_air = atof(air_str);
+                }
+                for (pugi::xml_node prism_node = s.child("prism"); prism_node; prism_node = prism_node.next_sibling("prism")) {
+                    // NOTE: do not deblank() here - the prism is several space-separated values, and deblank() strips ALL
+                    // spaces (it is meant for single tokens), which would concatenate the fields. The istringstream handles
+                    // the internal whitespace itself.
+                    std::istringstream prism_stream(prism_node.child_value());
+                    double wedge_deg, refr_index, rotor_hz;
+                    if (!(prism_stream >> wedge_deg >> refr_index >> rotor_hz)) {
+                        cerr << "failed.\n";
+                        helios_runtime_error("ERROR (LiDARcloud::loadXML): A <prism> of risley scan #" + std::to_string(scan_count) +
+                                             " must give at least 'wedgeAngle(deg) refractiveIndex rotorRate(Hz)' (an optional fourth value sets the initial phase in degrees).");
+                    }
+                    double phase_deg = 0.0;
+                    prism_stream >> phase_deg; // optional; left at 0 if absent
+                    risley_prisms.emplace_back(wedge_deg * M_PI / 180.0, refr_index, rotor_hz * 2.0 * M_PI, phase_deg * M_PI / 180.0);
+                }
+                if (risley_prisms.empty()) {
+                    cerr << "failed.\n";
+                    helios_runtime_error("ERROR (LiDARcloud::loadXML): A risley scan (#" + std::to_string(scan_count) + ") requires at least one <prism> child (a Livox-style sensor uses two counter-rotating prisms).");
+                }
             }
 
             // ----- beam (channel) elevation angles for spinning multibeam ------//
@@ -230,6 +268,10 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
             helios::int2 size = make_int2(0, 0);
             if (spinning_multibeam) {
                 size.x = int(beamZenithAngles.size()); // Ntheta = number of laser channels
+            } else if (risley) {
+                // A risley scan stores a single direction per pulse: Ntheta=1 and Nphi=Npulses are derived in addScanRisley
+                // from the PRF and the trajectory duration, so no <size> is specified.
+                size.x = 1;
             } else {
                 const char *size_str = s.child_value("size");
                 if (strlen(size_str) == 0) {
@@ -498,7 +540,7 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
             const bool has_perpoint_origin = (std::find(column_format.begin(), column_format.end(), "origin_x") != column_format.end() && std::find(column_format.begin(), column_format.end(), "origin_y") != column_format.end() &&
                                               std::find(column_format.begin(), column_format.end(), "origin_z") != column_format.end());
             const bool has_trajectory_tag = (!s.child("trajectory").empty() || strlen(s.child_value("trajectoryFile")) != 0 || strlen(s.child_value("trajectoryfile")) != 0);
-            if (!has_static_origin && !has_perpoint_origin && !spinning_multibeam && !has_trajectory_tag) {
+            if (!has_static_origin && !has_perpoint_origin && !spinning_multibeam && !risley && !has_trajectory_tag) {
                 cerr << "failed.\n";
                 helios_runtime_error("ERROR (LiDARcloud::loadXML): Scan #" + std::to_string(scan_count) +
                                      " has no beam origin. Specify either a static <origin> tag, or per-point origin columns (origin_x origin_y origin_z) in the <ASCII_format> and data file.");
@@ -604,11 +646,33 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
             // elevations + <azimuthStep> + <PRF> + a trajectory); there is no static azimuth-grid form. A stationary "spin
             // in place" capture is just a trajectory of two coincident poses whose time gap sets the acquisition duration.
             // A non-spinning scan with a trajectory is a moving raster; otherwise it is a static raster.
-            const bool physical_moving_raster = !spinning_multibeam && has_trajectory && (PRF > 0.f);
+            const bool physical_moving_raster = !spinning_multibeam && !risley && has_trajectory && (PRF > 0.f);
 
             uint scanID;
 
-            if (spinning_multibeam) {
+            if (risley) {
+
+                if (PRF <= 0.f) {
+                    cerr << "failed.\n";
+                    helios_runtime_error("ERROR (LiDARcloud::loadXML): risley scan #" + std::to_string(scan_count) + " requires a pulse repetition rate given as <PRF> (Hz).");
+                }
+                if (!has_trajectory) {
+                    cerr << "failed.\n";
+                    helios_runtime_error("ERROR (LiDARcloud::loadXML): risley scan #" + std::to_string(scan_count) +
+                                         " requires a <trajectory> or <trajectoryFile>. For a stationary capture, give two coincident poses with the same position and orientation, separated in time by the acquisition duration.");
+                }
+
+                scanID = addScanRisley(risley_prisms, risley_refractive_index_air, PRF, traj_t, traj_pos, traj_quat, lever_arm, boresight_rpy, exitDiameter, beamDivergence, rangeNoiseStdDev, angleNoiseStdDev, column_format,
+                                       t0_specified ? t0 : (traj_t.empty() ? 0.0 : traj_t.front()));
+
+                // Apply analytic-waveform return parameters (not constructor arguments of the new entry points).
+                setScanReturnMode(scanID, returnMode);
+                setScanSingleReturnSelection(scanID, singleReturnSelection);
+                setScanMaxReturns(scanID, maxReturns);
+                setScanPulseWidth(scanID, pulseWidth);
+                setScanDetectionThreshold(scanID, detectionThreshold);
+
+            } else if (spinning_multibeam) {
 
                 if (azimuthStep_rad <= 0.f) {
                     cerr << "failed.\n";
@@ -1523,9 +1587,11 @@ void LiDARcloud::exportScans(const char *filename) {
         const ScanMode scan_mode = getScanMode(i);
         const bool is_spinning = (scan_mode == SCAN_MODE_SPINNING);
         const bool is_moving_raster = (scan_mode == SCAN_MODE_MOVING_RASTER);
+        const bool is_risley = (scan_mode == SCAN_MODE_RISLEY_PRISM);
 
         // Spinning multibeam scans store the per-channel zenith angles rather than a uniform theta range, so write the pattern
-        // and channel elevation angles (in degrees above the horizon) to round-trip the scan geometry on re-import.
+        // and channel elevation angles (in degrees above the horizon) to round-trip the scan geometry on re-import. A Risley
+        // scan stores its rotating prism stack instead; both derive their grid internally and emit no <size>.
         if (getScanPattern(i) == SCAN_PATTERN_SPINNING_MULTIBEAM) {
             append_text_child("scanPattern", "spinning_multibeam");
             std::ostringstream elev_ss;
@@ -1539,30 +1605,45 @@ void LiDARcloud::exportScans(const char *filename) {
             append_text_child("beamElevationAngles", elev_ss.str());
             // A spinning scan derives Nphi (and the azimuth sweep) internally from the azimuth resolution, PRF, and
             // trajectory, which are written below; no <size>/<Nphi>/<phiMax> is emitted.
+        } else if (is_risley) {
+            append_text_child("scanPattern", "risley");
+            if (getScanRisleyRefractiveIndexAir(i) != 1.0) {
+                append_text_child("refractiveIndexAir", std::to_string(getScanRisleyRefractiveIndexAir(i)));
+            }
+            // One <prism> child per rotating wedge: "wedgeAngle(deg) refractiveIndex rotorRate(Hz, signed) phase(deg)". The
+            // grid (Ntheta=1, Nphi=Npulses) and circular FoV are derived internally from these on reload; no <size> is emitted.
+            const std::vector<RisleyPrism> prisms = getScanRisleyPrisms(i);
+            for (const RisleyPrism &prism : prisms) {
+                std::ostringstream prism_ss;
+                prism_ss << std::setprecision(12) << prism.wedge_angle * 180.0 / M_PI << " " << prism.refractive_index << " " << prism.rotor_rate / (2.0 * M_PI) << " " << prism.phase * 180.0 / M_PI;
+                append_text_child("prism", prism_ss.str());
+            }
         } else if (!is_moving_raster) {
             std::ostringstream size_ss;
             size_ss << Ntheta << " " << Nphi;
             append_text_child("size", size_ss.str());
         }
 
-        // The angular bounds describe the per-frame fan. For a physical spinning scan they are derived (phiMax encodes the
-        // multi-revolution sweep) and must NOT be written; for a moving raster the fan resolution is written via <size> below.
+        // The angular bounds describe the per-frame fan. For a physical spinning or Risley scan they are derived and must NOT
+        // be written (the geometry comes from the channels / prisms); for a moving raster the fan resolution is written via
+        // <size> below.
         if (is_moving_raster) {
             std::ostringstream size_ss;
             size_ss << Ntheta << " " << Nphi;
             append_text_child("size", size_ss.str());
         }
-        if (!is_spinning) {
+        if (!is_spinning && !is_risley) {
             append_text_child("thetaMin", std::to_string(theta_range.x * 180.f / float(M_PI)));
             append_text_child("thetaMax", std::to_string(theta_range.y * 180.f / float(M_PI)));
             append_text_child("phiMin", std::to_string(phi_range.x * 180.f / float(M_PI)));
             append_text_child("phiMax", std::to_string(phi_range.y * 180.f / float(M_PI)));
         }
 
-        // ----- physical-parameter (moving / spinning) round-trip ------//
-        // Emit the physical instrument parameters and a trajectory sidecar CSV so a moving-platform or spinning scan
-        // reloads through the same physical-parameter path it was created with (addScanSpinning / addScanMovingRaster).
-        if (is_spinning || is_moving_raster) {
+        // ----- physical-parameter (moving / spinning / Risley) round-trip ------//
+        // Emit the physical instrument parameters and a trajectory sidecar CSV so a moving-platform, spinning, or Risley scan
+        // reloads through the same physical-parameter path it was created with (addScanSpinning / addScanMovingRaster /
+        // addScanRisley).
+        if (is_spinning || is_moving_raster || is_risley) {
             const ScanMetadata &sm = scans.at(i);
 
             // PRF (Hz) from the per-pulse period.
