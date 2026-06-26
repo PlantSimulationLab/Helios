@@ -1949,6 +1949,19 @@ public:
      */
     void addGrid(const helios::vec3 &center, const helios::vec3 &size, const helios::int3 &ndiv, float rotation);
 
+    //! Add a grid to the point cloud with per-column vertical offsets (terrain following)
+    /**
+     * Identical to the four-argument overload, but each vertical column of voxels is shifted in z by a
+     * per-column offset so the grid can follow a terrain surface (e.g. a DEM). Cell centers are stored
+     * unrotated (rotation is applied downstream), so the offset is a pure vertical shift.
+     * \param[in] center center of the grid.
+     * \param[in] size Size of the grid in each dimension.
+     * \param[in] ndiv number of cells in the grid in each dimension.
+     * \param[in] rotation horizontal rotation in degrees.
+     * \param[in] column_z_offsets per-(x,y)-column vertical offset, row-major as [j*ndiv.x + i], length ndiv.x*ndiv.y. Empty for no offset.
+     */
+    void addGrid(const helios::vec3 &center, const helios::vec3 &size, const helios::int3 &ndiv, float rotation, const std::vector<float> &column_z_offsets);
+
     //! Add all triangles to the visualizer plug-in, and color them by their r-g-b color
     /**
      * \param[in] visualizer Pointer to the Visualizer plug-in object.

@@ -1779,6 +1779,10 @@ void LiDARcloud::addTrianglesToVisualizer(Visualizer *visualizer, uint gridcell)
 }
 
 void LiDARcloud::addGrid(const vec3 &center, const vec3 &size, const int3 &ndiv, float rotation) {
+    addGrid(center, size, ndiv, rotation, std::vector<float>());
+}
+
+void LiDARcloud::addGrid(const vec3 &center, const vec3 &size, const int3 &ndiv, float rotation, const std::vector<float> &column_z_offsets) {
     if (size.x <= 0 || size.y <= 0 || size.z <= 0) {
         cerr << "failed.\n";
         helios_runtime_error("ERROR (LiDARcloud::addGrid): The grid cell size must be positive.");
@@ -1787,6 +1791,15 @@ void LiDARcloud::addGrid(const vec3 &center, const vec3 &size, const int3 &ndiv,
     if (ndiv.x <= 0 || ndiv.y <= 0 || ndiv.z <= 0) {
         cerr << "failed.\n";
         helios_runtime_error("ERROR (LiDARcloud::addGrid): The number of grid cells in each direction must be positive.");
+    }
+
+    // Optional per-column vertical offset for terrain following. When supplied it must hold one value
+    // per (x,y) column, row-major as [j*ndiv.x + i]. Each cell's z is shifted by its column's offset so
+    // that vertical voxel columns track an external terrain surface (e.g. a DEM). Empty => no shift, in
+    // which case this is byte-for-byte identical to the axis-regular grid built previously.
+    const bool terrain_follow = !column_z_offsets.empty();
+    if (terrain_follow && column_z_offsets.size() != size_t(ndiv.x) * size_t(ndiv.y)) {
+        helios_runtime_error("ERROR (LiDARcloud::addGrid): column_z_offsets must have length ndiv.x*ndiv.y (one value per grid column).");
     }
 
     // add cells to grid
@@ -1801,7 +1814,9 @@ void LiDARcloud::addGrid(const vec3 &center, const vec3 &size, const int3 &ndiv,
             for (int i = 0; i < ndiv.x; i++) {
                 x = -0.5f * float(size.x) + (float(i) + 0.5f) * float(gsubsize.x);
 
-                vec3 subcenter = make_vec3(x, y, z);
+                float zoff = terrain_follow ? column_z_offsets[size_t(j) * size_t(ndiv.x) + size_t(i)] : 0.f;
+
+                vec3 subcenter = make_vec3(x, y, z + zoff);
 
                 vec3 subcenter_rot = rotatePoint(subcenter, make_SphericalCoord(0, rotation * M_PI / 180.f));
 
@@ -1811,6 +1826,10 @@ void LiDARcloud::addGrid(const vec3 &center, const vec3 &size, const int3 &ndiv,
                 }
 
                 addGridCell(subcenter + center, center, gsubsize, size, rotation * M_PI / 180.f, make_int3(i, j, k), ndiv);
+
+                if (terrain_follow) {
+                    grid_cells.back().ground_height = zoff;
+                }
 
                 count++;
             }
