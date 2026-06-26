@@ -7692,10 +7692,18 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
             // export when sparse per-primitive-data labels appear only on later hits; recorded values are unaffected.
             {
                 // (1) Union of hit-data labels across this chunk (parallel collect into per-thread sets, then merge).
+#ifdef _OPENMP
                 std::vector<std::set<std::string>> thread_label_sets(static_cast<size_t>(omp_get_max_threads()));
+#else
+                std::vector<std::set<std::string>> thread_label_sets(1);
+#endif
 #pragma omp parallel for schedule(dynamic, 256)
                 for (int local = 0; local < static_cast<int>(chunk_N); local++) {
+#ifdef _OPENMP
                     std::set<std::string> &my_labels = thread_label_sets[static_cast<size_t>(omp_get_thread_num())];
+#else
+                    std::set<std::string> &my_labels = thread_label_sets[0];
+#endif
                     for (const SyntheticBeamHit &bh: beam_outputs[local].hits) {
                         for (const auto &kv: bh.data) {
                             my_labels.insert(kv.first);
