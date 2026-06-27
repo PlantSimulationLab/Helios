@@ -5293,16 +5293,36 @@ void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits)
 }
 
 void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits, float element_width) {
-    // Triangulation-derived G(theta) (the original behavior). Sentinel < 0 => compute G(theta) per voxel.
-    calculateLeafArea_inner(context, min_voxel_hits, element_width, -1.f);
+    // Triangulation-derived G(theta) (the original behavior): an empty supplied-G(theta) vector tells the inner
+    // routine to compute G(theta) per voxel from triangulation.
+    calculateLeafArea_inner(context, min_voxel_hits, element_width, std::vector<float>{});
 }
 
 void LiDARcloud::calculateLeafArea(helios::Context *context, float Gtheta, int min_voxel_hits, float element_width) {
-    // Caller-supplied G(theta) for scans that cannot be triangulated (e.g. moving-platform scans).
+    // Caller-supplied G(theta) for scans that cannot be triangulated (e.g. moving-platform scans). A single value is
+    // broadcast to every voxel by the inner routine.
     if (!(Gtheta > 0.f) || Gtheta > 1.f) {
         helios_runtime_error("ERROR (LiDARcloud::calculateLeafArea): The supplied G(theta) must be in the range (0,1], but " + std::to_string(Gtheta) + " was provided. Use 0.5 for a spherical (random) leaf-angle distribution.");
     }
-    calculateLeafArea_inner(context, min_voxel_hits, element_width, Gtheta);
+    calculateLeafArea_inner(context, min_voxel_hits, element_width, std::vector<float>{Gtheta});
+}
+
+void LiDARcloud::calculateLeafArea(helios::Context *context, const std::vector<float> &Gtheta_per_cell, int min_voxel_hits, float element_width) {
+    // Caller-supplied PER-VOXEL G(theta) (e.g. a vertically-varying leaf-angle distribution). The length must match the
+    // grid-cell count and every value must be in (0,1]; the inner routine uses each value for its corresponding voxel.
+    const uint Ncells = getGridCellCount();
+    if (Gtheta_per_cell.size() != Ncells) {
+        helios_runtime_error("ERROR (LiDARcloud::calculateLeafArea): The per-voxel G(theta) vector has " + std::to_string(Gtheta_per_cell.size()) + " entries but the grid has " + std::to_string(Ncells) +
+                             " cells. Supply exactly one G(theta) per cell, in grid-cell order.");
+    }
+    for (size_t v = 0; v < Gtheta_per_cell.size(); v++) {
+        const float g = Gtheta_per_cell[v];
+        if (!(g > 0.f) || g > 1.f) {
+            helios_runtime_error("ERROR (LiDARcloud::calculateLeafArea): Per-voxel G(theta) values must be in the range (0,1], but cell " + std::to_string(v) + " was given " + std::to_string(g) +
+                                 ". Use 0.5 for a spherical (random) leaf-angle distribution.");
+        }
+    }
+    calculateLeafArea_inner(context, min_voxel_hits, element_width, Gtheta_per_cell);
 }
 
 void LiDARcloud::accumulateBeamCell(const uint *return_indices, size_t Nreturns, const std::vector<float> &dr, const std::vector<uint> &hit_location, float &P_equal_numerator, float &P_equal_denominator, float &P_equal_sumsq,
@@ -5480,9 +5500,11 @@ LiDARcloud::VoxelLattice LiDARcloud::detectVoxelLattice() const {
     return lattice;
 }
 
-void LiDARcloud::calculateLeafArea_inner(helios::Context *context, int min_voxel_hits, float element_width, float supplied_Gtheta) {
+void LiDARcloud::calculateLeafArea_inner(helios::Context *context, int min_voxel_hits, float element_width, const std::vector<float> &supplied_Gtheta) {
 
-    const bool use_supplied_Gtheta = (supplied_Gtheta > 0.f);
+    // An empty vector means "compute G(theta) per voxel from triangulation"; a non-empty vector (size 1 = broadcast, or
+    // size == Ncells = per-voxel) means the caller supplied G(theta) and triangulation is not required.
+    const bool use_supplied_Gtheta = !supplied_Gtheta.empty();
 
     if (printmessages) {
         std::cout << "Calculating leaf area (CollisionDetection)..." << std::endl;
@@ -5905,11 +5927,18 @@ void LiDARcloud::calculateLeafArea_inner(helios::Context *context, int min_voxel
             }
         }
 
-        // Obtain G(theta) per voxel. Normally computed from triangulation; when the caller supplied a value (e.g. for a
-        // moving-platform scan that cannot be triangulated), apply that single value to every voxel instead.
+        // Obtain G(theta) per voxel. Normally computed from triangulation; when the caller supplied G(theta) (e.g. for a
+        // moving-platform scan that cannot be triangulated, or a prescribed leaf-angle distribution) use that instead -
+        // a single supplied value is broadcast to every voxel, a per-voxel vector is used as-is. The public overloads
+        // validate the length (1 or Ncells) and range (0,1] before calling this; assert the size invariant here.
         std::vector<float> Gtheta;
         if (use_supplied_Gtheta) {
-            Gtheta.assign(Ncells, supplied_Gtheta);
+            if (supplied_Gtheta.size() == 1) {
+                Gtheta.assign(Ncells, supplied_Gtheta[0]);
+            } else {
+                assert(supplied_Gtheta.size() == Ncells);
+                Gtheta = supplied_Gtheta;
+            }
         } else {
             computeGtheta(Ncells, Nscans, Gtheta, Gtheta_bar);
         }

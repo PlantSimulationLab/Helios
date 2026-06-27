@@ -844,10 +844,13 @@ private:
      * \param[in] context Pointer to the Helios context
      * \param[in] min_voxel_hits Minimum number of allowable LiDAR hits per voxel
      * \param[in] element_width Characteristic vegetation element width [m] (<= 0 reports sampling-only uncertainty)
-     * \param[in] supplied_Gtheta If > 0, this G(theta) is used for every voxel and triangulation is NOT required. If <=
-     *            0 (the sentinel), G(theta) is computed per voxel from triangulation, which must have been performed.
+     * \param[in] supplied_Gtheta Controls the source of G(theta):
+     *            - empty: G(theta) is computed per voxel from triangulation, which must have been performed.
+     *            - size 1: the single value is broadcast to every voxel; triangulation is NOT required.
+     *            - size == grid-cell count: the value is used per voxel in cell order; triangulation is NOT required.
+     *            Any other size is an error. Every supplied value must be in (0,1].
      */
-    void calculateLeafArea_inner(helios::Context *context, int min_voxel_hits, float element_width, float supplied_Gtheta);
+    void calculateLeafArea_inner(helios::Context *context, int min_voxel_hits, float element_width, const std::vector<float> &supplied_Gtheta);
 
     //! Perform LAD inversion for a single voxel using secant method
     /**
@@ -2549,6 +2552,25 @@ public:
      *       call \ref gapfillMisses() first.
      */
     void calculateLeafArea(helios::Context *context, float Gtheta, int min_voxel_hits, float element_width);
+
+    //! Calculate the leaf area for each grid volume using a caller-supplied PER-VOXEL G(theta), without requiring triangulation
+    /**
+     * Identical to the single-G(theta) overload above, but takes one G(theta) per grid cell instead of a single value
+     * applied everywhere. This supports a vertically-varying (or otherwise spatially-varying) leaf-angle distribution -
+     * e.g. a canopy whose leaf inclination changes with height - without triangulating. Like the scalar overload it
+     * inverts Beer's law from each beam's own origin and does NOT require \ref triangulateHitPoints().
+     *
+     * \param[in] context Pointer to the Helios context
+     * \param[in] Gtheta_per_cell Mean leaf-projection coefficient G(theta) for each grid cell, in grid-cell order (the
+     *            same order as \ref getCellCenter()). Its length must equal \ref getGridCellCount(). Every value must be
+     *            in (0,1].
+     * \param[in] min_voxel_hits Minimum number of allowable LiDAR hits per voxel
+     * \param[in] element_width Characteristic vegetation element width [m]; see the three-argument overload. Pass <= 0
+     *            to report sampling-only uncertainty.
+     * \note Requires miss points (transmitted beams), like the other overloads; supply a miss-retaining scan format or
+     *       call \ref gapfillMisses() first.
+     */
+    void calculateLeafArea(helios::Context *context, const std::vector<float> &Gtheta_per_cell, int min_voxel_hits, float element_width);
 
     //! Calculate the leaf area for each grid volume (DEPRECATED - use calculateLeafArea)
     /**
