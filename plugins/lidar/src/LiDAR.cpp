@@ -5457,6 +5457,20 @@ LiDARcloud::VoxelLattice LiDARcloud::detectVoxelLattice() const {
     for (uint c = 0; c < Ncells; c++) {
         const GridCell &cell = grid_cells.at(c);
 
+        // Terrain-following grids are NOT a regular lattice: addGrid() shifts each
+        // column's cells vertically by a per-column offset (recorded in
+        // ground_height) so the columns track a surface. The DDA fast path below
+        // assumes a regular axis-aligned lattice and reconstructs cell corners from
+        // (origin + ijk*extent) with NO per-column offset, so a terrain grid that
+        // slipped through would get wrong cell bounds and the lifted (uphill) voxels
+        // would receive no beams (empty/NaN LAD). The expected-center check further
+        // down catches any meaningful offset via position tolerance, but key off the
+        // explicit flag too so the rejection can't depend on a tolerance that a tiny
+        // offset could sneak under. Any non-zero column offset => brute-force path.
+        if (cell.ground_height != 0.f) {
+            return lattice;
+        }
+
         // Shared lattice parameters
         if (cell.global_count.x != count.x || cell.global_count.y != count.y || cell.global_count.z != count.z) {
             return lattice;
