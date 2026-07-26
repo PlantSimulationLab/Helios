@@ -1407,6 +1407,73 @@ TEST_CASE("Aggregate Function Edge Cases") {
         ctx.getPrimitiveData(p2, "neg_product", result);
         DOCTEST_CHECK(result == doctest::Approx(-4.0f)); // 4 * (-1) = -4
     }
+
+    SUBCASE("aggregatePrimitiveDataProduct non-float types") {
+        // Regression: every type branch except FLOAT had the initialize/accumulate logic inverted, so
+        // products of double/int/uint/vec*/int* data were computed from a zero accumulator or overwritten.
+        uint p = ctx.addPatch();
+        std::vector<uint> uuids = {p};
+
+        ctx.setPrimitiveData(p, "dbl1", 2.0);
+        ctx.setPrimitiveData(p, "dbl2", 3.0);
+        std::vector<std::string> dbl_labels = {"dbl1", "dbl2"};
+        ctx.aggregatePrimitiveDataProduct(uuids, dbl_labels, "dbl_product");
+        double dresult;
+        ctx.getPrimitiveData(p, "dbl_product", dresult);
+        DOCTEST_CHECK(dresult == doctest::Approx(6.0));
+
+        ctx.setPrimitiveData(p, "int1", 4);
+        ctx.setPrimitiveData(p, "int2", -5);
+        std::vector<std::string> int_labels = {"int1", "int2"};
+        ctx.aggregatePrimitiveDataProduct(uuids, int_labels, "int_product");
+        int iresult;
+        ctx.getPrimitiveData(p, "int_product", iresult);
+        DOCTEST_CHECK(iresult == -20);
+
+        ctx.setPrimitiveData(p, "v31", make_vec3(1, 2, 3));
+        ctx.setPrimitiveData(p, "v32", make_vec3(4, 5, 6));
+        std::vector<std::string> vec3_labels = {"v31", "v32"};
+        ctx.aggregatePrimitiveDataProduct(uuids, vec3_labels, "vec3_product");
+        vec3 v3result;
+        ctx.getPrimitiveData(p, "vec3_product", v3result);
+        DOCTEST_CHECK(v3result.x == doctest::Approx(4.f));
+        DOCTEST_CHECK(v3result.y == doctest::Approx(10.f));
+        DOCTEST_CHECK(v3result.z == doctest::Approx(18.f));
+    }
+
+    SUBCASE("context-wide duplicatePrimitiveData int4") {
+        // Regression: the all-primitives duplicatePrimitiveData overload was missing the INT4 branch,
+        // registering the copied label's type without copying its value.
+        uint p = ctx.addPatch();
+        ctx.setPrimitiveData(p, "i4", make_int4(1, 2, 3, 4));
+        ctx.duplicatePrimitiveData("i4", "i4_copy");
+        DOCTEST_CHECK(ctx.doesPrimitiveDataExist(p, "i4_copy"));
+        int4 i4v;
+        DOCTEST_CHECK_NOTHROW(ctx.getPrimitiveData(p, "i4_copy", i4v));
+        DOCTEST_CHECK(i4v == make_int4(1, 2, 3, 4));
+    }
+
+    SUBCASE("calculatePrimitiveDataAreaWeightedMean NaN area") {
+        // Regression: a NaN-area primitive left the output parameter unassigned and, contrary to the
+        // warning message, was not excluded from the sums.
+        uint p1 = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        uint p2 = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+        ctx.setPrimitiveData(p1, "awm_val", 2.0f);
+        ctx.setPrimitiveData(p2, "awm_val", 4.0f);
+
+        float T[16];
+        ctx.getPrimitiveTransformationMatrix(p2, T);
+        T[0] = NAN;
+        ctx.setPrimitiveTransformationMatrix(p2, T);
+        DOCTEST_CHECK(std::isnan(ctx.getPrimitiveArea(p2)));
+
+        float awt_mean = -999.f;
+        {
+            capture_cerr cerr_buffer;
+            ctx.calculatePrimitiveDataAreaWeightedMean({p1, p2}, "awm_val", awt_mean);
+        }
+        DOCTEST_CHECK(awt_mean == doctest::Approx(2.0f)); // p2 excluded; p1 has area 1 and value 2
+    }
 }
 
 TEST_CASE("Data Type Coverage Extensions") {

@@ -23,15 +23,6 @@
 #include <omp.h>
 #endif
 
-// SIMD headers
-#ifdef __AVX2__
-#include <immintrin.h>
-#elif defined(__SSE4_1__)
-#include <smmintrin.h>
-#elif defined(__SSE2__)
-#include <emmintrin.h>
-#endif
-
 #ifdef HELIOS_CUDA_AVAILABLE
 #include <cuda_runtime.h>
 #endif
@@ -438,6 +429,13 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
         }
     }
 
+    // Primitives the Context reports as modified since the last build. A primitive that was moved, rotated or
+    // scaled keeps its UUID and stays in primitive_aabbs_cache, so without this its stale build-time AABB would be
+    // reused forever and the BVH would bound the geometry's OLD position. dirty_primitive_cache alone cannot cover
+    // this: nothing ever inserts into it, so it is always empty.
+    const std::vector<uint> context_dirty_for_aabbs = context->getDirtyUUIDs(false); // Don't include deleted
+    const std::unordered_set<uint> context_dirty_set(context_dirty_for_aabbs.begin(), context_dirty_for_aabbs.end());
+
     // Update only dirty or missing cache entries
     for (uint UUID: primitives_to_include) {
         if (!context->doesPrimitiveExist(UUID)) {
@@ -445,7 +443,7 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
         }
 
         // Only update if not cached or marked as dirty
-        bool needs_update = (primitive_aabbs_cache.find(UUID) == primitive_aabbs_cache.end()) || (dirty_primitive_cache.find(UUID) != dirty_primitive_cache.end());
+        bool needs_update = (primitive_aabbs_cache.find(UUID) == primitive_aabbs_cache.end()) || (dirty_primitive_cache.find(UUID) != dirty_primitive_cache.end()) || (context_dirty_set.find(UUID) != context_dirty_set.end());
 
         if (needs_update) {
             vec3 aabb_min, aabb_max;
@@ -493,6 +491,20 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
     // Update BVH geometry tracking for caching
     last_bvh_geometry.clear();
     last_bvh_geometry.insert(primitives_to_include.begin(), primitives_to_include.end());
+
+    // Record whether this build was restricted to a caller-specified subset, and which primitives that subset
+    // deliberately left out. ensureBVHCurrent() consults these so an automatic rebuild keeps excluding exactly the
+    // same primitives instead of silently widening the BVH to all geometry.
+    bvh_geometry_restricted = !UUIDs.empty();
+    bvh_excluded_geometry.clear();
+    if (bvh_geometry_restricted) {
+        for (uint uuid: context->getAllUUIDs()) {
+            if (new_primitive_set.find(uuid) == new_primitive_set.end()) {
+                bvh_excluded_geometry.insert(uuid);
+            }
+        }
+    }
+
     bvh_dirty = false;
     soa_dirty = true; // SoA needs rebuild after BVH change
 
@@ -700,7 +712,30 @@ void CollisionDetection::ensureBVHCurrent() {
             std::cout << "Geometry has changed since last BVH build, rebuilding..." << std::endl;
         }
 
-        buildBVH(); // This will update our internal tracking
+        if (bvh_geometry_restricted) {
+            // The BVH was built over a caller-specified subset. Rebuilding over all Context geometry would silently
+            // resurrect primitives the caller deliberately excluded, so carry the existing subset forward. Geometry
+            // added to the Context since that build is still absorbed (callers rely on new primitives appearing
+            // automatically); only the primitives that were explicitly excluded stay excluded. Deleted primitives
+            // are dropped.
+            std::vector<uint> rebuild_geometry;
+            for (uint uuid: context->getAllUUIDs()) {
+                if (bvh_excluded_geometry.find(uuid) == bvh_excluded_geometry.end()) {
+                    rebuild_geometry.push_back(uuid);
+                }
+            }
+
+            if (!rebuild_geometry.empty()) {
+                // Preserve the exclusion set across this rebuild: buildBVH() recomputes it from the primitives it is
+                // given, which would otherwise forget the original exclusions once new geometry is absorbed.
+                const std::set<uint> preserved_exclusions = bvh_excluded_geometry;
+                buildBVH(rebuild_geometry); // This will update our internal tracking
+                bvh_excluded_geometry = preserved_exclusions;
+                bvh_geometry_restricted = true;
+            }
+        } else {
+            buildBVH(); // This will update our internal tracking
+        }
     }
 
     // Note: We do NOT call context->markGeometryClean() here
@@ -712,11 +747,32 @@ bool CollisionDetection::isBVHValid() const {
         return false;
     }
 
-    // Check if there are new primitives in the context that aren't in our BVH
+    // Check if there are new primitives in the context that aren't in our BVH. Primitives that a restricted
+    // buildBVH() deliberately excluded are absent by design, so their absence is not staleness.
     std::vector<uint> all_context_uuids = context->getAllUUIDs();
     for (uint uuid: all_context_uuids) {
+        if (bvh_excluded_geometry.find(uuid) != bvh_excluded_geometry.end()) {
+            continue; // deliberately excluded by a restricted build
+        }
         if (last_processed_uuids.find(uuid) == last_processed_uuids.end()) {
             return false; // Found a primitive that's not in our BVH
+        }
+    }
+
+    // Check for geometry that has been modified in place (moved, rotated, scaled) since the BVH was built. Such a
+    // primitive keeps its UUID, so the UUID-set comparisons above cannot detect it, but its bounding box has moved
+    // and the stored node AABBs no longer bound it. Comparing the cached build-time AABB against the primitive's
+    // current bounding box measures staleness directly, rather than relying on Context dirty flags (which this
+    // plugin deliberately never clears, and which are set for freshly-added geometry too).
+    for (uint uuid: primitive_indices) {
+        auto cached = primitive_aabbs_cache.find(uuid);
+        if (cached == primitive_aabbs_cache.end()) {
+            continue; // no cached AABB to compare against
+        }
+        vec3 current_min, current_max;
+        context->getPrimitiveBoundingBox(uuid, current_min, current_max);
+        if (!approxSame(cached->second.first, current_min, 1e-6f) || !approxSame(cached->second.second, current_max, 1e-6f)) {
+            return false; // a primitive in our BVH has moved since the build
         }
     }
 
@@ -2318,6 +2374,11 @@ void CollisionDetection::markBVHDirty() {
     last_bvh_geometry.clear();
     bvh_dirty = true;
 
+    // The recorded subset is gone, so there is nothing left to keep excluding; drop the restriction along with it
+    // (rebuildBVH() calls this before an unrestricted buildBVH(), which must rebuild over all geometry).
+    bvh_geometry_restricted = false;
+    bvh_excluded_geometry.clear();
+
     // Note: Don't clear primitive_cache here - it will be cleared only when
     // buildBVH() detects actual primitive set changes, not just geometry updates
 
@@ -2623,201 +2684,12 @@ std::vector<uint> CollisionDetection::getGridIntersections(int i, int j, int k) 
 }
 
 int CollisionDetection::optimizeLayout(const std::vector<uint> &UUIDs, float learning_rate, int max_iterations) {
-    if (printmessages) {
-        std::cerr << "WARNING: optimizeLayout not yet implemented" << std::endl;
-    }
-    return 0;
-}
-
-int CollisionDetection::countRayIntersections(const vec3 &origin, const vec3 &direction, float max_distance) {
-
-    int intersection_count = 0;
-
-    if (bvh_nodes.empty()) {
-        return intersection_count;
-    }
-
-    // OPTIMIZATION: Minimum distance threshold to avoid self-intersection with nearby geometry
-    // This prevents plant's own geometry (shoot tips, etc.) from occluding the entire cone view
-    float min_distance = 0.05f; // 5cm minimum distance - ignore intersections closer than this
-
-    // Ensure the BVH is current before traversal
-    const_cast<CollisionDetection *>(this)->ensureBVHCurrent();
-
-    // Stack-based traversal to avoid recursion
-    std::vector<uint> node_stack;
-    node_stack.push_back(0); // Start with root node
-
-    while (!node_stack.empty()) {
-        uint node_idx = node_stack.back();
-        node_stack.pop_back();
-
-        if (node_idx >= bvh_nodes.size())
-            continue;
-
-        const BVHNode &node = bvh_nodes[node_idx];
-
-        // Test if ray intersects node AABB
-        float t_min, t_max;
-        if (!rayAABBIntersect(origin, direction, node.aabb_min, node.aabb_max, t_min, t_max)) {
-            continue;
-        }
-
-        // Check if intersection is within distance range (both min and max)
-        if (t_max < min_distance) {
-            continue; // Entire AABB is too close - skip
-        }
-        if (max_distance > 0.0f && t_min > max_distance) {
-            continue; // Entire AABB is too far - skip
-        }
-
-        if (node.is_leaf) {
-            // Check each primitive in this leaf for ray intersection
-            for (uint i = 0; i < node.primitive_count; i++) {
-                uint primitive_id = primitive_indices[node.primitive_start + i];
-
-                // Get this primitive's AABB
-                if (!context->doesPrimitiveExist(primitive_id)) {
-                    continue; // Skip invalid primitive
-                }
-                vec3 prim_min, prim_max;
-                context->getPrimitiveBoundingBox(primitive_id, prim_min, prim_max);
-
-                // Test ray against primitive AABB
-                float prim_t_min, prim_t_max;
-                if (rayAABBIntersect(origin, direction, prim_min, prim_max, prim_t_min, prim_t_max)) {
-                    // Check distance constraints (both min and max)
-                    bool within_min_distance = prim_t_min >= min_distance;
-                    bool within_max_distance = (max_distance <= 0.0f) || (prim_t_min <= max_distance);
-
-                    if (within_min_distance && within_max_distance) {
-                        intersection_count++;
-                    }
-                }
-            }
-        } else {
-            // Add child nodes to stack for further traversal
-            if (node.left_child != 0xFFFFFFFF) {
-                node_stack.push_back(node.left_child);
-            }
-            if (node.right_child != 0xFFFFFFFF) {
-                node_stack.push_back(node.right_child);
-            }
-        }
-    }
-
-    return intersection_count;
-}
-
-bool CollisionDetection::findNearestRayIntersection(const vec3 &origin, const vec3 &direction, const std::set<uint> &candidate_UUIDs, float &nearest_distance, float max_distance) {
-
-    nearest_distance = std::numeric_limits<float>::max();
-    bool found_intersection = false;
-
-    // Check if we need to traverse both static and dynamic BVHs
-    bool check_static_bvh = hierarchical_bvh_enabled && static_bvh_valid && !static_bvh_nodes.empty();
-    bool check_dynamic_bvh = !bvh_nodes.empty();
-
-    if (!check_static_bvh && !check_dynamic_bvh) {
-        return false;
-    }
-
-
-    // Ensure the BVH is current before traversal
-    const_cast<CollisionDetection *>(this)->ensureBVHCurrent();
-
-    // Lambda function to traverse a BVH and find ray intersections
-    auto traverseBVH = [&](const std::vector<BVHNode> &nodes, const std::vector<uint> &primitives, const char *bvh_name) {
-        if (nodes.empty())
-            return;
-
-        // Stack-based traversal to avoid recursion
-        std::vector<uint> node_stack;
-        node_stack.push_back(0); // Start with root node
-
-        while (!node_stack.empty()) {
-            uint node_idx = node_stack.back();
-            node_stack.pop_back();
-
-            if (node_idx >= nodes.size()) {
-                continue;
-            }
-
-            const BVHNode &node = nodes[node_idx];
-
-            // Test if ray intersects node AABB
-            float t_min, t_max;
-            if (!rayAABBIntersect(origin, direction, node.aabb_min, node.aabb_max, t_min, t_max)) {
-                continue;
-            }
-
-            // Check if intersection is within distance range
-            if (max_distance > 0.0f && t_min > max_distance) {
-                continue; // Entire AABB is too far - skip
-            }
-
-            // If we've already found a closer intersection than this AABB, skip it
-            if (t_min > nearest_distance) {
-                continue;
-            }
-
-            if (node.is_leaf) {
-                // Check each primitive in this leaf for ray intersection
-                for (uint i = 0; i < node.primitive_count; i++) {
-                    uint primitive_id = primitives[node.primitive_start + i];
-
-
-                    // Skip if this primitive is not in the candidate set (unless candidate set is empty)
-                    if (!candidate_UUIDs.empty() && candidate_UUIDs.find(primitive_id) == candidate_UUIDs.end()) {
-                        continue;
-                    }
-
-
-                    // Get this primitive's AABB
-                    if (!context->doesPrimitiveExist(primitive_id)) {
-                        continue; // Skip invalid primitive
-                    }
-
-                    vec3 prim_min, prim_max;
-                    context->getPrimitiveBoundingBox(primitive_id, prim_min, prim_max);
-
-                    // Test ray against primitive AABB
-                    float prim_t_min, prim_t_max;
-                    if (rayAABBIntersect(origin, direction, prim_min, prim_max, prim_t_min, prim_t_max)) {
-                        // Check distance constraints
-                        bool within_max_distance = (max_distance <= 0.0f) || (prim_t_min <= max_distance);
-
-                        if (within_max_distance && prim_t_min > 0.0f && prim_t_min < nearest_distance) {
-                            // For now, we use AABB intersection distance as an approximation
-                            // A more accurate implementation would perform exact ray-primitive intersection
-                            nearest_distance = prim_t_min;
-                            found_intersection = true;
-                        }
-                    }
-                }
-            } else {
-                // Add child nodes to stack for further traversal
-                if (node.left_child != 0xFFFFFFFF) {
-                    node_stack.push_back(node.left_child);
-                }
-                if (node.right_child != 0xFFFFFFFF) {
-                    node_stack.push_back(node.right_child);
-                }
-            }
-        } // End of while loop
-    }; // End of lambda
-
-    // First, traverse the static BVH if hierarchical BVH is enabled
-    if (check_static_bvh) {
-        traverseBVH(static_bvh_nodes, static_bvh_primitives, "static");
-    }
-
-    // Then, traverse the dynamic BVH
-    if (check_dynamic_bvh) {
-        traverseBVH(bvh_nodes, primitive_indices, "dynamic");
-    }
-
-    return found_intersection;
+    // Not implemented. Previously this printed a warning (silenced entirely by disableMessages()) and returned 0,
+    // which is indistinguishable from a successful optimization that eliminated every collision. Returning a fake
+    // value from an unimplemented function hides the failure from callers, so fail loudly instead.
+    helios_runtime_error("ERROR (CollisionDetection::optimizeLayout): Layout optimization is not implemented. This function currently performs no optimization and has no meaningful collision count to return. Remove the call, or implement "
+                         "the optimization; collisions can be counted in the meantime with findCollisions().");
+    return 0; // unreachable; helios_runtime_error always throws
 }
 
 bool CollisionDetection::findNearestPrimitiveDistance(const vec3 &origin, const vec3 &direction, const std::vector<uint> &candidate_UUIDs, float &distance, vec3 &obstacle_direction) {
@@ -3610,7 +3482,11 @@ void CollisionDetection::calculateVoxelRayPathLengths(const vec3 &grid_center, c
             if (printmessages) {
                 warnings.addWarning("gpu_voxel_fallback", "GPU voxel calculation failed, falling back to CPU");
             }
-            gpu_acceleration_enabled = false;
+            // Route through disableGPUAcceleration() rather than clearing the flag directly so the resident scene
+            // buffers are released too. Clearing the flag alone left them allocated for the object's whole lifetime
+            // while also wedging transferBVHToGPU() into its !gpu_acceleration_enabled early return, so residency
+            // could never be restored.
+            disableGPUAcceleration();
             calculateVoxelRayPathLengths_CPU(ray_origins, ray_directions);
         }
     } else {

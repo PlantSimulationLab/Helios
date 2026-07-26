@@ -132,6 +132,12 @@ inline int triangulate_CDT(const std::vector<Shx> &pts, std::vector<Triad> &tria
         }
 
         cdt.insertVertices(verts);
+
+        // insertVertices copies the coordinates into CDT's own internal vertex
+        // buffer, so this local copy is dead from here on. Release it before the
+        // (potentially large) triangle extraction below to lower peak memory.
+        std::vector<CDT::V2d<float>>().swap(verts);
+
         cdt.eraseSuperTriangle();
 
         // After eraseSuperTriangle(), CDT subtracts the super-triangle vertex

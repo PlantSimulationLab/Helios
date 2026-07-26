@@ -3514,6 +3514,12 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         }
     }
 
+    // Persist per-band emission-enabled state to global data so that downstream plug-ins (e.g. the
+    // energy balance model) can identify which band governs thermal emission.
+    for (const auto &band: radiation_bands) {
+        context->setGlobalData(("emission_enabled_" + band.first).c_str(), (uint) (band.second.emissionFlag ? 1 : 0));
+    }
+
     // Check to make sure some geometry was added to the context
     if (context->getPrimitiveCount() == 0) {
         std::cerr << "WARNING (RadiationModel::runBand): No geometry was added to the context. There is nothing to simulate...exiting." << std::endl;
@@ -3840,7 +3846,11 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
             fluxes.at(s).resize(Nbands_launch);
 
-            for (auto b = 0; b < label.size(); b++) {
+            // Iterate over Nbands_launch (== band_labels.size()), NOT label.size(). When SIF cameras
+            // are registered, runBand() appends auto-generated excitation bands to band_labels, so
+            // Nbands_launch > label.size(). Using label.size() would leave the trailing band slots at
+            // zero and upload zero direct flux for those bands.
+            for (size_t b = 0; b < Nbands_launch; b++) {
                 fluxes.at(s).at(b) = getSourceFlux(s, band_labels.at(b));
             }
 
@@ -4095,7 +4105,13 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                                     scatter_bottom_cam[ind] += sif_bottom_flux;
                                 }
                             } else {
-                                flux_bottom.at(ind) += flux_top.at(ind);
+                                // Two-sided emission: the bottom face emits only its own emitted
+                                // energy (out_top), NOT the top face's accumulated scattered-direct
+                                // energy that flux_top already holds. Adding flux_top here would
+                                // re-emit the top face's scattered radiation from the bottom face,
+                                // violating energy conservation. This matches the camera-scatter
+                                // accumulator below and the SIF branch above.
+                                flux_bottom.at(ind) += out_top;
                                 if (Ncameras > 0) {
                                     scatter_bottom_cam[ind] += out_top;
                                 }

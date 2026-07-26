@@ -294,6 +294,15 @@ public:
      */
     ~CollisionDetection();
 
+    //! CollisionDetection owns raw CUDA device pointers that its destructor frees, so an implicitly-generated copy
+    //! would double-free them (both objects would hold the same pointers with gpu_memory_allocated true) and an
+    //! implicitly-generated assignment would orphan the target's buffers (overwriting live pointers and clearing the
+    //! flag, after which freeGPUMemory() skips them). Copy and move are deleted; hold instances by pointer or reference.
+    CollisionDetection(const CollisionDetection &) = delete;
+    CollisionDetection &operator=(const CollisionDetection &) = delete;
+    CollisionDetection(CollisionDetection &&) = delete;
+    CollisionDetection &operator=(CollisionDetection &&) = delete;
+
     // -------- PRIMITIVE/OBJECT COLLISION DETECTION --------
 
     /**
@@ -684,6 +693,10 @@ public:
 
     /**
      * \brief Optimize layout of primitives/objects to minimize collisions
+     *
+     * \note NOT YET IMPLEMENTED. Calling this function always throws a runtime error rather than returning a
+     * misleading collision count. To count collisions for the current (unmodified) layout, use \ref findCollisions().
+     *
      * \param[in] UUIDs Vector of primitive/object UUIDs to optimize
      * \param[in] learning_rate Step size for optimization algorithm
      * \param[in] max_iterations Maximum number of optimization iterations
@@ -1300,6 +1313,17 @@ private:
     //! Last built BVH geometry set (for cache validation)
     std::set<uint> last_bvh_geometry;
 
+    //! True when the BVH was built over a caller-specified subset of the Context geometry rather than over all
+    //! primitives. An automatic rebuild triggered by \ref ensureBVHCurrent() must then keep honoring that
+    //! restriction; rebuilding over all geometry would silently resurrect primitives the caller explicitly
+    //! excluded. Set by buildBVH() according to whether an explicit UUID list was supplied.
+    bool bvh_geometry_restricted = false;
+
+    //! Primitives that existed in the Context but were deliberately left out of the last restricted buildBVH() call.
+    //! An automatic rebuild keeps excluding exactly these, while still absorbing primitives added to the Context
+    //! afterwards (which the caller never had the chance to exclude). Empty when the BVH is unrestricted.
+    std::set<uint> bvh_excluded_geometry;
+
     //! Flag to track if BVH needs rebuilding
     bool bvh_dirty;
 
@@ -1556,33 +1580,6 @@ private:
     bool rayAABBIntersect(const helios::vec3 &origin, const helios::vec3 &direction, const helios::vec3 &aabb_min, const helios::vec3 &aabb_max, float &t_min, float &t_max) const;
 
     /**
-     * \brief SIMD-optimized ray-AABB intersection test using AVX2/SSE
-     * \param[in] ray_origins Array of ray origins (size 4 or 8 for AVX)
-     * \param[in] ray_directions Array of ray directions (size 4 or 8 for AVX)
-     * \param[in] aabb_mins Array of AABB minimum points (size 4 or 8 for AVX)
-     * \param[in] aabb_maxs Array of AABB maximum points (size 4 or 8 for AVX)
-     * \param[out] t_mins Array of near intersection parameters
-     * \param[out] t_maxs Array of far intersection parameters
-     * \param[in] count Number of rays to process (must be 4 or 8)
-     * \return Bitmask indicating which rays intersect their respective AABBs
-     */
-    uint32_t rayAABBIntersectSIMD(const helios::vec3 *ray_origins, const helios::vec3 *ray_directions, const helios::vec3 *aabb_mins, const helios::vec3 *aabb_maxs, float *t_mins, float *t_maxs, int count);
-
-    /**
-     * \brief SIMD-optimized BVH traversal for multiple rays
-     * \param[in] ray_origins Array of ray origins
-     * \param[in] ray_directions Array of ray directions
-     * \param[in] count Number of rays to process
-     * \param[out] results Array to store hit results
-     */
-    void traverseBVHSIMD(const helios::vec3 *ray_origins, const helios::vec3 *ray_directions, int count, HitResult *results);
-
-    /**
-     * \brief SIMD implementation helper for BVH traversal
-     */
-    void traverseBVHSIMDImpl(const helios::vec3 *ray_origins, const helios::vec3 *ray_directions, int count, HitResult *results);
-
-    /**
      * \brief Test if a cone intersects an AABB
      * \param[in] cone Cone to test
      * \param[in] aabb_min Minimum corner of AABB
@@ -1613,25 +1610,6 @@ private:
      */
     bool coneAABBIntersect(const helios::vec3 &cone_origin, const helios::vec3 &cone_direction, float cone_angle, float max_distance, const helios::vec3 &aabb_min, const helios::vec3 &aabb_max);
 
-    /**
-     * \brief Count intersections along a ray using BVH traversal
-     * \param[in] origin Starting point of the ray
-     * \param[in] direction Direction vector of the ray (normalized)
-     * \param[in] max_distance Maximum distance to test (negative = infinite)
-     * \return Number of primitive intersections along the ray
-     */
-    int countRayIntersections(const helios::vec3 &origin, const helios::vec3 &direction, float max_distance = -1.0f);
-
-    /**
-     * \brief Find nearest primitive intersection along a ray using BVH traversal
-     * \param[in] origin Starting point of the ray
-     * \param[in] direction Direction vector of the ray (normalized)
-     * \param[in] candidate_UUIDs Set of primitive UUIDs to consider (empty = all primitives)
-     * \param[out] nearest_distance Distance to nearest intersection (only valid if return is true)
-     * \param[in] max_distance Maximum distance to test (negative = infinite)
-     * \return True if any intersection found, false otherwise
-     */
-    bool findNearestRayIntersection(const helios::vec3 &origin, const helios::vec3 &direction, const std::set<uint> &candidate_UUIDs, float &nearest_distance, float max_distance = -1.0f);
 
     /**
      * \brief Generate uniform sample directions within a cone
@@ -1939,16 +1917,6 @@ private:
      */
     HitResult intersectPrimitive(const RayQuery &query, uint primitive_id);
 
-    /**
-     * \brief Ray-AABB intersection test for voxel primitives
-     * \param[in] origin Ray origin point
-     * \param[in] direction Ray direction vector (should be normalized)
-     * \param[in] aabb_min Minimum corner of axis-aligned bounding box
-     * \param[in] aabb_max Maximum corner of axis-aligned bounding box
-     * \param[out] distance Distance to intersection point
-     * \return True if ray intersects the AABB, false otherwise
-     */
-    bool rayAABBIntersectPrimitive(const helios::vec3 &origin, const helios::vec3 &direction, const helios::vec3 &aabb_min, const helios::vec3 &aabb_max, float &distance);
 
     // -------- RASTERIZATION-BASED COLLISION DETECTION --------
 

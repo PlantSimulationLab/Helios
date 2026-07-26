@@ -66,6 +66,90 @@ DOCTEST_TEST_CASE("LiDAR triangulateHitPoints Cancel Flag") {
     DOCTEST_CHECK(cleared.getTriangleCount() == baseline);
 }
 
+DOCTEST_TEST_CASE("LiDAR triangulateHitPoints Memory-Optimization Equivalence") {
+    // The triangulation memory optimizations (dead pts_copy removal, early release of transient buffers, and the
+    // shared triangulateScanSecondPass helper used by both overloads) must not change the output mesh. sphere.xml is
+    // multi-scan and deterministic, so we assert: (1) the diagnostics reconcile, (2) the mesh is bit-identical across
+    // two independent runs, and (3) a golden count+checksum captured from the mesh is reproduced exactly. The golden
+    // constants below are the mesh this deterministic scene produces; they double as a regression guard so any future
+    // change that alters the output is caught here.
+
+    // Sum every triangle's vertex components and area into a single order-independent checksum. Using double
+    // accumulation of exactly-representable float values keeps this reproducible for identical input.
+    auto meshChecksum = [](const LiDARcloud &cloud) -> double {
+        double sum = 0.0;
+        for (uint i = 0; i < cloud.getTriangleCount(); i++) {
+            Triangulation tri = cloud.getTriangle(i);
+            sum += double(tri.vertex0.x) + double(tri.vertex0.y) + double(tri.vertex0.z);
+            sum += double(tri.vertex1.x) + double(tri.vertex1.y) + double(tri.vertex1.z);
+            sum += double(tri.vertex2.x) + double(tri.vertex2.y) + double(tri.vertex2.z);
+            sum += double(tri.area);
+        }
+        return sum;
+    };
+
+    // --- Two-argument overload ---------------------------------------------------------------------------------
+    LiDARcloud cloud_a;
+    cloud_a.disableMessages();
+    DOCTEST_CHECK_NOTHROW(cloud_a.loadXML("plugins/lidar/xml/sphere.xml"));
+    DOCTEST_CHECK_NOTHROW(cloud_a.triangulateHitPoints(0.5, 5));
+
+    const uint kept_a = cloud_a.getTriangleCount();
+    DOCTEST_CHECK(kept_a > 0);
+
+    // Diagnostics reconciliation: candidates == kept + dropped_lmax + dropped_aspect + dropped_degenerate.
+    std::size_t candidates_a = cloud_a.getTriangulationCandidateCount();
+    std::size_t dropped_a = cloud_a.getTriangulationDroppedByLmax() + cloud_a.getTriangulationDroppedByAspect() + cloud_a.getTriangulationDroppedByDegenerate();
+    DOCTEST_CHECK(candidates_a == std::size_t(kept_a) + dropped_a);
+
+    // Golden guard: this scene forms 383 triangles (matches the "Single Voxel Sphere Test" primitive count).
+    DOCTEST_CHECK(kept_a == 383u);
+    const double checksum_a = meshChecksum(cloud_a);
+
+    // Determinism: an independently-built identical cloud must produce a bit-identical mesh (exact ==, not Approx).
+    LiDARcloud cloud_a2;
+    cloud_a2.disableMessages();
+    DOCTEST_CHECK_NOTHROW(cloud_a2.loadXML("plugins/lidar/xml/sphere.xml"));
+    DOCTEST_CHECK_NOTHROW(cloud_a2.triangulateHitPoints(0.5, 5));
+    DOCTEST_REQUIRE(cloud_a2.getTriangleCount() == kept_a);
+    for (uint i = 0; i < kept_a; i++) {
+        Triangulation t1 = cloud_a.getTriangle(i);
+        Triangulation t2 = cloud_a2.getTriangle(i);
+        DOCTEST_CHECK(t2.vertex0.x == t1.vertex0.x);
+        DOCTEST_CHECK(t2.vertex0.y == t1.vertex0.y);
+        DOCTEST_CHECK(t2.vertex0.z == t1.vertex0.z);
+        DOCTEST_CHECK(t2.vertex1.x == t1.vertex1.x);
+        DOCTEST_CHECK(t2.vertex1.y == t1.vertex1.y);
+        DOCTEST_CHECK(t2.vertex1.z == t1.vertex1.z);
+        DOCTEST_CHECK(t2.vertex2.x == t1.vertex2.x);
+        DOCTEST_CHECK(t2.vertex2.y == t1.vertex2.y);
+        DOCTEST_CHECK(t2.vertex2.z == t1.vertex2.z);
+        DOCTEST_CHECK(t2.area == t1.area);
+    }
+    DOCTEST_CHECK(meshChecksum(cloud_a2) == checksum_a);
+
+    // --- Filtered (five-argument) overload ---------------------------------------------------------------------
+    // sphere.xml carries a "reflectance" scalar field; filtering on it exercises the helper's scalar-field gather
+    // path. The filter keeps the run non-trivial while remaining deterministic.
+    LiDARcloud cloud_b;
+    cloud_b.disableMessages();
+    DOCTEST_CHECK_NOTHROW(cloud_b.loadXML("plugins/lidar/xml/sphere.xml"));
+    DOCTEST_CHECK_NOTHROW(cloud_b.triangulateHitPoints(0.5, 5, "reflectance", -1.0f, "<"));
+
+    const uint kept_b = cloud_b.getTriangleCount();
+    std::size_t candidates_b = cloud_b.getTriangulationCandidateCount();
+    std::size_t dropped_b = cloud_b.getTriangulationDroppedByLmax() + cloud_b.getTriangulationDroppedByAspect() + cloud_b.getTriangulationDroppedByDegenerate();
+    DOCTEST_CHECK(candidates_b == std::size_t(kept_b) + dropped_b);
+
+    // Determinism for the filtered overload.
+    LiDARcloud cloud_b2;
+    cloud_b2.disableMessages();
+    DOCTEST_CHECK_NOTHROW(cloud_b2.loadXML("plugins/lidar/xml/sphere.xml"));
+    DOCTEST_CHECK_NOTHROW(cloud_b2.triangulateHitPoints(0.5, 5, "reflectance", -1.0f, "<"));
+    DOCTEST_REQUIRE(cloud_b2.getTriangleCount() == kept_b);
+    DOCTEST_CHECK(meshChecksum(cloud_b2) == meshChecksum(cloud_b));
+}
+
 DOCTEST_TEST_CASE("LiDAR syntheticScan Progress Callback") {
     LiDARcloud cloud;
     cloud.disableMessages();
@@ -572,6 +656,198 @@ DOCTEST_TEST_CASE("LiDAR Thin-Layer Vertical Symmetry Test") {
         bool symmetric = (denom > 0.f) && (fabs(upper - lower) / denom < 0.25f);
         DOCTEST_CHECK_MESSAGE(symmetric, "Thin-layer LAD asymmetry at size.z=" << sizez << ": lower=" << lower << " upper=" << upper);
     }
+}
+
+DOCTEST_TEST_CASE("LiDAR getCellCenter Rotated Grid Test") {
+    // getCellCenter() must return the TRUE world-space center for a rotated grid, i.e. the un-rotated
+    // lattice center rotated about the grid anchor (about +z). A 2x1x1 grid of total size 2 centered at
+    // the origin has un-rotated cell centers at x = -0.5 and x = +0.5. After a 90 degree rotation those
+    // centers must land on the +/-y axis at (0, -0.5) and (0, +0.5).
+    LiDARcloud cloud;
+    cloud.disableMessages();
+
+    cloud.addGrid(make_vec3(0, 0, 0), make_vec3(2, 1, 1), make_int3(2, 1, 1), 90.f);
+    DOCTEST_REQUIRE(cloud.getGridCellCount() == 2);
+
+    // Cell 0 (i=0) un-rotated at x=-0.5 -> rotates to (0,-0.5); cell 1 (i=1) at x=+0.5 -> (0,+0.5).
+    vec3 c0 = cloud.getCellCenter(0);
+    vec3 c1 = cloud.getCellCenter(1);
+    DOCTEST_CHECK(c0.x == doctest::Approx(0.0f).epsilon(err_tol));
+    DOCTEST_CHECK(c0.y == doctest::Approx(-0.5f).epsilon(err_tol));
+    DOCTEST_CHECK(c0.z == doctest::Approx(0.0f).epsilon(err_tol));
+    DOCTEST_CHECK(c1.x == doctest::Approx(0.0f).epsilon(err_tol));
+    DOCTEST_CHECK(c1.y == doctest::Approx(0.5f).epsilon(err_tol));
+    DOCTEST_CHECK(c1.z == doctest::Approx(0.0f).epsilon(err_tol));
+
+    // 45 degree case checked directly against rotatePointAboutLine of the un-rotated lattice centers.
+    LiDARcloud cloud45;
+    cloud45.disableMessages();
+    cloud45.addGrid(make_vec3(0, 0, 0), make_vec3(2, 1, 1), make_int3(2, 1, 1), 45.f);
+    const vec3 unrot[2] = {make_vec3(-0.5f, 0, 0), make_vec3(0.5f, 0, 0)};
+    for (uint i = 0; i < cloud45.getGridCellCount(); i++) {
+        vec3 expected = rotatePointAboutLine(unrot[i], make_vec3(0, 0, 0), make_vec3(0, 0, 1), deg2rad(45.f));
+        vec3 got = cloud45.getCellCenter(i);
+        DOCTEST_CHECK(got.x == doctest::Approx(expected.x).epsilon(err_tol));
+        DOCTEST_CHECK(got.y == doctest::Approx(expected.y).epsilon(err_tol));
+        DOCTEST_CHECK(got.z == doctest::Approx(expected.z).epsilon(err_tol));
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR getCellCenter Anchor Round-Trip Test") {
+    // For every cell of a rotated multi-cell grid, getCellCenter(i) must equal the un-rotated lattice
+    // center rotated about getCellGlobalAnchor(i) by getCellRotation(i). The global anchor must be
+    // unchanged by rotation (it stays the grid center). The un-rotated fast path (rotation 0) must
+    // return the lattice center exactly.
+    const vec3 grid_center = make_vec3(1.f, -2.f, 0.5f);
+    const vec3 grid_size = make_vec3(2.f, 2.f, 1.f);
+    const int3 ndiv = make_int3(3, 3, 1);
+
+    // Reference grid with no rotation: its centers ARE the un-rotated lattice centers.
+    LiDARcloud ref;
+    ref.disableMessages();
+    ref.addGrid(grid_center, grid_size, ndiv, 0.f);
+
+    // Rotated grid (same geometry) to validate the round-trip.
+    const float rot_deg = 60.f;
+    LiDARcloud rot;
+    rot.disableMessages();
+    rot.addGrid(grid_center, grid_size, ndiv, rot_deg);
+
+    DOCTEST_REQUIRE(ref.getGridCellCount() == rot.getGridCellCount());
+    for (uint i = 0; i < rot.getGridCellCount(); i++) {
+        vec3 lattice_center = ref.getCellCenter(i); // rotation 0 -> un-rotated lattice center
+        vec3 anchor = rot.getCellGlobalAnchor(i);
+        DOCTEST_CHECK(anchor.x == doctest::Approx(grid_center.x).epsilon(err_tol));
+        DOCTEST_CHECK(anchor.y == doctest::Approx(grid_center.y).epsilon(err_tol));
+        DOCTEST_CHECK(anchor.z == doctest::Approx(grid_center.z).epsilon(err_tol));
+
+        vec3 expected = rotatePointAboutLine(lattice_center, anchor, make_vec3(0, 0, 1), deg2rad(rot.getCellRotation(i)));
+        vec3 got = rot.getCellCenter(i);
+        DOCTEST_CHECK(got.x == doctest::Approx(expected.x).epsilon(err_tol));
+        DOCTEST_CHECK(got.y == doctest::Approx(expected.y).epsilon(err_tol));
+        DOCTEST_CHECK(got.z == doctest::Approx(expected.z).epsilon(err_tol));
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR getCellRotation Degrees Round-Trip Test") {
+    // addGrid() takes the rotation in degrees; getCellRotation() must return degrees (the documented
+    // public-API unit), NOT the internally-stored radians. A 45 degree grid must read back 45, not
+    // 0.785..., and a 0 degree grid must read back 0.
+    LiDARcloud cloud;
+    cloud.disableMessages();
+    cloud.addGrid(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1), 45.f);
+    DOCTEST_REQUIRE(cloud.getGridCellCount() == 1);
+    DOCTEST_CHECK(cloud.getCellRotation(0) == doctest::Approx(45.0f).epsilon(err_tol));
+
+    LiDARcloud cloud0;
+    cloud0.disableMessages();
+    cloud0.addGrid(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1), 0.f);
+    DOCTEST_CHECK(cloud0.getCellRotation(0) == doctest::Approx(0.0f).epsilon(err_tol));
+}
+
+DOCTEST_TEST_CASE("LiDAR Rotated Grid Wireframe Corner Test") {
+    // The wireframe corners drawn by addGridWireFrametoVisualizer are the un-rotated lattice box
+    // corners rotated about the grid anchor. Their centroid must coincide with the public (rotated)
+    // getCellCenter(), confirming the wireframe is co-located with the rotated voxel rather than drawn
+    // axis-aligned (the previous bug).
+    LiDARcloud cloud;
+    cloud.disableMessages();
+    const vec3 grid_center = make_vec3(0.5f, 0.5f, 0.25f);
+    cloud.addGrid(grid_center, make_vec3(2, 1, 1), make_int3(2, 1, 1), 30.f);
+
+    for (uint i = 0; i < cloud.getGridCellCount(); i++) {
+        vec3 center = cloud.getCellCenter(i);
+        vec3 anchor = cloud.getCellGlobalAnchor(i);
+        float rot = deg2rad(cloud.getCellRotation(i));
+        vec3 size = cloud.getCellSize(i);
+
+        // Reconstruct the rotated lattice center from getCellCenter by inverse-rotating it, then build
+        // the eight corners about it and rotate them back; their centroid must return to getCellCenter.
+        vec3 lattice_center = rotatePointAboutLine(center, anchor, make_vec3(0, 0, 1), -rot);
+        vec3 boxmin = lattice_center - 0.5f * size;
+        vec3 boxmax = lattice_center + 0.5f * size;
+        vec3 centroid = make_vec3(0, 0, 0);
+        for (int b = 0; b < 8; b++) {
+            vec3 corner = make_vec3((b & 1) ? boxmax.x : boxmin.x, (b & 2) ? boxmax.y : boxmin.y, (b & 4) ? boxmax.z : boxmin.z);
+            corner = rotatePointAboutLine(corner, anchor, make_vec3(0, 0, 1), rot);
+            centroid = centroid + corner / 8.f;
+        }
+        DOCTEST_CHECK(centroid.x == doctest::Approx(center.x).epsilon(err_tol));
+        DOCTEST_CHECK(centroid.y == doctest::Approx(center.y).epsilon(err_tol));
+        DOCTEST_CHECK(centroid.z == doctest::Approx(center.z).epsilon(err_tol));
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR LAD Rotation Invariance Test") {
+    // The leaf-area inversion physics must be untouched by the getCellCenter()/getCellRotation()
+    // rotation change. The decisive guard uses a SINGLE voxel that fully encloses the leaf cube: the
+    // scene (cube + scanners) is identical, and a single enclosing voxel is rotation-invariant (its
+    // volume and the set of leaves it contains do not depend on the grid's bookkeeping rotation), so
+    // the inverted LAD must be identical up to solver noise. A double-rotation bug in the binning path
+    // (where the AABB and the inverse-rotated hit/beam must stay consistent) would corrupt this, as
+    // would an under-sized getGridBoundingBox(), which sets the ray cull for scan_grid_only scans.
+    //
+    // The voxel must genuinely enclose the canopy AT BOTH ROTATIONS for that invariance argument to
+    // hold. leaf_cube_LAI2_lw0_01_spherical.xml spans x,y in [-0.5, 0.5] and z in [0, 1], and a voxel
+    // of side L rotated by 30 degrees contains that cube's corners only for L >= 1.0*(cos30+sin30) =
+    // 1.366, so the 1.5 x 1.5 x 1.2 voxel below encloses it at 0 and at 30 degrees. A smaller voxel is
+    // a sub-volume of a stochastic canopy, and rotating it selects a different subset of leaves, so its
+    // LAD legitimately differs between rotations and the strict check would be measuring sampling noise.
+    //
+    // A multi-voxel 2x2x2 grid is NOT used for the strict check: at 30 degrees the voxel boundaries
+    // slice the cube differently, genuinely re-partitioning the leaf area (the cube is symmetric under
+    // 90 degrees, not 30), so per-voxel LAD legitimately changes. We still check the multi-voxel MEAN
+    // LAD, which is conserved because total leaf area and total volume are rotation-invariant -- but
+    // that conservation holds ONLY if the grid CAPTURES the whole canopy at both rotations. The grid
+    // must therefore enclose the cube exactly as the single-voxel guard does: a grid of total span S
+    // contains the cube's footprint when S >= cos(30)+sin(30) = 1.366, so the 2x2x2 grid below uses a
+    // total span of 1.4 (0.7 per cell). A grid whose span only matches the cube at 0 degrees (e.g. the
+    // 1.0 footprint itself) rotates ~15% of the leaf area outside the grid at 30 degrees while the grid
+    // volume stays fixed, so mean LAD necessarily drops and the check measures that truncation rather
+    // than rotation invariance.
+    Context context_inv;
+    context_inv.loadXML("plugins/lidar/xml/leaf_cube_LAI2_lw0_01_spherical.xml", true); // cube centered at z=0.5
+
+    const float origins[4][3] = {{-5, 0, 0.5f}, {0, -5, 0.5f}, {5, 0, 0.5f}, {0, 5, 0.5f}};
+    const vec3 grid_center = make_vec3(0, 0, 0.5f);
+
+    auto run_lad = [&](const vec3 &grid_size, const int3 &grid_div, float rotation_deg) -> std::vector<float> {
+        LiDARcloud lidar;
+        lidar.disableMessages();
+        for (int sidx = 0; sidx < 4; sidx++) {
+            ScanMetadata scan(make_vec3(origins[sidx][0], origins[sidx][1], origins[sidx][2]), 2000, 0.f, M_PI, 4000, 0.f, 2.f * M_PI, 0.f, 0.f, 0.f, 0.f, std::vector<std::string>{});
+            lidar.addScan(scan);
+        }
+        lidar.addGrid(grid_center, grid_size, grid_div, rotation_deg);
+        lidar.syntheticScan(&context_inv, true, true);
+        lidar.triangulateHitPoints(0.04, 10);
+        lidar.calculateLeafArea(&context_inv);
+        std::vector<float> lad;
+        for (uint i = 0; i < lidar.getGridCellCount(); i++) {
+            lad.push_back(lidar.getCellLeafAreaDensity(i));
+        }
+        return lad;
+    };
+
+    // Strict guard: single enclosing voxel -> identical LAD regardless of grid rotation.
+    std::vector<float> single0 = run_lad(make_vec3(1.5f, 1.5f, 1.2f), make_int3(1, 1, 1), 0.f);
+    std::vector<float> single30 = run_lad(make_vec3(1.5f, 1.5f, 1.2f), make_int3(1, 1, 1), 30.f);
+    DOCTEST_REQUIRE(single0.size() == 1);
+    DOCTEST_REQUIRE(single30.size() == 1);
+    DOCTEST_CHECK_MESSAGE(fabs(single0[0] - single30[0]) < 1e-2f, "Single-voxel LAD not rotation-invariant: lad0=" << single0[0] << " lad30=" << single30[0]);
+
+    // Secondary guard: 2x2x2 grid mean LAD is conserved (total leaf area / total volume). The grid
+    // spans 1.4 x 1.4 x 1.2 (0.7 x 0.7 x 0.6 per cell) so it fully encloses the canopy at 0 AND at
+    // 30 degrees; only then are the captured leaf area and the grid volume both rotation-invariant.
+    std::vector<float> multi0 = run_lad(make_vec3(1.4f, 1.4f, 1.2f), make_int3(2, 2, 2), 0.f);
+    std::vector<float> multi30 = run_lad(make_vec3(1.4f, 1.4f, 1.2f), make_int3(2, 2, 2), 30.f);
+    DOCTEST_REQUIRE(multi0.size() == multi30.size());
+    float mean0 = 0.f, mean30 = 0.f;
+    for (size_t i = 0; i < multi0.size(); i++) {
+        mean0 += multi0[i] / float(multi0.size());
+        mean30 += multi30[i] / float(multi30.size());
+    }
+    DOCTEST_CHECK_MESSAGE(fabs(mean0 - mean30) / std::max(mean0, mean30) < 0.05f, "Mean LAD not rotation-invariant: mean0=" << mean0 << " mean30=" << mean30);
 }
 
 DOCTEST_TEST_CASE("LiDAR Single Voxel Anisotropic Patches Test") {
@@ -3219,12 +3495,19 @@ DOCTEST_TEST_CASE("LiDAR Exit Diameter - Combined with Beam Divergence") {
     // a relaxation of the physical claim.
     const int spread_rays = 200;
 
+    // The beam-footprint sub-rays are drawn from the Context RNG, so seed it before each scan with the
+    // SAME seed (mirrors the "Comparative Spread Test" above). Both scans then use an identical sampling
+    // realization, isolating the aperture's added spread from RNG noise: without this the bounding-box
+    // extent (an extremum statistic driven by outliers) flakes across platforms, e.g. 1.13099 vs 1.1312.
+    const uint scan_seed = 2024u;
+
     // Scan with BOTH exitDiameter and beamDivergence
     LiDARcloud lidar_both;
     lidar_both.disableMessages();
     ScanMetadata scan_both(scan_origin, 100, 0, M_PI, 100, 0, 2 * M_PI, 0.1f, 0.01f, 0.0f, 0.0f, {});
     lidar_both.addScan(scan_both);
     lidar_both.setScanDetectionThreshold(0, 0.f); // measure footprint spread, not the noise floor: keep all returns (default threshold 0.05 also shrinks the sampled cone)
+    context.seedRandomGenerator(scan_seed);
     lidar_both.syntheticScan(&context, spread_rays, 0.05f, false, false);
 
     // Scan with ONLY beamDivergence
@@ -3233,6 +3516,7 @@ DOCTEST_TEST_CASE("LiDAR Exit Diameter - Combined with Beam Divergence") {
     ScanMetadata scan_div(scan_origin, 100, 0, M_PI, 100, 0, 2 * M_PI, 0.0f, 0.01f, 0.0f, 0.0f, {});
     lidar_div.addScan(scan_div);
     lidar_div.setScanDetectionThreshold(0, 0.f); // measure footprint spread, not the noise floor: keep all returns (default threshold 0.05 also shrinks the sampled cone)
+    context.seedRandomGenerator(scan_seed);
     lidar_div.syntheticScan(&context, spread_rays, 0.05f, false, false);
 
     DOCTEST_REQUIRE(lidar_both.getHitCount() > 0);

@@ -185,6 +185,211 @@ TEST_CASE("Context XML I/O Functions") {
         std::remove(test_file);
     }
 
+    SUBCASE("writeXML and loadXML round-trip int4 and vector-valued data") {
+        // Regressions: (1) writeXML wrote int4 data with mismatched tags (<data_int3 ... </data_int4>),
+        // producing malformed XML that could not be reloaded; (2) object member primitive data arrays were
+        // written with no separator between consecutive elements, silently corrupting vector-valued data.
+        Context ctx;
+
+        uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        ctx.setPrimitiveData(patch, "prim_int4", make_int4(1, -2, 3, -4));
+        ctx.setGlobalData("glob_int4", make_int4(5, 6, 7, 8));
+
+        uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(2, 2));
+        std::vector<uint> tileUUIDs = ctx.getObjectPrimitiveUUIDs(tile);
+        std::vector<float> float_array{1.5f, 2.5f, -3.5f};
+        ctx.setPrimitiveData(tileUUIDs.front(), "member_float_array", float_array);
+        std::vector<int2> int2_array{make_int2(1, 2), make_int2(3, 4)};
+        ctx.setPrimitiveData(tileUUIDs.front(), "member_int2_array", int2_array);
+
+        const char *test_file = "helios_test_int4_roundtrip.xml";
+        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, true));
+
+        Context ctx2;
+        DOCTEST_CHECK_NOTHROW(ctx2.loadXML(test_file, true));
+
+        bool found_int4 = false;
+        bool found_arrays = false;
+        for (uint uuid: ctx2.getAllUUIDs()) {
+            if (ctx2.doesPrimitiveDataExist(uuid, "prim_int4")) {
+                int4 v;
+                ctx2.getPrimitiveData(uuid, "prim_int4", v);
+                DOCTEST_CHECK(v == make_int4(1, -2, 3, -4));
+                found_int4 = true;
+            }
+            if (ctx2.doesPrimitiveDataExist(uuid, "member_float_array")) {
+                std::vector<float> vf;
+                ctx2.getPrimitiveData(uuid, "member_float_array", vf);
+                DOCTEST_CHECK(vf.size() == 3);
+                if (vf.size() == 3) {
+                    DOCTEST_CHECK(vf.at(0) == doctest::Approx(1.5f));
+                    DOCTEST_CHECK(vf.at(1) == doctest::Approx(2.5f));
+                    DOCTEST_CHECK(vf.at(2) == doctest::Approx(-3.5f));
+                }
+                std::vector<int2> vi;
+                ctx2.getPrimitiveData(uuid, "member_int2_array", vi);
+                DOCTEST_CHECK(vi.size() == 2);
+                if (vi.size() == 2) {
+                    DOCTEST_CHECK(vi.at(0) == make_int2(1, 2));
+                    DOCTEST_CHECK(vi.at(1) == make_int2(3, 4));
+                }
+                found_arrays = true;
+            }
+        }
+        DOCTEST_CHECK(found_int4);
+        DOCTEST_CHECK(found_arrays);
+
+        int4 gv;
+        ctx2.getGlobalData("glob_int4", gv);
+        DOCTEST_CHECK(gv == make_int4(5, 6, 7, 8));
+
+        std::remove(test_file);
+    }
+
+    SUBCASE("loadXML polymesh reload") {
+        // Regression: loading a file containing a polymesh object into a Context where that object ID was
+        // already in use remapped the ID before the primitive-map lookup and crashed with std::out_of_range.
+        Context ctx;
+        uint p1 = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        uint p2 = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+        uint poly = ctx.addPolymeshObject({p1, p2});
+        DOCTEST_CHECK(ctx.doesObjectExist(poly));
+
+        const char *test_file = "helios_test_polymesh_reload.xml";
+        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, true));
+
+        Context ctx2;
+        DOCTEST_CHECK_NOTHROW(ctx2.loadXML(test_file, true));
+        DOCTEST_CHECK_NOTHROW(ctx2.loadXML(test_file, true));
+        DOCTEST_CHECK(ctx2.getObjectCount() == 2);
+        DOCTEST_CHECK(ctx2.getPrimitiveCount() == 4);
+
+        std::remove(test_file);
+    }
+
+    SUBCASE("writeXML and loadXML preserve texture UV coordinates") {
+        // Regression test: textured primitives written with the v3 <material> format must
+        // retain their texture (u,v) coordinates across a writeXML()/loadXML() round-trip.
+        const char *texture = "lib/images/disk_texture.png";
+        Context ctx;
+
+        // Textured tile object (its sub-patches carry the UVs)
+        uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(2, 2), nullrotation, make_int2(2, 2), texture);
+        std::vector<uint> tile_uuids = ctx.getObjectPrimitiveUUIDs(tile);
+        DOCTEST_CHECK(tile_uuids.size() == 4);
+        std::vector<std::vector<vec2>> tile_uv_before;
+        for (uint uuid: tile_uuids) {
+            std::vector<vec2> uv = ctx.getPrimitiveTextureUV(uuid);
+            DOCTEST_CHECK(uv.size() == 4);
+            tile_uv_before.push_back(uv);
+        }
+
+        // Standalone textured patch and triangle exercise the same material-format read branch
+        vec2 uv0 = make_vec2(0.2f, 0.3f);
+        vec2 uv2 = make_vec2(0.8f, 0.9f);
+        uint patch = ctx.addPatch(make_vec3(3, 0, 0), make_vec2(1, 1), nullrotation, texture, 0.5f * (uv0 + uv2), uv2 - uv0);
+        std::vector<vec2> patch_uv_before = ctx.getPrimitiveTextureUV(patch);
+        DOCTEST_CHECK(patch_uv_before.size() == 4);
+
+        uint triangle = ctx.addTriangle(make_vec3(5, 0, 0), make_vec3(6, 0, 0), make_vec3(6, 1, 0), texture, make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1));
+        std::vector<vec2> tri_uv_before = ctx.getPrimitiveTextureUV(triangle);
+        DOCTEST_CHECK(tri_uv_before.size() == 3);
+
+        const char *test_file = "helios_texture_uv_test.xml";
+        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, true));
+
+        Context ctx2;
+        DOCTEST_CHECK_NOTHROW(ctx2.loadXML(test_file, true));
+
+        // Locate the reloaded tile object and verify its sub-patch UVs survived
+        std::vector<uint> object_ids = ctx2.getAllObjectIDs();
+        uint loaded_tile = 0;
+        bool found_tile = false;
+        for (uint objID: object_ids) {
+            if (ctx2.getObjectType(objID) == OBJECT_TYPE_TILE) {
+                loaded_tile = objID;
+                found_tile = true;
+                break;
+            }
+        }
+        DOCTEST_CHECK(found_tile);
+
+        std::vector<uint> loaded_tile_uuids = ctx2.getObjectPrimitiveUUIDs(loaded_tile);
+        DOCTEST_CHECK(loaded_tile_uuids.size() == tile_uuids.size());
+
+        // Each sub-patch must retain its 4 UVs and texture file, and the sub-patch ordering must be
+        // preserved across the round-trip (writeXML() emits primitives in ascending UUID order, which
+        // matches the tile's row-major sub-patch creation order).
+        for (size_t i = 0; i < loaded_tile_uuids.size(); i++) {
+            std::vector<vec2> uv = ctx2.getPrimitiveTextureUV(loaded_tile_uuids.at(i));
+            DOCTEST_CHECK(uv.size() == 4);
+            DOCTEST_CHECK(ctx2.getPrimitiveTextureFile(loaded_tile_uuids.at(i)) == std::string(texture));
+            for (size_t k = 0; k < uv.size() && k < tile_uv_before.at(i).size(); k++) {
+                DOCTEST_CHECK(uv.at(k).x == doctest::Approx(tile_uv_before.at(i).at(k).x));
+                DOCTEST_CHECK(uv.at(k).y == doctest::Approx(tile_uv_before.at(i).at(k).y));
+            }
+        }
+
+        // Verify the standalone patch and triangle UVs survived
+        std::vector<uint> loaded_uuids = ctx2.getAllUUIDs();
+        int checked_patch = 0;
+        int checked_triangle = 0;
+        for (uint uuid: loaded_uuids) {
+            if (ctx2.getPrimitiveParentObjectID(uuid) != 0) {
+                continue; // skip tile sub-patches already checked above
+            }
+            if (ctx2.getPrimitiveType(uuid) == PRIMITIVE_TYPE_PATCH) {
+                std::vector<vec2> uv = ctx2.getPrimitiveTextureUV(uuid);
+                DOCTEST_CHECK(uv.size() == 4);
+                checked_patch++;
+            } else if (ctx2.getPrimitiveType(uuid) == PRIMITIVE_TYPE_TRIANGLE) {
+                std::vector<vec2> uv = ctx2.getPrimitiveTextureUV(uuid);
+                DOCTEST_CHECK(uv.size() == 3);
+                checked_triangle++;
+            }
+        }
+        DOCTEST_CHECK(checked_patch == 1);
+        DOCTEST_CHECK(checked_triangle == 1);
+
+        std::remove(test_file);
+    }
+
+    SUBCASE("writeXML and loadXML preserve object sub-primitive ordering after deletion") {
+        // Deleting a sub-primitive from a compound object must keep the remaining sub-primitives'
+        // ordering intact across a writeXML()/loadXML() round-trip (deleteChildPrimitive is
+        // order-preserving, and writeXML writes primitives in ascending UUID order).
+        Context ctx;
+        uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(3, 3), nullrotation, make_int2(3, 3));
+        std::vector<uint> uuids = ctx.getObjectPrimitiveUUIDs(tile);
+        DOCTEST_CHECK(uuids.size() == 9);
+
+        // Delete a middle sub-patch, then capture the remaining ordering
+        ctx.deletePrimitive(uuids.at(3));
+        std::vector<uint> remaining = ctx.getObjectPrimitiveUUIDs(tile);
+        DOCTEST_CHECK(remaining.size() == 8);
+        // The kept sub-primitives must still be in ascending (creation) order in memory
+        for (size_t i = 1; i < remaining.size(); i++) {
+            DOCTEST_CHECK(remaining.at(i) > remaining.at(i - 1));
+        }
+
+        const char *test_file = "helios_order_delete_test.xml";
+        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, true));
+
+        Context ctx2;
+        DOCTEST_CHECK_NOTHROW(ctx2.loadXML(test_file, true));
+
+        std::vector<uint> object_ids = ctx2.getAllObjectIDs();
+        DOCTEST_CHECK(object_ids.size() == 1);
+        std::vector<uint> loaded = ctx2.getObjectPrimitiveUUIDs(object_ids.at(0));
+        DOCTEST_CHECK(loaded.size() == remaining.size());
+        // Loaded sub-primitives must also be in ascending order (same relative order as before write)
+        for (size_t i = 1; i < loaded.size(); i++) {
+            DOCTEST_CHECK(loaded.at(i) > loaded.at(i - 1));
+        }
+
+        std::remove(test_file);
+    }
+
     SUBCASE("writeXML_byobject") {
         Context ctx;
         uint box1 = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));

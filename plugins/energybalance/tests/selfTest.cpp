@@ -585,6 +585,149 @@ DOCTEST_TEST_CASE("EnergyBalanceModel - Default value warnings") {
     }
 }
 
+DOCTEST_TEST_CASE("EnergyBalanceModel initial temperature guess equal to internal second guess") {
+    // Regression test: the secant solver uses a hardcoded second initial guess of 400 K. When the
+    // user-supplied initial 'temperature' equals that value, the two initial guesses produce identical
+    // residuals, the solver's degenerate-case branch is taken on the first iteration, and (on the buggy
+    // code) the uninitialized result variable is written back as the surface temperature.
+    Context context;
+    uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    float Teq = 350.f; // Purely radiative equilibrium temperature (gH = 0 => no sensible/latent flux)
+    context.setPrimitiveData(UUID, "radiation_flux_LW", float(2.f * 5.67e-8 * pow(Teq, 4)));
+    context.setPrimitiveData(UUID, "air_temperature", 300.f);
+    context.setPrimitiveData(UUID, "boundarylayer_conductance", 0.f); // gH = 0
+    context.setPrimitiveData(UUID, "temperature", 400.f); // Collides with the internal second guess
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+    model.addRadiationBand("LW");
+    DOCTEST_CHECK_NOTHROW(model.run());
+
+    float T;
+    DOCTEST_CHECK_NOTHROW(context.getPrimitiveData(UUID, "temperature", T));
+    DOCTEST_CHECK(std::isfinite(T));
+    DOCTEST_CHECK(T == doctest::Approx(Teq).epsilon(err_tol));
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel zero boundary-layer conductance with stomatal conductance") {
+    // Regression test: with gH = 0 (e.g. zero wind) and a nonzero moisture conductance on a surface
+    // whose stomatal sidedness is zero, the total moisture conductance expression evaluates 0/0. The
+    // buggy guard only caught the gH == 0 && gS == 0 case, so latent_flux was written as NaN.
+    Context context;
+    uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    context.setPrimitiveData(UUID, "radiation_flux_LW", 400.f);
+    context.setPrimitiveData(UUID, "air_temperature", 300.f);
+    context.setPrimitiveData(UUID, "boundarylayer_conductance", 0.f); // gH = 0
+    context.setPrimitiveData(UUID, "moisture_conductance", 0.1f); // gS > 0
+    // stomatal_sidedness left unset -> defaults to 0 -> 0/0 in the buggy conductance expression
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+    model.addRadiationBand("LW");
+    DOCTEST_CHECK_NOTHROW(model.run());
+
+    float latent_flux, T;
+    DOCTEST_CHECK_NOTHROW(context.getPrimitiveData(UUID, "latent_flux", latent_flux));
+    DOCTEST_CHECK_NOTHROW(context.getPrimitiveData(UUID, "temperature", T));
+    DOCTEST_CHECK(std::isfinite(latent_flux));
+    DOCTEST_CHECK(latent_flux == doctest::Approx(0.0f)); // No boundary-layer conductance => no vapor transport
+    DOCTEST_CHECK(std::isfinite(T));
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel single emission-enabled band selects its emissivity") {
+    // When the RadiationModel records emission-enabled state, thermal emission must use the emissivity of
+    // the single emission-enabled band (here LW, emissivity 0.8) and ignore other bands' emissivities.
+    Context context;
+    uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    float R = 500.f;
+    context.setPrimitiveData(UUID, "radiation_flux_LW", R);
+    context.setPrimitiveData(UUID, "radiation_flux_SW", 0.f);
+    context.setPrimitiveData(UUID, "air_temperature", 300.f);
+    context.setPrimitiveData(UUID, "boundarylayer_conductance", 0.f); // gH = 0 => pure radiative equilibrium
+    context.setPrimitiveData(UUID, "emissivity_LW", 0.8f);
+    context.setPrimitiveData(UUID, "emissivity_SW", 0.4f);
+    context.setGlobalData("emission_enabled_LW", uint(1)); // Simulates a radiation run: emission only on LW
+    context.setGlobalData("emission_enabled_SW", uint(0));
+
+    std::string output;
+    {
+        capture_cout capture;
+        EnergyBalanceModel model(&context);
+        model.addRadiationBand("LW");
+        model.addRadiationBand("SW");
+        model.run();
+        output = capture.get_captured_output();
+    }
+
+    float T;
+    DOCTEST_CHECK_NOTHROW(context.getPrimitiveData(UUID, "temperature", T));
+    // Pure radiative equilibrium: R = Nsides * eps * sigma * T^4, with Nsides = 2 and eps = 0.8 (the LW band)
+    float T_expected = float(pow(R / (2.f * 0.8f * 5.67e-8f), 0.25));
+    DOCTEST_CHECK(T == doctest::Approx(T_expected).epsilon(err_tol));
+    DOCTEST_CHECK(output.find("multiple_emission_bands") == std::string::npos);
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel multiple emission-enabled bands warn and use the first") {
+    // With emission enabled on more than one band the choice is ambiguous: warn and use the emissivity of
+    // the first emission-enabled band (LW, added first, emissivity 0.8).
+    Context context;
+    uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    float R = 500.f;
+    context.setPrimitiveData(UUID, "radiation_flux_LW", R);
+    context.setPrimitiveData(UUID, "radiation_flux_LW2", 0.f);
+    context.setPrimitiveData(UUID, "air_temperature", 300.f);
+    context.setPrimitiveData(UUID, "boundarylayer_conductance", 0.f);
+    context.setPrimitiveData(UUID, "emissivity_LW", 0.8f);
+    context.setPrimitiveData(UUID, "emissivity_LW2", 0.4f);
+    context.setGlobalData("emission_enabled_LW", uint(1));
+    context.setGlobalData("emission_enabled_LW2", uint(1));
+
+    std::string output;
+    {
+        capture_cout capture;
+        EnergyBalanceModel model(&context);
+        model.addRadiationBand("LW");
+        model.addRadiationBand("LW2");
+        model.run();
+        output = capture.get_captured_output();
+    }
+
+    float T;
+    DOCTEST_CHECK_NOTHROW(context.getPrimitiveData(UUID, "temperature", T));
+    float T_expected = float(pow(R / (2.f * 0.8f * 5.67e-8f), 0.25));
+    DOCTEST_CHECK(output.find("multiple_emission_bands") != std::string::npos);
+    DOCTEST_CHECK(T == doctest::Approx(T_expected).epsilon(err_tol));
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel emissivity defined on multiple bands without emission info warns") {
+    // Backward-compatible fallback: when no emission-enabled information is available (radiation fluxes set
+    // manually, no RadiationModel run), all bands are emissivity candidates. Defining emissivity on more
+    // than one band is ambiguous and is warned about; the first band's value is used.
+    Context context;
+    uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    context.setPrimitiveData(UUID, "radiation_flux_LW", 400.f);
+    context.setPrimitiveData(UUID, "radiation_flux_SW", 300.f);
+    context.setPrimitiveData(UUID, "air_temperature", 300.f);
+    context.setPrimitiveData(UUID, "emissivity_LW", 0.95f);
+    context.setPrimitiveData(UUID, "emissivity_SW", 0.5f);
+
+    std::string output;
+    {
+        capture_cout capture;
+        EnergyBalanceModel model(&context);
+        model.addRadiationBand("LW");
+        model.addRadiationBand("SW");
+        model.run();
+        output = capture.get_captured_output();
+    }
+    DOCTEST_CHECK(output.find("multiple_emissivity_bands") != std::string::npos);
+}
+
 int EnergyBalanceModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

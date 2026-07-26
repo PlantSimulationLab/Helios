@@ -737,6 +737,44 @@ TEST_CASE("Object Management") {
         DOCTEST_CHECK(bmax.x > 0.5f);
     }
 
+    SUBCASE("rotateObject z-axis consistency") {
+        // Regression: CompoundObject::rotate negated the rotation angle for the "z" axis only, rotating
+        // objects opposite to rotatePrimitive and to the vec3-axis rotateObject overload.
+        Context ctx;
+        uint obj = ctx.addTileObject(make_vec3(1, 0, 0), make_vec2(0.5, 0.5), nullrotation, make_int2(1, 1));
+        uint obj2 = ctx.addTileObject(make_vec3(1, 0, 0), make_vec2(0.5, 0.5), nullrotation, make_int2(1, 1));
+        uint prim = ctx.addPatch(make_vec3(1, 0, 0), make_vec2(0.5, 0.5));
+
+        ctx.rotateObject(obj, 0.5f * PI_F, "z");
+        ctx.rotateObject(obj2, 0.5f * PI_F, make_vec3(0, 0, 1));
+        ctx.rotatePrimitive(prim, 0.5f * PI_F, "z");
+
+        vec3 obj_center = ctx.getObjectCenter(obj);
+        vec3 obj2_center = ctx.getObjectCenter(obj2);
+        vec3 prim_center = ctx.getPatchCenter(prim);
+
+        DOCTEST_CHECK(obj_center.x == doctest::Approx(0.f).epsilon(errtol));
+        DOCTEST_CHECK(obj_center.y == doctest::Approx(1.f).epsilon(errtol));
+        DOCTEST_CHECK(obj_center.x == doctest::Approx(prim_center.x).epsilon(errtol));
+        DOCTEST_CHECK(obj_center.y == doctest::Approx(prim_center.y).epsilon(errtol));
+        DOCTEST_CHECK(obj_center.x == doctest::Approx(obj2_center.x).epsilon(errtol));
+        DOCTEST_CHECK(obj_center.y == doctest::Approx(obj2_center.y).epsilon(errtol));
+    }
+
+    SUBCASE("domain bounding box min/max") {
+        // Regression: the serial (non-OpenMP) path used if/else-if between the min and max tests, so a
+        // vertex that set a new minimum could never update the maximum.
+        Context ctx;
+        uint tri = ctx.addTriangle(make_vec3(3, 0, 0), make_vec3(2, 1, 0), make_vec3(1, 0, 0), RGB::red);
+        DOCTEST_CHECK(ctx.doesPrimitiveExist(tri));
+        vec2 xb, yb, zb;
+        ctx.getDomainBoundingBox(xb, yb, zb);
+        DOCTEST_CHECK(xb.x == doctest::Approx(1.f).epsilon(errtol));
+        DOCTEST_CHECK(xb.y == doctest::Approx(3.f).epsilon(errtol));
+        DOCTEST_CHECK(yb.x == doctest::Approx(0.f).epsilon(errtol));
+        DOCTEST_CHECK(yb.y == doctest::Approx(1.f).epsilon(errtol));
+    }
+
     SUBCASE("domain bounding sphere") {
         Context ctx;
         std::vector<uint> ids;
@@ -889,6 +927,17 @@ TEST_CASE("Data Management") {
         DOCTEST_CHECK(ctx.queryTimeseriesData("ts", 1) == doctest::Approx(305.3f));
         // Length is unchanged (update, not insert)
         DOCTEST_CHECK(ctx.getTimeseriesLength("ts") == 2);
+
+        // Regression: adding a data point at a duplicate date/time used to warn "Skipping duplicate" but
+        // then terminate with an "unknown reason" runtime error. It must warn and skip.
+        {
+            capture_cerr cerr_buffer;
+            DOCTEST_CHECK_NOTHROW(ctx.addTimeseriesData("ts", 111.1f, date, time0));
+            DOCTEST_CHECK_NOTHROW(ctx.addTimeseriesData("ts", 222.2f, date, time1));
+        }
+        DOCTEST_CHECK(ctx.getTimeseriesLength("ts") == 2);
+        DOCTEST_CHECK(ctx.queryTimeseriesData("ts", 0) == doctest::Approx(999.9f));
+        DOCTEST_CHECK(ctx.queryTimeseriesData("ts", 1) == doctest::Approx(305.3f));
 
         // Error: unknown label
         {
@@ -1073,6 +1122,52 @@ TEST_CASE("Object Management: Creation and Properties") {
         DOCTEST_CHECK(ctx.getDiskObjectCenter(objID) == make_vec3(1, 2, 3));
         DOCTEST_CHECK(ctx.getDiskObjectSize(objID) == make_vec2(4, 5));
         DOCTEST_CHECK(ctx.getDiskObjectSubdivisionCount(objID) == 8u);
+    }
+
+    SUBCASE("multi-ring disk triangle transforms") {
+        // Regression: for Ndivs.y >= 2, the color overloads of addDisk/addDiskObject only rotated/translated
+        // the second triangle of each outer-ring pair, leaving the first at the world origin.
+        Context ctx;
+        vec3 center = make_vec3(5, 0, 0);
+        std::vector<uint> UUIDs = ctx.addDisk(make_int2(8, 2), center, make_vec2(1, 1), nullrotation, RGB::red);
+        DOCTEST_CHECK(UUIDs.size() == 8 + 8 * 2);
+        for (uint UUID: UUIDs) {
+            for (const vec3 &v: ctx.getPrimitiveVertices(UUID)) {
+                DOCTEST_CHECK((v - center).magnitude() <= 1.f + errtol);
+            }
+        }
+
+        vec3 obj_center = make_vec3(0, 4, 1);
+        uint objID = ctx.addDiskObject(make_int2(6, 3), obj_center, make_vec2(2, 2), nullrotation, RGB::red);
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(objID)) {
+            for (const vec3 &v: ctx.getPrimitiveVertices(UUID)) {
+                DOCTEST_CHECK((v - obj_center).magnitude() <= 2.f + errtol);
+            }
+        }
+    }
+
+    SUBCASE("voxel rotation restrictions") {
+        // Regression: non-z-axis rotations of voxels warned "Ignoring this rotation" but were applied anyway
+        // (batch overloads), and Voxel::rotate rotated about z regardless of the requested axis string.
+        Context ctx;
+        uint vox = ctx.addVoxel(make_vec3(1, 2, 3), make_vec3(1, 1, 1));
+        float T_before[16], T_after[16];
+        ctx.getPrimitiveTransformationMatrix(vox, T_before);
+        std::vector<uint> vlist{vox};
+        {
+            capture_cerr cerr_buffer;
+            ctx.rotatePrimitive(vlist, 0.25f * PI_F, "x"); // batch string-axis overload
+            ctx.rotatePrimitive(vox, 0.25f * PI_F, "y"); // single-primitive overload -> Voxel::rotate
+            ctx.rotatePrimitive(vlist, 0.25f * PI_F, make_vec3(1, 0, 0)); // batch vec3-axis overload
+        }
+        ctx.getPrimitiveTransformationMatrix(vox, T_after);
+        for (int i = 0; i < 16; i++) {
+            DOCTEST_CHECK(T_after[i] == doctest::Approx(T_before[i]).epsilon(errtol));
+        }
+        // rotation about the z-axis is allowed and must still be applied
+        ctx.rotatePrimitive(vox, 0.5f * PI_F, "z");
+        ctx.getPrimitiveTransformationMatrix(vox, T_after);
+        DOCTEST_CHECK(T_after[0] == doctest::Approx(0.f).epsilon(errtol));
     }
 
     SUBCASE("addConeObject") {

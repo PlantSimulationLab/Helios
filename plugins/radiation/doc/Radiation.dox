@@ -169,7 +169,7 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
      <td>glass\_n\_*</td>
      <td>unitless</td>
      <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
-     <td>Refractive index of a translucent cover (glass/plastic) for band *. <b>Setting this activates the Fresnel+Bouguer angular-transmittance model for the primitive in that band</b>, overriding any constant reflectivity_*/transmissivity_*. See Sect. \ref RadGlass.</td>
+     <td>Refractive index of a translucent cover (glass/plastic) for band *. <b>Setting this activates the Fresnel+Bouguer angular-transmittance model for the primitive in that band</b>, overriding any constant <code>reflectivity_*</code>/<code>transmissivity_*</code>. See Sect. \ref RadGlass.</td>
      <td>N/A</td>
      <td>N/A (model off)</td>
    </tr>
@@ -177,7 +177,7 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
      <td>glass\_KL\_*</td>
      <td>unitless</td>
      <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
-     <td>Bouguer absorption product K·L (extinction coefficient × thickness) of a translucent cover for band *. Optional; only used when glass_n_* is set. Default 0 = lossless (non-absorbing) sheet. See Sect. \ref RadGlass.</td>
+     <td>Bouguer absorption product K·L (extinction coefficient × thickness) of a translucent cover for band *. Optional; only used when <code>glass_n_*</code> is set. Default 0 = lossless (non-absorbing) sheet. See Sect. \ref RadGlass.</td>
      <td>N/A</td>
      <td>0</td>
    </tr>

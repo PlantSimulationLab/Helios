@@ -19,6 +19,7 @@
 #include <cmath>
 #include <doctest.h>
 #include <iostream>
+#include <type_traits>
 #include "doctest_utils.h"
 #include "global.h"
 
@@ -215,6 +216,19 @@ DOCTEST_TEST_CASE("CollisionDetection GPU Availability Query") {
     // Disabling always lands in CPU mode regardless of availability.
     DOCTEST_CHECK_NOTHROW(collision.disableGPUAcceleration());
     DOCTEST_CHECK(collision.isGPUAccelerationEnabled() == false);
+}
+
+
+// Regression guard: CollisionDetection owns raw CUDA device pointers and frees them in its destructor, so an
+// implicitly-generated copy would double-free them (copy-construct leaves two objects holding the same pointers with
+// gpu_memory_allocated true) or orphan them (copy-assign overwrites the target's live pointers and clears the flag,
+// after which freeGPUMemory()'s early return skips them entirely). Copy and move must stay deleted. This asserts a
+// compile-time type property, so it is meaningful on CPU-only builds too and needs no GPU or CUDA guard.
+DOCTEST_TEST_CASE("CollisionDetection Non-Copyable Device Ownership") {
+    DOCTEST_CHECK(std::is_copy_constructible<CollisionDetection>::value == false);
+    DOCTEST_CHECK(std::is_copy_assignable<CollisionDetection>::value == false);
+    DOCTEST_CHECK(std::is_move_constructible<CollisionDetection>::value == false);
+    DOCTEST_CHECK(std::is_move_assignable<CollisionDetection>::value == false);
 }
 
 
@@ -503,6 +517,82 @@ DOCTEST_TEST_CASE("CollisionDetection Manual BVH Rebuild") {
 }
 
 
+DOCTEST_TEST_CASE("CollisionDetection Restricted BVH Survives Automatic Rebuild") {
+    // Regression test: buildBVH(subset) must remain restricted to that subset across subsequent
+    // queries. Previously ensureBVHCurrent() saw the primitives OUTSIDE the subset still flagged
+    // dirty in the Context, concluded the geometry had changed, and silently rebuilt the BVH over
+    // ALL geometry -- so a ray returned a primitive the caller had explicitly excluded.
+    Context context;
+
+    // near_UUID is deliberately excluded from the BVH; far_UUID is the only requested primitive.
+    uint near_UUID = context.addPatch(make_vec3(0, 0, 2), make_vec2(10, 10));
+    uint far_UUID = context.addPatch(make_vec3(0, 0, 8), make_vec2(10, 10));
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    collision.buildBVH({far_UUID});
+    DOCTEST_CHECK(collision.getPrimitiveCount() == 1);
+
+    // Casting a ray must not resurrect the excluded primitive.
+    CollisionDetection::HitResult result = collision.castRay(make_vec3(0, 0, 0), make_vec3(0, 0, 1), -1.0f);
+
+    DOCTEST_CHECK(collision.getPrimitiveCount() == 1);
+    DOCTEST_CHECK(result.hit == true);
+    DOCTEST_CHECK(result.primitive_UUID == far_UUID);
+    DOCTEST_CHECK(result.distance == doctest::Approx(8.0f).epsilon(0.01));
+
+    // The excluded primitive must never be reported.
+    DOCTEST_CHECK(result.primitive_UUID != near_UUID);
+}
+
+
+DOCTEST_TEST_CASE("CollisionDetection Automatic Rebuild Tracks New Geometry") {
+    // Companion to the restricted-BVH test above: when the BVH was built over ALL geometry
+    // (the default), adding new primitives must still trigger an automatic rebuild that picks
+    // them up. This guards against over-correcting the restriction fix into a stale BVH.
+    Context context;
+
+    context.addPatch(make_vec3(0, 0, 8), make_vec2(10, 10));
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    collision.buildBVH(); // all geometry
+    DOCTEST_CHECK(collision.getPrimitiveCount() == 1);
+
+    // Add a nearer patch; an unrestricted BVH must automatically absorb it.
+    uint added_UUID = context.addPatch(make_vec3(0, 0, 2), make_vec2(10, 10));
+
+    CollisionDetection::HitResult result = collision.castRay(make_vec3(0, 0, 0), make_vec3(0, 0, 1), -1.0f);
+
+    DOCTEST_CHECK(collision.getPrimitiveCount() == 2);
+    DOCTEST_CHECK(result.hit == true);
+    DOCTEST_CHECK(result.primitive_UUID == added_UUID);
+    DOCTEST_CHECK(result.distance == doctest::Approx(2.0f).epsilon(0.01));
+}
+
+
+DOCTEST_TEST_CASE("CollisionDetection optimizeLayout Unimplemented Fails Loudly") {
+    // Regression test: optimizeLayout() is a public, documented API whose return value is specified as the
+    // "final collision count after optimization". It is not implemented. Previously it merely printed a warning
+    // (suppressed entirely by disableMessages()) and returned a fake 0 -- indistinguishable from a genuine
+    // "optimization succeeded, zero collisions remain" result. Per the Helios fail-fast policy an unimplemented
+    // function must raise helios_runtime_error rather than return a misleading value.
+    Context context;
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    // Deliberately overlapping geometry: a real implementation could never report 0 collisions here.
+    std::vector<uint> overlapping;
+    overlapping.push_back(context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1)));
+    overlapping.push_back(context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1)));
+
+    DOCTEST_CHECK_THROWS_AS(collision.optimizeLayout(overlapping), std::runtime_error);
+}
+
+
 DOCTEST_TEST_CASE("CollisionDetection Message Control") {
     Context context;
 
@@ -647,6 +737,31 @@ DOCTEST_TEST_CASE("CollisionDetection BVH Validity Persistence") {
     collision.buildBVH();
 
     // Should be valid after building
+    DOCTEST_CHECK(collision.isBVHValid() == true);
+}
+
+
+DOCTEST_TEST_CASE("CollisionDetection isBVHValid Reports Moved Geometry As Stale") {
+    // Regression test: isBVHValid() must agree with whether a query would actually rebuild the BVH.
+    // Moving an existing primitive marks it dirty in the Context, so ensureBVHCurrent() rebuilds and the
+    // stored node AABBs change. isBVHValid() only compared UUID sets -- which a move does not alter -- so it
+    // reported "valid" for a BVH whose bounding boxes no longer matched the geometry.
+    Context context;
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    uint UUID = context.addPatch(make_vec3(0, 0, 5), make_vec2(1, 1));
+    collision.buildBVH();
+    DOCTEST_CHECK(collision.isBVHValid() == true);
+
+    // Move the primitive far away. Same UUID, so the primitive set is unchanged, but the BVH AABBs are stale.
+    context.translatePrimitive(UUID, make_vec3(0, 0, 20));
+
+    DOCTEST_CHECK(collision.isBVHValid() == false);
+
+    // After an explicit rebuild it must report valid again.
+    collision.rebuildBVH();
     DOCTEST_CHECK(collision.isBVHValid() == true);
 }
 

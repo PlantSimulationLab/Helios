@@ -464,8 +464,12 @@ void Context::duplicatePrimitiveData(const char *existing_data_label, const char
                 primitive->primitive_data_int2[copy_data_label] = primitive->primitive_data_int2.at(existing_data_label);
             } else if (type == HELIOS_TYPE_INT3) {
                 primitive->primitive_data_int3[copy_data_label] = primitive->primitive_data_int3.at(existing_data_label);
+            } else if (type == HELIOS_TYPE_INT4) {
+                primitive->primitive_data_int4[copy_data_label] = primitive->primitive_data_int4.at(existing_data_label);
             } else if (type == HELIOS_TYPE_STRING) {
                 primitive->primitive_data_string[copy_data_label] = primitive->primitive_data_string.at(existing_data_label);
+            } else {
+                helios_runtime_error("ERROR (Context::duplicatePrimitiveData): Unsupported primitive data type for label '" + std::string(existing_data_label) + "'.");
             }
             primitive->dirty_flag = true;
         }
@@ -709,17 +713,19 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
             A = getPrimitiveArea(UUID);
             if (std::isnan(A)) {
                 nan_warning = true;
+                continue;
             }
             sum += value * A;
             area += A;
         }
     }
 
+    if (nan_warning) {
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
+    }
     if (area == 0) {
         std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         awt_mean = 0;
-    } else if (nan_warning) {
-        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     } else {
         awt_mean = sum / area;
     }
@@ -738,17 +744,19 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
             A = getPrimitiveArea(UUID);
             if (std::isnan(A)) {
                 nan_warning = true;
+                continue;
             }
             sum += value * double(A);
             area += A;
         }
     }
 
+    if (nan_warning) {
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
+    }
     if (area == 0) {
         std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         awt_mean = 0;
-    } else if (nan_warning) {
-        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     } else {
         awt_mean = sum / area;
     }
@@ -766,17 +774,19 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
             float A = getPrimitiveArea(UUID);
             if (std::isnan(A)) {
                 nan_warning = true;
+                continue;
             }
             sum = sum + (value * A);
             area += A;
         }
     }
 
+    if (nan_warning) {
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
+    }
     if (area == 0) {
         std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         awt_mean = make_vec2(0, 0);
-    } else if (nan_warning) {
-        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     } else {
         awt_mean = sum / area;
     }
@@ -794,17 +804,19 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
             float A = getPrimitiveArea(UUID);
             if (std::isnan(A)) {
                 nan_warning = true;
+                continue;
             }
             sum = sum + (value * A);
             area += A;
         }
     }
 
+    if (nan_warning) {
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
+    }
     if (area == 0) {
         std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         awt_mean = make_vec3(0, 0, 0);
-    } else if (nan_warning) {
-        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     } else {
         awt_mean = sum / area;
     }
@@ -822,17 +834,19 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
             float A = getPrimitiveArea(UUID);
             if (std::isnan(A)) {
                 nan_warning = true;
+                continue;
             }
             sum = sum + (value * A);
             area += A;
         }
     }
 
+    if (nan_warning) {
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
+    }
     if (area == 0) {
         std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         awt_mean = make_vec4(0, 0, 0, 0);
-    } else if (nan_warning) {
-        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     } else {
         awt_mean = sum / area;
     }
@@ -1411,85 +1425,85 @@ void Context::aggregatePrimitiveDataProduct(const std::vector<uint> &UUIDs, cons
                 double data;
                 primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
                 if (i == 0) {
-                    data_double *= data;
-                } else {
                     data_double = data;
+                } else {
+                    data_double *= data;
                 }
             } else if (data_type_current == HELIOS_TYPE_VEC2) {
                 vec2 data;
                 primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
                 if (i == 0) {
+                    data_vec2 = data;
+                } else {
                     data_vec2.x *= data.x;
                     data_vec2.y *= data.y;
-                } else {
-                    data_vec2 = data;
                 }
             } else if (data_type_current == HELIOS_TYPE_VEC3) {
                 vec3 data;
                 primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
                 if (i == 0) {
+                    data_vec3 = data;
+                } else {
                     data_vec3.x *= data.x;
                     data_vec3.y *= data.y;
                     data_vec3.z *= data.z;
-                } else {
-                    data_vec3 = data;
                 }
             } else if (data_type_current == HELIOS_TYPE_VEC4) {
                 vec4 data;
                 primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
                 if (i == 0) {
+                    data_vec4 = data;
+                } else {
                     data_vec4.x *= data.x;
                     data_vec4.y *= data.y;
                     data_vec4.z *= data.z;
                     data_vec4.w *= data.w;
-                } else {
-                    data_vec4 = data;
                 }
             } else if (data_type_current == HELIOS_TYPE_INT) {
                 int data;
                 primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
                 if (i == 0) {
-                    data_int = data_int * data;
-                } else {
                     data_int = data;
+                } else {
+                    data_int = data_int * data;
                 }
             } else if (data_type_current == HELIOS_TYPE_UINT) {
                 uint data;
                 primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
                 if (i == 0) {
-                    data_uint = data_uint * data;
-                } else {
                     data_uint = data;
+                } else {
+                    data_uint = data_uint * data;
                 }
             } else if (data_type_current == HELIOS_TYPE_INT2) {
                 int2 data;
                 primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
                 if (i == 0) {
+                    data_int2 = data;
+                } else {
                     data_int2.x *= data.x;
                     data_int2.y *= data.y;
-                } else {
-                    data_int2 = data;
                 }
             } else if (data_type_current == HELIOS_TYPE_INT3) {
                 int3 data;
                 primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
                 if (i == 0) {
+                    data_int3 = data;
+                } else {
                     data_int3.x *= data.x;
                     data_int3.y *= data.y;
                     data_int3.z *= data.z;
-                } else {
-                    data_int3 = data;
                 }
             } else if (data_type_current == HELIOS_TYPE_INT4) {
                 int4 data;
                 primitives.at(UUID)->getPrimitiveData(label.c_str(), data);
                 if (i == 0) {
+                    data_int4 = data;
+                } else {
                     data_int4.x *= data.x;
                     data_int4.y *= data.y;
                     data_int4.z *= data.z;
                     data_int4.w *= data.w;
-                } else {
-                    data_int4 = data;
                 }
             } else {
                 helios_runtime_error("ERROR (Context::aggregatePrimitiveDataProduct): This operation is not supported for string primitive data types.");

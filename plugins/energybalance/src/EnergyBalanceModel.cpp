@@ -715,9 +715,12 @@ static inline float evaluateEnergyBalance_CPU(float T, float R, float Qother, fl
 
     // Latent heat flux
     float es = 611.0f * expf(17.502f * (T - 273.f) / (T - 273.f + 240.97f));
-    float gM = 1.08f * gH * gS * (stomatal_sidedness / (1.08f * gH + gS * stomatal_sidedness) + (1.f - stomatal_sidedness) / (1.08f * gH + gS * (1.f - stomatal_sidedness)));
-    if (gH == 0 && gS == 0) {
-        gM = 0;
+    // A zero boundary-layer conductance (gH) or zero stomatal conductance (gS) means there is no vapor
+    // pathway, so gM is zero. Guarding both cases also avoids a 0/0 in the series-conductance expression
+    // when gH == 0 and the stomatal sidedness makes one of the denominators vanish.
+    float gM = 0.f;
+    if (gH != 0.f && gS != 0.f) {
+        gM = 1.08f * gH * gS * (stomatal_sidedness / (1.08f * gH + gS * stomatal_sidedness) + (1.f - stomatal_sidedness) / (1.08f * gH + gS * (1.f - stomatal_sidedness)));
     }
 
     float QL = gM * lambda_mol * (es - ea * surfacehumidity) / pressure;
@@ -746,11 +749,6 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_CPU(const std::vector<uint
     const uint Nprimitives = UUIDs.size();
 
     std::vector<float> Rn(Nprimitives, 0);
-    std::vector<float> emissivity(Nprimitives);
-
-    for (size_t u = 0; u < Nprimitives; u++) {
-        emissivity.at(u) = 1.f;
-    }
 
     // Accumulate radiation across bands
     for (int b = 0; b < radiation_bands.size(); b++) {
@@ -767,13 +765,38 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_CPU(const std::vector<uint
             float R;
             context->getPrimitiveData(p, str, R);
             Rn.at(u) += R;
+        }
+    }
 
-            snprintf(str, sizeof(str), "emissivity_%s", radiation_bands.at(b).c_str());
-            if (context->doesPrimitiveDataExist(p, str) && context->getPrimitiveDataType(str) == helios::HELIOS_TYPE_FLOAT) {
-                context->getPrimitiveData(p, str, emissivity.at(u));
-            } else {
-                warnings.addWarning("missing_emissivity", "Primitive data 'emissivity_" + std::string(radiation_bands.at(b)) + "' not set, using default (1.0)");
+    // Determine which radiation band(s) govern the emitted thermal radiation. The RadiationModel records
+    // per-band emission-enabled state in global data 'emission_enabled_<band>'. In a properly configured
+    // run emission is enabled for exactly one band, and that band's emissivity is used. If more than one
+    // band has emission enabled we warn and use the first. When no emission-enabled information is
+    // available (e.g. radiation fluxes were set manually without running the RadiationModel), all bands
+    // added to the energy balance are treated as candidates for backward compatibility.
+    std::vector<std::string> emissivity_candidate_bands;
+    {
+        std::vector<std::string> emission_enabled_bands;
+        bool emission_info_available = false;
+        for (const auto &band: radiation_bands) {
+            std::string gdlabel = "emission_enabled_" + band;
+            if (context->doesGlobalDataExist(gdlabel.c_str()) && context->getGlobalDataType(gdlabel.c_str()) == helios::HELIOS_TYPE_UINT) {
+                emission_info_available = true;
+                uint enabled = 0;
+                context->getGlobalData(gdlabel.c_str(), enabled);
+                if (enabled == 1) {
+                    emission_enabled_bands.push_back(band);
+                }
             }
+        }
+        if (emission_info_available) {
+            if (emission_enabled_bands.size() > 1) {
+                warnings.addWarning("multiple_emission_bands",
+                                    "Emission is enabled for more than one radiation band. Thermal emission uses a single emissivity; the emissivity of the first emission-enabled band will be used.");
+            }
+            emissivity_candidate_bands = emission_enabled_bands; // may be empty => no modeled band emits, blackbody default used
+        } else {
+            emissivity_candidate_bands = radiation_bands;
         }
     }
 
@@ -937,8 +960,25 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_CPU(const std::vector<uint
             surfacehumidity[u] = surface_humidity_default;
         }
 
-        // Emissivity
-        eps[u] = emissivity.at(u);
+        // Emissivity for the emitted thermal radiation term. Use the first candidate band that defines
+        // an emissivity for this primitive; default to 1.0 (blackbody) if none do.
+        eps[u] = 1.f;
+        int emissivity_defined_count = 0;
+        for (const auto &band: emissivity_candidate_bands) {
+            std::string elabel = "emissivity_" + band;
+            if (context->doesPrimitiveDataExist(p, elabel.c_str()) && context->getPrimitiveDataType(elabel.c_str()) == helios::HELIOS_TYPE_FLOAT) {
+                if (emissivity_defined_count == 0) {
+                    context->getPrimitiveData(p, elabel.c_str(), eps[u]);
+                }
+                emissivity_defined_count++;
+            }
+        }
+        if (emissivity_defined_count == 0 && !emissivity_candidate_bands.empty()) {
+            warnings.addWarning("missing_emissivity", "Emissivity not set for the emitting radiation band(s), using default (1.0)");
+        } else if (emissivity_candidate_bands.size() > 1 && emissivity_defined_count > 1) {
+            warnings.addWarning("multiple_emissivity_bands",
+                                "Emissivity was defined for more than one radiation band. Thermal emission uses a single emissivity; the value from the first band will be used.");
+        }
 
         // Net absorbed radiation
         R[u] = Rn.at(u);
@@ -996,17 +1036,22 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_CPU(const std::vector<uint
         const float err_max = 0.0001f;
         const uint max_iter = 100;
 
-        // Initial guesses
-        float T_old_old = To[p];
-        float T_old = T_old_old;
-        T_old_old = 400.f;
+        // Initial guesses. The second guess must differ from the first, otherwise the two residuals are
+        // identical and the secant update below divides by zero (this happens when the supplied initial
+        // temperature equals the hardcoded second guess of 400 K).
+        float T_old = To[p];
+        float T_old_old = 400.f;
+        if (T_old_old == T_old) {
+            T_old_old = T_old + 100.f;
+        }
 
         // Evaluate residual at initial guesses
         float resid_old = evaluateEnergyBalance_CPU(T_old, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
         float resid_old_old = evaluateEnergyBalance_CPU(T_old_old, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
 
-        // Secant method iteration
-        float T_new;
+        // Secant method iteration. Initialize the result to the current best guess so that a degenerate
+        // early exit (identical residuals) never leaves the surface temperature uninitialized.
+        float T_new = T_old;
         float resid = 100;
         float err = resid;
         uint iter = 0;
@@ -1021,10 +1066,11 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_CPU(const std::vector<uint
 
             resid = evaluateEnergyBalance_CPU(T_new, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
 
+            // Relative change of the newest secant step (measures the latest iterate, not the previous one)
+            err = fabs(T_new - T_old) / fabs(T_old);
+
             resid_old_old = resid_old;
             resid_old = resid;
-
-            err = fabs(T_old - T_old_old) / fabs(T_old_old);
 
             T_old_old = T_old;
             T_old = T_new;
@@ -1065,7 +1111,7 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_CPU(const std::vector<uint
     for (uint u = 0; u < Nprimitives; u++) {
         size_t UUID = UUIDs.at(u);
 
-        if (T[u] != T[u]) { // NaN check
+        if (!std::isfinite(T[u])) { // catches NaN and infinities
             T[u] = temperature_default;
         }
 
@@ -1075,9 +1121,9 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_CPU(const std::vector<uint
         context->setPrimitiveData(UUID, "sensible_flux", QH);
 
         float es = esat_Pa(T[u]);
-        float gM = 1.08f * gH[u] * gS[u] * (stomatal_sidedness[u] / (1.08f * gH[u] + gS[u] * stomatal_sidedness[u]) + (1.f - stomatal_sidedness[u]) / (1.08f * gH[u] + gS[u] * (1.f - stomatal_sidedness[u])));
-        if (gH[u] == 0 && gS[u] == 0) {
-            gM = 0;
+        float gM = 0.f;
+        if (gH[u] != 0.f && gS[u] != 0.f) {
+            gM = 1.08f * gH[u] * gS[u] * (stomatal_sidedness[u] / (1.08f * gH[u] + gS[u] * stomatal_sidedness[u]) + (1.f - stomatal_sidedness[u]) / (1.08f * gH[u] + gS[u] * (1.f - stomatal_sidedness[u])));
         }
         float QL = lambda_mol * gM * (es - ea[u]) / pressure[u];
         context->setPrimitiveData(UUID, "latent_flux", QL);

@@ -1553,6 +1553,12 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         getPrimitivePointer_private(ID)->setTransformationMatrix(transform);
 
+        // Apply texture (u,v) coordinates. The material-format branches create the patch without UVs,
+        // so this must be done explicitly to preserve them across a writeXML()/loadXML() round-trip.
+        if (!uv.empty()) {
+            getPrimitivePointer_private(ID)->setTextureUV(uv);
+        }
+
         // Assign material if using material format
         if (has_material && !material_label_from_xml.empty()) {
             assignMaterialToPrimitive(ID, material_label_from_xml);
@@ -1672,6 +1678,12 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         }
 
         getPrimitivePointer_private(ID)->setTransformationMatrix(transform);
+
+        // Apply texture (u,v) coordinates. The material-format branch creates the triangle without UVs,
+        // so this must be done explicitly to preserve them across a writeXML()/loadXML() round-trip.
+        if (!uv.empty()) {
+            getPrimitivePointer_private(ID)->setTextureUV(uv);
+        }
 
         // Assign material if using material format
         if (has_material_tri && !material_label_from_xml_tri.empty()) {
@@ -2338,9 +2350,9 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'polymesh' block must be a non-negative integer value.");
         }
 
-        if (doesObjectExist(objID)) { // if this object ID is already in use, assign a new one
-            objID = currentObjectID;
-            currentObjectID++;
+        // objID here is the file-scoped object ID used to key object_prim_UUIDs; the Context object ID is assigned by addPolymeshObject below
+        if (object_prim_UUIDs.find(objID) == object_prim_UUIDs.end() || object_prim_UUIDs.at(objID).empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): <polymesh> block with objID " + std::to_string(objID) + " does not reference any primitives in the file.");
         }
 
         ID = addPolymeshObject(object_prim_UUIDs.at(objID));
@@ -2835,7 +2847,7 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
             }
             outfile << "</data_int3>" << std::endl;
         } else if (dtype == HELIOS_TYPE_INT4) {
-            outfile << "\t<data_int3 label=\"" << label << "\">" << std::flush;
+            outfile << "\t<data_int4 label=\"" << label << "\">" << std::flush;
             std::vector<int4> data;
             if (strcmp(data_group, "primitive") == 0) {
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
@@ -2983,7 +2995,14 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
     // -- primitives -- //
 
-    for (uint UUID: UUIDs) {
+    // Write primitives in ascending UUID order rather than the (nondeterministic) order of the
+    // underlying unordered_map. This makes the XML output deterministic and, because a compound
+    // object's sub-primitives are created with contiguous ascending UUIDs, preserves their ordering
+    // (e.g. the row-major layout of tile sub-patches) across a writeXML()/loadXML() round-trip.
+    std::vector<uint> sorted_UUIDs = UUIDs;
+    std::sort(sorted_UUIDs.begin(), sorted_UUIDs.end());
+
+    for (uint UUID: sorted_UUIDs) {
         uint p = UUID;
 
         if (!doesPrimitiveExist(p)) {
@@ -3160,7 +3179,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
                         for (float i: data) {
-                            outfile << i << std::flush;
+                            outfile << i << " " << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -3174,7 +3193,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
                         for (double i: data) {
-                            outfile << i << std::flush;
+                            outfile << i << " " << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -3188,7 +3207,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
                         for (unsigned int i: data) {
-                            outfile << i << std::flush;
+                            outfile << i << " " << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -3202,7 +3221,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
                         for (int i: data) {
-                            outfile << i << std::flush;
+                            outfile << i << " " << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -3216,7 +3235,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
                         for (auto &i: data) {
-                            outfile << i.x << " " << i.y << std::flush;
+                            outfile << i.x << " " << i.y << " " << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -3230,7 +3249,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
                         for (auto &i: data) {
-                            outfile << i.x << " " << i.y << " " << i.z << std::flush;
+                            outfile << i.x << " " << i.y << " " << i.z << " " << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -3244,7 +3263,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
                         for (auto &i: data) {
-                            outfile << i.x << " " << i.y << " " << i.z << " " << i.w << std::flush;
+                            outfile << i.x << " " << i.y << " " << i.z << " " << i.w << " " << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -3258,7 +3277,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
                         for (auto &i: data) {
-                            outfile << i.x << " " << i.y << std::flush;
+                            outfile << i.x << " " << i.y << " " << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -3272,7 +3291,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
                         for (auto &i: data) {
-                            outfile << i.x << " " << i.y << " " << i.z << std::flush;
+                            outfile << i.x << " " << i.y << " " << i.z << " " << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -3286,7 +3305,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
                         for (auto &i: data) {
-                            outfile << i.x << " " << i.y << " " << i.z << " " << i.w << std::flush;
+                            outfile << i.x << " " << i.y << " " << i.z << " " << i.w << " " << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }
@@ -3300,7 +3319,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
                         outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
                         for (const auto &i: data) {
-                            outfile << i << std::flush;
+                            outfile << i << " " << std::flush;
                         }
                         outfile << " </data>" << std::endl;
                     }

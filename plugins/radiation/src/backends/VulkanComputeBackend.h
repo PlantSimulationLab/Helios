@@ -119,6 +119,46 @@ namespace helios {
         }
 
     private:
+        //! Maximum number of rays (primitives * rays_per_primitive) submitted in a single
+        //! command buffer.
+        /**
+         * A single vkCmdDispatch covering every primitive can exceed the host platform's
+         * command-buffer execution watchdog and abort the whole submission with
+         * VK_ERROR_DEVICE_LOST. This is observed on macOS/Metal (via MoltenVK), where the
+         * GPU watchdog kills long-running command buffers (and is more aggressive while the
+         * GPU is also driving the display). Apple's guidance for that failure is to split the
+         * work into multiple grids, so direct and diffuse launches are batched over primitives
+         * with this ray budget. The OptiX 6 backend batches for the same reason.
+         *
+         * Batching is numerically transparent: results accumulate into the same buffers via
+         * atomic adds, and both ray-generation shaders already resolve their primitive from
+         * launch_offset + batch index.
+         *
+         * Choosing this value is a trade-off, and it is deliberately NOT calibrated to the
+         * largest launch that happens to survive. The watchdog threshold is not a fixed
+         * number: the same launch that fails can succeed on a retry, because the limit
+         * tightens when the GPU is simultaneously driving the display or serving other
+         * clients. A budget tuned to the observed failure edge on an idle machine would fail
+         * intermittently on a busy one.
+         *
+         * The cost of a smaller budget is bounded and measurable: each batch is one
+         * command-buffer record + submit + blocking fence wait, measured at ~0.6 ms of fixed
+         * overhead per batch (independent of the work inside the batch). Splitting a launch
+         * into a handful of batches is therefore nearly free, while splitting it into many
+         * hundreds is not — an 85-batch split of a small scene ran 7x slower than a
+         * single-batch launch. This value keeps typical scenes in the low-batch regime while
+         * staying far below any launch size observed to trigger device loss.
+         */
+        static constexpr size_t max_rays_per_launch = 64 * 1024 * 1024;
+
+        //! Number of primitives to process per batched launch for a given per-primitive ray count.
+        /**
+         * \param[in] rays_per_primitive Number of rays launched for each primitive.
+         * \param[in] launch_count Total number of primitives to be launched.
+         * \return Primitive count per batch (at least 1, never more than launch_count).
+         */
+        static uint32_t primitivesPerLaunchBatch(uint32_t rays_per_primitive, uint32_t launch_count);
+
         // Vulkan device - either owned (production) or borrowed (test shared device)
         VulkanDevice *device;
         bool owns_device; // true = we own device, false = borrowed from test singleton

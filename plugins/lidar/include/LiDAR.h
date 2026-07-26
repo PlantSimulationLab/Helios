@@ -158,6 +158,9 @@ struct Triangulation {
 };
 
 struct GridCell {
+    //! Un-rotated lattice center of the cell (load-bearing internal convention). The public
+    //! LiDARcloud::getCellCenter() rotates this about global_anchor by azimuthal_rotation to return
+    //! the true world-space center; internal AABB consumers read this un-rotated value directly.
     helios::vec3 center;
     helios::vec3 global_anchor;
     helios::vec3 size;
@@ -698,6 +701,21 @@ private:
 
     std::vector<GridCell> grid_cells;
 
+    //! Internal: the un-rotated lattice center stored in \ref GridCell.center.
+    /** This is NOT the public world-space center returned by \ref getCellCenter(). Internal hot paths that build an
+     *  axis-aligned AABB from center +/- size/2 and inverse-rotate the query point about the anchor must use this value,
+     *  not the public getter (which applies the azimuthal rotation). \param[in] index Index of a grid cell. */
+    [[nodiscard]] helios::vec3 getCellCenterUnrotated(uint index) const {
+        return grid_cells.at(index).center;
+    }
+
+    //! Internal: the cell's azimuthal rotation about +z in RADIANS (as stored).
+    /** The public \ref getCellRotation() returns degrees; internal consumers that feed the rotation into radian-based
+     *  math (rotatePoint / rotatePointAboutLine) must use this. \param[in] index Index of a grid cell. */
+    [[nodiscard]] float getCellRotationRadians(uint index) const {
+        return grid_cells.at(index).azimuthal_rotation;
+    }
+
     //! Test/diagnostic hook: when true, \ref calculateLeafArea_inner() uses the brute-force per-cell slab loop even for
     //! regular lattices that would otherwise use the fast DDA path. Used by the self-tests to A/B the two paths against
     //! each other; has no effect on results, only on which code path computes them.
@@ -722,6 +740,29 @@ private:
     std::size_t triangulation_dropped_lmax;
     std::size_t triangulation_dropped_aspect;
     std::size_t triangulation_dropped_degenerate;
+
+    //! Triangulate a single scan's hit points (the per-scan "second pass" shared by both \ref triangulateHitPoints
+    //! overloads). Gathers scan \p s's hits into (zenith,azimuth) points, de-duplicates, runs the Delaunay
+    //! tessellation, applies the edge-length/aspect/separation filters, and appends the surviving triangles to
+    //! \ref triangles while accumulating the triangulation_* diagnostics counters.
+    /**
+     * Both overloads previously duplicated this body verbatim; the shared helper keeps them from drifting.
+     * \param[in] s Scan index to triangulate.
+     * \param[in] Lmax Maximum triangle edge length; longer triangles are dropped.
+     * \param[in] max_aspect_ratio Maximum triangle aspect ratio; more elongated triangles are dropped.
+     * \param[in] use_adaptive_threshold True for multi-return data, enabling the separation-ratio filter and
+     *            (when \p scalar_field is nullptr) the first-return auto-filter during gather.
+     * \param[in] adaptive_sep_threshold Separation-ratio threshold from the multi-return first pass.
+     * \param[in] scalar_field Named hit-data field for the filtered overload's gather-time gate, or nullptr for the
+     *            two-argument overload (which instead auto-filters first returns when \p use_adaptive_threshold).
+     * \param[in] threshold Comparison value for the scalar-field gate (ignored when \p scalar_field is nullptr).
+     * \param[in] comparator Comparison operator ("<", ">", "=") for the scalar-field gate (ignored when nullptr).
+     * \param[in,out] Ntriangles Running count of kept triangles across all scans in the current run; incremented for
+     *            each triangle appended to \ref triangles (used only for the end-of-run summary print).
+     * \return false if the run was cancelled via \ref cancel_flag (the caller must discard the mesh and return);
+     *         true otherwise, including scans that were skipped because they contained no triangulable points.
+     */
+    bool triangulateScanSecondPass(uint s, float Lmax, float max_aspect_ratio, bool use_adaptive_threshold, float adaptive_sep_threshold, const char *scalar_field, float threshold, const char *comparator, int &Ntriangles);
 
     //! Return the index of the grid cell containing point \p p, or -1 if \p p lies outside every
     //! cell. Uses the same axis-aligned containment test (with inverse rotation for rotated cells)
@@ -1949,6 +1990,19 @@ public:
      */
     void addGrid(const helios::vec3 &center, const helios::vec3 &size, const helios::int3 &ndiv, float rotation);
 
+    //! Add a grid to the point cloud with per-column vertical offsets (terrain following)
+    /**
+     * Identical to the four-argument overload, but each vertical column of voxels is shifted in z by a
+     * per-column offset so the grid can follow a terrain surface (e.g. a DEM). Cell centers are stored
+     * unrotated (rotation is applied downstream), so the offset is a pure vertical shift.
+     * \param[in] center center of the grid.
+     * \param[in] size Size of the grid in each dimension.
+     * \param[in] ndiv number of cells in the grid in each dimension.
+     * \param[in] rotation horizontal rotation in degrees.
+     * \param[in] column_z_offsets per-(x,y)-column vertical offset, row-major as [j*ndiv.x + i], length ndiv.x*ndiv.y. Empty for no offset.
+     */
+    void addGrid(const helios::vec3 &center, const helios::vec3 &size, const helios::int3 &ndiv, float rotation, const std::vector<float> &column_z_offsets);
+
     //! Add all triangles to the visualizer plug-in, and color them by their r-g-b color
     /**
      * \param[in] visualizer Pointer to the Visualizer plug-in object.
@@ -2185,8 +2239,12 @@ public:
      */
     void addGridCell(const helios::vec3 &center, const helios::vec3 &global_anchor, const helios::vec3 &size, const helios::vec3 &global_size, float rotation, const helios::int3 &global_ijk, const helios::int3 &global_count);
 
-    //! Get the (x,y,z) coordinate of a grid cell by its index
+    //! Get the (x,y,z) coordinate of a grid cell center by its index
     /**
+     * Returns the TRUE world-space center of the cell. For a grid created with a non-zero azimuthal
+     * rotation (see \ref addGrid()), this is the lattice center rotated about the grid anchor (about
+     * +z), i.e. it lies in the same rotated world frame as the hit points, scan origins, and grid
+     * bounding box. For an un-rotated grid it is simply the lattice center.
      * \param[in] index Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1.
      */
     helios::vec3 getCellCenter(uint index) const;
@@ -2207,7 +2265,7 @@ public:
     //! Get the rotation angle of a grid cell about the z-axis by its index
     /**
      * \param[in] index Index of a grid cell.  Note: the index of a grid cell is given by the order in which it was added to the grid. E.g., the first cell's index is 0, and the last cell's index is Ncells-1.
-     * \return Rotation angle of the cell about the z-axis, in radians.
+     * \return Rotation angle of the cell about the z-axis, in degrees (matching the units expected by \ref addGrid()).
      */
     float getCellRotation(uint index) const;
 

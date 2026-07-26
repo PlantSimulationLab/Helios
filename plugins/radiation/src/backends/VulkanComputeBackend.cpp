@@ -809,6 +809,20 @@ namespace helios {
         }
     }
 
+    uint32_t VulkanComputeBackend::primitivesPerLaunchBatch(uint32_t rays_per_primitive, uint32_t launch_count) {
+        if (rays_per_primitive == 0) {
+            return launch_count;
+        }
+        size_t prims_per_batch = max_rays_per_launch / static_cast<size_t>(rays_per_primitive);
+        if (prims_per_batch == 0) {
+            prims_per_batch = 1; // A single primitive always goes in one batch, even if it exceeds the budget
+        }
+        if (prims_per_batch > static_cast<size_t>(launch_count)) {
+            prims_per_batch = launch_count;
+        }
+        return static_cast<uint32_t>(prims_per_batch);
+    }
+
     void VulkanComputeBackend::launchDirectRays(const RayTracingLaunchParams &params) {
         if (primitive_count == 0 || source_count == 0) {
             return; // No geometry or sources
@@ -879,19 +893,6 @@ namespace helios {
         }
         VkDevice vk_device = device->getDevice();
 
-        // Record COMPUTE command buffer
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vkBeginCommandBuffer(compute_command_buffer, &begin_info);
-
-        // Bind pipeline
-        vkCmdBindPipeline(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_direct);
-
-        // Bind descriptor sets
-        VkDescriptorSet sets[] = {set_geometry, set_materials, set_results};
-        vkCmdBindDescriptorSets(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 3, sets, 0, nullptr);
-
         // Push constants (expanded for 3D dispatch with 2D primitive tiling)
         struct PushConstants {
             uint launch_offset;
@@ -960,82 +961,105 @@ namespace helios {
         uint32_t dispatch_x = (launch_dim_x + WG_X - 1) / WG_X;
         uint32_t dispatch_y_rays = (launch_dim_y + WG_Y - 1) / WG_Y;
 
-        // Compute primitive tiling
-        uint32_t prims_per_tile = std::min(params.launch_count, MAX_PRIMS_PER_TILE);
-        uint32_t prim_tiles_y = (params.launch_count + MAX_PRIMS_PER_TILE - 1) / MAX_PRIMS_PER_TILE;
+        // Split the launch into batches of primitives so no single command buffer exceeds the
+        // platform's execution watchdog (see max_rays_per_launch).
+        const uint32_t prims_per_batch = primitivesPerLaunchBatch(params.rays_per_primitive, params.launch_count);
 
-        uint32_t dispatch_y = dispatch_y_rays * prim_tiles_y;
-        uint32_t dispatch_z = prims_per_tile;
+        for (uint32_t batch_start = 0; batch_start < params.launch_count; batch_start += prims_per_batch) {
+            const uint32_t batch_count = std::min(prims_per_batch, params.launch_count - batch_start);
 
-        push_constants.prim_tiles_y = prim_tiles_y;
-        push_constants.prims_per_tile = prims_per_tile;
+            // Compute primitive tiling for this batch
+            uint32_t prims_per_tile = std::min(batch_count, MAX_PRIMS_PER_TILE);
+            uint32_t prim_tiles_y = (batch_count + MAX_PRIMS_PER_TILE - 1) / MAX_PRIMS_PER_TILE;
 
-        vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
-        vkCmdDispatch(compute_command_buffer, dispatch_x, dispatch_y, dispatch_z);
+            uint32_t dispatch_y = dispatch_y_rays * prim_tiles_y;
+            uint32_t dispatch_z = prims_per_tile;
 
-        // Buffer memory barrier to ensure storage buffer writes are visible for readback
-        // CRITICAL: Use buffer-specific barrier instead of global barrier for MoltenVK compatibility
-        VkBufferMemoryBarrier buffer_barriers[3];
+            push_constants.launch_offset = params.launch_offset + batch_start;
+            push_constants.launch_count = batch_count;
+            push_constants.prim_tiles_y = prim_tiles_y;
+            push_constants.prims_per_tile = prims_per_tile;
 
-        // Radiation_in buffer barrier
-        buffer_barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-        buffer_barriers[0].pNext = nullptr;
-        buffer_barriers[0].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-        buffer_barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
-        buffer_barriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        buffer_barriers[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        buffer_barriers[0].buffer = radiation_in_buffer.buffer;
-        buffer_barriers[0].offset = 0;
-        buffer_barriers[0].size = VK_WHOLE_SIZE;
+            // Record COMPUTE command buffer
+            VkCommandBufferBeginInfo begin_info{};
+            begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+            vkBeginCommandBuffer(compute_command_buffer, &begin_info);
 
-        // Scatter_top buffer barrier (direct shader writes scatter)
-        buffer_barriers[1].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-        buffer_barriers[1].pNext = nullptr;
-        buffer_barriers[1].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-        buffer_barriers[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
-        buffer_barriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        buffer_barriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        buffer_barriers[1].buffer = scatter_top_buffer.buffer;
-        buffer_barriers[1].offset = 0;
-        buffer_barriers[1].size = VK_WHOLE_SIZE;
+            // Bind pipeline
+            vkCmdBindPipeline(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_direct);
 
-        // Scatter_bottom buffer barrier
-        buffer_barriers[2].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-        buffer_barriers[2].pNext = nullptr;
-        buffer_barriers[2].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-        buffer_barriers[2].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
-        buffer_barriers[2].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        buffer_barriers[2].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        buffer_barriers[2].buffer = scatter_bottom_buffer.buffer;
-        buffer_barriers[2].offset = 0;
-        buffer_barriers[2].size = VK_WHOLE_SIZE;
+            // Bind descriptor sets
+            VkDescriptorSet sets[] = {set_geometry, set_materials, set_results};
+            vkCmdBindDescriptorSets(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 3, sets, 0, nullptr);
 
-        vkCmdPipelineBarrier(compute_command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, // No global memory barriers
-                             3, buffer_barriers, // Buffer-specific barriers
-                             0, nullptr); // No image barriers
+            vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
+            vkCmdDispatch(compute_command_buffer, dispatch_x, dispatch_y, dispatch_z);
 
-        vkEndCommandBuffer(compute_command_buffer);
+            // Buffer memory barrier to ensure storage buffer writes are visible for readback
+            // CRITICAL: Use buffer-specific barrier instead of global barrier for MoltenVK compatibility
+            VkBufferMemoryBarrier buffer_barriers[3];
 
-        // Submit command buffer with COMPUTE fence
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &compute_command_buffer;
+            // Radiation_in buffer barrier
+            buffer_barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+            buffer_barriers[0].pNext = nullptr;
+            buffer_barriers[0].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            buffer_barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+            buffer_barriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            buffer_barriers[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            buffer_barriers[0].buffer = radiation_in_buffer.buffer;
+            buffer_barriers[0].offset = 0;
+            buffer_barriers[0].size = VK_WHOLE_SIZE;
 
-        vkResetFences(vk_device, 1, &compute_fence);
-        VkResult result = vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, compute_fence);
-        if (result != VK_SUCCESS) {
-            helios_runtime_error("ERROR (VulkanComputeBackend::launchDirectRays): vkQueueSubmit failed. VkResult: " + std::to_string(result));
-        }
+            // Scatter_top buffer barrier (direct shader writes scatter)
+            buffer_barriers[1].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+            buffer_barriers[1].pNext = nullptr;
+            buffer_barriers[1].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            buffer_barriers[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+            buffer_barriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            buffer_barriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            buffer_barriers[1].buffer = scatter_top_buffer.buffer;
+            buffer_barriers[1].offset = 0;
+            buffer_barriers[1].size = VK_WHOLE_SIZE;
 
-        // Wait for compute to complete (no timeout - large scenes can take minutes)
-        VkResult wait_result;
-        do {
-            wait_result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, 1000000000ULL);
-            if (wait_result != VK_SUCCESS && wait_result != VK_TIMEOUT) {
-                helios_runtime_error("ERROR (VulkanComputeBackend::launchDirectRays): vkWaitForFences failed. VkResult: " + std::to_string(wait_result));
+            // Scatter_bottom buffer barrier
+            buffer_barriers[2].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+            buffer_barriers[2].pNext = nullptr;
+            buffer_barriers[2].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            buffer_barriers[2].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+            buffer_barriers[2].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            buffer_barriers[2].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            buffer_barriers[2].buffer = scatter_bottom_buffer.buffer;
+            buffer_barriers[2].offset = 0;
+            buffer_barriers[2].size = VK_WHOLE_SIZE;
+
+            vkCmdPipelineBarrier(compute_command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, // No global memory barriers
+                                 3, buffer_barriers, // Buffer-specific barriers
+                                 0, nullptr); // No image barriers
+
+            vkEndCommandBuffer(compute_command_buffer);
+
+            // Submit command buffer with COMPUTE fence
+            VkSubmitInfo submit_info{};
+            submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submit_info.commandBufferCount = 1;
+            submit_info.pCommandBuffers = &compute_command_buffer;
+
+            vkResetFences(vk_device, 1, &compute_fence);
+            VkResult result = vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, compute_fence);
+            if (result != VK_SUCCESS) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::launchDirectRays): vkQueueSubmit failed. VkResult: " + std::to_string(result));
             }
-        } while (wait_result == VK_TIMEOUT);
+
+            // Wait for compute to complete (no timeout - large scenes can take minutes)
+            VkResult wait_result;
+            do {
+                wait_result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, 1000000000ULL);
+                if (wait_result != VK_SUCCESS && wait_result != VK_TIMEOUT) {
+                    helios_runtime_error("ERROR (VulkanComputeBackend::launchDirectRays): vkWaitForFences failed. VkResult: " + std::to_string(wait_result));
+                }
+            } while (wait_result == VK_TIMEOUT);
+        }
     }
 
     void VulkanComputeBackend::launchDiffuseRays(const RayTracingLaunchParams &params) {
@@ -1283,19 +1307,26 @@ namespace helios {
         uint32_t dispatch_x = (launch_dim_x + WG_X - 1) / WG_X;
         uint32_t dispatch_y_rays = (launch_dim_y + WG_Y - 1) / WG_Y;
 
-        // Compute primitive tiling
-        uint32_t prims_per_tile = std::min(params.launch_count, MAX_PRIMS_PER_TILE);
-        uint32_t prim_tiles_y = (params.launch_count + MAX_PRIMS_PER_TILE - 1) / MAX_PRIMS_PER_TILE;
+        // Split the launch into batches of primitives so no single command buffer exceeds the
+        // platform's execution watchdog (see max_rays_per_launch). Diffuse launches are the most
+        // exposed to this: they trace rays_per_primitive hemisphere rays for every primitive.
+        const uint32_t prims_per_batch = primitivesPerLaunchBatch(params.rays_per_primitive, params.launch_count);
 
-        uint32_t dispatch_y = dispatch_y_rays * prim_tiles_y;
-        uint32_t dispatch_z = prims_per_tile;
+        for (uint32_t batch_start = 0; batch_start < params.launch_count; batch_start += prims_per_batch) {
+            const uint32_t batch_count = std::min(prims_per_batch, params.launch_count - batch_start);
 
-        push_constants.launch_offset = params.launch_offset;
-        push_constants.launch_count = params.launch_count;
-        push_constants.prim_tiles_y = prim_tiles_y;
-        push_constants.prims_per_tile = prims_per_tile;
+            // Compute primitive tiling for this batch
+            uint32_t prims_per_tile = std::min(batch_count, MAX_PRIMS_PER_TILE);
+            uint32_t prim_tiles_y = (batch_count + MAX_PRIMS_PER_TILE - 1) / MAX_PRIMS_PER_TILE;
 
-        {
+            uint32_t dispatch_y = dispatch_y_rays * prim_tiles_y;
+            uint32_t dispatch_z = prims_per_tile;
+
+            push_constants.launch_offset = params.launch_offset + batch_start;
+            push_constants.launch_count = batch_count;
+            push_constants.prim_tiles_y = prim_tiles_y;
+            push_constants.prims_per_tile = prims_per_tile;
+
             // Record COMPUTE command buffer
             VkCommandBufferBeginInfo begin_info{};
             begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;

@@ -870,9 +870,9 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
 
                     vec3 subcenter = make_vec3(x, y, z);
 
-                    vec3 subcenter_rot = rotatePoint(subcenter, make_SphericalCoord(0, rotation * M_PI / 180.f));
-
                     if (printmessages) {
+                        // The grid cell stores the un-rotated lattice center; report the true (rotated) world-space center.
+                        vec3 subcenter_rot = rotatePoint(subcenter, make_SphericalCoord(0, rotation * M_PI / 180.f));
                         cout << "Adding grid cell #" << count << " with center " << subcenter_rot.x + center.x << "," << subcenter_rot.y + center.y << "," << subcenter.z + center.z << " and size " << gsubsize.x << " x " << gsubsize.y << " x "
                              << gsubsize.z << endl;
                     }

@@ -823,6 +823,76 @@ GPU_TEST_CASE("RadiationModel Second Law Equilibrium Test") {
     DOCTEST_CHECK(flux_err <= error_threshold);
 }
 
+GPU_TEST_CASE("RadiationModel Two-Sided Emitter Bottom-Face Energy Conservation") {
+    // Regression test for the two-sided emission double-count bug (RadiationModel.cpp).
+    //
+    // Before the fix, a two-sided emitting primitive deposited its TOP face's accumulated
+    // scattered-direct energy onto its BOTTOM face:  flux_bottom += flux_top  (where flux_top
+    // already held top-face scattered-direct energy PLUS emission), instead of emitting only its
+    // own emission term:  flux_bottom += out_top. The bottom face therefore re-emitted the top
+    // face's scattered direct radiation into the scene, violating energy conservation.
+    //
+    // Discriminating invariant: place a black sensor directly BENEATH a two-sided reflecting/
+    // emitting patch, fully shadowed from an overhead vertical collimated source by the patch
+    // itself (same 1x1 footprint). The shadowed bottom sensor can only receive the patch's
+    // BOTTOM-face re-emission, which physically depends ONLY on the patch's own emission — it must
+    // be INDEPENDENT of the source flux. We therefore run twice (source ON, source OFF) and require
+    // the bottom sensor to read the same both times. Under the bug, turning the source on injects
+    // the top face's large scattered-direct energy into the bottom face, so the bottom sensor jumps
+    // by ~10x (measured 371 vs 38). Under the fix it is source-independent (measured ~38 vs ~38).
+    // This source-on/source-off differencing cancels emission and geometry view factors, so it is
+    // robust to Monte-Carlo noise without needing tight convergence.
+    Context ctx;
+
+    // Two-sided strong reflector (rho=0.8) with modest thermal emission, facing up (+z).
+    uint emitter = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    ctx.setPrimitiveData(emitter, "twosided_flag", uint(1));
+    ctx.setPrimitiveData(emitter, "temperature", 300.f);
+    ctx.setPrimitiveData(emitter, "emissivity_LW", 0.2f);
+    ctx.setPrimitiveData(emitter, "reflectivity_LW", 0.8f); // large rho -> large top-face scatter
+
+    // Black sensor directly beneath, facing up toward the emitter's bottom face. Same footprint,
+    // so it is fully shadowed from the overhead vertical source: it sees only the bottom-face
+    // re-emission.
+    uint sensor_bot = ctx.addPatch(make_vec3(0, 0, -0.5f), make_vec2(1, 1));
+    ctx.setPrimitiveData(sensor_bot, "twosided_flag", uint(0));
+    ctx.setPrimitiveData(sensor_bot, "emissivity_LW", 1.f);
+    ctx.setPrimitiveData(sensor_bot, "reflectivity_LW", 0.f);
+    ctx.setPrimitiveData(sensor_bot, "temperature", 0.f); // cold: no confounding self-emission
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&ctx);
+    radiation.disableMessages();
+
+    radiation.addRadiationBand("LW");
+    radiation.setDirectRayCount("LW", 20000);
+    radiation.setDiffuseRayCount("LW", 20000);
+    radiation.setDiffuseRadiationFlux("LW", 0.f);
+    radiation.setScatteringDepth("LW", 1); // >0 so the emitter's top face carries scattered direct energy
+
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1)); // straight down onto the emitter top
+    radiation.setSourceFlux(sun, "LW", 1000.f);
+
+    radiation.updateGeometry();
+    radiation.runBand("LW");
+    float flux_source_on = -1.f;
+    ctx.getPrimitiveData(sensor_bot, "radiation_flux_LW", flux_source_on);
+
+    // Same scene, source OFF: bottom sensor now sees ONLY the emitter's bottom-face emission.
+    radiation.setSourceFlux(sun, "LW", 0.f);
+    radiation.runBand("LW");
+    float flux_source_off = -1.f;
+    ctx.getPrimitiveData(sensor_bot, "radiation_flux_LW", flux_source_off);
+
+    DOCTEST_CHECK(std::isfinite(flux_source_on));
+    DOCTEST_CHECK(std::isfinite(flux_source_off));
+    DOCTEST_CHECK(flux_source_off > 0.f); // bottom-face emission is nonzero
+    // The shadowed bottom sensor's flux must be source-independent. Under the bug it jumps ~10x when
+    // the source is on. 15% tolerance absorbs Monte-Carlo noise while rejecting the order-of-magnitude
+    // bug offset.
+    float source_dependence = fabsf(flux_source_on - flux_source_off) / flux_source_off;
+    DOCTEST_CHECK(source_dependence <= 0.15f);
+}
+
 GPU_TEST_CASE("RadiationModel Texture Mapping") {
     float error_threshold = 0.005;
 
@@ -8233,6 +8303,92 @@ GPU_TEST_CASE("SIF V&V Tier 2 (v2): full pipeline with solar source + SIF camera
 }
 
 // ============================================================================
+// SIF regression: piggybacked excitation bands receive direct source flux
+// ============================================================================
+//
+// Regression test for the source-flux upload indexing bug (RadiationModel.cpp). Before the fix,
+// the direct source-flux fill loop iterated `b < label.size()` but wrote into a `fluxes[s]` array
+// sized and indexed by `Nbands_launch` (== band_labels.size(), the alphabetically-ordered launch
+// set). When a SIF camera is registered and the user runs a REGULAR (non-SIF) band, runBand()
+// piggybacks the auto-generated "_SIF_exc_*" excitation bands into that same launch, so
+// Nbands_launch > label.size(). The short loop bound then left the excitation-band flux slots at
+// zero, uploading zero direct flux for every excitation band → zero APAR → zero fluorescence.
+//
+// This path is NOT covered by the Tier 2/Tier 3 SIF tests: those call runBand() on SIF emission
+// bands directly (which take the runExcitationBands() route where label == the excitation set, so
+// label.size() == Nbands_launch and the bug is masked). The bug only manifests through the
+// piggyback path, which requires a regular-band dispatch while an unpopulated excitation set exists.
+//
+// Scene: one leaf + overhead sensor + solar source (same as Tier 2), plus a regular "PAR" band.
+// We runBand("PAR") FIRST to trigger the piggyback and populate the excitation APAR, then run the
+// SIF bands. With the bug the piggybacked excitation flux is zero → sensor SIF flux is zero. With
+// the fix the excitation bands pick up solar flux → nonzero APAR → nonzero SIF sensor flux.
+
+GPU_TEST_CASE("SIF regression: piggybacked excitation bands receive direct source flux") {
+    Context ctx;
+
+    uint leaf = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    ctx.setPrimitiveData(leaf, "twosided_flag", uint(0));
+    sif_stamp_biochem(ctx, {leaf}, "exc_flux");
+    ctx.setPrimitiveData(leaf, "electron_transport_ratio", 0.5f);
+    ctx.setPrimitiveData(leaf, "temperature", 298.15f);
+
+    uint sensor = ctx.addPatch(make_vec3(0, 0, 0.2f), make_vec2(1, 1), make_SphericalCoord(M_PI, 0));
+    ctx.setPrimitiveData(sensor, "twosided_flag", uint(0));
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&ctx);
+    radiation.disableMessages();
+
+    // A regular band whose dispatch will piggyback the excitation set. "PAR" sorts before the
+    // "_SIF_exc_*" bands in the alphabetical band_labels order, so with the buggy `b < label.size()`
+    // bound (label.size()==1) the excitation flux slots are exactly the ones left at zero.
+    radiation.addRadiationBand("PAR", 400.f, 700.f);
+    radiation.setDirectRayCount("PAR", 500);
+    radiation.setDiffuseRayCount("PAR", 500);
+    radiation.setScatteringDepth("PAR", 0);
+
+    // SIF emission bands (image channels).
+    radiation.addRadiationBand("SIF_red", 680.f, 700.f);
+    radiation.addRadiationBand("SIF_farred", 730.f, 760.f);
+    for (const auto &b : {"SIF_red", "SIF_farred"}) {
+        radiation.setDirectRayCount(b, 500);
+        radiation.setDiffuseRayCount(b, 500);
+        radiation.setScatteringDepth(b, 1);
+    }
+
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(1.f, 0.f, 1.f));
+    radiation.setSourceSpectrum(sun, "solar_spectrum_direct_ASTMG173");
+
+    SIFCameraProperties cam_props;
+    cam_props.camera_resolution = make_int2(8, 8);
+    cam_props.HFOV = 30.f;
+    cam_props.excitation_bin_width_nm = 50.f; // coarse for test speed
+    radiation.addSIFCamera("sif_cam", {"SIF_red", "SIF_farred"},
+                            make_vec3(2.f, 0.f, 0.3f), make_vec3(0, 0, 0), cam_props, 1);
+
+    radiation.updateGeometry();
+
+    // Regular-band dispatch: this is where the excitation set is piggybacked and its APAR populated.
+    radiation.runBand("PAR");
+
+    // Now the SIF bands consume the (already-populated) excitation APAR.
+    const std::vector<std::string> sif_bands = {"SIF_red", "SIF_farred"};
+    radiation.runBand(sif_bands);
+
+    // If the piggybacked excitation bands got zero source flux (the bug), APAR is zero, so the
+    // Fluspect emission is zero and the sensor receives no SIF flux in either band.
+    float flux_red = -1.f, flux_farred = -1.f;
+    ctx.getPrimitiveData(sensor, "radiation_flux_SIF_red", flux_red);
+    ctx.getPrimitiveData(sensor, "radiation_flux_SIF_farred", flux_farred);
+
+    DOCTEST_MESSAGE("piggyback APAR path: F_red=" << flux_red << " F_farred=" << flux_farred);
+    DOCTEST_CHECK(std::isfinite(flux_red));
+    DOCTEST_CHECK(std::isfinite(flux_farred));
+    DOCTEST_CHECK(flux_red > 0.f);
+    DOCTEST_CHECK(flux_farred > 0.f);
+}
+
+// ============================================================================
 // SIF V&V Tier 3 (v2): multi-camera pipeline with distinct excitation resolutions
 // ============================================================================
 //
@@ -8995,5 +9151,48 @@ GPU_TEST_CASE("RadiationModel Glass Cover Mixed Bands Treated As Opaque") {
     // Mixed cover acts opaque: both bands blocked (SW would be ~923 under an "any glass band" rule).
     DOCTEST_CHECK(flux_SW < 5.0f);
     DOCTEST_CHECK(flux_LW < 5.0f);
+}
+
+// Launches are split into batches of primitives so that no single GPU command buffer exceeds the
+// host platform's execution watchdog (macOS/Metal aborts long command buffers with
+// VK_ERROR_DEVICE_LOST). Batching must be numerically transparent: every primitive has to be
+// launched exactly once regardless of how the launch is chunked. A batch-indexing error would
+// leave a contiguous block of primitives unlaunched (flux stuck at zero) or double-count them.
+GPU_TEST_CASE("Launch batching covers every primitive") {
+    Context context;
+
+    // A ground tile of uniformly-lit patches. Enough primitives that a high per-primitive ray
+    // count pushes the launch past a single batch on backends that batch.
+    std::vector<uint> UUIDs = context.addTile(make_vec3(0, 0, 0), make_vec2(10, 10), nullrotation, make_int2(40, 40));
+    context.setPrimitiveData(UUIDs, "twosided_flag", uint(0));
+    context.setPrimitiveData(UUIDs, "reflectivity_SW", 0.0f); // fully absorbing -> flux == incident
+
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+
+    // Overhead collimated source: every patch is unshaded, so all patches must receive the same flux.
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceFlux(sun, "SW", 1000.0f);
+    radiation.setDirectRayCount("SW", 100);
+    radiation.setScatteringDepth("SW", 0);
+
+    radiation.updateGeometry();
+    radiation.runBand("SW");
+
+    // Every primitive must have been launched: uniform illumination means uniform absorbed flux.
+    float min_flux = std::numeric_limits<float>::max();
+    float max_flux = std::numeric_limits<float>::lowest();
+    for (uint UUID: UUIDs) {
+        float flux = 0.f;
+        context.getPrimitiveData(UUID, "radiation_flux_SW", flux);
+        min_flux = std::min(min_flux, flux);
+        max_flux = std::max(max_flux, flux);
+    }
+
+    // No primitive left behind (a skipped batch would read back exactly zero) and none double-counted.
+    DOCTEST_CHECK(min_flux == doctest::Approx(1000.0f).epsilon(0.02));
+    DOCTEST_CHECK(max_flux == doctest::Approx(1000.0f).epsilon(0.02));
 }
 

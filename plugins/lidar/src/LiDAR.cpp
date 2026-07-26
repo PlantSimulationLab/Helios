@@ -1724,11 +1724,11 @@ void LiDARcloud::addGridToVisualizer(Visualizer *visualizer) const {
             continue;
         }
 
-        vec3 center = getCellCenter(i);
+        vec3 center = getCellCenterUnrotated(i);
 
         vec3 anchor = getCellGlobalAnchor(i);
 
-        SphericalCoord rotation = make_SphericalCoord(0, getCellRotation(i));
+        SphericalCoord rotation = make_SphericalCoord(0, getCellRotationRadians(i));
 
         center = rotatePointAboutLine(center, anchor, make_vec3(0, 0, 1), rotation.azimuth);
         vec3 size = getCellSize(i);
@@ -1779,6 +1779,10 @@ void LiDARcloud::addTrianglesToVisualizer(Visualizer *visualizer, uint gridcell)
 }
 
 void LiDARcloud::addGrid(const vec3 &center, const vec3 &size, const int3 &ndiv, float rotation) {
+    addGrid(center, size, ndiv, rotation, std::vector<float>());
+}
+
+void LiDARcloud::addGrid(const vec3 &center, const vec3 &size, const int3 &ndiv, float rotation, const std::vector<float> &column_z_offsets) {
     if (size.x <= 0 || size.y <= 0 || size.z <= 0) {
         cerr << "failed.\n";
         helios_runtime_error("ERROR (LiDARcloud::addGrid): The grid cell size must be positive.");
@@ -1787,6 +1791,15 @@ void LiDARcloud::addGrid(const vec3 &center, const vec3 &size, const int3 &ndiv,
     if (ndiv.x <= 0 || ndiv.y <= 0 || ndiv.z <= 0) {
         cerr << "failed.\n";
         helios_runtime_error("ERROR (LiDARcloud::addGrid): The number of grid cells in each direction must be positive.");
+    }
+
+    // Optional per-column vertical offset for terrain following. When supplied it must hold one value
+    // per (x,y) column, row-major as [j*ndiv.x + i]. Each cell's z is shifted by its column's offset so
+    // that vertical voxel columns track an external terrain surface (e.g. a DEM). Empty => no shift, in
+    // which case this is byte-for-byte identical to the axis-regular grid built previously.
+    const bool terrain_follow = !column_z_offsets.empty();
+    if (terrain_follow && column_z_offsets.size() != size_t(ndiv.x) * size_t(ndiv.y)) {
+        helios_runtime_error("ERROR (LiDARcloud::addGrid): column_z_offsets must have length ndiv.x*ndiv.y (one value per grid column).");
     }
 
     // add cells to grid
@@ -1801,16 +1814,22 @@ void LiDARcloud::addGrid(const vec3 &center, const vec3 &size, const int3 &ndiv,
             for (int i = 0; i < ndiv.x; i++) {
                 x = -0.5f * float(size.x) + (float(i) + 0.5f) * float(gsubsize.x);
 
-                vec3 subcenter = make_vec3(x, y, z);
+                float zoff = terrain_follow ? column_z_offsets[size_t(j) * size_t(ndiv.x) + size_t(i)] : 0.f;
 
-                vec3 subcenter_rot = rotatePoint(subcenter, make_SphericalCoord(0, rotation * M_PI / 180.f));
+                vec3 subcenter = make_vec3(x, y, z + zoff);
 
                 if (printmessages) {
+                    // The grid cell stores the un-rotated lattice center; report the true (rotated) world-space center.
+                    vec3 subcenter_rot = rotatePoint(subcenter, make_SphericalCoord(0, rotation * M_PI / 180.f));
                     cout << "Adding grid cell #" << count << " with center " << subcenter_rot.x + center.x << "," << subcenter_rot.y + center.y << "," << subcenter.z + center.z << " and size " << gsubsize.x << " x " << gsubsize.y << " x "
                          << gsubsize.z << endl;
                 }
 
                 addGridCell(subcenter + center, center, gsubsize, size, rotation * M_PI / 180.f, make_int3(i, j, k), ndiv);
+
+                if (terrain_follow) {
+                    grid_cells.back().ground_height = zoff;
+                }
 
                 count++;
             }
@@ -1822,30 +1841,32 @@ void LiDARcloud::addGridWireFrametoVisualizer(Visualizer *visualizer, float line
 
 
     for (int i = 0; i < getGridCellCount(); i++) {
-        helios::vec3 center = getCellCenter(i);
+        // Build the eight corners of the un-rotated lattice box, then rotate each about the grid anchor
+        // by the cell's azimuthal rotation (about +z) so the wireframe lines up with the rotated voxels
+        // (matches the eight-corner enclosure in getGridBoundingBox() and the rotated centers returned by
+        // getCellCenter()).
+        helios::vec3 center = getCellCenterUnrotated(i);
         helios::vec3 size = getCellSize(i);
+        helios::vec3 anchor = getCellGlobalAnchor(i);
+        float rotation = getCellRotationRadians(i);
 
-        helios::vec3 boxmin, boxmax;
-        boxmin = make_vec3(center.x - 0.5 * size.x, center.y - 0.5 * size.y, center.z - 0.5 * size.z);
-        boxmax = make_vec3(center.x + 0.5 * size.x, center.y + 0.5 * size.y, center.z + 0.5 * size.z);
+        helios::vec3 boxmin = make_vec3(center.x - 0.5f * size.x, center.y - 0.5f * size.y, center.z - 0.5f * size.z);
+        helios::vec3 boxmax = make_vec3(center.x + 0.5f * size.x, center.y + 0.5f * size.y, center.z + 0.5f * size.z);
 
-        // vertical edges of the cell
-        visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmin.z), make_vec3(boxmin.x, boxmin.y, boxmax.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
-        visualizer->addLine(make_vec3(boxmin.x, boxmax.y, boxmin.z), make_vec3(boxmin.x, boxmax.y, boxmax.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
-        visualizer->addLine(make_vec3(boxmax.x, boxmin.y, boxmin.z), make_vec3(boxmax.x, boxmin.y, boxmax.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
-        visualizer->addLine(make_vec3(boxmax.x, boxmax.y, boxmin.z), make_vec3(boxmax.x, boxmax.y, boxmax.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
+        // Corner index bit layout: bit0=x (0:min,1:max), bit1=y, bit2=z.
+        helios::vec3 corner[8];
+        for (int b = 0; b < 8; b++) {
+            corner[b] = make_vec3((b & 1) ? boxmax.x : boxmin.x, (b & 2) ? boxmax.y : boxmin.y, (b & 4) ? boxmax.z : boxmin.z);
+            if (fabsf(rotation) > 1e-6f) {
+                corner[b] = rotatePointAboutLine(corner[b], anchor, make_vec3(0, 0, 1), rotation);
+            }
+        }
 
-        // horizontal top edges
-        visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmax.z), make_vec3(boxmin.x, boxmax.y, boxmax.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
-        visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmax.z), make_vec3(boxmax.x, boxmin.y, boxmax.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
-        visualizer->addLine(make_vec3(boxmax.x, boxmin.y, boxmax.z), make_vec3(boxmax.x, boxmax.y, boxmax.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
-        visualizer->addLine(make_vec3(boxmin.x, boxmax.y, boxmax.z), make_vec3(boxmax.x, boxmax.y, boxmax.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
-
-        // horizontal bottom edges
-        visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmin.z), make_vec3(boxmin.x, boxmax.y, boxmin.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
-        visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmin.z), make_vec3(boxmax.x, boxmin.y, boxmin.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
-        visualizer->addLine(make_vec3(boxmax.x, boxmin.y, boxmin.z), make_vec3(boxmax.x, boxmax.y, boxmin.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
-        visualizer->addLine(make_vec3(boxmin.x, boxmax.y, boxmin.z), make_vec3(boxmax.x, boxmax.y, boxmin.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
+        // The twelve edges of the box (pairs of corner indices that differ in exactly one axis bit).
+        static const int edges[12][2] = {{0, 4}, {2, 6}, {1, 5}, {3, 7}, {4, 6}, {4, 5}, {5, 7}, {6, 7}, {0, 2}, {0, 1}, {1, 3}, {2, 3}};
+        for (const auto &e: edges) {
+            visualizer->addLine(corner[e[0]], corner[e[1]], RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
+        }
     }
 }
 
@@ -2075,36 +2096,33 @@ void LiDARcloud::getGridBoundingBox(helios::vec3 &boxmin, helios::vec3 &boxmax) 
     boxmin = make_vec3(1e6, 1e6, 1e6);
     boxmax = make_vec3(-1e6, -1e6, -1e6);
 
-    std::size_t count = 0;
     for (uint c = 0; c < getGridCellCount(); c++) {
 
-        vec3 center = getCellCenter(c);
+        vec3 center = getCellCenterUnrotated(c);
         vec3 size = getCellSize(c);
         vec3 cellanchor = getCellGlobalAnchor(c);
-        float rotation = getCellRotation(c);
+        float rotation = getCellRotationRadians(c);
 
-        vec3 xyz_min = center - 0.5f * size;
-        xyz_min = rotatePointAboutLine(xyz_min, cellanchor, make_vec3(0, 0, 1), rotation);
-        vec3 xyz_max = center + 0.5f * size;
-        xyz_max = rotatePointAboutLine(xyz_max, cellanchor, make_vec3(0, 0, 1), rotation);
+        vec3 cellmin = center - 0.5f * size;
+        vec3 cellmax = center + 0.5f * size;
 
-        if (xyz_min.x < boxmin.x) {
-            boxmin.x = xyz_min.x;
-        }
-        if (xyz_max.x > boxmax.x) {
-            boxmax.x = xyz_max.x;
-        }
-        if (xyz_min.y < boxmin.y) {
-            boxmin.y = xyz_min.y;
-        }
-        if (xyz_max.y > boxmax.y) {
-            boxmax.y = xyz_max.y;
-        }
-        if (xyz_min.z < boxmin.z) {
-            boxmin.z = xyz_min.z;
-        }
-        if (xyz_max.z > boxmax.z) {
-            boxmax.z = xyz_max.z;
+        // Enclose all eight corners of the un-rotated lattice box, each rotated about the grid anchor by the cell's
+        // azimuthal rotation (about +z). Rotating only the min and max corners does NOT bound the rotated box: for a
+        // 0.6 m cell at 30 degrees it reports one horizontal extent 3.7x too small (and swaps min/max past 90
+        // degrees), which under-sizes the ray cull that syntheticScan() derives from this box. Matches the eight-corner
+        // construction in addGridWireFrametoVisualizer().
+        for (int b = 0; b < 8; b++) {
+            vec3 corner = make_vec3((b & 1) ? cellmax.x : cellmin.x, (b & 2) ? cellmax.y : cellmin.y, (b & 4) ? cellmax.z : cellmin.z);
+            if (fabsf(rotation) > 1e-6f) {
+                corner = rotatePointAboutLine(corner, cellanchor, make_vec3(0, 0, 1), rotation);
+            }
+
+            boxmin.x = std::min(boxmin.x, corner.x);
+            boxmax.x = std::max(boxmax.x, corner.x);
+            boxmin.y = std::min(boxmin.y, corner.y);
+            boxmax.y = std::max(boxmax.y, corner.y);
+            boxmin.z = std::min(boxmin.z, corner.z);
+            boxmax.z = std::max(boxmax.z, corner.z);
         }
     }
 }
@@ -3274,6 +3292,264 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses_timestamp(uint scanID, const
     return xyz_filled;
 }
 
+bool LiDARcloud::triangulateScanSecondPass(uint s, float Lmax, float max_aspect_ratio, bool use_adaptive_threshold, float adaptive_sep_threshold, const char *scalar_field, float threshold, const char *comparator, int &Ntriangles) {
+
+    // Shared per-scan "second pass" for both triangulateHitPoints overloads. The only behavioral difference between the
+    // two callers is the gather-time gate: the two-argument overload (scalar_field == nullptr) auto-filters first
+    // returns for multi-return data, while the filtered overload (scalar_field != nullptr) applies a scalar-field
+    // comparison. Everything downstream (wrap handling, coordinate snapping, de-duplication, the Delaunay call, and the
+    // edge-length/aspect/separation filtering) is identical, so it lives here once. Returns false only on cancellation.
+
+    const bool use_scalar_filter = (scalar_field != nullptr);
+
+    std::vector<int> Delaunay_inds;
+
+    std::vector<Shx> pts;
+
+    std::size_t delete_count = 0;
+    int count = 0;
+    for (int r = 0; r < getHitCount(); r++) {
+
+        // Coarse cancellation poll inside the gather loop (~every 128k hits) so a huge single
+        // scan can be aborted before it even reaches the Delaunay call.
+        if ((r & 0x1FFFF) == 0 && triangulationCancelled(cancel_flag)) {
+            triangles.clear();
+            return false;
+        }
+
+        if (getHitScanID(r) == s && getHitGridCell(r) >= 0) {
+
+            if (use_scalar_filter) {
+                if (doesHitDataExist(r, scalar_field)) {
+                    double R = getHitData(r, scalar_field);
+                    if (strcmp(comparator, "<") == 0) {
+                        if (R < threshold) {
+                            delete_count++;
+                            continue;
+                        }
+                    } else if (strcmp(comparator, ">") == 0) {
+                        if (R > threshold) {
+                            delete_count++;
+                            continue;
+                        }
+                    } else if (strcmp(comparator, "=") == 0) {
+                        if (R == threshold) {
+
+                            delete_count++;
+                            continue;
+                        }
+                    }
+                }
+            } else if (use_adaptive_threshold) {
+                // Auto-filter first returns for multi-return data
+                if (doesHitDataExist(r, "target_index") && getHitData(r, "target_index") != 0.0) {
+                    continue; // Skip non-first returns
+                }
+            }
+
+            helios::SphericalCoord direction = getHitRaydir(r);
+
+            helios::vec3 direction_cart = getHitXYZ(r) - getScanOrigin(s);
+            direction = cart2sphere(direction_cart);
+
+            Shx pt;
+            pt.id = count;
+            pt.r = direction.zenith;
+            pt.c = direction.azimuth;
+
+            pts.push_back(pt);
+
+            Delaunay_inds.push_back(r);
+
+            count++;
+        }
+    }
+
+    if (printmessages && use_scalar_filter) {
+        std::cout << "Scan " << s << " triangulation: " << count << " points used, " << delete_count << " points filtered out";
+        if (strlen(scalar_field) > 0) {
+            std::cout << " (filter: " << scalar_field << " " << comparator << " " << threshold << ")";
+        }
+        std::cout << std::endl;
+    }
+
+    if (pts.size() == 0) {
+        if (printmessages) {
+            std::cout << "Scan " << s << " contains no triangles. Skipping this scan..." << std::endl;
+        }
+        return true;
+    }
+
+    float h[2] = {0, 0};
+    for (int r = 0; r < pts.size(); r++) {
+        if (pts.at(r).c < 0.5 * M_PI) {
+            h[0] += 1.f;
+        } else if (pts.at(r).c > 1.5 * M_PI) {
+            h[1] += 1.f;
+        }
+    }
+    h[0] /= float(pts.size());
+    h[1] /= float(pts.size());
+    if (h[0] + h[1] > 0.4) {
+        if (printmessages) {
+            std::cout << "Shifting scan " << s << std::endl;
+        }
+        for (int r = 0; r < pts.size(); r++) {
+            pts.at(r).c += M_PI;
+            if (pts.at(r).c > 2.f * M_PI) {
+                pts.at(r).c -= 2.f * M_PI;
+            }
+        }
+    }
+
+    // Snap coordinates to fixed precision for cross-platform consistency.
+    // Even with CDT's robust predicates (which make the triangulation
+    // deterministic for identical input), the upstream cart2sphere
+    // coordinates can differ at the ULP level across architectures
+    // (ARM64 vs x86_64); snapping collapses those so de_duplicate and the
+    // tessellation stay platform-independent.
+    const float COORD_SNAP_PRECISION = 1e-6f;
+    for (auto &pt: pts) {
+        pt.r = std::round(pt.r / COORD_SNAP_PRECISION) * COORD_SNAP_PRECISION;
+        pt.c = std::round(pt.c / COORD_SNAP_PRECISION) * COORD_SNAP_PRECISION;
+    }
+
+    std::vector<int> dupes;
+    int nx = de_duplicate(pts, dupes);
+    (void) nx;
+    // dupes is dead once de_duplicate returns; release it before the (uninterruptible) Delaunay call.
+    std::vector<int>().swap(dupes);
+
+    std::vector<Triad> triads;
+
+    if (printmessages) {
+        std::cout << "starting triangulation for scan " << s << "..." << std::endl;
+    }
+
+    // Cancellation poll immediately before the (uninterruptible) Delaunay call: if the caller
+    // already requested an abort, skip this scan's CDT work entirely and return empty.
+    if (triangulationCancelled(cancel_flag)) {
+        triangles.clear();
+        return false;
+    }
+
+    // CDT uses robust geometric predicates, so the s_hull-era
+    // rotate-and-retry recovery is no longer needed; a failure here is
+    // deterministic and the scan is skipped.
+    int success = triangulate_CDT(pts, triads);
+
+    // Cancellation poll immediately after CDT: bail before building the output mesh so a run
+    // cancelled during the (one-scan-bounded) tessellation still aborts promptly.
+    if (triangulationCancelled(cancel_flag)) {
+        triangles.clear();
+        return false;
+    }
+
+    if (success != 1) {
+        if (printmessages) {
+            std::cout << "FAILED: could not triangulate scan " << s << ". Skipping this scan." << std::endl;
+        }
+        return true;
+    } else if (printmessages) {
+        std::cout << "finished triangulation" << std::endl;
+    }
+
+    // pts is dead once the triads reference indices back through Delaunay_inds (the triad-build loop below
+    // uses Delaunay_inds + getHitXYZ/getHitRaydir, not pts). Release it across the entire triad-build loop.
+    std::vector<Shx>().swap(pts);
+
+    triangulation_candidate_count += triads.size();
+
+    for (int t = 0; t < triads.size(); t++) {
+
+        // Coarse cancellation poll inside the triad-build loop (~every 128k triangles).
+        if ((t & 0x1FFFF) == 0 && triangulationCancelled(cancel_flag)) {
+            triangles.clear();
+            return false;
+        }
+
+        int ID0 = Delaunay_inds.at(triads.at(t).a);
+        int ID1 = Delaunay_inds.at(triads.at(t).b);
+        int ID2 = Delaunay_inds.at(triads.at(t).c);
+
+        helios::vec3 vertex0 = getHitXYZ(ID0);
+        helios::SphericalCoord raydir0 = getHitRaydir(ID0);
+
+        helios::vec3 vertex1 = getHitXYZ(ID1);
+        helios::SphericalCoord raydir1 = getHitRaydir(ID1);
+
+        helios::vec3 vertex2 = getHitXYZ(ID2);
+        helios::SphericalCoord raydir2 = getHitRaydir(ID2);
+
+        helios::vec3 v;
+        v = vertex0 - vertex1;
+        float L0 = v.magnitude();
+        v = vertex0 - vertex2;
+        float L1 = v.magnitude();
+        v = vertex1 - vertex2;
+        float L2 = v.magnitude();
+
+        float aspect_ratio = max(max(L0, L1), L2) / min(min(L0, L1), L2);
+
+        // Apply filtering. Attribute each dropped triangle to ONE primary
+        // reason in priority order (Lmax, then aspect/separation) so the
+        // diagnostic counts reconcile: candidates == kept + dropped_lmax +
+        // dropped_aspect + dropped_degenerate.
+        bool dropped_lmax = (L0 > Lmax || L1 > Lmax || L2 > Lmax);
+        bool dropped_aspect = false;
+
+        if (use_adaptive_threshold) {
+            // Multi-return: use BOTH separation ratio filter AND aspect ratio filter
+            float ang01 = sqrt(pow(raydir0.zenith - raydir1.zenith, 2) + pow(raydir0.azimuth - raydir1.azimuth, 2));
+            float ang02 = sqrt(pow(raydir0.zenith - raydir2.zenith, 2) + pow(raydir0.azimuth - raydir2.azimuth, 2));
+            float ang12 = sqrt(pow(raydir1.zenith - raydir2.zenith, 2) + pow(raydir1.azimuth - raydir2.azimuth, 2));
+
+            float ratio01 = L0 / (ang01 + 1e-6);
+            float ratio02 = L1 / (ang02 + 1e-6);
+            float ratio12 = L2 / (ang12 + 1e-6);
+            float max_sep_ratio = max(max(ratio01, ratio02), ratio12);
+
+            dropped_aspect = (max_sep_ratio > adaptive_sep_threshold) || (aspect_ratio > max_aspect_ratio);
+        } else {
+            // Single-return: use aspect ratio filter
+            dropped_aspect = (aspect_ratio > max_aspect_ratio);
+        }
+
+        if (dropped_lmax) {
+            triangulation_dropped_lmax++;
+            continue;
+        }
+        if (dropped_aspect) {
+            triangulation_dropped_aspect++;
+            continue;
+        }
+
+        int gridcell = getHitGridCell(ID0);
+
+        if (printmessages && gridcell == -2) {
+            cout << "WARNING (triangulateHitPoints): You typically want to define the hit grid cell for all hit points before performing triangulation." << endl;
+        }
+
+        RGBcolor color = make_RGBcolor(0, 0, 0);
+        color.r = (hits.at(ID0).color.r + hits.at(ID1).color.r + hits.at(ID2).color.r) / 3.f;
+        color.g = (hits.at(ID0).color.g + hits.at(ID1).color.g + hits.at(ID2).color.g) / 3.f;
+        color.b = (hits.at(ID0).color.b + hits.at(ID1).color.b + hits.at(ID2).color.b) / 3.f;
+
+        Triangulation tri(s, vertex0, vertex1, vertex2, ID0, ID1, ID2, color, gridcell);
+
+        if (tri.area != tri.area) {
+            triangulation_dropped_degenerate++;
+            continue;
+        }
+
+        triangles.push_back(tri);
+
+        Ntriangles++;
+    }
+
+    return true;
+}
+
 void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio) {
 
     // Triangulation projects hits into the scan's (zenith, azimuth) grid space from a single origin. A moving-platform
@@ -3319,7 +3595,7 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio) {
 
         for (uint s = 0; s < getScanCount(); s++) {
             std::vector<int> Delaunay_inds_pass1;
-            std::vector<Shx> pts_pass1, pts_copy_pass1;
+            std::vector<Shx> pts_pass1;
             int count_pass1 = 0;
 
             for (int r = 0; r < getHitCount(); r++) {
@@ -3427,7 +3703,9 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio) {
         }
     }
 
-    // Second pass: perform triangulation with adaptive filtering
+    // Second pass: perform triangulation with adaptive filtering. The per-scan body is shared with the filtered
+    // overload via triangulateScanSecondPass(); passing scalar_field == nullptr selects the first-return auto-filter
+    // gather used by this two-argument overload.
     for (uint s = 0; s < getScanCount(); s++) {
 
         // Cancellation checkpoint between scans: a cancelled run discards any mesh built so far and
@@ -3437,212 +3715,8 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio) {
             return;
         }
 
-        std::vector<int> Delaunay_inds;
-
-        std::vector<Shx> pts, pts_copy;
-
-        int count = 0;
-        for (int r = 0; r < getHitCount(); r++) {
-
-            // Coarse cancellation poll inside the gather loop (~every 128k hits) so a huge single
-            // scan can be aborted before it even reaches the Delaunay call.
-            if ((r & 0x1FFFF) == 0 && triangulationCancelled(cancel_flag)) {
-                triangles.clear();
-                return;
-            }
-
-            if (getHitScanID(r) == s && getHitGridCell(r) >= 0) {
-                // Auto-filter first returns for multi-return data
-                if (use_adaptive_threshold) {
-                    if (doesHitDataExist(r, "target_index") && getHitData(r, "target_index") != 0.0) {
-                        continue; // Skip non-first returns
-                    }
-                }
-
-                helios::SphericalCoord direction = getHitRaydir(r);
-
-                helios::vec3 direction_cart = getHitXYZ(r) - getScanOrigin(s);
-                direction = cart2sphere(direction_cart);
-
-                Shx pt;
-                pt.id = count;
-                pt.r = direction.zenith;
-                pt.c = direction.azimuth;
-
-                pts.push_back(pt);
-
-                Delaunay_inds.push_back(r);
-
-                count++;
-            }
-        }
-
-        if (pts.size() == 0) {
-            if (printmessages) {
-                std::cout << "Scan " << s << " contains no triangles. Skipping this scan..." << std::endl;
-            }
-            continue;
-        }
-
-        float h[2] = {0, 0};
-        for (int r = 0; r < pts.size(); r++) {
-            if (pts.at(r).c < 0.5 * M_PI) {
-                h[0] += 1.f;
-            } else if (pts.at(r).c > 1.5 * M_PI) {
-                h[1] += 1.f;
-            }
-        }
-        h[0] /= float(pts.size());
-        h[1] /= float(pts.size());
-        if (h[0] + h[1] > 0.4) {
-            if (printmessages) {
-                std::cout << "Shifting scan " << s << std::endl;
-            }
-            for (int r = 0; r < pts.size(); r++) {
-                pts.at(r).c += M_PI;
-                if (pts.at(r).c > 2.f * M_PI) {
-                    pts.at(r).c -= 2.f * M_PI;
-                }
-            }
-        }
-
-        // Snap coordinates to fixed precision for cross-platform consistency.
-        // Even with CDT's robust predicates (which make the triangulation
-        // deterministic for identical input), the upstream cart2sphere
-        // coordinates can differ at the ULP level across architectures
-        // (ARM64 vs x86_64); snapping collapses those so de_duplicate and the
-        // tessellation stay platform-independent.
-        const float COORD_SNAP_PRECISION = 1e-6f;
-        for (auto &pt: pts) {
-            pt.r = std::round(pt.r / COORD_SNAP_PRECISION) * COORD_SNAP_PRECISION;
-            pt.c = std::round(pt.c / COORD_SNAP_PRECISION) * COORD_SNAP_PRECISION;
-        }
-
-        std::vector<int> dupes;
-        int nx = de_duplicate(pts, dupes);
-        pts_copy = pts;
-
-        std::vector<Triad> triads;
-
-        if (printmessages) {
-            std::cout << "starting triangulation for scan " << s << "..." << std::endl;
-        }
-
-        // Cancellation poll immediately before the (uninterruptible) Delaunay call: if the caller
-        // already requested an abort, skip this scan's CDT work entirely and return empty.
-        if (triangulationCancelled(cancel_flag)) {
-            triangles.clear();
-            return;
-        }
-
-        // CDT uses robust geometric predicates, so the s_hull-era
-        // rotate-and-retry recovery is no longer needed; a failure here is
-        // deterministic and the scan is skipped.
-        int success = triangulate_CDT(pts, triads);
-
-        // Cancellation poll immediately after CDT: bail before building the output mesh so a run
-        // cancelled during the (one-scan-bounded) tessellation still aborts promptly.
-        if (triangulationCancelled(cancel_flag)) {
-            triangles.clear();
-            return;
-        }
-
-        if (success != 1) {
-            if (printmessages) {
-                std::cout << "FAILED: could not triangulate scan " << s << ". Skipping this scan." << std::endl;
-            }
-            continue;
-        } else if (printmessages) {
-            std::cout << "finished triangulation" << std::endl;
-        }
-
-        triangulation_candidate_count += triads.size();
-
-        for (int t = 0; t < triads.size(); t++) {
-
-            // Coarse cancellation poll inside the triad-build loop (~every 128k triangles).
-            if ((t & 0x1FFFF) == 0 && triangulationCancelled(cancel_flag)) {
-                triangles.clear();
-                return;
-            }
-
-            int ID0 = Delaunay_inds.at(triads.at(t).a);
-            int ID1 = Delaunay_inds.at(triads.at(t).b);
-            int ID2 = Delaunay_inds.at(triads.at(t).c);
-
-            helios::vec3 vertex0 = getHitXYZ(ID0);
-            helios::SphericalCoord raydir0 = getHitRaydir(ID0);
-
-            helios::vec3 vertex1 = getHitXYZ(ID1);
-            helios::SphericalCoord raydir1 = getHitRaydir(ID1);
-
-            helios::vec3 vertex2 = getHitXYZ(ID2);
-            helios::SphericalCoord raydir2 = getHitRaydir(ID2);
-
-            helios::vec3 v;
-            v = vertex0 - vertex1;
-            float L0 = v.magnitude();
-            v = vertex0 - vertex2;
-            float L1 = v.magnitude();
-            v = vertex1 - vertex2;
-            float L2 = v.magnitude();
-
-            float aspect_ratio = max(max(L0, L1), L2) / min(min(L0, L1), L2);
-
-            // Apply filtering. Attribute each dropped triangle to ONE primary
-            // reason in priority order (Lmax, then aspect/separation) so the
-            // diagnostic counts reconcile: candidates == kept + dropped_lmax +
-            // dropped_aspect + dropped_degenerate.
-            bool dropped_lmax = (L0 > Lmax || L1 > Lmax || L2 > Lmax);
-            bool dropped_aspect = false;
-
-            if (use_adaptive_threshold) {
-                // Multi-return: use BOTH separation ratio filter AND aspect ratio filter
-                float ang01 = sqrt(pow(raydir0.zenith - raydir1.zenith, 2) + pow(raydir0.azimuth - raydir1.azimuth, 2));
-                float ang02 = sqrt(pow(raydir0.zenith - raydir2.zenith, 2) + pow(raydir0.azimuth - raydir2.azimuth, 2));
-                float ang12 = sqrt(pow(raydir1.zenith - raydir2.zenith, 2) + pow(raydir1.azimuth - raydir2.azimuth, 2));
-
-                float ratio01 = L0 / (ang01 + 1e-6);
-                float ratio02 = L1 / (ang02 + 1e-6);
-                float ratio12 = L2 / (ang12 + 1e-6);
-                float max_sep_ratio = max(max(ratio01, ratio02), ratio12);
-
-                dropped_aspect = (max_sep_ratio > adaptive_sep_threshold) || (aspect_ratio > max_aspect_ratio);
-            } else {
-                // Single-return: use aspect ratio filter
-                dropped_aspect = (aspect_ratio > max_aspect_ratio);
-            }
-
-            if (dropped_lmax) {
-                triangulation_dropped_lmax++;
-                continue;
-            }
-            if (dropped_aspect) {
-                triangulation_dropped_aspect++;
-                continue;
-            }
-
-            int gridcell = getHitGridCell(ID0);
-
-            if (printmessages && gridcell == -2) {
-                cout << "WARNING (triangulateHitPoints): You typically want to define the hit grid cell for all hit points before performing triangulation." << endl;
-            }
-
-            RGBcolor color = make_RGBcolor(0, 0, 0);
-            color.r = (hits.at(ID0).color.r + hits.at(ID1).color.r + hits.at(ID2).color.r) / 3.f;
-            color.g = (hits.at(ID0).color.g + hits.at(ID1).color.g + hits.at(ID2).color.g) / 3.f;
-            color.b = (hits.at(ID0).color.b + hits.at(ID1).color.b + hits.at(ID2).color.b) / 3.f;
-
-            Triangulation tri(s, vertex0, vertex1, vertex2, ID0, ID1, ID2, color, gridcell);
-
-            if (tri.area != tri.area) {
-                triangulation_dropped_degenerate++;
-                continue;
-            }
-
-            triangles.push_back(tri);
-
-            Ntriangles++;
+        if (!triangulateScanSecondPass(s, Lmax, max_aspect_ratio, use_adaptive_threshold, adaptive_sep_threshold, nullptr, 0.f, nullptr, Ntriangles)) {
+            return; // cancelled mid-scan (mesh already cleared by the helper)
         }
     }
 
@@ -3665,13 +3739,13 @@ int LiDARcloud::getContainingGridCell(const helios::vec3 &p) const {
     const uint Ncells = getGridCellCount();
     for (uint c = 0; c < Ncells; c++) {
 
-        helios::vec3 center = getCellCenter(c);
+        helios::vec3 center = getCellCenterUnrotated(c);
         helios::vec3 size = getCellSize(c);
         helios::vec3 lo = center - size * 0.5f;
         helios::vec3 hi = center + size * 0.5f;
 
         helios::vec3 q = p;
-        float rotation = getCellRotation(c);
+        float rotation = getCellRotationRadians(c);
         if (fabs(rotation) > 1e-6f) {
             helios::vec3 anchor = getCellGlobalAnchor(c);
             q = rotatePointAboutLine(p - anchor, helios::make_vec3(0, 0, 0), helios::make_vec3(0, 0, 1), -rotation) + anchor;
@@ -3788,7 +3862,7 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const 
 
         for (uint s = 0; s < getScanCount(); s++) {
             std::vector<int> Delaunay_inds_pass1;
-            std::vector<Shx> pts_pass1, pts_copy_pass1;
+            std::vector<Shx> pts_pass1;
             int count_pass1 = 0;
 
             for (int r = 0; r < getHitCount(); r++) {
@@ -3889,7 +3963,9 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const 
         }
     }
 
-    // Second pass: perform triangulation with adaptive filtering
+    // Second pass: perform triangulation with adaptive filtering. The per-scan body is shared with the two-argument
+    // overload via triangulateScanSecondPass(); the scalar_field/threshold/comparator arguments select the gather-time
+    // scalar-field gate used by this filtered overload.
     for (uint s = 0; s < getScanCount(); s++) {
 
         // Cancellation checkpoint between scans: a cancelled run discards any mesh built so far and
@@ -3899,237 +3975,8 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const 
             return;
         }
 
-        std::vector<int> Delaunay_inds;
-
-        std::vector<Shx> pts, pts_copy;
-
-        std::size_t delete_count = 0;
-        int count = 0;
-
-        for (int r = 0; r < getHitCount(); r++) {
-
-            // Coarse cancellation poll inside the gather loop (~every 128k hits) so a huge single
-            // scan can be aborted before it even reaches the Delaunay call.
-            if ((r & 0x1FFFF) == 0 && triangulationCancelled(cancel_flag)) {
-                triangles.clear();
-                return;
-            }
-
-            if (getHitScanID(r) == s && getHitGridCell(r) >= 0) {
-
-                if (doesHitDataExist(r, scalar_field)) {
-                    double R = getHitData(r, scalar_field);
-                    if (strcmp(comparator, "<") == 0) {
-                        if (R < threshold) {
-                            delete_count++;
-                            continue;
-                        }
-                    } else if (strcmp(comparator, ">") == 0) {
-                        if (R > threshold) {
-                            delete_count++;
-                            continue;
-                        }
-                    } else if (strcmp(comparator, "=") == 0) {
-                        if (R == threshold) {
-
-                            delete_count++;
-                            continue;
-                        }
-                    }
-                }
-
-                helios::SphericalCoord direction = getHitRaydir(r);
-
-                helios::vec3 direction_cart = getHitXYZ(r) - getScanOrigin(s);
-                direction = cart2sphere(direction_cart);
-
-                Shx pt;
-                pt.id = count;
-                pt.r = direction.zenith;
-                pt.c = direction.azimuth;
-
-                pts.push_back(pt);
-
-                Delaunay_inds.push_back(r);
-
-                count++;
-            }
-        }
-
-        if (printmessages) {
-            std::cout << "Scan " << s << " triangulation: " << count << " points used, " << delete_count << " points filtered out";
-            if (strlen(scalar_field) > 0) {
-                std::cout << " (filter: " << scalar_field << " " << comparator << " " << threshold << ")";
-            }
-            std::cout << std::endl;
-        }
-
-        if (pts.size() == 0) {
-            if (printmessages) {
-                std::cout << "Scan " << s << " contains no triangles. Skipping this scan..." << std::endl;
-            }
-            continue;
-        }
-
-        float h[2] = {0, 0};
-        for (int r = 0; r < pts.size(); r++) {
-            if (pts.at(r).c < 0.5 * M_PI) {
-                h[0] += 1.f;
-            } else if (pts.at(r).c > 1.5 * M_PI) {
-                h[1] += 1.f;
-            }
-        }
-        h[0] /= float(pts.size());
-        h[1] /= float(pts.size());
-        if (h[0] + h[1] > 0.4) {
-            if (printmessages) {
-                std::cout << "Shifting scan " << s << std::endl;
-            }
-            for (int r = 0; r < pts.size(); r++) {
-                pts.at(r).c += M_PI;
-                if (pts.at(r).c > 2.f * M_PI) {
-                    pts.at(r).c -= 2.f * M_PI;
-                }
-            }
-        }
-
-        // Snap coordinates to fixed precision for cross-platform consistency.
-        // Even with CDT's robust predicates (which make the triangulation
-        // deterministic for identical input), the upstream cart2sphere
-        // coordinates can differ at the ULP level across architectures
-        // (ARM64 vs x86_64); snapping collapses those so de_duplicate and the
-        // tessellation stay platform-independent.
-        const float COORD_SNAP_PRECISION = 1e-6f;
-        for (auto &pt: pts) {
-            pt.r = std::round(pt.r / COORD_SNAP_PRECISION) * COORD_SNAP_PRECISION;
-            pt.c = std::round(pt.c / COORD_SNAP_PRECISION) * COORD_SNAP_PRECISION;
-        }
-
-        std::vector<int> dupes;
-        int nx = de_duplicate(pts, dupes);
-        pts_copy = pts;
-
-        std::vector<Triad> triads;
-
-        if (printmessages) {
-            std::cout << "starting triangulation for scan " << s << "..." << std::endl;
-        }
-
-        // Cancellation poll immediately before the (uninterruptible) Delaunay call: if the caller
-        // already requested an abort, skip this scan's CDT work entirely and return empty.
-        if (triangulationCancelled(cancel_flag)) {
-            triangles.clear();
-            return;
-        }
-
-        // CDT uses robust geometric predicates, so the s_hull-era
-        // rotate-and-retry recovery is no longer needed; a failure here is
-        // deterministic and the scan is skipped.
-        int success = triangulate_CDT(pts, triads);
-
-        // Cancellation poll immediately after CDT: bail before building the output mesh so a run
-        // cancelled during the (one-scan-bounded) tessellation still aborts promptly.
-        if (triangulationCancelled(cancel_flag)) {
-            triangles.clear();
-            return;
-        }
-
-        if (success != 1) {
-            if (printmessages) {
-                std::cout << "FAILED: could not triangulate scan " << s << ". Skipping this scan." << std::endl;
-            }
-            continue;
-        } else if (printmessages) {
-            std::cout << "finished triangulation" << std::endl;
-        }
-
-        triangulation_candidate_count += triads.size();
-
-        for (int t = 0; t < triads.size(); t++) {
-
-            // Coarse cancellation poll inside the triad-build loop (~every 128k triangles).
-            if ((t & 0x1FFFF) == 0 && triangulationCancelled(cancel_flag)) {
-                triangles.clear();
-                return;
-            }
-
-            int ID0 = Delaunay_inds.at(triads.at(t).a);
-            int ID1 = Delaunay_inds.at(triads.at(t).b);
-            int ID2 = Delaunay_inds.at(triads.at(t).c);
-
-            helios::vec3 vertex0 = getHitXYZ(ID0);
-            helios::SphericalCoord raydir0 = getHitRaydir(ID0);
-
-            helios::vec3 vertex1 = getHitXYZ(ID1);
-            helios::SphericalCoord raydir1 = getHitRaydir(ID1);
-
-            helios::vec3 vertex2 = getHitXYZ(ID2);
-            helios::SphericalCoord raydir2 = getHitRaydir(ID2);
-
-            helios::vec3 v;
-            v = vertex0 - vertex1;
-            float L0 = v.magnitude();
-            v = vertex0 - vertex2;
-            float L1 = v.magnitude();
-            v = vertex1 - vertex2;
-            float L2 = v.magnitude();
-
-            float aspect_ratio = max(max(L0, L1), L2) / min(min(L0, L1), L2);
-
-            // Apply filtering. Attribute each dropped triangle to ONE primary
-            // reason in priority order (Lmax, then aspect/separation) so the
-            // diagnostic counts reconcile: candidates == kept + dropped_lmax +
-            // dropped_aspect + dropped_degenerate.
-            bool dropped_lmax = (L0 > Lmax || L1 > Lmax || L2 > Lmax);
-            bool dropped_aspect = false;
-
-            if (use_adaptive_threshold) {
-                // Multi-return: use BOTH separation ratio filter AND aspect ratio filter
-                float ang01 = sqrt(pow(raydir0.zenith - raydir1.zenith, 2) + pow(raydir0.azimuth - raydir1.azimuth, 2));
-                float ang02 = sqrt(pow(raydir0.zenith - raydir2.zenith, 2) + pow(raydir0.azimuth - raydir2.azimuth, 2));
-                float ang12 = sqrt(pow(raydir1.zenith - raydir2.zenith, 2) + pow(raydir1.azimuth - raydir2.azimuth, 2));
-
-                float ratio01 = L0 / (ang01 + 1e-6);
-                float ratio02 = L1 / (ang02 + 1e-6);
-                float ratio12 = L2 / (ang12 + 1e-6);
-                float max_sep_ratio = max(max(ratio01, ratio02), ratio12);
-
-                dropped_aspect = (max_sep_ratio > adaptive_sep_threshold) || (aspect_ratio > max_aspect_ratio);
-            } else {
-                // Single-return: use aspect ratio filter
-                dropped_aspect = (aspect_ratio > max_aspect_ratio);
-            }
-
-            if (dropped_lmax) {
-                triangulation_dropped_lmax++;
-                continue;
-            }
-            if (dropped_aspect) {
-                triangulation_dropped_aspect++;
-                continue;
-            }
-
-            int gridcell = getHitGridCell(ID0);
-
-            if (printmessages && gridcell == -2) {
-                cout << "WARNING (triangulateHitPoints): You typically want to define the hit grid cell for all hit points before performing triangulation." << endl;
-            }
-
-            RGBcolor color = make_RGBcolor(0, 0, 0);
-            color.r = (hits.at(ID0).color.r + hits.at(ID1).color.r + hits.at(ID2).color.r) / 3.f;
-            color.g = (hits.at(ID0).color.g + hits.at(ID1).color.g + hits.at(ID2).color.g) / 3.f;
-            color.b = (hits.at(ID0).color.b + hits.at(ID1).color.b + hits.at(ID2).color.b) / 3.f;
-
-            Triangulation tri(s, vertex0, vertex1, vertex2, ID0, ID1, ID2, color, gridcell);
-
-            if (tri.area != tri.area) {
-                triangulation_dropped_degenerate++;
-                continue;
-            }
-
-            triangles.push_back(tri);
-
-            Ntriangles++;
+        if (!triangulateScanSecondPass(s, Lmax, max_aspect_ratio, use_adaptive_threshold, adaptive_sep_threshold, scalar_field, threshold, comparator, Ntriangles)) {
+            return; // cancelled mid-scan (mesh already cleared by the helper)
         }
     }
 
@@ -4180,7 +4027,15 @@ helios::vec3 LiDARcloud::getCellCenter(uint index) const {
         helios_runtime_error("ERROR (LiDARcloud::getCellCenter): grid cell index out of range.  Requested center of cell #" + std::to_string(index) + " but there are only " + std::to_string(getGridCellCount()) + " cells in the grid.");
     }
 
-    return grid_cells.at(index).center;
+    const GridCell &cell = grid_cells.at(index);
+    if (fabsf(cell.azimuthal_rotation) <= 1e-6f) {
+        return cell.center; // un-rotated fast path
+    }
+    // Return the TRUE world-space center: rotate the un-rotated lattice center about the grid anchor
+    // by the cell's azimuthal rotation (about +z). The struct stores the un-rotated center as a
+    // load-bearing internal convention (see getCellCenterUnrotated()); the rotation is applied here so
+    // that the public coordinate matches the rotated world frame used by every other exposed coordinate.
+    return rotatePointAboutLine(cell.center, cell.global_anchor, make_vec3(0, 0, 1), cell.azimuthal_rotation);
 }
 
 helios::vec3 LiDARcloud::getCellGlobalAnchor(uint index) const {
@@ -4195,7 +4050,7 @@ helios::vec3 LiDARcloud::getCellGlobalAnchor(uint index) const {
 helios::vec3 LiDARcloud::getCellSize(uint index) const {
 
     if (index >= getGridCellCount()) {
-        helios_runtime_error("ERROR (LiDARcloud::getCellCenter): grid cell index out of range.  Requested size of cell #" + std::to_string(index) + " but there are only " + std::to_string(getGridCellCount()) + " cells in the grid.");
+        helios_runtime_error("ERROR (LiDARcloud::getCellSize): grid cell index out of range.  Requested size of cell #" + std::to_string(index) + " but there are only " + std::to_string(getGridCellCount()) + " cells in the grid.");
     }
 
     return grid_cells.at(index).size;
@@ -4207,7 +4062,9 @@ float LiDARcloud::getCellRotation(uint index) const {
         helios_runtime_error("ERROR (LiDARcloud::getCellRotation): grid cell index out of range.  Requested rotation of cell #" + std::to_string(index) + " but there are only " + std::to_string(getGridCellCount()) + " cells in the grid.");
     }
 
-    return grid_cells.at(index).azimuthal_rotation;
+    // Public API convention: angles are returned in degrees (matching the degrees expected by addGrid()).
+    // The value is stored internally in radians; internal radian consumers use getCellRotationRadians().
+    return rad2deg(grid_cells.at(index).azimuthal_rotation);
 }
 
 std::vector<float> LiDARcloud::calculateSyntheticGtheta(helios::Context *context) {
@@ -4757,8 +4614,8 @@ void LiDARcloud::backfillLeavesAlphaMask(const vector<float> &leaf_size, float l
                 int randi = round(randu() * (tri_rots.size() - 1));
 
                 helios::vec3 cellsize = getCellSize(v);
-                helios::vec3 cellcenter = getCellCenter(v);
-                float rotation = getCellRotation(v);
+                helios::vec3 cellcenter = getCellCenterUnrotated(v);
+                float rotation = getCellRotationRadians(v);
 
                 helios::vec3 shift = cellcenter + rotatePoint(helios::make_vec3((randu() - 0.5) * cellsize.x, (randu() - 0.5) * cellsize.y, (randu() - 0.5) * cellsize.z), 0, rotation);
 
@@ -4794,8 +4651,8 @@ void LiDARcloud::backfillLeavesAlphaMask(const vector<float> &leaf_size, float l
                 int group_index = group_gridcell.at(v).at(randi);
 
                 helios::vec3 cellsize = getCellSize(v);
-                helios::vec3 cellcenter = getCellCenter(v);
-                float rotation = getCellRotation(v);
+                helios::vec3 cellcenter = getCellCenterUnrotated(v);
+                float rotation = getCellRotationRadians(v);
                 helios::vec3 cellanchor = getCellGlobalAnchor(v);
 
                 // helios::vec3 shift = reconstructed_alphamasks_center.at(group_index) + helios::make_vec3( 0.45*(randu()-0.5)*cellsize.x, 0.45*(randu()-0.5)*cellsize.y, 0.45*(randu()-0.5)*cellsize.z ); //uniform shift about group
@@ -5793,9 +5650,9 @@ void LiDARcloud::calculateLeafArea_inner(helios::Context *context, int min_voxel
                 // Process each voxel
                 for (uint c = 0; c < Ncells; c++) {
 
-                    helios::vec3 center = getCellCenter(c);
+                    helios::vec3 center = getCellCenterUnrotated(c);
                     helios::vec3 size = getCellSize(c);
-                    float rotation = getCellRotation(c);
+                    float rotation = getCellRotationRadians(c);
                     helios::vec3 anchor = getCellGlobalAnchor(c); // rotate about the grid anchor (matches calculateHitGridCell())
 
                     // Reset for this voxel
@@ -6020,12 +5877,12 @@ void LiDARcloud::calculateHitGridCell() {
     std::vector<float> cell_rotation(Ncells);
     std::vector<bool> cell_rotated(Ncells);
     for (uint c = 0; c < Ncells; c++) {
-        helios::vec3 center = getCellCenter(c);
+        helios::vec3 center = getCellCenterUnrotated(c);
         helios::vec3 size = getCellSize(c);
         cell_min[c] = center - size * 0.5f;
         cell_max[c] = center + size * 0.5f;
         cell_anchor[c] = getCellGlobalAnchor(c);
-        cell_rotation[c] = getCellRotation(c);
+        cell_rotation[c] = getCellRotationRadians(c);
         cell_rotated[c] = (fabs(cell_rotation[c]) > 1e-6f);
     }
 
@@ -6200,10 +6057,10 @@ std::vector<float> LiDARcloud::calculateSyntheticLeafArea(helios::Context *conte
 
         // Test against each voxel (same logic as calculateHitGridCellCD)
         for (uint c = 0; c < Ncells; c++) {
-            helios::vec3 center = getCellCenter(c);
+            helios::vec3 center = getCellCenterUnrotated(c);
             helios::vec3 anchor = getCellGlobalAnchor(c);
             helios::vec3 size = getCellSize(c);
-            float rotation = getCellRotation(c);
+            float rotation = getCellRotationRadians(c);
 
             // Inverse rotate primitive position if voxel is rotated
             helios::vec3 prim_xyz_rot = prim_xyz;
@@ -7692,10 +7549,18 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
             // export when sparse per-primitive-data labels appear only on later hits; recorded values are unaffected.
             {
                 // (1) Union of hit-data labels across this chunk (parallel collect into per-thread sets, then merge).
+#ifdef _OPENMP
                 std::vector<std::set<std::string>> thread_label_sets(static_cast<size_t>(omp_get_max_threads()));
+#else
+                std::vector<std::set<std::string>> thread_label_sets(1);
+#endif
 #pragma omp parallel for schedule(dynamic, 256)
                 for (int local = 0; local < static_cast<int>(chunk_N); local++) {
+#ifdef _OPENMP
                     std::set<std::string> &my_labels = thread_label_sets[static_cast<size_t>(omp_get_thread_num())];
+#else
+                    std::set<std::string> &my_labels = thread_label_sets[0];
+#endif
                     for (const SyntheticBeamHit &bh: beam_outputs[local].hits) {
                         for (const auto &kv: bh.data) {
                             my_labels.insert(kv.first);

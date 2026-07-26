@@ -1084,9 +1084,13 @@ uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &s
                 i++;
                 UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), color);
             }
-            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.elevation, "y");
-            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.azimuth, "z");
-            getPrimitivePointer_private(UUID.at(i))->translate(center);
+            // Apply transformations to all triangles added in this iteration (one for the center ring, two for outer rings)
+            int start_idx = (r == 0) ? i : i - 1;
+            for (int tri_idx = start_idx; tri_idx <= i; tri_idx++) {
+                getPrimitivePointer_private(UUID.at(tri_idx))->rotate(rotation.elevation, "y");
+                getPrimitivePointer_private(UUID.at(tri_idx))->rotate(rotation.azimuth, "z");
+                getPrimitivePointer_private(UUID.at(tri_idx))->translate(center);
+            }
 
             i++;
         }
@@ -1611,7 +1615,7 @@ void CompoundObject::rotate(float rotation_radians, const char *rotation_axis_xy
 
     if (strcmp(rotation_axis_xyz_string, "z") == 0) {
         float Rz[16], Rz_prim[16];
-        makeRotationMatrix(-rotation_radians, "z", Rz);
+        makeRotationMatrix(rotation_radians, "z", Rz);
         matmult(Rz, transform, transform);
 
         for (uint UUID: UUIDs) {
@@ -1729,8 +1733,11 @@ void CompoundObject::setPrimitiveUUIDs(const std::vector<uint> &a_UUIDs) {
 void CompoundObject::deleteChildPrimitive(uint UUID) {
     auto it = find(UUIDs.begin(), UUIDs.end(), UUID);
     if (it != UUIDs.end()) {
-        std::iter_swap(it, UUIDs.end() - 1);
-        UUIDs.pop_back();
+        // Order-preserving erase (rather than swap-and-pop) so the remaining UUIDs keep their relative
+        // order. Because sub-primitives are created with ascending UUIDs, this keeps the vector sorted,
+        // which writeXML() relies on to preserve sub-primitive ordering across a round-trip. The linear
+        // find() above already makes this O(n), so erase() adds no asymptotic cost.
+        UUIDs.erase(it);
         primitivesarecomplete = false;
     }
 }

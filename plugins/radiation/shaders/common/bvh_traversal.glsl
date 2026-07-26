@@ -24,6 +24,19 @@ struct BVHNode {
     uint split_axis;
 };
 
+// Reciprocal of the ray direction that is safe for axis-aligned rays.
+//
+// A plain 1.0/ray_dir yields +/-inf for any zero direction component. The slab test then computes
+// (plane - origin) * inf; when the origin lies exactly on that slab plane the term is 0*inf = NaN,
+// which makes the "t_near <= t_far" comparison evaluate to false and silently prunes a subtree that
+// the ray actually passes through. This is common with axis-aligned geometry (flat ground at z=0,
+// horizontal leaves). Substituting a large finite reciprocal keeps the term finite (0*large = 0),
+// so a ray parallel to a slab is correctly treated as always-inside/always-outside that axis.
+vec3 safe_inv_dir(vec3 ray_dir) {
+    const float LARGE = 1e30;
+    return vec3(abs(ray_dir.x) > 1e-30 ? 1.0 / ray_dir.x : LARGE, abs(ray_dir.y) > 1e-30 ? 1.0 / ray_dir.y : LARGE, abs(ray_dir.z) > 1e-30 ? 1.0 / ray_dir.z : LARGE);
+}
+
 // Ray-AABB intersection test
 bool intersect_aabb(vec3 ray_origin, vec3 ray_dir_inv, vec3 aabb_min, vec3 aabb_max, float t_max) {
     vec3 t_min_vec = (aabb_min - ray_origin) * ray_dir_inv;
@@ -54,8 +67,8 @@ HitInfo intersect_triangle(vec3 ray_origin, vec3 ray_dir, vec3 v0, vec3 v1, vec3
 // Outputs: closest_t (intersection distance)
 uint traverse_bvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_idx, inout float closest_t) {
 
-    // Pre-compute inverse ray direction for AABB tests
-    vec3 ray_dir_inv = vec3(1.0) / ray_dir;
+    // Pre-compute inverse ray direction for AABB tests (safe for axis-aligned rays)
+    vec3 ray_dir_inv = safe_inv_dir(ray_dir);
 
     // Stack for BVH traversal (36 elements: BVH MAX_DEPTH=32, +4 headroom)
     uint stack[36];
@@ -174,7 +187,7 @@ const uint slot_masks[8] = uint[8](0x00u, 0x01u, 0x03u, 0x07u, 0x0Fu, 0x1Fu, 0x3
 // - Branchless byte extraction via bitfieldExtract
 uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_idx, inout float closest_t) {
 
-    vec3 ray_dir_inv = vec3(1.0) / ray_dir;
+    vec3 ray_dir_inv = safe_inv_dir(ray_dir);
 
     uint stack[MAX_CWBVH_STACK_DEPTH];
     int stack_ptr = 0;

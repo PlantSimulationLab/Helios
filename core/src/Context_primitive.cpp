@@ -325,6 +325,7 @@ void Context::rotatePrimitive(const std::vector<uint> &UUIDs, float rotation_rad
     for (uint UUID: UUIDs) {
         if (strcmp(axis, "z") != 0 && getPrimitivePointer_private(UUID)->getType() == PRIMITIVE_TYPE_VOXEL) {
             warnings.addWarning("voxel_rotation_z_only", "Voxels can only be rotated about the z-axis. Ignoring this rotation.");
+            continue;
         }
         getPrimitivePointer_private(UUID)->applyTransform(T);
     }
@@ -347,6 +348,7 @@ void Context::rotatePrimitive(const std::vector<uint> &UUIDs, float rotation_rad
     for (uint UUID: UUIDs) {
         if (getPrimitivePointer_private(UUID)->getType() == PRIMITIVE_TYPE_VOXEL) {
             warnings.addWarning("voxel_rotation_z_only", "Voxels can only be rotated about the z-axis. Ignoring this rotation.");
+            continue;
         }
         getPrimitivePointer_private(UUID)->applyTransform(T);
     }
@@ -369,6 +371,7 @@ void Context::rotatePrimitive(const std::vector<uint> &UUIDs, float rotation_rad
     for (uint UUID: UUIDs) {
         if (getPrimitivePointer_private(UUID)->getType() == PRIMITIVE_TYPE_VOXEL) {
             warnings.addWarning("voxel_rotation_z_only", "Voxels can only be rotated about the z-axis. Ignoring this rotation.");
+            continue;
         }
         getPrimitivePointer_private(UUID)->applyTransform(T);
     }
@@ -1284,6 +1287,18 @@ void Voxel::rotate(float rotation_radians, const char *rotation_axis_xyz_string)
         return;
     }
     if (rotation_radians == 0) {
+        return;
+    }
+
+    if (strcmp(rotation_axis_xyz_string, "z") != 0) {
+        if (strcmp(rotation_axis_xyz_string, "x") != 0 && strcmp(rotation_axis_xyz_string, "y") != 0) {
+            helios_runtime_error("ERROR (Voxel::rotate): Rotation axis should be one of x, y, or z.");
+        }
+        static bool voxel_rotate_axis_warning_shown = false;
+        if (!voxel_rotate_axis_warning_shown) {
+            std::cerr << "WARNING (Voxel::rotate) - Voxels can only be rotated about the z-axis. Ignoring this call to rotate()." << std::endl;
+            voxel_rotate_axis_warning_shown = true;
+        }
         return;
     }
 

@@ -614,6 +614,14 @@ void Context::addTimeseriesData(const char *label, float value, const Date &date
 
         uint N = getTimeseriesLength(label);
 
+        // check for a duplicate date/time anywhere in the (sorted) timeseries, including the first and last points
+        for (uint t = 0; t < N; t++) {
+            if (date_value == timeseries_datevalue[label].at(t)) {
+                std::cerr << "WARNING (Context::addTimeseriesData): Timeseries variable '" << label << "' already contains a data point at the specified date/time. Skipping duplicate timeseries date/time." << std::endl;
+                return;
+            }
+        }
+
         auto it_data = timeseries_data[label].begin();
         auto it_datevalue = timeseries_datevalue[label].begin();
 
@@ -640,10 +648,6 @@ void Context::addTimeseriesData(const char *label, float value, const Date &date
 
             // data should be inserted somewhere in the middle of timeseries
             for (uint t = 0; t < N - 1; t++) {
-                if (date_value == timeseries_datevalue[label].at(t)) {
-                    std::cerr << "WARNING (Context::addTimeseriesData): Skipping duplicate timeseries date/time." << std::endl;
-                    continue;
-                }
                 if (date_value > timeseries_datevalue[label].at(t) && date_value < timeseries_datevalue[label].at(t + 1)) {
                     timeseries_data[label].insert(it_data + t + 1, value);
                     timeseries_datevalue[label].insert(it_datevalue + t + 1, date_value);
@@ -940,17 +944,20 @@ void Context::getDomainBoundingBox(const std::vector<uint> &UUIDs, vec2 &xbounds
         for (auto &vert: verts) {
             if (vert.x < xbounds.x) {
                 xbounds.x = vert.x;
-            } else if (vert.x > xbounds.y) {
+            }
+            if (vert.x > xbounds.y) {
                 xbounds.y = vert.x;
             }
             if (vert.y < ybounds.x) {
                 ybounds.x = vert.y;
-            } else if (vert.y > ybounds.y) {
+            }
+            if (vert.y > ybounds.y) {
                 ybounds.y = vert.y;
             }
             if (vert.z < zbounds.x) {
                 zbounds.x = vert.z;
-            } else if (vert.z > zbounds.y) {
+            }
+            if (vert.z > zbounds.y) {
                 zbounds.y = vert.z;
             }
         }
@@ -2512,9 +2519,13 @@ std::vector<uint> Context::addDisk(const int2 &Ndivs, const vec3 &center, const 
                 i++;
                 UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), color);
             }
-            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.elevation, "y");
-            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.azimuth, "z");
-            getPrimitivePointer_private(UUID.at(i))->translate(center);
+            // Apply transformations to all triangles added in this iteration (one for the center ring, two for outer rings)
+            int start_idx = (r == 0) ? i : i - 1;
+            for (int tri_idx = start_idx; tri_idx <= i; tri_idx++) {
+                getPrimitivePointer_private(UUID.at(tri_idx))->rotate(rotation.elevation, "y");
+                getPrimitivePointer_private(UUID.at(tri_idx))->rotate(rotation.azimuth, "z");
+                getPrimitivePointer_private(UUID.at(tri_idx))->translate(center);
+            }
 
             i++;
         }
