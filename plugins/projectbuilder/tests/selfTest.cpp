@@ -15,6 +15,7 @@ using namespace helios;
 #define SKIP_IF_NO_GPU() \
     do { \
         if (!RadiationModel::isGPUBackendAvailable()) { \
+            helios::requireGPUOrFail("A projectbuilder test needs the radiation plugin's GPU backend and would have skipped."); \
             DOCTEST_MESSAGE("SKIPPED: No GPU backend available (radiation plugin requires GPU)"); \
             return; \
         } \

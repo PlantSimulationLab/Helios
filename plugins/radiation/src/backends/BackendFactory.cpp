@@ -15,6 +15,8 @@
 
 #include "RayTracingBackend.h"
 
+#include <cstdlib>
+
 // Conditionally include backend headers based on compile-time definitions
 #ifdef HELIOS_HAVE_OPTIX8
 #include "OptiX8Backend.h"
@@ -29,6 +31,17 @@
 #endif
 
 namespace helios {
+
+    bool gpuBackendsDisabledByEnvironment() {
+        // Read the environment once: the answer cannot change during the process lifetime
+        // for any purpose the probes care about, and every probe consults it.
+        static const bool disabled = []() {
+            const char *no_gpu = std::getenv("HELIOS_NO_GPU");
+            return no_gpu != nullptr && std::string(no_gpu) != "0";
+        }();
+        return disabled;
+    }
+
 
     std::unique_ptr<RayTracingBackend> RayTracingBackend::create(const std::string &backend_type) {
 
@@ -67,6 +80,15 @@ namespace helios {
 #endif
             if (compiled_backends.empty()) {
                 compiled_backends = "(none)";
+            }
+
+            if (gpuBackendsDisabledByEnvironment()) {
+                helios_runtime_error("ERROR (RayTracingBackend::create): GPU backends are disabled because the environment variable "
+                                     "HELIOS_NO_GPU is set.\n\n"
+                                     "Backends compiled into this build: " +
+                                     compiled_backends +
+                                     "\n"
+                                     "Unset HELIOS_NO_GPU (or set it to 0) to allow hardware probing.");
             }
 
             helios_runtime_error(

@@ -104,6 +104,12 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
 
  <b>Note:</b> This limitation only affects the Vulkan backend on Linux NVIDIA systems. The OptiX backend is unaffected. Reusing RadiationModel instances is recommended practice regardless, as it avoids repeated GPU resource allocation overhead.
 
+ <b>Backend probing does not contribute to this budget.</b> Each backend's hardware probe runs at most once per process and its result is cached, so \ref RadiationModel::isGPUBackendAvailable() and repeated RadiationModel construction no longer cost one extra instance create/destroy cycle apiece. Only the instance owned by a live RadiationModel counts against the driver's limit. One consequence of the caching: if the first probe in a process fails, that verdict is latched for the lifetime of the process — a driver that becomes usable later is not picked up until the program restarts.
+
+ \subsection RadDisableGPU Disabling GPU Backends
+
+ Setting the environment variable <tt>HELIOS_NO_GPU</tt> to any value other than <tt>0</tt> makes every backend probe report failure, so a GPU-equipped machine behaves exactly as one with no compatible hardware: \ref RadiationModel::isGPUBackendAvailable() returns <tt>false</tt> and constructing a RadiationModel throws. This is intended for reproducing headless CI behavior locally. Requesting a backend by name rather than through automatic selection bypasses the veto.
+
  <b>References:</b>
  - <a href="https://forums.developer.nvidia.com/t/issue-with-repeated-instance-creation-in-one-process/176978">NVIDIA Developer Forums: Instance Creation Issue</a>
  - <a href="https://github.com/qdrant/qdrant/pull/6031">Qdrant's Workaround (2024)</a>
@@ -1131,15 +1137,35 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
 
  \subsection RadRun Running Simulations
 
- Before simulations are run, we must update the context geometry within the radiation model using the \ref RadiationModel::updateGeometry() "updateGeometry()" command.  The geometry update can be somewhat costly, so it should only be done whenever geometry changes.
-
  Simulations for each band are run separately via the \ref RadiationModel::runBand() "runBand()" command:
 
  ~~~~~~{.cpp}
- radiationmodel.updateGeometry(); //build the context geometry in the radiation model
+ radiationmodel.runBand("PAR"); //run the model for the 'PAR' band
+ ~~~~~~
+
+ The context geometry is built within the radiation model automatically, so \ref RadiationModel::updateGeometry() "updateGeometry()" does not have to be called before the first run. It is also rebuilt automatically when primitives have been <b>added to</b> or <b>deleted from</b> the Context since the last build, which is detected by comparing the number of primitives in the Context against the number present when the geometry was last built.
+
+ \warning Because the check compares primitive counts, it does not detect changes that leave the number of primitives in the Context unchanged. In particular, <b>modifying existing primitives</b> — translating, rotating, or scaling them, or otherwise changing their vertices — and <b>deleting and adding an equal number of primitives</b> between runs are both invisible to it. In those cases the trace would run against the previous geometry, and \ref RadiationModel::updateGeometry() "updateGeometry()" must be called explicitly:
+
+ ~~~~~~{.cpp}
+ radiationmodel.runBand("PAR"); //builds the geometry automatically
+
+ context.translatePrimitive(UUIDs, make_vec3(0, 0, 1)); //moves existing primitives; the count is unchanged
+
+ radiationmodel.updateGeometry(); //required: the automatic rebuild will not catch this
+
+ radiationmodel.runBand("PAR");
+ ~~~~~~
+
+ The geometry update can be somewhat costly, so \ref RadiationModel::updateGeometry() "updateGeometry()" may also be called directly simply to control when that cost is incurred:
+
+ ~~~~~~{.cpp}
+ radiationmodel.updateGeometry(); //optional: build the context geometry up-front
 
  radiationmodel.runBand("PAR"); //run the model for the 'PAR' band
  ~~~~~~
+
+ A final consideration is the \ref RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) "updateGeometry(UUIDs)" overload, which restricts the model to a subset of the Context primitives. A subset build is never rebuilt automatically, since doing so would discard the requested subset; call it again after modifying Context geometry.
 
  The model will create several primitive data in the context with values set using simulation results (see Sect. "Output Primitive Data" above).
 
@@ -1348,6 +1374,9 @@ The above example assumes that we have already added some geometry to the Contex
 
  \par Longitude sign
  The \ref helios::Location struct uses a non-standard longitude convention where positive values are Western and negative values are Eastern. Standard EXIF / ISO 6709 is the opposite. The longitude sign is automatically flipped at the EXIF boundary so the written GPSLongitude and GPSLongitudeRef values follow the standard convention. This is transparent to users.
+
+ \par UTC offset
+ The OffsetTime tags are written as "+HH:MM" / "-HH:MM" in the standard East-positive convention, so the Context's West-positive \ref helios::Location::UTC_offset is negated at this boundary just as the longitude is. An offset that could not be expressed as a real time zone is rejected by \ref helios::Location::validate() when the Location is constructed or passed to \ref helios::Context::setLocation(), so it can never reach the image: a fractional-hour zone such as UTC+5:45 (Helios offset -5.75) is written as "+05:45", while an offset outside -14 to +12 raises an error rather than being embedded as a malformed tag.
 
  \par Limitations
  - Camera roll is always written as 0. \ref RadiationCamera does not currently store an up-vector, so the optical axis alone determines orientation. For nadir aerial scenes and ground-based imagery this is correct; for banked or tilted aerial captures, downstream tools will receive roll=0.

@@ -123,25 +123,10 @@ RadiationModel RadiationModel::createWithBackend(helios::Context *context, std::
 }
 
 bool RadiationModel::isGPUBackendAvailable() {
-    static bool checked = false;
-    static bool available = false;
-
-    if (checked) {
-        return available;
-    }
-    checked = true;
-
-    // Allow forcing unavailability for local CI simulation
-    const char *no_gpu = std::getenv("HELIOS_NO_GPU");
-    if (no_gpu && std::string(no_gpu) != "0") {
-        available = false;
-        return false;
-    }
-
-    // Lightweight probe without constructing a full backend
-    available = helios::probeAnyGPUBackend();
-
-    return available;
+    // Single source of truth: probeAnyGPUBackend() caches its result process-wide and honors
+    // the HELIOS_NO_GPU veto, so what is reported here can never diverge from what
+    // RayTracingBackend::create("auto") does when the constructor runs.
+    return helios::probeAnyGPUBackend();
 }
 
 RadiationModel::~RadiationModel() {
@@ -1955,6 +1940,27 @@ void RadiationModel::enforcePeriodicBoundary(const std::string &boundary) {
 
 void RadiationModel::updateGeometry() {
     updateGeometry(context->getAllUUIDs());
+    // A full-Context build is the default; clear the subset latch set by the overload below so
+    // that subsequent geometry changes are picked up automatically.
+    isgeometrysubset = false;
+}
+
+bool RadiationModel::needsGeometryRebuild() const {
+
+    if (!isgeometryinitialized) {
+        return true;
+    }
+
+    // The user explicitly restricted the model to a subset of primitives. Rebuilding from the full
+    // Context would silently discard that choice, so leave the existing geometry alone.
+    if (isgeometrysubset) {
+        return false;
+    }
+
+    // Primitives added to or deleted from the Context since the last build leave the acceleration
+    // structure stale. Comparing counts catches both, because deletions cannot be masked by
+    // additions without the count changing.
+    return context->getPrimitiveCount() != geometry_build_primitive_count;
 }
 
 
@@ -1977,6 +1983,12 @@ void RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) {
 
     radiativepropertiesneedupdate = true;
     isgeometryinitialized = true;
+
+    // Record the Context state this build corresponds to, so that geometry added or deleted later
+    // is detected by needsGeometryRebuild(). A build covering fewer primitives than the Context
+    // holds is an explicit user-specified subset, which must not be silently overwritten.
+    geometry_build_primitive_count = context->getPrimitiveCount();
+    isgeometrysubset = UUIDs.size() < geometry_build_primitive_count;
 
     if (message_flag) {
         std::cout << "done." << std::endl;
@@ -3526,8 +3538,10 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         return;
     }
 
-    // Check to make sure geometry was built in OptiX
-    if (!isgeometryinitialized) {
+    // Build the acceleration structure if it has never been built, or rebuild it if primitives
+    // were added to or deleted from the Context since the last build. Without the rebuild the
+    // trace would silently run against stale geometry.
+    if (needsGeometryRebuild()) {
         updateGeometry();
     }
 
@@ -4969,6 +4983,16 @@ std::string RadiationModel::autoCalibrateCameraImage(const std::string &camera_l
     }
     if (std::find(camera_bands.begin(), camera_bands.end(), blue_band_label) == camera_bands.end()) {
         helios_runtime_error("ERROR (RadiationModel::autoCalibrateCameraImage): Blue band '" + blue_band_label + "' not found in camera '" + camera_label + "'.");
+    }
+
+    // Check that the bands have actually been rendered. The band_labels checks above only confirm the bands were assigned when the camera was created; pixel_data is populated
+    // by runBand(), so a camera that has never been rendered passes those checks with no pixel data to calibrate.
+    const auto &camera_pixel_data = cameras.at(camera_label).pixel_data;
+    for (const std::string &band_label: {red_band_label, green_band_label, blue_band_label}) {
+        if (camera_pixel_data.find(band_label) == camera_pixel_data.end()) {
+            helios_runtime_error("ERROR (RadiationModel::autoCalibrateCameraImage): Image data for camera '" + camera_label + "', band '" + band_label +
+                                 "' has not been created. Call runBand() with this band after the camera was added.");
+        }
     }
 
     // Read processed camera data (same as writeCameraImage uses)

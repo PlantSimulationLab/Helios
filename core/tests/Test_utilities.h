@@ -550,6 +550,50 @@ TEST_CASE("Date and Time Logic") {
         DOCTEST_CHECK(ss4.str() == "<1,2,3,100>");
     }
 
+    SUBCASE("Location validation") {
+
+        // Boundaries of each range are valid. UTC_offset spans -14 to +12 rather than -12 to +12
+        // because Helios counts the offset positive moving West, inverting the real-world span of
+        // UTC-12 through UTC+14.
+        DOCTEST_CHECK_NOTHROW(Location(90.f, 180.f, -14.f));
+        DOCTEST_CHECK_NOTHROW(Location(-90.f, -180.f, 12.f));
+        DOCTEST_CHECK_NOTHROW(make_Location(0.f, 0.f, 0.f, -430.f)); // Dead Sea shore
+
+        // Out-of-range fields are rejected by both constructors and by make_Location(), which
+        // forwards to them.
+        DOCTEST_CHECK_THROWS_AS(Location(90.1f, 0.f, 0.f), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(Location(-90.1f, 0.f, 0.f), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(Location(0.f, 180.1f, 0.f), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(Location(0.f, -180.1f, 0.f), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(Location(0.f, 0.f, 12.1f), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(Location(0.f, 0.f, -14.1f), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(Location(0.f, 0.f, 100.f, 0.f), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(make_Location(0.f, 0.f, 100.f), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(make_Location(0.f, 0.f, 100.f, 0.f), std::runtime_error);
+
+        // NaN satisfies no ordered comparison, so it must be rejected by the negated form of each
+        // range check rather than slipping through as "not out of range".
+        const float nan_value = std::numeric_limits<float>::quiet_NaN();
+        DOCTEST_CHECK_THROWS_AS(Location(nan_value, 0.f, 0.f), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(Location(0.f, nan_value, 0.f), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(Location(0.f, 0.f, nan_value), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(Location(0.f, 0.f, 0.f, nan_value), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(Location(0.f, 0.f, 0.f, std::numeric_limits<float>::infinity()), std::runtime_error);
+
+        // The default constructor must produce a Location that satisfies its own invariant.
+        DOCTEST_CHECK_NOTHROW(Location().validate("test"));
+
+        // The error message must name the offending value and the offending field.
+        std::string offset_message;
+        try {
+            Location bad_offset(0.f, 0.f, 100.f);
+        } catch (const std::runtime_error &e) {
+            offset_message = e.what();
+        }
+        DOCTEST_CHECK(offset_message.find("UTC offset") != std::string::npos);
+        DOCTEST_CHECK(offset_message.find("100") != std::string::npos);
+    }
+
     SUBCASE("Julian day conversion") {
         int year = 2000;
         Date d = Julian2Calendar(10, year);

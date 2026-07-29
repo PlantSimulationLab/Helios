@@ -29,6 +29,7 @@
 #pragma clang diagnostic pop
 #endif
 
+#include <atomic>
 #include <vector>
 #include <string>
 
@@ -160,7 +161,23 @@ namespace helios {
          */
         void probeComputeCapability();
 
+        /**
+         * @brief Number of times initialize() has been entered in this process
+         *
+         * Diagnostic counter for Vulkan instance/device churn. Repeated
+         * vkCreateInstance/vkDestroyInstance cycles are a known driver failure mode (NVIDIA
+         * loaders start returning VK_ERROR_INCOMPATIBLE_DRIVER after roughly 25 cycles, and
+         * MoltenVK on virtualized macOS runners can fault), so backend probes cache their
+         * result to keep this count at one per process. Self-tests assert that invariant.
+         *
+         * @return Cumulative count of initialize() calls, successful or not
+         */
+        static uint64_t getInitializationAttemptCount();
+
     private:
+        // Cumulative initialize() entries, used to detect driver create/destroy churn
+        static std::atomic<uint64_t> initialization_attempt_count;
+
         // Vulkan handles
         VkInstance instance = VK_NULL_HANDLE;
         VkPhysicalDevice physical_device = VK_NULL_HANDLE;

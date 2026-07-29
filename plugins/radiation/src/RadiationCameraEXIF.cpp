@@ -18,7 +18,6 @@
 #include "RadiationModel.h"
 
 #include <cmath>
-#include <cstdio>
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -89,7 +88,21 @@ namespace {
     }
 
     //! Format the standard +E UTC offset as "+HH:MM" / "-HH:MM" given the Helios +W offset.
+    /**
+     * \param[in] utc_offset_helios_west_positive Context UTC offset in hours, Helios's +West convention.
+     * \note Real-world UTC offsets span UTC-12 to UTC+14, which is [-14,+12] in the +West convention.
+     *       An offset outside that range (or NaN) cannot produce a valid EXIF OffsetTime string.
+     *       `Location::validate()` already rejects such a value at construction and in
+     *       Context::setLocation(), so this is a backstop for any future path that writes the
+     *       Context's location without passing through either: a malformed offset must fail here
+     *       rather than be embedded in the image as though it were a real time zone.
+     */
     std::string formatStandardOffset(float utc_offset_helios_west_positive) {
+        if (!(utc_offset_helios_west_positive >= -14.f && utc_offset_helios_west_positive <= 12.f)) {
+            helios_runtime_error("ERROR (RadiationModel::populateImageEXIF): The Context UTC offset of " + std::to_string(utc_offset_helios_west_positive) +
+                                 " hours is outside the range of real time zones. Helios uses a +West convention, so valid offsets run from -14 (UTC+14) to +12 (UTC-12). "
+                                 "Set a valid offset via Context::setLocation().");
+        }
         // Standard convention is positive for East of UTC, so we negate.
         float std_offset = -utc_offset_helios_west_positive;
         char sign = (std_offset >= 0.f) ? '+' : '-';
@@ -101,9 +114,9 @@ namespace {
             mm -= 60;
             hh += 1;
         }
-        char buf[8];
-        std::snprintf(buf, sizeof(buf), "%c%02d:%02d", sign, hh, mm);
-        return std::string(buf);
+        std::ostringstream oss;
+        oss << sign << std::setw(2) << std::setfill('0') << hh << ":" << std::setw(2) << std::setfill('0') << mm;
+        return oss.str();
     }
 
 } // namespace

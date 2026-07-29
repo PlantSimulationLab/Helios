@@ -1693,7 +1693,15 @@ struct Shoot {
 
     const float internode_length_max_shoot_initial;
 
-    uint internode_tube_objID = 4294967294;
+    //! Sentinel value for internode_tube_objID meaning "no internode tube object exists in the Context"
+    /**
+     * Used both before the tube geometry has been built and after it has been deleted (e.g. by
+     * pruneGroundCollisions()). Resetting the ID to this sentinel on deletion is what keeps a freed
+     * object ID from being handed back to callers.
+     */
+    static constexpr uint no_internode_tube_objID = 4294967294;
+
+    uint internode_tube_objID = no_internode_tube_objID;
 
     std::vector<std::vector<helios::vec3>> shoot_internode_vertices; // first index is phytomer within shoot, second index is segment within phytomer internode tube
     std::vector<std::vector<float>> shoot_internode_radii; // first index is phytomer within shoot, second index is segment within phytomer internode tube
@@ -3266,6 +3274,20 @@ protected:
     [[nodiscard]] bool detectGroundCollision(const std::vector<uint> &objID) const;
 
     void setPlantLeafAngleDistribution_private(const std::vector<uint> &plantIDs, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity_azimuth, float ellipse_rotation_azimuth_degrees, bool set_elevation, bool set_azimuth) const;
+
+    //! Collect leaf object IDs together with their matching attachment base positions
+    /**
+     * Gathers both values in a single traversal of the shoot tree so that the object ID at a given
+     * index and the base position at the same index always refer to the same leaf. Callers that
+     * need the two in correspondence must use this rather than pairing the results of
+     * getPlantLeafObjectIDs() and getPlantLeafBases(), which are built by independent traversals
+     * and would silently desynchronize if either ever started filtering.
+     *
+     * \param[in] plantIDs List of IDs of the plant instances.
+     * \param[out] leaf_objIDs Object IDs of the leaves.
+     * \param[out] leaf_bases Attachment base position of each leaf, index-matched to leaf_objIDs.
+     */
+    void getPlantLeafObjectIDsAndBases(const std::vector<uint> &plantIDs, std::vector<uint> &leaf_objIDs, std::vector<helios::vec3> &leaf_bases) const;
 
     static float interpolateTube(const std::vector<float> &P, float frac);
 

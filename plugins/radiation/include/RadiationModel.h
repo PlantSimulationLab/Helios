@@ -709,6 +709,10 @@ public:
      * Also returns false if the environment variable HELIOS_NO_GPU is set to a
      * non-zero value, allowing local simulation of headless CI environments.
      *
+     * The probe runs at most once per process and the result is cached, so this is
+     * cheap to call repeatedly and never re-enters the GPU driver. A driver that
+     * becomes usable after the first probe is not picked up until the process restarts.
+     *
      * @return True if a GPU backend can be initialized successfully
      */
     static bool isGPUBackendAvailable();
@@ -1431,13 +1435,14 @@ public:
      * This method updates the intrinsic optical and geometric parameters of an existing camera.
      * The camera position, lookat direction, and spectral bands are preserved. All fields in
      * CameraProperties can be updated including resolution, HFOV, lens diameter, focal plane
-     * distance, sensor width, and model name. If resolution changes, pixel buffers will be
-     * reallocated on the next call to runRadiationImaging().
+     * distance, sensor width, and model name.
      *
      * \param[in] camera_label Label identifying the camera to update. Camera must already exist.
      * \param[in] camera_properties CameraProperties struct containing the new intrinsic parameters.
      * \note This method preserves the camera's position, lookat direction, and spectral band configuration.
      * \note The FOV_aspect_ratio field in camera_properties is ignored and recalculated from resolution.
+     * \note If the resolution changes, any existing image data for this camera is discarded, because the per-pixel buffers are sized to the resolution at which the camera was
+     * rendered. The camera must be re-rendered with \ref runBand() before its image can be written again. Changing other parameters leaves existing image data intact.
      * \note Throws helios_runtime_error if camera_label does not exist.
      */
     void updateCameraParameters(const std::string &camera_label, const CameraProperties &camera_properties);
@@ -1519,32 +1524,36 @@ public:
 
     //! Adds all geometric primitives from the Context to OptiX
     /**
-     * This function should be called anytime Context geometry is created or modified
-     * \note \ref RadiationModel::updateGeometry() must be called before simulation can be run
+     * Calling this function explicitly is optional: \ref RadiationModel::runBand() automatically
+     * builds the geometry before tracing, and rebuilds it when primitives have been added to or
+     * deleted from the Context since the last build. It may still be called directly to control
+     * when the cost of the build is incurred.
      */
     void updateGeometry();
 
     //! Adds certain geometric primitives from the Context to OptiX as specified by a list of UUIDs
     /**
-     * This function should be called anytime Context geometry is created or modified
+     * Restricts the radiation model to the specified subset of Context primitives. Unlike the
+     * no-argument overload, a subset build is never automatically rebuilt by
+     * \ref RadiationModel::runBand(), since that would discard the specified subset. Call this
+     * function again after modifying Context geometry to update the subset.
      * \param[in] UUIDs Vector of universal unique identifiers of Context primitives to be updated
-     * \note \ref RadiationModel::updateGeometry() must be called before simulation can be run
      */
     void updateGeometry(const std::vector<uint> &UUIDs);
 
     //! Run the simulation for a single radiative band
     /**
      * \param[in] label Label used to reference the band (e.g., "PAR")
-     * \note Before running the band simulation, you must 1) add at least one radiative band to the simulation (see \ref RadiationModel::addRadiationBand()), 2) update the Context geometry in the model (see \ref RadiationModel::updateGeometry()),
-     * and 3) update radiative properties in the model (see RadiationModel::updateRadiativeProperties()).
+     * \note Before running the band simulation, you must add at least one radiative band to the simulation (see \ref RadiationModel::addRadiationBand()). Context geometry (see \ref RadiationModel::updateGeometry()) and
+     * radiative properties (see RadiationModel::updateRadiativeProperties()) are updated automatically as needed.
      */
     void runBand(const std::string &label);
 
     //! Run the simulation for a multiple radiative bands
     /**
      * \param[in] labels Label used to reference the band (e.g., "PAR")
-     * \note Before running the band simulation, you must 1) add at least one radiative band to the simulation (see \ref RadiationModel::addRadiationBand()), 2) update the Context geometry in the model (see \ref RadiationModel::updateGeometry()),
-     * and 3) update radiative properties in the model (see RadiationModel::updateRadiativeProperties()).
+     * \note Before running the band simulation, you must add at least one radiative band to the simulation (see \ref RadiationModel::addRadiationBand()). Context geometry (see \ref RadiationModel::updateGeometry()) and
+     * radiative properties (see RadiationModel::updateRadiativeProperties()) are updated automatically as needed.
      */
     void runBand(const std::vector<std::string> &labels);
 
@@ -1659,7 +1668,9 @@ public:
      * \param[in] frame [optional] A frame count number to be appended to the output image file (e.g., camera_thermal_00001.jpeg). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
      * \param[in] flux_to_pixel_conversion [optional] A factor to convert radiative flux to 8-bit pixel values (0-255). By default, this value is 1.0, which means that the pixel values will be equal to the radiative flux. If the radiative flux is
      * very large or very small, it may be necessary to scale the flux to a more appropriate range for the image.
-     * \return Name of the output image file that was written
+     * \return Name of the output image file that was written, or an empty string if the image could not be written (e.g., the camera or band does not exist, or the camera has not been rendered by \ref runBand() for the requested bands).
+     * \note Image data is only available after \ref runBand() has been called with the requested bands and with the camera already added. A camera that was added after the last \ref runBand() call, or whose bands were never dispatched, has no
+     * image data to write.
      */
     std::string writeCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1, float flux_to_pixel_conversion = 1.f);
 
@@ -1670,7 +1681,7 @@ public:
      * \param[in] imagefile_base Name for base of output image JPEG files (will also include the camera label and a frame number in the file name)
      * \param[in] image_path Path to directory where images should be saved
      * \param[in] frame [optional] A frame count number to be appended to the output image file (e.g., camera_thermal_00001.jpeg). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
-     * \return Name of the output image file that was written
+     * \return Name of the output image file that was written, or an empty string if the image could not be written (e.g., the camera or band does not exist, or the camera has not been rendered by \ref runBand() for the requested bands).
      */
     std::string writeNormCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
 
@@ -2358,7 +2369,30 @@ protected:
 
 
     //! Flag indicating whether geometry has been built
-    bool isgeometryinitialized;
+    bool isgeometryinitialized = false;
+
+    //! True if the last updateGeometry() call built an explicit user-specified subset of primitives
+    /**
+     * When set, runBand() will not automatically rebuild the acceleration structure in response to
+     * Context geometry changes, because doing so would silently discard the user's chosen subset.
+     */
+    bool isgeometrysubset = false;
+
+    //! Number of Context primitives that existed when geometry was last built
+    /**
+     * Compared against the current Context primitive count to detect geometry added or deleted
+     * since the last build. \sa needsGeometryRebuild()
+     */
+    size_t geometry_build_primitive_count = 0;
+
+    //! Determine whether the acceleration structure is stale with respect to the Context
+    /**
+     * Returns true if geometry has never been built, or if primitives have been added to or
+     * deleted from the Context since the last build. Always returns false when the last build was
+     * an explicit user-specified subset.
+     * \return True if updateGeometry() should be re-run before tracing
+     */
+    [[nodiscard]] bool needsGeometryRebuild() const;
 
     //! Periodic boundary condition flags (x, y)
     helios::vec2 periodic_flag;

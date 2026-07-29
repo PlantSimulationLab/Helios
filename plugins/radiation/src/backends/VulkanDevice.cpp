@@ -51,7 +51,54 @@ namespace helios {
         return VK_FALSE;
     }
 
+    // ========== Instance capability queries ==========
+
+    namespace {
+
+        //! Enumerate the instance extensions advertised by the Vulkan loader (or the ICD, when linked directly)
+        /**
+         * Returns an empty list if enumeration fails, which conservatively causes every optional
+         * extension to be treated as unsupported.
+         */
+        std::vector<VkExtensionProperties> enumerateSupportedInstanceExtensions() {
+            uint32_t extension_count = 0;
+            if (vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr) != VK_SUCCESS || extension_count == 0) {
+                return {};
+            }
+            std::vector<VkExtensionProperties> supported_extensions(extension_count);
+            if (vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, supported_extensions.data()) != VK_SUCCESS) {
+                return {};
+            }
+            supported_extensions.resize(extension_count);
+            return supported_extensions;
+        }
+
+        bool isInstanceExtensionSupported(const std::vector<VkExtensionProperties> &supported_extensions, const char *extension_name) {
+            return std::any_of(supported_extensions.begin(), supported_extensions.end(), [extension_name](const VkExtensionProperties &extension) { return std::strcmp(extension.extensionName, extension_name) == 0; });
+        }
+
+        bool isInstanceLayerSupported(const char *layer_name) {
+            uint32_t layer_count = 0;
+            if (vkEnumerateInstanceLayerProperties(&layer_count, nullptr) != VK_SUCCESS || layer_count == 0) {
+                return false;
+            }
+            std::vector<VkLayerProperties> supported_layers(layer_count);
+            if (vkEnumerateInstanceLayerProperties(&layer_count, supported_layers.data()) != VK_SUCCESS) {
+                return false;
+            }
+            supported_layers.resize(layer_count);
+            return std::any_of(supported_layers.begin(), supported_layers.end(), [layer_name](const VkLayerProperties &layer) { return std::strcmp(layer.layerName, layer_name) == 0; });
+        }
+
+    } // namespace
+
     // ========== VulkanDevice implementation ==========
+
+    std::atomic<uint64_t> VulkanDevice::initialization_attempt_count{0};
+
+    uint64_t VulkanDevice::getInitializationAttemptCount() {
+        return initialization_attempt_count.load();
+    }
 
     VulkanDevice::VulkanDevice() = default;
 
@@ -60,6 +107,8 @@ namespace helios {
     }
 
     void VulkanDevice::initialize(bool enable_validation) {
+        ++initialization_attempt_count;
+
         createInstance(enable_validation);
         selectPhysicalDevice();
         createLogicalDevice();
@@ -112,60 +161,91 @@ namespace helios {
         create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         create_info.pApplicationInfo = &app_info;
 
+        // Ask the runtime what it actually supports rather than requesting extensions
+        // speculatively and relying on the driver to reject them. Requesting an unsupported
+        // extension aborts instance creation outright, which previously made otherwise usable
+        // configurations look like "no GPU available" (see the macOS case below).
+        const std::vector<VkExtensionProperties> supported_extensions = enumerateSupportedInstanceExtensions();
+
         // Required extensions (none for headless compute)
         std::vector<const char *> extensions;
 
-        // MoltenVK requires VK_KHR_portability_enumeration on macOS
 #ifdef __APPLE__
-        extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-        extensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-        create_info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+        // Behind the Vulkan loader, MoltenVK's physical device is a portability-subset
+        // implementation that is hidden unless VK_KHR_portability_enumeration is requested and
+        // the matching instance-create flag is set. When the application links libMoltenVK
+        // directly there is no loader, the extension does not exist, and requesting it makes
+        // vkCreateInstance fail with VK_ERROR_EXTENSION_NOT_PRESENT even though the driver is
+        // perfectly usable — MoltenVK enumerates its device unconditionally in that mode.
+        // Only ask for the extension when the runtime reports it.
+        if (isInstanceExtensionSupported(supported_extensions, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME)) {
+            extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+            create_info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+        }
+        if (isInstanceExtensionSupported(supported_extensions, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
+            extensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+        }
 #endif
 
-        // Try with validation first if requested
+        // Enable validation only when both the layer and the debug-utils extension are present
         std::vector<const char *> validation_layers;
-        bool validation_enabled = false;
-
-        if (enable_validation) {
-            validation_layers.push_back("VK_LAYER_KHRONOS_validation");
-            extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-
-            create_info.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-            create_info.ppEnabledExtensionNames = extensions.data();
-            create_info.enabledLayerCount = static_cast<uint32_t>(validation_layers.size());
-            create_info.ppEnabledLayerNames = validation_layers.data();
-
-            VkResult result = vkCreateInstance(&create_info, nullptr, &instance);
-
-            if (result == VK_SUCCESS) {
-                validation_enabled = true;
-            } else if (result == VK_ERROR_LAYER_NOT_PRESENT || result == VK_ERROR_EXTENSION_NOT_PRESENT) {
-                // Validation not available, try without it
-                extensions.pop_back(); // Remove debug utils extension
-            } else {
-                // Other error - fail
-                helios_runtime_error("ERROR (VulkanDevice::createInstance): Failed to create Vulkan instance. "
-                                     "Make sure Vulkan SDK is installed. VkResult code: " +
-                                     std::to_string(result));
-            }
-        }
-
-        // Create instance without validation if not already created
-        if (instance == VK_NULL_HANDLE) {
-            create_info.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-            create_info.ppEnabledExtensionNames = extensions.data();
-            create_info.enabledLayerCount = 0;
-            create_info.ppEnabledLayerNames = nullptr;
-
-            VkResult result = vkCreateInstance(&create_info, nullptr, &instance);
-            if (result != VK_SUCCESS) {
-                helios_runtime_error("ERROR (VulkanDevice::createInstance): Failed to create Vulkan instance. "
-                                     "Make sure Vulkan SDK is installed. VkResult code: " +
-                                     std::to_string(result));
-            }
-        }
+        const bool validation_enabled = enable_validation && isInstanceLayerSupported("VK_LAYER_KHRONOS_validation") && isInstanceExtensionSupported(supported_extensions, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
         if (validation_enabled) {
+            validation_layers.push_back("VK_LAYER_KHRONOS_validation");
+            extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        }
+
+        const VkInstanceCreateFlags requested_flags = create_info.flags;
+
+        auto attemptCreateInstance = [&](const std::vector<const char *> &requested_extensions, const std::vector<const char *> &requested_layers, VkInstanceCreateFlags flags) -> VkResult {
+            create_info.flags = flags;
+            create_info.enabledExtensionCount = static_cast<uint32_t>(requested_extensions.size());
+            create_info.ppEnabledExtensionNames = requested_extensions.empty() ? nullptr : requested_extensions.data();
+            create_info.enabledLayerCount = static_cast<uint32_t>(requested_layers.size());
+            create_info.ppEnabledLayerNames = requested_layers.empty() ? nullptr : requested_layers.data();
+
+            instance = VK_NULL_HANDLE;
+            VkResult attempt_result = vkCreateInstance(&create_info, nullptr, &instance);
+            if (attempt_result != VK_SUCCESS) {
+                // Some drivers write a non-null value into the handle on failure. Clearing it keeps
+                // the destructor from calling vkDestroyInstance() on a handle that was never created.
+                instance = VK_NULL_HANDLE;
+            }
+            return attempt_result;
+        };
+
+        const VkResult first_result = attemptCreateInstance(extensions, validation_layers, requested_flags);
+        VkResult result = first_result;
+        bool validation_active = validation_enabled && result == VK_SUCCESS;
+        bool retried_bare = false;
+
+        if (result == VK_ERROR_EXTENSION_NOT_PRESENT || result == VK_ERROR_LAYER_NOT_PRESENT) {
+            // The loader and the ICD can disagree about which instance extensions exist, and the
+            // disagreement is only observable by trying: on macOS the loader advertises
+            // VK_KHR_portability_enumeration (it implements the extension itself) but MoltenVK
+            // rejects the name when that name is forwarded to the driver. Every extension requested
+            // above is optional for headless compute, so retry once with none of them rather than
+            // reporting a usable driver as missing. Both failures are reported if the retry also
+            // fails — nothing is swallowed.
+            result = attemptCreateInstance({}, {}, 0);
+            validation_active = false;
+            retried_bare = true;
+        }
+
+        if (result != VK_SUCCESS) {
+            std::string error_message = "ERROR (VulkanDevice::createInstance): Failed to create Vulkan instance. "
+                                        "Make sure Vulkan SDK is installed. VkResult code: " +
+                                        std::to_string(result);
+            if (retried_bare) {
+                error_message += " (retry with no optional instance extensions or layers, after the "
+                                 "full request failed with VkResult code " +
+                                 std::to_string(first_result) + ")";
+            }
+            helios_runtime_error(error_message);
+        }
+
+        if (validation_active) {
             setupDebugMessenger();
         }
     }

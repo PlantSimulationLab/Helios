@@ -28,21 +28,29 @@ OptiX6Backend::OptiX6Backend() {
 }
 
 bool OptiX6Backend::probe() noexcept {
-    try {
-        RTcontext ctx = nullptr;
-        RTresult rc = rtContextCreate(&ctx);
-        if (rc != RT_SUCCESS) {
+    // Cached process-wide so repeated availability checks do not re-enter the driver.
+    // See VulkanComputeBackend::probe() for the rationale and the latching trade-off.
+    static const bool probe_result = []() noexcept -> bool {
+        if (gpuBackendsDisabledByEnvironment()) {
             return false;
         }
-        // RAII guard ensures context is destroyed even if an exception occurs
-        struct ContextGuard {
-            RTcontext c;
-            ~ContextGuard() { if (c) rtContextDestroy(c); }
-        } guard{ctx};
-        return true;
-    } catch (...) {
-        return false;
-    }
+        try {
+            RTcontext ctx = nullptr;
+            RTresult rc = rtContextCreate(&ctx);
+            if (rc != RT_SUCCESS) {
+                return false;
+            }
+            // RAII guard ensures context is destroyed even if an exception occurs
+            struct ContextGuard {
+                RTcontext c;
+                ~ContextGuard() { if (c) rtContextDestroy(c); }
+            } guard{ctx};
+            return true;
+        } catch (...) {
+            return false;
+        }
+    }();
+    return probe_result;
 }
 
 OptiX6Backend::~OptiX6Backend() {

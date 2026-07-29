@@ -1934,6 +1934,10 @@ namespace helios {
      *       ISO 6709 / EXIF convention is the opposite (+E / -W). When this Location is written
      *       into EXIF metadata via the radiation plugin, the longitude sign is automatically
      *       flipped at that boundary.
+     * \note Both parameterized constructors reject out-of-range fields via validate(), as the
+     *       Date and Time constructors do. The fields remain public, so code that assigns to a
+     *       member directly rather than constructing a new Location bypasses that check;
+     *       Context::setLocation() therefore validates again on the way in.
      */
     struct Location {
 
@@ -1966,6 +1970,8 @@ namespace helios {
             this->longitude_deg = longitude_deg;
             this->UTC_offset = UTC_offset;
             this->altitude_m = 0.f;
+
+            validate("Location constructor");
         }
 
         //! latitude/longitude/UTC/altitude constructor
@@ -1981,6 +1987,36 @@ namespace helios {
             this->longitude_deg = longitude_deg;
             this->UTC_offset = UTC_offset;
             this->altitude_m = altitude_m;
+
+            validate("Location constructor");
+        }
+
+        //! Check that every field lies within its physically meaningful range, throwing if not
+        /**
+         * \param[in] context_string Name of the calling function, used to prefix the error message
+         *
+         * \note Called by both parameterized constructors, and again by Context::setLocation().
+         *       The second call is not redundant: the fields are public, so a caller can hold a
+         *       valid Location and assign a nonsense value to a member afterwards. The ISO-8601
+         *       branch of Context::loadTabularTimeseriesData() does exactly that with UTC_offset,
+         *       from a value read out of an external file, which no constructor can intercept.
+         *
+         * \note UTC_offset spans -14 to +12 rather than -12 to +12 because Helios counts the offset
+         *       positive moving West: the real-world span of UTC-12 through UTC+14 (Kiribati keeps
+         *       the latter) inverts to +12 through -14. altitude_m is only required to be finite,
+         *       since no non-arbitrary bound exists for the altitude of a simulated scene.
+         */
+        void validate(const std::string &context_string) const {
+
+            if (!(latitude_deg >= -90.f && latitude_deg <= 90.f)) {
+                throw(std::runtime_error("ERROR (" + context_string + "): Latitude of " + std::to_string(latitude_deg) + " degrees is out of range (should be -90 to 90)."));
+            } else if (!(longitude_deg >= -180.f && longitude_deg <= 180.f)) {
+                throw(std::runtime_error("ERROR (" + context_string + "): Longitude of " + std::to_string(longitude_deg) + " degrees is out of range (should be -180 to 180). Note that Helios counts longitude positive in the Western hemisphere."));
+            } else if (!(UTC_offset >= -14.f && UTC_offset <= 12.f)) {
+                throw(std::runtime_error("ERROR (" + context_string + "): UTC offset of " + std::to_string(UTC_offset) + " hours is out of range (should be -14 to 12). Note that Helios counts the UTC offset positive moving West, so UTC-8 is an offset of +8."));
+            } else if (!std::isfinite(altitude_m)) {
+                throw(std::runtime_error("ERROR (" + context_string + "): Altitude of " + std::to_string(altitude_m) + " meters is not a finite value."));
+            }
         }
 
         //! check for equality of two locations

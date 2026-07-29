@@ -21,14 +21,33 @@
 namespace helios {
 
     bool VulkanComputeBackend::probe() noexcept {
-        try {
-            VulkanDevice probe_device;
-            probe_device.initialize(false);
-            probe_device.shutdown();
-            return true;
-        } catch (...) {
-            return false;
-        }
+        // The probe result is computed exactly once per process. Every probe runs a full
+        // vkCreateInstance/vkDestroyInstance cycle (plus a logical device and a compute
+        // dispatch when the instance is created), and repeated create/destroy churn is a
+        // known driver crash source: NVIDIA's loader starts returning
+        // VK_ERROR_INCOMPATIBLE_DRIVER after ~25 cycles, and MoltenVK on virtualized
+        // macOS runners can fault outright. Since RadiationModel construction and every
+        // GPU availability check funnel through here, an uncached probe means one driver
+        // init/teardown cycle per construction.
+        //
+        // Trade-off: a transient failure is latched for the lifetime of the process — a
+        // driver that becomes usable later will not be picked up until the process
+        // restarts. That is the accepted cost of never re-entering a driver that has
+        // already proven unusable.
+        static const bool probe_result = []() noexcept -> bool {
+            if (gpuBackendsDisabledByEnvironment()) {
+                return false;
+            }
+            try {
+                VulkanDevice probe_device;
+                probe_device.initialize(false);
+                probe_device.shutdown();
+                return true;
+            } catch (...) {
+                return false;
+            }
+        }();
+        return probe_result;
     }
 
     VulkanComputeBackend::VulkanComputeBackend() : device(new VulkanDevice()), owns_device(true) {

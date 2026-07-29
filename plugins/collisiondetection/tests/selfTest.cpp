@@ -3621,6 +3621,7 @@ DOCTEST_TEST_CASE("CollisionDetection SoA Batch Ray Casting GPU/CPU Equivalence"
     if (collision.isGPUAccelerationEnabled()) {
         DOCTEST_MESSAGE("GPU path exercised (working CUDA device present)");
     } else {
+        helios::requireGPUOrFail("The CPU/GPU equivalence comparison fell back to CPU-vs-CPU because no usable CUDA device was present at runtime, so the GPU traversal was never exercised.");
         DOCTEST_MESSAGE("SKIPPED GPU-path assertion: no usable CUDA device at runtime; comparison ran CPU-vs-CPU");
     }
 #endif

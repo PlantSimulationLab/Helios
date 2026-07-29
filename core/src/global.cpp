@@ -48,6 +48,43 @@ void helios::helios_runtime_error(const std::string &error_message) {
     throw(std::runtime_error(error_message));
 }
 
+bool helios::gpuRequiredByEnvironment() {
+    // Deliberately NOT cached, unlike the HELIOS_NO_GPU veto that the backend probes consult.
+    // That one is read on hot paths and must not re-enter getenv repeatedly; this one is called
+    // at most once per test case, where the cost is irrelevant and a live read keeps the
+    // behavior testable (a cached value fixed at first call could not be exercised both ways
+    // within a single test binary).
+    const char *require_gpu = std::getenv("HELIOS_REQUIRE_GPU");
+    return require_gpu != nullptr && std::string(require_gpu) != "0";
+}
+
+void helios::requireGPUOrFail(const std::string &context_message) {
+    if (!gpuRequiredByEnvironment()) {
+        return;
+    }
+
+    // Both variables set asks for mutually exclusive behavior. Name the contradiction rather
+    // than letting one silently win: a CI job configured this way would otherwise report a
+    // "no GPU" failure it can never satisfy.
+    const char *no_gpu = std::getenv("HELIOS_NO_GPU");
+    if (no_gpu != nullptr && std::string(no_gpu) != "0") {
+        helios_runtime_error("ERROR (requireGPUOrFail): HELIOS_REQUIRE_GPU and HELIOS_NO_GPU are both set, which is contradictory.\n\n"
+                             "HELIOS_NO_GPU forces GPU detection to fail, so the GPU that HELIOS_REQUIRE_GPU demands can never be\n"
+                             "found. Unset whichever one does not belong in this environment.");
+    }
+
+    helios_runtime_error("ERROR (requireGPUOrFail): HELIOS_REQUIRE_GPU is set, but no usable GPU was found.\n\n" + context_message +
+                         "\n\n"
+                         "This process is running where the purpose is to exercise GPU code paths, so skipping the GPU\n"
+                         "tests would report success without testing anything. Failing instead.\n\n"
+                         "To diagnose:\n"
+                         "  - NVIDIA: run 'nvidia-smi' to verify the driver is loaded. A machine where the CUDA toolkit\n"
+                         "    compiles but nvidia-smi fails usually has a kernel module that did not rebuild after an OS\n"
+                         "    or kernel update.\n"
+                         "  - Vulkan: run 'vulkaninfo --summary' to verify Vulkan support.\n\n"
+                         "If this machine is not supposed to have a GPU, unset HELIOS_REQUIRE_GPU.");
+}
+
 RGBcolor RGB::red = make_RGBcolor(1.f, 0.f, 0.f);
 RGBcolor RGB::blue = make_RGBcolor(0.f, 0.f, 1.f);
 RGBcolor RGB::green = make_RGBcolor(0.f, 0.6f, 0.f);

@@ -7,6 +7,10 @@ usage() {
     echo "Options:"
     echo "  --checkout       Clone the latest Helios repo to /tmp and run tests"
     echo "  --force-vulkan   Force use of Vulkan backend (passes -DFORCE_VULKAN_BACKEND to cmake)"
+    echo "  --nogpu          Run the tests as if no GPU were present (sets HELIOS_NO_GPU=1)."
+    echo "                   Reproduces the non-GPU CI runners on a GPU-equipped machine."
+    echo "  --requiregpu     Fail instead of skipping when no usable GPU is found"
+    echo "                   (sets HELIOS_REQUIRE_GPU=1). For GPU-dedicated CI runners."
     echo "  --visbuildonly   Build only, do not run visualizer tests"
     echo "  --memcheck       Enable memory checking tools (requires leaks on macOS or valgrind on Linux)"
     echo "  --debugbuild     Build with Debug configuration"
@@ -99,6 +103,25 @@ while [ $# -gt 0 ]; do
 
   --force-vulkan)
     FORCE_VULKAN="ON"
+    ;;
+
+  --nogpu)
+    # HELIOS_NO_GPU is a runtime-only veto consulted by every backend probe (nothing in the
+    # CMake configuration reads it), so exporting it here changes only what the test binaries
+    # see. This makes a GPU-equipped development machine behave exactly like the non-GPU CI
+    # runners, which is the only way to catch a GPU-dependent test that was never guarded
+    # with GPU_TEST_CASE before it reaches CI.
+    export HELIOS_NO_GPU=1
+    NOGPU="ON"
+    ;;
+
+  --requiregpu)
+    # Inverse of --nogpu: on a runner whose whole purpose is exercising GPU code, a missing
+    # driver must be a failure rather than a silent skip of every GPU test. Without this the
+    # job reports success having tested nothing, which is how a broken GPU instance can go
+    # unnoticed for days.
+    export HELIOS_REQUIRE_GPU=1
+    REQUIREGPU="ON"
     ;;
 
   --visbuildonly)
@@ -427,6 +450,19 @@ if [ ! -e "$HELIOS_BASE_DIR/utilities/create_project.sh" ]; then
   ERROR_COUNT=$((ERROR_COUNT + 1))
   rm -rf temp
 else
+  if [ "$NOGPU" == "ON" ] && [ "$REQUIREGPU" == "ON" ]; then
+    echo "Error: --nogpu and --requiregpu are contradictory. --nogpu hides the GPU; --requiregpu demands one."
+    exit 1
+  fi
+
+  if [ "$NOGPU" == "ON" ]; then
+    echo "HELIOS_NO_GPU=1 is set: running as if no GPU were present. GPU tests will skip."
+  fi
+
+  if [ "$REQUIREGPU" == "ON" ]; then
+    echo "HELIOS_REQUIRE_GPU=1 is set: tests that would skip for lack of a GPU will fail instead."
+  fi
+
   # Only create project if it doesn't already exist
   if [ "$PROJECT_EXISTS" == "OFF" ]; then
     echo "Building project with plugins: ${PLUGINS_TO_BUILD:-none}"

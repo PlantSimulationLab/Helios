@@ -7,6 +7,11 @@
 #include <fstream>
 #include <sstream>
 
+#ifndef _WIN32
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
+
 #ifdef HELIOS_HAVE_VULKAN
 #include "VulkanComputeBackend.h"
 #endif
@@ -33,7 +38,13 @@ namespace helios {
          * @return True if GPU tests can run (always true for OptiX, Vulkan-dependent otherwise)
          */
         static bool isGPUAvailable() {
-#ifdef HELIOS_HAVE_VULKAN
+// The condition mirrors createWithSharedDevice() below: gate on the shared Vulkan device only
+// on builds where that function actually hands out a Vulkan backend. On a build that also has
+// OptiX, createWithSharedDevice() returns an OptiX model and never touches the shared Vulkan
+// device, so gating on Vulkan there would skip every GPU test on a machine with a healthy
+// NVIDIA GPU and a broken Vulkan installation - which is exactly the configuration of the
+// Linux EC2 GPU runner. This restores the behavior the docstring above always claimed.
+#if defined(HELIOS_HAVE_VULKAN) && !(defined(HELIOS_HAVE_OPTIX8) || (defined(HELIOS_HAVE_OPTIX) && !defined(FORCE_VULKAN_BACKEND)))
             // Once a runtime failure (e.g. VK_ERROR_DEVICE_LOST on a flaky CI runner)
             // marks the shared device as bad, every later GPU test must skip — otherwise
             // they re-trigger the same crash and report it as a fresh failure.
@@ -72,6 +83,8 @@ int RadiationModel::selfTest(int argc, char **argv) {
 }
 
 DOCTEST_TEST_CASE("Backend Identification") {
+    // GPU-LINT-OK: reports which backends are compiled in and whether one is usable, which has
+    // to be printed on non-GPU runners too; the model is only constructed under gpu_available.
     std::string compiled_backends;
 #ifdef HELIOS_HAVE_OPTIX8
     compiled_backends += "OptiX8 ";
@@ -94,6 +107,138 @@ DOCTEST_TEST_CASE("Backend Identification") {
         DOCTEST_MESSAGE("Active backend: " << model.getBackendName());
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// Backend probe stability.
+//
+// Regression tests for a SIGSEGV observed on macOS CI (Apple Silicon VM, MoltenVK present but
+// unable to execute compute): RadiationModel construction failed cleanly for the first several
+// attempts in a process, then crashed on a later one. Every construction ran a full
+// vkCreateInstance/vkDestroyInstance cycle because RayTracingBackend::create("auto") re-probed
+// unconditionally, and repeated driver create/destroy churn is a known crash source (the same
+// failure mode the shared-device test singleton in test_helpers.h works around for NVIDIA).
+//
+// The contract these tests pin down: probing happens at most once per process, and repeated
+// RadiationModel construction on a machine with no usable backend produces clean throws only.
+// ---------------------------------------------------------------------------------------------
+
+//! Number of repetitions used by the backend-churn regression tests
+static constexpr int backend_probe_repetitions = 25;
+
+DOCTEST_TEST_CASE("Backend probe is cached and does not churn the driver") {
+#ifdef HELIOS_HAVE_VULKAN
+    const uint64_t vulkan_inits_before = VulkanDevice::getInitializationAttemptCount();
+#endif
+
+    // Repeated probing must be self-consistent...
+    const bool first_result = helios::probeAnyGPUBackend();
+    for (int attempt = 0; attempt < backend_probe_repetitions; attempt++) {
+        DOCTEST_CHECK(helios::probeAnyGPUBackend() == first_result);
+    }
+    DOCTEST_CHECK(RadiationModel::isGPUBackendAvailable() == first_result);
+
+#ifdef HELIOS_HAVE_VULKAN
+    // ...and must not re-enter the Vulkan driver. Across all the calls above, at most one
+    // VulkanDevice::initialize() may have run (zero if an earlier test already probed, or if a
+    // higher-priority OptiX backend claimed the probe before Vulkan was reached).
+    DOCTEST_CHECK(VulkanDevice::getInitializationAttemptCount() - vulkan_inits_before <= 1);
+#endif
+}
+
+DOCTEST_TEST_CASE("Repeated RadiationModel construction never crashes") {
+    // GPU-LINT-OK: the no-backend configuration is the case under test - construction must
+    // raise a clean helios_runtime_error rather than crash - so this branches on
+    // probeAnyGPUBackend() itself instead of skipping via GPU_TEST_CASE.
+    Context context;
+
+    if (!helios::probeAnyGPUBackend()) {
+        // No usable backend: every attempt must raise a clean helios_runtime_error. This is the
+        // configuration that crashed on macOS CI.
+        for (int attempt = 0; attempt < backend_probe_repetitions; attempt++) {
+            DOCTEST_CHECK_THROWS_AS(RadiationModel model(&context), std::runtime_error);
+        }
+        return;
+    }
+
+    // A backend is available. Construct only a couple of models rather than the full repetition
+    // count: each construction initializes a real GPU backend, and stacking many live devices
+    // alongside the shared test device is the very churn this change exists to avoid.
+#ifdef HELIOS_HAVE_VULKAN
+    const uint64_t vulkan_inits_before = VulkanDevice::getInitializationAttemptCount();
+#endif
+    {
+        capture_cout capture;
+        for (int attempt = 0; attempt < 2; attempt++) {
+            RadiationModel model(&context);
+            DOCTEST_CHECK_FALSE(model.getBackendName().empty());
+        }
+    }
+#ifdef HELIOS_HAVE_VULKAN
+    // Backend construction initializes one device per model, but must not additionally re-probe.
+    DOCTEST_CHECK(VulkanDevice::getInitializationAttemptCount() - vulkan_inits_before <= 2);
+#endif
+}
+
+#ifndef _WIN32
+DOCTEST_TEST_CASE("Backend probing is safe in a forked child process") {
+    // GPU-LINT-OK: must run with and without a backend - it asserts the probe answers from
+    // cached state in a forked child either way, which is exactly what GPU_TEST_CASE would skip.
+    // The macOS CI harness forks per test, and Metal/Objective-C are not fork-safe. A child that
+    // re-probes Vulkan after the parent already touched the driver is undefined behavior; with the
+    // probe cached, the child answers from inherited state without re-entering the driver at all.
+    const bool gpu_available = helios::probeAnyGPUBackend();
+
+    std::cout.flush();
+    std::cerr.flush();
+
+    pid_t child = fork();
+
+    if (child == 0) {
+        // Child: report status through the exit code only — no doctest macros, and _exit() rather
+        // than exit() so the parent's atexit handlers (including the shared Vulkan device
+        // teardown) do not run a second time in the child's inherited copy of that state.
+        int status = 0;
+        try {
+            if (helios::probeAnyGPUBackend() != gpu_available) {
+                status = 2; // probe result diverged from the parent's cached answer
+            } else if (!gpu_available) {
+                Context child_context;
+                for (int attempt = 0; attempt < backend_probe_repetitions; attempt++) {
+                    bool threw = false;
+                    try {
+                        RadiationModel model(&child_context);
+                    } catch (const std::runtime_error &) {
+                        threw = true;
+                    }
+                    if (!threw) {
+                        status = 3; // construction succeeded where it should have thrown
+                        break;
+                    }
+                }
+            }
+        } catch (...) {
+            status = 4; // any escaped exception is a failure
+        }
+        std::cout.flush();
+        _exit(status);
+    }
+
+    DOCTEST_REQUIRE(child > 0);
+
+    int wait_status = 0;
+    DOCTEST_REQUIRE(waitpid(child, &wait_status, 0) == child);
+
+    // A crash surfaces here as termination by signal (SIGSEGV) rather than a normal exit.
+    DOCTEST_CHECK_FALSE(WIFSIGNALED(wait_status));
+    if (WIFSIGNALED(wait_status)) {
+        DOCTEST_MESSAGE("child terminated by signal " << WTERMSIG(wait_status));
+    }
+    DOCTEST_CHECK(WIFEXITED(wait_status));
+    if (WIFEXITED(wait_status)) {
+        DOCTEST_CHECK(WEXITSTATUS(wait_status) == 0);
+    }
+}
+#endif // _WIN32
 
 DOCTEST_TEST_CASE("BufferIndexing Correctness") {
     // Test 2D indexer
@@ -209,6 +354,167 @@ DOCTEST_TEST_CASE("BufferIndexing Correctness") {
     }
 }
 
+GPU_TEST_CASE("RadiationModel Geometry Initialization Flag Default") {
+    // Regression test: isgeometryinitialized must be false on a freshly constructed model.
+    //
+    // The flag guards the self-initialization branch in runBand():
+    //     if (!isgeometryinitialized) { updateGeometry(); }
+    // and updateGeometry() is the only caller of backend->buildAccelerationStructure().
+    // When the flag was left uninitialized it could read as true at construction, so
+    // updateGeometry() was skipped and no acceleration structure was ever built. On OptiX8
+    // that throws ("No acceleration structure"); on the Vulkan compute backend
+    // buildAccelerationStructure() is a no-op, so the trace silently returned 0.0 flux for
+    // every primitive with no error at all.
+    //
+    // This is asserted on the flag directly rather than on a runBand() flux value: an
+    // uninitialized bool reads as false under many allocators, so a flux-based test would
+    // pass on the buggy code most of the time on some platforms and never fail reliably.
+    // Reading the member is deterministic on every platform.
+    //
+    // Reading the flag needs no GPU, but constructing the model does: the RadiationModel
+    // constructor calls RayTracingBackend::create("auto"), which throws when no backend
+    // probes successfully. Hence GPU_TEST_CASE. The FlagProbe subclass has to use the
+    // public constructor rather than createWithSharedDevice(), which returns a
+    // RadiationModel and so cannot expose the protected member.
+    struct FlagProbe : public RadiationModel {
+        using RadiationModel::isgeometryinitialized;
+        explicit FlagProbe(Context *context) : RadiationModel(context) {
+        }
+    };
+
+    Context context;
+    FlagProbe model(&context);
+    DOCTEST_CHECK(model.isgeometryinitialized == false);
+}
+
+GPU_TEST_CASE("RadiationModel Geometry Auto-Initialized By runBand") {
+    // Companion to the flag-default test above: verifies the behaviour the flag protects.
+    // runBand() is called WITHOUT an explicit updateGeometry(), so it must self-initialize
+    // the geometry and produce the correct non-zero flux. This is the silent-failure case
+    // (Vulkan returns 0.0 rather than throwing), so the assertion is against the
+    // deterministic expected value, not merely "no exception thrown".
+    Context context;
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(patch, "twosided_flag", uint(0));
+    context.setPrimitiveData(patch, "reflectivity_SW", 0.0f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceFlux(sun, "SW", 1000.0f);
+    radiation.setDirectRayCount("SW", 10000);
+    radiation.setScatteringDepth("SW", 0);
+
+    // Deliberately no updateGeometry() call here.
+    radiation.runBand("SW");
+
+    float flux;
+    context.getPrimitiveData(patch, "radiation_flux_SW", flux);
+
+    float error = fabsf(flux - 1000.0f) / 1000.0f;
+    DOCTEST_CHECK(error <= 0.01);
+}
+
+GPU_TEST_CASE("RadiationModel Rebuilds Geometry Added After First runBand") {
+    // Regression test: geometry added to the Context AFTER a first runBand() must be traced.
+    //
+    // isgeometryinitialized latches true on the first updateGeometry() and was never reset, so a
+    // second runBand() skipped the rebuild and the acceleration structure still held only the
+    // original primitives. The newly added primitive then received 0.0 flux with no error at all
+    // (Vulkan), or the launch tripped the "No acceleration structure" guard (OptiX8, when the
+    // first build was over an empty Context).
+    //
+    // Both patches are identical and fully illuminated, so the correct result is the same flux on
+    // each. Comparing the second patch against the first cancels source/geometry/noise effects:
+    // on the buggy code the second reads 0.0 while the first reads ~1000.
+    Context context;
+    uint patch_first = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(patch_first, "twosided_flag", uint(0));
+    context.setPrimitiveData(patch_first, "reflectivity_SW", 0.0f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceFlux(sun, "SW", 1000.0f);
+    radiation.setDirectRayCount("SW", 10000);
+    radiation.setScatteringDepth("SW", 0);
+
+    radiation.runBand("SW");
+
+    // Add a second patch well clear of the first so neither shades the other, and re-run WITHOUT
+    // an explicit updateGeometry() call.
+    uint patch_second = context.addPatch(make_vec3(10, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(patch_second, "twosided_flag", uint(0));
+    context.setPrimitiveData(patch_second, "reflectivity_SW", 0.0f);
+
+    radiation.runBand("SW");
+
+    float flux_first, flux_second;
+    context.getPrimitiveData(patch_first, "radiation_flux_SW", flux_first);
+    context.getPrimitiveData(patch_second, "radiation_flux_SW", flux_second);
+
+    DOCTEST_CHECK(fabsf(flux_first - 1000.0f) / 1000.0f <= 0.01);
+    DOCTEST_CHECK(fabsf(flux_second - 1000.0f) / 1000.0f <= 0.01);
+}
+
+GPU_TEST_CASE("RadiationModel Explicit Geometry Subset Is Not Auto-Rebuilt") {
+    // Counterpart to the auto-rebuild test: updateGeometry(UUIDs) restricts the model to an
+    // explicit subset of primitives, and runBand() must NOT silently rebuild from the full Context
+    // afterwards, since that would discard the subset the user asked for.
+    //
+    // Only the first patch is included in the subset, so it must be the only one traced. Primitives
+    // outside the subset are explicitly zero-filled by runBand(), so the excluded patch must read
+    // exactly 0 rather than the ~1000 it would receive if the subset had been silently discarded
+    // and the model rebuilt from the full Context.
+    Context context;
+    uint patch_included = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(patch_included, "twosided_flag", uint(0));
+    context.setPrimitiveData(patch_included, "reflectivity_SW", 0.0f);
+
+    uint patch_excluded = context.addPatch(make_vec3(10, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(patch_excluded, "twosided_flag", uint(0));
+    context.setPrimitiveData(patch_excluded, "reflectivity_SW", 0.0f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceFlux(sun, "SW", 1000.0f);
+    radiation.setDirectRayCount("SW", 10000);
+    radiation.setScatteringDepth("SW", 0);
+
+    // Explicitly restrict the model to the first patch only.
+    radiation.updateGeometry({patch_included});
+
+    // Add a further patch AFTER the subset build so that the Context primitive count no longer
+    // matches the count recorded at build time. The count check alone would treat that as stale
+    // geometry and rebuild from the full Context; only the explicit-subset latch prevents it.
+    uint patch_added_later = context.addPatch(make_vec3(20, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(patch_added_later, "twosided_flag", uint(0));
+    context.setPrimitiveData(patch_added_later, "reflectivity_SW", 0.0f);
+
+    radiation.runBand("SW");
+
+    float flux_included;
+    context.getPrimitiveData(patch_included, "radiation_flux_SW", flux_included);
+    DOCTEST_CHECK(fabsf(flux_included - 1000.0f) / 1000.0f <= 0.01);
+
+    // Neither patch outside the subset was traced, so both must be zero-filled rather than lit.
+    float flux_excluded, flux_added_later;
+    context.getPrimitiveData(patch_excluded, "radiation_flux_SW", flux_excluded);
+    context.getPrimitiveData(patch_added_later, "radiation_flux_SW", flux_added_later);
+    DOCTEST_CHECK(flux_excluded == doctest::Approx(0.0f));
+    DOCTEST_CHECK(flux_added_later == doctest::Approx(0.0f));
+}
+
 GPU_TEST_CASE("RadiationModel Simple Direct") {
     // Minimal test: single patch, collimated source, no scattering, no emission
     Context context;
@@ -241,15 +547,18 @@ GPU_TEST_CASE("RadiationModel Simple Direct") {
 GPU_TEST_CASE("RadiationModel Multi-Band Stale Backend Geometry") {
     // Regression test for a Vulkan-backend size-mismatch crash on a multi-band launch.
     //
-    // Reproduces the scenario where the backend's primitive count is stale at 0 while the Context
-    // does have primitives: geometry is first initialized over an empty Context (backend
-    // primitive_count = 0, isgeometryinitialized = true), then primitives are added but
-    // updateGeometry() is NOT called again before runBand(). runBand() skips the re-upload because
-    // geometry is already "initialized", so the backend still sees 0 primitives.
-    //
-    // In that state zeroRadiationBuffers() must still record launch_band_count (= 3 here) even
-    // though it allocates no buffers; otherwise uploadSourceFluxes() rejects the correctly-sized
+    // Originally this reproduced a backend primitive count left stale at 0 while the Context had
+    // primitives: geometry was initialized over an empty Context, primitives were added, and
+    // runBand() skipped the re-upload because the model-level flag was already latched
+    // "initialized". zeroRadiationBuffers() then had to record launch_band_count (= 3 here) even
+    // though it allocated no buffers, or uploadSourceFluxes() would reject the correctly-sized
     // (Nsources * Nbands_launch) flux buffer as a size mismatch.
+    //
+    // runBand() now detects the changed Context primitive count and rebuilds automatically, so the
+    // backend is no longer left at 0 primitives and that specific size-mismatch path is not
+    // reached. The scenario is retained as a multi-band smoke test: an empty-Context build
+    // followed by adding geometry and launching three bands (one of which, LW, has no source flux
+    // set) must complete without throwing.
     Context context;
 
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
@@ -266,9 +575,8 @@ GPU_TEST_CASE("RadiationModel Multi-Band Stale Backend Geometry") {
     // Initialize geometry while the Context is empty: backend primitive_count = 0.
     radiation.updateGeometry();
 
-    // Add geometry to the Context but do not re-run updateGeometry(): the backend's primitive
-    // count remains stale at 0 while context->getPrimitiveCount() > 0, so runBand() passes the
-    // model-level geometry guard but reaches the source-flux upload with no backend geometry.
+    // Add geometry to the Context without re-running updateGeometry(). runBand() must notice the
+    // Context primitive count no longer matches the last build and rebuild before tracing.
     context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
 
     DOCTEST_CHECK_NOTHROW(radiation.runBand({"PAR", "NIR", "LW"}));
@@ -4973,6 +5281,47 @@ GPU_TEST_CASE("RadiationModel - Camera Metadata Export") {
         std::remove(json_path.c_str());
     }
 
+    DOCTEST_SUBCASE("EXIF UTC offset formatting and validation") {
+        CameraProperties camera_props;
+        camera_props.camera_resolution = make_int2(32, 32);
+        camera_props.HFOV = 35.0f;
+        camera_props.sensor_width_mm = 36.0f;
+
+        radiationmodel.addRadiationCamera("offset_camera", {"RGB_R", "RGB_G", "RGB_B"},
+                                          make_vec3(0, -3, 1.5), make_vec3(0, 0, 0), camera_props, 1);
+        radiationmodel.updateGeometry();
+        radiationmodel.runBand("RGB_R");
+        radiationmodel.runBand("RGB_G");
+        radiationmodel.runBand("RGB_B");
+
+        // A half-hour time zone East of UTC exercises both the +West -> +East sign flip and the
+        // fractional-hour path: Helios -5.75 becomes the standard EXIF OffsetTime "+05:45".
+        context.setLocation(make_Location(27.7f, -85.3f, -5.75f, 1400.f));
+
+        const std::string image_path = radiationmodel.writeCameraImage(
+                "offset_camera", {"RGB_R", "RGB_G", "RGB_B"}, "test_offset");
+        DOCTEST_REQUIRE(!image_path.empty());
+
+        std::ifstream jpeg_in(image_path, std::ios::binary);
+        DOCTEST_REQUIRE(jpeg_in.is_open());
+        const std::string jpeg_bytes((std::istreambuf_iterator<char>(jpeg_in)), std::istreambuf_iterator<char>());
+        jpeg_in.close();
+
+        // OffsetTime / OffsetTimeOriginal / OffsetTimeDigitized are written as ASCII tags, so the
+        // formatted string appears verbatim in the EXIF payload.
+        DOCTEST_CHECK(jpeg_bytes.find("+05:45") != std::string::npos);
+
+        std::remove(image_path.c_str());
+        std::remove((image_path.substr(0, image_path.find_last_of(".")) + ".json").c_str());
+
+        // An offset that could not be represented as a valid EXIF OffsetTime string can no longer
+        // reach this plugin at all: Location::validate() rejects it at construction, and again in
+        // Context::setLocation() for the mutate-an-existing-Location path. Those two guards are
+        // covered by the core "Location struct" and "Location validation" tests; the check inside
+        // formatStandardOffset() is retained only as a backstop and is unreachable from here.
+        DOCTEST_CHECK_THROWS_AS(context.setLocation(make_Location(27.7f, -85.3f, 100.f, 1400.f)), std::runtime_error);
+    }
+
     DOCTEST_SUBCASE("Manual metadata population") {
         CameraProperties camera_props;
         camera_props.camera_resolution = make_int2(128, 128);
@@ -5113,6 +5462,320 @@ GPU_TEST_CASE("RadiationModel - Camera Metadata Export") {
             std::remove(image_path.c_str());
             std::remove(json_path.c_str());
         }
+    }
+}
+
+GPU_TEST_CASE("RadiationModel - writeCameraImage on camera with no pixel data") {
+    // Regression test: writeCameraImage() used to guard on band_labels (populated when the
+    // camera is CREATED) but then index pixel_data (populated only when the camera is
+    // RENDERED by runBand()). For a camera that exists but was never rendered, the guard
+    // passed and pixel_data.at(band) threw a raw std::out_of_range that escaped to the
+    // caller as "invalid map<K, T> key" with no indication of the cause or the fix.
+    //
+    // No ray tracing is required to reproduce it: the throw happened before any trace or
+    // file I/O, so addRadiationCamera() + writeCameraImage() is enough. Constructing the
+    // model still needs a backend, so this remains a GPU_TEST_CASE.
+
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiationmodel.disableMessages();
+
+    radiationmodel.addRadiationBand("Red");
+    radiationmodel.addRadiationBand("Green");
+    radiationmodel.addRadiationBand("Blue");
+
+    CameraProperties camera_props;
+    camera_props.camera_resolution = make_int2(32, 32);
+    camera_props.HFOV = 45.f;
+
+    radiationmodel.addRadiationCamera("unrendered_camera", {"Red", "Green", "Blue"}, make_vec3(0, -3, 1), make_vec3(0, 0, 0), camera_props, 1);
+
+    // Geometry is built, but runBand() is never called - so pixel_data is empty.
+    radiationmodel.updateGeometry();
+
+    std::string image_path;
+    std::string captured_output;
+    {
+        capture_cout capture;
+        image_path = radiationmodel.writeCameraImage("unrendered_camera", {"Red", "Green", "Blue"}, "unrendered");
+        captured_output = capture.get_captured_output();
+    } // capture destroyed here
+
+    // Must skip cleanly rather than throwing a raw STL exception.
+    DOCTEST_CHECK(image_path.empty());
+
+    // The message must name the camera and the band, and point at runBand().
+    DOCTEST_CHECK(captured_output.find("ERROR") != std::string::npos);
+    DOCTEST_CHECK(captured_output.find("unrendered_camera") != std::string::npos);
+    DOCTEST_CHECK(captured_output.find("Red") != std::string::npos);
+    DOCTEST_CHECK(captured_output.find("runBand") != std::string::npos);
+}
+
+GPU_TEST_CASE("RadiationModel - writeNormCameraImage on camera with no pixel data emits one error") {
+    // Companion to the test above. writeNormCameraImage() runs its own doesGlobalDataExist
+    // guard and then delegates to writeCameraImage(). Verify the unrendered path still
+    // produces exactly ONE error line - the new guard in writeCameraImage() must not
+    // double-report, and writeNormCameraImage() must not fall through to it.
+
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiationmodel.disableMessages();
+
+    radiationmodel.addRadiationBand("Red");
+
+    CameraProperties camera_props;
+    camera_props.camera_resolution = make_int2(32, 32);
+    camera_props.HFOV = 45.f;
+
+    radiationmodel.addRadiationCamera("norm_camera", {"Red"}, make_vec3(0, -3, 1), make_vec3(0, 0, 0), camera_props, 1);
+    radiationmodel.updateGeometry();
+
+    std::string image_path;
+    std::string captured_output;
+    {
+        capture_cout capture;
+        image_path = radiationmodel.writeNormCameraImage("norm_camera", {"Red"}, "norm_unrendered");
+        captured_output = capture.get_captured_output();
+    } // capture destroyed here
+
+    DOCTEST_CHECK(image_path.empty());
+
+    // Exactly one "ERROR" line - not two.
+    size_t error_count = 0;
+    size_t search_pos = captured_output.find("ERROR");
+    while (search_pos != std::string::npos) {
+        error_count++;
+        search_pos = captured_output.find("ERROR", search_pos + 1);
+    }
+    DOCTEST_CHECK(error_count == 1);
+}
+
+GPU_TEST_CASE("RadiationModel - writeNormCameraImage for camera that does not exist") {
+    // Regression test: writeNormCameraImage() dereferenced cameras.at(camera) to check the
+    // band labels without first verifying the camera exists, so an unrecognized camera label
+    // threw a raw std::out_of_range instead of the "camera does not exist" diagnostic that
+    // writeCameraImage() and writeCameraImageData() both emit for the same mistake.
+
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiationmodel.disableMessages();
+
+    radiationmodel.addRadiationBand("Red");
+
+    // Note: no camera is ever added.
+    std::string image_path;
+    std::string captured_output;
+    {
+        capture_cout capture;
+        image_path = radiationmodel.writeNormCameraImage("no_such_camera", {"Red"}, "missing_camera");
+        captured_output = capture.get_captured_output();
+    } // capture destroyed here
+
+    DOCTEST_CHECK(image_path.empty());
+    DOCTEST_CHECK(captured_output.find("ERROR") != std::string::npos);
+    DOCTEST_CHECK(captured_output.find("no_such_camera") != std::string::npos);
+    DOCTEST_CHECK(captured_output.find("does not exist") != std::string::npos);
+}
+
+GPU_TEST_CASE("RadiationModel - camera pixel data is discarded when resolution changes") {
+    // Regression test: updateCameraParameters() overwrote camera.resolution without resizing
+    // or clearing pixel_data, so a render -> change-resolution -> write sequence left pixel
+    // data sized for the OLD resolution while every reader indexed it using the NEW one.
+    // That read past the end of the buffer and threw a raw std::out_of_range.
+    //
+    // The fix discards the stale render so the camera reports "not rendered" (which callers
+    // already handle) instead of silently reading mismatched data.
+
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiationmodel.disableMessages();
+
+    radiationmodel.addRadiationBand("Red");
+    uint source = radiationmodel.addCollimatedRadiationSource();
+    radiationmodel.setSourceFlux(source, "Red", 100.f);
+
+    CameraProperties camera_props;
+    camera_props.camera_resolution = make_int2(64, 64);
+    camera_props.HFOV = 45.f;
+
+    radiationmodel.addRadiationCamera("resize_camera", {"Red"}, make_vec3(0, -3, 1), make_vec3(0, 0, 0), camera_props, 1);
+    radiationmodel.updateGeometry();
+    radiationmodel.runBand("Red");
+
+    // Sanity check: the camera renders correctly at its original resolution.
+    std::string original_image = radiationmodel.writeCameraImage("resize_camera", {"Red"}, "before_resize");
+    DOCTEST_CHECK(!original_image.empty());
+    std::remove(original_image.c_str());
+
+    // Enlarge the camera. The stale render still holds 64*64 values, but every reader now
+    // indexes using 128*128 - reading far past the end of the buffer.
+    CameraProperties larger_props;
+    larger_props.camera_resolution = make_int2(128, 128);
+    larger_props.HFOV = 45.f;
+    radiationmodel.updateCameraParameters("resize_camera", larger_props);
+
+    std::string image_path;
+    std::string captured_output;
+    {
+        capture_cout capture;
+        image_path = radiationmodel.writeCameraImage("resize_camera", {"Red"}, "after_resize");
+        captured_output = capture.get_captured_output();
+    } // capture destroyed here
+
+    // Must skip cleanly rather than throwing a raw STL exception.
+    DOCTEST_CHECK(image_path.empty());
+    DOCTEST_CHECK(captured_output.find("ERROR") != std::string::npos);
+    DOCTEST_CHECK(captured_output.find("resize_camera") != std::string::npos);
+
+    // writeCameraImageData() reads the same render through Context global data and indexes it
+    // by the CURRENT resolution, so the stale buffer overruns there too.
+    std::string data_output;
+    {
+        capture_cout capture;
+        radiationmodel.writeCameraImageData("resize_camera", "Red", "after_resize_data");
+        data_output = capture.get_captured_output();
+    } // capture destroyed here
+    DOCTEST_CHECK(data_output.find("ERROR") != std::string::npos);
+    std::remove("./resize_camera_after_resize_data.txt");
+
+    // Re-rendering at the new resolution must restore normal operation.
+    radiationmodel.runBand("Red");
+    std::string rerendered_image = radiationmodel.writeCameraImage("resize_camera", {"Red"}, "after_rerender");
+    DOCTEST_CHECK(!rerendered_image.empty());
+    std::remove(rerendered_image.c_str());
+}
+
+GPU_TEST_CASE("RadiationModel - camera pixel data survives non-resolution parameter changes") {
+    // Companion to the test above: clearing the render must be scoped to resolution changes
+    // only. Updating exposure, zoom, or any other parameter at the SAME resolution must not
+    // discard a valid render, or every such tweak would silently force a re-run of runBand().
+
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiationmodel.disableMessages();
+
+    radiationmodel.addRadiationBand("Red");
+    uint source = radiationmodel.addCollimatedRadiationSource();
+    radiationmodel.setSourceFlux(source, "Red", 100.f);
+
+    CameraProperties camera_props;
+    camera_props.camera_resolution = make_int2(32, 32);
+    camera_props.HFOV = 45.f;
+
+    radiationmodel.addRadiationCamera("keep_camera", {"Red"}, make_vec3(0, -3, 1), make_vec3(0, 0, 0), camera_props, 1);
+    radiationmodel.updateGeometry();
+    radiationmodel.runBand("Red");
+
+    // Change a non-resolution parameter, keeping the resolution identical.
+    CameraProperties zoom_props;
+    zoom_props.camera_resolution = make_int2(32, 32);
+    zoom_props.HFOV = 60.f;
+    radiationmodel.updateCameraParameters("keep_camera", zoom_props);
+
+    std::string image_path;
+    std::string captured_output;
+    {
+        capture_cout capture;
+        image_path = radiationmodel.writeCameraImage("keep_camera", {"Red"}, "kept_render");
+        captured_output = capture.get_captured_output();
+    } // capture destroyed here
+
+    // The existing render is still valid and must be written without complaint.
+    DOCTEST_CHECK(!image_path.empty());
+    DOCTEST_CHECK(captured_output.find("ERROR") == std::string::npos);
+    std::remove(image_path.c_str());
+}
+
+GPU_TEST_CASE("RadiationModel - writeCameraImage for band that was never dispatched") {
+    // Regression test for the two remaining ways a camera ends up with no pixel data for a
+    // band that legitimately exists on it. runBand() only populates pixel_data for cameras
+    // that exist at the time it runs, and only for bands in that dispatch (it skips cameras
+    // whose bands don't intersect the dispatched set). Both cases used to throw a raw
+    // std::out_of_range out of writeCameraImage().
+
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiationmodel.disableMessages();
+
+    radiationmodel.addRadiationBand("Red");
+    radiationmodel.addRadiationBand("Green");
+    radiationmodel.addRadiationBand("Blue");
+    radiationmodel.addRadiationBand("NIR");
+
+    uint source = radiationmodel.addCollimatedRadiationSource();
+    radiationmodel.setSourceFlux(source, "Red", 100.f);
+    radiationmodel.setSourceFlux(source, "Green", 100.f);
+    radiationmodel.setSourceFlux(source, "Blue", 100.f);
+    radiationmodel.setSourceFlux(source, "NIR", 100.f);
+
+    CameraProperties camera_props;
+    camera_props.camera_resolution = make_int2(32, 32);
+    camera_props.HFOV = 45.f;
+
+    radiationmodel.addRadiationCamera("rgb_camera", {"Red", "Green", "Blue", "NIR"}, make_vec3(0, -3, 1), make_vec3(0, 0, 0), camera_props, 1);
+
+    radiationmodel.updateGeometry();
+    radiationmodel.runBand({"Red", "Green", "Blue"});
+
+    DOCTEST_SUBCASE("Band exists on camera but was never rendered") {
+        std::string image_path;
+        std::string captured_output;
+        {
+            capture_cout capture;
+            image_path = radiationmodel.writeCameraImage("rgb_camera", {"NIR"}, "never_dispatched");
+            captured_output = capture.get_captured_output();
+        } // capture destroyed here
+
+        DOCTEST_CHECK(image_path.empty());
+        DOCTEST_CHECK(captured_output.find("ERROR") != std::string::npos);
+        DOCTEST_CHECK(captured_output.find("NIR") != std::string::npos);
+        DOCTEST_CHECK(captured_output.find("runBand") != std::string::npos);
+    }
+
+    DOCTEST_SUBCASE("Camera added after runBand() has no pixel data") {
+        radiationmodel.addRadiationCamera("late_camera", {"Red", "Green", "Blue"}, make_vec3(0, -3, 1), make_vec3(0, 0, 0), camera_props, 1);
+
+        std::string image_path;
+        std::string captured_output;
+        {
+            capture_cout capture;
+            image_path = radiationmodel.writeCameraImage("late_camera", {"Red", "Green", "Blue"}, "added_late");
+            captured_output = capture.get_captured_output();
+        } // capture destroyed here
+
+        DOCTEST_CHECK(image_path.empty());
+        DOCTEST_CHECK(captured_output.find("ERROR") != std::string::npos);
+        DOCTEST_CHECK(captured_output.find("late_camera") != std::string::npos);
+        DOCTEST_CHECK(captured_output.find("runBand") != std::string::npos);
+    }
+
+    DOCTEST_SUBCASE("Valid path is unaffected by the guard") {
+        // The fix must be a pure no-op for a properly rendered camera/band combination.
+        std::string image_path;
+        std::string captured_output;
+        {
+            capture_cout capture;
+            image_path = radiationmodel.writeCameraImage("rgb_camera", {"Red", "Green", "Blue"}, "valid_render");
+            captured_output = capture.get_captured_output();
+        } // capture destroyed here
+
+        DOCTEST_CHECK(!image_path.empty());
+        DOCTEST_CHECK(image_path.find(".jpeg") != std::string::npos);
+        DOCTEST_CHECK(captured_output.find("ERROR") == std::string::npos);
+
+        std::remove(image_path.c_str());
     }
 }
 

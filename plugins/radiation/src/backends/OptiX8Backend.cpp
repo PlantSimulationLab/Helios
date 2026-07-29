@@ -33,17 +33,25 @@ namespace helios {
 OptiX8Backend::OptiX8Backend() = default;
 
 bool OptiX8Backend::probe() noexcept {
-    try {
-        int device_count = 0;
-        cudaError_t rc = cudaGetDeviceCount(&device_count);
-        if (rc != cudaSuccess || device_count == 0) {
+    // Cached process-wide so repeated availability checks do not re-enter the driver.
+    // See VulkanComputeBackend::probe() for the rationale and the latching trade-off.
+    static const bool probe_result = []() noexcept -> bool {
+        if (gpuBackendsDisabledByEnvironment()) {
             return false;
         }
-        OptixResult optix_rc = optixInit();
-        return (optix_rc == OPTIX_SUCCESS);
-    } catch (...) {
-        return false;
-    }
+        try {
+            int device_count = 0;
+            cudaError_t rc = cudaGetDeviceCount(&device_count);
+            if (rc != cudaSuccess || device_count == 0) {
+                return false;
+            }
+            OptixResult optix_rc = optixInit();
+            return (optix_rc == OPTIX_SUCCESS);
+        } catch (...) {
+            return false;
+        }
+    }();
+    return probe_result;
 }
 
 OptiX8Backend::~OptiX8Backend() {
@@ -509,9 +517,16 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
 }
 
 void OptiX8Backend::buildAccelerationStructure() {
-    if (current_primitive_count == 0) {
-        helios_runtime_error("ERROR (OptiX8Backend::buildAccelerationStructure): No geometry uploaded. Call updateGeometry() first.");
-    }
+    // An empty geometry set is built without complaint, matching OptiX6 (which sets primitive counts
+    // of zero) and the Vulkan compute backend (whose build is a no-op). buildGAS() resets gas_handle
+    // to 0 and returns early for zero primitives, so the four launch entry points below still refuse
+    // to trace against a scene with no acceleration structure, and they say so accurately.
+    //
+    // Rejecting the empty build here instead was wrong on both counts: updateGeometry() is the only
+    // caller, so the advice to "call updateGeometry() first" was emitted from inside the very
+    // function it was asking for, and it made a legitimate sequence fail on OptiX8 alone — build
+    // over an empty Context, add primitives, then runBand(), which since the introduction of
+    // needsGeometryRebuild() detects the changed primitive count and rebuilds before tracing.
     buildGAS(static_cast<uint32_t>(current_primitive_count + current_bbox_count));
     buildSBT();
 }
@@ -800,7 +815,7 @@ void OptiX8Backend::launchDirectRays(const RayTracingLaunchParams &launch_params
         helios_runtime_error("ERROR (OptiX8Backend::launchDirectRays): Backend not initialized.");
     }
     if (gas_handle == 0) {
-        helios_runtime_error("ERROR (OptiX8Backend::launchDirectRays): No acceleration structure. Call buildAccelerationStructure() first.");
+        helios_runtime_error("ERROR (OptiX8Backend::launchDirectRays): No acceleration structure. Add geometry to the Context, then call updateGeometry() after modifying Context geometry.");
     }
 
     applyLaunchParams(launch_params);
@@ -860,7 +875,7 @@ void OptiX8Backend::launchDiffuseRays(const RayTracingLaunchParams &launch_param
     }
     if (gas_handle == 0) {
         helios_runtime_error("ERROR (OptiX8Backend::launchDiffuseRays): No acceleration structure. "
-                             "Call buildAccelerationStructure() first.");
+                             "Add geometry to the Context, then call updateGeometry() after modifying Context geometry.");
     }
 
     applyLaunchParams(launch_params);
@@ -992,7 +1007,7 @@ void OptiX8Backend::launchCameraRays(const RayTracingLaunchParams &launch_params
     }
     if (gas_handle == 0) {
         helios_runtime_error("ERROR (OptiX8Backend::launchCameraRays): No acceleration structure. "
-                             "Call buildAccelerationStructure() first.");
+                             "Add geometry to the Context, then call updateGeometry() after modifying Context geometry.");
     }
 
     applyLaunchParams(launch_params);
@@ -1059,7 +1074,7 @@ void OptiX8Backend::launchPixelLabelRays(const RayTracingLaunchParams &launch_pa
     }
     if (gas_handle == 0) {
         helios_runtime_error("ERROR (OptiX8Backend::launchPixelLabelRays): No acceleration structure. "
-                             "Call buildAccelerationStructure() first.");
+                             "Add geometry to the Context, then call updateGeometry() after modifying Context geometry.");
     }
 
     applyLaunchParams(launch_params);

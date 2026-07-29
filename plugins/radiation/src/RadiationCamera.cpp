@@ -498,6 +498,27 @@ void RadiationModel::updateCameraParameters(const std::string &camera_label, con
     // Get reference to camera
     auto &camera = cameras.at(camera_label);
 
+    // Discard any previous render if the resolution changed. All of the per-pixel buffers below are sized to the resolution at the time the camera was rendered, but every reader
+    // indexes them using the camera's current resolution, so keeping them across a resolution change reads past the end of the buffer. Clearing them makes the camera report as
+    // "not rendered" until the next runBand(), which callers already handle. Non-resolution parameter changes leave the render intact.
+    if (camera.resolution != camera_properties.camera_resolution) {
+        for (const auto &band_data: camera.pixel_data) {
+            std::string global_data_label = "camera_" + camera_label + "_" + band_data.first;
+            if (context->doesGlobalDataExist(global_data_label.c_str())) {
+                context->clearGlobalData(global_data_label.c_str());
+            }
+        }
+        for (const std::string &buffer_suffix: {"_pixel_UUID", "_pixel_depth"}) {
+            std::string global_data_label = "camera_" + camera_label + buffer_suffix;
+            if (context->doesGlobalDataExist(global_data_label.c_str())) {
+                context->clearGlobalData(global_data_label.c_str());
+            }
+        }
+        camera.pixel_data.clear();
+        camera.pixel_label_UUID.clear();
+        camera.pixel_depth.clear();
+    }
+
     // Update camera parameters
     camera.resolution = camera_properties.camera_resolution;
     camera.HFOV_degrees = camera_properties.HFOV;
@@ -557,7 +578,20 @@ std::string RadiationModel::writeCameraImage(const std::string &camera, const st
             return "";
         }
 
-        camera_data.at(b) = cameras.at(camera).pixel_data.at(band);
+        // check that the band has actually been rendered. band_labels is populated when the camera is created, but pixel_data is only populated by runBand(), so a camera that
+        // exists but has never been rendered (or was rendered for a different set of bands) passes the check above with no pixel data to write.
+        const auto &camera_pixel_data = cameras.at(camera).pixel_data;
+        const int2 camera_resolution = cameras.at(camera).resolution;
+        const auto pixel_data_iterator = camera_pixel_data.find(band);
+
+        if (pixel_data_iterator == camera_pixel_data.end() || pixel_data_iterator->second.size() != size_t(camera_resolution.x) * size_t(camera_resolution.y)) {
+            std::cout << "ERROR (RadiationModel::writeCameraImage): image data for camera " << camera << ", band " << band
+                      << " has not been created, or is stale because the camera resolution changed since it was last rendered. Call runBand() with band " << band
+                      << " after the camera was added. Skipping image write for this camera." << std::endl;
+            return "";
+        }
+
+        camera_data.at(b) = pixel_data_iterator->second;
 
         b++;
     }
@@ -663,6 +697,13 @@ std::string RadiationModel::writeCameraImage(const std::string &camera, const st
 }
 
 std::string RadiationModel::writeNormCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path, int frame) {
+
+    // check if camera exists
+    if (cameras.find(camera) == cameras.end()) {
+        std::cout << "ERROR (RadiationModel::writeNormCameraImage): camera with label " << camera << " does not exist. Skipping image write for this camera." << std::endl;
+        return "";
+    }
+
     float maxval = 0;
     // Find maximum mean value over all bands
     for (const std::string &band: bands) {

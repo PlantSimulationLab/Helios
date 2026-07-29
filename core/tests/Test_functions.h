@@ -5,6 +5,12 @@
 // Tests for standalone utility functions, typically found in a global header,
 // that provide common functionality like math, string parsing, and file handling.
 // =================================================================================
+
+// The EXIF/JPEG tests below decode byte buffers with uint16_t and uint32_t. Nothing in the
+// include chain pulls in <cstdint> directly - the types arrive only transitively today, which
+// every standard library happens to do and none is required to keep doing. core/src/exif_writer.cpp
+// includes it explicitly for the same types; this matches that.
+#include <cstdint>
 TEST_CASE("Mathematical and Geometric Helpers") {
     SUBCASE("global.h utilities") {
         SUBCASE("deg2rad and rad2deg") {
@@ -1781,4 +1787,119 @@ TEST_CASE("writeJPEG with metadata embeds EXIF and XMP markers") {
     }
     DOCTEST_CHECK(found_exif);
     DOCTEST_CHECK(found_xmp);
+}
+
+// POSIX setenv()/unsetenv() do not exist in the MSVC runtime, which provides _putenv_s() instead.
+// The two differ in more than name: _putenv_s() has no overwrite flag (it always overwrites, which
+// is what every call below wants), and it deletes a variable when handed an empty value rather than
+// through a separate function. These wrappers give the tests one spelling on all three platforms.
+//
+// The empty-value case is where the two cannot be reconciled: POSIX setenv(name, "", 1) leaves the
+// variable set to an empty string, which gpuRequiredByEnvironment() reads as "set to a value other
+// than 0" and therefore true, while _putenv_s(name, "") deletes it and yields false. Windows offers
+// no way to hold an empty variable, so rather than let the same call mean opposite things on two
+// platforms, this asserts the case never arises. Nothing here sets an empty value deliberately; it
+// could only reach the wrapper through the save/restore block below, from a CI runner that had
+// exported HELIOS_REQUIRE_GPU= with no value. A failed assertion says the runner's environment is
+// malformed, which is worth knowing, and is far better than restoring it to a different state on
+// Windows than on Linux.
+inline void test_setenv(const char *name, const char *value) {
+    assert(value != nullptr && value[0] != '\0');
+#ifdef _MSC_VER
+    _putenv_s(name, value);
+#else
+    setenv(name, value, 1);
+#endif
+}
+
+inline void test_unsetenv(const char *name) {
+#ifdef _MSC_VER
+    // An empty value deletes the variable on Windows, so a subsequent getenv() returns nullptr
+    // rather than a pointer to an empty string - which matters here, because the functions under
+    // test distinguish "unset" from "set to something".
+    _putenv_s(name, "");
+#else
+    unsetenv(name);
+#endif
+}
+
+DOCTEST_TEST_CASE("gpuRequiredByEnvironment and requireGPUOrFail") {
+    // These exist so a CI runner dedicated to GPU coverage cannot report success after silently
+    // skipping every GPU test - the failure mode that hid a dead GPU on the Linux EC2 runner
+    // across v1.3.78 and v1.3.79. requireGPUOrFail() is called wherever a test would otherwise
+    // skip for lack of a device, and must be inert unless HELIOS_REQUIRE_GPU is set.
+
+    // Preserve and restore the surrounding environment: the test binary may itself be running
+    // under one of these variables on a GPU CI runner.
+    const char *saved_require = std::getenv("HELIOS_REQUIRE_GPU");
+    const char *saved_no_gpu = std::getenv("HELIOS_NO_GPU");
+    const std::string saved_require_value = saved_require ? saved_require : "";
+    const std::string saved_no_gpu_value = saved_no_gpu ? saved_no_gpu : "";
+    const bool had_require = saved_require != nullptr;
+    const bool had_no_gpu = saved_no_gpu != nullptr;
+
+    test_unsetenv("HELIOS_REQUIRE_GPU");
+    test_unsetenv("HELIOS_NO_GPU");
+
+    // Unset: inert. This is the developer-machine and non-GPU-CI case, where skipping is correct.
+    DOCTEST_CHECK(gpuRequiredByEnvironment() == false);
+    DOCTEST_CHECK_NOTHROW(requireGPUOrFail("should not throw when the variable is unset"));
+
+    // Explicit "0" is an opt-out, matching how HELIOS_NO_GPU treats "0".
+    test_setenv("HELIOS_REQUIRE_GPU", "0");
+    DOCTEST_CHECK(gpuRequiredByEnvironment() == false);
+    DOCTEST_CHECK_NOTHROW(requireGPUOrFail("should not throw when the variable is 0"));
+
+    // Set: a would-be skip becomes a hard failure.
+    test_setenv("HELIOS_REQUIRE_GPU", "1");
+    DOCTEST_CHECK(gpuRequiredByEnvironment() == true);
+    DOCTEST_CHECK_THROWS_AS(requireGPUOrFail("a GPU test would have skipped"), std::runtime_error);
+
+    // Any non-"0" value counts, not just "1".
+    test_setenv("HELIOS_REQUIRE_GPU", "yes");
+    DOCTEST_CHECK(gpuRequiredByEnvironment() == true);
+
+    // The caller's context is echoed back, so the failure names what was skipped rather than
+    // just reporting that some GPU was missing.
+    test_setenv("HELIOS_REQUIRE_GPU", "1");
+    std::string thrown_message;
+    try {
+        requireGPUOrFail("SENTINEL_CONTEXT_STRING");
+    } catch (const std::runtime_error &e) {
+        thrown_message = e.what();
+    }
+    DOCTEST_CHECK(thrown_message.find("SENTINEL_CONTEXT_STRING") != std::string::npos);
+    DOCTEST_CHECK(thrown_message.find("HELIOS_REQUIRE_GPU") != std::string::npos);
+
+    // Both variables set is contradictory: HELIOS_NO_GPU guarantees no GPU is ever found, so the
+    // demand can never be satisfied. The error must name that rather than reporting a plain
+    // "no GPU" failure the operator cannot act on.
+    test_setenv("HELIOS_NO_GPU", "1");
+    std::string contradiction_message;
+    try {
+        requireGPUOrFail("irrelevant context");
+    } catch (const std::runtime_error &e) {
+        contradiction_message = e.what();
+    }
+    DOCTEST_CHECK(contradiction_message.find("contradictory") != std::string::npos);
+    DOCTEST_CHECK(contradiction_message.find("HELIOS_NO_GPU") != std::string::npos);
+
+    // Restore.
+    // A variable that was set but empty is restored by unsetting it, because Windows cannot hold an
+    // empty environment variable at all (see test_setenv above) and unset is the closest state it
+    // can represent. Note this is not a no-op in meaning: both functions test for a value other than
+    // "0", so an empty value reads as *enabled*, and unsetting it reads as disabled. That flip is
+    // accepted only because no runner sets either variable to an empty string - and because the
+    // alternative, restoring "enabled" on Linux and "disabled" on Windows from identical input, is
+    // the silent cross-platform divergence this whole wrapper exists to avoid.
+    if (had_require && !saved_require_value.empty()) {
+        test_setenv("HELIOS_REQUIRE_GPU", saved_require_value.c_str());
+    } else {
+        test_unsetenv("HELIOS_REQUIRE_GPU");
+    }
+    if (had_no_gpu && !saved_no_gpu_value.empty()) {
+        test_setenv("HELIOS_NO_GPU", saved_no_gpu_value.c_str());
+    } else {
+        test_unsetenv("HELIOS_NO_GPU");
+    }
 }

@@ -1511,9 +1511,13 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     this->parent_shoot_ID = parent_shoot->ID;
     this->parent_shoot_ptr = parent_shoot;
 
+    // Note: build_context_geometry_petiole and build_context_geometry_peduncle are Phytomer members
+    // (not locals), so that the decision made here at construction is the same one consulted later
+    // when the geometry is deleted or transformed. Declaring locals of the same name here would
+    // shadow the members and leave them permanently at their default of true.
     bool build_context_geometry_internode = plantarchitecture_ptr->build_context_geometry_internode;
-    bool build_context_geometry_petiole = plantarchitecture_ptr->build_context_geometry_petiole;
-    bool build_context_geometry_peduncle = plantarchitecture_ptr->build_context_geometry_peduncle;
+    this->build_context_geometry_petiole = plantarchitecture_ptr->build_context_geometry_petiole;
+    this->build_context_geometry_peduncle = plantarchitecture_ptr->build_context_geometry_peduncle;
 
     //    if( internode_radius==0.f || internode_length_max==0.f || parent_shoot_parameters.internode_radius_max.val()==0.f ){
     //        build_context_geometry_internode = false;
@@ -2335,12 +2339,14 @@ void PlantArchitecture::ensureInflorescencePrototypesInitialized(const PhytomerP
 }
 
 void Phytomer::updateInflorescence(FloralBud &fbud) {
-    bool build_context_geometry_peduncle = plantarchitecture_ptr->build_context_geometry_peduncle;
+    // Assign the member rather than a local of the same name, so that whether peduncle geometry was
+    // actually built here is the same flag consulted later when that geometry is deleted.
+    this->build_context_geometry_peduncle = plantarchitecture_ptr->build_context_geometry_peduncle;
 
     uint Ndiv_peduncle_length = std::max(uint(1), phytomer_parameters.peduncle.length_segments);
     uint Ndiv_peduncle_radius = std::max(uint(3), phytomer_parameters.peduncle.radial_subdivisions);
     if (phytomer_parameters.peduncle.length_segments == 0 || phytomer_parameters.peduncle.radial_subdivisions < 3) {
-        build_context_geometry_peduncle = false;
+        this->build_context_geometry_peduncle = false;
     }
 
     // Sample length once before calculating dr (same fix as petioles - don't resample until after geometry is created)
@@ -3668,6 +3674,9 @@ void PlantArchitecture::pruneGroundCollisions(uint plantID) {
             // internode
             if ((phytomer->shoot_index.x == 0 && phytomer->rank > 0) && context_ptr->doesObjectExist(shoot->internode_tube_objID) && detectGroundCollision(shoot->internode_tube_objID)) {
                 context_ptr->deleteObject(shoot->internode_tube_objID);
+                // Reset to the sentinel so the freed object ID is never handed back to callers or
+                // used to address the Context again.
+                shoot->internode_tube_objID = Shoot::no_internode_tube_objID;
                 shoot->terminateApicalBud();
             }
 
@@ -4013,11 +4022,14 @@ std::vector<helios::vec3> PlantArchitecture::getPlantLeafBases(uint plantID) con
 
     std::vector<vec3> leaf_bases;
 
-    // First calculate total size needed to avoid reallocations
+    // First calculate total size needed to avoid reallocations. leaf_bases is emptied when a leaf is
+    // removed (see Phytomer::removeLeaf), so front() must not be called without checking for that.
     size_t total_size = 0;
     for (const auto &shoot: plant_instances.at(plantID).shoot_tree) {
         for (const auto &phytomer: shoot->phytomers) {
-            total_size += phytomer->leaf_bases.size() * phytomer->leaf_bases.front().size();
+            if (!phytomer->leaf_bases.empty()) {
+                total_size += phytomer->leaf_bases.size() * phytomer->leaf_bases.front().size();
+            }
         }
     }
     leaf_bases.reserve(total_size);
@@ -4031,6 +4043,34 @@ std::vector<helios::vec3> PlantArchitecture::getPlantLeafBases(uint plantID) con
     }
 
     return leaf_bases;
+}
+
+void PlantArchitecture::getPlantLeafObjectIDsAndBases(const std::vector<uint> &plantIDs, std::vector<uint> &leaf_objIDs, std::vector<vec3> &leaf_bases) const {
+    leaf_objIDs.clear();
+    leaf_bases.clear();
+
+    for (const uint plantID: plantIDs) {
+        if (plant_instances.find(plantID) == plant_instances.end()) {
+            helios_runtime_error("ERROR (PlantArchitecture::getPlantLeafObjectIDsAndBases): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+        }
+
+        for (const auto &shoot: plant_instances.at(plantID).shoot_tree) {
+            for (const auto &phytomer: shoot->phytomers) {
+                // leaf_objIDs and leaf_bases are maintained in lockstep (see Phytomer::removeLeaf),
+                // so walking them together keeps each object ID paired with its own base position.
+                assert(phytomer->leaf_objIDs.size() == phytomer->leaf_bases.size());
+                for (uint petiole_index = 0; petiole_index < phytomer->leaf_objIDs.size(); petiole_index++) {
+                    const std::vector<uint> &petiole_leaf_objIDs = phytomer->leaf_objIDs.at(petiole_index);
+                    const std::vector<vec3> &petiole_leaf_bases = phytomer->leaf_bases.at(petiole_index);
+                    assert(petiole_leaf_objIDs.size() == petiole_leaf_bases.size());
+                    for (uint leaf_index = 0; leaf_index < petiole_leaf_objIDs.size(); leaf_index++) {
+                        leaf_objIDs.push_back(petiole_leaf_objIDs.at(leaf_index));
+                        leaf_bases.push_back(petiole_leaf_bases.at(leaf_index));
+                    }
+                }
+            }
+        }
+    }
 }
 
 std::vector<helios::vec3> PlantArchitecture::getPlantLeafBases(const std::vector<uint> &plantIDs) const {
@@ -4298,8 +4338,12 @@ void PlantArchitecture::setPlantLeafAngleDistribution_private(const std::vector<
     }
 
     // ── 2) Gather leaves ────────────────────────────────────────────────────
-    std::vector<uint> objIDs = getPlantLeafObjectIDs(plantIDs);
-    std::vector<vec3> bases = getPlantLeafBases(plantIDs);
+    // Object IDs and base positions are consumed index-for-index below (each leaf is rotated about
+    // its own base), so they must come from a single traversal. Gathering them via two independent
+    // getters would leave the correspondence resting on an assert that disappears in release builds.
+    std::vector<uint> objIDs;
+    std::vector<vec3> bases;
+    getPlantLeafObjectIDsAndBases(plantIDs, objIDs, bases);
     size_t N = objIDs.size();
     assert(bases.size() == N);
     if (N == 0 || (!set_elevation && !set_azimuth))
@@ -4790,7 +4834,7 @@ std::vector<uint> PlantArchitecture::getPlantPeduncleObjectIDs(uint plantID) con
 
 std::vector<uint> PlantArchitecture::getPlantFlowerObjectIDs(uint plantID) const {
     if (plant_instances.find(plantID) == plant_instances.end()) {
-        helios_runtime_error("ERROR (PlantArchitecture::getPlantInflorescenceObjectIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantFlowerObjectIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
 
     std::vector<uint> objIDs;
@@ -4814,7 +4858,7 @@ std::vector<uint> PlantArchitecture::getPlantFlowerObjectIDs(uint plantID) const
 
 std::vector<uint> PlantArchitecture::getPlantFruitObjectIDs(uint plantID) const {
     if (plant_instances.find(plantID) == plant_instances.end()) {
-        helios_runtime_error("ERROR (PlantArchitecture::getPlantInflorescenceObjectIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantFruitObjectIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
 
     std::vector<uint> objIDs;
@@ -4839,7 +4883,7 @@ std::vector<uint> PlantArchitecture::getPlantFruitObjectIDs(uint plantID) const 
 
 void PlantArchitecture::updateShootFruitCounts(uint plantID) const {
     if (plant_instances.find(plantID) == plant_instances.end()) {
-        helios_runtime_error("ERROR (PlantArchitecture::getPlantInflorescenceObjectIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+        helios_runtime_error("ERROR (PlantArchitecture::updateShootFruitCounts): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
 
     auto &shoot_tree = plant_instances.at(plantID).shoot_tree;

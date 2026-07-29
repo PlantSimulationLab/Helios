@@ -65,11 +65,36 @@ jobs:
     needs: start-gpu
     steps:
       - uses: actions/checkout@v4
+
+      # The entire purpose of this job is exercising GPU code paths. Every GPU test skips
+      # gracefully when no device is found, so without this check a runner whose driver has
+      # died reports a green build having tested nothing at all - which is exactly what
+      # happened between v1.3.78 and v1.3.79. Runs before the ~20 minute build so a dead
+      # driver is reported in seconds.
+      - name: Verify GPU is present and usable
+        shell: bash
+        run: |
+          if ! command -v nvidia-smi >/dev/null 2>&1; then
+            echo "ERROR: nvidia-smi not found on a runner dedicated to GPU testing."
+            echo "The NVIDIA driver is not installed, or is not on PATH."
+            exit 1
+          fi
+          if ! nvidia-smi; then
+            echo "ERROR: nvidia-smi failed, so no usable NVIDIA device is present."
+            echo "The CUDA toolkit can still compile in this state, which is why the build"
+            echo "would otherwise succeed and every GPU test would silently skip."
+            echo "Most often the kernel module did not rebuild after an OS or kernel update."
+            exit 1
+          fi
+
       - name: Bash script
         shell: bash
         run: |
           cd utilities
-          if ! ./run_tests.sh --visbuildonly --log-file linux_GPU_selftests.log; then
+          # --requiregpu turns a would-be GPU test skip into a failure. nvidia-smi above proves
+          # the driver is alive; this proves Helios can actually use it (OptiX/Vulkan can still
+          # fail to initialize against a healthy driver).
+          if ! ./run_tests.sh --visbuildonly --requiregpu --log-file linux_GPU_selftests.log; then
             echo "==== run_tests.sh failed; dumping linux_GPU_selftests.log ===="
             cat linux_GPU_selftests.log
             exit 1

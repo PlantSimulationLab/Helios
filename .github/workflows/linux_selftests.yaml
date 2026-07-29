@@ -19,6 +19,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Runs before the build so an unguarded GPU test fails in seconds rather than after the
+      # full ~15 minute build-and-test cycle. This is the single most common cause of a red
+      # non-GPU runner: a test that only exercises CPU-side logic but constructs a
+      # RadiationModel, which requires a ray tracing backend.
+      - name: Lint for unguarded GPU test cases
+        run: ./utilities/lint_gpu_tests.sh
+
+      # Also runs before the build, and deliberately on the Linux runner rather than the Windows
+      # one: the point is to fail here, in seconds and on the cheapest runner, instead of on
+      # Windows ten minutes into a build. POSIX-only calls in test code compile fine on Linux and
+      # macOS and break only MSVC, so without this check the first signal is a red Windows job
+      # (v1.3.79 lost two Windows runs to setenv/unsetenv this way).
+      - name: Lint test code for MSVC portability
+        run: ./utilities/lint_test_portability.sh
+
       #- uses: openrndr/setup-opengl@v1.1
       - name: Checkout OPENRNDR repository
         uses: actions/checkout@v4

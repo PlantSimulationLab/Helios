@@ -156,6 +156,28 @@ TEST_CASE("Core Context State and Configuration") {
         DOCTEST_CHECK(l.latitude_deg == doctest::Approx(40.7128));
         DOCTEST_CHECK(l.longitude_deg == doctest::Approx(-74.0060));
         DOCTEST_CHECK(l.UTC_offset == doctest::Approx(10.0));
+
+        // setLocation() re-validates rather than trusting construction, because Location's fields
+        // are public: an already-valid Location can be mutated into an invalid one and handed back.
+        // This is exactly what the ISO-8601 branch of loadTabularTimeseriesData() does with
+        // UTC_offset, using a value read out of an external file.
+        const Location original = ctx.getLocation();
+
+        Location mutated = ctx.getLocation();
+        mutated.UTC_offset = 100.f;
+
+        // No capture_cerr needed: validate() throws directly, as the Date and Time constructors in
+        // helios_vector_types.h do, so nothing is written to std::cerr on any build.
+        DOCTEST_CHECK_THROWS_AS(ctx.setLocation(mutated), std::runtime_error);
+
+        // A rejected setLocation() must leave the Context's location untouched.
+        DOCTEST_CHECK(ctx.getLocation() == original);
+
+        // A valid mutation still goes through, including a fractional-hour time zone.
+        Location valid = ctx.getLocation();
+        valid.UTC_offset = -5.75f;
+        DOCTEST_CHECK_NOTHROW(ctx.setLocation(valid));
+        DOCTEST_CHECK(ctx.getLocation().UTC_offset == doctest::Approx(-5.75f));
     }
 
     SUBCASE("primitive orientation and transforms") {
@@ -2339,6 +2361,53 @@ TEST_CASE("Advanced Object Operations") {
         ctx.getObjectBoundingBox(objs, min_corner, max_corner);
         DOCTEST_CHECK(min_corner.x == doctest::Approx(0.f).epsilon(0.01));
         DOCTEST_CHECK(max_corner.x == doctest::Approx(2.f).epsilon(0.01));
+    }
+
+    SUBCASE("object bounding box single-primitive object") {
+        // Regression: the box was seeded from the first primitive's first vertex and then
+        // "continue"d to the next primitive, so the rest of that primitive's vertices were never
+        // compared. A single-primitive object reported min == max == its first vertex. A box
+        // object cannot expose this (its six faces cover each other's extremes), so use a tile
+        // made of exactly one patch.
+        Context ctx;
+        uint obj = ctx.addTileObject(make_vec3(2, 0, 0), make_vec2(1, 1), nullrotation, make_int2(1, 1));
+
+        DOCTEST_CHECK(ctx.getObjectPrimitiveUUIDs(obj).size() == 1);
+
+        vec3 min_corner, max_corner;
+        ctx.getObjectBoundingBox(obj, min_corner, max_corner);
+
+        DOCTEST_CHECK(min_corner.x == doctest::Approx(1.5f).epsilon(0.01));
+        DOCTEST_CHECK(max_corner.x == doctest::Approx(2.5f).epsilon(0.01));
+        DOCTEST_CHECK(min_corner.y == doctest::Approx(-0.5f).epsilon(0.01));
+        DOCTEST_CHECK(max_corner.y == doctest::Approx(0.5f).epsilon(0.01));
+        // The box must have real extent rather than collapsing to a single point.
+        DOCTEST_CHECK(max_corner.x > min_corner.x);
+        DOCTEST_CHECK(max_corner.y > min_corner.y);
+    }
+
+    SUBCASE("object bounding box first object in list keeps its extent") {
+        // The defect was confined to the first primitive of the first object, so a list whose
+        // FIRST object holds a unique extreme is what exposes it.
+        Context ctx;
+        uint big = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(4, 4), nullrotation, make_int2(1, 1));
+        uint small = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(1, 1));
+
+        vec3 min_corner, max_corner;
+        ctx.getObjectBoundingBox(std::vector<uint>{big, small}, min_corner, max_corner);
+
+        DOCTEST_CHECK(min_corner.x == doctest::Approx(-2.f).epsilon(0.01));
+        DOCTEST_CHECK(max_corner.x == doctest::Approx(2.f).epsilon(0.01));
+        DOCTEST_CHECK(min_corner.y == doctest::Approx(-2.f).epsilon(0.01));
+        DOCTEST_CHECK(max_corner.y == doctest::Approx(2.f).epsilon(0.01));
+    }
+
+    SUBCASE("object bounding box with no primitives fails fast") {
+        // An empty request has no defined bounding box; returning leaves the caller's corners
+        // untouched, which reads as a valid box at whatever they were initialized to.
+        Context ctx;
+        vec3 min_corner, max_corner;
+        DOCTEST_CHECK_THROWS(ctx.getObjectBoundingBox(std::vector<uint>{}, min_corner, max_corner));
     }
 }
 

@@ -7311,15 +7311,20 @@ namespace helios {
          */
         [[nodiscard]] helios::Time getTime() const;
 
-        //! Set the location of the simulation (latitude, longitude, UTC offset, and altitude)
+        //! Set the latitude, longitude, UTC offset, and altitude of the simulation
         /**
          * \param[in] location Location vector. See \ref helios::Location for the longitude sign convention and altitude semantics.
+         * \note The fields are re-validated here via \ref helios::Location::validate(), because they are public and so may have
+         *       been assigned to directly after the Location was constructed. An out-of-range field raises an error and leaves
+         *       the Context's location unchanged.
+         * \sa getLocation()
          */
         void setLocation(const helios::Location &location);
 
-        //! Get the location of the simulation (latitude, longitude, UTC offset, and altitude)
+        //! Get the latitude, longitude, UTC offset, and altitude of the simulation
         /**
          * \return Location vector
+         * \sa setLocation()
          */
         [[nodiscard]] helios::Location getLocation() const;
 

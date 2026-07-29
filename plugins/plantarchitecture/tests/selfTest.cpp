@@ -552,6 +552,93 @@ DOCTEST_TEST_CASE("PlantArchitecture advanceTime after pruneBranch leaves empty 
     DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 365));
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture pruneGroundCollisions resets deleted internode tube object ID") {
+    // pruneGroundCollisions() deletes a shoot's internode tube object when it dips below the ground
+    // clipping plane, but used to leave the freed object ID in Shoot::internode_tube_objID. That
+    // dangling ID then had to be filtered out by every consumer; anything reading the field directly
+    // saw an ID that no longer exists in the Context. The ID must be reset to the sentinel instead.
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+
+    // Start the plant below the clipping plane so its internode geometry is guaranteed to have
+    // vertices with z < ground_clipping_height and therefore gets pruned.
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, -0.5f), 0);
+    plantarchitecture.enableGroundClipping(0.f);
+    plantarchitecture.advanceTime(plantID, 25);
+
+    // At least one shoot must actually have had its tube deleted, otherwise this test proves nothing.
+    int deleted_tube_count = 0;
+    for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+        const std::shared_ptr<Shoot> &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+        if (!context.doesObjectExist(shoot->internode_tube_objID)) {
+            deleted_tube_count++;
+            // The field must hold the sentinel, never a freed object ID.
+            DOCTEST_CHECK(shoot->internode_tube_objID == Shoot::no_internode_tube_objID);
+        }
+    }
+    DOCTEST_REQUIRE(deleted_tube_count > 0);
+
+    // The public getters must likewise never hand back an ID that is not in the Context.
+    for (uint objID: plantarchitecture.getShootInternodeObjectIDs(plantID)) {
+        DOCTEST_CHECK(context.doesObjectExist(objID));
+    }
+    for (uint objID: plantarchitecture.getPlantInternodeObjectIDs(plantID)) {
+        DOCTEST_CHECK(context.doesObjectExist(objID));
+    }
+    for (uint objID: plantarchitecture.getAllPlantObjectIDs(plantID)) {
+        DOCTEST_CHECK(context.doesObjectExist(objID));
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture organ getters return only live object IDs after organ removal") {
+    // Leaves, petioles, peduncles, flowers and fruit are deleted together with their ID containers
+    // (removeLeaf() clears leaf_objIDs, setFloralBudState() resizes the inflorescence/peduncle
+    // vectors), so these getters should never surface a freed object ID. This pins that invariant
+    // so a future change that deletes geometry without clearing its IDs is caught here.
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    plantarchitecture.advanceTime(plantID, 25);
+
+    // Remove the organs on only part of the plant, so the getters still return a non-empty result
+    // afterwards. Clearing every organ would make the loops below vacuous and prove nothing.
+    const std::vector<uint> shootIDs = plantarchitecture.getAllShootIDs(plantID);
+    DOCTEST_REQUIRE(!shootIDs.empty());
+    plantarchitecture.removeShootLeaves(plantID, shootIDs.front());
+    plantarchitecture.harvestPlant(plantID);
+
+    // The plant must still expose live organs, otherwise the existence checks are vacuous.
+    const std::vector<uint> remaining_leaves = plantarchitecture.getPlantLeafObjectIDs(plantID);
+    DOCTEST_REQUIRE(!remaining_leaves.empty());
+
+    for (uint objID: plantarchitecture.getPlantLeafObjectIDs(plantID)) {
+        DOCTEST_CHECK(context.doesObjectExist(objID));
+    }
+    for (uint objID: plantarchitecture.getPlantPetioleObjectIDs(plantID)) {
+        DOCTEST_CHECK(context.doesObjectExist(objID));
+    }
+    for (uint objID: plantarchitecture.getPlantPeduncleObjectIDs(plantID)) {
+        DOCTEST_CHECK(context.doesObjectExist(objID));
+    }
+    for (uint objID: plantarchitecture.getPlantFlowerObjectIDs(plantID)) {
+        DOCTEST_CHECK(context.doesObjectExist(objID));
+    }
+    for (uint objID: plantarchitecture.getPlantFruitObjectIDs(plantID)) {
+        DOCTEST_CHECK(context.doesObjectExist(objID));
+    }
+
+    // Consumers that feed these IDs straight into Context object queries must not throw.
+    DOCTEST_CHECK_NOTHROW(static_cast<void>(plantarchitecture.getPlantLeafInclinationAngleDistribution(plantID, 9)));
+    DOCTEST_CHECK_NOTHROW(static_cast<void>(plantarchitecture.getPlantLeafAzimuthAngleDistribution(plantID, 9)));
+    DOCTEST_CHECK_NOTHROW(static_cast<void>(plantarchitecture.sumPlantLeafArea(plantID)));
+}
+
 DOCTEST_TEST_CASE("PlantArchitecture hard collision avoidance base stem protection") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
@@ -1435,6 +1522,188 @@ DOCTEST_TEST_CASE("PlantArchitecture XML write with flowers and fruit") {
     DOCTEST_CHECK_NOTHROW(plantarchitecture.writePlantStructureXML(plantID, xml_filename));
 
     // Clean up test file
+    std::remove(xml_filename.c_str());
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture readPlantStructureXML preserves internode vertex-sharing convention") {
+    // Regression test. Shoot::shoot_internode_vertices holds one inner vector per phytomer under a
+    // vertex-sharing convention established in the Phytomer constructor: the first phytomer on a
+    // shoot stores all Ndiv+1 nodes, while every later phytomer omits its node 0 because that node
+    // is the previous phytomer's last node. The internode Tube object is built to match, so a shoot
+    // of P phytomers has exactly (Ndiv+1) + (P-1)*Ndiv nodes, and Shoot::updateShootNodes() pushes
+    // flatten(shoot_internode_vertices) straight into it.
+    //
+    // readPlantStructureXML() used to reconstruct Ndiv+1 nodes for EVERY phytomer, duplicating each
+    // shared node. That made both flattened arrays P-1 entries too long, so the next advanceTime()
+    // threw from Tube::setTubeRadii(). It also broke the consumers that assume the shared node is
+    // absent: Phytomer::getInternodeNodePositions() prepends a duplicate, and
+    // Phytomer::setInternodeLengthScaleFraction() differences the duplicate against its own twin and
+    // divides by a zero-magnitude axis, writing NaN into every downstream vertex.
+    //
+    // Bean is used because its phytomers have internode.length_segments == 2, so Ndiv > 1 and the
+    // off-by-one is observable. With Ndiv == 1 the two conventions would coincide.
+
+    const std::string xml_filename = "test_plant_xml_internode_convention.xml";
+
+    // --- Build a plant and save it ---
+    uint built_shoot_count = 0;
+    float built_leaf_area = 0.f;
+    {
+        Context context;
+        context.seedRandomGenerator(12345);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("bean");
+
+        // 30 days gives the base shoot several phytomers plus at least one child shoot, so all three
+        // internode_base branches of the reconstruction are exercised, while keeping the test quick.
+        uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30);
+        DOCTEST_REQUIRE(plantID != uint(-1));
+
+        built_shoot_count = static_cast<uint>(plantarchitecture.getAllShootIDs(plantID).size());
+        built_leaf_area = plantarchitecture.sumPlantLeafArea(plantID);
+
+        // Guard against a vacuous test: if no shoot carries more than one phytomer, the shared-node
+        // case never arises and every assertion below would pass even on the buggy code.
+        bool has_multi_phytomer_shoot = false;
+        for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            if (plantarchitecture.getPlantShoot(plantID, shootID)->phytomers.size() > 1) {
+                has_multi_phytomer_shoot = true;
+            }
+        }
+        DOCTEST_REQUIRE(has_multi_phytomer_shoot);
+
+        DOCTEST_REQUIRE_NOTHROW(plantarchitecture.writePlantStructureXML(plantID, xml_filename));
+    }
+
+    // --- Reload into a fresh Context/PlantArchitecture ---
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    // Required: the XML references shoot types by label, and reading resolves them via
+    // getCurrentShootParameters(), which errors if the model library was not loaded first.
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+
+    std::vector<uint> restored_plantIDs;
+    DOCTEST_REQUIRE_NOTHROW(restored_plantIDs = plantarchitecture.readPlantStructureXML(xml_filename, true));
+    DOCTEST_REQUIRE(restored_plantIDs.size() == 1);
+    const uint restored_plantID = restored_plantIDs.front();
+
+    const std::vector<uint> restored_shootIDs = plantarchitecture.getAllShootIDs(restored_plantID);
+    DOCTEST_REQUIRE(!restored_shootIDs.empty());
+
+    // The core invariant, checked before advanceTime() is ever called: the flattened per-phytomer
+    // arrays must have exactly as many entries as the shoot's internode Tube has nodes.
+    uint shoots_checked = 0;
+    for (uint shootID: restored_shootIDs) {
+        const std::shared_ptr<Shoot> &shoot = plantarchitecture.getPlantShoot(restored_plantID, shootID);
+
+        // A shoot whose tube was never built or was pruned away carries the sentinel object ID.
+        if (!context.doesObjectExist(shoot->internode_tube_objID)) {
+            continue;
+        }
+
+        const uint tube_node_count = context.getTubeObjectNodeCount(shoot->internode_tube_objID);
+        DOCTEST_CHECK(flatten(shoot->shoot_internode_vertices).size() == tube_node_count);
+        DOCTEST_CHECK(flatten(shoot->shoot_internode_radii).size() == tube_node_count);
+
+        // The convention itself, phytomer by phytomer.
+        DOCTEST_REQUIRE(shoot->shoot_internode_vertices.size() == shoot->phytomers.size());
+        DOCTEST_REQUIRE(!shoot->shoot_internode_vertices.front().empty());
+        const size_t segments_per_phytomer = shoot->shoot_internode_vertices.front().size() - 1;
+        DOCTEST_CHECK(segments_per_phytomer >= 1);
+        for (size_t p = 1; p < shoot->shoot_internode_vertices.size(); p++) {
+            DOCTEST_CHECK(shoot->shoot_internode_vertices.at(p).size() == segments_per_phytomer);
+            DOCTEST_CHECK(shoot->shoot_internode_radii.at(p).size() == segments_per_phytomer);
+
+            // The shared node must be absent: this phytomer's first node must not duplicate the
+            // previous phytomer's last node. This is the most direct statement of the bug, and it
+            // does not depend on the Tube object at all.
+            DOCTEST_CHECK(shoot->shoot_internode_vertices.at(p).front() != shoot->shoot_internode_vertices.at(p - 1).back());
+        }
+
+        // The Context tube geometry must already agree with the restored vertices, not just after the
+        // first growth step -- readPlantStructureXML() syncs it via updateShootNodes().
+        const std::vector<vec3> tube_nodes = context.getTubeObjectNodes(shoot->internode_tube_objID);
+        const std::vector<vec3> flat_nodes = flatten(shoot->shoot_internode_vertices);
+        DOCTEST_REQUIRE(tube_nodes.size() == flat_nodes.size());
+        for (size_t i = 0; i < tube_nodes.size(); i++) {
+            DOCTEST_CHECK(tube_nodes.at(i).x == doctest::Approx(flat_nodes.at(i).x).epsilon(1e-4));
+            DOCTEST_CHECK(tube_nodes.at(i).y == doctest::Approx(flat_nodes.at(i).y).epsilon(1e-4));
+            DOCTEST_CHECK(tube_nodes.at(i).z == doctest::Approx(flat_nodes.at(i).z).epsilon(1e-4));
+        }
+
+        shoots_checked++;
+    }
+    // Guard against a vacuous pass if every tube happened to be absent.
+    DOCTEST_REQUIRE(shoots_checked > 0);
+
+    // Sampled before any growth -- see the note further below on why post-growth leaf area is not a
+    // valid observable for a restored plant.
+    const float restored_leaf_area_at_load = plantarchitecture.sumPlantLeafArea(restored_plantID);
+
+    // Growing a restored plant must work, and repeated steps must stay stable. On the buggy code the
+    // first call threw "ERROR (Tube::setTubeRadii): Number of radii in input vector must match
+    // number of tube nodes."
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(restored_plantID, 5));
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(restored_plantID, 5));
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(restored_plantID, 5));
+
+    // The invariant must still hold after growth: new phytomers are appended under the same
+    // convention, so the counts stay locked to the tube.
+    for (uint shootID: plantarchitecture.getAllShootIDs(restored_plantID)) {
+        const std::shared_ptr<Shoot> &shoot = plantarchitecture.getPlantShoot(restored_plantID, shootID);
+        if (!context.doesObjectExist(shoot->internode_tube_objID)) {
+            continue;
+        }
+        const uint tube_node_count = context.getTubeObjectNodeCount(shoot->internode_tube_objID);
+        DOCTEST_CHECK(flatten(shoot->shoot_internode_vertices).size() == tube_node_count);
+        DOCTEST_CHECK(flatten(shoot->shoot_internode_radii).size() == tube_node_count);
+    }
+
+    // Weak structural equivalence only. Exact geometric equality between "build then grow" and
+    // "save, reload, then grow" is NOT achievable and is deliberately not asserted here:
+    //   - the reconstruction skips collision avoidance and attraction on purpose;
+    //   - restore recreates phytomers through addBaseStemShoot()/appendPhytomerToShoot(), which draw
+    //     and resample random parameters, so the RNG stream position diverges from a fresh build;
+    //   - shoot->gravitropic_curvature is not part of the XML schema, so it is resampled from the
+    //     library distribution.
+    // Tightening these into a geometric equality check would make the test flaky. Note also that
+    // total shoot length is a confounded observable: the duplicated node produced a zero-length
+    // segment, which contributes 0 to getInternodeLength(), so length was identical under both
+    // layouts. Node counts, asserted above, are the observable that actually distinguishes them.
+    DOCTEST_CHECK(plantarchitecture.getAllShootIDs(restored_plantID).size() >= built_shoot_count);
+
+    // Leaf area is checked at restore time, BEFORE growth, and must match the saved plant closely --
+    // leaves are reconstructed from saved parameters, so this is a real fidelity check on the restore.
+    //
+    // It is deliberately NOT checked after advanceTime(). Phenological thresholds are not part of the
+    // XML schema: setPlantPhenologicalThresholds() is called by the library plant builders (e.g.
+    // buildBeanPlant), never by readPlantStructureXML(), so a restored plant keeps the PlantInstance
+    // defaults, where dd_to_dormancy_break + dd_to_dormancy == 0. The dormancy check in advanceTime()
+    // is therefore satisfied on the very first step, which calls makeDormant() and harvestPlant() and
+    // drops every leaf. That is a separate pre-existing gap in the XML schema, independent of the
+    // internode node-count bug this test covers, and asserting post-growth leaf area here would
+    // conflate the two.
+    DOCTEST_CHECK(restored_leaf_area_at_load > 0.f);
+    DOCTEST_CHECK(std::isfinite(restored_leaf_area_at_load));
+    DOCTEST_CHECK(restored_leaf_area_at_load == doctest::Approx(built_leaf_area).epsilon(0.25));
+
+    // No NaN anywhere in the restored geometry. The buggy layout drove
+    // Phytomer::setInternodeLengthScaleFraction() into a divide-by-zero that wrote NaN into every
+    // downstream vertex, so this guards the silent-corruption failure mode as well as the throw.
+    for (uint shootID: plantarchitecture.getAllShootIDs(restored_plantID)) {
+        const std::shared_ptr<Shoot> &shoot = plantarchitecture.getPlantShoot(restored_plantID, shootID);
+        for (const std::vector<vec3> &phytomer_nodes: shoot->shoot_internode_vertices) {
+            for (const vec3 &node: phytomer_nodes) {
+                DOCTEST_CHECK(std::isfinite(node.x));
+                DOCTEST_CHECK(std::isfinite(node.y));
+                DOCTEST_CHECK(std::isfinite(node.z));
+            }
+        }
+    }
+
     std::remove(xml_filename.c_str());
 }
 

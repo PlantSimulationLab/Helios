@@ -166,6 +166,7 @@ namespace helios {
         using helios::RadiationModelTestHelper;                                                             \
         using helios::TestVulkanDeviceManager;                                                              \
         if (!RadiationModelTestHelper::isGPUAvailable()) {                                                  \
+            helios::requireGPUOrFail("Test case '" name "' needs a GPU backend and would have skipped.");   \
             DOCTEST_MESSAGE("SKIPPED: No GPU/Vulkan device available");                                     \
             return;                                                                                         \
         }                                                                                                   \

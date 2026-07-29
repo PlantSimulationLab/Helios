@@ -7,3 +7,5 @@ samples/*/build/*
 samples/*/output/*
 projects/*
 plugins/*/build/*
+# Throwaway --project-dir builds used when debugging tests
+utilities/.scratch/

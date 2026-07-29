@@ -1024,34 +1024,10 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     }
                 }
 
-                // Read internode vertices if available (optional for backward compatibility - values are ignored, geometry reconstructed from parameters)
-                std::vector<vec3> internode_vertices;
-                node_string = "internode_vertices";
-                if (internode.child(node_string.c_str())) {
-                    std::string vertices_str = internode.child_value(node_string.c_str());
-                    std::istringstream verts_stream(vertices_str);
-                    std::string vertex_str;
-                    while (std::getline(verts_stream, vertex_str, ';')) {
-                        std::istringstream vertex_coords(vertex_str);
-                        float x, y, z;
-                        if (vertex_coords >> x >> y >> z) {
-                            internode_vertices.push_back(make_vec3(x, y, z));
-                        }
-                    }
-                }
-
-                // Read internode radii if available (optional for backward compatibility - values are ignored, geometry reconstructed from parameters)
-                std::vector<float> internode_radii;
-                node_string = "internode_radii";
-                if (internode.child(node_string.c_str())) {
-                    std::string radii_str = internode.child_value(node_string.c_str());
-                    std::istringstream radii_stream(radii_str);
-                    std::string radius_str;
-                    while (std::getline(radii_stream, radius_str, ';')) {
-                        float radius = std::stof(radius_str);
-                        internode_radii.push_back(radius);
-                    }
-                }
+                // Note: <internode_vertices> and <internode_radii> are neither written nor read. Internode
+                // geometry is reconstructed from the saved parameters (length, radius, pitch,
+                // phyllotactic_angle, length_max, length_segments) plus the saved stochastic state
+                // (curvature_perturbations, yaw_perturbations) further below.
 
                 float petiole_length;
                 float petiole_radius;
@@ -1330,6 +1306,11 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
 
                 shoot_parameters.phytomer_parameters.internode.pitch = internode_pitch;
                 shoot_parameters.phytomer_parameters.internode.phyllotactic_angle = internode_phyllotactic_angle;
+                // The reconstruction loop below builds internode_length_segments+1 vertices, and the internode
+                // Tube is sized from phytomer_parameters.internode.length_segments. Both must use the saved
+                // value or the flattened node array and the Tube disagree. This copy covers the
+                // appendPhytomerToShoot() path, which honors the parameters passed by the caller.
+                shoot_parameters.phytomer_parameters.internode.length_segments = internode_length_segments;
 
                 shoot_parameters.phytomer_parameters.petiole.length = petiole_length;
                 shoot_parameters.phytomer_parameters.petiole.radius = petiole_radius;
@@ -1344,6 +1325,13 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 shoot_parameters.phytomer_parameters.leaf.leaflet_offset = leaflet_offset;
 
                 if (base_shoot) {
+
+                    // addBaseStemShoot()/addChildShoot() re-read the shoot type from shoot_types_snapshot and
+                    // ignore the locally-modified shoot_parameters above, so the saved segment count has to be
+                    // written into the snapshot for the first phytomer of each shoot. Otherwise that phytomer's
+                    // Tube is built with the library's length_segments while the reconstruction below uses the
+                    // XML's, and the two disagree.
+                    plant_instances.at(plantID).shoot_types_snapshot.at(shoot_type_label).phytomer_parameters.internode.length_segments = internode_length_segments;
 
                     if (parent_shoot_ID < 0) { // this is the first shoot of the plant
                         current_shoot_ID = addBaseStemShoot(plantID, 1, base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, shoot_type_label);
@@ -1364,6 +1352,9 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 // Restore internode properties from saved values
                 phytomer_ptr->internode_pitch = deg2rad(internode_pitch);
                 phytomer_ptr->internode_phyllotactic_angle = deg2rad(internode_phyllotactic_angle);
+                // The creation calls above pass internode_length as the max length, so restore the saved
+                // maximum here; it sets the elongation target used by subsequent growth.
+                phytomer_ptr->internode_length_max = internode_length_max;
 
                 // Get shoot pointer for internode geometry restoration
                 auto shoot_ptr = plant_instances.at(plantID).shoot_tree.at(current_shoot_ID);
@@ -1440,86 +1431,100 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     out_shoot_bending_axis = shoot_bending_axis;
                 };
 
+                // internode_length_segments defaults to 1 when the tag is absent, so a zero here means a
+                // malformed file. Reject it rather than dividing by zero below.
+                if (internode_length_segments == 0) {
+                    helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): <internode_length_segments> is zero for a phytomer on shoot " + std::to_string(shootID) +
+                                         ". An internode must have at least one length segment.");
+                }
+
                 // Reconstruct internode geometry from parameters
-                if (internode_length_segments > 0) {
-                    // Step 1: Compute base position
-                    helios::vec3 internode_base;
-                    if (phytomer_index_in_shoot == 0) {
-                        // First phytomer in this shoot
-                        if (shoot_ptr->parent_shoot_ID < 0) {
-                            // Base shoot: use plant base position from plant instance
-                            internode_base = plant_instances.at(plantID).base_position;
-                        } else {
-                            // Child shoot: get base from SAVED parent internode tip (petioles not reconstructed yet)
-                            // Note: Cannot use parent petiole tip because petioles are reconstructed later in the loop
-                            int parent_shoot_id = shoot_ptr->parent_shoot_ID;
-                            uint parent_node_index = shoot_ptr->parent_node_index;
-                            auto &parent_shoot = plant_instances.at(plantID).shoot_tree.at(parent_shoot_id);
-
-                            // Use the saved internode tip from the parent phytomer
-                            internode_base = parent_shoot->shoot_internode_vertices.at(parent_node_index).back();
-                        }
+                // Step 1: Compute base position
+                helios::vec3 internode_base;
+                if (phytomer_index_in_shoot == 0) {
+                    // First phytomer in this shoot
+                    if (shoot_ptr->parent_shoot_ID < 0) {
+                        // Base shoot: use plant base position from plant instance
+                        internode_base = plant_instances.at(plantID).base_position;
                     } else {
-                        // Subsequent phytomers: use previous phytomer's tip
-                        internode_base = shoot_ptr->shoot_internode_vertices[phytomer_index_in_shoot - 1].back();
+                        // Child shoot: get base from SAVED parent internode tip (petioles not reconstructed yet)
+                        // Note: Cannot use parent petiole tip because petioles are reconstructed later in the loop
+                        int parent_shoot_id = shoot_ptr->parent_shoot_ID;
+                        uint parent_node_index = shoot_ptr->parent_node_index;
+                        auto &parent_shoot = plant_instances.at(plantID).shoot_tree.at(parent_shoot_id);
+
+                        // Use the saved internode tip from the parent phytomer
+                        internode_base = parent_shoot->shoot_internode_vertices.at(parent_node_index).back();
                     }
+                } else {
+                    // Subsequent phytomers: use previous phytomer's tip
+                    internode_base = shoot_ptr->shoot_internode_vertices[phytomer_index_in_shoot - 1].back();
+                }
 
-                    // Step 2: Recompute orientation vectors from parent context
-                    helios::vec3 internode_axis_initial;
-                    helios::vec3 petiole_rotation_axis;
-                    helios::vec3 shoot_bending_axis;
+                // Step 2: Recompute orientation vectors from parent context
+                helios::vec3 internode_axis_initial;
+                helios::vec3 petiole_rotation_axis;
+                helios::vec3 shoot_bending_axis;
 
-                    recomputeInternodeOrientationVectors_local(phytomer_ptr, phytomer_index_in_shoot, deg2rad(internode_pitch), deg2rad(internode_phyllotactic_angle), internode_axis_initial, petiole_rotation_axis, shoot_bending_axis);
+                recomputeInternodeOrientationVectors_local(phytomer_ptr, phytomer_index_in_shoot, deg2rad(internode_pitch), deg2rad(internode_phyllotactic_angle), internode_axis_initial, petiole_rotation_axis, shoot_bending_axis);
 
-                    // Step 3: Reconstruct geometry segment-by-segment
-                    std::vector<helios::vec3> reconstructed_vertices(internode_length_segments + 1);
-                    std::vector<float> reconstructed_radii(internode_length_segments + 1);
+                // Step 3: Reconstruct geometry segment-by-segment
+                std::vector<helios::vec3> reconstructed_vertices(internode_length_segments + 1);
+                std::vector<float> reconstructed_radii(internode_length_segments + 1);
 
-                    reconstructed_vertices[0] = internode_base;
-                    reconstructed_radii[0] = internode_radius;
+                reconstructed_vertices[0] = internode_base;
+                reconstructed_radii[0] = internode_radius;
 
-                    float dr = internode_length / float(internode_length_segments);
-                    float dr_max = internode_length_max / float(internode_length_segments);
+                float dr = internode_length / float(internode_length_segments);
+                float dr_max = internode_length_max / float(internode_length_segments);
 
-                    helios::vec3 internode_axis = internode_axis_initial;
+                helios::vec3 internode_axis = internode_axis_initial;
 
-                    for (int i = 1; i <= internode_length_segments; i++) {
-                        // Apply gravitropic curvature + SAVED perturbations
-                        if (phytomer_index_in_shoot > 0 && !curvature_perturbations.empty()) {
-                            // Compute curvature factor (lines 1633-1636 in PlantArchitecture.cpp)
-                            float current_curvature_fact = 0.5f - internode_axis.z / 2.0f;
-                            if (internode_axis.z < 0) {
-                                current_curvature_fact *= 2.0f;
-                            }
-
-                            // Get gravitropic curvature from shoot
-                            float gravitropic_curvature = shoot_ptr->gravitropic_curvature;
-
-                            // Apply curvature with SAVED perturbation (matches line 1646-1647)
-                            float curvature_angle = deg2rad(gravitropic_curvature * current_curvature_fact * dr_max + curvature_perturbations[i - 1]);
-                            internode_axis = rotatePointAboutLine(internode_axis, nullorigin, shoot_bending_axis, curvature_angle);
-
-                            // Apply yaw perturbation if available (matches line 1651-1652)
-                            if (!yaw_perturbations.empty() && (i - 1) < yaw_perturbations.size()) {
-                                float yaw_angle = deg2rad(yaw_perturbations[i - 1]);
-                                internode_axis = rotatePointAboutLine(internode_axis, nullorigin, make_vec3(0, 0, 1), yaw_angle);
-                            }
+                for (int i = 1; i <= internode_length_segments; i++) {
+                    // Apply gravitropic curvature + SAVED perturbations
+                    if (phytomer_index_in_shoot > 0 && !curvature_perturbations.empty()) {
+                        // Compute curvature factor (lines 1633-1636 in PlantArchitecture.cpp)
+                        float current_curvature_fact = 0.5f - internode_axis.z / 2.0f;
+                        if (internode_axis.z < 0) {
+                            current_curvature_fact *= 2.0f;
                         }
 
-                        // NOTE: Skip collision avoidance and attraction (environment-dependent, lines 1655-1693)
+                        // Get gravitropic curvature from shoot
+                        float gravitropic_curvature = shoot_ptr->gravitropic_curvature;
 
-                        // Position next vertex
-                        reconstructed_vertices[i] = reconstructed_vertices[i - 1] + dr * internode_axis;
-                        reconstructed_radii[i] = internode_radius;
+                        // Apply curvature with SAVED perturbation (matches line 1646-1647)
+                        float curvature_angle = deg2rad(gravitropic_curvature * current_curvature_fact * dr_max + curvature_perturbations[i - 1]);
+                        internode_axis = rotatePointAboutLine(internode_axis, nullorigin, shoot_bending_axis, curvature_angle);
+
+                        // Apply yaw perturbation if available (matches line 1651-1652)
+                        if (!yaw_perturbations.empty() && (i - 1) < yaw_perturbations.size()) {
+                            float yaw_angle = deg2rad(yaw_perturbations[i - 1]);
+                            internode_axis = rotatePointAboutLine(internode_axis, nullorigin, make_vec3(0, 0, 1), yaw_angle);
+                        }
                     }
 
-                    // Use reconstructed geometry
+                    // NOTE: Skip collision avoidance and attraction (environment-dependent, lines 1655-1693)
+
+                    // Position next vertex
+                    reconstructed_vertices[i] = reconstructed_vertices[i - 1] + dr * internode_axis;
+                    reconstructed_radii[i] = internode_radius;
+                }
+
+                // Store the reconstructed geometry using the shoot's vertex-sharing convention: the first
+                // phytomer on a shoot stores all Ndiv+1 nodes, while every later phytomer omits its node 0
+                // because that node is the previous phytomer's last node. This must mirror the
+                // "if (shoot_index.x == 0)" branch in the Phytomer constructor exactly -- the internode Tube
+                // was built by the growth API with (Ndiv+1) + (P-1)*Ndiv nodes, and Shoot::updateShootNodes()
+                // pushes flatten(shoot_internode_vertices) straight into it, so storing Ndiv+1 nodes for every
+                // phytomer makes the flattened array P-1 nodes too long and the next setTubeRadii() throws.
+                // Consumers that walk these vectors (Phytomer::getInternodeNodePositions(),
+                // Phytomer::setInternodeLengthScaleFraction()) likewise assume the shared node is absent.
+                if (phytomer_index_in_shoot == 0) {
                     shoot_ptr->shoot_internode_vertices[phytomer_index_in_shoot] = reconstructed_vertices;
                     shoot_ptr->shoot_internode_radii[phytomer_index_in_shoot] = reconstructed_radii;
-                } else if (!internode_vertices.empty() && !internode_radii.empty()) {
-                    // Fallback: use saved geometry if no reconstruction parameters available (backward compatibility)
-                    shoot_ptr->shoot_internode_vertices[phytomer_index_in_shoot] = internode_vertices;
-                    shoot_ptr->shoot_internode_radii[phytomer_index_in_shoot] = internode_radii;
+                } else {
+                    shoot_ptr->shoot_internode_vertices[phytomer_index_in_shoot].assign(reconstructed_vertices.begin() + 1, reconstructed_vertices.end());
+                    shoot_ptr->shoot_internode_radii[phytomer_index_in_shoot].assign(reconstructed_radii.begin() + 1, reconstructed_radii.end());
                 }
 
                 // Helper function to recompute petiole orientation vectors from parent phytomer context
@@ -2479,6 +2484,17 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
             } // phytomers
 
         } // shoots
+
+        // Push the reconstructed internode geometry into the Context. The shoots and phytomers above were
+        // created through the normal growth API, so each internode Tube currently holds the geometry that the
+        // Phytomer constructor built from the library parameters, not the geometry reconstructed from the XML.
+        // Without this sync a restored plant renders the wrong shape until the first advanceTime(). This is
+        // only safe because the reconstruction now honors the vertex-sharing convention, so the flattened node
+        // count matches the Tube. updateShootNodes() recurses through childIDs, so one call on the base shoot
+        // covers the whole shoot tree.
+        if (!plant_instances.at(plantID).shoot_tree.empty()) {
+            plant_instances.at(plantID).shoot_tree.front()->updateShootNodes(true);
+        }
 
     } // plant instances
 

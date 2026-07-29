@@ -441,6 +441,9 @@ Time Context::getTime() const {
 }
 
 void Context::setLocation(const helios::Location &location) {
+    // Re-validated here rather than trusted from construction: Location's fields are public, so a
+    // caller can mutate a member of an already-valid Location and hand it straight back to us.
+    location.validate("Context::setLocation");
     sim_location = location;
 }
 
@@ -4520,7 +4523,7 @@ void Context::getObjectBoundingBox(uint ObjID, vec3 &min_corner, vec3 &max_corne
 }
 
 void Context::getObjectBoundingBox(const std::vector<uint> &ObjIDs, vec3 &min_corner, vec3 &max_corner) const {
-    uint o = 0;
+    bool seeded = false;
     for (uint ObjID: ObjIDs) {
         if (objects.find(ObjID) == objects.end()) {
             helios_runtime_error("ERROR (Context::getObjectBoundingBox): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
@@ -4528,15 +4531,21 @@ void Context::getObjectBoundingBox(const std::vector<uint> &ObjIDs, vec3 &min_co
 
         const std::vector<uint> &UUIDs = objects.at(ObjID)->getPrimitiveUUIDs();
 
-        uint p = 0;
         for (const uint UUID: UUIDs) {
             const std::vector<vec3> &vertices = getPrimitiveVertices(UUID);
 
-            if (p == 0 && o == 0) {
+            if (vertices.empty()) {
+                continue;
+            }
+
+            // Seed the box from the first vertex encountered anywhere in the set, then fall
+            // through so that vertex's siblings are still compared against it. Seeding must not
+            // skip the rest of its own primitive: doing so left a single-primitive object
+            // reporting min == max == its first vertex.
+            if (!seeded) {
                 min_corner = vertices.front();
                 max_corner = min_corner;
-                p++;
-                continue;
+                seeded = true;
             }
 
             for (const vec3 &vert: vertices) {
@@ -4560,8 +4569,10 @@ void Context::getObjectBoundingBox(const std::vector<uint> &ObjIDs, vec3 &min_co
                 }
             }
         }
+    }
 
-        o++;
+    if (!seeded) {
+        helios_runtime_error("ERROR (Context::getObjectBoundingBox): None of the given objects contain any primitives, so a bounding box is undefined.");
     }
 }
 

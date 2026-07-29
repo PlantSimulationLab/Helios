@@ -333,9 +333,31 @@ namespace helios {
      * constructing or initializing a full backend. Suitable for use in availability
      * checks where creating a full backend would be wasteful.
      *
+     * Each backend's probe() caches its own result process-wide, so repeated calls
+     * do not re-enter the GPU driver.
+     *
      * @return true if at least one compiled-in backend's probe() succeeds
      */
     bool probeAnyGPUBackend() noexcept;
+
+    /**
+     * @brief Check whether GPU backends have been vetoed by the HELIOS_NO_GPU environment variable
+     *
+     * Returns true when HELIOS_NO_GPU is set to any value other than "0". Every backend's
+     * probe() honors this veto, so setting the variable makes a GPU-equipped machine behave
+     * exactly like one with no compatible hardware: probeAnyGPUBackend() returns false and
+     * RayTracingBackend::create("auto") throws. Explicitly requesting a backend by name
+     * (e.g. create("vulkan_compute")) bypasses the veto.
+     *
+     * The environment is read once and the result cached for the lifetime of the process.
+     *
+     * @return true if GPU backend probing is disabled by the environment
+     */
+    bool gpuBackendsDisabledByEnvironment();
+
+    // The counterpart to the veto above - helios::requireGPUOrFail(), which turns a would-be
+    // GPU test skip into a failure when HELIOS_REQUIRE_GPU is set - lives in core/global.h so
+    // that every GPU-using plugin can reach it, not just the radiation backend layer.
 
 } // namespace helios
 

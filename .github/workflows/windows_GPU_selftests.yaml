@@ -85,11 +85,31 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
 
+      # See the equivalent step in linux_GPU_selftests.yaml: every GPU test skips gracefully
+      # when no device is found, so a runner with a dead driver would report a green build
+      # having tested nothing. Runs before the build so the failure is reported in seconds.
+      - name: Verify GPU is present and usable
+        shell: bash
+        run: |
+          if ! command -v nvidia-smi >/dev/null 2>&1; then
+            echo "ERROR: nvidia-smi not found on a runner dedicated to GPU testing."
+            echo "The NVIDIA driver is not installed, or is not on PATH."
+            exit 1
+          fi
+          if ! nvidia-smi; then
+            echo "ERROR: nvidia-smi failed, so no usable NVIDIA device is present."
+            echo "The CUDA toolkit can still compile in this state, which is why the build"
+            echo "would otherwise succeed and every GPU test would silently skip."
+            exit 1
+          fi
+
       - name: Bash script
         shell: bash
         run: |
           cd utilities
-          if ! ./run_tests.sh --visbuildonly --log-file ../windows_GPU_selftests.log; then
+          # --requiregpu turns a would-be GPU test skip into a failure, proving Helios can
+          # actually use the device rather than merely that a driver is installed.
+          if ! ./run_tests.sh --visbuildonly --requiregpu --log-file ../windows_GPU_selftests.log; then
             echo "==== run_tests.sh failed; dumping windows_GPU_selftests.log ===="
             cat ../windows_GPU_selftests.log
             exit 1

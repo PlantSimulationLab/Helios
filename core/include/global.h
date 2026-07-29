@@ -101,6 +101,34 @@ namespace helios {
      */
     void helios_runtime_error(const std::string &error_message);
 
+    //! Check whether a GPU is required by the HELIOS_REQUIRE_GPU environment variable
+    /**
+     * Returns true when HELIOS_REQUIRE_GPU is set to any value other than "0". This is the
+     * counterpart to the HELIOS_NO_GPU veto: rather than changing what hardware probes report,
+     * it changes what a *test* does when no GPU is found. Tests that normally skip on a machine
+     * with no usable device must instead fail, so that a CI runner whose entire purpose is
+     * exercising GPU code cannot report success after silently skipping every GPU test.
+     *
+     * Set it only on runners dedicated to GPU coverage; leave it unset everywhere else, so
+     * developer machines and non-GPU CI runners keep skipping as before.
+     *
+     * The environment is read on every call rather than cached, so a process can observe a
+     * change made with setenv().
+     *
+     * \return true if a usable GPU is mandatory for this process.
+     */
+    bool gpuRequiredByEnvironment();
+
+    //! Fail if HELIOS_REQUIRE_GPU is set but no usable GPU was found
+    /**
+     * Call at the point a test would otherwise skip for lack of a GPU. Does nothing unless
+     * HELIOS_REQUIRE_GPU is set. Setting both HELIOS_REQUIRE_GPU and HELIOS_NO_GPU is
+     * contradictory and is reported as such rather than letting one silently win.
+     *
+     * \param[in] context_message Description of what was about to be skipped, included in the error.
+     */
+    void requireGPUOrFail(const std::string &context_message);
+
     //--------------------- HELPER FUNCTIONS -----------------------------------//
 
     //! Construct a rotation matrix to perform rotation about the x-, y-, or z-axis.
