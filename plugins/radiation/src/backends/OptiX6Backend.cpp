@@ -841,6 +841,16 @@ void OptiX6Backend::zeroRadiationBuffers(size_t launch_band_count) {
         helios_runtime_error("ERROR (OptiX6Backend::zeroRadiationBuffers): launch_band_count (" + std::to_string(launch_band_count) + ") exceeds current_band_count (" + std::to_string(current_band_count) + ").");
     }
 
+    // Reset camera launch ID so camera pixel buffers get re-zeroed in launchCameraRays().
+    //
+    // radiation_in_camera_RTbuffer accumulates across the tiles of one camera launch, so it is
+    // zeroed only when the camera ID or launch band count changes. Nothing else ever reset this
+    // latch, so a second runBand() rendering the SAME camera with the same bands matched the
+    // existing ID, skipped the zero, and traced on top of the previous image -- doubling it.
+    // Zeroing at the start of every runBand() is what OptiX8Backend already does; this is the
+    // OptiX 6.5 counterpart, which it never had.
+    current_camera_launch_id = UINT32_MAX;
+
     // Zero all radiation result buffers (use current_band_count for global accumulation)
     // Note: Bbox primitives don't accumulate radiation (they only wrap rays),
     // so buffers are sized for real primitives only

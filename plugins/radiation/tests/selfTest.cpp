@@ -5583,6 +5583,71 @@ GPU_TEST_CASE("RadiationModel - writeNormCameraImage for camera that does not ex
     DOCTEST_CHECK(captured_output.find("does not exist") != std::string::npos);
 }
 
+GPU_TEST_CASE("RadiationModel - camera radiance matches Stefan-Boltzmann and is stable across runBand calls") {
+    // Every other camera test here asserts on the SHAPE of the output -- that pixel data exists,
+    // that it has the right size, that no ERROR was printed. None compares a pixel value against
+    // a quantity known independently of Helios, so a camera that renders the correct image
+    // multiplied by a constant passes all of them. That gap let a factor-of-two error in the
+    // camera scatter path live from v1.3.64 to v1.3.79: runBand() uploaded the host camera-scatter
+    // accumulator (already holding each primitive's emitted flux) into the device buffer, which is
+    // a write-only atomicAdd target, and then added the download back on top of the base it
+    // already held. On OptiX 8 the first runBand() was accidentally correct -- the upload is
+    // guarded on a device pointer that nothing had allocated yet -- so only a SECOND render of the
+    // same camera doubled, and no self-test rendered one twice and compared. On OptiX 6.5 the
+    // buffers are allocated eagerly, so every render doubled.
+    //
+    // The scene is chosen so the correct answer is analytic rather than a recorded golden value:
+    // one isolated blackbody patch (emissivity 1, no other geometry, no sources) has no
+    // inter-primitive scattering, so a pinhole camera with manual exposure -- which bypasses the
+    // auto-exposure gain entirely -- must read exactly the Planck/Stefan-Boltzmann radiance
+    // sigma*T^4/pi on the pixels covering the patch.
+
+    Context context;
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+    context.setPrimitiveData(patch, "temperature", 350.f);
+    context.setPrimitiveData(patch, "emissivity_TH", 1.f);
+
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiationmodel.disableMessages();
+
+    radiationmodel.addRadiationBand("TH");
+    radiationmodel.enableEmission("TH");
+    radiationmodel.setScatteringDepth("TH", 1);
+    radiationmodel.setDiffuseRayCount("TH", 100);
+
+    CameraProperties camera_props;
+    camera_props.camera_resolution = make_int2(64, 64);
+    camera_props.HFOV = 30.f;
+    camera_props.lens_diameter = 0.f; // pinhole: everything in focus, no aperture weighting
+    camera_props.exposure = "manual"; // raw radiance, no auto-exposure gain
+
+    radiationmodel.addRadiationCamera("thermal_cam", {"TH"}, make_vec3(0, 0, 10), make_vec3(0, 0, 0), camera_props, 1);
+    radiationmodel.updateGeometry();
+
+    const float sigma = 5.670374419e-8f;
+    const float expected_radiance = sigma * powf(350.f, 4) / float(M_PI); // ~270.9 W/m^2/sr
+
+    // Three renders of the same camera with nothing changed in between. Run 1 pins the absolute
+    // value; runs 2 and 3 pin that re-rendering neither accumulates nor decays. Checking every
+    // run against the analytic value rather than against run 1 means a backend that doubled on
+    // EVERY run cannot pass by being consistently wrong.
+    for (uint run = 1; run <= 3; run++) {
+        radiationmodel.runBand("TH");
+
+        std::vector<float> pixels = radiationmodel.getCameraPixelData("thermal_cam", "TH");
+        DOCTEST_REQUIRE(pixels.size() == 64 * 64);
+
+        float max_radiance = 0.f;
+        for (float p: pixels) {
+            DOCTEST_REQUIRE(std::isfinite(p));
+            max_radiance = std::max(max_radiance, p);
+        }
+
+        DOCTEST_INFO("runBand() call " << run << " of 3 read max radiance " << max_radiance << " W/m^2/sr, expected " << expected_radiance << " (ratio " << max_radiance / expected_radiance << ")");
+        DOCTEST_CHECK(max_radiance == doctest::Approx(expected_radiance).epsilon(0.05));
+    }
+}
+
 GPU_TEST_CASE("RadiationModel - camera pixel data is discarded when resolution changes") {
     // Regression test: updateCameraParameters() overwrote camera.resolution without resizing
     // or clearing pixel_data, so a render -> change-resolution -> write sequence left pixel
