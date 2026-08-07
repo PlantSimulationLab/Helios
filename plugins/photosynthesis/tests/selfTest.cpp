@@ -1917,6 +1917,290 @@ DOCTEST_TEST_CASE("PhotosynthesisModel C4 Library - Unknown species raises error
 }
 
 
+// ---------------------------------------------------------------------------
+// Regression tests for issues found in the deep-dive review.
+// Each of these FAILS on the pre-fix code.
+// ---------------------------------------------------------------------------
+
+DOCTEST_TEST_CASE("PhotosynthesisModel Empirical temperature response is applied") {
+    // REGRESSION: the documented f_T term (Tmin/Topt/q/Tref) was declared and serialized
+    // but never used in the assimilation equation, so temperature entered only via Rd.
+    Context context_test;
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 200.f);
+
+    PhotosynthesisModel photomodel(&context_test);
+    photomodel.disableMessages();
+
+    EmpiricalModelCoefficients emp;
+    photomodel.setModelCoefficients(emp);
+
+    // Evaluate at the optimum and well beyond it. f_T peaks at Topt, so A must decline.
+    context_test.setPrimitiveData(UUID, "temperature", emp.Topt);
+    photomodel.run();
+    float A_at_opt;
+    context_test.getPrimitiveData(UUID, "net_photosynthesis", A_at_opt);
+
+    context_test.setPrimitiveData(UUID, "temperature", emp.Topt + 12.f);
+    photomodel.run();
+    float A_hot;
+    context_test.getPrimitiveData(UUID, "net_photosynthesis", A_hot);
+
+    // Assimilation at the optimum must exceed assimilation 12 K above it.
+    DOCTEST_CHECK(A_at_opt > A_hot);
+
+    // Changing Topt alone must change the answer at fixed leaf temperature.
+    context_test.setPrimitiveData(UUID, "temperature", 310.f);
+    photomodel.run();
+    float A_default_topt;
+    context_test.getPrimitiveData(UUID, "net_photosynthesis", A_default_topt);
+
+    EmpiricalModelCoefficients emp_shifted;
+    emp_shifted.Topt = 280.f;
+    photomodel.setModelCoefficients(emp_shifted);
+    photomodel.run();
+    float A_shifted_topt;
+    context_test.getPrimitiveData(UUID, "net_photosynthesis", A_shifted_topt);
+
+    DOCTEST_CHECK(std::abs(A_default_topt - A_shifted_topt) > 1e-4f);
+
+    // Below Tmin, assimilation is clamped off (gross assimilation zero, so A = -Rd < 0).
+    EmpiricalModelCoefficients emp_cold;
+    photomodel.setModelCoefficients(emp_cold);
+    context_test.setPrimitiveData(UUID, "temperature", emp_cold.Tmin - 5.f);
+    photomodel.run();
+    float A_cold;
+    context_test.getPrimitiveData(UUID, "net_photosynthesis", A_cold);
+    DOCTEST_CHECK(A_cold < 0.f);
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel Empirical invalid temperature coefficients throw below Tmin") {
+    // REGRESSION: the Tref>Tmin / non-degenerate-denominator validation sat *after* the `TL <= Tmin`
+    // early return, so an invalid coefficient set was only diagnosed on timesteps where the leaf
+    // happened to be warmer than Tmin. On a cold timestep the model silently returned a well-formed
+    // A = -Rd instead, hiding the misconfiguration for part of a diurnal/seasonal run. The coefficients
+    // are a property of the set, not of the current temperature, so the check must fire either way.
+    Context context_test;
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    PhotosynthesisModel photomodel(&context_test);
+    photomodel.disableMessages();
+    photomodel.setModelType_Empirical();
+
+    // Tref below Tmin -- e.g. Tref and Tmin accidentally swapped, or one entered in Celsius.
+    EmpiricalModelCoefficients bad_coeffs;
+    bad_coeffs.Tmin = 290.f;
+    bad_coeffs.Tref = 280.f;
+    photomodel.setModelCoefficients(bad_coeffs);
+
+    // Leaf at or below Tmin: the path that previously bypassed the check entirely.
+    context_test.setPrimitiveData(UUID, "temperature", bad_coeffs.Tmin - 5.f);
+    DOCTEST_CHECK_THROWS(photomodel.run());
+
+    // Above Tmin the same invalid set must of course still throw.
+    context_test.setPrimitiveData(UUID, "temperature", bad_coeffs.Tmin + 5.f);
+    DOCTEST_CHECK_THROWS(photomodel.run());
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel Farquhar material round-trip preserves TPU and theta") {
+    // REGRESSION: setModelCoefficients(material,...) serialized TPU_flag but not TPU itself,
+    // and never serialized theta. TPU silently reverted to the struct default (2.0) while
+    // TPU_flag stayed 1, and the non-rectangular light response silently became rectangular.
+    Context context_test;
+    context_test.addMaterial("fq_roundtrip_mat");
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context_test.assignMaterialToPrimitive(UUID, "fq_roundtrip_mat");
+
+    PhotosynthesisModel photomodel(&context_test);
+    photomodel.disableMessages();
+
+    FarquharModelCoefficients fq;
+    fq.setVcmax(74.5f, 76.1f);
+    fq.setJmax(180.2f, 23.0f);
+    fq.setRd(1.3f, 46.39f);
+    fq.setQuantumEfficiency_alpha(0.304f);
+    fq.setLightResponseCurvature_theta(0.601f);
+    fq.setTPU(7.7f, 24.0f);
+
+    photomodel.setModelCoefficients("fq_roundtrip_mat", fq);
+    FarquharModelCoefficients rt = photomodel.getFarquharModelCoefficients(UUID);
+
+    DOCTEST_CHECK(rt.TPU_flag == 1);
+    DOCTEST_CHECK(rt.getTPUTempResponse().value_at_25C == doctest::Approx(7.7f).epsilon(1e-4));
+    DOCTEST_CHECK(rt.getTPUTempResponse().dHa == doctest::Approx(24.0f).epsilon(1e-4));
+    DOCTEST_CHECK(rt.getLightResponseCurvatureTempResponse().value_at_25C == doctest::Approx(0.601f).epsilon(1e-4));
+    DOCTEST_CHECK(rt.getQuantumEfficiencyTempResponse().value_at_25C == doctest::Approx(0.304f).epsilon(1e-4));
+    DOCTEST_CHECK(rt.getVcmaxTempResponse().value_at_25C == doctest::Approx(74.5f).epsilon(1e-4));
+
+    // A material with TPU never set must round-trip with TPU limitation still disabled.
+    context_test.addMaterial("fq_notpu_mat");
+    uint UUID2 = context_test.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
+    context_test.assignMaterialToPrimitive(UUID2, "fq_notpu_mat");
+
+    FarquharModelCoefficients fq_notpu;
+    fq_notpu.setVcmax(100.f, 65.33f);
+    fq_notpu.setJmax(200.f, 46.36f);
+    fq_notpu.setRd(1.5f, 46.39f);
+    fq_notpu.setQuantumEfficiency_alpha(0.5f);
+    photomodel.setModelCoefficients("fq_notpu_mat", fq_notpu);
+
+    FarquharModelCoefficients rt2 = photomodel.getFarquharModelCoefficients(UUID2);
+    DOCTEST_CHECK(rt2.TPU_flag == 0);
+    DOCTEST_CHECK(rt2.getLightResponseCurvatureTempResponse().value_at_25C == doctest::Approx(0.f).epsilon(1e-6));
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel peaked temperature response rejects dHd <= dHa") {
+    // REGRESSION: respondToTemperature computed logf(dHd/dHa - 1), which is NaN when
+    // dHd <= dHa. The NaN propagated into net_photosynthesis with no error and no warning
+    // (the A == 0 convergence check is false for NaN).
+    DOCTEST_CHECK_THROWS_AS(PhotosyntheticTemperatureResponseParameters(100.f, 65.f, 30.f, 50.f), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(PhotosyntheticTemperatureResponseParameters(100.f, 65.f, 30.f, 65.f), std::runtime_error);
+
+    FarquharModelCoefficients fq;
+    DOCTEST_CHECK_THROWS_AS(fq.setVcmax(100.f, 65.f, 30.f, 50.f), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(fq.setJmax(200.f, 46.f, 30.f, 40.f), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(fq.setRd(1.5f, 46.f, 30.f, 46.f), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(fq.setTPU(7.7f, 24.f, 30.f, 20.f), std::runtime_error);
+
+    C4ModelCoefficients c4;
+    DOCTEST_CHECK_THROWS_AS(c4.setVpmax(200.f, 50.f, 30.f, 40.f), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(c4.setJmax(247.f, 77.9f, 43.f, 70.f), std::runtime_error);
+
+    // Valid peaked responses (dHd > dHa) must still be accepted and produce finite results.
+    DOCTEST_CHECK_NOTHROW(fq.setVcmax(100.f, 65.f, 30.f, 200.f));
+
+    Context context_test;
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 400.f);
+    context_test.setPrimitiveData(UUID, "temperature", 300.f);
+
+    PhotosynthesisModel photomodel(&context_test);
+    photomodel.disableMessages();
+    FarquharModelCoefficients good;
+    good.setVcmax(100.f, 65.f, 30.f, 650.f);
+    good.setJmax(200.f, 46.f);
+    good.setRd(1.5f, 46.39f);
+    good.setQuantumEfficiency_alpha(0.5f);
+    photomodel.setModelCoefficients(good);
+    photomodel.run();
+    float A;
+    context_test.getPrimitiveData(UUID, "net_photosynthesis", A);
+    DOCTEST_CHECK(std::isfinite(A));
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel Farquhar setters take precedence over legacy fields") {
+    // REGRESSION: evaluateCi_Farquhar gated on the legacy public scalars (Vcmax/Jmax/Rd/alpha)
+    // before consulting the temperature-response objects, so assigning the public field
+    // silently discarded a prior setter call AND switched to a different T-response equation.
+    Context context_test;
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 200.f);
+    context_test.setPrimitiveData(UUID, "temperature", 298.15f);
+
+    PhotosynthesisModel photomodel(&context_test);
+    photomodel.disableMessages();
+    photomodel.setCi(250.f, {UUID});
+
+    FarquharModelCoefficients baseline;
+    baseline.setVcmax(100.f);
+    baseline.setJmax(200.f);
+    baseline.setRd(1.5f);
+    baseline.setQuantumEfficiency_alpha(0.5f);
+    photomodel.setModelCoefficients(baseline);
+    photomodel.run();
+    float A_setter;
+    context_test.getPrimitiveData(UUID, "net_photosynthesis", A_setter);
+
+    // Calling the setter AFTER touching the legacy field must make the setter authoritative.
+    FarquharModelCoefficients overridden;
+    overridden.Vcmax = 50.f;
+    overridden.setVcmax(100.f);
+    overridden.setJmax(200.f);
+    overridden.setRd(1.5f);
+    overridden.setQuantumEfficiency_alpha(0.5f);
+    photomodel.setModelCoefficients(overridden);
+    photomodel.run();
+    float A_overridden;
+    context_test.getPrimitiveData(UUID, "net_photosynthesis", A_overridden);
+
+    DOCTEST_CHECK(A_overridden == doctest::Approx(A_setter).epsilon(1e-4));
+
+    // The setter must also clear the legacy sentinel so the two representations cannot diverge.
+    DOCTEST_CHECK(overridden.Vcmax < 0.f);
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel Farquhar library values match documentation") {
+    // REGRESSION: the documented species table diverged substantially from the shipped
+    // library values (e.g. Almond doc Vcmax25=72.6 vs code 105.9).
+    PhotosynthesisModel photomodel(nullptr);
+    photomodel.disableMessages();
+
+    struct LibExpect {
+        const char *species;
+        float Vcmax25;
+        float Jmax25;
+        float Rd25;
+        float alpha;
+    };
+
+    // Values as published in plugins/photosynthesis/doc/Photosynthesis.dox
+    const std::vector<LibExpect> expected{
+            {"Almond", 72.6f, 144.2f, 0.2f, 0.094f},
+            {"Walnut", 81.6f, 201.9f, 0.9f, 0.362f},
+            {"Pistachio", 101.8f, 223.f, 1.5f, 0.216f},
+            {"Apple", 101.08f, 167.03f, 3.00f, 0.432f},
+            {"Cherry", 75.65f, 129.06f, 2.12f, 0.404f},
+            {"Pear", 107.69f, 176.71f, 1.51f, 0.274f},
+            {"Prune", 75.88f, 129.41f, 1.65f, 0.402f},
+            {"Grape", 74.5f, 180.2f, 1.3f, 0.304f},
+            {"Olive", 75.9f, 170.4f, 1.9f, 0.398f},
+            {"Toyon", 52.8f, 142.4f, 0.8f, 0.29f},
+            {"Elderberry", 37.7f, 149.7f, 1.3f, 0.202f},
+            {"Maple", 96.4f, 168.f, 0.1f, 0.077f},
+            {"Redbud", 68.5f, 132.4f, 0.8f, 0.41f},
+    };
+
+    for (const auto &e: expected) {
+        FarquharModelCoefficients c = photomodel.getFarquharCoefficientsFromLibrary(e.species);
+        DOCTEST_INFO("species = " << e.species);
+        DOCTEST_CHECK(c.getVcmaxTempResponse().value_at_25C == doctest::Approx(e.Vcmax25).epsilon(1e-3));
+        DOCTEST_CHECK(c.getJmaxTempResponse().value_at_25C == doctest::Approx(e.Jmax25).epsilon(1e-3));
+        DOCTEST_CHECK(c.getRdTempResponse().value_at_25C == doctest::Approx(e.Rd25).epsilon(1e-3));
+        DOCTEST_CHECK(c.getQuantumEfficiencyTempResponse().value_at_25C == doctest::Approx(e.alpha).epsilon(1e-3));
+    }
+
+    // Species documented with a TPU column must actually enable TPU limitation.
+    for (const char *sp: {"Almond", "Walnut", "Pistachio"}) {
+        FarquharModelCoefficients c = photomodel.getFarquharCoefficientsFromLibrary(sp);
+        DOCTEST_INFO("species = " << sp);
+        DOCTEST_CHECK(c.TPU_flag == 1);
+    }
+
+    // Species with no TPU column in the docs must leave TPU limitation off.
+    for (const char *sp: {"Apple", "Cherry", "Pear", "Prune"}) {
+        FarquharModelCoefficients c = photomodel.getFarquharCoefficientsFromLibrary(sp);
+        DOCTEST_INFO("species = " << sp);
+        DOCTEST_CHECK(c.TPU_flag == 0);
+    }
+
+    // The bare "Pistachio" key must resolve to the female cultivar, not the male one.
+    FarquharModelCoefficients pist_default = photomodel.getFarquharCoefficientsFromLibrary("Pistachio");
+    FarquharModelCoefficients pist_female = photomodel.getFarquharCoefficientsFromLibrary("PistachioFemale");
+    FarquharModelCoefficients pist_male = photomodel.getFarquharCoefficientsFromLibrary("PistachioMale");
+
+    DOCTEST_CHECK(pist_default.getVcmaxTempResponse().value_at_25C == doctest::Approx(pist_female.getVcmaxTempResponse().value_at_25C).epsilon(1e-4));
+    DOCTEST_CHECK(pist_default.getJmaxTempResponse().value_at_25C == doctest::Approx(pist_female.getJmaxTempResponse().value_at_25C).epsilon(1e-4));
+    DOCTEST_CHECK(pist_default.TPU_flag == pist_female.TPU_flag);
+
+    // The male cultivar is a distinct, unpeaked fit with no TPU limitation.
+    DOCTEST_CHECK(pist_male.getVcmaxTempResponse().value_at_25C == doctest::Approx(154.17f).epsilon(1e-3));
+    DOCTEST_CHECK(pist_male.getJmaxTempResponse().value_at_25C == doctest::Approx(243.20f).epsilon(1e-3));
+    DOCTEST_CHECK(pist_male.getRdTempResponse().value_at_25C == doctest::Approx(2.05f).epsilon(1e-3));
+    DOCTEST_CHECK(pist_male.getQuantumEfficiencyTempResponse().value_at_25C == doctest::Approx(0.335f).epsilon(1e-3));
+    DOCTEST_CHECK(pist_male.TPU_flag == 0);
+    DOCTEST_CHECK(pist_male.getVcmaxTempResponse().value_at_25C != doctest::Approx(pist_female.getVcmaxTempResponse().value_at_25C).epsilon(1e-4));
+}
+
 int PhotosynthesisModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

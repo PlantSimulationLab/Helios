@@ -265,6 +265,13 @@ public:
      */
     void run(float dt);
 
+    //! Deleted overload to prevent run({UUID}) from silently binding to run(float dt)
+    /**
+     * A braced initializer containing a single integer would otherwise be converted to a float and interpreted as a timestep rather than as a list of UUIDs. Call run(std::vector<uint>{UUID}) to run a
+     * subset of primitives, or run(dt) to advance the dynamic model.
+     */
+    void run(std::initializer_list<uint>) = delete;
+
     //! Update the stomatal conductance for a subset of primitives in the context
     /**
      * \param[in] dt Time step to advance stomatal conductance (seconds)
@@ -342,7 +349,13 @@ private:
     static float evaluate_BBLmodel(float esurf, std::vector<float> &variables, const void *parameters);
     static float evaluate_MOPTmodel(float esurf, std::vector<float> &variables, const void *parameters);
     static float evaluate_BMFmodel(float esurf, std::vector<float> &variables, const void *parameters);
-    static float evaluate_BBmodel(float gs, std::vector<float> &variables, const void *parameters);
+    static float evaluate_BBmodel(float esurf, std::vector<float> &variables, const void *parameters);
+
+    //! Closed-form solution of the implicit Bailey guard-cell relation for a given surface vapor pressure deficit
+    static float evaluate_BBconductance(float Ds, float Psix, float i, float beta, const BBcoefficients &coeffs);
+
+    //! Verify that dynamic response time constants are finite and positive
+    static void validateDynamicTimeConstants(float tau_open, float tau_close);
 
     bool message_flag = true;
 

@@ -141,7 +141,7 @@
 
  \image html images/Sketch_RLevels.jpeg
 
- The general idea behind the tree geometries is by specifying parameters that define the growth pattern of recursive branching levels (see figure above).  The base structure of the tree is the trunk, which is the 0th recursive level.  Braches are considered "children" of their "parent", which in this case is the trunk.  The first branching level is dependent on the size and orientation of the trunk.  Further levels of recursion are created by generating branches that are children of the previous branching level.  Each branching level follows the same set of rules but has different parameters that define the way they grow.  The number of recursion levels is given by the parameter <b>Levels</b>.  Importantly, the last level of recursion always corresponds to leaves, which follows the same general rules as branches.  So setting Levels = 3 would give a trunk, two branching levels, plus leaves.
+ The general idea behind the tree geometries is by specifying parameters that define the growth pattern of recursive branching levels (see figure above).  The base structure of the tree is the trunk, which is the 0th recursive level.  Braches are considered "children" of their "parent", which in this case is the trunk.  The first branching level is dependent on the size and orientation of the trunk.  Further levels of recursion are created by generating branches that are children of the previous branching level.  Each branching level follows the same set of rules but has different parameters that define the way they grow.  The number of recursion levels is given by the parameter <b>Levels</b>.  Importantly, the last level of recursion always corresponds to leaves, which follows the same general rules as branches.  So setting Levels = 3 would give a trunk, two branching levels, plus leaves.  Because the leaves are placed at recursion level Levels, each of the per-level parameters below must be given Levels+1 values, and Levels must be between 1 and 3.  A tree definition that violates this, or that gives a value of <code>nCurveRes</code> less than 1 for any level, is rejected with an error when the library is loaded or when <code>setTreeParameters()</code> is called.
 
  Many parameter names are prepended with the letter "n", which indicates that these parameters vary with recursion level.  For example, the parameter <b>Scale</b> is a scaling factor applied to the whole tree, and thus it does not depend on the recursion level.  The parameter <b>nBraches</b> gives the maximum number of branches <b>for each recursion level</b> (note the "n" in the name), and therefore can have a different value for each recursion level.  Below, each recursion level will be referred to by replacing "n" by the level number (e.g., 0Branches, 1Branches, 2Branches, etc.).
 
@@ -207,11 +207,13 @@
 
   <center>\f$\sum\limits_{i=1}^N\,g_{L,i}\Delta \theta_L=1\f$</center>
 
-  If this condition is not met by the PDF input by the user, the program will ignore it and revert to the default behavior.
+  If this condition is not met by the PDF input by the user, an error will be thrown when the tree library XML file is loaded. The error message reports the value the given PDF integrates to, which can be used to normalize it by dividing each value by that number.
 
 As a simple example, imagine we had only one leaf with an inclination of \f$\theta_L=0.1\f$ rad. This leaf would fall in the first discrete bin of \f$g_L\f$, which would have a value of \f$1/\Delta \theta_L\f$ and all other bins would be zero.
 
 For a typical almond tree, the PDF for N=18 is tabulated below. Note that we have the capability to have leaves pointing upward from their base (\f$\theta_L<\pi/2\f$) or leaves pointiing downward from their base (\f$\theta_L>\pi/2\f$). For simplicity, the distribution below considers only upward-facing normals.
+
+\note The inclination is applied as a rotation of the leaf about its own axis, so a leaf placed at \f$\theta_L\f$ and one placed at \f$\pi-\theta_L\f$ have normals that differ only in sign. If the leaf inclination angle is subsequently measured from the primitive normal (e.g. as \f$\mathrm{acos}(|n_z|)\f$), the two are indistinguishable, and a measured distribution will therefore appear folded onto the range 0 to \f$\pi/2\f$. Specifying probability mass above \f$\pi/2\f$ still affects which way the leaf faces, but it cannot be recovered from the leaf normal alone.
 
   <center>
   <table>

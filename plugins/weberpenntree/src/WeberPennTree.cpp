@@ -240,9 +240,11 @@ uint WeberPennTree::buildTree(const char *treename, helios::vec3 origin, float s
 
                     float radius_parent = radius.at(i - 1) + base_position.z / length0 * (radius.at(i) - radius.at(i - 1));
 
-                    // float offset_child = parameters.BaseSize*length0+(i-2)*dlength0 + dlength0*float(s)/float(stems_per_segment-1);
-                    float base_nodes = floor(base_size * parameters.nCurveRes.at(0));
-                    float offset_child = (Zminus - base_size) * length0 + float(s + 0.5) / float(stems_per_segment - 1) * dlength0;
+                    // The fractional position of this stem within the current trunk segment must match the
+                    // one used for base_position above. Dividing by (stems_per_segment-1) instead is a
+                    // division by zero when a single stem is placed per segment, and the resulting
+                    // infinity is silently clamped to the base of the crown further down the recursion.
+                    float offset_child = (Zminus - base_size) * length0 + float(s + 0.5) / float(stems_per_segment) * dlength0;
 
                     phi_child += (parameters.nRotate.at(1) + getVariation(parameters.nRotateV.at(1))) * M_PI / 180.f;
 
@@ -304,8 +306,12 @@ void WeberPennTree::recursiveBranch(WeberPennTreeParameters parameters, uint n, 
 
     if (n < parameters.Levels) { // Branches
 
+        // validateTreeParameters() guarantees that every per-level array holds at least Levels+1
+        // entries, so this level must be indexable. Silently remapping the level here would hide an
+        // inconsistent parameter set and build a tree that does not match the requested parameters.
         if (n >= parameters.nCurveRes.size()) {
-            n = parameters.Levels - 1;
+            helios_runtime_error("ERROR (WeberPennTree::recursiveBranch): Recursion level " + std::to_string(n) + " of tree " + parameters.label + " is outside the range of the per-level parameter arrays, which hold " +
+                                 std::to_string(parameters.nCurveRes.size()) + " entries.");
         }
 
         // Vectors to be passed to "addTube()"
@@ -621,6 +627,8 @@ std::vector<uint> WeberPennTree::getTrunkUUIDs(const uint TreeID) {
         helios_runtime_error("ERROR (WeberPennTree::getTrunkUUIDs): Tree ID " + std::to_string(TreeID) + " does not exist.");
     }
 
+    context->cleanDeletedUUIDs(UUID_trunk.at(TreeID));
+
     return UUID_trunk.at(TreeID);
 }
 
@@ -629,6 +637,8 @@ std::vector<uint> WeberPennTree::getBranchUUIDs(const uint TreeID) {
     if (TreeID >= UUID_branch.size()) {
         helios_runtime_error("ERROR (WeberPennTree::getBranchUUIDs): Tree ID " + std::to_string(TreeID) + " does not exist.");
     }
+
+    context->cleanDeletedUUIDs(UUID_branch.at(TreeID));
 
     return UUID_branch.at(TreeID);
 }
@@ -639,14 +649,21 @@ std::vector<uint> WeberPennTree::getLeafUUIDs(const uint TreeID) {
         helios_runtime_error("ERROR (WeberPennTree::getLeafUUIDs): Tree ID " + std::to_string(TreeID) + " does not exist.");
     }
 
+    context->cleanDeletedUUIDs(UUID_leaf.at(TreeID));
+
     return UUID_leaf.at(TreeID);
 }
 
 std::vector<uint> WeberPennTree::getAllUUIDs(const uint TreeID) {
 
-    if (TreeID >= UUID_leaf.size()) {
+    // All three containers are indexed below, so each must be checked rather than just UUID_leaf.
+    if (TreeID >= UUID_trunk.size() || TreeID >= UUID_branch.size() || TreeID >= UUID_leaf.size()) {
         helios_runtime_error("ERROR (WeberPennTree::getAllUUIDs): Tree ID " + std::to_string(TreeID) + " does not exist.");
     }
+
+    context->cleanDeletedUUIDs(UUID_trunk.at(TreeID));
+    context->cleanDeletedUUIDs(UUID_branch.at(TreeID));
+    context->cleanDeletedUUIDs(UUID_leaf.at(TreeID));
 
     std::vector<uint> UUIDs;
     UUIDs.insert(UUIDs.end(), UUID_trunk.at(TreeID).begin(), UUID_trunk.at(TreeID).end());
@@ -683,6 +700,87 @@ void WeberPennTree::setLeafSubdivisions(const helios::int2 segs) {
     }
 }
 
+void WeberPennTree::validateTreeParameters(const WeberPennTreeParameters &parameters, const std::string &treename) const {
+
+    // The per-level parameter arrays are indexed by the recursion level. Levels 0 through Levels-1 are
+    // branch levels, and the leaf placement additionally indexes level Levels, so every array must hold
+    // at least Levels+1 entries.
+    const int max_levels = 3;
+    if (parameters.Levels < 1 || parameters.Levels > max_levels) {
+        helios_runtime_error("ERROR (WeberPennTree::validateTreeParameters): Levels for tree " + treename + " is " + std::to_string(parameters.Levels) + ", but it must be between 1 and " + std::to_string(max_levels) +
+                             ". Level 0 is the trunk and the leaves are placed at level Levels, so the per-level parameter arrays must hold Levels+1 entries.");
+    }
+
+    const uint required_size = parameters.Levels + 1;
+
+    // Each per-level array must be long enough to be indexed at every level that is recursed into.
+    auto check_array_size = [&](size_t array_size, const std::string &array_name) {
+        if (array_size < required_size) {
+            helios_runtime_error("ERROR (WeberPennTree::validateTreeParameters): " + array_name + " for tree " + treename + " has " + std::to_string(array_size) + " entries, but Levels is " + std::to_string(parameters.Levels) +
+                                 ", which requires at least " + std::to_string(required_size) + " entries.");
+        }
+    };
+
+    check_array_size(parameters.nSegSplits.size(), "nSegSplits");
+    check_array_size(parameters.nSplitAngle.size(), "nSplitAngle");
+    check_array_size(parameters.nSplitAngleV.size(), "nSplitAngleV");
+    check_array_size(parameters.nCurveRes.size(), "nCurveRes");
+    check_array_size(parameters.nCurve.size(), "nCurve");
+    check_array_size(parameters.nCurveV.size(), "nCurveV");
+    check_array_size(parameters.nCurveBack.size(), "nCurveBack");
+    check_array_size(parameters.nLength.size(), "nLength");
+    check_array_size(parameters.nLengthV.size(), "nLengthV");
+    check_array_size(parameters.nTaper.size(), "nTaper");
+    check_array_size(parameters.nDownAngle.size(), "nDownAngle");
+    check_array_size(parameters.nDownAngleV.size(), "nDownAngleV");
+    check_array_size(parameters.nRotate.size(), "nRotate");
+    check_array_size(parameters.nRotateV.size(), "nRotateV");
+    check_array_size(parameters.nBranches.size(), "nBranches");
+
+    // nCurveRes is the number of segments a branch is divided into, and is used as a divisor when
+    // computing the length of each segment. A value of zero yields a tree with no primitives at all.
+    for (int i = 0; i < parameters.Levels; i++) {
+        if (parameters.nCurveRes.at(i) < 1) {
+            helios_runtime_error("ERROR (WeberPennTree::validateTreeParameters): nCurveRes for level " + std::to_string(i) + " of tree " + treename + " is " + std::to_string(parameters.nCurveRes.at(i)) +
+                                 ", but it must be at least 1. nCurveRes is the number of segments each branch is divided into, and is used as a divisor when computing the segment length.");
+        }
+    }
+
+    // The overall size of the tree scales linearly with Scale and with nLength at level 0, and both
+    // are used as divisors elsewhere in the geometry routines.
+    if (parameters.Scale <= 0.f) {
+        helios_runtime_error("ERROR (WeberPennTree::validateTreeParameters): Scale for tree " + treename + " is " + std::to_string(parameters.Scale) + ", but it must be positive.");
+    }
+
+    if (parameters.nLength.at(0) <= 0.f) {
+        helios_runtime_error("ERROR (WeberPennTree::validateTreeParameters): nLength for level 0 of tree " + treename + " is " + std::to_string(parameters.nLength.at(0)) +
+                             ", but it must be positive because it sets the overall length of the trunk.");
+    }
+
+    // The number of branches cannot be negative, and Leaves is used to size the leaf population.
+    for (int i = 0; i < parameters.Levels; i++) {
+        if (parameters.nBranches.at(i) < 0) {
+            helios_runtime_error("ERROR (WeberPennTree::validateTreeParameters): nBranches for level " + std::to_string(i) + " of tree " + treename + " is " + std::to_string(parameters.nBranches.at(i)) + ", but it cannot be negative.");
+        }
+    }
+
+    // BaseSize is the fraction of the trunk that carries no branches, and appears as (1-BaseSize) in
+    // the denominator of the branch position ratio.
+    if (parameters.BaseSize < 0.f || parameters.BaseSize >= 1.f) {
+        helios_runtime_error("ERROR (WeberPennTree::validateTreeParameters): BaseSize for tree " + treename + " is " + std::to_string(parameters.BaseSize) +
+                             ", but it must be in the range [0,1). BaseSize is the fraction of the trunk length that carries no branches.");
+    }
+
+    // The leaf geometry is built from a tile object whose dimensions come from these two parameters.
+    if (parameters.LeafScale <= 0.f) {
+        helios_runtime_error("ERROR (WeberPennTree::validateTreeParameters): LeafScale for tree " + treename + " is " + std::to_string(parameters.LeafScale) + ", but it must be positive.");
+    }
+
+    if (parameters.LeafScaleX <= 0.f) {
+        helios_runtime_error("ERROR (WeberPennTree::validateTreeParameters): LeafScaleX for tree " + treename + " is " + std::to_string(parameters.LeafScaleX) + ", but it must be positive.");
+    }
+}
+
 WeberPennTreeParameters WeberPennTree::getTreeParameters(const char *treename) {
 
     if (trees_library.find(treename) == trees_library.end()) {
@@ -697,6 +795,9 @@ void WeberPennTree::setTreeParameters(const char *treename, const WeberPennTreeP
     if (trees_library.find(treename) == trees_library.end()) {
         helios_runtime_error("ERROR (WeberPennTree::setTreeParameters): Tree " + std::string(treename) + " does not exist in the tree library.");
     }
+
+    // Validate before storing, so that a rejected parameter set does not overwrite the existing entry.
+    validateTreeParameters(parameters, std::string(treename));
 
     trees_library.at(treename) = parameters;
 }
@@ -940,12 +1041,16 @@ void WeberPennTree::loadXML(const char *filename, bool silent) {
             params.Levels = atoi(levels_str);
         }
 
-        int endLevel;
-        if (params.Levels == 4) {
-            endLevel = 4;
-        } else {
-            endLevel = params.Levels + 1;
+        // The per-level arrays below are fixed at 4 entries, and the leaf placement indexes level
+        // Levels, so Levels+1 values are read for each parameter. Levels is checked here rather than
+        // only in validateTreeParameters() so that the parsing loops cannot run past the end of the
+        // arrays while reading the file.
+        if (params.Levels < 1 || params.Levels > 3) {
+            helios_runtime_error("ERROR (WeberPennTree::loadXML): Levels for tree " + std::string(label) + " is " + std::to_string(params.Levels) +
+                                 ", but it must be between 1 and 3. Level 0 is the trunk and the leaves are placed at level Levels, so Levels+1 values are read from each of the per-level parameter tags.");
         }
+
+        const int endLevel = params.Levels + 1;
 
 
         // * nSegSplits * //
@@ -1333,15 +1438,16 @@ void WeberPennTree::loadXML(const char *filename, bool silent) {
                 params.leafAngleCDF.at(i) = tsum;
             }
             if (fabs(tsum - 1.f) > 0.001) {
-                std::cout << "WARNING (WeberPennTree::loadXML): Leaf angle distribution for tree " << label << " does not sum to 1. Assuming isotropic." << std::endl;
-                std::cout << params.leafAngleCDF.back() << std::endl;
-                params.leafAngleCDF.resize(0);
-            } else {
-                params.leafAngleCDF.back() = 1.f;
+                helios_runtime_error("ERROR (WeberPennTree::loadXML): Leaf angle distribution for tree " + std::string(label) + " integrates to " + std::to_string(tsum) + ", but it must integrate to 1 to within 0.001. The values given in <LeafAngleDist> are probability densities for " + std::to_string(leafAngleDist.size()) + " leaf inclination classes evenly spanning 0 to pi radians, so they must sum to " + std::to_string(1.f / dTheta) + " (i.e. 1/dTheta, where dTheta = pi/" + std::to_string(leafAngleDist.size()) + "). Divide each value by " + std::to_string(tsum) + " to normalize the distribution.");
             }
+            params.leafAngleCDF.back() = 1.f;
         }
 
         // store the parameters
+
+        // Reject a tree definition that cannot be built, rather than letting it fail with a division by
+        // zero or an out-of-range access once someone calls buildTree on it.
+        validateTreeParameters(params, std::string(label));
 
         trees_library[label] = params;
     }

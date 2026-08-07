@@ -33,6 +33,21 @@ private:
         }
     }
 
+    //! Validate the activation/deactivation energy pair used by the peaked Arrhenius response.
+    /** The peaked form evaluates ln(dHd/dHa - 1), which is undefined unless dHd > dHa. Without this
+     * check the response silently returns NaN, which then propagates into net_photosynthesis.
+     */
+    static void validateDeactivationEnergy(float rate_of_increase_dHa, float rate_of_decrease_dHd) {
+        if (rate_of_increase_dHa <= 0.f) {
+            return; // No Arrhenius term is applied, so dHd is unused.
+        }
+        if (rate_of_decrease_dHd <= rate_of_increase_dHa) {
+            helios::helios_runtime_error("ERROR (PhotosyntheticTemperatureResponseParameters): Deactivation energy dHd must be strictly greater than activation energy dHa for a peaked temperature response. Received dHa = " +
+                                         std::to_string(rate_of_increase_dHa) + " kJ/mol and dHd = " + std::to_string(rate_of_decrease_dHd) +
+                                         " kJ/mol. The peaked Arrhenius form evaluates ln(dHd/dHa - 1), which is undefined when dHd <= dHa. Increase dHd (a typical value is 10*dHa, or 200-600 kJ/mol) or omit dHd to use the default.");
+        }
+    }
+
 public:
     PhotosyntheticTemperatureResponseParameters() {
         value_at_25C = 100.0f;
@@ -73,6 +88,7 @@ public:
 
     PhotosyntheticTemperatureResponseParameters(float value_at_25C, float rate_of_increase_dHa, float optimum_temperature_in_C, float rate_of_decrease_dHd) {
         validateOptimalTemperature(optimum_temperature_in_C);
+        validateDeactivationEnergy(rate_of_increase_dHa, rate_of_decrease_dHd);
         this->value_at_25C = value_at_25C;
         this->dHa = rate_of_increase_dHa;
         this->dHd = rate_of_decrease_dHd;
@@ -155,7 +171,12 @@ public:
     // options
     int TPU_flag; // run model with TPU limitation
 
-    // parameters
+    // Deprecated legacy parameters. These are retained for backwards compatibility with code that
+    // assigns them directly; a value > 0 selects a simple (non-peaked) Arrhenius response using the
+    // corresponding c_*/dH_* coefficients below. Calling the matching setter (e.g. setVcmax())
+    // resets the field to the -1 sentinel so that the setter is always authoritative — otherwise the
+    // two representations could silently disagree about which value the model actually uses.
+    // Prefer the setter API in new code.
     float Vcmax;
     float Jmax;
     float Rd;
@@ -183,6 +204,7 @@ public:
      */
     void setVcmax(float Vcmax) {
         this->VcmaxTempResponse = PhotosyntheticTemperatureResponseParameters(Vcmax);
+        this->Vcmax = -1.f; // legacy field: setter is authoritative
     }
 
     //! Set Vcmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation
@@ -192,6 +214,7 @@ public:
      */
     void setVcmax(float Vcmax_at_25_C, float rate_of_increase_dHa) {
         this->VcmaxTempResponse = PhotosyntheticTemperatureResponseParameters(Vcmax_at_25_C, rate_of_increase_dHa);
+        this->Vcmax = -1.f; // legacy field: setter is authoritative
     }
 
     //! Set Vcmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum
@@ -204,6 +227,7 @@ public:
     void setVcmax(float Vcmax_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C) {
         float rate_of_decrease_dHd = 10.f * rate_of_increase_dHa;
         this->VcmaxTempResponse = PhotosyntheticTemperatureResponseParameters(Vcmax_at_25_C, rate_of_increase_dHa, optimum_temperature_in_C, rate_of_decrease_dHd);
+        this->Vcmax = -1.f; // legacy field: setter is authoritative
     }
 
     //! Set Vcmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum
@@ -215,6 +239,7 @@ public:
      */
     void setVcmax(float Vcmax_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C, float rate_of_decrease_dHd) {
         this->VcmaxTempResponse = PhotosyntheticTemperatureResponseParameters(Vcmax_at_25_C, rate_of_increase_dHa, optimum_temperature_in_C, rate_of_decrease_dHd);
+        this->Vcmax = -1.f; // legacy field: setter is authoritative
     }
 
     //! Set Jmax of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response
@@ -223,6 +248,7 @@ public:
      */
     void setJmax(float Jmax) {
         this->JmaxTempResponse = PhotosyntheticTemperatureResponseParameters(Jmax);
+        this->Jmax = -1.f; // legacy field: setter is authoritative
     }
 
     //! Set Jmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation
@@ -232,6 +258,7 @@ public:
      */
     void setJmax(float Jmax_at_25_C, float rate_of_increase_dHa) {
         this->JmaxTempResponse = PhotosyntheticTemperatureResponseParameters(Jmax_at_25_C, rate_of_increase_dHa);
+        this->Jmax = -1.f; // legacy field: setter is authoritative
     }
 
     //! Set Jmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum
@@ -243,6 +270,7 @@ public:
     void setJmax(float Jmax_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C) {
         float rate_of_decrease_dHd = 10.f * rate_of_increase_dHa;
         this->JmaxTempResponse = PhotosyntheticTemperatureResponseParameters(Jmax_at_25_C, rate_of_increase_dHa, optimum_temperature_in_C, rate_of_decrease_dHd);
+        this->Jmax = -1.f; // legacy field: setter is authoritative
     }
 
     //! Set Jmax of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum
@@ -254,6 +282,7 @@ public:
      */
     void setJmax(float Jmax_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C, float rate_of_decrease_dHd) {
         this->JmaxTempResponse = PhotosyntheticTemperatureResponseParameters(Jmax_at_25_C, rate_of_increase_dHa, optimum_temperature_in_C, rate_of_decrease_dHd);
+        this->Jmax = -1.f; // legacy field: setter is authoritative
     }
 
     //! Set Triose-Phosphate Utilization (TPU) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response
@@ -307,6 +336,7 @@ public:
      */
     void setRd(float Rd) {
         this->RdTempResponse = PhotosyntheticTemperatureResponseParameters(Rd);
+        this->Rd = -1.f; // legacy field: setter is authoritative
     }
 
     //! Set mitochondrial respiration rate (Rd) of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation
@@ -316,6 +346,7 @@ public:
      */
     void setRd(float Rd_at_25_C, float rate_of_increase_dHa) {
         this->RdTempResponse = PhotosyntheticTemperatureResponseParameters(Rd_at_25_C, rate_of_increase_dHa);
+        this->Rd = -1.f; // legacy field: setter is authoritative
     }
 
     //! Set mitochondrial respiration rate (Rd) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum
@@ -328,6 +359,7 @@ public:
     void setRd(float Rd_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C) {
         float rate_of_decrease_dHd = 10.f * rate_of_increase_dHa;
         this->RdTempResponse = PhotosyntheticTemperatureResponseParameters(Rd_at_25_C, rate_of_increase_dHa, optimum_temperature_in_C, rate_of_decrease_dHd);
+        this->Rd = -1.f; // legacy field: setter is authoritative
     }
 
     //! Set mitochondrial respiration rate (Rd) of the Farquhar-von Caemmerer-Berry model with temperature response ccording to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum
@@ -339,6 +371,7 @@ public:
      */
     void setRd(float Rd_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C, float rate_of_decrease_dHd) {
         this->RdTempResponse = PhotosyntheticTemperatureResponseParameters(Rd_at_25_C, rate_of_increase_dHa, optimum_temperature_in_C, rate_of_decrease_dHd);
+        this->Rd = -1.f; // legacy field: setter is authoritative
     }
 
     //! Set light response quantum efficiency (alpha) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response
@@ -347,6 +380,7 @@ public:
      */
     void setQuantumEfficiency_alpha(float alpha) {
         this->alphaTempResponse = PhotosyntheticTemperatureResponseParameters(alpha);
+        this->alpha = -1.f; // legacy field: setter is authoritative
     }
 
     //! Set light response quantum efficiency (alpha) of the Farquhar-von Caemmerer-Berry model with temperature response according to a monotonically increasing Arrhenius equation
@@ -356,6 +390,7 @@ public:
      */
     void setQuantumEfficiency_alpha(float alpha_at_25_C, float rate_of_increase_dHa) {
         this->alphaTempResponse = PhotosyntheticTemperatureResponseParameters(alpha_at_25_C, rate_of_increase_dHa);
+        this->alpha = -1.f; // legacy field: setter is authoritative
     }
 
     //! Set light response quantum efficiency (alpha) of the Farquhar-von Caemmerer-Berry model according to a modified Arrhenius equation with an optimum
@@ -368,6 +403,7 @@ public:
     void setQuantumEfficiency_alpha(float alpha_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C) {
         float rate_of_decrease_dHd = 10.f * rate_of_increase_dHa;
         this->alphaTempResponse = PhotosyntheticTemperatureResponseParameters(alpha_at_25_C, rate_of_increase_dHa, optimum_temperature_in_C, rate_of_decrease_dHd);
+        this->alpha = -1.f; // legacy field: setter is authoritative
     }
 
     //! Set light response quantum efficiency (alpha) of the Farquhar-von Caemmerer-Berry model with temperature response according to a modified Arrhenius equation with an optimum and specified rate of decrease beyond the optimum
@@ -379,6 +415,7 @@ public:
      */
     void setQuantumEfficiency_alpha(float alpha_at_25_C, float rate_of_increase_dHa, float optimum_temperature_in_C, float rate_of_decrease_dHd) {
         this->alphaTempResponse = PhotosyntheticTemperatureResponseParameters(alpha_at_25_C, rate_of_increase_dHa, optimum_temperature_in_C, rate_of_decrease_dHd);
+        this->alpha = -1.f; // legacy field: setter is authoritative
     }
 
     //! Set light response curvature (theta) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response
@@ -942,7 +979,7 @@ private:
 
     float evaluateC4Model(const C4ModelCoefficients &params, float i_PAR, float TL, float CO2, float gM, float &Ci, float &Cm, float &Vp, int &limitation_state, helios::WarningAggregator &warnings);
 
-    float evaluateCi_Empirical(const EmpiricalModelCoefficients &params, float Ci, float CO2, float fL, float Rd, float gM) const;
+    float evaluateCi_Empirical(const EmpiricalModelCoefficients &params, float Ci, float CO2, float fL, float fT, float Rd, float gM) const;
 
     static float evaluateCi_Farquhar(float Ci, std::vector<float> &variables, const void *parameters);
 

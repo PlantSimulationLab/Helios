@@ -803,14 +803,15 @@ TEST_CASE("Visualizer::PNG with transparent background") {
 TEST_CASE("Visualizer::headless render after windowed instance destroyed") {
     // Smoke test for cross-mode instance ordering: a headless Visualizer constructed
     // and rendered after a windowed Visualizer was created and destroyed in the same
-    // process must not crash. The windowed instance creates a shadow-map depth
-    // texture/framebuffer; a headless instance never creates these, so its
-    // depthTexture/framebufferID members must be zero-initialized (see Visualizer.h).
-    // If they were left uninitialized, the headless render path would bind a stale
-    // GL texture name as the shadow map, producing GL_INVALID_OPERATION and, on macOS,
-    // a driver-side crash. The original failure was allocator-layout dependent and only
-    // manifested reliably within the full suite, so this case guards the ordering rather
-    // than guaranteeing reproduction of the exact memory state.
+    // process must not crash. The shadow-map depth texture/framebuffer are created
+    // lazily, only once shadowed lighting is actually rendered, so an instance using
+    // the default lighting model never creates them and its depthTexture/framebufferID
+    // members must be zero-initialized (see Visualizer.h). If they were left
+    // uninitialized, the render path would bind a stale GL texture name as the shadow
+    // map, producing GL_INVALID_OPERATION and, on macOS, a driver-side crash. The
+    // original failure was allocator-layout dependent and only manifested reliably
+    // within the full suite, so this case guards the ordering rather than guaranteeing
+    // reproduction of the exact memory state.
 
     // First, create and destroy a WINDOWED instance to populate freed memory with
     // plausible GL handle values (mirrors the test-suite ordering that exposed the bug).
@@ -1339,6 +1340,258 @@ DOCTEST_TEST_CASE("Visualizer::colorContextPrimitivesByObjectData orphan primiti
 
     if (std::filesystem::exists(test_filename)) {
         std::filesystem::remove(test_filename);
+    }
+}
+
+// Mean brightness over a fractional sub-rectangle of a rendered image, skipping
+// background pixels. Bounds are fractions of the ACTUAL image dimensions, since
+// HiDPI/Retina scaling can make the rendered framebuffer larger than requested.
+static float shadowRegionMeanBrightness(const std::vector<RGBAcolor> &pixel_data, uint width, uint height, float x_min, float x_max, float y_min, float y_max, int &pixel_count) {
+    double sum = 0.0;
+    pixel_count = 0;
+    for (uint j = uint(y_min * float(height)); j < uint(y_max * float(height)); j++) {
+        for (uint i = uint(x_min * float(width)); i < uint(x_max * float(width)); i++) {
+            const RGBAcolor &pixel = pixel_data.at(j * width + i);
+            // The scene geometry is achromatic gray, so any strongly blue pixel is background.
+            if (pixel.b > pixel.r + 0.2f && pixel.b > pixel.g + 0.2f) {
+                continue;
+            }
+            sum += (pixel.r + pixel.g + pixel.b) / 3.0;
+            pixel_count++;
+        }
+    }
+    return pixel_count > 0 ? float(sum / double(pixel_count)) : 0.f;
+}
+
+// Render a ground patch with an elevated occluder above it (or the ground alone) and
+// return the decoded image. Shared by the shadow regression tests below.
+static void renderShadowScene(bool headless, bool include_occluder, bool set_light_direction, const std::string &filename, std::vector<RGBAcolor> &pixel_data, uint &width, uint &height) {
+
+    Visualizer visualizer(400, 400, 0, false, headless);
+    visualizer.disableMessages();
+    visualizer.hideWatermark();
+    visualizer.hideNavigationGizmo();
+    visualizer.disableColorbar();
+    // Pure blue background so background pixels are trivially separable from the gray geometry.
+    visualizer.setBackgroundColor(make_RGBcolor(0.f, 0.f, 1.f));
+
+    // Base color is deliberately dim: at 0.5 the lit ground saturates to white, which
+    // clips the lit sample and compresses the shadow contrast ratio from 3.6 to ~1.5.
+    RGBcolor gray = make_RGBcolor(0.25f, 0.25f, 0.25f);
+
+    // Ground: 8x8 at z=0, wound counter-clockwise viewed from +z so the normal is +z.
+    std::vector<vec3> ground_vertices{make_vec3(-4, -4, 0), make_vec3(4, -4, 0), make_vec3(4, 4, 0), make_vec3(-4, 4, 0)};
+    visualizer.addRectangleByVertices(ground_vertices, gray, Visualizer::COORDINATES_CARTESIAN);
+
+    if (include_occluder) {
+        // Occluder: 2x2 at z=2, same winding.
+        std::vector<vec3> occluder_vertices{make_vec3(-1, -1, 2), make_vec3(1, -1, 2), make_vec3(1, 1, 2), make_vec3(-1, 1, 2)};
+        visualizer.addRectangleByVertices(occluder_vertices, gray, Visualizer::COORDINATES_CARTESIAN);
+    }
+
+    visualizer.setLightingModel(Visualizer::LIGHTING_PHONG_SHADOWED);
+    if (set_light_direction) {
+        // light_direction points FROM the surface TOWARD the light: computeShadowDepthMVP()
+        // negates it to place the shadow camera at centroid + light_direction*100. Passed
+        // already unit-length so the stored and uniform values agree.
+        visualizer.setLightDirection(make_vec3(0.6f, 0.f, 0.8f));
+    }
+    // Oblique camera: a straight-down view is degenerate because the up vector is hard-coded to (0,0,1).
+    visualizer.setCameraPosition(make_vec3(0.f, -8.f, 10.f), make_vec3(0.f, 0.f, 0.f));
+
+    visualizer.plotUpdate(true);
+
+    // printWindow + readPNG reports the actual rendered dimensions; Wframebuffer has no public getter.
+    visualizer.printWindow(filename.c_str(), "png");
+    helios::readPNG(filename, width, height, pixel_data);
+    if (std::filesystem::exists(filename)) {
+        std::filesystem::remove(filename);
+    }
+}
+
+// Fractional bounds of the shadow core, calibrated by rendering the scene and reading off
+// a coarse brightness map. Chosen strictly inside the umbra so the penumbra at the shadow
+// edges does not dilute the mean (sampling the penumbra drops the ratio from 3.60 to ~1.5).
+// The explicit light direction (0.6,0,0.8) throws the shadow toward -x; the default
+// direction (1,1,1)/sqrt(3) throws it toward -x AND -y, so it lands lower in the image.
+static constexpr float shadow_x_min = 14.f / 48.f;
+static constexpr float shadow_x_max = 19.f / 48.f;
+static constexpr float shadow_y_min = 11.2f / 24.f;
+static constexpr float shadow_y_max = 13.8f / 24.f;
+
+static constexpr float default_light_shadow_x_min = 10.f / 48.f;
+static constexpr float default_light_shadow_x_max = 17.f / 48.f;
+static constexpr float default_light_shadow_y_min = 14.6f / 24.f;
+static constexpr float default_light_shadow_y_max = 17.4f / 24.f;
+
+// Measured contrast between the same region rendered without and with the occluder.
+static float measureShadowRatio(bool headless, bool set_light_direction, const std::string &tag) {
+
+    const float x_min = set_light_direction ? shadow_x_min : default_light_shadow_x_min;
+    const float x_max = set_light_direction ? shadow_x_max : default_light_shadow_x_max;
+    const float y_min = set_light_direction ? shadow_y_min : default_light_shadow_y_min;
+    const float y_max = set_light_direction ? shadow_y_max : default_light_shadow_y_max;
+
+    std::vector<RGBAcolor> pixels_occluded, pixels_clear;
+    uint width_occluded, height_occluded, width_clear, height_clear;
+
+    renderShadowScene(headless, true, set_light_direction, "test_shadow_" + tag + "_occluded.png", pixels_occluded, width_occluded, height_occluded);
+    renderShadowScene(headless, false, set_light_direction, "test_shadow_" + tag + "_clear.png", pixels_clear, width_clear, height_clear);
+
+    DOCTEST_REQUIRE(width_occluded == width_clear);
+    DOCTEST_REQUIRE(height_occluded == height_clear);
+    DOCTEST_REQUIRE(pixels_occluded.size() == size_t(width_occluded) * size_t(height_occluded));
+
+    int count_occluded, count_clear;
+    float mean_occluded = shadowRegionMeanBrightness(pixels_occluded, width_occluded, height_occluded, x_min, x_max, y_min, y_max, count_occluded);
+    float mean_clear = shadowRegionMeanBrightness(pixels_clear, width_clear, height_clear, x_min, x_max, y_min, y_max, count_clear);
+
+    DOCTEST_REQUIRE_MESSAGE(count_occluded > 200, "Shadow sample region contains too few geometry pixels (" << count_occluded << "); the region bounds need recalibration");
+    DOCTEST_REQUIRE_MESSAGE(count_clear > 200, "Reference sample region contains too few geometry pixels (" << count_clear << ")");
+    DOCTEST_REQUIRE_MESSAGE(mean_clear > 0.05f, "Unoccluded reference render is essentially black (" << mean_clear << "); the render pipeline failed for a reason unrelated to shadows");
+    DOCTEST_REQUIRE_MESSAGE(mean_occluded > 0.01f, "Occluded region is pure black (" << mean_occluded << "); the contrast ratio would be undefined");
+
+    return mean_clear / mean_occluded;
+}
+
+DOCTEST_TEST_CASE("Visualizer shadows render in headless mode") {
+    // REGRESSION TEST: Visualizer::initialize() created the shadow-map framebuffer and
+    // depth texture only under `if (!headless)`, so in headless mode framebufferID and
+    // depthTexture both stayed 0. The shadow pass in plotUpdate() is not guarded on
+    // headless, so it bound framebuffer 0 (rendering the depth pass into the default
+    // framebuffer) and bound texture 0 as the shadow map.
+    //
+    // The metric is deliberately a CONTRAST RATIO rather than an absolute darkness
+    // threshold. On the buggy code, sampling texture 0 returns 0.0, and the depth
+    // comparison in primaryShader.frag is `0.0 < proj.z`, which is true for essentially
+    // all geometry -- so every one of the four Poisson taps darkens every fragment and
+    // the ENTIRE scene renders at the fully-shadowed brightness. A test asserting "the
+    // shadow region is dark" would therefore PASS on the buggy code. A ratio collapses
+    // to 1.0 whether the broken output is uniformly dark or uniformly lit.
+    //
+    // Measured values: 3.60 with a working shadow map, exactly 1.00 without one (the
+    // two renders are byte-identical, since the occluder is invisible as well).
+
+    float shadow_ratio = measureShadowRatio(true, true, "headless");
+
+    DOCTEST_CHECK_MESSAGE(shadow_ratio > 2.f, "No shadow was rendered in headless mode: the occluded region is only "
+                                                      << shadow_ratio
+                                                      << "x darker than the same region rendered without the occluder (expected ~3.6; a value of ~1.0 means the shadow map is missing entirely). The "
+                                                         "shadow-map framebuffer/depth texture are likely not being created in headless mode.");
+
+    DOCTEST_CHECK_MESSAGE(shadow_ratio < 12.f, "Shadow contrast is implausibly large (" << shadow_ratio << "); the sample region may have fallen off the ground geometry");
+}
+
+DOCTEST_TEST_CASE("Visualizer shadows render in headless mode with the default light direction") {
+    // Companion to the test above, covering the case where the user never calls
+    // setLightDirection() at all. The shadow falls in a different place here: the default
+    // direction is (1,1,1)/sqrt(3), which throws the shadow toward -x and -y, whereas the
+    // test above uses (0.6,0,0.8) and throws it toward -x only.
+    //
+    // Note this does NOT depend on the initialize() light-direction fix. Shader::initialize()
+    // seeds the lightDirection uniform with (0,0,1), so headless previously rendered with a
+    // directly-overhead light instead of the (1,1,1) that initialize() intended -- a
+    // windowed/headless parity bug, but not one that suppresses shadows. That parity is
+    // covered by the dedicated test below rather than here.
+
+    float shadow_ratio = measureShadowRatio(true, false, "headless_default_light");
+
+    DOCTEST_CHECK_MESSAGE(shadow_ratio > 2.f, "No shadow was rendered in headless mode using the default light direction (ratio " << shadow_ratio << ", expected ~3.6).");
+}
+
+DOCTEST_TEST_CASE("Visualizer default light direction matches between headless and windowed modes") {
+    // initialize() pushed the initial light_direction to the primary shader only when
+    // !headless. Shader::initialize() seeds the uniform with (0,0,1), so a headless
+    // Visualizer that never calls setLightDirection() rendered with a directly-overhead
+    // light while a windowed one used the intended (1,1,1)/sqrt(3). Nothing errored; the
+    // two modes just shaded the same scene differently, contradicting the documented
+    // promise of identical visual output.
+    //
+    // The ground patch normal is +z, so the two directions give clearly different diffuse
+    // terms: dot((0,0,1),(0,0,1)) = 1 versus dot((0,0,1),(1,1,1)/sqrt(3)) = 0.577.
+
+    std::vector<RGBAcolor> pixel_data;
+    uint width, height;
+    renderShadowScene(true, false, false, "test_shadow_default_light_direction.png", pixel_data, width, height);
+
+    int pixel_count;
+    float mean_brightness = shadowRegionMeanBrightness(pixel_data, width, height, 0.45f, 0.55f, 0.45f, 0.55f, pixel_count);
+
+    DOCTEST_REQUIRE(pixel_count > 200);
+
+    // Ground base color 0.25, scaled by 1.5 in the shader, lit as intensity*(0.75 + d).
+    // d = 0.577 gives 0.375*1.327 = 0.498; the un-fixed d = 1.0 gives 0.375*1.75 = 0.656.
+    DOCTEST_CHECK_MESSAGE(mean_brightness < 0.57f, "Headless mode rendered with the wrong default light direction (brightness " << mean_brightness
+                                                                                                                                << ", expected ~0.50 for the (1,1,1) default rather than ~0.66 for an overhead light). The initial light "
+                                                                                                                                   "direction is likely not being sent to the shader in headless mode.");
+}
+
+DOCTEST_TEST_CASE("Visualizer shadows survive an intervening depth-map render") {
+    // updateDepthBuffer() used to render into the shadow-map framebuffer and re-specify
+    // the shared depth texture at the window resolution. Since the shadow pass sets a
+    // viewport of shadow_buffer_size (8192x8192 by default), any shadowed render after a
+    // plotDepthMap() call sampled a shadow map far smaller than the viewport it drew
+    // into, corrupting the shadows. The depth map now owns a separate framebuffer and
+    // texture, so a shadowed render before and after a depth-map render must agree.
+
+    Visualizer visualizer(400, 400, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.hideWatermark();
+    visualizer.hideNavigationGizmo();
+    visualizer.disableColorbar();
+    visualizer.setBackgroundColor(make_RGBcolor(0.f, 0.f, 1.f));
+
+    RGBcolor gray = make_RGBcolor(0.25f, 0.25f, 0.25f);
+    std::vector<vec3> ground_vertices{make_vec3(-4, -4, 0), make_vec3(4, -4, 0), make_vec3(4, 4, 0), make_vec3(-4, 4, 0)};
+    visualizer.addRectangleByVertices(ground_vertices, gray, Visualizer::COORDINATES_CARTESIAN);
+    std::vector<vec3> occluder_vertices{make_vec3(-1, -1, 2), make_vec3(1, -1, 2), make_vec3(1, 1, 2), make_vec3(-1, 1, 2)};
+    visualizer.addRectangleByVertices(occluder_vertices, gray, Visualizer::COORDINATES_CARTESIAN);
+
+    visualizer.setLightingModel(Visualizer::LIGHTING_PHONG_SHADOWED);
+    visualizer.setLightDirection(make_vec3(0.6f, 0.f, 0.8f));
+    visualizer.setCameraPosition(make_vec3(0.f, -8.f, 10.f), make_vec3(0.f, 0.f, 0.f));
+
+    // Shadowed render before the depth map.
+    visualizer.plotUpdate(true);
+    std::string before_file = "test_shadow_before_depthmap.png";
+    visualizer.printWindow(before_file.c_str(), "png");
+    std::vector<RGBAcolor> pixels_before;
+    uint width_before, height_before;
+    helios::readPNG(before_file, width_before, height_before, pixels_before);
+
+    // Render a depth map, which previously clobbered the shadow texture. getDepthMap() is
+    // used rather than plotDepthMap() because the latter ends in displayImage(), which
+    // calls plotInteractive() and blocks until the window is closed.
+    std::vector<float> depth_pixels;
+    uint depth_width, depth_height;
+    DOCTEST_CHECK_NOTHROW(visualizer.getDepthMap(depth_pixels, depth_width, depth_height));
+    DOCTEST_CHECK(depth_pixels.size() == size_t(depth_width) * size_t(depth_height));
+
+    // Shadowed render after the depth map.
+    visualizer.plotUpdate(true);
+    std::string after_file = "test_shadow_after_depthmap.png";
+    visualizer.printWindow(after_file.c_str(), "png");
+    std::vector<RGBAcolor> pixels_after;
+    uint width_after, height_after;
+    helios::readPNG(after_file, width_after, height_after, pixels_after);
+
+    DOCTEST_REQUIRE(width_before == width_after);
+    DOCTEST_REQUIRE(height_before == height_after);
+
+    int count_before, count_after;
+    float mean_before = shadowRegionMeanBrightness(pixels_before, width_before, height_before, shadow_x_min, shadow_x_max, shadow_y_min, shadow_y_max, count_before);
+    float mean_after = shadowRegionMeanBrightness(pixels_after, width_after, height_after, shadow_x_min, shadow_x_max, shadow_y_min, shadow_y_max, count_after);
+
+    DOCTEST_REQUIRE(count_before > 200);
+    DOCTEST_REQUIRE(count_after > 200);
+
+    DOCTEST_CHECK_MESSAGE(std::abs(mean_after - mean_before) < 0.05f,
+                          "The shadow changed after an intervening plotDepthMap() call (shadow region brightness " << mean_before << " before versus " << mean_after << " after); the depth-map render is corrupting the shadow map.");
+
+    for (const std::string &f: {before_file, after_file}) {
+        if (std::filesystem::exists(f)) {
+            std::filesystem::remove(f);
+        }
     }
 }
 

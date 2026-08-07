@@ -454,6 +454,15 @@ public:
      */
     void setLightIntensityFactor(float lightintensityfactor);
 
+    //! Create the shadow-map framebuffer and depth texture
+    /**
+     * Called lazily the first time shadowed lighting is actually rendered, in both windowed
+     * and headless modes. The shadow map is large (see shadow_buffer_size), so deferring it
+     * avoids allocating it for the many Visualizer instances that never enable shadows.
+     * Does nothing if the framebuffer has already been created.
+     */
+    void createShadowFramebuffer();
+
     //! Setup offscreen framebuffer for headless rendering
     void setupOffscreenFramebuffer();
 
@@ -1419,6 +1428,11 @@ private:
 
     uint framebufferID = 0;
     uint depthTexture = 0;
+
+    // Separate framebuffer/texture for updateDepthBuffer(), which renders a camera-space
+    // depth map at the window resolution rather than the shadow map's own resolution.
+    uint depthbufferFramebufferID = 0;
+    uint depthbufferTexture = 0;
 
     // Offscreen rendering support for CI testing
     uint offscreenFramebufferID = 0;

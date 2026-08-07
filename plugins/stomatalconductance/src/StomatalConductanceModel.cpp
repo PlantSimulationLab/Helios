@@ -326,12 +326,25 @@ void StomatalConductanceModel::setModelCoefficients(const BBcoefficients &coeffs
     model = "BB";
 }
 
+void StomatalConductanceModel::validateDynamicTimeConstants(float tau_open, float tau_close) {
+    // The time constants appear in the denominator of the forward Euler update gs = gs_old + (gs_ss-gs_old)*dt/tau. A zero value gives a non-finite conductance, and a negative value inverts the
+    // direction of the relaxation so that stomata diverge away from the steady-state value.
+    if (!std::isfinite(tau_open) || tau_open <= 0.f) {
+        helios_runtime_error("ERROR (StomatalConductanceModel::setDynamicTimeConstants): The stomatal opening time constant was given as " + std::to_string(tau_open) + " seconds, but it must be a finite positive value.");
+    }
+    if (!std::isfinite(tau_close) || tau_close <= 0.f) {
+        helios_runtime_error("ERROR (StomatalConductanceModel::setDynamicTimeConstants): The stomatal closing time constant was given as " + std::to_string(tau_close) + " seconds, but it must be a finite positive value.");
+    }
+}
+
 void StomatalConductanceModel::setDynamicTimeConstants(float tau_open, float tau_close) {
+    validateDynamicTimeConstants(tau_open, tau_close);
     dynamic_time_constants.clear();
     dynamic_time_constants[0] = make_vec2(tau_open, tau_close);
 }
 
 void StomatalConductanceModel::setDynamicTimeConstants(float tau_open, float tau_close, const std::vector<uint> &UUIDs) {
+    validateDynamicTimeConstants(tau_open, tau_close);
     for (uint UUID: UUIDs) {
         dynamic_time_constants[UUID] = make_vec2(tau_open, tau_close);
     }
@@ -592,9 +605,20 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
             context->getPrimitiveData(UUID, "boundarylayer_conductance_out", gbw);
             gbw = gbw * 1.08; // assume bl conductance to moisture is 1.08 of conductance to heat
         }
-        if (gbw < 0) {
-            gbw = 0;
-            warnings.addWarning("negative_boundarylayer_conductance", "Boundary-layer conductance value provided was negative. Clipping to zero.");
+        // A negative boundary-layer conductance is not physically meaningful and cannot be interpreted as a limit of the model, so it is rejected outright.
+        if (!std::isfinite(gbw) || gbw < 0.f) {
+            helios_runtime_error("ERROR (StomatalConductanceModel::run): Boundary-layer conductance for primitive " + std::to_string(UUID) + " is " + std::to_string(gbw / 1.08f) +
+                                 " mol/m^2/s, but it must be a finite non-negative value. Check the primitive data \"boundarylayer_conductance\" (or \"boundarylayer_conductance_out\"), or remove it to use the default value of " +
+                                 std::to_string(blconductance_default) + " mol/m^2/s.");
+        }
+
+        // A zero boundary-layer conductance is physically attainable (e.g. still air, or a zero-size primitive), and the BLConductanceModel plug-in produces it in those cases. In that limit no water
+        // vapor or CO2 can be exchanged with the air outside the boundary layer, so stomatal conductance no longer influences the flux and the surface CO2 concentration is undefined. The steady-state
+        // conductance is taken to be zero rather than dividing by zero below.
+        const bool no_boundarylayer_exchange = (gbw == 0.f);
+        if (no_boundarylayer_exchange) {
+            warnings.addWarning("zero_boundarylayer_conductance",
+                                "Boundary-layer conductance is zero for one or more primitives, so no vapor exchange is possible and the steady-state stomatal conductance was taken to be zero. This occurs for zero-size primitives or when the wind speed is zero.");
         }
 
         // beta soil moisture factor
@@ -617,14 +641,13 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
         float esat = 611.f * exp(17.502f * (Ta - 273.f) / ((Ta - 273.f) + 240.97f)); // This is Clausius-Clapeyron equation (See Campbell and Norman pp. 41 Eq. 3.8).  Note that temperature must be in degC, and result is in Pascals
         float ea = rh * esat; // Definition of vapor pressure (see Campbell and Norman pp. 42 Eq. 3.11)
         float es = 611.f * exp(17.502f * (TL - 273.f) / ((TL - 273.f) + 240.97f));
-        float D = max(0.f, (es - ea) / press * 1000.f); // mmol/mol
 
 
         // Compute CO2 concentration at leaf surface
         float An = An_default;
         float Gamma = Gamma_default;
         float Cs = air_CO2_default;
-        if (model == "BWB" || model == "BBL" || model == "MOPT") {
+        if (!no_boundarylayer_exchange && (model == "BWB" || model == "BBL" || model == "MOPT")) {
 
             // net photosynthesis
             if (context->doesPrimitiveDataExist(UUID, "net_photosynthesis") && context->getPrimitiveDataType("net_photosynthesis") == HELIOS_TYPE_FLOAT) {
@@ -645,11 +668,31 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
             if (context->doesPrimitiveDataExist(UUID, "air_CO2") && context->getPrimitiveDataType("air_CO2") == HELIOS_TYPE_FLOAT) {
                 context->getPrimitiveData(UUID, "air_CO2", Ca);
             }
+            if (!std::isfinite(Ca) || Ca <= 0.f) {
+                helios_runtime_error("ERROR (StomatalConductanceModel::run): The ambient CO2 concentration for primitive " + std::to_string(UUID) + " is " + std::to_string(Ca) +
+                                     " umol/mol, but it must be a finite positive value. Check the primitive data \"air_CO2\", or remove it to use the default value of " + std::to_string(air_CO2_default) + " umol/mol.");
+            }
 
             float gbc = 0.75f * gbw; // bl conductance to CO2
 
             // An = gbc*(Ca-Cs)
             Cs = Ca - An / gbc;
+
+            // A non-positive surface CO2 concentration is not physically meaningful, and would flip the sign of gs in the models below (all of which divide by Cs or by Cs-Gamma). This occurs when the
+            // assimilation rate is too large to be supplied through the given boundary-layer conductance. Note that a negative An (dark respiration) legitimately gives Cs > Ca and is not an error.
+            if (!std::isfinite(Cs) || Cs <= 0.f) {
+                helios_runtime_error("ERROR (StomatalConductanceModel::run): The CO2 concentration at the leaf surface for primitive " + std::to_string(UUID) + " evaluated to " + std::to_string(Cs) +
+                                     " umol/mol, which is not physically meaningful. The net photosynthetic flux (" + std::to_string(An) + " umol/m^2/s) is too large to be supplied through the boundary-layer conductance (" +
+                                     std::to_string(gbw / 1.08f) + " mol/m^2/s) at an ambient CO2 concentration of " + std::to_string(Ca) +
+                                     " umol/mol. Check the primitive data \"net_photosynthesis\", \"boundarylayer_conductance\", and \"air_CO2\".");
+            }
+
+            // The Ball-Berry-Leuning model has a pole at Cs == Gamma. Approaching it produces an unbounded conductance, so the degenerate case is rejected explicitly.
+            if (model == "BBL" && Cs <= Gamma) {
+                helios_runtime_error("ERROR (StomatalConductanceModel::run): The CO2 concentration at the leaf surface for primitive " + std::to_string(UUID) + " (" + std::to_string(Cs) +
+                                     " umol/mol) is less than or equal to the CO2 compensation point Gamma (" + std::to_string(Gamma) +
+                                     " umol/mol). The Ball-Berry-Leuning model is singular at this point. Check the primitive data \"Gamma_CO2\", \"net_photosynthesis\", and \"boundarylayer_conductance\".");
+            }
         }
 
         float Psix = xylem_potential_default;
@@ -662,7 +705,11 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
 
 
         float gs;
-        if (model == "BWB") {
+        if (no_boundarylayer_exchange) {
+
+            gs = 0.f;
+
+        } else if (model == "BWB") {
 
             // model coefficients
             BWBcoefficients coeffs = getCoefficientsForPrimitive_BWB(UUID);
@@ -733,9 +780,14 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
             // model coefficients
             BBcoefficients coeffs = getCoefficientsForPrimitive_BB(UUID);
 
-            std::vector<float> variables{i, D, Psix};
+            // Solve for the surface vapor pressure so that the model is coupled to the boundary layer in the same way as the other models, rather than using the air-to-cavity VPD directly.
+            std::vector<float> variables{i, es, ea, gbw, press, beta, Psix};
 
-            gs = fzero(evaluate_BBmodel, variables, &coeffs, 0.1f, 0.0001f, 100, &warnings);
+            float initial_guess = ea + 0.1f * (es - ea);
+            float esurf = fzero(evaluate_BBmodel, variables, &coeffs, initial_guess, 0.001f, 200, &warnings);
+            float Ds = max(0.f, (es - esurf) / press * 1000.f); // mmol/mol
+
+            gs = evaluate_BBconductance(Ds, Psix, i, beta, coeffs);
 
             if (std::find(output_prim_data.begin(), output_prim_data.end(), "model_parameters") != output_prim_data.end()) {
                 context->setPrimitiveData(UUID, "pi0_BB", coeffs.pi_0);
@@ -833,7 +885,7 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
                       << " primitives. Did you forget to run the photosynthesis model?" << std::endl;
         }
         if (model == "BBL" && assumed_default_Gamma > 0) {
-            std::cout << "WARNING (StomatalConductanceModel::run): The Ball-Berry-Leuning stomatal conductance model requires the CO2 compensation point Gamma , but primitive data Gamma_CO2 could not be found for " << assumed_default_An
+            std::cout << "WARNING (StomatalConductanceModel::run): The Ball-Berry-Leuning stomatal conductance model requires the CO2 compensation point Gamma, but primitive data Gamma_CO2 could not be found for " << assumed_default_Gamma
                       << " primitives. Did you forget to set optional output primitive data Gamma_CO2 in the photosynthesis model?" << std::endl;
         }
 
@@ -946,30 +998,57 @@ float StomatalConductanceModel::evaluate_BMFmodel(float esurf, std::vector<float
     return gs * (es - esurf) - gbw * (esurf - ea);
 }
 
-float StomatalConductanceModel::evaluate_BBmodel(float gs, std::vector<float> &variables, const void *parameters) {
+float StomatalConductanceModel::evaluate_BBconductance(float Ds, float Psix, float i, float beta, const BBcoefficients &coeffs) {
 
-    float fe = 0.5;
-    float Rxe = 200.f;
+    // Fraction of the epidermal water potential transmitted to the guard cells, and the xylem-to-epidermis hydraulic resistance (MPa m^2 s / mol). These are treated as fixed in this simplified form of
+    // the model.
+    constexpr float fe = 0.5f;
+    constexpr float Rxe = 200.f;
+
+    float pi_0 = coeffs.pi_0;
+    float pi_m = coeffs.pi_m;
+    float theta = coeffs.theta;
+    float sigma = coeffs.sigma;
+    float chi = coeffs.chi;
+
+    float D = Ds * 1e-3f; // mmol/mol -> mol/mol
+
+    // The guard cell turgor pressure is Pg = pi_g + Psi_e, where both the osmotic pressure pi_g and the epidermal water potential Psi_e depend on the transpiration rate, and hence on gs itself:
+    //   pi_g  = pi_0 + (pi_m-pi_0)*i/(i+theta) + sigma*(Psix - Rxe*fe*gs*D)
+    //   Psi_e = Psix - Rxe*fe*gs*D
+    // Since gs = chi*Pg is linear in gs, the implicit relation is solved in closed form rather than iterated.
+    float light_term = (i + theta > 0.f) ? (pi_m - pi_0) * i / (i + theta) : 0.f;
+    float numerator = pi_0 + light_term + (1.f + sigma) * Psix;
+    float denominator = 1.f + chi * (1.f + sigma) * Rxe * fe * D;
+
+    if (denominator <= 0.f || !std::isfinite(denominator)) {
+        return 0.f;
+    }
+
+    float gs = chi * numerator / denominator;
+
+    // Turgor cannot be negative, so neither can the conductance. The soil moisture factor scales the result in the same way as for the other models.
+    return max(0.f, beta * gs);
+}
+
+float StomatalConductanceModel::evaluate_BBmodel(float esurf, std::vector<float> &variables, const void *parameters) {
+
+    // We want to find the vapor pressure at the surface, esurf, that balances the equation gs(esurf)*(es-esurf) = gbw*(esurf-ea). This function returns the residual of this equation.
 
     const auto *coeffs = reinterpret_cast<const BBcoefficients *>(parameters);
 
-    float pi_0 = coeffs->pi_0;
-    float pi_m = coeffs->pi_m;
-    float theta = coeffs->theta;
-    float sigma = coeffs->sigma;
-    float chi = coeffs->chi;
-
     float i = variables[0];
-    float D = variables[1] * 1e-3F;
-    float Psix = variables[2];
+    float es = variables[1];
+    float ea = variables[2];
+    float gbw = variables[3];
+    float press = variables[4];
+    float beta = variables[5];
+    float Psix = variables[6];
 
-    float pig = pi_0 + (pi_m - pi_0) * i / (i + theta) + sigma * (Psix - Rxe * fe * gs * D);
-    float Psi_e = Psix - Rxe * fe * gs * D;
+    float Ds = max(0.f, (es - esurf) / press * 1000.f); // mmol/mol
+    float gs = evaluate_BBconductance(Ds, Psix, i, beta, *coeffs);
 
-    float Pg = max(0.f, pig + Psi_e);
-    float gsm = chi * Pg;
-
-    return gs - gsm;
+    return gs * (es - esurf) - gbw * (esurf - ea);
 }
 
 void StomatalConductanceModel::disableMessages() {
@@ -985,7 +1064,9 @@ void StomatalConductanceModel::optionalOutputPrimitiveData(const char *label) {
     std::vector<std::string> valid_data_labels = {"vapor_pressure_deficit", "model_parameters"};
 
     if (std::find(valid_data_labels.begin(), valid_data_labels.end(), label) != valid_data_labels.end()) {
-        output_prim_data.emplace_back(label);
+        if (std::find(output_prim_data.begin(), output_prim_data.end(), label) == output_prim_data.end()) {
+            output_prim_data.emplace_back(label);
+        }
     } else {
         if (message_flag) {
             std::cout << "WARNING (StomatalConductanceModel::optionalOutputPrimitiveData): unknown output primitive data " << label << std::endl;

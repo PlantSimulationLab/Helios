@@ -96,10 +96,12 @@ No gradients, 50+ params?
 | GA | Global, derivative-free | No | Box only | Yes (INTEGER, CATEGORICAL) | No | Multimodal, discrete/mixed params |
 | BO | Global, derivative-free | No | Box only | No | No | Expensive, low-dim (d < 15) |
 | CMA-ES | Global, derivative-free | No | Box only | No | No | Non-separable, medium-dim (5-50) |
-| L-BFGS | Local, gradient-based | Required (clean) | Box only | No | Yes | Smooth unimodal with AD gradients |
+| L-BFGS | Local, gradient-based | Required (clean) | Box only | No | Yes (LGPL, optional) | Smooth unimodal with AD gradients |
 | Adam | Local, gradient-based | Required (noise-OK) | Box only | No | No | Noisy gradients (FD on ray tracing) |
 | BOBYQA | Local, derivative-free | No | Box only | No | Yes | Polish GA/CMA-ES result without gradients |
 | SLSQP | Local, gradient-based | Required | Nonlinear inequality | No | Yes | Constrained optimization (max A s.t. E < budget) |
+
+\note L-BFGS is the only algorithm provided by NLopt's LGPL-licensed Luksan solvers, and is unavailable in builds configured with <code>HELIOS_NLOPT_LUKSAN=OFF</code>. Adam is the recommended substitute for gradient-based problems and BOBYQA for derivative-free ones. See \ref PO_NLoptLicensing.
 
 <b>Example Helios Scenarios:</b>
 
@@ -389,6 +391,8 @@ opt.setAlgorithm(SLSQP{});
 auto result = opt.run(obj, params, grad, {c});
 \endcode
 
+Every constraint must have both `function` and `gradient` assigned, and its `tolerance` must be a non-negative, non-NaN number (the default is `1e-6`; zero requires exact satisfaction). These are checked before the optimizer is configured, so a malformed constraint is reported against its index in the list rather than surfacing later from inside NLopt.
+
 \subsection PO_ConstrainedSim Combined Simulation
 
 When your simulation computes the objective, constraints, and all gradients in a single forward pass (typical for Helios biophysics), use the \ref ConstrainedSimulation API. The optimizer caches results internally so the simulation runs only once per parameter point, even though NLopt calls the objective and constraint callbacks separately.
@@ -574,14 +578,34 @@ auto result = phase2.run(objective, coarse.parameters);
 
 \section PO_NLopt NLopt Dependency
 
-L-BFGS, BOBYQA, and SLSQP use the NLopt optimization library (LGPL, v2.10.1). NLopt is **bundled** with the plugin in `plugins/parameteroptimization/lib/nlopt-2.10.1/` and built automatically from source — no user installation is required.
-
-If a system-installed NLopt is detected, it will be used instead of the bundled version. This is transparent and requires no configuration.
+L-BFGS, BOBYQA, and SLSQP use the NLopt optimization library (v2.10.1). NLopt is **bundled** with the plugin in `plugins/parameteroptimization/lib/nlopt-2.10.1/` and built automatically from source — no user installation is required. If the bundled source is absent, the build falls back to a system-installed NLopt.
 
 If NLopt is unavailable for any reason:
 - GA, Bayesian Optimization, CMA-ES, and Adam remain fully functional (no NLopt dependency)
-- L-BFGS, BOBYQA, and SLSQP will return error results at runtime with a descriptive message
+- L-BFGS, BOBYQA, and SLSQP raise a runtime error naming an available alternative
 - The compile-time flag `HELIOS_HAVE_NLOPT` indicates NLopt availability
+
+\subsection PO_NLoptLicensing Licensing and the HELIOS_NLOPT_LUKSAN option
+
+NLopt is MIT-licensed with one exception: the solvers under `src/algs/luksan/` are **LGPL-2.1**, and their `COPYRIGHT` file additionally carries an ACM notice restricting redistribution of some subroutines. Per NLopt's own `COPYING`, the compiled library is covered by the conjunction of its components' licenses, so a default build is effectively LGPL — and omitting that one directory makes the library **entirely MIT**.
+
+L-BFGS (`NLOPT_LD_LBFGS`) is implemented entirely by the Luksan code. BOBYQA (MIT) and SLSQP (BSD-3) are not, and neither are the four algorithms that require no NLopt at all.
+
+The CMake option `HELIOS_NLOPT_LUKSAN` controls this, and **defaults to `ON`** so existing builds are unchanged:
+
+\verbatim
+cmake .. -DHELIOS_NLOPT_LUKSAN=OFF
+\endverbatim
+
+With the option `OFF`:
+- The Luksan sources are never compiled and no Luksan objects are linked, so the resulting NLopt is MIT-licensed
+- **L-BFGS becomes unavailable.** Selecting it raises a runtime error naming this option and suggesting Adam (gradient-based, noise-tolerant, no external dependency) or BOBYQA (derivative-free, MIT)
+- BOBYQA, SLSQP, GA, Bayesian Optimization, CMA-ES, and Adam are all unaffected
+- The compile-time flag `HELIOS_HAVE_LBFGS` is not defined
+
+Use `HELIOS_HAVE_LBFGS` rather than `HELIOS_HAVE_NLOPT` to test for L-BFGS specifically — since this option exists, NLopt being available no longer implies L-BFGS is.
+
+\note Whether a **system-installed** NLopt was built with the Luksan solvers cannot be detected: `NLOPT_LUKSAN` is private to NLopt's own build, `nlopt.h` declares `NLOPT_LD_LBFGS` unconditionally regardless of what was compiled, and neither `nlopt_config.h` nor `NLoptConfig.cmake` records it. The build therefore assumes the solvers are present, which is correct for every mainstream distribution (Homebrew, Debian, Fedora, conda-forge, vcpkg). If yours was built with `-DNLOPT_LUKSAN=OFF`, set `HELIOS_SYSTEM_NLOPT_HAS_LUKSAN=OFF` so that L-BFGS is reported as unavailable up front rather than failing inside NLopt.
 
 \section PO_FloatPrecision Note on Float vs Double Precision
 

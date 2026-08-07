@@ -392,6 +392,14 @@ void LeafOptics::PROSPECT(float numberlayers, float Chlorophyllcontent, float ca
 {
     double k;
     double tau, ralf, r12, talf, t12, t21, r21, denom, Ta, Ra, t, r;
+
+    // These are output arguments - overwrite rather than append so that repeated
+    // calls with the same vectors do not accumulate results.
+    reflectivities_fit.clear();
+    transmissivities_fit.clear();
+    reflectivities_fit.reserve(nw);
+    transmissivities_fit.reserve(nw);
+
     // Loop over wavelength, might be a way to be vectorized at least partly
     for (int i = 0; i < LeafOptics::nw; i++) {
         // k: the mean absorption coefficient of each elementary layer.
@@ -440,8 +448,10 @@ void LeafOptics::PROSPECT(float numberlayers, float Chlorophyllcontent, float ca
         Tsub = bNm1 * (a2 - 1.) / denom;
 
         // Case of zero absorption
+        // The boundary r+t == 1 must be included: there D collapses to zero and the
+        // analytic Stokes solution above is degenerate.
 
-        if ((r + t) > 1.0) {
+        if ((r + t) >= 1.0) {
             Tsub = t / (t + (1. - t) * (numberlayers - 1));
             Rsub = 1 - Tsub;
         }
@@ -454,9 +464,48 @@ void LeafOptics::PROSPECT(float numberlayers, float Chlorophyllcontent, float ca
     }
 }
 
+void LeafOptics::validateProperties(const LeafOpticsProperties &leafproperties) {
+
+    // The structure parameter N counts the elementary layers making up the leaf.
+    // Values below 1 are unphysical: they make the Stokes exponent (N-1) negative,
+    // which inverts the layer stack, and N == 0 divides by zero when computing the
+    // mean absorption coefficient of each layer.
+    if (leafproperties.numberlayers < 1.f) {
+        helios_runtime_error(
+                "ERROR (LeafOptics): the leaf structure parameter 'numberlayers' (N) was " + std::to_string(leafproperties.numberlayers) +
+                ", but PROSPECT requires numberlayers >= 1 because it counts the number of elementary layers in the leaf. Set numberlayers to 1 for a single compact layer, or a larger value (typically 1.0-3.0) for a more scattering leaf.");
+    }
+
+    // All constituent contents are masses (or concentrations) per unit leaf area and
+    // cannot be negative. A negative value would contribute negative absorption.
+    auto check_non_negative = [](float value, const char *name, const char *units) {
+        if (value < 0.f) {
+            helios_runtime_error("ERROR (LeafOptics): the leaf constituent '" + std::string(name) + "' was " + std::to_string(value) + " " + units + ", but constituent contents cannot be negative. Set it to zero to disable this constituent.");
+        }
+    };
+
+    check_non_negative(leafproperties.chlorophyllcontent, "chlorophyllcontent", "ug/cm^2");
+    check_non_negative(leafproperties.carotenoidcontent, "carotenoidcontent", "ug/cm^2");
+    check_non_negative(leafproperties.anthocyancontent, "anthocyancontent", "ug/cm^2");
+    check_non_negative(leafproperties.brownpigments, "brownpigments", "(unitless)");
+    check_non_negative(leafproperties.watermass, "watermass", "g/cm^2");
+    check_non_negative(leafproperties.drymass, "drymass", "g/cm^2");
+    check_non_negative(leafproperties.protein, "protein", "g/cm^2");
+    check_non_negative(leafproperties.carbonconstituents, "carbonconstituents", "g/cm^2");
+}
+
 void LeafOptics::getLeafSpectra(const LeafOpticsProperties &leafproperties, std::vector<helios::vec2> &reflectivities_fit, std::vector<helios::vec2> &transmissivities_fit) {
 
     std::vector<float> reflectivities_fit_y, transmissivities_fit_y;
+
+    validateProperties(leafproperties);
+
+    // These are output arguments - overwrite rather than append so that repeated
+    // calls with the same vectors do not accumulate results.
+    reflectivities_fit.clear();
+    transmissivities_fit.clear();
+    reflectivities_fit.reserve(nw);
+    transmissivities_fit.reserve(nw);
 
     float numberlayers = leafproperties.numberlayers;
     float chlorophyllcontent = leafproperties.chlorophyllcontent;
@@ -528,10 +577,15 @@ float LeafOptics::transmittance(double k) {
     //! Ported from public available  Prospect-D Fortran code
     double xx, yy;
     float tau;
-    if (k < 0.0)
+    //! Zero (or negative) absorption means the elementary layer transmits everything.
+    //! The reference PROSPECT implementation initializes tau to 1 and only overwrites
+    //! it where k > 0. k is exactly zero whenever every constituent absorption term
+    //! vanishes, which is reachable in PROSPECT-PRO mode (the protein absorption
+    //! spectrum is identically zero over 400-1432 nm and drymass is forced to zero).
+    if (k <= 0.0)
         return 1.0;
 
-    if ((k > 0.0) && (k < 4.0)) {
+    if (k < 4.0) {
         xx = 0.5 * k - 1.0;
         yy = (((((((((((((((-3.60311230482612224e-13L * xx + 3.46348526554087424e-12L) * xx - 2.99627399604128973e-11L) * xx + 2.57747807106988589e-10L) * xx - 2.09330568435488303e-9L) * xx + 1.59501329936987818e-8L) * xx - 1.13717900285428895e-7L) *
                               xx +
@@ -559,7 +613,7 @@ float LeafOptics::transmittance(double k) {
         tau = (1.0 - k) * exp(-k) + k * k * yy;
         return tau;
     }
-    if ((k > 4.0) && (k < 85.0)) {
+    if (k < 85.0) {
         xx = 14.5 / (k + 3.25) - 1.0;
         yy = (((((((((((((((-1.62806570868460749e-12L * xx - 8.95400579318284288e-13L) * xx - 4.08352702838151578e-12L) * xx - 1.45132988248537498e-11L) * xx - 8.35086918940757852e-11L) * xx - 2.13638678953766289e-10L) * xx -
                        1.10302431467069770e-9L) *
@@ -588,6 +642,8 @@ float LeafOptics::transmittance(double k) {
         tau = (1.0 - k) * exp(-k) + k * k * yy;
         return tau;
     }
+    //! k >= 85: exp(-k) underflows to zero in double precision, so the layer is
+    //! fully absorbing to within machine precision.
     return 0.0;
 }
 

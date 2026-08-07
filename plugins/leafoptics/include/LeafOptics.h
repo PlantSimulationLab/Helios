@@ -157,6 +157,8 @@ public:
      * \param[in] drymass dry mass in the leaf
      * \param[in] protein protein content in the leaf
      * \param[in] carbonconstituents carbon constituents in the leaf
+     * \param[out] reflectivities_fit reflectivities of the leaf at each of the 2101 wavelengths. Any existing contents are overwritten.
+     * \param[out] transmissivities_fit transmissivities of the leaf at each of the 2101 wavelengths. Any existing contents are overwritten.
      */
     void PROSPECT(float numberlayers, float Chlorophyllcontent, float carotenoidcontent, float anthocyancontent, float brownpigments, float watermass, float drymass, float protein, float carbonconstituents, std::vector<float> &reflectivities_fit,
                   std::vector<float> &transmissivities_fit);
@@ -164,8 +166,9 @@ public:
     //! Get the leaf spectra
     /**
      * \param[in] leafproperties LeafOptics properties.
-     * \param[out] reflectivities_fit reflectivities of the leaf
-     * \param[out] transmissivities_fit transmissivities of the leaf
+     * \param[out] reflectivities_fit reflectivities of the leaf. Any existing contents are overwritten.
+     * \param[out] transmissivities_fit transmissivities of the leaf. Any existing contents are overwritten.
+     * \note Throws a runtime error if numberlayers is less than 1 or if any constituent content is negative.
      */
     void getLeafSpectra(const LeafOpticsProperties &leafproperties, std::vector<helios::vec2> &reflectivities_fit, std::vector<helios::vec2> &transmissivities_fit);
 
@@ -275,6 +278,13 @@ private:
     std::vector<float> absorption_protein, absorption_carbonconstituents;
     std::vector<float> Rcof, Tcof;
     //  std::vector<float> R_spec_normal, R_spec_diffuse, wave_length;
+
+    //! Validate PROSPECT input parameters, throwing if any value is unphysical
+    /**
+     * \param[in] leafproperties LeafOptics properties to validate.
+     * \note Throws a runtime error if the structure parameter is less than 1 or if any constituent content is negative.
+     */
+    void validateProperties(const LeafOpticsProperties &leafproperties);
 
     float transmittance(double k);
     // Computes the diffuse transmittance through an elementary layer

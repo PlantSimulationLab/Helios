@@ -841,6 +841,16 @@ void OptiX6Backend::zeroRadiationBuffers(size_t launch_band_count) {
         helios_runtime_error("ERROR (OptiX6Backend::zeroRadiationBuffers): launch_band_count (" + std::to_string(launch_band_count) + ") exceeds current_band_count (" + std::to_string(current_band_count) + ").");
     }
 
+    // Reset camera launch ID so camera pixel buffers get re-zeroed in launchCameraRays().
+    //
+    // radiation_in_camera_RTbuffer accumulates across the tiles of one camera launch, so it is
+    // zeroed only when the camera ID or launch band count changes. Nothing else ever reset this
+    // latch, so a second runBand() rendering the SAME camera with the same bands matched the
+    // existing ID, skipped the zero, and traced on top of the previous image -- doubling it.
+    // Zeroing at the start of every runBand() is what OptiX8Backend already does; this is the
+    // OptiX 6.5 counterpart, which it never had.
+    current_camera_launch_id = UINT32_MAX;
+
     // Zero all radiation result buffers (use current_band_count for global accumulation)
     // Note: Bbox primitives don't accumulate radiation (they only wrap rays),
     // so buffers are sized for real primitives only
@@ -944,19 +954,6 @@ void OptiX6Backend::uploadRadiationOut(const std::vector<float> &radiation_out_t
     }
     if (!radiation_out_bottom.empty()) {
         initializeBuffer1Df(radiation_out_bottom_RTbuffer, radiation_out_bottom);
-    }
-}
-
-void OptiX6Backend::uploadCameraScatterBuffers(const std::vector<float> &scatter_top_cam, const std::vector<float> &scatter_bottom_cam) {
-    if (!is_initialized) {
-        helios_runtime_error("ERROR (OptiX6Backend::uploadCameraScatterBuffers): Backend not initialized.");
-    }
-
-    if (!scatter_top_cam.empty()) {
-        initializeBuffer1Df(scatter_buff_top_cam_RTbuffer, scatter_top_cam);
-    }
-    if (!scatter_bottom_cam.empty()) {
-        initializeBuffer1Df(scatter_buff_bottom_cam_RTbuffer, scatter_bottom_cam);
     }
 }
 

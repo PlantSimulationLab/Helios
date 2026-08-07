@@ -103,6 +103,7 @@ public:
 
     //! Load tree library from an XML file
     /**
+     * If a tree definition specifies a leaf angle distribution via the <code>LeafAngleDist</code> tag, the distribution must integrate to 1 to within 0.001, otherwise an error is thrown.
      * \param[in] filename XML file with path relative to build directory
      * \param[in] silent Disable output messages
      */
@@ -127,24 +128,28 @@ public:
 
     //! Get the unique universal identifiers (UUIDs) for the primitives that make up the tree trunk
     /**
+     * UUIDs of primitives that have since been deleted from the Context are automatically removed, so only UUIDs of primitives that currently exist are returned.
      * \param[in] TreeID Identifier of tree.
      */
     std::vector<uint> getTrunkUUIDs(const uint TreeID);
 
     //! Get the unique universal identifiers (UUIDs) for the primitives that make up the tree branches
     /**
+     * UUIDs of primitives that have since been deleted from the Context are automatically removed, so only UUIDs of primitives that currently exist are returned.
      * \param[in] TreeID Identifier of tree.
      */
     std::vector<uint> getBranchUUIDs(const uint TreeID);
 
     //! Get the unique universal identifiers (UUIDs) for the primitives that make up the tree leaves
     /**
+     * UUIDs of primitives that have since been deleted from the Context are automatically removed, so only UUIDs of primitives that currently exist are returned.
      * \param[in] TreeID Identifier of tree.
      */
     std::vector<uint> getLeafUUIDs(const uint TreeID);
 
     //! Get the unique universal identifiers (UUIDs) for all primitives that make up the tree
     /**
+     * UUIDs of primitives that have since been deleted from the Context are automatically removed, so only UUIDs of primitives that currently exist are returned.
      * \param[in] TreeID Identifier of tree.
      */
     std::vector<uint> getAllUUIDs(const uint TreeID);
@@ -186,6 +191,7 @@ public:
 
     //! Set the architectural parameters for a tree in the currently loaded library
     /**
+     * The parameters are validated before being stored (\sa WeberPennTree::validateTreeParameters), and an error is thrown if they describe a tree that cannot be built.
      * \param[in] treename Name of a tree in the library.
      * \param[in] parameters Set of tree parameters.
      */
@@ -242,6 +248,16 @@ private:
      */
     void recursiveBranch(WeberPennTreeParameters parameters, uint n, uint seg_start, helios::vec3 base_position, helios::vec3 parent_normal, helios::SphericalCoord child_rotation, float length_parent, float radius_parent, float offset_child,
                          helios::vec3 origin, float scale, const uint leaf_template, float base_size, uint base_splits);
+
+    //! Check that a set of tree parameters describes a tree that can actually be built
+    /**
+     * The tree geometry routines divide by several of the parameters and index the per-level parameter arrays using the recursion level, so a parameter set that is out of range produces either a
+     * division by zero or an out-of-range access deep inside the recursion. This check is applied wherever parameters enter the library so that such a parameter set is reported at its source
+     * instead of silently producing a degenerate tree. Throws a runtime error describing the offending parameter if the set is not usable.
+     * \param[in] parameters Set of tree parameters to validate.
+     * \param[in] treename Name of the tree the parameters belong to, used to build the error message.
+     */
+    void validateTreeParameters(const WeberPennTreeParameters &parameters, const std::string &treename) const;
 
     float getVariation(float V);
 

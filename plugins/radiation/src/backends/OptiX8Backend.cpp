@@ -1248,22 +1248,6 @@ void OptiX8Backend::uploadRadiationOut(const std::vector<float> &radiation_out_t
     }
 }
 
-void OptiX8Backend::uploadCameraScatterBuffers(const std::vector<float> &scatter_top_cam,
-                                                const std::vector<float> &scatter_bottom_cam) {
-    if (!scatter_top_cam.empty() && d_scatter_buff_top_cam) {
-        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_scatter_buff_top_cam),
-                              scatter_top_cam.data(),
-                              scatter_top_cam.size() * sizeof(float),
-                              cudaMemcpyHostToDevice));
-    }
-    if (!scatter_bottom_cam.empty() && d_scatter_buff_bottom_cam) {
-        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_scatter_buff_bottom_cam),
-                              scatter_bottom_cam.data(),
-                              scatter_bottom_cam.size() * sizeof(float),
-                              cudaMemcpyHostToDevice));
-    }
-}
-
 void OptiX8Backend::zeroCameraScatterBuffers(size_t launch_band_count) {
     const size_t Nprims = current_primitive_count;
     if (Nprims == 0 || launch_band_count == 0) return;

@@ -535,6 +535,10 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
 
     bool shadow_flag = (primaryLightingModel == Visualizer::LIGHTING_PHONG_SHADOWED);
 
+    if (shadow_flag) {
+        createShadowFramebuffer();
+    }
+
     glm::mat4 depthMVP;
 
     assert(checkerrors());
@@ -656,6 +660,10 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
 void Visualizer::plotOnce(bool getKeystrokes) {
 
     bool shadow_flag = (primaryLightingModel == Visualizer::LIGHTING_PHONG_SHADOWED);
+
+    if (shadow_flag) {
+        createShadowFramebuffer();
+    }
 
     glm::mat4 depthMVP;
 
@@ -1372,6 +1380,10 @@ void Visualizer::plotUpdate(bool hide_window) {
 
     bool shadow_flag = (primaryLightingModel == Visualizer::LIGHTING_PHONG_SHADOWED);
 
+    if (shadow_flag) {
+        createShadowFramebuffer();
+    }
+
     glm::mat4 depthMVP;
 
     if (shadow_flag) {
@@ -1486,15 +1498,35 @@ void Visualizer::updateDepthBuffer() {
 
     transferBufferData();
 
-    // Depth buffer for shadows
-    glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
+    // Render the camera-space depth pass into a dedicated framebuffer. This deliberately does
+    // NOT reuse the shadow-map framebuffer: the depth map is rendered at the window resolution
+    // whereas the shadow map is shadow_buffer_size, so sharing the texture meant this call
+    // silently resized the shadow map and left any subsequent shadowed render sampling a
+    // texture much smaller than the viewport it sets.
+    if (depthbufferFramebufferID == 0) {
+        glGenFramebuffers(1, &depthbufferFramebufferID);
+        glGenTextures(1, &depthbufferTexture);
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, depthbufferFramebufferID);
     glViewport(0, 0, Wframebuffer, Hframebuffer);
 
-    // bind depth texture
+    // bind depth texture, sized to the current framebuffer
     glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, depthTexture);
+    glBindTexture(GL_TEXTURE_2D, depthbufferTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, Wframebuffer, Hframebuffer, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthbufferTexture, 0);
+    glDrawBuffer(GL_NONE); // No color buffer is drawn to.
     glActiveTexture(GL_TEXTURE0);
+
+    GLenum depthbuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (depthbuffer_status != GL_FRAMEBUFFER_COMPLETE) {
+        helios_runtime_error("ERROR (Visualizer::updateDepthBuffer): Depth-buffer framebuffer is incomplete (status " + std::to_string(depthbuffer_status) +
+                             "). This typically occurs in environments with limited graphics support or missing GPU drivers.");
+    }
 
     // Clear the screen
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1513,14 +1545,13 @@ void Visualizer::updateDepthBuffer() {
 
     depth_buffer_data.resize(Wframebuffer * Hframebuffer);
 
-#if defined(__APPLE__)
-    constexpr GLenum read_buf = GL_FRONT;
-#else
-    constexpr GLenum read_buf = GL_BACK;
-#endif
-    glReadBuffer(read_buf);
+    // Read back from the depth-buffer FBO that was just rendered into. Framebuffer objects
+    // have no front/back buffer concept, so no glReadBuffer selection is needed here.
     glReadPixels(0, 0, Wframebuffer, Hframebuffer, GL_DEPTH_COMPONENT, GL_FLOAT, depth_buffer_data.data());
     glFinish();
+
+    // Restore the default framebuffer so subsequent rendering is unaffected.
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     assert(checkerrors());
 

@@ -1319,7 +1319,7 @@ DOCTEST_TEST_CASE("ParameterOptimization LBFGS quadratic with exact gradient") {
     lbfgs.max_iterations = 100;
     popt.setAlgorithm(lbfgs);
 
-#ifdef HELIOS_HAVE_NLOPT
+#ifdef HELIOS_HAVE_LBFGS
     auto result = popt.run(objective, params, gradient);
 
     DOCTEST_INFO("LBFGS quadratic: fitness=", result.fitness,
@@ -1330,10 +1330,10 @@ DOCTEST_TEST_CASE("ParameterOptimization LBFGS quadratic with exact gradient") {
     DOCTEST_CHECK(result.parameters.at("x").value == doctest::Approx(3.f).epsilon(0.001f));
     DOCTEST_CHECK(result.parameters.at("y").value == doctest::Approx(-1.f).epsilon(0.001f));
 #else
-    // Without NLopt, should return initial params with non-optimal fitness
-    auto result = popt.run(objective, params, gradient);
-    DOCTEST_INFO("LBFGS without NLopt: fitness=", result.fitness, " (expected: no convergence)");
-    DOCTEST_CHECK(result.fitness > 1e-6f);
+    // Without L-BFGS, run() must report the unavailability rather than returning a
+    // result built from the initial parameters, which a caller cannot distinguish
+    // from a converged optimization.
+    DOCTEST_CHECK_THROWS_AS(popt.run(objective, params, gradient), std::runtime_error);
 #endif
 }
 
@@ -1365,7 +1365,7 @@ DOCTEST_TEST_CASE("ParameterOptimization LBFGS with composed gradient") {
     lbfgs.max_iterations = 100;
     popt.setAlgorithm(lbfgs);
 
-#ifdef HELIOS_HAVE_NLOPT
+#ifdef HELIOS_HAVE_LBFGS
     auto result = popt.run(objective, params, gradient);
 
     DOCTEST_INFO("LBFGS composed gradient: fitness=", result.fitness,
@@ -1473,7 +1473,7 @@ DOCTEST_TEST_CASE("ParameterOptimization LBFGS missing gradient key") {
     LBFGS lbfgs;
     popt.setAlgorithm(lbfgs);
 
-#ifdef HELIOS_HAVE_NLOPT
+#ifdef HELIOS_HAVE_LBFGS
     DOCTEST_CHECK_THROWS_AS(popt.run(objective, params, gradient), std::runtime_error);
 #endif
 }
@@ -1498,12 +1498,91 @@ DOCTEST_TEST_CASE("ParameterOptimization LBFGS result fitness consistency") {
     lbfgs.max_iterations = 50;
     popt.setAlgorithm(lbfgs);
 
-#ifdef HELIOS_HAVE_NLOPT
+#ifdef HELIOS_HAVE_LBFGS
     auto result = popt.run(objective, params, gradient);
     float recomputed = objective(result.parameters);
 
     DOCTEST_INFO("LBFGS consistency: reported=", result.fitness, " recomputed=", recomputed);
     DOCTEST_CHECK(result.fitness == doctest::Approx(recomputed).epsilon(1e-5f));
+#endif
+}
+
+// An exception thrown by user code (objective, gradient or constraint) must reach the
+// caller with its original type and message. NLopt's C++ wrapper actively works against
+// this: nlopt-in.hpp's myfunc catches everything escaping a callback, destroys it, and
+// rethrows a generic std::runtime_error("nlopt failure"). The message assertions below
+// are therefore the load-bearing part of these tests — a fix that merely deletes the
+// swallowing catch clause would satisfy DOCTEST_CHECK_THROWS_AS but report "nlopt
+// failure" instead of what the user's code actually said.
+
+DOCTEST_TEST_CASE("ParameterOptimization LBFGS propagates objective exception") {
+    ObjectiveFunction objective = [](const ParametersToOptimize &) -> float {
+        throw std::runtime_error("objective failure sentinel");
+    };
+
+    GradientFunction gradient = [](const ParametersToOptimize &p) -> ParameterGradient {
+        return {{"x", 2.f * p.at("x").value}, {"y", 2.f * p.at("y").value}};
+    };
+
+    ParametersToOptimize params = {{"x", {1.f, -5.f, 5.f}}, {"y", {1.f, -5.f, 5.f}}};
+
+    ParameterOptimization popt;
+    LBFGS lbfgs;
+    lbfgs.max_iterations = 20;
+    popt.setAlgorithm(lbfgs);
+
+#ifdef HELIOS_HAVE_LBFGS
+    DOCTEST_CHECK_THROWS_AS(popt.run(objective, params, gradient), std::runtime_error);
+
+    std::string message;
+    try {
+        auto result = popt.run(objective, params, gradient);
+        DOCTEST_FAIL("run() returned instead of propagating the objective exception");
+    } catch (const std::runtime_error &e) {
+        message = e.what();
+    }
+    DOCTEST_INFO("propagated message: ", message);
+    DOCTEST_CHECK(message.find("objective failure sentinel") != std::string::npos);
+#endif
+}
+
+DOCTEST_TEST_CASE("ParameterOptimization LBFGS propagates gradient exception") {
+    ObjectiveFunction objective = [](const ParametersToOptimize &p) {
+        float x = p.at("x").value, y = p.at("y").value;
+        return x * x + y * y;
+    };
+
+    // runLBFGS eagerly evaluates the gradient once before entering NLopt, outside the
+    // try block. A gradient that threw unconditionally would therefore propagate even
+    // on unfixed code and prove nothing. Succeeding on that first call puts the throw
+    // inside the NLopt callback, which is the path under test.
+    auto call_count = std::make_shared<int>(0);
+    GradientFunction gradient = [call_count](const ParametersToOptimize &p) -> ParameterGradient {
+        if ((*call_count)++ > 0) {
+            throw std::runtime_error("gradient failure sentinel");
+        }
+        return {{"x", 2.f * p.at("x").value}, {"y", 2.f * p.at("y").value}};
+    };
+
+    ParametersToOptimize params = {{"x", {1.f, -5.f, 5.f}}, {"y", {1.f, -5.f, 5.f}}};
+
+    ParameterOptimization popt;
+    LBFGS lbfgs;
+    lbfgs.max_iterations = 20;
+    popt.setAlgorithm(lbfgs);
+
+#ifdef HELIOS_HAVE_LBFGS
+    // Only one run() call here: the counter is stateful, so a second call would throw
+    // from the eager pre-validation rather than from inside the callback.
+    std::string message;
+    try {
+        auto result = popt.run(objective, params, gradient);
+        DOCTEST_FAIL("run() returned instead of propagating the gradient exception");
+    } catch (const std::runtime_error &e) {
+        message = e.what();
+    }
+    DOCTEST_INFO("propagated message: ", message);
+    DOCTEST_CHECK(message.find("gradient failure sentinel") != std::string::npos);
 #endif
 }
 
@@ -1624,8 +1703,9 @@ DOCTEST_TEST_CASE("ParameterOptimization BOBYQA quadratic") {
     DOCTEST_CHECK(result.parameters.at("x").value == doctest::Approx(3.f).epsilon(0.001f));
     DOCTEST_CHECK(result.parameters.at("y").value == doctest::Approx(-1.f).epsilon(0.001f));
 #else
-    auto result = popt.run(sim, params);
-    DOCTEST_CHECK(result.fitness > 1e-6f);
+    // Without NLopt, run() must report the unavailability rather than returning a
+    // result built from the initial parameters.
+    DOCTEST_CHECK_THROWS_AS(popt.run(sim, params), std::runtime_error);
 #endif
 }
 
@@ -1713,9 +1793,175 @@ DOCTEST_TEST_CASE("ParameterOptimization SLSQP with constraint") {
 #endif
 }
 
+DOCTEST_TEST_CASE("ParameterOptimization BOBYQA propagates objective exception") {
+    ObjectiveFunction objective = [](const ParametersToOptimize &) -> float {
+        throw std::runtime_error("objective failure sentinel");
+    };
+
+    ParametersToOptimize params = {{"x", {0.f, -5.f, 5.f}}, {"y", {0.f, -5.f, 5.f}}};
+
+    ParameterOptimization popt;
+    BOBYQA bobyqa;
+    bobyqa.max_iterations = 20;
+    popt.setAlgorithm(bobyqa);
+
+#ifdef HELIOS_HAVE_NLOPT
+    DOCTEST_CHECK_THROWS_AS(popt.run(objective, params), std::runtime_error);
+
+    std::string message;
+    try {
+        auto result = popt.run(objective, params);
+        DOCTEST_FAIL("run() returned instead of propagating the objective exception");
+    } catch (const std::runtime_error &e) {
+        message = e.what();
+    }
+    DOCTEST_INFO("propagated message: ", message);
+    DOCTEST_CHECK(message.find("objective failure sentinel") != std::string::npos);
+#endif
+}
+
+DOCTEST_TEST_CASE("ParameterOptimization SLSQP propagates objective exception") {
+    ObjectiveFunction objective = [](const ParametersToOptimize &) -> float {
+        throw std::runtime_error("objective failure sentinel");
+    };
+
+    GradientFunction gradient = [](const ParametersToOptimize &p) -> ParameterGradient {
+        return {{"x", 2.f * p.at("x").value}, {"y", 2.f * p.at("y").value}};
+    };
+
+    ParametersToOptimize params = {{"x", {1.f, -5.f, 5.f}}, {"y", {1.f, -5.f, 5.f}}};
+
+    ParameterOptimization popt;
+    SLSQP slsqp;
+    popt.setAlgorithm(slsqp);
+
+#ifdef HELIOS_HAVE_NLOPT
+    DOCTEST_CHECK_THROWS_AS(popt.run(objective, params, gradient), std::runtime_error);
+
+    std::string message;
+    try {
+        auto result = popt.run(objective, params, gradient);
+        DOCTEST_FAIL("run() returned instead of propagating the objective exception");
+    } catch (const std::runtime_error &e) {
+        message = e.what();
+    }
+    DOCTEST_INFO("propagated message: ", message);
+    DOCTEST_CHECK(message.find("objective failure sentinel") != std::string::npos);
+#endif
+}
+
+DOCTEST_TEST_CASE("ParameterOptimization SLSQP propagates constraint exception") {
+    ObjectiveFunction objective = [](const ParametersToOptimize &p) {
+        float x = p.at("x").value, y = p.at("y").value;
+        return x * x + y * y;
+    };
+    GradientFunction gradient = [](const ParametersToOptimize &p) -> ParameterGradient {
+        return {{"x", 2.f * p.at("x").value}, {"y", 2.f * p.at("y").value}};
+    };
+
+    // The constraint callback is entirely unguarded on unfixed code, and constraint
+    // functions are never eagerly pre-validated, so this throw originates inside NLopt.
+    Constraint c;
+    c.function = [](const ParametersToOptimize &) -> float {
+        throw std::runtime_error("constraint failure sentinel");
+    };
+    c.gradient = [](const ParametersToOptimize &) -> ParameterGradient {
+        return {{"x", -1.f}, {"y", -1.f}};
+    };
+    c.tolerance = 1e-6f;
+
+    ParametersToOptimize params = {{"x", {0.f, -5.f, 5.f}}, {"y", {0.f, -5.f, 5.f}}};
+
+    ParameterOptimization popt;
+    SLSQP slsqp;
+    popt.setAlgorithm(slsqp);
+
+#ifdef HELIOS_HAVE_NLOPT
+    DOCTEST_CHECK_THROWS_AS(popt.run(objective, params, gradient, {c}), std::runtime_error);
+
+    std::string message;
+    try {
+        auto result = popt.run(objective, params, gradient, {c});
+        DOCTEST_FAIL("run() returned instead of propagating the constraint exception");
+    } catch (const std::runtime_error &e) {
+        message = e.what();
+    }
+    DOCTEST_INFO("propagated message: ", message);
+    DOCTEST_CHECK(message.find("constraint failure sentinel") != std::string::npos);
+#endif
+}
+
 // Test 48: SLSQP Cowan-Farquhar style: maximize A subject to E < budget
 // Simplified: maximize x+y subject to x^2+y^2 <= 1 (unit circle)
 // Constrained optimum: x=y=1/sqrt(2), f=sqrt(2)
+// Constraint is an aggregate whose fields the user sets directly, so each of these reaches
+// the optimizer unchecked without validateConstraints(). A negative tolerance would
+// otherwise be caught only by NLopt, as std::invalid_argument — a std::logic_error, which
+// slips past a caller catching std::runtime_error as the rest of Helios does. A NaN
+// tolerance passes NLopt's own `tol < 0` test entirely, and an unset function or gradient
+// raises std::bad_function_call from inside a callback.
+DOCTEST_TEST_CASE("ParameterOptimization SLSQP constraint validation") {
+    ObjectiveFunction objective = [](const ParametersToOptimize &p) {
+        float x = p.at("x").value, y = p.at("y").value;
+        return x * x + y * y;
+    };
+    GradientFunction gradient = [](const ParametersToOptimize &p) -> ParameterGradient {
+        return {{"x", 2.f * p.at("x").value}, {"y", 2.f * p.at("y").value}};
+    };
+
+    ConstraintFunction cfunc = [](const ParametersToOptimize &p) -> float {
+        return 1.f - p.at("x").value - p.at("y").value;
+    };
+    ConstraintGradientFunction cgrad = [](const ParametersToOptimize &) -> ParameterGradient {
+        return {{"x", -1.f}, {"y", -1.f}};
+    };
+
+    ParametersToOptimize params = {{"x", {0.f, -5.f, 5.f}}, {"y", {0.f, -5.f, 5.f}}};
+
+    ParameterOptimization popt;
+    SLSQP slsqp;
+    popt.setAlgorithm(slsqp);
+
+    DOCTEST_SUBCASE("negative tolerance") {
+        Constraint c;
+        c.function = cfunc;
+        c.gradient = cgrad;
+        c.tolerance = -1.f;
+        DOCTEST_CHECK_THROWS_AS(popt.run(objective, params, gradient, {c}), std::runtime_error);
+    }
+
+    DOCTEST_SUBCASE("NaN tolerance") {
+        Constraint c;
+        c.function = cfunc;
+        c.gradient = cgrad;
+        c.tolerance = std::numeric_limits<float>::quiet_NaN();
+        DOCTEST_CHECK_THROWS_AS(popt.run(objective, params, gradient, {c}), std::runtime_error);
+    }
+
+    DOCTEST_SUBCASE("unset constraint function") {
+        Constraint c;
+        c.gradient = cgrad;
+        DOCTEST_CHECK_THROWS_AS(popt.run(objective, params, gradient, {c}), std::runtime_error);
+    }
+
+    DOCTEST_SUBCASE("unset constraint gradient") {
+        Constraint c;
+        c.function = cfunc;
+        DOCTEST_CHECK_THROWS_AS(popt.run(objective, params, gradient, {c}), std::runtime_error);
+    }
+
+    DOCTEST_SUBCASE("zero tolerance is accepted") {
+        Constraint c;
+        c.function = cfunc;
+        c.gradient = cgrad;
+        c.tolerance = 0.f;
+#ifdef HELIOS_HAVE_NLOPT
+        auto result = popt.run(objective, params, gradient, {c});
+        DOCTEST_CHECK(result.fitness == doctest::Approx(0.5f).epsilon(0.05f));
+#endif
+    }
+}
+
 DOCTEST_TEST_CASE("ParameterOptimization SLSQP maximize with constraint") {
     // Minimize -(x+y) subject to x^2+y^2 - 1 <= 0
     ObjectiveFunction objective = [](const ParametersToOptimize &p) {
@@ -1906,7 +2152,7 @@ DOCTEST_TEST_CASE("ParameterOptimization four-way comparison: 3D quadratic") {
         results.push_back({"CMA-ES", r.fitness, std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count(), eval_count});
     }
 
-#ifdef HELIOS_HAVE_NLOPT
+#ifdef HELIOS_HAVE_LBFGS
     // LBFGS with exact gradient
     {
         auto sim = make_objective();
@@ -2078,7 +2324,7 @@ DOCTEST_TEST_CASE("ParameterOptimization four-way comparison: 2D Rosenbrock") {
         results.push_back({"CMA-ES", r.fitness, std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count(), eval_count});
     }
 
-#ifdef HELIOS_HAVE_NLOPT
+#ifdef HELIOS_HAVE_LBFGS
     // LBFGS with exact gradient
     {
         auto sim = make_objective();
@@ -2257,7 +2503,7 @@ DOCTEST_TEST_CASE("ParameterOptimization four-way comparison: 3D rotated ellipso
         results.push_back({"CMA-ES", r.fitness, std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count(), eval_count});
     }
 
-#ifdef HELIOS_HAVE_NLOPT
+#ifdef HELIOS_HAVE_LBFGS
     // LBFGS with exact gradient
     {
         auto sim = make_objective();
@@ -2661,7 +2907,7 @@ DOCTEST_TEST_CASE("ParameterOptimization Adam weight decay (AdamW)") {
 // LBFGS Gradient Verification Test
 // ============================================================================
 
-#ifdef HELIOS_HAVE_NLOPT
+#ifdef HELIOS_HAVE_LBFGS
 // Test 78: LBFGS with verify_gradients enabled converges normally
 DOCTEST_TEST_CASE("ParameterOptimization LBFGS verify_gradients") {
     ObjectiveFunction obj = [](const ParametersToOptimize &p) {

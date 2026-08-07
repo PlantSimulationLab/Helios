@@ -4136,10 +4136,24 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             }
         }
 
-        // Upload camera scatter buffers accumulated from emission, direct rays, and primary diffuse
-        // Camera scatter is accumulated on CPU from GPU after each ray launch
+        // The device camera-scatter buffers are write-only accumulators: every device-side use is an
+        // atomicFloatAdd and nothing reads them back during a launch. They must therefore be ZERO
+        // going into each launch, so that the download afterwards yields only that launch's own
+        // contribution, which is what the three accumulate sites below add into scatter_top_cam.
+        //
+        // Uploading the host accumulator here instead seeded the device buffer with the emitted flux
+        // that scatter_top_cam already held, so the next download returned base + new and the base was
+        // counted twice. On the first runBand() of an emission-only scene that upload was silently
+        // dropped -- with no sources, rundirect is false, so the earlier zeroCameraScatterBuffers()
+        // call is skipped and the OptiX8 device pointers are still null, which makes its
+        // uploadCameraScatterBuffers() (since removed) a no-op -- so only the second and later calls
+        // doubled. Zeroing
+        // here allocates the buffers as well, which removes that first-call/later-call asymmetry.
+        //
+        // What the cameras actually read is radiation_out, uploaded from the same host accumulator
+        // further below; nothing depends on the device camera-scatter buffer holding the base.
         if (Ncameras > 0) {
-            backend->uploadCameraScatterBuffers(scatter_top_cam, scatter_bottom_cam);
+            backend->zeroCameraScatterBuffers(Nbands_launch);
         }
 
         // Note: radiation_specular_RTbuffer is populated on GPU via atomicFloatAdd during ray tracing, don't overwrite it here

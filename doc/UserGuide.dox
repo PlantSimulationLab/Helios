@@ -956,6 +956,50 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
   }
  ~~~~~~
 
+ \subsection DeletingPrims Deleting Primitives and Stale UUIDs
+
+ Primitives are removed from the Context using \ref helios::Context::deletePrimitive() "deletePrimitive()", which accepts either a single UUID or a vector of UUIDs. Once a primitive is deleted, the memory associated with it is released by the Context, and its UUID is no longer valid. UUIDs are never recycled, so a deleted UUID will not later refer to some other primitive.
+
+ It is important to understand that the Context does not track copies of UUIDs that you (or a plug-in) may be holding. If you store a vector of UUIDs and subsequently delete some of those primitives, your stored vector still contains the UUIDs of the deleted primitives. These are commonly referred to as "stale" or "dangling" UUIDs. Passing a stale UUID to most Context functions is an error, and will produce a message such as:
+
+ ~~~~~~
+  ERROR (Context::getPrimitiveArea): Primitive with UUID of 1 does not exist in the Context.
+ ~~~~~~
+
+ You can check whether a UUID is still valid using \ref helios::Context::doesPrimitiveExist() "doesPrimitiveExist()", which also has an overload that takes a vector of UUIDs and returns true only if all of them exist. To prune stale UUIDs from a vector you are holding, use \ref helios::Context::cleanDeletedUUIDs() "cleanDeletedUUIDs()", which removes any UUIDs that no longer correspond to an existing primitive. Overloads are provided for one-, two-, and three-dimensional vectors of UUIDs.
+
+ ~~~~~~{.cpp}
+  #include "Context.h"
+  using namespace helios;
+
+  int main(){
+
+     // Initialize the Context
+     Context context;
+
+     vec3 center = make_vec3(0,0,0);
+     vec2 size = make_vec2(1,1);
+
+     std::vector<uint> UUIDs;
+     for( int i=0; i<10; i++ ){
+        UUIDs.push_back( context.addPatch( make_vec3(i*3,0,0), size ) );
+     }
+
+     // Delete the first two patches
+     context.deletePrimitive( UUIDs.at(0) );
+     context.deletePrimitive( UUIDs.at(1) );
+
+     // Our stored vector still holds all 10 UUIDs, two of which are now stale
+     bool all_exist = context.doesPrimitiveExist( UUIDs ); // returns false
+
+     // Remove the stale UUIDs, leaving the 8 that still exist
+     context.cleanDeletedUUIDs( UUIDs );
+
+  }
+ ~~~~~~
+
+ Geometry-generating plug-ins such as \ref WeberPennDoc "WeberPennTree" and \ref CanopyGeneratorDoc "CanopyGenerator" cache the UUIDs of the primitives they create so that they can be retrieved later. If you delete primitives that a plug-in created, that plug-in's cached UUIDs would also become stale. To avoid this, the UUID getter functions in these plug-ins (for example \ref WeberPennTree::getLeafUUIDs() "getLeafUUIDs()" and \ref WeberPennTree::getAllUUIDs() "getAllUUIDs()") automatically remove UUIDs of deleted primitives before returning. As a result, these getters always return only UUIDs of primitives that currently exist, and it is safe to pass their return value directly to other plug-ins.
+
  \subsection Texture Texture Mapping
 
  Images can be overlaid on patches and triangles through a process called <a href="https://en.wikipedia.org/wiki/Texture_mapping">texture mapping</a>. There are typically two reasons for doing this. One is simply for visualization purposes, as it easily allows for complex coloring of a surface by coloring a surface according to an image. The other is to create a more complex shape by removing a portion of the primitive surface according to the transparency channel of an image. Each of these cases are described in detail below.

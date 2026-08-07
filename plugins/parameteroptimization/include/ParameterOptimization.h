@@ -110,9 +110,9 @@ using ConstraintGradientFunction = std::function<ParameterGradient(const Paramet
 
 //! A nonlinear inequality constraint: c(x) <= 0
 struct Constraint {
-    ConstraintFunction function;           //!< Returns c(x); constraint satisfied when c(x) <= 0
-    ConstraintGradientFunction gradient;   //!< Returns dc/d(param) for each parameter
-    float tolerance = 1e-6f;               //!< Constraint satisfaction tolerance
+    ConstraintFunction function;           //!< Returns c(x); constraint satisfied when c(x) <= 0. Required.
+    ConstraintGradientFunction gradient;   //!< Returns dc/d(param) for each parameter. Required.
+    float tolerance = 1e-6f;               //!< Constraint satisfaction tolerance. Must be non-negative; 0 requires exact satisfaction.
 };
 
 // --- Combined simulation for constrained optimization ---

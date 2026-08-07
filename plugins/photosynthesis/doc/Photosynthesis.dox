@@ -196,6 +196,8 @@ As \f$T_{opt}\f$ \f$\to \infty\f$, then the peaked form approaches the standard,
 
 In the Photosynthesis Plugin, the Arrhenius form will be assumed as it requires fewer parameters, unless the additional parameters \f$dH_d\f$ and \f$T_{opt}\f$ are specified by the user.
 
+\warning The peaked form evaluates \f$\ln(dH_d/dH_a - 1)\f$, which requires \f$dH_d > dH_a\f$. Supplying \f$dH_d \le dH_a\f$ to a four-argument setter raises \c helios_runtime_error rather than silently producing NaN. When \f$dH_d\f$ is not specified it defaults to \f$10\,dH_a\f$, which always satisfies this constraint.
+
 | Parameter | Description                            | Units                     |
 | --------- | -------------------------------------- | ------------------------- |
 | \f$k_{25}\f$  | reference rate at 25\f$^\circ\f$C     | \f$\mu mol\,m^{-2}\,s^{-1}\f$ |
@@ -269,6 +271,10 @@ Each parameter has a setter function, which is the means by which the underlying
 
 Note that the parameter sets in the library vary in terms of which response functions are used based on the data available for parameter fitting.
 
+\note Pistachio is available as two separate cultivar fits. The species key \c "PistachioFemale" (and the bare key \c "Pistachio") selects the female parameter set given in the table above. The key \c "PistachioMale" selects a separate male fit (\f$V_{cmax25}\f$ = 154.17, \f$J_{max25}\f$ = 243.20, \f$R_{d25}\f$ = 2.05, \f$\alpha\f$ = 0.335, \f$\Delta H_{a,Vcmax}\f$ = 65.33, \f$\Delta H_{a,Jmax}\f$ = 50.89) that uses the unpeaked Arrhenius form with no TPU limitation.
+
+\warning The \ref FarquharModelCoefficients struct also exposes deprecated public scalar fields \c Vcmax, \c Jmax, \c Rd and \c alpha, retained for backwards compatibility. Assigning one of these directly (rather than calling the setter) selects a simple non-peaked Arrhenius response built from the corresponding \c dH_* coefficient, bypassing the temperature-response object entirely. Calling the matching setter resets the field to its \c -1 sentinel so the setter is always authoritative. Prefer the setter API in new code; mixing the two is not supported.
+
  ~~~~~~{.cpp}
 	PhotosynthesisModel photosynthesismodel(&context);
 
@@ -326,7 +332,9 @@ photo_model.run();
 - Simplified canopy management: Update one material to change entire plant/organ
 - Performance: Caching minimizes Context lookups
 
-**Temperature Response Handling**: The material-based approach properly serializes and deserializes the PhotosyntheticTemperatureResponseParameters objects, preserving all temperature response settings (constant, Arrhenius, or optimum-based).
+**Temperature Response Handling**: The material-based approach serializes and deserializes the PhotosyntheticTemperatureResponseParameters objects for \f$V_{cmax}\f$, \f$J_{max}\f$, \f$R_d\f$, \f$\alpha\f$, TPU, \f$\theta\f$ and \f$g_m\f$, preserving all temperature response settings (constant, Arrhenius, or optimum-based) along with the TPU limitation flag.
+
+\note Materials serialized by a Helios version prior to the addition of the TPU and \f$\theta\f$ fields will not contain them. Those labels are optional on read, so such materials deserialize with the struct defaults for TPU and \f$\theta\f$ — re-save the material to capture the current values.
 
   \section EmpiricalDescription Empirical Model Description
 
@@ -351,6 +359,8 @@ photo_model.run();
    \f$f_T(T_s) = \left(\dfrac{T_s-T_{min}}{T_{ref}-T_{min}}\right)^q\left(\dfrac{(1+q)T_{opt}-T_{min}-qT_s}{(1+q)T_{opt}-T_{min}-qT_{ref}}\right)\f$,
 
    where \f$T_{min}\f$ is the minimum temperature at which assimilation occurs, \f$T_{opt}\f$ is the temperature at which the maximum assimilation rate occurs, \f$T_{ref}\f$ is the reference temperature chosen to define \f$A_{ref}\f$, and \f$q\f$ is a shape parameter.
+
+   \f$f_T\f$ is clamped to zero outside the range over which it is defined: at or below \f$T_{min}\f$, and above the upper temperature at which the second factor changes sign. In those regimes gross assimilation is zero and the net rate is \f$A = -R_d\f$. The coefficients must satisfy \f$T_{ref} > T_{min}\f$ and \f$(1+q)T_{opt}-T_{min}-qT_{ref} \neq 0\f$; violating either raises \c helios_runtime_error.
 
    The "dark" respiration rate \f$R_d\f$ is assumed to increase exponentially with temperature following the Arrhenius equation (and assumed not to vary with ambient CO<sub>2</sub> concentration).  Thus, the dark respiration rate is calculated simply as
 

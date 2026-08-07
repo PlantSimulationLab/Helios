@@ -1703,6 +1703,193 @@ DOCTEST_TEST_CASE("Nitrogen Mode - Verify Spectrum Physical Properties") {
     DOCTEST_CHECK(refl_data.back().x == doctest::Approx(2500.0f).epsilon(0.01f));
 }
 
+DOCTEST_TEST_CASE("LeafOptics Zero Absorption - PROSPECT-PRO with no water") {
+    // Regression test: when every absorption term vanishes, the mean absorption
+    // coefficient k is exactly zero. The reference PROSPECT implementation sets
+    // tau = 1 in that case (zero absorption => perfect transmission through the
+    // elementary layer). Returning tau = 0 instead drives the internal
+    // transmissivity t to zero, which divides by zero in the Stokes solution and
+    // produces NaN reflectance/transmittance.
+    //
+    // absorption_proteins is identically zero over 400-1432 nm, and PROSPECT-PRO
+    // mode forces drymass to zero, so this is reachable with legal inputs.
+
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    LeafOpticsProperties props;
+    props.chlorophyllcontent = 0.0f;
+    props.carotenoidcontent = 0.0f;
+    props.anthocyancontent = 0.0f;
+    props.brownpigments = 0.0f;
+    props.watermass = 0.0f; // no water absorption
+    props.drymass = 0.0f;
+    props.protein = 0.001f; // enables PROSPECT-PRO mode
+    props.carbonconstituents = 0.0f;
+
+    std::vector<vec2> reflectivities, transmissivities;
+    leafoptics.getLeafSpectra(props, reflectivities, transmissivities);
+
+    DOCTEST_CHECK(reflectivities.size() == 2101);
+    DOCTEST_CHECK(transmissivities.size() == 2101);
+
+    // Every point must be finite and physically bounded.
+    for (size_t i = 0; i < reflectivities.size(); i++) {
+        DOCTEST_CHECK(std::isfinite(reflectivities.at(i).y));
+        DOCTEST_CHECK(std::isfinite(transmissivities.at(i).y));
+        DOCTEST_CHECK(reflectivities.at(i).y >= 0.0f);
+        DOCTEST_CHECK(reflectivities.at(i).y <= 1.0f);
+        DOCTEST_CHECK(transmissivities.at(i).y >= 0.0f);
+        DOCTEST_CHECK(transmissivities.at(i).y <= 1.0f);
+        DOCTEST_CHECK(reflectivities.at(i).y + transmissivities.at(i).y <= 1.01f);
+    }
+
+    // In the non-absorbing limit the leaf must transmit nearly all incident
+    // radiation. Sample 1400 nm (index 1000), inside the protein-only zero-k window.
+    DOCTEST_CHECK(transmissivities.at(1000).y > 0.4f);
+    DOCTEST_CHECK(reflectivities.at(1000).y + transmissivities.at(1000).y > 0.99f);
+}
+
+DOCTEST_TEST_CASE("LeafOptics Spectra Are Finite For All Library Species") {
+    // Broad guard: no species in the built-in library may produce non-finite or
+    // out-of-range spectra.
+
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    std::vector<std::string> species = {"default", "garden_lettuce", "alfalfa", "corn", "sunflower", "english_walnut", "rice", "soybean", "wine_grape", "tomato", "common_bean", "cowpea"};
+
+    for (const auto &name: species) {
+        LeafOpticsProperties props;
+        leafoptics.getPropertiesFromLibrary(name, props);
+
+        std::vector<vec2> reflectivities, transmissivities;
+        leafoptics.getLeafSpectra(props, reflectivities, transmissivities);
+
+        DOCTEST_CHECK(reflectivities.size() == 2101);
+        DOCTEST_CHECK(transmissivities.size() == 2101);
+
+        for (size_t i = 0; i < reflectivities.size(); i++) {
+            DOCTEST_CHECK(std::isfinite(reflectivities.at(i).y));
+            DOCTEST_CHECK(std::isfinite(transmissivities.at(i).y));
+            DOCTEST_CHECK(reflectivities.at(i).y >= 0.0f);
+            DOCTEST_CHECK(reflectivities.at(i).y <= 1.0f);
+            DOCTEST_CHECK(transmissivities.at(i).y >= 0.0f);
+            DOCTEST_CHECK(transmissivities.at(i).y <= 1.0f);
+        }
+    }
+}
+
+DOCTEST_TEST_CASE("LeafOptics Transmittance Continuity Across Branch Boundaries") {
+    // Regression test: the exponential-integral approximation in transmittance()
+    // is evaluated over separate k intervals. Boundary values (k == 4, k == 85)
+    // must not fall through to a degenerate return. The absorption coefficient k
+    // is swept by scaling chlorophyll content, and the resulting spectra must vary
+    // smoothly - a dropped boundary shows up as a discontinuous jump.
+
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    // Sweep chlorophyll finely so that k crosses 4.0 at many wavelengths.
+    float previous_mean = -1.0f;
+    for (int step = 0; step <= 40; step++) {
+        LeafOpticsProperties props;
+        props.chlorophyllcontent = 5.0f + static_cast<float>(step) * 2.5f;
+
+        std::vector<vec2> reflectivities, transmissivities;
+        leafoptics.getLeafSpectra(props, reflectivities, transmissivities);
+
+        float mean_transmittance = 0.0f;
+        for (const auto &value: transmissivities) {
+            DOCTEST_CHECK(std::isfinite(value.y));
+            mean_transmittance += value.y;
+        }
+        mean_transmittance /= static_cast<float>(transmissivities.size());
+
+        // Increasing chlorophyll must monotonically decrease mean transmittance,
+        // with no abrupt jumps from a dropped branch boundary.
+        if (previous_mean >= 0.0f) {
+            DOCTEST_CHECK(mean_transmittance <= previous_mean + 1e-4f);
+            DOCTEST_CHECK(std::abs(mean_transmittance - previous_mean) < 0.05f);
+        }
+        previous_mean = mean_transmittance;
+    }
+}
+
+DOCTEST_TEST_CASE("LeafOptics Output Vectors Are Overwritten Not Appended") {
+    // Regression test: getLeafSpectra() takes its spectra as [out] parameters, so
+    // reusing the same vectors across calls must overwrite rather than append.
+
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    LeafOpticsProperties props;
+    props.chlorophyllcontent = 40.0f;
+
+    std::vector<vec2> reflectivities, transmissivities;
+    leafoptics.getLeafSpectra(props, reflectivities, transmissivities);
+
+    DOCTEST_CHECK(reflectivities.size() == 2101);
+    DOCTEST_CHECK(transmissivities.size() == 2101);
+
+    // Second call with the same vectors must not grow them.
+    leafoptics.getLeafSpectra(props, reflectivities, transmissivities);
+
+    DOCTEST_CHECK(reflectivities.size() == 2101);
+    DOCTEST_CHECK(transmissivities.size() == 2101);
+
+    // Wavelength axis must still be correct (not restarted mid-vector).
+    DOCTEST_CHECK(reflectivities.front().x == doctest::Approx(400.0f).epsilon(0.01f));
+    DOCTEST_CHECK(reflectivities.back().x == doctest::Approx(2500.0f).epsilon(0.01f));
+    DOCTEST_CHECK(transmissivities.front().x == doctest::Approx(400.0f).epsilon(0.01f));
+    DOCTEST_CHECK(transmissivities.back().x == doctest::Approx(2500.0f).epsilon(0.01f));
+}
+
+DOCTEST_TEST_CASE("LeafOptics Invalid Input Parameters Throw") {
+    // PROSPECT requires the structure parameter N >= 1 (it counts elementary
+    // layers). N < 1 makes the Stokes exponent negative and N == 0 divides by
+    // zero when computing k. Negative constituent contents are equally unphysical.
+
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    std::vector<vec2> reflectivities, transmissivities;
+
+    {
+        capture_cerr capture;
+
+        LeafOpticsProperties zero_layers;
+        zero_layers.numberlayers = 0.0f;
+        DOCTEST_CHECK_THROWS(leafoptics.getLeafSpectra(zero_layers, reflectivities, transmissivities));
+
+        LeafOpticsProperties sub_unit_layers;
+        sub_unit_layers.numberlayers = 0.5f;
+        DOCTEST_CHECK_THROWS(leafoptics.getLeafSpectra(sub_unit_layers, reflectivities, transmissivities));
+
+        LeafOpticsProperties negative_chlorophyll;
+        negative_chlorophyll.chlorophyllcontent = -10.0f;
+        DOCTEST_CHECK_THROWS(leafoptics.getLeafSpectra(negative_chlorophyll, reflectivities, transmissivities));
+
+        LeafOpticsProperties negative_water;
+        negative_water.watermass = -0.01f;
+        DOCTEST_CHECK_THROWS(leafoptics.getLeafSpectra(negative_water, reflectivities, transmissivities));
+    }
+
+    // N exactly 1 is the valid lower bound (a single compact layer).
+    LeafOpticsProperties single_layer;
+    single_layer.numberlayers = 1.0f;
+    DOCTEST_CHECK_NOTHROW(leafoptics.getLeafSpectra(single_layer, reflectivities, transmissivities));
+    for (size_t i = 0; i < reflectivities.size(); i++) {
+        DOCTEST_CHECK(std::isfinite(reflectivities.at(i).y));
+        DOCTEST_CHECK(std::isfinite(transmissivities.at(i).y));
+    }
+}
+
 int LeafOptics::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

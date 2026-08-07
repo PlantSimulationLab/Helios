@@ -230,6 +230,24 @@ The model automatically selects the appropriate mode based on parameter values:
 
 **Note:** The built-in species library uses PROSPECT-D mode for all species. If you need PROSPECT-PRO parameters, you must set them manually.
 
+\subsection LOModeNoDryMatter Leaves With No Dry Matter
+
+If `drymass`, `protein`, and `carbonconstituents` are all zero, the leaf has no dry matter at all. This is not an error — the model still runs and returns a spectrum — but it is almost always a mistake, so a warning is printed unless messages have been disabled with \ref LeafOptics::disableMessages(). Set at least one dry-matter parameter to a non-zero value to suppress it.
+
+Note that a leaf with no dry matter *and* no water and no pigments is perfectly non-absorbing at every wavelength. This is handled correctly (the elementary-layer transmittance is 1, so the leaf reflects and transmits all incident radiation with no absorption), but such a leaf is not physically meaningful.
+
+\section LOValidation Input Validation
+
+The model validates its inputs before computing a spectrum and throws a runtime error for values that are physically meaningless:
+
+<table>
+ <tr><th>Parameter</th><th>Requirement</th><th>Reason</th></tr>
+ <tr><td>numberlayers</td><td>\f$N \ge 1\f$</td><td>\f$N\f$ counts the elementary layers making up the leaf. \f$N < 1\f$ makes the Stokes exponent \f$N-1\f$ negative, which inverts the layer stack, and \f$N = 0\f$ divides by zero when computing the per-layer absorption coefficient. Use \f$N = 1\f$ for a single compact layer.</td></tr>
+ <tr><td>All constituent contents</td><td>\f$\ge 0\f$</td><td>Constituent contents are masses (or concentrations) per unit leaf area. A negative value would contribute negative absorption. Set a constituent to zero to disable it.</td></tr>
+</table>
+
+Validation applies to every entry point that computes a spectrum, including \ref LeafOptics::getLeafSpectra() and both \ref LeafOptics::run() overloads that take a \ref LeafOpticsProperties struct.
+
 \section LOProps LeafOpticsProperties Structure
 
 The \ref LeafOpticsProperties structure stores the biochemical inputs to the
@@ -315,7 +333,7 @@ The method populates all nine parameters in the \ref LeafOpticsProperties struct
 
 \subsection LOLibrarySpecies Available Species
 
-The library contains parameters fitted to LOPEX93 spectral library samples using the `fit_prospect_visrobust.py` script with robust optimization. All species use PROSPECT-D mode (see \ref LOModes).
+The library contains parameters fitted to measured leaf spectra using the `fit_prospect_visrobust.py` script with robust optimization. Most species are fitted to LOPEX93 spectral library samples; "common_bean" and "cowpea" are fitted to spectra from the GEMINI field experiments. All species use PROSPECT-D mode (see \ref LOModes).
 
 <table>
  <tr><th>Species Label</th><th>Scientific Name</th><th>N</th><th>Cab<br>(µg/cm²)</th><th>Car<br>(µg/cm²)</th><th>Ant<br>(µg/cm²)</th><th>Cbrown</th><th>Cw<br>(g/cm²)</th><th>Cm<br>(g/cm²)</th><th>R²</th><th>Source</th></tr>
@@ -329,11 +347,13 @@ The library contains parameters fitted to LOPEX93 spectral library samples using
  <tr><td>"soybean"</td><td>Glycine max L.</td><td>1.54</td><td>46.4</td><td>12.1</td><td>0.65</td><td>0.000</td><td>0.0101</td><td>0.0029</td><td>0.997</td><td>LOPEX93 sample 0116</td></tr>
  <tr><td>"wine_grape"</td><td>Vitis vinifera L.</td><td>1.43</td><td>50.9</td><td>12.5</td><td>1.44</td><td>0.080</td><td>0.0109</td><td>0.0060</td><td>0.997</td><td>LOPEX93 sample 0276</td></tr>
  <tr><td>"tomato"</td><td>Lycopersicum esculentum</td><td>1.40</td><td>48.3</td><td>11.6</td><td>1.45</td><td>0.000</td><td>0.0156</td><td>0.0026</td><td>0.997</td><td>LOPEX93 sample 0316</td></tr>
+ <tr><td>"common_bean"</td><td>Phaseolus vulgaris L.</td><td>1.44</td><td>42.4</td><td>15.6</td><td>0.84</td><td>0.000</td><td>0.0150</td><td>0.0020</td><td>-</td><td>GEMINI field experiments, day 35</td></tr>
+ <tr><td>"cowpea"</td><td>Vigna unguiculata L.</td><td>1.23</td><td>61.5</td><td>25.6</td><td>2.52</td><td>0.000</td><td>0.0221</td><td>0.0011</td><td>-</td><td>GEMINI field experiments, day 48</td></tr>
 </table>
 
 **Notes:**
 - Species names are case-insensitive (e.g., "corn" and "CORN" are equivalent).
-- R² values computed as 1 - (RMSE² / variance), indicating goodness-of-fit to measured spectra.
+- R² values computed as 1 - (RMSE² / variance), indicating goodness-of-fit to measured spectra. A dash indicates the reference spectra are not distributed with Helios, so the value is not reported.
 - All parameters were fitted without affine calibration using visible-robust optimization.
 - LOPEX93 dataset: Hosgood B. et al. (1994), Leaf Optical Properties Experiment 93 (LOPEX93), EUR 16095 EN.
 
@@ -348,7 +368,23 @@ This ensures that code continues to run even if a species name is misspelled or 
 
 \subsection LOLibraryExtend Extending the Species Library
 
-To add new species to the library, edit the \ref LeafOptics::getPropertiesFromLibrary() method in `plugins/leafoptics/src/LeafOptics.cpp`. Follow the existing if-else pattern to add new species entries. The library supports both PROSPECT-D mode (using drymass) and PROSPECT-PRO mode (using protein and carbonconstituents).
+To add new species to the library, edit the `initializeSpeciesLibrary()` method in `plugins/leafoptics/src/LeafOptics.cpp`. The library is a `std::map` keyed by the lower-case species name, so a new entry is added by populating a \ref LeafOpticsProperties struct and assigning it into the map:
+
+~~~~~~{.cpp}
+// Barley (Hordeum vulgare L.)
+props.numberlayers = 1.62f;
+props.chlorophyllcontent = 38.5f;
+props.carotenoidcontent = 9.2f;
+props.anthocyancontent = 0.8f;
+props.brownpigments = 0.0f;
+props.watermass = 0.0121f;
+props.drymass = 0.0045f;
+props.protein = 0.0f;
+props.carbonconstituents = 0.0f;
+species_library["barley"] = props;
+~~~~~~
+
+Keys must be lower-case, because \ref LeafOptics::getPropertiesFromLibrary() lower-cases the requested name before looking it up. The library supports both PROSPECT-D mode (using drymass) and PROSPECT-PRO mode (using protein and carbonconstituents). Remember to add the new species to the table above.
 
 \section LOSIFIntegration Integration with the Radiation SIF Pipeline
 

@@ -39,6 +39,14 @@ namespace {
     constexpr const char *LABEL_FQ_alpha = "photo_fq_alpha";
     constexpr const char *LABEL_FQ_O = "photo_fq_O";
     constexpr const char *LABEL_FQ_TPU_flag = "photo_fq_TPU_flag";
+    constexpr const char *LABEL_FQ_TPU = "photo_fq_TPU";
+    constexpr const char *LABEL_FQ_TPU_dHa = "photo_fq_TPU_dHa";
+    constexpr const char *LABEL_FQ_TPU_dHd = "photo_fq_TPU_dHd";
+    constexpr const char *LABEL_FQ_TPU_Topt = "photo_fq_TPU_Topt";
+    constexpr const char *LABEL_FQ_theta = "photo_fq_theta";
+    constexpr const char *LABEL_FQ_theta_dHa = "photo_fq_theta_dHa";
+    constexpr const char *LABEL_FQ_theta_dHd = "photo_fq_theta_dHd";
+    constexpr const char *LABEL_FQ_theta_Topt = "photo_fq_theta_Topt";
     constexpr const char *LABEL_FQ_c_Rd = "photo_fq_c_Rd";
     constexpr const char *LABEL_FQ_c_Vcmax = "photo_fq_c_Vcmax";
     constexpr const char *LABEL_FQ_c_Jmax = "photo_fq_c_Jmax";
@@ -378,6 +386,22 @@ void PhotosynthesisModel::setModelCoefficients(const std::string &material_label
     context->setMaterialData(material_label, LABEL_FQ_alpha, alpha_resp.value_at_25C);
     context->setMaterialData(material_label, "photo_fq_alpha_dHa", alpha_resp.dHa);
 
+    // Serialize temperature response parameters for TPU. Without these, a material with
+    // TPU_flag = 1 would deserialize with TPU silently reverted to the struct default.
+    PhotosyntheticTemperatureResponseParameters tpu_resp = const_cast<FarquharModelCoefficients &>(coeffs).getTPUTempResponse();
+    context->setMaterialData(material_label, LABEL_FQ_TPU, tpu_resp.value_at_25C);
+    context->setMaterialData(material_label, LABEL_FQ_TPU_dHa, tpu_resp.dHa);
+    context->setMaterialData(material_label, LABEL_FQ_TPU_dHd, tpu_resp.dHd);
+    context->setMaterialData(material_label, LABEL_FQ_TPU_Topt, tpu_resp.Topt);
+
+    // Serialize the light-response curvature theta. Without this, a non-rectangular
+    // hyperbola light response would silently deserialize as a rectangular one.
+    PhotosyntheticTemperatureResponseParameters theta_resp = const_cast<FarquharModelCoefficients &>(coeffs).getLightResponseCurvatureTempResponse();
+    context->setMaterialData(material_label, LABEL_FQ_theta, theta_resp.value_at_25C);
+    context->setMaterialData(material_label, LABEL_FQ_theta_dHa, theta_resp.dHa);
+    context->setMaterialData(material_label, LABEL_FQ_theta_dHd, theta_resp.dHd);
+    context->setMaterialData(material_label, LABEL_FQ_theta_Topt, theta_resp.Topt);
+
     // Serialize mesophyll conductance gm (default value_at_25C is +infinity, meaning Cc ≡ Ci).
     PhotosyntheticTemperatureResponseParameters gm_resp = coeffs.getMesophyllConductance_gmTempResponse();
     context->setMaterialData(material_label, LABEL_FQ_gm, gm_resp.value_at_25C);
@@ -406,10 +430,11 @@ FarquharModelCoefficients PhotosynthesisModel::getFarquharCoefficientsFromLibrar
     FarquharModelCoefficients fmc;
     bool defaultSpecies = false;
     if (s == "Almond" || s == "almond") {
-        fmc.setVcmax(105.9, 65.33f);
-        fmc.setJmax(166.34, 46.36);
-        fmc.setRd(1.49, 46.39f);
-        fmc.setQuantumEfficiency_alpha(0.336);
+        fmc.setVcmax(72.6, 27.3, 315.3 - 273.15, 478.4);
+        fmc.setJmax(144.2, 64.1, 314.9 - 273.15, 508.4);
+        fmc.setTPU(6.4, 37.1, 311.3 - 273.15, 477.9);
+        fmc.setRd(0.2, 46.39f);
+        fmc.setQuantumEfficiency_alpha(0.094);
     } else if (s == "Apple" || s == "apple") {
         fmc.setVcmax(101.08, 65.33f);
         fmc.setJmax(167.03, 47.62);
@@ -423,7 +448,7 @@ FarquharModelCoefficients PhotosynthesisModel::getFarquharCoefficientsFromLibrar
     } else if (s == "Prune" || s == "prune") {
         fmc.setVcmax(75.88, 65.33f);
         fmc.setJmax(129.41, 48.58);
-        fmc.setRd(1.56, 46.39f);
+        fmc.setRd(1.65, 46.39f);
         fmc.setQuantumEfficiency_alpha(0.402);
     } else if (s == "Pear" || s == "pear") {
         fmc.setVcmax(107.69, 65.33f);
@@ -431,20 +456,24 @@ FarquharModelCoefficients PhotosynthesisModel::getFarquharCoefficientsFromLibrar
         fmc.setRd(1.510, 46.39f);
         fmc.setQuantumEfficiency_alpha(0.274);
     } else if (s == "PistachioFemale" || s == "pistachiofemale" || s == "pistachio_female" || s == "Pistachio_Female" || s == "Pistachio_female" || s == "pistachio" || s == "Pistachio") {
-        fmc.setVcmax(138.99, 65.33f);
-        fmc.setJmax(221.76, 43.80);
-        fmc.setRd(2.850, 46.39f);
-        fmc.setQuantumEfficiency_alpha(0.366);
+        // Generic "pistachio" resolves to the female cultivar.
+        fmc.setVcmax(101.8, 56.5, 316.6 - 273.15, 483.1);
+        fmc.setJmax(223.0, 27.7, 314.6 - 273.15, 458.5);
+        fmc.setTPU(9.8, 39.9, 315.4 - 273.15, 494.3);
+        fmc.setRd(1.5, 46.39f);
+        fmc.setQuantumEfficiency_alpha(0.216);
+        fmc.setLightResponseCurvature_theta(0.65);
     } else if (s == "PistachioMale" || s == "pistachiomale" || s == "pistachio_male" || s == "Pistachio_Male" || s == "Pistachio_male") {
         fmc.setVcmax(154.17, 65.33f);
         fmc.setJmax(243.20, 50.89);
         fmc.setRd(2.050, 46.39f);
         fmc.setQuantumEfficiency_alpha(0.335);
     } else if (s == "Walnut" || s == "walnut") {
-        fmc.setVcmax(121.85, 65.33f);
-        fmc.setJmax(197.25, 48.35);
-        fmc.setRd(1.960, 46.39f);
-        fmc.setQuantumEfficiency_alpha(0.404);
+        fmc.setVcmax(81.6, 85.3, 316.5 - 273.15, 500.6);
+        fmc.setJmax(201.9, 41.4, 308.6 - 273.15, 308.2);
+        fmc.setTPU(10.2, 21.9, 310.4 - 273.15, 434.9);
+        fmc.setRd(0.9, 46.39f);
+        fmc.setQuantumEfficiency_alpha(0.362);
     } else if (s == "Grape" || s == "grape") {
         // cv. Cabernet Sauvignon
         fmc.setVcmax(74.5, 76.1, 318.8 - 273.15, 499.8);
@@ -771,7 +800,53 @@ FarquharModelCoefficients PhotosynthesisModel::getCoefficientsForPrimitive_Farqu
                 }
             }
 
-            // Set O and TPU_flag
+            // Reconstruct the TPU temperature response if present. Missing labels leave the
+            // struct default (older serializations pre-date these fields).
+            if (mat.doesMaterialDataExist(LABEL_FQ_TPU)) {
+                float tpu_25C, tpu_dHa = 0.f, tpu_dHd = 0.f, tpu_Topt = 10000.f;
+                mat.getMaterialData(LABEL_FQ_TPU, tpu_25C);
+                if (mat.doesMaterialDataExist(LABEL_FQ_TPU_dHa)) {
+                    mat.getMaterialData(LABEL_FQ_TPU_dHa, tpu_dHa);
+                }
+                if (mat.doesMaterialDataExist(LABEL_FQ_TPU_dHd)) {
+                    mat.getMaterialData(LABEL_FQ_TPU_dHd, tpu_dHd);
+                }
+                if (mat.doesMaterialDataExist(LABEL_FQ_TPU_Topt)) {
+                    mat.getMaterialData(LABEL_FQ_TPU_Topt, tpu_Topt);
+                }
+                if (tpu_Topt < 1000.f) {
+                    coeffs.setTPU(tpu_25C, tpu_dHa, tpu_Topt - 273.15f, tpu_dHd);
+                } else if (tpu_dHa > 0.f) {
+                    coeffs.setTPU(tpu_25C, tpu_dHa);
+                } else {
+                    coeffs.setTPU(tpu_25C);
+                }
+            }
+
+            // Reconstruct the light-response curvature theta if present.
+            if (mat.doesMaterialDataExist(LABEL_FQ_theta)) {
+                float theta_25C, theta_dHa = 0.f, theta_dHd = 0.f, theta_Topt = 10000.f;
+                mat.getMaterialData(LABEL_FQ_theta, theta_25C);
+                if (mat.doesMaterialDataExist(LABEL_FQ_theta_dHa)) {
+                    mat.getMaterialData(LABEL_FQ_theta_dHa, theta_dHa);
+                }
+                if (mat.doesMaterialDataExist(LABEL_FQ_theta_dHd)) {
+                    mat.getMaterialData(LABEL_FQ_theta_dHd, theta_dHd);
+                }
+                if (mat.doesMaterialDataExist(LABEL_FQ_theta_Topt)) {
+                    mat.getMaterialData(LABEL_FQ_theta_Topt, theta_Topt);
+                }
+                if (theta_Topt < 1000.f) {
+                    coeffs.setLightResponseCurvature_theta(theta_25C, theta_dHa, theta_Topt - 273.15f, theta_dHd);
+                } else if (theta_dHa > 0.f) {
+                    coeffs.setLightResponseCurvature_theta(theta_25C, theta_dHa);
+                } else {
+                    coeffs.setLightResponseCurvature_theta(theta_25C);
+                }
+            }
+
+            // Set O and TPU_flag. TPU_flag must be restored AFTER the setTPU() calls above,
+            // since setTPU() unconditionally enables the flag as a side effect.
             mat.getMaterialData(LABEL_FQ_O, coeffs.O);
             mat.getMaterialData(LABEL_FQ_TPU_flag, coeffs.TPU_flag);
 
@@ -1034,7 +1109,47 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
     warnings.report(std::cerr);
 }
 
-float PhotosynthesisModel::evaluateCi_Empirical(const EmpiricalModelCoefficients &params, float Ci, float CO2, float fL, float Rd, float gM) const {
+namespace {
+    //! Temperature response function f_T of the empirical model.
+    /** Follows the form documented in Photosynthesis.dox:
+     *    f_T = ((Ts - Tmin)/(Tref - Tmin))^q * ((1+q)Topt - Tmin - q*Ts) / ((1+q)Topt - Tmin - q*Tref)
+     * Assimilation is zero at or below Tmin, and the function is clamped at zero above the upper
+     * temperature at which the second factor changes sign, so f_T never goes negative.
+     */
+    float evaluateEmpiricalTemperatureResponse(const EmpiricalModelCoefficients &params, float TL) {
+
+        const float Tmin = params.Tmin;
+        const float Topt = params.Topt;
+        const float Tref = params.Tref;
+        const float q = params.q;
+
+        // The coefficients are validated before the temperature-dependent early return below. These are
+        // properties of the coefficient set rather than of the current leaf temperature, so checking them
+        // afterwards would silently skip the check on every timestep where the leaf sits at or below Tmin
+        // and report a well-formed A = -Rd instead.
+        const float denom_ref = (1.f + q) * Topt - Tmin - q * Tref;
+        if (Tref <= Tmin || std::fabs(denom_ref) < 1.0e-6f) {
+            helios_runtime_error("ERROR (PhotosynthesisModel): Invalid empirical model temperature response coefficients. Requires Tref > Tmin and (1+q)*Topt - Tmin - q*Tref != 0. Received Tmin = " + std::to_string(Tmin) +
+                                 " K, Topt = " + std::to_string(Topt) + " K, Tref = " + std::to_string(Tref) + " K, q = " + std::to_string(q) + ".");
+        }
+
+        // Below the minimum temperature no assimilation occurs.
+        if (TL <= Tmin) {
+            return 0.f;
+        }
+
+        const float numer = (1.f + q) * Topt - Tmin - q * TL;
+        if (numer <= 0.f) {
+            return 0.f; // beyond the upper temperature limit
+        }
+
+        const float f_T = std::pow((TL - Tmin) / (Tref - Tmin), q) * numer / denom_ref;
+
+        return std::max(f_T, 0.f);
+    }
+} // namespace
+
+float PhotosynthesisModel::evaluateCi_Empirical(const EmpiricalModelCoefficients &params, float Ci, float CO2, float fL, float fT, float Rd, float gM) const {
 
 
     //--- CO2 Response Function --- //
@@ -1044,7 +1159,7 @@ float PhotosynthesisModel::evaluateCi_Empirical(const EmpiricalModelCoefficients
 
     //--- Assimilation Rate --- //
 
-    float A = params.Asat * fL * fC - Rd;
+    float A = params.Asat * fL * fT * fC - Rd;
 
     //--- Calculate error and update --- //
 
@@ -1065,6 +1180,10 @@ float PhotosynthesisModel::evaluateEmpiricalModel(const EmpiricalModelCoefficien
 
     assert(fL >= 0 && fL <= 1);
 
+    //--- Temperature Response Function --- //
+
+    float fT = evaluateEmpiricalTemperatureResponse(params, TL);
+
     //--- Respiration Rate --- //
 
     float Rd = params.R * sqrt(TL - 273.f) * exp(-params.ER / TL);
@@ -1072,8 +1191,8 @@ float PhotosynthesisModel::evaluateEmpiricalModel(const EmpiricalModelCoefficien
     float Ci_old = Ci;
     float Ci_old_old = 0.95f * Ci;
 
-    float resid_old = evaluateCi_Empirical(params, Ci_old, CO2, fL, Rd, gM);
-    float resid_old_old = evaluateCi_Empirical(params, Ci_old_old, CO2, fL, Rd, gM);
+    float resid_old = evaluateCi_Empirical(params, Ci_old, CO2, fL, fT, Rd, gM);
+    float resid_old_old = evaluateCi_Empirical(params, Ci_old_old, CO2, fL, fT, Rd, gM);
 
     float err = 10000, err_max = 0.01;
     int iter = 0, max_iter = 100;
@@ -1086,7 +1205,7 @@ float PhotosynthesisModel::evaluateEmpiricalModel(const EmpiricalModelCoefficien
 
         Ci = fabs((Ci_old_old * resid_old - Ci_old * resid_old_old) / (resid_old - resid_old_old));
 
-        resid = evaluateCi_Empirical(params, Ci, CO2, fL, Rd, gM);
+        resid = evaluateCi_Empirical(params, Ci, CO2, fL, fT, Rd, gM);
 
         resid_old_old = resid_old;
         resid_old = resid;
@@ -1104,7 +1223,7 @@ float PhotosynthesisModel::evaluateEmpiricalModel(const EmpiricalModelCoefficien
         A = 0;
     } else {
         float fC = params.kC * Ci / params.Ci_ref;
-        A = params.Asat * fL * fC - Rd;
+        A = params.Asat * fL * fT * fC - Rd;
     }
 
     return A;

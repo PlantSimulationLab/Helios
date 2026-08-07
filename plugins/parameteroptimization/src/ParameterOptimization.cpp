@@ -645,6 +645,32 @@ struct GradientValidationError : public std::runtime_error {
 
 namespace {
 
+    // Validate constraints before they are handed to NLopt.
+    //
+    // Constraint is an aggregate whose fields the user sets directly, so every one of these
+    // reaches the optimizer unchecked. Without this, a negative tolerance is caught only by
+    // NLopt (as NLOPT_INVALID_ARGS, reported far from the offending field and naming no
+    // constraint index), a NaN tolerance passes NLopt's own `tol < 0` test — NaN compares
+    // false against everything — and then silently corrupts the feasibility test, and an
+    // unset function or gradient raises std::bad_function_call from inside a callback.
+    void validateConstraints(const std::vector<Constraint> &constraints) {
+        for (size_t i = 0; i < constraints.size(); ++i) {
+            const std::string index = "Constraint " + std::to_string(i);
+            if (!constraints[i].function) {
+                helios_runtime_error("ERROR (ParameterOptimization): " + index + " has no function assigned. Set Constraint::function to a callable returning c(x), where the constraint is satisfied when c(x) <= 0.");
+            }
+            if (!constraints[i].gradient) {
+                helios_runtime_error("ERROR (ParameterOptimization): " + index + " has no gradient assigned. Set Constraint::gradient to a callable returning dc/d(param) for every parameter.");
+            }
+            if (std::isnan(constraints[i].tolerance)) {
+                helios_runtime_error("ERROR (ParameterOptimization): " + index + " has a NaN tolerance. Constraint::tolerance must be a non-negative number.");
+            }
+            if (constraints[i].tolerance < 0.f) {
+                helios_runtime_error("ERROR (ParameterOptimization): " + index + " has a negative tolerance (" + std::to_string(constraints[i].tolerance) + "). Constraint::tolerance must be non-negative; use 0 to require exact satisfaction.");
+            }
+        }
+    }
+
     // Validate that all parameters are continuous (FLOAT) for gradient-based and NLopt-based methods
     // (LBFGS, Adam, SLSQP require differentiability; BOBYQA requires continuous variables)
     void validateContinuousParameters(const ParametersToOptimize &parameters) {
@@ -741,6 +767,71 @@ static nlopt::algorithm getLBFGSAlgorithm() {
     return nlopt::LD_LBFGS;
 }
 
+// Carries an exception thrown by user code (objective, gradient or constraint) out of a
+// raw C callback, past NLopt's internal exception handling, to the caller.
+//
+// NLopt's C++ wrapper actively defeats normal propagation: nlopt-in.hpp's myfunc() wraps
+// every callback invocation in a try/catch ending in catch(...), records only a coarse
+// error code, and lets optimize() rethrow a *brand-new* std::runtime_error("nlopt
+// failure"). The original exception object — and therefore the user's message, which is
+// the only actionable part of a failure in a user-supplied simulation — is destroyed.
+//
+// The remedy is to never let an exception escape our callbacks in the first place: stash
+// it here and ask NLopt to stop, then rethrow it verbatim once optimize() has returned.
+struct NLoptExceptionSink {
+    nlopt::opt *opt = nullptr;    // set after the nlopt::opt object is constructed
+    std::exception_ptr captured;  // null unless user code threw
+};
+
+// Invokes user code, capturing any exception. Returns true on success. On failure the
+// exception is stored and NLopt is asked to stop; the caller must then return a finite
+// value, since NLopt polls the stop flag only at its own stopping checks and may consume
+// the returned number before noticing.
+template<typename Fn>
+static bool nloptGuard(NLoptExceptionSink &sink, Fn &&fn) {
+    if (sink.captured) {
+        // Already failing — do not re-enter user code that is known to throw.
+        return false;
+    }
+    try {
+        fn();
+        return true;
+    } catch (...) {
+        sink.captured = std::current_exception();
+        if (sink.opt != nullptr) {
+            sink.opt->force_stop();
+        }
+        return false;
+    }
+}
+
+// Runs an NLopt call, translating the library's own failures into helios_runtime_error.
+//
+// NLopt reports configuration and internal failures by throwing from the std:: hierarchy:
+// nlopt-in.hpp's mythrow() maps NLOPT_INVALID_ARGS to std::invalid_argument and
+// NLOPT_OUT_OF_MEMORY to std::bad_alloc, and the nlopt::opt constructor throws
+// std::bad_alloc directly. std::invalid_argument derives from std::logic_error, not
+// std::runtime_error, so it would slip past a caller following the Helios convention of
+// catching std::runtime_error, and its message names NLopt rather than anything the caller
+// can act on. Translating here keeps every error out of this plug-in on one type.
+//
+// Exceptions originating in user code are NOT translated: those are captured by
+// nloptGuard() inside the callbacks and rethrown verbatim, so they never reach this.
+template<typename Fn>
+static void nloptCall(const char *algorithm_name, const char *operation, Fn &&fn) {
+    try {
+        fn();
+    } catch (const nlopt::roundoff_limited &) {
+        throw; // legitimate outcome, interpreted by the caller
+    } catch (const nlopt::forced_stop &) {
+        throw; // how a captured user exception surfaces; the caller rethrows the original
+    } catch (const std::bad_alloc &) {
+        helios_runtime_error(std::string("ERROR (ParameterOptimization): ") + algorithm_name + " failed to allocate memory during " + operation + ".");
+    } catch (const std::exception &e) {
+        helios_runtime_error(std::string("ERROR (ParameterOptimization): ") + algorithm_name + " failed during " + operation + " — NLopt reported: " + e.what());
+    }
+}
+
 // NLopt callback adapter
 struct NLoptCallbackData {
     const ObjectiveBundle *bundle;
@@ -749,6 +840,7 @@ struct NLoptCallbackData {
     int eval_count;
     struct EvalRecord { int eval_num; float fitness; std::vector<double> params; };
     std::vector<EvalRecord> eval_history;
+    NLoptExceptionSink sink;
 };
 
 static double nlopt_lbfgs_callback(unsigned n, const double* x, double* grad, void* data) {
@@ -759,20 +851,35 @@ static double nlopt_lbfgs_callback(unsigned n, const double* x, double* grad, vo
     std::vector<double> xvec(x, x + n);
     ParametersToOptimize params = naturalVectorToParams(xvec, *cb->template_params, *cb->param_names);
 
-    // Evaluate objective
-    float value = cb->bundle->objective(params);
-    cb->eval_history.push_back({cb->eval_count, value, xvec});
+    double value = 0.0;
+    bool ok = nloptGuard(cb->sink, [&]() {
+        // Evaluate objective
+        float fitness = cb->bundle->objective(params);
+        cb->eval_history.push_back({cb->eval_count, fitness, xvec});
+        value = static_cast<double>(fitness);
 
-    // Compute gradient if requested
-    if (grad) {
-        ParameterGradient pg = cb->bundle->gradient(params);
-        std::vector<double> gvec = gradientToNaturalVector(pg, *cb->param_names);
-        for (unsigned i = 0; i < n; ++i) {
-            grad[i] = gvec[i];
+        // Compute gradient if requested
+        if (grad) {
+            ParameterGradient pg = cb->bundle->gradient(params);
+            std::vector<double> gvec = gradientToNaturalVector(pg, *cb->param_names);
+            for (unsigned i = 0; i < n; ++i) {
+                grad[i] = gvec[i];
+            }
         }
+    });
+
+    if (!ok) {
+        // Return a finite, numerically inert value; it is never observed by the caller
+        // because the captured exception is rethrown once optimize() returns.
+        if (grad) {
+            for (unsigned i = 0; i < n; ++i) {
+                grad[i] = 0.0;
+            }
+        }
+        return 0.0;
     }
 
-    return static_cast<double>(value);
+    return value;
 }
 
 #endif // HELIOS_HAVE_NLOPT
@@ -789,6 +896,19 @@ static ParameterOptimization::Result runLBFGS(
 ) {
     validateParameters(parameters);
     validateContinuousParameters(parameters);
+
+    // Covers both "NLopt is absent entirely" and "NLopt was built without the Luksan
+    // solvers". Placed after the parameter validators so that INTEGER/CATEGORICAL errors
+    // keep reporting first in every build configuration, and before any timer or banner
+    // output so nothing suggests an optimization began.
+#ifndef HELIOS_HAVE_LBFGS
+    helios_runtime_error("ERROR (ParameterOptimization): L-BFGS is not available in this build. "
+                         "NLopt's L-BFGS is provided by the LGPL-licensed Luksan solvers, which were disabled "
+                         "at build time (CMake option HELIOS_NLOPT_LUKSAN=OFF, or a system NLopt built without "
+                         "them). Rebuild with -DHELIOS_NLOPT_LUKSAN=ON, or select a different algorithm: Adam "
+                         "is gradient-based and noise-tolerant with no external dependency, and BOBYQA is a "
+                         "derivative-free local optimizer available under the MIT license.");
+#endif
 
     std::vector<std::string> param_names = getOrderedParamNames(parameters);
     unsigned n = param_names.size();
@@ -875,38 +995,58 @@ static ParameterOptimization::Result runLBFGS(
         validateGradientCompleteness(test_grad, param_names);
     }
 
-    nlopt::opt opt(getLBFGSAlgorithm(), n);
-    opt.set_min_objective(nlopt_lbfgs_callback, &cb_data);
-    opt.set_lower_bounds(lower_bounds);
-    opt.set_upper_bounds(upper_bounds);
-    opt.set_ftol_rel(settings.ftol_rel);
-    opt.set_xtol_rel(settings.xtol_rel);
-    opt.set_maxeval(settings.max_iterations);
+    nlopt::opt opt;
+    nloptCall("L-BFGS", "optimizer setup", [&]() {
+        opt = nlopt::opt(getLBFGSAlgorithm(), n);
+        cb_data.sink.opt = &opt;
+        opt.set_min_objective(nlopt_lbfgs_callback, &cb_data);
+        opt.set_lower_bounds(lower_bounds);
+        opt.set_upper_bounds(upper_bounds);
+        opt.set_ftol_rel(settings.ftol_rel);
+        opt.set_xtol_rel(settings.xtol_rel);
+        opt.set_maxeval(settings.max_iterations);
+    });
 
     std::vector<double> optimal_params = initial;
-    double optimal_value = 0.0;
+    // NaN rather than 0.0: for a minimization, 0.0 is the most dangerous possible
+    // sentinel because it reads as perfect convergence. NLopt always writes this when at
+    // least one evaluation ran, so the initial value only survives on paths that return
+    // without evaluating anything.
+    double optimal_value = std::numeric_limits<double>::quiet_NaN();
     std::string result_message;
 
     try {
-        int rc = static_cast<int>(opt.optimize(optimal_params, optimal_value));
-        switch (rc) {
-            case 1: result_message = "Success (generic)"; break;
-            case 2: result_message = "Converged (stopval reached)"; break;
-            case 3: result_message = "Converged (ftol reached)"; break;
-            case 4: result_message = "Converged (xtol reached)"; break;
-            case 5: result_message = "Max evaluations reached"; break;
-            case 6: result_message = "Max time reached"; break;
-            default: result_message = "NLopt return code " + std::to_string(rc);
-        }
-    } catch (const GradientValidationError &e) {
-        throw; // Always propagate gradient validation errors to the caller
+        nloptCall("L-BFGS", "optimization", [&]() {
+            int rc = static_cast<int>(opt.optimize(optimal_params, optimal_value));
+            switch (rc) {
+                case 1: result_message = "Success (generic)"; break;
+                case 2: result_message = "Converged (stopval reached)"; break;
+                case 3: result_message = "Converged (ftol reached)"; break;
+                case 4: result_message = "Converged (xtol reached)"; break;
+                case 5: result_message = "Max evaluations reached"; break;
+                case 6: result_message = "Max time reached"; break;
+                default: result_message = "NLopt return code " + std::to_string(rc);
+            }
+        });
     } catch (const nlopt::roundoff_limited &) {
+        // Roundoff-limited is a legitimate outcome carrying a usable answer, but only if
+        // user code did not throw on the way here.
+        if (cb_data.sink.captured) std::rethrow_exception(cb_data.sink.captured);
         result_message = "Converged (roundoff limited)";
     } catch (const nlopt::forced_stop &) {
+        // Reached when nloptGuard() captured a user exception and called force_stop().
+        // Nothing else in this plugin ever calls force_stop(), so the captured pointer is
+        // the authoritative discriminator between our abort and a genuine external stop.
+        if (cb_data.sink.captured) std::rethrow_exception(cb_data.sink.captured);
         result_message = "Forced stop";
-    } catch (const std::exception &e) {
-        result_message = std::string("NLopt exception: ") + e.what();
     }
+    // Any other NLopt failure was converted to helios_runtime_error by nloptCall() and
+    // propagates, rather than being discarded into result_message — which is only ever
+    // printed when print_progress is enabled.
+
+    // Covers the case where user code threw but NLopt's stop flag lost the race against a
+    // normal convergence test, so optimize() returned a success code.
+    if (cb_data.sink.captured) std::rethrow_exception(cb_data.sink.captured);
 
     result.parameters = naturalVectorToParams(optimal_params, parameters, param_names);
     result.fitness = static_cast<float>(optimal_value);
@@ -960,9 +1100,9 @@ static ParameterOptimization::Result runLBFGS(
 
 #else // HELIOS_HAVE_NLOPT
 
-    std::cerr << "ERROR (ParameterOptimization): L-BFGS requires NLopt. Install NLopt and rebuild." << std::endl;
-    result.parameters = parameters;
-    result.fitness = bundle.objective(parameters);
+    // Unreachable: the #ifndef HELIOS_HAVE_LBFGS guard at the top of this function
+    // already raised an error, and HELIOS_HAVE_LBFGS is never defined without
+    // HELIOS_HAVE_NLOPT.
 
 #endif // HELIOS_HAVE_NLOPT
 
@@ -1154,6 +1294,7 @@ struct BOBYQACallbackData {
     int eval_count;
     struct EvalRecord { int eval_num; float fitness; std::vector<double> params; };
     std::vector<EvalRecord> eval_history;
+    NLoptExceptionSink sink;
 };
 
 static double nlopt_bobyqa_callback(unsigned n, const double* x, double* /*grad*/, void* data) {
@@ -1161,9 +1302,22 @@ static double nlopt_bobyqa_callback(unsigned n, const double* x, double* /*grad*
     cb->eval_count++;
     std::vector<double> xvec(x, x + n);
     ParametersToOptimize params = naturalVectorToParams(xvec, *cb->template_params, *cb->param_names);
-    float value = (*cb->objective)(params);
-    cb->eval_history.push_back({cb->eval_count, value, xvec});
-    return static_cast<double>(value);
+
+    double value = 0.0;
+    bool ok = nloptGuard(cb->sink, [&]() {
+        float fitness = (*cb->objective)(params);
+        cb->eval_history.push_back({cb->eval_count, fitness, xvec});
+        value = static_cast<double>(fitness);
+    });
+
+    if (!ok) {
+        // A finite value matters here: BOBYQA folds the returned number into its
+        // trust-region interpolation model before polling the stop flag, and a
+        // non-finite one would destabilize that model.
+        return 0.0;
+    }
+
+    return value;
 }
 
 #endif // HELIOS_HAVE_NLOPT
@@ -1214,40 +1368,54 @@ static ParameterOptimization::Result runBOBYQA(
     cb_data.param_names = &param_names;
     cb_data.eval_count = 0;
 
-    nlopt::opt opt(nlopt::LN_BOBYQA, n);
-    opt.set_min_objective(nlopt_bobyqa_callback, &cb_data);
-    opt.set_lower_bounds(lower_bounds);
-    opt.set_upper_bounds(upper_bounds);
-    opt.set_ftol_rel(settings.ftol_rel);
-    opt.set_xtol_rel(settings.xtol_rel);
-    opt.set_maxeval(settings.max_iterations);
+    nlopt::opt opt;
+    nloptCall("BOBYQA", "optimizer setup", [&]() {
+        opt = nlopt::opt(nlopt::LN_BOBYQA, n);
+        cb_data.sink.opt = &opt;
+        opt.set_min_objective(nlopt_bobyqa_callback, &cb_data);
+        opt.set_lower_bounds(lower_bounds);
+        opt.set_upper_bounds(upper_bounds);
+        opt.set_ftol_rel(settings.ftol_rel);
+        opt.set_xtol_rel(settings.xtol_rel);
+        opt.set_maxeval(settings.max_iterations);
 
-    // Set initial step size
-    if (settings.initial_step > 0) {
-        std::vector<double> steps(n, settings.initial_step);
-        opt.set_initial_step(steps);
-    }
+        // Set initial step size
+        if (settings.initial_step > 0) {
+            std::vector<double> steps(n, settings.initial_step);
+            opt.set_initial_step(steps);
+        }
+    });
 
     std::vector<double> optimal_params = initial;
-    double optimal_value = 0.0;
+    // See runLBFGS for why this is NaN rather than 0.0.
+    double optimal_value = std::numeric_limits<double>::quiet_NaN();
     std::string result_message;
 
     try {
-        int rc = static_cast<int>(opt.optimize(optimal_params, optimal_value));
-        switch (rc) {
-            case 1: result_message = "Success (generic)"; break;
-            case 2: result_message = "Converged (stopval reached)"; break;
-            case 3: result_message = "Converged (ftol reached)"; break;
-            case 4: result_message = "Converged (xtol reached)"; break;
-            case 5: result_message = "Max evaluations reached"; break;
-            case 6: result_message = "Max time reached"; break;
-            default: result_message = "NLopt return code " + std::to_string(rc);
-        }
+        nloptCall("BOBYQA", "optimization", [&]() {
+            int rc = static_cast<int>(opt.optimize(optimal_params, optimal_value));
+            switch (rc) {
+                case 1: result_message = "Success (generic)"; break;
+                case 2: result_message = "Converged (stopval reached)"; break;
+                case 3: result_message = "Converged (ftol reached)"; break;
+                case 4: result_message = "Converged (xtol reached)"; break;
+                case 5: result_message = "Max evaluations reached"; break;
+                case 6: result_message = "Max time reached"; break;
+                default: result_message = "NLopt return code " + std::to_string(rc);
+            }
+        });
     } catch (const nlopt::roundoff_limited &) {
+        if (cb_data.sink.captured) std::rethrow_exception(cb_data.sink.captured);
         result_message = "Converged (roundoff limited)";
-    } catch (const std::exception &e) {
-        result_message = std::string("NLopt exception: ") + e.what();
+    } catch (const nlopt::forced_stop &) {
+        // Present as exception-capture plumbing: this is how an abort triggered by
+        // nloptGuard() surfaces. BOBYQA offers no user-facing cancellation.
+        if (cb_data.sink.captured) std::rethrow_exception(cb_data.sink.captured);
+        result_message = "Forced stop";
     }
+    // Other NLopt failures are converted by nloptCall() — see runLBFGS.
+
+    if (cb_data.sink.captured) std::rethrow_exception(cb_data.sink.captured);
 
     result.parameters = naturalVectorToParams(optimal_params, parameters, param_names);
     result.fitness = static_cast<float>(optimal_value);
@@ -1287,9 +1455,12 @@ static ParameterOptimization::Result runBOBYQA(
     }
 
 #else
-    std::cerr << "ERROR (ParameterOptimization): BOBYQA requires NLopt. Install NLopt and rebuild." << std::endl;
-    result.parameters = parameters;
-    result.fitness = objective(parameters);
+    // Raise rather than returning the objective evaluated at the initial point, which a
+    // caller cannot distinguish from a converged optimization.
+    helios_runtime_error("ERROR (ParameterOptimization): BOBYQA requires NLopt, which is not available in this "
+                         "build. Install NLopt and rebuild, or select an algorithm with no external dependency: "
+                         "CMA-ES for derivative-free search over 5-50 parameters, or the genetic algorithm for "
+                         "multimodal or discrete problems.");
 #endif
 
     return result;
@@ -1306,6 +1477,7 @@ struct SLSQPCallbackData {
     int eval_count;
     struct EvalRecord { int eval_num; float fitness; std::vector<double> params; };
     std::vector<EvalRecord> eval_history;
+    NLoptExceptionSink sink;
 };
 
 static double nlopt_slsqp_obj_callback(unsigned n, const double* x, double* grad, void* data) {
@@ -1313,35 +1485,68 @@ static double nlopt_slsqp_obj_callback(unsigned n, const double* x, double* grad
     cb->eval_count++;
     std::vector<double> xvec(x, x + n);
     ParametersToOptimize params = naturalVectorToParams(xvec, *cb->template_params, *cb->param_names);
-    float value = cb->bundle->objective(params);
-    cb->eval_history.push_back({cb->eval_count, value, xvec});
 
-    if (grad) {
-        ParameterGradient pg = cb->bundle->gradient(params);
-        std::vector<double> gvec = gradientToNaturalVector(pg, *cb->param_names);
-        for (unsigned i = 0; i < n; ++i) grad[i] = gvec[i];
+    double value = 0.0;
+    bool ok = nloptGuard(cb->sink, [&]() {
+        float fitness = cb->bundle->objective(params);
+        cb->eval_history.push_back({cb->eval_count, fitness, xvec});
+        value = static_cast<double>(fitness);
+
+        if (grad) {
+            ParameterGradient pg = cb->bundle->gradient(params);
+            std::vector<double> gvec = gradientToNaturalVector(pg, *cb->param_names);
+            for (unsigned i = 0; i < n; ++i) grad[i] = gvec[i];
+        }
+    });
+
+    if (!ok) {
+        if (grad) {
+            for (unsigned i = 0; i < n; ++i) grad[i] = 0.0;
+        }
+        return 0.0;
     }
-    return static_cast<double>(value);
+
+    return value;
 }
 
 struct SLSQPConstraintData {
     const Constraint *constraint;
     const ParametersToOptimize *template_params;
     const std::vector<std::string> *param_names;
+    // Points at the objective callback data's sink, so a failure in any callback
+    // surfaces through a single location after optimize() returns.
+    NLoptExceptionSink *sink = nullptr;
 };
 
 static double nlopt_slsqp_constraint_callback(unsigned n, const double* x, double* grad, void* data) {
     auto* cd = static_cast<SLSQPConstraintData*>(data);
     std::vector<double> xvec(x, x + n);
     ParametersToOptimize params = naturalVectorToParams(xvec, *cd->template_params, *cd->param_names);
-    float value = cd->constraint->function(params);
 
-    if (grad) {
-        ParameterGradient pg = cd->constraint->gradient(params);
-        std::vector<double> gvec = gradientToNaturalVector(pg, *cd->param_names);
-        for (unsigned i = 0; i < n; ++i) grad[i] = gvec[i];
+    double value = 0.0;
+    bool ok = nloptGuard(*cd->sink, [&]() {
+        float constraint_value = cd->constraint->function(params);
+        value = static_cast<double>(constraint_value);
+
+        if (grad) {
+            ParameterGradient pg = cd->constraint->gradient(params);
+            std::vector<double> gvec = gradientToNaturalVector(pg, *cd->param_names);
+            for (unsigned i = 0; i < n; ++i) grad[i] = gvec[i];
+        }
+    });
+
+    if (!ok) {
+        // 0.0 reads as "constraint satisfied", which could let SLSQP take one more step
+        // into an infeasible region before it polls the stop flag. That is harmless
+        // because the captured exception is rethrown regardless; do not "fix" this to a
+        // large value, which would destabilize the QP subproblem.
+        if (grad) {
+            for (unsigned i = 0; i < n; ++i) grad[i] = 0.0;
+        }
+        return 0.0;
     }
-    return static_cast<double>(value);
+
+    return value;
 }
 
 #endif // HELIOS_HAVE_NLOPT
@@ -1359,6 +1564,7 @@ static ParameterOptimization::Result runSLSQP(
 ) {
     validateParameters(parameters);
     validateContinuousParameters(parameters);
+    validateConstraints(constraints);
 
     std::vector<std::string> param_names = getOrderedParamNames(parameters);
     unsigned n = param_names.size();
@@ -1400,46 +1606,59 @@ static ParameterOptimization::Result runSLSQP(
     cb_data.param_names = &param_names;
     cb_data.eval_count = 0;
 
-    nlopt::opt opt(nlopt::LD_SLSQP, n);
-    opt.set_min_objective(nlopt_slsqp_obj_callback, &cb_data);
-    opt.set_lower_bounds(lower_bounds);
-    opt.set_upper_bounds(upper_bounds);
-    opt.set_ftol_rel(settings.ftol_rel);
-    opt.set_xtol_rel(settings.xtol_rel);
-    opt.set_maxeval(settings.max_iterations);
-
+    nlopt::opt opt;
     // Add inequality constraints: c_i(x) <= 0
     std::vector<SLSQPConstraintData> constraint_data(constraints.size());
-    for (size_t i = 0; i < constraints.size(); ++i) {
-        constraint_data[i].constraint = &constraints[i];
-        constraint_data[i].template_params = &parameters;
-        constraint_data[i].param_names = &param_names;
-        opt.add_inequality_constraint(nlopt_slsqp_constraint_callback, &constraint_data[i],
-                                       static_cast<double>(constraints[i].tolerance));
-    }
+    nloptCall("SLSQP", "optimizer setup", [&]() {
+        opt = nlopt::opt(nlopt::LD_SLSQP, n);
+        cb_data.sink.opt = &opt;
+        opt.set_min_objective(nlopt_slsqp_obj_callback, &cb_data);
+        opt.set_lower_bounds(lower_bounds);
+        opt.set_upper_bounds(upper_bounds);
+        opt.set_ftol_rel(settings.ftol_rel);
+        opt.set_xtol_rel(settings.xtol_rel);
+        opt.set_maxeval(settings.max_iterations);
+
+        for (size_t i = 0; i < constraints.size(); ++i) {
+            constraint_data[i].constraint = &constraints[i];
+            constraint_data[i].template_params = &parameters;
+            constraint_data[i].param_names = &param_names;
+            constraint_data[i].sink = &cb_data.sink;
+            opt.add_inequality_constraint(nlopt_slsqp_constraint_callback, &constraint_data[i],
+                                           static_cast<double>(constraints[i].tolerance));
+        }
+    });
 
     std::vector<double> optimal_params = initial;
-    double optimal_value = 0.0;
+    // See runLBFGS for why this is NaN rather than 0.0.
+    double optimal_value = std::numeric_limits<double>::quiet_NaN();
     std::string result_message;
 
     try {
-        int rc = static_cast<int>(opt.optimize(optimal_params, optimal_value));
-        switch (rc) {
-            case 1: result_message = "Success (generic)"; break;
-            case 2: result_message = "Converged (stopval reached)"; break;
-            case 3: result_message = "Converged (ftol reached)"; break;
-            case 4: result_message = "Converged (xtol reached)"; break;
-            case 5: result_message = "Max evaluations reached"; break;
-            case 6: result_message = "Max time reached"; break;
-            default: result_message = "NLopt return code " + std::to_string(rc);
-        }
-    } catch (const GradientValidationError &e) {
-        throw;
+        nloptCall("SLSQP", "optimization", [&]() {
+            int rc = static_cast<int>(opt.optimize(optimal_params, optimal_value));
+            switch (rc) {
+                case 1: result_message = "Success (generic)"; break;
+                case 2: result_message = "Converged (stopval reached)"; break;
+                case 3: result_message = "Converged (ftol reached)"; break;
+                case 4: result_message = "Converged (xtol reached)"; break;
+                case 5: result_message = "Max evaluations reached"; break;
+                case 6: result_message = "Max time reached"; break;
+                default: result_message = "NLopt return code " + std::to_string(rc);
+            }
+        });
     } catch (const nlopt::roundoff_limited &) {
+        if (cb_data.sink.captured) std::rethrow_exception(cb_data.sink.captured);
         result_message = "Converged (roundoff limited)";
-    } catch (const std::exception &e) {
-        result_message = std::string("NLopt exception: ") + e.what();
+    } catch (const nlopt::forced_stop &) {
+        // Present as exception-capture plumbing: this is how an abort triggered by
+        // nloptGuard() surfaces, including one raised from a constraint callback.
+        if (cb_data.sink.captured) std::rethrow_exception(cb_data.sink.captured);
+        result_message = "Forced stop";
     }
+    // Other NLopt failures are converted by nloptCall() — see runLBFGS.
+
+    if (cb_data.sink.captured) std::rethrow_exception(cb_data.sink.captured);
 
     result.parameters = naturalVectorToParams(optimal_params, parameters, param_names);
     result.fitness = static_cast<float>(optimal_value);
@@ -1479,9 +1698,11 @@ static ParameterOptimization::Result runSLSQP(
     }
 
 #else
-    std::cerr << "ERROR (ParameterOptimization): SLSQP requires NLopt. Install NLopt and rebuild." << std::endl;
-    result.parameters = parameters;
-    result.fitness = bundle.objective(parameters);
+    // Raise rather than returning the objective evaluated at the initial point, which a
+    // caller cannot distinguish from a converged optimization.
+    helios_runtime_error("ERROR (ParameterOptimization): SLSQP requires NLopt, which is not available in this "
+                         "build. Install NLopt and rebuild, or use the genetic algorithm with the constraint "
+                         "folded into the objective as a penalty term.");
 #endif
 
     return result;

@@ -327,25 +327,34 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Input Validation") {
 
     uint UUID = context.addPatch();
 
+    // Out-of-range temperature/pressure/humidity fall back to defaults with a warning,
+    // so these remain non-throwing. A negative boundary-layer conductance is a hard
+    // error and is covered separately.
     context.setPrimitiveData(UUID, "temperature", 200.0f);
     context.setPrimitiveData(UUID, "air_temperature", 200.0f);
     context.setPrimitiveData(UUID, "air_pressure", 30000.0f);
     context.setPrimitiveData(UUID, "air_humidity", 1.5f);
-    context.setPrimitiveData(UUID, "boundarylayer_conductance", -0.5f);
+    context.setPrimitiveData(UUID, "boundarylayer_conductance", 0.5f);
 
     BMFcoefficients coeffs;
     gsm.setModelCoefficients(coeffs);
 
-    // Capture both stdout and stderr - these extreme values may cause fzero warnings
+    // Capture both stdout and stderr - these extreme values may cause fzero warnings.
+    // The captures must be destroyed before the assertions so that doctest failure
+    // messages are printed rather than swallowed.
     {
         capture_cout cout_buffer;
         capture_cerr cerr_buffer;
 
-        DOCTEST_CHECK_NOTHROW(gsm.run());
+        gsm.run();
 
         std::vector<uint> UUIDs = {UUID};
-        DOCTEST_CHECK_NOTHROW(gsm.run(UUIDs));
+        gsm.run(UUIDs);
     }
+
+    float gs;
+    context.getPrimitiveData(UUID, "moisture_conductance", gs);
+    DOCTEST_CHECK(std::isfinite(gs));
 }
 
 DOCTEST_TEST_CASE("StomatalConductanceModel - Unknown Species") {
@@ -446,17 +455,35 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Missing Photosynthesis Data") {
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
 }
 
+DOCTEST_TEST_CASE("StomatalConductanceModel - Non-physical ambient CO2 is rejected") {
+    // A negative ambient CO2 concentration is a user input error, not a condition
+    // the solver should attempt to work around.
+    Context context;
+    StomatalConductanceModel gsm(&context);
+    gsm.disableMessages();
+
+    uint UUID = context.addPatch();
+    context.setPrimitiveData(UUID, "air_CO2", -100.0f);
+
+    BWBcoefficients coeffs;
+    gsm.setModelCoefficients(coeffs);
+
+    DOCTEST_CHECK_THROWS(gsm.run(std::vector<uint>{UUID}));
+}
+
 DOCTEST_TEST_CASE("StomatalConductanceModel - Edge Cases and Error Conditions") {
     Context context;
     StomatalConductanceModel gsm(&context);
 
     uint UUID = context.addPatch();
 
-    context.setPrimitiveData(UUID, "radiation_flux_PAR", -10.0f);
+    // Extreme but physically admissible inputs: a very large leaf-to-air temperature
+    // difference at low pressure stresses the fzero surface-vapor-pressure solve.
+    context.setPrimitiveData(UUID, "radiation_flux_PAR", 0.0f);
     context.setPrimitiveData(UUID, "net_photosynthesis", -5.0f);
-    context.setPrimitiveData(UUID, "temperature", 100.0f);
+    context.setPrimitiveData(UUID, "temperature", 330.0f);
     context.setPrimitiveData(UUID, "air_temperature", 500.0f);
-    context.setPrimitiveData(UUID, "air_CO2", -100.0f);
+    context.setPrimitiveData(UUID, "air_CO2", 400.0f);
     context.setPrimitiveData(UUID, "air_humidity", 2.0f);
     context.setPrimitiveData(UUID, "air_pressure", 10000.0f);
 
@@ -844,5 +871,261 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Material-Based Coefficients") {
         DOCTEST_CHECK_NOTHROW(gsm.setModelCoefficients("bb_mat", bb));
         DOCTEST_CHECK(context.doesMaterialDataExist("bb_mat", "gs_bb_pi_0"));
         DOCTEST_CHECK(context.doesMaterialDataExist("bb_mat", "gs_bb_theta"));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Regression tests for physical-validity guards on the surface CO2 inversion,
+// the dynamic time constants, and the BB model coupling.
+// ---------------------------------------------------------------------------
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - Zero boundary-layer conductance yields zero conductance") {
+    // Cs = Ca - An/(0.75*gbw) divides by gbw. With gbw=0 and An=0 this produced
+    // 0/0 = NaN, which was written to "moisture_conductance" and silently consumed
+    // by the energy balance model. A zero boundary-layer conductance is physically
+    // attainable (still air, or a zero-size primitive) and is produced by the
+    // BLConductanceModel plug-in, so it must be handled as the no-exchange limit
+    // rather than as an error.
+    Context context;
+    StomatalConductanceModel gsm(&context);
+    gsm.disableMessages();
+
+    uint UUID = context.addPatch();
+    context.setPrimitiveData(UUID, "boundarylayer_conductance", 0.f);
+    context.setPrimitiveData(UUID, "net_photosynthesis", 0.f);
+
+    for (int model = 0; model < 5; model++) {
+        if (model == 0) {
+            BWBcoefficients c;
+            gsm.setModelCoefficients(c);
+        } else if (model == 1) {
+            BBLcoefficients c;
+            gsm.setModelCoefficients(c);
+        } else if (model == 2) {
+            MOPTcoefficients c;
+            gsm.setModelCoefficients(c);
+        } else if (model == 3) {
+            BMFcoefficients c;
+            gsm.setModelCoefficients(c);
+        } else {
+            BBcoefficients c;
+            gsm.setModelCoefficients(c);
+        }
+
+        DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
+
+        float gs;
+        context.getPrimitiveData(UUID, "moisture_conductance", gs);
+        DOCTEST_CHECK(std::isfinite(gs));
+        DOCTEST_CHECK(gs == doctest::Approx(0.f));
+    }
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - Negative boundary-layer conductance is rejected") {
+    // Previously this was silently clipped to zero, which then manufactured the
+    // divide-by-zero above. A negative conductance is a user input error.
+    Context context;
+    StomatalConductanceModel gsm(&context);
+    gsm.disableMessages();
+
+    uint UUID = context.addPatch();
+    context.setPrimitiveData(UUID, "boundarylayer_conductance", -0.5f);
+
+    BMFcoefficients coeffs;
+    gsm.setModelCoefficients(coeffs);
+
+    DOCTEST_CHECK_THROWS(gsm.run(std::vector<uint>{UUID}));
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - Non-physical surface CO2 is rejected") {
+    // Low gbw with high An drives Cs = Ca - An/(0.75*gbw) negative, which flipped
+    // the sign of gs and produced a negative (thermodynamically meaningless)
+    // stomatal conductance.
+    Context context;
+    StomatalConductanceModel gsm(&context);
+    gsm.disableMessages();
+
+    uint UUID = context.addPatch();
+    context.setPrimitiveData(UUID, "boundarylayer_conductance", 0.02f);
+    context.setPrimitiveData(UUID, "net_photosynthesis", 20.f);
+    context.setPrimitiveData(UUID, "air_CO2", 400.f);
+
+    BWBcoefficients coeffs;
+    gsm.setModelCoefficients(coeffs);
+
+    DOCTEST_CHECK_THROWS(gsm.run(std::vector<uint>{UUID}));
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - BBL rejects surface CO2 at the compensation point") {
+    // gs = gs0 + a1*An*beta/(Cs-Gamma)/(1+Ds/D0) has a pole at Cs == Gamma.
+    // Ca=400, Gamma=100 => need An/(0.75*gbw) = 300 to land on the pole.
+    Context context;
+    StomatalConductanceModel gsm(&context);
+    gsm.disableMessages();
+
+    uint UUID = context.addPatch();
+    context.setPrimitiveData(UUID, "boundarylayer_conductance", 0.1f / 1.08f);
+    context.setPrimitiveData(UUID, "net_photosynthesis", 22.5f);
+    context.setPrimitiveData(UUID, "air_CO2", 400.f);
+    context.setPrimitiveData(UUID, "Gamma_CO2", 100.f);
+
+    BBLcoefficients coeffs;
+    gsm.setModelCoefficients(coeffs);
+
+    DOCTEST_CHECK_THROWS(gsm.run(std::vector<uint>{UUID}));
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - Night-time respiration still yields positive gs") {
+    // Guards for the above must NOT reject legitimate negative An (dark
+    // respiration). Cs = Ca - An/gbc > Ca in that case, which is physical.
+    Context context;
+    StomatalConductanceModel gsm(&context);
+    gsm.disableMessages();
+
+    uint UUID = context.addPatch();
+    context.setPrimitiveData(UUID, "net_photosynthesis", -1.49f);
+    context.setPrimitiveData(UUID, "radiation_flux_PAR", 0.f);
+    context.setPrimitiveData(UUID, "boundarylayer_conductance", 3.5f);
+    context.setPrimitiveData(UUID, "air_CO2", 400.f);
+
+    BWBcoefficients coeffs;
+    gsm.setModelCoefficients(coeffs);
+
+    DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
+
+    float gs;
+    context.getPrimitiveData(UUID, "moisture_conductance", gs);
+    DOCTEST_CHECK(gs > 0.f);
+    DOCTEST_CHECK(std::isfinite(gs));
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - Non-positive dynamic time constants are rejected") {
+    // gs = gs_old + (gs_ss-gs_old)*dt/tau divides by tau. tau=0 produced +/-inf;
+    // a negative tau silently inverts the relaxation direction.
+    Context context;
+    StomatalConductanceModel gsm(&context);
+    gsm.disableMessages();
+
+    DOCTEST_CHECK_THROWS(gsm.setDynamicTimeConstants(0.f, 0.f));
+    DOCTEST_CHECK_THROWS(gsm.setDynamicTimeConstants(-10.f, 10.f));
+    DOCTEST_CHECK_THROWS(gsm.setDynamicTimeConstants(10.f, -10.f));
+    DOCTEST_CHECK_NOTHROW(gsm.setDynamicTimeConstants(10.f, 10.f));
+
+    uint UUID = context.addPatch();
+    std::vector<uint> UUIDs{UUID};
+    DOCTEST_CHECK_THROWS(gsm.setDynamicTimeConstants(0.f, 10.f, UUIDs));
+    DOCTEST_CHECK_NOTHROW(gsm.setDynamicTimeConstants(10.f, 10.f, UUIDs));
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - BB model responds to soil moisture factor") {
+    // The BB branch never applied beta, so a fully dry soil (beta=0) returned
+    // exactly the same conductance as a fully wet one.
+    Context context;
+    StomatalConductanceModel gsm(&context);
+    gsm.disableMessages();
+
+    uint UUID = context.addPatch();
+    context.setPrimitiveData(UUID, "radiation_flux_PAR", 400.f);
+
+    BBcoefficients coeffs;
+    gsm.setModelCoefficients(coeffs);
+
+    context.setPrimitiveData(UUID, "beta_soil", 1.f);
+    gsm.run(std::vector<uint>{UUID});
+    float gs_wet;
+    context.getPrimitiveData(UUID, "moisture_conductance", gs_wet);
+
+    context.setPrimitiveData(UUID, "beta_soil", 0.f);
+    gsm.run(std::vector<uint>{UUID});
+    float gs_dry;
+    context.getPrimitiveData(UUID, "moisture_conductance", gs_dry);
+
+    DOCTEST_CHECK(gs_dry < gs_wet);
+    DOCTEST_CHECK(gs_dry == doctest::Approx(0.f).epsilon(1e-6));
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - BB model responds to boundary-layer conductance") {
+    // The BB branch used the air-to-cavity VPD D rather than the surface VPD Ds
+    // that every other model solves for, so gbw had no effect at all.
+    Context context;
+    StomatalConductanceModel gsm(&context);
+    gsm.disableMessages();
+
+    uint UUID = context.addPatch();
+    context.setPrimitiveData(UUID, "radiation_flux_PAR", 400.f);
+    context.setPrimitiveData(UUID, "temperature", 303.f);
+    context.setPrimitiveData(UUID, "air_temperature", 300.f);
+    context.setPrimitiveData(UUID, "air_humidity", 0.5f);
+
+    BBcoefficients coeffs;
+    gsm.setModelCoefficients(coeffs);
+
+    context.setPrimitiveData(UUID, "boundarylayer_conductance", 10.f);
+    gsm.run(std::vector<uint>{UUID});
+    float gs_hi;
+    context.getPrimitiveData(UUID, "moisture_conductance", gs_hi);
+
+    context.setPrimitiveData(UUID, "boundarylayer_conductance", 0.05f);
+    gsm.run(std::vector<uint>{UUID});
+    float gs_lo;
+    context.getPrimitiveData(UUID, "moisture_conductance", gs_lo);
+
+    // A thicker boundary layer humidifies the leaf surface, lowering Ds and
+    // raising gs. The two must at minimum differ.
+    DOCTEST_CHECK(gs_hi != doctest::Approx(gs_lo));
+    DOCTEST_CHECK(std::isfinite(gs_hi));
+    DOCTEST_CHECK(std::isfinite(gs_lo));
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - Optional output data is not duplicated") {
+    Context context;
+    StomatalConductanceModel gsm(&context);
+    gsm.disableMessages();
+
+    uint UUID = context.addPatch();
+    context.setPrimitiveData(UUID, "radiation_flux_PAR", 400.f);
+
+    for (int k = 0; k < 5; k++) {
+        gsm.optionalOutputPrimitiveData("vapor_pressure_deficit");
+        gsm.optionalOutputPrimitiveData("model_parameters");
+    }
+
+    BMFcoefficients coeffs;
+    gsm.setModelCoefficients(coeffs);
+    DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
+    DOCTEST_CHECK(context.doesPrimitiveDataExist(UUID, "vapor_pressure_deficit"));
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - BBL Gamma warning reports the Gamma count") {
+    // The BBL "Gamma not found" warning printed assumed_default_An instead of
+    // assumed_default_Gamma. Supply net_photosynthesis but omit Gamma_CO2 so the
+    // two counts differ: An count = 0, Gamma count = 2.
+    Context context;
+    StomatalConductanceModel gsm(&context);
+
+    uint UUID1 = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    uint UUID2 = context.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
+    for (uint p: {UUID1, UUID2}) {
+        context.setPrimitiveData(p, "net_photosynthesis", 10.f);
+        context.setPrimitiveData(p, "boundarylayer_conductance", 3.5f);
+    }
+
+    BBLcoefficients coeffs;
+    gsm.setModelCoefficients(coeffs);
+
+    std::string output;
+    {
+        capture_cout cout_buffer;
+        capture_cerr cerr_buffer;
+        gsm.run(std::vector<uint>{UUID1, UUID2});
+        output = cout_buffer.get_captured_output();
+    }
+
+    // The Gamma warning must report 2 primitives, not 0 (the An count).
+    size_t pos = output.find("compensation point");
+    DOCTEST_CHECK(pos != std::string::npos);
+    if (pos != std::string::npos) {
+        std::string gamma_warning = output.substr(pos);
+        DOCTEST_CHECK(gamma_warning.find("for 2 primitives") != std::string::npos);
     }
 }

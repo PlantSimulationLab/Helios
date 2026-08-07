@@ -442,6 +442,95 @@ void Visualizer::createOffscreenContext() {
     // Note: In headless mode, we won't set up window callbacks since there's no user interaction
 }
 
+void Visualizer::createShadowFramebuffer() {
+
+    if (framebufferID != 0) {
+        return; // already created
+    }
+
+    // The shadow map is large (8192x8192 by default, i.e. 256 MB at 32-bit depth), so it is
+    // created here on first use rather than in initialize(). Clamp it to what the driver
+    // actually supports: nothing else validates shadow_buffer_size against this limit, and
+    // software rasterizers in CI environments can report a small maximum texture size.
+    GLint max_texture_size_supported = 0;
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_texture_size_supported);
+    if (max_texture_size_supported > 0 && (GLint(shadow_buffer_size.x) > max_texture_size_supported || GLint(shadow_buffer_size.y) > max_texture_size_supported)) {
+        shadow_buffer_size = make_uint2(uint(max_texture_size_supported), uint(max_texture_size_supported));
+    }
+
+    // The framebuffer, which regroups 0, 1, or more textures, and 0 or 1 depth buffer.
+    glGenFramebuffers(1, &framebufferID);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
+
+    // Depth texture. Slower than a depth buffer, but you can sample it later in your shader
+    glActiveTexture(GL_TEXTURE1);
+    glGenTextures(1, &depthTexture);
+    glBindTexture(GL_TEXTURE_2D, depthTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, shadow_buffer_size.x, shadow_buffer_size.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+    // clamp to border so any lookup outside [0,1] returns 1.0 (no shadow)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    GLfloat borderColor[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+    // enable hardware depth comparison
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+
+    if (!checkerrors()) {
+        helios_runtime_error("ERROR (Visualizer::createShadowFramebuffer): OpenGL setup failed during texture configuration. "
+                             "This may indicate graphics driver issues or insufficient OpenGL support.");
+    }
+
+    // restore default active texture for subsequent texture setup
+    glActiveTexture(GL_TEXTURE0);
+
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthTexture, 0);
+
+    glDrawBuffer(GL_NONE); // No color buffer is drawn to.
+
+    // Always check that our framebuffer is ok
+    int max_checks = 10000;
+    int checks = 0;
+    while (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE && checks < max_checks) {
+        checks++;
+    }
+    // Check framebuffer completeness instead of using assert
+    GLenum framebuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (framebuffer_status != GL_FRAMEBUFFER_COMPLETE) {
+        std::string error_message = "ERROR (Visualizer::createShadowFramebuffer): Shadow-map framebuffer is incomplete. Status: ";
+        switch (framebuffer_status) {
+            case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+                error_message += "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT - Framebuffer attachment is incomplete";
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+                error_message += "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT - No attachments";
+                break;
+            case GL_FRAMEBUFFER_UNSUPPORTED:
+                error_message += "GL_FRAMEBUFFER_UNSUPPORTED - Unsupported framebuffer format";
+                break;
+            default:
+                error_message += "Unknown framebuffer error code: " + std::to_string(framebuffer_status);
+                break;
+        }
+        error_message += ". This typically occurs in CI environments with limited graphics support or missing GPU drivers.";
+        helios_runtime_error(error_message);
+    }
+
+    // Restore the default framebuffer binding; the caller binds its own render target.
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // Finished OpenGL setup
+    // Check for OpenGL errors after framebuffer setup
+    if (!checkerrors()) {
+        helios_runtime_error("ERROR (Visualizer::createShadowFramebuffer): Framebuffer setup failed. "
+                             "This indicates issues with OpenGL framebuffer operations, often related to graphics driver limitations or insufficient resources.");
+    }
+}
+
 void Visualizer::setupOffscreenFramebuffer() {
     // Create a complete framebuffer for offscreen rendering with both color and depth attachments
     // This enables full OpenGL testing in CI environments
@@ -1235,78 +1324,10 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     primaryShader.useShader();
 
-    // Initialize frame buffer only for windowed mode
-    if (!headless) {
-        // The framebuffer, which regroups 0, 1, or more textures, and 0 or 1 depth buffer.
-        glGenFramebuffers(1, &framebufferID);
-        glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
-
-        // Depth texture. Slower than a depth buffer, but you can sample it later in your shader
-        glActiveTexture(GL_TEXTURE1);
-        glGenTextures(1, &depthTexture);
-        glBindTexture(GL_TEXTURE_2D, depthTexture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, shadow_buffer_size.x, shadow_buffer_size.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-        // clamp to border so any lookup outside [0,1] returns 1.0 (no shadow)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-        GLfloat borderColor[4] = {1.0f, 1.0f, 1.0f, 1.0f};
-        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-
-        // enable hardware depth comparison
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-
-        if (!checkerrors()) {
-            helios_runtime_error("ERROR (Visualizer::initialize): OpenGL setup failed during texture configuration. "
-                                 "This may indicate graphics driver issues or insufficient OpenGL support.");
-        }
-
-        // restore default active texture for subsequent texture setup
-        glActiveTexture(GL_TEXTURE0);
-
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthTexture, 0);
-
-        glDrawBuffer(GL_NONE); // No color buffer is drawn to.
-
-        // Always check that our framebuffer is ok
-        int max_checks = 10000;
-        int checks = 0;
-        while (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE && checks < max_checks) {
-            checks++;
-        }
-        // Check framebuffer completeness instead of using assert
-        GLenum framebuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-        if (framebuffer_status != GL_FRAMEBUFFER_COMPLETE) {
-            std::string error_message = "ERROR (Visualizer::initialize): Framebuffer is incomplete. Status: ";
-            switch (framebuffer_status) {
-                case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-                    error_message += "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT - Framebuffer attachment is incomplete";
-                    break;
-                case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-                    error_message += "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT - No attachments";
-                    break;
-                case GL_FRAMEBUFFER_UNSUPPORTED:
-                    error_message += "GL_FRAMEBUFFER_UNSUPPORTED - Unsupported framebuffer format";
-                    break;
-                default:
-                    error_message += "Unknown framebuffer error code: " + std::to_string(framebuffer_status);
-                    break;
-            }
-            error_message += ". This typically occurs in CI environments with limited graphics support or missing GPU drivers.";
-            helios_runtime_error(error_message);
-        }
-
-        // Finished OpenGL setup
-        // Check for OpenGL errors after framebuffer setup
-        if (!checkerrors()) {
-            helios_runtime_error("ERROR (Visualizer::initialize): Framebuffer setup failed. "
-                                 "This indicates issues with OpenGL framebuffer operations, often related to graphics driver limitations or insufficient resources.");
-        }
-    } else {
-        // Set framebuffer dimensions for headless mode (no framebuffer created)
+    // The shadow-map framebuffer is created lazily by createShadowFramebuffer() the first
+    // time shadowed lighting is actually rendered, in both windowed and headless modes.
+    if (headless) {
+        // Set framebuffer dimensions for headless mode
         Wframebuffer = Wdisplay;
         Hframebuffer = Hdisplay;
     }
@@ -1321,9 +1342,11 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     light_direction = make_vec3(1, 1, 1);
     light_direction.normalize();
-    if (!headless) {
-        primaryShader.setLightDirection(light_direction);
-    }
+    // Must be sent to the shader in headless mode too. The only other unconditional call
+    // site sits inside render() behind a line_count>0 check, so a scene made of patches
+    // would otherwise leave the uniform at its zero default, killing both the diffuse
+    // term and the shadow branch (which is gated on dot(normal,lightDirection)>0).
+    primaryShader.setLightDirection(light_direction);
 
     primaryLightingModel = Visualizer::LIGHTING_NONE;
 
@@ -1410,16 +1433,30 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 }
 
 Visualizer::~Visualizer() {
-    // Clean up resources for both headless and windowed modes
+    // Clean up the shadow-map framebuffer, which either mode may have created. The zero
+    // checks cover the common case where shadowed lighting was never used.
+    if (framebufferID != 0) {
+        glDeleteFramebuffers(1, &framebufferID);
+        framebufferID = 0;
+    }
+    if (depthTexture != 0) {
+        glDeleteTextures(1, &depthTexture);
+        depthTexture = 0;
+    }
+
+    // Clean up the depth-map framebuffer used by updateDepthBuffer()
+    if (depthbufferFramebufferID != 0) {
+        glDeleteFramebuffers(1, &depthbufferFramebufferID);
+        depthbufferFramebufferID = 0;
+    }
+    if (depthbufferTexture != 0) {
+        glDeleteTextures(1, &depthbufferTexture);
+        depthbufferTexture = 0;
+    }
+
+    // Clean up offscreen rendering resources for headless mode
     if (headless) {
         cleanupOffscreenFramebuffer();
-    } else {
-        if (framebufferID != 0) {
-            glDeleteFramebuffers(1, &framebufferID);
-        }
-        if (depthTexture != 0) {
-            glDeleteTextures(1, &depthTexture);
-        }
     }
 
     // Clean up common OpenGL resources regardless of mode
@@ -1509,7 +1546,9 @@ void Visualizer::setCameraFieldOfView(float angle_FOV) {
 
 void Visualizer::setLightDirection(const helios::vec3 &direction) {
     light_direction = direction / direction.magnitude();
-    primaryShader.setLightDirection(direction);
+    // Send the normalized vector: the shader scales the diffuse term by dot(normal,lightDirection),
+    // so passing the raw argument would scale shading by the caller's vector magnitude.
+    primaryShader.setLightDirection(light_direction);
 }
 
 void Visualizer::setLightingModel(LightingModel lightingmodel) {

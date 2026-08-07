@@ -2159,38 +2159,6 @@ namespace helios {
         }
     }
 
-    void VulkanComputeBackend::uploadCameraScatterBuffers(const std::vector<float> &scatter_top_cam, const std::vector<float> &scatter_bottom_cam) {
-        if (scatter_top_cam.empty() || scatter_bottom_cam.empty()) {
-            return; // No data to upload
-        }
-
-        size_t buffer_size = scatter_top_cam.size() * sizeof(float);
-
-        // Create or resize camera_scatter_top_buffer
-        if (camera_scatter_top_buffer.buffer == VK_NULL_HANDLE || camera_scatter_top_buffer.size != buffer_size) {
-            if (camera_scatter_top_buffer.buffer != VK_NULL_HANDLE) {
-                destroyBuffer(camera_scatter_top_buffer);
-            }
-            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-            camera_scatter_top_buffer = createBuffer(buffer_size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
-            descriptors_dirty = true;
-        }
-
-        // Create or resize camera_scatter_bottom_buffer
-        if (camera_scatter_bottom_buffer.buffer == VK_NULL_HANDLE || camera_scatter_bottom_buffer.size != buffer_size) {
-            if (camera_scatter_bottom_buffer.buffer != VK_NULL_HANDLE) {
-                destroyBuffer(camera_scatter_bottom_buffer);
-            }
-            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-            camera_scatter_bottom_buffer = createBuffer(buffer_size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
-            descriptors_dirty = true;
-        }
-
-        // Upload data to both buffers
-        uploadBufferData(camera_scatter_top_buffer, scatter_top_cam.data(), buffer_size);
-        uploadBufferData(camera_scatter_bottom_buffer, scatter_bottom_cam.data(), buffer_size);
-    }
-
     void VulkanComputeBackend::zeroCameraScatterBuffers(size_t launch_band_count_param) {
         if (primitive_count == 0 || launch_band_count_param == 0) {
             return; // No geometry or bands

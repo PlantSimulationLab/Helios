@@ -49,11 +49,11 @@
  
  \section VisIssues Known Issues
 
- - **macOS OpenGL Warning in Headless Mode**: When using headless rendering on macOS, you may see a warning like:
+ - **macOS OpenGL Warning**: On macOS you may see a warning like:
    ```
    UNSUPPORTED (log once): POSSIBLE ISSUE: unit 6 GLD_TEXTURE_INDEX_2D is unloadable and bound to sampler type (Float) - using zero texture because texture unloadable
    ```
-   This is a harmless driver warning from the macOS OpenGL implementation and does not affect rendering functionality. It appears once per run and can be safely ignored.
+   This appears once per run when a sampler is bound to a texture unit that holds no texture. It is benign for lighting models that do not sample the shadow map. Note that prior to v1.3.80 this warning was also emitted in headless mode with \ref Visualizer::LIGHTING_PHONG_SHADOWED "LIGHTING_PHONG_SHADOWED", where it was *not* benign: it indicated that the shadow map had never been created, and shadows were silently missing from the rendered output.
 
  - Large point clouds are supported with automatic culling optimization.
 
@@ -147,10 +147,12 @@
 
  <b>Key Features:</b>
  - Full OpenGL rendering using offscreen framebuffers
- - All geometry types and visual effects supported
+ - All geometry types and visual effects supported, including shadows (\ref Visualizer::LIGHTING_PHONG_SHADOWED "LIGHTING_PHONG_SHADOWED")
  - Image export via \ref Visualizer::printWindow() "printWindow()" and \ref Visualizer::getWindowPixelsRGB() "getWindowPixelsRGB()"
  - No display or window manager required
  - Identical visual output to windowed mode
+
+ \note Shadowed lighting in headless mode requires Helios v1.3.80 or later. Earlier versions created the shadow-map framebuffer only in windowed mode, so headless renders using \ref Visualizer::LIGHTING_PHONG_SHADOWED "LIGHTING_PHONG_SHADOWED" came out with no shadows at all.
 
  <b>Important Notes:</b>
  - When in headless mode, calling \ref Visualizer::plotUpdate(false) "plotUpdate(false)" (requesting visible window) will issue a warning and continue with offscreen rendering
