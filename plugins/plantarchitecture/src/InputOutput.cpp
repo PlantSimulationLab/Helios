@@ -614,11 +614,14 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                 output_xml << "\t\t\t\t\t\t<petiole_length_segments>" << phytomer->phytomer_parameters.petiole.length_segments << "</petiole_length_segments>" << std::endl;
                 output_xml << "\t\t\t\t\t\t<petiole_radial_subdivisions>" << phytomer->phytomer_parameters.petiole.radial_subdivisions << "</petiole_radial_subdivisions>" << std::endl;
 
-                if (phytomer->leaf_rotation.at(petiole).size() == 1) { // not compound leaf
+                if (phytomer->leaf_rotation.at(petiole).size() <= 1 || phytomer->leaf_size_max.at(petiole).empty()) { // not compound leaf
                     output_xml << "\t\t\t\t\t\t<leaflet_scale>" << 1.0 << "</leaflet_scale>" << std::endl;
                 } else {
-                    float tip_ind = floor(float(phytomer->leaf_rotation.at(petiole).size() - 1) / 2.f);
-                    output_xml << "\t\t\t\t\t\t<leaflet_scale>" << phytomer->leaf_size_max.at(petiole).at(int(tip_ind - 1)) / max(phytomer->leaf_size_max.at(petiole)) << "</leaflet_scale>" << std::endl;
+                    int tip_ind = int(floor(float(phytomer->leaf_rotation.at(petiole).size() - 1) / 2.f));
+                    int lateral_ind = std::max(0, tip_ind - 1);
+                    float max_val = max(phytomer->leaf_size_max.at(petiole));
+                    float scale_val = (max_val > 1e-6f && lateral_ind < int(phytomer->leaf_size_max.at(petiole).size())) ? (phytomer->leaf_size_max.at(petiole).at(lateral_ind) / max_val) : 1.0f;
+                    output_xml << "\t\t\t\t\t\t<leaflet_scale>" << scale_val << "</leaflet_scale>" << std::endl;
                 }
                 output_xml << "\t\t\t\t\t\t<leaflet_offset>" << phytomer->phytomer_parameters.leaf.leaflet_offset.val() << "</leaflet_offset>" << std::endl;
 
@@ -1422,6 +1425,9 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 // The creation calls above pass internode_length as the max length, so restore the saved
                 // maximum here; it sets the elongation target used by subsequent growth.
                 phytomer_ptr->internode_length_max = internode_length_max;
+                // Restore curvature and yaw perturbation vectors so branch tortuosity/curling is preserved on subsequent XML re-exports
+                phytomer_ptr->internode_curvature_perturbations = curvature_perturbations;
+                phytomer_ptr->internode_yaw_perturbations = yaw_perturbations;
 
                 // Get shoot pointer for internode geometry restoration
                 auto shoot_ptr = plant_instances.at(plantID).shoot_tree.at(current_shoot_ID);
@@ -1997,6 +2003,15 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     phytomer_ptr->leaf_objIDs[petiole].resize(leaves_per_petiole);
                     phytomer_ptr->leaf_bases[petiole].resize(leaves_per_petiole);
                     phytomer_ptr->leaf_rotation[petiole].resize(leaves_per_petiole);
+                    // Restore leaf_size_max from read leaf_scale to ensure exact scale invariance across XML write/read roundtrips
+                    // (writePlantStructureXML outputs leaf_scale = leaf_size_max * current_leaf_scale_factor)
+                    phytomer_ptr->leaf_size_max.resize(leaf_scale.size());
+                    phytomer_ptr->leaf_size_max[petiole].resize(leaves_per_petiole);
+
+                    float cur_leaf_factor = (petiole < current_leaf_scale_factors.size() && current_leaf_scale_factors[petiole] > 1e-5f) ? current_leaf_scale_factors[petiole] : 1.0f;
+                    for (int leaf = 0; leaf < leaves_per_petiole; leaf++) {
+                        phytomer_ptr->leaf_size_max[petiole][leaf] = leaf_scale[petiole][leaf] / cur_leaf_factor;
+                    }
 
                     for (int leaf = 0; leaf < leaves_per_petiole; leaf++) {
                         float ind_from_tip = float(leaf) - float(leaves_per_petiole - 1) / 2.f;
@@ -2068,8 +2083,10 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         // Auto-calculate leaf base from petiole geometry (handles compound leaves)
                         vec3 leaf_base = phytomer_ptr->petiole_vertices[petiole].back(); // Default: petiole tip
 
-                        int leaves_per_petiole = phytomer_ptr->phytomer_parameters.leaf.leaves_per_petiole.val();
-                        float leaflet_offset_val = clampOffset(leaves_per_petiole, phytomer_ptr->phytomer_parameters.leaf.leaflet_offset.val());
+                        // int leaves_per_petiole = phytomer_ptr->phytomer_parameters.leaf.leaves_per_petiole.val();
+                        // Note: use actual `leaves_per_petiole` (defined from XML leaf_scale[petiole].size() above)
+                        // instead of `phytomer_ptr->phytomer_parameters.leaf.leaves_per_petiole.val()` to preserve exact XML leaflet count (unifoliate vs trifoliate) and avoid RandomParameter resampling
+                        float leaflet_offset_val = clampOffset(leaves_per_petiole, leaflet_offset);
 
                         if (leaves_per_petiole > 1 && leaflet_offset_val > 0) {
                             // Compound leaf: calculate lateral leaflet positions along petiole
@@ -2545,6 +2562,8 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                             }
                         }
                     }
+                } else {
+                    phytomer_ptr->floral_buds.clear();
                 }
 
                 phytomer_count++;
