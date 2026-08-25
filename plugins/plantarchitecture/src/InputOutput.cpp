@@ -515,6 +515,9 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
     output_xml << "\t\t<max_age> " << plant_instances.at(plantID).max_age << " </max_age>" << std::endl;
 
     for (auto &shoot: plant_instances.at(plantID).shoot_tree) {
+        if (shoot->isPruned() || shoot->phytomers.empty()) {
+            continue;
+        }
 
         output_xml << "\t\t<shoot ID=\"" << shoot->ID << "\">" << std::endl;
         output_xml << "\t\t\t<shoot_type_label> " << shoot->shoot_type_label << " </shoot_type_label>" << std::endl;
@@ -661,14 +664,19 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                             output_xml << "\t\t\t\t\t\t\t\t<radius>" << phytomer->peduncle_radius.at(petiole).at(bud) << "</radius>" << std::endl;
                             output_xml << "\t\t\t\t\t\t\t\t<pitch>" << phytomer->peduncle_pitch.at(petiole).at(bud) << "</pitch>" << std::endl;
                             output_xml << "\t\t\t\t\t\t\t\t<curvature>" << phytomer->peduncle_curvature.at(petiole).at(bud) << "</curvature>" << std::endl;
+                            if (petiole < phytomer->peduncle_roll.size() && bud < phytomer->peduncle_roll.at(petiole).size()) {
+                                output_xml << "\t\t\t\t\t\t\t\t<roll>" << phytomer->peduncle_roll.at(petiole).at(bud) << "</roll>" << std::endl;
+                            } else {
+                                output_xml << "\t\t\t\t\t\t\t\t<roll>" << phytomer->phytomer_parameters.peduncle.roll.val() << "</roll>" << std::endl;
+                            }
                         } else {
                             // Fallback to parameter values if stored values not available
                             output_xml << "\t\t\t\t\t\t\t\t<length>" << phytomer->phytomer_parameters.peduncle.length.val() << "</length>" << std::endl;
                             output_xml << "\t\t\t\t\t\t\t\t<radius>" << phytomer->phytomer_parameters.peduncle.radius.val() << "</radius>" << std::endl;
                             output_xml << "\t\t\t\t\t\t\t\t<pitch>" << phytomer->phytomer_parameters.peduncle.pitch.val() << "</pitch>" << std::endl;
                             output_xml << "\t\t\t\t\t\t\t\t<curvature>" << phytomer->phytomer_parameters.peduncle.curvature.val() << "</curvature>" << std::endl;
+                            output_xml << "\t\t\t\t\t\t\t\t<roll>" << phytomer->phytomer_parameters.peduncle.roll.val() << "</roll>" << std::endl;
                         }
-                        output_xml << "\t\t\t\t\t\t\t\t<roll>" << phytomer->phytomer_parameters.peduncle.roll.val() << "</roll>" << std::endl;
 
                         output_xml << "\t\t\t\t\t\t\t</peduncle>" << std::endl;
 
@@ -2307,6 +2315,22 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                             phytomer_ptr->peduncle_radii.at(petiole).at(bud) = peduncle_radii_computed;
                                         }
 
+                                        // Persist reconstructed peduncle bulk parameters so the next XML write is stable
+                                        if (petiole < phytomer_ptr->peduncle_length.size()) {
+                                            if (phytomer_ptr->peduncle_length.at(petiole).size() <= bud) {
+                                                phytomer_ptr->peduncle_length.at(petiole).resize(bud + 1);
+                                                phytomer_ptr->peduncle_radius.at(petiole).resize(bud + 1);
+                                                phytomer_ptr->peduncle_pitch.at(petiole).resize(bud + 1);
+                                                phytomer_ptr->peduncle_curvature.at(petiole).resize(bud + 1);
+                                                phytomer_ptr->peduncle_roll.at(petiole).resize(bud + 1);
+                                            }
+                                            phytomer_ptr->peduncle_length.at(petiole).at(bud) = fbud_data.peduncle_length;
+                                            phytomer_ptr->peduncle_radius.at(petiole).at(bud) = fbud_data.peduncle_radius;
+                                            phytomer_ptr->peduncle_pitch.at(petiole).at(bud) = fbud_data.peduncle_pitch;
+                                            phytomer_ptr->peduncle_curvature.at(petiole).at(bud) = fbud_data.peduncle_curvature;
+                                            phytomer_ptr->peduncle_roll.at(petiole).at(bud) = fbud_data.peduncle_roll;
+                                        }
+
                                         // Rebuild Context geometry with COMPUTED vertices/radii
                                         if (phytomer_ptr->build_context_geometry_peduncle) {
                                             std::vector<RGBcolor> colors(peduncle_vertices_computed.size(), phytomer_ptr->phytomer_parameters.peduncle.color);
@@ -2315,6 +2339,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                             std::string peduncle_material_name = plant_instances.at(plantID).plant_name + "_" + shoot_type_label + "_peduncle";
                                             renameAutoMaterial(context_ptr, fbud.peduncle_objIDs.back(), peduncle_material_name);
                                         }
+
                                     }
 
                                     // Restore flower geometry using saved rotations (base positions auto-computed)
@@ -2473,6 +2498,22 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                             phytomer_ptr->peduncle_radii.at(petiole).at(bud) = peduncle_radii_computed;
                                         }
 
+                                        // Persist reconstructed peduncle bulk parameters so the next XML write is stable
+                                        if (petiole < phytomer_ptr->peduncle_length.size()) {
+                                            if (phytomer_ptr->peduncle_length.at(petiole).size() <= bud) {
+                                                phytomer_ptr->peduncle_length.at(petiole).resize(bud + 1);
+                                                phytomer_ptr->peduncle_radius.at(petiole).resize(bud + 1);
+                                                phytomer_ptr->peduncle_pitch.at(petiole).resize(bud + 1);
+                                                phytomer_ptr->peduncle_curvature.at(petiole).resize(bud + 1);
+                                                phytomer_ptr->peduncle_roll.at(petiole).resize(bud + 1);
+                                            }
+                                            phytomer_ptr->peduncle_length.at(petiole).at(bud) = fbud_data.peduncle_length;
+                                            phytomer_ptr->peduncle_radius.at(petiole).at(bud) = fbud_data.peduncle_radius;
+                                            phytomer_ptr->peduncle_pitch.at(petiole).at(bud) = fbud_data.peduncle_pitch;
+                                            phytomer_ptr->peduncle_curvature.at(petiole).at(bud) = fbud_data.peduncle_curvature;
+                                            phytomer_ptr->peduncle_roll.at(petiole).at(bud) = fbud_data.peduncle_roll;
+                                        }
+
                                         // Rebuild Context geometry with COMPUTED vertices/radii
                                         if (phytomer_ptr->build_context_geometry_peduncle) {
                                             std::vector<RGBcolor> colors(peduncle_vertices_computed.size(), phytomer_ptr->phytomer_parameters.peduncle.color);
@@ -2542,17 +2583,23 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                             }
                                             vec3 recalculated_peduncle_axis = phytomer_ptr->getAxisVector(frac, phytomer_ptr->peduncle_vertices.at(petiole).at(bud));
 
-                                            // Use individual base scale if available, then apply growth scaling
+                                            // Use individual base scale if available. The XML stores the base prototype scale;
+                                            // the current fruit growth fraction is applied separately so reloads are idempotent.
                                             float base_fruit_scale;
                                             if (i < fbud_data.flower_base_scales.size() && fbud_data.flower_base_scales.at(i) >= 0) {
                                                 base_fruit_scale = fbud_data.flower_base_scales.at(i);
                                             } else {
                                                 base_fruit_scale = phytomer_ptr->phytomer_parameters.inflorescence.fruit_prototype_scale.val();
                                             }
-                                            float scale_factor = base_fruit_scale * fbud_data.current_fruit_scale_factor;
 
-                                            // Create fruit geometry with computed base, saved rotations, and recalculated peduncle axis
-                                            phytomer_ptr->createInflorescenceGeometry(fbud, fruit_base_computed, recalculated_peduncle_axis, saved_pitch, saved_roll, saved_azimuth, saved_yaw, scale_factor, false);
+                                            // Create fruit geometry at base scale (matches original growth creation)
+                                            phytomer_ptr->createInflorescenceGeometry(fbud, fruit_base_computed, recalculated_peduncle_axis, saved_pitch, saved_roll, saved_azimuth, saved_yaw, base_fruit_scale, false);
+
+                                            // Apply the saved fruit growth fraction to match the rendered size on the original DAP
+                                            if (fbud_data.current_fruit_scale_factor > 0 && fbud_data.current_fruit_scale_factor != 1.0f) {
+                                                fbud.current_fruit_scale_factor = 1.0f; // reset so scaling applies cleanly
+                                                phytomer_ptr->setInflorescenceScaleFraction(fbud, fbud_data.current_fruit_scale_factor);
+                                            }
                                         }
                                     }
                                 }

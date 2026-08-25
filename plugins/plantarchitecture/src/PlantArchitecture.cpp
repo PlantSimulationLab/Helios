@@ -1606,6 +1606,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     peduncle_radius.resize(phytomer_parameters.petiole.petioles_per_internode);
     peduncle_pitch.resize(phytomer_parameters.petiole.petioles_per_internode);
     peduncle_curvature.resize(phytomer_parameters.petiole.petioles_per_internode);
+    peduncle_roll.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_pitch.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_curvature.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_taper.resize(phytomer_parameters.petiole.petioles_per_internode);
@@ -2431,9 +2432,11 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
         peduncle_axis.normalize();
     }
 
-    // Sample curvature once and store (avoids resampling each iteration which was a bug - same fix as petioles)
+    // Sample curvature and roll once and store (avoids resampling each iteration which was a bug - same fix as petioles)
     float peduncle_curvature = phytomer_parameters.peduncle.curvature.val();
     phytomer_parameters.peduncle.curvature.resample();
+    float peduncle_roll = phytomer_parameters.peduncle.roll.val();
+    phytomer_parameters.peduncle.roll.resample();
 
     // Store actual sampled peduncle parameters for XML reconstruction
     uint petiole_idx = fbud.parent_index;
@@ -2444,11 +2447,13 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
             this->peduncle_radius.at(petiole_idx).resize(bud_idx + 1);
             this->peduncle_pitch.at(petiole_idx).resize(bud_idx + 1);
             this->peduncle_curvature.at(petiole_idx).resize(bud_idx + 1);
+            this->peduncle_roll.at(petiole_idx).resize(bud_idx + 1);
         }
         this->peduncle_length.at(petiole_idx).at(bud_idx) = peduncle_length;
         this->peduncle_radius.at(petiole_idx).at(bud_idx) = phytomer_parameters.peduncle.radius.val();
         this->peduncle_pitch.at(petiole_idx).at(bud_idx) = phytomer_parameters.peduncle.pitch.val();
         this->peduncle_curvature.at(petiole_idx).at(bud_idx) = peduncle_curvature;
+        this->peduncle_roll.at(petiole_idx).at(bud_idx) = peduncle_roll;
     }
 
     for (int i = 1; i <= phytomer_parameters.peduncle.length_segments; i++) {
@@ -3728,15 +3733,19 @@ void PlantArchitecture::pruneGroundCollisions(uint plantID) {
     }
 
     for (auto &shoot: plant_instances.at(plantID).shoot_tree) {
-        for (auto &phytomer: shoot->phytomers) {
-            // internode
-            if ((phytomer->shoot_index.x == 0 && phytomer->rank > 0) && context_ptr->doesObjectExist(shoot->internode_tube_objID) && detectGroundCollision(shoot->internode_tube_objID)) {
-                context_ptr->deleteObject(shoot->internode_tube_objID);
-                // Reset to the sentinel so the freed object ID is never handed back to callers or
-                // used to address the Context again.
-                shoot->internode_tube_objID = Shoot::no_internode_tube_objID;
-                shoot->terminateApicalBud();
-            }
+        if (shoot->isPruned() || shoot->phytomers.empty()) {
+            continue;
+        }
+
+        // If a lateral shoot stem collides with ground, prune the shoot and its descendants cleanly from both Context and shoot_tree
+        if (shoot->rank > 0 && context_ptr->doesObjectExist(shoot->internode_tube_objID) && detectGroundCollision(shoot->internode_tube_objID)) {
+            shoot->phytomers.front()->deletePhytomer();
+            continue;
+        }
+
+        for (int node = int(shoot->phytomers.size()) - 1; node >= 0; node--) {
+            if (node >= int(shoot->phytomers.size())) continue;
+            auto phytomer = shoot->phytomers.at(node);
 
             // leaves
             for (uint petiole = 0; petiole < phytomer->leaf_objIDs.size(); petiole++) {
