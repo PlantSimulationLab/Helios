@@ -957,6 +957,41 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
   }
  ~~~~~~
 
+ \subsection AreaIndex Leaf and Plant Area Index
+
+ The area index of a scene is the total one-sided surface area of its vegetation divided by the ground area over which that vegetation is distributed. It is the quantity \f$L\f$ appearing in Beer's law, \f$\exp(-G(\theta)L/\cos\theta)\f$, and is referred to as the leaf area index (LAI) when only leaves are counted, or the plant area index (PAI) when woody elements are included as well.
+
+ The area index is calculated using \ref helios::Context::calculateAreaIndex() "calculateAreaIndex()". Ground primitives are excluded from the calculation simply by not passing them: the function sums only the primitives it is given.
+
+ ~~~~~~{.cpp}
+  #include "Context.h"
+
+  int main( void ){
+     Context context;
+
+     // ...build a canopy...
+
+     // Leaf area index, using the horizontal extent of the domain as the ground area basis
+     float LAI = context.calculateAreaIndex( leaf_UUIDs );
+
+     // Plant area index, additionally accounting for woody elements
+     float PAI = context.calculateAreaIndex( leaf_UUIDs, wood_UUIDs );
+
+     // Either form can instead be given an explicit ground area (m^2)
+     float LAI_explicit = context.calculateAreaIndex( leaf_UUIDs, 100.f );
+  }
+ ~~~~~~
+
+ <b>Ground area basis.</b> The overloads that do not take a ground area use the horizontal (x-y) footprint of the bounding box of <i>all</i> primitives in the Context. This is the same extent the radiation model derives when a periodic boundary is enforced via <code>RadiationModel::enforcePeriodicBoundary()</code>, so for a periodic scene whose ground is set exactly to the periodic domain edge, the automatically-determined basis is the correct one.
+
+ In other situations it may not be. Because every primitive contributes to the bounding box, a ground primitive that extends beyond the canopy will enlarge the area basis and correspondingly reduce the reported area index, even though the ground itself is not counted in the numerator. The same applies to any other geometry placed away from the canopy. Whenever the domain is not cropped tightly to the canopy, pass the ground area explicitly.
+
+ <b>Woody area.</b> Woody elements are counted as one half of their summed one-sided primitive area. A branch represented by a \ref helios::Tube "tube" or \ref helios::Cone "cone" object is enclosed by its primitives, which therefore sum to the full surface of the cylinder (approximately \f$2\pi r L\f$), whereas Beer's law requires the projected area \f$\pi r L\f$. Note that if woody elements are instead represented by non-enclosing planar primitives that are already one-sided silhouettes, this halving will underestimate their contribution by a factor of two.
+
+ Leaf area is taken directly as the one-sided primitive area, which already accounts for texture transparency: a leaf represented by a texture-masked patch contributes the area of the opaque portion of its texture rather than the area of the whole patch.
+
+ Primitives of type \ref helios::PRIMITIVE_TYPE_VOXEL "PRIMITIVE_TYPE_VOXEL" may not be included, because the area of a voxel is its total enclosing surface area rather than a one-sided area.
+
  \subsection DeletingPrims Deleting Primitives and Stale UUIDs
 
  Primitives are removed from the Context using \ref helios::Context::deletePrimitive() "deletePrimitive()", which accepts either a single UUID or a vector of UUIDs. Once a primitive is deleted, the memory associated with it is released by the Context, and its UUID is no longer valid. UUIDs are never recycled, so a deleted UUID will not later refer to some other primitive.

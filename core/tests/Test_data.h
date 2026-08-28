@@ -1240,6 +1240,146 @@ TEST_CASE("Surface Area Calculations") {
     }
 }
 
+
+TEST_CASE("Area Index Calculations") {
+
+    SUBCASE("leaves only, explicit ground area") {
+        Context ctx;
+        // Four 1x1 patches = 4 m^2 of one-sided leaf area.
+        for (int i = 0; i < 4; i++) {
+            ctx.addPatch(make_vec3(float(i), 0, 1), make_vec2(1, 1));
+        }
+        std::vector<uint> leaves = ctx.getAllUUIDs();
+
+        float LAI = ctx.calculateAreaIndex(leaves, 10.f);
+        DOCTEST_CHECK(LAI == doctest::Approx(0.4f));
+    }
+
+    SUBCASE("leaves only, automatic ground area basis") {
+        Context ctx;
+        // Two patches whose vertices span x in [-2,2] and y in [-2.5,2.5], giving a 4x5=20 m^2 footprint.
+        ctx.addPatch(make_vec3(0, 0, 1), make_vec2(4, 5));
+        std::vector<uint> leaves = ctx.getAllUUIDs();
+
+        // Leaf area is 20 m^2 over a 20 m^2 footprint.
+        float LAI = ctx.calculateAreaIndex(leaves);
+        DOCTEST_CHECK(LAI == doctest::Approx(1.0f));
+    }
+
+    SUBCASE("ground primitive enlarges the automatic area basis") {
+        Context ctx;
+        // A 2x2 canopy patch (4 m^2 of leaf area).
+        uint leaf = ctx.addPatch(make_vec3(0, 0, 1), make_vec2(2, 2));
+        const std::vector<uint> leaves = {leaf};
+
+        // Without any ground, the basis is the canopy's own 2x2 footprint.
+        float LAI_nogroud = ctx.calculateAreaIndex(leaves);
+        DOCTEST_CHECK(LAI_nogroud == doctest::Approx(1.0f));
+
+        // Adding a 10x10 ground plane enlarges the basis to 100 m^2 even though the ground is
+        // not included in the numerator. This is documented behavior, not a defect.
+        ctx.addPatch(make_vec3(0, 0, 0), make_vec2(10, 10));
+        float LAI_ground = ctx.calculateAreaIndex(leaves);
+        DOCTEST_CHECK(LAI_ground == doctest::Approx(0.04f));
+    }
+
+    SUBCASE("woody area is halved") {
+        Context ctx;
+        uint leaf = ctx.addPatch(make_vec3(0, 0, 1), make_vec2(2, 2)); // 4 m^2
+        uint wood = ctx.addPatch(make_vec3(0, 0, 2), make_vec2(2, 2)); // 4 m^2 -> counted as 2 m^2
+
+        const std::vector<uint> leaves = {leaf};
+        const std::vector<uint> wood_prims = {wood};
+        const std::vector<uint> none;
+
+        // Ground area of 4 m^2 => (4 + 0.5*4)/4 = 1.5
+        float PAI = ctx.calculateAreaIndex(leaves, wood_prims, 4.f);
+        DOCTEST_CHECK(PAI == doctest::Approx(1.5f));
+
+        // The halving must apply only to the wood vector.
+        float LAI = ctx.calculateAreaIndex(leaves, 4.f);
+        DOCTEST_CHECK(LAI == doctest::Approx(1.0f));
+
+        // Passing the same primitives as wood rather than leaves halves the result.
+        float PAI_wood_only = ctx.calculateAreaIndex(none, leaves, 4.f);
+        DOCTEST_CHECK(PAI_wood_only == doctest::Approx(0.5f));
+    }
+
+    SUBCASE("tube object woody area approximates pi*r*L") {
+        Context ctx;
+        const float radius = 0.1f;
+        const float length = 4.f;
+        // A straight, densely-faceted tube so the polygonal approximation is close to a true cylinder.
+        std::vector<vec3> nodes = {make_vec3(0, 0, 0), make_vec3(0, 0, length)};
+        std::vector<float> radii = {radius, radius};
+        uint objID = ctx.addTubeObject(60, nodes, radii);
+        std::vector<uint> wood = ctx.getObjectPrimitiveUUIDs(objID);
+
+        // The tube encloses the branch, so its primitives sum to ~2*pi*r*L. Halving gives ~pi*r*L.
+        const float ground_area = 1.f;
+        const std::vector<uint> none;
+        float PAI = ctx.calculateAreaIndex(none, wood, ground_area);
+        DOCTEST_CHECK(PAI == doctest::Approx(M_PI * radius * length).epsilon(0.01));
+    }
+
+    SUBCASE("texture-masked leaf contributes solid fraction area") {
+        Context ctx;
+        uint opaque = ctx.addPatch(make_vec3(0, 0, 1), make_vec2(1, 1));
+        uint masked = ctx.addPatch(make_vec3(2, 0, 1), make_vec2(1, 1), nullrotation, "lib/images/disk_texture.png");
+
+        const std::vector<uint> opaque_prims = {opaque};
+        const std::vector<uint> masked_prims = {masked};
+        float LAI_opaque = ctx.calculateAreaIndex(opaque_prims, 1.f);
+        float LAI_masked = ctx.calculateAreaIndex(masked_prims, 1.f);
+
+        // The masked patch is a disk inscribed in a unit square, so it covers ~pi/4 of it.
+        DOCTEST_CHECK(LAI_opaque == doctest::Approx(1.0f));
+        DOCTEST_CHECK(LAI_masked < LAI_opaque);
+        DOCTEST_CHECK(LAI_masked == doctest::Approx(0.25f * M_PI).epsilon(0.05));
+    }
+
+    SUBCASE("error conditions") {
+        Context ctx;
+        uint leaf = ctx.addPatch(make_vec3(0, 0, 1), make_vec2(2, 2));
+        std::vector<uint> leaves = {leaf};
+
+        capture_cerr cerr_buffer;
+        const std::vector<uint> none;
+        float result;
+
+        // No primitives given.
+        DOCTEST_CHECK_THROWS_AS(result = ctx.calculateAreaIndex(none), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(result = ctx.calculateAreaIndex(none, 1.f), std::runtime_error);
+
+        // Non-positive ground area.
+        DOCTEST_CHECK_THROWS_AS(result = ctx.calculateAreaIndex(leaves, 0.f), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(result = ctx.calculateAreaIndex(leaves, -1.f), std::runtime_error);
+
+        // Nonexistent primitive.
+        uint deleted_UUID = ctx.addPatch(make_vec3(0, 0, 2), make_vec2(1, 1));
+        ctx.deletePrimitive(deleted_UUID);
+        const std::vector<uint> deleted = {deleted_UUID};
+        DOCTEST_CHECK_THROWS_AS(result = ctx.calculateAreaIndex(deleted, 1.f), std::runtime_error);
+
+        // Voxels have a total enclosing surface area and cannot contribute to an area index.
+        const std::vector<uint> voxels = {ctx.addVoxel(make_vec3(0, 0, 1), make_vec3(1, 1, 1))};
+        DOCTEST_CHECK_THROWS_AS(result = ctx.calculateAreaIndex(voxels, 1.f), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(result = ctx.calculateAreaIndex(leaves, voxels, 1.f), std::runtime_error);
+    }
+
+    SUBCASE("vertical scene has no horizontal extent") {
+        Context ctx;
+        // A patch rotated to stand vertically has zero extent in one horizontal direction, so the
+        // automatic ground area basis is undefined.
+        uint leaf = ctx.addPatch(make_vec3(0, 0, 1), make_vec2(2, 2), make_SphericalCoord(0.5f * M_PI, 0.f));
+
+        capture_cerr cerr_buffer;
+        const std::vector<uint> leaves = {leaf};
+        float result;
+        DOCTEST_CHECK_THROWS_AS(result = ctx.calculateAreaIndex(leaves), std::runtime_error);
+    }
+}
+
 TEST_CASE("Advanced Area-Weighted Calculations") {
     Context ctx;
 

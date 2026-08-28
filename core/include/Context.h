@@ -3154,6 +3154,15 @@ namespace helios {
          */
         [[nodiscard]] Cone *getConeObjectPointer_private(uint ObjID) const;
 
+        //! Validate primitives used in an area index calculation and sum their one-sided surface area
+        /**
+         * \param[in] UUIDs Universal unique identifiers of primitives to sum.
+         * \param[in] argument_name Name of the calling function's argument, used in error messages.
+         * \return Sum of one-sided primitive area.
+         * @private
+         */
+        [[nodiscard]] float sumAreaIndexPrimitives_private(const std::vector<uint> &UUIDs, const std::string &argument_name) const;
+
         //! Invalidate the getAllUUIDs cache when primitives are added/removed/hidden/shown
         void invalidateAllUUIDsCache() const {
             all_uuids_cache_valid = false;
@@ -8477,6 +8486,44 @@ namespace helios {
          * \return Sum of primitive area
          */
         [[nodiscard]] float sumPrimitiveSurfaceArea(const std::vector<uint> &UUIDs) const;
+
+        //! Calculate the one-sided area index of a group of leaf primitives on a ground-area basis
+        /**
+         * The area index is the total one-sided leaf area divided by the ground area over which it is distributed, which is the quantity appearing in Beer's law (exp(-G*L/cos(theta))).
+         * \param[in] leaf_UUIDs Universal unique identifiers of leaf primitives.
+         * \return One-sided leaf area index (m^2 leaf area per m^2 ground area).
+         * \note The ground area basis is the horizontal (x-y) footprint of the bounding box of all primitives in the Context. Ground primitives should not be included in \p leaf_UUIDs; they are excluded from the numerator by omission. Note however that a ground primitive extending beyond the canopy will enlarge the area basis and thus reduce the reported index. Use \ref calculateAreaIndex( const std::vector<uint>&, float ) const to supply the ground area explicitly whenever the domain is not cropped tightly to the canopy.
+         * \note Primitives of type \ref PRIMITIVE_TYPE_VOXEL are not permitted, because a voxel's area is its total enclosing surface area rather than a one-sided area.
+         */
+        [[nodiscard]] float calculateAreaIndex(const std::vector<uint> &leaf_UUIDs) const;
+
+        //! Calculate the one-sided area index of a group of leaf primitives using a given ground area
+        /**
+         * \param[in] leaf_UUIDs Universal unique identifiers of leaf primitives.
+         * \param[in] ground_area Ground area basis for the calculation (m^2). Must be positive.
+         * \return One-sided leaf area index (m^2 leaf area per m^2 ground area).
+         */
+        [[nodiscard]] float calculateAreaIndex(const std::vector<uint> &leaf_UUIDs, float ground_area) const;
+
+        //! Calculate the one-sided plant area index of leaf and woody primitives on a ground-area basis
+        /**
+         * \param[in] leaf_UUIDs Universal unique identifiers of leaf primitives.
+         * \param[in] wood_UUIDs Universal unique identifiers of woody (branch, trunk, stem) primitives.
+         * \return One-sided plant area index (m^2 plant area per m^2 ground area).
+         * \note Woody area is taken as one half of the summed one-sided primitive area. A tube or cone object encloses the branch, so its primitives sum to the full surface of the cylinder (approximately 2*pi*r*L) rather than the projected area required by Beer's law. If woody elements are instead represented by non-enclosing planar primitives that are already one-sided silhouettes, this halving will underestimate their contribution by a factor of two.
+         * \note The ground area basis is the horizontal (x-y) footprint of the bounding box of all primitives in the Context. See \ref calculateAreaIndex( const std::vector<uint>& ) const for the implications of this choice.
+         */
+        [[nodiscard]] float calculateAreaIndex(const std::vector<uint> &leaf_UUIDs, const std::vector<uint> &wood_UUIDs) const;
+
+        //! Calculate the one-sided plant area index of leaf and woody primitives using a given ground area
+        /**
+         * \param[in] leaf_UUIDs Universal unique identifiers of leaf primitives.
+         * \param[in] wood_UUIDs Universal unique identifiers of woody (branch, trunk, stem) primitives.
+         * \param[in] ground_area Ground area basis for the calculation (m^2). Must be positive.
+         * \return One-sided plant area index (m^2 plant area per m^2 ground area).
+         * \note Woody area is taken as one half of the summed one-sided primitive area. See \ref calculateAreaIndex( const std::vector<uint>&, const std::vector<uint>& ) const for details.
+         */
+        [[nodiscard]] float calculateAreaIndex(const std::vector<uint> &leaf_UUIDs, const std::vector<uint> &wood_UUIDs, float ground_area) const;
 
         //! Filter a set of primitives based on their primitive data and a condition and float value
         /**

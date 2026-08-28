@@ -1,6 +1,10 @@
 # Changelog
 
-# [1.3.84] YYYY-XX-XX
+# [1.3.84] 2026-XX-XX
+
+## Core
+
+- Added `Context::calculateAreaIndex()`, which computes the one-sided leaf area index (LAI) or plant area index (PAI) of a scene on a ground-area basis, the quantity appearing in Beer's law. Overloads take leaf primitives alone or leaf and woody primitives separately, with the ground area either supplied explicitly or determined from the horizontal extent of the domain bounding box. Ground primitives are excluded by not being passed. Woody area is counted as one half of the summed one-sided primitive area, since a tube or cone encloses the branch it represents and its primitives therefore sum to the full cylinder surface rather than the projected area; woody elements represented instead by non-enclosing planar primitives will be underestimated by a factor of two. Voxels are rejected because a voxel's area is its total enclosing surface area.
 
 ## Energy Balance
 
