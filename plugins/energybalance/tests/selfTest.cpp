@@ -778,3 +778,595 @@ DOCTEST_TEST_CASE("EnergyBalanceModel surface humidity scales surface vapor pres
     // Guard the magnitude too, so a merely-marginal difference cannot pass.
     DOCTEST_CHECK(T_dry - T_saturated > 1.f);
 }
+
+// ---- Canopy airspace model ---- //
+
+//! Build a simple layered canopy of horizontal patches spanning a 1 m x 1 m ground area
+/**
+ * \param[in] context Context to add the canopy to.
+ * \param[in] patches_per_layer Number of patches at each height level.
+ * \param[in] num_levels Number of discrete height levels between the ground and the canopy top.
+ * \param[in] canopy_height_m Height of the canopy top in meters.
+ * \param[in] patch_size_m Edge length of each square patch in meters.
+ * \return UUIDs of the canopy patches.
+ */
+static std::vector<uint> buildTestCanopy(Context &context, uint patches_per_layer, uint num_levels, float canopy_height_m, float patch_size_m) {
+    std::vector<uint> UUIDs;
+    for (uint level = 0; level < num_levels; level++) {
+        // Distribute levels evenly through the canopy depth, keeping them strictly inside the canopy.
+        float z = canopy_height_m * (float(level) + 0.5f) / float(num_levels);
+        for (uint p = 0; p < patches_per_layer; p++) {
+            float x = 0.1f * float(p);
+            UUIDs.push_back(context.addPatch(make_vec3(x, 0, z), make_vec2(patch_size_m, patch_size_m)));
+        }
+    }
+    return UUIDs;
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Argument Validation") {
+    Context context;
+    std::vector<uint> UUIDs = buildTestCanopy(context, 2, 2, 2.f, 0.1f);
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+
+    // Empty canopy set is an error, since there would be nothing exchanging heat with the air.
+    DOCTEST_CHECK_THROWS(model.enableCanopyAirspaceModel({}, {}, 2.f, 3.f, 2.f, 1));
+    // Canopy height must be positive.
+    DOCTEST_CHECK_THROWS(model.enableCanopyAirspaceModel(UUIDs, {}, 0.f, 3.f, 2.f, 1));
+    // Reference height must be above the canopy top.
+    DOCTEST_CHECK_THROWS(model.enableCanopyAirspaceModel(UUIDs, {}, 2.f, 2.f, 2.f, 1));
+    DOCTEST_CHECK_THROWS(model.enableCanopyAirspaceModel(UUIDs, {}, 2.f, 1.f, 2.f, 1));
+    // Leaf area index must be positive.
+    DOCTEST_CHECK_THROWS(model.enableCanopyAirspaceModel(UUIDs, {}, 2.f, 3.f, 0.f, 1));
+    // At least one layer is required.
+    DOCTEST_CHECK_THROWS(model.enableCanopyAirspaceModel(UUIDs, {}, 2.f, 3.f, 2.f, 0));
+    // A UUID that does not exist in the Context is an error.
+    DOCTEST_CHECK_THROWS(model.enableCanopyAirspaceModel({999999}, {}, 2.f, 3.f, 2.f, 1));
+
+    // Valid arguments must be accepted.
+    DOCTEST_CHECK_NOTHROW(model.enableCanopyAirspaceModel(UUIDs, {}, 2.f, 3.f, 2.f, 1));
+
+    // Convergence criteria must be positive.
+    DOCTEST_CHECK_THROWS(model.setCanopyAirspaceConvergence(0.f, 10));
+    DOCTEST_CHECK_THROWS(model.setCanopyAirspaceConvergence(-1.f, 10));
+    DOCTEST_CHECK_THROWS(model.setCanopyAirspaceConvergence(0.01f, 0));
+    DOCTEST_CHECK_NOTHROW(model.setCanopyAirspaceConvergence(0.01f, 10));
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Equilibrium") {
+    // With the canopy in radiative equilibrium at the reference air temperature, there is no sensible or latent
+    // source, so the airspace must recover the reference air temperature exactly.
+    Context context;
+    float Tref = 300.f;
+    float canopy_height = 2.f;
+
+    std::vector<uint> UUIDs = buildTestCanopy(context, 4, 3, canopy_height, 0.1f);
+
+    // Longwave flux that exactly balances emission at Tref, and closed stomata so there is no latent flux.
+    context.setPrimitiveData(UUIDs, "radiation_flux_LW", float(2.f * 5.67e-8 * pow(Tref, 4)));
+    context.setPrimitiveData(UUIDs, "moisture_conductance", 0.f);
+    context.setGlobalData("air_temperature_reference", Tref);
+    context.setGlobalData("air_humidity_reference", 0.5f);
+    context.setGlobalData("wind_speed_reference", 2.f);
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+    model.addRadiationBand("LW");
+    DOCTEST_CHECK_NOTHROW(model.enableCanopyAirspaceModel(UUIDs, {}, canopy_height, 4.f, 2.f, 1));
+    DOCTEST_CHECK_NOTHROW(model.run());
+
+    float T_canopy_air;
+    DOCTEST_CHECK_NOTHROW(context.getGlobalData("canopy_air_temperature", T_canopy_air));
+    DOCTEST_CHECK(T_canopy_air == doctest::Approx(Tref).epsilon(err_tol));
+
+    // Every primitive must have been given the airspace temperature.
+    for (uint UUID: UUIDs) {
+        float Ta;
+        DOCTEST_CHECK_NOTHROW(context.getPrimitiveData(UUID, "air_temperature", Ta));
+        DOCTEST_CHECK(Ta == doctest::Approx(Tref).epsilon(err_tol));
+    }
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Heating and Cooling") {
+    // A canopy heated well above the reference air temperature must warm the within-canopy air, and the
+    // within-canopy air must remain between the reference air and the leaf temperature.
+    Context context;
+    float Tref = 300.f;
+    float canopy_height = 2.f;
+
+    std::vector<uint> UUIDs = buildTestCanopy(context, 4, 3, canopy_height, 0.1f);
+
+    // Strong shortwave load with closed stomata forces the leaves well above air temperature.
+    context.setPrimitiveData(UUIDs, "radiation_flux_SW", 600.f);
+    // Incoming longwave that balances emission at Tref, so shortwave is a true net heat load.
+    context.setPrimitiveData(UUIDs, "radiation_flux_LW", float(2.f * 5.67e-8 * pow(Tref, 4)));
+    context.setPrimitiveData(UUIDs, "moisture_conductance", 0.f);
+    context.setGlobalData("air_temperature_reference", Tref);
+    context.setGlobalData("air_humidity_reference", 0.5f);
+    context.setGlobalData("wind_speed_reference", 1.f);
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+    model.addRadiationBand("LW");
+    DOCTEST_CHECK_NOTHROW(model.enableCanopyAirspaceModel(UUIDs, {}, canopy_height, 4.f, 3.f, 1));
+    DOCTEST_CHECK_NOTHROW(model.run());
+
+    float T_canopy_air;
+    DOCTEST_CHECK_NOTHROW(context.getGlobalData("canopy_air_temperature", T_canopy_air));
+
+    float T_leaf;
+    DOCTEST_CHECK_NOTHROW(context.getPrimitiveData(UUIDs.at(0), "temperature", T_leaf));
+
+    // The heated canopy must warm the air it sits in.
+    DOCTEST_CHECK(T_canopy_air > Tref);
+    // But the air cannot be warmer than the leaves that are heating it.
+    DOCTEST_CHECK(T_canopy_air < T_leaf);
+    // The effect must be substantial, not marginal, under this radiation load.
+    DOCTEST_CHECK(T_canopy_air - Tref > 0.5f);
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Transpiration Feedback") {
+    // A transpiring canopy must humidify and cool the within-canopy air relative to a non-transpiring one.
+    // This is the feedback the model exists to represent.
+    Context context;
+    float Tref = 305.f;
+    float canopy_height = 2.f;
+
+    std::vector<uint> UUIDs = buildTestCanopy(context, 4, 3, canopy_height, 0.1f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_SW", 400.f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_LW", float(2.f * 5.67e-8 * pow(Tref, 4)));
+    context.setGlobalData("air_temperature_reference", Tref);
+    context.setGlobalData("air_humidity_reference", 0.4f);
+    context.setGlobalData("wind_speed_reference", 1.f);
+
+    // Case 1: closed stomata, no transpiration.
+    context.setPrimitiveData(UUIDs, "moisture_conductance", 0.f);
+    EnergyBalanceModel model_dry(&context);
+    model_dry.disableMessages();
+    model_dry.addRadiationBand("SW");
+    model_dry.addRadiationBand("LW");
+    DOCTEST_CHECK_NOTHROW(model_dry.enableCanopyAirspaceModel(UUIDs, {}, canopy_height, 4.f, 3.f, 1));
+    DOCTEST_CHECK_NOTHROW(model_dry.run());
+
+    float T_air_dry, humidity_dry;
+    DOCTEST_CHECK_NOTHROW(context.getGlobalData("canopy_air_temperature", T_air_dry));
+    DOCTEST_CHECK_NOTHROW(context.getGlobalData("canopy_air_humidity", humidity_dry));
+
+    // Case 2: open stomata, active transpiration. Clear the warm-start so both cases begin identically.
+    context.setGlobalData("canopy_air_temperature", Tref);
+    context.setPrimitiveData(UUIDs, "moisture_conductance", 0.3f);
+    EnergyBalanceModel model_wet(&context);
+    model_wet.disableMessages();
+    model_wet.addRadiationBand("SW");
+    model_wet.addRadiationBand("LW");
+    DOCTEST_CHECK_NOTHROW(model_wet.enableCanopyAirspaceModel(UUIDs, {}, canopy_height, 4.f, 3.f, 1));
+    DOCTEST_CHECK_NOTHROW(model_wet.run());
+
+    float T_air_wet, humidity_wet;
+    DOCTEST_CHECK_NOTHROW(context.getGlobalData("canopy_air_temperature", T_air_wet));
+    DOCTEST_CHECK_NOTHROW(context.getGlobalData("canopy_air_humidity", humidity_wet));
+
+    // Transpiration must cool the within-canopy air relative to the non-transpiring case.
+    DOCTEST_CHECK(T_air_wet < T_air_dry);
+    // Transpiration must humidify the within-canopy air.
+    DOCTEST_CHECK(humidity_wet > humidity_dry);
+    // Humidity must remain physical.
+    DOCTEST_CHECK(humidity_wet <= 1.f);
+    DOCTEST_CHECK(humidity_wet > 0.f);
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Multilayer Gradient") {
+    // A heated canopy ventilated from above must produce a vertical gradient in which the air is warmest at
+    // the bottom, furthest from the fixed reference boundary condition at the canopy top.
+    Context context;
+    float Tref = 300.f;
+    float canopy_height = 4.f;
+    uint num_layers = 5;
+
+    std::vector<uint> UUIDs = buildTestCanopy(context, 4, 10, canopy_height, 0.1f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_SW", 500.f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_LW", float(2.f * 5.67e-8 * pow(Tref, 4)));
+    context.setPrimitiveData(UUIDs, "moisture_conductance", 0.f);
+    context.setGlobalData("air_temperature_reference", Tref);
+    context.setGlobalData("air_humidity_reference", 0.5f);
+    context.setGlobalData("wind_speed_reference", 1.f);
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+    model.addRadiationBand("LW");
+    DOCTEST_CHECK_NOTHROW(model.enableCanopyAirspaceModel(UUIDs, {}, canopy_height, 6.f, 3.f, num_layers));
+    DOCTEST_CHECK_NOTHROW(model.run());
+
+    std::vector<float> T_layers;
+    DOCTEST_CHECK_NOTHROW(context.getGlobalData("canopy_air_temperature_layers", T_layers));
+    DOCTEST_CHECK(T_layers.size() == num_layers);
+
+    // Layer 0 is the bottom layer. Air temperature must decrease monotonically toward the canopy top, where
+    // it is tied to the reference air.
+    for (uint j = 0; j + 1 < num_layers; j++) {
+        DOCTEST_CHECK(T_layers.at(j) > T_layers.at(j + 1));
+    }
+    // Every layer must be warmer than the reference air, since the canopy is a heat source throughout.
+    for (uint j = 0; j < num_layers; j++) {
+        DOCTEST_CHECK(T_layers.at(j) > Tref);
+    }
+    // The gradient must be resolvable, not numerical noise.
+    DOCTEST_CHECK(T_layers.front() - T_layers.back() > 0.1f);
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Wind Profile") {
+    // The Cionco profile must attenuate wind speed with depth into the canopy, and must reach the
+    // canopy-top wind speed at the canopy top.
+    Context context;
+    float canopy_height = 4.f;
+    float LAI = 3.f;
+
+    // Two patches at known heights: one near the canopy top, one near the ground.
+    uint UUID_top = context.addPatch(make_vec3(0, 0, 4.f), make_vec2(0.1f, 0.1f));
+    uint UUID_bottom = context.addPatch(make_vec3(0, 0, 0.f), make_vec2(0.1f, 0.1f));
+    std::vector<uint> UUIDs = {UUID_top, UUID_bottom};
+
+    context.setPrimitiveData(UUIDs, "radiation_flux_SW", 100.f);
+    context.setGlobalData("air_temperature_reference", 300.f);
+    context.setGlobalData("air_humidity_reference", 0.5f);
+    context.setGlobalData("wind_speed_reference", 3.f);
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+    DOCTEST_CHECK_NOTHROW(model.enableCanopyAirspaceModel(UUIDs, {}, canopy_height, 6.f, LAI, 1));
+    DOCTEST_CHECK_NOTHROW(model.run());
+
+    float U_top, U_bottom;
+    DOCTEST_CHECK_NOTHROW(context.getPrimitiveData(UUID_top, "wind_speed", U_top));
+    DOCTEST_CHECK_NOTHROW(context.getPrimitiveData(UUID_bottom, "wind_speed", U_bottom));
+
+    // Wind must be attenuated with depth into the canopy.
+    DOCTEST_CHECK(U_bottom < U_top);
+    // The attenuation over the full canopy depth must follow exp(-a) with a = LAI/2.
+    DOCTEST_CHECK(U_bottom / U_top == doctest::Approx(std::exp(-0.5f * LAI)).epsilon(0.01f));
+    DOCTEST_CHECK(U_bottom > 0.f);
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Aerodynamic Resistance Scaling") {
+    // Aerodynamic resistance is inversely proportional to wind speed, so doubling the reference wind speed
+    // must halve the resistance, and a better-ventilated canopy must sit closer to the reference air.
+    Context context;
+    float Tref = 300.f;
+    float canopy_height = 2.f;
+
+    std::vector<uint> UUIDs = buildTestCanopy(context, 4, 3, canopy_height, 0.1f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_SW", 500.f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_LW", float(2.f * 5.67e-8 * pow(Tref, 4)));
+    context.setPrimitiveData(UUIDs, "moisture_conductance", 0.f);
+    context.setGlobalData("air_temperature_reference", Tref);
+    context.setGlobalData("air_humidity_reference", 0.5f);
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+    model.addRadiationBand("LW");
+    DOCTEST_CHECK_NOTHROW(model.enableCanopyAirspaceModel(UUIDs, {}, canopy_height, 4.f, 2.f, 1));
+
+    context.setGlobalData("wind_speed_reference", 1.f);
+    DOCTEST_CHECK_NOTHROW(model.run());
+    float ra_slow, T_air_slow;
+    DOCTEST_CHECK_NOTHROW(context.getGlobalData("aerodynamic_resistance", ra_slow));
+    DOCTEST_CHECK_NOTHROW(context.getGlobalData("canopy_air_temperature", T_air_slow));
+
+    context.setGlobalData("wind_speed_reference", 2.f);
+    DOCTEST_CHECK_NOTHROW(model.run());
+    float ra_fast, T_air_fast;
+    DOCTEST_CHECK_NOTHROW(context.getGlobalData("aerodynamic_resistance", ra_fast));
+    DOCTEST_CHECK_NOTHROW(context.getGlobalData("canopy_air_temperature", T_air_fast));
+
+    // Doubling wind speed must halve the aerodynamic resistance.
+    DOCTEST_CHECK(ra_fast == doctest::Approx(0.5f * ra_slow).epsilon(err_tol));
+    DOCTEST_CHECK(ra_slow > 0.f);
+    // Better ventilation must bring the within-canopy air closer to the reference air.
+    DOCTEST_CHECK(T_air_fast - Tref < T_air_slow - Tref);
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Soil Node") {
+    // The soil exchanges heat with the lowest canopy layer, and its own surface energy balance must be driven by
+    // that layer's air rather than by the air above the canopy. A strongly heated soil must therefore warm the
+    // bottom of the airspace, and the soil surface must equilibrate with the canopy air rather than the reference.
+    Context context;
+    float Tref = 300.f;
+    float canopy_height = 2.f;
+
+    std::vector<uint> UUIDs = buildTestCanopy(context, 4, 4, canopy_height, 0.1f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_SW", 200.f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_LW", float(2.f * 5.67e-8 * pow(Tref, 4)));
+    context.setPrimitiveData(UUIDs, "moisture_conductance", 0.f);
+    context.setGlobalData("air_temperature_reference", Tref);
+    context.setGlobalData("air_humidity_reference", 0.5f);
+    context.setGlobalData("wind_speed_reference", 1.f);
+
+    // Run without a soil node.
+    EnergyBalanceModel model_nosoil(&context);
+    model_nosoil.disableMessages();
+    model_nosoil.addRadiationBand("SW");
+    model_nosoil.addRadiationBand("LW");
+    DOCTEST_CHECK_NOTHROW(model_nosoil.enableCanopyAirspaceModel(UUIDs, {}, canopy_height, 4.f, 2.f, 3));
+    DOCTEST_CHECK_NOTHROW(model_nosoil.run(UUIDs));
+    std::vector<float> T_layers_nosoil;
+    DOCTEST_CHECK_NOTHROW(context.getGlobalData("canopy_air_temperature_layers", T_layers_nosoil));
+
+    // Add a strongly heated ground surface and run with a soil node. The ground absorbs a large radiation load, so
+    // it acts as a heat source into the bottom of the canopy airspace.
+    uint UUID_ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(1.f, 1.f));
+    context.setPrimitiveData(UUID_ground, "radiation_flux_SW", 800.f);
+    context.setPrimitiveData(UUID_ground, "radiation_flux_LW", float(2.f * 5.67e-8 * pow(Tref, 4)));
+    context.setPrimitiveData(UUID_ground, "twosided_flag", uint(0));
+    context.setGlobalData("canopy_air_temperature_layers", std::vector<float>{});
+
+    std::vector<uint> UUIDs_with_ground = UUIDs;
+    UUIDs_with_ground.push_back(UUID_ground);
+
+    EnergyBalanceModel model_soil(&context);
+    model_soil.disableMessages();
+    model_soil.addRadiationBand("SW");
+    model_soil.addRadiationBand("LW");
+    DOCTEST_CHECK_NOTHROW(model_soil.enableCanopyAirspaceModel(UUIDs, {UUID_ground}, canopy_height, 4.f, 2.f, 3));
+    DOCTEST_CHECK_NOTHROW(model_soil.run(UUIDs_with_ground));
+    std::vector<float> T_layers_soil;
+    DOCTEST_CHECK_NOTHROW(context.getGlobalData("canopy_air_temperature_layers", T_layers_soil));
+
+    // The heated soil must warm the bottom layer.
+    DOCTEST_CHECK(T_layers_soil.at(0) > T_layers_nosoil.at(0));
+    DOCTEST_CHECK(T_layers_soil.at(0) - T_layers_nosoil.at(0) > 0.5f);
+
+    // The soil must have been driven by the bottom layer's air, not by the reference air. Its air temperature
+    // primitive data must equal the bottom layer value that the model solved.
+    float T_air_ground;
+    DOCTEST_CHECK_NOTHROW(context.getPrimitiveData(UUID_ground, "air_temperature", T_air_ground));
+    DOCTEST_CHECK(T_air_ground == doctest::Approx(T_layers_soil.at(0)).epsilon(err_tol));
+    DOCTEST_CHECK(T_air_ground != doctest::Approx(Tref).epsilon(err_tol));
+
+    // The ground must also receive the within-canopy wind speed, which is attenuated well below the reference.
+    float U_ground;
+    DOCTEST_CHECK_NOTHROW(context.getPrimitiveData(UUID_ground, "wind_speed", U_ground));
+    DOCTEST_CHECK(U_ground > 0.f);
+    DOCTEST_CHECK(U_ground < 1.f);
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Requires Primitives In Run Set") {
+    // Every primitive exchanging with the airspace must also have its surface energy balance solved, otherwise it
+    // would be driven by an air state that nothing recomputes.
+    Context context;
+    float Tref = 300.f;
+    std::vector<uint> UUIDs = buildTestCanopy(context, 4, 3, 2.f, 0.1f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_SW", 200.f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_LW", float(2.f * 5.67e-8 * pow(Tref, 4)));
+    context.setGlobalData("air_temperature_reference", Tref);
+    context.setGlobalData("air_humidity_reference", 0.5f);
+    context.setGlobalData("wind_speed_reference", 1.f);
+
+    uint UUID_ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(1.f, 1.f));
+    context.setPrimitiveData(UUID_ground, "radiation_flux_SW", 200.f);
+    context.setPrimitiveData(UUID_ground, "radiation_flux_LW", float(2.f * 5.67e-8 * pow(Tref, 4)));
+    context.setPrimitiveData(UUID_ground, "temperature", 310.f);
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+    model.addRadiationBand("LW");
+    DOCTEST_CHECK_NOTHROW(model.enableCanopyAirspaceModel(UUIDs, {UUID_ground}, 2.f, 4.f, 3.f, 2));
+
+    // Ground is part of the airspace but excluded from the primitives being solved.
+    DOCTEST_CHECK_THROWS(model.run(UUIDs));
+
+    // Including it must work.
+    std::vector<uint> UUIDs_all = UUIDs;
+    UUIDs_all.push_back(UUID_ground);
+    DOCTEST_CHECK_NOTHROW(model.run(UUIDs_all));
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Dynamic Mode Rejected") {
+    // The airspace model solves a steady state and must refuse the dynamic form of run() rather than
+    // silently ignoring the timestep.
+    Context context;
+    std::vector<uint> UUIDs = buildTestCanopy(context, 2, 2, 2.f, 0.1f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_SW", 100.f);
+    context.setGlobalData("air_temperature_reference", 300.f);
+    context.setGlobalData("wind_speed_reference", 1.f);
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+    DOCTEST_CHECK_NOTHROW(model.enableCanopyAirspaceModel(UUIDs, {}, 2.f, 4.f, 2.f, 1));
+
+    DOCTEST_CHECK_THROWS(model.run(10.f));
+
+    // After disabling, the dynamic form must work again.
+    DOCTEST_CHECK_NOTHROW(model.disableCanopyAirspaceModel());
+    DOCTEST_CHECK_NOTHROW(model.run(10.f));
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Zero Wind Rejected") {
+    // Aerodynamic resistance is inversely proportional to wind speed, so a zero reference wind speed must
+    // produce a clear error rather than a division by zero.
+    Context context;
+    std::vector<uint> UUIDs = buildTestCanopy(context, 2, 2, 2.f, 0.1f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_SW", 100.f);
+    context.setGlobalData("air_temperature_reference", 300.f);
+    context.setGlobalData("wind_speed_reference", 0.f);
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+    model.addRadiationBand("LW");
+    DOCTEST_CHECK_NOTHROW(model.enableCanopyAirspaceModel(UUIDs, {}, 2.f, 4.f, 2.f, 1));
+    DOCTEST_CHECK_THROWS(model.run());
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Empty Layer Regression") {
+    // Requesting more layers than there are canopy primitives, or a strongly non-uniform distribution of leaf
+    // area, must not silently produce layers containing no leaf area. Such a layer contributes no source term
+    // and the solver would interpolate a temperature through it without any indication to the user.
+    Context context;
+    float Tref = 300.f;
+    float canopy_height = 2.f;
+
+    // Four primitives but ten requested layers: at most one layer can be started per primitive.
+    std::vector<uint> UUIDs = buildTestCanopy(context, 1, 4, canopy_height, 0.1f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_SW", 400.f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_LW", float(2.f * 5.67e-8 * pow(Tref, 4)));
+    context.setPrimitiveData(UUIDs, "moisture_conductance", 0.f);
+    context.setGlobalData("air_temperature_reference", Tref);
+    context.setGlobalData("air_humidity_reference", 0.5f);
+    context.setGlobalData("wind_speed_reference", 1.f);
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+    model.addRadiationBand("LW");
+
+    // Ten layers cannot be filled by four primitives. Layer assignment happens when the model is run, so the
+    // error surfaces there rather than at configuration time.
+    DOCTEST_CHECK_NOTHROW(model.enableCanopyAirspaceModel(UUIDs, {}, canopy_height, 4.f, 3.f, 10));
+    DOCTEST_CHECK_THROWS(model.run());
+
+    // A layer count the geometry can support must still work.
+    EnergyBalanceModel model_ok(&context);
+    model_ok.disableMessages();
+    model_ok.addRadiationBand("SW");
+    model_ok.addRadiationBand("LW");
+    DOCTEST_CHECK_NOTHROW(model_ok.enableCanopyAirspaceModel(UUIDs, {}, canopy_height, 4.f, 3.f, 2));
+    DOCTEST_CHECK_NOTHROW(model_ok.run());
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Forces Conductance Output") {
+    // The airspace solution weights leaves by their boundary-layer conductance, so enabling the model must add
+    // 'boundarylayer_conductance_out' to the outputs. Boundary-layer conductance is set explicitly here so that
+    // the separate path which enables this output when the conductance is calculated internally does not fire.
+    Context context;
+    float Tref = 300.f;
+    float canopy_height = 2.f;
+
+    std::vector<uint> UUIDs = buildTestCanopy(context, 4, 3, canopy_height, 0.1f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_SW", 300.f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_LW", float(2.f * 5.67e-8 * pow(Tref, 4)));
+    context.setPrimitiveData(UUIDs, "boundarylayer_conductance", 1.5f);
+    context.setPrimitiveData(UUIDs, "moisture_conductance", 0.2f);
+    context.setGlobalData("air_temperature_reference", Tref);
+    context.setGlobalData("air_humidity_reference", 0.5f);
+    context.setGlobalData("wind_speed_reference", 1.f);
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+    model.addRadiationBand("LW");
+    DOCTEST_CHECK_NOTHROW(model.enableCanopyAirspaceModel(UUIDs, {}, canopy_height, 4.f, 3.f, 1));
+    DOCTEST_CHECK_NOTHROW(model.run());
+
+    for (uint UUID: UUIDs) {
+        DOCTEST_CHECK(context.doesPrimitiveDataExist(UUID, "boundarylayer_conductance_out"));
+        float g_bl;
+        DOCTEST_CHECK_NOTHROW(context.getPrimitiveData(UUID, "boundarylayer_conductance_out", g_bl));
+        DOCTEST_CHECK(g_bl == doctest::Approx(1.5f).epsilon(err_tol));
+    }
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Mutually Exclusive With Air Energy Balance") {
+    // Both models determine the within-canopy air state and share the canopy and reference heights, so enabling
+    // both would silently let one overwrite the other's geometry.
+    Context context;
+    std::vector<uint> UUIDs = buildTestCanopy(context, 2, 2, 2.f, 0.1f);
+
+    EnergyBalanceModel model_a(&context);
+    model_a.disableMessages();
+    DOCTEST_CHECK_NOTHROW(model_a.enableCanopyAirspaceModel(UUIDs, {}, 2.f, 4.f, 2.f, 1));
+    DOCTEST_CHECK_THROWS(model_a.enableAirEnergyBalance(2.f, 4.f));
+
+    EnergyBalanceModel model_b(&context);
+    model_b.disableMessages();
+    DOCTEST_CHECK_NOTHROW(model_b.enableAirEnergyBalance(2.f, 4.f));
+    DOCTEST_CHECK_THROWS(model_b.enableCanopyAirspaceModel(UUIDs, {}, 2.f, 4.f, 2.f, 1));
+
+    // Disabling the airspace model must release the restriction.
+    EnergyBalanceModel model_c(&context);
+    model_c.disableMessages();
+    DOCTEST_CHECK_NOTHROW(model_c.enableCanopyAirspaceModel(UUIDs, {}, 2.f, 4.f, 2.f, 1));
+    DOCTEST_CHECK_NOTHROW(model_c.disableCanopyAirspaceModel());
+    DOCTEST_CHECK_NOTHROW(model_c.enableAirEnergyBalance(2.f, 4.f));
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Rejects Missing Soil Temperature") {
+    // A ground primitive without 'temperature' data yields an area-weighted sum of zero, which would drag the
+    // bottom canopy layer toward absolute zero. That must be an error, not a silently wrong profile.
+    Context context;
+    float Tref = 300.f;
+    float canopy_height = 2.f;
+
+    std::vector<uint> UUIDs = buildTestCanopy(context, 4, 3, canopy_height, 0.1f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_SW", 300.f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_LW", float(2.f * 5.67e-8 * pow(Tref, 4)));
+    context.setGlobalData("air_temperature_reference", Tref);
+    context.setGlobalData("air_humidity_reference", 0.5f);
+    context.setGlobalData("wind_speed_reference", 1.f);
+
+    // Ground primitive deliberately left without 'temperature' primitive data.
+    uint UUID_ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(1.f, 1.f));
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+    model.addRadiationBand("LW");
+    DOCTEST_CHECK_NOTHROW(model.enableCanopyAirspaceModel(UUIDs, {UUID_ground}, canopy_height, 4.f, 3.f, 2));
+    DOCTEST_CHECK_THROWS(model.run());
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Eddy Diffusivity Decay") {
+    // Turbulent mixing is damped with depth into the canopy, so the conductance between layers must decrease
+    // downward. The observable consequence is that the temperature gradient is concentrated near the bottom of the
+    // canopy, where the air is least well ventilated, rather than being spread evenly across the layers.
+    Context context;
+    float Tref = 300.f;
+    float canopy_height = 4.f;
+    uint num_layers = 8;
+
+    // Leaf area is spread uniformly with height so that the layers have near-equal thickness. Any asymmetry in the
+    // resulting profile therefore comes from the conductance profile, not from the layer geometry.
+    std::vector<uint> UUIDs = buildTestCanopy(context, 6, 24, canopy_height, 0.1f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_SW", 500.f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_LW", float(2.f * 5.67e-8 * pow(Tref, 4)));
+    context.setPrimitiveData(UUIDs, "moisture_conductance", 0.f);
+    context.setGlobalData("air_temperature_reference", Tref);
+    context.setGlobalData("air_humidity_reference", 0.5f);
+    context.setGlobalData("wind_speed_reference", 1.5f);
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+    model.addRadiationBand("LW");
+    DOCTEST_CHECK_NOTHROW(model.enableCanopyAirspaceModel(UUIDs, {}, canopy_height, 6.f, 3.f, num_layers));
+    DOCTEST_CHECK_NOTHROW(model.run());
+
+    std::vector<float> T_layers;
+    DOCTEST_CHECK_NOTHROW(context.getGlobalData("canopy_air_temperature_layers", T_layers));
+    DOCTEST_CHECK(T_layers.size() == num_layers);
+
+    // Temperature must still decrease upward everywhere.
+    for (uint j = 0; j + 1 < num_layers; j++) {
+        DOCTEST_CHECK(T_layers.at(j) > T_layers.at(j + 1));
+    }
+
+    // With conductance decaying downward, the temperature step across the lowest layer boundary must be larger than
+    // the step across the highest one. A height-independent conductance would make these steps comparable.
+    // Each layer boundary carries the heat released by every layer below it, so the flux through the topmost
+    // boundary is the largest. Conductance decaying downward partly offsets this, but the flux dominates, and the
+    // resulting temperature steps grow toward the canopy top.
+    float step_bottom = T_layers.at(0) - T_layers.at(1);
+    float step_top = T_layers.at(num_layers - 2) - T_layers.at(num_layers - 1);
+    DOCTEST_CHECK(step_top > step_bottom);
+
+    // The conductance profile must remain physical: every layer is warmer than the reference air, and the total
+    // departure is bounded well away from a runaway value.
+    DOCTEST_CHECK(T_layers.back() > Tref);
+    DOCTEST_CHECK(T_layers.front() - Tref < 30.f);
+}

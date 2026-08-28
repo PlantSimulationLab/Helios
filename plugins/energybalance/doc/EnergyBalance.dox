@@ -342,4 +342,131 @@ Useful OS-specific information for installing CUDA can be found here: \ref Depen
  ~~~~~~
 
 
+ \section EBCanopyAirspace Canopy Airspace Model
+
+ By default, the energy balance model treats the air temperature and humidity surrounding each primitive as a prescribed input, usually set to a value measured by a weather station. This means that the canopy cannot influence the air that drives its own transpiration: no matter how much the canopy transpires, the air it sits in remains at the measured temperature and humidity.
+
+ The canopy airspace model relaxes this assumption by solving for the within-canopy (aerodynamic) air temperature \f$T_{ac}\f$ and water vapor mole fraction \f$x_{ac}\f$ that surround leaves. These are intermediate between the prevailing above-canopy conditions and the canopy itself, and they respond to the sensible and latent heat the canopy releases. This allows the canopy to cool and humidify the air within it, which in turn feeds back on transpiration.
+
+ The model is enabled with \ref EnergyBalanceModel::enableCanopyAirspaceModel(). Once enabled, \ref EnergyBalanceModel::run() solves the coupled system rather than performing a single surface energy balance pass.
+
+ \subsection EBCanopyAirspaceVsAir Relationship to the Air Energy Balance Model
+
+ This model should not be confused with \ref EnergyBalanceModel::enableAirEnergyBalance(), which is a separate and independent model. The two differ in their upper boundary condition:
+
+ <table>
+ <tr><th>Model<th>Upper boundary<th>Solution
+ <tr><td>\ref EnergyBalanceModel::enableAirEnergyBalance()<td>Prognostic atmospheric boundary layer, evolved in time<td>Time integration
+ <tr><td>\ref EnergyBalanceModel::enableCanopyAirspaceModel()<td>Measured above-canopy air temperature and humidity, held fixed<td>Steady state
+ </table>
+
+ The air energy balance model carries an above-canopy energy reservoir, which implicitly assumes a horizontally infinite canopy. The canopy airspace model instead imposes measured conditions at the canopy top, so the surrounding atmosphere is unaffected by the simulated canopy. This is the appropriate choice for a canopy of limited horizontal extent subject to advection and mesoscale forcing, such as an orchard block, where the above-canopy air is set by the wider landscape rather than by the modeled canopy.
+
+ Because it solves for a steady state, the canopy airspace model cannot be combined with the unsteady form of \ref EnergyBalanceModel::run() that takes a timestep argument; doing so produces an error.
+
+ \subsection EBCanopyAirspaceTheory Theory
+
+ The canopy airspace is divided into \f$l\f$ vertical layers, each containing an equal increment of leaf area index. Each layer exchanges sensible heat and water vapor with the leaves it contains, with the layers immediately above and below it, and, for the uppermost and lowermost layers, with the above-canopy reference air and the soil surface respectively.
+
+ The air temperature of layer \f$j\f$ is obtained by requiring that sensible heat entering the layer balances that leaving it:
+
+ \f[ T_{ac,j} = \frac{\sum_{i=1}^{n}\left(g_{bl,i}\frac{A_i}{A_g}T_i\right) + \frac{T_{ac,j-1}}{R_{ac,j-1}} + \frac{T_{ac,j+1}}{R_{ac,j+1}}}{\sum_{i=1}^{n}\left(g_{bl,i}\frac{A_i}{A_g}\right) + \frac{1}{R_{ac,j-1}} + \frac{1}{R_{ac,j+1}}}, \f]
+
+ where \f$T_i\f$ is the surface temperature of leaf \f$i\f$, \f$g_{bl,i}\f$ is its boundary-layer conductance, \f$A_i\f$ is its one-sided area, and \f$A_g\f$ is the ground area of the canopy. Leaves are weighted by their boundary-layer conductance because that determines their relative contribution to sensible heat exchange with the surrounding air.
+
+ An analogous expression governs the water vapor mole fraction of each layer, with two differences. First, leaves are weighted by their total conductance to moisture \f$g_M\f$ (see \ref EBgm), which places the stomata in series with the boundary layer, rather than by \f$g_{bl}\f$ alone. This is the same expression used to compute the leaf latent heat flux, including the partition between stomata-bearing faces, so that the water weighted into the airspace matches the water the leaf actually transpires. A leaf with closed stomata therefore contributes no water vapor to the airspace. Second, the substomatal airspace is assumed to be saturated at the leaf surface temperature, so each leaf acts as a source at \f$e_s(T_i)\f$. Evaporation from the soil surface is assumed to be zero, and the soil exchanges sensible heat with the lowest layer through the bare-ground conductance \f$g_{Hg}=0.166+0.5U\f$ of Kustas and Norman (1999), evaluated at the wind speed at the soil surface.
+
+ Turbulent exchange between adjacent layers is represented by an eddy diffusivity for heat, \f$K\f$, so that the conductance across the boundary between two layers is \f$\rho K/\Delta z\f$, where \f$\Delta z\f$ is the distance between the layer midpoints. Turbulence is strongly damped with depth into the canopy, so \f$K\f$ decays exponentially from its value at the canopy top with the same attenuation coefficient used for the wind profile:
+
+ \f[ K(z) = \kappa u_* (h_c-d)\exp\left[-a\left(1-z/h_c\right)\right]. \f]
+
+ Because the conductance is formed from a diffusivity divided by a real distance, the number of layers acts as a numerical resolution rather than as a physical parameter: refining it resolves the profile more finely without changing the transport it represents. Note that turbulent eddies carry heat and water vapor alike, so the layer-to-layer conductances are the same for both; the ratio of vapor to heat diffusivity applies only to the molecular boundary layer at the leaf surface.
+
+ Setting the number of layers to 1 gives a single within-canopy node whose only neighbors are the reference air above and the soil surface below.
+
+ Because leaf temperature depends on the airspace state and the airspace state depends on leaf temperature, the two are solved iteratively: the surface energy balance and the airspace solution are alternated until the layer air temperatures stop changing. Convergence criteria may be adjusted with \ref EnergyBalanceModel::setCanopyAirspaceConvergence().
+
+ \subsection EBCanopyAirspaceRa Aerodynamic Resistance and Wind Profile
+
+ The resistance between the canopy top and the reference height follows Perrier (1975):
+
+ \f[ r_a = \frac{\ln\left[\frac{z_m-d}{z_{oM}}\right]\ln\left[\frac{z_H-d}{h_c-d}\right]}{\kappa^2 u}, \f]
+
+ where \f$z_m\f$ and \f$z_H\f$ are the measurement heights of wind speed and of temperature and humidity, \f$h_c\f$ is the canopy height, \f$\kappa\f$ is the von Karman constant, and \f$u\f$ is the wind speed at the reference height. The roughness length governing momentum transfer \f$z_{oM}\f$ and the zero-plane displacement height \f$d\f$ are computed from the canopy height and leaf area index following Perrier (1982):
+
+ \f[ z_{oM} = h_c e^{-\mathrm{LAI}/2}\left(1-e^{-\mathrm{LAI}/2}\right), \qquad d = h_c\left[1-\frac{2}{\mathrm{LAI}}\left(1-e^{-\mathrm{LAI}/2}\right)\right]. \f]
+
+ Wind speed decreases with depth into the canopy, and neglecting this attenuation overestimates the mean wind speed experienced by leaves and hence overestimates transpiration. The model therefore writes primitive data "wind_speed" for every canopy primitive using the exponential within-canopy profile of Cionco (1972):
+
+ \f[ U(z) = U(h_c)\exp\left[-a\left(1-z/h_c\right)\right], \f]
+
+ where \f$z\f$ is the height of the primitive above the base of the canopy. The attenuation coefficient \f$a\f$ is taken as one half of the leaf area index, following Frehner et al.; note that this relation is an empirical choice rather than part of Cionco's original formulation, and that reported values of \f$a\f$ for orchards can be considerably smaller. The resulting wind speed is used in the boundary-layer conductance calculation for each primitive (see \ref EBblc).
+
+ \subsection EBCanopyAirspaceUse Using the Canopy Airspace Model
+
+ The model requires the canopy primitives, the ground primitives forming the soil node, the canopy height, the reference height at which above-canopy conditions are measured, the leaf area index, and the number of layers. The ground primitive set may be empty, in which case there is no exchange with the soil surface; when it is not empty, every ground primitive must carry primitive data "temperature".
+
+ The leaf area index must be at least 0.5, below which the Perrier roughness relations are not valid, and the reference height must lie far enough above the canopy for the aerodynamic resistance to be defined. The number of layers is limited by the geometry: a layer that ends up containing no leaf area is an error, so a canopy resolved by few primitives cannot support many layers. Both the aerodynamic resistance and the roughness relations assume neutral stability.
+
+ The above-canopy boundary condition is read from global data "air_temperature_reference", "air_humidity_reference", and "wind_speed_reference".
+
+ <table>
+ <caption>Global data written by the canopy airspace model.</caption>
+ <tr><th>Global data<th>Type<th>Description
+ <tr><td>canopy_air_temperature<td>float<td>Mean within-canopy air temperature across all layers (Kelvin).
+ <tr><td>canopy_air_humidity<td>float<td>Mean within-canopy air relative humidity across all layers.
+ <tr><td>canopy_air_temperature_layers<td>vector&lt;float&gt;<td>Air temperature of each layer (Kelvin), ordered from the bottom layer to the top layer.
+ <tr><td>canopy_air_humidity_layers<td>vector&lt;float&gt;<td>Relative humidity of each layer, ordered from the bottom layer to the top layer.
+ <tr><td>aerodynamic_resistance<td>float<td>Aerodynamic resistance between the canopy top and the reference height (s/m).
+ <tr><td>canopy_airspace_iterations<td>uint<td>Number of iterations performed.
+ </table>
+
+ The model writes primitive data "air_temperature", "air_humidity", and "wind_speed" for all canopy primitives, and adds "boundarylayer_conductance_out" to the optional outputs because the airspace solution requires it.
+
+ The ground primitives are part of the solution rather than a fixed boundary condition. They are driven by the lowest canopy layer's air temperature and humidity and by the wind speed at the soil surface, all of which the model writes to their primitive data, and the heat they release returns to that same layer. Every primitive given to this function, canopy and ground alike, must therefore also be included in the primitives passed to \ref EnergyBalanceModel::run(); otherwise its surface temperature would never be updated to correspond to the air it exchanges with, and the model raises an error.
+
+ <p> <br><br> </p>
+
+ ~~~~~~{.cpp}
+ #include "EnergyBalanceModel.h"
+ using namespace helios;
+
+ int main(){
+
+    Context context;
+
+    // ... build the canopy and ground geometry, and run the radiation model ...
+
+    std::vector<uint> leaf_UUIDs = context.filterPrimitivesByData( context.getAllUUIDs(), "object_label", "leaf" );
+    std::vector<uint> ground_UUIDs = context.filterPrimitivesByData( context.getAllUUIDs(), "object_label", "ground" );
+
+    // Above-canopy conditions measured at the weather station
+    context.setGlobalData( "air_temperature_reference", 305.f );  // Kelvin
+    context.setGlobalData( "air_humidity_reference", 0.4f );      // fraction
+    context.setGlobalData( "wind_speed_reference", 2.f );         // m/s
+
+    EnergyBalanceModel energybalance(&context);
+
+    energybalance.addRadiationBand("PAR");
+    energybalance.addRadiationBand("NIR");
+    energybalance.addRadiationBand("LW");
+
+    float canopy_height = 4.f;      // m
+    float reference_height = 6.f;   // m, height of the weather station
+    float LAI = 3.f;                // m^2 leaf area per m^2 ground area
+    uint num_layers = 10;
+
+    energybalance.enableCanopyAirspaceModel( leaf_UUIDs, ground_UUIDs, canopy_height, reference_height, LAI, num_layers );
+
+    energybalance.run();
+
+    // Retrieve the resolved vertical profile of within-canopy air temperature
+    std::vector<float> T_layers;
+    context.getGlobalData( "canopy_air_temperature_layers", T_layers );
+
+    return 0;
+ }
+ ~~~~~~
+
+
 */

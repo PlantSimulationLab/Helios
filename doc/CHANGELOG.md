@@ -1,5 +1,14 @@
 # Changelog
 
+# [1.3.84] YYYY-XX-XX
+
+## Energy Balance
+
+- Added a canopy airspace model, enabled with `EnergyBalanceModel::enableCanopyAirspaceModel()`, which resolves the within-canopy air temperature and humidity that surround leaves from a resistance network rather than treating them as prescribed inputs. This allows the canopy to cool and humidify the air that drives its own transpiration. The canopy is divided into vertical layers of equal leaf area index, each exchanging sensible heat and water vapor with the leaves it contains, its neighboring layers, and the soil surface or above-canopy reference air; specifying a single layer gives one within-canopy node. Unlike `enableAirEnergyBalance()`, the above-canopy air temperature and humidity are held fixed at their measured values, making the model appropriate for canopies of limited horizontal extent subject to advection. `EnergyBalanceModel::run()` iterates the surface energy balance and the airspace solution to convergence, with criteria controlled by `EnergyBalanceModel::setCanopyAirspaceConvergence()`.
+- Ground primitives given to `EnergyBalanceModel::enableCanopyAirspaceModel()` are now part of the airspace solution rather than a one-way boundary condition: they are driven by the lowest canopy layer's air temperature, humidity, and near-surface wind speed, and the heat they release returns to that layer. All primitives given to the canopy airspace model must now also be included in the primitives passed to `run()`.
+- The canopy airspace model represents turbulent exchange between adjacent canopy layers using an eddy diffusivity for heat that decays exponentially with depth into the canopy, divided by the distance between layer midpoints. The number of layers therefore acts as a numerical resolution rather than as a physical parameter. Sensible heat exchange between the soil surface and the lowest canopy layer uses the bare-ground conductance of Kustas and Norman (1999) evaluated at the wind speed near the soil surface.
+- The canopy airspace model writes primitive data `wind_speed` for canopy primitives using the exponential within-canopy wind profile of Cionco (1972), so that boundary-layer conductance reflects the attenuation of wind with depth into the canopy rather than the above-canopy wind speed.
+
 # [1.3.83] 2026-08-27
 
 ## Core
