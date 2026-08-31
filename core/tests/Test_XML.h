@@ -306,6 +306,488 @@ TEST_CASE("Context XML I/O Functions") {
         std::remove(test_file);
     }
 
+    SUBCASE("loadXML does not remap the file-scoped object ID key") {
+        // Regression: the <sphere>/<tube>/<box>/<disk>/<cone> loops in loadXML() reassigned objID when it
+        // collided with a Context object ID already handed out earlier in the same load. objID is only ever
+        // the key into the file-scoped map of primitives belonging to each object, so the remap made the
+        // object claim a *different* object's primitive list. Here the tube is loaded first (the tube loop
+        // precedes the cone loop) and takes Context ID 1, so the cone -- whose file objID is 1 -- collided
+        // and stole the tube's primitives, leaving one object instead of two.
+        Context ctx;
+        uint cone = ctx.addConeObject(5, make_vec3(0, 0, 0), make_vec3(0, 0, 1), 0.1f, 0.05f);
+        uint tube = ctx.addTubeObject(5, {make_vec3(1, 0, 0), make_vec3(1, 0, 1)}, {0.1f, 0.05f});
+        DOCTEST_CHECK(ctx.getObjectType(cone) == OBJECT_TYPE_CONE);
+        DOCTEST_CHECK(ctx.getObjectType(tube) == OBJECT_TYPE_TUBE);
+
+        std::vector<uint> source_objects = ctx.getAllObjectIDs();
+        DOCTEST_CHECK(source_objects.size() == 2);
+
+        const char *test_file = "helios_objid_remap_test.xml";
+        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, true));
+
+        Context ctx2;
+        DOCTEST_CHECK_NOTHROW(ctx2.loadXML(test_file, true));
+
+        std::vector<uint> loaded_objects = ctx2.getAllObjectIDs();
+        DOCTEST_CHECK(loaded_objects.size() == source_objects.size());
+        DOCTEST_CHECK(ctx2.getPrimitiveCount() == ctx.getPrimitiveCount());
+
+        // Each object must come back with the same type and the same number of sub-primitives. The loaded
+        // object IDs are not the source IDs, so the comparison is over the sorted (type, count) signature.
+        std::vector<std::pair<int, size_t>> source_signature;
+        for (uint objID: source_objects) {
+            source_signature.emplace_back(static_cast<int>(ctx.getObjectType(objID)), ctx.getObjectPrimitiveUUIDs(objID).size());
+        }
+        std::vector<std::pair<int, size_t>> loaded_signature;
+        for (uint objID: loaded_objects) {
+            loaded_signature.emplace_back(static_cast<int>(ctx2.getObjectType(objID)), ctx2.getObjectPrimitiveUUIDs(objID).size());
+        }
+        std::sort(source_signature.begin(), source_signature.end());
+        std::sort(loaded_signature.begin(), loaded_signature.end());
+        DOCTEST_CHECK(loaded_signature == source_signature);
+
+        // Type and count alone cannot distinguish two objects that swapped primitive lists, so also check that
+        // each object came back at the position it was written from. Each object type appears once here, so the
+        // type is enough to pair a loaded object with its source.
+        std::map<int, vec3> source_centers;
+        for (uint objID: source_objects) {
+            source_centers[static_cast<int>(ctx.getObjectType(objID))] = ctx.getObjectCenter(objID);
+        }
+        for (uint objID: loaded_objects) {
+            int type = static_cast<int>(ctx2.getObjectType(objID));
+            DOCTEST_REQUIRE(source_centers.find(type) != source_centers.end());
+            vec3 loaded_center = ctx2.getObjectCenter(objID);
+            vec3 source_center = source_centers.at(type);
+            DOCTEST_CHECK(loaded_center.x == doctest::Approx(source_center.x).epsilon(1e-4));
+            DOCTEST_CHECK(loaded_center.y == doctest::Approx(source_center.y).epsilon(1e-4));
+            DOCTEST_CHECK(loaded_center.z == doctest::Approx(source_center.z).epsilon(1e-4));
+        }
+
+        // Ownership must also be self-consistent: every sub-primitive an object lists must point back at it.
+        size_t mismatched_parents = 0;
+        for (uint objID: loaded_objects) {
+            for (uint UUID: ctx2.getObjectPrimitiveUUIDs(objID)) {
+                if (ctx2.getPrimitiveParentObjectID(UUID) != objID) {
+                    mismatched_parents++;
+                }
+            }
+        }
+        DOCTEST_CHECK(mismatched_parents == 0);
+
+        std::remove(test_file);
+    }
+
+    SUBCASE("loadXML preserves object ownership across a mixed-type scene") {
+        // Same regression as above, exercised across every loop that carried the remap. loadXML() creates
+        // objects grouped by type (tile, adaptive tile, sphere, tube, box, disk, cone, polymesh) while file
+        // objIDs run in the writing Context's creation order, so the two orderings disagree and file objIDs
+        // collide with Context IDs already assigned during the same load. The primitive count survives the
+        // corruption intact -- the stolen primitives are simply reparented -- so it is the object count and
+        // the per-object type/size signature that reveal it.
+        Context ctx;
+        uint patch1 = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        uint patch2 = ctx.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
+        uint polymesh = ctx.addPolymeshObject({patch1, patch2});
+        uint cone = ctx.addConeObject(6, make_vec3(0, 3, 0), make_vec3(0, 3, 1), 0.1f, 0.05f);
+        uint disk = ctx.addDiskObject(7, make_vec3(0, 6, 0), make_vec2(0.5f, 0.5f));
+        uint box = ctx.addBoxObject(make_vec3(0, 9, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
+        uint tube = ctx.addTubeObject(8, {make_vec3(0, 12, 0), make_vec3(0, 12, 1)}, {0.1f, 0.05f});
+        uint sphere = ctx.addSphereObject(9, make_vec3(0, 15, 0), 0.5f);
+        uint tile = ctx.addTileObject(make_vec3(0, 18, 0), make_vec2(2, 2), nullrotation, make_int2(2, 2));
+
+        DOCTEST_CHECK(ctx.getObjectType(polymesh) == OBJECT_TYPE_POLYMESH);
+        DOCTEST_CHECK(ctx.getObjectType(cone) == OBJECT_TYPE_CONE);
+        DOCTEST_CHECK(ctx.getObjectType(disk) == OBJECT_TYPE_DISK);
+        DOCTEST_CHECK(ctx.getObjectType(box) == OBJECT_TYPE_BOX);
+        DOCTEST_CHECK(ctx.getObjectType(tube) == OBJECT_TYPE_TUBE);
+        DOCTEST_CHECK(ctx.getObjectType(sphere) == OBJECT_TYPE_SPHERE);
+        DOCTEST_CHECK(ctx.getObjectType(tile) == OBJECT_TYPE_TILE);
+
+        std::vector<uint> source_objects = ctx.getAllObjectIDs();
+        DOCTEST_CHECK(source_objects.size() == 7);
+
+        std::vector<std::pair<int, size_t>> source_signature;
+        std::map<int, vec3> source_centers;
+        for (uint objID: source_objects) {
+            source_signature.emplace_back(static_cast<int>(ctx.getObjectType(objID)), ctx.getObjectPrimitiveUUIDs(objID).size());
+            source_centers[static_cast<int>(ctx.getObjectType(objID))] = ctx.getObjectCenter(objID);
+        }
+        std::sort(source_signature.begin(), source_signature.end());
+
+        const char *test_file = "helios_objid_remap_mixed_test.xml";
+        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, true));
+
+        Context ctx2;
+        DOCTEST_CHECK_NOTHROW(ctx2.loadXML(test_file, true));
+
+        std::vector<uint> loaded_objects = ctx2.getAllObjectIDs();
+        DOCTEST_CHECK(loaded_objects.size() == source_objects.size());
+        DOCTEST_CHECK(ctx2.getPrimitiveCount() == ctx.getPrimitiveCount());
+
+        std::vector<std::pair<int, size_t>> loaded_signature;
+        for (uint objID: loaded_objects) {
+            loaded_signature.emplace_back(static_cast<int>(ctx2.getObjectType(objID)), ctx2.getObjectPrimitiveUUIDs(objID).size());
+        }
+        std::sort(loaded_signature.begin(), loaded_signature.end());
+        DOCTEST_CHECK(loaded_signature == source_signature);
+
+        // Type and count alone cannot distinguish two objects that swapped primitive lists. The objects are built
+        // at distinct, well-separated y-coordinates precisely so that a swap moves an object's center; each type
+        // appears once, so the type pairs a loaded object with its source.
+        for (uint objID: loaded_objects) {
+            int type = static_cast<int>(ctx2.getObjectType(objID));
+            DOCTEST_REQUIRE(source_centers.find(type) != source_centers.end());
+            vec3 loaded_center = ctx2.getObjectCenter(objID);
+            vec3 source_center = source_centers.at(type);
+            DOCTEST_CHECK(loaded_center.x == doctest::Approx(source_center.x).epsilon(1e-4));
+            DOCTEST_CHECK(loaded_center.y == doctest::Approx(source_center.y).epsilon(1e-4));
+            DOCTEST_CHECK(loaded_center.z == doctest::Approx(source_center.z).epsilon(1e-4));
+        }
+
+        // Ownership must also be self-consistent. Note this is not the assertion that catches the remap:
+        // setPrimitiveParentObjectID() detaches each primitive from its previous parent and destroys that
+        // object once it is left empty, so the corrupted Context is internally consistent -- it is simply
+        // missing objects, which the count and signature checks above are what detect.
+        size_t mismatched_parents = 0;
+        for (uint objID: loaded_objects) {
+            for (uint UUID: ctx2.getObjectPrimitiveUUIDs(objID)) {
+                if (ctx2.getPrimitiveParentObjectID(UUID) != objID) {
+                    mismatched_parents++;
+                }
+            }
+        }
+        DOCTEST_CHECK(mismatched_parents == 0);
+
+        std::remove(test_file);
+    }
+
+    SUBCASE("loadXML rejects a file in which two object blocks claim the same object ID") {
+        // An objID in the file identifies exactly one object. If two object blocks claim the same one, both are
+        // handed the same primitive list and reparenting them to the second silently destroys the first -- the
+        // same symptom as the objID-remap bug above, reachable through a hand-edited file or by concatenating
+        // the bodies of two writeXML() outputs to merge two scenes (both number their objects from 1).
+        Context ctx;
+        uint sphere1 = ctx.addSphereObject(4, make_vec3(0, 0, 0), 0.5f);
+        uint sphere2 = ctx.addSphereObject(4, make_vec3(0, 5, 0), 0.5f);
+        DOCTEST_CHECK(ctx.getAllObjectIDs().size() == 2);
+
+        const char *source_file = "helios_dup_objid_source.xml";
+        DOCTEST_CHECK_NOTHROW(ctx.writeXML(source_file, true));
+
+        // Point the second <sphere> block at the first sphere's objID. writeXML emits every primitive block before
+        // the object blocks, so the final <objID> tag naming sphere2 is the one inside its object block.
+        std::string xml;
+        {
+            std::ifstream in(source_file);
+            std::stringstream buffer;
+            buffer << in.rdbuf();
+            xml = buffer.str();
+        }
+        std::string second_tag = "<objID>" + std::to_string(sphere2) + "</objID>";
+        std::string first_tag = "<objID>" + std::to_string(sphere1) + "</objID>";
+        size_t object_block_tag = xml.rfind(second_tag);
+        DOCTEST_REQUIRE(object_block_tag != std::string::npos);
+        DOCTEST_REQUIRE(object_block_tag > xml.rfind("<sphere>"));
+        xml.replace(object_block_tag, second_tag.size(), first_tag);
+
+        const char *duplicate_file = "helios_dup_objid.xml";
+        {
+            std::ofstream out(duplicate_file);
+            out << xml;
+        }
+
+        // Must fail fast naming the duplicated objID, rather than silently returning a Context short one object.
+        Context ctx2;
+        std::string message;
+        bool threw = false;
+        try {
+            ctx2.loadXML(duplicate_file, true);
+        } catch (const std::runtime_error &e) {
+            threw = true;
+            message = e.what();
+        }
+        DOCTEST_CHECK(threw);
+        DOCTEST_CHECK(message.find(std::to_string(sphere1)) != std::string::npos);
+
+        std::remove(source_file);
+        std::remove(duplicate_file);
+    }
+    SUBCASE("writeXML and loadXML round-trip sparse object sub-primitive data") {
+        // Regression: writeXML() records each datum's position within the object's sub-primitive list in the
+        // <data> label attribute and omits sub-primitives that do not carry the label, so the data is sparse.
+        // loadOsubPData() ignored that index and consumed the entries positionally, so data set on only some
+        // sub-primitives was reassigned to the first N of them -- and because it runs after the per-primitive
+        // blocks have already restored the data correctly, it overwrote correct values with shifted ones.
+        Context ctx;
+        uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(2, 2), nullrotation, make_int2(2, 2));
+        std::vector<uint> sub = ctx.getObjectPrimitiveUUIDs(tile);
+        DOCTEST_REQUIRE(sub.size() == 4);
+
+        // Only sub-patches 1 and 3 carry the label.
+        ctx.setPrimitiveData(sub.at(1), "sparse", 300);
+        ctx.setPrimitiveData(sub.at(3), "sparse", 700);
+
+        const char *test_file = "helios_osubp_sparse_test.xml";
+        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, true));
+
+        Context ctx2;
+        DOCTEST_CHECK_NOTHROW(ctx2.loadXML(test_file, true));
+        std::vector<uint> loaded_objects = ctx2.getAllObjectIDs();
+        DOCTEST_REQUIRE(loaded_objects.size() == 1);
+        std::vector<uint> loaded_sub = ctx2.getObjectPrimitiveUUIDs(loaded_objects.at(0));
+        DOCTEST_REQUIRE(loaded_sub.size() == 4);
+
+        // The two sub-patches that carried no data must still carry none, and the two that did must keep
+        // their own values rather than having them shifted onto their neighbours.
+        DOCTEST_CHECK(!ctx2.doesPrimitiveDataExist(loaded_sub.at(0), "sparse"));
+        DOCTEST_CHECK(!ctx2.doesPrimitiveDataExist(loaded_sub.at(2), "sparse"));
+        DOCTEST_REQUIRE(ctx2.doesPrimitiveDataExist(loaded_sub.at(1), "sparse"));
+        DOCTEST_REQUIRE(ctx2.doesPrimitiveDataExist(loaded_sub.at(3), "sparse"));
+        int value1, value3;
+        ctx2.getPrimitiveData(loaded_sub.at(1), "sparse", value1);
+        ctx2.getPrimitiveData(loaded_sub.at(3), "sparse", value3);
+        DOCTEST_CHECK(value1 == 300);
+        DOCTEST_CHECK(value3 == 700);
+
+        std::remove(test_file);
+    }
+
+    SUBCASE("writeXML and loadXML round-trip object sub-primitive data with a hidden sub-primitive") {
+        // Regression: getAllUUIDs() omits hidden primitives, but the object's data block was written from the
+        // object's full member list, so a tile with one hidden sub-patch wrote three <patch> blocks and four
+        // <data> entries. The surplus entry shifted the values and tripped an 'osubpdata_length_mismatch'
+        // warning -- and the shifted data was written anyway.
+        Context ctx;
+        uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(2, 2), nullrotation, make_int2(2, 2));
+        std::vector<uint> sub = ctx.getObjectPrimitiveUUIDs(tile);
+        DOCTEST_REQUIRE(sub.size() == 4);
+        for (size_t i = 0; i < sub.size(); i++) {
+            ctx.setPrimitiveData(sub.at(i), "slot", static_cast<int>(10 * i));
+        }
+        ctx.hidePrimitive(sub.at(1));
+
+        const char *test_file = "helios_osubp_hidden_test.xml";
+        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, true));
+
+        Context ctx2;
+        std::string cerr_text;
+        {
+            capture_cerr capture;
+            DOCTEST_CHECK_NOTHROW(ctx2.loadXML(test_file, true));
+            cerr_text = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(cerr_text.find("osubpdata_length_mismatch") == std::string::npos);
+
+        std::vector<uint> loaded_objects = ctx2.getAllObjectIDs();
+        DOCTEST_REQUIRE(loaded_objects.size() == 1);
+        std::vector<uint> loaded_sub = ctx2.getObjectPrimitiveUUIDs(loaded_objects.at(0));
+        DOCTEST_REQUIRE(loaded_sub.size() == 3);
+
+        // The written sub-patches are the visible ones, in order: slots 0, 20 and 30.
+        std::vector<int> expected = {0, 20, 30};
+        for (size_t i = 0; i < loaded_sub.size(); i++) {
+            DOCTEST_REQUIRE(ctx2.doesPrimitiveDataExist(loaded_sub.at(i), "slot"));
+            int value;
+            ctx2.getPrimitiveData(loaded_sub.at(i), "slot", value);
+            DOCTEST_CHECK(value == expected.at(i));
+        }
+
+        std::remove(test_file);
+    }
+    SUBCASE("writeXML and loadXML round-trip polymesh topology") {
+        // Regression: the OBJECT_TYPE_POLYMESH branch of writeXML() emitted nothing but the closing tag -- no
+        // transformation matrix and none of the indexed face set -- so a mesh that had retained its connectivity
+        // came back from a round-trip as a triangle soup: getPolymeshObjectFaceCount() returned 0,
+        // getPolymeshObjectFaceIndexForPrimitive() threw, the mesh was no longer closed so its volume could not
+        // be computed, and writePLY()/writeOBJ() fell back to independent per-triangle vertices.
+        Context ctx;
+        std::vector<vec3> cube_vertices = {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), make_vec3(0, 1, 0), make_vec3(0, 0, 1), make_vec3(1, 0, 1), make_vec3(1, 1, 1), make_vec3(0, 1, 1)};
+        std::vector<int3> cube_faces = {make_int3(0, 3, 2), make_int3(0, 2, 1), make_int3(4, 5, 6), make_int3(4, 6, 7), make_int3(0, 1, 5), make_int3(0, 5, 4),
+                                        make_int3(2, 3, 7), make_int3(2, 7, 6), make_int3(3, 0, 4), make_int3(3, 4, 7), make_int3(1, 2, 6), make_int3(1, 6, 5)};
+
+        std::vector<uint> UUIDs;
+        for (const int3 &face: cube_faces) {
+            UUIDs.push_back(ctx.addTriangle(cube_vertices.at(face.x), cube_vertices.at(face.y), cube_vertices.at(face.z)));
+        }
+        uint polymesh = ctx.addPolymeshObject(UUIDs);
+
+        // Authored per-vertex normals and texture coordinates exercise the optional halves of the face set.
+        std::vector<vec3> vertex_normals;
+        std::vector<vec2> vertex_uv;
+        for (const vec3 &vertex: cube_vertices) {
+            vec3 outward = vertex - make_vec3(0.5f, 0.5f, 0.5f);
+            outward.normalize();
+            vertex_normals.push_back(outward);
+            vertex_uv.push_back(make_vec2(vertex.x, vertex.y));
+        }
+        ctx.setPolymeshObjectTopology(polymesh, cube_vertices, cube_faces, UUIDs, vertex_normals, vertex_uv, NORMAL_SOURCE_AUTHORED);
+
+        DOCTEST_REQUIRE(ctx.getPolymeshObjectFaceCount(polymesh) == 12);
+        DOCTEST_REQUIRE(ctx.isPolymeshObjectClosed(polymesh));
+
+        const char *test_file = "helios_polymesh_topology_test.xml";
+        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, true));
+
+        Context ctx2;
+        DOCTEST_CHECK_NOTHROW(ctx2.loadXML(test_file, true));
+        std::vector<uint> loaded_objects = ctx2.getAllObjectIDs();
+        DOCTEST_REQUIRE(loaded_objects.size() == 1);
+        uint loaded = loaded_objects.at(0);
+        DOCTEST_REQUIRE(ctx2.getObjectType(loaded) == OBJECT_TYPE_POLYMESH);
+
+        // The shared-vertex mesh must survive, not degrade to one independent vertex triple per triangle.
+        DOCTEST_CHECK(ctx2.getPolymeshObjectVertexCount(loaded) == ctx.getPolymeshObjectVertexCount(polymesh));
+        DOCTEST_CHECK(ctx2.getPolymeshObjectFaceCount(loaded) == ctx.getPolymeshObjectFaceCount(polymesh));
+        DOCTEST_CHECK(ctx2.getPolymeshObjectFaces(loaded) == ctx.getPolymeshObjectFaces(polymesh));
+        DOCTEST_CHECK(ctx2.isPolymeshObjectClosed(loaded));
+        DOCTEST_CHECK(ctx2.getPolymeshObjectBoundaryEdges(loaded).empty());
+        DOCTEST_CHECK(ctx2.getPolymeshObjectVolume(loaded) == doctest::Approx(ctx.getPolymeshObjectVolume(polymesh)).epsilon(1e-4));
+
+        std::vector<vec3> loaded_vertices = ctx2.getPolymeshObjectVertices(loaded);
+        DOCTEST_REQUIRE(loaded_vertices.size() == cube_vertices.size());
+        for (size_t i = 0; i < loaded_vertices.size(); i++) {
+            DOCTEST_CHECK(loaded_vertices.at(i).x == doctest::Approx(cube_vertices.at(i).x).epsilon(1e-5));
+            DOCTEST_CHECK(loaded_vertices.at(i).y == doctest::Approx(cube_vertices.at(i).y).epsilon(1e-5));
+            DOCTEST_CHECK(loaded_vertices.at(i).z == doctest::Approx(cube_vertices.at(i).z).epsilon(1e-5));
+        }
+
+        DOCTEST_CHECK(ctx2.getPolymeshObjectVertexNormalSource(loaded) == NORMAL_SOURCE_AUTHORED);
+        std::vector<vec3> loaded_normals = ctx2.getPolymeshObjectVertexNormals(loaded);
+        DOCTEST_REQUIRE(loaded_normals.size() == vertex_normals.size());
+        for (size_t i = 0; i < loaded_normals.size(); i++) {
+            DOCTEST_CHECK(loaded_normals.at(i).x == doctest::Approx(vertex_normals.at(i).x).epsilon(1e-5));
+            DOCTEST_CHECK(loaded_normals.at(i).y == doctest::Approx(vertex_normals.at(i).y).epsilon(1e-5));
+            DOCTEST_CHECK(loaded_normals.at(i).z == doctest::Approx(vertex_normals.at(i).z).epsilon(1e-5));
+        }
+
+        std::vector<vec2> loaded_uv = ctx2.getPolymeshObjectVertexUV(loaded);
+        DOCTEST_REQUIRE(loaded_uv.size() == vertex_uv.size());
+        for (size_t i = 0; i < loaded_uv.size(); i++) {
+            DOCTEST_CHECK(loaded_uv.at(i).x == doctest::Approx(vertex_uv.at(i).x).epsilon(1e-5));
+            DOCTEST_CHECK(loaded_uv.at(i).y == doctest::Approx(vertex_uv.at(i).y).epsilon(1e-5));
+        }
+
+        // Each face must still resolve to the member primitive it describes.
+        std::vector<uint> loaded_sub = ctx2.getObjectPrimitiveUUIDs(loaded);
+        DOCTEST_REQUIRE(loaded_sub.size() == UUIDs.size());
+        for (size_t i = 0; i < loaded_sub.size(); i++) {
+            DOCTEST_CHECK(ctx2.getPolymeshObjectFaceIndexForPrimitive(loaded, loaded_sub.at(i)) == ctx.getPolymeshObjectFaceIndexForPrimitive(polymesh, UUIDs.at(i)));
+        }
+
+        std::remove(test_file);
+    }
+    SUBCASE("loadXML rejects a file whose primitives reference an object block that is not present") {
+        // Regression: primitives carrying an objID were added to the Context but pushed onto the vector that
+        // loadXML() returns only when objID was 0. If no object block claimed that objID -- a truncated or
+        // hand-edited file -- the primitives ended up in the scene with no parent object and no handle returned
+        // to the caller: geometry that still renders and ray-traces but that the caller cannot address.
+        Context ctx;
+        uint sphere = ctx.addSphereObject(4, make_vec3(0, 0, 0), 0.5f);
+        DOCTEST_CHECK(ctx.doesObjectExist(sphere));
+
+        const char *source_file = "helios_orphan_objid_source.xml";
+        DOCTEST_CHECK_NOTHROW(ctx.writeXML(source_file, true));
+
+        std::string xml;
+        {
+            std::ifstream in(source_file);
+            std::stringstream buffer;
+            buffer << in.rdbuf();
+            xml = buffer.str();
+        }
+
+        // Strip the <sphere> object block, leaving its member primitives behind still tagged with its objID.
+        size_t block_start = xml.find("<sphere>");
+        size_t block_end = xml.find("</sphere>");
+        DOCTEST_REQUIRE(block_start != std::string::npos);
+        DOCTEST_REQUIRE(block_end != std::string::npos);
+        xml.erase(block_start, block_end + std::string("</sphere>").size() - block_start);
+
+        const char *orphan_file = "helios_orphan_objid.xml";
+        {
+            std::ofstream out(orphan_file);
+            out << xml;
+        }
+
+        Context ctx2;
+        std::string message;
+        bool threw = false;
+        try {
+            ctx2.loadXML(orphan_file, true);
+        } catch (const std::runtime_error &e) {
+            threw = true;
+            message = e.what();
+        }
+        DOCTEST_CHECK(threw);
+        DOCTEST_CHECK(message.find(std::to_string(sphere)) != std::string::npos);
+
+        std::remove(source_file);
+        std::remove(orphan_file);
+    }
+    SUBCASE("loadXML keeps legacy numeric material IDs from different files apart") {
+        // Regression: the v2 format identifies a material by a file-scoped number, which loadXML() mapped onto
+        // the Context-global label "__auto_material_<N>". Two v2 files both number their materials from 1, so
+        // loading a second one found the label already taken and mutated the existing material in place --
+        // silently recoloring every primitive loaded from the first file. loadOBJ() already renames on
+        // collision and keeps a remap; loadXML() now does the same.
+        auto write_v2_file = [](const char *filename, const char *color) {
+            std::ofstream out(filename);
+            out << "<?xml version=\"1.0\"?>\n<helios>\n";
+            out << "   <materials>\n";
+            out << "\t<material id=\"1\">\n";
+            out << "\t   <color>" << color << "</color>\n";
+            out << "\t</material>\n";
+            out << "   </materials>\n";
+            out << "   <patch>\n";
+            out << "\t<material_id>1</material_id>\n";
+            out << "   </patch>\n";
+            out << "</helios>\n";
+        };
+
+        const char *red_file = "helios_v2_material_red.xml";
+        const char *blue_file = "helios_v2_material_blue.xml";
+        write_v2_file(red_file, "1 0 0");
+        write_v2_file(blue_file, "0 0 1");
+
+        Context ctx;
+        std::vector<uint> red_UUIDs;
+        std::vector<uint> blue_UUIDs;
+        DOCTEST_CHECK_NOTHROW(red_UUIDs = ctx.loadXML(red_file, true));
+        DOCTEST_CHECK_NOTHROW(blue_UUIDs = ctx.loadXML(blue_file, true));
+        DOCTEST_REQUIRE(red_UUIDs.size() == 1);
+        DOCTEST_REQUIRE(blue_UUIDs.size() == 1);
+
+        // The first file's patch must still be red; loading the second file must not have recolored it.
+        RGBcolor red = ctx.getPrimitiveColor(red_UUIDs.front());
+        RGBcolor blue = ctx.getPrimitiveColor(blue_UUIDs.front());
+        DOCTEST_CHECK(red.r == doctest::Approx(1.f));
+        DOCTEST_CHECK(red.b == doctest::Approx(0.f));
+        DOCTEST_CHECK(blue.r == doctest::Approx(0.f));
+        DOCTEST_CHECK(blue.b == doctest::Approx(1.f));
+
+        std::remove(red_file);
+        std::remove(blue_file);
+    }
+    SUBCASE("writeXML succeeds after primitive data is renamed on a member of an object") {
+        // Regression: renaming or duplicating primitive data registered the new label on the primitive but not in
+        // the Context-wide type registry, and writeXML() looks the type up by label for every label carried by an
+        // object's members -- so writing a Context in which any object member's data had been renamed failed with
+        // "Primitive data ... does not exist".
+        Context ctx;
+        uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(2, 2), nullrotation, make_int2(2, 2));
+        std::vector<uint> sub = ctx.getObjectPrimitiveUUIDs(tile);
+        DOCTEST_REQUIRE(sub.size() == 4);
+        ctx.setPrimitiveData(sub, "flux", 1.f);
+        ctx.renamePrimitiveData(sub.front(), "flux", "flux_renamed");
+
+        const char *test_file = "helios_renamed_data_test.xml";
+        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, true));
+
+        Context ctx2;
+        DOCTEST_CHECK_NOTHROW(ctx2.loadXML(test_file, true));
+
+        std::remove(test_file);
+    }
     SUBCASE("writeXML and loadXML preserve texture UV coordinates") {
         // Regression test: textured primitives written with the v3 <material> format must
         // retain their texture (u,v) coordinates across a writeXML()/loadXML() round-trip.

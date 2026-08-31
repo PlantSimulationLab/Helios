@@ -76,8 +76,17 @@ namespace helios {
 
         // Extended leaf data (48 bytes) - per-child primitive info
         uint32_t child_first_prim[8]; //!< First primitive index for each leaf child (32 bytes)
-        uint8_t child_prim_count[8]; //!< Primitive count for each leaf child (8 bytes)
-        uint8_t child_prim_type[8]; //!< Primitive type for each leaf child (8 bytes)
+        //! Primitive count for each leaf child (16 bytes).
+        /**
+         * Sixteen bits, not eight. Leaves normally hold at most MAX_PRIMS_PER_LEAF primitives,
+         * but recursiveBuild() also creates a leaf of unbounded size whenever it hits MAX_DEPTH,
+         * which dense overlapping geometry (a plant canopy, for instance) reaches. An 8-bit
+         * count silently wrapped those leaves: 300 primitives became 44, and exactly 256 became
+         * 0, which made the traversal skip the leaf entirely and drop the geometry in it without
+         * any diagnostic. The eight bytes come from the former child_prim_type[8], which nothing
+         * ever read - the traversal shader resolves each primitive's type through prim_types_buf.
+         */
+        uint16_t child_prim_count[8];
     };
 
     static_assert(sizeof(CWBVH_Node) == 128, "CWBVH_Node must be exactly 128 bytes");
@@ -204,6 +213,14 @@ namespace helios {
         std::vector<uint32_t> type_offsets; //!< Pre-computed type-specific indices for O(1) lookup
 
         // BVH construction parameters
+        //! Traversal stack depth provided by the compute shader.
+        /**
+         * Must match MAX_CWBVH_STACK_DEPTH in shaders/common/bvh_traversal.glsl. The shader
+         * cannot report an overflow, so convertToCWBVH() checks the tree against this bound on
+         * the host and fails there instead.
+         */
+        static constexpr uint32_t CWBVH_TRAVERSAL_STACK_DEPTH = 80;
+
         static constexpr uint32_t MAX_PRIMS_PER_LEAF = 4; //!< Max primitives per leaf
         static constexpr uint32_t MAX_DEPTH = 32; //!< Max tree depth
         static constexpr uint32_t NUM_BINS = 16; //!< Number of bins for SAH

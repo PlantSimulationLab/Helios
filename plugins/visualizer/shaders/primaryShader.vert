@@ -6,6 +6,8 @@ layout(location = 1) in vec2 uv;
 
 layout(location = 2) in int face_index;
 
+layout(location = 3) in vec3 vertexNormal;
+
 uniform mat4 MVP;
 uniform mat4 view;
 uniform mat4 projection;
@@ -15,6 +17,15 @@ out vec4 ShadowCoord;
 
 out vec2 texcoord;
 out vec2 uv_scale;
+
+//World-space fragment position, used by the fragment shader to form the view vector for the
+//specular term. Vertex positions are already in world space -- there is no separate model matrix,
+//MVP is applied directly -- so the raw vertex position is passed through unchanged.
+out vec3 worldPosition;
+
+//Per-vertex normal, interpolated across the primitive by the rasterizer. The fragment shader uses
+//this when smooth shading is enabled, and the flat per-face normal otherwise.
+out vec3 interpolatedNormal;
 
 flat out int faceID;
 
@@ -50,6 +61,10 @@ void main(){
   vec4 scale = texelFetch(uv_rescale, textureID);
   texcoord = uv;            // pass original texture coordinates
   uv_scale = scale.rg;      // scale factors for this texture layer
+
+  worldPosition = vertexPosition_modelspace;
+
+  interpolatedNormal = vertexNormal;
 
   ShadowCoord = DepthBiasMVP*v;
 

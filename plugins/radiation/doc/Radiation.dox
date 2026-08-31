@@ -68,6 +68,8 @@ The radiation model requires at least one ray-tracing backend. Two backends are 
 
 CMake automatically detects which backends are available and enables them. On NVIDIA systems with driver ≥ 560 and CUDA 12.0+, the OptiX 8.1 backend is selected by default; on systems with driver &lt; 560 and CUDA 9.0+, the OptiX 6.5 (legacy) backend is used instead. On systems without NVIDIA hardware or when CUDA is not installed, the Vulkan backend is used. You can force the Vulkan backend by setting <tt>-DFORCE_VULKAN_BACKEND=ON</tt>, or force the OptiX 6.5 legacy backend by setting <tt>-DOPTIX_VERSION_LEGACY=ON</tt>.
 
+\note <b>Feature coverage:</b> The Vulkan backend's software BVH intersects patches, tiles and triangles only. A scene containing voxel primitives is rejected with an error rather than traced as though the voxels were absent; voxel ray tracing is available only on the OptiX backends.
+
 \note <b>Performance:</b> The OptiX backend is strongly preferred on NVIDIA systems. For direct radiation source ray traces, performance between the two backends is broadly comparable. However, for diffuse radiation or scattering ray traces, the Vulkan backend can be significantly slower. If you have an NVIDIA GPU and are running simulations with diffuse radiation or multiple scattering iterations, it is strongly recommended to install CUDA and use the OptiX backend. On systems with driver ≥ 560, the OptiX 8.1 backend will be selected automatically.
 
 For help choosing the correct CUDA toolkit version and accompanying OptiX version for your system, consult this page: \ref ChoosingCUDA

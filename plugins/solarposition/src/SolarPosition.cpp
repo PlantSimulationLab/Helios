@@ -187,11 +187,10 @@ float SolarPosition::getSolarFlux(float pressure_Pa, float temperature_K, float 
     // Deprecated method - kept for backward compatibility
     float Eb_PAR, Eb_NIR, fdiff;
     GueymardSolarModel(pressure_Pa, temperature_K, humidity_rel, turbidity, Eb_PAR, Eb_NIR, fdiff);
-    float Eb = Eb_PAR + Eb_NIR;
     if (!cloudcalibrationlabel.empty()) {
-        applyCloudCalibration(Eb, fdiff);
+        applyCloudCalibration(Eb_PAR, Eb_NIR, fdiff);
     }
-    return Eb;
+    return Eb_PAR + Eb_NIR;
 }
 
 float SolarPosition::getSolarFluxPAR(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const {
@@ -199,7 +198,7 @@ float SolarPosition::getSolarFluxPAR(float pressure_Pa, float temperature_K, flo
     float Eb_PAR, Eb_NIR, fdiff;
     GueymardSolarModel(pressure_Pa, temperature_K, humidity_rel, turbidity, Eb_PAR, Eb_NIR, fdiff);
     if (!cloudcalibrationlabel.empty()) {
-        applyCloudCalibration(Eb_PAR, fdiff);
+        applyCloudCalibration(Eb_PAR, Eb_NIR, fdiff);
     }
     return Eb_PAR;
 }
@@ -209,7 +208,7 @@ float SolarPosition::getSolarFluxNIR(float pressure_Pa, float temperature_K, flo
     float Eb_PAR, Eb_NIR, fdiff;
     GueymardSolarModel(pressure_Pa, temperature_K, humidity_rel, turbidity, Eb_PAR, Eb_NIR, fdiff);
     if (!cloudcalibrationlabel.empty()) {
-        applyCloudCalibration(Eb_NIR, fdiff);
+        applyCloudCalibration(Eb_PAR, Eb_NIR, fdiff);
     }
     return Eb_NIR;
 }
@@ -219,7 +218,7 @@ float SolarPosition::getDiffuseFraction(float pressure_Pa, float temperature_K, 
     float Eb_PAR, Eb_NIR, fdiff;
     GueymardSolarModel(pressure_Pa, temperature_K, humidity_rel, turbidity, Eb_PAR, Eb_NIR, fdiff);
     if (!cloudcalibrationlabel.empty()) {
-        applyCloudCalibration(Eb_PAR, fdiff);
+        applyCloudCalibration(Eb_PAR, Eb_NIR, fdiff);
     }
     return fdiff;
 }
@@ -502,11 +501,10 @@ float SolarPosition::getSolarFlux() const {
 
     float Eb_PAR, Eb_NIR, fdiff;
     GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
-    float Eb = Eb_PAR + Eb_NIR;
     if (!cloudcalibrationlabel.empty()) {
-        applyCloudCalibration(Eb, fdiff);
+        applyCloudCalibration(Eb_PAR, Eb_NIR, fdiff);
     }
-    return Eb;
+    return Eb_PAR + Eb_NIR;
 }
 
 float SolarPosition::getSolarFluxPAR() const {
@@ -516,7 +514,7 @@ float SolarPosition::getSolarFluxPAR() const {
     float Eb_PAR, Eb_NIR, fdiff;
     GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
     if (!cloudcalibrationlabel.empty()) {
-        applyCloudCalibration(Eb_PAR, fdiff);
+        applyCloudCalibration(Eb_PAR, Eb_NIR, fdiff);
     }
     return Eb_PAR;
 }
@@ -528,7 +526,7 @@ float SolarPosition::getSolarFluxNIR() const {
     float Eb_PAR, Eb_NIR, fdiff;
     GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
     if (!cloudcalibrationlabel.empty()) {
-        applyCloudCalibration(Eb_NIR, fdiff);
+        applyCloudCalibration(Eb_PAR, Eb_NIR, fdiff);
     }
     return Eb_NIR;
 }
@@ -540,7 +538,7 @@ float SolarPosition::getDiffuseFraction() const {
     float Eb_PAR, Eb_NIR, fdiff;
     GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
     if (!cloudcalibrationlabel.empty()) {
-        applyCloudCalibration(Eb_PAR, fdiff);
+        applyCloudCalibration(Eb_PAR, Eb_NIR, fdiff);
     }
     return fdiff;
 }
@@ -558,18 +556,59 @@ float SolarPosition::getAmbientLongwaveFlux() const {
     return eps * 5.67e-8 * pow(temperature, 4);
 }
 
-void SolarPosition::applyCloudCalibration(float &R_calc_Wm2, float &fdiff_calc) const {
+float SolarPosition::diffuseFractionFromClearnessIndex(float clearness_index) {
+    // Hourly diffuse-fraction correlation of Erbs et al. (1982), Solar Energy 28(4):293-302, Eq. 1.
+    // The three branches very nearly meet at the breakpoints kT = 0.22 and kT = 0.80, where they
+    // differ by about 0.0003; this small step is a property of the published fit, not an error here.
+    float kt = fmin(fmax(clearness_index, 0.f), 1.f);
 
-    assert(context->doesTimeseriesVariableExist(cloudcalibrationlabel.c_str()));
+    if (kt <= 0.22f) {
+        return 1.f - 0.09f * kt;
+    } else if (kt <= 0.80f) {
+        return 0.9511f - 0.1604f * kt + 4.388f * kt * kt - 16.638f * kt * kt * kt + 12.336f * kt * kt * kt * kt;
+    }
+    // Above kT = 0.80 Erbs et al. adopt a constant rather than fitting the sparse data there.
+    return 0.165f;
+}
 
+float SolarPosition::getExtraterrestrialHorizontalFlux() const {
+    float cos_zenith = cosf(getSunZenith());
+    if (cos_zenith <= 0.f) {
+        return 0.f;
+    }
+    // Solar constant (W/m^2), corrected for the Earth-Sun distance on this day of year.
+    const float solar_constant = 1361.f;
+    return solar_constant * calculateGeometricFactor(context->getJulianDate()) * cos_zenith;
+}
+
+void SolarPosition::applyCloudCalibration(float &Eb_PAR_Wm2, float &Eb_NIR_Wm2, float &fdiff_calc) const {
+
+    // The measured flux is all-wave, so the calibration must be based on the all-wave (PAR+NIR)
+    // clear-sky flux. Deriving the attenuation factor from a single band would make the band cancel
+    // out of the ratio below, collapsing every band onto R_meas/cos(theta).
     float R_meas = context->queryTimeseriesData(cloudcalibrationlabel.c_str());
+    if (R_meas < 0.f) {
+        helios_runtime_error("ERROR (SolarPosition::applyCloudCalibration): Measured shortwave flux from timeseries '" + cloudcalibrationlabel + "' is negative (" + std::to_string(R_meas) + " W/m^2). Cloud calibration requires a non-negative measured flux; check the timeseries data for invalid or sentinel values.");
+    }
+    float R_calc_Wm2 = Eb_PAR_Wm2 + Eb_NIR_Wm2;
     float R_calc_horiz = R_calc_Wm2 * cosf(getSunZenith());
 
-    float fdiff = fmin(fmax(0, 1.f - (R_meas - R_calc_horiz) / (R_calc_horiz)), 1);
-    float R = R_calc_Wm2 * R_meas / R_calc_horiz;
+    // Estimate the diffuse fraction from the clearness index. The previous expression here,
+    // 1-(R_meas-R_calc_horiz)/R_calc_horiz, reduces to 2-R_meas/R_calc_horiz, which exceeds 1 for
+    // any measurement below the clear-sky prediction and therefore clamped to a fully-diffuse sky
+    // under all real cloud, varying only when the measurement exceeded clear-sky irradiance.
+    float extraterrestrial_horiz = getExtraterrestrialHorizontalFlux();
+    float fdiff = 1.f;
+    if (extraterrestrial_horiz > 1.f) {
+        fdiff = diffuseFractionFromClearnessIndex(R_meas / extraterrestrial_horiz);
+    }
 
-    if (fdiff > 0.001 && R_calc_horiz > 1.f) {
-        R_calc_Wm2 = R;
+    if (R_calc_horiz > 1.f) {
+        // Scale both bands by the same broadband cloud attenuation factor. This preserves the
+        // clear-sky PAR/NIR ratio and keeps Eb_PAR+Eb_NIR equal to the calibrated all-wave flux.
+        float cloud_attenuation_factor = R_meas / R_calc_horiz;
+        Eb_PAR_Wm2 *= cloud_attenuation_factor;
+        Eb_NIR_Wm2 *= cloud_attenuation_factor;
         fdiff_calc = fdiff;
     }
 }
@@ -977,6 +1016,12 @@ void SolarPosition::calculateSpectralIrradianceComponents(std::vector<helios::ve
         diffuse_spectrum.push_back(helios::make_vec2(wavelength_nm, diffuse_irr));
     }
 
+    // Apply cloud calibration against the measured broadband flux, if enabled. This must happen at
+    // the model's native 1 nm resolution, before any downsampling, since it integrates the spectrum.
+    if (!cloudcalibrationlabel.empty()) {
+        applySpectralCloudCalibration(global_spectrum, direct_spectrum, diffuse_spectrum, mu0);
+    }
+
     // Downsample if requested resolution is coarser than 1 nm
     if (resolution_nm > 1.0f + 1e-5f) {
         std::vector<helios::vec2> global_downsampled, direct_downsampled, diffuse_downsampled;
@@ -1001,6 +1046,144 @@ void SolarPosition::calculateSpectralIrradianceComponents(std::vector<helios::ve
         global_spectrum = global_downsampled;
         direct_spectrum = direct_downsampled;
         diffuse_spectrum = diffuse_downsampled;
+    }
+}
+
+float SolarPosition::integrateSpectrum(const std::vector<helios::vec2> &spectrum) {
+    if (spectrum.size() < 2) {
+        return 0.f;
+    }
+    float integral = 0.f;
+    for (size_t i = 1; i < spectrum.size(); ++i) {
+        float delta_lambda = spectrum.at(i).x - spectrum.at(i - 1).x;
+        integral += 0.5f * (spectrum.at(i).y + spectrum.at(i - 1).y) * delta_lambda;
+    }
+    return integral;
+}
+
+void SolarPosition::applySpectralCloudCalibration(std::vector<helios::vec2> &global_spectrum, std::vector<helios::vec2> &direct_spectrum, std::vector<helios::vec2> &diffuse_spectrum, float mu0) const {
+
+    // Fraction of the extraterrestrial solar irradiance falling inside the 300-2600 nm window
+    // covered by the SSolar-GOA tabulated spectrum. A broadband pyranometer sees essentially the
+    // whole shortwave spectrum, so the measured flux is scaled by this fraction before it is
+    // compared against the integral of the modeled spectrum.
+    const float model_window_fraction = 0.9596f;
+
+    // Below this relative disagreement between the modeled and measured broadband irradiance, no
+    // cloud modification is applied. Bird, Riordan & Myers (1987) use the same 5% criterion: within
+    // it the discrepancy is dominated by measurement uncertainty and by error in the turbidity and
+    // precipitable-water inputs, so "correcting" for it would inject noise rather than cloud effects.
+    const float no_correction_threshold = 0.05f;
+
+    float R_meas_broadband = context->queryTimeseriesData(cloudcalibrationlabel.c_str());
+    if (R_meas_broadband < 0.f) {
+        helios_runtime_error("ERROR (SolarPosition::applySpectralCloudCalibration): Measured shortwave flux from timeseries '" + cloudcalibrationlabel + "' is negative (" + std::to_string(R_meas_broadband) + " W/m^2). Cloud calibration requires a non-negative measured flux; check the timeseries data for invalid or sentinel values.");
+    }
+    float R_meas_in_window = R_meas_broadband * model_window_fraction;
+
+    float R_calc_in_window = integrateSpectrum(global_spectrum);
+
+    if (R_calc_in_window <= 1.f) {
+        return; // sun too low for the ratio to be meaningful
+    }
+
+    float measured_to_modeled_ratio = R_meas_in_window / R_calc_in_window;
+
+    if (std::fabs(measured_to_modeled_ratio - 1.f) < no_correction_threshold) {
+        return;
+    }
+
+    // ---- Step 1: repartition the direct and diffuse components ----
+    // Cloud converts direct beam into diffuse, so the two components cannot simply be scaled by the
+    // same factor: doing so would leave the diffuse fraction at its clear-sky value no matter how
+    // thick the cloud, and the spectral modifiers below (which act on the diffuse component) would
+    // have almost nothing to act on. Bird, Riordan & Myers (1987) avoid this by normalizing the
+    // global and direct-normal spectra against two independent measurements, but only one broadband
+    // measurement is available here, so the diffuse fraction is estimated from the clearness index.
+    float extraterrestrial_horiz = getExtraterrestrialHorizontalFlux();
+    if (extraterrestrial_horiz <= 1.f) {
+        return;
+    }
+    float diffuse_fraction = diffuseFractionFromClearnessIndex(R_meas_broadband / extraterrestrial_horiz);
+
+    float calibrated_global = R_meas_in_window;
+    float calibrated_diffuse = calibrated_global * diffuse_fraction;
+    float calibrated_direct_horizontal = calibrated_global - calibrated_diffuse;
+
+    float clear_direct_horizontal = integrateSpectrum(direct_spectrum) * mu0;
+    float clear_diffuse = integrateSpectrum(diffuse_spectrum);
+
+    // Scale the direct beam to its calibrated total, preserving its clear-sky spectral shape.
+    float direct_scale = (clear_direct_horizontal > 1e-6f) ? calibrated_direct_horizontal / clear_direct_horizontal : 0.f;
+    for (helios::vec2 &sample: direct_spectrum) {
+        sample.y *= direct_scale;
+    }
+
+    // The clear-sky diffuse component is Rayleigh-scattered skylight, which is far bluer than light
+    // scattered by cloud: cloud droplets are large compared with the wavelength and scatter almost
+    // neutrally. Simply rescaling the clear-sky diffuse shape would therefore drive the spectrum
+    // toward pure Rayleigh blue as the sky becomes overcast, overstating the photosynthetically
+    // active fraction. The diffuse shape is instead blended from the clear-sky skylight shape toward
+    // the (near-neutral) beam shape in proportion to how much of the diffuse light originates from
+    // cloud rather than from clear sky.
+    //
+    // Cloud-scattered light is not perfectly neutral either: it retains part of the blue enrichment
+    // of skylight. This weight is the fraction of that enrichment retained, chosen so the modeled PAR
+    // fraction of global irradiance under heavy overcast matches the measured value of 0.483 (versus
+    // 0.417 under clear sky) reported for multi-site pyranometer/quantum-sensor records.
+    const float cloud_skylight_blueness_retention = 0.375f;
+
+    float clear_sky_diffuse_fraction = (R_calc_in_window > 1e-6f) ? clear_diffuse / R_calc_in_window : 0.f;
+    float cloud_share_of_diffuse = 0.f;
+    if (diffuse_fraction > clear_sky_diffuse_fraction && diffuse_fraction > 1e-6f) {
+        cloud_share_of_diffuse = (diffuse_fraction - clear_sky_diffuse_fraction) / diffuse_fraction;
+    }
+    cloud_share_of_diffuse *= (1.f - cloud_skylight_blueness_retention);
+
+    // direct_spectrum has already been scaled above, so this is the calibrated (not clear-sky) total.
+    // Only the normalized shape is used below, and the scaling cancels out of that ratio.
+    float direct_normal_total = integrateSpectrum(direct_spectrum);
+    for (size_t i = 0; i < diffuse_spectrum.size(); ++i) {
+        float skylight_shape = (clear_diffuse > 1e-6f) ? diffuse_spectrum.at(i).y / clear_diffuse : 0.f;
+        float beam_shape = (direct_normal_total > 1e-6f) ? direct_spectrum.at(i).y / direct_normal_total : 0.f;
+        float blended_shape = (1.f - cloud_share_of_diffuse) * skylight_shape + cloud_share_of_diffuse * beam_shape;
+        diffuse_spectrum.at(i).y = blended_shape * calibrated_diffuse;
+    }
+
+    // ---- Step 2: empirical spectral modifiers (Bird, Riordan & Myers 1987, Eq. 4-3) ----
+    // Clouds transmit short wavelengths preferentially, so a purely grey rescaling leaves the
+    // cloudy-sky spectrum too red. Both modifiers act on the diffuse component, which is what Bird
+    // et al. derived them for and which dominates the global irradiance under overcast skies.
+    for (helios::vec2 &sample: diffuse_spectrum) {
+        float wavelength_um = sample.x * 0.001f;
+
+        // Blue/UV enhancement below 0.55 um: Diffuse * (lambda + 0.45)^-1. The form is continuous at
+        // the 0.55 um cutoff (where it evaluates to exactly 1) and reaches its maximum of +1/3 at
+        // 0.3 um, matching the increase reported by Bird et al.
+        if (wavelength_um <= 0.55f) {
+            sample.y /= (wavelength_um + 0.45f);
+        }
+
+        // Constant 7% increase from 0.50 to 0.926 um.
+        if (wavelength_um >= 0.50f && wavelength_um <= 0.926f) {
+            sample.y *= 1.07f;
+        }
+    }
+
+    // ---- Step 3: renormalize so the calibrated spectrum still integrates to the measurement ----
+    // The spectral modifiers add energy, which would otherwise break agreement with the measured
+    // broadband flux that the whole calibration is anchored to.
+    float diffuse_after_modifiers = integrateSpectrum(diffuse_spectrum);
+    if (diffuse_after_modifiers > 1e-6f) {
+        float renormalization = calibrated_diffuse / diffuse_after_modifiers;
+        for (helios::vec2 &sample: diffuse_spectrum) {
+            sample.y *= renormalization;
+        }
+    }
+
+    // Rebuild the global spectrum from its components (direct beam is normal-incidence).
+    for (size_t i = 0; i < global_spectrum.size(); ++i) {
+        global_spectrum.at(i).y = direct_spectrum.at(i).y * mu0 + diffuse_spectrum.at(i).y;
     }
 }
 

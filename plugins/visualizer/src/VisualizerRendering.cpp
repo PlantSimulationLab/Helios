@@ -54,7 +54,10 @@ void Visualizer::printWindow(const char *outfile, const std::string &image_forma
         hideNavigationGizmo();
     }
 
-    // Update the plot window to ensure latest rendering
+    // Re-render so that the captured frame reflects the hidden navigation gizmo. This has to be a full plotUpdate():
+    // a caller may hand the Visualizer a Context and capture straight away without an intervening plotUpdate(), and
+    // only the full path builds that geometry. It is no longer the expensive call it once was, because
+    // buildContextGeometry_private() now rebuilds only primitives that actually changed since the last build.
     this->plotUpdate(true);
 
     std::string outfile_str = outfile;
@@ -117,7 +120,9 @@ void Visualizer::printWindow(const char *outfile, const std::string &image_forma
 
         // Bind the appropriate framebuffer
         if (headless && offscreenFramebufferID != 0) {
-            glBindFramebuffer(GL_FRAMEBUFFER, offscreenFramebufferID);
+            // Render into the multisampled framebuffer when one exists; it is blit-resolved into the
+            // single-sampled color texture before any readback.
+            glBindFramebuffer(GL_FRAMEBUFFER, offscreenMultisampleFramebufferID != 0 ? offscreenMultisampleFramebufferID : offscreenFramebufferID);
             glViewport(0, 0, Wframebuffer, Hframebuffer);
         } else {
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -141,6 +146,13 @@ void Visualizer::printWindow(const char *outfile, const std::string &image_forma
         primaryShader.setLightingModel(primaryLightingModel);
         primaryShader.setLightIntensity(lightintensity);
         primaryShader.setColorBoost(colorboost);
+        primaryShader.setLinearPipeline(linear_pipeline_enabled);
+        primaryShader.setExposure(exposure);
+        primaryShader.setCameraPositionUniform(camera_eye_location);
+        primaryShader.setPhongMaterial(phong_material.ambient, phong_material.diffuse, phong_material.specular, phong_material.shininess);
+        primaryShader.setAmbientColors(ambient_sky_color, ambient_ground_color);
+        primaryShader.setSmoothShading(smooth_shading_enabled);
+        primaryShader.setPhongMaterialTable(phong_material_table_size);
 
         render(false);
 
@@ -407,6 +419,10 @@ void Visualizer::getWindowPixelsRGB(uint *buffer) const {
         // Bind the offscreen framebuffer to ensure we read from the rendered content
         GLint current_framebuffer;
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &current_framebuffer);
+
+        // Rendering targets a multisampled framebuffer when anti-aliasing is active; resolve it into
+        // the single-sampled color texture before reading, or this reads an unrendered attachment.
+        resolveOffscreenMultisampleFramebuffer();
 
         glBindFramebuffer(GL_FRAMEBUFFER, offscreenFramebufferID);
 
@@ -732,6 +748,13 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
         primaryShader.setLightingModel(primaryLightingModel);
         primaryShader.setLightIntensity(lightintensity);
         primaryShader.setColorBoost(colorboost);
+        primaryShader.setLinearPipeline(linear_pipeline_enabled);
+        primaryShader.setExposure(exposure);
+        primaryShader.setCameraPositionUniform(camera_eye_location);
+        primaryShader.setPhongMaterial(phong_material.ambient, phong_material.diffuse, phong_material.specular, phong_material.shininess);
+        primaryShader.setAmbientColors(ambient_sky_color, ambient_ground_color);
+        primaryShader.setSmoothShading(smooth_shading_enabled);
+        primaryShader.setPhongMaterialTable(phong_material_table_size);
 
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, depthTexture);
@@ -837,8 +860,10 @@ void Visualizer::plotOnce(bool getKeystrokes) {
 
     // Render to the screen or offscreen framebuffer depending on headless mode
     if (headless && offscreenFramebufferID != 0) {
-        // Render to offscreen framebuffer for headless mode
-        glBindFramebuffer(GL_FRAMEBUFFER, offscreenFramebufferID);
+        // Render into the multisampled framebuffer when one exists; it is blit-resolved into the
+        // single-sampled color texture before any readback. Falls back to rendering directly into
+        // the single-sampled framebuffer when anti-aliasing is off or the driver refused it.
+        glBindFramebuffer(GL_FRAMEBUFFER, offscreenMultisampleFramebufferID != 0 ? offscreenMultisampleFramebufferID : offscreenFramebufferID);
         glViewport(0, 0, Wframebuffer, Hframebuffer);
     } else {
         // Render to the default framebuffer for windowed mode
@@ -872,6 +897,13 @@ void Visualizer::plotOnce(bool getKeystrokes) {
     primaryShader.setLightingModel(primaryLightingModel);
     primaryShader.setLightIntensity(lightintensity);
     primaryShader.setColorBoost(colorboost);
+    primaryShader.setLinearPipeline(linear_pipeline_enabled);
+    primaryShader.setExposure(exposure);
+    primaryShader.setCameraPositionUniform(camera_eye_location);
+    primaryShader.setPhongMaterial(phong_material.ambient, phong_material.diffuse, phong_material.specular, phong_material.shininess);
+    primaryShader.setAmbientColors(ambient_sky_color, ambient_ground_color);
+    primaryShader.setSmoothShading(smooth_shading_enabled);
+    primaryShader.setPhongMaterialTable(phong_material_table_size);
 
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, depthTexture);
@@ -960,7 +992,9 @@ void Visualizer::transferBufferData() {
         const auto *face_index_data = geometry_handler.getFaceIndexData_ptr(geometry_type);
         const auto *color_data = geometry_handler.getColorData_ptr(geometry_type);
         const auto *normal_data = geometry_handler.getNormalData_ptr(geometry_type);
+        const auto *vertex_normal_data = geometry_handler.getVertexNormalData_ptr(geometry_type);
         const auto *texture_flag_data = geometry_handler.getTextureFlagData_ptr(geometry_type);
+        const auto *material_index_data = geometry_handler.getMaterialIndexData_ptr(geometry_type);
         const auto *texture_ID_data = geometry_handler.getTextureIDData_ptr(geometry_type);
         const auto *coordinate_flag_data = geometry_handler.getCoordinateFlagData_ptr(geometry_type);
         const auto *sky_geometry_flag_data = geometry_handler.getSkyGeometryFlagData_ptr(geometry_type);
@@ -968,10 +1002,12 @@ void Visualizer::transferBufferData() {
 
         ensureArrayBuffer(vertex_buffer.at(gi), GL_ARRAY_BUFFER, vertex_data->size() * sizeof(GLfloat), vertex_data->data());
         ensureArrayBuffer(uv_buffer.at(gi), GL_ARRAY_BUFFER, uv_data->size() * sizeof(GLfloat), uv_data->data());
+        ensureArrayBuffer(vertex_normal_buffer.at(gi), GL_ARRAY_BUFFER, vertex_normal_data->size() * sizeof(GLfloat), vertex_normal_data->data());
         ensureArrayBuffer(face_index_buffer.at(gi), GL_ARRAY_BUFFER, face_index_data->size() * sizeof(GLint), face_index_data->data());
         ensureTextureBuffer(color_buffer.at(gi), color_texture_object.at(gi), GL_RGBA32F, color_data->size() * sizeof(GLfloat), color_data->data());
         ensureTextureBuffer(normal_buffer.at(gi), normal_texture_object.at(gi), GL_RGB32F, normal_data->size() * sizeof(GLfloat), normal_data->data());
         ensureTextureBuffer(texture_flag_buffer.at(gi), texture_flag_texture_object.at(gi), GL_R32I, texture_flag_data->size() * sizeof(GLint), texture_flag_data->data());
+        ensureTextureBuffer(material_index_buffer.at(gi), material_index_texture_object.at(gi), GL_R32I, material_index_data->size() * sizeof(GLint), material_index_data->data());
         ensureTextureBuffer(texture_ID_buffer.at(gi), texture_ID_texture_object.at(gi), GL_R32I, texture_ID_data->size() * sizeof(GLint), texture_ID_data->data());
         ensureTextureBuffer(coordinate_flag_buffer.at(gi), coordinate_flag_texture_object.at(gi), GL_R32I, coordinate_flag_data->size() * sizeof(GLint), coordinate_flag_data->data());
         ensureTextureBuffer(sky_geometry_flag_buffer.at(gi), sky_geometry_flag_texture_object.at(gi), GL_R8I, sky_geometry_flag_data->size() * sizeof(GLbyte), sky_geometry_flag_data->data());
@@ -999,6 +1035,9 @@ void Visualizer::transferBufferData() {
         glBindBuffer(GL_ARRAY_BUFFER, uv_buffer.at(i));
         glBufferSubData(GL_ARRAY_BUFFER, index_map.uv_index * sizeof(GLfloat), vcount * 2 * sizeof(GLfloat), geometry_handler.getUVData_ptr(geometry_type)->data() + index_map.uv_index);
 
+        glBindBuffer(GL_ARRAY_BUFFER, vertex_normal_buffer.at(i));
+        glBufferSubData(GL_ARRAY_BUFFER, index_map.vertex_normal_index * sizeof(GLfloat), vcount * 3 * sizeof(GLfloat), geometry_handler.getVertexNormalData_ptr(geometry_type)->data() + index_map.vertex_normal_index);
+
         glBindBuffer(GL_ARRAY_BUFFER, face_index_buffer.at(i));
         glBufferSubData(GL_ARRAY_BUFFER, index_map.face_index_index * sizeof(GLint), vcount * sizeof(GLint), geometry_handler.getFaceIndexData_ptr(geometry_type)->data() + index_map.face_index_index);
 
@@ -1011,6 +1050,11 @@ void Visualizer::transferBufferData() {
         glBufferSubData(GL_ARRAY_BUFFER, index_map.normal_index * sizeof(GLfloat), 3 * sizeof(GLfloat), geometry_handler.getNormalData_ptr(geometry_type)->data() + index_map.normal_index);
         glBindTexture(GL_TEXTURE_BUFFER, normal_texture_object.at(i));
         glTexBuffer(GL_TEXTURE_BUFFER, GL_RGB32F, normal_buffer.at(i));
+
+        glBindBuffer(GL_ARRAY_BUFFER, material_index_buffer.at(i));
+        glBufferSubData(GL_ARRAY_BUFFER, index_map.material_index_index * sizeof(GLint), sizeof(GLint), geometry_handler.getMaterialIndexData_ptr(geometry_type)->data() + index_map.material_index_index);
+        glBindTexture(GL_TEXTURE_BUFFER, material_index_texture_object.at(i));
+        glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, material_index_buffer.at(i));
 
         glBindBuffer(GL_ARRAY_BUFFER, texture_flag_buffer.at(i));
         glBufferSubData(GL_ARRAY_BUFFER, index_map.texture_flag_index * sizeof(GLint), sizeof(GLint), geometry_handler.getTextureFlagData_ptr(geometry_type)->data() + index_map.texture_flag_index);
@@ -1238,6 +1282,12 @@ void Visualizer::render(bool shadow) const {
         glBindTexture(GL_TEXTURE_BUFFER, hidden_flag_texture_object.at(triangle_ind));
         // Note: Uniform location already set during shader initialization
 
+        glActiveTexture(GL_TEXTURE10);
+        glBindTexture(GL_TEXTURE_BUFFER, material_index_texture_object.at(triangle_ind));
+
+        glActiveTexture(GL_TEXTURE11);
+        glBindTexture(GL_TEXTURE_BUFFER, phong_material_table_texture);
+
         glBindVertexArray(primaryShader.vertex_array_IDs.at(triangle_ind));
         assert(checkerrors());
         glDrawArrays(GL_TRIANGLES, 0, triangle_count * 3);
@@ -1275,6 +1325,12 @@ void Visualizer::render(bool shadow) const {
         glActiveTexture(GL_TEXTURE8);
         glBindTexture(GL_TEXTURE_BUFFER, hidden_flag_texture_object.at(rectangle_ind));
         // Note: Uniform location already set during shader initialization
+
+        glActiveTexture(GL_TEXTURE10);
+        glBindTexture(GL_TEXTURE_BUFFER, material_index_texture_object.at(rectangle_ind));
+
+        glActiveTexture(GL_TEXTURE11);
+        glBindTexture(GL_TEXTURE_BUFFER, phong_material_table_texture);
 
         glBindVertexArray(primaryShader.vertex_array_IDs.at(rectangle_ind));
 
@@ -1390,6 +1446,13 @@ void Visualizer::render(bool shadow) const {
             lineShader.setLightingModel(primaryLightingModel);
             lineShader.setLightIntensity(lightintensity);
             lineShader.setColorBoost(colorboost);
+            lineShader.setLinearPipeline(linear_pipeline_enabled);
+            lineShader.setExposure(exposure);
+            lineShader.setCameraPositionUniform(camera_eye_location);
+            lineShader.setPhongMaterial(phong_material.ambient, phong_material.diffuse, phong_material.specular, phong_material.shininess);
+            lineShader.setAmbientColors(ambient_sky_color, ambient_ground_color);
+            lineShader.setSmoothShading(smooth_shading_enabled);
+            lineShader.setPhongMaterialTable(phong_material_table_size);
 
             // Set viewport size for geometry shader
             GLint viewportSizeLoc = glGetUniformLocation(lineShader.shaderID, "viewportSize");
@@ -1429,6 +1492,12 @@ void Visualizer::render(bool shadow) const {
             glActiveTexture(GL_TEXTURE8);
             glBindTexture(GL_TEXTURE_BUFFER, hidden_flag_texture_object.at(line_ind));
             // Note: Uniform location already set during shader initialization
+
+            glActiveTexture(GL_TEXTURE10);
+            glBindTexture(GL_TEXTURE_BUFFER, material_index_texture_object.at(line_ind));
+
+            glActiveTexture(GL_TEXTURE11);
+            glBindTexture(GL_TEXTURE_BUFFER, phong_material_table_texture);
 
             glBindVertexArray(lineShader.vertex_array_IDs.at(line_ind));
 
@@ -1475,6 +1544,13 @@ void Visualizer::render(bool shadow) const {
             primaryShader.setLightDirection(light_direction);
             primaryShader.setLightIntensity(lightintensity);
             primaryShader.setColorBoost(colorboost);
+            primaryShader.setLinearPipeline(linear_pipeline_enabled);
+            primaryShader.setExposure(exposure);
+            primaryShader.setCameraPositionUniform(camera_eye_location);
+            primaryShader.setPhongMaterial(phong_material.ambient, phong_material.diffuse, phong_material.specular, phong_material.shininess);
+            primaryShader.setAmbientColors(ambient_sky_color, ambient_ground_color);
+            primaryShader.setSmoothShading(smooth_shading_enabled);
+            primaryShader.setPhongMaterialTable(phong_material_table_size);
 
             // Rebind texture array and uv_rescale for primary shader
             glActiveTexture(GL_TEXTURE0);
@@ -1516,6 +1592,12 @@ void Visualizer::render(bool shadow) const {
             glActiveTexture(GL_TEXTURE8);
             glBindTexture(GL_TEXTURE_BUFFER, hidden_flag_texture_object.at(point_ind));
             // Note: Uniform location already set during shader initialization
+
+            glActiveTexture(GL_TEXTURE10);
+            glBindTexture(GL_TEXTURE_BUFFER, material_index_texture_object.at(point_ind));
+
+            glActiveTexture(GL_TEXTURE11);
+            glBindTexture(GL_TEXTURE_BUFFER, phong_material_table_texture);
 
             glBindVertexArray(primaryShader.vertex_array_IDs.at(point_ind));
 
@@ -1670,8 +1752,10 @@ void Visualizer::plotUpdate(bool hide_window) {
 
     // Render to the screen or offscreen framebuffer depending on headless mode
     if (headless && offscreenFramebufferID != 0) {
-        // Render to offscreen framebuffer for headless mode
-        glBindFramebuffer(GL_FRAMEBUFFER, offscreenFramebufferID);
+        // Render into the multisampled framebuffer when one exists; it is blit-resolved into the
+        // single-sampled color texture before any readback. Falls back to rendering directly into
+        // the single-sampled framebuffer when anti-aliasing is off or the driver refused it.
+        glBindFramebuffer(GL_FRAMEBUFFER, offscreenMultisampleFramebufferID != 0 ? offscreenMultisampleFramebufferID : offscreenFramebufferID);
         glViewport(0, 0, Wframebuffer, Hframebuffer);
     } else {
         // Render to the default framebuffer for windowed mode
@@ -1705,6 +1789,13 @@ void Visualizer::plotUpdate(bool hide_window) {
     primaryShader.setLightingModel(primaryLightingModel);
     primaryShader.setLightIntensity(lightintensity);
     primaryShader.setColorBoost(colorboost);
+    primaryShader.setLinearPipeline(linear_pipeline_enabled);
+    primaryShader.setExposure(exposure);
+    primaryShader.setCameraPositionUniform(camera_eye_location);
+    primaryShader.setPhongMaterial(phong_material.ambient, phong_material.diffuse, phong_material.specular, phong_material.shininess);
+    primaryShader.setAmbientColors(ambient_sky_color, ambient_ground_color);
+    primaryShader.setSmoothShading(smooth_shading_enabled);
+    primaryShader.setPhongMaterialTable(phong_material_table_size);
 
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, depthTexture);
@@ -2007,6 +2098,10 @@ void Shader::initialize(const char *vertex_shader_file, const char *fragment_sha
         glEnableVertexAttribArray(2); // face index
         glVertexAttribIPointer(2, 1, GL_INT, 0, nullptr);
 
+        glBindBuffer(GL_ARRAY_BUFFER, visualizer_ptr->vertex_normal_buffer.at(i));
+        glEnableVertexAttribArray(3); // per-vertex normal
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+
         i++;
     }
 
@@ -2056,6 +2151,31 @@ void Shader::initialize(const char *vertex_shader_file, const char *fragment_sha
     colorBoostUniform = glGetUniformLocation(shaderID, "colorBoost");
     glUniform1f(colorBoostUniform, 1.5f); // Default brightens ordinary renders
 
+    linearPipelineUniform = glGetUniformLocation(shaderID, "linearPipeline");
+    glUniform1i(linearPipelineUniform, 1); // Default on; matches Visualizer::linear_pipeline_enabled
+
+    exposureUniform = glGetUniformLocation(shaderID, "exposure");
+    glUniform1f(exposureUniform, 1.f);
+
+    cameraPositionUniform = glGetUniformLocation(shaderID, "cameraPosition");
+    materialAmbientUniform = glGetUniformLocation(shaderID, "materialAmbient");
+    materialDiffuseUniform = glGetUniformLocation(shaderID, "materialDiffuse");
+    materialSpecularUniform = glGetUniformLocation(shaderID, "materialSpecular");
+    materialShininessUniform = glGetUniformLocation(shaderID, "materialShininess");
+    ambientSkyColorUniform = glGetUniformLocation(shaderID, "ambientSkyColor");
+    ambientGroundColorUniform = glGetUniformLocation(shaderID, "ambientGroundColor");
+    smoothShadingUniform = glGetUniformLocation(shaderID, "smoothShading");
+    glUniform1i(smoothShadingUniform, 1); // Default on; matches Visualizer::smooth_shading_enabled
+
+    // Defaults match Visualizer::PhongMaterial and the default ambient colors, so that a shader
+    // used before any per-frame uniform push still shades sensibly.
+    glUniform1f(materialAmbientUniform, 1.0f);
+    glUniform1f(materialDiffuseUniform, 0.8f);
+    glUniform1f(materialSpecularUniform, 0.2f);
+    glUniform1f(materialShininessUniform, 32.f);
+    glUniform3f(ambientSkyColorUniform, 0.5f, 0.6f, 0.75f);
+    glUniform3f(ambientGroundColorUniform, 0.35f, 0.3f, 0.22f);
+
     // Texture (u,v) rescaling factor
     uvRescaleUniform = glGetUniformLocation(shaderID, "uv_rescale");
 
@@ -2084,6 +2204,17 @@ void Shader::initialize(const char *vertex_shader_file, const char *fragment_sha
         glUniform1i(skyGeometryFlagTextureObjectUniform, 2);
     if (hiddenFlagTextureObjectUniform >= 0)
         glUniform1i(hiddenFlagTextureObjectUniform, 8);
+
+    materialIndexTextureObjectUniform = glGetUniformLocation(shaderID, "material_index_texture_object");
+    if (materialIndexTextureObjectUniform >= 0)
+        glUniform1i(materialIndexTextureObjectUniform, 10);
+
+    phongMaterialTableUniform = glGetUniformLocation(shaderID, "phongMaterialTable");
+    if (phongMaterialTableUniform >= 0)
+        glUniform1i(phongMaterialTableUniform, 11);
+
+    phongMaterialTableSizeUniform = glGetUniformLocation(shaderID, "phongMaterialTableSize");
+    glUniform1i(phongMaterialTableSizeUniform, 0);
 
     assert(checkerrors());
 
@@ -2157,6 +2288,38 @@ void Shader::setLightingModel(uint lightingmodel) const {
 
 void Shader::setLightIntensity(float lightintensity) const {
     glUniform1f(lightIntensityUniform, lightintensity);
+}
+
+void Shader::setLinearPipeline(bool enabled) const {
+    glUniform1i(linearPipelineUniform, enabled ? 1 : 0);
+}
+
+void Shader::setExposure(float exposure) const {
+    glUniform1f(exposureUniform, exposure);
+}
+
+void Shader::setCameraPositionUniform(const helios::vec3 &position) const {
+    glUniform3f(cameraPositionUniform, position.x, position.y, position.z);
+}
+
+void Shader::setPhongMaterial(float ambient, float diffuse, float specular, float shininess) const {
+    glUniform1f(materialAmbientUniform, ambient);
+    glUniform1f(materialDiffuseUniform, diffuse);
+    glUniform1f(materialSpecularUniform, specular);
+    glUniform1f(materialShininessUniform, shininess);
+}
+
+void Shader::setAmbientColors(const helios::RGBcolor &sky_color, const helios::RGBcolor &ground_color) const {
+    glUniform3f(ambientSkyColorUniform, sky_color.r, sky_color.g, sky_color.b);
+    glUniform3f(ambientGroundColorUniform, ground_color.r, ground_color.g, ground_color.b);
+}
+
+void Shader::setPhongMaterialTable(GLint table_size) const {
+    glUniform1i(phongMaterialTableSizeUniform, table_size);
+}
+
+void Shader::setSmoothShading(bool enabled) const {
+    glUniform1i(smoothShadingUniform, enabled ? 1 : 0);
 }
 
 void Shader::setColorBoost(float colorboost) const {

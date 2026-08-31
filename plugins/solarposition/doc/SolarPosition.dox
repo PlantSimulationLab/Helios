@@ -44,7 +44,7 @@
  The day angle \f$\Gamma\f$ given as the polar angle of the earth relative to the sun (\f$\Gamma=0\f$ on Jan. 1) is calculated as
 
  <center>
- \f$\Gamma = 2\pi(DOY-1)/365.25\f$,  (1)
+ \f$\Gamma = 2\pi(DOY-1)/365\f$,  (1)
  </center>
 
  where DOY is the <a href="https://en.wikipedia.org/wiki/Julian_day">Julian Day</a> of the year.
@@ -88,7 +88,7 @@
  and the solar azimuthal angle is given by
 
  <center>
- \f$\phi_s=\mathrm{cos}^{-1}( (\mathrm{sin}(\delta) - \mathrm{sin}(\theta_s)\mathrm{sin}(latitude))/(\mathrm{cos}(\theta)\mathrm{cos}(latitude)))\f$.         (8)
+ \f$\phi_s=\mathrm{cos}^{-1}( (\mathrm{sin}(\delta) - \mathrm{sin}(\theta_s)\mathrm{sin}(latitude))/(\mathrm{cos}(\theta_s)\mathrm{cos}(latitude)))\f$.         (8)
  </center>
 
  Note that \f$\mathrm{cos}^{-1}\f$ gives angles between 0 and \f$\pi\f$, so to get a \f$\phi_s\f$ between 0 and \f$2\pi\f$, we take \f$\phi_s=2\pi-\phi_s\f$ if \f$LST>12\f$.
@@ -163,7 +163,7 @@
  Below is an example of how to use the \ref SolarPosition mode to calculate the sun angle.
 
  ~~~~~~
-  #include "SolarPosition"
+  #include "SolarPosition.h"
 
   int main(){
       Context context; //declare the context
@@ -310,22 +310,44 @@
     R_{clear,h} = R_{clear}\mathrm{cos}\,\theta_s.
  \f]
 
- The diffuse fraction can be approximated as
+ The diffuse fraction is estimated from the hourly clearness index \f$k_T = R_{meas,h}/R_{0,h}\f$, where \f$R_{0,h}\f$ is the extraterrestrial irradiance on a horizontal surface, using the correlation of <a href="https://doi.org/10.1016/0038-092X(82)90302-4">Erbs et al. (1982)</a>:
 
  \f[
-    f_{diff} = 1-\frac{R_{meas,h} - R_{clear,h}}{R_{clear,h}},
+    f_{diff} = \begin{cases}
+      1.0 - 0.09\,k_T & k_T \leq 0.22 \\
+      0.9511 - 0.1604\,k_T + 4.388\,k_T^2 - 16.638\,k_T^3 + 12.336\,k_T^4 & 0.22 < k_T \leq 0.80 \\
+      0.165 & k_T > 0.80
+    \end{cases}
  \f]
 
- where it is enforced that \f$0\leq f_{diff} \leq 1\f$. The resulting flux that is output from the model is (flux perpendicular to the sun)
+ The resulting flux that is output from the model is (flux perpendicular to the sun)
 
  \f[
    R_{model} = R_{clear}\frac{R_{meas,h}}{R_{clear,h}}.
  \f]
 
+ Note that \f$R_{clear}\f$ is the all-wave (PAR+NIR) clear-sky flux, since the measured flux \f$R_{meas,h}\f$ is itself all-wave. The resulting attenuation factor \f$R_{meas,h}/R_{clear,h}\f$ is applied equally to the PAR and NIR bands, so \ref SolarPosition::getSolarFluxPAR() and \ref SolarPosition::getSolarFluxNIR() retain their clear-sky spectral ratio under calibration and continue to sum to \ref SolarPosition::getSolarFlux().
+
+ \subsubsection SolarFluxCloudsSpectral Cloud calibration of the spectral model
+
+ Cloud calibration also applies to the spectral (SSolar-GOA) model, i.e. to \ref SolarPosition::calculateDirectSolarSpectrum(), \ref SolarPosition::calculateDiffuseSolarSpectrum() and \ref SolarPosition::calculateGlobalSolarSpectrum(). The approach follows <a href="https://doi.org/10.2172/6436871">Bird, Riordan and Myers (1987)</a>, who normalize a clear-sky spectral model against a measured broadband irradiance and then apply empirical spectral corrections. The procedure is:
+
+ <ol>
+ <li>The modeled clear-sky global spectrum is integrated over the model's 300-2600 nm window and compared with the measured broadband flux. Because a pyranometer sees essentially the whole shortwave spectrum while the model covers only this window, the measured value is scaled by the fraction of the extraterrestrial spectrum that falls inside it (0.9596) before the comparison.</li>
+ <li>If the two agree to within 5%, no cloud modification is applied at all. Within this margin the discrepancy is dominated by measurement uncertainty and by error in the turbidity and precipitable-water inputs, so correcting for it would introduce noise rather than cloud effects. Bird et al. adopt the same criterion.</li>
+ <li>Otherwise the direct and diffuse components are rescaled separately so that their sum matches the measurement and their ratio matches the diffuse fraction from the Erbs correlation above. Scaling both by a single factor would instead hold the diffuse fraction at its clear-sky value regardless of cloud thickness.</li>
+ <li>The diffuse spectral shape is blended from clear-sky skylight toward the near-neutral direct-beam shape in proportion to how much of the diffuse light originates from cloud. Clear-sky skylight is Rayleigh-scattered and far bluer than light scattered by cloud droplets, which are large compared with the wavelength.</li>
+ <li>The spectral modifiers of Bird et al. are applied to the diffuse component: an enhancement of \f$(\lambda+0.45)^{-1}\f$ for \f$\lambda \leq 0.55\,\mu\f$m (reaching \f$+1/3\f$ at \f$0.3\,\mu\f$m), and a constant 7% increase from 0.50 to 0.926 \f$\mu\f$m. The spectrum is then renormalized so it still integrates to the measured flux.</li>
+ </ol>
+
+ The net effect is that cloud both attenuates the spectrum and shifts it toward shorter wavelengths. The modeled photosynthetically active fraction of the irradiance in the model's 300-2600 nm window rises from about 0.45 under clear sky to about 0.51 under heavy overcast. The magnitude of this shift was calibrated against reported measurements of the PAR fraction of *broadband* shortwave irradiance, which rise from about 0.42 under clear sky to about 0.48 under overcast; note that the model's narrower wavelength window gives it a higher denominator-relative fraction than those broadband measurements, so the two sets of numbers are not directly comparable.
+
+ \note This treatment is an empirical approximation, not a radiative-transfer calculation. It infers a spectral shape from a single broadband measurement, so it cannot represent the wavelength-selective absorption of cloud liquid water (notably the bands near 1450 and 1950 nm), and it assumes a fixed relationship between cloud thickness and spectral shift. The spectral modifiers of Bird et al. were derived from five days of measurements and validated only out to 1.1 \f$\mu\f$m; beyond that wavelength they are unconstrained by the original data. Where spectrally resolved accuracy under cloud is critical, use measured spectra rather than this model.
+
  In order to enable flux calibration for cloudy conditions, you must 1) Load timeseries data into the Context containing the measured all-wave solar radiation flux. This data must cover the entire period of the simulation. 2) Call \ref SolarPosition::enableCloudCalibration(), which requires a string corresponding to the timeseries data value reference in (1). Below is a code example:
 
  ~~~~~~
- #include "SolarPosition"
+ #include "SolarPosition.h"
 
  int main(){
     Context context; //declare the context
@@ -344,17 +366,19 @@
     float turbidity = sun.calibrateTurbidityFromTimeseries( "R_tot_Wm2" ); //must have some clear-sky days in the weather data
 
     //Loop over time
-    for( int t=0; t<context.getTimeseriesLength(); t++ ){
+    for( int t=0; t<context.getTimeseriesLength("R_tot_Wm2"); t++ ){
         context.setCurrentTimeseriesPoint( "R_tot_Wm2", t );
 
         float Tair_K = context.queryTimeseriesData( "Tair_C" ) + 273;
         float humidity_rel = context.queryTimeseriesData( "humidity_rel" );
         float Patm_Pa = context.queryTimeseriesData( "Patm_Pa" );
 
-        //Calculate solar flux
-        float R = sun.getSolarFlux( Patm_Pa, Tair_K, humidity_rel, turbidity ); //flux perpendicular to sun (W/m^2)
+        sun.setAtmosphericConditions( Patm_Pa, Tair_K, humidity_rel, turbidity );
 
-        float f_diff = sun.getDiffuseFraction( Patm_Pa, Tair_K, humidity_rel, turbidity ); //fraction of diffuse radiation
+        //Calculate solar flux
+        float R = sun.getSolarFlux(); //flux perpendicular to sun (W/m^2)
+
+        float f_diff = sun.getDiffuseFraction(); //fraction of diffuse radiation
 
         float R_dir = R*(1.f-f_diff); //direct component of flux (W/m^2)
         float R_diff = R*f_diff; //diffuse component of flux (W/m^2)
@@ -383,7 +407,7 @@
 
       //Set current time, date, and location
       context.setDate(16,7,2023); //July 16, 2023
-      context.setTime(12,0); //Solar noon
+      context.setTime(0,12); //Solar noon
 
       //Initialize SolarPosition with location
       SolarPosition sun( 0, 36.93f, 3.33f, &context ); //UTC, latitude, longitude
@@ -423,6 +447,6 @@
 
  \subsection LWFlux Getting the Sky Longwave Flux
 
- The downwelling longwave radiation flux from the sky can be calculated using the \ref SolarPosition::getAmbientLongwaveFlux() function. This function takes the air temperature and humidity as arguments, which are defined in the same was as for the \ref SolarPosition::getSolarFlux() function described above. The value returned by the function is the clear-sky downwelling longwave radiation flux on a horizontal surface in W/m<sup>2</sup>.
+ The downwelling longwave radiation flux from the sky can be calculated using the \ref SolarPosition::getAmbientLongwaveFlux() function. This function uses the air temperature and humidity set via \ref SolarPosition::setAtmosphericConditions(), in the same way as the \ref SolarPosition::getSolarFlux() function described above. The value returned by the function is the clear-sky downwelling longwave radiation flux on a horizontal surface in W/m<sup>2</sup>.
 
 */

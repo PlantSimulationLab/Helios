@@ -17,6 +17,7 @@
 #include <fstream>
 #include <iostream>
 #include <cstring>
+#include <cmath>
 
 namespace helios {
 
@@ -177,6 +178,8 @@ namespace helios {
         destroyBuffer(camera_pixel_depth_buffer);
         destroyBuffer(camera_scatter_top_buffer);
         destroyBuffer(camera_scatter_bottom_buffer);
+        destroyBuffer(reflectivity_cam_buffer);
+        destroyBuffer(transmissivity_cam_buffer);
         destroyBuffer(radiation_specular_buffer);
         destroyBuffer(diffuse_flux_buffer);
         destroyBuffer(diffuse_peak_dir_buffer);
@@ -371,6 +374,25 @@ namespace helios {
             uploadBufferData(triangle_vertices_buffer, tri_verts.data(), tri_verts.size() * sizeof(helios::vec3));
         }
 
+        // The software BVH traversal intersects patches/tiles and triangles only (see
+        // traverse_cwbvh() in shaders/common/bvh_traversal.glsl). A voxel in the scene would
+        // occupy a BVH leaf that no ray can ever hit, so it would neither intercept nor absorb
+        // radiation and the run would simply report less interception than the scene contains.
+        // Refuse the geometry instead of returning a quietly wrong answer.
+        {
+            size_t voxel_count = 0;
+            for (size_t i = 0; i < primitive_count; ++i) {
+                if (geometry.primitive_types[i] == 4) {
+                    voxel_count++;
+                }
+            }
+            if (voxel_count > 0) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::updateGeometry): the scene contains " + std::to_string(voxel_count) +
+                                     " voxel primitive(s), which this backend cannot intersect. Voxel ray tracing is implemented only in the OptiX backends. Build with CUDA available (and without "
+                                     "-DFORCE_VULKAN_BACKEND=ON) to trace this scene, or remove the voxels from the Context.");
+            }
+        }
+
         // Pre-compute world-space normals for each primitive.
         // Eliminates per-thread get_patch_normal() / get_triangle_normal() (3 transform_point + cross product)
         // in both direct and diffuse shaders, and also eliminates the per-hit normal computation in diffuse.
@@ -440,8 +462,22 @@ namespace helios {
             std::vector<uint32_t> mask_offsets;
             uint32_t current_offset = 0;
             for (const auto &sz: geometry.mask_sizes) {
+                if (sz.x <= 0 || sz.y <= 0) {
+                    helios_runtime_error("ERROR (VulkanComputeBackend::updateGeometry): transparency mask " + std::to_string(mask_offsets.size()) + " has a non-positive size (" + std::to_string(sz.x) + " x " + std::to_string(sz.y) +
+                                         "). A mask with no texels cannot be sampled, and the traversal shader would index outside the mask data.");
+                }
                 mask_offsets.push_back(current_offset);
                 current_offset += static_cast<uint32_t>(sz.x) * static_cast<uint32_t>(sz.y);
+            }
+
+            // Every primitive that references a mask must reference one that exists: the traversal
+            // shader indexes mask_sizes/mask_offsets by this value without an upper bound, so an
+            // out-of-range ID reads whatever follows those buffers.
+            for (size_t p = 0; p < geometry.mask_IDs.size(); ++p) {
+                if (geometry.mask_IDs[p] >= static_cast<int>(geometry.mask_sizes.size())) {
+                    helios_runtime_error("ERROR (VulkanComputeBackend::updateGeometry): primitive " + std::to_string(p) + " references transparency mask " + std::to_string(geometry.mask_IDs[p]) + ", but only " +
+                                         std::to_string(geometry.mask_sizes.size()) + " masks were uploaded.");
+                }
             }
 
             std::vector<uint32_t> mask_data_uint;
@@ -455,13 +491,22 @@ namespace helios {
                 }
             }
 
-            // Reformat UV data: allocate 4 vec2 per primitive (flat array)
+            // Reformat UV data: allocate 4 vec2 per primitive (flat array).
+            // geometry.uv_data is a packed stream holding exactly 4 UVs for each primitive with
+            // custom UVs, in primitive order, so it is consumed sequentially here. Running short
+            // is a data inconsistency, not something to absorb: the remaining primitives would
+            // keep UV (0,0) for all four corners, collapsing each of them onto a single mask
+            // texel and making them either fully solid or completely invisible.
             std::vector<helios::vec2> uv_flat(primitive_count * 4, helios::make_vec2(0.f, 0.f));
             size_t uv_read_offset = 0;
             for (size_t p = 0; p < primitive_count; ++p) {
                 if (!geometry.uv_IDs.empty() && geometry.uv_IDs[p] >= 0) {
                     // This primitive has custom UVs - read next 4 from uv_data
-                    for (int v = 0; v < 4 && uv_read_offset < geometry.uv_data.size(); ++v) {
+                    if (uv_read_offset + 4 > geometry.uv_data.size()) {
+                        helios_runtime_error("ERROR (VulkanComputeBackend::updateGeometry): ran out of UV data at primitive " + std::to_string(p) + ". Expected 4 UV coordinates per primitive with custom UVs, but only " +
+                                             std::to_string(geometry.uv_data.size()) + " were provided in total.");
+                    }
+                    for (int v = 0; v < 4; ++v) {
                         uv_flat[p * 4 + v] = geometry.uv_data[uv_read_offset++];
                     }
                 }
@@ -479,6 +524,8 @@ namespace helios {
             } else {
                 // Keep placeholder buffer if no mask data
                 mask_data_buffer = createBuffer(sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                const uint32_t no_texels = 0u;
+                uploadBufferData(mask_data_buffer, &no_texels, sizeof(no_texels));
             }
 
             // Upload mask_sizes_buffer
@@ -490,6 +537,8 @@ namespace helios {
                 uploadBufferData(mask_sizes_buffer, geometry.mask_sizes.data(), geometry.mask_sizes.size() * sizeof(helios::int2));
             } else {
                 mask_sizes_buffer = createBuffer(sizeof(int32_t) * 2, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                const int32_t empty_size[2] = {0, 0};
+                uploadBufferData(mask_sizes_buffer, empty_size, sizeof(empty_size));
             }
 
             // Upload mask_offsets_buffer
@@ -501,6 +550,8 @@ namespace helios {
                 uploadBufferData(mask_offsets_buffer, mask_offsets.data(), mask_offsets.size() * sizeof(uint32_t));
             } else {
                 mask_offsets_buffer = createBuffer(sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                const uint32_t zero_offset = 0u;
+                uploadBufferData(mask_offsets_buffer, &zero_offset, sizeof(zero_offset));
             }
 
             // Upload mask_IDs_buffer
@@ -513,7 +564,12 @@ namespace helios {
                 mask_IDs_buffer = createBuffer(mask_IDs_int32.size() * sizeof(int32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
                 uploadBufferData(mask_IDs_buffer, mask_IDs_int32.data(), mask_IDs_int32.size() * sizeof(int32_t));
             } else {
+                // -1, not 0: the shader reads this as "primitive has no transparency mask". A
+                // zero (or an uninitialized value that happens to be non-negative) would send
+                // every primitive down the masked path and index mask arrays that hold nothing.
                 mask_IDs_buffer = createBuffer(sizeof(int32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                const int32_t no_mask = -1;
+                uploadBufferData(mask_IDs_buffer, &no_mask, sizeof(no_mask));
             }
 
             // Upload uv_data_buffer
@@ -525,6 +581,8 @@ namespace helios {
                 uploadBufferData(uv_data_buffer, uv_flat.data(), uv_flat.size() * sizeof(helios::vec2));
             } else {
                 uv_data_buffer = createBuffer(sizeof(float) * 2, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                const float zero_uv[2] = {0.f, 0.f};
+                uploadBufferData(uv_data_buffer, zero_uv, sizeof(zero_uv));
             }
 
             // Upload uv_IDs_buffer
@@ -537,7 +595,10 @@ namespace helios {
                 uv_IDs_buffer = createBuffer(uv_IDs_int32.size() * sizeof(int32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
                 uploadBufferData(uv_IDs_buffer, uv_IDs_int32.data(), uv_IDs_int32.size() * sizeof(int32_t));
             } else {
+                // -1 means "use the default UV mapping" (see texture_mask.glsl).
                 uv_IDs_buffer = createBuffer(sizeof(int32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                const int32_t default_uvs = -1;
+                uploadBufferData(uv_IDs_buffer, &default_uvs, sizeof(default_uvs));
             }
         }
 
@@ -591,6 +652,7 @@ namespace helios {
 
     void VulkanComputeBackend::updateMaterials(const RayTracingMaterial &materials) {
         band_count = materials.num_bands;
+        camera_count = materials.num_cameras;
 
         if (primitive_count == 0) {
             return; // No geometry uploaded yet
@@ -626,6 +688,35 @@ namespace helios {
             }
             transmissivity_buffer = createBuffer(materials.transmissivity.size() * sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
             uploadBufferData(transmissivity_buffer, materials.transmissivity.data(), materials.transmissivity.size() * sizeof(float));
+        }
+
+        // Camera-weighted reflectivity/transmissivity, indexed [source][primitive][band_global][camera].
+        // These differ from rho/tau only when a source carries a spectrum AND a camera declares a
+        // non-uniform spectral response; without them the camera image is built from band-weighted
+        // scatter, which is a different integral over wavelength (measured 60-75% error on a scene
+        // with a spectral soil, spectral lamps and per-band camera responses).
+        const size_t expected_cam_size = expected_size * materials.num_cameras;
+        if (!materials.reflectivity_cam.empty()) {
+            if (materials.reflectivity_cam.size() != expected_cam_size) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): reflectivity_cam size mismatch. Expected " + std::to_string(expected_cam_size) +
+                                     " entries (Nsources * Nprims * Nbands * Ncameras), got " + std::to_string(materials.reflectivity_cam.size()));
+            }
+            if (reflectivity_cam_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(reflectivity_cam_buffer);
+            }
+            reflectivity_cam_buffer = createBuffer(materials.reflectivity_cam.size() * sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            uploadBufferData(reflectivity_cam_buffer, materials.reflectivity_cam.data(), materials.reflectivity_cam.size() * sizeof(float));
+        }
+        if (!materials.transmissivity_cam.empty()) {
+            if (materials.transmissivity_cam.size() != expected_cam_size) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): transmissivity_cam size mismatch. Expected " + std::to_string(expected_cam_size) +
+                                     " entries (Nsources * Nprims * Nbands * Ncameras), got " + std::to_string(materials.transmissivity_cam.size()));
+            }
+            if (transmissivity_cam_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(transmissivity_cam_buffer);
+            }
+            transmissivity_cam_buffer = createBuffer(materials.transmissivity_cam.size() * sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            uploadBufferData(transmissivity_cam_buffer, materials.transmissivity_cam.data(), materials.transmissivity_cam.size() * sizeof(float));
         }
 
         // Upload specular exponent buffer (per primitive)
@@ -843,6 +934,7 @@ namespace helios {
     }
 
     void VulkanComputeBackend::launchDirectRays(const RayTracingLaunchParams &params) {
+        last_launch_description = "a direct-ray launch (" + std::to_string(params.launch_count) + " primitives, " + std::to_string(params.rays_per_primitive) + " rays each, " + std::to_string(params.num_bands_launch) + " bands)";
         if (primitive_count == 0 || source_count == 0) {
             return; // No geometry or sources
         }
@@ -936,6 +1028,8 @@ namespace helios {
             float domain_ymin;
             float domain_ymax;
             uint specular_reflection_enabled; // 0=disabled, 1=default scale, 2=user scale
+            uint camera_count; // Number of cameras (trailing stride of rho_cam/tau_cam); 0 = no camera-weighted scatter
+            uint camera_id; // Camera whose weighting the camera-scatter buffers accumulate
         } push_constants;
 
         // Compute 2D grid dimensions for stratified sampling (matches OptiX)
@@ -970,6 +1064,10 @@ namespace helios {
         push_constants.domain_ymin = domain_bounds[2];
         push_constants.domain_ymax = domain_bounds[3];
         push_constants.specular_reflection_enabled = params.specular_reflection_enabled;
+        // Camera-weighted scatter accumulates for a single camera, matching OptiX, whose camera_ID is
+        // 0 during direct and diffuse launches (those run once, not once per camera).
+        push_constants.camera_count = static_cast<uint32_t>(camera_count);
+        push_constants.camera_id = params.camera_id;
 
         // 3D dispatch with 2D primitive tiling to avoid sub-batching
         // Tile primitives into Y dimension when count exceeds 65535 to use full Vulkan dispatch space
@@ -1082,6 +1180,8 @@ namespace helios {
     }
 
     void VulkanComputeBackend::launchDiffuseRays(const RayTracingLaunchParams &params) {
+        last_launch_description = "a diffuse-ray launch (scattering iteration " + std::to_string(params.scattering_iteration) + ", " + std::to_string(params.launch_count) + " primitives, " + std::to_string(params.rays_per_primitive) +
+                                  " rays each, launch_face " + std::to_string(params.launch_face) + ")";
         if (primitive_count == 0) {
             return; // No geometry
         }
@@ -1295,6 +1395,8 @@ namespace helios {
             float domain_ymax;
             uint32_t prim_tiles_y; // Number of primitive tiles in Y dimension
             uint32_t prims_per_tile; // Primitives per tile (65535 max)
+            uint32_t camera_count; // Number of cameras (trailing stride of rho_cam/tau_cam); 0 = no camera-weighted scatter
+            uint32_t camera_id; // Camera whose weighting the camera-scatter buffers accumulate
         } push_constants;
 
         // Initialize invariant push constants
@@ -1316,6 +1418,8 @@ namespace helios {
         push_constants.domain_xmax = domain_bounds[1];
         push_constants.domain_ymin = domain_bounds[2];
         push_constants.domain_ymax = domain_bounds[3];
+        push_constants.camera_count = static_cast<uint32_t>(camera_count);
+        push_constants.camera_id = params.camera_id;
 
         // 3D dispatch with 2D primitive tiling to avoid exceeding Vulkan maxComputeWorkGroupCount[2] = 65535
         // Tile primitives into Y dimension when count exceeds 65535, matching the direct shader approach
@@ -1449,6 +1553,7 @@ namespace helios {
     }
 
     void VulkanComputeBackend::launchCameraRays(const RayTracingLaunchParams &params) {
+        last_launch_description = "a camera-ray launch (camera " + std::to_string(params.camera_id) + ", " + std::to_string(params.antialiasing_samples) + " samples per pixel)";
         if (primitive_count == 0) {
             return; // No geometry
         }
@@ -1616,6 +1721,7 @@ namespace helios {
     }
 
     void VulkanComputeBackend::launchPixelLabelRays(const RayTracingLaunchParams &params) {
+        last_launch_description = "a pixel-label launch (camera " + std::to_string(params.camera_id) + ")";
         if (primitive_count == 0) {
             return; // No geometry
         }
@@ -1762,6 +1868,29 @@ namespace helios {
         } while (wait_result == VK_TIMEOUT);
     }
 
+    void VulkanComputeBackend::requireMapSucceeded(int map_result, const char *buffer_name) const {
+        if (map_result != VK_SUCCESS) {
+            helios_runtime_error("ERROR (" + getBackendName() + "): failed to map the '" + std::string(buffer_name) + "' buffer for host access (VkResult: " + std::to_string(map_result) +
+                                 "). This usually means the device is out of host-visible memory. Continuing would read or write through a null pointer.");
+        }
+    }
+
+    void VulkanComputeBackend::requireFiniteResults(const std::vector<float> &data, const char *buffer_name, size_t stride) const {
+        for (size_t i = 0; i < data.size(); i++) {
+            if (std::isfinite(data.at(i))) {
+                continue;
+            }
+            std::string location = "index " + std::to_string(i) + " of " + std::to_string(data.size());
+            if (stride > 0) {
+                location += " (primitive " + std::to_string(i / stride) + ", band " + std::to_string(i % stride) + ")";
+            }
+            helios_runtime_error("ERROR (" + getBackendName() + "): ray tracing produced a non-finite value (" + std::to_string(data.at(i)) + ") in the '" + std::string(buffer_name) + "' buffer at " + location + ", after " + last_launch_description +
+                                 ". The result is unusable and would otherwise propagate silently through the scattering iterations into every camera pixel, producing a black image with no error. "
+                                 "This indicates a defect in the Vulkan compute backend rather than a problem with the scene. Please report it with the scene that produced it; running the same scene on an OptiX build "
+                                 "(a CUDA-capable build, or without -DFORCE_VULKAN_BACKEND=ON) is a workaround.");
+        }
+    }
+
     void VulkanComputeBackend::getRadiationResults(RayTracingResults &results) {
         if (primitive_count == 0 || launch_band_count == 0) {
             return; // No results to download
@@ -1810,6 +1939,8 @@ namespace helios {
             } else {
                 downloadBufferData(radiation_in_buffer, results.radiation_in.data(), buffer_size * sizeof(float));
             }
+            // The sentinel check above cannot see a non-finite value: NaN < 0.0f is false.
+            requireFiniteResults(results.radiation_in, "radiation_in", launch_band_count);
         } else {
             std::fill(results.radiation_in.begin(), results.radiation_in.end(), 0.0f);
         }
@@ -1817,12 +1948,13 @@ namespace helios {
         // Download radiation_out_top buffer
         if (radiation_out_top_buffer.buffer != VK_NULL_HANDLE) {
             void *mapped;
-            VkResult result = vmaMapMemory(device->getAllocator(), radiation_out_top_buffer.allocation, &mapped);
-            if (result == VK_SUCCESS) {
-                vmaInvalidateAllocation(device->getAllocator(), radiation_out_top_buffer.allocation, 0, VK_WHOLE_SIZE);
-                std::memcpy(results.radiation_out_top.data(), mapped, buffer_size * sizeof(float));
-                vmaUnmapMemory(device->getAllocator(), radiation_out_top_buffer.allocation);
-            }
+            // Not "if it worked": a failed map used to leave results.radiation_out_top holding whatever the
+            // previous call left in it, which is silently stale rather than obviously wrong.
+            requireMapSucceeded(vmaMapMemory(device->getAllocator(), radiation_out_top_buffer.allocation, &mapped), "radiation_out_top");
+            vmaInvalidateAllocation(device->getAllocator(), radiation_out_top_buffer.allocation, 0, VK_WHOLE_SIZE);
+            std::memcpy(results.radiation_out_top.data(), mapped, buffer_size * sizeof(float));
+            vmaUnmapMemory(device->getAllocator(), radiation_out_top_buffer.allocation);
+            requireFiniteResults(results.radiation_out_top, "radiation_out_top", launch_band_count);
         } else {
             std::fill(results.radiation_out_top.begin(), results.radiation_out_top.end(), 0.0f);
         }
@@ -1830,12 +1962,13 @@ namespace helios {
         // Download radiation_out_bottom buffer
         if (radiation_out_bottom_buffer.buffer != VK_NULL_HANDLE) {
             void *mapped;
-            VkResult result = vmaMapMemory(device->getAllocator(), radiation_out_bottom_buffer.allocation, &mapped);
-            if (result == VK_SUCCESS) {
-                vmaInvalidateAllocation(device->getAllocator(), radiation_out_bottom_buffer.allocation, 0, VK_WHOLE_SIZE);
-                std::memcpy(results.radiation_out_bottom.data(), mapped, buffer_size * sizeof(float));
-                vmaUnmapMemory(device->getAllocator(), radiation_out_bottom_buffer.allocation);
-            }
+            // Not "if it worked": a failed map used to leave results.radiation_out_bottom holding whatever the
+            // previous call left in it, which is silently stale rather than obviously wrong.
+            requireMapSucceeded(vmaMapMemory(device->getAllocator(), radiation_out_bottom_buffer.allocation, &mapped), "radiation_out_bottom");
+            vmaInvalidateAllocation(device->getAllocator(), radiation_out_bottom_buffer.allocation, 0, VK_WHOLE_SIZE);
+            std::memcpy(results.radiation_out_bottom.data(), mapped, buffer_size * sizeof(float));
+            vmaUnmapMemory(device->getAllocator(), radiation_out_bottom_buffer.allocation);
+            requireFiniteResults(results.radiation_out_bottom, "radiation_out_bottom", launch_band_count);
         } else {
             std::fill(results.radiation_out_bottom.begin(), results.radiation_out_bottom.end(), 0.0f);
         }
@@ -1844,12 +1977,13 @@ namespace helios {
         results.scatter_buff_top.resize(buffer_size);
         if (scatter_top_buffer.buffer != VK_NULL_HANDLE) {
             void *mapped;
-            VkResult result = vmaMapMemory(device->getAllocator(), scatter_top_buffer.allocation, &mapped);
-            if (result == VK_SUCCESS) {
-                vmaInvalidateAllocation(device->getAllocator(), scatter_top_buffer.allocation, 0, VK_WHOLE_SIZE);
-                std::memcpy(results.scatter_buff_top.data(), mapped, buffer_size * sizeof(float));
-                vmaUnmapMemory(device->getAllocator(), scatter_top_buffer.allocation);
-            }
+            // Not "if it worked": a failed map used to leave results.scatter_buff_top holding whatever the
+            // previous call left in it, which is silently stale rather than obviously wrong.
+            requireMapSucceeded(vmaMapMemory(device->getAllocator(), scatter_top_buffer.allocation, &mapped), "scatter_top");
+            vmaInvalidateAllocation(device->getAllocator(), scatter_top_buffer.allocation, 0, VK_WHOLE_SIZE);
+            std::memcpy(results.scatter_buff_top.data(), mapped, buffer_size * sizeof(float));
+            vmaUnmapMemory(device->getAllocator(), scatter_top_buffer.allocation);
+            requireFiniteResults(results.scatter_buff_top, "scatter_top", launch_band_count);
         } else {
             std::fill(results.scatter_buff_top.begin(), results.scatter_buff_top.end(), 0.0f);
         }
@@ -1858,22 +1992,44 @@ namespace helios {
         results.scatter_buff_bottom.resize(buffer_size);
         if (scatter_bottom_buffer.buffer != VK_NULL_HANDLE) {
             void *mapped;
-            VkResult result = vmaMapMemory(device->getAllocator(), scatter_bottom_buffer.allocation, &mapped);
-            if (result == VK_SUCCESS) {
-                vmaInvalidateAllocation(device->getAllocator(), scatter_bottom_buffer.allocation, 0, VK_WHOLE_SIZE);
-                std::memcpy(results.scatter_buff_bottom.data(), mapped, buffer_size * sizeof(float));
-                vmaUnmapMemory(device->getAllocator(), scatter_bottom_buffer.allocation);
-            }
+            // Not "if it worked": a failed map used to leave results.scatter_buff_bottom holding whatever the
+            // previous call left in it, which is silently stale rather than obviously wrong.
+            requireMapSucceeded(vmaMapMemory(device->getAllocator(), scatter_bottom_buffer.allocation, &mapped), "scatter_bottom");
+            vmaInvalidateAllocation(device->getAllocator(), scatter_bottom_buffer.allocation, 0, VK_WHOLE_SIZE);
+            std::memcpy(results.scatter_buff_bottom.data(), mapped, buffer_size * sizeof(float));
+            vmaUnmapMemory(device->getAllocator(), scatter_bottom_buffer.allocation);
+            requireFiniteResults(results.scatter_buff_bottom, "scatter_bottom", launch_band_count);
         } else {
             std::fill(results.scatter_buff_bottom.begin(), results.scatter_buff_bottom.end(), 0.0f);
         }
 
-        // Camera scatter buffers: use regular scatter as proxy for camera-weighted scatter.
-        // This is exact when camera spectral response is uniform (1.0 across all wavelengths).
-        // For non-uniform camera responses, Vulkan shaders would need dedicated camera scatter
-        // buffers with camera-weighted materials (rho_cam, tau_cam), matching OptiX (rayHit.cu:223-236).
-        results.scatter_buff_top_cam = results.scatter_buff_top;
-        results.scatter_buff_bottom_cam = results.scatter_buff_bottom;
+        // Camera scatter: accumulated by the direct/diffuse shaders against rho_cam/tau_cam, which is a
+        // different integral over wavelength than the band-weighted rho/tau driving the scattering
+        // iterations. The two coincide only when every camera response is uniform, so these must be
+        // read back separately rather than aliased onto scatter_buff_top/bottom.
+        results.scatter_buff_top_cam.resize(buffer_size);
+        if (camera_scatter_top_buffer.buffer != VK_NULL_HANDLE && camera_scatter_top_buffer.size >= buffer_size * sizeof(float)) {
+            void *mapped;
+            requireMapSucceeded(vmaMapMemory(device->getAllocator(), camera_scatter_top_buffer.allocation, &mapped), "camera_scatter_top");
+            vmaInvalidateAllocation(device->getAllocator(), camera_scatter_top_buffer.allocation, 0, VK_WHOLE_SIZE);
+            std::memcpy(results.scatter_buff_top_cam.data(), mapped, buffer_size * sizeof(float));
+            vmaUnmapMemory(device->getAllocator(), camera_scatter_top_buffer.allocation);
+            requireFiniteResults(results.scatter_buff_top_cam, "camera_scatter_top", launch_band_count);
+        } else {
+            std::fill(results.scatter_buff_top_cam.begin(), results.scatter_buff_top_cam.end(), 0.0f);
+        }
+
+        results.scatter_buff_bottom_cam.resize(buffer_size);
+        if (camera_scatter_bottom_buffer.buffer != VK_NULL_HANDLE && camera_scatter_bottom_buffer.size >= buffer_size * sizeof(float)) {
+            void *mapped;
+            requireMapSucceeded(vmaMapMemory(device->getAllocator(), camera_scatter_bottom_buffer.allocation, &mapped), "camera_scatter_bottom");
+            vmaInvalidateAllocation(device->getAllocator(), camera_scatter_bottom_buffer.allocation, 0, VK_WHOLE_SIZE);
+            std::memcpy(results.scatter_buff_bottom_cam.data(), mapped, buffer_size * sizeof(float));
+            vmaUnmapMemory(device->getAllocator(), camera_scatter_bottom_buffer.allocation);
+            requireFiniteResults(results.scatter_buff_bottom_cam, "camera_scatter_bottom", launch_band_count);
+        } else {
+            std::fill(results.scatter_buff_bottom_cam.begin(), results.scatter_buff_bottom_cam.end(), 0.0f);
+        }
     }
 
     void VulkanComputeBackend::getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels, std::vector<float> &pixel_depths, uint camera_id, const helios::int2 &resolution) {
@@ -1909,6 +2065,10 @@ namespace helios {
         } else {
             std::fill(pixel_data.begin(), pixel_data.end(), 0.0f);
         }
+        // Catch a non-finite pixel here rather than letting it reach applyCameraExposure, whose
+        // auto-gain (target / std::max(median, 1e-6f)) is itself NaN once any pixel is, turning a
+        // single bad pixel into a uniformly black frame.
+        requireFiniteResults(pixel_data, "camera pixel radiation", launch_band_count);
 
         // Download camera_pixel_label_buffer (pixel_labels). The size guard is CRITICAL: these
         // buffers start as tiny placeholders and are only resized to full resolution by
@@ -2088,12 +2248,14 @@ namespace helios {
         // Wait for any pending compute work and invalidate scatter buffers before reading
         vkQueueWaitIdle(device->getComputeQueue());
 
-        // Copy scatter_top → radiation_out_top
+        // Copy scatter_top → radiation_out_top.
+        // Both map calls are checked: a failed vmaMapMemory leaves the pointer null, and the
+        // memcpy below would then write through it.
         vmaInvalidateAllocation(device->getAllocator(), scatter_top_buffer.allocation, 0, VK_WHOLE_SIZE);
         void *src_top = nullptr;
         void *dst_top = nullptr;
-        vmaMapMemory(device->getAllocator(), scatter_top_buffer.allocation, &src_top);
-        vmaMapMemory(device->getAllocator(), radiation_out_top_buffer.allocation, &dst_top);
+        requireMapSucceeded(vmaMapMemory(device->getAllocator(), scatter_top_buffer.allocation, &src_top), "scatter_top");
+        requireMapSucceeded(vmaMapMemory(device->getAllocator(), radiation_out_top_buffer.allocation, &dst_top), "radiation_out_top");
         memcpy(dst_top, src_top, buffer_size);
         vmaFlushAllocation(device->getAllocator(), radiation_out_top_buffer.allocation, 0, VK_WHOLE_SIZE);
         vmaUnmapMemory(device->getAllocator(), scatter_top_buffer.allocation);
@@ -2103,8 +2265,8 @@ namespace helios {
         vmaInvalidateAllocation(device->getAllocator(), scatter_bottom_buffer.allocation, 0, VK_WHOLE_SIZE);
         void *src_bottom = nullptr;
         void *dst_bottom = nullptr;
-        vmaMapMemory(device->getAllocator(), scatter_bottom_buffer.allocation, &src_bottom);
-        vmaMapMemory(device->getAllocator(), radiation_out_bottom_buffer.allocation, &dst_bottom);
+        requireMapSucceeded(vmaMapMemory(device->getAllocator(), scatter_bottom_buffer.allocation, &src_bottom), "scatter_bottom");
+        requireMapSucceeded(vmaMapMemory(device->getAllocator(), radiation_out_bottom_buffer.allocation, &dst_bottom), "radiation_out_bottom");
         memcpy(dst_bottom, src_bottom, buffer_size);
         vmaFlushAllocation(device->getAllocator(), radiation_out_bottom_buffer.allocation, 0, VK_WHOLE_SIZE);
         vmaUnmapMemory(device->getAllocator(), scatter_bottom_buffer.allocation);
@@ -2602,6 +2764,8 @@ namespace helios {
                 {11, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Translucent cover: is_glass (uint)
                 {12, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Translucent cover: glass_n (float)
                 {13, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Translucent cover: glass_KL (float)
+                {14, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Reflectivity (camera-weighted)
+                {15, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Transmissivity (camera-weighted)
         };
 
         layout_info.bindingCount = static_cast<uint32_t>(material_bindings.size());
@@ -2750,6 +2914,12 @@ namespace helios {
         zeroBuffer(specular_scale_buffer);
         source_fluxes_cam_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         zeroBuffer(source_fluxes_cam_buffer);
+        // Bindings 14-15 of the material set are always referenced by the direct/diffuse shaders, so
+        // valid buffers must exist before pipeline creation even in scenes with no cameras.
+        reflectivity_cam_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(reflectivity_cam_buffer);
+        transmissivity_cam_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(transmissivity_cam_buffer);
         radiation_specular_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         zeroBuffer(radiation_specular_buffer);
 
@@ -2765,6 +2935,10 @@ namespace helios {
 
         // ========== Create placeholder mask/UV buffers ==========
         // Same requirement as sky parameters — needed before pipeline creation for MoltenVK
+        // Placeholders bound before any geometry is uploaded. They are readable by the shaders
+        // from the moment the descriptor set is written, so each is given a defined value rather
+        // than left holding whatever the allocation contained. The two ID buffers take -1 (the
+        // "no mask" / "default UVs" sentinel), not zero, which would select mask 0 of none.
         mask_data_buffer = createBuffer(sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         mask_sizes_buffer = createBuffer(sizeof(int32_t) * 2, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         mask_offsets_buffer = createBuffer(sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
@@ -2772,6 +2946,20 @@ namespace helios {
         uv_data_buffer = createBuffer(sizeof(float) * 2, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         uv_IDs_buffer = createBuffer(sizeof(int32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         bbox_vertices_buffer = createBuffer(sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        {
+            const uint32_t zero_u32 = 0u;
+            const int32_t zero_i32_pair[2] = {0, 0};
+            const int32_t sentinel = -1;
+            const float zero_f32_pair[2] = {0.f, 0.f};
+            const float zero_f32 = 0.f;
+            uploadBufferData(mask_data_buffer, &zero_u32, sizeof(zero_u32));
+            uploadBufferData(mask_sizes_buffer, zero_i32_pair, sizeof(zero_i32_pair));
+            uploadBufferData(mask_offsets_buffer, &zero_u32, sizeof(zero_u32));
+            uploadBufferData(mask_IDs_buffer, &sentinel, sizeof(sentinel));
+            uploadBufferData(uv_data_buffer, zero_f32_pair, sizeof(zero_f32_pair));
+            uploadBufferData(uv_IDs_buffer, &sentinel, sizeof(sentinel));
+            uploadBufferData(bbox_vertices_buffer, &zero_f32, sizeof(zero_f32));
+        }
 
         // Update descriptor set 3 (sky parameters) with placeholder buffers
         // Note: Geometry/material/result buffers don't exist yet, so we only update set 3
@@ -3654,6 +3842,41 @@ namespace helios {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &glass_KL_info;
+            descriptor_writes.push_back(write);
+        }
+
+        // Camera-weighted materials: bindings 14 (rho_cam), 15 (tau_cam).
+        VkDescriptorBufferInfo reflectivity_cam_info{};
+        reflectivity_cam_info.buffer = reflectivity_cam_buffer.buffer;
+        reflectivity_cam_info.offset = 0;
+        reflectivity_cam_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo transmissivity_cam_info{};
+        transmissivity_cam_info.buffer = transmissivity_cam_buffer.buffer;
+        transmissivity_cam_info.offset = 0;
+        transmissivity_cam_info.range = VK_WHOLE_SIZE;
+
+        if (reflectivity_cam_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_materials;
+            write.dstBinding = 14;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &reflectivity_cam_info;
+            descriptor_writes.push_back(write);
+        }
+
+        if (transmissivity_cam_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_materials;
+            write.dstBinding = 15;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &transmissivity_cam_info;
             descriptor_writes.push_back(write);
         }
 

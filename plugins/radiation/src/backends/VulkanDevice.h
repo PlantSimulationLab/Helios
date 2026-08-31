@@ -79,6 +79,11 @@ namespace helios {
          *
          * Used to select optimized shader variant (atomic floats vs atomicCompSwap fallback).
          */
+        //! Subgroup width reported by the device, or 0 before the logical device is created.
+        uint32_t getSubgroupSize() const {
+            return subgroup_size;
+        }
+
         bool supportsAtomicFloat() const {
             return has_atomic_float;
         }
@@ -191,6 +196,7 @@ namespace helios {
         // Device properties and features
         VkPhysicalDeviceProperties device_properties{};
         bool has_atomic_float = false;
+        uint32_t subgroup_size = 0; //!< Subgroup width reported by the device (diagnostic)
         bool is_moltenvk = false;
 
         // Optional: validation layers

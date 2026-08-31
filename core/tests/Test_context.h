@@ -632,27 +632,28 @@ TEST_CASE("Triangle Scaling") {
         DOCTEST_CHECK(area_after == doctest::Approx(0.25f * area_before).epsilon(errtol));
     }
 
-    SUBCASE("triangle in compound object") {
-        // Create a compound object with a triangle
-        std::vector<uint> UUIDs;
-        UUIDs.push_back(ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0)));
-        uint objID = ctx.addPolymeshObject(UUIDs);
+    SUBCASE("sub-patch in non-deformable compound object") {
+        // A tile is defined by being planar, so scaling one of its sub-patches individually is blocked. Note a polymesh is deliberately NOT used here: a mesh has no such shape invariant and is deformable,
+        // so its member primitives can be transformed individually (see the "Polymesh Deformability" test case).
+        uint objID = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(2, 2), nullrotation, make_int2(2, 2));
+        std::vector<uint> UUIDs = ctx.getObjectPrimitiveUUIDs(objID);
+        DOCTEST_REQUIRE(!UUIDs.empty());
 
-        uint tri = UUIDs[0];
-        float area_before = ctx.getPrimitiveArea(tri);
+        uint sub_patch = UUIDs.front();
+        float area_before = ctx.getPrimitiveArea(sub_patch);
 
-        // Try to scale the triangle (should be blocked)
+        // Try to scale the sub-patch (should be blocked)
         bool has_warning;
         {
             capture_cerr cerr_buffer;
-            ctx.scalePrimitiveAboutPoint(tri, make_vec3(2, 2, 2), make_vec3(0, 0, 0));
+            ctx.scalePrimitiveAboutPoint(sub_patch, make_vec3(2, 2, 2), make_vec3(0, 0, 0));
             has_warning = cerr_buffer.has_output();
         } // cerr_buffer destroyed here
         DOCTEST_CHECK(has_warning); // Should print warning
 
-        float area_after = ctx.getPrimitiveArea(tri);
+        float area_after = ctx.getPrimitiveArea(sub_patch);
 
-        // Area should NOT change (scaling blocked for compound objects)
+        // Area should NOT change (scaling blocked for non-deformable compound objects)
         DOCTEST_CHECK(area_after == doctest::Approx(area_before).epsilon(errtol));
     }
 }
@@ -3424,6 +3425,45 @@ TEST_CASE("getAllUUIDs Cache Performance") {
         }
     }
 
+    SUBCASE("copyPrimitive of an object member does not claim membership of that object") {
+        // Regression: copyPrimitive() carried the source primitive's parent object ID onto the copy without adding
+        // the copy to that object's member list, so the copy claimed a membership the object did not recognize.
+        // Context::copyObject() assigns the parent itself immediately afterwards, so nothing depended on the
+        // inherited value. Consequences of the stray: deleteObject() deleted only the members it listed, leaving
+        // the copy behind pointing at an object that no longer existed, which made writeXML() throw an uncaught
+        // std::out_of_range; and without the delete, the object wrote one more <patch> block than its own
+        // subdivision count, so it reloaded with a sub-primitive it never had.
+        Context ctx;
+        uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(2, 2), nullrotation, make_int2(2, 2));
+        std::vector<uint> members = ctx.getObjectPrimitiveUUIDs(tile);
+        DOCTEST_REQUIRE(members.size() == 4);
+
+        uint stray = ctx.copyPrimitive(members.front());
+        DOCTEST_CHECK(ctx.getPrimitiveParentObjectID(stray) == 0);
+
+        // The object's membership must be unchanged by the copy.
+        std::vector<uint> members_after = ctx.getObjectPrimitiveUUIDs(tile);
+        DOCTEST_CHECK(members_after.size() == 4);
+        DOCTEST_CHECK(std::find(members_after.begin(), members_after.end(), stray) == members_after.end());
+
+        // Deleting the object must leave the stray copy as a valid standalone primitive, and the Context writable.
+        ctx.deleteObject(tile);
+        DOCTEST_CHECK(ctx.doesPrimitiveExist(stray));
+        DOCTEST_CHECK(ctx.getPrimitiveParentObjectID(stray) == 0);
+        const char *test_file = "helios_copyprimitive_parent_test.xml";
+        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, true));
+        std::remove(test_file);
+
+        // copyObject() must still produce a fully-formed copy, since it assigns the parent itself.
+        Context ctx2;
+        uint source = ctx2.addTileObject(make_vec3(0, 0, 0), make_vec2(2, 2), nullrotation, make_int2(2, 2));
+        uint copy = ctx2.copyObject(source);
+        DOCTEST_CHECK(ctx2.getObjectPrimitiveUUIDs(copy).size() == 4);
+        for (uint UUID: ctx2.getObjectPrimitiveUUIDs(copy)) {
+            DOCTEST_CHECK(ctx2.getPrimitiveParentObjectID(UUID) == copy);
+        }
+    }
+
     SUBCASE("Cache consistency across mixed operations") {
         Context ctx;
 
@@ -4649,5 +4689,995 @@ TEST_CASE("Context Timeseries File Loading") {
         // Row: 2024-01-03T13:00, 7.7, 0.00
         float temp_warm = ctx.queryTimeseriesData("temperature", jan3, make_Time(13, 0, 0));
         DOCTEST_CHECK(temp_warm == doctest::Approx(7.7f));
+    }
+}
+
+TEST_CASE("Polymesh Mesh Topology") {
+
+    // Build a closed unit cube as an explicit indexed mesh. Two triangles per face, wound counter-clockwise when viewed from outside.
+    auto buildUnitCubePolymesh = [](Context &ctx) {
+        const vec3 corner[8] = {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), make_vec3(0, 1, 0),
+                                make_vec3(0, 0, 1), make_vec3(1, 0, 1), make_vec3(1, 1, 1), make_vec3(0, 1, 1)};
+        const int3 cube_faces[12] = {make_int3(0, 3, 2), make_int3(0, 2, 1),  // bottom (-z)
+                                     make_int3(4, 5, 6), make_int3(4, 6, 7),  // top (+z)
+                                     make_int3(0, 1, 5), make_int3(0, 5, 4),  // front (-y)
+                                     make_int3(2, 3, 7), make_int3(2, 7, 6),  // back (+y)
+                                     make_int3(3, 0, 4), make_int3(3, 4, 7),  // left (-x)
+                                     make_int3(1, 2, 6), make_int3(1, 6, 5)}; // right (+x)
+
+        std::vector<uint> UUIDs;
+        for (const int3 &f: cube_faces) {
+            UUIDs.push_back(ctx.addTriangle(corner[f.x], corner[f.y], corner[f.z], RGB::red));
+        }
+        return UUIDs;
+    };
+
+    SUBCASE("getVolume on a closed cube and an open mesh") {
+        Context ctx;
+        std::vector<uint> UUIDs = buildUnitCubePolymesh(ctx);
+        uint objID = ctx.addPolymeshObject(UUIDs);
+
+        // Grouping loose primitives carries no face table, so no closure check is possible and the historical primitive-based sum is used.
+        DOCTEST_CHECK(ctx.getPolymeshObjectFaceCount(objID) == 0);
+        DOCTEST_CHECK(ctx.getPolymeshObjectVolume(objID) == doctest::Approx(1.f).epsilon(1e-5));
+    }
+
+    SUBCASE("getVolume raises an error for an open mesh with topology") {
+        Context ctx;
+
+        // A single triangle is an open surface: all three of its edges are boundary edges.
+        std::vector<uint> UUIDs;
+        UUIDs.push_back(ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0), RGB::red));
+        uint objID = ctx.addPolymeshObject(UUIDs);
+
+        ctx.setPolymeshObjectTopology(objID, {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0)}, {make_int3(0, 1, 2)}, UUIDs, {}, {}, NORMAL_SOURCE_NONE);
+
+        DOCTEST_CHECK(!ctx.isPolymeshObjectClosed(objID));
+        DOCTEST_CHECK(ctx.getPolymeshObjectBoundaryEdges(objID).size() == 3);
+        float open_mesh_volume = 0.f;
+        DOCTEST_CHECK_THROWS_AS(open_mesh_volume = ctx.getPolymeshObjectVolume(objID), std::runtime_error);
+    }
+
+    SUBCASE("getVolume on a closed cube carrying a face table") {
+        Context ctx;
+        std::vector<uint> UUIDs = buildUnitCubePolymesh(ctx);
+        uint objID = ctx.addPolymeshObject(UUIDs);
+
+        std::vector<vec3> cube_vertices = {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), make_vec3(0, 1, 0),
+                                           make_vec3(0, 0, 1), make_vec3(1, 0, 1), make_vec3(1, 1, 1), make_vec3(0, 1, 1)};
+        std::vector<int3> cube_faces = {make_int3(0, 3, 2), make_int3(0, 2, 1), make_int3(4, 5, 6), make_int3(4, 6, 7), make_int3(0, 1, 5), make_int3(0, 5, 4),
+                                        make_int3(2, 3, 7), make_int3(2, 7, 6), make_int3(3, 0, 4), make_int3(3, 4, 7), make_int3(1, 2, 6), make_int3(1, 6, 5)};
+
+        ctx.setPolymeshObjectTopology(objID, cube_vertices, cube_faces, UUIDs, {}, {}, NORMAL_SOURCE_NONE);
+
+        DOCTEST_CHECK(ctx.isPolymeshObjectClosed(objID));
+        DOCTEST_CHECK(ctx.getPolymeshObjectVolume(objID) == doctest::Approx(1.f).epsilon(1e-5));
+        DOCTEST_CHECK(ctx.getPolymeshObjectSurfaceArea(objID) == doctest::Approx(6.f).epsilon(1e-5));
+        DOCTEST_CHECK(ctx.getPolymeshObjectConnectedComponents(objID).size() == 1);
+    }
+
+    SUBCASE("Deleting a member primitive repairs the face table") {
+        Context ctx;
+
+        // Two triangles sharing an edge, plus a third that is entirely separate so its vertices become orphaned when it is deleted.
+        std::vector<vec3> mesh_vertices = {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), make_vec3(0, 1, 0), make_vec3(5, 5, 0), make_vec3(6, 5, 0), make_vec3(6, 6, 0)};
+        std::vector<int3> mesh_faces = {make_int3(0, 1, 2), make_int3(0, 2, 3), make_int3(4, 5, 6)};
+
+        std::vector<uint> UUIDs;
+        for (const int3 &f: mesh_faces) {
+            UUIDs.push_back(ctx.addTriangle(mesh_vertices.at(f.x), mesh_vertices.at(f.y), mesh_vertices.at(f.z), RGB::red));
+        }
+        uint objID = ctx.addPolymeshObject(UUIDs);
+        ctx.setPolymeshObjectTopology(objID, mesh_vertices, mesh_faces, UUIDs, {}, {}, NORMAL_SOURCE_NONE);
+
+        DOCTEST_CHECK(ctx.getPolymeshObjectVertexCount(objID) == 7);
+        DOCTEST_CHECK(ctx.getPolymeshObjectFaceCount(objID) == 3);
+        DOCTEST_CHECK(ctx.areObjectPrimitivesComplete(objID));
+
+        // Delete the isolated triangle: its face must go, and vertices 4, 5 and 6 are then referenced by nothing.
+        ctx.deletePrimitive(UUIDs.at(2));
+
+        DOCTEST_CHECK(!ctx.areObjectPrimitivesComplete(objID));
+        DOCTEST_CHECK(ctx.getPolymeshObjectFaceCount(objID) == 2);
+        DOCTEST_CHECK(ctx.getPolymeshObjectVertexCount(objID) == 4);
+
+        // The two surviving faces must have been reindexed onto the compacted vertex array, and still describe the same geometry.
+        std::vector<vec3> remaining_vertices = ctx.getPolymeshObjectVertices(objID);
+        std::vector<int3> remaining_faces = ctx.getPolymeshObjectFaces(objID);
+        DOCTEST_REQUIRE(remaining_faces.size() == 2);
+        for (const int3 &f: remaining_faces) {
+            DOCTEST_CHECK(f.x >= 0);
+            DOCTEST_CHECK(f.y >= 0);
+            DOCTEST_CHECK(f.z >= 0);
+            DOCTEST_CHECK(f.x < scast<int>(remaining_vertices.size()));
+            DOCTEST_CHECK(f.y < scast<int>(remaining_vertices.size()));
+            DOCTEST_CHECK(f.z < scast<int>(remaining_vertices.size()));
+        }
+        DOCTEST_CHECK(ctx.getPolymeshObjectSurfaceArea(objID) == doctest::Approx(1.f).epsilon(1e-5));
+
+        // The face-to-primitive mapping must still resolve for the surviving primitives.
+        size_t surviving_face_index = 0;
+        DOCTEST_CHECK_NOTHROW(surviving_face_index = ctx.getPolymeshObjectFaceIndexForPrimitive(objID, UUIDs.at(0)));
+        DOCTEST_CHECK(surviving_face_index < ctx.getPolymeshObjectFaceCount(objID));
+        DOCTEST_CHECK_NOTHROW(surviving_face_index = ctx.getPolymeshObjectFaceIndexForPrimitive(objID, UUIDs.at(1)));
+        DOCTEST_CHECK(surviving_face_index < ctx.getPolymeshObjectFaceCount(objID));
+    }
+
+    SUBCASE("Batched deletion repairs the face table once and matches per-primitive deletion") {
+        // Deleting a vector of UUIDs detaches them from the parent object as a batch, so the topology repair runs once rather than once per primitive. The end state must be identical to deleting them
+        // individually.
+        std::vector<vec3> mesh_vertices = {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), make_vec3(0, 1, 0), make_vec3(5, 5, 0), make_vec3(6, 5, 0), make_vec3(6, 6, 0)};
+        std::vector<int3> mesh_faces = {make_int3(0, 1, 2), make_int3(0, 2, 3), make_int3(4, 5, 6)};
+
+        Context ctx_batch;
+        Context ctx_single;
+        std::vector<uint> batch_UUIDs;
+        std::vector<uint> single_UUIDs;
+        for (const int3 &f: mesh_faces) {
+            batch_UUIDs.push_back(ctx_batch.addTriangle(mesh_vertices.at(f.x), mesh_vertices.at(f.y), mesh_vertices.at(f.z), RGB::red));
+            single_UUIDs.push_back(ctx_single.addTriangle(mesh_vertices.at(f.x), mesh_vertices.at(f.y), mesh_vertices.at(f.z), RGB::red));
+        }
+        uint batch_objID = ctx_batch.addPolymeshObject(batch_UUIDs);
+        uint single_objID = ctx_single.addPolymeshObject(single_UUIDs);
+        ctx_batch.setPolymeshObjectTopology(batch_objID, mesh_vertices, mesh_faces, batch_UUIDs, {}, {}, NORMAL_SOURCE_NONE);
+        ctx_single.setPolymeshObjectTopology(single_objID, mesh_vertices, mesh_faces, single_UUIDs, {}, {}, NORMAL_SOURCE_NONE);
+
+        ctx_batch.deletePrimitive(std::vector<uint>{batch_UUIDs.at(2)});
+        ctx_single.deletePrimitive(single_UUIDs.at(2));
+
+        DOCTEST_CHECK(ctx_batch.getPolymeshObjectFaceCount(batch_objID) == ctx_single.getPolymeshObjectFaceCount(single_objID));
+        DOCTEST_CHECK(ctx_batch.getPolymeshObjectVertexCount(batch_objID) == ctx_single.getPolymeshObjectVertexCount(single_objID));
+        DOCTEST_CHECK(!ctx_batch.areObjectPrimitivesComplete(batch_objID));
+
+        std::vector<int3> batch_faces = ctx_batch.getPolymeshObjectFaces(batch_objID);
+        std::vector<int3> single_faces = ctx_single.getPolymeshObjectFaces(single_objID);
+        DOCTEST_REQUIRE(batch_faces.size() == single_faces.size());
+        for (size_t f = 0; f < batch_faces.size(); f++) {
+            DOCTEST_CHECK(batch_faces.at(f).x == single_faces.at(f).x);
+            DOCTEST_CHECK(batch_faces.at(f).y == single_faces.at(f).y);
+            DOCTEST_CHECK(batch_faces.at(f).z == single_faces.at(f).z);
+        }
+
+        // Deleting several faces at once must also leave the survivors correctly reindexed.
+        ctx_batch.deletePrimitive(std::vector<uint>{batch_UUIDs.at(0), batch_UUIDs.at(1)});
+        DOCTEST_CHECK(!ctx_batch.doesObjectExist(batch_objID));
+    }
+
+    SUBCASE("Deleting every member primitive deletes the object without leaving a stale face table") {
+        Context ctx;
+        std::vector<uint> UUIDs = buildUnitCubePolymesh(ctx);
+        uint objID = ctx.addPolymeshObject(UUIDs);
+
+        std::vector<vec3> cube_vertices = {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), make_vec3(0, 1, 0),
+                                           make_vec3(0, 0, 1), make_vec3(1, 0, 1), make_vec3(1, 1, 1), make_vec3(0, 1, 1)};
+        std::vector<int3> cube_faces = {make_int3(0, 3, 2), make_int3(0, 2, 1), make_int3(4, 5, 6), make_int3(4, 6, 7), make_int3(0, 1, 5), make_int3(0, 5, 4),
+                                        make_int3(2, 3, 7), make_int3(2, 7, 6), make_int3(3, 0, 4), make_int3(3, 4, 7), make_int3(1, 2, 6), make_int3(1, 6, 5)};
+        ctx.setPolymeshObjectTopology(objID, cube_vertices, cube_faces, UUIDs, {}, {}, NORMAL_SOURCE_NONE);
+
+        DOCTEST_CHECK_NOTHROW(ctx.deletePrimitive(UUIDs));
+        DOCTEST_CHECK(!ctx.doesObjectExist(objID));
+    }
+
+    SUBCASE("Non-uniform scaling transforms normals by the inverse transpose") {
+        Context ctx;
+
+        // A single triangle in the xz-plane, whose surface normal points along +y.
+        std::vector<vec3> mesh_vertices = {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 0, 1)};
+        std::vector<int3> mesh_faces = {make_int3(0, 1, 2)};
+        std::vector<uint> UUIDs = {ctx.addTriangle(mesh_vertices.at(0), mesh_vertices.at(1), mesh_vertices.at(2), RGB::red)};
+        uint objID = ctx.addPolymeshObject(UUIDs);
+
+        // Give the mesh a normal that is deliberately NOT axis-aligned, so that a wrong (non-inverse-transpose) transform produces a different direction.
+        vec3 authored_normal = normalize(make_vec3(1.f, 1.f, 0.f));
+        ctx.setPolymeshObjectTopology(objID, mesh_vertices, mesh_faces, UUIDs, {authored_normal, authored_normal, authored_normal}, {}, NORMAL_SOURCE_AUTHORED);
+
+        // A NON-uniform scale is essential here: under a uniform scale the matrix and its inverse transpose differ only by a scalar, so the wrong math would still normalize to the right answer.
+        const vec3 scale_factor = make_vec3(4.f, 1.f, 1.f);
+        ctx.scaleObject(objID, scale_factor);
+
+        std::vector<vec3> normals_after = ctx.getPolymeshObjectVertexNormals(objID);
+        DOCTEST_REQUIRE(normals_after.size() == 3);
+
+        // Inverse transpose of diag(4,1,1) is diag(1/4,1,1), so (1,1,0)/sqrt(2) maps to (0.25,1,0) before renormalizing.
+        vec3 expected = normalize(make_vec3(authored_normal.x / scale_factor.x, authored_normal.y / scale_factor.y, authored_normal.z / scale_factor.z));
+        for (const vec3 &n: normals_after) {
+            DOCTEST_CHECK(n.magnitude() == doctest::Approx(1.f).epsilon(1e-5));
+            DOCTEST_CHECK(n.x == doctest::Approx(expected.x).epsilon(1e-5));
+            DOCTEST_CHECK(n.y == doctest::Approx(expected.y).epsilon(1e-5));
+            DOCTEST_CHECK(n.z == doctest::Approx(expected.z).epsilon(1e-5));
+        }
+
+        // Applying the matrix directly instead of its inverse transpose would give normalize((4,1,0)), which must NOT be the answer.
+        vec3 wrong = normalize(make_vec3(authored_normal.x * scale_factor.x, authored_normal.y * scale_factor.y, authored_normal.z * scale_factor.z));
+        DOCTEST_CHECK(std::abs(normals_after.front().x - wrong.x) > 1e-3f);
+    }
+
+    SUBCASE("Vertex positions round-trip exactly under a combined rotation, non-uniform scale and translation") {
+        Context ctx;
+
+        // The face table is stored in the object-local frame, so setTopology() converts incoming global vertices inward and getVertices() converts them back out. Those two conversions use hand-written
+        // matrix index arithmetic against a transposed-storage inverse, which is easy to break on a later edit and which a translation-only or axis-aligned test would not catch. Pin the invariant with a
+        // transform that combines rotation about two axes, a non-uniform scale and a translation.
+        std::vector<vec3> mesh_vertices = {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0)};
+        std::vector<int3> mesh_faces = {make_int3(0, 1, 2)};
+        std::vector<uint> UUIDs = {ctx.addTriangle(mesh_vertices.at(0), mesh_vertices.at(1), mesh_vertices.at(2), RGB::red)};
+        uint objID = ctx.addPolymeshObject(UUIDs);
+
+        ctx.rotateObject(objID, 0.7f, "z");
+        ctx.rotateObject(objID, 0.4f, "x");
+        ctx.scaleObject(objID, make_vec3(3.f, 0.5f, 2.f));
+        ctx.translateObject(objID, make_vec3(7, -2, 5));
+
+        const vec3 authored_normal = normalize(make_vec3(0.3f, -0.6f, 0.74f));
+        ctx.setPolymeshObjectTopology(objID, mesh_vertices, mesh_faces, UUIDs, {authored_normal, authored_normal, authored_normal}, {}, NORMAL_SOURCE_AUTHORED);
+
+        // Vertices handed in must come back out unchanged, in global coordinates.
+        std::vector<vec3> vertices_out = ctx.getPolymeshObjectVertices(objID);
+        DOCTEST_REQUIRE(vertices_out.size() == 3);
+        for (size_t v = 0; v < 3; v++) {
+            DOCTEST_CHECK(vertices_out.at(v).x == doctest::Approx(mesh_vertices.at(v).x).epsilon(1e-4));
+            DOCTEST_CHECK(vertices_out.at(v).y == doctest::Approx(mesh_vertices.at(v).y).epsilon(1e-4));
+            DOCTEST_CHECK(vertices_out.at(v).z == doctest::Approx(mesh_vertices.at(v).z).epsilon(1e-4));
+        }
+
+        // setTopology() followed by getVertexNormals() must likewise be an exact identity, and the normal must stay unit length.
+        std::vector<vec3> normals_out = ctx.getPolymeshObjectVertexNormals(objID);
+        DOCTEST_REQUIRE(normals_out.size() == 3);
+        for (const vec3 &n: normals_out) {
+            DOCTEST_CHECK(n.magnitude() == doctest::Approx(1.f).epsilon(1e-4));
+            DOCTEST_CHECK(n.x == doctest::Approx(authored_normal.x).epsilon(1e-4));
+            DOCTEST_CHECK(n.y == doctest::Approx(authored_normal.y).epsilon(1e-4));
+            DOCTEST_CHECK(n.z == doctest::Approx(authored_normal.z).epsilon(1e-4));
+        }
+    }
+
+    SUBCASE("Translation and rotation preserve mesh geometry") {
+        Context ctx;
+        std::vector<vec3> mesh_vertices = {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0)};
+        std::vector<int3> mesh_faces = {make_int3(0, 1, 2)};
+        std::vector<uint> UUIDs = {ctx.addTriangle(mesh_vertices.at(0), mesh_vertices.at(1), mesh_vertices.at(2), RGB::red)};
+        uint objID = ctx.addPolymeshObject(UUIDs);
+        ctx.setPolymeshObjectTopology(objID, mesh_vertices, mesh_faces, UUIDs, {make_vec3(0, 0, 1), make_vec3(0, 0, 1), make_vec3(0, 0, 1)}, {}, NORMAL_SOURCE_AUTHORED);
+
+        ctx.translateObject(objID, make_vec3(3, 4, 5));
+        std::vector<vec3> translated = ctx.getPolymeshObjectVertices(objID);
+        DOCTEST_CHECK(translated.at(0).x == doctest::Approx(3.f).epsilon(1e-5));
+        DOCTEST_CHECK(translated.at(0).y == doctest::Approx(4.f).epsilon(1e-5));
+        DOCTEST_CHECK(translated.at(0).z == doctest::Approx(5.f).epsilon(1e-5));
+
+        // A pure translation must leave the normal untouched.
+        std::vector<vec3> normals_translated = ctx.getPolymeshObjectVertexNormals(objID);
+        DOCTEST_CHECK(normals_translated.at(0).z == doctest::Approx(1.f).epsilon(1e-5));
+
+        // Rotating 90 degrees about the x-axis must carry the +z normal onto -y.
+        ctx.rotateObject(objID, 0.5f * PI_F, "x");
+        std::vector<vec3> normals_rotated = ctx.getPolymeshObjectVertexNormals(objID);
+        DOCTEST_CHECK(normals_rotated.at(0).magnitude() == doctest::Approx(1.f).epsilon(1e-5));
+        DOCTEST_CHECK(std::abs(normals_rotated.at(0).y) == doctest::Approx(1.f).epsilon(1e-5));
+        DOCTEST_CHECK(normals_rotated.at(0).z == doctest::Approx(0.f).epsilon(1e-5));
+    }
+
+    SUBCASE("computeVertexNormals keeps a cube crease hard") {
+        Context ctx;
+        std::vector<uint> UUIDs = buildUnitCubePolymesh(ctx);
+        uint objID = ctx.addPolymeshObject(UUIDs);
+
+        std::vector<vec3> cube_vertices = {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), make_vec3(0, 1, 0),
+                                           make_vec3(0, 0, 1), make_vec3(1, 0, 1), make_vec3(1, 1, 1), make_vec3(0, 1, 1)};
+        std::vector<int3> cube_faces = {make_int3(0, 3, 2), make_int3(0, 2, 1), make_int3(4, 5, 6), make_int3(4, 6, 7), make_int3(0, 1, 5), make_int3(0, 5, 4),
+                                        make_int3(2, 3, 7), make_int3(2, 7, 6), make_int3(3, 0, 4), make_int3(3, 4, 7), make_int3(1, 2, 6), make_int3(1, 6, 5)};
+        ctx.setPolymeshObjectTopology(objID, cube_vertices, cube_faces, UUIDs, {}, {}, NORMAL_SOURCE_NONE);
+
+        DOCTEST_CHECK(!ctx.doesPolymeshObjectHaveVertexNormals(objID));
+        DOCTEST_CHECK(ctx.getPolymeshObjectVertexNormalSource(objID) == NORMAL_SOURCE_NONE);
+
+        // Adjacent cube faces meet at 90 degrees. A crease angle below that must keep the faces from blending, leaving every vertex normal axis-aligned rather than averaged into a body diagonal.
+        ctx.computePolymeshObjectVertexNormals(objID, 45.f);
+        DOCTEST_CHECK(ctx.doesPolymeshObjectHaveVertexNormals(objID));
+        DOCTEST_CHECK(ctx.getPolymeshObjectVertexNormalSource(objID) == NORMAL_SOURCE_COMPUTED);
+
+        // Each corner is touched by three mutually perpendicular faces, so it splits into three vertices carrying one axis-aligned normal each: 8 corners -> 24 vertices.
+        std::vector<vec3> hard_normals = ctx.getPolymeshObjectVertexNormals(objID);
+        DOCTEST_CHECK(ctx.getPolymeshObjectVertexCount(objID) == 24);
+        DOCTEST_REQUIRE(hard_normals.size() == 24);
+        for (const vec3 &n: hard_normals) {
+            DOCTEST_CHECK(n.magnitude() == doctest::Approx(1.f).epsilon(1e-5));
+            const float largest_component = std::max(std::max(std::abs(n.x), std::abs(n.y)), std::abs(n.z));
+            DOCTEST_CHECK(largest_component == doctest::Approx(1.f).epsilon(1e-4));
+        }
+
+        // With a crease angle wide enough to span the 90-degree corner, all three faces at a corner form a single smooth group and blend into a body diagonal instead. Rebuild the topology first, because the
+        // call above already split each corner into three vertices that are no longer shared between faces.
+        ctx.setPolymeshObjectTopology(objID, cube_vertices, cube_faces, UUIDs, {}, {}, NORMAL_SOURCE_NONE);
+        ctx.computePolymeshObjectVertexNormals(objID, 120.f);
+        std::vector<vec3> smooth_normals = ctx.getPolymeshObjectVertexNormals(objID);
+        DOCTEST_CHECK(ctx.getPolymeshObjectVertexCount(objID) == 8);
+        DOCTEST_REQUIRE(smooth_normals.size() == 8);
+        // The averaging is area-weighted and a cube corner is not touched by equal triangle area on each of its three faces, so the blended normal is not the exact body diagonal. What distinguishes a blended
+        // normal from a hard one is that it points diagonally outward: every component is substantially non-zero, whereas the hard normals checked above were exactly axis-aligned.
+        for (size_t v = 0; v < smooth_normals.size(); v++) {
+            const vec3 &n = smooth_normals.at(v);
+            DOCTEST_CHECK(n.magnitude() == doctest::Approx(1.f).epsilon(1e-5));
+            DOCTEST_CHECK(std::abs(n.x) > 0.2f);
+            DOCTEST_CHECK(std::abs(n.y) > 0.2f);
+            DOCTEST_CHECK(std::abs(n.z) > 0.2f);
+
+            // The normal must point away from the cube center, i.e. agree in sign with the corner's offset from (0.5,0.5,0.5).
+            const vec3 outward = cube_vertices.at(v) - make_vec3(0.5f, 0.5f, 0.5f);
+            DOCTEST_CHECK(n * outward > 0.f);
+        }
+    }
+
+    SUBCASE("Degenerate and duplicate faces are handled without crashing") {
+        Context ctx;
+
+        std::vector<vec3> mesh_vertices = {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0), make_vec3(2, 0, 0)};
+        // A duplicated face, and a zero-area (collinear) face.
+        std::vector<int3> mesh_faces = {make_int3(0, 1, 2), make_int3(0, 1, 2), make_int3(0, 1, 3)};
+
+        std::vector<uint> UUIDs;
+        for (const int3 &f: mesh_faces) {
+            UUIDs.push_back(ctx.addTriangle(mesh_vertices.at(f.x) + make_vec3(0, 0, 1e-4f * scast<float>(UUIDs.size())), mesh_vertices.at(f.y), mesh_vertices.at(f.z), RGB::red));
+        }
+        uint objID = ctx.addPolymeshObject(UUIDs);
+
+        DOCTEST_CHECK_NOTHROW(ctx.setPolymeshObjectTopology(objID, mesh_vertices, mesh_faces, UUIDs, {}, {}, NORMAL_SOURCE_NONE));
+        float degenerate_surface_area = 0.f;
+        DOCTEST_CHECK_NOTHROW(degenerate_surface_area = ctx.getPolymeshObjectSurfaceArea(objID));
+        DOCTEST_CHECK(degenerate_surface_area >= 0.f);
+        std::vector<int2> degenerate_boundary_edges;
+        DOCTEST_CHECK_NOTHROW(degenerate_boundary_edges = ctx.getPolymeshObjectBoundaryEdges(objID));
+        std::vector<std::vector<size_t>> degenerate_components;
+        DOCTEST_CHECK_NOTHROW(degenerate_components = ctx.getPolymeshObjectConnectedComponents(objID));
+        DOCTEST_CHECK(!degenerate_components.empty());
+        DOCTEST_CHECK_NOTHROW(ctx.computePolymeshObjectVertexNormals(objID, 45.f));
+
+        // Every vertex that is actually referenced by a face must receive a unit normal. A zero-area face contributes no direction, so a vertex touched only by degenerate geometry legitimately has none.
+        std::vector<vec3> normals = ctx.getPolymeshObjectVertexNormals(objID);
+        std::vector<int3> resulting_faces = ctx.getPolymeshObjectFaces(objID);
+        std::vector<bool> vertex_is_referenced(normals.size(), false);
+        for (const int3 &f: resulting_faces) {
+            vertex_is_referenced.at(f.x) = true;
+            vertex_is_referenced.at(f.y) = true;
+            vertex_is_referenced.at(f.z) = true;
+        }
+        size_t unit_normal_count = 0;
+        for (size_t v = 0; v < normals.size(); v++) {
+            if (!vertex_is_referenced.at(v)) {
+                continue;
+            }
+            const float magnitude = normals.at(v).magnitude();
+            DOCTEST_CHECK((magnitude == doctest::Approx(1.f).epsilon(1e-4) || magnitude == doctest::Approx(0.f).epsilon(1e-4)));
+            if (magnitude > 0.5f) {
+                unit_normal_count++;
+            }
+        }
+        DOCTEST_CHECK(unit_normal_count > 0);
+
+        // An out-of-range face index must be rejected rather than silently accepted.
+        DOCTEST_CHECK_THROWS_AS(ctx.setPolymeshObjectTopology(objID, mesh_vertices, {make_int3(0, 1, 99)}, {UUIDs.front()}, {}, {}, NORMAL_SOURCE_NONE), std::runtime_error);
+    }
+
+    SUBCASE("Copying a polymesh object carries the topology") {
+        Context ctx;
+        std::vector<vec3> mesh_vertices = {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0)};
+        std::vector<int3> mesh_faces = {make_int3(0, 1, 2)};
+        std::vector<uint> UUIDs = {ctx.addTriangle(mesh_vertices.at(0), mesh_vertices.at(1), mesh_vertices.at(2), RGB::red)};
+        uint objID = ctx.addPolymeshObject(UUIDs);
+        ctx.setPolymeshObjectTopology(objID, mesh_vertices, mesh_faces, UUIDs, {make_vec3(0, 0, 1), make_vec3(0, 0, 1), make_vec3(0, 0, 1)}, {}, NORMAL_SOURCE_AUTHORED);
+
+        uint copy_objID = ctx.copyObject(objID);
+        DOCTEST_CHECK(ctx.getPolymeshObjectVertexCount(copy_objID) == 3);
+        DOCTEST_CHECK(ctx.getPolymeshObjectFaceCount(copy_objID) == 1);
+        DOCTEST_CHECK(ctx.doesPolymeshObjectHaveVertexNormals(copy_objID));
+        DOCTEST_CHECK(ctx.getPolymeshObjectVertexNormalSource(copy_objID) == NORMAL_SOURCE_AUTHORED);
+
+        // The copy's face table must reference the copied primitives, not the originals.
+        std::vector<uint> copy_UUIDs = ctx.getObjectPrimitiveUUIDs(copy_objID);
+        DOCTEST_REQUIRE(copy_UUIDs.size() == 1);
+        DOCTEST_CHECK(ctx.getPolymeshObjectPrimitiveUUIDForFace(copy_objID, 0) == copy_UUIDs.front());
+
+        // Deleting from the copy must not disturb the original.
+        ctx.deletePrimitive(copy_UUIDs.front());
+        DOCTEST_CHECK(ctx.getPolymeshObjectFaceCount(objID) == 1);
+    }
+}
+
+TEST_CASE("Polymesh Deformability") {
+
+    SUBCASE("Individual primitives of a polymesh can be transformed") {
+        Context ctx;
+
+        std::vector<vec3> mesh_vertices = {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), make_vec3(0, 1, 0)};
+        std::vector<int3> mesh_faces = {make_int3(0, 1, 2), make_int3(0, 2, 3)};
+        std::vector<uint> UUIDs;
+        for (const int3 &f: mesh_faces) {
+            UUIDs.push_back(ctx.addTriangle(mesh_vertices.at(f.x), mesh_vertices.at(f.y), mesh_vertices.at(f.z), RGB::red));
+        }
+        uint objID = ctx.addPolymeshObject(UUIDs);
+        ctx.setPolymeshObjectTopology(objID, mesh_vertices, mesh_faces, UUIDs, {}, {}, NORMAL_SOURCE_NONE);
+
+        // A mesh has no shape invariant to violate, so transforming one of its facets must be permitted and must not warn.
+        vec3 before = ctx.getTriangleVertex(UUIDs.front(), 0);
+        bool warned;
+        {
+            capture_cerr cerr_buffer;
+            ctx.translatePrimitive(UUIDs.front(), make_vec3(0, 0, 5));
+            warned = cerr_buffer.has_output();
+        } // capture destroyed here
+        DOCTEST_CHECK(!warned);
+
+        vec3 after = ctx.getTriangleVertex(UUIDs.front(), 0);
+        DOCTEST_CHECK(after.z == doctest::Approx(before.z + 5.f).epsilon(1e-5));
+    }
+
+    SUBCASE("Transforming a polymesh primitive updates the mesh vertices it shares") {
+        Context ctx;
+
+        // Two triangles sharing the edge (v0, v2). Moving the first must carry the shared vertices, keeping the mesh welded.
+        std::vector<vec3> mesh_vertices = {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), make_vec3(0, 1, 0)};
+        std::vector<int3> mesh_faces = {make_int3(0, 1, 2), make_int3(0, 2, 3)};
+        std::vector<uint> UUIDs;
+        for (const int3 &f: mesh_faces) {
+            UUIDs.push_back(ctx.addTriangle(mesh_vertices.at(f.x), mesh_vertices.at(f.y), mesh_vertices.at(f.z), RGB::red));
+        }
+        uint objID = ctx.addPolymeshObject(UUIDs);
+        ctx.setPolymeshObjectTopology(objID, mesh_vertices, mesh_faces, UUIDs, {}, {}, NORMAL_SOURCE_NONE);
+
+        ctx.translatePrimitive(UUIDs.front(), make_vec3(0, 0, 5));
+
+        // The stored topology must follow the primitive, not go stale.
+        std::vector<vec3> vertices_after = ctx.getPolymeshObjectVertices(objID);
+        DOCTEST_REQUIRE(vertices_after.size() == 4);
+        DOCTEST_CHECK(vertices_after.at(0).z == doctest::Approx(5.f).epsilon(1e-4));
+        DOCTEST_CHECK(vertices_after.at(1).z == doctest::Approx(5.f).epsilon(1e-4));
+        DOCTEST_CHECK(vertices_after.at(2).z == doctest::Approx(5.f).epsilon(1e-4));
+        // Vertex 3 belongs only to the second face and must not have moved.
+        DOCTEST_CHECK(vertices_after.at(3).z == doctest::Approx(0.f).epsilon(1e-4));
+
+        // The sibling primitive is deliberately NOT rewritten: cascading the update to neighbours would make a bulk transform of the whole mesh quadratic and order-dependent. Its shared mesh vertices have
+        // moved, but the primitive itself stays where it was until it is transformed too.
+        DOCTEST_CHECK(ctx.getTriangleVertex(UUIDs.at(1), 0).z == doctest::Approx(0.f).epsilon(1e-4));
+
+        // Transforming the whole mesh must leave the face table consistent with the primitives, without any cascade.
+        ctx.translatePrimitive(UUIDs, make_vec3(0, 0, 10));
+        std::vector<vec3> vertices_bulk = ctx.getPolymeshObjectVertices(objID);
+        DOCTEST_REQUIRE(vertices_bulk.size() == 4);
+        DOCTEST_CHECK(vertices_bulk.at(3).z == doctest::Approx(10.f).epsilon(1e-4));
+        DOCTEST_CHECK(ctx.getTriangleVertex(UUIDs.at(1), 0).z == doctest::Approx(10.f).epsilon(1e-4));
+    }
+
+    SUBCASE("Non-deformable compound objects still block individual primitive transforms") {
+        Context ctx;
+
+        // A tile must stay planar and a tube coherent, so their sub-primitives remain locked.
+        uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(2, 2), nullrotation, make_int2(2, 2));
+        std::vector<uint> tile_UUIDs = ctx.getObjectPrimitiveUUIDs(tile);
+        DOCTEST_REQUIRE(!tile_UUIDs.empty());
+
+        vec3 tile_vertex_before = ctx.getPrimitiveVertices(tile_UUIDs.front()).front();
+        bool tile_warned;
+        {
+            capture_cerr cerr_buffer;
+            ctx.translatePrimitive(tile_UUIDs.front(), make_vec3(0, 0, 5));
+            tile_warned = cerr_buffer.has_output();
+        } // capture destroyed here
+        DOCTEST_CHECK(tile_warned);
+        DOCTEST_CHECK(ctx.getPrimitiveVertices(tile_UUIDs.front()).front().z == doctest::Approx(tile_vertex_before.z).epsilon(1e-5));
+
+        std::vector<vec3> nodes = {make_vec3(0, 0, 0), make_vec3(0, 0, 1)};
+        std::vector<float> radii = {0.2f, 0.1f};
+        uint tube = ctx.addTubeObject(6, nodes, radii);
+        std::vector<uint> tube_UUIDs = ctx.getObjectPrimitiveUUIDs(tube);
+        DOCTEST_REQUIRE(!tube_UUIDs.empty());
+
+        vec3 tube_vertex_before = ctx.getPrimitiveVertices(tube_UUIDs.front()).front();
+        {
+            capture_cerr cerr_buffer;
+            ctx.translatePrimitive(tube_UUIDs.front(), make_vec3(0, 0, 5));
+        } // capture destroyed here
+        DOCTEST_CHECK(ctx.getPrimitiveVertices(tube_UUIDs.front()).front().z == doctest::Approx(tube_vertex_before.z).epsilon(1e-5));
+    }
+
+    SUBCASE("A polymesh with no topology is still deformable") {
+        Context ctx;
+
+        // Grouping loose primitives gives a polymesh with no face table; transforming its members must still be allowed and must not warn.
+        std::vector<uint> UUIDs;
+        UUIDs.push_back(ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0), RGB::red));
+        uint objID = ctx.addPolymeshObject(UUIDs);
+        DOCTEST_CHECK(ctx.getPolymeshObjectFaceCount(objID) == 0);
+
+        bool warned;
+        {
+            capture_cerr cerr_buffer;
+            ctx.translatePrimitive(UUIDs.front(), make_vec3(1, 2, 3));
+            warned = cerr_buffer.has_output();
+        } // capture destroyed here
+        DOCTEST_CHECK(!warned);
+        DOCTEST_CHECK(ctx.getTriangleVertex(UUIDs.front(), 0).z == doctest::Approx(3.f).epsilon(1e-5));
+    }
+}
+
+TEST_CASE("Analytic vertex normals for curved compound objects") {
+
+    SUBCASE("Sphere normals point radially outward") {
+        Context ctx;
+        const uint objID = ctx.addSphereObject(8, make_vec3(1, 2, 3), 2.f);
+        DOCTEST_CHECK(ctx.doesObjectHaveAnalyticVertexNormals(objID));
+
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(objID)) {
+            const std::vector<vec3> vertices = ctx.getPrimitiveVertices(UUID);
+            const std::vector<vec3> normals = ctx.getObjectPrimitiveVertexNormals(objID, UUID);
+            DOCTEST_REQUIRE(normals.size() == vertices.size());
+            for (size_t k = 0; k < vertices.size(); k++) {
+                const vec3 outward = normalize(vertices.at(k) - make_vec3(1, 2, 3));
+                DOCTEST_CHECK(normals.at(k).magnitude() == doctest::Approx(1.f).epsilon(1e-4));
+                DOCTEST_CHECK(normals.at(k).x == doctest::Approx(outward.x).epsilon(1e-4));
+                DOCTEST_CHECK(normals.at(k).y == doctest::Approx(outward.y).epsilon(1e-4));
+                DOCTEST_CHECK(normals.at(k).z == doctest::Approx(outward.z).epsilon(1e-4));
+                // A sign error would still give a unit vector along the right line, so check the direction explicitly.
+                DOCTEST_CHECK(normals.at(k) * outward > 0.f);
+            }
+        }
+    }
+
+    SUBCASE("Rotated ellipsoid normals stay perpendicular to the surface") {
+        // A facet edge is only perpendicular to the vertex normal in the limit of fine tessellation, so the test is that the residual shrinks as the sphere is refined. A normal computed by dividing the offset
+        // from the center by the squared semi-axes in the global frame is exact only while the ellipsoid remains axis-aligned; once rotated it converges to a non-zero residual instead.
+        float previous_residual = -1.f;
+        for (uint Ndivs: {20u, 40u, 80u}) {
+            Context ctx;
+            const uint objID = ctx.addSphereObject(Ndivs, make_vec3(0, 0, 0), make_vec3(3, 1, 1));
+            ctx.rotateObject(objID, 0.25f * PI_F, "z");
+
+            float worst_residual = 0.f;
+            for (uint UUID: ctx.getObjectPrimitiveUUIDs(objID)) {
+                const std::vector<vec3> vertices = ctx.getPrimitiveVertices(UUID);
+                const std::vector<vec3> normals = ctx.getObjectPrimitiveVertexNormals(objID, UUID);
+                vec3 edge_a = vertices.at(1) - vertices.at(0);
+                vec3 edge_b = vertices.at(2) - vertices.at(0);
+                if (edge_a.magnitude() < 1e-9f || edge_b.magnitude() < 1e-9f) {
+                    continue;
+                }
+                edge_a.normalize();
+                edge_b.normalize();
+                for (const vec3 &n: normals) {
+                    DOCTEST_CHECK(n.magnitude() == doctest::Approx(1.f).epsilon(1e-4));
+                    worst_residual = std::max(worst_residual, std::abs(n * edge_a));
+                    worst_residual = std::max(worst_residual, std::abs(n * edge_b));
+                }
+            }
+            if (previous_residual >= 0.f) {
+                // Halving the facet size must roughly halve the residual.
+                DOCTEST_CHECK(worst_residual < previous_residual * 0.75f);
+            }
+            previous_residual = worst_residual;
+        }
+    }
+
+    SUBCASE("Untapered tube normals are perpendicular to the tube axis") {
+        Context ctx;
+        const std::vector<vec3> nodes{make_vec3(0, 0, 0), make_vec3(0, 0, 1), make_vec3(0, 0, 2)};
+        const std::vector<float> radii{0.3f, 0.3f, 0.3f};
+        const uint objID = ctx.addTubeObject(10, nodes, radii);
+        DOCTEST_CHECK(ctx.doesObjectHaveAnalyticVertexNormals(objID));
+
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(objID)) {
+            for (const vec3 &n: ctx.getObjectPrimitiveVertexNormals(objID, UUID)) {
+                DOCTEST_CHECK(n.magnitude() == doctest::Approx(1.f).epsilon(1e-4));
+                DOCTEST_CHECK(n * make_vec3(0, 0, 1) == doctest::Approx(0.f).epsilon(1e-4));
+            }
+        }
+    }
+
+    SUBCASE("Tapered tube normals tilt toward the narrowing end") {
+        // The surface of a tapering tube is a cone rather than a cylinder, so its normal leans along the axis by the taper slope. Without that correction every normal here would be exactly perpendicular to
+        // the axis, so this pins the taper term specifically.
+        Context ctx;
+        const std::vector<vec3> nodes{make_vec3(0, 0, 0), make_vec3(0, 0, 2)};
+        const std::vector<float> radii{0.4f, 0.1f};
+        const uint objID = ctx.addTubeObject(12, nodes, radii);
+
+        const float taper_slope = (0.1f - 0.4f) / 2.f;
+        const float expected_axial = -taper_slope / std::sqrt(1.f + taper_slope * taper_slope);
+        DOCTEST_REQUIRE(expected_axial > 0.1f); // the effect must be large enough for the check to mean something
+
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(objID)) {
+            for (const vec3 &n: ctx.getObjectPrimitiveVertexNormals(objID, UUID)) {
+                DOCTEST_CHECK(n * make_vec3(0, 0, 1) == doctest::Approx(expected_axial).epsilon(1e-3));
+            }
+        }
+    }
+
+    SUBCASE("Vertices shared across the tube seam receive identical normals") {
+        // The first and last radial slot of a ring are the same physical point. Evaluating the normal from the vertex position rather than from its index guarantees they agree exactly, so no seam appears.
+        Context ctx;
+        const std::vector<vec3> nodes{make_vec3(0, 0, 0), make_vec3(0, 0, 1)};
+        const std::vector<float> radii{0.25f, 0.25f};
+        const uint objID = ctx.addTubeObject(6, nodes, radii);
+        const std::vector<uint> UUIDs = ctx.getObjectPrimitiveUUIDs(objID);
+
+        int shared_vertices_found = 0;
+        for (size_t a = 0; a < UUIDs.size(); a++) {
+            const std::vector<vec3> vertices_a = ctx.getPrimitiveVertices(UUIDs.at(a));
+            const std::vector<vec3> normals_a = ctx.getObjectPrimitiveVertexNormals(objID, UUIDs.at(a));
+            for (size_t b = a + 1; b < UUIDs.size(); b++) {
+                const std::vector<vec3> vertices_b = ctx.getPrimitiveVertices(UUIDs.at(b));
+                const std::vector<vec3> normals_b = ctx.getObjectPrimitiveVertexNormals(objID, UUIDs.at(b));
+                for (size_t i = 0; i < 3; i++) {
+                    for (size_t j = 0; j < 3; j++) {
+                        if ((vertices_a.at(i) - vertices_b.at(j)).magnitude() == 0.f) {
+                            shared_vertices_found++;
+                            DOCTEST_CHECK((normals_a.at(i) - normals_b.at(j)).magnitude() == 0.f);
+                        }
+                    }
+                }
+            }
+        }
+        DOCTEST_CHECK(shared_vertices_found > 0);
+    }
+
+    SUBCASE("Textured tubes that drop degenerate triangles still get correct normals") {
+        // The textured overload discards zero-area triangles, so a primitive's position in the object's UUID list no longer matches its position in the tessellation grid. Evaluating from vertex positions is
+        // unaffected by that, whereas deriving the ring from the UUID index would not be.
+        Context ctx;
+        const std::vector<vec3> nodes{make_vec3(0, 0, 0), make_vec3(0, 0, 1), make_vec3(0, 0, 2)};
+        const std::vector<float> radii{0.2f, 0.2f, 0.2f};
+        const uint objID = ctx.addTubeObject(8, nodes, radii, "lib/images/disk_texture.png");
+
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(objID)) {
+            for (const vec3 &n: ctx.getObjectPrimitiveVertexNormals(objID, UUID)) {
+                DOCTEST_CHECK(n * make_vec3(0, 0, 1) == doctest::Approx(0.f).epsilon(1e-4));
+            }
+        }
+    }
+
+    SUBCASE("Tube normals remain correct after a segment is appended") {
+        Context ctx;
+        const std::vector<vec3> nodes{make_vec3(0, 0, 0), make_vec3(0, 0, 1)};
+        const std::vector<float> radii{0.3f, 0.3f};
+        const uint objID = ctx.addTubeObject(8, nodes, radii);
+        ctx.appendTubeSegment(objID, make_vec3(0, 0, 2), 0.3f, make_RGBcolor(0.5f, 0.5f, 0.5f));
+
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(objID)) {
+            for (const vec3 &n: ctx.getObjectPrimitiveVertexNormals(objID, UUID)) {
+                DOCTEST_CHECK(n.magnitude() == doctest::Approx(1.f).epsilon(1e-4));
+                DOCTEST_CHECK(n * make_vec3(0, 0, 1) == doctest::Approx(0.f).epsilon(1e-4));
+            }
+        }
+    }
+
+    SUBCASE("Tube normals follow a change in radius") {
+        // Normals are derived from the object's current state rather than stored, so a change in radius is reflected without any explicit invalidation.
+        Context ctx;
+        const std::vector<vec3> nodes{make_vec3(0, 0, 0), make_vec3(0, 0, 2)};
+        const uint objID = ctx.addTubeObject(10, nodes, {0.3f, 0.3f});
+
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(objID)) {
+            for (const vec3 &n: ctx.getObjectPrimitiveVertexNormals(objID, UUID)) {
+                DOCTEST_CHECK(n * make_vec3(0, 0, 1) == doctest::Approx(0.f).epsilon(1e-4));
+            }
+        }
+
+        ctx.setTubeRadii(objID, {0.4f, 0.1f});
+        const float taper_slope = (0.1f - 0.4f) / 2.f;
+        const float expected_axial = -taper_slope / std::sqrt(1.f + taper_slope * taper_slope);
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(objID)) {
+            for (const vec3 &n: ctx.getObjectPrimitiveVertexNormals(objID, UUID)) {
+                DOCTEST_CHECK(n * make_vec3(0, 0, 1) == doctest::Approx(expected_axial).epsilon(1e-3));
+            }
+        }
+    }
+
+    SUBCASE("Cone normals match the slant of the lateral surface") {
+        Context ctx;
+        const uint objID = ctx.addConeObject(10, make_vec3(0, 0, 0), make_vec3(0, 0, 2), 0.5f, 0.2f);
+        DOCTEST_CHECK(ctx.doesObjectHaveAnalyticVertexNormals(objID));
+
+        const float taper_slope = (0.2f - 0.5f) / 2.f;
+        const float expected_axial = -taper_slope / std::sqrt(1.f + taper_slope * taper_slope);
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(objID)) {
+            for (const vec3 &n: ctx.getObjectPrimitiveVertexNormals(objID, UUID)) {
+                DOCTEST_CHECK(n.magnitude() == doctest::Approx(1.f).epsilon(1e-4));
+                DOCTEST_CHECK(n * make_vec3(0, 0, 1) == doctest::Approx(expected_axial).epsilon(1e-3));
+            }
+        }
+    }
+
+    SUBCASE("Cone tapering to a point yields finite normals at the apex") {
+        // The apex of a cone is a singular point with no single surface normal. The normal is constant along a slant line, so the azimuth of another vertex of the same triangle gives the normal of the
+        // surface arriving at the tip rather than a division by zero.
+        Context ctx;
+        const uint objID = ctx.addConeObject(10, make_vec3(0, 0, 0), make_vec3(0, 0, 2), 0.5f, 0.f);
+
+        const float taper_slope = (0.f - 0.5f) / 2.f;
+        const float expected_axial = -taper_slope / std::sqrt(1.f + taper_slope * taper_slope);
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(objID)) {
+            for (const vec3 &n: ctx.getObjectPrimitiveVertexNormals(objID, UUID)) {
+                DOCTEST_REQUIRE(!std::isnan(n.x));
+                DOCTEST_REQUIRE(!std::isnan(n.y));
+                DOCTEST_REQUIRE(!std::isnan(n.z));
+                DOCTEST_CHECK(n * make_vec3(0, 0, 1) == doctest::Approx(expected_axial).epsilon(1e-3));
+            }
+        }
+    }
+
+    SUBCASE("Flat object types report no analytic normals") {
+        Context ctx;
+        const uint tile_objID = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+        const uint box_objID = ctx.addBoxObject(make_vec3(5, 5, 5), make_vec3(1, 1, 1), make_int3(1, 1, 1));
+
+        DOCTEST_CHECK(!ctx.doesObjectHaveAnalyticVertexNormals(tile_objID));
+        DOCTEST_CHECK(!ctx.doesObjectHaveAnalyticVertexNormals(box_objID));
+        DOCTEST_CHECK(ctx.getObjectPrimitiveVertexNormals(tile_objID, ctx.getObjectPrimitiveUUIDs(tile_objID).front()).empty());
+    }
+}
+
+TEST_CASE("Tube geometry stays consistent after appending segments") {
+
+    // Tube::updateTriangleVertices() assigns geometry to the object's UUID list by position, assuming the triangles are ordered with the radial slot varying slowest and the segment index fastest, which is
+    // how addTubeObject() emits them. appendTubeSegment() added its new triangles to the end of the list instead of interleaving them into that order, so the geometry was subsequently repainted onto a
+    // permuted set of primitives. The vertices themselves still described a valid tube, but everything carried per primitive rather than per vertex - the color above all - stayed with the primitive and so
+    // ended up on the wrong part of the tube.
+
+    SUBCASE("Node colors stay on the segment they belong to") {
+        Context ctx;
+        const std::vector<vec3> nodes{make_vec3(0, 0, 0), make_vec3(0, 0, 1)};
+        const std::vector<RGBcolor> colors{RGB::red, RGB::red};
+        const uint objID = ctx.addTubeObject(6, nodes, {0.3f, 0.3f}, colors);
+        ctx.appendTubeSegment(objID, make_vec3(0, 0, 2), 0.3f, RGB::blue);
+
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(objID)) {
+            float lowest_z = (std::numeric_limits<float>::max)();
+            for (const vec3 &vertex: ctx.getPrimitiveVertices(UUID)) {
+                lowest_z = std::min(lowest_z, vertex.z);
+            }
+            const RGBcolor color = ctx.getPrimitiveColor(UUID);
+            // Triangles spanning the first segment were given the original color, those spanning the appended segment the new one.
+            if (lowest_z < 0.5f) {
+                DOCTEST_CHECK(color.r > 0.5f);
+                DOCTEST_CHECK(color.b < 0.5f);
+            } else {
+                DOCTEST_CHECK(color.b > 0.5f);
+                DOCTEST_CHECK(color.r < 0.5f);
+            }
+        }
+    }
+
+    SUBCASE("Radii can be changed after appending a segment") {
+        Context ctx;
+        const std::vector<vec3> nodes{make_vec3(0, 0, 0), make_vec3(0, 0, 1)};
+        const uint objID = ctx.addTubeObject(6, nodes, {0.3f, 0.3f});
+        ctx.appendTubeSegment(objID, make_vec3(0, 0, 2), 0.3f, make_RGBcolor(0.5f, 0.5f, 0.5f));
+
+        const std::vector<float> new_radii{0.5f, 0.4f, 0.2f};
+        ctx.setTubeRadii(objID, new_radii);
+
+        // Every vertex of the rebuilt tube must lie on the ring of the node it belongs to.
+        const std::vector<vec3> tube_nodes = ctx.getTubeObjectNodes(objID);
+        DOCTEST_REQUIRE(tube_nodes.size() == new_radii.size());
+
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(objID)) {
+            for (const vec3 &vertex: ctx.getPrimitiveVertices(UUID)) {
+                bool lies_on_a_ring = false;
+                for (size_t n = 0; n < tube_nodes.size(); n++) {
+                    const vec3 offset = vertex - tube_nodes.at(n);
+                    if (std::abs(offset.z) < 1e-4f && std::abs(offset.magnitude() - new_radii.at(n)) < 1e-4f) {
+                        lies_on_a_ring = true;
+                        break;
+                    }
+                }
+                DOCTEST_CHECK(lies_on_a_ring);
+            }
+        }
+    }
+
+    SUBCASE("Appending reproduces the same tube as building it in one call") {
+        // A tube built by appending must hold the same set of triangles, with the same colors, as the same tube built directly.
+        Context ctx;
+        const std::vector<vec3> nodes{make_vec3(0, 0, 0), make_vec3(0, 0, 1), make_vec3(0, 0, 2)};
+        const std::vector<float> radii{0.3f, 0.3f, 0.3f};
+        const std::vector<RGBcolor> colors{RGB::red, RGB::red, RGB::blue};
+
+        const uint built_objID = ctx.addTubeObject(6, nodes, radii, colors);
+
+        const uint appended_objID = ctx.addTubeObject(6, {nodes.at(0), nodes.at(1)}, {radii.at(0), radii.at(1)}, {colors.at(0), colors.at(1)});
+        ctx.appendTubeSegment(appended_objID, nodes.at(2), radii.at(2), colors.at(2));
+
+        // Both tubes must describe the same surface, triangle for triangle and in the same order.
+
+        const std::vector<uint> built_UUIDs = ctx.getObjectPrimitiveUUIDs(built_objID);
+        const std::vector<uint> appended_UUIDs = ctx.getObjectPrimitiveUUIDs(appended_objID);
+        DOCTEST_REQUIRE(built_UUIDs.size() == appended_UUIDs.size());
+
+        for (size_t k = 0; k < built_UUIDs.size(); k++) {
+            const std::vector<vec3> built_vertices = ctx.getPrimitiveVertices(built_UUIDs.at(k));
+            const std::vector<vec3> appended_vertices = ctx.getPrimitiveVertices(appended_UUIDs.at(k));
+            for (size_t m = 0; m < 3; m++) {
+                DOCTEST_CHECK((built_vertices.at(m) - appended_vertices.at(m)).magnitude() < 1e-5f);
+            }
+            // Colors are not compared here: addTubeObject() colors a segment by the node it starts from, while appendTubeSegment() colors the new segment by the node being appended, so the two disagree on
+            // the last segment by design. What matters for the ordering is that each triangle sits at the same place in both lists, which the vertex comparison above establishes.
+        }
+    }
+}
+
+TEST_CASE("Cone node radii account for the object transformation") {
+
+    // Cone::getNodeRadii() used to return the radii exactly as they were supplied at construction, ignoring any scaling later applied to the object, while getNodeCoordinates() and getLength() did apply it.
+    // Scaling a cone therefore left the reported radii describing the cone as it was originally built rather than as it now is, and getVolume() combined the un-scaled radii with the scaled length.
+
+    // The true radius of the cone is measured from the geometry itself, so the check does not depend on the accessor under test.
+    auto measuredRadiusAtNode = [](Context &ctx, uint objID, int node_index) {
+        const std::vector<vec3> nodes = ctx.getConeObjectNodes(objID);
+        const vec3 axis = normalize(nodes.at(1) - nodes.at(0));
+        float measured = 0.f;
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(objID)) {
+            for (const vec3 &vertex: ctx.getPrimitiveVertices(UUID)) {
+                const vec3 offset = vertex - nodes.at(node_index);
+                // Only vertices lying in the plane of the requested node contribute to that node's ring.
+                if (std::abs(offset * axis) < 1e-4f) {
+                    measured = std::max(measured, (offset - (offset * axis) * axis).magnitude());
+                }
+            }
+        }
+        return measured;
+    };
+
+    SUBCASE("Radii follow a uniform object scaling") {
+        Context ctx;
+        const uint objID = ctx.addConeObject(12, make_vec3(0, 0, 0), make_vec3(0, 0, 2), 0.5f, 0.25f);
+        ctx.scaleObject(objID, make_vec3(2, 2, 2));
+
+        const std::vector<float> reported = ctx.getConeObjectNodeRadii(objID);
+        DOCTEST_REQUIRE(reported.size() == 2);
+        DOCTEST_CHECK(reported.at(0) == doctest::Approx(measuredRadiusAtNode(ctx, objID, 0)).epsilon(1e-3));
+        DOCTEST_CHECK(reported.at(1) == doctest::Approx(measuredRadiusAtNode(ctx, objID, 1)).epsilon(1e-3));
+        DOCTEST_CHECK(ctx.getConeObjectNodeRadius(objID, 0) == doctest::Approx(reported.at(0)).epsilon(1e-5));
+        DOCTEST_CHECK(ctx.getConeObjectNodeRadius(objID, 1) == doctest::Approx(reported.at(1)).epsilon(1e-5));
+    }
+
+    SUBCASE("Volume follows a uniform object scaling") {
+        Context ctx;
+        const uint objID = ctx.addConeObject(24, make_vec3(0, 0, 0), make_vec3(0, 0, 2), 0.5f, 0.25f);
+        const float original_volume = ctx.getConeObjectVolume(objID);
+
+        ctx.scaleObject(objID, make_vec3(2, 2, 2));
+
+        // Scaling every dimension by two multiplies a volume by eight.
+        DOCTEST_CHECK(ctx.getConeObjectVolume(objID) == doctest::Approx(8.f * original_volume).epsilon(1e-3));
+    }
+
+    SUBCASE("Radii still follow scaleConeObjectGirth") {
+        // scaleGirth() scales the object and must not also be counted a second time through the transformation-aware accessor.
+        Context ctx;
+        const uint objID = ctx.addConeObject(12, make_vec3(0, 0, 0), make_vec3(0, 0, 2), 0.5f, 0.25f);
+        ctx.scaleConeObjectGirth(objID, 2.f);
+
+        const std::vector<float> reported = ctx.getConeObjectNodeRadii(objID);
+        DOCTEST_REQUIRE(reported.size() == 2);
+        DOCTEST_CHECK(reported.at(0) == doctest::Approx(1.0f).epsilon(1e-3));
+        DOCTEST_CHECK(reported.at(1) == doctest::Approx(0.5f).epsilon(1e-3));
+        DOCTEST_CHECK(reported.at(0) == doctest::Approx(measuredRadiusAtNode(ctx, objID, 0)).epsilon(1e-3));
+        DOCTEST_CHECK(reported.at(1) == doctest::Approx(measuredRadiusAtNode(ctx, objID, 1)).epsilon(1e-3));
+    }
+
+    SUBCASE("Radii are unchanged by translation and rotation") {
+        Context ctx;
+        const uint objID = ctx.addConeObject(12, make_vec3(0, 0, 0), make_vec3(0, 0, 2), 0.5f, 0.25f);
+        ctx.translateObject(objID, make_vec3(3, -2, 1));
+        ctx.rotateObject(objID, 0.3f * PI_F, "y");
+
+        const std::vector<float> reported = ctx.getConeObjectNodeRadii(objID);
+        DOCTEST_REQUIRE(reported.size() == 2);
+        DOCTEST_CHECK(reported.at(0) == doctest::Approx(0.5f).epsilon(1e-4));
+        DOCTEST_CHECK(reported.at(1) == doctest::Approx(0.25f).epsilon(1e-4));
+    }
+}
+
+TEST_CASE("Tube and Cone objects survive an XML round trip after being transformed") {
+
+    // writeXML() records the object transformation matrix and, for tubes and cones, the nodes and radii the object was built from. loadXML() rebuilds the object from those nodes and radii and then applies
+    // the transformation matrix on top, so the values written have to be in the object's local frame. They were previously written with the transformation already applied, so loading applied it twice and a
+    // scaled tube or cone came back larger than it was written.
+
+    SUBCASE("Scaled tube round trips unchanged") {
+        const std::string filename = "test_tube_roundtrip.xml";
+        std::vector<vec3> written_nodes;
+        std::vector<float> written_radii;
+        {
+            Context ctx;
+            const uint objID = ctx.addTubeObject(8, {make_vec3(0, 0, 0), make_vec3(0, 0, 2)}, {0.5f, 0.25f});
+            ctx.scaleObject(objID, make_vec3(2, 2, 2));
+            written_nodes = ctx.getTubeObjectNodes(objID);
+            written_radii = ctx.getTubeObjectNodeRadii(objID);
+            ctx.writeXML(filename.c_str(), true);
+        }
+
+        Context ctx;
+        ctx.loadXML(filename.c_str(), true);
+
+        std::vector<uint> tube_objIDs;
+        for (uint objID: ctx.getAllObjectIDs()) {
+            if (ctx.getObjectType(objID) == OBJECT_TYPE_TUBE) {
+                tube_objIDs.push_back(objID);
+            }
+        }
+        DOCTEST_REQUIRE(tube_objIDs.size() == 1);
+
+        const std::vector<vec3> loaded_nodes = ctx.getTubeObjectNodes(tube_objIDs.front());
+        const std::vector<float> loaded_radii = ctx.getTubeObjectNodeRadii(tube_objIDs.front());
+        DOCTEST_REQUIRE(loaded_nodes.size() == written_nodes.size());
+        for (size_t n = 0; n < loaded_nodes.size(); n++) {
+            DOCTEST_CHECK((loaded_nodes.at(n) - written_nodes.at(n)).magnitude() < 1e-4f);
+            DOCTEST_CHECK(loaded_radii.at(n) == doctest::Approx(written_radii.at(n)).epsilon(1e-4));
+        }
+
+        std::filesystem::remove(filename);
+    }
+
+    SUBCASE("Scaled cone round trips unchanged") {
+        const std::string filename = "test_cone_roundtrip.xml";
+        std::vector<vec3> written_nodes;
+        std::vector<float> written_radii;
+        float written_volume = 0.f;
+        {
+            Context ctx;
+            const uint objID = ctx.addConeObject(12, make_vec3(0, 0, 0), make_vec3(0, 0, 2), 0.5f, 0.25f);
+            ctx.scaleObject(objID, make_vec3(2, 2, 2));
+            written_nodes = ctx.getConeObjectNodes(objID);
+            written_radii = ctx.getConeObjectNodeRadii(objID);
+            written_volume = ctx.getConeObjectVolume(objID);
+            ctx.writeXML(filename.c_str(), true);
+        }
+
+        Context ctx;
+        ctx.loadXML(filename.c_str(), true);
+
+        std::vector<uint> cone_objIDs;
+        for (uint objID: ctx.getAllObjectIDs()) {
+            if (ctx.getObjectType(objID) == OBJECT_TYPE_CONE) {
+                cone_objIDs.push_back(objID);
+            }
+        }
+        DOCTEST_REQUIRE(cone_objIDs.size() == 1);
+
+        const std::vector<vec3> loaded_nodes = ctx.getConeObjectNodes(cone_objIDs.front());
+        const std::vector<float> loaded_radii = ctx.getConeObjectNodeRadii(cone_objIDs.front());
+        DOCTEST_REQUIRE(loaded_nodes.size() == written_nodes.size());
+        for (size_t n = 0; n < loaded_nodes.size(); n++) {
+            DOCTEST_CHECK((loaded_nodes.at(n) - written_nodes.at(n)).magnitude() < 1e-4f);
+            DOCTEST_CHECK(loaded_radii.at(n) == doctest::Approx(written_radii.at(n)).epsilon(1e-4));
+        }
+        DOCTEST_CHECK(ctx.getConeObjectVolume(cone_objIDs.front()) == doctest::Approx(written_volume).epsilon(1e-3));
+
+        std::filesystem::remove(filename);
+    }
+
+    SUBCASE("Untransformed tube round trips unchanged") {
+        // The un-transformed case worked before and must keep working, since the fix changes which frame the values are written in.
+        const std::string filename = "test_tube_plain_roundtrip.xml";
+        {
+            Context ctx;
+            ctx.addTubeObject(8, {make_vec3(1, 0, 0), make_vec3(1, 0, 2)}, {0.5f, 0.25f});
+            ctx.writeXML(filename.c_str(), true);
+        }
+
+        Context ctx;
+        ctx.loadXML(filename.c_str(), true);
+        for (uint objID: ctx.getAllObjectIDs()) {
+            if (ctx.getObjectType(objID) == OBJECT_TYPE_TUBE) {
+                const std::vector<vec3> loaded_nodes = ctx.getTubeObjectNodes(objID);
+                const std::vector<float> loaded_radii = ctx.getTubeObjectNodeRadii(objID);
+                DOCTEST_REQUIRE(loaded_nodes.size() == 2);
+                DOCTEST_CHECK((loaded_nodes.at(0) - make_vec3(1, 0, 0)).magnitude() < 1e-4f);
+                DOCTEST_CHECK((loaded_nodes.at(1) - make_vec3(1, 0, 2)).magnitude() < 1e-4f);
+                DOCTEST_CHECK(loaded_radii.at(0) == doctest::Approx(0.5f).epsilon(1e-4));
+                DOCTEST_CHECK(loaded_radii.at(1) == doctest::Approx(0.25f).epsilon(1e-4));
+            }
+        }
+
+        std::filesystem::remove(filename);
     }
 }

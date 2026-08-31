@@ -1,12 +1,13 @@
 /** intersections.glsl - Ray-primitive intersection tests
  *
- * Supports 6 primitive types:
+ * Primitive types reaching the software BVH:
  * - 0: Patch (quadrilateral)
  * - 1: Triangle
- * - 2: Disk
- * - 3: Tile (textured quadrilateral)
- * - 4: Voxel (axis-aligned box)
- * - 5: BBox (oriented bounding box)
+ * - 3: Tile (textured quadrilateral, intersected as a patch)
+ *
+ * RadiationModel::buildGeometryData() only ever emits types 0, 1 and 4, and
+ * VulkanComputeBackend::updateGeometry() rejects type 4 (voxel) because this backend has no
+ * voxel intersector. Types 2 (disk) and 5 (bbox) are never emitted at all.
  */
 
 #ifndef INTERSECTIONS_GLSL
@@ -28,9 +29,16 @@ HitInfo intersect_patch(vec3 ray_origin, vec3 ray_dir, vec4 v0, vec4 v1, vec4 v2
     hit.hit = false;
     hit.t = 1e30;
 
-    // Compute patch plane
+    // Compute patch plane. The degeneracy test must happen BEFORE normalizing: a zero-area
+    // patch gives cross() == 0, normalize() then yields a NaN normal, and the parallel-ray
+    // guard below cannot reject it because abs(NaN) < 1e-8 evaluates to false.
     vec3 anchor = v0.xyz;
-    vec3 normal = normalize(cross(v1.xyz - v0.xyz, v2.xyz - v0.xyz));
+    vec3 plane_normal = cross(v1.xyz - v0.xyz, v2.xyz - v0.xyz);
+    float plane_normal_length = length(plane_normal);
+    if (plane_normal_length < 1e-20) {
+        return hit; // Degenerate patch (zero area)
+    }
+    vec3 normal = plane_normal / plane_normal_length;
 
     // Ray-plane intersection
     float denom = dot(ray_dir, normal);
@@ -54,16 +62,19 @@ HitInfo intersect_patch(vec3 ray_origin, vec3 ray_dir, vec4 v0, vec4 v1, vec4 v2
     float ddota = dot(d, a);
     float ddotb = dot(d, b);
 
-    if (ddota > 0.0 && ddota < dot(a, a) && ddotb > 0.0 && ddotb < dot(b, b)) {
+    // The squared edge lengths double as the inside-quad bounds and as the UV divisors, so a
+    // zero-length edge cannot reach the division: ddota > 0.0 && ddota < 0.0 is never true.
+    float a_length_squared = dot(a, a);
+    float b_length_squared = dot(b, b);
+
+    if (ddota > 0.0 && ddota < a_length_squared && ddotb > 0.0 && ddotb < b_length_squared) {
         // Inside quad
         hit.hit = true;
         hit.t = t;
         hit.normal = normal;
 
         // Compute UV coordinates
-        float amag = length(a);
-        float bmag = length(b);
-        hit.uv = vec2(ddota / (amag * amag), ddotb / (bmag * bmag));
+        hit.uv = vec2(ddota / a_length_squared, ddotb / b_length_squared);
     }
 
     return hit;
@@ -105,37 +116,13 @@ HitInfo intersect_triangle(vec3 ray_origin, vec3 ray_dir, vec3 v0, vec3 v1, vec3
         hit.hit = true;
         hit.t = t;
         hit.uv = vec2(u, v);
-        hit.normal = normalize(cross(edge1, edge2));
+        // Guard the normalize: a sliver triangle can pass the determinant test above while
+        // cross(edge1, edge2) underflows to zero, and normalize(vec3(0)) is NaN.
+        vec3 face_normal = cross(edge1, edge2);
+        float face_normal_length = length(face_normal);
+        hit.normal = (face_normal_length > 1e-20) ? (face_normal / face_normal_length) : vec3(0.0, 0.0, 1.0);
     }
 
-    return hit;
-}
-
-HitInfo intersect_disk(vec3 ray_origin, vec3 ray_dir, uint prim_index) {
-    HitInfo hit;
-    hit.hit = false;
-    hit.t = 1e30;
-    return hit;
-}
-
-HitInfo intersect_tile(vec3 ray_origin, vec3 ray_dir, uint prim_index) {
-    HitInfo hit;
-    hit.hit = false;
-    hit.t = 1e30;
-    return hit;
-}
-
-HitInfo intersect_voxel(vec3 ray_origin, vec3 ray_dir, uint prim_index) {
-    HitInfo hit;
-    hit.hit = false;
-    hit.t = 1e30;
-    return hit;
-}
-
-HitInfo intersect_bbox(vec3 ray_origin, vec3 ray_dir, uint prim_index) {
-    HitInfo hit;
-    hit.hit = false;
-    hit.t = 1e30;
     return hit;
 }
 

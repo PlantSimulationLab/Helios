@@ -316,7 +316,16 @@ private:
 
     void GueymardSolarModel(float pressure, float temperature, float humidity, float turbidity, float &Eb_PAR, float &Eb_NIR, float &fdiff) const;
 
-    void applyCloudCalibration(float &R_calc_Wm2, float &fdiff_calc) const;
+    //! Calibrate the clear-sky direct-normal fluxes and diffuse fraction against a measured all-wave flux
+    /**
+     * The cloud attenuation factor is computed from the ALL-WAVE (PAR+NIR) flux and then applied to
+     * each band, so that the spectral partitioning between PAR and NIR is preserved and the two
+     * bands continue to sum to the broadband total.
+     * \param[in,out] Eb_PAR_Wm2 Clear-sky PAR flux perpendicular to the sun (W/m^2); scaled in place.
+     * \param[in,out] Eb_NIR_Wm2 Clear-sky NIR flux perpendicular to the sun (W/m^2); scaled in place.
+     * \param[in,out] fdiff_calc Clear-sky diffuse fraction; replaced by the cloud-calibrated value.
+     */
+    void applyCloudCalibration(float &Eb_PAR_Wm2, float &Eb_NIR_Wm2, float &fdiff_calc) const;
 
     static float turbidityResidualFunction(float turbidity, std::vector<float> &parameters, const void *a_solarpositionmodel);
 
@@ -363,6 +372,45 @@ private:
 
     //! Helper method to calculate all three spectral components
     void calculateSpectralIrradianceComponents(std::vector<helios::vec2> &global_spectrum, std::vector<helios::vec2> &direct_spectrum, std::vector<helios::vec2> &diffuse_spectrum, float resolution_nm) const;
+
+    //! Apply cloud calibration to clear-sky spectral irradiance using a measured broadband flux
+    /**
+     * Normalizes the modeled clear-sky spectrum so that its integral matches the measured broadband
+     * global horizontal irradiance, then applies the empirical spectral modifiers of Bird, Riordan &
+     * Myers (1987) to account for the preferential transmission of short wavelengths through cloud.
+     * See \ref SolarFluxClouds for the model description and its limitations.
+     *
+     * The spectra must be supplied at the model's native 1 nm resolution (before any downsampling),
+     * since the normalization integrates over them.
+     * \param[in,out] global_spectrum Global horizontal spectral irradiance (W/m^2/nm).
+     * \param[in,out] direct_spectrum Direct normal spectral irradiance (W/m^2/nm).
+     * \param[in,out] diffuse_spectrum Diffuse horizontal spectral irradiance (W/m^2/nm).
+     * \param[in] mu0 Cosine of the solar zenith angle.
+     */
+    void applySpectralCloudCalibration(std::vector<helios::vec2> &global_spectrum, std::vector<helios::vec2> &direct_spectrum, std::vector<helios::vec2> &diffuse_spectrum, float mu0) const;
+
+    //! Estimate the diffuse fraction of global horizontal irradiance from the clearness index
+    /**
+     * Uses the hourly correlation of Erbs et al. (1982), Solar Energy 28(4):293-302, fit to
+     * pyrheliometer and pyranometer data from four U.S. locations. The diffuse fraction rises toward
+     * unity under thick cloud and falls to 0.165 under clear skies.
+     * \param[in] clearness_index Ratio of measured global horizontal irradiance to extraterrestrial horizontal irradiance.
+     * \return Diffuse fraction of global horizontal irradiance, in the range [0,1].
+     */
+    [[nodiscard]] static float diffuseFractionFromClearnessIndex(float clearness_index);
+
+    //! Calculate the extraterrestrial irradiance on a horizontal surface
+    /**
+     * \return Extraterrestrial horizontal irradiance in W/m^2, or zero when the sun is below the horizon.
+     */
+    [[nodiscard]] float getExtraterrestrialHorizontalFlux() const;
+
+    //! Integrate a spectral irradiance curve over wavelength using the trapezoidal rule
+    /**
+     * \param[in] spectrum Spectral irradiance as (wavelength_nm, W/m^2/nm) pairs, ordered by wavelength.
+     * \return Integrated irradiance in W/m^2.
+     */
+    [[nodiscard]] static float integrateSpectrum(const std::vector<helios::vec2> &spectrum);
 };
 
 #endif

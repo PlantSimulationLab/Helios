@@ -1017,13 +1017,33 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
 
     int u;
 
+    // writeXML() records each datum's position within the object's sub-primitive list in the <data> label attribute, and omits sub-primitives that do not carry the label, so the data is sparse. Honor that
+    // index rather than assuming the entries arrive one per sub-primitive in file order, which silently shifts sparse data onto the wrong primitives. Files written before the index was emitted carry no
+    // label attribute; their entries are dense and positional, so the sequential position is used for those.
+    auto resolveSubPrimitiveIndex = [&](pugi::xml_node data, int sequential_index, const char *label, uint &resolved_index) -> bool {
+        const char *index_str = data.attribute("label").value();
+        if (strlen(index_str) > 0) {
+            if (!parse_uint(trim_whitespace(index_str), resolved_index)) {
+                helios_runtime_error("ERROR (Context::loadXML): Object member primitive data \"" + std::string(label) + "\" has a <data> element whose label attribute of \"" + std::string(index_str) + "\" is not a valid sub-primitive index.");
+            }
+        } else {
+            resolved_index = static_cast<uint>(sequential_index);
+        }
+        if (resolved_index >= prim_UUIDs.size()) {
+            warnings.addWarning("osubpdata_length_mismatch",
+                                "There was a problem with reading object primitive data \"" + std::string(label) + "\". The data refers to a sub-primitive that this object does not contain. Skipping remaining data values.");
+            return false;
+        }
+        return true;
+    };
+
     for (pugi::xml_node prim_data = p.child("primitive_data_int"); prim_data; prim_data = prim_data.next_sibling("primitive_data_int")) {
         const char *label = prim_data.attribute("label").value();
 
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
-            if (u >= prim_UUIDs.size()) {
-                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
+            uint p_index;
+            if (!resolveSubPrimitiveIndex(data, u, label, p_index)) {
                 break;
             }
 
@@ -1032,11 +1052,11 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
                 helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_int> with label " + std::string(label) + " contained invalid data.");
             }
 
-            if (doesPrimitiveExist(prim_UUIDs.at(u))) {
+            if (doesPrimitiveExist(prim_UUIDs.at(p_index))) {
                 if (datav.size() == 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav);
                 }
             }
             u++;
@@ -1048,8 +1068,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
 
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
-            if (u >= prim_UUIDs.size()) {
-                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
+            uint p_index;
+            if (!resolveSubPrimitiveIndex(data, u, label, p_index)) {
                 break;
             }
 
@@ -1058,11 +1078,11 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
                 helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_uint> with label " + std::string(label) + " contained invalid data.");
             }
 
-            if (doesPrimitiveExist(prim_UUIDs.at(u))) {
+            if (doesPrimitiveExist(prim_UUIDs.at(p_index))) {
                 if (datav.size() == 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav);
                 }
             }
             u++;
@@ -1074,8 +1094,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
 
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
-            if (u >= prim_UUIDs.size()) {
-                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
+            uint p_index;
+            if (!resolveSubPrimitiveIndex(data, u, label, p_index)) {
                 break;
             }
 
@@ -1084,11 +1104,11 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
                 helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_float> with label " + std::string(label) + " contained invalid data.");
             }
 
-            if (doesPrimitiveExist(prim_UUIDs.at(u))) {
+            if (doesPrimitiveExist(prim_UUIDs.at(p_index))) {
                 if (datav.size() == 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav);
                 }
             }
             u++;
@@ -1100,8 +1120,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
 
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
-            if (u >= prim_UUIDs.size()) {
-                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
+            uint p_index;
+            if (!resolveSubPrimitiveIndex(data, u, label, p_index)) {
                 break;
             }
 
@@ -1110,11 +1130,11 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
                 helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_double> with label " + std::string(label) + " contained invalid data.");
             }
 
-            if (doesPrimitiveExist(prim_UUIDs.at(u))) {
+            if (doesPrimitiveExist(prim_UUIDs.at(p_index))) {
                 if (datav.size() == 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav);
                 }
             }
             u++;
@@ -1126,8 +1146,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
 
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
-            if (u >= prim_UUIDs.size()) {
-                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
+            uint p_index;
+            if (!resolveSubPrimitiveIndex(data, u, label, p_index)) {
                 break;
             }
 
@@ -1136,11 +1156,11 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
                 helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_vec2> with label " + std::string(label) + " contained invalid data.");
             }
 
-            if (doesPrimitiveExist(prim_UUIDs.at(u))) {
+            if (doesPrimitiveExist(prim_UUIDs.at(p_index))) {
                 if (datav.size() == 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav);
                 }
             }
             u++;
@@ -1152,8 +1172,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
 
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
-            if (u >= prim_UUIDs.size()) {
-                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
+            uint p_index;
+            if (!resolveSubPrimitiveIndex(data, u, label, p_index)) {
                 break;
             }
 
@@ -1162,11 +1182,11 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
                 helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_vec3> with label " + std::string(label) + " contained invalid data.");
             }
 
-            if (doesPrimitiveExist(prim_UUIDs.at(u))) {
+            if (doesPrimitiveExist(prim_UUIDs.at(p_index))) {
                 if (datav.size() == 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav);
                 }
             }
             u++;
@@ -1178,8 +1198,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
 
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
-            if (u >= prim_UUIDs.size()) {
-                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
+            uint p_index;
+            if (!resolveSubPrimitiveIndex(data, u, label, p_index)) {
                 break;
             }
 
@@ -1188,11 +1208,11 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
                 helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_vec4> with label " + std::string(label) + " contained invalid data.");
             }
 
-            if (doesPrimitiveExist(prim_UUIDs.at(u))) {
+            if (doesPrimitiveExist(prim_UUIDs.at(p_index))) {
                 if (datav.size() == 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav);
                 }
             }
             u++;
@@ -1204,8 +1224,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
 
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
-            if (u >= prim_UUIDs.size()) {
-                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
+            uint p_index;
+            if (!resolveSubPrimitiveIndex(data, u, label, p_index)) {
                 break;
             }
 
@@ -1214,11 +1234,11 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
                 helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_int2> with label " + std::string(label) + " contained invalid data.");
             }
 
-            if (doesPrimitiveExist(prim_UUIDs.at(u))) {
+            if (doesPrimitiveExist(prim_UUIDs.at(p_index))) {
                 if (datav.size() == 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav);
                 }
             }
             u++;
@@ -1230,8 +1250,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
 
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
-            if (u >= prim_UUIDs.size()) {
-                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
+            uint p_index;
+            if (!resolveSubPrimitiveIndex(data, u, label, p_index)) {
                 break;
             }
 
@@ -1240,11 +1260,11 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
                 helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_int3> with label " + std::string(label) + " contained invalid data.");
             }
 
-            if (doesPrimitiveExist(prim_UUIDs.at(u))) {
+            if (doesPrimitiveExist(prim_UUIDs.at(p_index))) {
                 if (datav.size() == 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav);
                 }
             }
             u++;
@@ -1256,8 +1276,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
 
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
-            if (u >= prim_UUIDs.size()) {
-                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
+            uint p_index;
+            if (!resolveSubPrimitiveIndex(data, u, label, p_index)) {
                 break;
             }
 
@@ -1266,11 +1286,11 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
                 helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_int4> with label " + std::string(label) + " contained invalid data.");
             }
 
-            if (doesPrimitiveExist(prim_UUIDs.at(u))) {
+            if (doesPrimitiveExist(prim_UUIDs.at(p_index))) {
                 if (datav.size() == 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav);
                 }
             }
             u++;
@@ -1282,8 +1302,8 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
 
         u = 0;
         for (pugi::xml_node data = prim_data.child("data"); data; data = data.next_sibling("data")) {
-            if (u >= prim_UUIDs.size()) {
-                warnings.addWarning("osubpdata_length_mismatch", "There was a problem with reading object primitive data \"" + std::string(label) + "\". The number of data values provided does not match the number of primitives contained in this object. Skipping remaining data values.");
+            uint p_index;
+            if (!resolveSubPrimitiveIndex(data, u, label, p_index)) {
                 break;
             }
 
@@ -1292,11 +1312,11 @@ void Context::loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator
                 helios_runtime_error("ERROR (Context::loadXML): Object member primitive data tag <primitive_data_string> with label " + std::string(label) + " contained invalid data.");
             }
 
-            if (doesPrimitiveExist(prim_UUIDs.at(u))) {
+            if (doesPrimitiveExist(prim_UUIDs.at(p_index))) {
                 if (datav.size() == 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav.front());
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav.front());
                 } else if (datav.size() > 1) {
-                    setPrimitiveData(prim_UUIDs.at(u), label, datav);
+                    setPrimitiveData(prim_UUIDs.at(p_index), label, datav);
                 }
             }
             u++;
@@ -1347,6 +1367,16 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
     // if primitives are added that belong to an object, store their UUIDs here so that we can make sure their UUIDs are consistent
     std::map<uint, std::vector<uint>> object_prim_UUIDs;
+
+    // An objID in the file identifies exactly one object. Were two object blocks to claim the same one, both would be handed the same primitive list, and reparenting those primitives to the second object
+    // would leave the first empty and destroy it -- the file would load without complaint but come back short an object. Refuse the file instead.
+    std::set<uint> claimed_object_prim_keys;
+    auto claimObjectPrimitiveKey = [&](uint file_objID, const char *block_name) {
+        if (file_objID > 0 && !claimed_object_prim_keys.insert(file_objID).second) {
+            helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) of " + std::to_string(file_objID) + " is claimed by more than one object block (seen again in a '" + std::string(block_name) +
+                                 "' block). Each objID in the file must identify exactly one object.");
+        }
+    };
 
     WarningAggregator load_xml_warnings;
 
@@ -1426,8 +1456,19 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
                     if (!parse_uint(id_str, matID)) {
                         helios_runtime_error("ERROR (Context::loadXML): Material ID must be an unsigned integer value.");
                     }
-                    // Generate label from numeric ID for backward compatibility
+                    // Generate label from numeric ID for backward compatibility. The numeric ID is file-scoped but the label it maps onto is global to the Context, and every v2 file numbers its materials
+                    // from 1, so loading a second such file would find the label taken and mutate the first file's material in place -- recoloring geometry that has nothing to do with it. Take a fresh
+                    // label on collision and record it in the per-load remap below, the way loadOBJ() already handles colliding .mtl material names.
                     material_label = "__auto_material_" + std::to_string(matID);
+                    if (doesMaterialExist(material_label)) {
+                        uint disambiguator = 1;
+                        std::string unique_label;
+                        do {
+                            unique_label = "__auto_material_" + std::to_string(matID) + "_" + std::to_string(disambiguator);
+                            disambiguator++;
+                        } while (doesMaterialExist(unique_label));
+                        material_label = unique_label;
+                    }
                     legacy_material_id_to_label[matID] = material_label;
                 } else {
                     helios_runtime_error("ERROR (Context::loadXML): Material must have either a 'label' or 'id' attribute.");
@@ -1848,6 +1889,8 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'tile' block must be a non-negative integer value.");
         }
 
+        claimObjectPrimitiveKey(objID, "tile");
+
         // * Tile Transformation Matrix * //
         float transform[16];
         int result = XMLparser::parse_transform(p, transform);
@@ -1954,6 +1997,8 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         if (XMLparser::parse_objID(p, objID) > 1) {
             helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'adaptive_tile' block must be a non-negative integer value.");
         }
+
+        claimObjectPrimitiveKey(objID, "adaptive_tile");
 
         // Unlike a uniform tile, an adaptive tile is not regenerated from its parameters and then overwritten with the loaded primitives. Two reasons: regenerating a large adaptive tile only to delete it is expensive,
         // and the refinement predicate is evaluated with transcendental functions that are not identically rounded across platforms, so a cell whose desired level falls within one unit in the last place of an integer
@@ -2069,10 +2114,9 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'sphere' block must be a non-negative integer value.");
         }
 
-        if (doesObjectExist(objID)) { // if this object ID is already in use, assign a new one
-            objID = currentObjectID;
-            currentObjectID++;
-        }
+        claimObjectPrimitiveKey(objID, "sphere");
+
+        // objID here is the file-scoped object ID used to key object_prim_UUIDs; the Context object ID is assigned by addSphereObject below
 
         // * Sphere Transformation Matrix * //
         float transform[16];
@@ -2154,10 +2198,9 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'tube' block must be a non-negative integer value.");
         }
 
-        if (doesObjectExist(objID)) { // if this object ID is already in use, assign a new one
-            objID = currentObjectID;
-            currentObjectID++;
-        }
+        claimObjectPrimitiveKey(objID, "tube");
+
+        // objID here is the file-scoped object ID used to key object_prim_UUIDs; the Context object ID is assigned by addTubeObject below
 
         // * Tube Transformation Matrix * //
         float transform[16];
@@ -2257,10 +2300,9 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'box' block must be a non-negative integer value.");
         }
 
-        if (doesObjectExist(objID)) { // if this object ID is already in use, assign a new one
-            objID = currentObjectID;
-            currentObjectID++;
-        }
+        claimObjectPrimitiveKey(objID, "box");
+
+        // objID here is the file-scoped object ID used to key object_prim_UUIDs; the Context object ID is assigned by addBoxObject below
 
         // * Box Transformation Matrix * //
         float transform[16];
@@ -2342,10 +2384,9 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'disk' block must be a non-negative integer value.");
         }
 
-        if (doesObjectExist(objID)) { // if this object ID is already in use, assign a new one
-            objID = currentObjectID;
-            currentObjectID++;
-        }
+        claimObjectPrimitiveKey(objID, "disk");
+
+        // objID here is the file-scoped object ID used to key object_prim_UUIDs; the Context object ID is assigned by addDiskObject below
 
         // * Disk Transformation Matrix * //
         float transform[16];
@@ -2427,10 +2468,9 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'cone' block must be a non-negative integer value.");
         }
 
-        if (doesObjectExist(objID)) { // if this object ID is already in use, assign a new one
-            objID = currentObjectID;
-            currentObjectID++;
-        }
+        claimObjectPrimitiveKey(objID, "cone");
+
+        // objID here is the file-scoped object ID used to key object_prim_UUIDs; the Context object ID is assigned by addConeObject below
 
         // * Cone Transformation Matrix * //
         float transform[16];
@@ -2519,6 +2559,8 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) given in 'polymesh' block must be a non-negative integer value.");
         }
 
+        claimObjectPrimitiveKey(objID, "polymesh");
+
         // objID here is the file-scoped object ID used to key object_prim_UUIDs; the Context object ID is assigned by addPolymeshObject below
         if (object_prim_UUIDs.find(objID) == object_prim_UUIDs.end() || object_prim_UUIDs.at(objID).empty()) {
             helios_runtime_error("ERROR (Context::loadXML): <polymesh> block with objID " + std::to_string(objID) + " does not reference any primitives in the file.");
@@ -2527,6 +2569,75 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         ID = addPolymeshObject(object_prim_UUIDs.at(objID));
 
         setPrimitiveParentObjectID(object_prim_UUIDs.at(objID), ID);
+
+        // * Polymesh Transformation Matrix * //
+        // Written since v1.3.83; a file predating that carries none, and the matrix addPolymeshObject() derived from the primitives is kept.
+        float polymesh_transform[16];
+        int polymesh_transform_result = XMLparser::parse_transform(p, polymesh_transform);
+        if (polymesh_transform_result == 3) {
+            helios_runtime_error("ERROR (Context::loadXML): Polymesh <transform> node contains less than 16 data values.");
+        } else if (polymesh_transform_result == 2) {
+            helios_runtime_error("ERROR (Context::loadXML): Polymesh <transform> node contains invalid data.");
+        } else if (polymesh_transform_result == 0) {
+            getObjectPointer_private(ID)->setTransformationMatrix(polymesh_transform);
+        }
+
+        // * Polymesh Mesh Topology * //
+        // The indexed face set is not recoverable from the member primitives, so it is restored from the file when present. Faces name their primitive by position in the object's sub-primitive list, since
+        // the UUIDs recorded when the file was written no longer exist.
+        pugi::xml_node faces_node = p.child("faces");
+        if (faces_node) {
+            std::vector<vec3> mesh_vertices;
+            if (XMLparser::parse_data_vec3(p.child("vertices"), mesh_vertices) != 0 || mesh_vertices.empty()) {
+                helios_runtime_error("ERROR (Context::loadXML): Polymesh <vertices> node contains invalid data.");
+            }
+
+            std::vector<int3> mesh_faces;
+            if (XMLparser::parse_data_int3(faces_node, mesh_faces) != 0 || mesh_faces.empty()) {
+                helios_runtime_error("ERROR (Context::loadXML): Polymesh <faces> node contains invalid data.");
+            }
+
+            std::vector<uint> face_primitive_indices;
+            if (XMLparser::parse_data_uint(p.child("face_primitives"), face_primitive_indices) != 0) {
+                helios_runtime_error("ERROR (Context::loadXML): Polymesh <face_primitives> node contains invalid data.");
+            }
+            if (face_primitive_indices.size() != mesh_faces.size()) {
+                helios_runtime_error("ERROR (Context::loadXML): Polymesh <face_primitives> node lists " + std::to_string(face_primitive_indices.size()) + " entries but the mesh has " + std::to_string(mesh_faces.size()) +
+                                     " faces. Every face must name the member primitive it describes.");
+            }
+
+            std::vector<uint> member_UUIDs = getObjectPrimitiveUUIDs(ID);
+            std::vector<uint> face_UUIDs;
+            face_UUIDs.reserve(face_primitive_indices.size());
+            for (uint index: face_primitive_indices) {
+                if (index >= member_UUIDs.size()) {
+                    helios_runtime_error("ERROR (Context::loadXML): Polymesh <face_primitives> node refers to sub-primitive " + std::to_string(index) + " but the object contains only " + std::to_string(member_UUIDs.size()) + " primitives.");
+                }
+                face_UUIDs.push_back(member_UUIDs.at(index));
+            }
+
+            std::vector<vec3> mesh_normals;
+            VertexNormalSource normal_source = NORMAL_SOURCE_NONE;
+            pugi::xml_node normals_node = p.child("vertex_normals");
+            if (normals_node) {
+                if (XMLparser::parse_data_vec3(normals_node, mesh_normals) != 0) {
+                    helios_runtime_error("ERROR (Context::loadXML): Polymesh <vertex_normals> node contains invalid data.");
+                }
+                normal_source = NORMAL_SOURCE_AUTHORED;
+                std::vector<int> normal_source_value;
+                if (XMLparser::parse_data_int(p.child("vertex_normal_source"), normal_source_value) == 0 && normal_source_value.size() == 1 && normal_source_value.front() == NORMAL_SOURCE_COMPUTED) {
+                    normal_source = NORMAL_SOURCE_COMPUTED;
+                }
+            }
+
+            std::vector<vec2> mesh_uv;
+            pugi::xml_node uv_node = p.child("vertex_uv");
+            if (uv_node && XMLparser::parse_data_vec2(uv_node, mesh_uv) != 0) {
+                helios_runtime_error("ERROR (Context::loadXML): Polymesh <vertex_uv> node contains invalid data.");
+            }
+
+            setPolymeshObjectTopology(ID, mesh_vertices, mesh_faces, face_UUIDs, mesh_normals, mesh_uv, normal_source);
+        }
 
         // * Polymesh Sub-Primitive Data * //
 
@@ -2539,6 +2650,15 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         std::vector<uint> childUUIDs = object_prim_UUIDs.at(objID);
         UUID.insert(UUID.end(), childUUIDs.begin(), childUUIDs.end());
     } // end polymesh
+
+    // Every objID that appeared on a primitive must have been claimed by an object block above. An unclaimed one leaves its primitives in the Context with no parent object and, because only primitives with
+    // no objID are added to the returned vector, with no handle returned to the caller either -- geometry that still renders and ray-traces but that the caller cannot address. Refuse the file instead.
+    for (const auto &[file_objID, member_UUIDs]: object_prim_UUIDs) {
+        if (claimed_object_prim_keys.find(file_objID) == claimed_object_prim_keys.end()) {
+            helios_runtime_error("ERROR (Context::loadXML): Object ID (objID) of " + std::to_string(file_objID) + " appears on " + std::to_string(member_UUIDs.size()) +
+                                 " primitive(s), but no object block in the file declares it. Every objID referenced by a primitive must have a matching object block.");
+        }
+    }
 
     //-------------- GLOBAL DATA ---------------//
 
@@ -3296,6 +3416,13 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
     // -- objects -- //
 
     for (auto o: objectIDs) {
+        // The object IDs come from the parent recorded on each primitive, which is not checked against the object registry anywhere along the way. A primitive naming an object that no longer exists would
+        // otherwise surface here as a bare unordered_map::at failure with nothing to act on.
+        if (!doesObjectExist(o)) {
+            helios_runtime_error("ERROR (Context::writeXML): One or more primitives being written name parent object " + std::to_string(o) +
+                                 ", which does not exist in the Context. Detach them with "
+                                 "Context::setPrimitiveParentObjectID(UUID, 0) or delete them before writing.");
+        }
         CompoundObject *obj = objects.at(o);
 
         std::string texture_file = obj->getTextureFile();
@@ -3331,7 +3458,16 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
         std::vector<std::string> pdata_labels;
         std::vector<HeliosDataType> pdata_types;
-        std::vector<uint> primitiveUUIDs = obj->getPrimitiveUUIDs();
+        // Sub-primitive data below is indexed by position within the primitives actually written for this object, which is the list loadXML() will rebuild for it: the members of this object present in the
+        // written set, in the ascending-UUID order the primitive blocks were emitted in above. Members that are not being written -- hidden, or outside a caller-specified selection -- must be skipped
+        // entirely, since emitting them would shift the index of every later member and record data for primitives the file does not contain.
+        std::vector<uint> primitiveUUIDs;
+        for (uint UUID: obj->getPrimitiveUUIDs()) {
+            if (std::binary_search(sorted_UUIDs.begin(), sorted_UUIDs.end(), UUID)) {
+                primitiveUUIDs.push_back(UUID);
+            }
+        }
+        std::sort(primitiveUUIDs.begin(), primitiveUUIDs.end());
         for (uint UUID: primitiveUUIDs) {
             std::vector<std::string> labels = getPrimitivePointer_private(UUID)->listPrimitiveData();
             for (const auto &label: labels) {
@@ -3592,8 +3728,10 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             uint subdiv = tube->getSubdivisionCount();
             outfile << "\t<subdivisions> " << subdiv << " </subdivisions>" << std::endl;
 
-            std::vector<vec3> nodes = tube->getNodes();
-            std::vector<float> radius = tube->getNodeRadii();
+            // The transformation matrix is written separately above, and loadXML() rebuilds the tube from these nodes and radii before applying it. They must therefore be written in the object's local frame:
+            // writing the values reported by getNodes() and getNodeRadii(), which already have the transformation applied, would make loading apply it a second time.
+            const std::vector<vec3> &nodes = tube->nodes;
+            const std::vector<float> &radius = tube->radius;
 
             assert(nodes.size() == radius.size());
             outfile << "\t<nodes> " << std::endl;
@@ -3671,8 +3809,9 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             uint subdiv = cone->getSubdivisionCount();
             outfile << "\t<subdivisions> " << subdiv << " </subdivisions>" << std::endl;
 
-            std::vector<vec3> nodes = cone->getNodeCoordinates();
-            std::vector<float> radius = cone->getNodeRadii();
+            // As for the tube above, these are written in the object's local frame because loadXML() applies the transformation matrix on top of them.
+            const std::vector<vec3> &nodes = cone->nodes;
+            const std::vector<float> &radius = cone->radii;
 
             assert(nodes.size() == radius.size());
             outfile << "\t<nodes> " << std::endl;
@@ -3690,6 +3829,78 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
             // Polymesh
         } else if (obj->getObjectType() == OBJECT_TYPE_POLYMESH) {
+            float transform[16];
+            obj->getTransformationMatrix(transform);
+            outfile << "\t<transform> ";
+            for (float i: transform) {
+                outfile << i << " ";
+            }
+            outfile << "</transform>" << std::endl;
+
+            // A polymesh is rebuilt from its member primitives, which carry the geometry, but the indexed face set that records which of those primitives share which vertices is not recoverable from them --
+            // reloading without it degrades a closed mesh to a triangle soup whose every edge is a boundary edge. Faces reference member primitives by their position in the written sub-primitive list rather
+            // than by UUID, since UUIDs are reallocated on load.
+            std::vector<vec3> mesh_vertices = getPolymeshObjectVertices(o);
+            std::vector<int3> mesh_faces = getPolymeshObjectFaces(o);
+            if (!mesh_faces.empty()) {
+                std::map<uint, size_t> primitive_index;
+                for (size_t i = 0; i < primitiveUUIDs.size(); i++) {
+                    primitive_index[primitiveUUIDs.at(i)] = i;
+                }
+
+                // A face whose primitive is not being written cannot be reconstructed, so the mesh topology is only written when the file contains every primitive the face set refers to.
+                bool faces_complete = true;
+                std::vector<size_t> face_primitive_indices;
+                face_primitive_indices.reserve(mesh_faces.size());
+                for (size_t f = 0; f < mesh_faces.size(); f++) {
+                    uint face_UUID = getPolymeshObjectPrimitiveUUIDForFace(o, f);
+                    if (primitive_index.find(face_UUID) == primitive_index.end()) {
+                        faces_complete = false;
+                        break;
+                    }
+                    face_primitive_indices.push_back(primitive_index.at(face_UUID));
+                }
+
+                if (faces_complete) {
+                    outfile << "\t<vertices>" << std::endl;
+                    for (const vec3 &vertex: mesh_vertices) {
+                        outfile << "\t\t" << vertex.x << " " << vertex.y << " " << vertex.z << std::endl;
+                    }
+                    outfile << "\t</vertices>" << std::endl;
+
+                    outfile << "\t<faces>" << std::endl;
+                    for (const int3 &face: mesh_faces) {
+                        outfile << "\t\t" << face.x << " " << face.y << " " << face.z << std::endl;
+                    }
+                    outfile << "\t</faces>" << std::endl;
+
+                    outfile << "\t<face_primitives> ";
+                    for (size_t index: face_primitive_indices) {
+                        outfile << index << " ";
+                    }
+                    outfile << "</face_primitives>" << std::endl;
+
+                    std::vector<vec3> mesh_normals = getPolymeshObjectVertexNormals(o);
+                    if (!mesh_normals.empty()) {
+                        outfile << "\t<vertex_normals>" << std::endl;
+                        for (const vec3 &normal: mesh_normals) {
+                            outfile << "\t\t" << normal.x << " " << normal.y << " " << normal.z << std::endl;
+                        }
+                        outfile << "\t</vertex_normals>" << std::endl;
+                        outfile << "\t<vertex_normal_source>" << static_cast<int>(getPolymeshObjectVertexNormalSource(o)) << "</vertex_normal_source>" << std::endl;
+                    }
+
+                    std::vector<vec2> mesh_uv = getPolymeshObjectVertexUV(o);
+                    if (!mesh_uv.empty()) {
+                        outfile << "\t<vertex_uv>" << std::endl;
+                        for (const vec2 &uv: mesh_uv) {
+                            outfile << "\t\t" << uv.x << " " << uv.y << std::endl;
+                        }
+                        outfile << "\t</vertex_uv>" << std::endl;
+                    }
+                }
+            }
+
             outfile << "   </polymesh>" << std::endl;
         }
     }
@@ -3864,9 +4075,11 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
     std::vector<vec3> vertices;
     std::vector<std::vector<int>> faces;
     std::vector<RGBcolor> colors;
+    std::vector<vec3> normals;
     std::vector<std::string> properties;
 
     bool ifColor = false;
+    bool ifNormal = false;
 
     // Resolve file path using unified resolution
     std::filesystem::path resolved_path = resolveFilePath(filename);
@@ -3932,6 +4145,8 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
     for (auto &property: properties) {
         if (property == "red") {
             ifColor = true;
+        } else if (property == "nx") {
+            ifNormal = true;
         }
     }
     if (!silent) {
@@ -3941,6 +4156,9 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
     vertices.resize(vertexCount);
     colors.resize(vertexCount);
     faces.resize(faceCount);
+    if (ifNormal) {
+        normals.resize(vertexCount);
+    }
 
 
     //--- read vertices ----//
@@ -3985,6 +4203,46 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
                     vertices.at(row).x = z;
                 } else if (upaxis == "ZUP") {
                     vertices.at(row).z = z;
+                }
+            } else if (property == "nx") {
+                inputPly >> temp_string;
+                float nx;
+                if (!parse_float(temp_string, nx)) {
+                    helios_runtime_error("ERROR (Context::loadPLY): nx normal value for vertex " + std::to_string(row) + " is invalid and could not be read.");
+                }
+                // Normals are permuted onto the Helios axes exactly as the vertex coordinates are, so that they stay aligned with the geometry.
+                if (upaxis == "XUP") {
+                    normals.at(row).z = nx;
+                } else if (upaxis == "YUP") {
+                    normals.at(row).y = nx;
+                } else if (upaxis == "ZUP") {
+                    normals.at(row).x = nx;
+                }
+            } else if (property == "ny") {
+                inputPly >> temp_string;
+                float ny;
+                if (!parse_float(temp_string, ny)) {
+                    helios_runtime_error("ERROR (Context::loadPLY): ny normal value for vertex " + std::to_string(row) + " is invalid and could not be read.");
+                }
+                if (upaxis == "XUP") {
+                    normals.at(row).x = ny;
+                } else if (upaxis == "YUP") {
+                    normals.at(row).z = ny;
+                } else if (upaxis == "ZUP") {
+                    normals.at(row).y = ny;
+                }
+            } else if (property == "nz") {
+                inputPly >> temp_string;
+                float nz;
+                if (!parse_float(temp_string, nz)) {
+                    helios_runtime_error("ERROR (Context::loadPLY): nz normal value for vertex " + std::to_string(row) + " is invalid and could not be read.");
+                }
+                if (upaxis == "XUP") {
+                    normals.at(row).y = nz;
+                } else if (upaxis == "YUP") {
+                    normals.at(row).x = nz;
+                } else if (upaxis == "ZUP") {
+                    normals.at(row).z = nz;
                 }
             } else if (property == "red") {
                 inputPly >> temp_string;
@@ -4054,12 +4312,23 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
         vertices.at(row).z *= scl;
 
         vertices.at(row) = rotatePoint(vertices.at(row), rotation) + origin;
+
+        if (ifNormal) {
+            // Only the rotation affects a direction: the translation does not, and the PLY scaling is uniform so it cannot tilt the normal off the surface.
+            normals.at(row) = rotatePoint(normals.at(row), rotation);
+            const float magnitude = normals.at(row).magnitude();
+            if (magnitude > 0.f) {
+                normals.at(row) = normals.at(row) / magnitude;
+            }
+        }
     }
 
     //--- read faces ----//
 
     uint v, ID;
     std::vector<uint> UUID;
+    std::vector<int3> mesh_faces;
+    std::vector<uint> mesh_face_UUIDs;
     for (uint row = 0; row < faceCount; row++) {
         inputPly >> temp_string;
 
@@ -4103,11 +4372,20 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
             ID = addTriangle(v0, v1, v2, color);
 
             UUID.push_back(ID);
+            // Record the shared-vertex indices of this triangle so the connectivity already present in the PLY file is retained rather than discarded.
+            mesh_faces.push_back(make_int3(faces.at(row).front(), faces.at(row).at(t - 1), faces.at(row).at(t)));
+            mesh_face_UUIDs.push_back(ID);
         }
 
         if (inputPly.eof()) {
             helios_runtime_error("ERROR (Context::loadPLY): Read past end of file while reading faces. Face count specified in header may be incorrect.");
         }
+    }
+
+    // Group the loaded triangles into a polymesh object so the vertex-facet connectivity in the source file survives, along with any authored vertex normals.
+    if (!UUID.empty()) {
+        uint polymesh_ObjID = addPolymeshObject(UUID);
+        getPolymeshObjectPointer_private(polymesh_ObjID)->setTopology(vertices, mesh_faces, mesh_face_UUIDs, normals, {}, ifNormal ? NORMAL_SOURCE_AUTHORED : NORMAL_SOURCE_NONE);
     }
 
     if (!silent) {
@@ -4151,18 +4429,81 @@ void Context::writePLY(const char *filename, const std::vector<uint> &UUIDs) con
 
     size_t vertex_count = 0;
 
+    // A triangle belonging to a polymesh that retains its connectivity is written against the mesh's shared vertices, so a vertex used by several faces is emitted once and referenced by index. The mesh
+    // accessors transform and return the whole vertex array on each call, so the result is cached per object rather than re-fetched for every triangle.
+    std::unordered_map<int64_t, int> polymesh_vertex_index;
+    std::map<uint, std::vector<vec3>> polymesh_vertices_cache;
+    std::map<uint, std::vector<int3>> polymesh_faces_cache;
+    std::map<uint, std::vector<vec3>> polymesh_normals_cache;
+
+    // Per-vertex normals are written only when every vertex in the file has one, since the PLY header declares a single fixed property list for all vertices.
+    std::vector<vec3> vertex_normals_out;
+    bool all_vertices_have_normals = true;
+
     for (auto UUID: UUIDs) {
-        std::vector<vec3> vertices = getPrimitivePointer_private(UUID)->getVertices();
-        PrimitiveType type = getPrimitivePointer_private(UUID)->getType();
-        RGBcolor C = getPrimitivePointer_private(UUID)->getColor();
+        const Primitive *prim_ptr = getPrimitivePointer_private(UUID);
+        std::vector<vec3> vertices = prim_ptr->getVertices();
+        PrimitiveType type = prim_ptr->getType();
+        RGBcolor C = prim_ptr->getColor();
         C.scale(255.f);
 
         if (type == PRIMITIVE_TYPE_TRIANGLE) {
-            faces.push_back(make_int3((int) vertex_count, (int) vertex_count + 1, (int) vertex_count + 2));
-            for (int i = 0; i < 3; i++) {
-                verts.push_back(vertices.at(i));
-                colors.push_back(C);
-                vertex_count++;
+            bool wrote_shared_vertices = false;
+
+            const uint parent_ObjID = prim_ptr->getParentObjectID();
+            if (parent_ObjID != 0 && doesObjectExist(parent_ObjID) && getObjectType(parent_ObjID) == OBJECT_TYPE_POLYMESH) {
+                const Polymesh *polymesh_ptr = getPolymeshObjectPointer_private(parent_ObjID);
+                if (polymesh_ptr->getFaceCount() > 0) {
+                    if (polymesh_faces_cache.find(parent_ObjID) == polymesh_faces_cache.end()) {
+                        polymesh_faces_cache[parent_ObjID] = polymesh_ptr->getFaces();
+                    }
+                    if (polymesh_vertices_cache.find(parent_ObjID) == polymesh_vertices_cache.end()) {
+                        polymesh_vertices_cache[parent_ObjID] = polymesh_ptr->getVertices();
+                    }
+                    const std::vector<int3> &mesh_faces = polymesh_faces_cache.at(parent_ObjID);
+                    const std::vector<vec3> &mesh_vertices = polymesh_vertices_cache.at(parent_ObjID);
+                    const int3 &mesh_face = mesh_faces.at(polymesh_ptr->getFaceIndexForPrimitive(UUID));
+                    const int mesh_corner[3] = {mesh_face.x, mesh_face.y, mesh_face.z};
+
+                    int written_index[3];
+                    for (int i = 0; i < 3; i++) {
+                        const int64_t key = (scast<int64_t>(parent_ObjID) << 32) | (scast<int64_t>(mesh_corner[i]) & 0xffffffffLL);
+                        auto it = polymesh_vertex_index.find(key);
+                        if (it != polymesh_vertex_index.end()) {
+                            written_index[i] = it->second;
+                        } else {
+                            written_index[i] = scast<int>(vertex_count);
+                            polymesh_vertex_index[key] = written_index[i];
+                            verts.push_back(mesh_vertices.at(mesh_corner[i]));
+                            // PLY stores one color per vertex, so a vertex shared between faces of differing color takes the color of the first face that writes it.
+                            colors.push_back(C);
+                            if (polymesh_ptr->hasVertexNormals()) {
+                                if (polymesh_normals_cache.find(parent_ObjID) == polymesh_normals_cache.end()) {
+                                    polymesh_normals_cache[parent_ObjID] = polymesh_ptr->getVertexNormals();
+                                }
+                                vertex_normals_out.push_back(polymesh_normals_cache.at(parent_ObjID).at(mesh_corner[i]));
+                            } else {
+                                all_vertices_have_normals = false;
+                                vertex_normals_out.push_back(make_vec3(0, 0, 0));
+                            }
+                            vertex_count++;
+                        }
+                    }
+
+                    faces.push_back(make_int3(written_index[0], written_index[1], written_index[2]));
+                    wrote_shared_vertices = true;
+                }
+            }
+
+            if (!wrote_shared_vertices) {
+                faces.push_back(make_int3((int) vertex_count, (int) vertex_count + 1, (int) vertex_count + 2));
+                for (int i = 0; i < 3; i++) {
+                    verts.push_back(vertices.at(i));
+                    colors.push_back(C);
+                    all_vertices_have_normals = false;
+                    vertex_normals_out.push_back(make_vec3(0, 0, 0));
+                    vertex_count++;
+                }
             }
         } else if (type == PRIMITIVE_TYPE_PATCH) {
             faces.push_back(make_int3((int) vertex_count, (int) vertex_count + 1, (int) vertex_count + 2));
@@ -4170,19 +4511,30 @@ void Context::writePLY(const char *filename, const std::vector<uint> &UUIDs) con
             for (int i = 0; i < 4; i++) {
                 verts.push_back(vertices.at(i));
                 colors.push_back(C);
+                all_vertices_have_normals = false;
+                vertex_normals_out.push_back(make_vec3(0, 0, 0));
                 vertex_count++;
             }
         }
     }
 
+    const bool write_vertex_normals = all_vertices_have_normals && !verts.empty();
+
     PLYfile << "element vertex " << verts.size() << std::endl;
     PLYfile << "property float x" << std::endl << "property float y" << std::endl << "property float z" << std::endl;
+    if (write_vertex_normals) {
+        PLYfile << "property float nx" << std::endl << "property float ny" << std::endl << "property float nz" << std::endl;
+    }
     PLYfile << "property uchar red" << std::endl << "property uchar green" << std::endl << "property uchar blue" << std::endl;
     PLYfile << "element face " << faces.size() << std::endl;
     PLYfile << "property list uchar int vertex_indices" << std::endl << "end_header" << std::endl;
 
     for (size_t v = 0; v < verts.size(); v++) {
-        PLYfile << verts.at(v).x << " " << verts.at(v).y << " " << verts.at(v).z << " " << round(colors.at(v).r) << " " << round(colors.at(v).g) << " " << round(colors.at(v).b) << std::endl;
+        PLYfile << verts.at(v).x << " " << verts.at(v).y << " " << verts.at(v).z << " ";
+        if (write_vertex_normals) {
+            PLYfile << vertex_normals_out.at(v).x << " " << vertex_normals_out.at(v).y << " " << vertex_normals_out.at(v).z << " ";
+        }
+        PLYfile << round(colors.at(v).r) << " " << round(colors.at(v).g) << " " << round(colors.at(v).b) << std::endl;
     }
 
     for (auto &face: faces) {
@@ -4225,7 +4577,8 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
     std::vector<vec3> vertices;
     std::vector<std::string> objects;
     std::vector<vec2> texture_uv;
-    std::map<std::string, std::vector<std::vector<int>>> face_inds, texture_inds;
+    std::vector<vec3> vertex_normals;
+    std::map<std::string, std::vector<std::vector<int>>> face_inds, texture_inds, normal_inds;
 
     std::map<std::string, OBJmaterial> materials;
 
@@ -4296,6 +4649,13 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
             vec2 uv(string2vec2(line.c_str()));
             texture_uv.emplace_back(uv);
 
+            // ------- VERTEX NORMALS --------- //
+        } else if (line == "vn") {
+            getline(inputOBJ, line);
+            line = trim_whitespace(line);
+            vec3 normal(string2vec3(line.c_str()));
+            vertex_normals.emplace_back(normal);
+
             // ------- MATERIALS --------- //
         } else if (line == "usemtl") {
             getline(inputOBJ, line);
@@ -4306,35 +4666,38 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
             getline(inputOBJ, line);
             // parse face vertices
             std::istringstream stream(line);
-            std::string tmp, digitf, digitu;
-            std::vector<int> f, u;
+            std::string tmp;
+            std::vector<int> f, u, n;
             while (stream.good()) {
                 stream >> tmp;
+                if (tmp.empty()) {
+                    continue;
+                }
 
-                digitf = "";
-                int ic = 0;
-                for (char i: tmp) {
-                    if (isdigit(i)) {
-                        digitf.push_back(i);
-                        ic++;
+                // A face vertex reference is one of 'v', 'v/vt', 'v//vn' or 'v/vt/vn'. Split on '/' so that an omitted middle field is preserved as an empty token rather than shifting the normal index into
+                // the texture slot.
+                std::string reference_fields[3];
+                size_t field_index = 0;
+                for (char character: tmp) {
+                    if (character == '/') {
+                        field_index++;
+                        if (field_index > 2) {
+                            helios_runtime_error("ERROR (Context::loadOBJ): Face vertex reference '" + tmp + "' on line " + std::to_string(lineno) +
+                                                 " has more than three fields. Valid forms are v, v/vt, v//vn and v/vt/vn.");
+                        }
                     } else {
-                        break;
+                        reference_fields[field_index].push_back(character);
                     }
                 }
 
-                digitu = "";
-                for (int i = ic + 1; i < tmp.size(); i++) {
-                    if (isdigit(tmp[i])) {
-                        digitu.push_back(tmp[i]);
-                    } else {
-                        break;
-                    }
-                }
-
-                if (!digitf.empty()) {
+                if (!reference_fields[0].empty()) {
                     int face;
-                    if (!parse_int(digitf, face)) {
-                        helios_runtime_error("ERROR (Context::loadOBJ): Face index on line " + std::to_string(lineno) + " must be a non-negative integer value.");
+                    if (!parse_int(reference_fields[0], face)) {
+                        helios_runtime_error("ERROR (Context::loadOBJ): Face index on line " + std::to_string(lineno) + " must be an integer value.");
+                    }
+                    // A negative OBJ index is relative to the end of the element list declared so far.
+                    if (face < 0) {
+                        face = scast<int>(vertices.size()) + face + 1;
                     }
                     // Add bounds checking for face indices
                     if (face <= 0 || face > vertices.size()) {
@@ -4343,10 +4706,13 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
                     }
                     f.push_back(face);
                 }
-                if (!digitu.empty()) {
+                if (!reference_fields[1].empty()) {
                     int uv;
-                    if (!parse_int(digitu, uv)) {
-                        helios_runtime_error("ERROR (Context::loadOBJ): u,v index on line " + std::to_string(lineno) + " must be a non-negative integer value.");
+                    if (!parse_int(reference_fields[1], uv)) {
+                        helios_runtime_error("ERROR (Context::loadOBJ): u,v index on line " + std::to_string(lineno) + " must be an integer value.");
+                    }
+                    if (uv < 0) {
+                        uv = scast<int>(texture_uv.size()) + uv + 1;
                     }
                     // Add bounds checking for UV indices
                     if (uv <= 0 || uv > texture_uv.size()) {
@@ -4355,9 +4721,25 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
                     }
                     u.push_back(uv);
                 }
+                if (!reference_fields[2].empty()) {
+                    int normal;
+                    if (!parse_int(reference_fields[2], normal)) {
+                        helios_runtime_error("ERROR (Context::loadOBJ): Vertex normal index on line " + std::to_string(lineno) + " must be an integer value.");
+                    }
+                    if (normal < 0) {
+                        normal = scast<int>(vertex_normals.size()) + normal + 1;
+                    }
+                    // Add bounds checking for vertex normal indices
+                    if (normal <= 0 || normal > vertex_normals.size()) {
+                        helios_runtime_error("ERROR (Context::loadOBJ): Vertex normal index " + std::to_string(normal) + " on line " + std::to_string(lineno) + " is out of range. Valid range is 1-" +
+                                             std::to_string(vertex_normals.size()) + ". Check that vertex normal indices in face definitions reference existing vertex normals.");
+                    }
+                    n.push_back(normal);
+                }
             }
             face_inds[current_material].push_back(f);
             texture_inds[current_material].push_back(u);
+            normal_inds[current_material].push_back(n);
 
             // ------ OTHER STUFF --------- //
         } else {
@@ -4405,6 +4787,10 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
         bool textureColorIsOverridden;
         std::string materialname;
         std::string object;
+        // Indices (0-based) into the file's v and vn arrays for each of the three corners, so that the authored connectivity survives the fan triangulation and the silent dropping of degenerate triangles
+        // below. int3(-1,-1,-1) means the file supplied no normals for this face.
+        helios::int3 vertex_index;
+        helios::int3 normal_index;
     };
 
     // Register all MTL materials in Context material system.
@@ -4452,6 +4838,8 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
 
         const auto &material_faces = face_inds.at(materialname);
         const auto &material_texture_inds = texture_inds.count(materialname) ? texture_inds.at(materialname) : std::vector<std::vector<int>>();
+        const std::vector<std::vector<int>> empty_normal_inds;
+        const auto &material_normal_inds = normal_inds.count(materialname) ? normal_inds.at(materialname) : empty_normal_inds;
 
         // Exception handling for OpenMP - capture exceptions and rethrow after parallel region
         std::string exception_message;
@@ -4499,6 +4887,14 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
                         triangleData.textureColorIsOverridden = textureColorIsOverridden;
                         triangleData.materialname = mtl_to_context_material.count(materialname) ? mtl_to_context_material.at(materialname) : materialname;
                         triangleData.object = objects.at(material_faces[i][0] - 1);
+
+                        // Record which file vertices and normals this triangle came from. The fan uses corners 0, t-1 and t of the original face.
+                        triangleData.vertex_index = make_int3(material_faces[i][0] - 1, material_faces[i][t - 1] - 1, material_faces[i][t] - 1);
+                        if (i < material_normal_inds.size() && material_normal_inds[i].size() == material_faces[i].size()) {
+                            triangleData.normal_index = make_int3(material_normal_inds[i][0] - 1, material_normal_inds[i][t - 1] - 1, material_normal_inds[i][t] - 1);
+                        } else {
+                            triangleData.normal_index = make_int3(-1, -1, -1);
+                        }
 
                         // Handle texture coordinates if present
                         // First check if material has texture file
@@ -4578,6 +4974,69 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
         if (triangleData.object != "none" && doesPrimitiveExist(ID)) {
             setPrimitiveData(ID, "object_label", triangleData.object);
         }
+    }
+
+    // Group the loaded triangles into a polymesh object so that the authored vertex-facet connectivity is retained rather than being flattened into a triangle soup. The vertices used here are the
+    // already-transformed corners carried on each TriangleData, so the topology is built only from triangles that actually survived the degenerate-triangle filtering above.
+    if (!UUID.empty()) {
+
+        std::vector<vec3> mesh_vertices;
+        std::vector<vec3> mesh_vertex_normals;
+        std::vector<int3> mesh_faces;
+        std::vector<uint> mesh_face_UUIDs;
+
+        // Deduplicate by the source file's vertex index, which is what makes the mesh shared-vertex rather than a soup. A vertex referenced with differing normals across faces is split, since a single
+        // vertex can only carry one normal in an indexed face set.
+        // The (vertex index, normal index) pair is packed into a single 64-bit key so the dedup can use a hash map, which matters for meshes with millions of vertices.
+        std::unordered_map<int64_t, int> source_index_to_mesh_index;
+        const bool file_supplied_normals = !vertex_normals.empty();
+
+        for (size_t t = 0; t < triangleDataList.size(); t++) {
+            const TriangleData &triangleData = triangleDataList.at(t);
+            const vec3 corner_vertices[3] = {triangleData.vert0, triangleData.vert1, triangleData.vert2};
+            const int corner_vertex_index[3] = {triangleData.vertex_index.x, triangleData.vertex_index.y, triangleData.vertex_index.z};
+            const int corner_normal_index[3] = {triangleData.normal_index.x, triangleData.normal_index.y, triangleData.normal_index.z};
+
+            int face_corner[3];
+            for (int c = 0; c < 3; c++) {
+                const int64_t key = (scast<int64_t>(corner_vertex_index[c]) << 32) | (scast<int64_t>(corner_normal_index[c]) & 0xffffffffLL);
+                auto it = source_index_to_mesh_index.find(key);
+                if (it != source_index_to_mesh_index.end()) {
+                    face_corner[c] = it->second;
+                    continue;
+                }
+
+                face_corner[c] = scast<int>(mesh_vertices.size());
+                source_index_to_mesh_index[key] = face_corner[c];
+                mesh_vertices.push_back(corner_vertices[c]);
+
+                if (file_supplied_normals) {
+                    vec3 normal = make_vec3(0, 0, 1);
+                    if (corner_normal_index[c] >= 0 && corner_normal_index[c] < scast<int>(vertex_normals.size())) {
+                        normal = vertex_normals.at(corner_normal_index[c]);
+                    }
+                    // Apply the same orientation changes that were applied to the vertices. Translation does not affect a direction, and the scaling below is applied via the inverse-transpose so that a
+                    // non-uniform scale does not tilt the normal off the surface.
+                    if (strcmp(upaxis, "YUP") == 0) {
+                        normal = rotatePointAboutLine(normal, make_vec3(0, 0, 0), make_vec3(1, 0, 0), 0.5 * M_PI);
+                    }
+                    normal = rotatePoint(normal, rotation);
+                    normal = make_vec3(normal.x / scl.x, normal.y / scl.y, normal.z / scl.z);
+                    const float magnitude = normal.magnitude();
+                    if (magnitude > 0.f) {
+                        normal = normal / magnitude;
+                    }
+                    mesh_vertex_normals.push_back(normal);
+                }
+            }
+
+            mesh_faces.push_back(make_int3(face_corner[0], face_corner[1], face_corner[2]));
+            mesh_face_UUIDs.push_back(UUID.at(t));
+        }
+
+        uint polymesh_ObjID = addPolymeshObject(UUID);
+        getPolymeshObjectPointer_private(polymesh_ObjID)
+                ->setTopology(mesh_vertices, mesh_faces, mesh_face_UUIDs, mesh_vertex_normals, {}, file_supplied_normals ? NORMAL_SOURCE_AUTHORED : NORMAL_SOURCE_NONE);
     }
 
     if (!silent) {
@@ -4769,7 +5228,7 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
     uv.reserve(estimated_vertices);
 
     std::map<uint, std::vector<int3>> faces;
-    std::map<uint, std::vector<int>> normal_inds;
+    std::map<uint, std::vector<int3>> normal_inds;
     std::map<uint, std::vector<int3>> uv_inds;
     size_t vertex_count = 1;
     size_t normal_count = 0;
@@ -4777,11 +5236,24 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
     std::map<uint, std::vector<uint>> UUIDs_write;
 
     std::map<std::string, std::map<uint, std::vector<int3>>> object_faces;
-    std::map<std::string, std::map<uint, std::vector<int>>> object_normal_inds;
+    std::map<std::string, std::map<uint, std::vector<int3>>> object_normal_inds;
     std::map<std::string, std::map<uint, std::vector<int3>>> object_uv_inds;
     std::vector<std::string> object_order;
     object_order.reserve(primitive_count / 10);
     bool object_groups_found = false;
+
+    // For a primitive belonging to a polymesh that carries an indexed face set, the mesh vertex index is written once and then referenced by every face that shares it, so that the shared-vertex topology
+    // survives the write. Keyed by (object ID, mesh vertex index) -> 1-based index into the `verts` array being accumulated below.
+    std::unordered_map<int64_t, int> polymesh_vertex_index;
+
+    // The same sharing applied to the 'vn' records, so that a shared vertex contributes one normal rather than one per incident face.
+    std::unordered_map<int64_t, int> polymesh_normal_index;
+
+    // The mesh accessors below transform and return the whole vertex/normal array on every call, so the result is fetched once per polymesh object and reused for all of that object's primitives. Fetching
+    // them inside the per-primitive loop would re-transform the entire mesh once per triangle, which is quadratic in the number of triangles.
+    std::map<uint, std::vector<vec3>> polymesh_vertices_cache;
+    std::map<uint, std::vector<vec3>> polymesh_normals_cache;
+    std::map<uint, std::vector<int3>> polymesh_faces_cache;
 
     for (size_t p: UUIDs) {
         if (!doesPrimitiveExist(p)) {
@@ -4847,24 +5319,116 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
             UUIDs_write[material_ID].push_back(p);
         }
 
+        // Resolve the parent polymesh once per primitive: both the normal block below and the vertex block further down need it, and each resolution costs a map lookup plus a dynamic_cast.
+        const uint parent_ObjID = prim_ptr->getParentObjectID();
+        const Polymesh *polymesh_ptr = nullptr;
+        if (type == PRIMITIVE_TYPE_TRIANGLE && parent_ObjID != 0 && doesObjectExist(parent_ObjID) && getObjectType(parent_ObjID) == OBJECT_TYPE_POLYMESH) {
+            polymesh_ptr = getPolymeshObjectPointer_private(parent_ObjID);
+        }
+
+        // A primitive belonging to a polymesh that carries authored per-vertex normals is written with one normal per corner, so that a smooth mesh survives the round-trip. Everything else keeps the
+        // historical behavior of a single flat normal per primitive.
+        int3 primitive_normal_index = make_int3(-1, -1, -1);
         if (write_normals) {
-            vec3 normal = getPrimitiveNormal(p);
-            normals.push_back(normal);
-            normal_count++;
+            bool wrote_vertex_normals = false;
+
+            {
+                if (polymesh_ptr != nullptr && polymesh_ptr->hasVertexNormals() && polymesh_ptr->getFaceCount() > 0) {
+                    if (polymesh_normals_cache.find(parent_ObjID) == polymesh_normals_cache.end()) {
+                        polymesh_normals_cache[parent_ObjID] = polymesh_ptr->getVertexNormals();
+                    }
+                    if (polymesh_faces_cache.find(parent_ObjID) == polymesh_faces_cache.end()) {
+                        polymesh_faces_cache[parent_ObjID] = polymesh_ptr->getFaces();
+                    }
+                    const std::vector<vec3> &mesh_normals = polymesh_normals_cache.at(parent_ObjID);
+                    const std::vector<int3> &mesh_faces = polymesh_faces_cache.at(parent_ObjID);
+                    const size_t face_index = polymesh_ptr->getFaceIndexForPrimitive(p);
+                    const int3 &mesh_face = mesh_faces.at(face_index);
+                    const int mesh_corner[3] = {mesh_face.x, mesh_face.y, mesh_face.z};
+
+                    // Emit one normal per shared mesh vertex, matching how the vertices themselves are shared below, so that 'vn' records are not duplicated for a vertex used by several faces.
+                    int written_normal_index[3];
+                    for (int i = 0; i < 3; i++) {
+                        const int64_t key = (scast<int64_t>(parent_ObjID) << 32) | (scast<int64_t>(mesh_corner[i]) & 0xffffffffLL);
+                        auto it = polymesh_normal_index.find(key);
+                        if (it != polymesh_normal_index.end()) {
+                            written_normal_index[i] = it->second;
+                        } else {
+                            normal_count++;
+                            written_normal_index[i] = scast<int>(normal_count);
+                            polymesh_normal_index[key] = written_normal_index[i];
+                            normals.push_back(mesh_normals.at(mesh_corner[i]));
+                        }
+                    }
+
+                    primitive_normal_index = make_int3(written_normal_index[0], written_normal_index[1], written_normal_index[2]);
+                    wrote_vertex_normals = true;
+                }
+            }
+
+            if (!wrote_vertex_normals) {
+                vec3 normal = getPrimitiveNormal(p);
+                normals.push_back(normal);
+                normal_count++;
+                primitive_normal_index = make_int3(scast<int>(normal_count), scast<int>(normal_count), scast<int>(normal_count));
+            }
         }
 
         if (type == PRIMITIVE_TYPE_TRIANGLE) {
-            int3 ftmp = make_int3((int) vertex_count, (int) vertex_count + 1, (int) vertex_count + 2);
-            faces[material_ID].push_back(ftmp);
-            object_faces[obj_label][material_ID].push_back(ftmp);
-            for (int i = 0; i < 3; i++) {
-                verts.push_back(vertices.at(i));
-                vertex_count++;
+            // A triangle belonging to a polymesh with retained connectivity is written against the mesh's shared vertices, so a vertex used by several faces is emitted once and referenced by index.
+            // Everything else keeps the historical behavior of emitting three independent vertices per triangle.
+            int3 ftmp;
+            bool wrote_shared_vertices = false;
+
+            {
+                const uint vertex_parent_ObjID = parent_ObjID;
+                const Polymesh *vertex_polymesh_ptr = polymesh_ptr;
+                if (vertex_polymesh_ptr != nullptr && vertex_polymesh_ptr->getFaceCount() > 0) {
+                    if (polymesh_faces_cache.find(vertex_parent_ObjID) == polymesh_faces_cache.end()) {
+                        polymesh_faces_cache[vertex_parent_ObjID] = vertex_polymesh_ptr->getFaces();
+                    }
+                    if (polymesh_vertices_cache.find(vertex_parent_ObjID) == polymesh_vertices_cache.end()) {
+                        polymesh_vertices_cache[vertex_parent_ObjID] = vertex_polymesh_ptr->getVertices();
+                    }
+                    const std::vector<int3> &mesh_faces = polymesh_faces_cache.at(vertex_parent_ObjID);
+                    const std::vector<vec3> &mesh_vertices = polymesh_vertices_cache.at(vertex_parent_ObjID);
+                    const size_t vertex_face_index = vertex_polymesh_ptr->getFaceIndexForPrimitive(p);
+                    const int3 &mesh_face = mesh_faces.at(vertex_face_index);
+                    const int mesh_corner[3] = {mesh_face.x, mesh_face.y, mesh_face.z};
+
+                    int written_index[3];
+                    for (int i = 0; i < 3; i++) {
+                        const int64_t key = (scast<int64_t>(vertex_parent_ObjID) << 32) | (scast<int64_t>(mesh_corner[i]) & 0xffffffffLL);
+                        auto it = polymesh_vertex_index.find(key);
+                        if (it != polymesh_vertex_index.end()) {
+                            written_index[i] = it->second;
+                        } else {
+                            written_index[i] = scast<int>(vertex_count);
+                            polymesh_vertex_index[key] = written_index[i];
+                            verts.push_back(mesh_vertices.at(mesh_corner[i]));
+                            vertex_count++;
+                        }
+                    }
+
+                    ftmp = make_int3(written_index[0], written_index[1], written_index[2]);
+                    wrote_shared_vertices = true;
+                }
             }
 
+            if (!wrote_shared_vertices) {
+                ftmp = make_int3((int) vertex_count, (int) vertex_count + 1, (int) vertex_count + 2);
+                for (int i = 0; i < 3; i++) {
+                    verts.push_back(vertices.at(i));
+                    vertex_count++;
+                }
+            }
+
+            faces[material_ID].push_back(ftmp);
+            object_faces[obj_label][material_ID].push_back(ftmp);
+
             if (write_normals) {
-                normal_inds[material_ID].push_back(static_cast<int>(normal_count));
-                object_normal_inds[obj_label][material_ID].push_back(static_cast<int>(normal_count));
+                normal_inds[material_ID].push_back(primitive_normal_index);
+                object_normal_inds[obj_label][material_ID].push_back(primitive_normal_index);
             }
 
             std::vector<vec2> uv_v = getTrianglePointer_private(p)->getTextureUV();
@@ -4896,10 +5460,10 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
             uv_v = getPatchPointer_private(p)->getTextureUV();
 
             if (write_normals) {
-                normal_inds[material_ID].push_back(static_cast<int>(normal_count));
-                normal_inds[material_ID].push_back(static_cast<int>(normal_count));
-                object_normal_inds[obj_label][material_ID].push_back(static_cast<int>(normal_count));
-                object_normal_inds[obj_label][material_ID].push_back(static_cast<int>(normal_count));
+                normal_inds[material_ID].push_back(primitive_normal_index);
+                normal_inds[material_ID].push_back(primitive_normal_index);
+                object_normal_inds[obj_label][material_ID].push_back(primitive_normal_index);
+                object_normal_inds[obj_label][material_ID].push_back(primitive_normal_index);
             }
 
             if (getPatchPointer_private(p)->hasTexture()) {
@@ -5143,8 +5707,8 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
                         for (size_t f = start_idx; f < end_idx; f++) {
                             if (uv.empty()) {
                                 if (write_normals) {
-                                    face_stream << "f " << current_faces[f].x << "//" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].y << "//" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].z << "//"
-                                                << object_normal_inds[obj_label][mat][f] << "\n";
+                                    face_stream << "f " << current_faces[f].x << "//" << object_normal_inds[obj_label][mat][f].x << " " << current_faces[f].y << "//" << object_normal_inds[obj_label][mat][f].y << " " << current_faces[f].z
+                                                << "//" << object_normal_inds[obj_label][mat][f].z << "\n";
                                 } else {
                                     face_stream << "f " << current_faces[f].x << " " << current_faces[f].y << " " << current_faces[f].z << "\n";
                                 }
@@ -5152,8 +5716,9 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
                                 face_stream << "f " << current_faces[f].x << "/1 " << current_faces[f].y << "/1 " << current_faces[f].z << "/1\n";
                             } else {
                                 if (write_normals) {
-                                    face_stream << "f " << current_faces[f].x << "/" << object_uv_inds[obj_label][mat][f].x << "/" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].y << "/" << object_uv_inds[obj_label][mat][f].y
-                                                << "/" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].z << "/" << object_uv_inds[obj_label][mat][f].z << "/" << object_normal_inds[obj_label][mat][f] << "\n";
+                                    face_stream << "f " << current_faces[f].x << "/" << object_uv_inds[obj_label][mat][f].x << "/" << object_normal_inds[obj_label][mat][f].x << " " << current_faces[f].y << "/"
+                                                << object_uv_inds[obj_label][mat][f].y << "/" << object_normal_inds[obj_label][mat][f].y << " " << current_faces[f].z << "/" << object_uv_inds[obj_label][mat][f].z << "/"
+                                                << object_normal_inds[obj_label][mat][f].z << "\n";
                                 } else {
                                     face_stream << "f " << current_faces[f].x << "/" << object_uv_inds[obj_label][mat][f].x << " " << current_faces[f].y << "/" << object_uv_inds[obj_label][mat][f].y << " " << current_faces[f].z << "/"
                                                 << object_uv_inds[obj_label][mat][f].z << "\n";
@@ -5173,8 +5738,8 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
                     for (size_t f = 0; f < current_faces.size(); ++f) {
                         if (uv.empty()) {
                             if (write_normals) {
-                                objfstream << "f " << current_faces[f].x << "//" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].y << "//" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].z << "//"
-                                           << object_normal_inds[obj_label][mat][f] << std::endl;
+                                objfstream << "f " << current_faces[f].x << "//" << object_normal_inds[obj_label][mat][f].x << " " << current_faces[f].y << "//" << object_normal_inds[obj_label][mat][f].y << " " << current_faces[f].z
+                                           << "//" << object_normal_inds[obj_label][mat][f].z << std::endl;
                             } else {
                                 objfstream << "f " << current_faces[f].x << " " << current_faces[f].y << " " << current_faces[f].z << std::endl;
                             }
@@ -5182,8 +5747,9 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
                             objfstream << "f " << current_faces[f].x << "/1 " << current_faces[f].y << "/1 " << current_faces[f].z << "/1" << std::endl;
                         } else {
                             if (write_normals) {
-                                objfstream << "f " << current_faces[f].x << "/" << object_uv_inds[obj_label][mat][f].x << "/" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].y << "/" << object_uv_inds[obj_label][mat][f].y << "/"
-                                           << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].z << "/" << object_uv_inds[obj_label][mat][f].z << "/" << object_normal_inds[obj_label][mat][f] << std::endl;
+                                objfstream << "f " << current_faces[f].x << "/" << object_uv_inds[obj_label][mat][f].x << "/" << object_normal_inds[obj_label][mat][f].x << " " << current_faces[f].y << "/"
+                                           << object_uv_inds[obj_label][mat][f].y << "/" << object_normal_inds[obj_label][mat][f].y << " " << current_faces[f].z << "/" << object_uv_inds[obj_label][mat][f].z << "/"
+                                           << object_normal_inds[obj_label][mat][f].z << std::endl;
                             } else {
                                 objfstream << "f " << current_faces[f].x << "/" << object_uv_inds[obj_label][mat][f].x << " " << current_faces[f].y << "/" << object_uv_inds[obj_label][mat][f].y << " " << current_faces[f].z << "/"
                                            << object_uv_inds[obj_label][mat][f].z << std::endl;
@@ -5222,7 +5788,7 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
                     for (size_t f = start_idx; f < end_idx; f++) {
                         if (uv.empty()) {
                             if (write_normals) {
-                                face_stream << "f " << current_faces[f].x << "//" << normal_inds.at(mat)[f] << " " << current_faces[f].y << "//" << normal_inds.at(mat)[f] << " " << current_faces[f].z << "//" << normal_inds.at(mat)[f] << "\n";
+                                face_stream << "f " << current_faces[f].x << "//" << normal_inds.at(mat)[f].x << " " << current_faces[f].y << "//" << normal_inds.at(mat)[f].y << " " << current_faces[f].z << "//" << normal_inds.at(mat)[f].z << "\n";
                             } else {
                                 face_stream << "f " << current_faces[f].x << " " << current_faces[f].y << " " << current_faces[f].z << "\n";
                             }
@@ -5230,8 +5796,8 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
                             face_stream << "f " << current_faces[f].x << "/1 " << current_faces[f].y << "/1 " << current_faces[f].z << "/1\n";
                         } else {
                             if (write_normals) {
-                                face_stream << "f " << current_faces[f].x << "/" << uv_inds.at(mat)[f].x << "/" << normal_inds.at(mat)[f] << " " << current_faces[f].y << "/" << uv_inds.at(mat)[f].y << "/" << normal_inds.at(mat)[f] << " "
-                                            << current_faces[f].z << "/" << uv_inds.at(mat)[f].z << "/" << normal_inds.at(mat)[f] << "\n";
+                                face_stream << "f " << current_faces[f].x << "/" << uv_inds.at(mat)[f].x << "/" << normal_inds.at(mat)[f].x << " " << current_faces[f].y << "/" << uv_inds.at(mat)[f].y << "/" << normal_inds.at(mat)[f].y
+                                            << " " << current_faces[f].z << "/" << uv_inds.at(mat)[f].z << "/" << normal_inds.at(mat)[f].z << "\n";
                             } else {
                                 face_stream << "f " << current_faces[f].x << "/" << uv_inds.at(mat)[f].x << " " << current_faces[f].y << "/" << uv_inds.at(mat)[f].y << " " << current_faces[f].z << "/" << uv_inds.at(mat)[f].z << "\n";
                             }
@@ -5250,7 +5816,7 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
                 for (int f = 0; f < current_faces.size(); f++) {
                     if (uv.empty()) {
                         if (write_normals) {
-                            objfstream << "f " << current_faces[f].x << "//" << normal_inds.at(mat)[f] << " " << current_faces[f].y << "//" << normal_inds.at(mat)[f] << " " << current_faces[f].z << "//" << normal_inds.at(mat)[f] << std::endl;
+                            objfstream << "f " << current_faces[f].x << "//" << normal_inds.at(mat)[f].x << " " << current_faces[f].y << "//" << normal_inds.at(mat)[f].y << " " << current_faces[f].z << "//" << normal_inds.at(mat)[f].z << std::endl;
                         } else {
                             objfstream << "f " << current_faces[f].x << " " << current_faces[f].y << " " << current_faces[f].z << std::endl;
                         }
@@ -5258,8 +5824,8 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
                         objfstream << "f " << current_faces[f].x << "/1 " << current_faces[f].y << "/1 " << current_faces[f].z << "/1" << std::endl;
                     } else {
                         if (write_normals) {
-                            objfstream << "f " << current_faces[f].x << "/" << uv_inds.at(mat)[f].x << "/" << normal_inds.at(mat)[f] << " " << current_faces[f].y << "/" << uv_inds.at(mat)[f].y << "/" << normal_inds.at(mat)[f] << " "
-                                       << current_faces[f].z << "/" << uv_inds.at(mat)[f].z << "/" << normal_inds.at(mat)[f] << std::endl;
+                            objfstream << "f " << current_faces[f].x << "/" << uv_inds.at(mat)[f].x << "/" << normal_inds.at(mat)[f].x << " " << current_faces[f].y << "/" << uv_inds.at(mat)[f].y << "/" << normal_inds.at(mat)[f].y
+                                       << " " << current_faces[f].z << "/" << uv_inds.at(mat)[f].z << "/" << normal_inds.at(mat)[f].z << std::endl;
                         } else {
                             objfstream << "f " << current_faces[f].x << "/" << uv_inds.at(mat)[f].x << " " << current_faces[f].y << "/" << uv_inds.at(mat)[f].y << " " << current_faces[f].z << "/" << uv_inds.at(mat)[f].z << std::endl;
                         }

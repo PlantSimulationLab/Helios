@@ -269,6 +269,287 @@ TEST_CASE("SolarPosition cloud calibration") {
     }
 }
 
+TEST_CASE("SolarPosition cloud calibration preserves PAR/NIR partitioning") {
+    // The cloud calibration scales the clear-sky flux by the broadband factor R_meas/R_clear,h.
+    // That factor must be computed from the ALL-WAVE flux and then applied to each band, so that
+    // (a) the PAR/NIR ratio is unchanged by calibration, and (b) the bands still sum to the
+    // broadband total. Computing the factor from whichever band is passed in makes the input
+    // cancel algebraically (R_calc*R_meas/(R_calc*cos(theta)) == R_meas/cos(theta)), collapsing
+    // PAR, NIR and broadband onto a single value.
+    Context context_s;
+
+    // Noon at the summer solstice near Davis, CA, so the sun is high and the clear-sky flux large.
+    const Date date = make_Date(21, 6, 2020);
+    const Time time = make_Time(12, 30, 0);
+    context_s.setDate(date);
+    context_s.setTime(time);
+
+    SolarPosition sp(-8, 38.55f, -121.76f, &context_s);
+    sp.setAtmosphericConditions(101000.f, 300.f, 0.5f, 0.05f);
+
+    const float cos_theta = std::cos(sp.getSunZenith());
+    DOCTEST_REQUIRE(cos_theta > 0.5f); // sun must be well above the horizon for this test to mean anything
+
+    // Clear-sky (uncalibrated) reference values.
+    const float par_clear = sp.getSolarFluxPAR();
+    const float nir_clear = sp.getSolarFluxNIR();
+    const float total_clear = sp.getSolarFlux();
+
+    DOCTEST_REQUIRE(par_clear > 0.f);
+    DOCTEST_REQUIRE(nir_clear > 0.f);
+    DOCTEST_REQUIRE(total_clear > 0.f);
+    // Sanity: the two bands partition the broadband flux, and neither dominates entirely.
+    DOCTEST_CHECK(par_clear + nir_clear == doctest::Approx(total_clear).epsilon(1e-4));
+    const float par_fraction_clear = par_clear / total_clear;
+    DOCTEST_REQUIRE(par_fraction_clear > 0.1f);
+    DOCTEST_REQUIRE(par_fraction_clear < 0.9f);
+
+    // Impose a cloudy measurement: 55% of the clear-sky flux on a horizontal plane. Using a
+    // fraction well below 1 keeps the calibration branch active (fdiff > 0.001) and makes the
+    // expected attenuation an order-of-magnitude effect rather than a marginal one.
+    const float cloud_factor = 0.55f;
+    const float R_meas_horizontal = cloud_factor * total_clear * cos_theta;
+    context_s.addTimeseriesData("R_meas_Wm2", R_meas_horizontal, date, time);
+    context_s.setCurrentTimeseriesPoint("R_meas_Wm2", 0);
+
+    // Re-pin date/time: setCurrentTimeseriesPoint moves the Context clock to the data point.
+    DOCTEST_REQUIRE(std::fabs(std::cos(sp.getSunZenith()) - cos_theta) < 1e-4f);
+
+    sp.enableCloudCalibration("R_meas_Wm2");
+
+    const float par_cloudy = sp.getSolarFluxPAR();
+    const float nir_cloudy = sp.getSolarFluxNIR();
+    const float total_cloudy = sp.getSolarFlux();
+
+    // The calibration must actually have done something.
+    DOCTEST_CHECK(total_cloudy < total_clear);
+    DOCTEST_CHECK(total_cloudy == doctest::Approx(R_meas_horizontal / cos_theta).epsilon(1e-3));
+
+    // (a) The spectral partitioning must survive calibration.
+    DOCTEST_CHECK(par_cloudy / total_cloudy == doctest::Approx(par_fraction_clear).epsilon(1e-3));
+    DOCTEST_CHECK(nir_cloudy / par_cloudy == doctest::Approx(nir_clear / par_clear).epsilon(1e-3));
+
+    // (b) Energy must be conserved: the bands sum to the broadband total, not to twice it.
+    DOCTEST_CHECK(par_cloudy + nir_cloudy == doctest::Approx(total_cloudy).epsilon(1e-3));
+
+    // Each band should be attenuated by the same broadband cloud factor.
+    DOCTEST_CHECK(par_cloudy == doctest::Approx(cloud_factor * par_clear).epsilon(1e-3));
+    DOCTEST_CHECK(nir_cloudy == doctest::Approx(cloud_factor * nir_clear).epsilon(1e-3));
+}
+
+TEST_CASE("SolarPosition cloud calibration diffuse fraction responds to cloud") {
+    // The calibrated diffuse fraction must increase monotonically as the measured flux falls further
+    // below the clear-sky prediction. The previous heuristic, 1-(R_meas-R_calc)/R_calc, reduces to
+    // 2-R_meas/R_calc, which exceeds 1 for any measurement below clear-sky and so clamped to a
+    // fully-diffuse sky for every real cloud condition, reporting overcast for light haze.
+    Context context_s;
+
+    const Date date = make_Date(21, 6, 2020);
+    const Time time = make_Time(12, 30, 0);
+    context_s.setDate(date);
+    context_s.setTime(time);
+
+    SolarPosition sp(-8, 38.55f, -121.76f, &context_s);
+    sp.setAtmosphericConditions(101000.f, 300.f, 0.5f, 0.05f);
+
+    const float cos_theta = std::cos(sp.getSunZenith());
+    DOCTEST_REQUIRE(cos_theta > 0.5f);
+
+    const float total_clear = sp.getSolarFlux();
+    const float clear_horizontal = total_clear * cos_theta;
+    DOCTEST_REQUIRE(clear_horizontal > 100.f);
+
+    // Seed one timeseries point, then overwrite it for each cloud level.
+    context_s.addTimeseriesData("R_meas_Wm2", clear_horizontal, date, time);
+    context_s.setCurrentTimeseriesPoint("R_meas_Wm2", 0);
+    sp.enableCloudCalibration("R_meas_Wm2");
+
+    // Thin cloud should stay predominantly direct; thick cloud should be predominantly diffuse.
+    context_s.updateTimeseriesData("R_meas_Wm2", date, time, 0.95f * clear_horizontal);
+    const float fdiff_thin = sp.getDiffuseFraction();
+
+    context_s.updateTimeseriesData("R_meas_Wm2", date, time, 0.60f * clear_horizontal);
+    const float fdiff_moderate = sp.getDiffuseFraction();
+
+    context_s.updateTimeseriesData("R_meas_Wm2", date, time, 0.20f * clear_horizontal);
+    const float fdiff_thick = sp.getDiffuseFraction();
+
+    DOCTEST_CHECK(fdiff_thin >= 0.f);
+    DOCTEST_CHECK(fdiff_thick <= 1.f);
+
+    // Monotonic in cloud thickness.
+    DOCTEST_CHECK(fdiff_thin < fdiff_moderate);
+    DOCTEST_CHECK(fdiff_moderate < fdiff_thick);
+
+    // A nearly clear sky must NOT be reported as fully diffuse.
+    DOCTEST_CHECK(fdiff_thin < 0.6f);
+
+    // A heavily overcast sky must be predominantly diffuse.
+    DOCTEST_CHECK(fdiff_thick > 0.8f);
+}
+
+TEST_CASE("SolarPosition cloud calibration rejects negative measured flux") {
+    // A negative measured shortwave flux (a sentinel or a faulty sensor reading) must be reported
+    // rather than silently producing negative fluxes.
+    Context context_s;
+
+    const Date date = make_Date(21, 6, 2020);
+    const Time time = make_Time(12, 30, 0);
+    context_s.setDate(date);
+    context_s.setTime(time);
+
+    SolarPosition sp(-8, 38.55f, -121.76f, &context_s);
+    sp.setAtmosphericConditions(101000.f, 300.f, 0.5f, 0.05f);
+
+    context_s.addTimeseriesData("R_bad", -999.f, date, time);
+    context_s.setCurrentTimeseriesPoint("R_bad", 0);
+    sp.enableCloudCalibration("R_bad");
+
+    {
+        capture_cerr cerr_buffer;
+        DOCTEST_CHECK_THROWS_AS([[maybe_unused]] float flux = sp.getSolarFluxPAR(), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(sp.calculateGlobalSolarSpectrum("spectrum_bad"), std::runtime_error);
+    }
+}
+
+TEST_CASE("SolarPosition spectral cloud calibration") {
+    // The spectral (SSolar-GOA) path must honor enableCloudCalibration(). The calibration normalizes
+    // the modeled clear-sky spectrum to the measured broadband flux and then applies the Bird,
+    // Riordan & Myers (1987) spectral modifiers, which transmit short wavelengths preferentially.
+    Context context_s;
+
+    const Date date = make_Date(21, 6, 2020);
+    const Time time = make_Time(12, 30, 0);
+    context_s.setDate(date);
+    context_s.setTime(time);
+
+    SolarPosition sp(-8, 38.55f, -121.76f, &context_s);
+    sp.setAtmosphericConditions(101000.f, 300.f, 0.5f, 0.05f);
+
+    const float cos_theta = std::cos(sp.getSunZenith());
+    DOCTEST_REQUIRE(cos_theta > 0.5f);
+
+    // Clear-sky reference spectra.
+    sp.calculateGlobalSolarSpectrum("global_clear");
+    sp.calculateDiffuseSolarSpectrum("diffuse_clear");
+    std::vector<vec2> global_clear, diffuse_clear;
+    context_s.getGlobalData("global_clear", global_clear);
+    context_s.getGlobalData("diffuse_clear", diffuse_clear);
+    DOCTEST_REQUIRE(global_clear.size() > 100);
+
+    auto integrate = [](const std::vector<vec2> &spectrum) {
+        float total = 0.f;
+        for (size_t i = 1; i < spectrum.size(); ++i) {
+            total += 0.5f * (spectrum.at(i).y + spectrum.at(i - 1).y) * (spectrum.at(i).x - spectrum.at(i - 1).x);
+        }
+        return total;
+    };
+
+    const float integral_clear = integrate(global_clear);
+    DOCTEST_REQUIRE(integral_clear > 100.f);
+
+    // Impose a cloudy measurement well outside the 5% no-correction deadband. The measured value is
+    // broadband, whereas the model covers only 300-2600 nm, so scale by the window fraction to get
+    // the target the calibration should reproduce inside the window.
+    const float model_window_fraction = 0.9596f;
+    const float cloud_factor = 0.55f;
+    const float R_meas_broadband = cloud_factor * integral_clear / model_window_fraction;
+    context_s.addTimeseriesData("R_meas_Wm2", R_meas_broadband, date, time);
+    context_s.setCurrentTimeseriesPoint("R_meas_Wm2", 0);
+    DOCTEST_REQUIRE(std::fabs(std::cos(sp.getSunZenith()) - cos_theta) < 1e-4f);
+
+    sp.enableCloudCalibration("R_meas_Wm2");
+
+    sp.calculateGlobalSolarSpectrum("global_cloudy");
+    sp.calculateDirectSolarSpectrum("direct_cloudy");
+    sp.calculateDiffuseSolarSpectrum("diffuse_cloudy");
+    std::vector<vec2> global_cloudy, direct_cloudy, diffuse_cloudy;
+    context_s.getGlobalData("global_cloudy", global_cloudy);
+    context_s.getGlobalData("direct_cloudy", direct_cloudy);
+    context_s.getGlobalData("diffuse_cloudy", diffuse_cloudy);
+
+    DOCTEST_REQUIRE(global_cloudy.size() == global_clear.size());
+
+    // The calibration must actually have been applied to the spectral path.
+    const float integral_cloudy = integrate(global_cloudy);
+    DOCTEST_CHECK(integral_cloudy < integral_clear);
+    DOCTEST_CHECK(integral_cloudy == doctest::Approx(cloud_factor * integral_clear).epsilon(0.05));
+
+    // The two components must still compose the global spectrum: global = direct*mu0 + diffuse.
+    for (size_t i = 0; i < global_cloudy.size(); i += 200) {
+        DOCTEST_CHECK(global_cloudy.at(i).y == doctest::Approx(direct_cloudy.at(i).y * cos_theta + diffuse_cloudy.at(i).y).epsilon(1e-3));
+    }
+
+    // Cloud must shift the diffuse fraction upward: the clear-sky sky is mostly direct beam, whereas
+    // an overcast sky is almost entirely diffuse.
+    const float diffuse_fraction_clear = integrate(diffuse_clear) / integral_clear;
+    const float diffuse_fraction_cloudy = integrate(diffuse_cloudy) / integral_cloudy;
+    DOCTEST_CHECK(diffuse_fraction_cloudy > diffuse_fraction_clear);
+    DOCTEST_CHECK(diffuse_fraction_cloudy > 0.5f);
+
+    // Cloud must enrich the photosynthetically active fraction of the global spectrum, which is the
+    // physically observable consequence of the spectral treatment. Measurements put the PAR fraction
+    // of global shortwave at about 0.417 under clear sky rising to about 0.483 under overcast.
+    auto par_fraction = [&](const std::vector<vec2> &spectrum) {
+        float par = 0.f;
+        for (size_t i = 1; i < spectrum.size(); ++i) {
+            if (spectrum.at(i).x < 400.f || spectrum.at(i).x > 700.f) {
+                continue;
+            }
+            par += 0.5f * (spectrum.at(i).y + spectrum.at(i - 1).y) * (spectrum.at(i).x - spectrum.at(i - 1).x);
+        }
+        return par / integrate(spectrum);
+    };
+
+    const float par_fraction_clear = par_fraction(global_clear);
+    const float par_fraction_cloudy = par_fraction(global_cloudy);
+    DOCTEST_CHECK(par_fraction_cloudy > par_fraction_clear);
+
+    // A purely grey rescaling would leave the PAR fraction exactly unchanged, so require a shift
+    // that is clearly larger than floating-point noise but still physically plausible.
+    DOCTEST_CHECK(par_fraction_cloudy - par_fraction_clear > 0.01f);
+    DOCTEST_CHECK(par_fraction_cloudy - par_fraction_clear < 0.10f);
+}
+
+TEST_CASE("SolarPosition spectral cloud calibration deadband") {
+    // Within 5% agreement between the modeled and measured broadband irradiance, no cloud
+    // modification is applied at all (Bird, Riordan & Myers 1987): the discrepancy there is
+    // dominated by measurement and input uncertainty rather than by cloud.
+    Context context_s;
+
+    const Date date = make_Date(21, 6, 2020);
+    const Time time = make_Time(12, 30, 0);
+    context_s.setDate(date);
+    context_s.setTime(time);
+
+    SolarPosition sp(-8, 38.55f, -121.76f, &context_s);
+    sp.setAtmosphericConditions(101000.f, 300.f, 0.5f, 0.05f);
+
+    sp.calculateGlobalSolarSpectrum("global_clear_db");
+    std::vector<vec2> global_clear;
+    context_s.getGlobalData("global_clear_db", global_clear);
+
+    float integral_clear = 0.f;
+    for (size_t i = 1; i < global_clear.size(); ++i) {
+        integral_clear += 0.5f * (global_clear.at(i).y + global_clear.at(i - 1).y) * (global_clear.at(i).x - global_clear.at(i - 1).x);
+    }
+
+    // A measurement only 2% below the model sits inside the deadband.
+    const float model_window_fraction = 0.9596f;
+    context_s.addTimeseriesData("R_meas_db", 0.98f * integral_clear / model_window_fraction, date, time);
+    context_s.setCurrentTimeseriesPoint("R_meas_db", 0);
+
+    sp.enableCloudCalibration("R_meas_db");
+    sp.calculateGlobalSolarSpectrum("global_deadband");
+    std::vector<vec2> global_deadband;
+    context_s.getGlobalData("global_deadband", global_deadband);
+
+    DOCTEST_REQUIRE(global_deadband.size() == global_clear.size());
+    for (size_t i = 0; i < global_clear.size(); i += 200) {
+        DOCTEST_CHECK(global_deadband.at(i).y == doctest::Approx(global_clear.at(i).y).epsilon(1e-5));
+    }
+}
+
 TEST_CASE("SolarPosition turbidity calculation") {
     Context context_s;
     SolarPosition sp(7, 40.125f, 105.2369f, &context_s);

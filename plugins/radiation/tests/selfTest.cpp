@@ -105,6 +105,46 @@ namespace helios {
     };
 } // namespace helios
 
+GPU_TEST_CASE("RadiationModel::writeImageSegmentationMasks refuses a pixel-to-primitive map that no longer resolves") {
+    // The per-camera "camera_<label>_pixel_UUID" map holds Context UUIDs (offset by one, zero meaning the pixel hit
+    // nothing) and is published as global data. Context::writeXML() stores global data verbatim while
+    // Context::loadXML() assigns every primitive a fresh UUID, so a map that arrives with a reloaded scene describes
+    // primitives that are gone -- or, where the value happens to land in range again, entirely different ones, which
+    // would silently mislabel the annotations. Writing masks against a map that no longer resolves must fail loudly.
+    Context context;
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(patch, "patch_id", uint(1));
+
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiationmodel.disableMessages();
+
+    CameraProperties cam_props;
+    cam_props.camera_resolution = make_int2(8, 8);
+    cam_props.HFOV = 70;
+    cam_props.focal_plane_distance = 10;
+    cam_props.lens_diameter = 0.f;
+    radiationmodel.addRadiationCamera("stale_cam", {"SW"}, make_vec3(0, -10, 0), make_vec3(0, 0, 0), cam_props, 1);
+
+    // Stand in for a map carried over from another Context: one pixel that hit nothing, and one naming a primitive
+    // that does not exist here.
+    std::vector<uint> stale_map = {0u, 999999u};
+    context.setGlobalData("camera_stale_cam_pixel_UUID", stale_map);
+
+    std::string message;
+    bool threw = false;
+    try {
+        radiationmodel.writeImageSegmentationMasks("stale_cam", {"patch_id"}, {1}, "stale_masks.json", "does_not_exist.jpeg");
+    } catch (const std::runtime_error &e) {
+        threw = true;
+        message = e.what();
+    }
+    DOCTEST_CHECK(threw);
+    // Must be rejected for the stale map specifically, not for the missing image file that is checked afterwards.
+    DOCTEST_CHECK(message.find("no longer exist in the Context") != std::string::npos);
+
+    std::remove("stale_masks.json");
+}
+
 GPU_TEST_CASE("RadiationModel::writeImageBoundingBoxes classes file argument is not taken as the output path") {
     // Regression test for an overload-resolution trap. The current API is
     //     writeImageBoundingBoxes(camera, label, class_ID, image_file, classes_txt_file, image_path)
@@ -10256,3 +10296,393 @@ GPU_TEST_CASE("RadiationModel segmentation masks leave a single component unchan
     DOCTEST_CHECK(annotations.at(0).at("category_id").at(0) == doctest::Approx(4.f));
     DOCTEST_CHECK(annotations.at(0).at("image_id").at(0) == doctest::Approx(9.f));
 }
+
+// ================================================================================================
+// Vulkan compute backend regression tests
+//
+// These cover defects that were live only on the Vulkan compute (software BVH) backend, where no
+// CI job exercised the runtime path. They are backend-agnostic by construction — each asserts an
+// analytic result or a finiteness invariant that must hold on OptiX too — so they run wherever the
+// suite runs and are meaningful on a build configured with -DFORCE_VULKAN_BACKEND=ON.
+//
+// They share the "Backend Invariant - " name prefix so a runner too slow for the full suite can
+// select just this group. The Linux Vulkan workflow does exactly that, because lavapipe is a CPU
+// driver and some existing tests trace half a million diffuse rays per primitive.
+// ================================================================================================
+
+//! Mean radiation_flux over a set of primitives, for the analytic energy tests below.
+static float meanRadiationFlux(helios::Context &context, const std::vector<uint> &UUIDs, const std::string &band) {
+    double sum = 0.0;
+    for (uint UUID: UUIDs) {
+        float flux = 0.f;
+        context.getPrimitiveData(UUID, ("radiation_flux_" + band).c_str(), flux);
+        sum += double(flux);
+    }
+    return float(sum / double(UUIDs.size()));
+}
+
+GPU_TEST_CASE("Backend Invariant - Camera Render of Alpha-Masked Geometry is Finite") {
+    // A camera image of texture-masked geometry with scattering enabled. Every pixel must be
+    // finite. A single non-finite pixel is not a local defect: applyCameraExposure() derives its
+    // gain from a statistic over the frame, so one NaN scales the whole image to NaN and the
+    // result is an entirely black render with no error — which is how this failure presented.
+    //
+    // No existing test rendered a camera image of textured geometry: the tests that use a texture
+    // file and the tests that add a camera were disjoint sets.
+    Context context;
+
+    // Ground plus a stack of alpha-masked textured patches, arranged so that rays are rejected
+    // both by the transparency mask and by occlusion, and so the camera sees a mixture of the two.
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4));
+    for (int i = 0; i < 6; i++) {
+        context.addPatch(make_vec3(-0.4f + 0.16f * float(i), 0.1f * float(i), 0.5f + 0.18f * float(i)), make_vec2(1.1f, 1.1f), make_SphericalCoord(0.35f * float(i), 0.7f * float(i)), "plugins/radiation/disk.png");
+    }
+
+    std::vector<uint> all_UUIDs = context.getAllUUIDs();
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+
+    uint sun = model.addCollimatedRadiationSource(make_vec3(0.2f, 0.1f, 1.f));
+
+    const std::vector<std::string> bands = {"red", "green", "blue"};
+    for (const std::string &band: bands) {
+        model.addRadiationBand(band);
+        model.disableEmission(band);
+        model.setScatteringDepth(band, 2);
+        model.setDirectRayCount(band, 200);
+        model.setDiffuseRayCount(band, 200);
+        model.setSourceFlux(sun, band, 500.f);
+        model.setDiffuseRadiationFlux(band, 100.f);
+        context.setPrimitiveData(all_UUIDs, ("reflectivity_" + band).c_str(), 0.35f);
+        context.setPrimitiveData(all_UUIDs, ("transmissivity_" + band).c_str(), 0.1f);
+    }
+
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = make_int2(24, 24);
+    camera_properties.HFOV = 60.f;
+    camera_properties.focal_plane_distance = 2.f;
+    camera_properties.lens_diameter = 0.f;
+    model.addRadiationCamera("cam", bands, make_vec3(0, -2.5f, 1.2f), make_vec3(0, 0, 0.4f), camera_properties, 4);
+
+    model.updateGeometry();
+    model.runBand(bands);
+
+    for (const std::string &band: bands) {
+        std::vector<float> pixels;
+        context.getGlobalData(("camera_cam_" + band).c_str(), pixels);
+        DOCTEST_REQUIRE(pixels.size() == size_t(camera_properties.camera_resolution.x * camera_properties.camera_resolution.y));
+
+        size_t non_finite = 0;
+        float max_pixel = 0.f;
+        for (float pixel: pixels) {
+            if (!std::isfinite(pixel)) {
+                non_finite++;
+            } else {
+                max_pixel = std::max(max_pixel, pixel);
+            }
+        }
+        DOCTEST_CHECK_MESSAGE(non_finite == 0, "band " << band << ": " << non_finite << " of " << pixels.size() << " camera pixels are non-finite");
+        // An all-zero frame would satisfy the finiteness check while proving nothing.
+        DOCTEST_CHECK_MESSAGE(max_pixel > 0.f, "band " << band << ": camera rendered an entirely black frame");
+
+        // Also check the per-primitive fluxes: a non-finite value in the direct pass can be
+        // masked at the camera if no camera ray happens to hit the affected primitive.
+        for (uint UUID: all_UUIDs) {
+            float flux = 0.f;
+            context.getPrimitiveData(UUID, ("radiation_flux_" + band).c_str(), flux);
+            DOCTEST_REQUIRE_MESSAGE(std::isfinite(flux), "band " << band << ": primitive " << UUID << " has non-finite radiation_flux");
+        }
+    }
+}
+
+GPU_TEST_CASE("Backend Invariant - Multiple Collimated Sources Each Contribute") {
+    // Every source after the first must contribute its own flux. On the Vulkan backend the source
+    // position array was declared `vec3 positions[]` in the shaders, which std430 gives a 16-byte
+    // stride, while the host uploaded tightly-packed 12-byte helios::vec3. Element 0 read
+    // correctly and element 1 read the wrong 12 bytes (running past the end of the allocation),
+    // producing a garbage direction: the second source delivered exactly zero flux, silently.
+    //
+    // A horizontal surface under a collimated source at zenith angle theta absorbs
+    // flux * cos(theta), so the two-source total is analytic.
+    Context context;
+    std::vector<uint> ground = context.addTile(make_vec3(0, 0, 0), make_vec2(2, 2), nullrotation, make_int2(10, 10));
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+
+    uint source_zenith = model.addCollimatedRadiationSource(make_vec3(0.f, 0.f, 1.f)); // cos = 1.0
+    uint source_oblique = model.addCollimatedRadiationSource(make_vec3(0.6f, 0.f, 0.8f)); // cos = 0.8 once normalized
+
+    model.addRadiationBand("SW");
+    model.disableEmission("SW");
+    model.setScatteringDepth("SW", 0);
+    model.setDirectRayCount("SW", 500);
+    model.setDiffuseRadiationFlux("SW", 0.f);
+
+    std::vector<uint> all_UUIDs = context.getAllUUIDs();
+    context.setPrimitiveData(all_UUIDs, "reflectivity_SW", 0.f);
+    context.setPrimitiveData(all_UUIDs, "transmissivity_SW", 0.f);
+
+    model.updateGeometry();
+
+    // Each source in isolation, then both together.
+    model.setSourceFlux(source_zenith, "SW", 1000.f);
+    model.setSourceFlux(source_oblique, "SW", 0.f);
+    model.runBand("SW");
+    const float zenith_only = meanRadiationFlux(context, ground, "SW");
+
+    model.setSourceFlux(source_zenith, "SW", 0.f);
+    model.setSourceFlux(source_oblique, "SW", 1000.f);
+    model.runBand("SW");
+    const float oblique_only = meanRadiationFlux(context, ground, "SW");
+
+    model.setSourceFlux(source_zenith, "SW", 1000.f);
+    model.setSourceFlux(source_oblique, "SW", 1000.f);
+    model.runBand("SW");
+    const float both = meanRadiationFlux(context, ground, "SW");
+
+    DOCTEST_CHECK(zenith_only == doctest::Approx(1000.f).epsilon(0.02));
+    // This is the assertion that failed before the fix: the second source contributed 0.
+    DOCTEST_CHECK(oblique_only == doctest::Approx(800.f).epsilon(0.02));
+    DOCTEST_CHECK(both == doctest::Approx(1800.f).epsilon(0.02));
+}
+
+GPU_TEST_CASE("Backend Invariant - Per-Band Diffuse Peak Direction") {
+    // The sky peak direction is per band, and each band must use its own. The same std430 stride
+    // mismatch described above applied to the diffuse peak-direction array, so in a three-band
+    // run bands 1 and 2 sampled the sky around the wrong direction (errors of 21% and 27%).
+    //
+    // A horizontal surface under a power-law sky absorbs an amount that depends on where the sky
+    // peaks, so per-band absorbed flux reads back the direction actually used. Ground truth is
+    // measured one band at a time, where the index is always 0 and therefore always correct.
+    const vec3 zenith = make_vec3(0.f, 0.f, 1.f);
+    const vec3 tilted = make_vec3(0.9f, 0.f, 0.4f);
+    const std::vector<vec3> peak_directions = {zenith, tilted, zenith};
+
+    auto measure = [&](const std::vector<vec3> &directions, size_t band_to_report) {
+        Context context;
+        std::vector<uint> ground = context.addTile(make_vec3(0, 0, 0), make_vec2(2, 2), nullrotation, make_int2(10, 10));
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+
+        std::vector<std::string> bands;
+        std::vector<uint> all_UUIDs = context.getAllUUIDs();
+        for (size_t b = 0; b < directions.size(); b++) {
+            const std::string band = "B" + std::to_string(b);
+            bands.push_back(band);
+            model.addRadiationBand(band);
+            model.disableEmission(band);
+            model.setScatteringDepth(band, 0);
+            model.setDiffuseRayCount(band, 500);
+            model.setDiffuseRadiationFlux(band, 1000.f);
+            model.setDiffuseRadiationExtinctionCoeff(band, 0.9f, directions.at(b));
+            context.setPrimitiveData(all_UUIDs, ("reflectivity_" + band).c_str(), 0.f);
+            context.setPrimitiveData(all_UUIDs, ("transmissivity_" + band).c_str(), 0.f);
+        }
+
+        model.updateGeometry();
+        model.runBand(bands);
+        return meanRadiationFlux(context, ground, bands.at(band_to_report));
+    };
+
+    for (size_t b = 0; b < peak_directions.size(); b++) {
+        const float truth = measure({peak_directions.at(b)}, 0);
+        const float in_multi_band_run = measure(peak_directions, b);
+        DOCTEST_CHECK_MESSAGE(in_multi_band_run == doctest::Approx(truth).epsilon(0.05), "band " << b << " sampled the sky around the wrong peak direction");
+    }
+}
+
+GPU_TEST_CASE("Backend Invariant - Occlusion and Texture Masking Conserve Energy") {
+    // Absorbed flux under a collimated source must equal source_flux * (1 - blocked_fraction),
+    // whether the blocking comes from an opaque occluder or from a transparency mask. Both cases
+    // make the ray-generation shaders take a per-ray early exit, which is the control flow the
+    // Vulkan backend's subgroup reductions run under; this pins down that the reductions deposit
+    // exactly the right amount of energy under that divergence.
+    auto measure = [](int occluder_kind, float &blocked_fraction) {
+        Context context;
+        std::vector<uint> ground = context.addTile(make_vec3(0, 0, 0), make_vec2(2, 2), nullrotation, make_int2(20, 20));
+
+        blocked_fraction = 0.f;
+        if (occluder_kind == 1) {
+            // Opaque 1x1 patch over a 2x2 ground: blocks one quarter.
+            context.addPatch(make_vec3(0, 0, 1), make_vec2(1, 1));
+            blocked_fraction = 0.25f;
+        } else if (occluder_kind == 2) {
+            // disk.png is an opaque inscribed disk on a transparent background, so a 1x1 patch
+            // blocks pi/4 of its own area, i.e. pi/16 of the ground.
+            context.addPatch(make_vec3(0, 0, 1), make_vec2(1, 1), make_SphericalCoord(0, 0), "plugins/radiation/disk.png");
+            blocked_fraction = float(M_PI) / 16.f;
+        }
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+
+        uint sun = model.addCollimatedRadiationSource(make_vec3(0.f, 0.f, 1.f));
+        model.addRadiationBand("SW");
+        model.disableEmission("SW");
+        model.setScatteringDepth("SW", 0);
+        model.setDirectRayCount("SW", 1000);
+        model.setSourceFlux(sun, "SW", 1000.f);
+        model.setDiffuseRadiationFlux("SW", 0.f);
+
+        std::vector<uint> all_UUIDs = context.getAllUUIDs();
+        context.setPrimitiveData(all_UUIDs, "reflectivity_SW", 0.f);
+        context.setPrimitiveData(all_UUIDs, "transmissivity_SW", 0.f);
+
+        model.updateGeometry();
+        model.runBand("SW");
+        return meanRadiationFlux(context, ground, "SW");
+    };
+
+    float blocked_fraction = 0.f;
+
+    const float unoccluded = measure(0, blocked_fraction);
+    DOCTEST_CHECK(unoccluded == doctest::Approx(1000.f).epsilon(0.01));
+
+    const float opaque_occluder = measure(1, blocked_fraction);
+    DOCTEST_CHECK(opaque_occluder == doctest::Approx(1000.f * (1.f - blocked_fraction)).epsilon(0.02));
+
+    const float masked_occluder = measure(2, blocked_fraction);
+    DOCTEST_CHECK(masked_occluder == doctest::Approx(1000.f * (1.f - blocked_fraction)).epsilon(0.02));
+}
+
+// A surface's reflectivity is integrated against each SOURCE's spectrum, so two sources with
+// different spectra see different rho on the same surface. The Vulkan direct-ray shader indexed
+// rho/tau as [primitive][band] with no source term, silently applying source 0's properties to
+// every source: two sources whose reflectivities differed by 60 percentage points deposited
+// identical flux. This asserts the transport against the model's own per-source reflectivity, so it
+// holds whatever the spectra integrate to.
+GPU_TEST_CASE("Backend Invariant - Per-Source Radiative Properties") {
+    // Reflectance steps from 0.2 to 0.8 at 600 nm; the two source spectra occupy opposite halves of
+    // the band and have equal integrals, so they differ only in which half of the surface they see.
+    const std::vector<vec2> surface_rho = {make_vec2(400, 0.2f), make_vec2(590, 0.2f), make_vec2(610, 0.8f), make_vec2(800, 0.8f)};
+    const std::vector<vec2> spectrum_short = {make_vec2(400, 1.f), make_vec2(590, 1.f), make_vec2(610, 0.f), make_vec2(800, 0.f)};
+    const std::vector<vec2> spectrum_long = {make_vec2(400, 0.f), make_vec2(590, 0.f), make_vec2(610, 1.f), make_vec2(800, 1.f)};
+
+    auto absorbed_with = [&](const std::vector<vec2> &active_spectrum, const std::vector<vec2> &idle_spectrum, uint which, float &rho_out) {
+        Context context;
+        context.setGlobalData("probe_surface_rho", surface_rho);
+        std::vector<uint> ground = context.addTile(make_vec3(0, 0, 0), make_vec2(2, 2), nullrotation, make_int2(8, 8));
+        context.setPrimitiveData(ground, "reflectivity_spectrum", "probe_surface_rho");
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        model.optionalOutputPrimitiveData("reflectivity");
+
+        // Both sources are geometrically identical, so only the spectrum can change the result.
+        uint source_a = model.addCollimatedRadiationSource(make_vec3(0.f, 0.f, 1.f));
+        uint source_b = model.addCollimatedRadiationSource(make_vec3(0.f, 0.f, 1.f));
+        model.setSourceSpectrum(source_a, which == 0 ? active_spectrum : idle_spectrum);
+        model.setSourceSpectrum(source_b, which == 0 ? idle_spectrum : active_spectrum);
+
+        // Explicit band bounds give the spectral integration a range without needing a camera.
+        model.addRadiationBand("SW", 400, 800);
+        model.disableEmission("SW");
+        model.setScatteringDepth("SW", 1);
+        model.setDirectRayCount("SW", 200);
+        model.setDiffuseRayCount("SW", 200);
+        model.setDiffuseRadiationFlux("SW", 0.f);
+
+        model.setSourceFlux(source_a, "SW", which == 0 ? 1000.f : 0.f);
+        model.setSourceFlux(source_b, "SW", which == 0 ? 0.f : 1000.f);
+
+        model.updateGeometry();
+        model.runBand("SW");
+
+        rho_out = 0.f;
+        context.getPrimitiveData(ground.front(), which == 0 ? "reflectivity_0_SW" : "reflectivity_1_SW", rho_out);
+        return meanRadiationFlux(context, ground, "SW");
+    };
+
+    float rho_short = 0.f, rho_long = 0.f;
+    const float absorbed_short = absorbed_with(spectrum_short, spectrum_long, 0, rho_short);
+    const float absorbed_long = absorbed_with(spectrum_long, spectrum_short, 1, rho_long);
+
+    // Precondition: the two sources must genuinely see different reflectivities, otherwise the test
+    // cannot distinguish per-source indexing from source-0-for-everything.
+    DOCTEST_REQUIRE(std::abs(rho_short - rho_long) > 0.1f);
+
+    // A flat tile cannot illuminate itself, so absorbed = incident * (1 - rho) for each source.
+    DOCTEST_CHECK(absorbed_short == doctest::Approx(1000.f * (1.f - rho_short)).epsilon(0.02));
+    DOCTEST_CHECK(absorbed_long == doctest::Approx(1000.f * (1.f - rho_long)).epsilon(0.02));
+
+    // This is the assertion that failed before the fix: both sources deposited the same flux.
+    DOCTEST_CHECK(absorbed_long / absorbed_short == doctest::Approx((1.f - rho_long) / (1.f - rho_short)).epsilon(0.03));
+}
+
+// A camera integrates scattered radiance against its own spectral response, which is a different
+// integral over wavelength than the band-weighted scatter that drives the scattering iterations.
+// The Vulkan backend aliased the two (scatter_buff_top_cam = scatter_buff_top), so the camera saw
+// band-weighted radiance whenever a source spectrum and a non-uniform camera response were both
+// present -- measured 60-75% error on a scene with spectral soil, spectral lamps and per-band
+// camera responses. Aliasing makes the ratio below exactly 1.
+GPU_TEST_CASE("Backend Invariant - Camera-Weighted Scatter") {
+    // The surface reflects 0.2 below 600 nm and 0.8 above. Explicit band bounds fix the transport
+    // weighting, and the source spectrum is flat, so both runs share identical rho and identical
+    // incident radiation -- only the camera's own weighting differs between them.
+    const std::vector<vec2> surface_rho = {make_vec2(400, 0.2f), make_vec2(590, 0.2f), make_vec2(610, 0.8f), make_vec2(800, 0.8f)};
+    const std::vector<vec2> flat_source = {make_vec2(400, 1.f), make_vec2(800, 1.f)};
+    // Mirror-image responses with equal integrals, each confined to one half of the band.
+    const std::vector<vec2> response_low = {make_vec2(400, 1.f), make_vec2(590, 1.f), make_vec2(610, 0.f), make_vec2(800, 0.f)};
+    const std::vector<vec2> response_high = {make_vec2(400, 0.f), make_vec2(590, 0.f), make_vec2(610, 1.f), make_vec2(800, 1.f)};
+
+    auto render_with = [&](const std::vector<vec2> &response) {
+        Context context;
+        context.setGlobalData("probe_surface_rho", surface_rho);
+        context.setGlobalData("probe_camera_response", response);
+
+        std::vector<uint> ground = context.addTile(make_vec3(0, 0, 0), make_vec2(4, 4), nullrotation, make_int2(8, 8));
+        context.setPrimitiveData(ground, "reflectivity_spectrum", "probe_surface_rho");
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+
+        uint sun = model.addCollimatedRadiationSource(make_vec3(0.f, 0.f, 1.f));
+        model.setSourceSpectrum(sun, flat_source);
+
+        model.addRadiationBand("SW", 400, 800);
+        model.disableEmission("SW");
+        model.setScatteringDepth("SW", 1);
+        model.setDirectRayCount("SW", 200);
+        model.setDiffuseRayCount("SW", 200);
+        model.setDiffuseRadiationFlux("SW", 0.f);
+        model.setSourceFlux(sun, "SW", 1000.f);
+
+        CameraProperties camera_properties;
+        camera_properties.camera_resolution = make_int2(16, 16);
+        camera_properties.HFOV = 40.f;
+        camera_properties.focal_plane_distance = 2.f;
+        camera_properties.lens_diameter = 0.f;
+        camera_properties.exposure = "manual"; // no auto gain, so the two runs stay comparable
+        camera_properties.white_balance = "off";
+        model.addRadiationCamera("cam", {"SW"}, make_vec3(0, 0, 2.f), make_vec3(0, 0, 0), camera_properties, 4);
+        model.setCameraSpectralResponse("cam", "SW", "probe_camera_response");
+
+        model.updateGeometry();
+        model.runBand("SW");
+
+        std::vector<float> pixels;
+        context.getGlobalData("camera_cam_SW", pixels);
+        double sum = 0;
+        for (float pixel: pixels) {
+            DOCTEST_REQUIRE(std::isfinite(pixel));
+            sum += pixel;
+        }
+        return float(sum / double(pixels.size()));
+    };
+
+    const float seen_low = render_with(response_low);
+    const float seen_high = render_with(response_high);
+
+    DOCTEST_REQUIRE(seen_low > 0.f);
+
+    // The camera looking through the long-wavelength half must see the surface's 0.8 reflectance,
+    // the other its 0.2. Band-weighted scatter is identical for both and would give a ratio of 1.
+    const float ratio = seen_high / seen_low;
+    DOCTEST_CHECK_MESSAGE(ratio > 2.f, "camera-weighted scatter appears to be aliased onto band-weighted scatter (ratio " << ratio << ", expected well above 1)");
+    DOCTEST_CHECK(ratio == doctest::Approx(4.f).epsilon(0.25));
+}
+
+

@@ -158,6 +158,34 @@ namespace helios {
          */
         static uint32_t primitivesPerLaunchBatch(uint32_t rays_per_primitive, uint32_t launch_count);
 
+        //! Abort if a VMA memory map failed, rather than dereferencing the null pointer it left behind.
+        /**
+         * \param[in] map_result VkResult returned by vmaMapMemory.
+         * \param[in] buffer_name Name of the buffer, used in the error message.
+         */
+        void requireMapSucceeded(int map_result, const char *buffer_name) const;
+
+        //! Abort if any value in a downloaded result buffer is not finite.
+        /**
+         * A non-finite result is never recoverable and never meaningful, but until it is
+         * detected it is also invisible: it propagates through the scattering iterations into
+         * `radiation_out`, then into every camera pixel that hits an affected primitive, and
+         * `RadiationCamera::applyCameraExposure` finally multiplies the whole frame by a NaN
+         * gain. The end state is a uniformly black image with no diagnostic at all, which
+         * reads as an exposure problem rather than as a failed trace. Checking here attributes
+         * the failure to the launch that produced it while that information still exists.
+         *
+         * \param[in] data Result buffer just downloaded from the device.
+         * \param[in] buffer_name Name of the buffer, used in the error message.
+         * \param[in] stride Number of values per primitive (band count), used to decode the
+         *                   offending index into a primitive and band. Pass 0 to report the
+         *                   flat index only.
+         */
+        void requireFiniteResults(const std::vector<float> &data, const char *buffer_name, size_t stride) const;
+
+        //! Description of the most recent launch, used to attribute a non-finite result to it.
+        std::string last_launch_description = "no launch has been performed";
+
         // Vulkan device - either owned (production) or borrowed (test shared device)
         VulkanDevice *device;
         bool owns_device; // true = we own device, false = borrowed from test singleton
@@ -201,6 +229,11 @@ namespace helios {
         Buffer source_fluxes_buffer;
         Buffer reflectivity_buffer;
         Buffer transmissivity_buffer;
+        //! Camera-weighted reflectivity/transmissivity, indexed [source][primitive][band_global][camera].
+        //! Distinct from rho/tau whenever a source spectrum and a non-uniform camera spectral response
+        //! are both present; the camera image must be built from these rather than the band-weighted pair.
+        Buffer reflectivity_cam_buffer;
+        Buffer transmissivity_cam_buffer;
         Buffer specular_exponent_buffer; //!< Per-primitive Blinn-Phong exponent
         Buffer specular_scale_buffer; //!< Per-primitive specular scale coefficient
         Buffer source_fluxes_cam_buffer; //!< Camera spectral response weights [source × band]
@@ -274,6 +307,7 @@ namespace helios {
         // Geometry cache
         size_t primitive_count = 0;
         size_t band_count = 0; // Global band count (material buffer stride)
+        size_t camera_count = 0; // Number of cameras (rho_cam/tau_cam trailing stride)
         size_t source_count = 0;
 
         // Periodic boundary state

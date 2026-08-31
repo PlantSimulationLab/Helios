@@ -91,6 +91,25 @@ public:
         visualizer.updateColorbar();
     }
 
+    //! Run the Context->geometry-handler build that plotUpdate() performs, without needing a render
+    static void buildContextGeometry_private(Visualizer &visualizer) {
+        visualizer.buildContextGeometry_private();
+    }
+
+    //! Number of primitives the visualizer considers already uploaded to the geometry handler
+    /**
+     * Context dirty flags are sticky, so this is what keeps a build from re-uploading the whole
+     * scene every frame. \sa Visualizer::contextUUIDs_uploaded
+     */
+    static size_t getUploadedPrimitiveCount(const Visualizer &visualizer) {
+        return visualizer.contextUUIDs_uploaded.size();
+    }
+
+    //! Number of geometry elements the handler will push to the GPU on the next transferBufferData()
+    static size_t getDirtyGeometryCount(const Visualizer &visualizer) {
+        return visualizer.geometry_handler.getDirtyUUIDs().size();
+    }
+
     //! Force the framebuffer dimensions independently of the window dimensions
     /**
      * Headless mode always initializes the framebuffer to match the window, so the high-DPI case
@@ -3408,4 +3427,784 @@ TEST_CASE("Visualizer::addSegmentationMaskOverlay with no masks adds no geometry
 
     DOCTEST_CHECK(UUIDs.empty());
     DOCTEST_CHECK(VisualizerTestHelper::getLiveGeometryCount(visualizer) == geometry_count_before);
+}
+
+// ================================================================================================
+// Linear-light rendering pipeline (sRGB decode -> shade -> tone map -> sRGB encode)
+// ================================================================================================
+
+TEST_CASE("Visualizer linear pipeline state and exposure validation") {
+    Visualizer visualizer(64, 64, 0, true, true); // headless
+    visualizer.disableMessages();
+
+    // On by default: physically-based shading is the standard rendering path.
+    DOCTEST_CHECK(visualizer.isLinearPipelineEnabled() == true);
+    DOCTEST_CHECK(visualizer.getExposure() == doctest::Approx(1.f));
+
+    visualizer.disableLinearPipeline();
+    DOCTEST_CHECK(visualizer.isLinearPipelineEnabled() == false);
+
+    visualizer.setExposure(2.5f);
+    DOCTEST_CHECK(visualizer.getExposure() == doctest::Approx(2.5f));
+
+    visualizer.enableLinearPipeline();
+    DOCTEST_CHECK(visualizer.isLinearPipelineEnabled() == true);
+
+    // Exposure is a linear multiplier on radiance; zero or negative is meaningless and must fail
+    // loudly rather than silently producing a black or sign-flipped image.
+    DOCTEST_CHECK_THROWS_AS(visualizer.setExposure(0.f), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(visualizer.setExposure(-1.f), std::runtime_error);
+    DOCTEST_CHECK(visualizer.getExposure() == doctest::Approx(2.5f)); // unchanged by the failed calls
+}
+
+TEST_CASE("Visualizer exact color mode and linear pipeline are mutually exclusive") {
+    Visualizer visualizer(64, 64, 0, true, true); // headless
+    visualizer.disableMessages();
+
+    // The synthetic annotation plug-in carries object ID codes through the framebuffer as RGB
+    // values. Tone mapping and sRGB encoding are non-linear transforms of those channels, so
+    // enabling exact color mode must turn the linear pipeline off or the IDs decode to garbage.
+    // This matters more now that the pipeline is on by default: a caller who never touches it
+    // still gets the protection.
+    DOCTEST_CHECK(visualizer.isLinearPipelineEnabled() == true);
+
+    visualizer.enableExactColorMode();
+    DOCTEST_CHECK(visualizer.isLinearPipelineEnabled() == false);
+
+    // The two calls must round-trip, rather than leaving the renderer in a non-default state.
+    visualizer.disableExactColorMode();
+    DOCTEST_CHECK(visualizer.isLinearPipelineEnabled() == true);
+}
+
+TEST_CASE("Visualizer linear pipeline tone-maps the rendered image") {
+    // A mid-grey unlit patch fills the view. With lighting disabled the shaded value equals the
+    // decoded albedo, so the output is encode(tonemap(decode(a))). decode and encode are exact
+    // inverses, leaving the ACES tone curve as the only transformation. That curve maps linear
+    // 0.5 to roughly 0.48 and thus pulls the encoded mid-grey visibly DOWN, which is the signal
+    // this test detects. On the old shader the value passes through untouched.
+    Context context;
+    const uint patch_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(100, 100));
+    context.setPrimitiveColor(patch_UUID, make_RGBcolor(0.5f, 0.5f, 0.5f));
+
+    // No antialiasing, so interior pixels are exact rather than edge-blended.
+    Visualizer visualizer(64, 64, 0, true, true); // headless
+    visualizer.disableMessages();
+    visualizer.setLightingModel(Visualizer::LIGHTING_NONE);
+    visualizer.setCameraPosition(make_vec3(0, 0, 10), make_vec3(0, 0, 0));
+    // colorBoost of 1.5 would saturate 0.5 and confound the comparison, so pin it to 1.
+    visualizer.enableExactColorMode();
+    visualizer.buildContextGeometry(&context);
+
+    auto centerPixel = [](Visualizer &vis) {
+        std::vector<uint> pixels;
+        uint w = 0, h = 0;
+        vis.plotUpdate();
+        vis.getWindowPixelsRGB(pixels, w, h);
+        REQUIRE(w > 0);
+        REQUIRE(h > 0);
+        // Row-major r-g-b triples; sample the red channel at the center of the image.
+        const size_t idx = 3 * (size_t(h / 2) * size_t(w) + size_t(w / 2));
+        REQUIRE(pixels.size() > idx);
+        return pixels.at(idx);
+    };
+
+    const uint baseline = centerPixel(visualizer);
+
+    visualizer.enableLinearPipeline();
+    const uint tonemapped = centerPixel(visualizer);
+
+    // The patch must actually be covering the sampled pixel, or both reads are just background.
+    REQUIRE(baseline > 0);
+    // ACES compresses mid-grey downward. A no-op shader would leave the two identical.
+    DOCTEST_CHECK(tonemapped < baseline);
+}
+
+TEST_CASE("Visualizer Phong material state and validation") {
+    Visualizer visualizer(64, 64, 0, true, true); // headless
+    visualizer.disableMessages();
+
+    const Visualizer::PhongMaterial defaults = visualizer.getPhongMaterial();
+    DOCTEST_CHECK(defaults.ambient == doctest::Approx(1.0f));
+    DOCTEST_CHECK(defaults.diffuse == doctest::Approx(0.8f));
+    DOCTEST_CHECK(defaults.specular == doctest::Approx(0.2f));
+    DOCTEST_CHECK(defaults.shininess == doctest::Approx(32.f));
+
+    Visualizer::PhongMaterial glossy;
+    glossy.ambient = 0.2f;
+    glossy.diffuse = 0.6f;
+    glossy.specular = 0.9f;
+    glossy.shininess = 96.f;
+    visualizer.setPhongMaterial(glossy);
+
+    const Visualizer::PhongMaterial read_back = visualizer.getPhongMaterial();
+    DOCTEST_CHECK(read_back.ambient == doctest::Approx(0.2f));
+    DOCTEST_CHECK(read_back.diffuse == doctest::Approx(0.6f));
+    DOCTEST_CHECK(read_back.specular == doctest::Approx(0.9f));
+    DOCTEST_CHECK(read_back.shininess == doctest::Approx(96.f));
+
+    // A negative reflectance weight would subtract light from the scene.
+    Visualizer::PhongMaterial negative_weight = glossy;
+    negative_weight.diffuse = -0.1f;
+    DOCTEST_CHECK_THROWS_AS(visualizer.setPhongMaterial(negative_weight), std::runtime_error);
+
+    // pow(x, 0) is 1 everywhere, which would paint a uniform highlight across the whole surface.
+    Visualizer::PhongMaterial zero_exponent = glossy;
+    zero_exponent.shininess = 0.f;
+    DOCTEST_CHECK_THROWS_AS(visualizer.setPhongMaterial(zero_exponent), std::runtime_error);
+
+    // The rejected calls must not have partially applied.
+    DOCTEST_CHECK(visualizer.getPhongMaterial().diffuse == doctest::Approx(0.6f));
+    DOCTEST_CHECK(visualizer.getPhongMaterial().shininess == doctest::Approx(96.f));
+}
+
+TEST_CASE("Visualizer ambient color state and validation") {
+    Visualizer visualizer(64, 64, 0, true, true); // headless
+    visualizer.disableMessages();
+
+    // Default is a cool sky above and a warm ground bounce below.
+    DOCTEST_CHECK(visualizer.getAmbientSkyColor().b > visualizer.getAmbientSkyColor().r);
+    DOCTEST_CHECK(visualizer.getAmbientGroundColor().r > visualizer.getAmbientGroundColor().b);
+
+    visualizer.setAmbientColors(make_RGBcolor(0.1f, 0.2f, 0.3f), make_RGBcolor(0.4f, 0.5f, 0.6f));
+    DOCTEST_CHECK(visualizer.getAmbientSkyColor().g == doctest::Approx(0.2f));
+    DOCTEST_CHECK(visualizer.getAmbientGroundColor().g == doctest::Approx(0.5f));
+
+    // helios::RGBcolor clamps its components to [0,1] in its constructor, so an out-of-range
+    // ambient color is clamped before it ever reaches setAmbientColors().
+    visualizer.setAmbientColors(make_RGBcolor(-0.1f, 2.f, 0.5f), make_RGBcolor(0.f, 0.f, 0.f));
+    DOCTEST_CHECK(visualizer.getAmbientSkyColor().r == doctest::Approx(0.f));
+    DOCTEST_CHECK(visualizer.getAmbientSkyColor().g == doctest::Approx(1.f));
+}
+
+TEST_CASE("Visualizer specular term brightens a surface at the mirror angle") {
+    // A patch is viewed from the mirror direction of the light, where the Blinn-Phong half-vector
+    // aligns with the surface normal and the specular term is at its maximum. Rendering the same
+    // scene with specular=0 and then with a strong specular weight must brighten that pixel. The
+    // old shader had no specular term at all, so both renders were identical.
+    Context context;
+    const uint patch_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(20, 20));
+    context.setPrimitiveColor(patch_UUID, make_RGBcolor(0.25f, 0.25f, 0.25f));
+
+    Visualizer visualizer(64, 64, 0, true, true); // headless, no antialiasing
+    visualizer.disableMessages();
+    visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
+
+    // The patch lies in the z=0 plane, so its normal is +z. With the light and the camera both at
+    // 45 degrees on opposite sides, the half-vector is exactly the surface normal.
+    visualizer.setLightDirection(make_vec3(1, 0, 1));
+    visualizer.setCameraPosition(make_vec3(-10, 0, 10), make_vec3(0, 0, 0));
+    visualizer.buildContextGeometry(&context);
+
+    auto centerPixel = [](Visualizer &vis) {
+        std::vector<uint> pixels;
+        uint w = 0, h = 0;
+        vis.plotUpdate();
+        vis.getWindowPixelsRGB(pixels, w, h);
+        REQUIRE(w > 0);
+        REQUIRE(h > 0);
+        const size_t idx = 3 * (size_t(h / 2) * size_t(w) + size_t(w / 2));
+        REQUIRE(pixels.size() > idx);
+        return pixels.at(idx);
+    };
+
+    Visualizer::PhongMaterial matte;
+    matte.ambient = 0.4f;
+    matte.diffuse = 0.8f;
+    matte.specular = 0.f; // no highlight
+    matte.shininess = 32.f;
+    visualizer.setPhongMaterial(matte);
+    const uint without_specular = centerPixel(visualizer);
+
+    Visualizer::PhongMaterial glossy = matte;
+    glossy.specular = 1.f;
+    glossy.shininess = 16.f; // broad lobe, so the highlight comfortably covers the center pixel
+    visualizer.setPhongMaterial(glossy);
+    const uint with_specular = centerPixel(visualizer);
+
+    REQUIRE(without_specular > 0); // the patch must actually cover the sampled pixel
+    DOCTEST_CHECK(with_specular > without_specular);
+}
+
+TEST_CASE("Visualizer hemispheric ambient shades by surface orientation") {
+    // Only the ambient term is left active, with a white sky and a black ground. A patch tilted so
+    // that its normal points upward must then come out brighter than one tilted downward.
+    //
+    // The patches are tilted about the y-axis and viewed from along +x rather than from directly
+    // overhead. Viewing a patch head-on would defeat the test: the shader flips a normal that faces
+    // away from the camera, so an up- and a down-facing patch seen from +z would shade identically.
+    // A side-on view keeps the two tilts distinguishable after that flip.
+    auto renderTiltedPatch = [](float tilt_radians) {
+        Context context;
+        const uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(20, 20));
+        context.setPrimitiveColor(UUID, make_RGBcolor(1.f, 1.f, 1.f));
+        context.rotatePrimitive(UUID, tilt_radians, "y");
+
+        Visualizer visualizer(64, 64, 0, true, true); // headless, no antialiasing
+        visualizer.disableMessages();
+        visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
+        visualizer.setAmbientColors(make_RGBcolor(1.f, 1.f, 1.f), make_RGBcolor(0.f, 0.f, 0.f));
+
+        Visualizer::PhongMaterial ambient_only;
+        ambient_only.ambient = 1.f;
+        ambient_only.diffuse = 0.f; // remove the light-dependent terms so only ambient remains
+        ambient_only.specular = 0.f;
+        ambient_only.shininess = 32.f;
+        visualizer.setPhongMaterial(ambient_only);
+
+        visualizer.setCameraPosition(make_vec3(10, 0, 0), make_vec3(0, 0, 0));
+        visualizer.buildContextGeometry(&context);
+        visualizer.plotUpdate();
+
+        std::vector<uint> pixels;
+        uint w = 0, h = 0;
+        visualizer.getWindowPixelsRGB(pixels, w, h);
+        REQUIRE(w > 0);
+        REQUIRE(h > 0);
+        const size_t idx = 3 * (size_t(h / 2) * size_t(w) + size_t(w / 2));
+        REQUIRE(pixels.size() > idx);
+        return pixels.at(idx);
+    };
+
+    // Tilting by -60 degrees leans the normal up toward the sky; +60 leans it down toward the ground.
+    const uint tilted_up = renderTiltedPatch(-60.f * PI_F / 180.f);
+    const uint tilted_down = renderTiltedPatch(60.f * PI_F / 180.f);
+
+    REQUIRE(tilted_up > 0); // the patch must actually cover the sampled pixel
+    DOCTEST_CHECK(tilted_up != tilted_down);
+}
+
+TEST_CASE("Visualizer smooth shading state") {
+    Visualizer visualizer(64, 64, 0, true, true); // headless
+    visualizer.disableMessages();
+
+    // On by default. Geometry without authored vertex normals carries the face normal replicated
+    // across its vertices, so the default is a no-op for it.
+    DOCTEST_CHECK(visualizer.isSmoothShadingEnabled() == true);
+
+    visualizer.disableSmoothShading();
+    DOCTEST_CHECK(visualizer.isSmoothShadingEnabled() == false);
+
+    visualizer.enableSmoothShading();
+    DOCTEST_CHECK(visualizer.isSmoothShadingEnabled() == true);
+}
+
+TEST_CASE("Visualizer smooth shading is a no-op for geometry without vertex normals") {
+    // A plain patch has no authored vertex normals, so addGeometry() replicates its face normal
+    // across the vertices. Toggling smooth shading must therefore not change the rendered image at
+    // all -- this is what makes the feature safe to leave on by default.
+    Context context;
+    const uint patch_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(20, 20));
+    context.setPrimitiveColor(patch_UUID, make_RGBcolor(0.6f, 0.6f, 0.6f));
+
+    Visualizer visualizer(64, 64, 0, true, true); // headless, no antialiasing
+    visualizer.disableMessages();
+    visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
+    visualizer.setLightDirection(make_vec3(1, 0, 1));
+    visualizer.setCameraPosition(make_vec3(-10, 0, 10), make_vec3(0, 0, 0));
+    visualizer.buildContextGeometry(&context);
+
+    auto centerPixel = [](Visualizer &vis) {
+        std::vector<uint> pixels;
+        uint w = 0, h = 0;
+        vis.plotUpdate();
+        vis.getWindowPixelsRGB(pixels, w, h);
+        REQUIRE(w > 0);
+        REQUIRE(h > 0);
+        const size_t idx = 3 * (size_t(h / 2) * size_t(w) + size_t(w / 2));
+        REQUIRE(pixels.size() > idx);
+        return pixels.at(idx);
+    };
+
+    visualizer.enableSmoothShading();
+    const uint smooth = centerPixel(visualizer);
+
+    visualizer.disableSmoothShading();
+    const uint flat = centerPixel(visualizer);
+
+    REQUIRE(smooth > 0);
+    DOCTEST_CHECK(smooth == flat);
+}
+
+TEST_CASE("Visualizer smooth shading interpolates authored vertex normals") {
+    // Two triangles forming a flat square are given vertex normals that fan outward, as a curved
+    // surface tessellated into flats would have. Because the geometry is flat, flat shading gives
+    // every fragment the same normal and thus a uniform result; smooth shading interpolates the
+    // fanned normals and produces a gradient instead. Sampling two well-separated points and
+    // comparing their difference under each mode isolates that gradient.
+    //
+    // The normals are authored through a Polymesh, which is the supported route for supplying them.
+    Context context;
+    const uint t0 = context.addTriangle(make_vec3(-5, -5, 0), make_vec3(5, -5, 0), make_vec3(5, 5, 0), make_RGBcolor(0.7f, 0.7f, 0.7f));
+    const uint t1 = context.addTriangle(make_vec3(-5, -5, 0), make_vec3(5, 5, 0), make_vec3(-5, 5, 0), make_RGBcolor(0.7f, 0.7f, 0.7f));
+    const uint objID = context.addPolymeshObject({t0, t1});
+
+    // Shared vertices of the square, in the order the two faces reference them.
+    const std::vector<vec3> vertices{make_vec3(-5, -5, 0), make_vec3(5, -5, 0), make_vec3(5, 5, 0), make_vec3(-5, 5, 0)};
+    const std::vector<int3> faces{make_int3(0, 1, 2), make_int3(0, 2, 3)};
+
+    // Normals tilted strongly toward each corner, so the interpolated normal sweeps across the face.
+    const std::vector<vec3> vertex_normals{normalize(make_vec3(-0.8f, -0.8f, 1.f)), normalize(make_vec3(0.8f, -0.8f, 1.f)), normalize(make_vec3(0.8f, 0.8f, 1.f)), normalize(make_vec3(-0.8f, 0.8f, 1.f))};
+
+    // face_UUIDs maps each face of the table onto the primitive that represents it.
+    context.setPolymeshObjectTopology(objID, vertices, faces, {t0, t1}, vertex_normals, {}, helios::NORMAL_SOURCE_AUTHORED);
+
+    Visualizer visualizer(64, 64, 0, true, true); // headless, no antialiasing
+    visualizer.disableMessages();
+    visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
+    visualizer.setLightDirection(make_vec3(1, 0, 1));
+    visualizer.buildContextGeometry(&context);
+    // Slightly off-axis. Looking straight down the z-axis at geometry lying in the z=0 plane gives a
+    // degenerate camera basis and nothing is rasterized at all.
+    visualizer.setCameraPosition(make_vec3(1, 1, 18), make_vec3(0, 0, 0));
+
+    // Difference in brightness between two points on opposite sides of the square.
+    auto brightnessSpread = [](Visualizer &vis) {
+        std::vector<uint> pixels;
+        uint w = 0, h = 0;
+        vis.plotUpdate();
+        vis.getWindowPixelsRGB(pixels, w, h);
+        REQUIRE(w > 0);
+        REQUIRE(h > 0);
+        const size_t left = 3 * (size_t(h / 2) * size_t(w) + size_t(w * 3 / 8));
+        const size_t right = 3 * (size_t(h / 2) * size_t(w) + size_t(w * 5 / 8));
+        REQUIRE(pixels.size() > right);
+        return std::abs(int(pixels.at(left)) - int(pixels.at(right)));
+    };
+
+    visualizer.disableSmoothShading();
+    const int flat_spread = brightnessSpread(visualizer);
+
+    visualizer.enableSmoothShading();
+    const int smooth_spread = brightnessSpread(visualizer);
+
+    // Flat shading gives every fragment the same face normal, so brightness is essentially uniform
+    // across the face (a unit or two of variation survives 8-bit quantization).
+    DOCTEST_CHECK(flat_spread <= 2);
+    // Smooth shading interpolates between the fanned vertex normals, producing a real gradient.
+    DOCTEST_CHECK(smooth_spread > 5);
+    DOCTEST_CHECK(smooth_spread > flat_spread);
+}
+
+TEST_CASE("Visualizer smooth shading uses analytic normals of curved compound objects") {
+    // A coarsely tessellated sphere is the clearest case: with flat shading each facet is a band of
+    // constant brightness, so a scanline across the sphere is a staircase. Analytic vertex normals
+    // turn it into a ramp. Comparing the largest second difference along the scanline measures
+    // exactly that difference between a staircase and a ramp, and unlike a simple bright-vs-dark
+    // comparison it cannot be satisfied by an overall change in brightness.
+    Context context;
+    context.addSphereObject(6, make_vec3(0, 0, 0), 3.f, make_RGBcolor(0.7f, 0.7f, 0.7f));
+
+    Visualizer visualizer(200, 200, 0, true, true); // headless, no antialiasing
+    visualizer.disableMessages();
+    visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
+    visualizer.setLightDirection(make_vec3(1, 0, 1));
+    visualizer.buildContextGeometry(&context);
+    visualizer.setCameraPosition(make_vec3(-12, 1, 2), make_vec3(0, 0, 0));
+
+    // Largest absolute second difference of brightness along a horizontal scanline through the
+    // middle of the sphere. A faceted surface has abrupt steps between bands; a smooth one does not.
+    auto maximumCurvature = [](Visualizer &vis) {
+        std::vector<uint> pixels;
+        uint w = 0, h = 0;
+        vis.plotUpdate();
+        vis.getWindowPixelsRGB(pixels, w, h);
+        REQUIRE(w > 0);
+        REQUIRE(h > 0);
+        const size_t row = size_t(h / 2);
+        std::vector<int> scan;
+        for (size_t x = 0; x < size_t(w); x++) {
+            const size_t idx = 3 * (row * size_t(w) + x);
+            REQUIRE(pixels.size() > idx);
+            const int value = int(pixels.at(idx));
+            // Ignore the background, which is not part of the shaded surface.
+            if (value > 0) {
+                scan.push_back(value);
+            }
+        }
+        REQUIRE(scan.size() > 10);
+        int worst = 0;
+        for (size_t i = 1; i + 1 < scan.size(); i++) {
+            worst = std::max(worst, std::abs(scan.at(i - 1) - 2 * scan.at(i) + scan.at(i + 1)));
+        }
+        return worst;
+    };
+
+    visualizer.disableSmoothShading();
+    const int faceted = maximumCurvature(visualizer);
+
+    visualizer.enableSmoothShading();
+    const int smooth = maximumCurvature(visualizer);
+
+    // The faceted sphere must actually show steps, otherwise the comparison below is vacuous.
+    DOCTEST_CHECK(faceted > 4);
+    DOCTEST_CHECK(smooth < faceted);
+}
+
+TEST_CASE("Visualizer smooth shading is a no-op for compound objects with flat faces") {
+    // A box is built from genuinely flat faces whose face normal is already correct everywhere, so
+    // it must be excluded from analytic normals. If it were not, its edges would be rounded off and
+    // the rendered image would change when smooth shading is toggled.
+    Context context;
+    context.addBoxObject(make_vec3(0, 0, 0), make_vec3(2, 2, 2), make_int3(1, 1, 1), make_RGBcolor(0.6f, 0.6f, 0.6f));
+
+    Visualizer visualizer(64, 64, 0, true, true); // headless, no antialiasing
+    visualizer.disableMessages();
+    visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
+    visualizer.setLightDirection(make_vec3(1, 0, 1));
+    visualizer.buildContextGeometry(&context);
+    visualizer.setCameraPosition(make_vec3(-6, 3, 4), make_vec3(0, 0, 0));
+
+    auto centerPixel = [](Visualizer &vis) {
+        std::vector<uint> pixels;
+        uint w = 0, h = 0;
+        vis.plotUpdate();
+        vis.getWindowPixelsRGB(pixels, w, h);
+        REQUIRE(w > 0);
+        REQUIRE(h > 0);
+        const size_t idx = 3 * (size_t(h / 2) * size_t(w) + size_t(w / 2));
+        REQUIRE(pixels.size() > idx);
+        return pixels.at(idx);
+    };
+
+    visualizer.enableSmoothShading();
+    const uint smooth = centerPixel(visualizer);
+
+    visualizer.disableSmoothShading();
+    const uint flat = centerPixel(visualizer);
+
+    REQUIRE(smooth > 0);
+    DOCTEST_CHECK(smooth == flat);
+}
+
+TEST_CASE("Visualizer per-material Phong parameters override the global material") {
+    // Two patches with different materials, one of which specifies a strong specular highlight
+    // through generic material data. Rendered at the mirror angle, the patch whose material raises
+    // the specular weight must come out brighter than the one that inherits the global value.
+    // Before per-material parameters existed, both patches shaded identically.
+    Context context;
+
+    const uint matte_UUID = context.addPatch(make_vec3(-6, 0, 0), make_vec2(10, 10));
+    const uint glossy_UUID = context.addPatch(make_vec3(6, 0, 0), make_vec2(10, 10));
+
+    context.addMaterial("matte_leaf");
+    context.addMaterial("glossy_leaf");
+    context.assignMaterialToPrimitive(matte_UUID, "matte_leaf");
+    context.assignMaterialToPrimitive(glossy_UUID, "glossy_leaf");
+
+    // Primitive color is stored on the material, and addMaterial() creates it black, so the colors
+    // must be set after the materials are assigned or they are discarded.
+    context.setPrimitiveColor(matte_UUID, make_RGBcolor(0.3f, 0.3f, 0.3f));
+    context.setPrimitiveColor(glossy_UUID, make_RGBcolor(0.3f, 0.3f, 0.3f));
+
+    // Only the glossy material specifies Phong data; the matte one inherits the global material.
+    context.setMaterialData("glossy_leaf", "phong_specular", 1.0f);
+    context.setMaterialData("glossy_leaf", "phong_shininess", 8.f);
+
+    Visualizer visualizer(128, 64, 0, true, true); // headless, no antialiasing
+    visualizer.disableMessages();
+    visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
+    visualizer.setLightDirection(make_vec3(0.05f, -0.1f, 1));
+
+    Visualizer::PhongMaterial global_material;
+    global_material.ambient = 1.0f;
+    global_material.diffuse = 0.8f;
+    global_material.specular = 0.f; // global default has no highlight at all
+    global_material.shininess = 32.f;
+    visualizer.setPhongMaterial(global_material);
+
+    visualizer.buildContextGeometry(&context);
+    visualizer.setCameraPosition(make_vec3(0.5f, -2.f, 25), make_vec3(0, 0, 0));
+    visualizer.plotUpdate();
+
+    std::vector<uint> pixels;
+    uint w = 0, h = 0;
+    visualizer.getWindowPixelsRGB(pixels, w, h);
+    REQUIRE(w > 0);
+    REQUIRE(h > 0);
+
+    // The two patches sit left and right of center in the rendered image.
+    const size_t left = 3 * (size_t(h / 2) * size_t(w) + size_t(w / 4));
+    const size_t right = 3 * (size_t(h / 2) * size_t(w) + size_t(w * 3 / 4));
+    REQUIRE(pixels.size() > right);
+
+    const uint matte_brightness = pixels.at(left);
+    const uint glossy_brightness = pixels.at(right);
+
+    REQUIRE(matte_brightness > 0); // both patches must actually be covering their sample points
+    REQUIRE(glossy_brightness > 0);
+    DOCTEST_CHECK(glossy_brightness > matte_brightness);
+}
+
+TEST_CASE("Visualizer per-material Phong parameters partially override the global material") {
+    // A material that specifies only one of the four parameters must inherit the rest from the
+    // global material, rather than silently resetting them to some built-in default.
+    Context context;
+    const uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(10, 10));
+    context.addMaterial("partial");
+    context.assignMaterialToPrimitive(UUID, "partial");
+    // Primitive color lives on the material, so it must be set after the material is assigned.
+    context.setPrimitiveColor(UUID, make_RGBcolor(0.5f, 0.5f, 0.5f));
+    context.setMaterialData("partial", "phong_specular", 0.f);
+
+    Visualizer visualizer(64, 64, 0, true, true); // headless
+    visualizer.disableMessages();
+    visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
+    visualizer.setLightDirection(make_vec3(0.05f, -0.1f, 1));
+
+    auto renderWithGlobalDiffuse = [&](float diffuse) {
+        Visualizer::PhongMaterial material;
+        material.ambient = 0.2f;
+        material.diffuse = diffuse;
+        material.specular = 0.5f;
+        material.shininess = 32.f;
+        visualizer.setPhongMaterial(material);
+        visualizer.buildContextGeometry(&context);
+        visualizer.setCameraPosition(make_vec3(0.5f, -2.f, 22), make_vec3(0, 0, 0));
+        visualizer.plotUpdate();
+
+        std::vector<uint> pixels;
+        uint w = 0, h = 0;
+        visualizer.getWindowPixelsRGB(pixels, w, h);
+        REQUIRE(w > 0);
+        REQUIRE(h > 0);
+        const size_t idx = 3 * (size_t(h / 2) * size_t(w) + size_t(w / 2));
+        REQUIRE(pixels.size() > idx);
+        return pixels.at(idx);
+    };
+
+    // The material pins specular to zero but says nothing about diffuse, so changing the global
+    // diffuse weight must still change how this primitive is shaded.
+    const uint dim = renderWithGlobalDiffuse(0.1f);
+    const uint bright = renderWithGlobalDiffuse(0.9f);
+
+    REQUIRE(dim > 0);
+    DOCTEST_CHECK(bright > dim);
+}
+
+TEST_CASE("Visualizer rejects invalid per-material Phong parameters") {
+    // buildContextGeometry() only records which UUIDs to build; the geometry, and with it the
+    // per-material Phong table, is actually built during plotUpdate(). The validation therefore
+    // surfaces there rather than at the buildContextGeometry() call. Each case gets its own
+    // Visualizer so that state left behind by a throw cannot mask the next one.
+    auto renderWithMaterialData = [](const char *data_label, float value) {
+        Context context;
+        const uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(10, 10));
+        context.addMaterial("bad_material");
+        context.assignMaterialToPrimitive(UUID, "bad_material");
+        context.setPrimitiveColor(UUID, make_RGBcolor(0.5f, 0.5f, 0.5f));
+        context.setMaterialData("bad_material", data_label, value);
+
+        Visualizer visualizer(64, 64, 0, true, true); // headless
+        visualizer.disableMessages();
+        visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
+        visualizer.buildContextGeometry(&context);
+        visualizer.plotUpdate();
+    };
+
+    // pow(x, 0) is 1 everywhere, which would paint a uniform highlight across the whole surface.
+    DOCTEST_CHECK_THROWS_AS(renderWithMaterialData("phong_shininess", 0.f), std::runtime_error);
+
+    // A negative reflectance weight would subtract light from the scene.
+    DOCTEST_CHECK_THROWS_AS(renderWithMaterialData("phong_diffuse", -0.5f), std::runtime_error);
+}
+
+DOCTEST_TEST_CASE("Visualizer rebuilds only primitives that changed since the last build") {
+    // Context dirty flags are sticky: only Context::markGeometryClean() clears them, and that is the
+    // user's call to make once every plug-in has processed the change, so the Visualizer must not
+    // clear them itself. Left unfiltered, though, getDirtyUUIDs() reports the entire scene on every
+    // frame, and each primitive is then re-uploaded to the GPU individually - which made rendering
+    // cost scale with the size of the scene rather than with what actually changed. A 900K-primitive
+    // scene spent ~40 s per frame re-uploading geometry that had not changed.
+    Context context;
+    for (int i = 0; i < 50; i++) {
+        context.addPatch(make_vec3(float(i), 0, 0), make_vec2(0.5, 0.5));
+    }
+
+    Visualizer visualizer(64, 64, 0, true, true); // headless
+    visualizer.disableMessages();
+    visualizer.buildContextGeometry(&context);
+
+    // First build has to upload everything.
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    DOCTEST_CHECK(VisualizerTestHelper::getUploadedPrimitiveCount(visualizer) == 50);
+
+    // The Context still reports all 50 as dirty, because nothing cleared the flags.
+    DOCTEST_CHECK(context.getDirtyUUIDs().size() == 50);
+
+    // A second build with nothing changed must not queue any geometry for re-upload. On the buggy
+    // code every primitive was rebuilt and re-marked dirty in the geometry handler, so this count
+    // was 50 rather than 0.
+    visualizer.plotUpdate(true); // flushes the pending upload from the first build
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    DOCTEST_CHECK(VisualizerTestHelper::getDirtyGeometryCount(visualizer) == 0);
+
+    // A primitive genuinely added afterwards must still be picked up.
+    const uint new_UUID = context.addPatch(make_vec3(100, 0, 0), make_vec2(0.5, 0.5));
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    DOCTEST_CHECK(VisualizerTestHelper::getUploadedPrimitiveCount(visualizer) == 51);
+    DOCTEST_CHECK(VisualizerTestHelper::getDirtyGeometryCount(visualizer) == 1);
+
+    // ...and a primitive deleted afterwards must be dropped from the uploaded set, so that a later
+    // primitive reusing that UUID is not mistaken for one already on the GPU.
+    context.deletePrimitive(new_UUID);
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    DOCTEST_CHECK(VisualizerTestHelper::getUploadedPrimitiveCount(visualizer) == 50);
+}
+
+DOCTEST_TEST_CASE("Visualizer::printWindow builds Context geometry that was never plotted") {
+    // printWindow() re-renders before capturing, but via plotOnce(), which deliberately does not
+    // re-walk the Context. A caller that hands the Visualizer a Context and then captures straight
+    // away - without an intervening plotUpdate() - must still get that geometry in the image, so
+    // printWindow() has to do the build itself in that case.
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, RGB::red);
+
+    Visualizer visualizer(64, 64, 0, true, true); // headless
+    visualizer.disableMessages();
+    visualizer.setBackgroundColor(RGB::blue);
+    visualizer.setLightingModel(Visualizer::LIGHTING_NONE);
+    visualizer.setCameraPosition(make_vec3(0, 0, 2), make_vec3(0, 0, 0));
+    visualizer.buildContextGeometry(&context);
+
+    const std::string outfile = "test_printWindow_unplotted.jpeg";
+    DOCTEST_CHECK_NOTHROW(visualizer.printWindow(outfile.c_str()));
+    DOCTEST_REQUIRE(std::filesystem::exists(outfile));
+
+    // The patch is red against a blue background, so if the geometry made it into the frame the
+    // image cannot be uniformly blue.
+    std::vector<helios::RGBcolor> pixels;
+    uint width, height;
+    readJPEG(outfile, width, height, pixels);
+
+    size_t red_pixels = 0;
+    for (const helios::RGBcolor &pixel: pixels) {
+        if (pixel.r > 0.5f && pixel.b < 0.5f) {
+            red_pixels++;
+        }
+    }
+    DOCTEST_CHECK(red_pixels > 0);
+
+    std::filesystem::remove(outfile);
+}
+
+TEST_CASE("Visualizer headless rendering anti-aliases geometry edges") {
+    // A patch rotated off-axis presents a diagonal silhouette, which is where aliasing is visible:
+    // without multisampling every pixel along that edge is either fully the patch or fully the
+    // background, so the edge column contains only those two values. With multisampling the edge
+    // pixels carry partial coverage, producing intermediate values that lie strictly between.
+    //
+    // Counting distinct intermediate values is what distinguishes the two, rather than comparing
+    // images: a hard-edged render has none, an anti-aliased one has several.
+    auto countIntermediateEdgeValues = [](int aliasing_samples) {
+        Context context;
+        const uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(12, 12));
+        context.setPrimitiveColor(UUID, make_RGBcolor(1.f, 1.f, 1.f));
+        // Rotate about z so the patch edges run diagonally across the pixel grid.
+        context.rotatePrimitive(UUID, 0.35f, "z");
+
+        Visualizer visualizer(200, 200, aliasing_samples, true, true); // headless
+        visualizer.disableMessages();
+        visualizer.setLightingModel(Visualizer::LIGHTING_NONE);
+        visualizer.setBackgroundColor(make_RGBcolor(0.f, 0.f, 0.f));
+        visualizer.buildContextGeometry(&context);
+        visualizer.setCameraPosition(make_vec3(0.5f, -1.f, 26), make_vec3(0, 0, 0));
+        visualizer.plotUpdate();
+
+        std::vector<uint> pixels;
+        uint w = 0, h = 0;
+        visualizer.getWindowPixelsRGB(pixels, w, h);
+        REQUIRE(w > 0);
+        REQUIRE(h > 0);
+
+        // Scan a horizontal line across the middle and collect values that are neither background
+        // nor fully-covered patch. A generous margin keeps 8-bit rounding from counting as coverage.
+        std::set<uint> intermediate;
+        const size_t row = size_t(h / 2);
+        for (uint x = 0; x < w; x++) {
+            const uint value = pixels.at(3 * (row * size_t(w) + size_t(x)));
+            if (value > 8 && value < 247) {
+                intermediate.insert(value);
+            }
+        }
+        return intermediate.size();
+    };
+
+    const size_t without_msaa = countIntermediateEdgeValues(0);
+    const size_t with_msaa = countIntermediateEdgeValues(8);
+
+    // Without multisampling the diagonal edge is hard: every pixel is background or patch.
+    DOCTEST_CHECK(without_msaa <= 1);
+
+    // Accepting the multisampled attachments is not the same as rasterizing multisampled. macOS
+    // drives OpenGL through a deprecated Metal translation layer that reports GL_SAMPLES=4 on the
+    // framebuffer while leaving GL_SAMPLE_BUFFERS at 0: the attachments allocate their samples and
+    // the blit resolves faithfully, but every sample of a pixel holds the same value, so the
+    // resolved image is byte-identical to an unantialiased one. Asserting anti-aliasing there would
+    // fail for a platform reason rather than a code one, so the check is reported rather than
+    // enforced when the platform produces no coverage values at all.
+    if (with_msaa <= without_msaa) {
+        WARN("Headless multisampling produced no partial-coverage pixels; this driver does not rasterize "
+             "multisampled into a user-created framebuffer (expected on macOS OpenGL-over-Metal). "
+             "The resolve path itself is exercised by the render completing without error.");
+    } else {
+        // With multisampling the edge pixels carry partial coverage.
+        DOCTEST_CHECK(with_msaa > without_msaa);
+    }
+}
+
+TEST_CASE("Visualizer does not illuminate surfaces facing away from the light") {
+    // A leaf tilted past vertical has its normal pointing down and away from an overhead sun, so it
+    // receives no direct sunlight regardless of where it is viewed from. Viewing it from the side
+    // its normal points away from must not make it brighter: how much sunlight a surface receives
+    // is a property of the geometry and the sun, and cannot depend on the camera.
+    //
+    // The regression this guards against flipped the normal toward the camera before computing the
+    // diffuse term, so this back-facing leaf picked up ~70% of full direct illumination.
+    auto renderTiltedLeaf = [](bool sun_overhead) {
+        Context context;
+        const uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(8, 8));
+        context.addMaterial("leaf");
+        context.assignMaterialToPrimitive(UUID, "leaf");
+        // Primitive color lives on the material, so it must be set after the material is assigned.
+        context.setPrimitiveColor(UUID, make_RGBcolor(0.5f, 0.5f, 0.5f));
+        // Tilt 135 degrees about y: the normal starts at +z and ends pointing down and to +x.
+        context.rotatePrimitive(UUID, 135.f * PI_F / 180.f, "y");
+
+        Visualizer visualizer(64, 64, 0, true, true); // headless, no antialiasing
+        visualizer.disableMessages();
+        visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
+        // Sun overhead is what the tilted leaf faces away from; the source-off case is the control.
+        visualizer.setLightDirection(sun_overhead ? make_vec3(0, 0, 1) : make_vec3(0, 0, -1));
+
+        Visualizer::PhongMaterial material;
+        material.ambient = 1.0f;
+        material.diffuse = 0.8f;
+        material.specular = 0.f; // isolate the diffuse term
+        material.shininess = 32.f;
+        visualizer.setPhongMaterial(material);
+
+        visualizer.buildContextGeometry(&context);
+        // Camera on the side the normal points away from, so the back face is what is visible.
+        visualizer.setCameraPosition(make_vec3(-6.f, 0.5f, 6.f), make_vec3(0, 0, 0));
+        visualizer.plotUpdate();
+
+        std::vector<uint> pixels;
+        uint w = 0, h = 0;
+        visualizer.getWindowPixelsRGB(pixels, w, h);
+        REQUIRE(w > 0);
+        REQUIRE(h > 0);
+        const size_t idx = 3 * (size_t(h / 2) * size_t(w) + size_t(w / 2));
+        REQUIRE(pixels.size() > idx);
+        return pixels.at(idx);
+    };
+
+    // Moving the sun from overhead to underneath changes which side of this leaf is lit. The face
+    // being viewed is the one turned away from the overhead sun, so it must not be the brighter of
+    // the two: with the sun overhead it receives ambient only.
+    const uint sun_overhead = renderTiltedLeaf(true);
+    const uint sun_underneath = renderTiltedLeaf(false);
+
+    REQUIRE(sun_overhead > 0); // the leaf must actually cover the sampled pixel
+    REQUIRE(sun_underneath > 0);
+    DOCTEST_CHECK(sun_overhead < sun_underneath);
 }

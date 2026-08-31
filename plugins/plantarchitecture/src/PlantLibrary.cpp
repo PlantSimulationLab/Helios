@@ -2537,7 +2537,7 @@ void PlantArchitecture::initializeMaizeShoots() {
     phytomer_parameters_maize.petiole.petioles_per_internode = 1;
     phytomer_parameters_maize.petiole.pitch.uniformDistribution(-40, -20);
     phytomer_parameters_maize.petiole.radius = 0.0;
-    phytomer_parameters_maize.petiole.length = 0.05;
+    phytomer_parameters_maize.petiole.length = 0.01;
     phytomer_parameters_maize.petiole.taper = 0;
     phytomer_parameters_maize.petiole.curvature = 0;
     phytomer_parameters_maize.petiole.length_segments = 1;

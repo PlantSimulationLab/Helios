@@ -988,6 +988,9 @@ bool helios::parse_float(const std::string &input_string, float &converted_float
             return false;
     } catch (std::invalid_argument &e) {
         return false;
+    } catch (std::out_of_range &e) {
+        // A magnitude the type cannot represent is a value this function cannot convert, which is what a false return means. Letting the exception escape instead surfaced a raw STL error to the caller.
+        return false;
     }
     return true;
 }
@@ -1001,6 +1004,8 @@ bool helios::parse_double(const std::string &input_string, double &converted_dou
             return false;
     } catch (std::invalid_argument &e) {
         return false;
+    } catch (std::out_of_range &e) {
+        return false;
     }
     return true;
 }
@@ -1013,6 +1018,8 @@ bool helios::parse_int(const std::string &input_string, int &converted_int) {
         if (str.size() != read)
             return false;
     } catch (std::invalid_argument &e) {
+        return false;
+    } catch (std::out_of_range &e) {
         return false;
     }
     return true;
@@ -1051,13 +1058,17 @@ bool helios::parse_uint(const std::string &input_string, uint &converted_uint) {
     try {
         size_t read = 0;
         std::string str = trim_whitespace(input_string);
-        int converted_int = std::stoi(str, &read);
-        if (str.size() != read || converted_int < 0) {
+        // Parsed as a wider signed type because std::stoi cannot represent the upper half of the uint range: every value above INT_MAX threw std::out_of_range, so a uint that Helios had itself written to
+        // file could not be read back. The result is range-checked against uint rather than int.
+        long long converted_value = std::stoll(str, &read);
+        if (str.size() != read || converted_value < 0 || converted_value > static_cast<long long>(std::numeric_limits<uint>::max())) {
             return false;
         } else {
-            converted_uint = (uint) converted_int;
+            converted_uint = (uint) converted_value;
         }
     } catch (std::invalid_argument &e) {
+        return false;
+    } catch (std::out_of_range &e) {
         return false;
     }
     return true;

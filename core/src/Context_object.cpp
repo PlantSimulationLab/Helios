@@ -17,6 +17,49 @@
 
 using namespace helios;
 
+namespace {
+
+    //! Compute the inverse transpose of the upper-left 3x3 block of a Helios 4x4 affine transformation matrix
+    /**
+     * Normals must be transformed by the inverse transpose rather than by the matrix itself, otherwise they no longer remain perpendicular to the surface under non-uniform scaling. Returns false when the
+     * linear part of the transformation is singular, in which case no meaningful normal direction exists.
+     */
+    bool makeNormalMatrix(const float (&T)[16], float (&N)[9]) {
+        const float a = T[0], b = T[1], c = T[2];
+        const float d = T[4], e = T[5], f = T[6];
+        const float g = T[8], h = T[9], i = T[10];
+
+        const float determinant = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+        if (std::abs(determinant) < 1e-20f) {
+            return false;
+        }
+        const float inv_det = 1.f / determinant;
+
+        // Inverse of the 3x3 block (cofactor matrix / determinant), immediately transposed by the index assignment below.
+        N[0] = (e * i - f * h) * inv_det;
+        N[3] = -(b * i - c * h) * inv_det;
+        N[6] = (b * f - c * e) * inv_det;
+        N[1] = -(d * i - f * g) * inv_det;
+        N[4] = (a * i - c * g) * inv_det;
+        N[7] = -(a * f - c * d) * inv_det;
+        N[2] = (d * h - e * g) * inv_det;
+        N[5] = -(a * h - b * g) * inv_det;
+        N[8] = (a * e - b * d) * inv_det;
+
+        return true;
+    }
+
+    //! Apply a 3x3 normal matrix to a direction vector
+    helios::vec3 transformNormalByMatrix(const float (&N)[9], const helios::vec3 &normal) {
+        helios::vec3 result;
+        result.x = N[0] * normal.x + N[1] * normal.y + N[2] * normal.z;
+        result.y = N[3] * normal.x + N[4] * normal.y + N[5] * normal.z;
+        result.z = N[6] * normal.x + N[7] * normal.y + N[8] * normal.z;
+        return result;
+    }
+
+} // namespace
+
 uint Context::addSphereObject(uint Ndivs, const vec3 &center, float radius) {
     return addSphereObject(Ndivs, center, {radius, radius, radius}, {0.f, 0.75f, 0.f}); // Default color is green
 }
@@ -1732,6 +1775,22 @@ uint Context::addPolymeshObject(const std::vector<uint> &UUIDs) {
         helios_runtime_error("ERROR (Context::addPolymeshObject): One or more of the provided UUIDs does not exist. Cannot create polymesh object.");
     }
 
+    // The file loaders build a polymesh object themselves so that the mesh topology can be retained, and callers conventionally wrap the returned UUIDs in addPolymeshObject(). Recognize that case and
+    // return the existing object rather than warning about primitives that already have a parent and then building an empty object from what is left.
+    const uint first_parent_ObjID = getPrimitivePointer_private(UUIDs.front())->getParentObjectID();
+    if (first_parent_ObjID != 0 && doesObjectExist(first_parent_ObjID) && objects.at(first_parent_ObjID)->getObjectType() == OBJECT_TYPE_POLYMESH) {
+        bool all_belong_to_same_polymesh = true;
+        for (uint UUID: UUIDs) {
+            if (getPrimitivePointer_private(UUID)->getParentObjectID() != first_parent_ObjID) {
+                all_belong_to_same_polymesh = false;
+                break;
+            }
+        }
+        if (all_belong_to_same_polymesh) {
+            return first_parent_ObjID;
+        }
+    }
+
     // Check whether primitives already belong to another object
     std::vector<uint> UUIDs_polymesh;
     UUIDs_polymesh.reserve(UUIDs.size());
@@ -1745,6 +1804,10 @@ uint Context::addPolymeshObject(const std::vector<uint> &UUIDs) {
     }
     if (skipped_UUIDs > 0) {
         std::cerr << "WARNING (Context::addPolymeshObject): " << skipped_UUIDs << " primitives were not added to polymesh object because they already belong to another object." << std::endl;
+    }
+    if (UUIDs_polymesh.empty()) {
+        helios_runtime_error("ERROR (Context::addPolymeshObject): All of the provided primitives already belong to another object, so no polymesh object could be created. Detach the primitives from their "
+                             "current object, or pass the object ID of the existing object instead.");
     }
 
     auto *polymesh_new = (new Polymesh(currentObjectID, UUIDs_polymesh, "", this));
@@ -2259,17 +2322,40 @@ void CompoundObject::deleteChildPrimitive(uint UUID) {
         // find() above already makes this O(n), so erase() adds no asymptotic cost.
         UUIDs.erase(it);
         primitivesarecomplete = false;
+        onChildPrimitiveDeleted(UUID);
     }
 }
 
 void CompoundObject::deleteChildPrimitive(const std::vector<uint> &a_UUIDs) {
+    // Erase the members first and repair once for the whole batch, rather than repairing after each individual erase. For a derived type whose repair touches the entire object (such as the face table of a
+    // Polymesh) the per-primitive form is quadratic in the number of primitives deleted.
+    std::vector<uint> erased_UUIDs;
+    erased_UUIDs.reserve(a_UUIDs.size());
     for (uint UUID: a_UUIDs) {
-        deleteChildPrimitive(UUID);
+        auto it = find(UUIDs.begin(), UUIDs.end(), UUID);
+        if (it != UUIDs.end()) {
+            UUIDs.erase(it);
+            primitivesarecomplete = false;
+            erased_UUIDs.push_back(UUID);
+        }
+    }
+    if (!erased_UUIDs.empty()) {
+        onChildPrimitivesDeleted(erased_UUIDs);
     }
 }
 
 bool CompoundObject::arePrimitivesComplete() const {
     return primitivesarecomplete;
+}
+
+std::vector<std::vector<helios::vec3>> CompoundObject::getPrimitiveVertexNormals(const std::vector<uint> &UUIDs_query) const {
+    // The base implementation simply repeats the single-primitive form. Types whose evaluation needs per-object preparation override this so that the preparation is done once for the whole batch.
+    std::vector<std::vector<helios::vec3>> normals;
+    normals.reserve(UUIDs_query.size());
+    for (uint UUID: UUIDs_query) {
+        normals.push_back(getPrimitiveVertexNormals(UUID));
+    }
+    return normals;
 }
 
 // ============== TILE CLASS METHOD DEFINITIONS ==============
@@ -2505,6 +2591,41 @@ float Sphere::getVolume() const {
     return 4.f / 3.f * PI_F * radii.x * radii.y * radii.z;
 }
 
+helios::vec3 Sphere::evaluateSurfaceNormal(const helios::vec3 &point, const float (&normal_matrix)[9]) const {
+    // The sphere's transformation matrix is exactly the affine map that carries the unit sphere onto the object's geometry, so the point is first carried back to the unit sphere, where the outward normal at
+    // a point is simply the point itself. That local normal is then carried to the global frame by the normal matrix. Working through the unit sphere this way keeps the result exact for an ellipsoid that has
+    // also been rotated, which a componentwise division by the squared semi-axes in the global frame would not.
+    const vec3 shifted = make_vec3(point.x - transform[3], point.y - transform[7], point.z - transform[11]);
+
+    // The normal matrix is the inverse transpose of the linear part, so reading it transposed gives the inverse of the linear part itself.
+    vec3 local;
+    local.x = normal_matrix[0] * shifted.x + normal_matrix[3] * shifted.y + normal_matrix[6] * shifted.z;
+    local.y = normal_matrix[1] * shifted.x + normal_matrix[4] * shifted.y + normal_matrix[7] * shifted.z;
+    local.z = normal_matrix[2] * shifted.x + normal_matrix[5] * shifted.y + normal_matrix[8] * shifted.z;
+
+    vec3 normal = transformNormalByMatrix(normal_matrix, local);
+    const float magnitude = normal.magnitude();
+    return (magnitude > 0.f) ? normal / magnitude : normal;
+}
+
+std::vector<helios::vec3> Sphere::getPrimitiveVertexNormals(uint UUID) const {
+    float N[9];
+    if (!makeNormalMatrix(transform, N)) {
+        // A singular transformation means the sphere has been flattened along at least one axis and has no meaningful surface normal. Returning nothing lets the caller keep the face normal rather than
+        // preventing the object from being drawn at all.
+        return {};
+    }
+
+    const std::vector<vec3> vertices = context->getPrimitiveVertices(UUID);
+
+    std::vector<vec3> normals;
+    normals.reserve(vertices.size());
+    for (const vec3 &vertex: vertices) {
+        normals.push_back(evaluateSurfaceNormal(vertex, N));
+    }
+    return normals;
+}
+
 // ============== TUBE CLASS METHOD DEFINITIONS ==============
 
 Tube::Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3> &a_nodes, const std::vector<float> &a_radius, const std::vector<helios::RGBcolor> &a_colors, const std::vector<std::vector<helios::vec3>> &a_triangle_vertices,
@@ -2715,19 +2836,38 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
 
     int second_last = node_count - 2;
     int last = node_count - 1;
+
+    // The UUID list is ordered with the radial slot varying slowest and the segment index fastest, and updateTriangleVertices() relies on that when it assigns geometry to primitives by position. The new
+    // segment's triangles therefore have to be inserted into each radial slot's block rather than appended to the end, otherwise every primitive is subsequently repainted with some other primitive's
+    // geometry. The vertices would still describe a valid tube, but anything held per primitive rather than per vertex, the color in particular, would end up on the wrong part of the tube.
+    const int new_segment_count = node_count - 1;
+    std::vector<uint> reordered_UUIDs;
+    reordered_UUIDs.reserve(2 * new_segment_count * radial_subdivisions);
+
+    int existing_index = 0;
     for (int j = 0; j < radial_subdivisions; j++) {
+
+        // The segments that were already present keep their existing primitives, in their existing order.
+        for (int i = 0; i < new_segment_count - 1; i++) {
+            reordered_UUIDs.push_back(UUIDs.at(existing_index));
+            reordered_UUIDs.push_back(UUIDs.at(existing_index + 1));
+            existing_index += 2;
+        }
+
         vec3 v0 = triangle_vertices.at(second_last).at(j);
         vec3 v1 = triangle_vertices.at(last).at(j + 1);
         vec3 v2 = triangle_vertices.at(second_last).at(j + 1);
 
-        UUIDs.push_back(context->addTriangle(v0, v1, v2, node_color));
+        reordered_UUIDs.push_back(context->addTriangle(v0, v1, v2, node_color));
 
         v0 = triangle_vertices.at(second_last).at(j);
         v1 = triangle_vertices.at(last).at(j);
         v2 = triangle_vertices.at(last).at(j + 1);
 
-        UUIDs.push_back(context->addTriangle(v0, v1, v2, node_color));
+        reordered_UUIDs.push_back(context->addTriangle(v0, v1, v2, node_color));
     }
+
+    UUIDs = reordered_UUIDs;
 
     for (uint p: UUIDs) {
         context->setPrimitiveParentObjectID(p, this->OID);
@@ -2848,13 +2988,24 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
         }
     }
 
-    int old_triangle_count = UUIDs.size();
-
     vec3 v0, v1, v2;
     vec2 uv0, uv1, uv2;
 
-    // Add triangles for new segment
+    // The new segment's triangles are inserted into each radial slot's block rather than appended to the end, because updateTriangleVertices() assigns geometry to primitives by position and expects the
+    // radial slot to vary slowest and the segment index fastest. See the color overload of this method for what goes wrong otherwise.
+    const int new_segment_count = node_count - 1;
+    std::vector<uint> reordered_UUIDs;
+    reordered_UUIDs.reserve(2 * new_segment_count * radial_subdivisions);
+
+    int existing_index = 0;
     for (int j = 0; j < radial_subdivisions; j++) {
+
+        for (int i = 0; i < new_segment_count - 1; i++) {
+            reordered_UUIDs.push_back(UUIDs.at(existing_index));
+            reordered_UUIDs.push_back(UUIDs.at(existing_index + 1));
+            existing_index += 2;
+        }
+
         v0 = triangle_vertices[node_count - 2][j];
         v1 = triangle_vertices[node_count - 1][j + 1];
         v2 = triangle_vertices[node_count - 2][j + 1];
@@ -2863,7 +3014,7 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
         uv1 = uv[1][j + 1];
         uv2 = uv[0][j + 1];
 
-        UUIDs.push_back(context->addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
+        reordered_UUIDs.push_back(context->addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
 
         v0 = triangle_vertices[node_count - 2][j];
         v1 = triangle_vertices[node_count - 1][j];
@@ -2873,8 +3024,10 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
         uv1 = uv[1][j];
         uv2 = uv[1][j + 1];
 
-        UUIDs.push_back(context->addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
+        reordered_UUIDs.push_back(context->addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
     }
+
+    UUIDs = reordered_UUIDs;
 
     for (uint p: UUIDs) {
         context->setPrimitiveParentObjectID(p, this->OID);
@@ -3096,6 +3249,132 @@ void Tube::updateTriangleVertices() const {
     }
 }
 
+Tube::NormalFrame Tube::buildNormalFrame() const {
+    NormalFrame frame;
+
+    frame.nodes_global = getNodes();
+    frame.radii_global = getNodeRadii();
+
+    const size_t node_count = frame.nodes_global.size();
+    frame.axis.resize(node_count);
+    frame.taper_slope.resize(node_count);
+    frame.cumulative_arclength.resize(node_count);
+
+    // Arclength along the node polyline, used below to narrow the search for the ring a surface point belongs to.
+    frame.cumulative_arclength.at(0) = 0.f;
+    for (size_t i = 1; i < node_count; i++) {
+        frame.cumulative_arclength.at(i) = frame.cumulative_arclength.at(i - 1) + (frame.nodes_global.at(i) - frame.nodes_global.at(i - 1)).magnitude();
+    }
+
+    for (size_t i = 0; i < node_count; i++) {
+
+        // The axial direction uses the same one-sided ends and averaged interior as the cross-section construction in recomputeCrossSections(), so that the normal frame agrees with the geometry frame.
+        vec3 axial_vector;
+        if (i == 0) {
+            axial_vector = frame.nodes_global.at(1) - frame.nodes_global.at(0);
+        } else if (i == node_count - 1) {
+            axial_vector = frame.nodes_global.at(i) - frame.nodes_global.at(i - 1);
+        } else {
+            axial_vector = 0.5f * ((frame.nodes_global.at(i) - frame.nodes_global.at(i - 1)) + (frame.nodes_global.at(i + 1) - frame.nodes_global.at(i)));
+        }
+        const float axial_magnitude = axial_vector.magnitude();
+        // Matches the degenerate-segment substitution made when the cross-sections were built.
+        frame.axis.at(i) = (axial_magnitude < 1e-6f) ? make_vec3(0, 0, 1) : axial_vector / axial_magnitude;
+
+        // Rate of change of radius with respect to arclength. A tapering tube's surface is a cone rather than a cylinder, so its normal tilts toward the narrowing end by this slope; leaving it out would
+        // shade a tapered stem as though it were a perfect cylinder. Differentiation is with respect to arclength rather than node index so that unevenly spaced nodes give the correct slope.
+        float slope_sum = 0.f;
+        int slope_count = 0;
+        if (i > 0) {
+            const float dl = frame.cumulative_arclength.at(i) - frame.cumulative_arclength.at(i - 1);
+            if (dl > 1e-6f) {
+                slope_sum += (frame.radii_global.at(i) - frame.radii_global.at(i - 1)) / dl;
+                slope_count++;
+            }
+        }
+        if (i + 1 < node_count) {
+            const float dl = frame.cumulative_arclength.at(i + 1) - frame.cumulative_arclength.at(i);
+            if (dl > 1e-6f) {
+                slope_sum += (frame.radii_global.at(i + 1) - frame.radii_global.at(i)) / dl;
+                slope_count++;
+            }
+        }
+        frame.taper_slope.at(i) = (slope_count > 0) ? slope_sum / float(slope_count) : 0.f;
+    }
+
+    return frame;
+}
+
+helios::vec3 Tube::evaluateSurfaceNormal(const helios::vec3 &point, const NormalFrame &frame) const {
+    const size_t node_count = frame.nodes_global.size();
+
+    // Identify the ring the point belongs to. Every vertex of the tube lies exactly one node radius from its own node, so the residual between the measured distance and the stored radius is zero for the
+    // correct ring and of the order of the node spacing for any other. That discriminates far more sharply than proximity alone, which can pick the wrong node on the inside of a tight bend.
+    size_t ring = 0;
+    float best_residual = -1.f;
+    for (size_t i = 0; i < node_count; i++) {
+        const float residual = std::abs((point - frame.nodes_global.at(i)).magnitude() - frame.radii_global.at(i));
+        if (best_residual < 0.f || residual < best_residual) {
+            best_residual = residual;
+            ring = i;
+        }
+    }
+
+    const vec3 &axis = frame.axis.at(ring);
+
+    // Remove any axial component so that the radial direction is measured strictly perpendicular to the tube axis.
+    vec3 radial = point - frame.nodes_global.at(ring);
+    radial = radial - (radial * axis) * axis;
+
+    const float radial_magnitude = radial.magnitude();
+    if (radial_magnitude < 1e-9f) {
+        // The point sits on the axis itself, where the surface has pinched to nothing and no radial direction exists.
+        return axis;
+    }
+
+    vec3 normal = radial / radial_magnitude - frame.taper_slope.at(ring) * axis;
+    const float magnitude = normal.magnitude();
+    return (magnitude > 0.f) ? normal / magnitude : radial / radial_magnitude;
+}
+
+std::vector<helios::vec3> Tube::getPrimitiveVertexNormals(uint UUID) const {
+    if (nodes.size() < 2) {
+        return {};
+    }
+    const NormalFrame frame = buildNormalFrame();
+
+    const std::vector<vec3> vertices = context->getPrimitiveVertices(UUID);
+
+    std::vector<vec3> normals;
+    normals.reserve(vertices.size());
+    for (const vec3 &vertex: vertices) {
+        normals.push_back(evaluateSurfaceNormal(vertex, frame));
+    }
+    return normals;
+}
+
+std::vector<std::vector<helios::vec3>> Tube::getPrimitiveVertexNormals(const std::vector<uint> &UUIDs_query) const {
+    if (nodes.size() < 2) {
+        return std::vector<std::vector<helios::vec3>>(UUIDs_query.size());
+    }
+
+    // Building the frame costs one pass over the tube nodes, so it is done once here rather than once per primitive.
+    const NormalFrame frame = buildNormalFrame();
+
+    std::vector<std::vector<helios::vec3>> normals;
+    normals.reserve(UUIDs_query.size());
+    for (uint UUID: UUIDs_query) {
+        const std::vector<vec3> vertices = context->getPrimitiveVertices(UUID);
+        std::vector<vec3> primitive_normals;
+        primitive_normals.reserve(vertices.size());
+        for (const vec3 &vertex: vertices) {
+            primitive_normals.push_back(evaluateSurfaceNormal(vertex, frame));
+        }
+        normals.push_back(primitive_normals);
+    }
+    return normals;
+}
+
 // ============== BOX CLASS METHOD DEFINITIONS ==============
 
 Box::Box(uint a_OID, const std::vector<uint> &a_UUIDs, const int3 &a_subdiv, const char *a_texturefile, helios::Context *a_context) {
@@ -3214,7 +3493,531 @@ Polymesh::Polymesh(uint a_OID, const std::vector<uint> &a_UUIDs, const char *a_t
     context = a_context;
 }
 
+namespace {
+
+    //! Transform a point in object-local coordinates to global coordinates using a Helios 4x4 affine transformation matrix
+    helios::vec3 transformPointByMatrix(const float (&T)[16], const helios::vec3 &point) {
+        helios::vec3 result;
+        result.x = T[0] * point.x + T[1] * point.y + T[2] * point.z + T[3];
+        result.y = T[4] * point.x + T[5] * point.y + T[6] * point.z + T[7];
+        result.z = T[8] * point.x + T[9] * point.y + T[10] * point.z + T[11];
+        return result;
+    }
+
+    //! Build a canonically-ordered key identifying the undirected edge between two vertex indices
+    /**
+     * The two 32-bit indices are packed into a single 64-bit value so that edges can be counted in a hash map without needing a hash functor for std::pair.
+     */
+    int64_t makeEdgeKey(int vertex_a, int vertex_b) {
+        const int64_t lower = (vertex_a < vertex_b) ? vertex_a : vertex_b;
+        const int64_t upper = (vertex_a < vertex_b) ? vertex_b : vertex_a;
+        return (lower << 32) | (upper & 0xffffffffLL);
+    }
+
+} // namespace
+
+void Polymesh::setTopology(const std::vector<helios::vec3> &a_vertices, const std::vector<helios::int3> &a_faces, const std::vector<uint> &a_face_UUIDs, const std::vector<helios::vec3> &a_vertex_normals,
+                           const std::vector<helios::vec2> &a_vertex_uv, helios::VertexNormalSource a_normal_source) {
+
+    if (a_faces.size() != a_face_UUIDs.size()) {
+        helios_runtime_error("ERROR (Polymesh::setTopology): The face table has " + std::to_string(a_faces.size()) + " entries but " + std::to_string(a_face_UUIDs.size()) +
+                             " primitive UUIDs were given. Every face must correspond to exactly one primitive.");
+    }
+    if (!a_vertex_normals.empty() && a_vertex_normals.size() != a_vertices.size()) {
+        helios_runtime_error("ERROR (Polymesh::setTopology): " + std::to_string(a_vertex_normals.size()) + " vertex normals were given for " + std::to_string(a_vertices.size()) +
+                             " vertices. Vertex normals must either be empty or parallel to the vertex array.");
+    }
+    if (!a_vertex_uv.empty() && a_vertex_uv.size() != a_vertices.size()) {
+        helios_runtime_error("ERROR (Polymesh::setTopology): " + std::to_string(a_vertex_uv.size()) + " texture coordinates were given for " + std::to_string(a_vertices.size()) +
+                             " vertices. Texture coordinates must either be empty or parallel to the vertex array.");
+    }
+    if (a_vertex_normals.empty() && a_normal_source != helios::NORMAL_SOURCE_NONE) {
+        helios_runtime_error("ERROR (Polymesh::setTopology): A vertex normal source was specified but no vertex normals were given. Pass NORMAL_SOURCE_NONE when the mesh has no vertex normals.");
+    }
+    for (const helios::int3 &face: a_faces) {
+        if (face.x < 0 || face.y < 0 || face.z < 0 || face.x >= scast<int>(a_vertices.size()) || face.y >= scast<int>(a_vertices.size()) || face.z >= scast<int>(a_vertices.size())) {
+            helios_runtime_error("ERROR (Polymesh::setTopology): Face references vertex indices (" + std::to_string(face.x) + ", " + std::to_string(face.y) + ", " + std::to_string(face.z) +
+                                 ") but the mesh has only " + std::to_string(a_vertices.size()) + " vertices. Check that all face indices are within range.");
+        }
+    }
+
+    // Incoming geometry is in global coordinates; store it in the object-local frame so that it stays correct as the object transformation matrix is subsequently updated by translate/rotate/scale.
+    float T_inverse[9];
+    if (!makeNormalMatrix(transform, T_inverse)) {
+        helios_runtime_error("ERROR (Polymesh::setTopology): The object transformation matrix is singular and cannot be inverted. The mesh topology cannot be expressed in the object-local frame.");
+    }
+
+    vertices.resize(a_vertices.size());
+    for (size_t v = 0; v < a_vertices.size(); v++) {
+        // The linear part of a Helios object transform is inverted via its transpose-inverse, so invert the translation separately and apply the true inverse linear map.
+        const helios::vec3 shifted = make_vec3(a_vertices.at(v).x - transform[3], a_vertices.at(v).y - transform[7], a_vertices.at(v).z - transform[11]);
+        vertices.at(v).x = T_inverse[0] * shifted.x + T_inverse[3] * shifted.y + T_inverse[6] * shifted.z;
+        vertices.at(v).y = T_inverse[1] * shifted.x + T_inverse[4] * shifted.y + T_inverse[7] * shifted.z;
+        vertices.at(v).z = T_inverse[2] * shifted.x + T_inverse[5] * shifted.y + T_inverse[8] * shifted.z;
+    }
+
+    // Normals are transformed to the local frame by the inverse of the inverse transpose, which is the transpose of the linear part itself.
+    vertex_normals.resize(a_vertex_normals.size());
+    for (size_t v = 0; v < a_vertex_normals.size(); v++) {
+        const helios::vec3 &n = a_vertex_normals.at(v);
+        helios::vec3 local_normal;
+        local_normal.x = transform[0] * n.x + transform[4] * n.y + transform[8] * n.z;
+        local_normal.y = transform[1] * n.x + transform[5] * n.y + transform[9] * n.z;
+        local_normal.z = transform[2] * n.x + transform[6] * n.y + transform[10] * n.z;
+        const float magnitude = local_normal.magnitude();
+        vertex_normals.at(v) = (magnitude > 0.f) ? local_normal / magnitude : local_normal;
+    }
+
+    faces = a_faces;
+    face_UUIDs = a_face_UUIDs;
+    vertex_uv = a_vertex_uv;
+    normal_source = a_normal_source;
+
+    UUID_to_face.clear();
+    for (size_t f = 0; f < face_UUIDs.size(); f++) {
+        UUID_to_face[face_UUIDs.at(f)] = f;
+    }
+
+    invalidateAdjacency();
+}
+
+std::vector<helios::vec3> Polymesh::getVertices() const {
+    std::vector<vec3> vertices_global(vertices.size());
+    for (size_t v = 0; v < vertices.size(); v++) {
+        vertices_global.at(v) = transformPointByMatrix(transform, vertices.at(v));
+    }
+    return vertices_global;
+}
+
+std::vector<helios::int3> Polymesh::getFaces() const {
+    return faces;
+}
+
+std::vector<helios::vec3> Polymesh::getVertexNormals() const {
+    if (vertex_normals.empty()) {
+        return {};
+    }
+
+    float N[9];
+    if (!makeNormalMatrix(transform, N)) {
+        helios_runtime_error("ERROR (Polymesh::getVertexNormals): The object transformation matrix is singular, so surface normals are undefined. This usually means the object was scaled by zero along one or "
+                             "more axes.");
+    }
+
+    std::vector<vec3> normals_global(vertex_normals.size());
+    for (size_t v = 0; v < vertex_normals.size(); v++) {
+        vec3 n = transformNormalByMatrix(N, vertex_normals.at(v));
+        const float magnitude = n.magnitude();
+        if (magnitude > 0.f) {
+            n = n / magnitude;
+        }
+        normals_global.at(v) = n;
+    }
+    return normals_global;
+}
+
+std::vector<helios::vec2> Polymesh::getVertexUV() const {
+    return vertex_uv;
+}
+
+bool Polymesh::hasVertexNormals() const {
+    return !vertex_normals.empty();
+}
+
+helios::VertexNormalSource Polymesh::getVertexNormalSource() const {
+    return normal_source;
+}
+
+size_t Polymesh::getVertexCount() const {
+    return vertices.size();
+}
+
+size_t Polymesh::getFaceCount() const {
+    return faces.size();
+}
+
+size_t Polymesh::getFaceIndexForPrimitive(uint UUID) const {
+    auto it = UUID_to_face.find(UUID);
+    if (it == UUID_to_face.end()) {
+        helios_runtime_error("ERROR (Polymesh::getFaceIndexForPrimitive): Primitive UUID " + std::to_string(UUID) + " does not correspond to a face of polymesh object " + std::to_string(OID) +
+                             ". Check that the primitive belongs to this object and that the object carries mesh topology.");
+    }
+    return it->second;
+}
+
+uint Polymesh::getPrimitiveUUIDForFace(size_t face_index) const {
+    if (face_index >= face_UUIDs.size()) {
+        helios_runtime_error("ERROR (Polymesh::getPrimitiveUUIDForFace): Face index " + std::to_string(face_index) + " is out of range. Polymesh object " + std::to_string(OID) + " has " +
+                             std::to_string(face_UUIDs.size()) + " faces.");
+    }
+    return face_UUIDs.at(face_index);
+}
+
+void Polymesh::invalidateAdjacency() const {
+    adjacency_valid = false;
+    vertex_to_faces.clear();
+}
+
+void Polymesh::buildAdjacency() const {
+    if (adjacency_valid) {
+        return;
+    }
+    vertex_to_faces.assign(vertices.size(), {});
+    for (size_t f = 0; f < faces.size(); f++) {
+        vertex_to_faces.at(faces.at(f).x).push_back(f);
+        vertex_to_faces.at(faces.at(f).y).push_back(f);
+        vertex_to_faces.at(faces.at(f).z).push_back(f);
+    }
+    adjacency_valid = true;
+}
+
+void Polymesh::syncVerticesFromPrimitive(uint UUID) {
+    auto it = UUID_to_face.find(UUID);
+    if (it == UUID_to_face.end()) {
+        // The object carries no topology, so there is nothing to keep in sync.
+        return;
+    }
+
+    const std::vector<vec3> primitive_vertices = context->getPrimitiveVertices(UUID);
+    if (primitive_vertices.size() != 3) {
+        return;
+    }
+
+    // The face table is stored in the object-local frame, so convert the primitive's global vertices back through the object transform.
+    float T_inverse[9];
+    if (!makeNormalMatrix(transform, T_inverse)) {
+        helios_runtime_error("ERROR (Polymesh::syncVerticesFromPrimitive): The object transformation matrix of polymesh object " + std::to_string(OID) +
+                             " is singular and cannot be inverted, so the deformed geometry cannot be expressed in the object-local frame. This usually means the object was scaled by zero along one or more "
+                             "axes.");
+    }
+
+    const int3 &face = faces.at(it->second);
+    const int face_corner[3] = {face.x, face.y, face.z};
+    for (int i = 0; i < 3; i++) {
+        const vec3 shifted = make_vec3(primitive_vertices.at(i).x - transform[3], primitive_vertices.at(i).y - transform[7], primitive_vertices.at(i).z - transform[11]);
+        vec3 &mesh_vertex = vertices.at(face_corner[i]);
+        mesh_vertex.x = T_inverse[0] * shifted.x + T_inverse[3] * shifted.y + T_inverse[6] * shifted.z;
+        mesh_vertex.y = T_inverse[1] * shifted.x + T_inverse[4] * shifted.y + T_inverse[7] * shifted.z;
+        mesh_vertex.z = T_inverse[2] * shifted.x + T_inverse[5] * shifted.y + T_inverse[8] * shifted.z;
+    }
+
+    // The stored vertices are shared, so this update is already visible to every face that references them. The sibling primitives are deliberately NOT rewritten here: doing so would make a bulk transform
+    // of the whole mesh quadratic (each facet rewriting its ~6 neighbours, which are then rewritten again as the loop reaches them) and order-dependent, since each rewrite would re-derive a neighbour from
+    // vertices that other facets in the same batch are still updating. A caller that moves only some facets of a welded mesh therefore leaves the untouched neighbouring primitives where they were, even
+    // though the shared mesh vertex has moved; transform the neighbouring primitives too if the rendered geometry must follow.
+
+    // Vertex normals were computed for the undeformed geometry and no longer describe the surface. Leave them in place rather than silently recomputing them; computeVertexNormals() should be called again if
+    // exact normals are needed after a deformation.
+
+    // The face table itself is unchanged - only vertex positions moved - so the cached vertex-to-face adjacency remains valid and is deliberately not invalidated here. Rebuilding it once per transformed
+    // primitive would dominate the cost of a bulk transform.
+}
+
+void Polymesh::removeFacesAndCompact(const std::vector<bool> &remove_face) {
+
+    std::vector<int3> faces_kept;
+    std::vector<uint> face_UUIDs_kept;
+    faces_kept.reserve(faces.size());
+    face_UUIDs_kept.reserve(face_UUIDs.size());
+    for (size_t f = 0; f < faces.size(); f++) {
+        if (!remove_face.at(f)) {
+            faces_kept.push_back(faces.at(f));
+            face_UUIDs_kept.push_back(face_UUIDs.at(f));
+        }
+    }
+    faces = faces_kept;
+    face_UUIDs = face_UUIDs_kept;
+
+    UUID_to_face.clear();
+    for (size_t f = 0; f < face_UUIDs.size(); f++) {
+        UUID_to_face[face_UUIDs.at(f)] = f;
+    }
+
+    // Drop any vertex left unreferenced by the surviving faces and reindex the remainder so the topology stays compact and valid.
+    std::vector<bool> vertex_is_referenced(vertices.size(), false);
+    for (const int3 &face: faces) {
+        vertex_is_referenced.at(face.x) = true;
+        vertex_is_referenced.at(face.y) = true;
+        vertex_is_referenced.at(face.z) = true;
+    }
+
+    std::vector<int> remapped_index(vertices.size(), -1);
+    std::vector<vec3> vertices_kept;
+    std::vector<vec3> vertex_normals_kept;
+    std::vector<vec2> vertex_uv_kept;
+    vertices_kept.reserve(vertices.size());
+    for (size_t v = 0; v < vertices.size(); v++) {
+        if (!vertex_is_referenced.at(v)) {
+            continue;
+        }
+        remapped_index.at(v) = scast<int>(vertices_kept.size());
+        vertices_kept.push_back(vertices.at(v));
+        if (!vertex_normals.empty()) {
+            vertex_normals_kept.push_back(vertex_normals.at(v));
+        }
+        if (!vertex_uv.empty()) {
+            vertex_uv_kept.push_back(vertex_uv.at(v));
+        }
+    }
+
+    for (int3 &face: faces) {
+        face.x = remapped_index.at(face.x);
+        face.y = remapped_index.at(face.y);
+        face.z = remapped_index.at(face.z);
+    }
+
+    vertices = vertices_kept;
+    vertex_normals = vertex_normals_kept;
+    vertex_uv = vertex_uv_kept;
+
+    if (vertices.empty()) {
+        normal_source = helios::NORMAL_SOURCE_NONE;
+    }
+
+    invalidateAdjacency();
+}
+
+void Polymesh::onChildPrimitiveDeleted(uint UUID) {
+    auto it = UUID_to_face.find(UUID);
+    if (it == UUID_to_face.end()) {
+        // The object carries no topology (e.g. it was created by grouping loose primitives), so there is nothing to repair.
+        return;
+    }
+
+    std::vector<bool> remove_face(faces.size(), false);
+    remove_face.at(it->second) = true;
+    removeFacesAndCompact(remove_face);
+}
+
+void Polymesh::onChildPrimitivesDeleted(const std::vector<uint> &a_UUIDs) {
+    if (UUID_to_face.empty()) {
+        return;
+    }
+
+    // Mark every deleted primitive's face first, then repair once. Repairing per primitive would rebuild the UUID map and recompact the vertex array once for each deletion, which is quadratic in the size
+    // of the mesh when a large number of primitives is deleted together.
+    std::vector<bool> remove_face(faces.size(), false);
+    bool any_removed = false;
+    for (uint UUID: a_UUIDs) {
+        auto it = UUID_to_face.find(UUID);
+        if (it != UUID_to_face.end()) {
+            remove_face.at(it->second) = true;
+            any_removed = true;
+        }
+    }
+
+    if (any_removed) {
+        removeFacesAndCompact(remove_face);
+    }
+}
+
+void Polymesh::computeVertexNormals(float crease_angle_degrees) {
+    if (faces.empty()) {
+        helios_runtime_error("ERROR (Polymesh::computeVertexNormals): Polymesh object " + std::to_string(OID) +
+                             " carries no mesh topology, so vertex normals cannot be computed. Vertex normals are only available for meshes loaded from a file with retained connectivity.");
+    }
+    if (crease_angle_degrees < 0.f || crease_angle_degrees > 180.f) {
+        helios_runtime_error("ERROR (Polymesh::computeVertexNormals): Crease angle of " + std::to_string(crease_angle_degrees) + " degrees is out of range. The crease angle must be between 0 and 180 degrees.");
+    }
+
+    const float crease_angle_radians = deg2rad(crease_angle_degrees);
+
+    // Face normals and areas are computed in the local frame; the area weighting and the crease comparison are both invariant to the object transform being applied afterwards.
+    std::vector<vec3> face_normals(faces.size());
+    std::vector<float> face_areas(faces.size());
+    for (size_t f = 0; f < faces.size(); f++) {
+        const vec3 &v0 = vertices.at(faces.at(f).x);
+        const vec3 &v1 = vertices.at(faces.at(f).y);
+        const vec3 &v2 = vertices.at(faces.at(f).z);
+        const vec3 face_cross = cross(v1 - v0, v2 - v0);
+        const float cross_magnitude = face_cross.magnitude();
+        face_areas.at(f) = 0.5f * cross_magnitude;
+        // A degenerate (zero-area) face has no meaningful normal; it contributes nothing to the averaging because its weight is zero.
+        face_normals.at(f) = (cross_magnitude > 0.f) ? face_cross / cross_magnitude : make_vec3(0, 0, 0);
+    }
+
+    buildAdjacency();
+
+    // A vertex whose incident faces do not all lie within the crease angle of one another carries more than one normal, which an indexed face set cannot represent at a single index. Such a vertex is
+    // therefore split into one copy per smooth group, and the faces in each group are repointed at their own copy. This is what keeps a crease genuinely hard rather than averaging across it.
+    std::vector<vec3> split_vertices;
+    std::vector<vec3> split_normals;
+    std::vector<vec2> split_uv;
+    split_vertices.reserve(vertices.size());
+    split_normals.reserve(vertices.size());
+
+    // For each face, the index its corner should refer to after splitting.
+    std::vector<int3> updated_faces = faces;
+
+    for (size_t v = 0; v < vertices.size(); v++) {
+        const std::vector<size_t> &incident_faces = vertex_to_faces.at(v);
+
+        if (incident_faces.empty()) {
+            // An unreferenced vertex has no adjacent face to derive a normal from; keep it in place with a zero normal so the vertex array stays parallel to any texture coordinates.
+            split_vertices.push_back(vertices.at(v));
+            split_normals.push_back(make_vec3(0, 0, 0));
+            if (!vertex_uv.empty()) {
+                split_uv.push_back(vertex_uv.at(v));
+            }
+            continue;
+        }
+
+        // Partition the incident faces into smooth groups, merging two faces whenever they lie within the crease angle of one another.
+        std::vector<std::vector<size_t>> smooth_groups;
+        for (size_t incident_face: incident_faces) {
+            bool placed = false;
+            for (std::vector<size_t> &group: smooth_groups) {
+                for (size_t member_face: group) {
+                    if (acos_safe(face_normals.at(incident_face) * face_normals.at(member_face)) <= crease_angle_radians) {
+                        group.push_back(incident_face);
+                        placed = true;
+                        break;
+                    }
+                }
+                if (placed) {
+                    break;
+                }
+            }
+            if (!placed) {
+                smooth_groups.push_back({incident_face});
+            }
+        }
+
+        for (const std::vector<size_t> &group: smooth_groups) {
+            vec3 accumulated = make_vec3(0, 0, 0);
+            for (size_t member_face: group) {
+                accumulated = accumulated + face_normals.at(member_face) * face_areas.at(member_face);
+            }
+            const float magnitude = accumulated.magnitude();
+            if (magnitude > 0.f) {
+                accumulated = accumulated / magnitude;
+            } else {
+                // Every face in the group was degenerate, or their normals cancelled exactly; fall back to a member face normal rather than emitting a zero-length normal.
+                accumulated = face_normals.at(group.front());
+            }
+
+            const int new_vertex_index = scast<int>(split_vertices.size());
+            split_vertices.push_back(vertices.at(v));
+            split_normals.push_back(accumulated);
+            if (!vertex_uv.empty()) {
+                split_uv.push_back(vertex_uv.at(v));
+            }
+
+            for (size_t member_face: group) {
+                if (faces.at(member_face).x == scast<int>(v)) {
+                    updated_faces.at(member_face).x = new_vertex_index;
+                }
+                if (faces.at(member_face).y == scast<int>(v)) {
+                    updated_faces.at(member_face).y = new_vertex_index;
+                }
+                if (faces.at(member_face).z == scast<int>(v)) {
+                    updated_faces.at(member_face).z = new_vertex_index;
+                }
+            }
+        }
+    }
+
+    vertices = split_vertices;
+    vertex_normals = split_normals;
+    vertex_uv = split_uv;
+    faces = updated_faces;
+
+    normal_source = helios::NORMAL_SOURCE_COMPUTED;
+    invalidateAdjacency();
+}
+
+bool Polymesh::isClosed() const {
+    return getBoundaryEdges().empty();
+}
+
+std::vector<helios::int2> Polymesh::getBoundaryEdges() const {
+    std::unordered_map<int64_t, int> edge_face_count;
+    for (const int3 &face: faces) {
+        edge_face_count[makeEdgeKey(face.x, face.y)]++;
+        edge_face_count[makeEdgeKey(face.y, face.z)]++;
+        edge_face_count[makeEdgeKey(face.z, face.x)]++;
+    }
+
+    std::vector<int2> boundary_edges;
+    for (const auto &[edge, count]: edge_face_count) {
+        if (count == 1) {
+            boundary_edges.push_back(make_int2(scast<int>(edge >> 32), scast<int>(edge & 0xffffffffLL)));
+        }
+    }
+    // The hash map does not preserve an ordering, so sort for a deterministic result across runs and platforms.
+    std::sort(boundary_edges.begin(), boundary_edges.end(), [](const int2 &a, const int2 &b) { return (a.x != b.x) ? (a.x < b.x) : (a.y < b.y); });
+    return boundary_edges;
+}
+
+std::vector<std::vector<size_t>> Polymesh::getConnectedComponents() const {
+    buildAdjacency();
+
+    std::vector<std::vector<size_t>> components;
+    std::vector<bool> face_visited(faces.size(), false);
+
+    for (size_t seed_face = 0; seed_face < faces.size(); seed_face++) {
+        if (face_visited.at(seed_face)) {
+            continue;
+        }
+
+        std::vector<size_t> component;
+        std::vector<size_t> pending = {seed_face};
+        face_visited.at(seed_face) = true;
+
+        while (!pending.empty()) {
+            const size_t current_face = pending.back();
+            pending.pop_back();
+            component.push_back(current_face);
+
+            const int3 &face = faces.at(current_face);
+            for (int vertex_index: {face.x, face.y, face.z}) {
+                for (size_t neighbor_face: vertex_to_faces.at(vertex_index)) {
+                    if (!face_visited.at(neighbor_face)) {
+                        face_visited.at(neighbor_face) = true;
+                        pending.push_back(neighbor_face);
+                    }
+                }
+            }
+        }
+
+        std::sort(component.begin(), component.end());
+        components.push_back(component);
+    }
+
+    return components;
+}
+
+float Polymesh::getSurfaceArea() const {
+    const std::vector<vec3> vertices_global = getVertices();
+    float surface_area = 0.f;
+    for (const int3 &face: faces) {
+        surface_area += calculateTriangleArea(vertices_global.at(face.x), vertices_global.at(face.y), vertices_global.at(face.z));
+    }
+    return surface_area;
+}
+
 float Polymesh::getVolume() const {
+
+    // When the object carries an indexed face set the surface can be verified before applying the divergence theorem, which is only valid for a closed surface.
+    if (!faces.empty()) {
+        const std::vector<int2> boundary_edges = getBoundaryEdges();
+        if (!boundary_edges.empty()) {
+            helios_runtime_error("ERROR (Polymesh::getVolume): Polymesh object " + std::to_string(OID) + " is not a closed surface (" + std::to_string(boundary_edges.size()) +
+                                 " boundary edges were found), so its enclosed volume is undefined. Volume can only be computed for a watertight mesh; use getSurfaceArea() for an open mesh, or repair the "
+                                 "holes in the source geometry.");
+        }
+
+        const std::vector<vec3> vertices_global = getVertices();
+        float volume = 0.f;
+        for (const int3 &face: faces) {
+            const vec3 &v0 = vertices_global.at(face.x);
+            const vec3 &v1 = vertices_global.at(face.y);
+            const vec3 &v2 = vertices_global.at(face.z);
+            volume += (1.f / 6.f) * v0 * cross(v1, v2);
+        }
+        return std::abs(volume);
+    }
+
     float volume = 0.f;
     for (uint UUID: UUIDs) {
         if (context->getPrimitiveType(UUID) == PRIMITIVE_TYPE_TRIANGLE) {
@@ -3276,7 +4079,11 @@ helios::vec3 Cone::getNodeCoordinate(int node_index) const {
 }
 
 std::vector<float> Cone::getNodeRadii() const {
-    return radii;
+    std::vector<float> radii_T(radii.size());
+    for (size_t i = 0; i < radii.size(); i++) {
+        radii_T.at(i) = transformedRadius(radii.at(i));
+    }
+    return radii_T;
 }
 
 float Cone::getNodeRadius(int node_index) const {
@@ -3284,7 +4091,16 @@ float Cone::getNodeRadius(int node_index) const {
         helios_runtime_error("ERROR (Cone::getNodeRadius): node number must be 0 or 1.");
     }
 
-    return radii.at(node_index);
+    return transformedRadius(radii.at(node_index));
+}
+
+float Cone::transformedRadius(float radius_local) const {
+    // The stored radius is in the object's local frame, so it is scaled by the object transformation in the same way the node coordinates are. Measuring the transformed length of a radial vector keeps this
+    // consistent with getNodeCoordinates() and getLength(), which also report the cone as it currently is rather than as it was constructed.
+    vec3 origin_T, radial_T;
+    vecmult(transform, make_vec3(0, 0, 0), origin_T);
+    vecmult(transform, make_vec3(radius_local, 0, 0), radial_T);
+    return (radial_T - origin_T).magnitude();
 }
 
 uint Cone::getSubdivisionCount() const {
@@ -3408,8 +4224,7 @@ void Cone::scaleGirth(float S) {
     // translate back
     translate(nodes_T.at(0));
 
-    radii.at(0) *= S;
-    radii.at(1) *= S;
+    // The scaling has been applied to the object transformation, and getNodeRadii() reads the radii through that transformation, so the stored local radii must not be scaled a second time here.
 }
 
 float Cone::getVolume() const {
@@ -3418,4 +4233,66 @@ float Cone::getVolume() const {
     float h = getLength();
 
     return PI_F * h / 3.f * (r0 * r0 + r0 * r1 + r1 * r1);
+}
+
+std::vector<helios::vec3> Cone::getPrimitiveVertexNormals(uint UUID) const {
+    const std::vector<vec3> nodes_global = getNodeCoordinates();
+    const vec3 axis = nodes_global.at(1) - nodes_global.at(0);
+    const float length = axis.magnitude();
+    if (length < 1e-6f) {
+        return {};
+    }
+    const vec3 axis_unit = axis / length;
+
+    // The taper slope is a ratio of a radius difference to a length, so both are taken in the object's local frame. Under a uniform scaling the numerator and denominator scale together and the ratio is
+    // unchanged, which keeps the slope correct without having to reason about how the transformation is distributed between the two.
+    const float local_length = (nodes.at(1) - nodes.at(0)).magnitude();
+    const float taper_slope = (local_length > 1e-6f) ? (radii.at(1) - radii.at(0)) / local_length : 0.f;
+
+    const std::vector<vec3> vertices = context->getPrimitiveVertices(UUID);
+
+    // The normal of a cone's lateral surface depends only on the azimuth of the point about the axis, so the axial component is removed and the remainder gives the radial direction. There is no need to
+    // determine which end of the cone the point belongs to.
+    std::vector<vec3> radial_directions(vertices.size());
+    std::vector<bool> radial_defined(vertices.size(), false);
+    for (size_t k = 0; k < vertices.size(); k++) {
+        const vec3 offset = vertices.at(k) - nodes_global.at(0);
+        const vec3 radial = offset - (offset * axis_unit) * axis_unit;
+        const float radial_magnitude = radial.magnitude();
+        if (radial_magnitude > 1e-9f) {
+            radial_directions.at(k) = radial / radial_magnitude;
+            radial_defined.at(k) = true;
+        }
+    }
+
+    std::vector<vec3> normals;
+    normals.reserve(vertices.size());
+    for (size_t k = 0; k < vertices.size(); k++) {
+
+        vec3 radial_direction;
+        if (radial_defined.at(k)) {
+            radial_direction = radial_directions.at(k);
+        } else {
+            // The vertex lies on an apex of zero radius, where the surface pinches to a point and has no single normal. Because the normal is constant along a slant line, borrowing the azimuth of another
+            // vertex of the same triangle gives the normal of the surface arriving at the apex, which is what makes the shading continuous up to the tip.
+            size_t donor = vertices.size();
+            for (size_t m = 0; m < vertices.size(); m++) {
+                if (radial_defined.at(m)) {
+                    donor = m;
+                    break;
+                }
+            }
+            if (donor == vertices.size()) {
+                // Every vertex is on the axis, so the primitive is degenerate and no normal can be recovered from it.
+                return {};
+            }
+            radial_direction = radial_directions.at(donor);
+        }
+
+        // Tilt the radial direction toward the narrowing end by the taper slope, giving the true normal of the slanted surface rather than that of a cylinder.
+        vec3 normal = radial_direction - taper_slope * axis_unit;
+        const float magnitude = normal.magnitude();
+        normals.push_back((magnitude > 0.f) ? normal / magnitude : radial_direction);
+    }
+    return normals;
 }

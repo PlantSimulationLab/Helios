@@ -74,8 +74,12 @@ float sky_prague(vec3 ray_dir, vec3 peak_dir, vec4 params) {
     // Zenith angle (z-component is cos(theta) in z-up coordinates)
     float cos_theta = max(0.0, ray_dir.z);
 
-    // Circumsolar brightening: exponential decay from sun
-    float circ_term = 1.0 + circ_strength * exp(-gamma / circ_width);
+    // Circumsolar brightening: exponential decay from sun.
+    // circ_width comes straight from a per-band parameter buffer and is not validated there. A
+    // width of zero gives -gamma/0, which is -inf for gamma > 0 (harmless: exp() underflows to
+    // zero) but 0/0 = NaN for a ray pointing exactly at the sun, and that NaN would propagate
+    // into the deposited sky energy. Treat a non-positive width as "no circumsolar region".
+    float circ_term = (circ_width > 0.0) ? (1.0 + circ_strength * exp(-gamma / circ_width)) : 1.0;
 
     // Horizon brightening: increases as cos_theta → 0 (horizon)
     float horizon_term = 1.0 + (horizon_brightness - 1.0) * (1.0 - cos_theta);

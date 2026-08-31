@@ -48,6 +48,7 @@ constexpr float PI_F = 3.14159265358979323846f;
 #include <thread>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #ifdef USE_OPENMP

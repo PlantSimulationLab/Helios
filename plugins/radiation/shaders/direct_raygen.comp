@@ -3,6 +3,7 @@
 #extension GL_EXT_shader_atomic_float : enable
 #extension GL_GOOGLE_include_directive : enable
 #extension GL_KHR_shader_subgroup_arithmetic : enable
+#extension GL_KHR_shader_subgroup_basic : enable
 
 // Direct ray generation shader
 // Launches rays from surfaces toward radiation sources
@@ -33,6 +34,8 @@ layout(push_constant) uniform PushConstants {
     float domain_ymin;
     float domain_ymax;
     uint specular_reflection_enabled;  // 0=disabled, 1=default scale, 2=user scale
+    uint camera_count;                 // Number of cameras; 0 = skip camera-weighted scatter
+    uint camera_id;                    // Camera whose weighting the camera-scatter buffers accumulate
 } pc;
 
 // ========== Descriptor Set 0: Geometry ==========
@@ -94,8 +97,13 @@ layout(set = 0, binding = 17) readonly buffer BboxVerticesBuffer {
 } bbox_verts_buf;
 
 // ========== Descriptor Set 1: Materials/Sources ==========
+// NOTE on the three-float source/sky arrays below: std430 gives an array of `vec3` a 16-byte
+// stride, while the host uploads tightly-packed 12-byte helios::vec3. Declaring them as `vec3[]`
+// therefore reads the wrong 12 bytes for every element after the first, and reads past the end of
+// the allocation for the last one. They are declared as flat float arrays and fetched three at a
+// time instead, matching patch_vertices_buf / triangle_vertices_buf / normals_buf.
 layout(set = 1, binding = 0) readonly buffer SourcePositionsBuffer {
-    vec3 positions[];
+    float positions[]; // 3 floats per source
 } source_positions_buf;
 
 layout(set = 1, binding = 1) readonly buffer SourceTypesBuffer {
@@ -103,8 +111,18 @@ layout(set = 1, binding = 1) readonly buffer SourceTypesBuffer {
 } source_types_buf;
 
 layout(set = 1, binding = 2) readonly buffer SourceRotationsBuffer {
-    vec3 rotations[];
+    float rotations[]; // 3 floats per source
 } source_rotations_buf;
+
+vec3 get_source_position(uint source_index) {
+    uint b = source_index * 3u;
+    return vec3(source_positions_buf.positions[b], source_positions_buf.positions[b + 1u], source_positions_buf.positions[b + 2u]);
+}
+
+vec3 get_source_rotation(uint source_index) {
+    uint b = source_index * 3u;
+    return vec3(source_rotations_buf.rotations[b], source_rotations_buf.rotations[b + 1u], source_rotations_buf.rotations[b + 2u]);
+}
 
 layout(set = 1, binding = 3) readonly buffer SourceWidthsBuffer {
     vec2 widths[];
@@ -121,6 +139,18 @@ layout(set = 1, binding = 5) readonly buffer ReflectivityBuffer {
 layout(set = 1, binding = 6) readonly buffer TransmissivityBuffer {
     float transmissivity[];
 } transmissivity_buf;
+
+// Camera-weighted material properties, indexed [source][primitive][band_global][camera]. These are a
+// different integral over wavelength than reflectivity/transmissivity above: those weight the surface
+// spectrum by the source spectrum over the band, these additionally weight by the camera's spectral
+// response. They coincide only when the response is uniform.
+layout(set = 1, binding = 14) readonly buffer ReflectivityCamBuffer {
+    float reflectivity_cam[];
+} reflectivity_cam_buf;
+
+layout(set = 1, binding = 15) readonly buffer TransmissivityCamBuffer {
+    float transmissivity_cam[];
+} transmissivity_cam_buf;
 
 layout(set = 1, binding = 10) readonly buffer BandMapBuffer {
     uint map[]; // Maps launch band index → global band index
@@ -160,6 +190,17 @@ layout(set = 2, binding = 3) buffer ScatterTopBuffer {
 layout(set = 2, binding = 4) buffer ScatterBottomBuffer {
     float scatter_bottom[];
 } scatter_bottom_buf;
+
+// Camera-weighted scatter. Mirrors scatter_top/scatter_bottom but accumulates against rho_cam/tau_cam.
+// RadiationModel uploads the accumulated result into radiation_out before the camera trace, so the
+// camera sees radiance weighted by its own spectral response rather than by the band.
+layout(set = 2, binding = 8) buffer CameraScatterTopBuffer {
+    float camera_scatter_top[];
+} camera_scatter_top_buf;
+
+layout(set = 2, binding = 9) buffer CameraScatterBottomBuffer {
+    float camera_scatter_bottom[];
+} camera_scatter_bottom_buf;
 
 layout(set = 2, binding = 10) buffer RadiationSpecularBuffer {
     float radiation_specular[]; // [source * primitive * band] accumulated incident radiation
@@ -271,28 +312,6 @@ vec3 sample_square(inout RNGState rng) {
     float Rx = rng_float(rng);
     float Ry = rng_float(rng);
     return vec3(-0.5 + Rx, -0.5 + Ry, 0.0);
-}
-
-// Get patch normal in world space
-vec3 get_patch_normal(uint prim_idx, float transform_mat[16]) {
-    mat4 transform = floats_to_mat4(transform_mat);
-
-    vec3 v0 = transform_point(transform, vec3(0, 0, 0));
-    vec3 v1 = transform_point(transform, vec3(1, 0, 0));
-    vec3 v2 = transform_point(transform, vec3(0, 1, 0));
-
-    return normalize(cross(v1 - v0, v2 - v0));
-}
-
-// Get triangle normal in world space
-vec3 get_triangle_normal(uint prim_idx, float transform_mat[16]) {
-    mat4 transform = floats_to_mat4(transform_mat);
-
-    vec3 v0 = transform_point(transform, vec3(0, 0, 0));
-    vec3 v1 = transform_point(transform, vec3(0, 1, 0));
-    vec3 v2 = transform_point(transform, vec3(1, 1, 0));
-
-    return normalize(cross(v1 - v0, v2 - v0));
 }
 
 // Calculate ray strength for collimated source (sun)
@@ -446,9 +465,7 @@ void main() {
                 }
             } else if (prim_type == 1 && mask_ids_buf.mask_ids[prim_idx] >= 0) {
                 // Triangle origin masking via rejection sampling
-                vec2 uv0 = uv_data_buf.uv_data[prim_idx * 4 + 0];
-                vec2 uv1 = uv_data_buf.uv_data[prim_idx * 4 + 1];
-                vec2 uv2 = uv_data_buf.uv_data[prim_idx * 4 + 2];
+                int mask_id = mask_ids_buf.mask_ids[prim_idx];
                 bool masked = true;
                 for (int attempt = 0; attempt < 50 && masked; attempt++) {
                     // Generate random point on canonical triangle
@@ -458,14 +475,7 @@ void main() {
                     sp_local = vec3(r2, r1 + r2, 0.0); // canonical: x=gamma, y=beta+gamma
                     float beta = r1;  // sp_local.y - sp_local.x
                     float gamma = r2; // sp_local.x
-                    vec2 tex_uv = uv0 + beta * (uv1 - uv0) + gamma * (uv2 - uv0);
-                    tex_uv.y = 1.0 - tex_uv.y;
-                    int mask_id = mask_ids_buf.mask_ids[prim_idx];
-                    ivec2 sz = mask_sizes_buf.mask_sizes[mask_id];
-                    uint offset = mask_offsets_buf.mask_offsets[mask_id];
-                    int tx = clamp(int(floor(float(sz.x - 1) * tex_uv.x)), 0, sz.x - 1);
-                    int ty = clamp(int(floor(float(sz.y - 1) * tex_uv.y)), 0, sz.y - 1);
-                    masked = (mask_data_buf.mask_data[offset + ty * sz.x + tx] == 0);
+                    masked = !mask_texel_is_opaque(mask_id, triangle_texture_uv(prim_idx, vec2(beta, gamma)));
                 }
                 if (masked) {
                     continue; // Skip this ray - all 50 attempts hit transparent texels
@@ -482,7 +492,7 @@ void main() {
             // Send ray to each source
             for (uint src_idx = 0; src_idx < pc.source_count; ++src_idx) {
 
-                vec3 source_pos = source_positions_buf.positions[src_idx];
+                vec3 source_pos = get_source_position(src_idx);
                 uint source_type = source_types_buf.types[src_idx];
 
                 vec3 ray_dir;
@@ -500,15 +510,17 @@ void main() {
                     vec3 sphere_point = radius * vec3(sin(theta_s) * cos(phi_s), sin(theta_s) * sin(phi_s), cos(theta_s));
 
                     // Ray from surface point toward sampled point on sphere
-                    ray_dir = sphere_point + source_pos - ray_origin;
-                    float ray_magnitude = length(ray_dir);
-                    ray_dir = normalize(ray_dir);
+                    float ray_magnitude;
+                    ray_dir = safe_normalize(sphere_point + source_pos - ray_origin, ray_magnitude);
+                    if (ray_magnitude < 1e-20) {
+                        continue; // Surface point coincides with the sampled source point
+                    }
 
                     // Numerical integration over visible hemisphere of sphere
                     strength = calc_sphere_strength(normal, ray_dir, ray_magnitude, source_widths_buf.widths[src_idx].x, Nrays);
 
                 } else if (source_type == 3) { // Rectangle source
-                    vec3 source_rotation = source_rotations_buf.rotations[src_idx];
+                    vec3 source_rotation = get_source_rotation(src_idx);
                     vec2 source_size = source_widths_buf.widths[src_idx]; // (width, height)
 
                     // Sample random point on rectangle [-0.5, 0.5]²
@@ -533,8 +545,11 @@ void main() {
                         continue;
                     }
 
-                    float ray_magnitude = length(ray_dir);
-                    ray_dir = normalize(ray_dir);
+                    float ray_magnitude;
+                    ray_dir = safe_normalize(ray_dir, ray_magnitude);
+                    if (ray_magnitude < 1e-20) {
+                        continue; // Surface point coincides with the sampled source point
+                    }
 
                     // Strength calculation (matches OptiX rayGeneration.cu:197)
                     float area = source_size.x * source_size.y;
@@ -542,7 +557,7 @@ void main() {
                                / (ray_magnitude * ray_magnitude) * area / PI;
 
                 } else if (source_type == 4) { // Disk source
-                    vec3 source_rotation = source_rotations_buf.rotations[src_idx];
+                    vec3 source_rotation = get_source_rotation(src_idx);
                     float radius = source_widths_buf.widths[src_idx].x; // x component stores radius
 
                     // Sample random point on unit disk (function already exists in shader)
@@ -563,8 +578,11 @@ void main() {
                         continue;
                     }
 
-                    float ray_magnitude = length(ray_dir);
-                    ray_dir = normalize(ray_dir);
+                    float ray_magnitude;
+                    ray_dir = safe_normalize(ray_dir, ray_magnitude);
+                    if (ray_magnitude < 1e-20) {
+                        continue; // Surface point coincides with the sampled source point
+                    }
 
                     // Strength calculation (matches OptiX rayGeneration.cu:221)
                     strength = (1.0 / float(Nrays)) * abs(dot(normal, ray_dir)) * abs(dot(light_direction, ray_dir))
@@ -679,10 +697,13 @@ void main() {
                     float band_cover_tau = (band < uint(GLASS_MAX_BANDS)) ? cover_tau[band] : 1.0;
                     float flux = source_fluxes_buf.fluxes[flux_idx] * band_cover_tau;
 
-                    // Get material properties for this primitive and band
-                    // Use global band index for material buffer access (material buffers use global stride)
+                    // Get material properties for this primitive and band.
+                    // Radiative properties are per SOURCE: when a source carries a spectrum, the
+                    // surface reflectance is integrated against that source's spectrum, so each source
+                    // sees its own rho/tau. Dropping the source term here silently applied source 0's
+                    // properties to every source.
                     uint global_b = band_map_buf.map[band];
-                    uint mat_idx = prim_idx * pc.material_band_count + global_b;
+                    uint mat_idx = (src_idx * pc.primitive_count + prim_idx) * pc.material_band_count + global_b;
                     float rho = reflectivity_buf.reflectivity[mat_idx];
                     float tau = transmissivity_buf.transmissivity[mat_idx];
 
@@ -711,6 +732,24 @@ void main() {
                         } else {
                             atomicAdd(scatter_bottom_buf.scatter_bottom[rad_idx], scatter_rho_sum);
                             atomicAdd(scatter_top_buf.scatter_top[rad_idx], scatter_tau_sum);
+                        }
+                    }
+
+                    // Camera-weighted scatter, accumulated in parallel with the band-weighted scatter
+                    // above. subgroupAdd is called outside the branch: it must be reached by every
+                    // active invocation in the subgroup, so the camera_count test cannot gate it.
+                    uint cam_mat_idx = ((src_idx * pc.primitive_count + prim_idx) * pc.material_band_count + global_b) * pc.camera_count + pc.camera_id;
+                    float rho_cam = (pc.camera_count > 0u) ? reflectivity_cam_buf.reflectivity_cam[cam_mat_idx] : 0.0;
+                    float tau_cam = (pc.camera_count > 0u) ? transmissivity_cam_buf.transmissivity_cam[cam_mat_idx] : 0.0;
+                    float scatter_rho_cam_sum = subgroupAdd(flux * strength * rho_cam);
+                    float scatter_tau_cam_sum = subgroupAdd(flux * strength * tau_cam);
+                    if (pc.camera_count > 0u && subgroupElect()) {
+                        if (is_top_face) {
+                            atomicAdd(camera_scatter_top_buf.camera_scatter_top[rad_idx], scatter_rho_cam_sum);
+                            atomicAdd(camera_scatter_bottom_buf.camera_scatter_bottom[rad_idx], scatter_tau_cam_sum);
+                        } else {
+                            atomicAdd(camera_scatter_bottom_buf.camera_scatter_bottom[rad_idx], scatter_rho_cam_sum);
+                            atomicAdd(camera_scatter_top_buf.camera_scatter_top[rad_idx], scatter_tau_cam_sum);
                         }
                     }
 

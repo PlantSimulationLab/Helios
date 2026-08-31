@@ -936,6 +936,51 @@ void Visualizer::setupOffscreenFramebuffer() {
         helios_runtime_error(error_message);
     }
 
+    // Multisampled attachments, which headless rendering draws into and which are blit-resolved into
+    // the single-sampled color texture above before readback. Without this, headless renders are
+    // fully aliased on every edge while windowed renders are not, because the window's own default
+    // framebuffer is multisampled and this one is not.
+    if (antialiasing_sample_count > 1) {
+
+        // A driver may support fewer samples than requested; asking for more than GL_MAX_SAMPLES is
+        // an error rather than a silent clamp, so the request is clamped here.
+        GLint max_samples = 0;
+        glGetIntegerv(GL_MAX_SAMPLES, &max_samples);
+        const GLsizei samples = static_cast<GLsizei>(std::min(antialiasing_sample_count, std::max(1, int(max_samples))));
+
+        if (samples > 1) {
+
+            glGenFramebuffers(1, &offscreenMultisampleFramebufferID);
+            glBindFramebuffer(GL_FRAMEBUFFER, offscreenMultisampleFramebufferID);
+
+            glGenRenderbuffers(1, &offscreenMultisampleColorBuffer);
+            glBindRenderbuffer(GL_RENDERBUFFER, offscreenMultisampleColorBuffer);
+            glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, GL_RGBA8, static_cast<GLsizei>(Wframebuffer), static_cast<GLsizei>(Hframebuffer));
+            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, offscreenMultisampleColorBuffer);
+
+            glGenRenderbuffers(1, &offscreenMultisampleDepthBuffer);
+            glBindRenderbuffer(GL_RENDERBUFFER, offscreenMultisampleDepthBuffer);
+            glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, GL_DEPTH_COMPONENT24, static_cast<GLsizei>(Wframebuffer), static_cast<GLsizei>(Hframebuffer));
+            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, offscreenMultisampleDepthBuffer);
+
+            glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+            // Multisampled attachments are an optimization, not a requirement: if the driver cannot
+            // provide them, fall back to the single-sampled framebuffer rather than failing the
+            // render outright. The image is aliased, which is exactly the previous behavior.
+            const GLenum multisample_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+            if (multisample_status != GL_FRAMEBUFFER_COMPLETE || glGetError() != GL_NO_ERROR) {
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                glDeleteRenderbuffers(1, &offscreenMultisampleColorBuffer);
+                glDeleteRenderbuffers(1, &offscreenMultisampleDepthBuffer);
+                glDeleteFramebuffers(1, &offscreenMultisampleFramebufferID);
+                offscreenMultisampleColorBuffer = 0;
+                offscreenMultisampleDepthBuffer = 0;
+                offscreenMultisampleFramebufferID = 0;
+            }
+        }
+    }
+
     // Restore default framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -944,6 +989,24 @@ void Visualizer::setupOffscreenFramebuffer() {
         cleanupOffscreenFramebuffer();
         helios_runtime_error("ERROR (Visualizer::setupOffscreenFramebuffer): OpenGL errors occurred during offscreen framebuffer setup completion.");
     }
+}
+
+bool Visualizer::isHeadlessMultisamplingActive() const {
+    return offscreenMultisampleFramebufferID != 0;
+}
+
+void Visualizer::resolveOffscreenMultisampleFramebuffer() const {
+
+    if (offscreenMultisampleFramebufferID == 0 || offscreenFramebufferID == 0) {
+        return;
+    }
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, offscreenMultisampleFramebufferID);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, offscreenFramebufferID);
+    glBlitFramebuffer(0, 0, static_cast<GLint>(Wframebuffer), static_cast<GLint>(Hframebuffer), 0, 0, static_cast<GLint>(Wframebuffer), static_cast<GLint>(Hframebuffer), GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+    // Leave the single-sampled framebuffer bound: callers read pixels from it immediately after.
+    glBindFramebuffer(GL_FRAMEBUFFER, offscreenFramebufferID);
 }
 
 void Visualizer::cleanupOffscreenFramebuffer() {
@@ -958,6 +1021,18 @@ void Visualizer::cleanupOffscreenFramebuffer() {
             glDeleteTextures(1, &offscreenColorTexture);
             offscreenColorTexture = 0;
         }
+        if (offscreenMultisampleFramebufferID != 0) {
+            glDeleteFramebuffers(1, &offscreenMultisampleFramebufferID);
+            offscreenMultisampleFramebufferID = 0;
+        }
+        if (offscreenMultisampleColorBuffer != 0) {
+            glDeleteRenderbuffers(1, &offscreenMultisampleColorBuffer);
+            offscreenMultisampleColorBuffer = 0;
+        }
+        if (offscreenMultisampleDepthBuffer != 0) {
+            glDeleteRenderbuffers(1, &offscreenMultisampleDepthBuffer);
+            offscreenMultisampleDepthBuffer = 0;
+        }
         if (offscreenDepthTexture != 0) {
             glDeleteTextures(1, &offscreenDepthTexture);
             offscreenDepthTexture = 0;
@@ -966,6 +1041,11 @@ void Visualizer::cleanupOffscreenFramebuffer() {
 }
 
 std::vector<helios::RGBcolor> Visualizer::readOffscreenPixels() const {
+
+    // Headless rendering draws into a multisampled framebuffer; resolve it into the single-sampled
+    // color texture before reading, or the read returns the unrendered single-sampled attachment.
+    resolveOffscreenMultisampleFramebuffer();
+
     // Read pixels from the offscreen framebuffer for printWindow functionality
 
     if (offscreenFramebufferID == 0) {
@@ -1047,6 +1127,11 @@ std::vector<helios::RGBcolor> Visualizer::readOffscreenPixels() const {
 }
 
 std::vector<helios::RGBAcolor> Visualizer::readOffscreenPixelsRGBA(bool read_alpha) const {
+
+    // Headless rendering draws into a multisampled framebuffer; resolve it into the single-sampled
+    // color texture before reading, or the read returns the unrendered single-sampled attachment.
+    resolveOffscreenMultisampleFramebuffer();
+
     // Read pixels from the offscreen framebuffer for PNG output with optional transparency
 
     if (offscreenFramebufferID == 0) {
@@ -1384,9 +1469,18 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     glDepthFunc(GL_LEQUAL); // Accept fragment if it closer to or equal to the camera than the former one (required for sky rendering)
     // glEnable(GL_DEPTH_CLAMP);
 
+    antialiasing_sample_count = aliasing_samples;
+
     if (aliasing_samples <= 0) {
         glDisable(GL_MULTISAMPLE);
         glDisable(GL_MULTISAMPLE_ARB);
+    } else {
+        // Must be enabled explicitly. In windowed mode the GLFW window's default framebuffer is
+        // multisampled and the driver rasterizes accordingly, but the headless offscreen framebuffer
+        // is one this code creates itself, and without GL_MULTISAMPLE enabled the driver resolves
+        // every sample of a pixel to the same value -- the multisampled attachments allocate their
+        // samples correctly and the resolved image still comes out with hard, aliased edges.
+        glEnable(GL_MULTISAMPLE);
     }
 
     if (aliasing_samples <= 1) {
@@ -1437,6 +1531,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
         face_index_buffer.resize(Ntypes);
         vertex_buffer.resize(Ntypes);
         uv_buffer.resize(Ntypes);
+        vertex_normal_buffer.resize(Ntypes);
 
         // Generate per-vertex buffers with immediate error checking
         glGenBuffers((GLsizei) face_index_buffer.size(), face_index_buffer.data());
@@ -1457,6 +1552,12 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
             helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate UV buffers. OpenGL error: " + std::to_string(error));
         }
 
+        glGenBuffers((GLsizei) vertex_normal_buffer.size(), vertex_normal_buffer.data());
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate vertex normal buffers. OpenGL error: " + std::to_string(error));
+        }
+
         // per-primitive data with error checking after each allocation
         color_buffer.resize(Ntypes);
         color_texture_object.resize(Ntypes);
@@ -1464,6 +1565,8 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
         normal_texture_object.resize(Ntypes);
         texture_flag_buffer.resize(Ntypes);
         texture_flag_texture_object.resize(Ntypes);
+        material_index_buffer.resize(Ntypes);
+        material_index_texture_object.resize(Ntypes);
         texture_ID_buffer.resize(Ntypes);
         texture_ID_texture_object.resize(Ntypes);
         coordinate_flag_buffer.resize(Ntypes);
@@ -1508,6 +1611,18 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
         error = glGetError();
         if (error != GL_NO_ERROR) {
             helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate texture flag texture objects. OpenGL error: " + std::to_string(error));
+        }
+
+        glGenBuffers((GLsizei) material_index_buffer.size(), material_index_buffer.data());
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate material index buffers. OpenGL error: " + std::to_string(error));
+        }
+
+        glGenTextures((GLsizei) material_index_texture_object.size(), material_index_texture_object.data());
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate material index texture objects. OpenGL error: " + std::to_string(error));
         }
 
         glGenBuffers((GLsizei) texture_ID_buffer.size(), texture_ID_buffer.data());
@@ -1743,6 +1858,17 @@ Visualizer::~Visualizer() {
         glDeleteBuffers((GLsizei) face_index_buffer.size(), face_index_buffer.data());
         glDeleteBuffers((GLsizei) vertex_buffer.size(), vertex_buffer.data());
         glDeleteBuffers((GLsizei) uv_buffer.size(), uv_buffer.data());
+        glDeleteBuffers((GLsizei) vertex_normal_buffer.size(), vertex_normal_buffer.data());
+        glDeleteBuffers((GLsizei) material_index_buffer.size(), material_index_buffer.data());
+        glDeleteTextures((GLsizei) material_index_texture_object.size(), material_index_texture_object.data());
+        if (phong_material_table_buffer != 0) {
+            glDeleteBuffers(1, &phong_material_table_buffer);
+            phong_material_table_buffer = 0;
+        }
+        if (phong_material_table_texture != 0) {
+            glDeleteTextures(1, &phong_material_table_texture);
+            phong_material_table_texture = 0;
+        }
 
         glDeleteBuffers((GLsizei) color_buffer.size(), color_buffer.data());
         glDeleteTextures((GLsizei) color_texture_object.size(), color_texture_object.data());
@@ -1847,10 +1973,160 @@ void Visualizer::setLightIntensityFactor(float lightintensityfactor) {
 
 void Visualizer::enableExactColorMode() {
     colorboost = 1.f;
+    // Tone mapping and sRGB encoding are non-linear transformations of the color channels, so they
+    // would corrupt any data (e.g. object ID codes) carried through the framebuffer.
+    linear_pipeline_enabled = false;
 }
 
 void Visualizer::disableExactColorMode() {
     colorboost = 1.5f;
+    // enableExactColorMode() turns the linear pipeline off; restore it so that the two calls are a
+    // true round trip rather than silently leaving the renderer in a non-default state.
+    linear_pipeline_enabled = true;
+}
+
+void Visualizer::enableLinearPipeline() {
+    linear_pipeline_enabled = true;
+}
+
+void Visualizer::disableLinearPipeline() {
+    linear_pipeline_enabled = false;
+}
+
+void Visualizer::setExposure(float a_exposure) {
+    if (a_exposure <= 0.f) {
+        helios_runtime_error("ERROR (Visualizer::setExposure): Exposure must be positive, but a value of " + std::to_string(a_exposure) +
+                             " was given. Exposure is a linear multiplier applied to radiance before tone mapping; use a value greater than 1 to brighten the image and less than 1 to darken it.");
+    }
+    exposure = a_exposure;
+}
+
+float Visualizer::getExposure() const {
+    return exposure;
+}
+
+bool Visualizer::isLinearPipelineEnabled() const {
+    return linear_pipeline_enabled;
+}
+
+void Visualizer::setPhongMaterial(const PhongMaterial &material) {
+    if (material.ambient < 0.f || material.diffuse < 0.f || material.specular < 0.f) {
+        helios_runtime_error("ERROR (Visualizer::setPhongMaterial): Reflectance weights must be non-negative, but ambient=" + std::to_string(material.ambient) + ", diffuse=" + std::to_string(material.diffuse) + ", specular=" + std::to_string(material.specular) +
+                             " was given. A negative weight would subtract light from the scene.");
+    }
+    if (material.shininess <= 0.f) {
+        helios_runtime_error("ERROR (Visualizer::setPhongMaterial): Specular exponent (shininess) must be positive, but a value of " + std::to_string(material.shininess) +
+                             " was given. Larger values give a tighter highlight; typical values range from 4 for a matte sheen to 128 for a near-mirror finish. To remove the highlight entirely, set specular to zero instead.");
+    }
+
+    phong_material = material;
+}
+
+Visualizer::PhongMaterial Visualizer::getPhongMaterial() const {
+    return phong_material;
+}
+
+void Visualizer::setAmbientColors(const helios::RGBcolor &sky_color, const helios::RGBcolor &ground_color) {
+    // No range validation is needed here: helios::RGBcolor clamps its components to [0,1] in its
+    // own constructor, so an out-of-range ambient color cannot reach this function.
+    ambient_sky_color = sky_color;
+    ambient_ground_color = ground_color;
+}
+
+helios::RGBcolor Visualizer::getAmbientSkyColor() const {
+    return ambient_sky_color;
+}
+
+helios::RGBcolor Visualizer::getAmbientGroundColor() const {
+    return ambient_ground_color;
+}
+
+void Visualizer::enableSmoothShading() {
+    smooth_shading_enabled = true;
+}
+
+void Visualizer::disableSmoothShading() {
+    smooth_shading_enabled = false;
+}
+
+bool Visualizer::isSmoothShadingEnabled() const {
+    return smooth_shading_enabled;
+}
+
+std::unordered_map<uint, int> Visualizer::buildPhongMaterialTable(const helios::Context *context, const std::set<uint> &referenced_material_IDs) {
+
+    // Resolving Phong parameters is deliberately done here, once per distinct material, rather than
+    // inside the per-primitive geometry loop. Context material data is keyed by std::string inside a
+    // std::map, so each lookup is a tree walk with string comparisons; doing four of those per
+    // primitive would add tens of millions of string comparisons to a multi-million-primitive scene
+    // rebuild. Materials number in the tens, so the same work here is negligible.
+
+    std::unordered_map<uint, int> material_ID_to_index;
+    std::vector<GLfloat> table;
+
+    for (uint materialID: referenced_material_IDs) {
+
+        const helios::Material &material = context->getMaterial(materialID);
+
+        // A material that specifies none of the four parameters is left out of the table entirely,
+        // so its primitives keep an index of -1 and fall back to the global Phong material.
+        const bool has_any = material.doesMaterialDataExist("phong_ambient") || material.doesMaterialDataExist("phong_diffuse") || material.doesMaterialDataExist("phong_specular") || material.doesMaterialDataExist("phong_shininess");
+        if (!has_any) {
+            continue;
+        }
+
+        // Parameters the material does not specify individually inherit the global value, so a
+        // material can override only the specular lobe without having to restate the rest.
+        PhongMaterial resolved = phong_material;
+        if (material.doesMaterialDataExist("phong_ambient")) {
+            material.getMaterialData("phong_ambient", resolved.ambient);
+        }
+        if (material.doesMaterialDataExist("phong_diffuse")) {
+            material.getMaterialData("phong_diffuse", resolved.diffuse);
+        }
+        if (material.doesMaterialDataExist("phong_specular")) {
+            material.getMaterialData("phong_specular", resolved.specular);
+        }
+        if (material.doesMaterialDataExist("phong_shininess")) {
+            material.getMaterialData("phong_shininess", resolved.shininess);
+        }
+
+        if (resolved.ambient < 0.f || resolved.diffuse < 0.f || resolved.specular < 0.f) {
+            helios_runtime_error("ERROR (Visualizer::buildPhongMaterialTable): Material '" + material.label + "' specifies a negative Phong reflectance weight (ambient=" + std::to_string(resolved.ambient) + ", diffuse=" + std::to_string(resolved.diffuse) +
+                                 ", specular=" + std::to_string(resolved.specular) + "). A negative weight would subtract light from the scene.");
+        }
+        if (resolved.shininess <= 0.f) {
+            helios_runtime_error("ERROR (Visualizer::buildPhongMaterialTable): Material '" + material.label + "' specifies a non-positive Phong shininess of " + std::to_string(resolved.shininess) +
+                                 ". Larger values give a tighter highlight; typical values range from 4 for a matte sheen to 128 for a near-mirror finish. To remove the highlight entirely, set phong_specular to zero instead.");
+        }
+
+        material_ID_to_index[materialID] = static_cast<int>(table.size() / 4);
+        table.push_back(resolved.ambient);
+        table.push_back(resolved.diffuse);
+        table.push_back(resolved.specular);
+        table.push_back(resolved.shininess);
+    }
+
+    phong_material_table_size = static_cast<GLint>(table.size() / 4);
+
+    // The table is tiny (four floats per material), so it is uploaded whole rather than diffed.
+    if (phong_material_table_buffer == 0) {
+        glGenBuffers(1, &phong_material_table_buffer);
+        glGenTextures(1, &phong_material_table_texture);
+    }
+    glBindBuffer(GL_TEXTURE_BUFFER, phong_material_table_buffer);
+    // A zero-size buffer is not a valid texture buffer source, so an empty table is padded to one
+    // unused entry. No primitive indexes into it: they all carry -1 and use the global material.
+    if (table.empty()) {
+        table.assign(4, 0.f);
+    }
+    glBufferData(GL_TEXTURE_BUFFER, GLsizeiptr(table.size() * sizeof(GLfloat)), table.data(), GL_STATIC_DRAW);
+    glBindTexture(GL_TEXTURE_BUFFER, phong_material_table_texture);
+    glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, phong_material_table_buffer);
+    glBindBuffer(GL_TEXTURE_BUFFER, 0);
+    glBindTexture(GL_TEXTURE_BUFFER, 0);
+
+    return material_ID_to_index;
 }
 
 void Visualizer::removeBackgroundRectangle() {

@@ -537,6 +537,30 @@ void Context::scalePrimitiveAboutPoint(const std::vector<uint> &UUIDs, const hel
 }
 
 void Context::deletePrimitive(const std::vector<uint> &UUIDs) {
+    // Detach the primitives from their parent objects as a batch before deleting them individually. Doing so lets an object repair any per-primitive bookkeeping once for the whole batch instead of once per
+    // primitive, which matters for objects that maintain mesh topology. deletePrimitive(uint) below then finds no parent object to notify and simply frees each primitive.
+    std::map<uint, std::vector<uint>> UUIDs_by_parent_object;
+    for (uint UUID: UUIDs) {
+        if (!doesPrimitiveExist(UUID)) {
+            continue;
+        }
+        const uint ObjID = primitives.at(UUID)->getParentObjectID();
+        if (ObjID != 0 && doesObjectExist(ObjID)) {
+            UUIDs_by_parent_object[ObjID].push_back(UUID);
+        }
+    }
+    for (const auto &[ObjID, object_UUIDs]: UUIDs_by_parent_object) {
+        objects.at(ObjID)->deleteChildPrimitive(object_UUIDs);
+        for (uint UUID: object_UUIDs) {
+            primitives.at(UUID)->setParentObjectID(0);
+        }
+        if (getObjectPointer_private(ObjID)->getPrimitiveUUIDs().empty()) {
+            CompoundObject *obj = objects.at(ObjID);
+            delete obj;
+            objects.erase(ObjID);
+        }
+    }
+
     for (uint UUID: UUIDs) {
         deletePrimitive(UUID);
     }
@@ -592,7 +616,10 @@ uint Context::copyPrimitive(uint UUID) {
     }
 
     PrimitiveType type = primitives.at(UUID)->getType();
-    uint parentID = primitives.at(UUID)->getParentObjectID();
+    // The copy is a standalone primitive and belongs to no object. Inheriting the source's parent object ID made it claim a membership the object did not list, so the object never deleted or wrote it, and
+    // deleting the object left the copy pointing at an ID that no longer existed. Context::copyObject() assigns the parent of each copy itself immediately after calling this, so nothing needs the inherited
+    // value.
+    const uint parentID = 0;
     bool textureoverride = primitives.at(UUID)->isTextureColorOverridden();
 
     if (type == PRIMITIVE_TYPE_PATCH) {
@@ -1063,8 +1090,30 @@ void Triangle::setVertices(const helios::vec3 &vertex0, const helios::vec3 &vert
     dirty_flag = true;
 }
 
+void Primitive::syncParentObjectAfterTransform() const {
+    // A deformable parent object may keep geometry of its own that must follow the primitive. For a Polymesh this is the indexed face set: the mesh vertices this facet references are updated so that faces
+    // sharing them move too, which is what keeps a deformed mesh welded instead of tearing it apart.
+    if (parent_object_ID == 0 || context_ptr == nullptr || !context_ptr->doesObjectExist(parent_object_ID)) {
+        return;
+    }
+    if (context_ptr->getObjectType(parent_object_ID) == helios::OBJECT_TYPE_POLYMESH) {
+        context_ptr->getPolymeshObjectPointer_private(parent_object_ID)->syncVerticesFromPrimitive(UUID);
+    }
+}
+
+bool Primitive::isTransformLockedByParentObject() const {
+    if (parent_object_ID == 0) {
+        return false;
+    }
+    if (context_ptr == nullptr || !context_ptr->doesObjectExist(parent_object_ID)) {
+        return false;
+    }
+    // A deformable object (currently only Polymesh) imposes no shape constraint that an individual primitive transformation could violate.
+    return !context_ptr->getObjectPointer_private(parent_object_ID)->isDeformable();
+}
+
 void Primitive::applyTransform(float (&T)[16]) {
-    if (parent_object_ID != 0) {
+    if (isTransformLockedByParentObject()) {
         static bool compound_transform_warning_shown = false;
         if (!compound_transform_warning_shown) {
             std::cerr << "WARNING (Primitive::applyTransform): Cannot transform individual primitives within a compound object. Use the setter function for objects." << std::endl;
@@ -1075,10 +1124,11 @@ void Primitive::applyTransform(float (&T)[16]) {
 
     matmult(T, transform, transform);
     dirty_flag = true;
+    syncParentObjectAfterTransform();
 }
 
 void Primitive::scale(const vec3 &S) {
-    if (parent_object_ID != 0) {
+    if (isTransformLockedByParentObject()) {
         static bool compound_scale_warning_shown = false;
         if (!compound_scale_warning_shown) {
             std::cerr << "WARNING (Primitive::scale): Cannot scale individual primitives within a compound object. Use the setter function for objects." << std::endl;
@@ -1096,10 +1146,11 @@ void Primitive::scale(const vec3 &S) {
     makeScaleMatrix(S, T);
     matmult(T, transform, transform);
     dirty_flag = true;
+    syncParentObjectAfterTransform();
 }
 
 void Primitive::scale(const vec3 &S, const vec3 &point) {
-    if (parent_object_ID != 0) {
+    if (isTransformLockedByParentObject()) {
         static bool compound_scale_point_warning_shown = false;
         if (!compound_scale_point_warning_shown) {
             std::cerr << "WARNING (Primitive::scale): Cannot scale individual primitives within a compound object. Use the setter function for objects." << std::endl;
@@ -1117,10 +1168,11 @@ void Primitive::scale(const vec3 &S, const vec3 &point) {
     makeScaleMatrix(S, point, T);
     matmult(T, transform, transform);
     dirty_flag = true;
+    syncParentObjectAfterTransform();
 }
 
 void Primitive::translate(const helios::vec3 &shift) {
-    if (parent_object_ID != 0) {
+    if (isTransformLockedByParentObject()) {
         static bool compound_translate_warning_shown = false;
         if (!compound_translate_warning_shown) {
             std::cerr << "WARNING (Primitive::translate): Cannot translate individual primitives within a compound object. Use the setter function for objects." << std::endl;
@@ -1137,10 +1189,11 @@ void Primitive::translate(const helios::vec3 &shift) {
     makeTranslationMatrix(shift, T);
     matmult(T, transform, transform);
     dirty_flag = true;
+    syncParentObjectAfterTransform();
 }
 
 void Patch::rotate(float rotation_radians, const char *rotation_axis_xyz_string) {
-    if (parent_object_ID != 0) {
+    if (isTransformLockedByParentObject()) {
         static bool patch_rotate_axis_warning_shown = false;
         if (!patch_rotate_axis_warning_shown) {
             std::cerr << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
@@ -1168,10 +1221,11 @@ void Patch::rotate(float rotation_radians, const char *rotation_axis_xyz_string)
         helios_runtime_error("ERROR (Patch::rotate): Rotation axis should be one of x, y, or z.");
     }
     dirty_flag = true;
+    syncParentObjectAfterTransform();
 }
 
 void Patch::rotate(float rotation_radians, const helios::vec3 &rotation_axis_vector) {
-    if (parent_object_ID != 0) {
+    if (isTransformLockedByParentObject()) {
         static bool patch_rotate_vec_warning_shown = false;
         if (!patch_rotate_vec_warning_shown) {
             std::cerr << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
@@ -1187,10 +1241,11 @@ void Patch::rotate(float rotation_radians, const helios::vec3 &rotation_axis_vec
     makeRotationMatrix(rotation_radians, rotation_axis_vector, R);
     matmult(R, transform, transform);
     dirty_flag = true;
+    syncParentObjectAfterTransform();
 }
 
 void Patch::rotate(float rotation_radians, const helios::vec3 &origin, const helios::vec3 &rotation_axis_vector) {
-    if (parent_object_ID != 0) {
+    if (isTransformLockedByParentObject()) {
         static bool patch_rotate_origin_warning_shown = false;
         if (!patch_rotate_origin_warning_shown) {
             std::cerr << "WARNING (Patch::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
@@ -1206,10 +1261,11 @@ void Patch::rotate(float rotation_radians, const helios::vec3 &origin, const hel
     makeRotationMatrix(rotation_radians, origin, rotation_axis_vector, R);
     matmult(R, transform, transform);
     dirty_flag = true;
+    syncParentObjectAfterTransform();
 }
 
 void Triangle::rotate(float rotation_radians, const char *rotation_axis_xyz_string) {
-    if (parent_object_ID != 0) {
+    if (isTransformLockedByParentObject()) {
         static bool triangle_rotate_axis_warning_shown = false;
         if (!triangle_rotate_axis_warning_shown) {
             std::cerr << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
@@ -1237,10 +1293,11 @@ void Triangle::rotate(float rotation_radians, const char *rotation_axis_xyz_stri
         helios_runtime_error("ERROR (Triangle::rotate): Rotation axis should be one of x, y, or z.");
     }
     dirty_flag = true;
+    syncParentObjectAfterTransform();
 }
 
 void Triangle::rotate(float rotation_radians, const helios::vec3 &rotation_axis_vector) {
-    if (parent_object_ID != 0) {
+    if (isTransformLockedByParentObject()) {
         static bool triangle_rotate_vec_warning_shown = false;
         if (!triangle_rotate_vec_warning_shown) {
             std::cerr << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
@@ -1256,10 +1313,11 @@ void Triangle::rotate(float rotation_radians, const helios::vec3 &rotation_axis_
     makeRotationMatrix(rotation_radians, rotation_axis_vector, R);
     matmult(R, transform, transform);
     dirty_flag = true;
+    syncParentObjectAfterTransform();
 }
 
 void Triangle::rotate(float rotation_radians, const helios::vec3 &origin, const helios::vec3 &rotation_axis_vector) {
-    if (parent_object_ID != 0) {
+    if (isTransformLockedByParentObject()) {
         static bool triangle_rotate_origin_warning_shown = false;
         if (!triangle_rotate_origin_warning_shown) {
             std::cerr << "WARNING (Triangle::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
@@ -1275,10 +1333,11 @@ void Triangle::rotate(float rotation_radians, const helios::vec3 &origin, const 
     makeRotationMatrix(rotation_radians, origin, rotation_axis_vector, R);
     matmult(R, transform, transform);
     dirty_flag = true;
+    syncParentObjectAfterTransform();
 }
 
 void Voxel::rotate(float rotation_radians, const char *rotation_axis_xyz_string) {
-    if (parent_object_ID != 0) {
+    if (isTransformLockedByParentObject()) {
         static bool voxel_compound_rotate_warning_shown = false;
         if (!voxel_compound_rotate_warning_shown) {
             std::cerr << "WARNING (Voxel::rotate): Cannot rotate individual primitives within a compound object. Use the setter function for objects." << std::endl;
@@ -1306,6 +1365,7 @@ void Voxel::rotate(float rotation_radians, const char *rotation_axis_xyz_string)
     makeRotationMatrix(rotation_radians, "z", Rz);
     matmult(Rz, transform, transform);
     dirty_flag = true;
+    syncParentObjectAfterTransform();
 }
 
 void Voxel::rotate(float rotation_radians, const helios::vec3 &rotation_axis_vector) {

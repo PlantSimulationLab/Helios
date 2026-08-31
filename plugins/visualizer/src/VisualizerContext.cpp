@@ -21,6 +21,7 @@ void Visualizer::clearContextGeometry() {
     geometry_handler.clearContextGeometry();
 
     contextUUIDs_build.clear();
+    contextUUIDs_uploaded.clear();
     colorPrimitives_UUIDs.clear();
     colorPrimitives_objIDs.clear();
     depth_buffer_data.clear();
@@ -95,6 +96,7 @@ void Visualizer::buildContextGeometry_private() {
                 if (geometry_handler.doesGeometryExist(UUID)) {
                     geometry_handler.deleteGeometry(UUID);
                 }
+                contextUUIDs_uploaded.erase(UUID);
             }
         }
         // check if the primitive is dirty, if so, add it to contextUUIDs_needupdate
@@ -103,7 +105,28 @@ void Visualizer::buildContextGeometry_private() {
         }
     }
 
+    // Context dirty flags are sticky - only the user's call to Context::markGeometryClean() clears them, once every
+    // plug-in has processed the change - so getDirtyUUIDs() keeps reporting the whole scene on every frame. Rebuilding
+    // and re-uploading a primitive that is already in the geometry handler in its current form would restore identical
+    // contents, so skip the ones already uploaded.
+    //
+    // primitiveColorsNeedUpdate means the mapping from primitive/object data to color has changed, which changes the
+    // color of primitives whose geometry did not change at all, so in that case every dirty primitive must be rebuilt.
+    if (!contextUUIDs_needupdate.empty() && !primitiveColorsNeedUpdate) {
+        std::vector<uint> contextUUIDs_notyetuploaded;
+        contextUUIDs_notyetuploaded.reserve(contextUUIDs_needupdate.size());
+        for (uint UUID: contextUUIDs_needupdate) {
+            if (contextUUIDs_uploaded.find(UUID) == contextUUIDs_uploaded.end() || !geometry_handler.doesGeometryExist(UUID)) {
+                contextUUIDs_notyetuploaded.push_back(UUID);
+            }
+        }
+        contextUUIDs_needupdate = std::move(contextUUIDs_notyetuploaded);
+    }
+
     if (contextUUIDs_needupdate.empty() && !primitiveColorsNeedUpdate) {
+        // No geometry work to do, but material data may still have changed without dirtying any
+        // primitive, so the per-material Phong pass must still run against the existing geometry.
+        updatePhongMaterialIndices();
         return;
     }
 
@@ -291,12 +314,18 @@ void Visualizer::buildContextGeometry_private() {
     size_t triangle_count = context->getTriangleCount();
     geometry_handler.allocateBufferSize(triangle_count, GeometryHandler::GEOMETRY_TYPE_TRIANGLE);
 
+    // Vertex normals belong to the parent object rather than to the individual triangle, and resolving them costs work proportional to the size of that object. Triangles are therefore collected by parent
+    // object here and resolved once per object after the loop, rather than resolving the parent again for every one of its triangles. Applying them after the loop is also required for correctness, because
+    // addGeometry() resets a primitive's vertex normals to its face normal, so a primitive re-added later in the loop would otherwise discard normals set earlier.
+    std::unordered_map<uint, std::vector<uint>> smooth_shaded_triangles;
+
     for (unsigned int UUID: contextUUIDs_needupdate) {
 
         if (!context->doesPrimitiveExist(UUID)) {
             std::cerr << "WARNING (Visualizer::buildContextGeometry): UUID vector contains ID(s) that do not exist in the Context...they will be ignored." << std::endl;
             continue;
         }
+
 
         helios::PrimitiveType ptype = context->getPrimitiveType(UUID);
 
@@ -420,6 +449,18 @@ void Visualizer::buildContextGeometry_private() {
                     geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_TRIANGLE, verts, color, uvs, textureID, true, false, COORDINATES_CARTESIAN, true, true);
                 }
             }
+
+            // A triangle belonging to an object that can supply per-vertex normals is shaded smoothly rather than faceted: a Polymesh that retains authored or computed normals, or a curved object whose
+            // normal is known analytically. Primitives with neither keep the face normal that addGeometry() already replicated across their vertices, so nothing needs to be done for them. The normals
+            // themselves are resolved after the loop, once per parent object.
+            const uint parent_ObjID = context->getPrimitiveParentObjectID(UUID);
+            if (parent_ObjID != 0 && context->doesObjectExist(parent_ObjID)) {
+                const bool polymesh_has_normals =
+                        context->getObjectType(parent_ObjID) == helios::OBJECT_TYPE_POLYMESH && context->getPolymeshObjectVertexNormalSource(parent_ObjID) != helios::NORMAL_SOURCE_NONE;
+                if (polymesh_has_normals || context->doesObjectHaveAnalyticVertexNormals(parent_ObjID)) {
+                    smooth_shaded_triangles[parent_ObjID].push_back(UUID);
+                }
+            }
         }
         // ---- VOXELS ---- //
         else if (ptype == helios::PRIMITIVE_TYPE_VOXEL) {
@@ -478,9 +519,89 @@ void Visualizer::buildContextGeometry_private() {
         }
     }
 
+    // Apply per-vertex normals, one parent object at a time. Everything expensive - a Polymesh's vertex and face tables, a tube's node tangents and taper rates - is fetched once per object here instead of
+    // once per triangle.
+    for (const auto &[parent_ObjID, object_UUIDs]: smooth_shaded_triangles) {
+
+        if (context->getObjectType(parent_ObjID) == helios::OBJECT_TYPE_POLYMESH) {
+            const std::vector<helios::vec3> mesh_vertex_normals = context->getPolymeshObjectVertexNormals(parent_ObjID);
+            const std::vector<helios::int3> mesh_faces = context->getPolymeshObjectFaces(parent_ObjID);
+            for (uint UUID: object_UUIDs) {
+                const size_t face_index = context->getPolymeshObjectFaceIndexForPrimitive(parent_ObjID, UUID);
+                const helios::int3 &face = mesh_faces.at(face_index);
+                geometry_handler.setVertexNormals(UUID, {mesh_vertex_normals.at(face.x), mesh_vertex_normals.at(face.y), mesh_vertex_normals.at(face.z)});
+            }
+        } else {
+            const std::vector<std::vector<helios::vec3>> object_normals = context->getObjectPrimitiveVertexNormals(parent_ObjID, object_UUIDs);
+            for (size_t k = 0; k < object_UUIDs.size(); k++) {
+                // An object whose transformation is degenerate returns no normals, and the face normal already in place remains the best available.
+                if (object_normals.at(k).size() == 3) {
+                    geometry_handler.setVertexNormals(object_UUIDs.at(k), object_normals.at(k));
+                }
+            }
+        }
+    }
+
     if (primitiveColorsNeedUpdate) {
         updateContextPrimitiveColors();
     }
+
+    // Record what was just built, so that the next frame does not rebuild these primitives again purely because their
+    // Context dirty flags are still set.
+    contextUUIDs_uploaded.insert(contextUUIDs_needupdate.begin(), contextUUIDs_needupdate.end());
+
+    updatePhongMaterialIndices();
+}
+
+void Visualizer::updatePhongMaterialIndices() {
+
+    if (context == nullptr) {
+        return;
+    }
+
+    // The geometry handler's live set is the true set of displayed primitives. contextUUIDs_build
+    // holds only the dirty UUIDs when building all context geometry, so it would miss primitives
+    // whose material data changed while the primitives themselves stayed clean. Geometry added
+    // directly to the Visualizer rather than from the Context is skipped: it has no material.
+    const std::vector<size_t> live_geometry = geometry_handler.getAllGeometryIDs();
+
+    std::set<uint> referenced_material_IDs;
+    for (size_t geometry_UUID: live_geometry) {
+        const uint UUID = static_cast<uint>(geometry_UUID);
+        if (context->doesPrimitiveExist(UUID)) {
+            referenced_material_IDs.insert(context->getPrimitiveMaterialID(UUID));
+        }
+    }
+
+    const std::unordered_map<uint, int> material_ID_to_index = buildPhongMaterialTable(context, referenced_material_IDs);
+
+    // Reassigning indices walks every displayed primitive, so it is skipped when the resolved Phong
+    // data is identical to the previous build. Building the table itself is O(materials) and cheap
+    // enough to redo each time, and it is what produces the fingerprint.
+    std::vector<float> fingerprint;
+    fingerprint.reserve(material_ID_to_index.size() * 2);
+    for (const auto &[materialID, table_index]: material_ID_to_index) {
+        fingerprint.push_back(float(materialID));
+        fingerprint.push_back(float(table_index));
+    }
+    std::sort(fingerprint.begin(), fingerprint.end());
+
+    if (phong_material_indices_assigned && fingerprint == phong_material_fingerprint) {
+        return;
+    }
+
+    for (size_t geometry_UUID: live_geometry) {
+        const uint UUID = static_cast<uint>(geometry_UUID);
+        if (!context->doesPrimitiveExist(UUID)) {
+            continue;
+        }
+        const auto it = material_ID_to_index.find(context->getPrimitiveMaterialID(UUID));
+        // A material with no Phong data is absent from the map; -1 means "use the global material".
+        geometry_handler.setMaterialIndex(UUID, it != material_ID_to_index.end() ? it->second : -1);
+    }
+
+    phong_material_fingerprint = fingerprint;
+    phong_material_indices_assigned = true;
 }
 
 void Visualizer::updateContextPrimitiveColors() {

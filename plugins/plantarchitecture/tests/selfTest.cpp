@@ -9,6 +9,15 @@ using namespace helios;
 
 double err_tol = 1e-7;
 
+//! Adapts a petiole's object-ID storage to a flat list, so tests can be written against the
+//! petiole's geometry without depending on whether it is stored as one object or several.
+inline std::vector<uint> flattenPetioleObjIDs(const std::vector<uint> &objIDs) {
+    return objIDs;
+}
+inline std::vector<uint> flattenPetioleObjIDs(uint objID) {
+    return std::vector<uint>{objID};
+}
+
 //! Grants these tests access to private per-plant state. Declared a friend of PlantArchitecture in
 //! PlantArchitecture.h; defined here so nothing test-related is exposed to users of the library.
 class PlantArchitectureTestHelper {
@@ -18,6 +27,9 @@ public:
     }
     static bool attractionPointsEnabled(const PlantArchitecture &pa, uint plantID) {
         return pa.plant_instances.at(plantID).attraction_points_enabled;
+    }
+    static const std::vector<std::shared_ptr<Shoot>> &getShootTree(const PlantArchitecture &pa, uint plantID) {
+        return pa.plant_instances.at(plantID).shoot_tree;
     }
 };
 
@@ -5390,4 +5402,117 @@ DOCTEST_TEST_CASE("PhytomerParameters assignment resamples while ShootParameters
 
 int PlantArchitecture::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture petiole geometry is a continuous tube") {
+    // A multi-segment petiole must form ONE continuous surface.
+    //
+    // Petioles were historically built as a chain of independent Cone objects
+    // (makeTubeFromCones). Context::addConeObject seeds its radial reference frame from a
+    // hard-coded constant vector on every call, so each cone in the chain chose its azimuthal
+    // phase independently of its neighbours. Adjacent cones therefore met at a shared centerline
+    // node with their vertex rings rotated out of phase, leaving a visible crease at every
+    // segment joint. A tube object parallel-transports the frame along the centerline, so the
+    // rings stay in phase and the surface closes.
+    //
+    // The invariant checked is phase continuity at a shared interior node: the vertices
+    // contributed there by the geometry on either side must coincide. This is written against
+    // raw primitive vertices rather than the tube/cone APIs so that it compiles -- and fails --
+    // against the old cone-chain representation as well as the new tube one.
+    Context context;
+    PlantArchitecture pa(&context);
+    pa.disableMessages();
+
+    // Sugarbeet uses petiole.length_segments = 8 -- plenty of interior joints to inspect.
+    pa.loadPlantModelFromLibrary("sugarbeet");
+    uint plantID = pa.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0.f);
+    pa.advanceTime(20.f);
+
+    const std::vector<std::shared_ptr<Shoot>> &shoot_tree = PlantArchitectureTestHelper::getShootTree(pa, plantID);
+
+    uint petioles_checked = 0;
+    uint petioles_with_seam = 0;
+
+    for (const auto &shoot: shoot_tree) {
+        for (const auto &phytomer: shoot->phytomers) {
+            for (uint petiole = 0; petiole < phytomer->petiole_vertices.size(); petiole++) {
+
+                const std::vector<vec3> &centerline = phytomer->petiole_vertices.at(petiole);
+                const std::vector<float> &radii = phytomer->petiole_radii.at(petiole);
+                if (centerline.size() < 3) {
+                    continue; // need at least one interior joint
+                }
+
+                // Gather every primitive making up this petiole, whatever objects hold them.
+                std::vector<uint> petiole_UUIDs;
+                for (uint objID: flattenPetioleObjIDs(phytomer->petiole_objIDs.at(petiole))) {
+                    if (!context.doesObjectExist(objID)) {
+                        continue;
+                    }
+                    const std::vector<uint> &UUIDs = context.getObjectPrimitiveUUIDs(objID);
+                    petiole_UUIDs.insert(petiole_UUIDs.end(), UUIDs.begin(), UUIDs.end());
+                }
+                if (petiole_UUIDs.empty()) {
+                    continue;
+                }
+
+                // The petiole must be a single tube object, not a chain of cones.
+                for (uint objID: flattenPetioleObjIDs(phytomer->petiole_objIDs.at(petiole))) {
+                    if (context.doesObjectExist(objID)) {
+                        DOCTEST_CHECK(context.getObjectType(objID) == helios::OBJECT_TYPE_TUBE);
+                    }
+                }
+
+                // Inspect the middle interior node, furthest from both tube ends.
+                uint interior_node = centerline.size() / 2;
+                const vec3 node_center = centerline.at(interior_node);
+                const float node_radius = radii.at(interior_node);
+                if (!(node_radius > 0.f)) {
+                    continue;
+                }
+
+                // A vertex belongs to this node's ring if it lies on that node's circle.
+                std::vector<vec3> ring_vertices;
+                for (uint UUID: petiole_UUIDs) {
+                    for (const vec3 &v: context.getPrimitiveVertices(UUID)) {
+                        if (fabsf((v - node_center).magnitude() - node_radius) < 0.05f * node_radius) {
+                            ring_vertices.push_back(v);
+                        }
+                    }
+                }
+                if (ring_vertices.empty()) {
+                    continue;
+                }
+
+                // Count distinct positions around the ring. On a continuous surface the geometry
+                // on both sides of the node shares one ring, so the distinct count equals the
+                // number of radial subdivisions. Two out-of-phase rings roughly double it.
+                std::vector<vec3> distinct;
+                for (const vec3 &v: ring_vertices) {
+                    bool found = false;
+                    for (const vec3 &d: distinct) {
+                        if ((v - d).magnitude() < 1e-3f * node_radius) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        distinct.push_back(v);
+                    }
+                }
+
+                uint Ndivs = std::max(uint(3), phytomer->phytomer_parameters.petiole.radial_subdivisions);
+
+                // Allow one extra for the duplicated seam vertex that closes the ring.
+                if (distinct.size() > Ndivs + 1) {
+                    petioles_with_seam++;
+                }
+                petioles_checked++;
+            }
+        }
+    }
+
+    // Guard against the test silently passing because it never found a multi-segment petiole.
+    DOCTEST_CHECK(petioles_checked > 0);
+    DOCTEST_CHECK(petioles_with_seam == 0);
 }

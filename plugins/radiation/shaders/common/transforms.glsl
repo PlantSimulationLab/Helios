@@ -88,4 +88,15 @@ vec3 camera_rotate_point(vec3 position, float theta, float phi) {
     );
 }
 
+// Normalize a vector that may legitimately be zero-length.
+//
+// normalize(vec3(0)) is 0/0 = NaN, and a NaN direction is not rejected by any of the usual
+// guards: every comparison against it evaluates false, so the ray silently misses everything
+// while its energy is still deposited, or a NaN propagates into the accumulation buffers.
+// Callers that can produce a zero-length vector use this and check the returned length.
+vec3 safe_normalize(vec3 v, out float length_out) {
+    length_out = length(v);
+    return (length_out > 1e-20) ? (v / length_out) : vec3(0.0);
+}
+
 #endif // TRANSFORMS_GLSL

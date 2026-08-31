@@ -1147,3 +1147,317 @@ map_d lib/images/solid.jpg
         std::remove("lib/models/test_material_color.mtl");
     }
 }
+
+TEST_CASE("OBJ Vertex Normal and Mesh Topology Retention") {
+
+    SUBCASE("Load OBJ with vn and retain authored vertex normals") {
+        Context ctx;
+
+        std::vector<uint> UUIDs = ctx.loadOBJ("lib/models/test_cube_medium.obj", make_vec3(0, 0, 0), 0, nullrotation, RGB::red, "ZUP", true);
+        DOCTEST_REQUIRE(!UUIDs.empty());
+
+        // The loader groups the mesh into a polymesh object so the authored connectivity can be retained.
+        uint objID = ctx.getPrimitiveParentObjectID(UUIDs.front());
+        DOCTEST_REQUIRE(objID != 0);
+        DOCTEST_REQUIRE(ctx.getObjectType(objID) == OBJECT_TYPE_POLYMESH);
+
+        // The cube's 6 quads fan-triangulate to 12 triangles. This model assigns one normal per face, so each of the 8 geometric corners carries three distinct normals and must be split into three mesh
+        // vertices: an indexed face set stores exactly one normal per vertex, and it is this splitting that keeps the cube's edges hard.
+        DOCTEST_CHECK(ctx.getPolymeshObjectFaceCount(objID) == 12);
+        DOCTEST_CHECK(ctx.getPolymeshObjectVertexCount(objID) == 24);
+
+        DOCTEST_REQUIRE(ctx.doesPolymeshObjectHaveVertexNormals(objID));
+        DOCTEST_CHECK(ctx.getPolymeshObjectVertexNormalSource(objID) == NORMAL_SOURCE_AUTHORED);
+
+        std::vector<vec3> normals = ctx.getPolymeshObjectVertexNormals(objID);
+        DOCTEST_REQUIRE(normals.size() == 24);
+        for (const vec3 &n: normals) {
+            DOCTEST_CHECK(n.magnitude() == doctest::Approx(1.f).epsilon(1e-5));
+        }
+
+        // Every normal in this model is axis-aligned; confirm the authored values survived rather than being replaced by a computed average.
+        for (const vec3 &n: normals) {
+            const float largest_component = std::max(std::max(std::abs(n.x), std::abs(n.y)), std::abs(n.z));
+            DOCTEST_CHECK(largest_component == doctest::Approx(1.f).epsilon(1e-5));
+        }
+    }
+
+    SUBCASE("Round-trip load, writeOBJ and reload preserves vertex normals") {
+        Context ctx;
+
+        std::vector<uint> UUIDs = ctx.loadOBJ("lib/models/test_cube_medium.obj", make_vec3(0, 0, 0), 0, nullrotation, RGB::red, "ZUP", true);
+        DOCTEST_REQUIRE(!UUIDs.empty());
+        uint objID = ctx.getPrimitiveParentObjectID(UUIDs.front());
+        DOCTEST_REQUIRE(ctx.doesPolymeshObjectHaveVertexNormals(objID));
+
+        std::vector<vec3> vertices_before = ctx.getPolymeshObjectVertices(objID);
+        std::vector<vec3> normals_before = ctx.getPolymeshObjectVertexNormals(objID);
+
+        // write_normals defaults to false, so it must be requested explicitly for normals to be emitted at all.
+        const char *test_file = "lib/models/helios_test_normal_roundtrip.obj";
+        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(test_file, UUIDs, true, true));
+
+        Context ctx2;
+        std::vector<uint> UUIDs2 = ctx2.loadOBJ(test_file, make_vec3(0, 0, 0), 0, nullrotation, RGB::red, "ZUP", true);
+        DOCTEST_REQUIRE(!UUIDs2.empty());
+        uint objID2 = ctx2.getPrimitiveParentObjectID(UUIDs2.front());
+        DOCTEST_REQUIRE(objID2 != 0);
+
+        DOCTEST_REQUIRE(ctx2.doesPolymeshObjectHaveVertexNormals(objID2));
+        std::vector<vec3> normals_after = ctx2.getPolymeshObjectVertexNormals(objID2);
+        std::vector<vec3> vertices_after = ctx2.getPolymeshObjectVertices(objID2);
+
+        // Geometry belonging to a polymesh is written against its shared vertices, so the reloaded mesh must have exactly the same vertex count as the original rather than three unshared vertices per
+        // triangle (which would give 12 * 3 = 36 here). Before this was fixed, writeOBJ also flattened the normals to one per primitive.
+        DOCTEST_CHECK(vertices_after.size() == vertices_before.size());
+        DOCTEST_CHECK(vertices_after.size() != 36);
+        DOCTEST_REQUIRE(vertices_after.size() == normals_after.size());
+        DOCTEST_REQUIRE(!normals_after.empty());
+
+        // Face connectivity must survive too, not just the vertex positions.
+        DOCTEST_CHECK(ctx2.getPolymeshObjectFaceCount(objID2) == ctx.getPolymeshObjectFaceCount(objID));
+
+        // A position can legitimately appear more than once with different normals (a hard edge), so require that each reloaded (position, normal) pair also existed in the original mesh rather than matching
+        // on position alone. If the writer had flattened the normals to one per face, the reloaded normals would no longer coincide with the authored ones and no match would be found.
+        for (size_t v = 0; v < vertices_after.size(); v++) {
+            bool found_matching_vertex = false;
+            for (size_t w = 0; w < vertices_before.size(); w++) {
+                if ((vertices_after.at(v) - vertices_before.at(w)).magnitude() > 1e-5f) {
+                    continue;
+                }
+                if ((normals_after.at(v) - normals_before.at(w)).magnitude() < 1e-5f) {
+                    found_matching_vertex = true;
+                    break;
+                }
+            }
+            DOCTEST_CHECK(found_matching_vertex);
+        }
+
+        // Confirm on the file itself that vertices are shared rather than tripled, and that normals are referenced per corner.
+        {
+            std::ifstream written(test_file);
+            size_t v_count = 0, vn_count = 0, f_count = 0;
+            std::string file_line;
+            while (std::getline(written, file_line)) {
+                if (file_line.rfind("v ", 0) == 0) {
+                    v_count++;
+                } else if (file_line.rfind("vn ", 0) == 0) {
+                    vn_count++;
+                } else if (file_line.rfind("f ", 0) == 0) {
+                    f_count++;
+                }
+            }
+            DOCTEST_CHECK(f_count == 12);
+            DOCTEST_CHECK(v_count == 24);
+            DOCTEST_CHECK(vn_count == 24);
+        }
+
+        std::remove(test_file);
+        std::remove("lib/models/helios_test_normal_roundtrip.mtl");
+    }
+
+    SUBCASE("addPolymeshObject on loader output returns the loader's object") {
+        Context ctx;
+
+        // This is the pattern used throughout the plant architecture plugin: wrap the loader result in addPolymeshObject().
+        std::vector<uint> UUIDs = ctx.loadOBJ("lib/models/test_cube_medium.obj", make_vec3(0, 0, 0), 0, nullrotation, RGB::red, "ZUP", true);
+        uint loader_objID = ctx.getPrimitiveParentObjectID(UUIDs.front());
+
+        bool warned;
+        uint objID;
+        {
+            capture_cerr cerr_buffer;
+            objID = ctx.addPolymeshObject(UUIDs);
+            warned = cerr_buffer.has_output();
+        } // capture destroyed here
+
+        DOCTEST_CHECK(!warned);
+        DOCTEST_CHECK(objID == loader_objID);
+        DOCTEST_CHECK(ctx.getPolymeshObjectFaceCount(objID) == 12);
+    }
+}
+
+TEST_CASE("PLY File I/O and Mesh Topology") {
+
+    // Build a closed unit cube as an indexed mesh, matching the winding used in the Polymesh topology tests.
+    auto buildCubeMesh = [](std::vector<vec3> &cube_vertices, std::vector<int3> &cube_faces) {
+        cube_vertices = {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), make_vec3(0, 1, 0),
+                         make_vec3(0, 0, 1), make_vec3(1, 0, 1), make_vec3(1, 1, 1), make_vec3(0, 1, 1)};
+        cube_faces = {make_int3(0, 3, 2), make_int3(0, 2, 1), make_int3(4, 5, 6), make_int3(4, 6, 7), make_int3(0, 1, 5), make_int3(0, 5, 4),
+                      make_int3(2, 3, 7), make_int3(2, 7, 6), make_int3(3, 0, 4), make_int3(3, 4, 7), make_int3(1, 2, 6), make_int3(1, 6, 5)};
+    };
+
+    SUBCASE("writePLY shares vertices for polymesh geometry") {
+        Context ctx;
+        std::vector<vec3> cube_vertices;
+        std::vector<int3> cube_faces;
+        buildCubeMesh(cube_vertices, cube_faces);
+
+        std::vector<uint> UUIDs;
+        for (const int3 &f: cube_faces) {
+            UUIDs.push_back(ctx.addTriangle(cube_vertices.at(f.x), cube_vertices.at(f.y), cube_vertices.at(f.z), RGB::red));
+        }
+        uint objID = ctx.addPolymeshObject(UUIDs);
+        ctx.setPolymeshObjectTopology(objID, cube_vertices, cube_faces, UUIDs, {}, {}, NORMAL_SOURCE_NONE);
+
+        const char *test_file = "helios_test_shared.ply";
+        DOCTEST_CHECK_NOTHROW(ctx.writePLY(test_file, UUIDs));
+
+        // The cube has 8 shared vertices and 12 faces. Writing three independent vertices per triangle would give 36.
+        size_t header_vertex_count = 0, header_face_count = 0;
+        {
+            std::ifstream written(test_file);
+            std::string file_line;
+            while (std::getline(written, file_line)) {
+                if (file_line.rfind("element vertex ", 0) == 0) {
+                    header_vertex_count = std::stoul(file_line.substr(15));
+                } else if (file_line.rfind("element face ", 0) == 0) {
+                    header_face_count = std::stoul(file_line.substr(13));
+                }
+            }
+        }
+        DOCTEST_CHECK(header_face_count == 12);
+        DOCTEST_CHECK(header_vertex_count == 8);
+        DOCTEST_CHECK(header_vertex_count != 36);
+
+        // Reloading must reproduce the same closed solid.
+        Context ctx2;
+        std::vector<uint> reloaded = ctx2.loadPLY(test_file, make_vec3(0, 0, 0), 0, "ZUP", true);
+        DOCTEST_REQUIRE(!reloaded.empty());
+        uint reloaded_objID = ctx2.getPrimitiveParentObjectID(reloaded.front());
+        DOCTEST_REQUIRE(reloaded_objID != 0);
+        DOCTEST_CHECK(ctx2.getPolymeshObjectVertexCount(reloaded_objID) == 8);
+        DOCTEST_CHECK(ctx2.getPolymeshObjectFaceCount(reloaded_objID) == 12);
+        DOCTEST_CHECK(ctx2.isPolymeshObjectClosed(reloaded_objID));
+        DOCTEST_CHECK(ctx2.getPolymeshObjectVolume(reloaded_objID) == doctest::Approx(1.f).epsilon(1e-4));
+
+        std::remove(test_file);
+    }
+
+    SUBCASE("writePLY writes independent vertices for non-polymesh geometry") {
+        Context ctx;
+
+        // Loose primitives with no retained connectivity must keep the historical behavior.
+        std::vector<uint> UUIDs;
+        UUIDs.push_back(ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0), RGB::red));
+        UUIDs.push_back(ctx.addTriangle(make_vec3(1, 0, 0), make_vec3(1, 1, 0), make_vec3(0, 1, 0), RGB::blue));
+        UUIDs.push_back(ctx.addPatch(make_vec3(5, 5, 0), make_vec2(1, 1)));
+
+        const char *test_file = "helios_test_unshared.ply";
+        DOCTEST_CHECK_NOTHROW(ctx.writePLY(test_file, UUIDs));
+
+        size_t header_vertex_count = 0, header_face_count = 0;
+        {
+            std::ifstream written(test_file);
+            std::string file_line;
+            while (std::getline(written, file_line)) {
+                if (file_line.rfind("element vertex ", 0) == 0) {
+                    header_vertex_count = std::stoul(file_line.substr(15));
+                } else if (file_line.rfind("element face ", 0) == 0) {
+                    header_face_count = std::stoul(file_line.substr(13));
+                }
+            }
+        }
+        // Two triangles (3 vertices each) plus one patch (4 vertices, 2 faces).
+        DOCTEST_CHECK(header_vertex_count == 10);
+        DOCTEST_CHECK(header_face_count == 4);
+
+        std::remove(test_file);
+    }
+
+    SUBCASE("PLY round-trip preserves shared vertices and vertex normals") {
+        Context ctx;
+        std::vector<vec3> cube_vertices;
+        std::vector<int3> cube_faces;
+        buildCubeMesh(cube_vertices, cube_faces);
+
+        std::vector<uint> UUIDs;
+        for (const int3 &f: cube_faces) {
+            UUIDs.push_back(ctx.addTriangle(cube_vertices.at(f.x), cube_vertices.at(f.y), cube_vertices.at(f.z), RGB::red));
+        }
+        uint objID = ctx.addPolymeshObject(UUIDs);
+        ctx.setPolymeshObjectTopology(objID, cube_vertices, cube_faces, UUIDs, {}, {}, NORMAL_SOURCE_NONE);
+
+        // Generate smooth normals so there is something for the writer to emit, then check they come back.
+        ctx.computePolymeshObjectVertexNormals(objID, 120.f);
+        DOCTEST_REQUIRE(ctx.doesPolymeshObjectHaveVertexNormals(objID));
+        std::vector<vec3> normals_before = ctx.getPolymeshObjectVertexNormals(objID);
+        std::vector<vec3> vertices_before = ctx.getPolymeshObjectVertices(objID);
+
+        const char *test_file = "helios_test_ply_roundtrip.ply";
+        DOCTEST_CHECK_NOTHROW(ctx.writePLY(test_file, UUIDs));
+
+        Context ctx2;
+        std::vector<uint> reloaded = ctx2.loadPLY(test_file, make_vec3(0, 0, 0), 0, "ZUP", true);
+        DOCTEST_REQUIRE(!reloaded.empty());
+        uint reloaded_objID = ctx2.getPrimitiveParentObjectID(reloaded.front());
+        DOCTEST_REQUIRE(reloaded_objID != 0);
+
+        DOCTEST_REQUIRE(ctx2.doesPolymeshObjectHaveVertexNormals(reloaded_objID));
+        DOCTEST_CHECK(ctx2.getPolymeshObjectVertexNormalSource(reloaded_objID) == NORMAL_SOURCE_AUTHORED);
+
+        std::vector<vec3> vertices_after = ctx2.getPolymeshObjectVertices(reloaded_objID);
+        std::vector<vec3> normals_after = ctx2.getPolymeshObjectVertexNormals(reloaded_objID);
+        DOCTEST_REQUIRE(vertices_after.size() == vertices_before.size());
+        DOCTEST_REQUIRE(normals_after.size() == normals_before.size());
+
+        // Match each reloaded vertex to its original by position and compare the normal carried with it.
+        for (size_t v = 0; v < vertices_after.size(); v++) {
+            bool found_matching_vertex = false;
+            for (size_t w = 0; w < vertices_before.size(); w++) {
+                if ((vertices_after.at(v) - vertices_before.at(w)).magnitude() > 1e-4f) {
+                    continue;
+                }
+                if ((normals_after.at(v) - normals_before.at(w)).magnitude() < 1e-4f) {
+                    found_matching_vertex = true;
+                    break;
+                }
+            }
+            DOCTEST_CHECK(found_matching_vertex);
+        }
+
+        std::remove(test_file);
+    }
+
+    SUBCASE("loadPLY reads nx, ny and nz vertex normals") {
+        // Write a small PLY by hand carrying authored vertex normals.
+        const char *test_file = "helios_test_normals.ply";
+        {
+            std::ofstream out(test_file);
+            out << "ply\nformat ascii 1.0\n";
+            out << "element vertex 4\n";
+            out << "property float x\nproperty float y\nproperty float z\n";
+            out << "property float nx\nproperty float ny\nproperty float nz\n";
+            out << "element face 2\n";
+            out << "property list uchar int vertex_indices\nend_header\n";
+            out << "0 0 0 0 0 1\n";
+            out << "1 0 0 0 0 1\n";
+            out << "1 1 0 0 0 1\n";
+            out << "0 1 0 0 0 1\n";
+            out << "3 0 1 2\n";
+            out << "3 0 2 3\n";
+        }
+
+        Context ctx;
+        std::vector<uint> UUIDs = ctx.loadPLY(test_file, make_vec3(0, 0, 0), 0, "ZUP", true);
+        DOCTEST_REQUIRE(UUIDs.size() == 2);
+
+        uint objID = ctx.getPrimitiveParentObjectID(UUIDs.front());
+        DOCTEST_REQUIRE(objID != 0);
+        DOCTEST_REQUIRE(ctx.doesPolymeshObjectHaveVertexNormals(objID));
+        DOCTEST_CHECK(ctx.getPolymeshObjectVertexNormalSource(objID) == NORMAL_SOURCE_AUTHORED);
+
+        std::vector<vec3> normals = ctx.getPolymeshObjectVertexNormals(objID);
+        DOCTEST_REQUIRE(normals.size() == 4);
+        for (const vec3 &n: normals) {
+            DOCTEST_CHECK(n.magnitude() == doctest::Approx(1.f).epsilon(1e-5));
+            DOCTEST_CHECK(n.z == doctest::Approx(1.f).epsilon(1e-5));
+        }
+
+        // The mesh keeps the file's shared-vertex connectivity rather than 3 vertices per triangle.
+        DOCTEST_CHECK(ctx.getPolymeshObjectVertexCount(objID) == 4);
+        DOCTEST_CHECK(ctx.getPolymeshObjectFaceCount(objID) == 2);
+
+        std::remove(test_file);
+    }
+}

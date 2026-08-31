@@ -33,6 +33,8 @@ layout(push_constant) uniform PushConstants {
     float domain_ymax;
     uint prim_tiles_y;     // Number of primitive tiles in Y dimension (for large primitive counts)
     uint prims_per_tile;   // Primitives per tile (65535 max)
+    uint camera_count;     // Number of cameras; 0 = skip camera-weighted scatter
+    uint camera_id;        // Camera whose weighting the camera-scatter buffers accumulate
 } pc;
 
 // ========== Descriptor Set 0: Geometry ==========
@@ -94,8 +96,13 @@ layout(set = 0, binding = 17) readonly buffer BboxVerticesBuffer {
 } bbox_verts_buf;
 
 // ========== Descriptor Set 1: Materials/Sources ==========
+// NOTE on the three-float source/sky arrays below: std430 gives an array of `vec3` a 16-byte
+// stride, while the host uploads tightly-packed 12-byte helios::vec3. Declaring them as `vec3[]`
+// therefore reads the wrong 12 bytes for every element after the first, and reads past the end of
+// the allocation for the last one. They are declared as flat float arrays and fetched three at a
+// time instead, matching patch_vertices_buf / triangle_vertices_buf / normals_buf.
 layout(set = 1, binding = 0) readonly buffer SourcePositionsBuffer {
-    vec3 positions[];
+    float positions[]; // 3 floats per source
 } source_positions_buf;
 
 layout(set = 1, binding = 1) readonly buffer SourceTypesBuffer {
@@ -103,7 +110,7 @@ layout(set = 1, binding = 1) readonly buffer SourceTypesBuffer {
 } source_types_buf;
 
 layout(set = 1, binding = 2) readonly buffer SourceRotationsBuffer {
-    vec3 rotations[];
+    float rotations[]; // 3 floats per source
 } source_rotations_buf;
 
 layout(set = 1, binding = 3) readonly buffer SourceWidthsBuffer {
@@ -121,6 +128,17 @@ layout(set = 1, binding = 5) readonly buffer ReflectivityBuffer {
 layout(set = 1, binding = 6) readonly buffer TransmissivityBuffer {
     float transmissivity[];
 } transmissivity_buf;
+
+// Camera-weighted material properties, indexed [source][primitive][band_global][camera]. The diffuse
+// and scattering passes carry no source of their own, so they read source 0 exactly as OptiX does
+// (its diffuse/scatter ray generation sets source_ID = 0).
+layout(set = 1, binding = 14) readonly buffer ReflectivityCamBuffer {
+    float reflectivity_cam[];
+} reflectivity_cam_buf;
+
+layout(set = 1, binding = 15) readonly buffer TransmissivityCamBuffer {
+    float transmissivity_cam[];
+} transmissivity_cam_buf;
 
 layout(set = 1, binding = 10) readonly buffer BandMapBuffer {
     uint map[]; // Maps launch band index → global band index
@@ -162,13 +180,27 @@ layout(set = 2, binding = 4) buffer ScatterBottomBuffer {
 } scatter_bottom_buf;
 
 // ========== Descriptor Set 3: Sky Parameters ==========
+// Camera-weighted scatter, accumulated against rho_cam/tau_cam alongside the band-weighted scatter.
+layout(set = 2, binding = 8) buffer CameraScatterTopBuffer {
+    float camera_scatter_top[];
+} camera_scatter_top_buf;
+
+layout(set = 2, binding = 9) buffer CameraScatterBottomBuffer {
+    float camera_scatter_bottom[];
+} camera_scatter_bottom_buf;
+
 layout(set = 3, binding = 0) readonly buffer DiffuseFluxBuffer {
     float diffuse_flux[]; // [band] - Sky irradiance per band
 } diffuse_flux_buf;
 
 layout(set = 3, binding = 1) readonly buffer DiffusePeakDirBuffer {
-    vec3 diffuse_peak_dir[]; // [band] - Sun direction per band
+    float diffuse_peak_dir[]; // [band] - Sun direction per band, 3 floats per band
 } diffuse_peak_dir_buf;
+
+vec3 get_diffuse_peak_dir(uint band) {
+    uint b = band * 3u;
+    return vec3(diffuse_peak_dir_buf.diffuse_peak_dir[b], diffuse_peak_dir_buf.diffuse_peak_dir[b + 1u], diffuse_peak_dir_buf.diffuse_peak_dir[b + 2u]);
+}
 
 layout(set = 3, binding = 2) readonly buffer DiffuseExtinctionBuffer {
     float diffuse_extinction[]; // [band] - Power-law K parameter
@@ -275,28 +307,6 @@ vec3 sample_disk(inout RNGState rng) {
     return sp;
 }
 
-// Get patch normal in world space
-vec3 get_patch_normal(float transform_mat[16]) {
-    mat4 transform = floats_to_mat4(transform_mat);
-
-    vec3 v0 = transform_point(transform, vec3(0, 0, 0));
-    vec3 v1 = transform_point(transform, vec3(1, 0, 0));
-    vec3 v2 = transform_point(transform, vec3(0, 1, 0));
-
-    return normalize(cross(v1 - v0, v2 - v0));
-}
-
-// Get triangle normal in world space
-vec3 get_triangle_normal(float transform_mat[16]) {
-    mat4 transform = floats_to_mat4(transform_mat);
-
-    vec3 v0 = transform_point(transform, vec3(0, 0, 0));
-    vec3 v1 = transform_point(transform, vec3(0, 1, 0));
-    vec3 v2 = transform_point(transform, vec3(1, 1, 0));
-
-    return normalize(cross(v1 - v0, v2 - v0));
-}
-
 // Rotate local hemisphere direction to align with surface normal
 // Local frame: Z-up (hemisphere aligned with +Z axis)
 // World frame: Arbitrary normal direction
@@ -307,8 +317,12 @@ vec3 rotate_to_normal(vec3 dir_local, vec3 normal) {
     // Elevation angle (from Z-axis)
     float elevation = acos(clamp(normal.z, -1.0, 1.0));
 
-    // Azimuthal angle (in XY plane)
-    float azimuth = atan(normal.y, normal.x);
+    // Azimuthal angle (in XY plane). atan(y, x) is explicitly undefined in GLSL when both
+    // arguments are zero, which is the case for every perfectly horizontal primitive
+    // (normal == (0,0,+/-1)) and for the (0,0,1) fallback the host substitutes for any
+    // primitive whose vertices are degenerate. The azimuth is arbitrary in that case, so pick
+    // zero rather than leave it to the implementation.
+    float azimuth = (abs(normal.x) > 0.0 || abs(normal.y) > 0.0) ? atan(normal.y, normal.x) : 0.0;
 
     // Rotate local direction to world frame
     // First rotate around Y by elevation, then around Z by azimuth
@@ -406,6 +420,10 @@ void main() {
                 sp_local = sample_triangle(rng);
             } else if (prim_type == 2) { // Disk
                 sp_local = sample_disk(rng);
+            } else {
+                // Voxel (4) or bbox (5): no surface sampler exists, so sp_local would be read
+                // uninitialized below. direct_raygen.comp already skips these; match it.
+                continue;
             }
 
             // Origin masking: reject transparent texels (matches OptiX d_sampleTexture_patch, RayTracing.cuh:504)
@@ -429,9 +447,7 @@ void main() {
                 }
             } else if (prim_type == 1 && mask_ids_buf.mask_ids[prim_idx] >= 0) {
                 // Triangle origin masking via rejection sampling
-                vec2 uv0 = uv_data_buf.uv_data[prim_idx * 4 + 0];
-                vec2 uv1 = uv_data_buf.uv_data[prim_idx * 4 + 1];
-                vec2 uv2 = uv_data_buf.uv_data[prim_idx * 4 + 2];
+                int mask_id = mask_ids_buf.mask_ids[prim_idx];
                 bool masked = true;
                 for (int attempt = 0; attempt < 50 && masked; attempt++) {
                     // Generate random point on canonical triangle
@@ -441,14 +457,7 @@ void main() {
                     sp_local = vec3(r2, r1 + r2, 0.0); // canonical: x=gamma, y=beta+gamma
                     float beta = r1;  // sp_local.y - sp_local.x
                     float gamma = r2; // sp_local.x
-                    vec2 tex_uv = uv0 + beta * (uv1 - uv0) + gamma * (uv2 - uv0);
-                    tex_uv.y = 1.0 - tex_uv.y;
-                    int mask_id = mask_ids_buf.mask_ids[prim_idx];
-                    ivec2 sz = mask_sizes_buf.mask_sizes[mask_id];
-                    uint offset = mask_offsets_buf.mask_offsets[mask_id];
-                    int tx = clamp(int(floor(float(sz.x - 1) * tex_uv.x)), 0, sz.x - 1);
-                    int ty = clamp(int(floor(float(sz.y - 1) * tex_uv.y)), 0, sz.y - 1);
-                    masked = (mask_data_buf.mask_data[offset + ty * sz.x + tx] == 0);
+                    masked = !mask_texel_is_opaque(mask_id, triangle_texture_uv(prim_idx, vec2(beta, gamma)));
                 }
                 if (masked) {
                     continue; // Skip this ray - all 50 attempts hit transparent texels
@@ -464,7 +473,9 @@ void main() {
 
             // Cosine-weighted hemisphere sampling
             // Theta in [0, π/2], Phi in [0, 2π]
-            float theta = asin(sqrt(Rt));
+            // Rt is < 1 by construction, but clamp before asin(): a value even one ulp above 1
+            // would make theta NaN and poison every ray direction launched from this primitive.
+            float theta = asin(sqrt(clamp(Rt, 0.0, 1.0)));
             float phi = 2.0 * 3.14159265359 * Rp;
 
             // Cartesian direction in local hemisphere frame (+Z up)
@@ -577,6 +588,9 @@ void main() {
                 uint mat_idx = prim_idx * pc.material_band_count + global_b;
                 float rho = reflectivity_buf.reflectivity[mat_idx];
                 float tau = transmissivity_buf.transmissivity[mat_idx];
+                uint cam_mat_idx = mat_idx * pc.camera_count + pc.camera_id;
+                float rho_cam = (pc.camera_count > 0u) ? reflectivity_cam_buf.reflectivity_cam[cam_mat_idx] : 0.0;
+                float tau_cam = (pc.camera_count > 0u) ? transmissivity_cam_buf.transmissivity_cam[cam_mat_idx] : 0.0;
 
                 // Compute energy contributions unconditionally (zero for inactive path).
                 // subgroupAdd must be called by all active threads in the subgroup at the same
@@ -584,6 +598,8 @@ void main() {
                 float absorption_val = 0.0;
                 float scatter_top_val = 0.0;
                 float scatter_bottom_val = 0.0;
+                float scatter_top_cam_val = 0.0;
+                float scatter_bottom_cam_val = 0.0;
 
                 if (hit_found) {
                     // ========== HIT: Ray intersected another surface ==========
@@ -601,12 +617,18 @@ void main() {
 
                     float reflect_energy = hit_energy * rho;
                     float transmit_energy = hit_energy * tau;
+                    float reflect_energy_cam = hit_energy * rho_cam;
+                    float transmit_energy_cam = hit_energy * tau_cam;
                     if (pc.launch_face == 1) {
                         scatter_top_val    = reflect_energy;
                         scatter_bottom_val = transmit_energy;
+                        scatter_top_cam_val    = reflect_energy_cam;
+                        scatter_bottom_cam_val = transmit_energy_cam;
                     } else {
                         scatter_bottom_val = reflect_energy;
                         scatter_top_val    = transmit_energy;
+                        scatter_bottom_cam_val = reflect_energy_cam;
+                        scatter_top_cam_val    = transmit_energy_cam;
                     }
 
                 } else {
@@ -614,7 +636,7 @@ void main() {
                     float diffuse_flux = diffuse_flux_buf.diffuse_flux[band];
 
                     if (diffuse_flux > 0.0) {
-                        vec3 peak_dir = diffuse_peak_dir_buf.diffuse_peak_dir[band];
+                        vec3 peak_dir = get_diffuse_peak_dir(band);
                         float extinction = diffuse_extinction_buf.diffuse_extinction[band];
                         float dist_norm = diffuse_dist_norm_buf.diffuse_dist_norm[band];
                         vec4 sky_params = sky_radiance_params_buf.sky_radiance_params[band];
@@ -628,12 +650,18 @@ void main() {
 
                         float sky_reflect  = sky_energy * rho;
                         float sky_transmit = sky_energy * tau;
+                        float sky_reflect_cam  = sky_energy * rho_cam;
+                        float sky_transmit_cam = sky_energy * tau_cam;
                         if (pc.launch_face == 1) {
                             scatter_top_val    = sky_reflect;
                             scatter_bottom_val = sky_transmit;
+                            scatter_top_cam_val    = sky_reflect_cam;
+                            scatter_bottom_cam_val = sky_transmit_cam;
                         } else {
                             scatter_bottom_val = sky_reflect;
                             scatter_top_val    = sky_transmit;
+                            scatter_bottom_cam_val = sky_reflect_cam;
+                            scatter_top_cam_val    = sky_transmit_cam;
                         }
                     }
                 }
@@ -642,6 +670,8 @@ void main() {
                 float absorption_sum    = subgroupAdd(absorption_val);
                 float scatter_top_sum   = subgroupAdd(scatter_top_val);
                 float scatter_bottom_sum = subgroupAdd(scatter_bottom_val);
+                float scatter_top_cam_sum = subgroupAdd(scatter_top_cam_val);
+                float scatter_bottom_cam_sum = subgroupAdd(scatter_bottom_cam_val);
                 if (subgroupElect()) {
                     if (absorption_sum != 0.0)
                         atomicAdd(rad_in_buf.radiation_in[global_idx], absorption_sum);
@@ -649,6 +679,10 @@ void main() {
                         atomicAdd(scatter_top_buf.scatter_top[global_idx], scatter_top_sum);
                     if (scatter_bottom_sum != 0.0)
                         atomicAdd(scatter_bottom_buf.scatter_bottom[global_idx], scatter_bottom_sum);
+                    if (scatter_top_cam_sum != 0.0)
+                        atomicAdd(camera_scatter_top_buf.camera_scatter_top[global_idx], scatter_top_cam_sum);
+                    if (scatter_bottom_cam_sum != 0.0)
+                        atomicAdd(camera_scatter_bottom_buf.camera_scatter_bottom[global_idx], scatter_bottom_cam_sum);
                 }
             } // band loop
         } // ii loop (sub-patches)

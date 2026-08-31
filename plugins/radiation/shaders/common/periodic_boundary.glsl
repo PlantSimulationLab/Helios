@@ -33,7 +33,13 @@ float intersect_bbox_face(vec3 ray_origin, vec3 ray_dir, uint face_idx) {
     vec3 v3 = vec3(bbox_verts_buf.vertices[base + 9], bbox_verts_buf.vertices[base + 10], bbox_verts_buf.vertices[base + 11]);
 
     vec3 anchor = v0;
-    vec3 normal = normalize(cross(v1 - v0, v2 - v0));
+    // Test for degeneracy before normalizing: a zero-extent bbox face gives cross() == 0, and
+    // the resulting NaN normal would slip past the parallel-ray guard below, since
+    // abs(NaN) < 1e-8 evaluates to false.
+    vec3 face_normal = cross(v1 - v0, v2 - v0);
+    float face_normal_length = length(face_normal);
+    if (face_normal_length < 1e-20) return -1.0; // Degenerate face
+    vec3 normal = face_normal / face_normal_length;
 
     float denom = dot(ray_dir, normal);
     if (abs(denom) < 1e-8) return -1.0; // Ray parallel to face

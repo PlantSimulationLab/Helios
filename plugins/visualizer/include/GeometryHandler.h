@@ -37,6 +37,8 @@ public:
             face_index_data[geometry_type] = {};
             vertex_data[geometry_type] = {};
             normal_data[geometry_type] = {};
+            material_index_data[geometry_type] = {};
+            vertex_normal_data[geometry_type] = {};
             color_data[geometry_type] = {};
             uv_data[geometry_type] = {};
             texture_flag_data[geometry_type] = {};
@@ -210,6 +212,37 @@ public:
      * \return Constant pointer to the vector containing normal data.
      */
     [[nodiscard]] const std::vector<float> *getNormalData_ptr(VisualizerGeometryType geometry_type) const;
+
+    //! Retrieves a pointer to the per-vertex normal data
+    /**
+     * \param[in] geometry_type The type of visualizer geometry for which the vertex normal data is requested.
+     * \return Constant pointer to the vector containing per-vertex normal data.
+     */
+    [[nodiscard]] const std::vector<float> *getVertexNormalData_ptr(VisualizerGeometryType geometry_type) const;
+
+    //! Retrieves a pointer to the per-primitive Phong material index data
+    /**
+     * \param[in] geometry_type The type of visualizer geometry for which the material index data is requested.
+     * \return Constant pointer to the vector containing per-primitive material indices.
+     */
+    [[nodiscard]] const std::vector<int> *getMaterialIndexData_ptr(VisualizerGeometryType geometry_type) const;
+
+    //! Set the Phong material table index of an existing primitive
+    /**
+     * \param[in] UUID Unique identifier of the primitive.
+     * \param[in] material_index Index into the Visualizer's packed Phong material table, or -1 to use the global Phong material.
+     */
+    void setMaterialIndex(size_t UUID, int material_index);
+
+    //! Set the per-vertex normals of an existing primitive
+    /**
+     * Used to apply smooth (interpolated) normals to geometry whose source retains connectivity,
+     * such as a Polymesh loaded from an OBJ or PLY file carrying vertex normals.
+     *
+     * \param[in] UUID Unique identifier of the primitive.
+     * \param[in] vertex_normals One normal per vertex of the primitive.
+     */
+    void setVertexNormals(size_t UUID, const std::vector<helios::vec3> &vertex_normals);
 
     /**
      * \brief Sets the color for the geometry identified by a specific UUID.
@@ -446,9 +479,11 @@ private:
         size_t face_index_index;
         size_t vertex_index;
         size_t normal_index;
+        size_t vertex_normal_index;
         size_t uv_index;
         size_t color_index;
         size_t texture_flag_index;
+        size_t material_index_index;
         size_t texture_ID_index;
         size_t coordinate_flag_index;
         size_t visible_index;
@@ -465,9 +500,23 @@ private:
     std::unordered_map<VisualizerGeometryType, std::vector<int>> face_index_data;
     std::unordered_map<VisualizerGeometryType, std::vector<float>> vertex_data;
     std::unordered_map<VisualizerGeometryType, std::vector<float>> normal_data;
+
+    //! Per-vertex normals, three floats per vertex. Distinct from normal_data, which holds one
+    //! face normal per primitive and is consumed as a faceID-indexed texture buffer. This array is
+    //! bound as a vertex attribute so that it interpolates across the primitive, which is what
+    //! makes smooth shading possible. Defaults to the face normal replicated across the vertices,
+    //! so that a primitive with no authored vertex normals shades exactly as it did before.
+    std::unordered_map<VisualizerGeometryType, std::vector<float>> vertex_normal_data;
     std::unordered_map<VisualizerGeometryType, std::vector<float>> uv_data;
     std::unordered_map<VisualizerGeometryType, std::vector<float>> color_data;
     std::unordered_map<VisualizerGeometryType, std::vector<int>> texture_flag_data;
+
+    //! Index into the Visualizer's packed Phong material table, one per primitive.
+    //! Primitives store only this integer rather than the four Phong floats: materials number in the
+    //! tens while primitives number in the millions, so the parameters are resolved once per material
+    //! into a small table and looked up by index on the GPU. A value of -1 means "use the global
+    //! Phong material", which is the default for any material that specifies no Phong data.
+    std::unordered_map<VisualizerGeometryType, std::vector<int>> material_index_data;
     std::unordered_map<VisualizerGeometryType, std::vector<int>> texture_ID_data;
     std::unordered_map<VisualizerGeometryType, std::vector<int>> coordinate_flag_data;
     std::unordered_map<VisualizerGeometryType, std::vector<char>> visible_flag_data;

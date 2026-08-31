@@ -404,6 +404,9 @@ void Context::duplicatePrimitiveData(uint UUID, const char *old_label, const cha
     if (!primitives.at(UUID)->doesPrimitiveDataExist(new_label)) {
         incrementPrimitiveDataLabelCounter(new_label);
     }
+    // The label-only Context::getPrimitiveDataType() answers from the Context-wide registry, not from the primitive, so a label introduced here has to be registered there too. Without it the data exists on
+    // the primitive while the Context reports the label does not exist, which breaks every caller that resolves a type by label -- writeXML() among them.
+    registerOrValidatePrimitiveDataType(new_label, type);
     primitives.at(UUID)->primitive_data_types[new_label] = type;
     if (type == HELIOS_TYPE_INT) {
         primitives.at(UUID)->primitive_data_int[new_label] = primitives.at(UUID)->primitive_data_int.at(old_label);
@@ -445,6 +448,7 @@ void Context::duplicatePrimitiveData(const char *existing_data_label, const char
             if (!primitive->doesPrimitiveDataExist(copy_data_label)) {
                 incrementPrimitiveDataLabelCounter(copy_data_label);
             }
+            registerOrValidatePrimitiveDataType(copy_data_label, type);
             primitive->primitive_data_types[copy_data_label] = type;
             if (type == HELIOS_TYPE_FLOAT) {
                 primitive->primitive_data_float[copy_data_label] = primitive->primitive_data_float.at(existing_data_label);

@@ -473,6 +473,17 @@ TEST_CASE("Primitive Data") {
         DOCTEST_CHECK(ctx.doesPrimitiveDataExist(p1, "global_copy_test_new"));
         DOCTEST_CHECK(!ctx.doesPrimitiveDataExist(p2, "global_copy_test_new"));
 
+        // Regression: renamePrimitiveData() and duplicatePrimitiveData() wrote the new label's type straight onto the
+        // primitive, bypassing the Context-wide type registry that the label-only getPrimitiveDataType() reads. The
+        // data existed on the primitive but the Context reported that the label did not exist at all, which broke
+        // every caller that looks a type up by label -- writeXML() among them.
+        DOCTEST_CHECK_NOTHROW(static_cast<void>(ctx.getPrimitiveDataType("new_data_name")));
+        DOCTEST_CHECK(ctx.getPrimitiveDataType("new_data_name") == HELIOS_TYPE_INT);
+        DOCTEST_CHECK_NOTHROW(static_cast<void>(ctx.getPrimitiveDataType("my_data_copy")));
+        DOCTEST_CHECK(ctx.getPrimitiveDataType("my_data_copy") == HELIOS_TYPE_INT);
+        DOCTEST_CHECK_NOTHROW(static_cast<void>(ctx.getPrimitiveDataType("global_copy_test_new")));
+        DOCTEST_CHECK(ctx.getPrimitiveDataType("global_copy_test_new") == HELIOS_TYPE_FLOAT);
+
         std::vector<std::string> all_labels = ctx.listAllPrimitiveDataLabels();
         DOCTEST_CHECK(std::find(all_labels.begin(), all_labels.end(), "my_data") != all_labels.end());
         DOCTEST_CHECK(std::find(all_labels.begin(), all_labels.end(), "my_data_copy") != all_labels.end());

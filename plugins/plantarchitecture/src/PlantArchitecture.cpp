@@ -1203,17 +1203,18 @@ int Shoot::appendPhytomer(float internode_radius, float internode_length_max, fl
         }
     }
     if (plantarchitecture_ptr->build_context_geometry_petiole) {
+        const std::vector<uint> petiole_objIDs_existing = phytomer->getExistingPetioleObjIDs();
         if (plantarchitecture_ptr->output_object_data.at("age")) {
-            context_ptr->setObjectData(phytomer->petiole_objIDs, "age", phytomer->age);
+            context_ptr->setObjectData(petiole_objIDs_existing, "age", phytomer->age);
         }
         if (plantarchitecture_ptr->output_object_data.at("rank")) {
-            context_ptr->setObjectData(phytomer->petiole_objIDs, "rank", phytomer->rank);
+            context_ptr->setObjectData(petiole_objIDs_existing, "rank", phytomer->rank);
         }
         if (plantarchitecture_ptr->output_object_data.at("plantID")) {
-            context_ptr->setObjectData(phytomer->petiole_objIDs, "plantID", (int) plantID);
+            context_ptr->setObjectData(petiole_objIDs_existing, "plantID", (int) plantID);
         }
         if (plantarchitecture_ptr->output_object_data.at("plant_name")) {
-            context_ptr->setObjectData(phytomer->petiole_objIDs, "plant_name", plantarchitecture_ptr->plant_instances.at(plantID).plant_name);
+            context_ptr->setObjectData(petiole_objIDs_existing, "plant_name", plantarchitecture_ptr->plant_instances.at(plantID).plant_name);
         }
     }
     if (plantarchitecture_ptr->output_object_data.at("age")) {
@@ -1635,8 +1636,9 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         }
     }
     phytomer_parameters.petiole.length.resample();
-    // Always initialize petiole_objIDs vector for potential lazy creation later
-    petiole_objIDs.resize(phytomer_parameters.petiole.petioles_per_internode);
+    // Always initialize petiole_objIDs vector for potential lazy creation later. Filled with the
+    // sentinel rather than default-constructed, since 0 is a valid object ID.
+    petiole_objIDs.assign(phytomer_parameters.petiole.petioles_per_internode, no_petiole_objID);
 
     // initialize leaf variables
     leaf_bases.resize(phytomer_parameters.petiole.petioles_per_internode);
@@ -2015,8 +2017,8 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         }
 
         if (build_context_geometry_petiole && !suppress_petiole_geometry.at(petiole)) {
-            petiole_objIDs.at(petiole) = makeTubeFromCones(Ndiv_petiole_radius, petiole_vertices.at(petiole), petiole_radii.at(petiole), petiole_colors, context_ptr);
-            if (!petiole_objIDs.at(petiole).empty()) {
+            petiole_objIDs.at(petiole) = makePetioleTube(Ndiv_petiole_radius, petiole_vertices.at(petiole), petiole_radii.at(petiole), petiole_colors, context_ptr);
+            if (context_ptr->doesObjectExist(petiole_objIDs.at(petiole))) {
                 context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(petiole_objIDs.at(petiole)), "object_label", "petiole");
                 std::string petiole_material_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_" + parent_shoot->shoot_type_label + "_petiole";
                 renameAutoMaterial(context_ptr, petiole_objIDs.at(petiole), petiole_material_name);
@@ -2667,7 +2669,7 @@ void Phytomer::setPetioleBase(const helios::vec3 &base_position) {
     }
 
     if (build_context_geometry_petiole) {
-        context_ptr->translateObject(flatten(petiole_objIDs), shift);
+        context_ptr->translateObject(getExistingPetioleObjIDs(), shift);
     }
     context_ptr->translateObject(flatten(leaf_objIDs), shift);
 
@@ -2773,7 +2775,7 @@ void Phytomer::rotatePetiole(uint petiole_index, const AxisRotation &rotation) {
         if (angle == 0.f) {
             return;
         }
-        if (!petiole_objIDs.at(petiole_index).empty()) {
+        if (context_ptr->doesObjectExist(petiole_objIDs.at(petiole_index))) {
             context_ptr->rotateObject(petiole_objIDs.at(petiole_index), angle, base, axis);
         }
         if (petiole_index < leaf_objIDs.size() && !leaf_objIDs.at(petiole_index).empty()) {
@@ -2896,7 +2898,7 @@ void Phytomer::setLeafScaleFraction(uint petiole_index, float leaf_scale_factor_
     }
 
     // If the leaf is already at leaf_scale_factor_fraction, or there are no petioles/leaves, nothing to do.
-    if (leaf_scale_factor_fraction == current_leaf_scale_factor.at(petiole_index) || (leaf_objIDs.at(petiole_index).empty() && petiole_objIDs.at(petiole_index).empty())) {
+    if (leaf_scale_factor_fraction == current_leaf_scale_factor.at(petiole_index) || (leaf_objIDs.at(petiole_index).empty() && !context_ptr->doesObjectExist(petiole_objIDs.at(petiole_index)))) {
         return;
     }
 
@@ -2910,39 +2912,26 @@ void Phytomer::setLeafScaleFraction(uint petiole_index, float leaf_scale_factor_
 
     // scale the petiole geometry if it exists, or create it if it doesn't but should now
 
-    if (!petiole_objIDs.at(petiole_index).empty()) {
-        int node = 0;
-        vec3 last_base = petiole_vertices.at(petiole_index).front(); // looping over petioles
-        for (uint objID: petiole_objIDs.at(petiole_index)) {
-            // looping over cones/segments within petiole
-            context_ptr->scaleConeObjectLength(objID, delta_scale);
-            context_ptr->scaleConeObjectGirth(objID, delta_scale);
-            petiole_radii.at(petiole_index).at(node) *= delta_scale;
-            if (node > 0) {
-                vec3 new_base = context_ptr->getConeObjectNode(objID, 0);
-                context_ptr->translateObject(objID, last_base - new_base);
-            } else {
-                petiole_vertices.at(petiole_index).at(0) = context_ptr->getConeObjectNode(objID, 0);
-            }
-            last_base = context_ptr->getConeObjectNode(objID, 1);
-            petiole_vertices.at(petiole_index).at(node + 1) = last_base;
-            node++;
-        }
-    } else if (build_context_geometry_petiole) {
-        // Petiole geometry doesn't exist - scale the radii AND vertices data and try to create geometry
-        vec3 base = petiole_vertices.at(petiole_index).at(0);
-        for (uint node = 0; node < petiole_radii.at(petiole_index).size(); node++) {
-            petiole_radii.at(petiole_index).at(node) *= delta_scale;
-        }
-        // Scale vertices relative to base point to match the scaling of existing geometry
-        for (uint node = 1; node < petiole_vertices.at(petiole_index).size(); node++) {
-            vec3 offset = petiole_vertices.at(petiole_index).at(node) - base;
-            petiole_vertices.at(petiole_index).at(node) = base + offset * delta_scale;
-        }
+    // Scale the stored centerline about the petiole base, and the radii uniformly. The geometry is
+    // then driven from these arrays, so both the existing-geometry and create-geometry cases below
+    // work from the same scaled state.
+    const vec3 base = petiole_vertices.at(petiole_index).at(0);
+    for (uint node = 0; node < petiole_radii.at(petiole_index).size(); node++) {
+        petiole_radii.at(petiole_index).at(node) *= delta_scale;
+    }
+    for (uint node = 1; node < petiole_vertices.at(petiole_index).size(); node++) {
+        vec3 offset = petiole_vertices.at(petiole_index).at(node) - base;
+        petiole_vertices.at(petiole_index).at(node) = base + offset * delta_scale;
+    }
 
+    if (context_ptr->doesObjectExist(petiole_objIDs.at(petiole_index))) {
+        context_ptr->setTubeNodes(petiole_objIDs.at(petiole_index), petiole_vertices.at(petiole_index));
+        context_ptr->setTubeRadii(petiole_objIDs.at(petiole_index), petiole_radii.at(petiole_index));
+    } else if (build_context_geometry_petiole) {
+        // Petiole geometry doesn't exist - try to create it now that it has been scaled up
         uint Ndiv_petiole_radius = std::max(uint(3), phytomer_parameters.petiole.radial_subdivisions);
-        petiole_objIDs.at(petiole_index) = makeTubeFromCones(Ndiv_petiole_radius, petiole_vertices.at(petiole_index), petiole_radii.at(petiole_index), petiole_colors, context_ptr);
-        if (!petiole_objIDs.at(petiole_index).empty()) {
+        petiole_objIDs.at(petiole_index) = makePetioleTube(Ndiv_petiole_radius, petiole_vertices.at(petiole_index), petiole_radii.at(petiole_index), petiole_colors, context_ptr);
+        if (context_ptr->doesObjectExist(petiole_objIDs.at(petiole_index))) {
             context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(petiole_objIDs.at(petiole_index)), "object_label", "petiole");
             std::string petiole_material_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_" + parent_shoot_ptr->shoot_type_label + "_petiole";
             renameAutoMaterial(context_ptr, petiole_objIDs.at(petiole_index), petiole_material_name);
@@ -3079,23 +3068,11 @@ void Phytomer::scalePetioleGeometry(uint petiole_index, float target_length, flo
     // Update scalar length
     petiole_length.at(petiole_index) = target_length;
 
-    // Update the Context geometry if it exists
-    if (!petiole_objIDs.at(petiole_index).empty()) {
-        // Delete existing geometry
-        context_ptr->deleteObject(petiole_objIDs.at(petiole_index));
-
-        // Recreate tube with updated vertices and radii
-        std::vector<RGBcolor> petiole_colors(petiole_radii.at(petiole_index).size(), phytomer_parameters.petiole.color);
-        uint Ndiv_petiole_radius = std::max(uint(3), phytomer_parameters.petiole.radial_subdivisions);
-
-        petiole_objIDs.at(petiole_index) = makeTubeFromCones(Ndiv_petiole_radius, petiole_vertices.at(petiole_index), petiole_radii.at(petiole_index), petiole_colors, context_ptr);
-
-        // Restore primitive data labels
-        if (!petiole_objIDs.at(petiole_index).empty()) {
-            context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(petiole_objIDs.at(petiole_index)), "object_label", "petiole");
-            std::string petiole_material_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_" + parent_shoot_ptr->shoot_type_label + "_petiole";
-            renameAutoMaterial(context_ptr, petiole_objIDs.at(petiole_index), petiole_material_name);
-        }
+    // Update the Context geometry in place if it exists. The tube keeps its object ID, its
+    // primitive data and its material, so none of those need to be reapplied.
+    if (context_ptr->doesObjectExist(petiole_objIDs.at(petiole_index))) {
+        context_ptr->setTubeNodes(petiole_objIDs.at(petiole_index), petiole_vertices.at(petiole_index));
+        context_ptr->setTubeRadii(petiole_objIDs.at(petiole_index), petiole_radii.at(petiole_index));
     }
 
     // Translate leaf bases to maintain their relative positions along the scaled petiole
@@ -3168,8 +3145,8 @@ void Phytomer::removeLeaf() {
     leaf_bases.clear();
 
     if (build_context_geometry_petiole) {
-        context_ptr->deleteObject(flatten(petiole_objIDs));
-        petiole_objIDs.resize(0);
+        context_ptr->deleteObject(getExistingPetioleObjIDs());
+        petiole_objIDs.clear();
     }
 }
 
@@ -4920,8 +4897,8 @@ std::vector<uint> PlantArchitecture::getAllPlantObjectIDs(uint plantID) const {
             objIDs.push_back(shoot->internode_tube_objID);
         }
         for (const auto &phytomer: shoot->phytomers) {
-            std::vector<uint> petiole_objIDs_flat = flatten(phytomer->petiole_objIDs);
-            objIDs.insert(objIDs.end(), petiole_objIDs_flat.begin(), petiole_objIDs_flat.end());
+            std::vector<uint> petiole_objIDs_existing = phytomer->getExistingPetioleObjIDs();
+            objIDs.insert(objIDs.end(), petiole_objIDs_existing.begin(), petiole_objIDs_existing.end());
             std::vector<uint> leaf_objIDs_flat = flatten(phytomer->leaf_objIDs);
             objIDs.insert(objIDs.end(), leaf_objIDs_flat.begin(), leaf_objIDs_flat.end());
             for (auto &petiole: phytomer->floral_buds) {
@@ -5048,9 +5025,8 @@ std::vector<uint> PlantArchitecture::getPlantPetioleObjectIDs(uint plantID) cons
 
     for (auto &shoot: shoot_tree) {
         for (auto &phytomer: shoot->phytomers) {
-            for (auto &petiole: phytomer->petiole_objIDs) {
-                objIDs.insert(objIDs.end(), petiole.begin(), petiole.end());
-            }
+            std::vector<uint> petiole_objIDs_existing = phytomer->getExistingPetioleObjIDs();
+            objIDs.insert(objIDs.end(), petiole_objIDs_existing.begin(), petiole_objIDs_existing.end());
         }
     }
 
@@ -6105,7 +6081,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 // Update each phytomer's petiole, leaf, and floral bud age
                 for (auto &phytomer: shoot->phytomers) {
                     if (phytomer->build_context_geometry_petiole) {
-                        context_ptr->setObjectData(phytomer->petiole_objIDs, "age", phytomer->age);
+                        context_ptr->setObjectData(phytomer->getExistingPetioleObjIDs(), "age", phytomer->age);
                     }
                     context_ptr->setObjectData(phytomer->leaf_objIDs, "age", phytomer->age);
                     for (auto &petiole: phytomer->floral_buds) {
@@ -6464,13 +6440,10 @@ void PlantArchitecture::pruneSolidBoundaryCollisions() {
                 }
 
                 // Check petiole objects for collision
-                for (uint petiole = 0; petiole < phytomer->petiole_objIDs.size(); petiole++) {
-                    for (uint segment = 0; segment < phytomer->petiole_objIDs.at(petiole).size(); segment++) {
-                        uint petiole_objID = phytomer->petiole_objIDs.at(petiole).at(segment);
-                        if (collision_set.count(petiole_objID)) {
-                            phytomer->removeLeaf();
-                            break; // removeLeaf() removes petiole and all leaflets
-                        }
+                for (uint petiole_objID: phytomer->petiole_objIDs) {
+                    if (collision_set.count(petiole_objID)) {
+                        phytomer->removeLeaf();
+                        break; // removeLeaf() removes petiole and all leaflets
                     }
                 }
 
@@ -6514,18 +6487,32 @@ void PlantArchitecture::pruneSolidBoundaryCollisions() {
     }
 }
 
-std::vector<uint> makeTubeFromCones(uint radial_subdivisions, const std::vector<helios::vec3> &vertices, const std::vector<float> &radii, const std::vector<helios::RGBcolor> &colors, helios::Context *context_ptr) {
+std::vector<uint> Phytomer::getExistingPetioleObjIDs() const {
+    std::vector<uint> objIDs;
+    objIDs.reserve(petiole_objIDs.size());
+    for (uint objID: petiole_objIDs) {
+        if (context_ptr->doesObjectExist(objID)) {
+            objIDs.push_back(objID);
+        }
+    }
+    return objIDs;
+}
+
+uint makePetioleTube(uint radial_subdivisions, const std::vector<helios::vec3> &vertices, const std::vector<float> &radii, const std::vector<helios::RGBcolor> &colors, helios::Context *context_ptr) {
     uint Nverts = vertices.size();
 
     if (radii.size() != Nverts || colors.size() != Nverts) {
-        helios_runtime_error("ERROR (makeTubeFromCones): Length of vertex vectors is not consistent.");
+        helios_runtime_error("ERROR (makePetioleTube): Length of vertex vectors is not consistent.");
+    }
+
+    // A tube needs at least two nodes to have any extent.
+    if (Nverts < 2) {
+        return Phytomer::no_petiole_objID;
     }
 
     // Check if tube is too small to create geometry - check both radii and total length
     bool all_radii_too_small = true;
-    float max_radius = 0.0f;
     for (float radius: radii) {
-        max_radius = std::max(max_radius, radius);
         if (radius >= MIN_TUBE_RADIUS_FOR_GEOMETRY) {
             all_radii_too_small = false;
             break;
@@ -6538,25 +6525,38 @@ std::vector<uint> makeTubeFromCones(uint radial_subdivisions, const std::vector<
         total_length += (vertices.at(v + 1) - vertices.at(v)).magnitude();
     }
 
-
-    // Return empty if either condition fails
     if (all_radii_too_small || total_length < MIN_TUBE_LENGTH_FOR_GEOMETRY) {
-        return std::vector<uint>();
+        return Phytomer::no_petiole_objID;
     }
 
-    std::vector<uint> objIDs;
-    objIDs.reserve(Nverts - 1);
+    // Drop nodes that coincide with their predecessor. Zero-length segments would produce
+    // degenerate triangles, and addTubeObject does not skip them the way the previous
+    // cone-by-cone construction did.
+    std::vector<helios::vec3> tube_vertices;
+    std::vector<float> tube_radii;
+    std::vector<helios::RGBcolor> tube_colors;
+    tube_vertices.reserve(Nverts);
+    tube_radii.reserve(Nverts);
+    tube_colors.reserve(Nverts);
 
-    for (uint v = 0; v < Nverts - 1; v++) {
-        if ((vertices.at(v + 1) - vertices.at(v)).magnitude() < 1e-6f) {
+    tube_vertices.push_back(vertices.front());
+    tube_radii.push_back(std::max(radii.front(), MIN_TUBE_RADIUS_FOR_GEOMETRY));
+    tube_colors.push_back(colors.front());
+
+    for (uint v = 1; v < Nverts; v++) {
+        if ((vertices.at(v) - tube_vertices.back()).magnitude() < 1e-6f) {
             continue;
         }
-        float r0 = std::max(radii.at(v), MIN_TUBE_RADIUS_FOR_GEOMETRY);
-        float r1 = std::max(radii.at(v + 1), MIN_TUBE_RADIUS_FOR_GEOMETRY);
-        objIDs.push_back(context_ptr->addConeObject(radial_subdivisions, vertices.at(v), vertices.at(v + 1), r0, r1, colors.at(v)));
+        tube_vertices.push_back(vertices.at(v));
+        tube_radii.push_back(std::max(radii.at(v), MIN_TUBE_RADIUS_FOR_GEOMETRY));
+        tube_colors.push_back(colors.at(v));
     }
 
-    return objIDs;
+    if (tube_vertices.size() < 2) {
+        return Phytomer::no_petiole_objID;
+    }
+
+    return context_ptr->addTubeObject(radial_subdivisions, tube_vertices, tube_radii, tube_colors);
 }
 
 bool PlantArchitecture::detectGroundCollision(uint objID) {

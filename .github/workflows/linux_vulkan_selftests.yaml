@@ -1,0 +1,79 @@
+name: Build and Run Radiation on Vulkan (lavapipe)
+
+# The Vulkan compute (software BVH) backend is compiled by every hosted runner but its runtime
+# path is exercised by none of them: the hosted runners have no Vulkan ICD, so every
+# GPU_TEST_CASE skips, and the self-hosted GPU runners have CUDA, so RayTracingBackend::create()
+# selects OptiX. The backend therefore shipped defects that the whole suite passed straight over
+# (a multi-source scene silently receiving flux from only its first source, among others).
+#
+# lavapipe is Mesa's CPU Vulkan implementation. It is slow, but it is a real, conformant Vulkan
+# driver on a free runner, so it actually runs the compute shaders. Kept as its own workflow so a
+# lavapipe or Mesa regression cannot block the main Linux suite.
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+
+  radiation_vulkan_linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Vulkan loader and the lavapipe software driver
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libvulkan-dev glslang-tools mesa-vulkan-drivers vulkan-tools
+
+          # Resolve the lavapipe ICD manifest and publish it to $GITHUB_ENV so every later step
+          # pins the same driver without repeating the path. The filename is NOT portable: an
+          # upstream Mesa build installs lvp_icd.<arch>.json, while Debian/Ubuntu's
+          # mesa-vulkan-drivers package drops the arch suffix and ships lvp_icd.json. Hardcoding
+          # either spelling breaks on the other, so glob and fail loudly if nothing matches.
+          LVP_ICD=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json 2>/dev/null | head -1)
+          if [ -z "$LVP_ICD" ]; then
+            echo "No lavapipe ICD manifest found under /usr/share/vulkan/icd.d/."
+            echo "Contents of /usr/share/vulkan/icd.d/:"
+            ls -la /usr/share/vulkan/icd.d/ || echo "  (directory does not exist)"
+            exit 1
+          fi
+          echo "Using lavapipe ICD manifest: $LVP_ICD"
+          echo "VK_ICD_FILENAMES=$LVP_ICD" >> "$GITHUB_ENV"
+
+      # Fail here, with the driver list in the log, rather than 20 minutes later with an
+      # unexplained skip. VK_ICD_FILENAMES, resolved in the install step above, pins the loader
+      # to lavapipe so the job cannot quietly fall back to some other driver that happens to be
+      # present.
+      # The backend requires two optional Vulkan capabilities: VK_EXT_shader_atomic_float
+      # (shaderBufferFloat32AtomicAdd) and compute-stage subgroup basic + arithmetic operations.
+      # VulkanDevice::createLogicalDevice() refuses the device without the latter. vulkaninfo
+      # prints both, so if this job ever fails at device creation the summary below is the first
+      # place to look.
+      - name: Verify lavapipe is present and usable
+        run: |
+          vulkaninfo --summary
+
+      - name: Run radiation self-tests against the Vulkan backend
+        run: |
+          cd utilities
+          # --force-vulkan builds with -DFORCE_VULKAN_BACKEND=ON so OptiX is never selected.
+          # --requiregpu turns a would-be GPU test skip into a hard failure: without it a job
+          # that finds no usable driver reports success having tested nothing, which is exactly
+          # the blind spot this workflow exists to close.
+          #
+          # Only the "Backend Invariant - " group runs here. lavapipe is a CPU driver, and the
+          # full radiation suite includes tests that trace 500,000 diffuse rays per primitive,
+          # which take minutes even on a real GPU. This group is analytic, covers the paths the
+          # backend actually gets wrong (multi-source, per-band sky, occlusion and alpha-mask
+          # energy, finite camera output), and runs in well under a second on a real GPU.
+          if ! ./run_tests.sh --test radiation --force-vulkan --requiregpu --doctestargs "-tc=*Backend Invariant*" --log-file ../linux_vulkan_selftests.log; then
+            echo "==== run_tests.sh failed; dumping linux_vulkan_selftests.log ===="
+            cat ../linux_vulkan_selftests.log
+            exit 1
+          fi

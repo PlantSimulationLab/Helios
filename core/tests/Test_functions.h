@@ -561,6 +561,39 @@ TEST_CASE("String, File Path, and Parsing Utilities") {
         DOCTEST_CHECK(u == 123u);
         DOCTEST_CHECK(!parse_uint("-123", u));
     }
+    SUBCASE("Primitive Type Parsing - out-of-range values") {
+        // Regression: all four parsers caught only std::invalid_argument, so a value too large for the
+        // underlying std::stoi/std::stod escaped as a raw std::out_of_range instead of being reported as a
+        // failed parse. parse_uint() additionally parsed through std::stoi, which cannot represent the upper
+        // half of the uint range at all -- so Context::writeXML() could emit a uint that Context::loadXML()
+        // then failed to read back.
+        unsigned int u;
+        DOCTEST_CHECK_NOTHROW(parse_uint("3000000000", u));
+        DOCTEST_CHECK(parse_uint("3000000000", u));
+        DOCTEST_CHECK(u == 3000000000u);
+        DOCTEST_CHECK_NOTHROW(parse_uint("4294967295", u));
+        DOCTEST_CHECK(parse_uint("4294967295", u));
+        DOCTEST_CHECK(u == 4294967295u);
+        // One past the top of the range is a failed parse, not an exception.
+        DOCTEST_CHECK_NOTHROW(parse_uint("4294967296", u));
+        DOCTEST_CHECK(!parse_uint("4294967296", u));
+        DOCTEST_CHECK_NOTHROW(parse_uint("99999999999999999999", u));
+        DOCTEST_CHECK(!parse_uint("99999999999999999999", u));
+
+        int i;
+        DOCTEST_CHECK_NOTHROW(parse_int("99999999999999999999", i));
+        DOCTEST_CHECK(!parse_int("99999999999999999999", i));
+        DOCTEST_CHECK_NOTHROW(parse_int("-99999999999999999999", i));
+        DOCTEST_CHECK(!parse_int("-99999999999999999999", i));
+
+        float f;
+        DOCTEST_CHECK_NOTHROW(parse_float("1e999", f));
+        DOCTEST_CHECK(!parse_float("1e999", f));
+
+        double d;
+        DOCTEST_CHECK_NOTHROW(parse_double("1e999", d));
+        DOCTEST_CHECK(!parse_double("1e999", d));
+    }
     SUBCASE("Compound Type Parsing") {
         int2 i2;
         DOCTEST_CHECK(parse_int2("1 2", i2));

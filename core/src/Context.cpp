@@ -1249,7 +1249,28 @@ uint Context::copyObject(uint ObjID) {
 
         objects[currentObjectID] = disk_new;
     } else if (type == OBJECT_TYPE_POLYMESH) {
+        Polymesh *o = getPolymeshObjectPointer_private(ObjID);
+
         auto *polymesh_new = (new Polymesh(currentObjectID, UUIDs_copy, texturefile.c_str(), this));
+
+        // Copy the mesh topology directly from the source object's local-frame storage. Going through the world-space accessors instead would re-apply the source transform on top of the copy, because the
+        // transformation matrix is assigned to the new object further below.
+        polymesh_new->vertices = o->vertices;
+        polymesh_new->vertex_normals = o->vertex_normals;
+        polymesh_new->vertex_uv = o->vertex_uv;
+        polymesh_new->faces = o->faces;
+        polymesh_new->normal_source = o->normal_source;
+
+        // The face table is keyed by primitive UUID, so remap it onto the copied primitives. copyPrimitive() preserves order, giving a positional correspondence between UUIDs and UUIDs_copy.
+        std::unordered_map<uint, uint> UUID_source_to_copy;
+        for (size_t p = 0; p < UUIDs.size(); p++) {
+            UUID_source_to_copy[UUIDs.at(p)] = UUIDs_copy.at(p);
+        }
+        polymesh_new->face_UUIDs.resize(o->face_UUIDs.size());
+        for (size_t f = 0; f < o->face_UUIDs.size(); f++) {
+            polymesh_new->face_UUIDs.at(f) = UUID_source_to_copy.at(o->face_UUIDs.at(f));
+            polymesh_new->UUID_to_face[polymesh_new->face_UUIDs.at(f)] = f;
+        }
 
         objects[currentObjectID] = polymesh_new;
     } else if (type == OBJECT_TYPE_CONE) {
@@ -4935,6 +4956,18 @@ float Context::getConeObjectVolume(uint ObjID) const {
     return getConeObjectPointer_private(ObjID)->getVolume();
 }
 
+bool Context::doesObjectHaveAnalyticVertexNormals(uint ObjID) const {
+    return getObjectPointer_private(ObjID)->hasAnalyticVertexNormals();
+}
+
+std::vector<helios::vec3> Context::getObjectPrimitiveVertexNormals(uint ObjID, uint UUID) const {
+    return getObjectPointer_private(ObjID)->getPrimitiveVertexNormals(UUID);
+}
+
+std::vector<std::vector<helios::vec3>> Context::getObjectPrimitiveVertexNormals(uint ObjID, const std::vector<uint> &UUIDs) const {
+    return getObjectPointer_private(ObjID)->getPrimitiveVertexNormals(UUIDs);
+}
+
 void Context::scaleConeObjectLength(uint ObjID, float scale_factor) {
     getConeObjectPointer_private(ObjID)->scaleLength(scale_factor);
 }
@@ -4945,6 +4978,80 @@ void Context::scaleConeObjectGirth(uint ObjID, float scale_factor) {
 
 float Context::getPolymeshObjectVolume(uint ObjID) const {
     return getPolymeshObjectPointer_private(ObjID)->getVolume();
+}
+
+void Context::setPolymeshObjectTopology(uint ObjID, const std::vector<helios::vec3> &vertices, const std::vector<helios::int3> &faces, const std::vector<uint> &face_UUIDs,
+                                        const std::vector<helios::vec3> &vertex_normals, const std::vector<helios::vec2> &vertex_uv, helios::VertexNormalSource normal_source) {
+    for (uint UUID: face_UUIDs) {
+        if (!doesPrimitiveExist(UUID)) {
+            helios_runtime_error("ERROR (Context::setPolymeshObjectTopology): Primitive UUID " + std::to_string(UUID) + " does not exist in the Context. Every face must correspond to an existing primitive.");
+        }
+        if (getPrimitiveParentObjectID(UUID) != ObjID) {
+            helios_runtime_error("ERROR (Context::setPolymeshObjectTopology): Primitive UUID " + std::to_string(UUID) + " does not belong to object " + std::to_string(ObjID) +
+                                 ". Every face must correspond to a primitive that is a member of the object.");
+        }
+    }
+    getPolymeshObjectPointer_private(ObjID)->setTopology(vertices, faces, face_UUIDs, vertex_normals, vertex_uv, normal_source);
+}
+
+size_t Context::getPolymeshObjectFaceIndexForPrimitive(uint ObjID, uint UUID) const {
+    return getPolymeshObjectPointer_private(ObjID)->getFaceIndexForPrimitive(UUID);
+}
+
+uint Context::getPolymeshObjectPrimitiveUUIDForFace(uint ObjID, size_t face_index) const {
+    return getPolymeshObjectPointer_private(ObjID)->getPrimitiveUUIDForFace(face_index);
+}
+
+std::vector<helios::vec3> Context::getPolymeshObjectVertices(uint ObjID) const {
+    return getPolymeshObjectPointer_private(ObjID)->getVertices();
+}
+
+std::vector<helios::int3> Context::getPolymeshObjectFaces(uint ObjID) const {
+    return getPolymeshObjectPointer_private(ObjID)->getFaces();
+}
+
+std::vector<helios::vec3> Context::getPolymeshObjectVertexNormals(uint ObjID) const {
+    return getPolymeshObjectPointer_private(ObjID)->getVertexNormals();
+}
+
+std::vector<helios::vec2> Context::getPolymeshObjectVertexUV(uint ObjID) const {
+    return getPolymeshObjectPointer_private(ObjID)->getVertexUV();
+}
+
+bool Context::doesPolymeshObjectHaveVertexNormals(uint ObjID) const {
+    return getPolymeshObjectPointer_private(ObjID)->hasVertexNormals();
+}
+
+helios::VertexNormalSource Context::getPolymeshObjectVertexNormalSource(uint ObjID) const {
+    return getPolymeshObjectPointer_private(ObjID)->getVertexNormalSource();
+}
+
+size_t Context::getPolymeshObjectVertexCount(uint ObjID) const {
+    return getPolymeshObjectPointer_private(ObjID)->getVertexCount();
+}
+
+size_t Context::getPolymeshObjectFaceCount(uint ObjID) const {
+    return getPolymeshObjectPointer_private(ObjID)->getFaceCount();
+}
+
+void Context::computePolymeshObjectVertexNormals(uint ObjID, float crease_angle_degrees) {
+    getPolymeshObjectPointer_private(ObjID)->computeVertexNormals(crease_angle_degrees);
+}
+
+bool Context::isPolymeshObjectClosed(uint ObjID) const {
+    return getPolymeshObjectPointer_private(ObjID)->isClosed();
+}
+
+std::vector<helios::int2> Context::getPolymeshObjectBoundaryEdges(uint ObjID) const {
+    return getPolymeshObjectPointer_private(ObjID)->getBoundaryEdges();
+}
+
+std::vector<std::vector<size_t>> Context::getPolymeshObjectConnectedComponents(uint ObjID) const {
+    return getPolymeshObjectPointer_private(ObjID)->getConnectedComponents();
+}
+
+float Context::getPolymeshObjectSurfaceArea(uint ObjID) const {
+    return getPolymeshObjectPointer_private(ObjID)->getSurfaceArea();
 }
 
 void Context::reportAPIWarnings() const {

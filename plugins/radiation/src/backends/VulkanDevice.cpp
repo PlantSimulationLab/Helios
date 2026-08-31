@@ -417,6 +417,30 @@ namespace helios {
 
         bool enable_atomic_float = atomic_float_features.shaderBufferFloat32AtomicAdd;
 
+        // The direct and diffuse ray-generation shaders reduce each subgroup's energy
+        // contribution with subgroupAdd()/subgroupElect() before issuing one atomic per
+        // subgroup. Both are optional in Vulkan 1.1: a device may support no subgroup
+        // operations at all, or support them outside the compute stage only. Without this
+        // check the pipelines are created against capabilities the device never advertised,
+        // and the failure surfaces as wrong accumulated energy rather than as a clear error.
+        VkPhysicalDeviceSubgroupProperties subgroup_properties{};
+        subgroup_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_PROPERTIES;
+        subgroup_properties.pNext = nullptr;
+
+        VkPhysicalDeviceProperties2 properties2{};
+        properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+        properties2.pNext = &subgroup_properties;
+        vkGetPhysicalDeviceProperties2(physical_device, &properties2);
+
+        const VkSubgroupFeatureFlags required_subgroup_ops = VK_SUBGROUP_FEATURE_BASIC_BIT | VK_SUBGROUP_FEATURE_ARITHMETIC_BIT;
+        if ((subgroup_properties.supportedOperations & required_subgroup_ops) != required_subgroup_ops || (subgroup_properties.supportedStages & VK_SHADER_STAGE_COMPUTE_BIT) == 0) {
+            helios_runtime_error("ERROR (VulkanDevice::createLogicalDevice): the Vulkan device does not support the subgroup operations the radiation compute shaders require (basic + arithmetic, in the compute stage). "
+                                 "Reported supportedOperations = " +
+                                 std::to_string(subgroup_properties.supportedOperations) + ", supportedStages = " + std::to_string(subgroup_properties.supportedStages) +
+                                 ". Use a device or driver that supports VK_SUBGROUP_FEATURE_BASIC_BIT and VK_SUBGROUP_FEATURE_ARITHMETIC_BIT for compute, or build with an OptiX backend instead.");
+        }
+        subgroup_size = subgroup_properties.subgroupSize;
+
         VkDeviceCreateInfo create_info{};
         create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         create_info.pQueueCreateInfos = &queue_create_info;

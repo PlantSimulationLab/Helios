@@ -905,6 +905,234 @@
    }
   ~~~~~~
 
+  \subsubsection PhongMaterial Material properties and ambient light
+
+  The shading model combines three terms: a hemispheric ambient term, a Lambertian diffuse term,
+  and a Blinn-Phong specular highlight. Their relative weights are controlled with
+  \ref Visualizer::setPhongMaterial(), which takes a \ref Visualizer::PhongMaterial struct.
+
+ <table>
+   <tr><th>Parameter</th><th>Meaning</th><th>Default</th></tr>
+   <tr><td><code>ambient</code></td><td>Weight of the hemispheric ambient contribution</td><td>1.0</td></tr>
+   <tr><td><code>diffuse</code></td><td>Weight of the Lambertian diffuse contribution</td><td>0.8</td></tr>
+   <tr><td><code>specular</code></td><td>Weight of the specular highlight. Zero removes it entirely.</td><td>0.2</td></tr>
+   <tr><td><code>shininess</code></td><td>Specular exponent. Larger values give a tighter highlight.</td><td>32</td></tr>
+ </table>
+
+  The specular highlight is what makes foliage read as living tissue rather than matte paper, and
+  is most effective in combination with \ref Visualizer::enableLinearPipeline(), which lets bright
+  highlights roll off smoothly rather than clipping to white.
+
+  Ambient light is modeled hemispherically rather than as a single constant. Light is taken to
+  arrive as one color from above (the sky) and another from below (bounce off the ground), blended
+  according to the vertical component of the surface normal. Surfaces facing away from the sun
+  therefore retain soft directional shading instead of the flat, uniform fill a constant ambient
+  term produces. The two colors are set with \ref Visualizer::setAmbientColors(); setting both to
+  the same value recovers a constant ambient term.
+
+  ~~~~~~{.cpp}
+   #include "Visualizer.h"
+
+   int main(){
+      Visualizer vis( 1200 );
+
+      vis.setLightingModel( Visualizer::LIGHTING_PHONG_SHADOWED );
+      vis.setLightDirection( make_vec3(1,1,1) );
+
+      // A glossier surface, as for a wet or waxy leaf
+      Visualizer::PhongMaterial material;
+      material.ambient = 1.0f;
+      material.diffuse = 0.8f;
+      material.specular = 0.6f;
+      material.shininess = 64.f;
+      vis.setPhongMaterial( material );
+
+      // Cool skylight from above, warm soil bounce from below
+      vis.setAmbientColors( make_RGBcolor(0.5f,0.6f,0.75f), make_RGBcolor(0.35f,0.3f,0.22f) );
+   }
+  ~~~~~~
+
+  \subsubsection HeadlessAntiAliasing Anti-aliasing in headless mode
+
+  The number of anti-aliasing samples is given as the third argument to the \ref Visualizer
+  constructor. In windowed mode these samples come from the window's own framebuffer; in headless
+  mode the Visualizer renders into a multisampled framebuffer of its own and resolves it before the
+  image is read back, so saved figures are anti-aliased rather than hard-edged.
+
+  The requested sample count is clamped to what the driver reports as its maximum, and if the driver
+  will not provide multisampled attachments at all the Visualizer falls back to rendering without
+  them. \ref Visualizer::isHeadlessMultisamplingActive() reports which of those happened, since the
+  fallback is otherwise silent.
+
+  ~~~~~~{.cpp}
+   #include "Visualizer.h"
+
+   int main(){
+      Context context;
+      // ... build geometry ...
+
+      Visualizer vis( 1200, 800, 8, true, true ); // 8 samples, headless
+      vis.buildContextGeometry( &context );
+      vis.plotUpdate();
+      vis.printWindow( "figure.jpeg" );
+   }
+  ~~~~~~
+
+  \note On macOS, OpenGL is a deprecated translation layer over Metal that accepts multisampled
+  framebuffer attachments but does not rasterize into them: the resolved image is identical to an
+  unantialiased one. \ref Visualizer::isHeadlessMultisamplingActive() still reports true there,
+  because the attachments were created successfully. Headless anti-aliasing is effective on drivers
+  with native OpenGL support.
+
+  \subsubsection PerMaterialPhong Per-material Phong parameters
+
+  \ref Visualizer::setPhongMaterial() sets the parameters used for the whole scene. Individual
+  material groups can override them by attaching material data with the labels below, so that
+  glossy leaves, matte soil and wet fruit can coexist in one render.
+
+ <table>
+   <tr><th>Material data label</th><th>Type</th><th>Meaning</th></tr>
+   <tr><td><code>phong_ambient</code></td><td><code>float</code></td><td>Ambient reflectance weight</td></tr>
+   <tr><td><code>phong_diffuse</code></td><td><code>float</code></td><td>Diffuse reflectance weight</td></tr>
+   <tr><td><code>phong_specular</code></td><td><code>float</code></td><td>Specular reflectance weight</td></tr>
+   <tr><td><code>phong_shininess</code></td><td><code>float</code></td><td>Specular exponent</td></tr>
+ </table>
+
+  These are ordinary material data, set with \ref helios::Context::setMaterialData(), so no special
+  API is required and any material can carry them.
+
+  The override is per parameter, not per material: a material that specifies only
+  <code>phong_specular</code> inherits the other three from the global Phong material, so a glossier
+  surface can be described without restating the whole set. A material that specifies none of them
+  uses the global values entirely, which is why existing scenes are unaffected.
+
+  ~~~~~~{.cpp}
+   #include "Visualizer.h"
+
+   int main(){
+      Context context;
+      uint leaf = context.addPatch( make_vec3(0,0,0), make_vec2(1,1) );
+
+      context.addMaterial( "wet_leaf" );
+      context.assignMaterialToPrimitive( leaf, "wet_leaf" );
+
+      // Only the specular lobe is overridden; ambient, diffuse and the light response are inherited.
+      context.setMaterialData( "wet_leaf", "phong_specular", 0.8f );
+      context.setMaterialData( "wet_leaf", "phong_shininess", 64.f );
+
+      Visualizer vis( 1200 );
+      vis.setLightingModel( Visualizer::LIGHTING_PHONG_SHADOWED );
+      vis.buildContextGeometry( &context );
+      vis.plotInteractive();
+   }
+  ~~~~~~
+
+  \note Primitive color is stored on the material, and \ref helios::Context::addMaterial() creates a
+  material with a black color. Set the primitive color *after* assigning the material, or the color
+  is discarded and the primitive renders black.
+
+  Parameters are resolved once per material rather than once per primitive, so attaching them to a
+  material shared by millions of primitives costs no more than attaching them to one.
+
+  \subsubsection SmoothShading Smooth and flat shading
+
+  Each fragment is shaded using a normal interpolated across the primitive from its vertices, rather
+  than the single geometric normal of the face. On a tessellated curved surface this removes the
+  faceted appearance, so a stem, fruit or trunk reads as smoothly curved rather than as a series of
+  flat panels. Smooth shading is the default; \ref Visualizer::disableSmoothShading() selects flat
+  shading, and \ref Visualizer::enableSmoothShading() restores it.
+
+  Smooth shading only changes the appearance of geometry that actually supplies distinct vertex
+  normals. Primitives added without them carry the face normal replicated across every vertex, so
+  they shade identically either way, and the default is a no-op for much of Helios geometry:
+  patches, triangles and voxels added directly to the Context are flat surfaces whose face normal is
+  already correct, as are the faces of a tile, box or disk.
+
+  Vertex normals reach the Visualizer by two routes, which differ in where the normal comes from.
+
+  The curved compound object types -- `Sphere`, `Tube` and `Cone` -- are tessellations of a surface
+  whose true normal is known in closed form, so the normal is evaluated directly from the shape's own
+  definition at each vertex. These normals are exact rather than inferred, they require no action
+  from the user, and they follow the object automatically when it is transformed or its geometry is
+  modified. This is what allows a stem, trunk or fruit to read as smoothly curved. Note that the
+  normal accounts for taper, so a tube or cone whose radius changes along its length is shaded as the
+  cone it is rather than as a cylinder. The values are available outside the Visualizer through
+  \ref helios::Context::getObjectPrimitiveVertexNormals() "getObjectPrimitiveVertexNormals()".
+
+  A `Polymesh` has no such closed-form definition -- an arbitrary mesh is only what its faces say it
+  is -- so its normals must instead be retained from the source data: a mesh loaded from an OBJ or
+  PLY file that supplies vertex normals (see \ref helios::Context::loadOBJ() "loadOBJ()" and
+  \ref helios::Context::loadPLY() "loadPLY()"), or one whose normals were generated explicitly with
+  \ref helios::Context::computePolymeshObjectVertexNormals() "computePolymeshObjectVertexNormals()".
+  Helios never synthesizes the normals of a mesh implicitly, so a mesh whose source file provided
+  none is shaded flat until they are computed.
+
+  ~~~~~~{.cpp}
+   #include "Visualizer.h"
+
+   int main(){
+      Context context;
+      std::vector<uint> UUIDs = context.loadOBJ( "mesh.obj", true );
+
+      // If the file supplied no vertex normals, generate them. The crease angle keeps edges sharper
+      // than 30 degrees hard, so a chamfered or boxy model does not turn into a rounded blob.
+      uint objID = context.getPrimitiveParentObjectID( UUIDs.front() );
+      if( context.getPolymeshObjectVertexNormalSource(objID) == NORMAL_SOURCE_NONE ){
+         context.computePolymeshObjectVertexNormals( objID, 30.f );
+      }
+
+      Visualizer vis( 1200 );
+      vis.setLightingModel( Visualizer::LIGHTING_PHONG_SHADOWED );
+      vis.buildContextGeometry( &context );
+      vis.plotInteractive();
+   }
+  ~~~~~~
+
+  \note On alpha-masked cutouts such as leaf textures, smooth shading can look worse than flat
+  shading: the interpolated normal no longer agrees with the visible silhouette, which the alpha mask
+  rather than the geometry defines. Use \ref Visualizer::disableSmoothShading() for such scenes.
+
+  \subsubsection LinearPipeline Linear-light rendering and tone mapping
+
+  Rendering is physically based by default: albedo is decoded from sRGB to linear light before
+  shading, the shaded radiance is multiplied by the exposure, passed through an ACES filmic tone
+  curve, and re-encoded to sRGB for display. Highlights roll off smoothly instead of clipping, and
+  mid-tone gradients are correct.
+
+  The alternative, selected with \ref Visualizer::disableLinearPipeline(), performs the lighting
+  arithmetic directly on sRGB-encoded color values and writes the result straight to the
+  framebuffer. This is how the Visualizer rendered prior to v1.3.83, and is not physically
+  meaningful: sRGB values are non-linear in radiance, so adding an ambient and a diffuse term in
+  that space yields mid-tones that are too dark and shadow terminators that are unnaturally abrupt,
+  while bright surfaces clip against the 8-bit framebuffer and flatten to pure white. Use it to
+  reproduce images generated by earlier versions.
+
+  Overall image brightness is controlled with \ref Visualizer::setExposure(). Because the tone curve
+  compresses rather than clips, increasing exposure brightens the image while retaining detail in
+  sunlit regions.
+
+  ~~~~~~{.cpp}
+   #include "Visualizer.h"
+
+   int main(){
+      Visualizer vis( 1200 );
+
+      vis.setLightingModel( Visualizer::LIGHTING_PHONG_SHADOWED );
+      vis.setLightDirection( make_vec3(1,1,1) );
+
+      // The linear pipeline is already active by default; only the exposure needs setting.
+      vis.setExposure( 1.2f );
+   }
+  ~~~~~~
+
+  \note This mode is mutually exclusive with \ref Visualizer::enableExactColorMode(). That mode is
+  used when the framebuffer carries data rather than an image (for example object ID codes decoded
+  from rendered pixels, as the synthetic annotation plug-in does), and tone mapping would corrupt
+  those values. Enabling exact color mode therefore disables the linear pipeline.
+
+  Text and blended image overlays are authored in display space and are deliberately excluded from
+  the tone-mapping stage, as is all 2D screen-space geometry.
+
   \subsection Options View Options
 
   The default camera position is at an elevation angle of 20 degrees and to the North, with the camera looking toward the origin.  The distance of the camera from the origin is automatically adjusted to fit all primitives in view.

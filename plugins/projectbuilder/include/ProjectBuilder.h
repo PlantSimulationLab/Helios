@@ -367,7 +367,7 @@ private:
     std::vector<uint> ground_UUIDs;
 
     //! Ground object ID
-    uint ground_objID;
+    uint ground_objID = 0;
 
     //! Leaf UUIDs
     std::vector<uint> leaf_UUIDs;

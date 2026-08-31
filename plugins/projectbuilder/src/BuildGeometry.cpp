@@ -135,7 +135,7 @@ void BuildGeometry(const std::string &xml_input_file, PlantArchitecture *plant_a
         std::cout << "WARNING: Both 'ground_color' and 'ground_texture_file' were defined. The ground color will be overridden by the texture image." << std::endl;
     }
 
-    uint ground_objID;
+    uint ground_objID = 0;
     if (!ground_model_file.empty()) {
         ground_UUIDs = context_ptr->loadOBJ(ground_model_file.c_str());
         ground_objID = context_ptr->addPolymeshObject(ground_UUIDs);
@@ -348,6 +348,9 @@ void BuildGeometry(const std::string &xml_input_file, PlantArchitecture *plant_a
     // ####### SET UUID GLOBAL DATA ####### //
 
     context_ptr->setGlobalData("ground_UUIDs", ground_UUIDs);
+    // BuildGeometry() is a free function, so the ground object it creates has to be handed back to ProjectBuilder the same way its primitives already are. Without this the ProjectBuilder member is
+    // never assigned, and updateGround() tested and deleted whatever value it happened to hold.
+    context_ptr->setGlobalData("ground_objID", ground_objID);
     context_ptr->setGlobalData("leaf_UUIDs", leaf_UUIDs);
     context_ptr->setGlobalData("petiolule_UUIDs", petiolule_UUIDs);
     context_ptr->setGlobalData("petiole_UUIDs", petiole_UUIDs);

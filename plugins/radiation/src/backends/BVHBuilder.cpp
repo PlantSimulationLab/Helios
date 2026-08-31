@@ -37,6 +37,10 @@ namespace helios {
 
         for (size_t i = 0; i < geom.primitive_count; ++i) {
             uint32_t prim_type = geom.primitive_types[i];
+            if (prim_type >= type_counters.size()) {
+                helios_runtime_error("ERROR (BVHBuilder::build): primitive " + std::to_string(i) + " has type " + std::to_string(prim_type) + ", but only types 0-" + std::to_string(type_counters.size() - 1) +
+                                     " are defined. Indexing the type table with this value would corrupt memory outside it.");
+            }
             type_offsets[i] = type_counters[prim_type]++;
         }
 
@@ -482,6 +486,20 @@ namespace helios {
         std::vector<CWBVH_Node> cwbvh_nodes;
         flattenBVH8(root8, cwbvh_nodes);
 
+        // The traversal shader walks this tree with a fixed-size stack (MAX_CWBVH_STACK_DEPTH in
+        // shaders/common/bvh_traversal.glsl), sized from the bound below. Verify the bound here
+        // rather than letting the shader silently drop nodes it has no room for, which would make
+        // geometry invisible to the trace and read as a light leak rather than a failure.
+        {
+            const uint32_t max_bvh8_depth = (MAX_DEPTH + 2u) / 3u; // 8-wide collapse folds 3 BVH2 levels into 1
+            const uint32_t worst_case_stack = max_bvh8_depth * 7u + 1u; // each pop can push up to 8, net +7
+            const uint32_t shader_stack_depth = CWBVH_TRAVERSAL_STACK_DEPTH;
+            if (worst_case_stack > shader_stack_depth) {
+                helios_runtime_error("ERROR (BVHBuilder::convertToCWBVH): the compressed BVH can require a traversal stack of " + std::to_string(worst_case_stack) + " entries, but the traversal shader provides only " +
+                                     std::to_string(shader_stack_depth) + ". Raise MAX_CWBVH_STACK_DEPTH in plugins/radiation/shaders/common/bvh_traversal.glsl to at least that value, or lower BVHBuilder::MAX_DEPTH.");
+            }
+        }
+
         // Cleanup
         for (BVH8Node *node: allocated_bvh8_nodes) {
             delete node;
@@ -712,8 +730,13 @@ namespace helios {
 
             // Store per-child leaf data in extended fields
             dst.child_first_prim[child] = src->first_prim[child];
-            dst.child_prim_count[child] = static_cast<uint8_t>(src->prim_count[child]);
-            dst.child_prim_type[child] = static_cast<uint8_t>(src->prim_type[child]);
+            if (src->prim_count[child] > std::numeric_limits<uint16_t>::max()) {
+                helios_runtime_error("ERROR (BVHBuilder::compressNode): a BVH leaf holds " + std::to_string(src->prim_count[child]) + " primitives, which exceeds the " + std::to_string(std::numeric_limits<uint16_t>::max()) +
+                                     " that the compressed node format can encode. This happens when the SAH build hits its depth limit (MAX_DEPTH = " + std::to_string(MAX_DEPTH) +
+                                     ") with a large number of primitives that could not be separated spatially - typically many exactly-coincident primitives. Storing a truncated count here would silently drop geometry from the "
+                                     "acceleration structure.");
+            }
+            dst.child_prim_count[child] = static_cast<uint16_t>(src->prim_count[child]);
         }
     }
 

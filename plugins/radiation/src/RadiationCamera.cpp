@@ -1827,6 +1827,25 @@ void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel,
         helios_runtime_error("ERROR (RadiationModel::writeImageSegmentationMasks): Pixel labels for camera '" + cameralabel + "' do not exist. Was the radiation model run to generate labels?");
     }
 
+    // The pixel-to-primitive map holds UUIDs of the Context that produced the render, offset by one, with zero meaning the pixel hit nothing. It is only meaningful for that Context: Context::writeXML() stores
+    // global data verbatim while Context::loadXML() assigns every primitive a fresh UUID, so a map carried in from a file describes primitives that are gone -- or, where the UUID happens to be in range again,
+    // different ones. Annotating against such a map silently mislabels the image, so refuse the map the moment it stops resolving.
+    {
+        std::vector<uint> pixel_UUIDs_check;
+        context->getGlobalData(global_data_label.c_str(), pixel_UUIDs_check);
+        size_t unresolved_pixel_UUIDs = 0;
+        for (uint pixel_UUID: pixel_UUIDs_check) {
+            if (pixel_UUID != 0 && !context->doesPrimitiveExist(pixel_UUID - 1)) {
+                unresolved_pixel_UUIDs++;
+            }
+        }
+        if (unresolved_pixel_UUIDs > 0) {
+            helios_runtime_error("ERROR (RadiationModel::writeImageSegmentationMasks): The pixel-to-primitive map for camera '" + cameralabel + "' refers to " + std::to_string(unresolved_pixel_UUIDs) +
+                                 " primitives that no longer exist in the Context. This map is only valid for the Context that produced the render; it does not survive a Context::writeXML()/loadXML() round "
+                                 "trip, because primitives are assigned new UUIDs on load. Re-run the radiation model for this camera before writing segmentation masks.");
+        }
+    }
+
     // Check that all primitive data labels exist
     std::vector<std::string> all_primitive_data = context->listAllPrimitiveDataLabels();
     helios::WarningAggregator missing_label_warnings;
@@ -3207,6 +3226,23 @@ void RadiationCamera::applyCameraExposure(helios::Context *context) {
     for (const auto &band: band_labels) {
         if (pixel_data.find(band) == pixel_data.end()) {
             return; // Skip exposure if not all bands are populated yet
+        }
+    }
+
+    // Reject non-finite pixel data before any statistic is taken. Both auto-exposure branches
+    // below divide a target by std::max(<statistic>, 1e-6f), and std::max(NaN, 1e-6f) returns
+    // NaN, so a single non-finite pixel makes the gain NaN and multiplies EVERY pixel of EVERY
+    // band by it — a black frame with no diagnostic, which reads as an exposure problem rather
+    // than as a failed ray trace. std::sort over a range containing NaN is also undefined
+    // behaviour, not merely a wrong median, so this must happen before the sorts.
+    for (const auto &band_pair: pixel_data) {
+        for (std::size_t i = 0; i < band_pair.second.size(); i++) {
+            if (!std::isfinite(band_pair.second[i])) {
+                helios_runtime_error("ERROR (RadiationCamera::applyCameraExposure): camera '" + label + "' band '" + band_pair.first + "' contains a non-finite radiance value (" + std::to_string(band_pair.second[i]) + ") at pixel " +
+                                     std::to_string(i) +
+                                     ". The ray trace that produced this image failed; exposure cannot be applied. Applying it anyway would scale the entire image by a non-finite gain and produce a "
+                                     "uniformly black frame with no indication that anything went wrong.");
+            }
         }
     }
 

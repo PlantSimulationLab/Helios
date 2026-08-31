@@ -407,14 +407,14 @@ struct NitrogenParameters {
 
 //! Add geometry to the Context consisting of a series of Cone objects to form a tube-like shape
 /**
- * \param[in] radial_subdivisions Number of subdivisions around the circumference of each cone (must be be >= 3).
+ * \param[in] radial_subdivisions Number of subdivisions around the circumference of the tube (must be >= 3).
  * \param[in] vertices (x,y,z) Cartesian coordinates of vertices forming the centerline of the tube.
  * \param[in] radii Radius of the tube at each specified vertex.
  * \param[in] colors Color of the tube at each specified vertex.
  * \param[in] context_ptr Pointer to the Helios context.
- * \return Vector of Object IDs of the cones forming the tube.
+ * \return Object ID of the tube, or Phytomer::no_petiole_objID if the tube was too small to build.
  */
-std::vector<uint> makeTubeFromCones(uint radial_subdivisions, const std::vector<helios::vec3> &vertices, const std::vector<float> &radii, const std::vector<helios::RGBcolor> &colors, helios::Context *context_ptr);
+uint makePetioleTube(uint radial_subdivisions, const std::vector<helios::vec3> &vertices, const std::vector<float> &radii, const std::vector<helios::RGBcolor> &colors, helios::Context *context_ptr);
 
 struct VegetativeBud {
 
@@ -1475,7 +1475,23 @@ public:
     std::vector<helios::RGBcolor> internode_colors; // index is segment within internode tube
     std::vector<helios::RGBcolor> petiole_colors; // index is segment within petiole tube
 
-    std::vector<std::vector<uint>> petiole_objIDs; // first index is petiole within internode, second index is segment within petiole tube
+    //! Object ID of the tube making up each petiole. Index is petiole within internode.
+    //! Equal to no_petiole_objID where the petiole has no geometry (suppressed, or too small to build).
+    std::vector<uint> petiole_objIDs;
+
+    //! Sentinel marking a petiole that has no Context geometry. Zero is a valid object ID, so
+    //! absence cannot be signalled with it.
+    static constexpr uint no_petiole_objID = 4294967294;
+
+    //! Object IDs of all petioles on this phytomer that currently have geometry in the Context.
+    /**
+     * Petioles whose geometry was suppressed, was never built, or has since been deleted are
+     * omitted, so the result can be passed directly to Context methods that require every object
+     * to exist.
+     * \return Object IDs of the existing petiole tubes.
+     */
+    [[nodiscard]] std::vector<uint> getExistingPetioleObjIDs() const;
+
     std::vector<std::vector<uint>> leaf_objIDs; // first index is petiole within internode, second index is leaf within petiole tube
 
     PhytomerParameters phytomer_parameters;

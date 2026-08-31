@@ -1834,12 +1834,14 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         }
 
                         // Rebuild petiole Context geometry
-                        context_ptr->deleteObject(phytomer_ptr->petiole_objIDs[p]);
+                        if (context_ptr->doesObjectExist(phytomer_ptr->petiole_objIDs[p])) {
+                            context_ptr->deleteObject(phytomer_ptr->petiole_objIDs[p]);
+                        }
                         std::vector<RGBcolor> petiole_colors(phytomer_ptr->petiole_radii[p].size(), phytomer_ptr->phytomer_parameters.petiole.color);
-                        phytomer_ptr->petiole_objIDs[p] = makeTubeFromCones(Ndiv_petiole_radius, phytomer_ptr->petiole_vertices[p], phytomer_ptr->petiole_radii[p], petiole_colors, context_ptr);
+                        phytomer_ptr->petiole_objIDs[p] = makePetioleTube(Ndiv_petiole_radius, phytomer_ptr->petiole_vertices[p], phytomer_ptr->petiole_radii[p], petiole_colors, context_ptr);
 
                         // Set primitive data labels
-                        if (!phytomer_ptr->petiole_objIDs[p].empty()) {
+                        if (context_ptr->doesObjectExist(phytomer_ptr->petiole_objIDs[p])) {
                             context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(phytomer_ptr->petiole_objIDs[p]), "object_label", "petiole");
                             std::string petiole_material_name = plant_instances.at(plantID).plant_name + "_" + shoot_type_label + "_petiole";
                             renameAutoMaterial(context_ptr, phytomer_ptr->petiole_objIDs[p], petiole_material_name);
@@ -3210,23 +3212,19 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                     link.mass = params.wood_density * computeCapsuleVolume(seg_radius, half_len);
                     link.inertia_diagonal = computeCapsuleInertia(link.mass, seg_radius, half_len);
 
-                    // Extract visual mesh from petiole object, transforming to link's local frame
-                    if (petiole_idx < phytomer->petiole_objIDs.size() && seg < static_cast<int>(phytomer->petiole_objIDs[petiole_idx].size())) {
-                        uint pet_objID = phytomer->petiole_objIDs[petiole_idx][seg];
+                    // Extract visual mesh for this segment of the petiole tube, transformed into
+                    // the link's local frame. The petiole is a single tube object, so the segment
+                    // is addressed by index the same way internode segments are above.
+                    if (petiole_idx < phytomer->petiole_objIDs.size()) {
+                        uint pet_objID = phytomer->petiole_objIDs[petiole_idx];
                         if (context_ptr->doesObjectExist(pet_objID)) {
-                            USDLink temp_link;
-                            temp_link.position = link.position;
-                            buildMeshFromContextObject(context_ptr, pet_objID, data, temp_link);
-                            // Re-transform vertices into this link's rotated local frame
-                            link.mesh_vertices.resize(temp_link.mesh_vertices.size());
-                            for (size_t vi = 0; vi < temp_link.mesh_vertices.size(); vi++) {
-                                vec3 world_pos = temp_link.mesh_vertices[vi] + temp_link.position; // back to world
-                                link.mesh_vertices[vi] = worldToLocal(world_pos, link.position, link.qw, link.qx, link.qy, link.qz);
+                            // Take the segment count from the tube itself rather than from the
+                            // centerline array: coincident nodes are dropped when the tube is
+                            // built, so the two can disagree.
+                            int total_petiole_segments = static_cast<int>(context_ptr->getTubeObjectNodeCount(pet_objID)) - 1;
+                            if (seg < total_petiole_segments) {
+                                buildTubeSegmentVisualMesh(context_ptr, pet_objID, seg, total_petiole_segments, data, link);
                             }
-                            link.mesh_uvs = std::move(temp_link.mesh_uvs);
-                            link.mesh_face_vertex_counts = std::move(temp_link.mesh_face_vertex_counts);
-                            link.mesh_face_vertex_indices = std::move(temp_link.mesh_face_vertex_indices);
-                            link.material_index = temp_link.material_index;
                         }
                     }
 

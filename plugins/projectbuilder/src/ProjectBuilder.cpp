@@ -899,6 +899,7 @@ void ProjectBuilder::buildFromXML() {
 #ifdef ENABLE_PLANT_ARCHITECTURE
     BuildGeometry(xml_input_file, plantarchitecture, context, canopy_IDs, individual_plant_locations);
     context->getGlobalData("ground_UUIDs", ground_UUIDs);
+    context->getGlobalData("ground_objID", ground_objID);
 // } //PLANT_ARCHITECTURE
 #endif // PLANT_ARCHITECTURE
 

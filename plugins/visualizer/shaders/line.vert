@@ -3,6 +3,7 @@
 layout(location = 0) in vec3 vertexPosition_modelspace;
 layout(location = 1) in vec2 uv;
 layout(location = 2) in int face_index;
+layout(location = 3) in vec3 vertexNormal;
 
 uniform mat4 MVP;
 uniform mat4 DepthBiasMVP;
@@ -11,6 +12,8 @@ uniform mat4 DepthBiasMVP;
 out vec2 vs_texcoord;
 out vec2 vs_uv_scale;
 out vec4 vs_ShadowCoord;
+out vec3 vs_worldPosition;
+out vec3 vs_interpolatedNormal;
 flat out int vs_faceID;
 
 uniform isamplerBuffer texture_ID_texture_object;
@@ -35,6 +38,9 @@ void main() {
     vec4 scale = texelFetch(uv_rescale, textureID);
     vs_texcoord = uv;
     vs_uv_scale = scale.rg;
+
+    vs_worldPosition = vertexPosition_modelspace;
+    vs_interpolatedNormal = vertexNormal;
 
     vs_ShadowCoord = DepthBiasMVP * v;
 }

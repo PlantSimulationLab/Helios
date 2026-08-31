@@ -22,9 +22,11 @@ void GeometryHandler::allocateBufferSize(size_t primitive_count, VisualizerGeome
     face_index_data[geometry_type].reserve(face_index_data[geometry_type].size() + primitive_count);
     vertex_data[geometry_type].reserve(vertex_data[geometry_type].size() + primitive_count * vertex_count * 3);
     normal_data[geometry_type].reserve(normal_data[geometry_type].size() + primitive_count * vertex_count * 3);
+    vertex_normal_data[geometry_type].reserve(vertex_normal_data[geometry_type].size() + primitive_count * vertex_count * 3);
     color_data[geometry_type].reserve(color_data[geometry_type].size() + primitive_count * 4);
     uv_data[geometry_type].reserve(uv_data[geometry_type].size() + primitive_count * vertex_count * 2);
     texture_flag_data[geometry_type].reserve(texture_flag_data[geometry_type].size() + primitive_count);
+    material_index_data[geometry_type].reserve(material_index_data[geometry_type].size() + primitive_count);
     texture_ID_data[geometry_type].reserve(texture_ID_data[geometry_type].size() + primitive_count);
     coordinate_flag_data[geometry_type].reserve(coordinate_flag_data[geometry_type].size() + primitive_count);
     delete_flag_data[geometry_type].reserve(delete_flag_data[geometry_type].size() + primitive_count);
@@ -62,6 +64,7 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
 
     size_t vertex_index = UUID_map.at(UUID).vertex_index;
     size_t normal_index = UUID_map.at(UUID).normal_index;
+    size_t vertex_normal_index = UUID_map.at(UUID).vertex_normal_index;
     size_t uv_index = UUID_map.at(UUID).uv_index;
     size_t color_index = UUID_map.at(UUID).color_index;
     size_t texture_flag_index = UUID_map.at(UUID).texture_flag_index;
@@ -167,10 +170,21 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
         normal_data[geometry_type].push_back(normal.y);
         normal_data[geometry_type].push_back(normal.z);
 
+        // Per-vertex normals default to the face normal replicated across every vertex, so that
+        // geometry with no authored vertex normals shades identically to flat shading.
+        for (char v = 0; v < vertex_count; v++) {
+            vertex_normal_data[geometry_type].push_back(normal.x);
+            vertex_normal_data[geometry_type].push_back(normal.y);
+            vertex_normal_data[geometry_type].push_back(normal.z);
+        }
+
         color_data[geometry_type].push_back(color.r);
         color_data[geometry_type].push_back(color.g);
         color_data[geometry_type].push_back(color.b);
         color_data[geometry_type].push_back(color.a);
+
+        // -1 means "no material-specific Phong parameters"; the shader falls back to the global ones.
+        material_index_data[geometry_type].push_back(-1);
 
         coordinate_flag_data[geometry_type].push_back(coordinate_system);
 
@@ -187,6 +201,15 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
         normal_data[geometry_type].at(normal_index) = normal.x;
         normal_data[geometry_type].at(normal_index + 1) = normal.y;
         normal_data[geometry_type].at(normal_index + 2) = normal.z;
+
+        // Re-adding an existing primitive resets its vertex normals to the recomputed face normal.
+        // Any smooth normals previously applied refer to the old vertex positions and would no
+        // longer be correct for the new ones.
+        for (char v = 0; v < vertex_count; v++) {
+            vertex_normal_data[geometry_type].at(vertex_normal_index + 3 * v + 0) = normal.x;
+            vertex_normal_data[geometry_type].at(vertex_normal_index + 3 * v + 1) = normal.y;
+            vertex_normal_data[geometry_type].at(vertex_normal_index + 3 * v + 2) = normal.z;
+        }
 
         color_data[geometry_type].at(color_index) = color.r;
         color_data[geometry_type].at(color_index + 1) = color.g;
@@ -320,6 +343,40 @@ void GeometryHandler::setVertices(size_t UUID, const std::vector<helios::vec3> &
     normal_data[index_map.geometry_type].at(normal_ind + 1) = normal.y;
     normal_data[index_map.geometry_type].at(normal_ind + 2) = normal.z;
 
+    // Moving the vertices invalidates any smooth normals previously applied, since they were
+    // computed for the old vertex positions. Reset them to the recomputed face normal.
+    const size_t vertex_normal_ind = index_map.vertex_normal_index;
+    for (int i = 0; i < vertex_count; i++) {
+        vertex_normal_data[index_map.geometry_type].at(vertex_normal_ind + 3 * i + 0) = normal.x;
+        vertex_normal_data[index_map.geometry_type].at(vertex_normal_ind + 3 * i + 1) = normal.y;
+        vertex_normal_data[index_map.geometry_type].at(vertex_normal_ind + 3 * i + 2) = normal.z;
+    }
+
+    markDirty(UUID);
+}
+
+void GeometryHandler::setVertexNormals(size_t UUID, const std::vector<helios::vec3> &vertex_normals) {
+
+    if (UUID_map.find(UUID) == UUID_map.end()) {
+        helios::helios_runtime_error("ERROR (GeometryHandler::setVertexNormals): UUID of " + std::to_string(UUID) + " does not exist in the visualizer geometry.");
+    }
+
+    const PrimitiveIndexMap &index_map = UUID_map.at(UUID);
+    const char vertex_count = getVertexCount(index_map.geometry_type);
+
+    if (vertex_normals.size() != static_cast<size_t>(vertex_count)) {
+        helios::helios_runtime_error("ERROR (GeometryHandler::setVertexNormals): Expected " + std::to_string(int(vertex_count)) + " vertex normals for this primitive, but " + std::to_string(vertex_normals.size()) +
+                             " were given. One normal must be supplied for each vertex.");
+    }
+
+    const size_t vertex_normal_ind = index_map.vertex_normal_index;
+    for (int i = 0; i < vertex_count; i++) {
+        const helios::vec3 n = normalize(vertex_normals.at(i));
+        vertex_normal_data[index_map.geometry_type].at(vertex_normal_ind + 3 * i + 0) = n.x;
+        vertex_normal_data[index_map.geometry_type].at(vertex_normal_ind + 3 * i + 1) = n.y;
+        vertex_normal_data[index_map.geometry_type].at(vertex_normal_ind + 3 * i + 2) = n.z;
+    }
+
     markDirty(UUID);
 }
 
@@ -388,6 +445,40 @@ const std::vector<float> *GeometryHandler::getNormalData_ptr(VisualizerGeometryT
     assert(normal_data.find(geometry_type) != normal_data.end());
 #endif
     return &normal_data.at(geometry_type);
+}
+
+const std::vector<int> *GeometryHandler::getMaterialIndexData_ptr(VisualizerGeometryType geometry_type) const {
+#ifdef HELIOS_DEBUG
+    assert(material_index_data.find(geometry_type) != material_index_data.end());
+#endif
+    return &material_index_data.at(geometry_type);
+}
+
+void GeometryHandler::setMaterialIndex(size_t UUID, int material_index) {
+
+    if (UUID_map.find(UUID) == UUID_map.end()) {
+        helios::helios_runtime_error("ERROR (GeometryHandler::setMaterialIndex): UUID of " + std::to_string(UUID) + " does not exist in the visualizer geometry.");
+    }
+
+    const PrimitiveIndexMap &index_map = UUID_map.at(UUID);
+    int &stored_index = material_index_data[index_map.geometry_type].at(index_map.material_index_index);
+
+    // Only dirty the primitive when the index actually changes. This is called for every displayed
+    // primitive on every geometry build, so marking unconditionally would force a full per-primitive
+    // GPU re-upload every frame even when nothing about the materials changed.
+    if (stored_index == material_index) {
+        return;
+    }
+
+    stored_index = material_index;
+    markDirty(UUID);
+}
+
+const std::vector<float> *GeometryHandler::getVertexNormalData_ptr(VisualizerGeometryType geometry_type) const {
+#ifdef HELIOS_DEBUG
+    assert(vertex_normal_data.find(geometry_type) != vertex_normal_data.end());
+#endif
+    return &vertex_normal_data.at(geometry_type);
 }
 
 void GeometryHandler::setColor(size_t UUID, const helios::RGBAcolor &color) {
@@ -726,6 +817,8 @@ void GeometryHandler::clearAllGeometry() {
         face_index_data.at(geometry_type).clear();
         vertex_data.at(geometry_type).clear();
         normal_data.at(geometry_type).clear();
+        vertex_normal_data.at(geometry_type).clear();
+        material_index_data.at(geometry_type).clear();
         uv_data.at(geometry_type).clear();
         color_data.at(geometry_type).clear();
         texture_flag_data.at(geometry_type).clear();
@@ -851,9 +944,11 @@ void GeometryHandler::defragmentBuffers() {
         auto &oldFace = face_index_data.at(geometry_type);
         auto &oldVertex = vertex_data.at(geometry_type);
         auto &oldNormal = normal_data.at(geometry_type);
+        auto &oldVertexNormal = vertex_normal_data.at(geometry_type);
         auto &oldUV = uv_data.at(geometry_type);
         auto &oldColor = color_data.at(geometry_type);
         auto &oldTexFlag = texture_flag_data.at(geometry_type);
+        auto &oldMatIndex = material_index_data.at(geometry_type);
         auto &oldTexID = texture_ID_data.at(geometry_type);
         auto &oldCoordFlag = coordinate_flag_data.at(geometry_type);
         auto &oldVisible = visible_flag_data.at(geometry_type);
@@ -864,8 +959,8 @@ void GeometryHandler::defragmentBuffers() {
 
         // New buffers
         std::vector<VisualizerGeometryType> newType;
-        std::vector<float> newVertex, newNormal, newUV, newColor, newSize;
-        std::vector<int> newFace, newTexFlag, newTexID, newCoordFlag;
+        std::vector<float> newVertex, newNormal, newVertexNormal, newUV, newColor, newSize;
+        std::vector<int> newFace, newTexFlag, newMatIndex, newTexID, newCoordFlag;
         std::vector<bool> newDeleteFlag, newContextFlag;
         std::vector<char> newVisible, newSkyFlag;
 
@@ -893,9 +988,11 @@ void GeometryHandler::defragmentBuffers() {
             const size_t fi = newFace.size();
             const size_t vi = newVertex.size();
             const size_t ni = newNormal.size();
+            const size_t vni = newVertexNormal.size();
             const size_t ui = newUV.size();
             const size_t ci = newColor.size();
             const size_t tfi = newTexFlag.size();
+            const size_t mii = newMatIndex.size();
             const size_t tidi = newTexID.size();
             const size_t cfi = newCoordFlag.size();
             const size_t vi2 = newVisible.size();
@@ -911,11 +1008,14 @@ void GeometryHandler::defragmentBuffers() {
 
             newNormal.insert(newNormal.end(), oldNormal.begin() + prim.normal_index, oldNormal.begin() + prim.normal_index + 3);
 
+            newVertexNormal.insert(newVertexNormal.end(), oldVertexNormal.begin() + prim.vertex_normal_index, oldVertexNormal.begin() + prim.vertex_normal_index + v3);
+
             newUV.insert(newUV.end(), oldUV.begin() + prim.uv_index, oldUV.begin() + prim.uv_index + v2);
 
             newColor.insert(newColor.end(), oldColor.begin() + prim.color_index, oldColor.begin() + prim.color_index + 4);
 
             newTexFlag.push_back(oldTexFlag[prim.texture_flag_index]);
+            newMatIndex.push_back(oldMatIndex[prim.material_index_index]);
             newTexID.push_back(oldTexID[prim.texture_ID_index]);
             newCoordFlag.push_back(oldCoordFlag[prim.coordinate_flag_index]);
             newVisible.push_back(oldVisible[prim.visible_index]);
@@ -928,9 +1028,11 @@ void GeometryHandler::defragmentBuffers() {
             prim.face_index_index = fi;
             prim.vertex_index = vi;
             prim.normal_index = ni;
+            prim.vertex_normal_index = vni;
             prim.uv_index = ui;
             prim.color_index = ci;
             prim.texture_flag_index = tfi;
+            prim.material_index_index = mii;
             prim.texture_ID_index = tidi;
             prim.coordinate_flag_index = cfi;
             prim.visible_index = vi2;
@@ -949,9 +1051,11 @@ void GeometryHandler::defragmentBuffers() {
         oldFace.swap(newFace);
         oldVertex.swap(newVertex);
         oldNormal.swap(newNormal);
+        oldVertexNormal.swap(newVertexNormal);
         oldUV.swap(newUV);
         oldColor.swap(newColor);
         oldTexFlag.swap(newTexFlag);
+        oldMatIndex.swap(newMatIndex);
         oldTexID.swap(newTexID);
         oldCoordFlag.swap(newCoordFlag);
         oldVisible.swap(newVisible);
@@ -971,9 +1075,11 @@ void GeometryHandler::registerUUID(size_t UUID, const VisualizerGeometryType &ge
                       face_index_data.at(geometry_type).size(),
                       vertex_data.at(geometry_type).size(),
                       normal_data.at(geometry_type).size(),
+                      vertex_normal_data.at(geometry_type).size(),
                       uv_data.at(geometry_type).size(),
                       color_data.at(geometry_type).size(),
                       texture_flag_data.at(geometry_type).size(),
+                      material_index_data.at(geometry_type).size(),
                       texture_ID_data.at(geometry_type).size(),
                       coordinate_flag_data.at(geometry_type).size(),
                       visible_flag_data.at(geometry_type).size(),

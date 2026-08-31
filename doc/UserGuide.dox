@@ -1375,7 +1375,50 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
 	 <li>\ref helios::Context::getConeObjectVolume() "getConeObjectVolume()"</li>
        </ul>
  </td></tr>
+ <tr><td>Polymesh</td><td>
+       <ul>
+	 <li>\ref helios::Context::getPolymeshObjectVolume() "getPolymeshObjectVolume()"</li>
+	 <li>\ref helios::Context::getPolymeshObjectVertices() "getPolymeshObjectVertices()"</li>
+	 <li>\ref helios::Context::getPolymeshObjectFaces() "getPolymeshObjectFaces()"</li>
+	 <li>\ref helios::Context::getPolymeshObjectVertexNormals() "getPolymeshObjectVertexNormals()"</li>
+	 <li>\ref helios::Context::getPolymeshObjectVertexUV() "getPolymeshObjectVertexUV()"</li>
+	 <li>\ref helios::Context::doesPolymeshObjectHaveVertexNormals() "doesPolymeshObjectHaveVertexNormals()"</li>
+	 <li>\ref helios::Context::getPolymeshObjectVertexNormalSource() "getPolymeshObjectVertexNormalSource()"</li>
+	 <li>\ref helios::Context::getPolymeshObjectVertexCount() "getPolymeshObjectVertexCount()"</li>
+	 <li>\ref helios::Context::getPolymeshObjectFaceCount() "getPolymeshObjectFaceCount()"</li>
+	 <li>\ref helios::Context::getPolymeshObjectSurfaceArea() "getPolymeshObjectSurfaceArea()"</li>
+	 <li>\ref helios::Context::isPolymeshObjectClosed() "isPolymeshObjectClosed()"</li>
+	 <li>\ref helios::Context::getPolymeshObjectBoundaryEdges() "getPolymeshObjectBoundaryEdges()"</li>
+	 <li>\ref helios::Context::getPolymeshObjectConnectedComponents() "getPolymeshObjectConnectedComponents()"</li>
+       </ul>
+ </td></tr>
  </table>
+
+ A polymesh object created by \ref helios::Context::loadOBJ() or \ref helios::Context::loadPLY() retains the vertex-facet connectivity of the source file, so the getters above return a genuine indexed
+ face set rather than a triangle soup (see \ref OBJmeshtopology). A polymesh assembled by passing loose primitives to \ref helios::Context::addPolymeshObject() has no such connectivity, and the topology
+ getters return empty; \ref helios::Context::setPolymeshObjectTopology() can be used to attach a face set to one explicitly. \ref helios::Context::getPolymeshObjectVolume() applies the divergence theorem,
+ which is only valid for a closed surface, and raises an error rather than returning a meaningless number when a mesh carrying a face table is not closed.
+
+ Unlike other compound object types, a polymesh is <b>deformable</b>: its individual member primitives can be translated, rotated and scaled with the primitive-level functions such as
+ \ref helios::Context::translatePrimitive(). Other object types refuse this and emit a warning, because a tile would no longer be planar and a tube no longer coherent if one of their sub-primitives moved
+ independently; a mesh has no equivalent shape constraint. \ref helios::CompoundObject::isDeformable() reports whether a given object permits it. When the mesh carries an indexed face set, transforming a
+ member primitive also updates the mesh vertices that facet references, so the stored topology continues to describe the geometry.
+
+ Note that the neighbouring primitives sharing those vertices are not rewritten. Transforming every facet of a mesh (the usual case, e.g. \ref helios::Context::translatePrimitive() applied to everything
+ \ref helios::Context::loadPLY() returned) therefore behaves exactly as expected and costs time proportional to the number of primitives. Transforming only some facets of a welded mesh moves the shared
+ mesh vertices but leaves the untouched neighbouring primitives where they were, so transform those too if the rendered geometry must follow. Applying <em>different</em> transformations to two facets that
+ share a vertex leaves that vertex wherever the last one processed put it, because a shared vertex can only hold one position - transform all facets sharing a vertex identically if that matters. Vertex normals computed before a deformation are left
+ unchanged, since they no longer describe the deformed surface - call \ref helios::Context::computePolymeshObjectVertexNormals() again if exact normals are required.
+
+ Deleting a member primitive of a polymesh repairs the face table: the corresponding face is removed, any vertex left unreferenced is dropped, and the remaining faces are reindexed, so the mesh stays
+ valid and queryable. \ref helios::Context::areObjectPrimitivesComplete() reports false afterwards. Note that repairing a hole in this way makes the area-weighted vertex normals adjacent to the new
+ boundary subtly incorrect, since the face that contributed to them is gone; call \ref helios::Context::computePolymeshObjectVertexNormals() again if exact normals are needed after deleting primitives.
+
+ Mesh topology is written to and read from the Helios XML format, so a polymesh that has been through \ref helios::Context::writeXML() and \ref helios::Context::loadXML() keeps its face set, its
+ per-vertex normals and their provenance, and its texture coordinates. Faces reference their member primitive by position within the object rather than by UUID, since primitive UUIDs are reallocated on
+ load. Topology is written only when the file contains every primitive the face set refers to, so a partial write made with \ref helios::Context::writeXML() over a subset of UUIDs, or one that omits
+ hidden primitives, reloads as an unconnected mesh rather than one whose faces point at primitives that are not there. Files written before this was supported carry no topology and still reload as a
+ triangle soup.
 
  \subsection AdaptiveTileObjects Adaptive Tile Objects
 
@@ -1974,6 +2017,12 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
 
   There are other forms of the loadPLY function that allow for translation, rotation, and scaling of the entire PLY model.
 
+  As with \ref helios::Context::loadOBJ(), the triangles created by \ref helios::Context::loadPLY() are grouped into a \ref helios::Polymesh "Polymesh" compound object that retains the vertex-facet
+  connectivity of the file, and 'nx', 'ny' and 'nz' vertex properties are read as per-vertex normals when present. See \ref OBJmeshtopology for how to query the resulting mesh.
+
+  \ref helios::Context::writePLY() likewise writes polymesh geometry against its shared vertices, and emits 'nx', 'ny' and 'nz' properties when every vertex being written carries a normal, so a closed mesh
+  written to PLY reloads as a closed mesh rather than as a triangle soup. Geometry that is not part of a polymesh with retained connectivity is written as independent primitives exactly as before.
+
   Different applications may utilize different coordinate axes in .ply files. In computer graphics applications, it is common to define the y-axis as the up direction. Helios uses a z-up coordinate system. By default \ref helios::Context::loadPLY() assumes that the coordinate system used when creating the .ply file is y-up. There is an optional argument \ref helios::Context::loadPLY() that can allow you to easily define the up-axis.
 
   The Blender software package (<a href="https://www.blender.org">www.blender.org</a>) can easily modify and convert most polygon file formats to .ply format.  \ref ConvertPLY "This page" gives a tutorial on how to perform such conversions using Blender.
@@ -2001,6 +2050,29 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
   </table>
 
   The last optional argument to the \ref helios::Context::loadOBJ() function allows the user to disable any messages output from the function while loading by setting silent=true.
+
+  \subsubsection OBJmeshtopology Retained Mesh Topology
+
+  In addition to returning the UUIDs of the triangles it creates, \ref helios::Context::loadOBJ() groups them into a \ref helios::Polymesh "Polymesh" compound object that retains the vertex-facet
+  connectivity of the source file. The object ID can be obtained from any of the returned UUIDs:
+
+  ~~~~~~{.cpp}
+   std::vector<uint> UUIDs = context.loadOBJ("someobjfile.obj", make_vec3(0,0,0), 0, nullrotation, RGB::red );
+   uint objID = context.getPrimitiveParentObjectID( UUIDs.front() );
+
+   std::vector<vec3> vertices = context.getPolymeshObjectVertices( objID );
+   std::vector<int3> faces = context.getPolymeshObjectFaces( objID );
+  ~~~~~~
+
+  Vertex normals declared in the file with 'vn' records are read and attached to the mesh, and \ref helios::Context::getPolymeshObjectVertexNormalSource() reports \ref helios::NORMAL_SOURCE_AUTHORED for
+  them. Normals are never generated implicitly: a file that supplies none leaves \ref helios::Context::doesPolymeshObjectHaveVertexNormals() false and the source reported as
+  \ref helios::NORMAL_SOURCE_NONE, in which case the face normal is the correct value to use. Call \ref helios::Context::computePolymeshObjectVertexNormals() to generate them explicitly.
+
+  All four OBJ face forms are supported ('v', 'v/vt', 'v//vn' and 'v/vt/vn'), as are negative (relative) indices.
+
+  \ref helios::Context::writeOBJ() writes geometry belonging to a polymesh against its shared vertices, so the connectivity is preserved on output rather than being expanded into three independent
+  vertices per triangle. Passing write_normals=true additionally writes the per-vertex normals, so a smooth mesh survives a load-write-load round trip rather than being flattened to one normal per facet.
+  Geometry that is not part of a polymesh with retained connectivity is written as independent primitives exactly as before.
 
   Example code is given below to load an OBJ model at the origin with no scaling (height=0) or rotation (rotation='nullrotation') applied and default up axis of "z".
 

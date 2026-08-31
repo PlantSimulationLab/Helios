@@ -256,9 +256,9 @@ void Visualizer::clearGeometry() {
     resetCachedGeometryIDs();
 
     contextUUIDs_build.clear();
+    contextUUIDs_uploaded.clear();
     colorPrimitives_UUIDs.clear();
     colorPrimitives_objIDs.clear();
-    contextUUIDs_build.clear();
     depth_buffer_data.clear();
     colorbar_min = 0;
     colorbar_max = 0;
