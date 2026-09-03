@@ -130,6 +130,8 @@ namespace helios {
         void copyScatterToRadiation() override;
         void uploadRadiationOut(const std::vector<float> &radiation_out_top,
                                 const std::vector<float> &radiation_out_bottom) override;
+        void uploadVertexRadiationOut(const std::vector<float> &vertex_radiation_out_top,
+                                      const std::vector<float> &vertex_radiation_out_bottom) override;
         void zeroCameraScatterBuffers(size_t launch_band_count) override;
         void uploadSourceFluxes(const std::vector<float> &fluxes) override;
         void uploadSourceFluxesCam(const std::vector<float> &fluxes_cam) override;
@@ -228,6 +230,9 @@ namespace helios {
         CUdeviceptr d_radiation_in           = 0;
         CUdeviceptr d_radiation_out_top      = 0;
         CUdeviceptr d_radiation_out_bottom   = 0;
+        CUdeviceptr d_smoothing_vertex_indices = 0;
+        CUdeviceptr d_vertex_radiation_out_top = 0;
+        CUdeviceptr d_vertex_radiation_out_bottom = 0;
         CUdeviceptr d_scatter_buff_top       = 0;
         CUdeviceptr d_scatter_buff_bottom    = 0;
         CUdeviceptr d_radiation_in_camera    = 0;

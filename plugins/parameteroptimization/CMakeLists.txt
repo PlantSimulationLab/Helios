@@ -49,12 +49,9 @@ if(EXISTS "${_NLOPT_BUNDLED_DIR}/CMakeLists.txt")
         message(STATUS "[ParameterOptimization] Luksan solvers disabled — NLopt build is MIT-licensed; L-BFGS unavailable (use Adam or BOBYQA)")
     endif()
 
+    # Linking the nlopt target propagates its own INTERFACE include directories,
+    # which already cover both the generated nlopt.hpp and the checked-in nlopt.h.
     target_link_libraries(parameteroptimization PUBLIC nlopt)
-    # NLopt generates nlopt.hpp in the build directory
-    target_include_directories(parameteroptimization PUBLIC
-        "${CMAKE_BINARY_DIR}/nlopt-build/src/api"
-        "${_NLOPT_BUNDLED_DIR}/src/api"
-    )
 else()
     # Fallback: try to find system-installed NLopt
     find_package(NLopt QUIET)

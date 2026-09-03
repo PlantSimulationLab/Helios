@@ -5681,3 +5681,521 @@ TEST_CASE("Tube and Cone objects survive an XML round trip after being transform
         std::filesystem::remove(filename);
     }
 }
+
+//! Collect the distinct shared vertices of a compound object and verify that every corner mapped to the same index really is the same point
+/**
+ * The indices are produced from each facet's position in the object's primitive list, while the coordinates come from the primitives themselves, so agreement between the two is a genuine check on the
+ * index arithmetic rather than a restatement of it. A transposed ring or an unwrapped spoke maps two corners that are nowhere near each other onto one index, which this catches immediately.
+ */
+inline size_t checkSharedVertexTopologyIsConsistent(helios::Context &ctx, uint ObjID, helios::VertexWeldMode weld_mode, float tolerance) {
+    const std::vector<uint> object_UUIDs = ctx.getObjectPrimitiveUUIDs(ObjID);
+    const std::vector<std::vector<int>> all_indices = ctx.getObjectPrimitiveSharedVertexIndices(ObjID, object_UUIDs, weld_mode);
+    const size_t shared_vertex_count = ctx.getObjectSharedVertexCount(ObjID, weld_mode);
+
+    DOCTEST_REQUIRE(all_indices.size() == object_UUIDs.size());
+
+    std::map<int, std::vector<helios::vec3>> positions_by_index;
+
+    for (size_t k = 0; k < object_UUIDs.size(); k++) {
+        const std::vector<helios::vec3> primitive_vertices = ctx.getPrimitiveVertices(object_UUIDs.at(k));
+        const std::vector<int> &indices = all_indices.at(k);
+        DOCTEST_REQUIRE(indices.size() == primitive_vertices.size());
+        for (size_t v = 0; v < indices.size(); v++) {
+            DOCTEST_REQUIRE(indices.at(v) >= 0);
+            DOCTEST_REQUIRE(size_t(indices.at(v)) < shared_vertex_count);
+            positions_by_index[indices.at(v)].push_back(primitive_vertices.at(v));
+        }
+    }
+
+    for (const auto &entry: positions_by_index) {
+        const std::vector<helios::vec3> &coincident = entry.second;
+        for (size_t a = 1; a < coincident.size(); a++) {
+            const float separation = (coincident.at(a) - coincident.front()).magnitude();
+            DOCTEST_INFO("shared vertex " << entry.first << " gathers corners " << separation << " apart");
+            DOCTEST_CHECK(separation < tolerance);
+        }
+    }
+
+    return positions_by_index.size();
+}
+
+TEST_CASE("Shared vertex topology identifies the facets that meet at each vertex") {
+
+    SUBCASE("Tube welds around the circumference without welding along the axis") {
+        Context ctx;
+        const uint radial_subdivisions = 6;
+        const std::vector<vec3> nodes = {make_vec3(0, 0, 0), make_vec3(0, 0, 1), make_vec3(0, 0, 2), make_vec3(0, 0, 3)};
+        const uint ObjID = ctx.addTubeObject(radial_subdivisions, nodes, {0.3f, 0.3f, 0.25f, 0.2f});
+
+        DOCTEST_CHECK(ctx.doesObjectHaveSharedVertexTopology(ObjID));
+
+        const uint segment_count = uint(nodes.size()) - 1;
+
+        // Each segment carries its own pair of rings, so a shadow edge crossing the tube is not averaged along its length.
+        DOCTEST_CHECK(ctx.getObjectSharedVertexCount(ObjID, WELD_CROSS_SECTION_ONLY) == size_t(2 * segment_count * radial_subdivisions));
+        const size_t cross_section_used = checkSharedVertexTopologyIsConsistent(ctx, ObjID, WELD_CROSS_SECTION_ONLY, 1e-4f);
+        DOCTEST_CHECK(cross_section_used == size_t(2 * segment_count * radial_subdivisions));
+
+        // Welding fully instead shares each interior ring between the two segments that meet there.
+        DOCTEST_CHECK(ctx.getObjectSharedVertexCount(ObjID, WELD_FULL) == size_t(nodes.size() * radial_subdivisions));
+        const size_t full_used = checkSharedVertexTopologyIsConsistent(ctx, ObjID, WELD_FULL, 1e-4f);
+        DOCTEST_CHECK(full_used == size_t(nodes.size() * radial_subdivisions));
+
+        // Welding is the whole point: there are three corners per facet, and far fewer distinct vertices than that.
+        DOCTEST_CHECK(full_used < 3 * ctx.getObjectPrimitiveUUIDs(ObjID).size());
+    }
+
+    SUBCASE("Tube topology survives the object being rotated and translated") {
+        // The indices come from the primitive list rather than from coordinates, so they must be unaffected by where the object has been moved to.
+        Context ctx;
+        const uint ObjID = ctx.addTubeObject(8, {make_vec3(0, 0, 0), make_vec3(0, 0, 1), make_vec3(0, 0.4f, 1.9f)}, {0.2f, 0.2f, 0.1f});
+        const std::vector<std::vector<int>> before = ctx.getObjectPrimitiveSharedVertexIndices(ObjID, ctx.getObjectPrimitiveUUIDs(ObjID), WELD_CROSS_SECTION_ONLY);
+
+        ctx.rotateObject(ObjID, 0.7f, "y");
+        ctx.translateObject(ObjID, make_vec3(3, -2, 5));
+
+        const std::vector<std::vector<int>> after = ctx.getObjectPrimitiveSharedVertexIndices(ObjID, ctx.getObjectPrimitiveUUIDs(ObjID), WELD_CROSS_SECTION_ONLY);
+
+        // Vertices are named from where they are, so a transform may renumber the spokes. What has to survive is the property the naming exists for: the same number of facets described, and coincident
+        // corners still sharing one vertex.
+        DOCTEST_CHECK(after.size() == before.size());
+        checkSharedVertexTopologyIsConsistent(ctx, ObjID, WELD_CROSS_SECTION_ONLY, 1e-4f);
+    }
+
+    SUBCASE("Sphere collapses each pole to a single vertex") {
+        Context ctx;
+        const uint radial_subdivisions = 7;
+        const uint ObjID = ctx.addSphereObject(radial_subdivisions, make_vec3(1, 2, 3), 0.5f);
+
+        DOCTEST_CHECK(ctx.doesObjectHaveSharedVertexTopology(ObjID));
+        DOCTEST_CHECK(ctx.getObjectSharedVertexCount(ObjID, WELD_FULL) == size_t(2 + (radial_subdivisions - 1) * radial_subdivisions));
+
+        const size_t full_used = checkSharedVertexTopologyIsConsistent(ctx, ObjID, WELD_FULL, 1e-4f);
+        DOCTEST_CHECK(full_used == size_t(2 + (radial_subdivisions - 1) * radial_subdivisions));
+
+        checkSharedVertexTopologyIsConsistent(ctx, ObjID, WELD_CROSS_SECTION_ONLY, 1e-4f);
+    }
+
+    SUBCASE("Cone welds its seam and reports one vertex per division at each end") {
+        Context ctx;
+        const uint radial_subdivisions = 9;
+        const uint ObjID = ctx.addConeObject(radial_subdivisions, make_vec3(0, 0, 0), make_vec3(0, 0, 2), 0.4f, 0.15f);
+
+        DOCTEST_CHECK(ctx.doesObjectHaveSharedVertexTopology(ObjID));
+        DOCTEST_CHECK(ctx.getObjectSharedVertexCount(ObjID, WELD_CROSS_SECTION_ONLY) == size_t(2 * radial_subdivisions));
+
+        const size_t used = checkSharedVertexTopologyIsConsistent(ctx, ObjID, WELD_CROSS_SECTION_ONLY, 1e-4f);
+        DOCTEST_CHECK(used == size_t(2 * radial_subdivisions));
+    }
+
+    SUBCASE("Tile reports the nodes of its sub-patch grid") {
+        Context ctx;
+        const int2 subdivisions = make_int2(5, 3);
+        const uint ObjID = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(2, 1), make_SphericalCoord(0.3f, 0.9f), subdivisions);
+
+        DOCTEST_CHECK(ctx.doesObjectHaveSharedVertexTopology(ObjID));
+        DOCTEST_CHECK(ctx.getObjectSharedVertexCount(ObjID, WELD_FULL) == size_t((subdivisions.x + 1) * (subdivisions.y + 1)));
+
+        const size_t used = checkSharedVertexTopologyIsConsistent(ctx, ObjID, WELD_FULL, 1e-4f);
+        DOCTEST_CHECK(used == size_t((subdivisions.x + 1) * (subdivisions.y + 1)));
+
+        // A tile is planar, so there is no axis for the two weld modes to disagree about.
+        DOCTEST_CHECK(ctx.getObjectSharedVertexCount(ObjID, WELD_CROSS_SECTION_ONLY) == ctx.getObjectSharedVertexCount(ObjID, WELD_FULL));
+    }
+
+    SUBCASE("Flat-faced object types report no shared vertex topology") {
+        // A box and a disk are built from genuinely flat faces, where the value of a per-face quantity is already correct across the whole face, so there is nothing for a consumer to interpolate.
+        Context ctx;
+        const uint box_ObjID = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(2, 2, 2));
+        const uint disk_ObjID = ctx.addDiskObject(10, make_vec3(3, 0, 0), make_vec2(0.5f, 0.5f));
+
+        DOCTEST_CHECK(!ctx.doesObjectHaveSharedVertexTopology(box_ObjID));
+        DOCTEST_CHECK(!ctx.doesObjectHaveSharedVertexTopology(disk_ObjID));
+        DOCTEST_CHECK(ctx.getObjectSharedVertexCount(box_ObjID, WELD_FULL) == 0);
+        DOCTEST_CHECK(ctx.getObjectPrimitiveSharedVertexIndices(box_ObjID, ctx.getObjectPrimitiveUUIDs(box_ObjID).front(), WELD_FULL).empty());
+    }
+
+    SUBCASE("A primitive with no parent object has no shared vertices") {
+        Context ctx;
+        const uint patch_UUID = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        const uint triangle_UUID = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0));
+
+        DOCTEST_CHECK(ctx.getPrimitiveSharedVertexIndices(patch_UUID, WELD_FULL).empty());
+        DOCTEST_CHECK(ctx.getPrimitiveSharedVertexIndices(triangle_UUID, WELD_FULL).empty());
+    }
+
+    SUBCASE("Polymesh reports the face table it retained from the file it was loaded from") {
+        Context ctx;
+        const std::vector<uint> mesh_UUIDs = ctx.loadOBJ("lib/models/test_cube_medium.obj", true);
+        DOCTEST_REQUIRE(!mesh_UUIDs.empty());
+
+        const uint ObjID = ctx.getPrimitiveParentObjectID(mesh_UUIDs.front());
+        DOCTEST_REQUIRE(ObjID != 0);
+        DOCTEST_REQUIRE(ctx.getObjectType(ObjID) == OBJECT_TYPE_POLYMESH);
+
+        DOCTEST_CHECK(ctx.doesObjectHaveSharedVertexTopology(ObjID));
+        DOCTEST_CHECK(ctx.getObjectSharedVertexCount(ObjID, WELD_FULL) == ctx.getPolymeshObjectVertexCount(ObjID));
+
+        const size_t used = checkSharedVertexTopologyIsConsistent(ctx, ObjID, WELD_FULL, 1e-4f);
+        DOCTEST_CHECK(used > 0);
+        // Facets that meet along an edge report the same vertices there, so there are fewer distinct vertices than loose corners.
+        DOCTEST_CHECK(used < 3 * ctx.getObjectPrimitiveUUIDs(ObjID).size());
+
+        // A mesh has no distinguished axis, so the weld mode makes no difference to it.
+        DOCTEST_CHECK(ctx.getObjectSharedVertexCount(ObjID, WELD_CROSS_SECTION_ONLY) == ctx.getObjectSharedVertexCount(ObjID, WELD_FULL));
+    }
+
+    SUBCASE("A polymesh assembled from loose primitives has no face table to report") {
+        // Grouping unrelated triangles does not make them a mesh: nothing says which of their corners are meant to be the same point.
+        Context ctx;
+        std::vector<uint> loose_UUIDs;
+        loose_UUIDs.push_back(ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0)));
+        loose_UUIDs.push_back(ctx.addTriangle(make_vec3(1, 0, 0), make_vec3(1, 1, 0), make_vec3(0, 1, 0)));
+        const uint ObjID = ctx.addPolymeshObject(loose_UUIDs);
+
+        DOCTEST_CHECK(!ctx.doesObjectHaveSharedVertexTopology(ObjID));
+        DOCTEST_CHECK(ctx.getObjectSharedVertexCount(ObjID, WELD_FULL) == 0);
+        DOCTEST_CHECK(ctx.getObjectPrimitiveSharedVertexIndices(ObjID, loose_UUIDs.front(), WELD_FULL).empty());
+    }
+
+    SUBCASE("Adaptive tile counts only the lattice nodes its sub-patches actually reach") {
+        // The quadtree refines only near the target, so the lattice of the finest level is mostly unused. Counting the whole lattice would claim orders of magnitude more vertices than the tile has.
+        Context ctx;
+        AdaptiveTileRefinement refinement;
+        refinement.target = make_vec2(0.f, 0.f);
+        refinement.subpatch_size_min = 0.25f;
+        refinement.subpatch_size_max = 2.f;
+        refinement.transition_exponent = 0.5f;
+
+        const uint ObjID = ctx.addAdaptiveTileObject(make_vec3(0, 0, 0), make_vec2(8, 8), nullrotation, refinement);
+        DOCTEST_REQUIRE(ctx.getObjectType(ObjID) == OBJECT_TYPE_ADAPTIVE_TILE);
+        DOCTEST_CHECK(ctx.doesObjectHaveSharedVertexTopology(ObjID));
+
+        const size_t subpatch_count = ctx.getObjectPrimitiveUUIDs(ObjID).size();
+        const size_t used = checkSharedVertexTopologyIsConsistent(ctx, ObjID, WELD_FULL, 1e-4f);
+
+        DOCTEST_CHECK(used == ctx.getObjectSharedVertexCount(ObjID, WELD_FULL));
+        DOCTEST_CHECK(used > 0);
+        // Four corners per sub-patch, and neighbours share them, so the vertex count sits between the sub-patch count and four times it.
+        DOCTEST_CHECK(used < 4 * subpatch_count);
+        DOCTEST_CHECK(used > subpatch_count);
+    }
+
+    SUBCASE("Deleting a facet leaves the remaining facets correctly named") {
+        // Facets are located from where their corners are rather than from their position in the object's primitive list, so removing one does not disturb the naming of the others.
+        Context ctx;
+        const uint ObjID = ctx.addTubeObject(6, {make_vec3(0, 0, 0), make_vec3(0, 0, 1)}, {0.2f, 0.2f});
+        DOCTEST_REQUIRE(ctx.doesObjectHaveSharedVertexTopology(ObjID));
+
+        ctx.deletePrimitive(ctx.getObjectPrimitiveUUIDs(ObjID).front());
+
+        DOCTEST_CHECK(ctx.doesObjectHaveSharedVertexTopology(ObjID));
+        checkSharedVertexTopologyIsConsistent(ctx, ObjID, WELD_CROSS_SECTION_ONLY, 1e-4f);
+    }
+}
+
+TEST_CASE("Shared vertex topology survives the ways an object can legitimately be built and moved") {
+
+    SUBCASE("Textured sphere reports the same vertices as an untextured one") {
+        // The textured and untextured sphere generators wind the top cap differently, so an index formula derived from one of them is wrong for the other.
+        Context ctx;
+        const uint ObjID = ctx.addSphereObject(7, make_vec3(0, 0, 0), 0.5f, "lib/images/solid.jpg");
+        DOCTEST_REQUIRE(ctx.doesObjectHaveSharedVertexTopology(ObjID));
+        checkSharedVertexTopologyIsConsistent(ctx, ObjID, WELD_FULL, 1e-4f);
+    }
+
+    SUBCASE("Tile whose frame has been sheared by a rotation and a non-uniform scale") {
+        // scaleObject applies a world-axis scale, so rotating first leaves the tile a parallelogram whose edge vectors are no longer perpendicular.
+        Context ctx;
+        const uint ObjID = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(8, 8));
+        ctx.rotateObject(ObjID, 0.25f * float(M_PI), "z");
+        ctx.scaleObject(ObjID, make_vec3(2, 1, 1));
+
+        const size_t used = checkSharedVertexTopologyIsConsistent(ctx, ObjID, WELD_FULL, 1e-4f);
+        DOCTEST_INFO("distinct vertices located on the sheared tile: " << used);
+        DOCTEST_CHECK(used == size_t(9 * 9));
+    }
+
+    SUBCASE("Tube that had a segment appended and was then written and reloaded") {
+        // appendTubeSegment inserts the new facets into the radial ordering, and writeXML sorts member UUIDs, so a reloaded tube has the same facet count in a different order.
+        const std::string filename = "test_tube_topology_roundtrip.xml";
+        {
+            Context ctx;
+            const uint ObjID = ctx.addTubeObject(6, {make_vec3(0, 0, 0), make_vec3(0, 0, 1)}, {0.2f, 0.2f});
+            ctx.appendTubeSegment(ObjID, make_vec3(0, 0, 2), 0.2f, RGB::green);
+            checkSharedVertexTopologyIsConsistent(ctx, ObjID, WELD_CROSS_SECTION_ONLY, 1e-4f);
+            ctx.writeXML(filename.c_str(), true);
+        }
+
+        Context ctx;
+        ctx.loadXML(filename.c_str(), true);
+        for (uint ObjID: ctx.getAllObjectIDs()) {
+            if (ctx.getObjectType(ObjID) == OBJECT_TYPE_TUBE) {
+                checkSharedVertexTopologyIsConsistent(ctx, ObjID, WELD_CROSS_SECTION_ONLY, 1e-4f);
+            }
+        }
+        std::filesystem::remove(filename);
+    }
+
+    SUBCASE("An object too coarse to have a lattice reports no topology") {
+        // hasSharedVertexTopology() is documented as false exactly when getPrimitiveSharedVertexIndices() returns nothing, so it has to be answered from the object rather than asserted.
+        Context ctx;
+        const uint box_ObjID = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(2, 2, 2));
+        DOCTEST_CHECK(!ctx.doesObjectHaveSharedVertexTopology(box_ObjID));
+        DOCTEST_CHECK(ctx.getObjectSharedVertexCount(box_ObjID, WELD_FULL) == 0);
+
+        // A textured tube drops its degenerate facets at creation; the remaining ones must still be named correctly.
+        const uint tube_ObjID = ctx.addTubeObject(6, {make_vec3(3, 0, 0), make_vec3(3, 0, 1)}, {0.2f, 0.2f}, "lib/images/solid.jpg");
+        DOCTEST_CHECK(ctx.doesObjectHaveSharedVertexTopology(tube_ObjID));
+        checkSharedVertexTopologyIsConsistent(ctx, tube_ObjID, WELD_CROSS_SECTION_ONLY, 1e-4f);
+    }
+}
+
+TEST_CASE("Polymesh bulk vertex deformation") {
+
+    // Builds the two-triangle quad shared by these subcases: faces (0,1,2) and (0,2,3) meeting along the edge (v0, v2).
+    auto buildQuad = [](Context &ctx, uint &objID, std::vector<uint> &UUIDs, std::vector<vec3> &mesh_vertices, std::vector<int3> &mesh_faces) {
+        mesh_vertices = {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), make_vec3(0, 1, 0)};
+        mesh_faces = {make_int3(0, 1, 2), make_int3(0, 2, 3)};
+        UUIDs.clear();
+        for (const int3 &f: mesh_faces) {
+            UUIDs.push_back(ctx.addTriangle(mesh_vertices.at(f.x), mesh_vertices.at(f.y), mesh_vertices.at(f.z), RGB::red));
+        }
+        objID = ctx.addPolymeshObject(UUIDs);
+        ctx.setPolymeshObjectTopology(objID, mesh_vertices, mesh_faces, UUIDs, {}, {}, NORMAL_SOURCE_NONE);
+    };
+
+    SUBCASE("Moved vertices round-trip and carry the member primitives with them") {
+        Context ctx;
+        uint objID;
+        std::vector<uint> UUIDs;
+        std::vector<vec3> mesh_vertices;
+        std::vector<int3> mesh_faces;
+        buildQuad(ctx, objID, UUIDs, mesh_vertices, mesh_faces);
+
+        // Lift the two vertices along the far edge, which is the shape a leaf deformation produces: a bend rather than a rigid motion.
+        std::vector<vec3> deformed = mesh_vertices;
+        deformed.at(1).z = 0.25f;
+        deformed.at(2).z = 0.5f;
+        ctx.setPolymeshObjectVertices(objID, deformed);
+
+        std::vector<vec3> vertices_after = ctx.getPolymeshObjectVertices(objID);
+        DOCTEST_REQUIRE(vertices_after.size() == 4);
+        for (size_t v = 0; v < deformed.size(); v++) {
+            DOCTEST_CHECK(vertices_after.at(v).x == doctest::Approx(deformed.at(v).x).epsilon(1e-5));
+            DOCTEST_CHECK(vertices_after.at(v).y == doctest::Approx(deformed.at(v).y).epsilon(1e-5));
+            DOCTEST_CHECK(vertices_after.at(v).z == doctest::Approx(deformed.at(v).z).epsilon(1e-5));
+        }
+
+        // Unlike a per-primitive transform, this must push the new positions all the way out to the primitives.
+        DOCTEST_CHECK(ctx.getTriangleVertex(UUIDs.at(0), 1).z == doctest::Approx(0.25f).epsilon(1e-5));
+        DOCTEST_CHECK(ctx.getTriangleVertex(UUIDs.at(0), 2).z == doctest::Approx(0.5f).epsilon(1e-5));
+    }
+
+    SUBCASE("Faces meeting at a shared vertex stay welded") {
+        Context ctx;
+        uint objID;
+        std::vector<uint> UUIDs;
+        std::vector<vec3> mesh_vertices;
+        std::vector<int3> mesh_faces;
+        buildQuad(ctx, objID, UUIDs, mesh_vertices, mesh_faces);
+
+        // v2 is referenced by both faces. Moving it must move it in BOTH primitives - the tearing that transforming facets one at a time produces.
+        std::vector<vec3> deformed = mesh_vertices;
+        deformed.at(2).z = 3.f;
+        ctx.setPolymeshObjectVertices(objID, deformed);
+
+        // Face 0 is (0,1,2), so v2 is its corner 2; face 1 is (0,2,3), so v2 is its corner 1.
+        DOCTEST_CHECK(ctx.getTriangleVertex(UUIDs.at(0), 2).z == doctest::Approx(3.f).epsilon(1e-5));
+        DOCTEST_CHECK(ctx.getTriangleVertex(UUIDs.at(1), 1).z == doctest::Approx(3.f).epsilon(1e-5));
+
+        // The vertices that did not move must stay put in both primitives.
+        DOCTEST_CHECK(ctx.getTriangleVertex(UUIDs.at(0), 0).z == doctest::Approx(0.f).epsilon(1e-5));
+        DOCTEST_CHECK(ctx.getTriangleVertex(UUIDs.at(1), 2).z == doctest::Approx(0.f).epsilon(1e-5));
+    }
+
+    SUBCASE("Deformation survives an object transform and a copy") {
+        Context ctx;
+        uint objID;
+        std::vector<uint> UUIDs;
+        std::vector<vec3> mesh_vertices;
+        std::vector<int3> mesh_faces;
+        buildQuad(ctx, objID, UUIDs, mesh_vertices, mesh_faces);
+
+        // Vertices are stored in the object-local frame but are given and returned in global coordinates, so a scaled and translated object must round-trip global positions unchanged. This is the case the
+        // plant model actually hits: leaves are scaled and placed before being deformed.
+        ctx.scaleObject(objID, make_vec3(2, 2, 2));
+        ctx.translateObject(objID, make_vec3(10, 0, 0));
+
+        std::vector<vec3> deformed = ctx.getPolymeshObjectVertices(objID);
+        deformed.at(2).z += 1.5f;
+        ctx.setPolymeshObjectVertices(objID, deformed);
+
+        std::vector<vec3> vertices_after = ctx.getPolymeshObjectVertices(objID);
+        DOCTEST_REQUIRE(vertices_after.size() == 4);
+        DOCTEST_CHECK(vertices_after.at(2).x == doctest::Approx(deformed.at(2).x).epsilon(1e-4));
+        DOCTEST_CHECK(vertices_after.at(2).z == doctest::Approx(deformed.at(2).z).epsilon(1e-4));
+
+        // A copy carries the deformed topology, so cloned leaves are themselves deformable.
+        uint objID_copy = ctx.copyObject(objID);
+        std::vector<vec3> vertices_copy = ctx.getPolymeshObjectVertices(objID_copy);
+        DOCTEST_REQUIRE(vertices_copy.size() == 4);
+        DOCTEST_CHECK(vertices_copy.at(2).z == doctest::Approx(vertices_after.at(2).z).epsilon(1e-4));
+
+        std::vector<vec3> deformed_copy = vertices_copy;
+        deformed_copy.at(3).z += 2.f;
+        ctx.setPolymeshObjectVertices(objID_copy, deformed_copy);
+        DOCTEST_CHECK(ctx.getPolymeshObjectVertices(objID_copy).at(3).z == doctest::Approx(deformed_copy.at(3).z).epsilon(1e-4));
+        // Deforming the copy must not disturb the original it was cloned from.
+        DOCTEST_CHECK(ctx.getPolymeshObjectVertices(objID).at(3).z == doctest::Approx(vertices_after.at(3).z).epsilon(1e-4));
+    }
+
+    SUBCASE("Deforming a textured mesh does not recompute the solid fraction") {
+        Context ctx;
+
+        // The diamond texture is half transparent, so its solid fraction is a value the deformation could plausibly disturb. Solid fraction is a function of the (u,v) coordinates, which a deformation does
+        // not touch; recomputing it would rasterize the alpha mask for every facet of every mesh moved, which is the cost this whole API exists to avoid.
+        const char *texture = "lib/images/diamond_texture.png";
+        std::vector<vec3> mesh_vertices = {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), make_vec3(0, 1, 0)};
+        std::vector<vec2> mesh_uv = {make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1), make_vec2(0, 1)};
+        std::vector<int3> mesh_faces = {make_int3(0, 1, 2), make_int3(0, 2, 3)};
+        std::vector<uint> UUIDs;
+        for (const int3 &f: mesh_faces) {
+            UUIDs.push_back(ctx.addTriangle(mesh_vertices.at(f.x), mesh_vertices.at(f.y), mesh_vertices.at(f.z), texture, mesh_uv.at(f.x), mesh_uv.at(f.y), mesh_uv.at(f.z)));
+        }
+        uint objID = ctx.addPolymeshObject(UUIDs);
+        ctx.setPolymeshObjectTopology(objID, mesh_vertices, mesh_faces, UUIDs, {}, mesh_uv, NORMAL_SOURCE_NONE);
+
+        const float solid_fraction_before = ctx.getPrimitiveSolidFraction(UUIDs.front());
+
+        std::vector<vec3> deformed = mesh_vertices;
+        deformed.at(1).z = 0.4f;
+        deformed.at(2).z = 0.8f;
+        ctx.setPolymeshObjectVertices(objID, deformed);
+
+        DOCTEST_CHECK(ctx.getPrimitiveSolidFraction(UUIDs.front()) == doctest::Approx(solid_fraction_before).epsilon(1e-6));
+    }
+
+    SUBCASE("Invalid deformation requests are rejected") {
+        Context ctx;
+        uint objID;
+        std::vector<uint> UUIDs;
+        std::vector<vec3> mesh_vertices;
+        std::vector<int3> mesh_faces;
+        buildQuad(ctx, objID, UUIDs, mesh_vertices, mesh_faces);
+
+        // The method moves existing vertices and cannot add or remove them, so a mismatched count is a mistake rather than something to silently truncate.
+        std::vector<vec3> too_few = {make_vec3(0, 0, 0), make_vec3(1, 0, 0)};
+        DOCTEST_CHECK_THROWS(ctx.setPolymeshObjectVertices(objID, too_few));
+
+        std::vector<vec3> too_many = mesh_vertices;
+        too_many.push_back(make_vec3(2, 2, 2));
+        DOCTEST_CHECK_THROWS(ctx.setPolymeshObjectVertices(objID, too_many));
+
+        // A mesh assembled from loose primitives carries no face table, so there are no shared vertices to write and the request cannot be honoured.
+        uint UUID_loose = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), RGB::blue);
+        uint objID_loose = ctx.addPolymeshObject({UUID_loose});
+        DOCTEST_CHECK_THROWS(ctx.setPolymeshObjectVertices(objID_loose, {make_vec3(0, 0, 1), make_vec3(1, 0, 1), make_vec3(1, 1, 1)}));
+
+        DOCTEST_CHECK_THROWS(ctx.setPolymeshObjectVertices(99999, mesh_vertices));
+    }
+}
+
+TEST_CASE("Polymesh volume comes from the parts of the mesh that enclose something") {
+    // Solids are commonly authored alongside open decoration - a fruit modelled with its sepals, or with its stalk. Requiring the whole mesh to be watertight leaves such an object with no computable volume
+    // at all, even though the part that has one is closed; and sealing the decoration to satisfy that requirement would add its enclosed volume to the solid's.
+    const float h = 0.5f;
+    const std::vector<vec3> cube_vertices = {make_vec3(-h, -h, -h), make_vec3(h, -h, -h), make_vec3(h, h, -h), make_vec3(-h, h, -h),
+                                             make_vec3(-h, -h, h),  make_vec3(h, -h, h),  make_vec3(h, h, h),  make_vec3(-h, h, h)};
+    const std::vector<int3> cube_faces = {make_int3(0, 3, 2), make_int3(0, 2, 1), make_int3(4, 5, 6), make_int3(4, 6, 7), make_int3(0, 1, 5),
+                                          make_int3(0, 5, 4), make_int3(2, 3, 7), make_int3(2, 7, 6), make_int3(0, 4, 7), make_int3(0, 7, 3),
+                                          make_int3(1, 2, 6), make_int3(1, 6, 5)};
+
+    SUBCASE("A closed solid alongside an open flap reports the solid's volume") {
+        Context ctx;
+        std::vector<vec3> vertices = cube_vertices;
+        std::vector<int3> faces = cube_faces;
+        std::vector<uint> face_UUIDs;
+        for (const int3 &face: faces) {
+            face_UUIDs.push_back(ctx.addTriangle(vertices.at(face.x), vertices.at(face.y), vertices.at(face.z)));
+        }
+
+        // A flap standing well clear of the cube: two triangles sharing an edge, open all the way round and touching nothing else.
+        const int base = int(vertices.size());
+        vertices.push_back(make_vec3(3, 0, 0));
+        vertices.push_back(make_vec3(4, 0, 0));
+        vertices.push_back(make_vec3(4, 1, 0));
+        vertices.push_back(make_vec3(3, 1, 0));
+        const std::vector<int3> flap = {make_int3(base, base + 1, base + 2), make_int3(base, base + 2, base + 3)};
+        for (const int3 &face: flap) {
+            face_UUIDs.push_back(ctx.addTriangle(vertices.at(face.x), vertices.at(face.y), vertices.at(face.z)));
+            faces.push_back(face);
+        }
+
+        const uint ObjID = ctx.addPolymeshObject(face_UUIDs);
+        ctx.setPolymeshObjectTopology(ObjID, vertices, faces, face_UUIDs, {}, {}, NORMAL_SOURCE_NONE);
+
+        DOCTEST_REQUIRE(!ctx.getPolymeshObjectBoundaryEdges(ObjID).empty()); // the mesh as a whole is not watertight
+        DOCTEST_CHECK(ctx.getPolymeshObjectVolume(ObjID) == doctest::Approx(8.f * h * h * h).epsilon(1e-4));
+    }
+
+    SUBCASE("A mesh that encloses nothing anywhere still raises") {
+        // With no closed piece there is no volume to report, so the caller is told rather than handed a number that means nothing.
+        Context ctx;
+        const std::vector<vec3> vertices = {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), make_vec3(0, 1, 0)};
+        const std::vector<int3> faces = {make_int3(0, 1, 2), make_int3(0, 2, 3)};
+        std::vector<uint> face_UUIDs;
+        for (const int3 &face: faces) {
+            face_UUIDs.push_back(ctx.addTriangle(vertices.at(face.x), vertices.at(face.y), vertices.at(face.z)));
+        }
+        const uint ObjID = ctx.addPolymeshObject(face_UUIDs);
+        ctx.setPolymeshObjectTopology(ObjID, vertices, faces, face_UUIDs, {}, {}, NORMAL_SOURCE_NONE);
+
+        DOCTEST_CHECK_THROWS_AS(ctx.getPolymeshObjectVolume(ObjID), std::runtime_error);
+    }
+
+    SUBCASE("A mesh with no face table is still checked before its volume is reported") {
+        // An object grouped from loose primitives carries no topology, so its facets are matched up by which of their corners coincide. Without that check the divergence theorem returns a number for an open
+        // surface too - and not even a fixed one, since it measures the cone swept from the origin and therefore changes when the object is moved.
+        Context ctx;
+        std::vector<uint> flap_UUIDs;
+        flap_UUIDs.push_back(ctx.addTriangle(make_vec3(3, 0, 5), make_vec3(4, 0, 5), make_vec3(4, 1, 5)));
+        flap_UUIDs.push_back(ctx.addTriangle(make_vec3(3, 0, 5), make_vec3(4, 1, 5), make_vec3(3, 1, 5)));
+        const uint flap_ObjID = ctx.addPolymeshObject(flap_UUIDs);
+        DOCTEST_REQUIRE(ctx.getPolymeshObjectFaceCount(flap_ObjID) == 0);
+        DOCTEST_CHECK_THROWS_AS(ctx.getPolymeshObjectVolume(flap_ObjID), std::runtime_error);
+
+        // A closed solid grouped the same way is still measured, since its facets do meet up.
+        std::vector<uint> cube_UUIDs;
+        for (const int3 &face: cube_faces) {
+            cube_UUIDs.push_back(ctx.addTriangle(cube_vertices.at(face.x), cube_vertices.at(face.y), cube_vertices.at(face.z)));
+        }
+        const uint cube_ObjID = ctx.addPolymeshObject(cube_UUIDs);
+        DOCTEST_REQUIRE(ctx.getPolymeshObjectFaceCount(cube_ObjID) == 0);
+        DOCTEST_CHECK(ctx.getPolymeshObjectVolume(cube_ObjID) == doctest::Approx(8.f * h * h * h).epsilon(1e-4));
+    }
+
+    SUBCASE("Two separate solids add rather than cancel") {
+        // Signed volumes are taken piece by piece, so a second solid wound the other way does not subtract from the first.
+        Context ctx;
+        std::vector<vec3> vertices;
+        std::vector<int3> faces;
+        std::vector<uint> face_UUIDs;
+        for (int copy = 0; copy < 2; copy++) {
+            const int base = int(vertices.size());
+            for (const vec3 &vertex: cube_vertices) {
+                vertices.push_back(vertex + make_vec3(3.f * float(copy), 0, 0));
+            }
+            for (const int3 &face: cube_faces) {
+                // The second cube is wound inside-out.
+                const int3 shifted = (copy == 0) ? make_int3(face.x + base, face.y + base, face.z + base) : make_int3(face.x + base, face.z + base, face.y + base);
+                faces.push_back(shifted);
+                face_UUIDs.push_back(ctx.addTriangle(vertices.at(shifted.x), vertices.at(shifted.y), vertices.at(shifted.z)));
+            }
+        }
+        const uint ObjID = ctx.addPolymeshObject(face_UUIDs);
+        ctx.setPolymeshObjectTopology(ObjID, vertices, faces, face_UUIDs, {}, {}, NORMAL_SOURCE_NONE);
+
+        DOCTEST_CHECK(ctx.getPolymeshObjectVolume(ObjID) == doctest::Approx(2.f * 8.f * h * h * h).epsilon(1e-4));
+    }
+}

@@ -1420,6 +1420,18 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
  hidden primitives, reloads as an unconnected mesh rather than one whose faces point at primitives that are not there. Files written before this was supported carry no topology and still reload as a
  triangle soup.
 
+ Any object type that knows which of its facets meet at a given vertex can report that, whether or not it stores a face table. \ref helios::Context::doesObjectHaveSharedVertexTopology() asks whether an
+ object can, \ref helios::Context::getObjectSharedVertexCount() gives the number of distinct shared vertices, and \ref helios::Context::getObjectPrimitiveSharedVertexIndices() gives, for each corner of a
+ primitive, the shared vertex it belongs to, in the same order as \ref helios::Context::getPrimitiveVertices(). Two primitives meeting at a corner report the same index there, which is what lets a
+ consumer average a per-face quantity onto the vertices they have in common. \ref helios::Tube "Tube", \ref helios::Sphere "Sphere", \ref helios::Cone "Cone", \ref helios::Tile "Tile" and
+ \ref helios::AdaptiveTile "AdaptiveTile" derive this from their own lattice, and \ref helios::Polymesh "Polymesh" reports its face table; \ref helios::Box "Box" and \ref helios::Disk "Disk" report none,
+ because their faces are flat and a per-face value is already correct everywhere on them.
+
+ The \ref helios::VertexWeldMode argument selects how coincident vertices are treated. \ref helios::WELD_FULL treats every coincident vertex as one. \ref helios::WELD_CROSS_SECTION_ONLY welds only within
+ a cross-section, so that the two segments of a tube meeting at a node keep separate copies of that ring. The distinction matters for a swept surface, whose tessellation is coarse around the circumference,
+ where it under-resolves the curve, but fine along the axis, where consecutive nodes resolve genuine variation; welding both ways would average away detail the tessellation actually captured. Object types
+ with no distinguished axis report the same topology for either mode.
+
  \subsection AdaptiveTileObjects Adaptive Tile Objects
 
  A ground plane is normally built as a tile object, which subdivides it into a uniform grid. That forces an awkward tradeoff whenever the scene contains an object of interest sitting on a large domain: resolving the shadows it casts requires centimeter-scale sub-patches, while the rest of the domain only needs to occlude the horizon. Running the fine resolution all the way out wastes millions of sub-patches, and nesting several tiles of differing resolution by hand is tedious and leaves seams to manage.

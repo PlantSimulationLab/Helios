@@ -31,11 +31,7 @@
 #ifndef ZLIB_H
 #define ZLIB_H
 
-#ifdef WIN32
-#include "zconf.h.included" //BNB 6/10/2024
-#else
 #include "zconf.h"
-#endif
 
 /* Ensure stdarg.h is included for va_list on Linux systems */
 #if defined(__linux__) && defined(STDC)

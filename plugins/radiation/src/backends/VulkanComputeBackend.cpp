@@ -171,6 +171,9 @@ namespace helios {
         destroyBuffer(radiation_in_buffer);
         destroyBuffer(radiation_out_top_buffer);
         destroyBuffer(radiation_out_bottom_buffer);
+        destroyBuffer(smoothing_vertex_indices_buffer);
+        destroyBuffer(vertex_radiation_out_top_buffer);
+        destroyBuffer(vertex_radiation_out_bottom_buffer);
         destroyBuffer(scatter_top_buffer);
         destroyBuffer(scatter_bottom_buffer);
         destroyBuffer(camera_radiation_buffer);
@@ -306,6 +309,31 @@ namespace helios {
             }
             object_subdivisions_buffer = createBuffer(geometry.object_subdivisions.size() * sizeof(helios::int2), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
             uploadBufferData(object_subdivisions_buffer, geometry.object_subdivisions.data(), geometry.object_subdivisions.size() * sizeof(helios::int2));
+        }
+
+        // Camera flux smoothing topology. The camera shader reads this binding whatever the smoothing setting, so a buffer is always bound; when smoothing is off it holds a single entry, which is too short
+        // for any primitive to index into and leaves the camera reading the per-primitive value.
+        {
+            std::vector<int> smoothing_indices = geometry.smoothing_vertex_indices;
+            if (smoothing_indices.empty()) {
+                smoothing_indices.assign(1, -1);
+            }
+            if (smoothing_vertex_indices_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(smoothing_vertex_indices_buffer);
+            }
+            smoothing_vertex_indices_buffer = createBuffer(smoothing_indices.size() * sizeof(int), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            uploadBufferData(smoothing_vertex_indices_buffer, smoothing_indices.data(), smoothing_indices.size() * sizeof(int));
+            descriptors_dirty = true;
+        }
+
+        // The vertex flux itself arrives later, once a band has been solved. Bind a placeholder now so the descriptor is never left dangling; uploadVertexRadiationOut() replaces it.
+        if (vertex_radiation_out_top_buffer.buffer == VK_NULL_HANDLE) {
+            const float empty_flux = 0.f;
+            vertex_radiation_out_top_buffer = createBuffer(sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            uploadBufferData(vertex_radiation_out_top_buffer, &empty_flux, sizeof(float));
+            vertex_radiation_out_bottom_buffer = createBuffer(sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            uploadBufferData(vertex_radiation_out_bottom_buffer, &empty_flux, sizeof(float));
+            descriptors_dirty = true;
         }
 
         // Upload twosided flags
@@ -2321,6 +2349,34 @@ namespace helios {
         }
     }
 
+    void VulkanComputeBackend::uploadVertexRadiationOut(const std::vector<float> &vertex_radiation_out_top, const std::vector<float> &vertex_radiation_out_bottom) {
+        if (vertex_radiation_out_top.empty() || vertex_radiation_out_bottom.empty()) {
+            return; // camera flux smoothing is disabled, so the placeholder bound at geometry upload stays in place
+        }
+
+        const size_t top_bytes = vertex_radiation_out_top.size() * sizeof(float);
+        const size_t bottom_bytes = vertex_radiation_out_bottom.size() * sizeof(float);
+        const VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+        if (vertex_radiation_out_top_buffer.buffer == VK_NULL_HANDLE || vertex_radiation_out_top_buffer.size != top_bytes) {
+            if (vertex_radiation_out_top_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(vertex_radiation_out_top_buffer);
+            }
+            vertex_radiation_out_top_buffer = createBuffer(top_bytes, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            descriptors_dirty = true;
+        }
+        if (vertex_radiation_out_bottom_buffer.buffer == VK_NULL_HANDLE || vertex_radiation_out_bottom_buffer.size != bottom_bytes) {
+            if (vertex_radiation_out_bottom_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(vertex_radiation_out_bottom_buffer);
+            }
+            vertex_radiation_out_bottom_buffer = createBuffer(bottom_bytes, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            descriptors_dirty = true;
+        }
+
+        uploadBufferData(vertex_radiation_out_top_buffer, vertex_radiation_out_top.data(), top_bytes);
+        uploadBufferData(vertex_radiation_out_bottom_buffer, vertex_radiation_out_bottom.data(), bottom_bytes);
+    }
+
     void VulkanComputeBackend::zeroCameraScatterBuffers(size_t launch_band_count_param) {
         if (primitive_count == 0 || launch_band_count_param == 0) {
             return; // No geometry or bands
@@ -2737,6 +2793,7 @@ namespace helios {
                 {15, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // UV data (vec2)
                 {16, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // UV IDs (int)
                 {17, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Bbox vertices (periodic boundary)
+                {18, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Camera flux smoothing topology
         };
 
         VkDescriptorSetLayoutCreateInfo layout_info{};
@@ -2788,6 +2845,8 @@ namespace helios {
                 {8, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // camera_scatter_top
                 {9, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // camera_scatter_bottom
                 {10, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // radiation_specular
+                {11, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // vertex_radiation_out_top
+                {12, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // vertex_radiation_out_bottom
         };
 
         layout_info.bindingCount = static_cast<uint32_t>(result_bindings.size());
@@ -2832,7 +2891,7 @@ namespace helios {
         // ========== Create Descriptor Pool ==========
 
         std::vector<VkDescriptorPoolSize> pool_sizes = {
-                {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 64}, // All sets: 18 geo + 11 mat + 11 result + 9 sky + 1 debug + margin
+                {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 72}, // All sets: 19 geo + 16 mat + 13 result + 9 sky + 1 debug + margin
         };
 
         VkDescriptorPoolCreateInfo pool_info{};
@@ -3605,6 +3664,23 @@ namespace helios {
             descriptor_writes.push_back(write);
         }
 
+        VkDescriptorBufferInfo smoothing_indices_info{};
+        smoothing_indices_info.buffer = smoothing_vertex_indices_buffer.buffer;
+        smoothing_indices_info.offset = 0;
+        smoothing_indices_info.range = VK_WHOLE_SIZE;
+
+        if (smoothing_vertex_indices_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_geometry;
+            write.dstBinding = 18;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &smoothing_indices_info;
+            descriptor_writes.push_back(write);
+        }
+
         // ========== Set 1: Material/Source Buffers ==========
 
         VkDescriptorBufferInfo source_pos_info{};
@@ -4069,6 +4145,40 @@ namespace helios {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &radiation_specular_info;
+            descriptor_writes.push_back(write);
+        }
+
+        VkDescriptorBufferInfo vertex_radiation_out_top_info{};
+        vertex_radiation_out_top_info.buffer = vertex_radiation_out_top_buffer.buffer;
+        vertex_radiation_out_top_info.offset = 0;
+        vertex_radiation_out_top_info.range = VK_WHOLE_SIZE;
+
+        if (vertex_radiation_out_top_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_results;
+            write.dstBinding = 11;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &vertex_radiation_out_top_info;
+            descriptor_writes.push_back(write);
+        }
+
+        VkDescriptorBufferInfo vertex_radiation_out_bottom_info{};
+        vertex_radiation_out_bottom_info.buffer = vertex_radiation_out_bottom_buffer.buffer;
+        vertex_radiation_out_bottom_info.offset = 0;
+        vertex_radiation_out_bottom_info.range = VK_WHOLE_SIZE;
+
+        if (vertex_radiation_out_bottom_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_results;
+            write.dstBinding = 12;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &vertex_radiation_out_bottom_info;
             descriptor_writes.push_back(write);
         }
 

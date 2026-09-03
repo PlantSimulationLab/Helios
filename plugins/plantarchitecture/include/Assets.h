@@ -2,6 +2,29 @@
 #ifndef HELIOS_ASSETS_H
 #define HELIOS_ASSETS_H
 
+//! Deflect a leaf blade lattice under its own weight
+/**
+ * Treats the blade as a cantilever clamped at its base and loaded by its own distributed weight. The bending moment at each station along the midrib is the weight of everything distal to it acting through
+ * its horizontal lever arm; curvature is proportional to that moment and is integrated along the arc to give the deflected centreline, which the rest of the lattice is then carried along with.
+ *
+ * The deflection is computed from the undeformed rest lattice every time rather than accumulated onto the previous result, so a leaf that stops growing stops drooping instead of creeping downward.
+ * Because the moment grows with the cube of blade length while the stiffness does not, a leaf that doubles in length droops roughly eight times as far - growth-driven droop falls out of the mechanics
+ * and needs no separate age term.
+ * \param[in] rest_vertices Undeformed lattice vertices, row-major over (Nx+1) x (Ny+1) with the midrib running along the local x-axis.
+ * \param[in] Nx Number of blade subdivisions along the leaf length.
+ * \param[in] Ny Number of blade subdivisions across the leaf width.
+ * \param[in] scale Current length scale of the leaf, as applied to the unit-length rest lattice.
+ * \param[in] mature_scale Length scale the leaf reaches when fully grown. This is the reference length the dimensionless flexibility is measured against, so it must be the leaf's final size rather than its
+ * current one - normalizing by the current size would divide out the growth-driven droop entirely.
+ * \param[in] flexibility Dimensionless droopiness of the fully-grown leaf. Zero returns the rest lattice unchanged, which is the path taken by every species that does not droop. Values around 20 give a
+ * mature grass blade that arcs over to roughly a third of its length, and the same value means the same shape regardless of how long the leaf actually is.
+ * \param[in] taper How much more compliant the blade is at its tip than at its base, as a ratio of the two. A blade of uniform stiffness bends hardest where the bending moment is largest, which is at the
+ * clamped base, and is left nearly straight over its outer half; a real grass leaf does the opposite, staying straight near the base and curving hardest toward the tip. The difference is the midrib, whose
+ * thickness falls several-fold from base to tip and takes the blade's bending stiffness down with it faster than the moment itself decays. One leaves the stiffness uniform along the blade.
+ * \return Deflected lattice vertices, parallel to \p rest_vertices.
+ */
+std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, float scale, float mature_scale, float flexibility, float taper = 1.f);
+
 uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype_parameters, int compound_leaf_index);
 
 uint GeneralSphericalFruitPrototype(helios::Context *context_ptr, uint subdivisions);

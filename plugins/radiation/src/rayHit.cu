@@ -28,6 +28,9 @@ rtDeclareVariable(float, t_hit, rtIntersectionDistance, );
 rtDeclareVariable(PerRayData, prd, rtPayload, );
 
 rtDeclareVariable(unsigned int, UUID, attribute UUID, );
+// Where on the facet the ray landed, written by every intersection program. See primitiveIntersection.cu for the meaning of each component.
+rtDeclareVariable(float, surface_u, attribute surface_u, );
+rtDeclareVariable(float, surface_v, attribute surface_v, );
 
 // ---------------------------------------------------------------------------
 // Translucent cover (glass/plastic) optical model
@@ -517,7 +520,49 @@ RT_PROGRAM void closest_hit_camera() {
             // Use BufferIndexer: [primitive][band]
             size_t ind_hit = rad_indexer(hit_position, b);
 
-            if (face || primitive_type[hit_position] == 4) {
+            const bool use_top_face = (face || primitive_type[hit_position] == 4);
+
+            // Camera flux smoothing: blend the outgoing flux across the facet from the values carried by the vertices it shares with its neighbours, so that a coarsely tessellated curved surface does not
+            // render as flat panels with a step at every facet edge. A primitive taking no part in smoothing keeps the single value of the facet behind the pixel.
+            int smooth_v0 = -1;
+            if (smoothing_vertex_indices.size() > 4 * hit_position + 3 && vertex_radiation_out_top.size() > 0) {
+                smooth_v0 = smoothing_vertex_indices[4 * hit_position + 0];
+            }
+
+            if (smooth_v0 >= 0) {
+                const int smooth_v1 = smoothing_vertex_indices[4 * hit_position + 1];
+                const int smooth_v2 = smoothing_vertex_indices[4 * hit_position + 2];
+                const int smooth_v3 = smoothing_vertex_indices[4 * hit_position + 3];
+
+                float w0 = 0.f, w1 = 0.f, w2 = 0.f, w3 = 0.f;
+                if (smooth_v3 < 0) {
+                    // Triangle: barycentric weights, with the attributes holding the weights of the second and third corners.
+                    w1 = surface_u;
+                    w2 = surface_v;
+                    w0 = 1.f - w1 - w2;
+                } else {
+                    // Patch: bilinear weights over the patch-local coordinates, whose corners run (0,0), (1,0), (1,1), (0,1).
+                    w0 = (1.f - surface_u) * (1.f - surface_v);
+                    w1 = surface_u * (1.f - surface_v);
+                    w2 = surface_u * surface_v;
+                    w3 = (1.f - surface_u) * surface_v;
+                }
+
+                float outgoing_flux;
+                if (use_top_face) {
+                    outgoing_flux = w0 * vertex_radiation_out_top[smooth_v0 * Nbands_launch + b] + w1 * vertex_radiation_out_top[smooth_v1 * Nbands_launch + b] + w2 * vertex_radiation_out_top[smooth_v2 * Nbands_launch + b];
+                    if (smooth_v3 >= 0) {
+                        outgoing_flux += w3 * vertex_radiation_out_top[smooth_v3 * Nbands_launch + b];
+                    }
+                } else {
+                    outgoing_flux = w0 * vertex_radiation_out_bottom[smooth_v0 * Nbands_launch + b] + w1 * vertex_radiation_out_bottom[smooth_v1 * Nbands_launch + b] +
+                                    w2 * vertex_radiation_out_bottom[smooth_v2 * Nbands_launch + b];
+                    if (smooth_v3 >= 0) {
+                        outgoing_flux += w3 * vertex_radiation_out_bottom[smooth_v3 * Nbands_launch + b];
+                    }
+                }
+                strength = outgoing_flux * prd.strength;
+            } else if (use_top_face) {
                 strength = radiation_out_top[ind_hit] * prd.strength;
             } else {
                 strength = radiation_out_bottom[ind_hit] * prd.strength;

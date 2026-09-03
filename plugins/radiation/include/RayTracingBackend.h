@@ -228,6 +228,17 @@ namespace helios {
         virtual void uploadRadiationOut(const std::vector<float> &radiation_out_top, const std::vector<float> &radiation_out_bottom) = 0;
 
         /**
+         * @brief Upload the outgoing radiation resampled onto the shared mesh vertices, for camera flux smoothing
+         *
+         * @param[in] vertex_radiation_out_top Top-face outgoing radiation at each shared vertex [Nvertices * Nbands]
+         * @param[in] vertex_radiation_out_bottom Bottom-face outgoing radiation at each shared vertex [Nvertices * Nbands]
+         *
+         * Read by the camera hit program in place of the per-primitive value, and interpolated across the facet from the shared vertices its corners belong to. Both vectors are empty when smoothing is
+         * disabled, in which case the backend has nothing to upload and cameras fall back to the per-primitive value.
+         */
+        virtual void uploadVertexRadiationOut(const std::vector<float> &vertex_radiation_out_top, const std::vector<float> &vertex_radiation_out_bottom) = 0;
+
+        /**
          * @brief Zero camera scatter buffers (scatter_buff_top_cam, scatter_buff_bottom_cam)
          *
          * @param[in] launch_band_count Number of bands being launched in current iteration

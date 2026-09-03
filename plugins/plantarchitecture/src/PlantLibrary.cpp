@@ -2510,14 +2510,16 @@ void PlantArchitecture::initializeMaizeShoots() {
     leaf_prototype.leaf_texture_file[0] = "SorghumLeaf.png";
     leaf_prototype.leaf_aspect_ratio = 0.15f;
     leaf_prototype.midrib_fold_fraction = 0.3f;
-    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.45, -0.3);
+    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.07, -0.04);
+    leaf_prototype.longitudinal_curvature_exponent = 3.f;
+    leaf_prototype.flexibility_taper = 150.f;
+    leaf_prototype.flexibility_aging = 11.f;
+    leaf_prototype.flexibility_aging_max = 6.f;
     leaf_prototype.lateral_curvature = -0.3f;
-    ;
-    leaf_prototype.petiole_roll = 0.04f;
+    leaf_prototype.petiole_roll = 0.f;
     leaf_prototype.wave_period = 0.1f;
-    leaf_prototype.wave_amplitude = 0.1f;
-    leaf_prototype.leaf_buckle_length.uniformDistribution(0.4, 0.6);
-    leaf_prototype.leaf_buckle_angle.uniformDistribution(40, 50);
+    leaf_prototype.wave_amplitude = 0.06f;
+    leaf_prototype.flexibility.uniformDistribution(1.5, 2.3);
     leaf_prototype.subdivisions = 50;
     leaf_prototype.unique_prototypes = 10;
 
@@ -2535,7 +2537,7 @@ void PlantArchitecture::initializeMaizeShoots() {
     phytomer_parameters_maize.internode.max_vegetative_buds_per_petiole = 0;
 
     phytomer_parameters_maize.petiole.petioles_per_internode = 1;
-    phytomer_parameters_maize.petiole.pitch.uniformDistribution(-40, -20);
+    phytomer_parameters_maize.petiole.pitch.uniformDistribution(-30, -16);
     phytomer_parameters_maize.petiole.radius = 0.0;
     phytomer_parameters_maize.petiole.length = 0.01;
     phytomer_parameters_maize.petiole.taper = 0;
@@ -3379,14 +3381,17 @@ void PlantArchitecture::initializeSorghumShoots() {
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
     leaf_prototype.leaf_texture_file[0] = "SorghumLeaf.png";
     leaf_prototype.leaf_aspect_ratio = 0.15f;
-    leaf_prototype.midrib_fold_fraction = 0.3f;
-    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.4, -0.2);
+    leaf_prototype.midrib_fold_fraction = 0.45f;
+    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.07, -0.04);
+    leaf_prototype.longitudinal_curvature_exponent = 3.f;
+    leaf_prototype.flexibility_taper = 150.f;
+    leaf_prototype.flexibility_aging = 11.f;
+    leaf_prototype.flexibility_aging_max = 6.f;
     leaf_prototype.lateral_curvature = -0.3f;
-    leaf_prototype.petiole_roll = 0.04f;
+    leaf_prototype.petiole_roll = 0.f;
     leaf_prototype.wave_period = 0.1f;
-    leaf_prototype.wave_amplitude = 0.1f;
-    leaf_prototype.leaf_buckle_length.uniformDistribution(0.4, 0.6);
-    leaf_prototype.leaf_buckle_angle.uniformDistribution(45, 55);
+    leaf_prototype.wave_amplitude = 0.06f;
+    leaf_prototype.flexibility.uniformDistribution(1.2, 1.8);
     leaf_prototype.subdivisions = 50;
     leaf_prototype.unique_prototypes = 10;
 
@@ -3395,7 +3400,7 @@ void PlantArchitecture::initializeSorghumShoots() {
     PhytomerParameters phytomer_parameters_sorghum(context_ptr->getRandomGenerator());
 
     phytomer_parameters_sorghum.internode.pitch = 0;
-    phytomer_parameters_sorghum.internode.phyllotactic_angle.uniformDistribution(170, 190);
+    phytomer_parameters_sorghum.internode.phyllotactic_angle.uniformDistribution(155, 205);
     phytomer_parameters_sorghum.internode.radius_initial = 0.003;
     phytomer_parameters_sorghum.internode.color = make_RGBcolor(0.09, 0.13, 0.06);
     phytomer_parameters_sorghum.internode.length_segments = 2;
@@ -3404,9 +3409,9 @@ void PlantArchitecture::initializeSorghumShoots() {
     phytomer_parameters_sorghum.internode.max_vegetative_buds_per_petiole = 0;
 
     phytomer_parameters_sorghum.petiole.petioles_per_internode = 1;
-    phytomer_parameters_sorghum.petiole.pitch.uniformDistribution(-40, -20);
+    phytomer_parameters_sorghum.petiole.pitch.uniformDistribution(-25, -12);
     phytomer_parameters_sorghum.petiole.radius = 0.0;
-    phytomer_parameters_sorghum.petiole.length = 0.05;
+    phytomer_parameters_sorghum.petiole.length = 0.002;
     phytomer_parameters_sorghum.petiole.taper = 0;
     phytomer_parameters_sorghum.petiole.curvature = 0;
     phytomer_parameters_sorghum.petiole.length_segments = 1;
@@ -3414,7 +3419,7 @@ void PlantArchitecture::initializeSorghumShoots() {
     phytomer_parameters_sorghum.leaf.leaves_per_petiole = 1;
     phytomer_parameters_sorghum.leaf.pitch = 0;
     phytomer_parameters_sorghum.leaf.yaw = 0;
-    phytomer_parameters_sorghum.leaf.roll = 0;
+    phytomer_parameters_sorghum.leaf.roll.uniformDistribution(-12, 12);
     phytomer_parameters_sorghum.leaf.prototype_scale = 0.65;
     phytomer_parameters_sorghum.leaf.prototype = leaf_prototype;
 
@@ -3441,7 +3446,7 @@ void PlantArchitecture::initializeSorghumShoots() {
     shoot_parameters_mainstem.elongation_rate_max = 0.05;
     shoot_parameters_mainstem.girth_area_factor = 5.f;
     shoot_parameters_mainstem.gravitropic_curvature.uniformDistribution(-700, -200);
-    shoot_parameters_mainstem.internode_length_max = 0.06;
+    shoot_parameters_mainstem.internode_length_max = 0.075;
     shoot_parameters_mainstem.internode_length_decay_rate = 0;
     shoot_parameters_mainstem.flowers_require_dormancy = false;
     shoot_parameters_mainstem.growth_requires_dormancy = false;
@@ -3464,7 +3469,9 @@ uint PlantArchitecture::buildSorghumPlant(const helios::vec3 &base_position) {
 
     uint plantID = addPlantInstance(base_position - make_vec3(0, 0, 0.025), 0);
 
-    uint uID_stem = addBaseStemShoot(plantID, 1, make_AxisRotation(context_ptr->randu(0.f, 0.075f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), context_ptr->randu(0.f, 2.f * M_PI)), 0.003,
+    // The base stem is built upright. A tilt here is not confined to leaning the plant over: the phyllotactic rotation of each successive phytomer is applied about its own internode axis, so tilting the
+    // base makes those axes non-parallel and the two ranks of a distichous grass converge instead of staying opposite. The previous 0.075*pi tilt cost roughly 18 degrees of rank separation.
+    uint uID_stem = addBaseStemShoot(plantID, 1, make_AxisRotation(0.f, context_ptr->randu(0.f, 2.f * M_PI), context_ptr->randu(0.f, 2.f * M_PI)), 0.003,
                                      shoot_types.at("mainstem").internode_length_max.val(), 0.01, 0.01, 0, "mainstem");
 
     breakPlantDormancy(plantID);
@@ -4239,13 +4246,16 @@ void PlantArchitecture::initializeWheatShoots() {
     leaf_prototype.leaf_texture_file[0] = "SorghumLeaf.png";
     leaf_prototype.leaf_aspect_ratio = 0.1f;
     leaf_prototype.midrib_fold_fraction = 0.3f;
-    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.5, -0.1);
+    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.07, -0.04);
+    leaf_prototype.longitudinal_curvature_exponent = 3.f;
+    leaf_prototype.flexibility_taper = 150.f;
+    leaf_prototype.flexibility_aging = 11.f;
+    leaf_prototype.flexibility_aging_max = 5.f;
     leaf_prototype.lateral_curvature = -0.3;
-    leaf_prototype.petiole_roll = 0.04f;
+    leaf_prototype.petiole_roll = 0.f;
     leaf_prototype.wave_period = 0.1f;
-    leaf_prototype.wave_amplitude = 0.1f;
-    leaf_prototype.leaf_buckle_length.uniformDistribution(0.5, 0.6);
-    leaf_prototype.leaf_buckle_angle.uniformDistribution(25, 35);
+    leaf_prototype.wave_amplitude = 0.04f;
+    leaf_prototype.flexibility.uniformDistribution(0.8, 1.2);
     leaf_prototype.subdivisions = 20;
     leaf_prototype.unique_prototypes = 10;
 
@@ -4274,13 +4284,13 @@ void PlantArchitecture::initializeWheatShoots() {
     phytomer_parameters_wheat.leaf.pitch = 0;
     phytomer_parameters_wheat.leaf.yaw = 0;
     phytomer_parameters_wheat.leaf.roll = 0;
-    phytomer_parameters_wheat.leaf.prototype_scale = 0.22;
+    phytomer_parameters_wheat.leaf.prototype_scale = 0.36;
     phytomer_parameters_wheat.leaf.prototype = leaf_prototype;
 
     phytomer_parameters_wheat.peduncle.length = 0.1;
     phytomer_parameters_wheat.peduncle.radius = 0.002;
     phytomer_parameters_wheat.peduncle.color = phytomer_parameters_wheat.internode.color;
-    phytomer_parameters_wheat.peduncle.curvature = -100;
+    phytomer_parameters_wheat.peduncle.curvature = 0;
     phytomer_parameters_wheat.peduncle.radial_subdivisions = 6;
 
     phytomer_parameters_wheat.inflorescence.flowers_per_peduncle = 1;
@@ -4300,13 +4310,14 @@ void PlantArchitecture::initializeWheatShoots() {
     shoot_parameters_mainstem.phyllochron_min = 2;
     shoot_parameters_mainstem.elongation_rate_max = 0.1;
     shoot_parameters_mainstem.girth_area_factor = 6.f;
+    shoot_parameters_mainstem.internode_length_max = 0.11;
     shoot_parameters_mainstem.gravitropic_curvature.uniformDistribution(-500, -200);
     shoot_parameters_mainstem.flowers_require_dormancy = false;
     shoot_parameters_mainstem.growth_requires_dormancy = false;
     shoot_parameters_mainstem.determinate_shoot_growth = false;
     shoot_parameters_mainstem.fruit_set_probability = 1.0;
     shoot_parameters_mainstem.defineChildShootTypes({"mainstem"}, {1.0});
-    shoot_parameters_mainstem.max_nodes = 20;
+    shoot_parameters_mainstem.max_nodes = 8;
     shoot_parameters_mainstem.max_terminal_floral_buds = 1;
 
     defineShootType("mainstem", shoot_parameters_mainstem);
@@ -4321,7 +4332,9 @@ uint PlantArchitecture::buildWheatPlant(const helios::vec3 &base_position) {
 
     uint plantID = addPlantInstance(base_position - make_vec3(0, 0, 0.025), 0);
 
-    uint uID_stem = addBaseStemShoot(plantID, 1, make_AxisRotation(context_ptr->randu(0.f, 0.05f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), context_ptr->randu(0.f, 2.f * M_PI)), 0.001, 0.025, 0.01, 0.01, 0, "mainstem");
+    // The internode length is taken from the shoot type rather than fixed here, so the eight-node culm reaches the height of a real wheat plant; passing a literal overrode it and left the plant knee-high.
+    uint uID_stem = addBaseStemShoot(plantID, 1, make_AxisRotation(context_ptr->randu(0.f, 0.05f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), context_ptr->randu(0.f, 2.f * M_PI)), 0.001,
+                                     shoot_types.at("mainstem").internode_length_max.val(), 0.01, 0.01, 0, "mainstem");
 
     breakPlantDormancy(plantID);
 

@@ -104,6 +104,7 @@ namespace helios {
         void zeroCameraPixelBuffers(const helios::int2 &resolution) override;
         void copyScatterToRadiation() override;
         void uploadRadiationOut(const std::vector<float> &radiation_out_top, const std::vector<float> &radiation_out_bottom) override;
+        void uploadVertexRadiationOut(const std::vector<float> &vertex_radiation_out_top, const std::vector<float> &vertex_radiation_out_bottom) override;
         void zeroCameraScatterBuffers(size_t launch_band_count) override;
         void uploadSourceFluxes(const std::vector<float> &fluxes) override;
         void uploadSourceFluxesCam(const std::vector<float> &fluxes_cam) override;
@@ -255,6 +256,12 @@ namespace helios {
         RTvariable radiation_out_top_RTvariable;
         RTbuffer radiation_out_bottom_RTbuffer;
         RTvariable radiation_out_bottom_RTvariable;
+        RTbuffer smoothing_vertex_indices_RTbuffer;
+        RTvariable smoothing_vertex_indices_RTvariable;
+        RTbuffer vertex_radiation_out_top_RTbuffer;
+        RTvariable vertex_radiation_out_top_RTvariable;
+        RTbuffer vertex_radiation_out_bottom_RTbuffer;
+        RTvariable vertex_radiation_out_bottom_RTvariable;
         RTbuffer Rsky_RTbuffer;
         RTvariable Rsky_RTvariable;
         RTbuffer radiation_specular_RTbuffer;

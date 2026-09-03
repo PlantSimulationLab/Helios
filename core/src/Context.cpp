@@ -4968,6 +4968,30 @@ std::vector<std::vector<helios::vec3>> Context::getObjectPrimitiveVertexNormals(
     return getObjectPointer_private(ObjID)->getPrimitiveVertexNormals(UUIDs);
 }
 
+bool Context::doesObjectHaveSharedVertexTopology(uint ObjID) const {
+    return getObjectPointer_private(ObjID)->hasSharedVertexTopology();
+}
+
+size_t Context::getObjectSharedVertexCount(uint ObjID, helios::VertexWeldMode weld_mode) const {
+    return getObjectPointer_private(ObjID)->getSharedVertexCount(weld_mode);
+}
+
+std::vector<int> Context::getObjectPrimitiveSharedVertexIndices(uint ObjID, uint UUID, helios::VertexWeldMode weld_mode) const {
+    return getObjectPointer_private(ObjID)->getPrimitiveSharedVertexIndices(UUID, weld_mode);
+}
+
+std::vector<std::vector<int>> Context::getObjectPrimitiveSharedVertexIndices(uint ObjID, const std::vector<uint> &UUIDs, helios::VertexWeldMode weld_mode) const {
+    return getObjectPointer_private(ObjID)->getPrimitiveSharedVertexIndices(UUIDs, weld_mode);
+}
+
+std::vector<int> Context::getPrimitiveSharedVertexIndices(uint UUID, helios::VertexWeldMode weld_mode) const {
+    const uint parent_ObjID = getPrimitiveParentObjectID(UUID);
+    if (parent_ObjID == 0 || !doesObjectExist(parent_ObjID)) {
+        return {};
+    }
+    return getObjectPointer_private(parent_ObjID)->getPrimitiveSharedVertexIndices(UUID, weld_mode);
+}
+
 void Context::scaleConeObjectLength(uint ObjID, float scale_factor) {
     getConeObjectPointer_private(ObjID)->scaleLength(scale_factor);
 }
@@ -5004,6 +5028,10 @@ uint Context::getPolymeshObjectPrimitiveUUIDForFace(uint ObjID, size_t face_inde
 
 std::vector<helios::vec3> Context::getPolymeshObjectVertices(uint ObjID) const {
     return getPolymeshObjectPointer_private(ObjID)->getVertices();
+}
+
+void Context::setPolymeshObjectVertices(uint ObjID, const std::vector<helios::vec3> &vertices) {
+    getPolymeshObjectPointer_private(ObjID)->setVertices(vertices);
 }
 
 std::vector<helios::int3> Context::getPolymeshObjectFaces(uint ObjID) const {

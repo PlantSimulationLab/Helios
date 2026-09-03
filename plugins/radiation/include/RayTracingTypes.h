@@ -49,6 +49,13 @@ namespace helios {
         std::vector<char> twosided_flags; //!< Two-sided flag (1=two-sided, 0=one-sided)
         std::vector<float> solid_fractions; //!< Solid fraction (0-1, for porous surfaces)
 
+        // Camera flux smoothing topology (empty unless smoothing is enabled)
+        //!< Shared vertex index for each corner of each primitive, four entries per primitive.
+        //!< Entry 4*p is negative for a primitive that takes no part in smoothing, and entry 4*p+3 is negative for a triangle, which has only three corners.
+        std::vector<int> smoothing_vertex_indices;
+        //!< Number of distinct shared vertices the indices above refer to, across every participating object.
+        size_t smoothing_vertex_count = 0;
+
         // UUID-to-position lookup table (indexed by UUID value)
         //!< Maps UUID to array position: primitive_positions[UUID] = array_index
         //!< Size: max_UUID + 1 (sparse array, entries for non-existent UUIDs = UINT_MAX)
@@ -243,6 +250,10 @@ namespace helios {
         // Emission/outgoing radiation (for diffuse ray launches)
         std::vector<float> radiation_out_top; //!< Emitted/outgoing radiation (top face) per [primitive][band]
         std::vector<float> radiation_out_bottom; //!< Emitted/outgoing radiation (bottom face) per [primitive][band]
+
+        // Outgoing radiation resampled onto the shared mesh vertices, for camera flux smoothing (empty unless smoothing is enabled)
+        std::vector<float> vertex_radiation_out_top; //!< Area-weighted mean outgoing radiation (top face) per [vertex][band]
+        std::vector<float> vertex_radiation_out_bottom; //!< Area-weighted mean outgoing radiation (bottom face) per [vertex][band]
 
         // Flags
         uint specular_reflection_enabled = 0; //!< Specular reflection mode: 0=disabled, 1=default 0.25 scale, 2=user-defined scale

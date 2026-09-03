@@ -154,6 +154,11 @@ void SyntheticAnnotation::setBackgroundColor(const helios::RGBcolor &color) {
 }
 
 void SyntheticAnnotation::addSkyDome(const char *filename) {
+    // An empty filename removes the sky dome, leaving the background colour showing. The existence check is skipped for it because there is no file to find, not because a missing file is being tolerated.
+    if (std::string(filename).empty()) {
+        skydome_texture_file.clear();
+        return;
+    }
     if (!std::filesystem::exists(filename)) {
         helios_runtime_error("ERROR (SyntheticAnnotation::addSkyDome): Sky dome texture file " + std::string(filename) + " does not exist.");
     }
@@ -353,7 +358,11 @@ void SyntheticAnnotation::render(const char *outputdir) {
     vis_RGB.buildContextGeometry(context);
     vis_RGB.hideWatermark();
     vis_RGB.setBackgroundColor(background_color);
-    vis_RGB.setBackgroundSkyTexture(skydome_texture_file.c_str(), 30);
+    // The sky dome is drawn over the background colour, so a caller that has set a flat colour would otherwise never see it. Clearing the sky texture is how that caller asks for the plain colour instead,
+    // which is what matching a photographed backdrop needs.
+    if (!skydome_texture_file.empty()) {
+        vis_RGB.setBackgroundSkyTexture(skydome_texture_file.c_str(), 30);
+    }
     vis_RGB.setLightDirection(sphere2cart(make_SphericalCoord(30 * M_PI / 180.f, 205 * M_PI / 180.f)));
     vis_RGB.setLightingModel(Visualizer::LIGHTING_PHONG_SHADOWED);
 

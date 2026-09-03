@@ -26,6 +26,11 @@ rtDeclareVariable(Ray, ray, rtCurrentRay, );
 rtDeclareVariable(PerRayData, prd, rtPayload, );
 
 rtDeclareVariable(unsigned int, UUID, attribute UUID, );
+// Where on the facet the ray landed, so that the camera program can interpolate a per-vertex quantity across it rather than holding it constant. For a triangle these are the barycentric weights of the
+// second and third vertices; for a patch they are the position within the patch, running from zero at its first vertex to one at the second and fourth. Every intersection program must set them, since an
+// attribute not written by the program that reported the hit is undefined when it is read.
+rtDeclareVariable(float, surface_u, attribute surface_u, );
+rtDeclareVariable(float, surface_v, attribute surface_v, );
 // Note: Nprimitives is declared in RayTracing.cuh (for bbox position calculation)
 
 //----------------- Rectangle Primitive ----------------------//
@@ -83,6 +88,8 @@ RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in ge
                 if (maskID[ID] == -1) { // no texture transparency
                     if (rtPotentialIntersection(t)) {
                         UUID = patch_UUID[objID];
+                        surface_u = ddota / dot(a, a);
+                        surface_v = ddotb / dot(b, b);
                         rtReportIntersection(0);
                     }
                 } else { // use transparency mask
@@ -109,6 +116,8 @@ RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in ge
                     if (maskdata[ind]) {
                         if (rtPotentialIntersection(t)) {
                             UUID = patch_UUID[objID];
+                            surface_u = ddota / dot(a, a);
+                            surface_v = ddotb / dot(b, b);
                             rtReportIntersection(0);
                         }
                     }
@@ -188,6 +197,8 @@ RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geo
                 if (maskID[ID] == -1) { // no texture transparency
                     if (rtPotentialIntersection(t)) {
                         UUID = triangle_UUID[objID];
+                        surface_u = beta;
+                        surface_v = gamma;
                         rtReportIntersection(0);
                     }
                 } else { // has texture transparency
@@ -208,6 +219,8 @@ RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geo
                     if (maskdata[ind]) {
                         if (rtPotentialIntersection(t)) {
                             UUID = triangle_UUID[objID];
+                            surface_u = beta;
+                            surface_v = gamma;
                             rtReportIntersection(0);
                         }
                     }
@@ -259,6 +272,8 @@ RT_PROGRAM void disk_intersect(int objID /**< [in] index of primitive in geometr
 
             if (rtPotentialIntersection(t)) {
                 UUID = disk_UUID[objID];
+                surface_u = 0.f; // disks take no part in camera flux smoothing
+                surface_v = 0.f;
                 rtReportIntersection(0);
             }
         }
@@ -359,6 +374,8 @@ RT_PROGRAM void voxel_intersect(int objID /**< [in] index of primitive in geomet
     if (t0 < t1 && t0 > 1e-5) { // note: if ray originated inside voxel, no intersection occurs.
         if (rtPotentialIntersection(t0)) {
             UUID = voxel_UUID[objID];
+            surface_u = 0.f; // voxels take no part in camera flux smoothing
+            surface_v = 0.f;
             rtReportIntersection(0);
         }
     }
@@ -417,6 +434,8 @@ RT_PROGRAM void bbox_intersect(int objID /**< [in] index of primitive in geometr
 
                 if (rtPotentialIntersection(t)) {
                     UUID = bbox_UUID[objID];
+                    surface_u = 0.f; // periodic boundary walls take no part in camera flux smoothing
+                    surface_v = 0.f;
                     rtReportIntersection(0);
                 }
             }
@@ -499,6 +518,8 @@ RT_PROGRAM void tile_intersect(int objID /**< [in] index of primitive in geometr
                         int subpatch_x = min((int) floorf(uv.x * object_subdivisions[ID].x), object_subdivisions[ID].x - 1);
                         int subpatch_y = min((int) floorf(uv.y * object_subdivisions[ID].y), object_subdivisions[ID].y - 1);
                         UUID = U + subpatch_y * object_subdivisions[ID].x + subpatch_x;
+                        surface_u = uv.x * object_subdivisions[ID].x - float(subpatch_x);
+                        surface_v = uv.y * object_subdivisions[ID].y - float(subpatch_y);
                         rtReportIntersection(0);
                     }
                 } else { // use transparency mask
@@ -513,6 +534,8 @@ RT_PROGRAM void tile_intersect(int objID /**< [in] index of primitive in geometr
                             int subpatch_x = min((int) floorf(uv.x * object_subdivisions[ID].x), object_subdivisions[ID].x - 1);
                             int subpatch_y = min((int) floorf(uv.y * object_subdivisions[ID].y), object_subdivisions[ID].y - 1);
                             UUID = U + subpatch_y * object_subdivisions[ID].x + subpatch_x;
+                            surface_u = uv.x * object_subdivisions[ID].x - float(subpatch_x);
+                            surface_v = uv.y * object_subdivisions[ID].y - float(subpatch_y);
                             rtReportIntersection(0);
                         }
                     }

@@ -192,7 +192,12 @@ const uint slot_masks[8] = uint[8](0x00u, 0x01u, 0x03u, 0x07u, 0x0Fu, 0x1Fu, 0x3
 // - Step 2: Read metadata + leaf data only for survivors (deferred reads)
 // - No sort arrays — process children in slot order, push internal nodes in near-first order
 // - Branchless byte extraction via bitfieldExtract
-uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_idx, inout float closest_t) {
+// This overload also reports where on the facet the closest hit landed, which the camera shader interpolates a per-vertex quantity with. For a triangle the components are the barycentric weights of the
+// second and third vertices; for a patch they run from zero at the first vertex to one at the second and fourth.
+uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_idx, inout float closest_t, out vec2 closest_uv) {
+
+    closest_uv = vec2(0.0);
+
 
     vec3 ray_dir_inv = safe_inv_dir(ray_dir);
 
@@ -342,6 +347,7 @@ uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim
                         }
                         closest_t = hit.t;
                         closest_prim = prim_idx;
+                        closest_uv = hit.uv;
                     }
                 }
             }
@@ -349,6 +355,12 @@ uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim
     }
 
     return closest_prim;
+}
+
+// Callers that do not need the surface parameters keep the shorter signature.
+uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_idx, inout float closest_t) {
+    vec2 unused_uv;
+    return traverse_cwbvh(ray_origin, ray_dir, t_min, origin_prim_idx, closest_t, unused_uv);
 }
 
 #endif // BVH_TRAVERSAL_GLSL

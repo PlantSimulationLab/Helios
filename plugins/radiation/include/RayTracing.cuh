@@ -149,6 +149,9 @@ rtBuffer<float, 1> radiation_in;
 rtBuffer<float, 1> radiation_in_camera;
 rtBuffer<float, 1> radiation_out_top;
 rtBuffer<float, 1> radiation_out_bottom;
+rtBuffer<int, 1> smoothing_vertex_indices; // Shared vertex index per facet corner, 4 per primitive; entry 4*prim is negative when the primitive is not smoothed, entry 4*prim+3 is negative for a triangle
+rtBuffer<float, 1> vertex_radiation_out_top; // Outgoing radiation resampled onto the shared mesh vertices [vertex * Nbands_launch + band]
+rtBuffer<float, 1> vertex_radiation_out_bottom;
 rtBuffer<float, 1> scatter_buff_top;
 rtBuffer<float, 1> scatter_buff_bottom;
 rtBuffer<float, 1> scatter_buff_top_cam;

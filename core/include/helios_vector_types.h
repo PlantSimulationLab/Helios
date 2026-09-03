@@ -2103,7 +2103,7 @@ namespace helios {
         }
 
         //! Copy constructor
-        SphericalCoord(const SphericalCoord &c) : elevation_private(c.elevation_private), zenith_private(c.zenith_private), radius(c.radius), elevation(c.elevation_private), zenith(c.zenith_private), azimuth(c.azimuth) {
+        SphericalCoord(const SphericalCoord &c) : elevation_private(c.elevation_private), zenith_private(c.zenith_private), radius(c.radius), elevation(elevation_private), zenith(zenith_private), azimuth(c.azimuth) {
         }
 
         //! Assignment operator

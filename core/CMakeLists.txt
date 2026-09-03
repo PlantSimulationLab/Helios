@@ -39,10 +39,10 @@ target_include_directories(helios
 set(SAVED_LOG_LEVEL ${CMAKE_MESSAGE_LOG_LEVEL})
 set(CMAKE_MESSAGE_LOG_LEVEL WARNING)
 
-include_directories( "${CMAKE_CURRENT_SOURCE_DIR}/lib/zlib")
+include_directories( "${CMAKE_BINARY_DIR}/lib/zlib" "${CMAKE_CURRENT_SOURCE_DIR}/lib/zlib")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/zlib"     "${CMAKE_BINARY_DIR}/lib/zlib")
 
-include_directories( "${CMAKE_CURRENT_SOURCE_DIR}/lib/libpng")
+include_directories( "${CMAKE_BINARY_DIR}/lib/libpng" "${CMAKE_CURRENT_SOURCE_DIR}/lib/libpng")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/libpng"   "${CMAKE_BINARY_DIR}/lib/libpng")
 add_dependencies( png_static zlibstatic )
 

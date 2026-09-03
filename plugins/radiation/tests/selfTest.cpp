@@ -10686,3 +10686,521 @@ GPU_TEST_CASE("Backend Invariant - Camera-Weighted Scatter") {
 }
 
 
+
+// Camera flux smoothing tests
+//
+// Smoothing reconstructs a camera image by interpolating the outgoing flux across each facet instead of holding it constant. The tests below pin the three properties that make that safe: it is exactly the
+// identity on a field that is already uniform, it leaves geometry that does not take part untouched, and it does not average across an edge the mesh genuinely resolved.
+
+//! Largest difference between neighbouring pixels that both see geometry
+/**
+ * Faceting shows up as a step at every facet edge, so the largest step between neighbouring pixels is a direct measure of how faceted the image looks. Both image directions are considered, because which one
+ * crosses the facets depends on how the object happens to be oriented on the sensor. Pixels where either side sees the sky are skipped: the step from geometry to background is not faceting and is there
+ * either way.
+ */
+static float maxAdjacentPixelJump(const std::vector<float> &pixels, const helios::int2 &resolution) {
+    auto pixel_at = [&](int i, int j) { return pixels.at(size_t(j) * size_t(resolution.x) + size_t(i)); };
+
+    float largest_jump = 0.f;
+    for (int j = 0; j < resolution.y; j++) {
+        for (int i = 0; i < resolution.x; i++) {
+            const float here = pixel_at(i, j);
+            if (here <= 0.f) {
+                continue;
+            }
+            if (i + 1 < resolution.x && pixel_at(i + 1, j) > 0.f) {
+                largest_jump = std::max(largest_jump, std::fabs(pixel_at(i + 1, j) - here));
+            }
+            if (j + 1 < resolution.y && pixel_at(i, j + 1) > 0.f) {
+                largest_jump = std::max(largest_jump, std::fabs(pixel_at(i, j + 1) - here));
+            }
+        }
+    }
+    return largest_jump;
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - defaults to off and validates its crease angle") {
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+
+    DOCTEST_CHECK(!model.isCameraFluxSmoothingEnabled());
+
+    model.enableCameraFluxSmoothing();
+    DOCTEST_CHECK(model.isCameraFluxSmoothingEnabled());
+    DOCTEST_CHECK(model.getCameraFluxSmoothingCreaseAngle() == doctest::Approx(30.f));
+
+    model.enableCameraFluxSmoothing(45.f);
+    DOCTEST_CHECK(model.getCameraFluxSmoothingCreaseAngle() == doctest::Approx(45.f));
+
+    model.disableCameraFluxSmoothing();
+    DOCTEST_CHECK(!model.isCameraFluxSmoothingEnabled());
+
+    // A crease angle outside [0,180] has no meaning as an angle between two normals, so it is rejected rather than clamped.
+    DOCTEST_CHECK_THROWS_AS(model.enableCameraFluxSmoothing(-5.f), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(model.enableCameraFluxSmoothing(200.f), std::runtime_error);
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - a uniform flux field is reproduced exactly") {
+    // Averaging a per-facet quantity onto the vertices and interpolating it back must not create or destroy energy. The sharpest statement of that is a field which is already uniform: every vertex then
+    // carries the same value, every set of interpolation weights sums to one, and the reconstruction has to return that value at every point of every facet.
+    //
+    // A blackbody tube at a single temperature gives exactly that. With emissivity one there is no reflected component to vary from facet to facet, so every facet radiates sigma*T^4 whatever its
+    // orientation, and a pinhole camera with manual exposure must read sigma*T^4/pi on every pixel covering the tube whether or not smoothing is on. A weight that does not sum to one, or a vertex index
+    // pointing at the wrong slot, shows up here immediately as a changed radiance.
+    const float temperature = 350.f;
+    const float sigma = 5.670374419e-8f;
+    const float expected_radiance = sigma * powf(temperature, 4) / float(M_PI);
+
+    auto render = [&](bool enable_smoothing) {
+        Context context;
+        const std::vector<vec3> nodes = {make_vec3(0, 0, -1), make_vec3(0, 0, 0), make_vec3(0, 0, 1)};
+        const uint ObjID = context.addTubeObject(6, nodes, {0.3f, 0.3f, 0.3f});
+        const std::vector<uint> tube_UUIDs = context.getObjectPrimitiveUUIDs(ObjID);
+        context.setPrimitiveData(tube_UUIDs, "temperature", temperature);
+        context.setPrimitiveData(tube_UUIDs, "emissivity_TH", 1.f);
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        if (enable_smoothing) {
+            model.enableCameraFluxSmoothing();
+        }
+
+        model.addRadiationBand("TH");
+        model.enableEmission("TH");
+        model.setScatteringDepth("TH", 1);
+        model.setDiffuseRayCount("TH", 100);
+
+        CameraProperties camera_properties;
+        camera_properties.camera_resolution = make_int2(64, 64);
+        camera_properties.HFOV = 40.f;
+        camera_properties.lens_diameter = 0.f; // pinhole, so no aperture weighting
+        camera_properties.exposure = "manual"; // raw radiance, so the two runs stay comparable
+        camera_properties.white_balance = "off";
+
+        model.addRadiationCamera("tube_cam", {"TH"}, make_vec3(0, -5, 0), make_vec3(0, 0, 0), camera_properties, 1);
+        model.updateGeometry();
+        model.runBand("TH");
+
+        std::vector<float> pixels = model.getCameraPixelData("tube_cam", "TH");
+        DOCTEST_REQUIRE(pixels.size() == 64 * 64);
+
+        float max_radiance = 0.f;
+        for (float pixel: pixels) {
+            DOCTEST_REQUIRE(std::isfinite(pixel));
+            max_radiance = std::max(max_radiance, pixel);
+        }
+        return max_radiance;
+    };
+
+    const float flat_radiance = render(false);
+    const float smoothed_radiance = render(true);
+
+    DOCTEST_INFO("flat " << flat_radiance << ", smoothed " << smoothed_radiance << ", expected " << expected_radiance);
+    DOCTEST_CHECK(flat_radiance == doctest::Approx(expected_radiance).epsilon(0.05));
+    DOCTEST_CHECK(smoothed_radiance == doctest::Approx(expected_radiance).epsilon(0.05));
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - removes the faceting on a coarsely tessellated tube") {
+    // A tube of six radial divisions lit from one side gives six plateaus of constant radiance around its circumference, with a visible step between each. Smoothing must turn those steps into a gradient.
+    // The effect is deliberately made order-of-magnitude rather than marginal, so that Monte-Carlo noise in the scattered component cannot account for it.
+    auto render = [](bool enable_smoothing) {
+        Context context;
+        const std::vector<vec3> nodes = {make_vec3(0, 0, -1), make_vec3(0, 0, 1)};
+        const uint ObjID = context.addTubeObject(6, nodes, {0.4f, 0.4f});
+        const std::vector<uint> tube_UUIDs = context.getObjectPrimitiveUUIDs(ObjID);
+        context.setPrimitiveData(tube_UUIDs, "reflectivity_SW", 0.5f);
+        context.setPrimitiveData(tube_UUIDs, "transmissivity_SW", 0.f);
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        if (enable_smoothing) {
+            model.enableCameraFluxSmoothing();
+        }
+
+        // The source is angled towards the camera so that several facets around the visible side of the tube are lit to different degrees, and a diffuse component keeps the facets facing away from it from
+        // reading exactly zero. Without both, the camera sees one lit facet against a black background and there is no facet-to-facet step for the test to measure.
+        const uint sun = model.addCollimatedRadiationSource(make_vec3(0.7f, -0.7f, 0.f));
+        model.addRadiationBand("SW");
+        model.disableEmission("SW");
+        model.setScatteringDepth("SW", 1);
+        model.setDirectRayCount("SW", 500);
+        model.setDiffuseRayCount("SW", 500);
+        model.setSourceFlux(sun, "SW", 1000.f);
+        model.setDiffuseRadiationFlux("SW", 150.f);
+
+        CameraProperties camera_properties;
+        camera_properties.camera_resolution = make_int2(80, 80);
+        camera_properties.HFOV = 35.f;
+        camera_properties.lens_diameter = 0.f;
+        camera_properties.exposure = "manual";
+        camera_properties.white_balance = "off";
+
+        model.addRadiationCamera("facet_cam", {"SW"}, make_vec3(0, -4, 0), make_vec3(0, 0, 0), camera_properties, 1);
+        model.updateGeometry();
+        model.runBand("SW");
+
+        std::vector<float> pixels = model.getCameraPixelData("facet_cam", "SW");
+        DOCTEST_REQUIRE(pixels.size() == 80 * 80);
+        for (float pixel: pixels) {
+            DOCTEST_REQUIRE(std::isfinite(pixel));
+        }
+        return pixels;
+    };
+
+    const helios::int2 resolution = make_int2(80, 80);
+    const std::vector<float> flat_pixels = render(false);
+    const std::vector<float> smoothed_pixels = render(true);
+
+    const float flat_jump = maxAdjacentPixelJump(flat_pixels, resolution);
+    const float smoothed_jump = maxAdjacentPixelJump(smoothed_pixels, resolution);
+
+    DOCTEST_REQUIRE(flat_jump > 0.f);
+    DOCTEST_INFO("largest step between neighbouring pixels: flat " << flat_jump << ", smoothed " << smoothed_jump);
+    DOCTEST_CHECK_MESSAGE(smoothed_jump < 0.5f * flat_jump, "smoothing did not reduce the step at the facet edges");
+
+    // The image must still be an image: smoothing redistributes the flux across each facet, it does not dim or brighten the object.
+    const auto flat_max = *std::max_element(flat_pixels.begin(), flat_pixels.end());
+    const auto smoothed_max = *std::max_element(smoothed_pixels.begin(), smoothed_pixels.end());
+    DOCTEST_CHECK(smoothed_max > 0.f);
+    DOCTEST_CHECK(smoothed_max == doctest::Approx(flat_max).epsilon(0.35));
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - leaves geometry that does not take part untouched") {
+    // A patch belonging to no object has no neighbour to share a vertex with, so there is nothing to interpolate and its pixels must be identical with smoothing on and off. This is what lets smoothing be
+    // enabled on a mixed scene without disturbing the parts of it that are already correct.
+    auto render = [](bool enable_smoothing) {
+        Context context;
+        const uint patch_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+        context.setPrimitiveData(patch_UUID, "temperature", 320.f);
+        context.setPrimitiveData(patch_UUID, "emissivity_TH", 1.f);
+
+        // A box is built from genuinely flat faces, so it is excluded by design and must be left alone too.
+        const uint box_ObjID = context.addBoxObject(make_vec3(3, 0, 0), make_vec3(1, 1, 1), make_int3(2, 2, 2));
+        context.setPrimitiveData(context.getObjectPrimitiveUUIDs(box_ObjID), "temperature", 320.f);
+        context.setPrimitiveData(context.getObjectPrimitiveUUIDs(box_ObjID), "emissivity_TH", 1.f);
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        if (enable_smoothing) {
+            model.enableCameraFluxSmoothing();
+        }
+
+        model.addRadiationBand("TH");
+        model.enableEmission("TH");
+        model.setScatteringDepth("TH", 1);
+        model.setDiffuseRayCount("TH", 100);
+
+        CameraProperties camera_properties;
+        camera_properties.camera_resolution = make_int2(48, 48);
+        camera_properties.HFOV = 45.f;
+        camera_properties.lens_diameter = 0.f;
+        camera_properties.exposure = "manual";
+        camera_properties.white_balance = "off";
+
+        model.addRadiationCamera("plain_cam", {"TH"}, make_vec3(0, 0, 6), make_vec3(0, 0, 0), camera_properties, 1);
+        model.updateGeometry();
+        model.runBand("TH");
+
+        return model.getCameraPixelData("plain_cam", "TH");
+    };
+
+    const std::vector<float> flat_pixels = render(false);
+    const std::vector<float> smoothed_pixels = render(true);
+
+    DOCTEST_REQUIRE(flat_pixels.size() == smoothed_pixels.size());
+
+    // Each camera ray is jittered within its pixel, so a pixel on the silhouette can fall on the patch in one render and on the sky in the other. Those pixels say nothing about smoothing, so the comparison
+    // is restricted to pixels both renders agree are looking at geometry.
+    float largest_difference = 0.f;
+    float largest_value = 0.f;
+    size_t compared_pixels = 0;
+    for (size_t p = 0; p < flat_pixels.size(); p++) {
+        largest_value = std::max(largest_value, flat_pixels.at(p));
+        if (flat_pixels.at(p) > 0.f && smoothed_pixels.at(p) > 0.f) {
+            largest_difference = std::max(largest_difference, std::fabs(flat_pixels.at(p) - smoothed_pixels.at(p)));
+            compared_pixels++;
+        }
+    }
+
+    DOCTEST_REQUIRE(largest_value > 0.f);
+    DOCTEST_REQUIRE(compared_pixels > 100);
+    DOCTEST_INFO("largest difference over " << compared_pixels << " shared pixels was " << largest_difference << " against a peak radiance of " << largest_value);
+    DOCTEST_CHECK(largest_difference <= 1e-4f * largest_value);
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - needs no stored vertex normals") {
+    // Smoothing interpolates a scalar, not a direction, so it must work on a mesh whose source file carried no vertex normals at all. This pins that invariant against a future change that assumes normals
+    // are available: test_complex_large.obj has no vn records, so its polymesh reports NORMAL_SOURCE_NONE.
+    Context context;
+    const std::vector<uint> mesh_UUIDs = context.loadOBJ("lib/models/test_complex_large.obj", make_vec3(0, 0, 0), 2.f, nullrotation, RGB::red, true);
+    DOCTEST_REQUIRE(!mesh_UUIDs.empty());
+
+    const uint ObjID = context.getPrimitiveParentObjectID(mesh_UUIDs.front());
+    DOCTEST_REQUIRE(ObjID != 0);
+    DOCTEST_REQUIRE(context.getObjectType(ObjID) == OBJECT_TYPE_POLYMESH);
+    DOCTEST_REQUIRE(context.getPolymeshObjectVertexNormalSource(ObjID) == NORMAL_SOURCE_NONE);
+    DOCTEST_REQUIRE(context.doesObjectHaveSharedVertexTopology(ObjID));
+
+    context.setPrimitiveData(mesh_UUIDs, "temperature", 340.f);
+    context.setPrimitiveData(mesh_UUIDs, "emissivity_TH", 1.f);
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    model.enableCameraFluxSmoothing();
+
+    model.addRadiationBand("TH");
+    model.enableEmission("TH");
+    model.setScatteringDepth("TH", 1);
+    model.setDiffuseRayCount("TH", 50);
+
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = make_int2(48, 48);
+    camera_properties.HFOV = 45.f;
+    camera_properties.lens_diameter = 0.f;
+    camera_properties.exposure = "manual";
+    camera_properties.white_balance = "off";
+
+    model.addRadiationCamera("mesh_cam", {"TH"}, make_vec3(0, -6, 2), make_vec3(0, 0, 0), camera_properties, 1);
+    model.updateGeometry();
+    model.runBand("TH");
+
+    const std::vector<float> pixels = model.getCameraPixelData("mesh_cam", "TH");
+    DOCTEST_REQUIRE(pixels.size() == 48 * 48);
+
+    float max_radiance = 0.f;
+    for (float pixel: pixels) {
+        DOCTEST_REQUIRE(std::isfinite(pixel));
+        max_radiance = std::max(max_radiance, pixel);
+    }
+
+    // A blackbody at 340 K radiates sigma*T^4/pi whichever facet is seen, so the reconstruction has an analytic value to hit even on an arbitrary mesh.
+    const float sigma = 5.670374419e-8f;
+    const float expected_radiance = sigma * powf(340.f, 4) / float(M_PI);
+    DOCTEST_INFO("peak radiance " << max_radiance << ", expected " << expected_radiance);
+    DOCTEST_CHECK(max_radiance == doctest::Approx(expected_radiance).epsilon(0.05));
+}
+
+//! Build a closed cube as a welded polymesh carrying no vertex normals
+/**
+ * A cube loaded from an OBJ that supplies vertex normals is already split at its edges, because the loader keys its deduplication on the normal as well as the position, so it cannot exercise the crease
+ * test. Building the mesh here with eight shared corners and no normals gives a mesh where every edge really is welded, and where averaging across an edge would visibly bleed one face into the next.
+ */
+static uint buildWeldedCubePolymesh(helios::Context &context, float half_size) {
+    const std::vector<helios::vec3> vertices = {helios::make_vec3(-half_size, -half_size, -half_size), helios::make_vec3(half_size, -half_size, -half_size), helios::make_vec3(half_size, half_size, -half_size),
+                                                helios::make_vec3(-half_size, half_size, -half_size), helios::make_vec3(-half_size, -half_size, half_size), helios::make_vec3(half_size, -half_size, half_size),
+                                                helios::make_vec3(half_size, half_size, half_size),   helios::make_vec3(-half_size, half_size, half_size)};
+
+    // Two triangles per face, wound so that every facet normal points out of the cube.
+    const std::vector<helios::int3> faces = {helios::make_int3(0, 3, 2), helios::make_int3(0, 2, 1), // -z
+                                             helios::make_int3(4, 5, 6), helios::make_int3(4, 6, 7), // +z
+                                             helios::make_int3(0, 1, 5), helios::make_int3(0, 5, 4), // -y
+                                             helios::make_int3(2, 3, 7), helios::make_int3(2, 7, 6), // +y
+                                             helios::make_int3(0, 4, 7), helios::make_int3(0, 7, 3), // -x
+                                             helios::make_int3(1, 2, 6), helios::make_int3(1, 6, 5)}; // +x
+
+    std::vector<uint> face_UUIDs;
+    face_UUIDs.reserve(faces.size());
+    for (const helios::int3 &face: faces) {
+        face_UUIDs.push_back(context.addTriangle(vertices.at(face.x), vertices.at(face.y), vertices.at(face.z)));
+    }
+
+    const uint ObjID = context.addPolymeshObject(face_UUIDs);
+    context.setPolymeshObjectTopology(ObjID, vertices, faces, face_UUIDs, {}, {}, helios::NORMAL_SOURCE_NONE);
+    return ObjID;
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - keeps a crease sharp that the mesh actually resolved") {
+    // Smoothing exists to compensate for a tessellation that under-resolves a curve. It must not also erase detail the mesh did resolve: the edge of a cube is a real edge, and averaging the lit face into
+    // the shadowed one across it would turn a crisp cube into a smudge. The crease angle is what separates the two cases, so the test renders the same welded cube at both settings and compares the step
+    // across its edges. At the default crease angle the faces stay separate; at 180 degrees, where nothing counts as a crease, they are allowed to blend and the step must collapse.
+    auto render = [](bool enable_smoothing, float crease_angle_degrees) {
+        Context context;
+        const uint ObjID = buildWeldedCubePolymesh(context, 0.5f);
+        const std::vector<uint> cube_UUIDs = context.getObjectPrimitiveUUIDs(ObjID);
+        context.setPrimitiveData(cube_UUIDs, "reflectivity_SW", 0.5f);
+        context.setPrimitiveData(cube_UUIDs, "transmissivity_SW", 0.f);
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        if (enable_smoothing) {
+            model.enableCameraFluxSmoothing(crease_angle_degrees);
+        }
+
+        const uint sun = model.addCollimatedRadiationSource(make_vec3(1.f, 0.f, 0.f));
+        model.addRadiationBand("SW");
+        model.disableEmission("SW");
+        model.setScatteringDepth("SW", 1);
+        model.setDirectRayCount("SW", 500);
+        model.setDiffuseRayCount("SW", 500);
+        model.setSourceFlux(sun, "SW", 1000.f);
+        // A diffuse component keeps the shadowed face from reading exactly zero, so that the step across the edge is between two lit values rather than between geometry and background.
+        model.setDiffuseRadiationFlux("SW", 150.f);
+
+        CameraProperties camera_properties;
+        camera_properties.camera_resolution = make_int2(80, 80);
+        camera_properties.HFOV = 35.f;
+        camera_properties.lens_diameter = 0.f;
+        camera_properties.exposure = "manual";
+        camera_properties.white_balance = "off";
+
+        // Looking at the cube corner where the lit +x face meets the shadowed -y face.
+        model.addRadiationCamera("crease_cam", {"SW"}, make_vec3(3.f, -3.f, 0.5f), make_vec3(0, 0, 0), camera_properties, 1);
+        model.updateGeometry();
+        model.runBand("SW");
+
+        std::vector<float> pixels = model.getCameraPixelData("crease_cam", "SW");
+        DOCTEST_REQUIRE(pixels.size() == 80 * 80);
+        for (float pixel: pixels) {
+            DOCTEST_REQUIRE(std::isfinite(pixel));
+        }
+        return pixels;
+    };
+
+    const helios::int2 resolution = make_int2(80, 80);
+
+    const float flat_jump = maxAdjacentPixelJump(render(false, 30.f), resolution);
+    const float creased_jump = maxAdjacentPixelJump(render(true, 30.f), resolution);
+    const float blended_jump = maxAdjacentPixelJump(render(true, 180.f), resolution);
+
+    DOCTEST_REQUIRE(flat_jump > 0.f);
+    DOCTEST_INFO("step across the cube edge: flat " << flat_jump << ", crease 30 degrees " << creased_jump << ", crease 180 degrees " << blended_jump);
+
+    // At the default crease angle the cube's 90-degree edges are above the threshold, so no vertex is shared across them and the edge survives essentially untouched.
+    DOCTEST_CHECK(creased_jump == doctest::Approx(flat_jump).epsilon(0.2));
+
+    // With no angle counting as a crease, the faces share their corners and the edge blurs.
+    DOCTEST_CHECK_MESSAGE(blended_jump < 0.6f * flat_jump, "a crease angle of 180 degrees should have blended the cube faces together");
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - an adaptive tile stays continuous across its refinement boundaries") {
+    // An adaptive tile refines into sub-patches of different sizes, so a coarse cell can meet two finer ones along one edge. The vertex at that T-junction is a corner of the finer cells but only the midpoint
+    // of the coarse cell's edge, which is where a reconstruction can tear. The test renders a lit adaptive tile and requires the largest step between neighbouring pixels to fall, not rise: if the refinement
+    // boundaries tore, the step there would exceed the per-sub-patch step that smoothing is removing.
+    auto render = [](bool enable_smoothing) {
+        Context context;
+        AdaptiveTileRefinement refinement;
+        refinement.target = make_vec2(0.f, 0.f);
+        refinement.subpatch_size_min = 0.2f;
+        refinement.subpatch_size_max = 1.f;
+        refinement.transition_exponent = 0.5f;
+
+        const uint ObjID = context.addAdaptiveTileObject(make_vec3(0, 0, 0), make_vec2(6, 6), nullrotation, refinement);
+        const std::vector<uint> tile_UUIDs = context.getObjectPrimitiveUUIDs(ObjID);
+        context.setPrimitiveData(tile_UUIDs, "reflectivity_SW", 0.5f);
+        context.setPrimitiveData(tile_UUIDs, "transmissivity_SW", 0.f);
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        if (enable_smoothing) {
+            model.enableCameraFluxSmoothing();
+        }
+
+        // A small occluder above the tile casts a shadow whose edge runs across sub-patches of both sizes, so the reconstruction is exercised where the flux actually varies.
+        const uint occluder = context.addPatch(make_vec3(0.5f, 0.5f, 1.5f), make_vec2(1.2f, 1.2f));
+        context.setPrimitiveData(occluder, "reflectivity_SW", 0.f);
+        context.setPrimitiveData(occluder, "transmissivity_SW", 0.f);
+
+        const uint sun = model.addCollimatedRadiationSource(make_vec3(0.3f, 0.3f, 1.f));
+        model.addRadiationBand("SW");
+        model.disableEmission("SW");
+        model.setScatteringDepth("SW", 1);
+        model.setDirectRayCount("SW", 300);
+        model.setDiffuseRayCount("SW", 300);
+        model.setSourceFlux(sun, "SW", 1000.f);
+        model.setDiffuseRadiationFlux("SW", 100.f);
+
+        CameraProperties camera_properties;
+        camera_properties.camera_resolution = make_int2(72, 72);
+        camera_properties.HFOV = 45.f;
+        camera_properties.lens_diameter = 0.f;
+        camera_properties.exposure = "manual";
+        camera_properties.white_balance = "off";
+
+        model.addRadiationCamera("adaptive_cam", {"SW"}, make_vec3(0, 0, 7), make_vec3(0, 0, 0), camera_properties, 1);
+        model.updateGeometry();
+        model.runBand("SW");
+
+        std::vector<float> pixels = model.getCameraPixelData("adaptive_cam", "SW");
+        DOCTEST_REQUIRE(pixels.size() == 72 * 72);
+        for (float pixel: pixels) {
+            DOCTEST_REQUIRE(std::isfinite(pixel));
+        }
+        return pixels;
+    };
+
+    const helios::int2 resolution = make_int2(72, 72);
+    const std::vector<float> flat_pixels = render(false);
+    const std::vector<float> smoothed_pixels = render(true);
+
+    const float flat_jump = maxAdjacentPixelJump(flat_pixels, resolution);
+    const float smoothed_jump = maxAdjacentPixelJump(smoothed_pixels, resolution);
+
+    DOCTEST_REQUIRE(flat_jump > 0.f);
+    DOCTEST_INFO("largest step between neighbouring pixels: flat " << flat_jump << ", smoothed " << smoothed_jump);
+    DOCTEST_CHECK_MESSAGE(smoothed_jump <= flat_jump, "smoothing introduced a larger discontinuity than the one it was removing, which is what a tear at a refinement boundary would look like");
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - can be switched on and off after the geometry has been built") {
+    // The topology is normally uploaded as part of updateGeometry(), so toggling smoothing afterwards has to repeat that upload. Re-uploading the geometry releases the buffers the acceleration structure was
+    // built from, so this also covers that the structure is rebuilt rather than left pointing at freed storage - which would show up as a black frame or a crash rather than as a subtly wrong image.
+    Context context;
+    const std::vector<vec3> nodes = {make_vec3(0, 0, -1), make_vec3(0, 0, 1)};
+    const uint ObjID = context.addTubeObject(6, nodes, {0.4f, 0.4f});
+    const std::vector<uint> tube_UUIDs = context.getObjectPrimitiveUUIDs(ObjID);
+    context.setPrimitiveData(tube_UUIDs, "temperature", 350.f);
+    context.setPrimitiveData(tube_UUIDs, "emissivity_TH", 1.f);
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+
+    model.addRadiationBand("TH");
+    model.enableEmission("TH");
+    model.setScatteringDepth("TH", 1);
+    model.setDiffuseRayCount("TH", 100);
+
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = make_int2(48, 48);
+    camera_properties.HFOV = 40.f;
+    camera_properties.lens_diameter = 0.f;
+    camera_properties.exposure = "manual";
+    camera_properties.white_balance = "off";
+
+    model.addRadiationCamera("toggle_cam", {"TH"}, make_vec3(0, -5, 0), make_vec3(0, 0, 0), camera_properties, 1);
+
+    // Geometry is built first, so every toggle below happens against an already-uploaded scene.
+    model.updateGeometry();
+
+    const float sigma = 5.670374419e-8f;
+    const float expected_radiance = sigma * powf(350.f, 4) / float(M_PI);
+
+    auto renderPeak = [&]() {
+        model.runBand("TH");
+        const std::vector<float> pixels = model.getCameraPixelData("toggle_cam", "TH");
+        DOCTEST_REQUIRE(pixels.size() == 48 * 48);
+        float peak = 0.f;
+        for (float pixel: pixels) {
+            DOCTEST_REQUIRE(std::isfinite(pixel));
+            peak = std::max(peak, pixel);
+        }
+        return peak;
+    };
+
+    // A blackbody tube at one temperature radiates the same value from every facet, so the peak radiance is the analytic value in all three states.
+    const float before = renderPeak();
+
+    model.enableCameraFluxSmoothing();
+    DOCTEST_REQUIRE(model.isCameraFluxSmoothingEnabled());
+    const float during = renderPeak();
+
+    model.disableCameraFluxSmoothing();
+    DOCTEST_REQUIRE(!model.isCameraFluxSmoothingEnabled());
+    const float after = renderPeak();
+
+    DOCTEST_INFO("peak radiance before " << before << ", with smoothing " << during << ", after disabling " << after << ", expected " << expected_radiance);
+    DOCTEST_CHECK(before == doctest::Approx(expected_radiance).epsilon(0.05));
+    DOCTEST_CHECK(during == doctest::Approx(expected_radiance).epsilon(0.05));
+    DOCTEST_CHECK(after == doctest::Approx(expected_radiance).epsilon(0.05));
+}

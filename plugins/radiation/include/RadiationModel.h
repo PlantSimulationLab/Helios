@@ -1308,6 +1308,45 @@ public:
      */
     void setCameraSpectralResponseFromLibrary(const std::string &camera_label, const std::string &camera_library_name);
 
+    //! Reconstruct camera images by interpolating the outgoing flux across each facet, instead of holding it constant
+    /**
+     * A camera builds each pixel from a single outgoing flux value per primitive, so every pixel landing on a facet reads the same value and a coarsely tessellated surface renders as flat panels separated
+     * by visible steps. With smoothing enabled, the flux is first averaged onto the vertices the facets share, weighted by facet area, and then interpolated across each facet from its own corners, so a
+     * tessellated curve reads as a curve.
+     *
+     * This applies to \a Tube, \a Sphere, \a Cone, \a Polymesh, \a Tile and \a AdaptiveTile objects. A \a Box or \a Disk object, and any primitive that belongs to no object, is left alone: its faces are
+     * genuinely flat, so the per-facet value is already correct everywhere on them. A \a Polymesh must carry the face table that \ref helios::Context::loadOBJ() and \ref helios::Context::loadPLY() retain;
+     * one assembled from loose primitives by \ref helios::Context::addPolymeshObject() has no topology and is left alone. Vertex normals are neither required nor used.
+     *
+     * \note This changes what the camera reports. A pixel no longer carries the outgoing flux of the primitive behind it, but a blend of that primitive's value with those of its neighbours, so pixel values
+     * no longer correspond exactly to the `radiation_flux_*` primitive data. Nothing else is affected: the radiation solve, the `radiation_flux_*` values themselves, and the pixel-label and depth images are
+     * all unchanged. Smoothing is off by default for this reason, and should be enabled deliberately.
+     *
+     * \param[in] crease_angle_degrees Angle between adjacent facet normals above which a shared edge is treated as a hard crease, so that flux is not averaged across it. Applies to \a Polymesh objects only,
+     * whose facets may meet at a genuine edge that the tessellation resolved; the curved object types are smooth by construction and are never creased. Must be between 0 and 180 degrees.
+     * \sa disableCameraFluxSmoothing(), isCameraFluxSmoothingEnabled()
+     */
+    void enableCameraFluxSmoothing(float crease_angle_degrees = 30.f);
+
+    //! Reconstruct camera images by holding the outgoing flux constant across each facet
+    /**
+     * This is the default. Each pixel reports the outgoing flux of the primitive behind it.
+     * \sa enableCameraFluxSmoothing()
+     */
+    void disableCameraFluxSmoothing();
+
+    //! Query whether camera flux smoothing is enabled
+    /**
+     * \return True if camera images are reconstructed by interpolating flux across each facet, false if the flux is held constant across it.
+     */
+    [[nodiscard]] bool isCameraFluxSmoothingEnabled() const;
+
+    //! Get the crease angle used when smoothing camera flux across a mesh
+    /**
+     * \return Crease angle in degrees, as given to \ref enableCameraFluxSmoothing().
+     */
+    [[nodiscard]] float getCameraFluxSmoothingCreaseAngle() const;
+
     //! Add a radiation camera sensor loading all properties from the camera library
     /**
      * This method loads camera intrinsic parameters (resolution, field of view, sensor size)
@@ -2370,6 +2409,50 @@ protected:
     helios::vec2 periodic_flag;
 
     bool radiativepropertiesneedupdate = true;
+
+    //! Whether camera images interpolate the outgoing flux across each facet rather than holding it constant
+    bool cameraflux_smoothing_enabled = false;
+
+    //! Angle between adjacent facet normals above which a mesh edge is treated as a hard crease and flux is not averaged across it
+    float cameraflux_smoothing_crease_angle = 30.f;
+
+    //! Number of distinct shared vertices the smoothing topology refers to
+    size_t smoothing_vertex_count = 0;
+
+    //! Shared vertex index for each corner of each primitive, four entries per primitive in GPU buffer order
+    /**
+     * Entry `4*p` is negative for a primitive taking no part in smoothing, and entry `4*p+3` is negative for a triangle, which has only three corners.
+     */
+    std::vector<int> smoothing_vertex_indices;
+
+    //! Total facet area meeting at each shared vertex, used to weight the average
+    std::vector<float> smoothing_vertex_area;
+
+    //! Area of each primitive, in GPU buffer order, cached so that it is not recomputed for every band
+    std::vector<float> smoothing_primitive_area;
+
+    //! Build the shared vertex topology that camera flux smoothing accumulates onto
+    /**
+     * Walks the participating objects once, assigns every shared vertex a slot in one flat buffer, and records which slots each primitive's corners belong to. Called from updateGeometry(), because the
+     * topology is only valid for the primitive ordering that build produced.
+     */
+    void buildCameraFluxSmoothingTopology();
+
+    //! Rebuild the shared vertex topology and re-upload the geometry that carries it
+    /**
+     * Used when smoothing is toggled after the geometry has already been built, which the ordinary path does not cover because the topology is normally uploaded as part of updateGeometry().
+     */
+    void uploadCameraFluxSmoothingTopology();
+
+    //! Resample the per-primitive outgoing flux onto the shared vertices
+    /**
+     * \param[in] flux_top Per-primitive outgoing radiation for the top face, indexed [primitive][band].
+     * \param[in] flux_bottom Per-primitive outgoing radiation for the bottom face, indexed [primitive][band].
+     * \param[in] band_count Number of bands in the current launch.
+     * \param[out] vertex_flux_top Area-weighted mean top-face radiation at each shared vertex, indexed [vertex][band].
+     * \param[out] vertex_flux_bottom Area-weighted mean bottom-face radiation at each shared vertex, indexed [vertex][band].
+     */
+    void accumulateCameraFluxAtVertices(const std::vector<float> &flux_top, const std::vector<float> &flux_bottom, size_t band_count, std::vector<float> &vertex_flux_top, std::vector<float> &vertex_flux_bottom) const;
 
     std::vector<bool> isbandpropertyinitialized;
 

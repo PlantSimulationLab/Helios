@@ -568,7 +568,7 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | prototype | LeafPrototype struct | - | Structure containing information to build leaf prototypes. |
 | --- **peduncle** --- ||||
 | length | RandomParameter_float | meters | Length of the peduncle (inflorescence supporting structure). |
-| radius | RandomParameter_float | meters | Radius of the peduncle. |
+| radius | RandomParameter_float | meters | Radius of the peduncle. Ignored for a terminal inflorescence on a herbaceous stem (a grass panicle or tassel), whose peduncle is sized from the radius of the culm tip it attaches to so that the two tubes meet without a step; used as given for a lateral peduncle or one on a woody stem. |
 | pitch | RandomParameter_float | degrees | Angle of the peduncle axis with respect to its parent internode axis. |
 | roll | RandomParameter_float | degrees | Rotation angle of the peduncle about it's own axis. |
 | curvature | RandomParameter_float | degrees/meter | Curvature angle of the peduncle per unit length of peduncle. If curvature is positive, peduncle curves upward toward vertical. If negative, curvature is downward. |
@@ -640,8 +640,7 @@ The built-in function for procedural leaf generation generates leaf geometries b
 | lateral_curvature | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Curvature factor along y-direction (widthwise). (+curves upward, -curved downward) |
 | wave_period | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Period factor of leaf waves/wrinkles. |
 | wave_amplitude | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Amplitude of leaf waves/wrinkles. |
-| leaf_buckle_length | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Length along the leaf where it buckles due to its weight (as fraction of overall leaf length). |
-| leaf_buckle_angle | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Angle (degrees) formed by the leaf buckling. |
+| flexibility | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Droopiness of the fully-grown leaf blade under its own weight. The leaf points along its growing direction when small and bends over as it expands. =0 gives a rigid leaf that keeps its prototype shape at every size. |
 | unique_prototypes | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | 0 | Number of unique leaf prototypes to generate. If = 0, every leaf will be unique. Increasing this value gives more variability across the plant, but it will take longer to initially generate the plant model. |
 | leaf_offset | \htmlonly<span style="font-family: Courier, monospace; color: green;">helios::vec3</span>\endhtmlonly | (0,0,0) | Offset/translation applied to the leaf prototype. |
 | petiole_roll | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Creates a roll of the leaf near its base to more smoothly meet the petiole. |
@@ -672,6 +671,30 @@ Fruit geometry creation is similar to that of flowers, except the prototype func
 ~~~~~~
 uint(*prototype_function)( helios::Context*, uint subdivisions )
 ~~~~~~
+
+\subsection PlantArch_leafdroop Leaf Droop Under Self-Weight
+
+Leaves are not rigid. A blade that has just been formed points along the direction the shoot is growing, and bends over as it expands and its own weight begins to matter - which is why the lower leaves of a
+maize or sorghum plant arc over while the short upper ones stay erect. Setting the leaf prototype parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">flexibility</span>\endhtmlonly
+to a non-zero value turns this on. A value of zero, the default, gives a perfectly rigid leaf that keeps its prototype shape at every size, which is the behaviour of every species whose leaves do not visibly droop.
+
+The blade is treated as a cantilever clamped at its base and loaded by its own weight. The bending moment at each point along the midrib is the weight of everything beyond it acting through its horizontal
+lever arm, and the resulting curvature is integrated along the blade to give its deflected shape. Because the moment grows with the cube of blade length while the stiffness does not, and because a longer leaf
+is also a wider and heavier one, the droop of a leaf grows very steeply - roughly with the fifth power of its length. This is what makes the droop follow the plant's growth on its own: there is no age or time
+term anywhere in it, and a leaf that is prevented from growing to full size also stays comparatively straight.
+
+The parameter is dimensionless, describing how far the leaf bends once it is fully grown rather than a stiffness in physical units. This matters because the raw compliance would have to be set per species
+across orders of magnitude to describe the same visual droop; expressed this way, a value near 20 gives any grass blade an arc of roughly a third of its length whether the blade is 20 cm or 90 cm long.
+
+Two practical notes. The deflection is recomputed from the prototype's undeformed shape each time the leaf grows, rather than bending the leaf further from where it already is, so the shape cannot drift over a
+long simulation. And the leaf's prototype shape is its shape at full turgor with no load - so parameters such as \htmlonly<span style="font-family: Courier, monospace; color: blue;">longitudinal_curvature</span>\endhtmlonly
+should describe the leaf before it droops, with the droop left to this parameter.
+
+This replaces the former \htmlonly<span style="font-family: Courier, monospace; color: blue;">leaf_buckle_length</span>\endhtmlonly and \htmlonly<span style="font-family: Courier, monospace; color: blue;">leaf_buckle_angle</span>\endhtmlonly
+parameters, which kinked the leaf by a fixed angle at a fixed station along its length. Those parameters are deprecated but still work: if they are set and
+\htmlonly<span style="font-family: Courier, monospace; color: blue;">flexibility</span>\endhtmlonly is left at zero, they are converted to the flexibility that reproduces the same droop on the fully-grown leaf.
+The mature leaf is shaped much as it was, but now arrives at that shape as it expands rather than starting out with it. Setting \htmlonly<span style="font-family: Courier, monospace; color: blue;">flexibility</span>\endhtmlonly
+explicitly always takes precedence, and the deprecated parameters will be removed in a future version.
 
 \subsection PlantArch_compound Compound Leaves
 

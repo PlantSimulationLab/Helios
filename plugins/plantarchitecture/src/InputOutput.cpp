@@ -515,6 +515,13 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
     output_xml << "\t\t<max_age> " << plant_instances.at(plantID).max_age << " </max_age>" << std::endl;
 
     for (auto &shoot: plant_instances.at(plantID).shoot_tree) {
+        // A pruned shoot keeps its slot in shoot_tree so that shoot IDs stay stable, but it has no
+        // phytomers and no geometry left in the Context. Writing it produced a <shoot> element with no
+        // content that the reader then rebuilt as a live shoot. Its children were pruned with it, so
+        // skipping it never orphans a surviving shoot.
+        if (shoot->isPruned()) {
+            continue;
+        }
 
         output_xml << "\t\t<shoot ID=\"" << shoot->ID << "\">" << std::endl;
         output_xml << "\t\t\t<shoot_type_label> " << shoot->shoot_type_label << " </shoot_type_label>" << std::endl;
@@ -527,6 +534,10 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
         for (auto &phytomer: shoot->phytomers) {
 
             output_xml << "\t\t\t<phytomer>" << std::endl;
+            // How long this phytomer has been alive, in days. Needed because the compliance of a drooping leaf
+            // follows its age (LeafPrototype::flexibility_aging), so a reloaded plant whose phytomers all
+            // started again from age zero gave its oldest leaves the stiffness of newly emerged ones.
+            output_xml << "\t\t\t\t<phytomer_age>" << phytomer->age << "</phytomer_age>" << std::endl;
             output_xml << "\t\t\t\t<internode>" << std::endl;
             output_xml << "\t\t\t\t\t<internode_length>" << phytomer->getInternodeLength() << "</internode_length>" << std::endl;
             output_xml << "\t\t\t\t\t<internode_radius>" << phytomer->getInternodeRadius() << "</internode_radius>" << std::endl;
@@ -614,11 +625,16 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                 output_xml << "\t\t\t\t\t\t<petiole_length_segments>" << phytomer->phytomer_parameters.petiole.length_segments << "</petiole_length_segments>" << std::endl;
                 output_xml << "\t\t\t\t\t\t<petiole_radial_subdivisions>" << phytomer->phytomer_parameters.petiole.radial_subdivisions << "</petiole_radial_subdivisions>" << std::endl;
 
-                if (phytomer->leaf_rotation.at(petiole).size() == 1) { // not compound leaf
+                if (phytomer->leaf_rotation.at(petiole).size() <= 1 || phytomer->leaf_size_max.at(petiole).empty()) { // not compound leaf
                     output_xml << "\t\t\t\t\t\t<leaflet_scale>" << 1.0 << "</leaflet_scale>" << std::endl;
                 } else {
-                    float tip_ind = floor(float(phytomer->leaf_rotation.at(petiole).size() - 1) / 2.f);
-                    output_xml << "\t\t\t\t\t\t<leaflet_scale>" << phytomer->leaf_size_max.at(petiole).at(int(tip_ind - 1)) / max(phytomer->leaf_size_max.at(petiole)) << "</leaflet_scale>" << std::endl;
+                    // A petiole carrying exactly two leaflets has a tip index of 0, so the lateral index was
+                    // -1 and threw out of std::vector::at() while the file was being written.
+                    int tip_ind = int(floor(float(phytomer->leaf_rotation.at(petiole).size() - 1) / 2.f));
+                    int lateral_ind = std::min(std::max(0, tip_ind - 1), int(phytomer->leaf_size_max.at(petiole).size()) - 1);
+                    float leaflet_size_max = max(phytomer->leaf_size_max.at(petiole));
+                    float leaflet_scale = (leaflet_size_max > 0.f) ? phytomer->leaf_size_max.at(petiole).at(lateral_ind) / leaflet_size_max : 1.0f;
+                    output_xml << "\t\t\t\t\t\t<leaflet_scale>" << leaflet_scale << "</leaflet_scale>" << std::endl;
                 }
                 output_xml << "\t\t\t\t\t\t<leaflet_offset>" << phytomer->phytomer_parameters.leaf.leaflet_offset.val() << "</leaflet_offset>" << std::endl;
 
@@ -631,6 +647,12 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                     output_xml << "\t\t\t\t\t\t\t<leaf_pitch>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).pitch) << "</leaf_pitch>" << std::endl;
                     output_xml << "\t\t\t\t\t\t\t<leaf_yaw>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).yaw) << "</leaf_yaw>" << std::endl;
                     output_xml << "\t\t\t\t\t\t\t<leaf_roll>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).roll) << "</leaf_roll>" << std::endl;
+                    // Which of the species' interchangeable leaf prototypes this blade is a copy of. The
+                    // prototypes differ in shape, so without this the reader had to pick one at random and a
+                    // reloaded plant was built from a different set of blades than the one that was saved.
+                    if (petiole < phytomer->leaf_prototype_index.size() && leaf < phytomer->leaf_prototype_index.at(petiole).size()) {
+                        output_xml << "\t\t\t\t\t\t\t<leaf_prototype>" << phytomer->leaf_prototype_index.at(petiole).at(leaf) << "</leaf_prototype>" << std::endl;
+                    }
                     output_xml << "\t\t\t\t\t\t</leaf>" << std::endl;
                 }
 
@@ -658,14 +680,15 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                             output_xml << "\t\t\t\t\t\t\t\t<radius>" << phytomer->peduncle_radius.at(petiole).at(bud) << "</radius>" << std::endl;
                             output_xml << "\t\t\t\t\t\t\t\t<pitch>" << phytomer->peduncle_pitch.at(petiole).at(bud) << "</pitch>" << std::endl;
                             output_xml << "\t\t\t\t\t\t\t\t<curvature>" << phytomer->peduncle_curvature.at(petiole).at(bud) << "</curvature>" << std::endl;
+                            output_xml << "\t\t\t\t\t\t\t\t<roll>" << phytomer->peduncle_roll.at(petiole).at(bud) << "</roll>" << std::endl;
                         } else {
                             // Fallback to parameter values if stored values not available
                             output_xml << "\t\t\t\t\t\t\t\t<length>" << phytomer->phytomer_parameters.peduncle.length.val() << "</length>" << std::endl;
                             output_xml << "\t\t\t\t\t\t\t\t<radius>" << phytomer->phytomer_parameters.peduncle.radius.val() << "</radius>" << std::endl;
                             output_xml << "\t\t\t\t\t\t\t\t<pitch>" << phytomer->phytomer_parameters.peduncle.pitch.val() << "</pitch>" << std::endl;
                             output_xml << "\t\t\t\t\t\t\t\t<curvature>" << phytomer->phytomer_parameters.peduncle.curvature.val() << "</curvature>" << std::endl;
+                            output_xml << "\t\t\t\t\t\t\t\t<roll>" << phytomer->phytomer_parameters.peduncle.roll.val() << "</roll>" << std::endl;
                         }
-                        output_xml << "\t\t\t\t\t\t\t\t<roll>" << phytomer->phytomer_parameters.peduncle.roll.val() << "</roll>" << std::endl;
 
                         output_xml << "\t\t\t\t\t\t\t</peduncle>" << std::endl;
 
@@ -1034,6 +1057,12 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
 
             for (pugi::xml_node phytomer = shoot.child("phytomer"); phytomer; phytomer = phytomer.next_sibling("phytomer")) {
 
+                // Optional: files written before this tag existed leave the phytomer at age zero, as they did.
+                float phytomer_age = 0.f;
+                if (phytomer.child("phytomer_age")) {
+                    phytomer_age = parse_xml_tag_float(phytomer.child("phytomer_age"), "phytomer_age", "PlantArchitecture::readPlantStructureXML");
+                }
+
                 pugi::xml_node internode = phytomer.child("internode");
 
                 // internode length
@@ -1117,6 +1146,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 std::vector<std::vector<float>> leaf_pitch;
                 std::vector<std::vector<float>> leaf_yaw;
                 std::vector<std::vector<float>> leaf_roll;
+                std::vector<std::vector<int>> leaf_prototype; // index of the unique leaf prototype each blade was copied from; -1 when the file does not record it
 
                 // Floral bud data structures
                 struct FloralBudData {
@@ -1207,6 +1237,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     leaf_pitch.resize(leaf_pitch.size() + 1);
                     leaf_yaw.resize(leaf_yaw.size() + 1);
                     leaf_roll.resize(leaf_roll.size() + 1);
+                    leaf_prototype.resize(leaf_prototype.size() + 1);
                     floral_bud_data.resize(floral_bud_data.size() + 1); // Always resize to stay in sync with leaf vectors
 
                     std::vector<vec3> saved_leaf_bases; // Saved leaf attachment positions
@@ -1239,6 +1270,16 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         // leaf roll
                         node_string = "leaf_roll";
                         leaf_roll.back().push_back(parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML"));
+
+                        // Which unique leaf prototype this blade is a copy of. Optional: files written before
+                        // this tag existed do not record it, and such a leaf is assigned a prototype at random
+                        // as it always was.
+                        node_string = "leaf_prototype";
+                        if (leaf.child(node_string.c_str())) {
+                            leaf_prototype.back().push_back(parse_xml_tag_int(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML"));
+                        } else {
+                            leaf_prototype.back().push_back(-1);
+                        }
                     }
 
                     // Store saved_leaf_bases for this petiole
@@ -1404,6 +1445,13 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         current_shoot_ID = addBaseStemShoot(plantID, 1, base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, shoot_type_label);
                         shoot_ID_mapping[shootID] = current_shoot_ID;
                     } else { // this is a child of an existing shoot
+                        // The parent must already have been read. Shoot IDs in the file are not contiguous -
+                        // writePlantStructureXML() omits pruned shoots - so this is a map lookup, and a miss means
+                        // the file refers to a shoot that is not in it.
+                        if (shoot_ID_mapping.find(parent_shoot_ID) == shoot_ID_mapping.end()) {
+                            helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): Shoot " + std::to_string(shootID) + " in '" + filename + "' names shoot " + std::to_string(parent_shoot_ID) +
+                                                 " as its parent, but no such shoot appears earlier in the file. The file is incomplete or its shoots are out of order.");
+                        }
                         current_shoot_ID = addChildShoot(plantID, shoot_ID_mapping.at(parent_shoot_ID), parent_node_index, 1, base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, shoot_type_label, parent_petiole_index);
                         shoot_ID_mapping[shootID] = current_shoot_ID;
                     }
@@ -1422,6 +1470,14 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 // The creation calls above pass internode_length as the max length, so restore the saved
                 // maximum here; it sets the elongation target used by subsequent growth.
                 phytomer_ptr->internode_length_max = internode_length_max;
+                phytomer_ptr->age = phytomer_age;
+
+                // The perturbations were parsed above and used to rebuild this phytomer's internode
+                // vertices, but were never stored on the phytomer itself. writePlantStructureXML()
+                // reads them back off the phytomer, so without this a saved plant lost its branch
+                // tortuosity and re-exported as a set of straight internodes.
+                phytomer_ptr->internode_curvature_perturbations = curvature_perturbations;
+                phytomer_ptr->internode_yaw_perturbations = yaw_perturbations;
 
                 // Get shoot pointer for internode geometry restoration
                 auto shoot_ptr = plant_instances.at(plantID).shoot_tree.at(current_shoot_ID);
@@ -1785,8 +1841,17 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         phytomer_ptr->petiole_vertices.at(p).at(0) = shoot_ptr->shoot_internode_vertices[phytomer_index_in_shoot].back();
                         phytomer_ptr->petiole_radii.at(p).at(0) = petiole_radii_values[p];
 
-                        // Compute segment length
+                        // Compute segment length. Two are needed, as in the Phytomer constructor: the
+                        // curvature is integrated over the segment length of the MATURE petiole while the
+                        // vertices are stepped along the segment length of the petiole at its current size.
+                        // Using the current length for both, as this did, under-rotated the axis of every
+                        // petiole that had not finished expanding, so a reloaded plant's petioles pointed a
+                        // degree or two away from where the grown plant had them and every leaf hanging off
+                        // them inherited the error. The mature length is recovered the same way the mature leaf
+                        // size is, since Phytomer::setLeafScaleFraction() scales petiole_length and
+                        // current_leaf_scale_factor together.
                         float dr_petiole = petiole_lengths[p] / float(Ndiv_petiole_length);
+                        float dr_petiole_max = petiole_lengths[p] / (current_leaf_scale_factors[p] * float(Ndiv_petiole_length));
 
                         // Recompute orientation vectors from parent context
                         vec3 recomputed_axis;
@@ -1809,7 +1874,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         for (int j = 1; j <= Ndiv_petiole_length; j++) {
                             // Apply curvature rotation
                             if (fabs(petiole_curvatures[p]) > 0) {
-                                petiole_axis_actual = rotatePointAboutLine(petiole_axis_actual, nullorigin, petiole_rotation_axis_actual, -deg2rad(petiole_curvatures[p] * dr_petiole));
+                                petiole_axis_actual = rotatePointAboutLine(petiole_axis_actual, nullorigin, petiole_rotation_axis_actual, -deg2rad(petiole_curvatures[p] * dr_petiole_max));
                             }
 
                             // Position next vertex
@@ -1970,14 +2035,42 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     if (phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes > 0 &&
                         this->unique_leaf_prototype_objIDs.find(phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototype_identifier) == this->unique_leaf_prototype_objIDs.end()) {
                         this->unique_leaf_prototype_objIDs[phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototype_identifier].resize(phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes);
+                        this->unique_leaf_prototype_rest_geometry[phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototype_identifier].resize(phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes);
+
+                        // Keyed on the prototype identifier so that this set of blade shapes is the same one the
+                        // saved plant was built from. Both here and in the Phytomer constructor the set is built
+                        // lazily, at the first phytomer that needs it, but the two arrive there having drawn
+                        // different amounts of randomness from the Context -- so drawing the shapes from the shared
+                        // stream produced five differently-curved blades on read than on growth, and <leaf_prototype>
+                        // then restored each leaf to the right index of the wrong set.
+                        std::minstd_rand0 prototype_generator(phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototype_identifier);
+                        std::minstd_rand0 *context_generator = phytomer_ptr->phytomer_parameters.leaf.prototype.setRandomGenerator(&prototype_generator);
+
                         for (int prototype = 0; prototype < phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes; prototype++) {
                             for (int leaf = 0; leaf < leaves_per_petiole; leaf++) {
                                 float ind_from_tip = float(leaf) - float(leaves_per_petiole - 1) / 2.f;
                                 uint objID_leaf = phytomer_ptr->phytomer_parameters.leaf.prototype.prototype_function(context_ptr, &phytomer_ptr->phytomer_parameters.leaf.prototype, ind_from_tip);
                                 if (phytomer_ptr->phytomer_parameters.leaf.prototype.prototype_function == GenericLeafPrototype) {
-                                    context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(objID_leaf), "object_label", "leaf");
+                                    // A petiolule loaded from an OBJ arrives already labelled by its own group in the file. Labelling the whole object "leaf" would overwrite that, and the filter below - which gives the
+                                    // petiolule the petiole's colour, and which downstream code uses to give it the petiole's optical properties rather than the blade's - would then match nothing.
+                                    const std::vector<uint> object_UUIDs = context_ptr->getObjectPrimitiveUUIDs(objID_leaf);
+                                    const std::vector<uint> labelled_UUIDs = context_ptr->filterPrimitivesByData(object_UUIDs, "object_label", "petiolule");
+                                    const std::set<uint> keep_label(labelled_UUIDs.begin(), labelled_UUIDs.end());
+                                    std::vector<uint> blade_UUIDs;
+                                    blade_UUIDs.reserve(object_UUIDs.size());
+                                    for (uint UUID: object_UUIDs) {
+                                        if (keep_label.find(UUID) == keep_label.end()) {
+                                            blade_UUIDs.push_back(UUID);
+                                        }
+                                    }
+                                    context_ptr->setPrimitiveData(blade_UUIDs, "object_label", "leaf");
                                 }
                                 this->unique_leaf_prototype_objIDs.at(phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototype_identifier).at(prototype).push_back(objID_leaf);
+                                // Without this the rest-shape cache stayed empty on the reader's path, so
+                                // Phytomer::deformLeafUnderSelfWeight() had nothing to deflect from and every leaf of a
+                                // reloaded grass came back rigid - sorghum blades were up to 77 degrees away from where
+                                // the grown plant had them.
+                                this->recordLeafPrototypeRestGeometry(phytomer_ptr->phytomer_parameters.leaf.prototype, prototype, objID_leaf, phytomer_ptr->leaf_flexibility);
                                 std::string leaf_material_name = plant_instances.at(plantID).plant_name + "_" + shoot_type_label + "_leaf";
                                 renameAutoMaterial(context_ptr, objID_leaf, leaf_material_name);
                                 std::vector<uint> petiolule_UUIDs = context_ptr->filterPrimitivesByData(context_ptr->getObjectPrimitiveUUIDs(objID_leaf), "object_label", "petiolule");
@@ -1985,6 +2078,8 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                 context_ptr->hideObject(objID_leaf);
                             }
                         }
+
+                        phytomer_ptr->phytomer_parameters.leaf.prototype.setRandomGenerator(context_generator);
                     }
                 }
 
@@ -1993,12 +2088,32 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
 
                     // Get CORRECT petiole axis (after geometry restoration)
                     vec3 petiole_tip_axis = phytomer_ptr->getPetioleAxisVector(1.f, petiole);
-                    vec3 internode_axis = phytomer_ptr->getInternodeAxisVector(1.f);
 
                     // Resize leaf data structures
                     phytomer_ptr->leaf_objIDs[petiole].resize(leaves_per_petiole);
                     phytomer_ptr->leaf_bases[petiole].resize(leaves_per_petiole);
                     phytomer_ptr->leaf_rotation[petiole].resize(leaves_per_petiole);
+
+                    // Recover the mature leaf size from the scale that was written out.
+                    // writePlantStructureXML() emits <leaf_scale> as leaf_size_max * current_leaf_scale_factor,
+                    // but leaf_size_max was left at the species prototype default on read - typically ~1 m
+                    // against a real leaf of ~0.1 m. The next write then emitted that default, and reloading
+                    // that file scaled every leaf up by the ratio, compounding on each save/load cycle.
+                    // current_leaf_scale_factor was already restored from the file further above.
+                    const float current_leaf_scale_factor = phytomer_ptr->current_leaf_scale_factor.at(petiole);
+                    if (leaves_per_petiole > 0 && current_leaf_scale_factor <= 0.f) {
+                        helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): <current_leaf_scale_factor> for petiole " + std::to_string(petiole) + " of a phytomer in '" + filename + "' is " +
+                                             std::to_string(current_leaf_scale_factor) + ", but it must be positive because the mature leaf size is recovered by dividing <leaf_scale> by it. Re-export the plant with a current version of Helios.");
+                    }
+                    phytomer_ptr->leaf_size_max.at(petiole).resize(leaves_per_petiole);
+                    for (int leaf = 0; leaf < leaves_per_petiole; leaf++) {
+                        phytomer_ptr->leaf_size_max.at(petiole).at(leaf) = leaf_scale[petiole][leaf] / current_leaf_scale_factor;
+                    }
+                    // Which prototype each blade came from, and the deflection bookkeeping that goes with it.
+                    // Leaving these empty made Phytomer::deformLeafUnderSelfWeight() return immediately, so a
+                    // reloaded grass had rigid leaves however flexible its species is.
+                    phytomer_ptr->leaf_prototype_index.at(petiole).assign(leaves_per_petiole, -1);
+                    phytomer_ptr->leaf_last_deformed_scale.at(petiole).assign(leaves_per_petiole, -1.f);
 
                     for (int leaf = 0; leaf < leaves_per_petiole; leaf++) {
                         float ind_from_tip = float(leaf) - float(leaves_per_petiole - 1) / 2.f;
@@ -2006,7 +2121,19 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         // Copy leaf from prototype (matching constructor logic)
                         uint objID_leaf;
                         if (phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes > 0) {
-                            int prototype = context_ptr->randu(0, phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes - 1);
+                            // Use the prototype the saved leaf was built from. The species' prototypes are
+                            // different shapes, so drawing one at random here - which is what happened before
+                            // <leaf_prototype> was written - rebuilt the plant from a different set of blades
+                            // than the one saved, leaving every leaf a few degrees off however exactly the rest
+                            // of the reconstruction matched. Files written before the tag existed record -1 and
+                            // still draw at random, since the information is simply not in them.
+                            const int saved_prototype = (leaf < int(leaf_prototype[petiole].size())) ? leaf_prototype[petiole][leaf] : -1;
+                            if (saved_prototype >= phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes) {
+                                helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): <leaf_prototype> in '" + filename + "' is " + std::to_string(saved_prototype) + ", but shoot type '" + shoot_type_label + "' defines only " +
+                                                     std::to_string(phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes) + " unique leaf prototypes. The file was written against a different definition of this species.");
+                            }
+                            int prototype = (saved_prototype >= 0) ? saved_prototype : context_ptr->randu(0, phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes - 1);
+                            phytomer_ptr->leaf_prototype_index.at(petiole).at(leaf) = prototype;
                             uint uid = phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototype_identifier;
                             assert(this->unique_leaf_prototype_objIDs.find(uid) != this->unique_leaf_prototype_objIDs.end());
                             assert(this->unique_leaf_prototype_objIDs.at(uid).size() > prototype);
@@ -2020,57 +2147,34 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         vec3 leaf_scale_vec = leaf_scale[petiole][leaf] * make_vec3(1, 1, 1);
                         context_ptr->scaleObject(objID_leaf, leaf_scale_vec);
 
-                        // Calculate compound rotation (matching constructor logic)
-                        float compound_rotation = 0;
-                        if (leaves_per_petiole > 1) {
-                            if (leaf == float(leaves_per_petiole - 1) / 2.f) {
-                                compound_rotation = 0; // tip leaf
-                            } else if (leaf < float(leaves_per_petiole - 1) / 2.f) {
-                                compound_rotation = -0.5 * M_PI; // left lateral
-                            } else {
-                                compound_rotation = 0.5 * M_PI; // right lateral
-                            }
-                        }
+                        // Shared with the Phytomer constructor. This was a second copy that implemented only the
+                        // offset-leaflet arrangement, so a species whose leaflets all attach at the petiole tip
+                        // (leaflet offset of zero, fanned evenly around it) had them stacked on two sides instead
+                        // when its plants were reloaded.
+                        const float leaflet_offset_clamped = clampOffset(leaves_per_petiole, phytomer_ptr->phytomer_parameters.leaf.leaflet_offset.val());
+                        const float compound_rotation = Phytomer::compoundLeafRotation(leaves_per_petiole, leaf, leaflet_offset_clamped);
 
-                        // Apply saved rotations (matching constructor logic)
-                        float saved_pitch = deg2rad(leaf_pitch[petiole][leaf]);
-                        float saved_yaw = deg2rad(leaf_yaw[petiole][leaf]);
-                        float saved_roll = deg2rad(leaf_roll[petiole][leaf]);
+                        // Apply the saved rotations through the same chain the Phytomer constructor uses, so
+                        // that a restored leaf is oriented exactly as a grown one. This code used to be a
+                        // second copy of that chain and had drifted from it in three ways: the azimuth of the
+                        // petiole was applied with the opposite sign, mirroring every blade about the x axis;
+                        // the unifoliate roll was a different formula entirely, described in its own comment as
+                        // "simplified"; and the curvature-aware blade-up correction was missing. Together these
+                        // left a reloaded cowpea's leaves pointing an average of 60 degrees away from where the
+                        // grown plant had them.
+                        const float saved_pitch = deg2rad(leaf_pitch[petiole][leaf]);
+                        const float saved_yaw = deg2rad(leaf_yaw[petiole][leaf]);
+                        const float saved_roll = deg2rad(leaf_roll[petiole][leaf]);
 
-                        // Roll rotation
-                        float roll_rot = 0;
-                        if (leaves_per_petiole == 1) {
-                            int sign = 1; // Simplified, constructor uses shoot_index
-                            roll_rot = (acos_safe(internode_axis.z) - saved_roll) * sign;
-                        } else if (ind_from_tip != 0) {
-                            roll_rot = (asin_safe(petiole_tip_axis.z) + saved_roll) * compound_rotation / std::fabs(compound_rotation);
-                        }
-                        phytomer_ptr->leaf_rotation[petiole][leaf].roll = saved_roll;
-                        context_ptr->rotateObject(objID_leaf, roll_rot, "x");
-
-                        // Pitch rotation
-                        phytomer_ptr->leaf_rotation[petiole][leaf].pitch = saved_pitch;
-                        float pitch_rot = saved_pitch;
-                        if (ind_from_tip == 0) {
-                            pitch_rot += asin_safe(petiole_tip_axis.z);
-                        }
-                        context_ptr->rotateObject(objID_leaf, -pitch_rot, "y");
-
-                        // Yaw rotation
-                        if (ind_from_tip != 0) {
-                            phytomer_ptr->leaf_rotation[petiole][leaf].yaw = saved_yaw;
-                            context_ptr->rotateObject(objID_leaf, saved_yaw, "z");
-                        } else {
-                            phytomer_ptr->leaf_rotation[petiole][leaf].yaw = 0;
-                        }
-
-                        // Rotate to petiole azimuth
-                        context_ptr->rotateObject(objID_leaf, -std::atan2(petiole_tip_axis.y, petiole_tip_axis.x) + compound_rotation, "z");
+                        phytomer_ptr->orientLeaf(objID_leaf, petiole, leaf, leaves_per_petiole, ind_from_tip, compound_rotation, petiole_tip_axis, saved_roll, saved_pitch, saved_yaw);
 
                         // Auto-calculate leaf base from petiole geometry (handles compound leaves)
                         vec3 leaf_base = phytomer_ptr->petiole_vertices[petiole].back(); // Default: petiole tip
 
-                        int leaves_per_petiole = phytomer_ptr->phytomer_parameters.leaf.leaves_per_petiole.val();
+                        // Use the enclosing leaves_per_petiole, taken from the number of <leaf_scale> entries
+                        // in the file. Re-drawing it from the shoot type's RandomParameter here could return a
+                        // different count than the one the leaves were just built from, which placed the
+                        // leaflets of a compound leaf as though it were unifoliate and vice versa.
                         float leaflet_offset_val = clampOffset(leaves_per_petiole, phytomer_ptr->phytomer_parameters.leaf.leaflet_offset.val());
 
                         if (leaves_per_petiole > 1 && leaflet_offset_val > 0) {
@@ -2085,6 +2189,12 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
 
                         phytomer_ptr->leaf_objIDs[petiole][leaf] = objID_leaf;
                         phytomer_ptr->leaf_bases[petiole][leaf] = leaf_base;
+
+                        // The blade is placed at its rest shape above, exactly as the Phytomer constructor
+                        // places it. During growth the droop is then applied by setLeafScaleFraction() on every
+                        // timestep, which the reader does not go through, so without this call a reloaded plant
+                        // of a flexible species kept undrooped leaves.
+                        phytomer_ptr->deformLeafUnderSelfWeight(petiole, leaf);
                     }
                 }
 
@@ -2131,7 +2241,12 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 }
 
                 // Apply floral bud data
-                if (!floral_bud_data.empty() && floral_bud_data.size() <= phytomer_ptr->petiole_length.size()) {
+                if (floral_bud_data.empty()) {
+                    // The phytomer was constructed from the shoot type, which may have given it floral buds
+                    // that the saved plant does not have. Leaving them in place made the next write emit buds
+                    // that were never in the original file.
+                    phytomer_ptr->floral_buds.clear();
+                } else if (floral_bud_data.size() <= phytomer_ptr->petiole_length.size()) {
                     // Ensure the floral_buds vector is properly sized
                     phytomer_ptr->floral_buds.resize(floral_bud_data.size());
 
@@ -2147,6 +2262,10 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                             fbud.parent_index = fbud_data.parent_index;
                             fbud.bud_index = fbud_data.bud_index;
                             fbud.isterminal = fbud_data.is_terminal;
+                            if (fbud_data.current_fruit_scale_factor <= 0.f || fbud_data.current_fruit_scale_factor > 1.f) {
+                                helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): <current_fruit_scale_factor> in '" + filename + "' is " + std::to_string(fbud_data.current_fruit_scale_factor) +
+                                                     ", but it must be greater than zero and no greater than one. It is the fraction of its mature size that the fruit has reached.");
+                            }
                             fbud.current_fruit_scale_factor = fbud_data.current_fruit_scale_factor;
 
                             // Auto-calculate floral bud base_position and base_rotation from parent geometry
@@ -2290,6 +2409,26 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                             }
                                             phytomer_ptr->peduncle_vertices.at(petiole).at(bud) = peduncle_vertices_computed;
                                             phytomer_ptr->peduncle_radii.at(petiole).at(bud) = peduncle_radii_computed;
+                                        }
+
+                                        // Store the scalar parameters the peduncle was just rebuilt from. Only the
+                                        // vertices were being restored, so writePlantStructureXML() fell through to
+                                        // its "stored values not available" branch and emitted a fresh random draw
+                                        // for length, radius, pitch, curvature and roll - giving a different peduncle
+                                        // on every re-export.
+                                        if (petiole < phytomer_ptr->peduncle_length.size()) {
+                                            if (phytomer_ptr->peduncle_length.at(petiole).size() <= bud) {
+                                                phytomer_ptr->peduncle_length.at(petiole).resize(bud + 1);
+                                                phytomer_ptr->peduncle_radius.at(petiole).resize(bud + 1);
+                                                phytomer_ptr->peduncle_pitch.at(petiole).resize(bud + 1);
+                                                phytomer_ptr->peduncle_curvature.at(petiole).resize(bud + 1);
+                                                phytomer_ptr->peduncle_roll.at(petiole).resize(bud + 1);
+                                            }
+                                            phytomer_ptr->peduncle_length.at(petiole).at(bud) = fbud_data.peduncle_length;
+                                            phytomer_ptr->peduncle_radius.at(petiole).at(bud) = fbud_data.peduncle_radius;
+                                            phytomer_ptr->peduncle_pitch.at(petiole).at(bud) = fbud_data.peduncle_pitch;
+                                            phytomer_ptr->peduncle_curvature.at(petiole).at(bud) = fbud_data.peduncle_curvature;
+                                            phytomer_ptr->peduncle_roll.at(petiole).at(bud) = fbud_data.peduncle_roll;
                                         }
 
                                         // Rebuild Context geometry with COMPUTED vertices/radii
@@ -2458,6 +2597,26 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                             phytomer_ptr->peduncle_radii.at(petiole).at(bud) = peduncle_radii_computed;
                                         }
 
+                                        // Store the scalar parameters the peduncle was just rebuilt from. Only the
+                                        // vertices were being restored, so writePlantStructureXML() fell through to
+                                        // its "stored values not available" branch and emitted a fresh random draw
+                                        // for length, radius, pitch, curvature and roll - giving a different peduncle
+                                        // on every re-export.
+                                        if (petiole < phytomer_ptr->peduncle_length.size()) {
+                                            if (phytomer_ptr->peduncle_length.at(petiole).size() <= bud) {
+                                                phytomer_ptr->peduncle_length.at(petiole).resize(bud + 1);
+                                                phytomer_ptr->peduncle_radius.at(petiole).resize(bud + 1);
+                                                phytomer_ptr->peduncle_pitch.at(petiole).resize(bud + 1);
+                                                phytomer_ptr->peduncle_curvature.at(petiole).resize(bud + 1);
+                                                phytomer_ptr->peduncle_roll.at(petiole).resize(bud + 1);
+                                            }
+                                            phytomer_ptr->peduncle_length.at(petiole).at(bud) = fbud_data.peduncle_length;
+                                            phytomer_ptr->peduncle_radius.at(petiole).at(bud) = fbud_data.peduncle_radius;
+                                            phytomer_ptr->peduncle_pitch.at(petiole).at(bud) = fbud_data.peduncle_pitch;
+                                            phytomer_ptr->peduncle_curvature.at(petiole).at(bud) = fbud_data.peduncle_curvature;
+                                            phytomer_ptr->peduncle_roll.at(petiole).at(bud) = fbud_data.peduncle_roll;
+                                        }
+
                                         // Rebuild Context geometry with COMPUTED vertices/radii
                                         if (phytomer_ptr->build_context_geometry_peduncle) {
                                             std::vector<RGBcolor> colors(peduncle_vertices_computed.size(), phytomer_ptr->phytomer_parameters.peduncle.color);
@@ -2527,18 +2686,32 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                             }
                                             vec3 recalculated_peduncle_axis = phytomer_ptr->getAxisVector(frac, phytomer_ptr->peduncle_vertices.at(petiole).at(bud));
 
-                                            // Use individual base scale if available, then apply growth scaling
+                                            // <flower_base_scale> holds the mature prototype scale; the growth
+                                            // fraction is a separate factor applied on top of it, exactly as during
+                                            // growth. Passing the product as the base scale instead made
+                                            // createInflorescenceGeometry() record base * fraction in
+                                            // inflorescence_base_scales, which the next write emitted as
+                                            // <flower_base_scale>. Reloading that file then applied the fraction to
+                                            // an already-scaled base, so fruit grew by the fraction squared, then the
+                                            // fourth power, and so on with each save/load cycle.
                                             float base_fruit_scale;
                                             if (i < fbud_data.flower_base_scales.size() && fbud_data.flower_base_scales.at(i) >= 0) {
                                                 base_fruit_scale = fbud_data.flower_base_scales.at(i);
                                             } else {
                                                 base_fruit_scale = phytomer_ptr->phytomer_parameters.inflorescence.fruit_prototype_scale.val();
                                             }
-                                            float scale_factor = base_fruit_scale * fbud_data.current_fruit_scale_factor;
 
                                             // Create fruit geometry with computed base, saved rotations, and recalculated peduncle axis
-                                            phytomer_ptr->createInflorescenceGeometry(fbud, fruit_base_computed, recalculated_peduncle_axis, saved_pitch, saved_roll, saved_azimuth, saved_yaw, scale_factor, false);
+                                            phytomer_ptr->createInflorescenceGeometry(fbud, fruit_base_computed, recalculated_peduncle_axis, saved_pitch, saved_roll, saved_azimuth, saved_yaw, base_fruit_scale, false);
                                         }
+
+                                        // Now grow every fruit on this bud from its mature size down to the size it
+                                        // had when the file was written, the same way the fruit-growth step of
+                                        // advanceTime() does. This runs once for the whole bud, not once per fruit:
+                                        // setInflorescenceScaleFraction() scales all of the bud's fruit together and
+                                        // returns immediately when the bud is already at the requested fraction.
+                                        fbud.current_fruit_scale_factor = 1.f;
+                                        phytomer_ptr->setInflorescenceScaleFraction(fbud, fbud_data.current_fruit_scale_factor);
                                     }
                                 }
                             } else {

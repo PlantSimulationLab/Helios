@@ -639,6 +639,21 @@ namespace helios {
         NORMAL_SOURCE_COMPUTED = 2
     };
 
+    //! Granularity at which coincident vertices of a compound object are treated as the same shared vertex
+    /**
+     * A consumer that averages a per-face quantity onto the mesh vertices needs to know which faces meet at a vertex. For a swept or revolved surface the answer is not unique: a tube's facets are coarse
+     * around the circumference, where the tessellation under-resolves the true curve, but fine along the axis, where consecutive nodes resolve genuine variation. Welding both ways therefore smooths away
+     * detail that the tessellation actually captured, while welding only around the cross-section removes the faceting without touching the axial direction.
+     *
+     * Object types with no distinguished axis - a \ref helios::Polymesh "Polymesh", a \ref helios::Tile "Tile" - have only one sensible answer, and report the same topology for either mode.
+     */
+    enum VertexWeldMode {
+        //! Treat every coincident vertex of the object as one shared vertex.
+        WELD_FULL = 0,
+        //! Weld only within a cross-section, leaving vertices at the same cross-sectional position on different segments distinct. Identical to \ref WELD_FULL for object types with no distinguished axis.
+        WELD_CROSS_SECTION_ONLY = 1
+    };
+
     class CompoundObject {
     public:
         //! Destructor
@@ -816,6 +831,49 @@ namespace helios {
          * \return Vector parallel to \p UUIDs, each entry holding one unit normal per vertex of the corresponding primitive.
          */
         [[nodiscard]] virtual std::vector<std::vector<helios::vec3>> getPrimitiveVertexNormals(const std::vector<uint> &UUIDs) const;
+
+        //! Method to query whether the object exposes which of its member primitives meet at each mesh vertex
+        /**
+         * A consumer that averages a per-face quantity onto the mesh vertices - to reconstruct a smoothly varying field across a tessellation that under-resolves it - needs to identify the vertices two
+         * adjacent faces have in common. That identity is available for a tessellated curved surface, whose vertices lie on a known lattice, and for a mesh that retained the index buffer of the file it was
+         * loaded from. It is not available for an object assembled from unrelated primitives, whose facets need not meet at all.
+         * \return True if \ref getPrimitiveSharedVertexIndices() returns indices for this object's primitives, false if it returns an empty vector.
+         */
+        [[nodiscard]] virtual bool hasSharedVertexTopology() const {
+            return false;
+        }
+
+        //! Get the number of distinct shared vertices in the object's mesh
+        /**
+         * \param[in] weld_mode Granularity at which coincident vertices are treated as the same shared vertex.
+         * \return Number of shared vertices, which is one greater than the largest index \ref getPrimitiveSharedVertexIndices() can return. Zero if the object exposes no topology.
+         */
+        [[nodiscard]] virtual size_t getSharedVertexCount(helios::VertexWeldMode weld_mode) const {
+            return 0;
+        }
+
+        //! Get the shared mesh vertex that each vertex of a member primitive belongs to
+        /**
+         * Indices are returned in the same order as the vertices given by \ref helios::Context::getPrimitiveVertices(), so index \a k identifies the shared vertex at that primitive's \a k-th corner. Two
+         * primitives that meet at a corner report the same index there, which is what lets a consumer accumulate a per-face quantity onto the vertices they have in common.
+         * \param[in] UUID Universally unique identifier of a primitive belonging to this object.
+         * \param[in] weld_mode Granularity at which coincident vertices are treated as the same shared vertex.
+         * \return Vector of shared vertex indices, one per vertex of the primitive, each less than \ref getSharedVertexCount(). Empty if the object exposes no topology, or if the vertices of this primitive
+         * cannot be located on the object's mesh.
+         */
+        [[nodiscard]] virtual std::vector<int> getPrimitiveSharedVertexIndices(uint UUID, helios::VertexWeldMode weld_mode) const {
+            return {};
+        }
+
+        //! Get the shared mesh vertices for many member primitives at once
+        /**
+         * Equivalent to calling \ref getPrimitiveSharedVertexIndices(uint, helios::VertexWeldMode) const for each UUID in turn, except that any per-object quantity needed to locate the vertices is prepared
+         * once for the whole batch instead of once per primitive. Prefer this overload when walking an entire object, because for a tube the per-object preparation is proportional to the number of nodes.
+         * \param[in] UUIDs Universally unique identifiers of primitives belonging to this object.
+         * \param[in] weld_mode Granularity at which coincident vertices are treated as the same shared vertex.
+         * \return Vector parallel to \p UUIDs, each entry holding one shared vertex index per vertex of the corresponding primitive.
+         */
+        [[nodiscard]] virtual std::vector<std::vector<int>> getPrimitiveSharedVertexIndices(const std::vector<uint> &UUIDs, helios::VertexWeldMode weld_mode) const;
 
         //-------- Object Data Methods ---------- //
 
@@ -1232,6 +1290,31 @@ namespace helios {
          */
         [[nodiscard]] helios::int2 getEffectiveTextureRepeat() const;
 
+        //! Query whether the tile identifies which sub-patches meet at each vertex
+        /**
+         * Always true: the sub-patches of a tile are cells of a regular grid, so the vertices two neighbouring cells have in common are known exactly.
+         * \return Always true.
+         */
+        [[nodiscard]] bool hasSharedVertexTopology() const override;
+
+        //! Get the number of shared vertices in the tile's grid
+        /**
+         * A tile is planar and has no distinguished axis, so both weld modes describe the same topology.
+         * \param[in] weld_mode Ignored; a tile reports the same topology for either mode.
+         * \return Number of grid nodes, one more than the subdivision count in each direction.
+         */
+        [[nodiscard]] size_t getSharedVertexCount(helios::VertexWeldMode weld_mode) const override;
+
+        //! Get the grid nodes that a sub-patch's corners coincide with
+        /**
+         * \param[in] UUID Universally unique identifier of a sub-patch belonging to this object.
+         * \param[in] weld_mode Ignored; a tile reports the same topology for either mode.
+         * \return The four grid node indices of this sub-patch's corners, in the order given by \ref helios::Context::getPrimitiveVertices(). Empty if the primitive's corners do not lie on the tile grid.
+         */
+        [[nodiscard]] std::vector<int> getPrimitiveSharedVertexIndices(uint UUID, helios::VertexWeldMode weld_mode) const override;
+
+        using CompoundObject::getPrimitiveSharedVertexIndices;
+
     protected:
         //! Default constructor
         /**
@@ -1345,6 +1428,33 @@ namespace helios {
          */
         [[nodiscard]] helios::int2 getTextureRepeat() const;
 
+        //! Query whether the tile identifies which sub-patches meet at each vertex
+        /**
+         * Always true: however deeply the quadtree has refined, every sub-patch corner lands on the lattice of the finest refinement level, so the vertices neighbouring sub-patches have in common are known
+         * exactly even where a coarse cell abuts a finer one.
+         * \return Always true.
+         */
+        [[nodiscard]] bool hasSharedVertexTopology() const override;
+
+        //! Get the number of shared vertices actually used by the tile's sub-patches
+        /**
+         * Only the lattice nodes that some sub-patch has a corner at are counted. The lattice of the finest refinement level spans the whole tile, but a quadtree that refined only where it had to leaves most
+         * of that lattice unused, so counting the whole lattice would badly overstate the number of vertices the object has.
+         * \param[in] weld_mode Ignored; a tile is planar and reports the same topology for either mode.
+         * \return Number of distinct lattice nodes referenced by the object's sub-patches.
+         */
+        [[nodiscard]] size_t getSharedVertexCount(helios::VertexWeldMode weld_mode) const override;
+
+        //! Get the shared vertices that a sub-patch's corners coincide with
+        /**
+         * \param[in] UUID Universally unique identifier of a sub-patch belonging to this object.
+         * \param[in] weld_mode Ignored; a tile is planar and reports the same topology for either mode.
+         * \return The four shared vertex indices of this sub-patch's corners, in the order given by \ref helios::Context::getPrimitiveVertices(). Empty if the primitive's corners do not lie on the lattice.
+         */
+        [[nodiscard]] std::vector<int> getPrimitiveSharedVertexIndices(uint UUID, helios::VertexWeldMode weld_mode) const override;
+
+        using CompoundObject::getPrimitiveSharedVertexIndices;
+
     protected:
         //! Default constructor
         /**
@@ -1367,6 +1477,28 @@ namespace helios {
 
         //! Number of times the texture image is repeated across the tile
         helios::int2 texture_repeat = helios::make_int2(1, 1);
+
+        //! Number of lattice cells spanning the tile at the finest refinement level
+        [[nodiscard]] helios::int2 getLatticeDivisions() const;
+
+        //! Lazily-built map from packed lattice node coordinates to a contiguous shared vertex index
+        mutable std::unordered_map<int64_t, int> lattice_node_to_vertex;
+
+        //! Whether `lattice_node_to_vertex` reflects the current set of member sub-patches
+        mutable bool lattice_map_valid = false;
+
+        //! Discard the cached lattice map, so that it is rebuilt on next use
+        void invalidateLatticeMap() const;
+
+        //! Enumerate the lattice nodes the member sub-patches have corners at, and assign each a contiguous index
+        /**
+         * Indices are assigned in ascending order of the packed node key rather than in the order the sub-patches happen to be visited, so that the same geometry always produces the same numbering.
+         */
+        void buildLatticeMap() const;
+
+        void onChildPrimitiveDeleted(uint UUID) override;
+
+        void onChildPrimitivesDeleted(const std::vector<uint> &UUIDs) override;
 
         friend class CompoundObject;
         friend class Context;
@@ -1412,6 +1544,40 @@ namespace helios {
         [[nodiscard]] std::vector<helios::vec3> getPrimitiveVertexNormals(uint UUID) const override;
 
         using CompoundObject::getPrimitiveVertexNormals;
+
+        //! Query whether the object identifies which of its facets meet at each vertex
+        /**
+         * Always true: the facets of a sphere are cells of a regular lattice in the shape's own parameters, so the vertices two neighbouring facets have in common are known exactly.
+         * \return Always true.
+         */
+        [[nodiscard]] bool hasSharedVertexTopology() const override;
+
+        //! Get the number of shared vertices in the tessellation
+        /**
+         * Under \\ref helios::WELD_FULL each pole is one vertex and each intermediate ring carries one vertex per azimuthal division. Under \\ref helios::WELD_CROSS_SECTION_ONLY the rings bounding each zenith band are kept separate, so that a flux gradient running from pole to pole is not averaged across the bands that resolve it.
+         * \param[in] weld_mode Granularity at which coincident vertices are treated as the same shared vertex.
+         * \return Number of shared vertices. Zero if the object's facets were not all retained, in which case their lattice positions cannot be recovered.
+         */
+        [[nodiscard]] size_t getSharedVertexCount(helios::VertexWeldMode weld_mode) const override;
+
+        //! Get the shared vertices that a facet's corners coincide with
+        /**
+         * A facet is located from its position in the object's primitive list, which the generator fills in lattice order. A textured object whose degenerate facets were discarded at creation, or any object a primitive has since been deleted from, no longer has that correspondence; the facet count is checked against the one the lattice implies and no topology is reported when they disagree.
+         * \param[in] UUID Universally unique identifier of a primitive belonging to this object.
+         * \param[in] weld_mode Granularity at which coincident vertices are treated as the same shared vertex.
+         * \return The three shared vertex indices of this facet's corners, in the order given by \ref helios::Context::getPrimitiveVertices(). Empty if the object's facets were not all retained.
+         */
+        [[nodiscard]] std::vector<int> getPrimitiveSharedVertexIndices(uint UUID, helios::VertexWeldMode weld_mode) const override;
+
+        //! Get the shared vertices for many facets at once
+        /**
+         * Locating a single facet requires a search through the object's primitive list, so resolving a whole object one facet at a time costs time quadratic in the number of facets. This overload indexes
+         * the list once and is the one to use when walking an entire object.
+         * \param[in] UUIDs Universally unique identifiers of primitives belonging to this object.
+         * \param[in] weld_mode Granularity at which coincident vertices are treated as the same shared vertex.
+         * \return Vector parallel to \p UUIDs, each entry holding one shared vertex index per vertex of the corresponding facet.
+         */
+        [[nodiscard]] std::vector<std::vector<int>> getPrimitiveSharedVertexIndices(const std::vector<uint> &UUIDs, helios::VertexWeldMode weld_mode) const override;
 
     protected:
         //! Default constructor
@@ -1540,6 +1706,40 @@ namespace helios {
          * \return Vector parallel to \p UUIDs, each entry holding one unit normal per vertex of the corresponding primitive.
          */
         [[nodiscard]] std::vector<std::vector<helios::vec3>> getPrimitiveVertexNormals(const std::vector<uint> &UUIDs) const override;
+
+        //! Query whether the object identifies which of its facets meet at each vertex
+        /**
+         * Always true: the facets of a tube are cells of a regular lattice in the shape's own parameters, so the vertices two neighbouring facets have in common are known exactly.
+         * \return Always true.
+         */
+        [[nodiscard]] bool hasSharedVertexTopology() const override;
+
+        //! Get the number of shared vertices in the tessellation
+        /**
+         * Under \\ref helios::WELD_FULL each node ring carries one vertex per radial division. Under \\ref helios::WELD_CROSS_SECTION_ONLY each segment carries its own pair of rings, so that variation along the tube - which consecutive nodes resolve - is not averaged away, while the coarse faceting around the circumference is.
+         * \param[in] weld_mode Granularity at which coincident vertices are treated as the same shared vertex.
+         * \return Number of shared vertices. Zero if the object's facets were not all retained, in which case their lattice positions cannot be recovered.
+         */
+        [[nodiscard]] size_t getSharedVertexCount(helios::VertexWeldMode weld_mode) const override;
+
+        //! Get the shared vertices that a facet's corners coincide with
+        /**
+         * A facet is located from its position in the object's primitive list, which the generator fills in lattice order. A textured object whose degenerate facets were discarded at creation, or any object a primitive has since been deleted from, no longer has that correspondence; the facet count is checked against the one the lattice implies and no topology is reported when they disagree.
+         * \param[in] UUID Universally unique identifier of a primitive belonging to this object.
+         * \param[in] weld_mode Granularity at which coincident vertices are treated as the same shared vertex.
+         * \return The three shared vertex indices of this facet's corners, in the order given by \ref helios::Context::getPrimitiveVertices(). Empty if the object's facets were not all retained.
+         */
+        [[nodiscard]] std::vector<int> getPrimitiveSharedVertexIndices(uint UUID, helios::VertexWeldMode weld_mode) const override;
+
+        //! Get the shared vertices for many facets at once
+        /**
+         * Locating a single facet requires a search through the object's primitive list, so resolving a whole object one facet at a time costs time quadratic in the number of facets. This overload indexes
+         * the list once and is the one to use when walking an entire object.
+         * \param[in] UUIDs Universally unique identifiers of primitives belonging to this object.
+         * \param[in] weld_mode Granularity at which coincident vertices are treated as the same shared vertex.
+         * \return Vector parallel to \p UUIDs, each entry holding one shared vertex index per vertex of the corresponding facet.
+         */
+        [[nodiscard]] std::vector<std::vector<int>> getPrimitiveSharedVertexIndices(const std::vector<uint> &UUIDs, helios::VertexWeldMode weld_mode) const override;
 
     protected:
         //! Default constructor
@@ -1685,6 +1885,44 @@ namespace helios {
             return true;
         }
 
+        //! Query whether the mesh identifies which facets meet at each vertex
+        /**
+         * True whenever the object carries an indexed face set, which a mesh loaded from an OBJ or PLY file does and a mesh assembled from loose primitives by \ref helios::Context::addPolymeshObject() does not.
+         * \return True if the object carries a face table, false otherwise.
+         */
+        [[nodiscard]] bool hasSharedVertexTopology() const override;
+
+        //! Get the number of shared vertices in the mesh
+        /**
+         * A mesh has no distinguished axis, so both weld modes describe the same topology and this is always \ref getVertexCount().
+         * \param[in] weld_mode Ignored; a mesh reports the same topology for either mode.
+         * \return Number of mesh vertices.
+         */
+        [[nodiscard]] size_t getSharedVertexCount(helios::VertexWeldMode weld_mode) const override;
+
+        //! Get the mesh vertices that a member primitive's face refers to
+        /**
+         * \param[in] UUID Universally unique identifier of a primitive belonging to this object.
+         * \param[in] weld_mode Ignored; a mesh reports the same topology for either mode.
+         * \return The three vertex indices of this primitive's face. Empty if the object carries no face table, or if the primitive has no face entry.
+         */
+        [[nodiscard]] std::vector<int> getPrimitiveSharedVertexIndices(uint UUID, helios::VertexWeldMode weld_mode) const override;
+
+        using CompoundObject::getPrimitiveSharedVertexIndices;
+
+        //! Move the mesh vertices, deforming the mesh
+        /**
+         * Writes every shared vertex of the mesh in a single pass and pushes the new positions out to the member primitives, which is how a mesh is deformed without tearing: each face is rebuilt from the
+         * shared vertex array, so facets meeting at a vertex all pick up the same new position. Transforming the member primitives one at a time instead leaves a shared vertex wherever the last facet
+         * processed put it, and re-inverts the object transformation matrix for every facet.
+         *
+         * The mesh topology is unchanged - this moves the existing vertices and cannot add or remove them - so the vertex count must match. Texture coordinates are untouched, and consequently so is each
+         * primitive's solid fraction, which depends on the (u,v) coordinates rather than on the vertex positions.
+         * \param[in] vertices_global Vertex positions in global Cartesian coordinates, parallel to and the same length as \ref getVertices().
+         * \note Vertex normals are not recomputed and no longer describe the deformed surface; call \ref computeVertexNormals() again if exact normals are needed.
+         */
+        void setVertices(const std::vector<helios::vec3> &vertices_global);
+
         //! Update the stored mesh vertices of a member primitive after it has been transformed
         /**
          * Called by the Context after an individual member primitive has been moved, so that the indexed face set continues to describe the actual geometry. Because vertices are shared, updating them moves
@@ -1695,9 +1933,10 @@ namespace helios {
 
         //! Get the volume of the polymesh object
         /**
-         * The volume is computed by the divergence theorem, which requires a closed surface with consistent facet winding. When the object carries an indexed face set (see \ref getFaces()), closure is
-         * verified before the sum is performed and an error is raised if the mesh is not closed. A Polymesh created by grouping loose primitives via \ref helios::Context::addPolymeshObject() has no face
-         * table, in which case the volume is summed over the member primitives without a closure check.
+         * The volume is computed by the divergence theorem, which requires a closed surface with consistent facet winding. When the object carries an indexed face set (see \ref getFaces()), the mesh is
+         * separated into its connected pieces and only those that are closed contribute, so a solid modelled alongside open decoration - a fruit with its sepals or its stalk - reports the volume of the solid
+         * rather than having none at all. An error is raised only when no piece of the mesh is closed, since there is then no volume to report. A Polymesh created by grouping loose primitives via
+         * \ref helios::Context::addPolymeshObject() has no face table, in which case the volume is summed over the member primitives without any closure check.
          * \return Volume enclosed by the mesh.
          */
         [[nodiscard]] float getVolume() const;
@@ -1959,6 +2198,40 @@ namespace helios {
         [[nodiscard]] std::vector<helios::vec3> getPrimitiveVertexNormals(uint UUID) const override;
 
         using CompoundObject::getPrimitiveVertexNormals;
+
+        //! Query whether the object identifies which of its facets meet at each vertex
+        /**
+         * Always true: the facets of a cone are cells of a regular lattice in the shape's own parameters, so the vertices two neighbouring facets have in common are known exactly.
+         * \return Always true.
+         */
+        [[nodiscard]] bool hasSharedVertexTopology() const override;
+
+        //! Get the number of shared vertices in the tessellation
+        /**
+         * A cone is a single segment, so both weld modes give the same answer: one vertex per radial division at each of the two ends.
+         * \param[in] weld_mode Granularity at which coincident vertices are treated as the same shared vertex.
+         * \return Number of shared vertices. Zero if the object's facets were not all retained, in which case their lattice positions cannot be recovered.
+         */
+        [[nodiscard]] size_t getSharedVertexCount(helios::VertexWeldMode weld_mode) const override;
+
+        //! Get the shared vertices that a facet's corners coincide with
+        /**
+         * A facet is located from its position in the object's primitive list, which the generator fills in lattice order. A textured object whose degenerate facets were discarded at creation, or any object a primitive has since been deleted from, no longer has that correspondence; the facet count is checked against the one the lattice implies and no topology is reported when they disagree.
+         * \param[in] UUID Universally unique identifier of a primitive belonging to this object.
+         * \param[in] weld_mode Granularity at which coincident vertices are treated as the same shared vertex.
+         * \return The three shared vertex indices of this facet's corners, in the order given by \ref helios::Context::getPrimitiveVertices(). Empty if the object's facets were not all retained.
+         */
+        [[nodiscard]] std::vector<int> getPrimitiveSharedVertexIndices(uint UUID, helios::VertexWeldMode weld_mode) const override;
+
+        //! Get the shared vertices for many facets at once
+        /**
+         * Locating a single facet requires a search through the object's primitive list, so resolving a whole object one facet at a time costs time quadratic in the number of facets. This overload indexes
+         * the list once and is the one to use when walking an entire object.
+         * \param[in] UUIDs Universally unique identifiers of primitives belonging to this object.
+         * \param[in] weld_mode Granularity at which coincident vertices are treated as the same shared vertex.
+         * \return Vector parallel to \p UUIDs, each entry holding one shared vertex index per vertex of the corresponding facet.
+         */
+        [[nodiscard]] std::vector<std::vector<int>> getPrimitiveSharedVertexIndices(const std::vector<uint> &UUIDs, helios::VertexWeldMode weld_mode) const override;
 
     protected:
         //! Default constructor
@@ -6715,6 +6988,20 @@ namespace helios {
          */
         [[nodiscard]] std::vector<helios::vec3> getPolymeshObjectVertices(uint ObjID) const;
 
+        //! Move the vertices of a polymesh object, deforming the mesh
+        /**
+         * Writes every shared vertex of the mesh in one pass and pushes the new positions out to the member primitives, keeping faces that meet at a vertex welded together. This is the supported way to
+         * deform a mesh: transforming the member primitives individually leaves each shared vertex wherever the last facet processed put it, and re-inverts the object transformation matrix per facet.
+         *
+         * The topology is unchanged, so the vertex count must match that of \ref getPolymeshObjectVertices(). Texture coordinates are not touched, and neither is the solid fraction of the member
+         * primitives, which is a function of the (u,v) coordinates rather than of the vertex positions - deforming a textured mesh therefore does not re-rasterize its alpha mask.
+         * \param[in] ObjID Object ID of the polymesh object
+         * \param[in] vertices Vertex positions in global Cartesian coordinates, parallel to and the same length as the array returned by \ref getPolymeshObjectVertices().
+         * \note Vertex normals are not recomputed and no longer describe the deformed surface; call \ref computePolymeshObjectVertexNormals() again if exact normals are needed.
+         * \sa \ref getPolymeshObjectVertices(), \ref setPolymeshObjectTopology()
+         */
+        void setPolymeshObjectVertices(uint ObjID, const std::vector<helios::vec3> &vertices);
+
         //! Get the face table of a Polygon Mesh object from the context
         /**
          * \param[in] ObjID object ID of the Polygon Mesh object
@@ -6877,6 +7164,52 @@ namespace helios {
          * \return Vector parallel to \p UUIDs, each entry holding one unit normal per vertex of the corresponding primitive.
          */
         [[nodiscard]] std::vector<std::vector<helios::vec3>> getObjectPrimitiveVertexNormals(uint ObjID, const std::vector<uint> &UUIDs) const;
+
+        //! Query whether a compound object exposes which of its member primitives meet at each mesh vertex
+        /**
+         * \param[in] ObjID Object ID of the compound object.
+         * \return True if \ref getObjectPrimitiveSharedVertexIndices() returns indices for this object's primitives.
+         */
+        [[nodiscard]] bool doesObjectHaveSharedVertexTopology(uint ObjID) const;
+
+        //! Get the number of distinct shared vertices in a compound object's mesh
+        /**
+         * \param[in] ObjID Object ID of the compound object.
+         * \param[in] weld_mode Granularity at which coincident vertices are treated as the same shared vertex.
+         * \return Number of shared vertices, one greater than the largest index \ref getObjectPrimitiveSharedVertexIndices() can return. Zero if the object exposes no topology.
+         */
+        [[nodiscard]] size_t getObjectSharedVertexCount(uint ObjID, helios::VertexWeldMode weld_mode) const;
+
+        //! Get the shared mesh vertex that each vertex of a primitive belongs to
+        /**
+         * Indices are in the same order as the vertices given by \ref getPrimitiveVertices(), and two primitives meeting at a corner report the same index there. This is what lets a per-face quantity be
+         * averaged onto the vertices that neighbouring faces have in common.
+         * \param[in] ObjID Object ID of the compound object the primitive belongs to.
+         * \param[in] UUID Universally unique identifier of the primitive.
+         * \param[in] weld_mode Granularity at which coincident vertices are treated as the same shared vertex.
+         * \return Shared vertex indices, one per vertex of the primitive. Empty if the object exposes no topology.
+         */
+        [[nodiscard]] std::vector<int> getObjectPrimitiveSharedVertexIndices(uint ObjID, uint UUID, helios::VertexWeldMode weld_mode) const;
+
+        //! Get the shared mesh vertices for many primitives of a compound object at once
+        /**
+         * Equivalent to calling \ref getObjectPrimitiveSharedVertexIndices(uint, uint, helios::VertexWeldMode) const for each UUID, except that any per-object quantity needed to locate the vertices is
+         * prepared once for the whole batch. Prefer this overload when walking an entire object.
+         * \param[in] ObjID Object ID of the compound object the primitives belong to.
+         * \param[in] UUIDs Universally unique identifiers of the primitives.
+         * \param[in] weld_mode Granularity at which coincident vertices are treated as the same shared vertex.
+         * \return Vector parallel to \p UUIDs, each entry holding one shared vertex index per vertex of the corresponding primitive.
+         */
+        [[nodiscard]] std::vector<std::vector<int>> getObjectPrimitiveSharedVertexIndices(uint ObjID, const std::vector<uint> &UUIDs, helios::VertexWeldMode weld_mode) const;
+
+        //! Get the shared mesh vertex that each vertex of a primitive belongs to, without naming its parent object
+        /**
+         * Resolves the primitive's parent object and forwards to it. A primitive that belongs to no object, or to one that exposes no topology, has no shared vertices to report.
+         * \param[in] UUID Universally unique identifier of the primitive.
+         * \param[in] weld_mode Granularity at which coincident vertices are treated as the same shared vertex.
+         * \return Shared vertex indices, one per vertex of the primitive. Empty if the primitive has no parent object, or its parent exposes no topology.
+         */
+        [[nodiscard]] std::vector<int> getPrimitiveSharedVertexIndices(uint UUID, helios::VertexWeldMode weld_mode) const;
 
         //! Scale the length of a Cone object by scaling the distance between its nodes
         /**

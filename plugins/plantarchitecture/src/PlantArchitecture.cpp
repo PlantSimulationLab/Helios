@@ -209,12 +209,22 @@ LeafPrototype::LeafPrototype(std::minstd_rand0 *generator) : generator(generator
     leaf_aspect_ratio.initialize(1.f, generator);
     midrib_fold_fraction.initialize(0.f, generator);
     longitudinal_curvature.initialize(0.f, generator);
+    // Defaults to the quartic the leaf prototype has always used, so a species that does not set it keeps its existing blade shape exactly.
+    longitudinal_curvature_exponent.initialize(4.f, generator);
     lateral_curvature.initialize(0.f, generator);
     petiole_roll.initialize(0.f, generator);
     wave_period.initialize(0.f, generator);
     wave_amplitude.initialize(0.f, generator);
+    flexibility.initialize(0.f, generator);
+    // Defaults to a blade of uniform stiffness, which is what the deflection assumed before this parameter existed.
+    flexibility_taper.initialize(1.f, generator);
+    // Defaults to no ageing at all: droop then follows from leaf size alone, as it did before these parameters existed.
+    flexibility_aging.initialize(0.f, generator);
+    flexibility_aging_max.initialize(4.f, generator);
+    HELIOS_PUSH_IGNORE_DEPRECATED
     leaf_buckle_length.initialize(0.f, generator);
     leaf_buckle_angle.initialize(0.f, generator);
+    HELIOS_POP_IGNORE_DEPRECATED
     subdivisions = 1;
     unique_prototypes = 1;
     leaf_offset = make_vec3(0, 0, 0);
@@ -223,6 +233,54 @@ LeafPrototype::LeafPrototype(std::minstd_rand0 *generator) : generator(generator
     if (generator != nullptr) {
         sampleIdentifier();
     }
+}
+
+std::minstd_rand0 *LeafPrototype::setRandomGenerator(std::minstd_rand0 *rand_generator) {
+    std::minstd_rand0 *previous_generator = generator;
+    generator = rand_generator;
+    leaf_aspect_ratio.setRandomGenerator(rand_generator);
+    midrib_fold_fraction.setRandomGenerator(rand_generator);
+    longitudinal_curvature.setRandomGenerator(rand_generator);
+    longitudinal_curvature_exponent.setRandomGenerator(rand_generator);
+    lateral_curvature.setRandomGenerator(rand_generator);
+    petiole_roll.setRandomGenerator(rand_generator);
+    wave_period.setRandomGenerator(rand_generator);
+    wave_amplitude.setRandomGenerator(rand_generator);
+    flexibility.setRandomGenerator(rand_generator);
+    flexibility_taper.setRandomGenerator(rand_generator);
+    flexibility_aging.setRandomGenerator(rand_generator);
+    flexibility_aging_max.setRandomGenerator(rand_generator);
+    HELIOS_PUSH_IGNORE_DEPRECATED
+    leaf_buckle_length.setRandomGenerator(rand_generator);
+    leaf_buckle_angle.setRandomGenerator(rand_generator);
+    HELIOS_POP_IGNORE_DEPRECATED
+    return previous_generator;
+}
+
+float LeafPrototype::resolveFlexibility() {
+
+    const float flexibility_value = flexibility.val();
+    flexibility.resample();
+
+    HELIOS_PUSH_IGNORE_DEPRECATED
+    const float buckle_angle_degrees = leaf_buckle_angle.val();
+    const float buckle_length_fraction = leaf_buckle_length.val();
+    leaf_buckle_angle.resample();
+    leaf_buckle_length.resample();
+    HELIOS_POP_IGNORE_DEPRECATED
+
+    // An explicitly-set flexibility always wins, so code that has migrated is unaffected by a stale buckle value sitting beside it, and a caller that deliberately wants a rigid leaf is not overridden by one.
+    if (flexibility_value > 0.f || buckle_angle_degrees <= 0.f) {
+        return flexibility_value;
+    }
+
+    // Convert the retired kink into the flexibility that reproduces it. Bending the blade through an angle A at a fraction f along its length dropped the tip by (1-f)*sin(A) of the leaf length; a leaf of a
+    // given flexibility droops its tip by aspect*flexibility/8 of its length once fully grown, which is the standard uniformly-loaded cantilever result with the length dependence divided out. Equating the
+    // two gives the expression below. Checked against the three grass models this replaced, it lands within about ten percent of the values obtained by numerically matching their old shapes.
+    const float aspect_ratio = std::max(leaf_aspect_ratio.val(), 1e-3f);
+    const float hinge_tip_droop_fraction = (1.f - clamp(buckle_length_fraction, 0.f, 1.f)) * sinf(deg2rad(buckle_angle_degrees));
+
+    return std::max(8.f * hinge_tip_droop_fraction / aspect_ratio, 0.f);
 }
 
 PhytomerParameters::PhytomerParameters() : PhytomerParameters(nullptr) {
@@ -334,6 +392,14 @@ void ShootParameters::defineChildShootTypes(const std::vector<std::string> &a_ch
 
     this->child_shoot_type_labels = a_child_shoot_type_labels;
     this->child_shoot_type_probabilities = a_child_shoot_type_probabilities;
+}
+
+std::vector<std::string> ShootParameters::getChildShootTypeLabels() const {
+    return child_shoot_type_labels;
+}
+
+std::vector<float> ShootParameters::getChildShootTypeProbabilities() const {
+    return child_shoot_type_probabilities;
 }
 
 void ShootParameters::inheritCustomFunctionsFrom(const ShootParameters &source) {
@@ -505,6 +571,25 @@ float Phytomer::getLeafArea() const {
         p++;
     }
     return leaf_area;
+}
+
+float Phytomer::getInflorescenceArea() const {
+    float inflorescence_area = 0;
+    for (const auto &petiole: floral_buds) {
+        for (const auto &fbud: petiole) {
+            for (uint objID: fbud.inflorescence_objIDs) {
+                if (context_ptr->doesObjectExist(objID)) {
+                    // Reported at full size, matching getLeafArea(): the area is divided out by the current scale factor so that a structure part-way through its growth still reports the area it is growing
+                    // toward. The girth it demands of the stem should not shrink back as it expands.
+                    const float scale_factor = fbud.current_fruit_scale_factor;
+                    if (scale_factor > 0.f) {
+                        inflorescence_area += context_ptr->getObjectArea(objID) / powi(scale_factor, 2);
+                    }
+                }
+            }
+        }
+    }
+    return inflorescence_area;
 }
 
 helios::vec3 Phytomer::getLeafBasePosition(const uint petiole_index, const uint leaf_index) const {
@@ -1495,6 +1580,46 @@ float Shoot::sumShootLeafArea(uint start_node_index) const {
 }
 
 
+float Shoot::refreshDownstreamInflorescenceArea() {
+    // Inflorescence area cannot be accumulated the way downstream_leaf_area is, because a fruit or panicle keeps growing after it is created -- it starts at a quarter scale and expands -- so a value
+    // banked once when the floral bud opened would describe a structure the plant no longer has. It is therefore recomputed, but once per shoot per time step rather than once per node.
+    //
+    // The sums are built by a single sweep from the shoot tip downward, so that the running total is carried from one node to the next: the value at node p is this phytomer's own inflorescence area plus
+    // the value already computed at node p+1. Summing the suffix independently at every node instead -- which is what the original on-demand form did, once per node from the girth loop -- re-walks the
+    // whole shoot and every subtree hanging off it for each node in turn, making the cost quadratic in phytomer count and re-visiting a deep subtree once per ancestor node. On a mature branched fruiting
+    // plant that dominated the entire growth step.
+    if (isPruned()) {
+        return 0.f;
+    }
+
+    float running_total = 0;
+
+    for (int p = static_cast<int>(phytomers.size()) - 1; p >= 0; p--) {
+        running_total += phytomers.at(p)->getInflorescenceArea();
+
+        // Inflorescences borne on child shoots load this shoot too, so they are counted the same way sumShootLeafArea() counts their leaves. Each child subtree is visited exactly once here, and its own
+        // cached total is refreshed by the same recursion.
+        if (childIDs.find(p) != childIDs.end()) {
+            for (int child_shoot_ID: childIDs.at(p)) {
+                running_total += plantarchitecture_ptr->plant_instances.at(plantID).shoot_tree.at(child_shoot_ID)->refreshDownstreamInflorescenceArea();
+            }
+        }
+
+        phytomers.at(p)->downstream_inflorescence_area = running_total;
+    }
+
+    return running_total;
+}
+
+float Shoot::sumDownstreamInflorescenceArea(uint start_node_index) const {
+    if (isPruned() || start_node_index >= phytomers.size()) {
+        return 0.f;
+    }
+
+    return phytomers.at(start_node_index)->downstream_inflorescence_area;
+}
+
+
 float Shoot::sumChildVolume(uint start_node_index) const {
     // A pruned shoot has no phytomers and so no child shoots. See the note in sumShootLeafArea().
     if (isPruned()) {
@@ -1607,6 +1732,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     peduncle_radius.resize(phytomer_parameters.petiole.petioles_per_internode);
     peduncle_pitch.resize(phytomer_parameters.petiole.petioles_per_internode);
     peduncle_curvature.resize(phytomer_parameters.petiole.petioles_per_internode);
+    peduncle_roll.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_pitch.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_curvature.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_taper.resize(phytomer_parameters.petiole.petioles_per_internode);
@@ -1642,6 +1768,12 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     // initialize leaf variables
     leaf_bases.resize(phytomer_parameters.petiole.petioles_per_internode);
     leaf_objIDs.resize(phytomer_parameters.petiole.petioles_per_internode);
+    leaf_prototype_index.resize(phytomer_parameters.petiole.petioles_per_internode);
+    leaf_last_deformed_scale.resize(phytomer_parameters.petiole.petioles_per_internode);
+
+    // Resolved once here and held for the life of the phytomer. This also honours the retired leaf_buckle_* parameters when the flexibility itself was never set, so that code written against them still
+    // produces a drooping leaf rather than a rigid one.
+    leaf_flexibility = phytomer_parameters.leaf.prototype.resolveFlexibility();
     leaf_size_max.resize(phytomer_parameters.petiole.petioles_per_internode);
     leaf_rotation.resize(phytomer_parameters.petiole.petioles_per_internode);
     int leaves_per_petiole = phytomer_parameters.leaf.leaves_per_petiole.val();
@@ -2063,14 +2195,39 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         if (phytomer_parameters.leaf.prototype.unique_prototypes > 0 &&
             plantarchitecture_ptr->unique_leaf_prototype_objIDs.find(phytomer_parameters.leaf.prototype.unique_prototype_identifier) == plantarchitecture_ptr->unique_leaf_prototype_objIDs.end()) {
             plantarchitecture_ptr->unique_leaf_prototype_objIDs[phytomer_parameters.leaf.prototype.unique_prototype_identifier].resize(phytomer_parameters.leaf.prototype.unique_prototypes);
+            plantarchitecture_ptr->unique_leaf_prototype_rest_geometry[phytomer_parameters.leaf.prototype.unique_prototype_identifier].resize(phytomer_parameters.leaf.prototype.unique_prototypes);
+
+            // The set of unique blade shapes is drawn from a private stream keyed on the prototype identifier
+            // rather than from the Context's generator. The set is built lazily, at the first phytomer that needs
+            // it, and PlantArchitecture::readPlantStructureXML() builds it at a different point in the plant's
+            // sequence of random draws than growing the plant does -- so drawing from the shared stream gave a
+            // reloaded plant a different set of blade shapes than the one that was saved. See the matching block
+            // in readPlantStructureXML().
+            std::minstd_rand0 prototype_generator(phytomer_parameters.leaf.prototype.unique_prototype_identifier);
+            std::minstd_rand0 *context_generator = phytomer_parameters.leaf.prototype.setRandomGenerator(&prototype_generator);
+
             for (int prototype = 0; prototype < phytomer_parameters.leaf.prototype.unique_prototypes; prototype++) {
                 for (int leaf = 0; leaf < leaves_per_petiole; leaf++) {
                     float ind_from_tip = float(leaf) - float(leaves_per_petiole - 1) / 2.f;
                     uint objID_leaf = phytomer_parameters.leaf.prototype.prototype_function(context_ptr, &phytomer_parameters.leaf.prototype, ind_from_tip);
                     if (phytomer_parameters.leaf.prototype.prototype_function == GenericLeafPrototype) {
-                        context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(objID_leaf), "object_label", "leaf");
+                        // A petiolule loaded from an OBJ arrives already labelled by its own group in the file. Labelling the whole object "leaf" would overwrite that, and the filter below - which gives the
+                        // petiolule the petiole's colour, and which downstream code uses to give it the petiole's optical properties rather than the blade's - would then match nothing.
+                        const std::vector<uint> object_UUIDs = context_ptr->getObjectPrimitiveUUIDs(objID_leaf);
+                        const std::vector<uint> labelled_UUIDs = context_ptr->filterPrimitivesByData(object_UUIDs, "object_label", "petiolule");
+                        const std::set<uint> keep_label(labelled_UUIDs.begin(), labelled_UUIDs.end());
+                        std::vector<uint> blade_UUIDs;
+                        blade_UUIDs.reserve(object_UUIDs.size());
+                        for (uint UUID: object_UUIDs) {
+                            if (keep_label.find(UUID) == keep_label.end()) {
+                                blade_UUIDs.push_back(UUID);
+                            }
+                        }
+                        context_ptr->setPrimitiveData(blade_UUIDs, "object_label", "leaf");
                     }
                     plantarchitecture_ptr->unique_leaf_prototype_objIDs.at(phytomer_parameters.leaf.prototype.unique_prototype_identifier).at(prototype).push_back(objID_leaf);
+
+                    plantarchitecture_ptr->recordLeafPrototypeRestGeometry(phytomer_parameters.leaf.prototype, prototype, objID_leaf, leaf_flexibility);
                     std::string material_base_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_" + parent_shoot->shoot_type_label + "_leaf";
                     renameAutoMaterial(context_ptr, objID_leaf, material_base_name);
                     std::vector<uint> petiolule_UUIDs = context_ptr->filterPrimitivesByData(context_ptr->getObjectPrimitiveUUIDs(objID_leaf), "object_label", "petiolule");
@@ -2078,15 +2235,20 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
                     context_ptr->hideObject(objID_leaf);
                 }
             }
+
+            phytomer_parameters.leaf.prototype.setRandomGenerator(context_generator);
         }
 
         for (int leaf = 0; leaf < leaves_per_petiole; leaf++) {
             float ind_from_tip = float(leaf) - float(leaves_per_petiole - 1) / 2.f;
 
             uint objID_leaf;
+            // Which cached prototype this leaf is a copy of, so its rest shape can be found again when it is deflected. A leaf built fresh rather than copied has no cached rest shape and stays rigid.
+            int leaf_prototype_source = -1;
             if (phytomer_parameters.leaf.prototype.unique_prototypes > 0) {
                 // copy the existing prototype
                 int prototype = context_ptr->randu(0, phytomer_parameters.leaf.prototype.unique_prototypes - 1);
+                leaf_prototype_source = prototype;
                 assert(plantarchitecture_ptr->unique_leaf_prototype_objIDs.find(phytomer_parameters.leaf.prototype.unique_prototype_identifier) != plantarchitecture_ptr->unique_leaf_prototype_objIDs.end());
                 assert(plantarchitecture_ptr->unique_leaf_prototype_objIDs.at(phytomer_parameters.leaf.prototype.unique_prototype_identifier).size() > prototype);
                 assert(plantarchitecture_ptr->unique_leaf_prototype_objIDs.at(phytomer_parameters.leaf.prototype.unique_prototype_identifier).at(prototype).size() > leaf);
@@ -2109,91 +2271,24 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
 
             context_ptr->scaleObject(objID_leaf, leaf_scale);
 
-            float compound_rotation = 0;
-            if (leaves_per_petiole > 1) {
-                if (leaflet_offset_val == 0) {
-                    float dphi = PI_F / (floor(0.5 * float(leaves_per_petiole - 1)) + 1);
-                    compound_rotation = -float(PI_F) + dphi * (leaf + 0.5f);
-                } else {
-                    if (leaf == float(leaves_per_petiole - 1) / 2.f) {
-                        // tip leaf
-                        compound_rotation = 0;
-                    } else if (leaf < float(leaves_per_petiole - 1) / 2.f) {
-                        compound_rotation = -0.5 * PI_F;
-                    } else {
-                        compound_rotation = 0.5 * PI_F;
-                    }
-                }
-            }
+            float compound_rotation = compoundLeafRotation(leaves_per_petiole, leaf, leaflet_offset_val);
 
             // -- leaf rotations -- //
 
-            // leaf roll rotation
-            // Roll-X here only applies the user-configured `leaf.roll` parameter; the
-            // curvature-driven blade-up correction is done after the pitch+yaw chain
-            // (see "blade-up correction" block below) so that it can roll about the
-            // leaf's actual length axis rather than about world X.
-            float roll_rot = 0;
-            if (leaves_per_petiole == 1) {
-                int sign = (shoot_index.x % 2 == 0) ? 1 : -1;
-                roll_rot = -deg2rad(phytomer_parameters.leaf.roll.val()) * sign;
-            } else if (ind_from_tip != 0) {
-                roll_rot = (asin_safe(petiole_tip_axis.z) + deg2rad(phytomer_parameters.leaf.roll.val())) * compound_rotation / std::fabs(compound_rotation);
-            }
-            leaf_rotation.at(petiole).at(leaf).roll = deg2rad(phytomer_parameters.leaf.roll.val());
+            // Sampled here rather than inside orientLeaf() so that the order of the random draws, and
+            // therefore every subsequent draw for the plant, is unchanged. orientLeaf() samples nothing.
+            const float leaf_roll_angle = deg2rad(phytomer_parameters.leaf.roll.val());
             phytomer_parameters.leaf.roll.resample();
-            context_ptr->rotateObject(objID_leaf, roll_rot, "x");
-
-            // leaf pitch rotation
-            leaf_rotation.at(petiole).at(leaf).pitch = deg2rad(phytomer_parameters.leaf.pitch.val());
-            float pitch_rot = leaf_rotation.at(petiole).at(leaf).pitch;
+            const float leaf_pitch_angle = deg2rad(phytomer_parameters.leaf.pitch.val());
             phytomer_parameters.leaf.pitch.resample();
-            if (ind_from_tip == 0) {
-                pitch_rot += asin_safe(petiole_tip_axis.z);
-            }
-            context_ptr->rotateObject(objID_leaf, -pitch_rot, "y");
-
-            // leaf yaw rotation
+            float leaf_yaw_angle = 0;
             if (ind_from_tip != 0) {
-                float sign = -compound_rotation / fabs(compound_rotation);
-                leaf_rotation.at(petiole).at(leaf).yaw = sign * deg2rad(phytomer_parameters.leaf.yaw.val());
-                float yaw_rot = leaf_rotation.at(petiole).at(leaf).yaw;
+                const float yaw_sign = -compound_rotation / fabs(compound_rotation);
+                leaf_yaw_angle = yaw_sign * deg2rad(phytomer_parameters.leaf.yaw.val());
                 phytomer_parameters.leaf.yaw.resample();
-                context_ptr->rotateObject(objID_leaf, yaw_rot, "z");
-            } else {
-                leaf_rotation.at(petiole).at(leaf).yaw = 0;
             }
 
-            // rotate leaf to azimuth of petiole
-            context_ptr->rotateObject(objID_leaf, -std::atan2(petiole_tip_axis.y, petiole_tip_axis.x) + compound_rotation, "z");
-
-            // Curvature-aware blade-up correction: after the pitch-Y / yaw-Z chain, the
-            // leaf's blade normal lies in the vertical plane containing the petiole's
-            // length, but tilted from world-up by the angle between the petiole and
-            // world-up (= asin(petiole_tip.z)). Roll the leaf around its own length axis
-            // (= petiole_tip_axis in world space) to bring the blade normal back toward
-            // vertical. The amount of correction is scaled by petiole_length / leaf_size:
-            //   - long petioles (leaf held far from stem) → full correction (the leaf
-            //     can hang at its natural angle independent of stem curvature)
-            //   - short petioles (leaf hugs the stem) → little to no correction (the
-            //     leaf orientation is dictated by the stem)
-            // The total correction is also clamped to <90° to avoid extreme rolls when
-            // the stem is heavily curved.
-            if (leaves_per_petiole == 1) {
-                int sign = (shoot_index.x % 2 == 0) ? 1 : -1;
-                const float r_h = sqrtf(petiole_tip_axis.x * petiole_tip_axis.x + petiole_tip_axis.y * petiole_tip_axis.y);
-                if (r_h > 1e-4f) {
-                    float blade_correction = std::atan2(petiole_tip_axis.z * r_h, r_h * r_h);
-                    const float petiole_len = petiole_length.at(petiole);
-                    const float leaf_size_ref = std::max(leaf_size_max.at(petiole).at(leaf), 1e-6f);
-                    const float length_ratio = std::min(petiole_len / leaf_size_ref, 1.f);
-                    blade_correction *= length_ratio;
-                    const float max_correction = 0.5f * PI_F - deg2rad(1.f);
-                    if (blade_correction > max_correction) blade_correction = max_correction;
-                    if (blade_correction < -max_correction) blade_correction = -max_correction;
-                    context_ptr->rotateObject(objID_leaf, blade_correction * static_cast<float>(sign), petiole_tip_axis);
-                }
-            }
+            orientLeaf(objID_leaf, petiole, leaf, leaves_per_petiole, ind_from_tip, compound_rotation, petiole_tip_axis, leaf_roll_angle, leaf_pitch_angle, leaf_yaw_angle);
 
 
             // -- leaf translation -- //
@@ -2210,6 +2305,9 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
 
             leaf_objIDs.at(petiole).push_back(objID_leaf);
             leaf_bases.at(petiole).push_back(leaf_base);
+            leaf_prototype_index.at(petiole).push_back(leaf_prototype_source);
+            // Nothing has been deflected yet, so record a scale that no leaf can already be at; the first growth step then always deforms.
+            leaf_last_deformed_scale.at(petiole).push_back(-1.f);
         }
         phytomer_parameters.leaf.prototype_scale.resample();
 
@@ -2363,6 +2461,119 @@ void PlantArchitecture::ensureInflorescencePrototypesInitialized(const PhytomerP
     }
 }
 
+float Phytomer::getReconciledPeduncleRadius() {
+    // The peduncle attaches to the culm at a single point -- Shoot::addTerminalFloralBud puts its base on the last internode vertex -- so if the two tubes disagree in radius the join is a visible step
+    // rather than a taper. They were free to disagree: the peduncle radius is an independent constant, while the internode radius comes from the pipe model, which sizes each internode from the leaf area
+    // above it. The terminal internode carries the inflorescence rather than leaves, so the pipe model gives it almost nothing and it ends up far thinner than the structure it has to support.
+    //
+    // Reconciling against the culm rather than clamping in one direction matters because the error runs both ways: sorghum's peduncle was about 2.7x wider than its culm tip, maize's about 1.9x narrower.
+    const float culm_tip_radius = getInternodeRadius(1.f);
+    if (culm_tip_radius <= 0.f || !peduncleShouldMatchCulm()) {
+        // Nothing to match against, or a lateral peduncle whose configured radius is meaningful in its own right.
+        return phytomer_parameters.peduncle.radius.val();
+    }
+
+    // A peduncle is slightly narrower than the culm bearing it, continuing the stem's taper rather than stepping down. No measured peduncle diameter was found in the literature for either species, so this
+    // ratio is a calibration.
+    //
+    // The reconciled radius is used directly rather than being bounded by the configured one, because the mismatch runs in both directions: sorghum's peduncle was about 2.7x too wide, maize's about 1.9x
+    // too narrow, and a one-sided bound would correct only one of them.
+    constexpr float peduncle_to_culm_radius_ratio = 0.9f;
+    return peduncle_to_culm_radius_ratio * culm_tip_radius;
+}
+
+bool Phytomer::peduncleShouldMatchCulm() const {
+    // Only a peduncle that continues the stem's own axis should be sized from it. That is the case for a terminal inflorescence on an unbranched herbaceous culm -- a grass panicle or tassel sits directly on
+    // the stem apex, is the same organ continued, and looks wrong at any radius the stem does not lead into.
+    //
+    // A lateral peduncle is a different structure: the flower stalks of almond, apple, walnut and the other woody species in the library are deliberately slender (0.5-1 mm) and hang off branches that
+    // thicken to centimeters, so matching them to their parent would replace a flower stalk with a stub. Those keep their configured radius.
+    if (!parent_shoot_ptr->shoot_parameters.phytomer_parameters.internode.image_texture.empty()) {
+        // A bark texture marks a woody stem.
+        return false;
+    }
+    return shoot_index.x + 1 == shoot_index.z;
+}
+
+void Phytomer::updatePeduncleRadii() {
+    // Most phytomers on most plants carry no peduncle geometry at all, and this runs for every phytomer on every time step from the girth loop. Establishing that there is nothing to update costs a walk
+    // over the bud lists; computing the radius first does not, since getReconciledPeduncleRadius() measures the internode. Check first, so the common case exits before doing any of that work.
+    bool has_peduncle_geometry = false;
+    for (const auto &petiole: floral_buds) {
+        for (const auto &fbud: petiole) {
+            if (!fbud.peduncle_objIDs.empty()) {
+                has_peduncle_geometry = true;
+                break;
+            }
+        }
+        if (has_peduncle_geometry) {
+            break;
+        }
+    }
+    if (!has_peduncle_geometry) {
+        return;
+    }
+
+    const float radius = getReconciledPeduncleRadius();
+
+    for (uint petiole_idx = 0; petiole_idx < floral_buds.size(); petiole_idx++) {
+        for (auto &fbud: floral_buds.at(petiole_idx)) {
+            for (uint objID: fbud.peduncle_objIDs) {
+                if (!context_ptr->doesObjectExist(objID)) {
+                    continue;
+                }
+                const std::vector<float> existing_radii = context_ptr->getTubeObjectNodeRadii(objID);
+                if (existing_radii.empty()) {
+                    continue;
+                }
+                // setTubeRadii() regenerates the tube's primitives, so it is worth confirming there is actually a change to apply. The radius converges as the culm stops thickening, after which every
+                // remaining time step would otherwise rebuild the same geometry to the same dimensions.
+                bool radii_differ = false;
+                for (float existing_radius: existing_radii) {
+                    if (std::abs(existing_radius - radius) > 1e-9f) {
+                        radii_differ = true;
+                        break;
+                    }
+                }
+                if (radii_differ) {
+                    context_ptr->setTubeRadii(objID, std::vector<float>(existing_radii.size(), radius));
+                }
+
+                // The peduncle tube is built once, at the height the culm had that day, and nothing carries it upward as the internode beneath it goes on elongating: Shoot::updateShootNodes() rebuilds the
+                // internode tube and repositions petioles and leaves, but never peduncles. Re-anchoring it to the floral bud's base -- which does track the internode tip -- keeps the two joined; without
+                // this a mature sorghum culm ends nearly half a metre below its own panicle, with the head left floating.
+                //
+                // The anchor is measured from the rendered geometry rather than from the tube's node list, because the two do not agree. Phytomer::setPetioleBase() and Phytomer::setLeafScaleFraction()
+                // both translate peduncle objects by a shift derived from the PETIOLE base -- correct for an axillary bud, which sits there, and wrong for a terminal bud, which is anchored to the internode
+                // tip -- and those translations move the primitives without rewriting the node list. The primitives are what is drawn, so they are what has to be placed correctly.
+                vec3 lower_corner;
+                vec3 upper_corner;
+                context_ptr->getObjectBoundingBox(objID, lower_corner, upper_corner);
+
+                // The peduncle grows upward from its base, so the bottom of its bounding box is where it attaches to the culm.
+                const vec3 rendered_base = make_vec3(0.5f * (lower_corner.x + upper_corner.x), 0.5f * (lower_corner.y + upper_corner.y), lower_corner.z);
+                const vec3 anchor_shift = fbud.base_position - rendered_base;
+                if (anchor_shift.magnitude() > 1e-6f) {
+                    // Rewritten through the node list rather than by translating the object, so that the tube's nodes and the primitives generated from them stay in agreement -- Context::setTubeNodes()
+                    // moves the primitives to match, whereas translating the object moves only the primitives and leaves the node list behind.
+                    std::vector<vec3> nodes = context_ptr->getTubeObjectNodes(objID);
+                    if (!nodes.empty()) {
+                        const vec3 node_base = nodes.front();
+                        for (vec3 &node: nodes) {
+                            node = fbud.base_position + (node - node_base);
+                        }
+                        context_ptr->setTubeNodes(objID, nodes);
+                    }
+                }
+            }
+            // Keep the stored radius in step with the geometry, since it is what gets written out when the plant structure is saved to XML.
+            if (petiole_idx < peduncle_radius.size() && fbud.bud_index < peduncle_radius.at(petiole_idx).size()) {
+                peduncle_radius.at(petiole_idx).at(fbud.bud_index) = radius;
+            }
+        }
+    }
+}
+
 void Phytomer::updateInflorescence(FloralBud &fbud) {
     // Assign the member rather than a local of the same name, so that whether peduncle geometry was
     // actually built here is the same flag consulted later when that geometry is deleted.
@@ -2381,7 +2592,7 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
     std::vector<vec3> peduncle_vertices(phytomer_parameters.peduncle.length_segments + 1);
     peduncle_vertices.at(0) = fbud.base_position;
     std::vector<float> peduncle_radii(phytomer_parameters.peduncle.length_segments + 1);
-    peduncle_radii.at(0) = phytomer_parameters.peduncle.radius.val();
+    peduncle_radii.at(0) = getReconciledPeduncleRadius();
     std::vector<RGBcolor> peduncle_colors(phytomer_parameters.peduncle.length_segments + 1);
     peduncle_colors.at(0) = phytomer_parameters.peduncle.color;
 
@@ -2437,6 +2648,12 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
     float peduncle_curvature = phytomer_parameters.peduncle.curvature.val();
     phytomer_parameters.peduncle.curvature.resample();
 
+    // Read the roll here so that the value stored below is the same one the inflorescence yaw is
+    // built from further down. It must NOT be resampled here: peduncle.roll is resampled once at
+    // the end of this function, and drawing a second sample would both shift every subsequent
+    // random draw for the plant and store a roll that was never applied to any geometry.
+    float peduncle_roll = phytomer_parameters.peduncle.roll.val();
+
     // Store actual sampled peduncle parameters for XML reconstruction
     uint petiole_idx = fbud.parent_index;
     uint bud_idx = fbud.bud_index;
@@ -2446,11 +2663,13 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
             this->peduncle_radius.at(petiole_idx).resize(bud_idx + 1);
             this->peduncle_pitch.at(petiole_idx).resize(bud_idx + 1);
             this->peduncle_curvature.at(petiole_idx).resize(bud_idx + 1);
+            this->peduncle_roll.at(petiole_idx).resize(bud_idx + 1);
         }
         this->peduncle_length.at(petiole_idx).at(bud_idx) = peduncle_length;
         this->peduncle_radius.at(petiole_idx).at(bud_idx) = phytomer_parameters.peduncle.radius.val();
         this->peduncle_pitch.at(petiole_idx).at(bud_idx) = phytomer_parameters.peduncle.pitch.val();
         this->peduncle_curvature.at(petiole_idx).at(bud_idx) = peduncle_curvature;
+        this->peduncle_roll.at(petiole_idx).at(bud_idx) = peduncle_roll;
     }
 
     for (int i = 1; i <= phytomer_parameters.peduncle.length_segments; i++) {
@@ -2505,7 +2724,7 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
 
         peduncle_vertices.at(i) = peduncle_vertices.at(i - 1) + dr_peduncle * peduncle_axis;
 
-        peduncle_radii.at(i) = phytomer_parameters.peduncle.radius.val();
+        peduncle_radii.at(i) = peduncle_radii.at(0);
         peduncle_colors.at(i) = phytomer_parameters.peduncle.color;
     }
 
@@ -2605,7 +2824,7 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
         float azimuth = -std::atan2(peduncle_axis.y, peduncle_axis.x);
 
         // Calculate compound yaw (peduncle roll + compound rotation)
-        float yaw_compound = deg2rad(phytomer_parameters.peduncle.roll.val()) + compound_rotation;
+        float yaw_compound = deg2rad(peduncle_roll) + compound_rotation;
 
         // Determine if flower is open
         bool is_open_flower = (fbud.state == BUD_FLOWER_OPEN);
@@ -2684,7 +2903,10 @@ void Phytomer::setPetioleBase(const helios::vec3 &base_position) {
 
     for (auto &floral_bud: floral_buds) {
         for (auto &fbud: floral_bud) {
-            fbud.base_position = petiole_vertices.front().front();
+            // Translated by the same shift as everything else above, rather than reassigned to the petiole base. An axillary bud does sit at the petiole base and so was unaffected, but a terminal bud is
+            // anchored to the internode tip (see Shoot::addTerminalFloralBud), and snapping it to the petiole put it a whole internode too low. That was invisible while the last internode was the same
+            // length as its neighbours, and became a visible break between the culm and its panicle once the flag-leaf internode was allowed to elongate.
+            fbud.base_position += shift;
             context_ptr->translateObject(fbud.inflorescence_objIDs, shift);
             for (auto &base: fbud.inflorescence_bases) {
                 base += shift;
@@ -2894,6 +3116,11 @@ void Phytomer::setLeafScaleFraction(uint petiole_index, float leaf_scale_factor_
 
     // If the leaf is already at leaf_scale_factor_fraction, or there are no petioles/leaves, nothing to do.
     if (leaf_scale_factor_fraction == current_leaf_scale_factor.at(petiole_index) || (leaf_objIDs.at(petiole_index).empty() && !context_ptr->doesObjectExist(petiole_objIDs.at(petiole_index)))) {
+        // The leaf has not changed size, so none of the scaling below has anything to do. The deflection is still applied: a leaf reaches its full length before it reaches its final droop, and this is the
+        // path every mature leaf takes on every timestep from then on, so returning outright here would freeze each leaf at whatever droop it happened to have while it was still expanding.
+        for (uint leaf = 0; leaf < leaf_objIDs.at(petiole_index).size(); leaf++) {
+            deformLeafUnderSelfWeight(petiole_index, leaf);
+        }
         return;
     }
 
@@ -2951,7 +3178,225 @@ void Phytomer::setLeafScaleFraction(uint petiole_index, float leaf_scale_factor_
             context_ptr->translateObject(leaf_objIDs.at(petiole_index).at(leaf), leaf_base);
             leaf_bases.at(petiole_index).at(leaf) = leaf_base;
         }
+
+        deformLeafUnderSelfWeight(petiole_index, leaf);
     }
+}
+
+void PlantArchitecture::recordLeafPrototypeRestGeometry(const LeafPrototype &prototype_params, int prototype_index, uint objID_leaf, float leaf_flexibility) {
+
+    // Keep the prototype's undeformed blade so that a drooping leaf can be re-deflected from its rest shape as it grows, instead of being bent further from wherever it already is. Stored once
+    // per prototype and shared by every leaf copied from it, so this costs a handful of meshes per plant type rather than one per leaf. Only leaves that actually droop are recorded.
+    LeafRestGeometry rest_geometry;
+    if (leaf_flexibility > 0.f) {
+        // Recorded in the prototype's own local frame, not the world frame that getPolymeshObjectVertices() returns. A leaf is a copyObject() of this prototype, and copyObject preserves the
+        // local vertices while giving the copy its own transform; the deflected lattice is later carried through that transform. Storing world-space vertices would bake the prototype's own
+        // transform into them and then apply the leaf's on top, displacing every leaf from its petiole by a constant offset.
+        //
+        // The prototype is built at the origin and is only ever translated, never rotated or scaled, so its frame is removed by subtracting that translation rather than by inverting the
+        // matrix. The translation is read from the matrix itself so that a prototype placed somewhere else still resolves correctly.
+        rest_geometry.vertices = context_ptr->getPolymeshObjectVertices(objID_leaf);
+        float prototype_transform[16];
+        context_ptr->getObjectTransformationMatrix(objID_leaf, prototype_transform);
+        const vec3 prototype_origin = make_vec3(prototype_transform[3], prototype_transform[7], prototype_transform[11]);
+        for (vec3 &vertex: rest_geometry.vertices) {
+            vertex = vertex - prototype_origin;
+        }
+        // The blade is a regular lattice, so its dimensions can be recovered from the mesh itself. Deriving them here rather than recomputing them from the prototype parameters is what keeps
+        // this correct for a prototype whose lateral subdivision count came from a resampled random aspect ratio, which the caller cannot reproduce.
+        rest_geometry.subdivisions_x = prototype_params.subdivisions;
+        if (rest_geometry.subdivisions_x > 0 && rest_geometry.vertices.size() % (rest_geometry.subdivisions_x + 1) == 0) {
+            rest_geometry.subdivisions_y = uint(rest_geometry.vertices.size() / (rest_geometry.subdivisions_x + 1)) - 1;
+        } else {
+            // The mesh is not the plain lattice this deformation understands - an OBJ-loaded leaf, or one carrying a petiolule appended to the blade - so it is left rigid rather than deformed
+            // by an index mapping that does not describe it.
+            rest_geometry.vertices.clear();
+            rest_geometry.subdivisions_x = 0;
+        }
+    }
+    unique_leaf_prototype_rest_geometry[prototype_params.unique_prototype_identifier].at(prototype_index).push_back(rest_geometry);
+}
+
+float Phytomer::compoundLeafRotation(int leaves_per_petiole, int leaf_index, float leaflet_offset_val) {
+    float compound_rotation = 0;
+    if (leaves_per_petiole > 1) {
+        if (leaflet_offset_val == 0) {
+            float dphi = PI_F / (floor(0.5 * float(leaves_per_petiole - 1)) + 1);
+            compound_rotation = -float(PI_F) + dphi * (leaf_index + 0.5f);
+        } else {
+            if (leaf_index == float(leaves_per_petiole - 1) / 2.f) {
+                // tip leaf
+                compound_rotation = 0;
+            } else if (leaf_index < float(leaves_per_petiole - 1) / 2.f) {
+                compound_rotation = -0.5 * PI_F;
+            } else {
+                compound_rotation = 0.5 * PI_F;
+            }
+        }
+    }
+    return compound_rotation;
+}
+
+void Phytomer::orientLeaf(uint objID_leaf, uint petiole_index, uint leaf_index, int leaves_per_petiole, float ind_from_tip, float compound_rotation, const helios::vec3 &petiole_tip_axis, float leaf_roll_angle, float leaf_pitch_angle,
+                          float leaf_yaw_angle) {
+
+    // leaf roll rotation
+    // Roll-X here only applies the user-configured `leaf.roll` parameter; the
+    // curvature-driven blade-up correction is done after the pitch+yaw chain
+    // (see "blade-up correction" block below) so that it can roll about the
+    // leaf's actual length axis rather than about world X.
+    float roll_rot = 0;
+    if (leaves_per_petiole == 1) {
+        int sign = (shoot_index.x % 2 == 0) ? 1 : -1;
+        roll_rot = -leaf_roll_angle * sign;
+    } else if (ind_from_tip != 0) {
+        roll_rot = (asin_safe(petiole_tip_axis.z) + leaf_roll_angle) * compound_rotation / std::fabs(compound_rotation);
+    }
+    leaf_rotation.at(petiole_index).at(leaf_index).roll = leaf_roll_angle;
+    context_ptr->rotateObject(objID_leaf, roll_rot, "x");
+
+    // leaf pitch rotation
+    leaf_rotation.at(petiole_index).at(leaf_index).pitch = leaf_pitch_angle;
+    float pitch_rot = leaf_pitch_angle;
+    if (ind_from_tip == 0) {
+        pitch_rot += asin_safe(petiole_tip_axis.z);
+    }
+    context_ptr->rotateObject(objID_leaf, -pitch_rot, "y");
+
+    // leaf yaw rotation
+    if (ind_from_tip != 0) {
+        leaf_rotation.at(petiole_index).at(leaf_index).yaw = leaf_yaw_angle;
+        context_ptr->rotateObject(objID_leaf, leaf_yaw_angle, "z");
+    } else {
+        leaf_rotation.at(petiole_index).at(leaf_index).yaw = 0;
+    }
+
+    // rotate leaf to azimuth of petiole
+    context_ptr->rotateObject(objID_leaf, std::atan2(petiole_tip_axis.y, petiole_tip_axis.x) + compound_rotation, "z");
+
+    // Curvature-aware blade-up correction: after the pitch-Y / yaw-Z chain, the
+    // leaf's blade normal lies in the vertical plane containing the petiole's
+    // length, but tilted from world-up by the angle between the petiole and
+    // world-up (= asin(petiole_tip.z)). Roll the leaf around its own length axis
+    // (= petiole_tip_axis in world space) to bring the blade normal back toward
+    // vertical. The amount of correction is scaled by petiole_length / leaf_size:
+    //   - long petioles (leaf held far from stem) → full correction (the leaf
+    //     can hang at its natural angle independent of stem curvature)
+    //   - short petioles (leaf hugs the stem) → little to no correction (the
+    //     leaf orientation is dictated by the stem)
+    // The total correction is also clamped to <90° to avoid extreme rolls when
+    // the stem is heavily curved.
+    if (leaves_per_petiole == 1) {
+        int sign = (shoot_index.x % 2 == 0) ? 1 : -1;
+        const float r_h = sqrtf(petiole_tip_axis.x * petiole_tip_axis.x + petiole_tip_axis.y * petiole_tip_axis.y);
+        if (r_h > 1e-4f) {
+            float blade_correction = std::atan2(petiole_tip_axis.z * r_h, r_h * r_h);
+            const float petiole_len = petiole_length.at(petiole_index);
+            const float leaf_size_ref = std::max(leaf_size_max.at(petiole_index).at(leaf_index), 1e-6f);
+            const float length_ratio = std::min(petiole_len / leaf_size_ref, 1.f);
+            blade_correction *= length_ratio;
+            const float max_correction = 0.5f * PI_F - deg2rad(1.f);
+            if (blade_correction > max_correction)
+                blade_correction = max_correction;
+            if (blade_correction < -max_correction)
+                blade_correction = -max_correction;
+            context_ptr->rotateObject(objID_leaf, blade_correction * static_cast<float>(sign), petiole_tip_axis);
+        }
+    }
+}
+
+void Phytomer::deformLeafUnderSelfWeight(uint petiole_index, uint leaf_index) {
+
+    if (leaf_flexibility <= 0.f) {
+        // The species does not droop. This is the common case and must cost nothing beyond the check.
+        return;
+    }
+
+    // The blade goes on bending after it has stopped growing: it loses the straightening that comes with growth while its tissue keeps stiffening and shrinking irreversibly. That is expressed here as the
+    // leaf becoming steadily more compliant over its lifetime, so a leaf that has finished expanding continues to arch over instead of freezing at whatever shape its size alone dictates. Without this the
+    // oldest leaves on a plant are also its straightest, which is backwards.
+    float flexibility = leaf_flexibility;
+    const float aging_doubling_days = phytomer_parameters.leaf.prototype.flexibility_aging.val();
+    if (aging_doubling_days > 0.f) {
+        const float aging_ceiling = std::max(1.f, phytomer_parameters.leaf.prototype.flexibility_aging_max.val());
+        // Sigmoidal rather than exponential: a blade holds its shape while its tissue is still maturing, then softens over a relatively short window once maturation completes, and stops changing again.
+        // A plain exponential instead starts softening the moment the leaf appears, so it drooped the still-erect leaves of the middle canopy long before their turn.
+        // Normalised so the multiplier is exactly 1 on a leaf that has just appeared, rather than starting part-way up the curve: a newly emerged blade must be as stiff as the species' base flexibility says,
+        // or the ageing term silently changes the behaviour of every leaf including the youngest.
+        const float t = age / aging_doubling_days;
+        const float sigmoid = 1.f / (1.f + expf(-2.f * (t - 2.f)));
+        const float sigmoid_at_emergence = 1.f / (1.f + expf(4.f));
+        const float progress = std::clamp((sigmoid - sigmoid_at_emergence) / (1.f - sigmoid_at_emergence), 0.f, 1.f);
+        flexibility *= 1.f + (aging_ceiling - 1.f) * progress;
+    }
+
+    if (petiole_index >= leaf_prototype_index.size() || leaf_index >= leaf_prototype_index.at(petiole_index).size()) {
+        return;
+    }
+    const int prototype = leaf_prototype_index.at(petiole_index).at(leaf_index);
+    if (prototype < 0) {
+        return;
+    }
+
+    const uint prototype_identifier = phytomer_parameters.leaf.prototype.unique_prototype_identifier;
+    auto rest_cache = plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.find(prototype_identifier);
+    if (rest_cache == plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.end() || rest_cache->second.size() <= uint(prototype) || rest_cache->second.at(prototype).size() <= leaf_index) {
+        return;
+    }
+    const PlantArchitecture::LeafRestGeometry &rest = rest_cache->second.at(prototype).at(leaf_index);
+    if (rest.vertices.empty() || rest.subdivisions_x == 0) {
+        // No usable rest lattice was recorded for this prototype, so there is nothing to deflect from.
+        return;
+    }
+
+    const float current_scale = current_leaf_scale_factor.at(petiole_index) * leaf_size_max.at(petiole_index).at(leaf_index);
+    const float mature_scale = leaf_size_max.at(petiole_index).at(leaf_index);
+    if (mature_scale <= 0.f) {
+        return;
+    }
+
+    // A leaf that has not measurably grown since it was last deflected already has the right shape, so the vertex write is skipped. Once a leaf matures its scale stops changing and it costs nothing per
+    // timestep from then on, which is what keeps this affordable on a canopy where most leaves are full-grown.
+    float &last_scale = leaf_last_deformed_scale.at(petiole_index).at(leaf_index);
+    // Keyed on the deflection the leaf would take, which is its size and its current compliance together: an ageing leaf that has stopped growing still needs redeforming, and a key based on size alone would
+    // freeze it at the shape it had when it finished expanding. The tolerance is relative to the key itself rather than to a fixed scale, so it stays meaningful as ageing carries the compliance upward.
+    const float deflection_state = current_scale * flexibility;
+    if (last_scale >= 0.f && std::fabs(deflection_state - last_scale) < 1e-3f * std::max(deflection_state, last_scale)) {
+        return;
+    }
+
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+    if (!context_ptr->doesObjectExist(objID_leaf)) {
+        return;
+    }
+
+    // The rest lattice is the prototype's own geometry, which was recorded before the leaf was scaled, rotated into the canopy and translated onto its petiole. Rather than trying to reconstruct that chain
+    // of placements from the phytomer's stored angles, it is read back from the leaf object's own transformation matrix, which already holds exactly the composition that was applied to it. The blade is
+    // deflected in the prototype frame and then carried through that transform, so the leaf droops about its own base and keeps the orientation the rest of the model gave it.
+    //
+    // How far the blade bends depends on how long it physically is, so the mechanics are run at the leaf's true current and mature lengths. That also scales the returned lattice up to that physical size,
+    // which must then be divided back out: setLeafScaleFraction() has already accumulated the leaf's growth into the object transform through scaleObject(), so leaving the size in here would apply it twice
+    // and shrink every leaf by its own growth fraction - pulling the blade in toward its base and leaving it visibly detached from the stem.
+    //
+    // Dividing by the size the mechanics applied, rather than deflecting a unit lattice directly, keeps the amount of bend and the size of the leaf independent: the shape is the one belonging to a blade of
+    // this physical length, expressed at unit length for the transform to scale.
+    std::vector<vec3> deformed_prototype_frame = deformLeafLattice(rest.vertices, rest.subdivisions_x, rest.subdivisions_y, current_scale, mature_scale, flexibility, phytomer_parameters.leaf.prototype.flexibility_taper.val());
+    for (vec3 &vertex: deformed_prototype_frame) {
+        vertex = vertex / current_scale;
+    }
+
+    float transform[16];
+    context_ptr->getObjectTransformationMatrix(objID_leaf, transform);
+
+    std::vector<vec3> deformed_global(deformed_prototype_frame.size());
+    for (size_t v = 0; v < deformed_prototype_frame.size(); v++) {
+        const vec3 &p = deformed_prototype_frame.at(v);
+        deformed_global.at(v) = make_vec3(transform[0] * p.x + transform[1] * p.y + transform[2] * p.z + transform[3], transform[4] * p.x + transform[5] * p.y + transform[6] * p.z + transform[7],
+                                          transform[8] * p.x + transform[9] * p.y + transform[10] * p.z + transform[11]);
+    }
+
+    context_ptr->setPolymeshObjectVertices(objID_leaf, deformed_global);
+    last_scale = deflection_state;
 }
 
 void Phytomer::setLeafScaleFraction(float leaf_scale_factor_fraction) {
@@ -2970,19 +3415,13 @@ void Phytomer::setLeafPrototypeScale(uint petiole_index, float leaf_prototype_sc
 
     float tip_ind = ceil(scast<float>(leaf_size_max.at(petiole_index).size() - 1) / 2.f);
     float scale_factor = leaf_prototype_scale / leaf_size_max.at(petiole_index).at(tip_ind);
-    current_leaf_scale_factor.at(petiole_index) *= scale_factor;
 
+    // Only the mature size changes here. How far through its expansion the leaf is - current_leaf_scale_factor
+    // - is a separate quantity and must not move, or the invariant that a leaf's rendered size is
+    // leaf_size_max * current_leaf_scale_factor is broken. See scaleLeafPrototypeScale() for what that cost.
     for (int leaf = 0; leaf < leaf_objIDs.at(petiole_index).size(); leaf++) {
         leaf_size_max.at(petiole_index).at(leaf) *= scale_factor;
         context_ptr->scaleObjectAboutPoint(leaf_objIDs.at(petiole_index).at(leaf), scale_factor * make_vec3(1, 1, 1), leaf_bases.at(petiole_index).at(leaf));
-    }
-
-    // note: at time of phytomer creation, petiole curvature was based on the petiole length prior to this scaling. To stay consistent, we will scale the curvature appropriately.
-    this->petiole_curvature.at(petiole_index) /= scale_factor;
-
-    if (current_leaf_scale_factor.at(petiole_index) >= 1.f) {
-        setLeafScaleFraction(petiole_index, 1.f);
-        current_leaf_scale_factor.at(petiole_index) = 1.f;
     }
 }
 
@@ -3000,19 +3439,19 @@ void Phytomer::scaleLeafPrototypeScale(uint petiole_index, float scale_factor) {
         scale_factor = 0;
     }
 
-    current_leaf_scale_factor.at(petiole_index) /= scale_factor;
-
+    // Scale the mature leaf size and the geometry that follows from it, and leave the growth fraction alone.
+    // current_leaf_scale_factor used to be divided by scale_factor here, which broke the invariant that a
+    // leaf's rendered size is leaf_size_max * current_leaf_scale_factor: the geometry was scaled once but the
+    // product was left unchanged, so the bookkeeping overstated every leaf by scale_factor. Everything that
+    // reads that product was wrong by the same amount - writePlantStructureXML(), which then wrote a leaf
+    // scale that no geometry ever had, and deformLeafUnderSelfWeight(), which bent the blade as though it
+    // were longer than it is. Worse, dividing pushed the fraction toward one: a species calling this with 0.5
+    // on a half-grown leaf drove the fraction to exactly one, and the clamp that used to sit at the end of
+    // this function then marked the leaf fully grown at half its intended size, where it stayed for the rest
+    // of the simulation.
     for (int leaf = 0; leaf < leaf_objIDs.at(petiole_index).size(); leaf++) {
         leaf_size_max.at(petiole_index).at(leaf) *= scale_factor;
         context_ptr->scaleObjectAboutPoint(leaf_objIDs.at(petiole_index).at(leaf), scale_factor * make_vec3(1, 1, 1), leaf_bases.at(petiole_index).at(leaf));
-    }
-
-    // note: at time of phytomer creation, petiole curvature was based on the petiole length prior to this scaling. To stay consistent, we will scale the curvature appropriately.
-    this->petiole_curvature.at(petiole_index) /= scale_factor;
-
-    if (current_leaf_scale_factor.at(petiole_index) >= 1.f) {
-        setLeafScaleFraction(petiole_index, 1.f);
-        current_leaf_scale_factor.at(petiole_index) = 1.f;
     }
 }
 
@@ -3138,6 +3577,9 @@ void Phytomer::removeLeaf() {
     context_ptr->deleteObject(flatten(leaf_objIDs));
     leaf_objIDs.clear();
     leaf_bases.clear();
+    // These are indexed in lockstep with leaf_objIDs, so they have to be cleared with it or a later leaf would be deflected against a stale prototype.
+    leaf_prototype_index.clear();
+    leaf_last_deformed_scale.clear();
 
     if (build_context_geometry_petiole) {
         context_ptr->deleteObject(getExistingPetioleObjIDs());
@@ -3683,7 +4125,11 @@ void PlantArchitecture::incrementPhytomerInternodeGirth(uint plantID, uint shoot
         girth_area_factor = shoot->shoot_parameters.girth_area_factor.val() * 365 / phytomer_age;
     }
 
-    float internode_area = girth_area_factor * leaf_area * 1e-4;
+    // The pipe model sizes an internode from the leaf area it supports, which leaves a terminal inflorescence out of the account entirely: a sorghum panicle is borne above every node on the culm but adds
+    // nothing to the leaf area, so the upper culm tapered to a point far thinner than the head it carries. Counting the inflorescence alongside the leaves restores the taper the panicle's own load implies.
+    const float supported_area = leaf_area + shoot->sumDownstreamInflorescenceArea(node_number);
+
+    float internode_area = girth_area_factor * supported_area * 1e-4;
     float phytomer_radius = sqrtf(internode_area / PI_F);
 
     auto &segment = shoot->shoot_internode_radii.at(node_number);
@@ -3697,6 +4143,13 @@ void PlantArchitecture::incrementPhytomerInternodeGirth(uint plantID, uint shoot
     if (update_context_geometry && context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
         context_ptr->setTubeRadii(shoot->internode_tube_objID, flatten(shoot->shoot_internode_radii));
     }
+
+    // The peduncle is built once, when the terminal floral bud appears, which is the moment the culm is thinnest -- it then keeps thickening for the rest of the season while the peduncle stays as it was.
+    // Re-matching it here keeps the junction continuous for the whole growth period rather than only on the day it was created.
+    //
+    // Deliberately not gated on update_context_geometry: the growth loop passes false there and flushes the internode tube separately through Shoot::updateShootNodes(), which does not touch peduncles. The
+    // peduncle is its own Context object, so if this were skipped whenever that flag is false it would never be updated during ordinary growth at all.
+    phytomer->updatePeduncleRadii();
 }
 
 void PlantArchitecture::pruneGroundCollisions(uint plantID) {
@@ -3705,16 +4158,23 @@ void PlantArchitecture::pruneGroundCollisions(uint plantID) {
     }
 
     for (auto &shoot: plant_instances.at(plantID).shoot_tree) {
-        for (auto &phytomer: shoot->phytomers) {
-            // internode
-            if ((phytomer->shoot_index.x == 0 && phytomer->rank > 0) && context_ptr->doesObjectExist(shoot->internode_tube_objID) && detectGroundCollision(shoot->internode_tube_objID)) {
-                context_ptr->deleteObject(shoot->internode_tube_objID);
-                // Reset to the sentinel so the freed object ID is never handed back to callers or
-                // used to address the Context again.
-                shoot->internode_tube_objID = Shoot::no_internode_tube_objID;
-                shoot->terminateApicalBud();
-            }
+        // A shoot pruned earlier in this loop, or by an earlier call, has nothing left to clip.
+        if (shoot->isPruned()) {
+            continue;
+        }
 
+        // internode
+        if (shoot->rank > 0 && context_ptr->doesObjectExist(shoot->internode_tube_objID) && detectGroundCollision(shoot->internode_tube_objID)) {
+            // Delete the whole shoot rather than just its internode tube. Deleting the tube on its own
+            // left the shoot's phytomers in shoot_tree with no geometry behind them, so leaf area,
+            // carbohydrate transfer and writePlantStructureXML() all still counted organs the Context no
+            // longer had. deletePhytomer() at node 0 removes the tube, the phytomers and any child shoots
+            // together, and terminates the apical bud, leaving the two views consistent.
+            shoot->phytomers.front()->deletePhytomer();
+            continue;
+        }
+
+        for (auto &phytomer: shoot->phytomers) {
             // leaves
             for (uint petiole = 0; petiole < phytomer->leaf_objIDs.size(); petiole++) {
                 if (detectGroundCollision(phytomer->leaf_objIDs.at(petiole))) {
@@ -5675,6 +6135,14 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 continue;
             }
 
+            // Refresh the cached downstream inflorescence areas that the girth calculation reads below. This is done once per plant per time step, from the root shoots only: the refresh recurses into
+            // child shoots, so running it on every shoot in the tree would re-walk each subtree once per ancestor and reintroduce the very cost the cache exists to remove.
+            for (const auto &shoot: *shoot_tree) {
+                if (shoot->parent_shoot_ID < 0) {
+                    shoot->refreshDownstreamInflorescenceArea();
+                }
+            }
+
             size_t shoot_count = shoot_tree->size();
             for (int i = 0; i < shoot_count; i++) {
                 auto shoot = shoot_tree->at(i);
@@ -5829,6 +6297,12 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                     if (phytomer->hasLeaf()) {
                         for (uint petiole_index = 0; petiole_index < phytomer->current_leaf_scale_factor.size(); petiole_index++) {
                             if (phytomer->current_leaf_scale_factor.at(petiole_index) >= 1) {
+                                // The leaf has stopped growing, so there is no scaling left to do - but its shape is not necessarily finished. A blade goes on bending as it ages, so it is still handed to the
+                                // deflection, which returns immediately for a species whose leaves are rigid or whose shape has settled. Skipping the phytomer outright froze every mature leaf at the shape it
+                                // happened to have on the step it reached full size.
+                                for (uint leaf = 0; leaf < phytomer->leaf_objIDs.at(petiole_index).size(); leaf++) {
+                                    phytomer->deformLeafUnderSelfWeight(petiole_index, leaf);
+                                }
                                 continue;
                             }
 
@@ -5844,9 +6318,12 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                             float dL_leaf = dt_max_days * shoot->elongation_rate_instantaneous * phytomer->leaf_size_max.at(petiole_index).at(tip_ind);
                             float leaf_scale = fmin(1.f, (leaf_length + dL_leaf) / phytomer->phytomer_parameters.leaf.prototype_scale.val());
 
-                            // Use the minimum of petiole and leaf scaling to keep them synchronized
-                            // float scale = fmin(petiole_scale, leaf_scale);
-                            float scale = fmin(1.f, (leaf_length + dL_leaf) / phytomer->phytomer_parameters.leaf.prototype_scale.val());
+                            // Expressed as a fraction of THIS leaf's own full size rather than of the shoot type's prototype_scale. current_leaf_scale_factor means "how far this leaf has grown toward its
+                            // own maximum", and leaf_size_max is that maximum -- which a phytomer creation function is free to set per rank. Dividing by prototype_scale instead capped a leaf whose target
+                            // is smaller than the species maximum at target/prototype_scale, so it could never finish expanding and its size was multiplied by that shortfall a second time: a blade set to
+                            // 62% of the maximum came out at 62% of 62%. Every species whose leaf size is uniform along the shoot is unaffected, since there the two divisors are equal.
+                            const float leaf_size_full = phytomer->leaf_size_max.at(petiole_index).at(tip_ind);
+                            float scale = (leaf_size_full > 0.f) ? fmin(1.f, (leaf_length + dL_leaf) / leaf_size_full) : 1.f;
                             phytomer->phytomer_parameters.leaf.prototype_scale.resample();
                             phytomer->setLeafScaleFraction(petiole_index, scale);
                         }

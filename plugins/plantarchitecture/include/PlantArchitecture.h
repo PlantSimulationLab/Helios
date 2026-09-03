@@ -80,6 +80,18 @@ public:
         sampled = false;
     }
 
+    //! Draw subsequent values of this parameter from a different random number generator
+    /**
+     * The distribution and its parameters are left as they are; only the source of randomness changes. Any value
+     * already drawn is discarded, so that the next call to val() samples from the new generator rather than
+     * returning a value that came from the old one.
+     * \param[in] rand_generator Pointer to the random number generator to draw from.
+     */
+    void setRandomGenerator(std::minstd_rand0 *rand_generator) {
+        generator = rand_generator;
+        sampled = false;
+    }
+
     RandomParameter_float &operator=(float a) {
         this->distribution = "constant";
         this->constval = a;
@@ -465,6 +477,15 @@ public:
     //! Constructor - does not set random number generator
     LeafPrototype() = default;
 
+    //! Copy constructor
+    /**
+     * Written out rather than defaulted only so that copying the deprecated buckle members does not warn: an implicitly-generated copy constructor names them at the point the structure is defined, which
+     * makes every file that merely copies a LeafPrototype report a deprecation it had nothing to do with. Copies every member, as the implicit one did.
+     */
+    LeafPrototype(const LeafPrototype &a) {
+        duplicate(a);
+    }
+
     //! Custom prototype function for creating leaf prototypes
     /**
      * \note This is a function pointer, so it is not carried by a ShootParameters reconstructed from values alone. See \ref ShootParameters::inheritCustomFunctionsFrom().
@@ -492,6 +513,15 @@ public:
     // Parameters for leaf curvature
     //! Leaf curvature factor along the longitudinal/length (x-direction). (+curves upward, -curved downward)
     RandomParameter_float longitudinal_curvature;
+
+    //! How the longitudinal curvature is distributed along the blade, as the exponent of a power law in distance from the leaf base
+    /**
+     * The deflection at a fraction \c x along the blade is <code>longitudinal_curvature * x^longitudinal_curvature_exponent</code>, so a larger exponent keeps the inner blade straight and concentrates
+     * the bending near the tip, while a smaller one spreads it evenly along the leaf. At the default of 4 the blade has reached only 6% of its tip deflection by its own midpoint, which suits a leaf that
+     * stays straight and then turns over at the end; a grass blade that arcs continuously along its whole length is better described by an exponent near 2.
+     * \note This changes where the curvature acts, not how much there is: the deflection at the tip is <code>longitudinal_curvature</code> whatever the exponent.
+     */
+    RandomParameter_float longitudinal_curvature_exponent;
     //! Leaf curvature factor along the lateral/width (y-direction). (+curves upward, -curved downward)
     RandomParameter_float lateral_curvature;
 
@@ -504,11 +534,62 @@ public:
     //! Amplitude of leaf waves (sets the height of leaf waves)
     RandomParameter_float wave_amplitude;
 
-    // Parameters for leaf buckling
-    //! Fraction of the leaf length where the leaf buckles under its weight
-    RandomParameter_float leaf_buckle_length;
-    //! Angle of the leaf buckle (degrees)
-    RandomParameter_float leaf_buckle_angle;
+    //! How much floppier the blade becomes over its lifetime, as a multiple of its flexibility when it first reaches full size
+    /**
+     * A blade does not stop bending when it stops growing. Once elongation ceases the leaf loses the active straightening that accompanies growth, while its tissue goes on stiffening and shrinking
+     * irreversibly, so the bend accrued during development keeps accumulating with no further change in size. Measurements on maize find self-weight accounts for only about a third of the curvature of a
+     * mature blade, so a leaf whose droop follows from its size alone stays too straight, and its oldest leaves - the ones that should be arching over hardest - stay the straightest of all.
+     *
+     * This is the timescale of the softening: the blade holds its shape for about twice this many days while its tissue matures, then softens over a window of similar length, then stops changing again. Zero disables the effect, which is the default.
+     * \note The growth is bounded so that a very old leaf cannot become arbitrarily floppy - see \ref flexibility_aging_max.
+     */
+    RandomParameter_float flexibility_aging;
+
+    //! Largest multiple of \ref flexibility that ageing can reach, however old the leaf gets
+    /**
+     * Without a ceiling a long-lived leaf would go on softening indefinitely and eventually hang straight down. Real blades stop changing shape appreciably once their tissue has finished maturing, so the
+     * accumulated compliance is capped rather than allowed to grow without limit.
+     */
+    RandomParameter_float flexibility_aging_max;
+
+    //! How much more compliant the blade is at its tip than at its base
+    /**
+     * A blade of uniform stiffness bends hardest where the bending moment is largest, which is at the clamped base, leaving the outer half of the leaf nearly straight. Real grass leaves do the reverse: they
+     * stay straight near the base and curve most steeply toward the tip, because the midrib carrying the load thins several-fold along the blade and takes the bending stiffness down with it faster than the
+     * moment decays. This is the ratio of tip compliance to base compliance; 1 leaves the blade uniform, and values of order ten give the base-straight, tip-curved shape of a grass leaf.
+     */
+    RandomParameter_float flexibility_taper;
+
+    //! Compliance of the leaf blade in bending, which makes the leaf droop under its own weight as it grows
+    /**
+     * The blade is treated as a cantilever clamped at its base and loaded by its own weight, so a leaf points along its growing direction when it is small and bends over as it expands, with no separate age
+     * term. Larger values give a floppier leaf; zero gives a perfectly rigid one that keeps its prototype shape exactly, which is the behaviour of every species that does not droop.
+     * \note Deflection grows with the fifth power of leaf length, so this interacts strongly with <code>leaf_aspect_ratio</code> and with the leaf scale set through \ref PhytomerParameters.
+     */
+    RandomParameter_float flexibility;
+
+    //! \deprecated Superseded by \ref LeafPrototype::flexibility.
+    /**
+     * Formerly the fraction along the leaf at which it was bent by a fixed angle, standing in for the leaf drooping under its own weight. The leaf now bends continuously along its whole length, so there is
+     * no single station at which it kinks. Retained so that existing code continues to compile: if \ref LeafPrototype::flexibility is left at zero and a buckle angle was set, the pair is converted to the
+     * flexibility reproducing the same tip droop on the fully-grown leaf. The mature leaf therefore looks much as it did, but now reaches that shape gradually as it expands rather than being born with it.
+     */
+    [[deprecated("LeafPrototype::leaf_buckle_length is superseded by LeafPrototype::flexibility, which bends the leaf continuously under its own weight as it grows rather than kinking it at a fixed station. "
+                 "The value is converted to an equivalent flexibility for now; set flexibility directly instead.")]] RandomParameter_float leaf_buckle_length;
+
+    //! \deprecated Superseded by \ref LeafPrototype::flexibility.
+    /**
+     * Formerly the angle, in degrees, through which the leaf was bent at \ref LeafPrototype::leaf_buckle_length. See that parameter for how the value is now interpreted.
+     */
+    [[deprecated("LeafPrototype::leaf_buckle_angle is superseded by LeafPrototype::flexibility, which bends the leaf continuously under its own weight as it grows rather than kinking it at a fixed station. "
+                 "The value is converted to an equivalent flexibility for now; set flexibility directly instead.")]] RandomParameter_float leaf_buckle_angle;
+
+    //! Resolve the bending stiffness to build a leaf with, honouring a deprecated buckle setting when the flexibility was never set
+    /**
+     * An explicitly-set \ref LeafPrototype::flexibility always wins, so code that has already migrated is unaffected by a stale buckle value left beside it.
+     * \return Flexibility to build the leaf with.
+     */
+    [[nodiscard]] float resolveFlexibility();
 
     //! Amount to shift the leaf
     helios::vec3 leaf_offset;
@@ -530,12 +611,19 @@ public:
         this->leaf_aspect_ratio = a.leaf_aspect_ratio;
         this->midrib_fold_fraction = a.midrib_fold_fraction;
         this->longitudinal_curvature = a.longitudinal_curvature;
+        this->longitudinal_curvature_exponent = a.longitudinal_curvature_exponent;
         this->lateral_curvature = a.lateral_curvature;
         this->petiole_roll = a.petiole_roll;
         this->wave_period = a.wave_period;
         this->wave_amplitude = a.wave_amplitude;
+        this->flexibility = a.flexibility;
+        this->flexibility_taper = a.flexibility_taper;
+        this->flexibility_aging = a.flexibility_aging;
+        this->flexibility_aging_max = a.flexibility_aging_max;
+        HELIOS_PUSH_IGNORE_DEPRECATED
         this->leaf_buckle_length = a.leaf_buckle_length;
         this->leaf_buckle_angle = a.leaf_buckle_angle;
+        HELIOS_POP_IGNORE_DEPRECATED
         this->leaf_offset = a.leaf_offset;
         this->subdivisions = a.subdivisions;
         this->unique_prototypes = a.unique_prototypes;
@@ -557,6 +645,9 @@ public:
             if (a.midrib_fold_fraction.distribution != "constant")
                 this->midrib_fold_fraction.resample();
             this->longitudinal_curvature = a.longitudinal_curvature;
+            this->longitudinal_curvature_exponent = a.longitudinal_curvature_exponent;
+            if (a.longitudinal_curvature_exponent.distribution != "constant")
+                this->longitudinal_curvature_exponent.resample();
             if (a.longitudinal_curvature.distribution != "constant")
                 this->longitudinal_curvature.resample();
             this->lateral_curvature = a.lateral_curvature;
@@ -571,12 +662,26 @@ public:
             this->wave_amplitude = a.wave_amplitude;
             if (a.wave_amplitude.distribution != "constant")
                 this->wave_amplitude.resample();
+            this->flexibility = a.flexibility;
+            if (a.flexibility.distribution != "constant")
+                this->flexibility.resample();
+            this->flexibility_taper = a.flexibility_taper;
+            if (a.flexibility_taper.distribution != "constant")
+                this->flexibility_taper.resample();
+            this->flexibility_aging = a.flexibility_aging;
+            if (a.flexibility_aging.distribution != "constant")
+                this->flexibility_aging.resample();
+            this->flexibility_aging_max = a.flexibility_aging_max;
+            if (a.flexibility_aging_max.distribution != "constant")
+                this->flexibility_aging_max.resample();
+            HELIOS_PUSH_IGNORE_DEPRECATED
             this->leaf_buckle_length = a.leaf_buckle_length;
             if (a.leaf_buckle_length.distribution != "constant")
                 this->leaf_buckle_length.resample();
             this->leaf_buckle_angle = a.leaf_buckle_angle;
             if (a.leaf_buckle_angle.distribution != "constant")
                 this->leaf_buckle_angle.resample();
+            HELIOS_POP_IGNORE_DEPRECATED
             this->leaf_offset = a.leaf_offset;
             this->subdivisions = a.subdivisions;
             this->unique_prototypes = a.unique_prototypes;
@@ -595,6 +700,25 @@ public:
         assert(generator != nullptr);
         std::uniform_int_distribution<uint> unif_distribution;
         this->unique_prototype_identifier = unif_distribution(*generator);
+    }
+
+    //! Draw the shape of subsequently-built blades from a different random number generator
+    /**
+     * Redirects every random shape parameter of the prototype, and the prototype itself, at the given generator.
+     * Used to build a species' set of unique blade shapes from a private stream keyed on
+     * LeafPrototype::unique_prototype_identifier, so that the set does not depend on how much randomness has
+     * already been drawn from the Context when the set happens to be built.
+     * \param[in] rand_generator Pointer to the random number generator to draw from.
+     * \return Generator that was in use before the call, so that a caller can restore it.
+     */
+    std::minstd_rand0 *setRandomGenerator(std::minstd_rand0 *rand_generator);
+
+    //! Get the random number generator that this prototype draws its shape from
+    /**
+     * \return Pointer to the random number generator in use, which is null if the prototype was default-constructed.
+     */
+    [[nodiscard]] std::minstd_rand0 *getRandomGenerator() const {
+        return generator;
     }
 
 private:
@@ -994,8 +1118,31 @@ struct ShootParameters {
      * \param[in] child_shoot_type_probabilities Vector of probabilities for each child shoot type. Probabilities must sum to 1.
      *
      * \note The sizes of the input vectors must match, and neither input vector can be empty.
+     * \note The values set here can be read back with \ref getChildShootTypeLabels() and \ref getChildShootTypeProbabilities().
      */
     void defineChildShootTypes(const std::vector<std::string> &child_shoot_type_labels, const std::vector<float> &child_shoot_type_probabilities);
+
+    //! Get the labels of the child shoot types that may be generated by this shoot type
+    /**
+     * Returns the labels currently stored in this ShootParameters, which are set by \ref defineChildShootTypes(). An empty vector is a meaningful state rather than an error: a shoot type with no child
+     * shoot types defined generates child shoots of its own type.
+     *
+     * \return Vector of child shoot type labels, parallel to \ref getChildShootTypeProbabilities().
+     * \note Once the ShootParameters has been registered with \ref PlantArchitecture::defineShootType() and a plant is built, labels that do not correspond to a defined shoot type are dropped from the
+     * stored parameters, so the returned labels are not necessarily those originally passed to \ref defineChildShootTypes().
+     */
+    [[nodiscard]] std::vector<std::string> getChildShootTypeLabels() const;
+
+    //! Get the probabilities of the child shoot types that may be generated by this shoot type
+    /**
+     * Returns the probabilities currently stored in this ShootParameters, which are set by \ref defineChildShootTypes(). An empty vector is a meaningful state rather than an error: a shoot type with no
+     * child shoot types defined generates child shoots of its own type.
+     *
+     * \return Vector of child shoot type probabilities, parallel to \ref getChildShootTypeLabels().
+     * \note \ref defineChildShootTypes() requires that the probabilities sum to 1, but entries dropped for referring to an undefined shoot type are removed without renormalizing the remainder, so the
+     * returned probabilities do not necessarily sum to 1.
+     */
+    [[nodiscard]] std::vector<float> getChildShootTypeProbabilities() const;
 
     //! Copy the user-defined callback and prototype function pointers from another ShootParameters
     /**
@@ -1167,6 +1314,14 @@ public:
      * \return Total leaf area as a float value.
      */
     [[nodiscard]] float getLeafArea() const;
+
+    //! Total one-sided surface area of all flowers/fruit borne on this phytomer
+    /**
+     * Reported at full size, in the same way as \ref getLeafArea(): an inflorescence part-way through its growth reports the area it is expanding toward rather than its present area.
+     *
+     * \return Surface area (m^2) of the phytomer's inflorescences
+     */
+    [[nodiscard]] float getInflorescenceArea() const;
 
     /**
      * \brief Retrieves the position of the base of a leaf within the phytomer.
@@ -1459,6 +1614,7 @@ public:
     std::vector<std::vector<float>> peduncle_radius; // actual sampled radius for each peduncle - first index is petiole, second is bud
     std::vector<std::vector<float>> peduncle_pitch; // actual sampled pitch for each peduncle - first index is petiole, second is bud
     std::vector<std::vector<float>> peduncle_curvature; // actual sampled curvature for each peduncle - first index is petiole, second is bud
+    std::vector<std::vector<float>> peduncle_roll; // actual sampled roll for each peduncle - first index is petiole, second is bud
     float internode_pitch, internode_phyllotactic_angle;
 
     std::vector<std::vector<float>> petiole_radii; // first index is petiole within internode, second index is segment within petiole tube
@@ -1469,7 +1625,7 @@ public:
     std::vector<helios::vec3> petiole_axis_initial; // initial petiole axis (before curvature) for each petiole
     std::vector<helios::vec3> petiole_rotation_axis; // rotation axis for curvature application for each petiole
     std::vector<std::vector<float>> leaf_size_max; // first index is petiole within internode, second index is leaf within petiole
-    std::vector<std::vector<AxisRotation>> leaf_rotation; // first index is petiole within internode, second index is leaf within petiole
+    std::vector<std::vector<AxisRotation>> leaf_rotation; //!< Roll, pitch and yaw applied to each leaf, as angles rather than as the rotations built from them. First index is petiole within internode, second index is leaf within petiole.
 
     std::vector<helios::RGBcolor> internode_colors; // index is segment within internode tube
     std::vector<helios::RGBcolor> petiole_colors; // index is segment within petiole tube
@@ -1491,7 +1647,59 @@ public:
      */
     [[nodiscard]] std::vector<uint> getExistingPetioleObjIDs() const;
 
+    //! Re-deflect one leaf under its own weight for its current size
+    /**
+     * Deflects the leaf from its prototype's undeformed rest shape rather than from its current geometry, so repeated growth steps cannot accumulate and creep the leaf downward. Does nothing for a species
+     * whose leaves are rigid, for a leaf with no cached rest shape, or for a leaf that has not measurably grown since it was last deflected.
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf within the petiole.
+     */
+    void deformLeafUnderSelfWeight(uint petiole_index, uint leaf_index);
+
+    //! Apply the full rotation chain that orients one leaf on its petiole
+    /**
+     * Rolls, pitches and yaws the leaf, turns it to the azimuth of the petiole it hangs from, and applies the curvature-aware blade-up correction, then records the three angles in \ref leaf_rotation. Called
+     * both when a phytomer is first built and when one is rebuilt by PlantArchitecture::readPlantStructureXML(), so that a restored leaf is oriented identically to a grown one; the two used to carry separate
+     * copies of this chain that had drifted apart. Samples nothing, so the caller owns the random draws and their order.
+     * \param[in] objID_leaf Object ID of the leaf to orient. It must already be scaled and still be at the origin.
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf within the petiole.
+     * \param[in] leaves_per_petiole Number of leaves on this petiole. One selects the unifoliate roll, more than one the compound roll.
+     * \param[in] ind_from_tip Signed offset of this leaf from the middle of the petiole; zero for the tip leaf of a compound leaf and for a unifoliate leaf.
+     * \param[in] compound_rotation Rotation about the petiole that separates the leaflets of a compound leaf; zero for a unifoliate leaf.
+     * \param[in] petiole_tip_axis Direction of the petiole at its tip, in world coordinates.
+     * \param[in] leaf_roll_angle Leaf roll angle (radians), as stored in \ref leaf_rotation rather than as applied.
+     * \param[in] leaf_pitch_angle Leaf pitch angle (radians), as stored in \ref leaf_rotation rather than as applied.
+     * \param[in] leaf_yaw_angle Leaf yaw angle (radians), already carrying the sign for this leaflet's side of the petiole. Ignored when ind_from_tip is zero.
+     */
+    void orientLeaf(uint objID_leaf, uint petiole_index, uint leaf_index, int leaves_per_petiole, float ind_from_tip, float compound_rotation, const helios::vec3 &petiole_tip_axis, float leaf_roll_angle, float leaf_pitch_angle, float leaf_yaw_angle);
+
+    //! Rotation about the petiole that separates one leaflet of a compound leaf from the others
+    /**
+     * Leaflets held away from the petiole tip (a non-zero leaflet offset) are placed on alternating sides of the petiole, while leaflets all attached at the tip are fanned evenly around it. Shared by the
+     * Phytomer constructor and PlantArchitecture::readPlantStructureXML() so that a restored compound leaf is arranged like a grown one.
+     * \param[in] leaves_per_petiole Number of leaves on the petiole. One returns zero, since a unifoliate leaf is not rotated about its petiole.
+     * \param[in] leaf_index Index of the leaf within the petiole.
+     * \param[in] leaflet_offset_val Leaflet offset along the petiole, already clamped by clampOffset().
+     * \return Rotation about the petiole, in radians.
+     */
+    static float compoundLeafRotation(int leaves_per_petiole, int leaf_index, float leaflet_offset_val);
+
+
     std::vector<std::vector<uint>> leaf_objIDs; // first index is petiole within internode, second index is leaf within petiole tube
+
+    //! Which cached prototype each leaf was copied from, so its undeformed rest shape can be found again. Indexed as <code>leaf_objIDs</code>; -1 for a leaf that does not droop.
+    std::vector<std::vector<int>> leaf_prototype_index;
+
+    //! Leaf scale at which each leaf was last deflected, used to skip redeforming a leaf that has not measurably grown. Indexed as <code>leaf_objIDs</code>.
+    std::vector<std::vector<float>> leaf_last_deformed_scale;
+
+    //! Bending flexibility this phytomer's leaves were built with
+    /**
+     * Resolved once when the phytomer is created and held, rather than being read from the prototype on each timestep. The prototype's value is a random parameter that resamples when it is read, so
+     * consulting it every timestep would give one leaf a different stiffness at every step and make it flap rather than settle.
+     */
+    float leaf_flexibility = 0.f;
 
     PhytomerParameters phytomer_parameters;
 
@@ -1512,7 +1720,11 @@ public:
 
     float old_phytomer_volume = 0;
 
+    //! Leaf area borne at or above this phytomer, including on child shoots. Accumulated incrementally by \ref Shoot::propagateDownstreamLeafArea() as leaves are added, removed or rescaled.
     float downstream_leaf_area = 0;
+
+    //! Inflorescence area borne at or above this phytomer, including on child shoots. Refreshed once per shoot per time step by \ref Shoot::refreshDownstreamInflorescenceArea().
+    float downstream_inflorescence_area = 0;
 
     std::vector<std::vector<VegetativeBud>> axillary_vegetative_buds; // first index is petiole within internode, second index is bud within petiole
     std::vector<std::vector<FloralBud>> floral_buds; // first index is petiole within internode, second index is bud within petiole
@@ -1535,6 +1747,31 @@ protected:
     PlantArchitecture *plantarchitecture_ptr;
 
     void updateInflorescence(FloralBud &fbud);
+
+    //! Radius to build the peduncle with, matched to the culm tip it attaches to
+    /**
+     * The peduncle joins the culm at a single point, so a peduncle radius that disagrees with the internode radius there renders as an abrupt step. This returns a radius that continues the stem's taper
+     * across the junction, falling back to the configured \ref PeduncleParameters::radius when the phytomer has no internode geometry to match.
+     *
+     * \return Radius (meters) of the peduncle at its base
+     */
+    [[nodiscard]] float getReconciledPeduncleRadius();
+
+    //! Whether this phytomer's peduncle should take its radius from the culm rather than from its own parameter
+    /**
+     * True for a terminal inflorescence on a herbaceous stem -- a grass panicle or tassel, which continues the stem's own axis and must match it across the junction. False for a lateral peduncle or one on a
+     * woody stem, whose configured radius describes a genuinely slender flower stalk that should not be widened to match the branch bearing it.
+     *
+     * \return True if the peduncle radius should be derived from the culm-tip radius
+     */
+    [[nodiscard]] bool peduncleShouldMatchCulm() const;
+
+    //! Re-match this phytomer's peduncle geometry to the current culm-tip radius
+    /**
+     * Peduncle geometry is built once, when the floral bud appears and the culm is at its thinnest, but the culm keeps thickening afterward. This re-applies \ref getReconciledPeduncleRadius() so the
+     * junction stays continuous as the plant grows.
+     */
+    void updatePeduncleRadii();
 
     /**
      * \brief Create and position a single flower or fruit with specified rotation parameters.
@@ -1694,6 +1931,25 @@ struct Shoot {
      * \note Returns zero for a pruned shoot. Throws an error if start_node_index is out of range on a shoot that still has phytomers.
      */
     [[nodiscard]] float sumShootLeafArea(uint start_node_index = 0) const;
+
+    //! Recompute the cached inflorescence area borne at or above every node of this shoot, and of its child shoots
+    /**
+     * An inflorescence keeps expanding after it is created, so the area it contributes cannot be accumulated once the way \ref Phytomer::downstream_leaf_area is; it has to be recomputed as the plant
+     * grows. This does so for the whole shoot in a single sweep from the tip downward, filling \ref Phytomer::downstream_inflorescence_area at every node, and recurses into child shoots so their caches
+     * are refreshed too. Call it once per shoot per time step, before reading any node's value with \ref sumDownstreamInflorescenceArea().
+     *
+     * \return Total inflorescence area supported by this shoot and everything above it
+     */
+    float refreshDownstreamInflorescenceArea();
+
+    //! Get the inflorescence area borne at or above a given node, including on child shoots
+    /**
+     * Returns the value cached by \ref refreshDownstreamInflorescenceArea(), which must have been called for this shoot at some point since the inflorescence geometry last changed.
+     *
+     * \param[in] start_node_index Node index to sum from
+     * \return Surface area (m^2) of inflorescences supported at that node
+     */
+    [[nodiscard]] float sumDownstreamInflorescenceArea(uint start_node_index) const;
 
     /**
      * \brief Calculates the total volume of all child shoots starting from a specified node index.
@@ -3484,6 +3740,31 @@ protected:
     // Key is the prototype function pointer; value first index is the unique leaf prototype, second index is the leaflet along a compound leaf (if applicable)
     // std::map<uint(*)(helios::Context* context_ptr, LeafPrototype* prototype_parameters, int compound_leaf_index),std::vector<std::vector<uint>> > unique_leaf_prototype_objIDs;
     std::map<uint, std::vector<std::vector<uint>>> unique_leaf_prototype_objIDs;
+
+    //! Undeformed blade geometry of each cached leaf prototype, parallel to \ref unique_leaf_prototype_objIDs
+    /**
+     * A drooping leaf is re-deflected from its rest shape every time it grows rather than bent further from its current shape, so that the deflection cannot accumulate and creep the leaf downward. The rest
+     * shape is therefore kept once per prototype - not once per leaf - which is what lets thousands of leaves share it without giving up the memory savings of the prototype cache. Empty for species whose
+     * leaves do not droop.
+     */
+    struct LeafRestGeometry {
+        std::vector<helios::vec3> vertices;
+        uint subdivisions_x = 0;
+        uint subdivisions_y = 0;
+    };
+    std::map<uint, std::vector<std::vector<LeafRestGeometry>>> unique_leaf_prototype_rest_geometry;
+
+    //! Record the undeformed geometry of one leaf prototype, so leaves copied from it can be deflected from their rest shape
+    /**
+     * Appends one entry to \ref unique_leaf_prototype_rest_geometry for the given prototype, capturing the blade lattice in the prototype's own local frame. A rigid species, or a mesh that is not the plain
+     * lattice the deflection understands, records an empty entry and its leaves stay rigid. Called both when a phytomer first builds its prototypes and when readPlantStructureXML() rebuilds them, so that a
+     * reloaded plant droops like a grown one.
+     * \param[in] prototype_params Leaf prototype parameters the prototype was built from.
+     * \param[in] prototype_index Index of this prototype among the species' unique prototypes.
+     * \param[in] objID_leaf Object ID of the prototype leaf.
+     * \param[in] leaf_flexibility Resolved flexibility of the phytomer the prototype is being built for. Zero records an empty entry.
+     */
+    void recordLeafPrototypeRestGeometry(const LeafPrototype &prototype_params, int prototype_index, uint objID_leaf, float leaf_flexibility);
 
     // Key is the prototype function pointer; value index is the unique flower prototype
     std::map<uint (*)(helios::Context *context_ptr, uint subdivisions, bool flower_is_open), std::vector<uint>> unique_open_flower_prototype_objIDs;

@@ -599,7 +599,11 @@ void PlantArchitecture::incrementPhytomerInternodeGirth_carb(uint plantID, uint 
 
     float internode_area = girth_area_factor * leaf_area * 1e-4;
 
-    float phytomer_radius = sqrtf(internode_area / PI_F);
+    // A terminal inflorescence is borne above every node on the shoot but contributes no leaf area, so the pipe model alone tapers the stem below it too far -- see the matching adjustment in
+    // PlantArchitecture::incrementPhytomerInternodeGirth(). Only the rendered radius is widened here: internode_area continues to feed max_shoot_volume below, which sets the shoot's structural carbon
+    // demand, and that demand should stay tied to the leaf area actually supplying it.
+    const float supported_area = leaf_area + shoot->sumDownstreamInflorescenceArea(node_number);
+    float phytomer_radius = sqrtf(girth_area_factor * supported_area * 1e-4 / PI_F);
 
     float rho_cw = carbohydrate_params.stem_density * carbohydrate_params.stem_structural_carbon_percentage / C_molecular_wt; // Density of carbon in almond wood (mol C m^-3)
     float max_shoot_volume = internode_area * shoot->calculateShootLength();

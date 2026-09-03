@@ -49,6 +49,386 @@ namespace {
         return true;
     }
 
+    //! Locate a point on the regular lattice that divides a planar quadrilateral object into cells
+    /**
+     * Every corner of every sub-patch of a tile lies exactly on this lattice, so a corner can be named by the lattice node it coincides with. Identifying a vertex this way rather than by the position of its
+     * primitive in the object's UUID list keeps the identification correct after sub-patches have been dropped for having zero area, or deleted afterwards, both of which shift those positions.
+     *
+     * The point is expressed in the object's own parametric frame by solving the two-by-two system formed by the edge vectors. Projecting onto each edge independently would be equivalent only for a
+     * rectangular frame; an object that has been rotated and then scaled along a world axis is a parallelogram, and the independent projections then mix the two parametric coordinates together.
+     * \param[in] point Point to locate, in global Cartesian coordinates.
+     * \param[in] origin Corner of the object that the two edge vectors emanate from.
+     * \param[in] edge_x Vector along the first parametric direction, spanning the whole object.
+     * \param[in] edge_y Vector along the second parametric direction, spanning the whole object.
+     * \param[in] lattice_divisions Number of lattice cells along each parametric direction.
+     * \param[out] node Lattice node coordinates, each between zero and the corresponding division count inclusive.
+     * \return True if the point coincides with a lattice node, false if it lies away from every node or the object is degenerate.
+     */
+    bool locatePlanarLatticeNode(const helios::vec3 &point, const helios::vec3 &origin, const helios::vec3 &edge_x, const helios::vec3 &edge_y, const helios::int2 &lattice_divisions, helios::int2 &node) {
+        if (lattice_divisions.x <= 0 || lattice_divisions.y <= 0) {
+            return false;
+        }
+
+        // Solved in double precision: the parametric coordinates are scaled by the division count, so on a deeply refined lattice the rounding carried through the primitive's own transformation matrix would
+        // otherwise grow to a noticeable fraction of a cell.
+        const double xx = double(edge_x * edge_x);
+        const double yy = double(edge_y * edge_y);
+        const double xy = double(edge_x * edge_y);
+        const double determinant = xx * yy - xy * xy;
+        if (xx < 1e-20 || yy < 1e-20 || std::abs(determinant) < 1e-20 * xx * yy) {
+            return false; // a degenerate frame, or two edges pointing the same way, has no unique parametric coordinate
+        }
+
+        const helios::vec3 offset = point - origin;
+        const double dx = double(offset * edge_x);
+        const double dy = double(offset * edge_y);
+
+        const double u = (dx * yy - dy * xy) / determinant;
+        const double v = (dy * xx - dx * xy) / determinant;
+
+        // A point off the object's plane projects onto it like any other, so the component the two edges cannot express is checked rather than discarded.
+        const helios::vec3 in_plane = origin + float(u) * edge_x + float(v) * edge_y;
+        const float out_of_plane = (point - in_plane).magnitude();
+        const float object_scale = std::sqrt(float(std::max(xx, yy)));
+        if (out_of_plane > 1e-4f * object_scale) {
+            return false;
+        }
+
+        const double node_x = u * double(lattice_divisions.x);
+        const double node_y = v * double(lattice_divisions.y);
+
+        const int rounded_x = int(std::lround(node_x));
+        const int rounded_y = int(std::lround(node_y));
+
+        // Adjacent nodes are one unit apart in these coordinates, so a quarter of a cell is comfortably inside the point at which the nearest node would become ambiguous, while leaving room for the rounding
+        // error accumulated by carrying the vertex through the primitive's own transformation matrix.
+        if (std::abs(node_x - double(rounded_x)) > 0.25 || std::abs(node_y - double(rounded_y)) > 0.25) {
+            return false;
+        }
+        if (rounded_x < 0 || rounded_x > lattice_divisions.x || rounded_y < 0 || rounded_y > lattice_divisions.y) {
+            return false;
+        }
+
+        node = helios::make_int2(rounded_x, rounded_y);
+        return true;
+    }
+
+    //! Pack a pair of lattice node coordinates into a single key
+    /**
+     * Mirrors the packing used elsewhere in this file for mesh edges, so that lattice nodes can be counted and deduplicated in a hash map without needing a hash function for a pair.
+     */
+    int64_t makeLatticeNodeKey(const helios::int2 &node) {
+        return (static_cast<int64_t>(node.x) << 32) | (static_cast<int64_t>(node.y) & 0xffffffffLL);
+    }
+
+    //! Index of a shared vertex on the ring-and-spoke lattice of a swept surface
+    /**
+     * A tube or cone is a stack of rings, each carrying \p radial_divisions vertices around the circumference. Under \ref helios::WELD_FULL a vertex is named by the ring it lies on, so the two segments
+     * meeting at an interior ring share it. Under \ref helios::WELD_CROSS_SECTION_ONLY each segment carries its own copy of both bounding rings, which keeps variation along the sweep from being averaged
+     * across the segments that resolve it.
+     * \param[in] ring Ring index, from zero at the first node to \p segment_count at the last.
+     * \param[in] segment Segment the facet belongs to, from zero to \p segment_count minus one.
+     * \param[in] spoke Position around the circumference, already wrapped into [0, \p radial_divisions).
+     * \param[in] radial_divisions Number of distinct vertices around the circumference.
+     * \param[in] weld_mode Granularity at which coincident vertices are treated as the same shared vertex.
+     */
+    int sweptSurfaceVertexIndex(int ring, int segment, int spoke, int radial_divisions, helios::VertexWeldMode weld_mode) {
+        if (weld_mode == helios::WELD_FULL) {
+            return ring * radial_divisions + spoke;
+        }
+        // The facet's two rings become ends zero and one of its own segment.
+        const int end = ring - segment;
+        return segment * 2 * radial_divisions + end * radial_divisions + spoke;
+    }
+
+    //! Number of shared vertices on the ring-and-spoke lattice of a swept surface
+    size_t sweptSurfaceVertexCount(int segment_count, int radial_divisions, helios::VertexWeldMode weld_mode) {
+        if (weld_mode == helios::WELD_FULL) {
+            return size_t(segment_count + 1) * size_t(radial_divisions);
+        }
+        return size_t(segment_count) * 2 * size_t(radial_divisions);
+    }
+
+    //! Index of a shared vertex on the zenith-and-azimuth lattice of a sphere
+    /**
+     * The two poles are single points at which every azimuth coincides, so they are collapsed to one vertex rather than being left as \p radial_divisions copies of the same position.
+     * \param[in] ring Zenith index, from zero at the south pole to \p radial_divisions at the north pole.
+     * \param[in] band Zenith band the facet belongs to, from zero to \p radial_divisions minus one.
+     * \param[in] spoke Azimuthal position, already wrapped into [0, \p radial_divisions).
+     * \param[in] radial_divisions Subdivision count of the sphere, used for both zenith and azimuth.
+     * \param[in] weld_mode Granularity at which coincident vertices are treated as the same shared vertex.
+     */
+    int sphereVertexIndex(int ring, int band, int spoke, int radial_divisions, helios::VertexWeldMode weld_mode) {
+        const bool is_pole = (ring == 0 || ring == radial_divisions);
+
+        if (weld_mode == helios::WELD_FULL) {
+            if (ring == 0) {
+                return 0;
+            }
+            if (ring == radial_divisions) {
+                return 1;
+            }
+            return 2 + (ring - 1) * radial_divisions + spoke;
+        }
+
+        // Every band gets a uniform pair of ring slots. A band bounded by a pole leaves all but one of that ring's slots unused, which costs a handful of entries and keeps the arithmetic free of special cases.
+        const int end = ring - band;
+        return band * 2 * radial_divisions + end * radial_divisions + (is_pole ? 0 : spoke);
+    }
+
+    //! Number of shared vertices on the zenith-and-azimuth lattice of a sphere
+    size_t sphereVertexCount(int radial_divisions, helios::VertexWeldMode weld_mode) {
+        if (weld_mode == helios::WELD_FULL) {
+            return 2 + size_t(radial_divisions - 1) * size_t(radial_divisions);
+        }
+        return size_t(radial_divisions) * 2 * size_t(radial_divisions);
+    }
+
+
+    //! Frame of one ring of a swept surface, used to name a vertex by the ring and spoke it coincides with
+    struct SweptRingFrame {
+        helios::vec3 node;
+        float radius = 0.f;
+        helios::vec3 axis;
+        helios::vec3 reference; //!< unit vector perpendicular to the axis, from which azimuth is measured
+        helios::vec3 orthogonal; //!< completes a right-handed frame with the axis and the reference
+        double phase = 0.0; //!< azimuth of the ring's first spoke in this frame, so that the object's own spokes land on whole numbers
+    };
+
+    //! Build a frame for each ring of a swept surface
+    /**
+     * The reference direction is derived from each ring's own axis rather than carried along the sweep. That is all the naming requires: a vertex belongs to exactly one ring, so the spoke numbering has to be
+     * self-consistent within a ring but need not be aligned between rings, and deriving it locally avoids having to reproduce the generator's parallel transport.
+     */
+    std::vector<SweptRingFrame> buildSweptRingFrames(const std::vector<helios::vec3> &nodes, const std::vector<float> &radii, const std::vector<helios::vec3> &lattice_points, int radial_divisions) {
+        std::vector<SweptRingFrame> frames(nodes.size());
+        for (size_t i = 0; i < nodes.size(); i++) {
+            frames.at(i).node = nodes.at(i);
+            frames.at(i).radius = radii.at(i);
+
+            helios::vec3 axis = (i + 1 < nodes.size()) ? (nodes.at(i + 1) - nodes.at(i)) : (nodes.at(i) - nodes.at(i - 1));
+            const float axis_magnitude = axis.magnitude();
+            axis = (axis_magnitude > 1e-9f) ? axis / axis_magnitude : helios::make_vec3(0, 0, 1);
+            frames.at(i).axis = axis;
+
+            // Crossing with whichever world direction the sweep is least aligned with keeps the result well conditioned, and depends only on the geometry so it is reproducible.
+            helios::vec3 seed = helios::make_vec3(0, 0, 1);
+            if (std::abs(axis.x) <= std::abs(axis.y) && std::abs(axis.x) <= std::abs(axis.z)) {
+                seed = helios::make_vec3(1, 0, 0);
+            } else if (std::abs(axis.y) <= std::abs(axis.z)) {
+                seed = helios::make_vec3(0, 1, 0);
+            }
+
+            helios::vec3 reference = cross(axis, seed);
+            const float reference_magnitude = reference.magnitude();
+            frames.at(i).reference = (reference_magnitude > 1e-9f) ? reference / reference_magnitude : helios::make_vec3(1, 0, 0);
+            frames.at(i).orthogonal = cross(axis, frames.at(i).reference);
+        }
+
+        // The generators place their spokes at azimuths fixed by their own frame construction, which this one has no way to reproduce, so each ring takes its phase from the object's own vertices: the smallest
+        // azimuth found on the ring. Taking the smallest rather than the first makes it independent of the order the vertices are visited in, and reading it from the whole object rather than from whichever
+        // facets were asked about makes the numbering the same whatever subset a caller queries.
+        std::vector<double> smallest_azimuth(frames.size(), std::numeric_limits<double>::max());
+        for (const helios::vec3 &point: lattice_points) {
+            int ring = 0;
+            float best_residual = -1.f;
+            for (size_t i = 0; i < frames.size(); i++) {
+                const float residual = std::abs((point - frames.at(i).node).magnitude() - frames.at(i).radius);
+                if (best_residual < 0.f || residual < best_residual) {
+                    best_residual = residual;
+                    ring = int(i);
+                }
+            }
+            const SweptRingFrame &frame = frames.at(size_t(ring));
+            if (frame.radius < 1e-9f) {
+                continue; // a ring closed to a point has no azimuth to read
+            }
+            helios::vec3 radial = point - frame.node;
+            radial = radial - (radial * frame.axis) * frame.axis;
+            if (radial.magnitude() < 1e-9f) {
+                continue;
+            }
+            double azimuth = std::atan2(double(radial * frame.orthogonal), double(radial * frame.reference));
+            // Reduced into one spoke spacing, so that the phase does not depend on which spoke happened to be the smallest.
+            const double spacing = 2.0 * M_PI / double(radial_divisions);
+            azimuth = azimuth - std::floor(azimuth / spacing) * spacing;
+            smallest_azimuth.at(size_t(ring)) = std::min(smallest_azimuth.at(size_t(ring)), azimuth);
+        }
+        for (size_t i = 0; i < frames.size(); i++) {
+            if (smallest_azimuth.at(i) != std::numeric_limits<double>::max()) {
+                frames.at(i).phase = smallest_azimuth.at(i);
+            }
+        }
+
+        return frames;
+    }
+
+    //! Every corner of every facet of a compound object, in global coordinates
+    std::vector<helios::vec3> gatherObjectCorners(const helios::Context *context, const std::vector<uint> &UUIDs) {
+        std::vector<helios::vec3> corners;
+        corners.reserve(3 * UUIDs.size());
+        for (uint UUID: UUIDs) {
+            const std::vector<helios::vec3> primitive_vertices = context->getPrimitiveVertices(UUID);
+            corners.insert(corners.end(), primitive_vertices.begin(), primitive_vertices.end());
+        }
+        return corners;
+    }
+
+    //! Name a vertex of a swept surface by the ring and spoke it coincides with
+    /**
+     * Locating the vertex from where it is, rather than from the position of its primitive in the object's UUID list, keeps the naming correct however the facets came to be ordered - after degenerate facets
+     * were dropped at creation, after a segment was appended, after a primitive was deleted, and after a write and reload that sorted the member list.
+     * \return True if the vertex sits on the lattice, false if it does not.
+     */
+    bool locateSweptVertex(const helios::vec3 &point, const std::vector<SweptRingFrame> &frames, int radial_divisions, int &ring, int &spoke) {
+        if (frames.empty() || radial_divisions < 1) {
+            return false;
+        }
+
+        // Every vertex lies exactly one node radius from its own node, so the residual between the measured distance and the stored radius is zero for the correct ring and of the order of the node spacing for
+        // any other. That discriminates far more sharply than proximity alone, which picks the wrong node on the inside of a tight bend.
+        ring = 0;
+        float best_residual = -1.f;
+        for (size_t i = 0; i < frames.size(); i++) {
+            const float residual = std::abs((point - frames.at(i).node).magnitude() - frames.at(i).radius);
+            if (best_residual < 0.f || residual < best_residual) {
+                best_residual = residual;
+                ring = int(i);
+            }
+        }
+
+        const SweptRingFrame &frame = frames.at(size_t(ring));
+
+        // A ring that has closed to a point carries one vertex however many spokes meet there, which is what keeps the tip of a cone from being split into as many vertices as it has divisions.
+        if (frame.radius < 1e-9f) {
+            spoke = 0;
+            return true;
+        }
+
+        if (best_residual > 0.25f * frame.radius) {
+            return false; // not on this surface at all
+        }
+
+        helios::vec3 radial = point - frame.node;
+        radial = radial - (radial * frame.axis) * frame.axis;
+        if (radial.magnitude() < 1e-9f) {
+            return false;
+        }
+
+        const double azimuth = std::atan2(double(radial * frame.orthogonal), double(radial * frame.reference));
+        const double spoke_real = (azimuth - frame.phase) / (2.0 * M_PI) * double(radial_divisions);
+        const long rounded = std::lround(spoke_real);
+        if (std::abs(spoke_real - double(rounded)) > 0.25) {
+            return false;
+        }
+
+        spoke = int(((rounded % radial_divisions) + radial_divisions) % radial_divisions);
+        return true;
+    }
+
+    //! Name a vertex of a sphere by the zenith ring and azimuthal spoke it coincides with
+    /**
+     * The transformation matrix carries the unit sphere onto the object, so the vertex is carried back to the unit sphere and its lattice indices read straight off its spherical coordinates. Reading the
+     * normal matrix transposed applies the inverse of the linear part, which keeps the result exact for an ellipsoid that has also been rotated.
+     */
+    bool locateSphereVertex(const helios::vec3 &point, const float (&transform)[16], const float (&normal_matrix)[9], int radial_divisions, int &ring, int &spoke) {
+        if (radial_divisions < 2) {
+            return false;
+        }
+
+        const helios::vec3 shifted = helios::make_vec3(point.x - transform[3], point.y - transform[7], point.z - transform[11]);
+        helios::vec3 local;
+        local.x = normal_matrix[0] * shifted.x + normal_matrix[3] * shifted.y + normal_matrix[6] * shifted.z;
+        local.y = normal_matrix[1] * shifted.x + normal_matrix[4] * shifted.y + normal_matrix[7] * shifted.z;
+        local.z = normal_matrix[2] * shifted.x + normal_matrix[5] * shifted.y + normal_matrix[8] * shifted.z;
+
+        const float magnitude = local.magnitude();
+        if (magnitude < 1e-9f) {
+            return false;
+        }
+        local = local / magnitude;
+
+        const double elevation = std::asin(std::max(-1.0, std::min(1.0, double(local.z))));
+        const double ring_real = (elevation + 0.5 * M_PI) / (M_PI / double(radial_divisions));
+        const long rounded_ring = std::lround(ring_real);
+        if (std::abs(ring_real - double(rounded_ring)) > 0.25 || rounded_ring < 0 || rounded_ring > radial_divisions) {
+            return false;
+        }
+        ring = int(rounded_ring);
+
+        // Both poles are single points at which every azimuth coincides.
+        if (ring == 0 || ring == radial_divisions) {
+            spoke = 0;
+            return true;
+        }
+
+        // sphere2cart() measures azimuth from the +y direction towards +x.
+        const double azimuth = std::atan2(double(local.x), double(local.y));
+        const double spoke_real = azimuth / (2.0 * M_PI) * double(radial_divisions);
+        const long rounded_spoke = std::lround(spoke_real);
+        if (std::abs(spoke_real - double(rounded_spoke)) > 0.25) {
+            return false;
+        }
+
+        spoke = int(((rounded_spoke % radial_divisions) + radial_divisions) % radial_divisions);
+        return true;
+    }
+
+    //! Shared vertices of one facet of a swept surface, from where its corners are
+    bool sweptSurfaceFacetSharedVertexIndices(const std::vector<helios::vec3> &corners, const std::vector<SweptRingFrame> &frames, int radial_divisions, helios::VertexWeldMode weld_mode, std::vector<int> &indices) {
+        const int segment_count = int(frames.size()) - 1;
+        if (segment_count < 1) {
+            return false;
+        }
+
+        std::vector<int> rings(corners.size()), spokes(corners.size());
+        int segment = segment_count; // a facet spans one segment, named by the lower of the two rings bounding it
+        for (size_t k = 0; k < corners.size(); k++) {
+            if (!locateSweptVertex(corners.at(k), frames, radial_divisions, rings.at(k), spokes.at(k))) {
+                return false;
+            }
+            segment = std::min(segment, rings.at(k));
+        }
+        segment = std::min(segment, segment_count - 1);
+
+        indices.assign(corners.size(), -1);
+        for (size_t k = 0; k < corners.size(); k++) {
+            const int end = rings.at(k) - segment;
+            if (end < 0 || end > 1) {
+                return false; // the corners do not bound a single segment, so the facet is not one of this surface's
+            }
+            indices.at(k) = sweptSurfaceVertexIndex(rings.at(k), segment, spokes.at(k), radial_divisions, weld_mode);
+        }
+        return true;
+    }
+
+    //! Shared vertices of one facet of a sphere, from where its corners are
+    bool sphereFacetSharedVertexIndices(const std::vector<helios::vec3> &corners, const float (&transform)[16], const float (&normal_matrix)[9], int radial_divisions, helios::VertexWeldMode weld_mode,
+                                        std::vector<int> &indices) {
+        std::vector<int> rings(corners.size()), spokes(corners.size());
+        int band = radial_divisions;
+        for (size_t k = 0; k < corners.size(); k++) {
+            if (!locateSphereVertex(corners.at(k), transform, normal_matrix, radial_divisions, rings.at(k), spokes.at(k))) {
+                return false;
+            }
+            band = std::min(band, rings.at(k));
+        }
+        band = std::min(band, radial_divisions - 1);
+        if (band < 0) {
+            return false;
+        }
+
+        indices.assign(corners.size(), -1);
+        for (size_t k = 0; k < corners.size(); k++) {
+            const int end = rings.at(k) - band;
+            if (end < 0 || end > 1) {
+                return false;
+            }
+            indices.at(k) = sphereVertexIndex(rings.at(k), band, spokes.at(k), radial_divisions, weld_mode);
+        }
+        return true;
+    }
+
     //! Apply a 3x3 normal matrix to a direction vector
     helios::vec3 transformNormalByMatrix(const float (&N)[9], const helios::vec3 &normal) {
         helios::vec3 result;
@@ -2358,6 +2738,16 @@ std::vector<std::vector<helios::vec3>> CompoundObject::getPrimitiveVertexNormals
     return normals;
 }
 
+std::vector<std::vector<int>> CompoundObject::getPrimitiveSharedVertexIndices(const std::vector<uint> &UUIDs_query, helios::VertexWeldMode weld_mode) const {
+    // The base implementation simply repeats the single-primitive form. Types whose lookup needs per-object preparation override this so that the preparation is done once for the whole batch.
+    std::vector<std::vector<int>> indices;
+    indices.reserve(UUIDs_query.size());
+    for (uint UUID: UUIDs_query) {
+        indices.push_back(getPrimitiveSharedVertexIndices(UUID, weld_mode));
+    }
+    return indices;
+}
+
 // ============== TILE CLASS METHOD DEFINITIONS ==============
 
 Tile::Tile(uint a_OID, const std::vector<uint> &a_UUIDs, const int2 &a_subdiv, const char *a_texturefile, const int2 &a_texture_repeat, helios::Context *a_context) {
@@ -2408,6 +2798,42 @@ helios::int2 Tile::getTextureRepeat() const {
 
 helios::int2 Tile::getEffectiveTextureRepeat() const {
     return correctTextureRepeat(subdiv, texture_repeat);
+}
+
+bool Tile::hasSharedVertexTopology() const {
+    // The documented contract is that this is false exactly when getPrimitiveSharedVertexIndices() would return nothing, so it is answered from the same well-formedness the count uses rather than asserted.
+    return getSharedVertexCount(helios::WELD_FULL) > 0;
+}
+
+size_t Tile::getSharedVertexCount(helios::VertexWeldMode weld_mode) const {
+    // A tile is planar, so there is no axis along which vertices could sensibly be left unwelded.
+    (void) weld_mode;
+    return size_t(subdiv.x + 1) * size_t(subdiv.y + 1);
+}
+
+std::vector<int> Tile::getPrimitiveSharedVertexIndices(uint UUID, helios::VertexWeldMode weld_mode) const {
+    (void) weld_mode;
+
+    const std::vector<vec3> primitive_vertices = context->getPrimitiveVertices(UUID);
+    if (primitive_vertices.size() != 4) {
+        return {};
+    }
+
+    const std::vector<vec3> tile_corners = getVertices();
+    const vec3 edge_x = tile_corners.at(1) - tile_corners.at(0);
+    const vec3 edge_y = tile_corners.at(3) - tile_corners.at(0);
+
+    std::vector<int> indices;
+    indices.reserve(primitive_vertices.size());
+    for (const vec3 &vertex: primitive_vertices) {
+        int2 node;
+        if (!locatePlanarLatticeNode(vertex, tile_corners.at(0), edge_x, edge_y, subdiv, node)) {
+            // The primitive does not sit on this tile's grid, so nothing can be said about which vertices it shares.
+            return {};
+        }
+        indices.push_back(node.y * (subdiv.x + 1) + node.x);
+    }
+    return indices;
 }
 
 
@@ -2531,6 +2957,107 @@ helios::int2 AdaptiveTile::getTextureRepeat() const {
     return texture_repeat;
 }
 
+helios::int2 AdaptiveTile::getLatticeDivisions() const {
+    // Each refinement level halves a cell in both directions, so the finest level divides the base grid by two to the power of the maximum level. Every sub-patch corner, at whatever level, lands on this lattice.
+    const int refinement_factor = 1 << max_level;
+    return make_int2(base_subdiv.x * refinement_factor, base_subdiv.y * refinement_factor);
+}
+
+void AdaptiveTile::invalidateLatticeMap() const {
+    lattice_map_valid = false;
+    lattice_node_to_vertex.clear();
+}
+
+void AdaptiveTile::buildLatticeMap() const {
+    if (lattice_map_valid) {
+        return;
+    }
+
+    lattice_node_to_vertex.clear();
+
+    const std::vector<vec3> tile_corners = getVertices();
+    const vec3 edge_x = tile_corners.at(1) - tile_corners.at(0);
+    const vec3 edge_y = tile_corners.at(3) - tile_corners.at(0);
+    const int2 lattice_divisions = getLatticeDivisions();
+
+    std::vector<int64_t> node_keys;
+    node_keys.reserve(4 * UUIDs.size());
+    for (uint UUID: UUIDs) {
+        const std::vector<vec3> primitive_vertices = context->getPrimitiveVertices(UUID);
+        for (const vec3 &vertex: primitive_vertices) {
+            int2 node;
+            if (locatePlanarLatticeNode(vertex, tile_corners.at(0), edge_x, edge_y, lattice_divisions, node)) {
+                node_keys.push_back(makeLatticeNodeKey(node));
+            }
+        }
+    }
+
+    // Numbering the nodes in ascending key order rather than in the order the sub-patches were visited means the same geometry always yields the same indices, whatever order the member primitives are in.
+    std::sort(node_keys.begin(), node_keys.end());
+    node_keys.erase(std::unique(node_keys.begin(), node_keys.end()), node_keys.end());
+
+    lattice_node_to_vertex.reserve(node_keys.size());
+    for (size_t k = 0; k < node_keys.size(); k++) {
+        lattice_node_to_vertex[node_keys.at(k)] = int(k);
+    }
+
+    lattice_map_valid = true;
+}
+
+void AdaptiveTile::onChildPrimitiveDeleted(uint UUID) {
+    // A deleted sub-patch may have been the only one referencing some lattice node, which would leave a gap in the numbering.
+    (void) UUID;
+    invalidateLatticeMap();
+}
+
+void AdaptiveTile::onChildPrimitivesDeleted(const std::vector<uint> &a_UUIDs) {
+    (void) a_UUIDs;
+    invalidateLatticeMap();
+}
+
+bool AdaptiveTile::hasSharedVertexTopology() const {
+    // The documented contract is that this is false exactly when getPrimitiveSharedVertexIndices() would return nothing, so it is answered from the same well-formedness the count uses rather than asserted.
+    return getSharedVertexCount(helios::WELD_FULL) > 0;
+}
+
+size_t AdaptiveTile::getSharedVertexCount(helios::VertexWeldMode weld_mode) const {
+    // A tile is planar, so there is no axis along which vertices could sensibly be left unwelded.
+    (void) weld_mode;
+    buildLatticeMap();
+    return lattice_node_to_vertex.size();
+}
+
+std::vector<int> AdaptiveTile::getPrimitiveSharedVertexIndices(uint UUID, helios::VertexWeldMode weld_mode) const {
+    (void) weld_mode;
+
+    const std::vector<vec3> primitive_vertices = context->getPrimitiveVertices(UUID);
+    if (primitive_vertices.size() != 4) {
+        return {};
+    }
+
+    buildLatticeMap();
+
+    const std::vector<vec3> tile_corners = getVertices();
+    const vec3 edge_x = tile_corners.at(1) - tile_corners.at(0);
+    const vec3 edge_y = tile_corners.at(3) - tile_corners.at(0);
+    const int2 lattice_divisions = getLatticeDivisions();
+
+    std::vector<int> indices;
+    indices.reserve(primitive_vertices.size());
+    for (const vec3 &vertex: primitive_vertices) {
+        int2 node;
+        if (!locatePlanarLatticeNode(vertex, tile_corners.at(0), edge_x, edge_y, lattice_divisions, node)) {
+            return {};
+        }
+        auto it = lattice_node_to_vertex.find(makeLatticeNodeKey(node));
+        if (it == lattice_node_to_vertex.end()) {
+            return {};
+        }
+        indices.push_back(it->second);
+    }
+    return indices;
+}
+
 // ============== SPHERE CLASS METHOD DEFINITIONS ==============
 
 Sphere::Sphere(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, const char *a_texturefile, helios::Context *a_context) {
@@ -2625,6 +3152,64 @@ std::vector<helios::vec3> Sphere::getPrimitiveVertexNormals(uint UUID) const {
     }
     return normals;
 }
+
+
+bool Sphere::hasSharedVertexTopology() const {
+    // The documented contract is that this is false exactly when getPrimitiveSharedVertexIndices() would return nothing, so it is answered from the same well-formedness the count uses rather than asserted.
+    return getSharedVertexCount(helios::WELD_FULL) > 0;
+}
+
+size_t Sphere::getSharedVertexCount(helios::VertexWeldMode weld_mode) const {
+    const int radial_divisions = int(subdiv);
+    if (radial_divisions < 2) {
+        return 0;
+    }
+    return sphereVertexCount(radial_divisions, weld_mode);
+}
+
+std::vector<int> Sphere::getPrimitiveSharedVertexIndices(uint UUID, helios::VertexWeldMode weld_mode) const {
+    const int radial_divisions = int(subdiv);
+    if (radial_divisions < 2) {
+        return {};
+    }
+
+    float N[9];
+    if (!makeNormalMatrix(transform, N)) {
+        // A singular transformation means the sphere has been flattened, and there is no unit sphere to carry the vertices back to.
+        return {};
+    }
+
+    const std::vector<vec3> corners = context->getPrimitiveVertices(UUID);
+    std::vector<int> indices;
+    if (!sphereFacetSharedVertexIndices(corners, transform, N, radial_divisions, weld_mode, indices)) {
+        return {};
+    }
+    return indices;
+}
+
+std::vector<std::vector<int>> Sphere::getPrimitiveSharedVertexIndices(const std::vector<uint> &UUIDs_query, helios::VertexWeldMode weld_mode) const {
+    const int radial_divisions = int(subdiv);
+
+    float N[9];
+    if (radial_divisions < 2 || !makeNormalMatrix(transform, N)) {
+        return std::vector<std::vector<int>>(UUIDs_query.size());
+    }
+
+    // The normal matrix is inverted once for the whole batch rather than once per facet.
+    std::vector<std::vector<int>> all_indices;
+    all_indices.reserve(UUIDs_query.size());
+    for (uint UUID: UUIDs_query) {
+        const std::vector<vec3> corners = context->getPrimitiveVertices(UUID);
+        std::vector<int> indices;
+        if (!sphereFacetSharedVertexIndices(corners, transform, N, radial_divisions, weld_mode, indices)) {
+            indices.clear();
+        }
+        all_indices.push_back(indices);
+    }
+    return all_indices;
+}
+
+
 
 // ============== TUBE CLASS METHOD DEFINITIONS ==============
 
@@ -3375,6 +3960,60 @@ std::vector<std::vector<helios::vec3>> Tube::getPrimitiveVertexNormals(const std
     return normals;
 }
 
+
+bool Tube::hasSharedVertexTopology() const {
+    // The documented contract is that this is false exactly when getPrimitiveSharedVertexIndices() would return nothing, so it is answered from the same well-formedness the count uses rather than asserted.
+    return getSharedVertexCount(helios::WELD_FULL) > 0;
+}
+
+size_t Tube::getSharedVertexCount(helios::VertexWeldMode weld_mode) const {
+    const int segment_count = int(nodes.size()) - 1;
+    const int radial_divisions = int(subdiv);
+    if (segment_count < 1 || radial_divisions < 3) {
+        return 0;
+    }
+    return sweptSurfaceVertexCount(segment_count, radial_divisions, weld_mode);
+}
+
+std::vector<int> Tube::getPrimitiveSharedVertexIndices(uint UUID, helios::VertexWeldMode weld_mode) const {
+    if (nodes.size() < 2 || subdiv < 3) {
+        return {};
+    }
+
+    // The phase of each ring is read from the whole object, so that the numbering does not depend on which facet was asked about.
+    const std::vector<SweptRingFrame> frames = buildSweptRingFrames(getNodes(), getNodeRadii(), gatherObjectCorners(context, UUIDs), int(subdiv));
+    const std::vector<vec3> corners = context->getPrimitiveVertices(UUID);
+
+    std::vector<int> indices;
+    if (!sweptSurfaceFacetSharedVertexIndices(corners, frames, int(subdiv), weld_mode, indices)) {
+        return {};
+    }
+    return indices;
+}
+
+std::vector<std::vector<int>> Tube::getPrimitiveSharedVertexIndices(const std::vector<uint> &UUIDs_query, helios::VertexWeldMode weld_mode) const {
+    if (nodes.size() < 2 || subdiv < 3) {
+        return std::vector<std::vector<int>>(UUIDs_query.size());
+    }
+
+    // Building the ring frames costs one pass over the object, so it is done once here rather than once per facet. This is why the batch form should be preferred when walking a whole object.
+    const std::vector<SweptRingFrame> frames = buildSweptRingFrames(getNodes(), getNodeRadii(), gatherObjectCorners(context, UUIDs), int(subdiv));
+
+    std::vector<std::vector<int>> all_indices;
+    all_indices.reserve(UUIDs_query.size());
+    for (uint UUID: UUIDs_query) {
+        const std::vector<vec3> corners = context->getPrimitiveVertices(UUID);
+        std::vector<int> indices;
+        if (!sweptSurfaceFacetSharedVertexIndices(corners, frames, int(subdiv), weld_mode, indices)) {
+            indices.clear();
+        }
+        all_indices.push_back(indices);
+    }
+    return all_indices;
+}
+
+
+
 // ============== BOX CLASS METHOD DEFINITIONS ==============
 
 Box::Box(uint a_OID, const std::vector<uint> &a_UUIDs, const int3 &a_subdiv, const char *a_texturefile, helios::Context *a_context) {
@@ -3653,6 +4292,30 @@ uint Polymesh::getPrimitiveUUIDForFace(size_t face_index) const {
     return face_UUIDs.at(face_index);
 }
 
+bool Polymesh::hasSharedVertexTopology() const {
+    return !faces.empty();
+}
+
+size_t Polymesh::getSharedVertexCount(helios::VertexWeldMode weld_mode) const {
+    // A mesh has no distinguished axis along which to leave vertices unwelded, so the weld mode does not change the answer.
+    (void) weld_mode;
+    return vertices.size();
+}
+
+std::vector<int> Polymesh::getPrimitiveSharedVertexIndices(uint UUID, helios::VertexWeldMode weld_mode) const {
+    (void) weld_mode;
+
+    // A primitive with no face entry is not described by the mesh - a patch member of a mixed object, or any member of an object assembled from loose primitives. The face table is the authority on which
+    // primitives the mesh describes, so an absent entry is reported as "no topology here" rather than raised as an error; getFaceIndexForPrimitive() is the accessor that treats it as a mistake.
+    auto it = UUID_to_face.find(UUID);
+    if (it == UUID_to_face.end()) {
+        return {};
+    }
+
+    const int3 &face = faces.at(it->second);
+    return {face.x, face.y, face.z};
+}
+
 void Polymesh::invalidateAdjacency() const {
     adjacency_valid = false;
     vertex_to_faces.clear();
@@ -3669,6 +4332,52 @@ void Polymesh::buildAdjacency() const {
         vertex_to_faces.at(faces.at(f).z).push_back(f);
     }
     adjacency_valid = true;
+}
+
+void Polymesh::setVertices(const std::vector<helios::vec3> &vertices_global) {
+
+    if (faces.empty()) {
+        helios_runtime_error("ERROR (Polymesh::setVertices): Polymesh object " + std::to_string(OID) +
+                             " carries no face table, so it has no shared vertices to write. A mesh assembled from loose primitives by Context::addPolymeshObject() has no topology; attach one with "
+                             "Context::setPolymeshObjectTopology() before deforming the mesh, or transform the member primitives individually.");
+    } else if (vertices_global.size() != vertices.size()) {
+        helios_runtime_error("ERROR (Polymesh::setVertices): Expected " + std::to_string(vertices.size()) + " vertices for polymesh object " + std::to_string(OID) + ", but " +
+                             std::to_string(vertices_global.size()) +
+                             " were given. This method moves the existing vertices and cannot add or remove them; use Context::setPolymeshObjectTopology() to replace the mesh topology itself.");
+    }
+
+    // Vertices are stored in the object-local frame but are given in global coordinates, matching getVertices(). The transform is inverted once here rather than once per face, which is what makes writing a
+    // whole deformed mesh a single pass; syncVerticesFromPrimitive() inverts it per call because it is only ever handed one facet at a time.
+    float T_inverse[9];
+    if (!makeNormalMatrix(transform, T_inverse)) {
+        helios_runtime_error("ERROR (Polymesh::setVertices): The object transformation matrix of polymesh object " + std::to_string(OID) +
+                             " is singular and cannot be inverted, so the given global vertices cannot be expressed in the object-local frame. This usually means the object was scaled by zero along one or "
+                             "more axes.");
+    }
+
+    for (size_t v = 0; v < vertices_global.size(); v++) {
+        const vec3 shifted = make_vec3(vertices_global.at(v).x - transform[3], vertices_global.at(v).y - transform[7], vertices_global.at(v).z - transform[11]);
+        vertices.at(v).x = T_inverse[0] * shifted.x + T_inverse[3] * shifted.y + T_inverse[6] * shifted.z;
+        vertices.at(v).y = T_inverse[1] * shifted.x + T_inverse[4] * shifted.y + T_inverse[7] * shifted.z;
+        vertices.at(v).z = T_inverse[2] * shifted.x + T_inverse[5] * shifted.y + T_inverse[8] * shifted.z;
+    }
+
+    // Push the moved vertices out to the member primitives. Every face is rewritten from the shared vertex array, so facets meeting at a vertex all pick up the same new position and the mesh stays welded
+    // rather than tearing - the failure mode that transforming facets one at a time produces. Writing through setVertices() rebuilds only the primitive's transformation matrix and deliberately leaves its
+    // solid fraction alone: that quantity depends on the texture (u,v) coordinates, which a deformation does not touch, and recomputing it would rasterize the alpha mask for every facet of every mesh moved.
+    for (size_t f = 0; f < faces.size(); f++) {
+        const int3 &face = faces.at(f);
+        const uint UUID = face_UUIDs.at(f);
+        if (!context->doesPrimitiveExist(UUID)) {
+            continue;
+        }
+        context->setTriangleVertices(UUID, transformPointByMatrix(transform, vertices.at(face.x)), transformPointByMatrix(transform, vertices.at(face.y)), transformPointByMatrix(transform, vertices.at(face.z)));
+    }
+
+    // Vertex normals were computed for the undeformed geometry and no longer describe the surface. They are left in place rather than silently recomputed, matching syncVerticesFromPrimitive();
+    // computeVertexNormals() should be called again if exact normals are needed after a deformation.
+
+    // Only vertex positions moved, so the face table and the cached vertex-to-face adjacency both remain valid and are deliberately not invalidated.
 }
 
 void Polymesh::syncVerticesFromPrimitive(uint UUID) {
@@ -3998,40 +4707,148 @@ float Polymesh::getSurfaceArea() const {
 
 float Polymesh::getVolume() const {
 
-    // When the object carries an indexed face set the surface can be verified before applying the divergence theorem, which is only valid for a closed surface.
+    // The divergence theorem is only valid over a closed surface, so with an indexed face set available the mesh is separated into its connected pieces and only the ones that enclose something contribute.
+    // A mesh authored as a solid alongside open decoration - a fruit modelled with its sepals or its stalk - would otherwise have no computable volume at all, even though the part that has one is watertight.
     if (!faces.empty()) {
-        const std::vector<int2> boundary_edges = getBoundaryEdges();
-        if (!boundary_edges.empty()) {
-            helios_runtime_error("ERROR (Polymesh::getVolume): Polymesh object " + std::to_string(OID) + " is not a closed surface (" + std::to_string(boundary_edges.size()) +
-                                 " boundary edges were found), so its enclosed volume is undefined. Volume can only be computed for a watertight mesh; use getSurfaceArea() for an open mesh, or repair the "
-                                 "holes in the source geometry.");
+        const std::vector<std::vector<size_t>> components = getConnectedComponents();
+        const std::vector<vec3> vertices_global = getVertices();
+
+        float volume = 0.f;
+        size_t closed_components = 0;
+        size_t open_components = 0;
+        for (const std::vector<size_t> &component: components) {
+
+            std::unordered_map<int64_t, int> edge_counts;
+            for (size_t face_index: component) {
+                const int3 &face = faces.at(face_index);
+                edge_counts[makeEdgeKey(face.x, face.y)]++;
+                edge_counts[makeEdgeKey(face.y, face.z)]++;
+                edge_counts[makeEdgeKey(face.z, face.x)]++;
+            }
+            // Every edge of a closed surface is shared by exactly two facets. An edge used once leaves a hole; an edge used three or more times means the surface folds back through itself, and the
+            // divergence theorem returns a number with no meaning there - on one of the shipped fruit assets a self-intersecting sepal produced a volume a hundred times the fruit's.
+            bool component_is_closed = true;
+            for (const auto &edge: edge_counts) {
+                if (edge.second != 2) {
+                    component_is_closed = false;
+                    break;
+                }
+            }
+            if (!component_is_closed) {
+                open_components++;
+                continue;
+            }
+
+            // Summed per piece rather than over the mesh as a whole, so that two solids wound in opposite directions add rather than cancel.
+            float component_volume = 0.f;
+            for (size_t face_index: component) {
+                const int3 &face = faces.at(face_index);
+                component_volume += (1.f / 6.f) * vertices_global.at(face.x) * cross(vertices_global.at(face.y), vertices_global.at(face.z));
+            }
+            volume += std::abs(component_volume);
+            closed_components++;
         }
 
-        const std::vector<vec3> vertices_global = getVertices();
-        float volume = 0.f;
-        for (const int3 &face: faces) {
-            const vec3 &v0 = vertices_global.at(face.x);
-            const vec3 &v1 = vertices_global.at(face.y);
-            const vec3 &v2 = vertices_global.at(face.z);
-            volume += (1.f / 6.f) * v0 * cross(v1, v2);
+        if (closed_components == 0) {
+            helios_runtime_error("ERROR (Polymesh::getVolume): Polymesh object " + std::to_string(OID) + " encloses no volume: none of its " + std::to_string(open_components) +
+                                 " connected pieces is a closed surface. Volume can only be computed for geometry that is watertight somewhere; use getSurfaceArea() for a mesh that is open throughout, or "
+                                 "repair the holes in the source geometry.");
         }
-        return std::abs(volume);
+
+        return volume;
+    }
+
+    // Without a face table the object does not know which of its facets meet, so closure is established by finding which of their corners coincide. The divergence theorem is meaningless over an open surface,
+    // and the number it returns there is not even a fixed one: it changes when the object is moved, because it measures the cone swept from the origin rather than anything the geometry encloses.
+    std::vector<std::array<vec3, 3>> facets;
+    facets.reserve(UUIDs.size());
+    for (uint UUID: UUIDs) {
+        const PrimitiveType type = context->getPrimitiveType(UUID);
+        if (type == PRIMITIVE_TYPE_TRIANGLE) {
+            facets.push_back({context->getTriangleVertex(UUID, 0), context->getTriangleVertex(UUID, 1), context->getTriangleVertex(UUID, 2)});
+        } else if (type == PRIMITIVE_TYPE_PATCH) {
+            const vec3 v0 = context->getTriangleVertex(UUID, 0);
+            const vec3 v1 = context->getTriangleVertex(UUID, 1);
+            const vec3 v2 = context->getTriangleVertex(UUID, 2);
+            const vec3 v3 = context->getTriangleVertex(UUID, 3);
+            facets.push_back({v0, v1, v2});
+            facets.push_back({v0, v2, v3});
+        }
+    }
+
+    if (facets.empty()) {
+        return 0.f;
+    }
+
+    vec3 minimum = facets.front().at(0), maximum = facets.front().at(0);
+    for (const std::array<vec3, 3> &facet: facets) {
+        for (const vec3 &corner: facet) {
+            minimum = make_vec3(std::min(minimum.x, corner.x), std::min(minimum.y, corner.y), std::min(minimum.z, corner.z));
+            maximum = make_vec3(std::max(maximum.x, corner.x), std::max(maximum.y, corner.y), std::max(maximum.z, corner.z));
+        }
+    }
+    // Scaled to the object so that the same test behaves the same on a millimetre fruit and a metre canopy. Corners this close together were the same point before the primitives were built from them.
+    const float weld_tolerance = 1e-5f * (maximum - minimum).magnitude();
+
+    std::unordered_map<int64_t, std::vector<std::pair<vec3, int>>> welded_lookup;
+    std::vector<int> corner_index;
+    corner_index.reserve(3 * facets.size());
+    int next_welded = 0;
+    const float cell = (weld_tolerance > 0.f) ? weld_tolerance : 1.f;
+
+    for (const std::array<vec3, 3> &facet: facets) {
+        for (const vec3 &corner: facet) {
+            const int cx = int(std::floor(corner.x / cell)), cy = int(std::floor(corner.y / cell)), cz = int(std::floor(corner.z / cell));
+            int found = -1;
+            // The neighbouring cells are searched too, so that two corners falling either side of a cell boundary still weld.
+            for (int dx = -1; dx <= 1 && found < 0; dx++) {
+                for (int dy = -1; dy <= 1 && found < 0; dy++) {
+                    for (int dz = -1; dz <= 1 && found < 0; dz++) {
+                        const int64_t key = (int64_t(cx + dx) * 73856093) ^ (int64_t(cy + dy) * 19349663) ^ (int64_t(cz + dz) * 83492791);
+                        auto bucket = welded_lookup.find(key);
+                        if (bucket == welded_lookup.end()) {
+                            continue;
+                        }
+                        for (const auto &entry: bucket->second) {
+                            if ((entry.first - corner).magnitude() <= weld_tolerance) {
+                                found = entry.second;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            if (found < 0) {
+                found = next_welded++;
+                const int64_t key = (int64_t(cx) * 73856093) ^ (int64_t(cy) * 19349663) ^ (int64_t(cz) * 83492791);
+                welded_lookup[key].emplace_back(corner, found);
+            }
+            corner_index.push_back(found);
+        }
+    }
+
+    std::unordered_map<int64_t, int> edge_counts;
+    for (size_t f = 0; f < facets.size(); f++) {
+        const int a = corner_index.at(3 * f), b = corner_index.at(3 * f + 1), c = corner_index.at(3 * f + 2);
+        edge_counts[makeEdgeKey(a, b)]++;
+        edge_counts[makeEdgeKey(b, c)]++;
+        edge_counts[makeEdgeKey(c, a)]++;
+    }
+    size_t unmatched_edges = 0;
+    for (const auto &edge: edge_counts) {
+        if (edge.second != 2) {
+            unmatched_edges++;
+        }
+    }
+    if (unmatched_edges > 0) {
+        helios_runtime_error("ERROR (Polymesh::getVolume): Polymesh object " + std::to_string(OID) + " does not enclose a volume: " + std::to_string(unmatched_edges) +
+                             " of its edges are not shared by exactly two facets. This object carries no face table, so its facets were matched up by which of their corners coincide; the volume of an open "
+                             "surface is undefined, and the number the divergence theorem returns for one changes when the object is moved. Use getSurfaceArea() for an open mesh.");
     }
 
     float volume = 0.f;
-    for (uint UUID: UUIDs) {
-        if (context->getPrimitiveType(UUID) == PRIMITIVE_TYPE_TRIANGLE) {
-            const vec3 &v0 = context->getTriangleVertex(UUID, 0);
-            const vec3 &v1 = context->getTriangleVertex(UUID, 1);
-            const vec3 &v2 = context->getTriangleVertex(UUID, 2);
-            volume += (1.f / 6.f) * v0 * cross(v1, v2);
-        } else if (context->getPrimitiveType(UUID) == PRIMITIVE_TYPE_PATCH) {
-            const vec3 &v0 = context->getTriangleVertex(UUID, 0);
-            const vec3 &v1 = context->getTriangleVertex(UUID, 1);
-            const vec3 &v2 = context->getTriangleVertex(UUID, 2);
-            const vec3 &v3 = context->getTriangleVertex(UUID, 3);
-            volume += (1.f / 6.f) * v0 * cross(v1, v2) + (1.f / 6.f) * v0 * cross(v2, v3);
-        }
+    for (const std::array<vec3, 3> &facet: facets) {
+        volume += (1.f / 6.f) * facet.at(0) * cross(facet.at(1), facet.at(2));
     }
     return std::abs(volume);
 }
@@ -4296,3 +5113,54 @@ std::vector<helios::vec3> Cone::getPrimitiveVertexNormals(uint UUID) const {
     }
     return normals;
 }
+
+bool Cone::hasSharedVertexTopology() const {
+    // The documented contract is that this is false exactly when getPrimitiveSharedVertexIndices() would return nothing, so it is answered from the same well-formedness the count uses rather than asserted.
+    return getSharedVertexCount(helios::WELD_FULL) > 0;
+}
+
+size_t Cone::getSharedVertexCount(helios::VertexWeldMode weld_mode) const {
+    const int radial_divisions = int(subdiv);
+    if (radial_divisions < 3) {
+        return 0;
+    }
+    // A cone is a single segment, so there is no interior ring for the two weld modes to disagree about.
+    return sweptSurfaceVertexCount(1, radial_divisions, weld_mode);
+}
+
+std::vector<int> Cone::getPrimitiveSharedVertexIndices(uint UUID, helios::VertexWeldMode weld_mode) const {
+    if (subdiv < 3) {
+        return {};
+    }
+
+    const std::vector<SweptRingFrame> frames = buildSweptRingFrames(getNodeCoordinates(), getNodeRadii(), gatherObjectCorners(context, UUIDs), int(subdiv));
+    const std::vector<vec3> corners = context->getPrimitiveVertices(UUID);
+
+    std::vector<int> indices;
+    if (!sweptSurfaceFacetSharedVertexIndices(corners, frames, int(subdiv), weld_mode, indices)) {
+        return {};
+    }
+    return indices;
+}
+
+std::vector<std::vector<int>> Cone::getPrimitiveSharedVertexIndices(const std::vector<uint> &UUIDs_query, helios::VertexWeldMode weld_mode) const {
+    if (subdiv < 3) {
+        return std::vector<std::vector<int>>(UUIDs_query.size());
+    }
+
+    const std::vector<SweptRingFrame> frames = buildSweptRingFrames(getNodeCoordinates(), getNodeRadii(), gatherObjectCorners(context, UUIDs), int(subdiv));
+
+    std::vector<std::vector<int>> all_indices;
+    all_indices.reserve(UUIDs_query.size());
+    for (uint UUID: UUIDs_query) {
+        const std::vector<vec3> corners = context->getPrimitiveVertices(UUID);
+        std::vector<int> indices;
+        if (!sweptSurfaceFacetSharedVertexIndices(corners, frames, int(subdiv), weld_mode, indices)) {
+            indices.clear();
+        }
+        all_indices.push_back(indices);
+    }
+    return all_indices;
+}
+
+

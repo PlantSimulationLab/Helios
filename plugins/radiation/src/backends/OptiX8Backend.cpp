@@ -112,7 +112,7 @@ void OptiX8Backend::initialize() {
     pipeline_options.usesMotionBlur                   = 0;
     pipeline_options.traversableGraphFlags            = OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_SINGLE_GAS;
     pipeline_options.numPayloadValues                 = 2;   // two uint32 for pointer-in-registers
-    pipeline_options.numAttributeValues               = 2;   // UUID + face in attributes
+    pipeline_options.numAttributeValues               = 4;   // UUID + face, plus the two surface parameters the camera program interpolates a per-vertex quantity with
     pipeline_options.exceptionFlags                   = OPTIX_EXCEPTION_FLAG_NONE;
     pipeline_options.pipelineLaunchParamsVariableName = "params";
     pipeline_options.usesPrimitiveTypeFlags           = OPTIX_PRIMITIVE_TYPE_FLAGS_CUSTOM;
@@ -261,6 +261,9 @@ void OptiX8Backend::shutdown() {
     freePtr(d_radiation_in);
     freePtr(d_radiation_out_top);
     freePtr(d_radiation_out_bottom);
+    freePtr(d_smoothing_vertex_indices);
+    freePtr(d_vertex_radiation_out_top);
+    freePtr(d_vertex_radiation_out_bottom);
     freePtr(d_scatter_buff_top);
     freePtr(d_scatter_buff_bottom);
     freePtr(d_radiation_in_camera);
@@ -356,6 +359,7 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
     upload(d_objectID,              geometry.object_IDs.data(),           geometry.object_IDs.size()           * sizeof(uint32_t));
     upload(d_twosided_flag,         geometry.twosided_flags.data(),       geometry.twosided_flags.size()       * sizeof(char));
     upload(d_primitive_solid_fraction, geometry.solid_fractions.data(),   geometry.solid_fractions.size()      * sizeof(float));
+    upload(d_smoothing_vertex_indices, geometry.smoothing_vertex_indices.data(), geometry.smoothing_vertex_indices.size() * sizeof(int32_t));
 
     // object_subdivisions: vector<helios::int2> → flat int32 array (2 ints per prim)
     if (!geometry.object_subdivisions.empty()) {
@@ -480,6 +484,14 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
     h_params.object_subdivisions      = reinterpret_cast<int32_t *>(d_object_subdivisions);
     h_params.twosided_flag            = reinterpret_cast<int8_t *>(d_twosided_flag);
     h_params.primitive_solid_fraction = reinterpret_cast<float *>(d_primitive_solid_fraction);
+    h_params.smoothing_vertex_indices = reinterpret_cast<int32_t *>(d_smoothing_vertex_indices);
+    if (geometry.smoothing_vertex_indices.empty()) {
+        // Camera flux smoothing is off for this geometry. Clear any vertex flux left over from a previous build so that the camera program cannot read a buffer describing geometry that no longer exists.
+        freeCUdeviceptr(d_vertex_radiation_out_top);
+        freeCUdeviceptr(d_vertex_radiation_out_bottom);
+        h_params.vertex_radiation_out_top = nullptr;
+        h_params.vertex_radiation_out_bottom = nullptr;
+    }
     h_params.patch_vertices           = reinterpret_cast<float3 *>(d_patch_vertices);
     h_params.patch_UUIDs              = reinterpret_cast<uint32_t *>(d_patch_UUIDs);
     h_params.triangle_vertices        = reinterpret_cast<float3 *>(d_triangle_vertices);
@@ -1248,6 +1260,25 @@ void OptiX8Backend::uploadRadiationOut(const std::vector<float> &radiation_out_t
     }
 }
 
+void OptiX8Backend::uploadVertexRadiationOut(const std::vector<float> &vertex_radiation_out_top,
+                                             const std::vector<float> &vertex_radiation_out_bottom) {
+    if (vertex_radiation_out_top.empty() || vertex_radiation_out_bottom.empty()) {
+        return; // camera flux smoothing is disabled, so there is nothing for the camera program to read
+    }
+
+    const size_t top_bytes    = vertex_radiation_out_top.size() * sizeof(float);
+    const size_t bottom_bytes = vertex_radiation_out_bottom.size() * sizeof(float);
+
+    reallocDevice(d_vertex_radiation_out_top, top_bytes);
+    reallocDevice(d_vertex_radiation_out_bottom, bottom_bytes);
+
+    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_vertex_radiation_out_top), vertex_radiation_out_top.data(), top_bytes, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_vertex_radiation_out_bottom), vertex_radiation_out_bottom.data(), bottom_bytes, cudaMemcpyHostToDevice));
+
+    h_params.vertex_radiation_out_top    = reinterpret_cast<float *>(d_vertex_radiation_out_top);
+    h_params.vertex_radiation_out_bottom = reinterpret_cast<float *>(d_vertex_radiation_out_bottom);
+}
+
 void OptiX8Backend::zeroCameraScatterBuffers(size_t launch_band_count) {
     const size_t Nprims = current_primitive_count;
     if (Nprims == 0 || launch_band_count == 0) return;
@@ -1321,6 +1352,7 @@ void OptiX8Backend::freeGeometryBuffers() {
     freeCUdeviceptr(d_object_subdivisions);
     freeCUdeviceptr(d_twosided_flag);
     freeCUdeviceptr(d_primitive_solid_fraction);
+    freeCUdeviceptr(d_smoothing_vertex_indices);
     freeCUdeviceptr(d_patch_vertices);
     freeCUdeviceptr(d_patch_UUIDs);
     freeCUdeviceptr(d_triangle_vertices);

@@ -125,6 +125,9 @@ struct OptiX8LaunchParams {
     float*    radiation_in;           //!< [prim * Nbands_global + band]
     float*    radiation_out_top;      //!< [prim * Nbands_global + band]
     float*    radiation_out_bottom;   //!< [prim * Nbands_global + band]
+    int32_t*  smoothing_vertex_indices;  //!< Shared vertex index per facet corner, 4 per primitive; entry 4*prim negative if the primitive is not smoothed, entry 4*prim+3 negative for a triangle
+    float*    vertex_radiation_out_top;    //!< [vertex * Nbands_launch + band], null when camera flux smoothing is disabled
+    float*    vertex_radiation_out_bottom; //!< [vertex * Nbands_launch + band], null when camera flux smoothing is disabled
     float*    scatter_buff_top;       //!< [prim * Nbands_global + band]
     float*    scatter_buff_bottom;    //!< [prim * Nbands_global + band]
     float*    radiation_in_camera;    //!< [prim * Nbands_launch + band]

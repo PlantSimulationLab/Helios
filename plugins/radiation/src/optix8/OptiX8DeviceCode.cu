@@ -362,7 +362,7 @@ extern "C" __global__ void __intersection__patch() {
         if (hit.x < mnx || hit.x > mxx || hit.y < mny || hit.y > mxy ||
             hit.z < mnz || hit.z > mxz) return;
 
-        optixReportIntersection(t, 0, uuid, 0u);
+        optixReportIntersection(t, 0, uuid, 0u, __float_as_uint(0.f), __float_as_uint(0.f));
         return;
     }
 
@@ -420,7 +420,9 @@ extern "C" __global__ void __intersection__patch() {
         // The hit face is recorded in face_attr (1 = front/top, 0 = back/bottom) for downstream
         // energy/face bookkeeping; one-sidedness is enforced at ray launch (raygen), not here.
         uint32_t face_attr = (nd < 0.f) ? 1u : 0u;
-        optixReportIntersection(t, 0, uuid, face_attr);
+        // Carry the patch-local hit position, remapped from [-0.5,0.5] to [0,1], so that the camera program can interpolate a per-vertex quantity bilinearly across the patch. Corner zero of
+        // Context::getPrimitiveVertices() sits at (0,0) here, corner one at (1,0), corner two at (1,1) and corner three at (0,1).
+        optixReportIntersection(t, 0, uuid, face_attr, __float_as_uint(u + 0.5f), __float_as_uint(v + 0.5f));
 
     } else {
         // ---- Triangle: canonical vertices (0,0,0), (0,1,0), (1,1,0) ----
@@ -485,7 +487,9 @@ extern "C" __global__ void __intersection__patch() {
         // Report the intersection for BOTH faces (see note in the patch branch above): one-sided
         // primitives still occlude back-face hits, matching the canonical OptiX 6 / Vulkan backends.
         uint32_t face_attr = (dot(ray_direction, tri_nrm) < 0.f) ? 1u : 0u;
-        optixReportIntersection(t, 0, uuid, face_attr);
+        // beta and gamma are the barycentric weights of the second and third vertices, already computed above for the texture mask. Passing them on lets the camera program interpolate a per-vertex
+        // quantity across the facet instead of holding it constant, at the cost of two attribute slots and no extra arithmetic.
+        optixReportIntersection(t, 0, uuid, face_attr, __float_as_uint(beta), __float_as_uint(gamma));
     }
 }
 
@@ -1041,12 +1045,50 @@ extern "C" __global__ void __closesthit__camera() {
         normal = make_float3(-normal.x, -normal.y, -normal.z);
     }
 
+    // Camera flux smoothing: blend the outgoing flux across the facet from the values carried by the vertices it shares with its neighbours, so that a coarsely tessellated curved surface does not render as
+    // flat panels with a step at every facet edge. The weights come from where on the facet the ray landed, which the intersection program passed through in attributes 2 and 3.
+    int32_t smooth_v0 = -1, smooth_v1 = -1, smooth_v2 = -1, smooth_v3 = -1;
+    float   smooth_w0 = 0.f, smooth_w1 = 0.f, smooth_w2 = 0.f, smooth_w3 = 0.f;
+
+    if (params.smoothing_vertex_indices != nullptr && params.vertex_radiation_out_top != nullptr) {
+        smooth_v0 = params.smoothing_vertex_indices[hit_position * 4 + 0];
+        if (smooth_v0 >= 0) {
+            smooth_v1 = params.smoothing_vertex_indices[hit_position * 4 + 1];
+            smooth_v2 = params.smoothing_vertex_indices[hit_position * 4 + 2];
+            smooth_v3 = params.smoothing_vertex_indices[hit_position * 4 + 3];
+
+            const float attr_u = __uint_as_float(optixGetAttribute_2());
+            const float attr_v = __uint_as_float(optixGetAttribute_3());
+
+            if (smooth_v3 < 0) {
+                // Triangle: barycentric weights, with attributes holding the weights of the second and third corners.
+                smooth_w1 = attr_u;
+                smooth_w2 = attr_v;
+                smooth_w0 = 1.f - smooth_w1 - smooth_w2;
+            } else {
+                // Patch: bilinear weights over the patch-local coordinates, whose corners run (0,0), (1,0), (1,1), (0,1).
+                smooth_w0 = (1.f - attr_u) * (1.f - attr_v);
+                smooth_w1 = attr_u * (1.f - attr_v);
+                smooth_w2 = attr_u * attr_v;
+                smooth_w3 = (1.f - attr_u) * attr_v;
+            }
+        }
+    }
+
     for (uint32_t b = 0; b < Nbands_l; b++) {
         // Radiance from hit surface (outgoing flux / pi = radiance)
         const uint32_t ind_hit = hit_position * Nbands_l + b;
-        float strength = (float)prd->strength *
-                         (float)(face_top ? params.radiation_out_top[ind_hit]
-                                          : params.radiation_out_bottom[ind_hit]);
+        float outgoing_flux;
+        if (smooth_v0 >= 0) {
+            const float *vertex_flux = face_top ? params.vertex_radiation_out_top : params.vertex_radiation_out_bottom;
+            outgoing_flux = smooth_w0 * vertex_flux[uint32_t(smooth_v0) * Nbands_l + b] + smooth_w1 * vertex_flux[uint32_t(smooth_v1) * Nbands_l + b] + smooth_w2 * vertex_flux[uint32_t(smooth_v2) * Nbands_l + b];
+            if (smooth_v3 >= 0) {
+                outgoing_flux += smooth_w3 * vertex_flux[uint32_t(smooth_v3) * Nbands_l + b];
+            }
+        } else {
+            outgoing_flux = face_top ? params.radiation_out_top[ind_hit] : params.radiation_out_bottom[ind_hit];
+        }
+        float strength = (float) prd->strength * outgoing_flux;
 
         // Check sources visible between camera origin and hit point
         for (uint32_t s = 0; s < params.Nsources; s++) {

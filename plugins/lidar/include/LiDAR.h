@@ -85,29 +85,53 @@ private:
 
 struct HitPoint {
     helios::vec3 position;
-    helios::SphericalCoord direction;
-    helios::int2 row_column;
+    //! Beam direction, stored as (radius, elevation, azimuth) rather than a helios::SphericalCoord.
+    /** The value is identical -- \ref getDirection() reconstitutes the coordinate -- but the struct is
+        not: helios::SphericalCoord keeps `elevation` and `zenith` as const-reference members aliasing its
+        own private fields, so it occupies 40 bytes to carry four floats. Sixteen of those bytes are
+        pointers into the object itself, which is pure overhead repeated on every point in the cloud. */
+    float dir_radius;
+    float dir_elevation;
+    float dir_azimuth;
     helios::RGBcolor color;
     int gridcell;
     int scanID;
+    // NOTE: the hit's (row,column) scan-grid index is deliberately NOT stored. It was written by every
+    // construction path and read by none, costing 8 bytes on every point in the cloud plus a
+    // direction2rc() call per hit. Where a scan-grid index is actually needed it is either recovered
+    // from the direction (ScanMetadata::direction2rc) or carried as "row"/"column" hit data by the
+    // importer and the gap filler.
+    //
+    // `direction` IS load-bearing and must not be dropped, despite getHitRaydir() recomputing a
+    // direction from (position - origin): for a synthetic scan with a finite beam footprint the two
+    // differ. syntheticScan() stores the beam's central sub-ray here, while the recorded position is
+    // the merged return of all sub-rays across the footprint, so substituting one for the other shifts
+    // the leaf-angle inversion (measurably: G(theta) and LAD move by ~30% on a spread-beam scan).
     // NOTE: per-hit scalar data (intensity, distance, timestamp, custom labels, ...) is NOT stored
     // here. It lives in cloud-level columnar storage on LiDARcloud (hit_data_columns/hit_data_present),
     // indexed by the hit's position in the `hits` vector. Storing it as N independent
     // std::map<std::string,double> trees (one per hit) made bulk field extraction O(K*N) cache-cold
     // tree descents and dominated export time. See LiDARcloud::getHitData / getHitDataColumn.
+    //! Beam direction as a helios::SphericalCoord (reconstituted from the stored components).
+    helios::SphericalCoord getDirection() const {
+        return helios::make_SphericalCoord(dir_radius, dir_elevation, dir_azimuth);
+    }
+    void setDirection(const helios::SphericalCoord &d) {
+        dir_radius = d.radius;
+        dir_elevation = d.elevation;
+        dir_azimuth = d.azimuth;
+    }
     HitPoint(void) {
         position = helios::make_vec3(0, 0, 0);
-        direction = helios::make_SphericalCoord(0, 0);
-        row_column = helios::make_int2(0, 0);
+        setDirection(helios::make_SphericalCoord(0, 0));
         color = helios::RGB::red;
         gridcell = -2;
         scanID = -1;
     }
-    HitPoint(int __scanID, helios::vec3 __position, helios::SphericalCoord __direction, helios::int2 __row_column, helios::RGBcolor __color) {
+    HitPoint(int __scanID, helios::vec3 __position, const helios::SphericalCoord &__direction, helios::RGBcolor __color) {
         scanID = __scanID;
         position = __position;
-        direction = __direction;
-        row_column = __row_column;
+        setDirection(__direction);
         color = __color;
         gridcell = -2;
     }
@@ -681,6 +705,146 @@ private:
     std::vector<std::vector<double>> hit_data_columns; //!< [slot][hit_index] scalar values.
     std::vector<std::vector<char>> hit_data_present; //!< [slot][hit_index] presence flag (0 = absent).
 
+    // ---- Virtualized gap-filled misses ----
+    //! Per-scan population of misses synthesized by \ref gapfillMisses_rowcolumn(), stored implicitly.
+    /** A gap-filled miss is a pure function of its scan-grid cell: given (row, column), the per-row
+        angular model fitted at gap-fill time, and the scan origin, its direction is
+        \f$\mathrm{zenith}=Z[\mathrm{row}]\f$, \f$\mathrm{azimuth}=B[\mathrm{row}]+M[\mathrm{row}]\cdot\mathrm{column}\f$
+        and its position is \c origin + \ref LIDAR_MISS_DISTANCE times that direction. Storing the
+        occupancy as one bit per cell therefore costs Ntheta*Nphi/8 bytes for the whole population
+        rather than a HitPoint plus a row across every hit-data column for each miss. Virtual misses
+        occupy the index range [hits.size(), hits.size()+Nvirtual) and are NOT elements of \c hits, so
+        \c hits.back() is always a real hit and \ref deleteHitPoint()'s swap-and-pop is unaffected. */
+    //! Angular model mapping a scan-grid cell to the direction of the beam that produced it
+    /** A raster scan steps its beam by a fixed angular increment per row and per column, so over the
+        whole grid
+
+        \f[ \mathrm{zenith} = z_0 + z_1\,\mathrm{row}, \qquad \mathrm{azimuth} = a_0 + a_1\,\mathrm{column} \f]
+
+        with four coefficients for the entire scan.
+
+        The surveying literature does describe departures from this: a scanner's collimation and
+        trunnion axis errors make the horizontal angle depend on the vertical one, as
+        \f$b_1\sec\alpha + b_2\tan\alpha\f$ (Lichti 2009), and encoder eccentricity and tilt add
+        harmonics to the vertical angle (Chow et al. 2013). Those are real but small: a self-calibration
+        of a RIEGL VZ-400 put them at tens to ~100 arcseconds, i.e. below 5e-4 rad, and a manufacturer
+        applies its own calibration before writing coordinates. Against a beam divergence of 0.25 mrad
+        the neglected terms are smaller than the beam itself, so they are deliberately not modelled --
+        fitting them would fit noise. \ref fitScanGridModel guards the assumption instead, by checking
+        the fit residual. They are estimated by least squares from a bounded
+        random sample of the returns (see \ref fitScanGridModel), which is what lets a gap-fill decide a
+        cell's direction without having seen the rest of the grid.
+
+        This replaced a per-row fit -- a median zenith and a Theil-Sen azimuth line for each row, some
+        7,500 coefficients for a 2,500-row scan, every row needing enough returns of its own before any
+        miss could be emitted. Measured against the scanner's own row/column indices on four scans from
+        two instruments (RIEGL VZ-600i at 7200x2501 and VZ-2000i at 4500x2512), the four-coefficient
+        model reconstructs directions to 0.016-0.022 degrees mean error, against 0.029-0.090 for the
+        per-row fit, and its 99th percentile is 0.03-0.04 degrees against 0.08-1.80. The per-row fit's
+        tail comes from rows too sparse to fit -- 12% of rows on one scan -- which fall back on
+        interpolation from their neighbours; a model fitted across the whole grid has no equivalent
+        failure. As a check that the fit recovers real instrument geometry rather than fitting noise,
+        the recovered azimuth step came out as exactly \f$-2\pi/N_\phi\f$ on both instruments.
+
+        For \ref SCAN_PATTERN_SPINNING_MULTIBEAM the zenith angles are per-channel and deliberately
+        non-uniform, so \ref zenith_per_row holds them instead and the linear form is not used. */
+    struct ScanGridModel {
+        double z0 = 0.0, z1 = 0.0; //!< zenith = z0 + z1*row (raster pattern).
+        double a0 = 0.0, a1 = 0.0; //!< azimuth = a0 + a1*column.
+        std::vector<double> zenith_per_row; //!< Per-row zenith for spinning-multibeam; empty otherwise.
+        double zenith_residual = 0.0; //!< RMS residual of the zenith fit, in radians (see fitScanGridModel).
+
+        //! Zenith of the beam in the given row.
+        double zenith(int row) const {
+            if (!zenith_per_row.empty()) {
+                const size_t i = (size_t) row < zenith_per_row.size() ? (size_t) row : zenith_per_row.size() - 1;
+                return zenith_per_row[i];
+            }
+            return z0 + z1 * (double) row;
+        }
+
+        //! Azimuth of the beam in the given column, wrapped to [0, 2pi).
+        double azimuth(int column) const {
+            double a = std::fmod(a0 + a1 * (double) column, 2.0 * M_PI);
+            if (a < 0.0) {
+                a += 2.0 * M_PI;
+            }
+            return a;
+        }
+    };
+
+    struct VirtualMissSet {
+        bool active = false; //!< Whether this scan currently has virtualized misses.
+        int Ntheta = 0, Nphi = 0; //!< Grid dimensions the occupancy was built against.
+        std::vector<uint64_t> vacant; //!< Bit per cell, row-major (row*Nphi+col); set = this cell is a virtual miss.
+        std::vector<uint64_t> row_prefix; //!< Size Ntheta+1; virtual misses in rows [0,row).
+        ScanGridModel grid_model; //!< Angular model mapping (row,column) to a beam direction.
+        bool add_flags = false; //!< Whether gapfillMisses_code is reported for these misses.
+        bool emit_timestamp = false; //!< Whether a reconstructed timestamp is reported.
+        double t0 = 0.0, pulse_period = 1.0; //!< For reconstructing per-cell timestamps.
+        helios::vec3 origin; //!< Scan origin captured at gap-fill time.
+
+        //! Number of virtual misses in this scan.
+        uint64_t count() const {
+            return row_prefix.empty() ? 0 : row_prefix.back();
+        }
+    };
+    std::vector<VirtualMissSet> virtual_misses; //!< Parallel to \ref scans.
+    uint64_t Nvirtual = 0; //!< Total virtual misses across all scans.
+    std::vector<uint64_t> scan_virtual_offset; //!< Size scans.size()+1; prefix sum of per-scan counts.
+
+    //! Returns sampled when fitting a \ref ScanGridModel. The model has four coefficients over a highly
+    //! redundant grid, so this is far more than needed: 5,000 and 50,000 agreed to five decimal places
+    //! on a 10-million-return scan.
+    static constexpr size_t SCAN_GRID_FIT_SAMPLE_LIMIT = 20000;
+
+    //! Floor on the acceptable scan-grid fit residual, in radians, below which no origin warning is
+    //! raised regardless of the angular step. Real scans measured 2e-4 rad with a correct origin.
+    static constexpr double SCAN_GRID_RESIDUAL_FLOOR = 2.0e-3;
+
+    //! Fit a \ref ScanGridModel to a scan's returns from a bounded sample
+    /** Least squares on at most \p sample_limit returns drawn deterministically across the scan.
+        The sample size does not need to be large: on a 10-million-return scan, fitting on 5,000 points
+        and on 50,000 agreed to five decimal places, because the model has four coefficients and the
+        grid is highly redundant.
+
+        \p zenith_residual on the result is the RMS of the zenith fit and doubles as a correctness
+        check on the scan origin. Beam directions are recovered as `position - origin`, so a wrong
+        origin perturbs each one by roughly `origin_error / range` -- a range-dependent error, not a
+        rigid rotation, which no angular model can absorb. It shows up directly in this residual:
+        measured on a real scan, 0.0002 rad with the correct origin against 0.0049 rad with the origin
+        1 cm out and 0.10 rad with it 1 m out.
+
+     * \param[in] scanID Scan to fit
+     * \param[in] sample_limit Maximum returns to use
+     * \return The fitted model
+     */
+    ScanGridModel fitScanGridModel(uint scanID, size_t sample_limit) const;
+
+    //! Resolve a global hit index in the virtual range to its (scan, row, column).
+    void resolveVirtualMiss(uint index, uint &scanID, int &row, int &col) const;
+
+    //! Reconstruct a virtual miss's direction from its cell and the stored per-row model.
+    helios::SphericalCoord virtualMissDirection(const VirtualMissSet &vm, int row, int col) const;
+
+    //! Look up a virtual miss's value for \p label; returns false when the miss does not carry it.
+    bool virtualMissData(uint index, const char *label, double &value) const;
+
+    //! Collapse every virtualized miss into real \c hits / column storage. No-op when none exist.
+    void materializeVirtualMisses();
+
+    //! Discard every virtualized miss without materializing (used by filters that would delete them all).
+    void discardVirtualMisses();
+
+    //! Keep every path-length sample rather than binning. See \ref setExactPathLengths.
+    bool exact_path_lengths = false;
+
+    //! Cap on stored hit points; 0 disables. See \ref setMaxHitPoints.
+    size_t max_hit_points = DEFAULT_MAX_HIT_POINTS;
+
+    //! Raise a diagnostic error if \p projected_hit_count would exceed \ref max_hit_points.
+    void checkHitPointCapacity(size_t projected_hit_count) const;
+
     //! Resolve a label to its column slot, creating a new full-length, absent-back-filled column if it
     //! does not yet exist. Returns the slot index.
     size_t getOrCreateHitDataColumn(const std::string &label);
@@ -909,7 +1073,79 @@ private:
      * \param[in,out] warnings Warning aggregator for per-voxel convergence warnings
      * \return True if inversion succeeded, false otherwise
      */
-    bool invertLAD(uint voxel_index, float P, float Gtheta, const std::vector<float> &dr_samples, int min_voxel_hits, const helios::vec3 &gridsize, float &leaf_area, helios::WarningAggregator &warnings);
+    //! Per-voxel collection of beam path lengths, bounded in size regardless of beam count
+    /** The leaf-area inversion solves \f$\frac{1}{N}\sum_j e^{-a\,dr_j\,G(\theta)} = P\f$ for the
+        extinction coefficient \f$a\f$. That mean is a linear functional of the empirical distribution
+        of \f$dr\f$, so grouping equal-valued samples and weighting by their count is exact; binning
+        nearby values is a quadrature approximation of it.
+
+        Collecting every sample costs one float per beam-voxel intersection, which grows without bound
+        as a scan gets larger and is what stops the inversion from being computable in a single pass.
+        This accumulator instead keeps exact samples until a voxel exceeds \ref DR_HISTOGRAM_THRESHOLD,
+        then collapses them into \ref DR_HISTOGRAM_BINS bins over [0, max path length] and accumulates
+        into those thereafter. Each bin carries its count and the sum of its members, so the bin's own
+        mean is used as its representative value rather than the bin centre -- worth roughly an order of
+        magnitude of accuracy for free.
+
+        Measured on real path lengths from the `leafcube_multi` fixture (one voxel, and a 4x4x4 grid
+        giving 64 voxels with differing distributions), 256 bins recovers \f$a\f$ to within 4e-7
+        relative -- about a hundredfold inside the secant solver's own 5e-5 convergence tolerance. The
+        distribution is favourable for binning: most beams cross a voxel nearly axially, so path lengths
+        cluster tightly near the voxel size with a thin tail from grazing beams. Set
+        \ref setExactPathLengths() to keep every sample if a scan's geometry is ever less benign. */
+    struct PathLengthAccumulator {
+        std::vector<float> samples; //!< Exact samples, while below the collapse threshold.
+        std::vector<uint32_t> bin_count; //!< Per-bin sample count once collapsed; empty while exact.
+        std::vector<double> bin_sum; //!< Per-bin sum of sample values, for the bin-mean representative.
+        float bin_width = 0.f; //!< Width of each bin once collapsed.
+        size_t total = 0; //!< Total samples added, exact or binned.
+
+        //! Whether this voxel has collapsed to histogram form.
+        bool collapsed() const {
+            return !bin_count.empty();
+        }
+    };
+
+    //! Number of bins a collapsed \ref PathLengthAccumulator uses. See its documentation for the
+    //! accuracy this was measured to deliver against the solver's own tolerance.
+    static constexpr size_t DR_HISTOGRAM_BINS = 256;
+
+    //! Sample count above which a voxel's path lengths are collapsed to a histogram.
+    /** Set so collapsing never costs more than the samples it replaces. The table is
+        \ref DR_HISTOGRAM_BINS entries of (uint32 count + double sum) = 3 KB, equivalent to 768 float
+        samples, so collapsing below that point would enlarge the voxel rather than bound it. Above it
+        the saving grows without limit -- a voxel crossed by 100k beams costs the same 3 KB as one
+        crossed by 1k. (The sum is kept in double deliberately: a bin may accumulate a hundred thousand
+        values, and float32 would lose several digits of the bin mean that the representative value
+        depends on.) */
+    static constexpr size_t DR_HISTOGRAM_THRESHOLD = 1024;
+
+    //! Visit a path-length accumulator as (representative value, weight) pairs.
+    /** Exact samples are visited with weight 1; a collapsed histogram is visited once per non-empty bin,
+        with that bin's own mean as the representative value and its count as the weight. Every consumer
+        of the distribution goes through this, so the exact and binned paths cannot drift apart. */
+    template<typename F>
+    static void forEachPathLength(const PathLengthAccumulator &acc, F &&visit) {
+        if (acc.collapsed()) {
+            for (size_t b = 0; b < acc.bin_count.size(); b++) {
+                if (acc.bin_count[b] > 0) {
+                    visit(float(acc.bin_sum[b] / double(acc.bin_count[b])), double(acc.bin_count[b]));
+                }
+            }
+            return;
+        }
+        for (float v: acc.samples) {
+            visit(v, 1.0);
+        }
+    }
+
+    //! Add one path-length sample to a voxel's accumulator, collapsing it to a histogram if needed.
+    void addPathLength(PathLengthAccumulator &acc, float dr, float max_path) const;
+
+    //! Merge \p src into \p dst (used to fold per-thread and per-scan accumulators together).
+    void mergePathLengths(PathLengthAccumulator &dst, const PathLengthAccumulator &src, float max_path) const;
+
+    bool invertLAD(uint voxel_index, float P, float Gtheta, const PathLengthAccumulator &dr_samples, int min_voxel_hits, const helios::vec3 &gridsize, float &leaf_area, helios::WarningAggregator &warnings);
 
     //! Result of a per-voxel leaf-area-density inversion, including sampling uncertainty
     struct LADInversionResult {
@@ -940,7 +1176,7 @@ private:
         \param[in,out] warnings Warning aggregator for per-voxel convergence warnings
         \return LADInversionResult with the point estimate and its sampling variance
      */
-    LADInversionResult invertLADWithVariance(uint voxel_index, float P, float Gtheta, const std::vector<float> &dr_samples, float sum_frac_sq, float element_width, int min_voxel_hits, const helios::vec3 &gridsize,
+    LADInversionResult invertLADWithVariance(uint voxel_index, float P, float Gtheta, const PathLengthAccumulator &dr_samples, float sum_frac_sq, float element_width, int min_voxel_hits, const helios::vec3 &gridsize,
                                              helios::WarningAggregator &warnings);
 
     //! Test whether a voxel's (L, L1, N) fall within the Pimont (2018) Table-3 CI-validity envelope
@@ -1020,8 +1256,8 @@ private:
         \param[in,out] P_equal_denominator Running count of beams contributing to this voxel
         \param[in,out] P_equal_sumsq Running sum of squared per-beam fractions (sampling-variance guard)
         \param[in,out] dr_array_cell Per-voxel path-length samples (one push_back per contributing beam) */
-    static void accumulateBeamCell(const uint *return_indices, size_t Nreturns, const std::vector<float> &dr, const std::vector<uint> &hit_location, float &P_equal_numerator, float &P_equal_denominator, float &P_equal_sumsq,
-                                   std::vector<float> &dr_array_cell);
+    void accumulateBeamCell(const uint *return_indices, size_t Nreturns, const std::vector<float> &dr, const std::vector<uint> &hit_location, float &P_equal_numerator, float &P_equal_denominator, float &P_equal_sumsq,
+                                   PathLengthAccumulator &dr_array_cell, float max_path) const;
 
     //! Helper method for loading TreeQSM cylinder files with different coloring strategies
     /**
@@ -1054,10 +1290,17 @@ private:
      * emitted as a miss along its reconstructed direction.
      *
      * \param[in] scanID ID of scan to gapfill
-     * \param[in] add_flags if true, gapfillMisses_code is added as hitpoint data (0 = original points, 1 = gapfilled interior, 4 = extrapolated row)
+     * \param[in] add_flags if true, gapfillMisses_code is added as hitpoint data (0 = original points, 1 = gapfilled). Code 4 ("extrapolated row") is retired: the scan-grid model is fitted across the whole scan
+     *                        rather than row by row, so a row with no returns of its own is evaluated from the same coefficients as any other and is no longer a distinct case.
      * \return (x,y,z) of missing points added to the scan from gapfilling
      */
-    std::vector<helios::vec3> gapfillMisses_rowcolumn(uint scanID, const bool add_flags);
+    std::vector<helios::vec3> gapfillMisses_rowcolumn(uint scanID, const bool add_flags, const bool collect_positions, size_t &filled_count);
+
+    //! Recompute \ref Nvirtual and \ref scan_virtual_offset from the per-scan virtual miss sets.
+    void rebuildVirtualMissIndex();
+
+    //! Shared implementation behind \ref gapfillMisses() and \ref gapfillMissesCount().
+    std::vector<helios::vec3> gapfillMissesInner(uint scanID, const bool gapfill_grid_only, const bool add_flags, const bool collect_positions, size_t &filled_count);
 
 public:
     //! LiDAR point cloud constructor
@@ -2532,6 +2775,137 @@ public:
      * \return (x,y,z) of missing points added to the scan from gapfilling
      */
     std::vector<helios::vec3> gapfillMisses(uint scanID, const bool gapfill_grid_only, const bool add_flags);
+
+    //! Gap-fill a scan's missing points, returning only how many were added
+    /** Identical to \ref gapfillMisses(uint,bool,bool) except that the filled positions are not
+        collected. The vector-returning overloads materialize one \ref helios::vec3 per filled point,
+        which for a fine raster is a large allocation the caller usually does not need; prefer this
+        form when only the count matters.
+     * \param[in] scanID ID of scan to gapfill
+     * \param[in] gapfill_grid_only if true, missing points are gapfilled only within the axis-aligned bounding box of the voxel grid
+     * \param[in] add_flags if true, gapfillMisses_code is added as hitpoint data
+     * \return Number of missing points added to the scan
+     */
+    size_t gapfillMissesCount(uint scanID, const bool gapfill_grid_only, const bool add_flags);
+
+    //! Gap-fill every scan's missing points, returning only how many were added
+    /**
+     * \return Number of missing points added across all scans
+     */
+    size_t gapfillMissesCount();
+
+    //! Read every hit's position in index order, in one pass
+    /** The per-index accessors resolve a virtualized miss by binary-searching to its scan and row and
+        then scanning that row's occupancy bits to find its column -- fine for a single lookup, but
+        O(Nphi) per call, which is ruinous as the inner step of a loop over the whole cloud. This walks
+        each scan's occupancy bitset in row-major order instead, which IS index order, so every hit
+        costs O(1). Measured on 576k virtualized misses: 0.31 s through the per-index accessors against
+        0.3 ms here.
+
+        Prefer this (and \ref getHitScanIDColumn) to a `for r in 0..getHitCount()` loop of accessor
+        calls whenever the whole cloud is being read.
+     * \param[out] xyz Resized to \ref getHitCount() and filled with each hit's position
+     */
+    void getHitXYZColumn(std::vector<helios::vec3> &xyz) const;
+
+    //! Read every hit's scan ID in index order, in one pass (see \ref getHitXYZColumn)
+    /**
+     * \param[out] scanID Resized to \ref getHitCount() and filled with each hit's scan index
+     */
+    void getHitScanIDColumn(std::vector<int> &scanID) const;
+
+    //! Direction of the beam at a scan-grid cell, from the model fitted during gap-filling
+    /** Available once \ref gapfillMisses() has run on the scan through the row/column path. This is the
+        same reconstruction used to place synthesized misses, exposed so a caller can check the fitted
+        geometry against known directions.
+     * \param[in] scanID Scan index
+     * \param[in] row Scan-grid row (zenith index)
+     * \param[in] column Scan-grid column (azimuth index)
+     * \return Unit direction of that cell's beam
+     */
+    [[nodiscard]] helios::SphericalCoord getScanGridDirection(uint scanID, int row, int column) const;
+
+    //! Number of gap-filled misses currently held in virtualized form
+    /** Misses synthesized by the row/column gap-filling path are stored implicitly as a per-cell
+        occupancy bitset plus a per-row angular model, rather than as elements of the hit-point array.
+        They are reported by \ref getHitCount() and readable through every index-based accessor, but
+        occupy no per-point storage. \return Number of virtualized misses across all scans. */
+    size_t getVirtualMissCount() const;
+
+    //! Whether any gap-filled miss is currently held in virtualized form (see \ref getVirtualMissCount)
+    bool hasVirtualMisses() const;
+
+    //! Estimate the resident memory a cloud of \p hit_count points will occupy, in bytes
+    /** Each stored point costs \c sizeof(HitPoint) plus, for every scalar-data label the cloud carries,
+        one \c double of value and one byte of presence (the columnar store is dense -- see
+        \ref getHitDataColumn). The estimate uses the labels currently present, so it is most accurate
+        once at least one point has been added; before then it reflects only the labels created so far.
+
+        This is the steady-state cost. It excludes gap-filled misses held in virtualized form (see
+        \ref getVirtualMissCount), which cost roughly one bit per scan-grid cell rather than a point
+        each, and it excludes the transient of growing the arrays -- call \ref reserveHitPoints() to
+        remove that.
+     * \param[in] hit_count Number of stored hit points
+     * \return Approximate resident bytes
+     */
+    [[nodiscard]] size_t estimateHitPointMemory(size_t hit_count) const;
+
+    //! Keep every beam path length exactly, instead of binning them once a voxel accumulates many
+    /** The leaf-area inversion needs the distribution of per-beam path lengths through each voxel, not
+        just its moments, so the samples cannot be reduced to a running sum. They are therefore binned
+        once a voxel exceeds an internal threshold, which bounds the memory a voxel can consume no matter
+        how many beams cross it. Binning was measured to recover the extinction coefficient to about
+        4e-7 relative on real scan geometry -- far inside the solver's own tolerance -- but this switch
+        restores exact accumulation for a scan whose geometry might be less favourable, or to confirm
+        that binning is not responsible for a difference in results.
+     * \param[in] exact True to keep every sample; false (the default) to bin above the threshold
+     */
+    void setExactPathLengths(bool exact);
+
+    //! Whether path lengths are accumulated exactly (see \ref setExactPathLengths)
+    [[nodiscard]] bool getExactPathLengths() const;
+
+    //! Default cap on the number of stored hit points in a cloud (see \ref setMaxHitPoints).
+    /** At the current per-point cost this is on the order of 20 GB of hit storage, so it does not
+        constrain any scan a workstation can actually hold; it exists so that a mis-specified scan grid
+        fails with an actionable message instead of exhausting the machine. */
+    static constexpr size_t DEFAULT_MAX_HIT_POINTS = size_t(100) * 1000 * 1000; // 100 million
+
+    //! Maximum number of hit points a cloud may hold before loading fails with a diagnostic
+    /** Exceeding this raises an error naming the required and permitted memory rather than letting the
+        allocation fail deep inside the standard library, where the message says nothing about which
+        scan was too large or by how much. A value of 0 disables the cap.
+
+        The default (\ref DEFAULT_MAX_HIT_POINTS) is deliberately generous -- it is a guard against a
+        mis-specified scan silently exhausting the machine, not a statement of what a given machine can
+        hold. Raise it with \ref setMaxHitPoints() when the machine genuinely has the memory.
+     * \param[in] max_hits Maximum stored hit points, or 0 to disable the check
+     */
+    void setMaxHitPoints(size_t max_hits);
+
+    //! Current cap on stored hit points (see \ref setMaxHitPoints)
+    [[nodiscard]] size_t getMaxHitPoints() const;
+
+    //! Reserve storage for an expected total number of hit points
+    /** Growing the hit-point array and its scalar-data columns by repeated insertion reallocates each of
+        them geometrically, and during every reallocation the old and new buffers are both live. For a
+        cloud of tens of millions of returns that transient is gigabytes on top of the steady-state cost,
+        and on Windows it is charged against the system commit limit at allocation time -- so a load that
+        would comfortably fit once settled can still fail while growing. Reserving the final size once
+        removes the transient entirely.
+
+        This only reserves capacity; it does not create hit points, and \ref getHitCount() is unchanged.
+        Reserving less than the eventual total is harmless (growth resumes normally), as is reserving more
+        (the excess is released by \ref clearHits()).
+     * \param[in] hit_count Expected total number of hit points in the cloud
+     */
+    void reserveHitPoints(size_t hit_count);
+
+    //! Convert every virtualized gap-filled miss into a stored hit point
+    /** Every observable is unchanged by this call -- it trades the memory saving for real storage.
+        It happens automatically before any operation that renumbers the hit index space (deleting or
+        adding a hit point, writing hit data or a grid cell). */
+    void materializeMisses();
 
 
     //! Calculate the leaf area for each grid volume

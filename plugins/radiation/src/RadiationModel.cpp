@@ -1964,6 +1964,276 @@ bool RadiationModel::needsGeometryRebuild() const {
 }
 
 
+void RadiationModel::enableCameraFluxSmoothing(float crease_angle_degrees) {
+    if (crease_angle_degrees < 0.f || crease_angle_degrees > 180.f) {
+        helios_runtime_error("ERROR (RadiationModel::enableCameraFluxSmoothing): Crease angle of " + std::to_string(crease_angle_degrees) +
+                             " degrees is out of range. The crease angle must be between 0 and 180 degrees, where 0 treats every mesh edge as a crease and 180 treats none of them as one.");
+    }
+    cameraflux_smoothing_enabled = true;
+    cameraflux_smoothing_crease_angle = crease_angle_degrees;
+
+    // The topology is uploaded with the geometry, so toggling smoothing after geometry has already been built has to repeat that upload.
+    if (isgeometryinitialized) {
+        uploadCameraFluxSmoothingTopology();
+    }
+}
+
+void RadiationModel::disableCameraFluxSmoothing() {
+    cameraflux_smoothing_enabled = false;
+    if (isgeometryinitialized) {
+        uploadCameraFluxSmoothingTopology();
+    }
+}
+
+void RadiationModel::uploadCameraFluxSmoothingTopology() {
+    buildCameraFluxSmoothingTopology();
+
+    // Re-uploading the geometry releases the buffers the acceleration structure was built from, so it is rebuilt here rather than left pointing at storage that has been freed. Toggling smoothing is a
+    // deliberate one-off, so paying for a rebuild is preferable to carrying a second upload path that only writes this one buffer.
+    backend->updateGeometry(geometry_data);
+    backend->buildAccelerationStructure();
+}
+
+bool RadiationModel::isCameraFluxSmoothingEnabled() const {
+    return cameraflux_smoothing_enabled;
+}
+
+float RadiationModel::getCameraFluxSmoothingCreaseAngle() const {
+    return cameraflux_smoothing_crease_angle;
+}
+
+void RadiationModel::buildCameraFluxSmoothingTopology() {
+
+    smoothing_vertex_indices.clear();
+    smoothing_vertex_area.clear();
+    smoothing_primitive_area.clear();
+    smoothing_vertex_count = 0;
+    geometry_data.smoothing_vertex_indices.clear();
+    geometry_data.smoothing_vertex_count = 0;
+
+    if (!cameraflux_smoothing_enabled) {
+        return;
+    }
+
+    const size_t primitive_count = context_UUIDs.size();
+    if (primitive_count == 0) {
+        return;
+    }
+
+    smoothing_vertex_indices.assign(4 * primitive_count, -1);
+    smoothing_primitive_area.assign(primitive_count, 0.f);
+
+    // Gather the primitives of each parent object together, so that the per-object topology is fetched once rather than once per facet.
+    std::map<uint, std::vector<size_t>> positions_by_object;
+    for (size_t position = 0; position < primitive_count; position++) {
+        const uint UUID = context_UUIDs.at(position);
+        smoothing_primitive_area.at(position) = context->getPrimitiveArea(UUID);
+
+        const uint parent_ObjID = context->getPrimitiveParentObjectID(UUID);
+        if (parent_ObjID == 0 || !context->doesObjectExist(parent_ObjID)) {
+            continue; // a primitive belonging to no object has no neighbours to share a vertex with
+        }
+        positions_by_object[parent_ObjID].push_back(position);
+    }
+
+    const float crease_angle_radians_mesh = deg2rad(cameraflux_smoothing_crease_angle);
+
+    std::vector<float> vertex_area;
+    size_t next_global_vertex = 0;
+
+    for (const auto &object_entry: positions_by_object) {
+        const uint parent_ObjID = object_entry.first;
+        const std::vector<size_t> &positions = object_entry.second;
+
+        if (!context->doesObjectHaveSharedVertexTopology(parent_ObjID)) {
+            continue; // a box, a disk, or a mesh with no face table: its faces are flat, or its facets are not known to meet
+        }
+
+        // Welding only within a cross-section keeps the coarse faceting around a tube or cone from being smoothed along its length as well, where consecutive nodes resolve genuine variation.
+        const size_t local_vertex_count = context->getObjectSharedVertexCount(parent_ObjID, helios::WELD_CROSS_SECTION_ONLY);
+        if (local_vertex_count == 0) {
+            continue; // the object could not locate its own facets, so no topology is available
+        }
+
+        std::vector<uint> object_UUIDs;
+        object_UUIDs.reserve(positions.size());
+        for (size_t position: positions) {
+            object_UUIDs.push_back(context_UUIDs.at(position));
+        }
+
+        const std::vector<std::vector<int>> local_indices = context->getObjectPrimitiveSharedVertexIndices(parent_ObjID, object_UUIDs, helios::WELD_CROSS_SECTION_ONLY);
+
+        // A curved object is a tessellation of a smooth surface, so every edge of it is an artifact of the tessellation and none of them is a crease. Only a mesh can have an edge that is genuinely there.
+        const bool object_can_have_creases = (context->getObjectType(parent_ObjID) == helios::OBJECT_TYPE_POLYMESH);
+        const float crease_angle_radians = object_can_have_creases ? crease_angle_radians_mesh : float(M_PI);
+
+        // Facet normals, for the crease test. Computed from the corner positions rather than read from any stored vertex normal, which smoothing neither needs nor uses.
+        std::vector<helios::vec3> facet_normal(object_UUIDs.size(), helios::make_vec3(0, 0, 0));
+        for (size_t k = 0; k < object_UUIDs.size(); k++) {
+            if (local_indices.at(k).empty()) {
+                continue;
+            }
+            const std::vector<helios::vec3> corners = context->getPrimitiveVertices(object_UUIDs.at(k));
+            if (corners.size() < 3) {
+                continue;
+            }
+            const helios::vec3 facet_cross = cross(corners.at(1) - corners.at(0), corners.at(2) - corners.at(0));
+            const float cross_magnitude = facet_cross.magnitude();
+            if (cross_magnitude > 0.f) {
+                facet_normal.at(k) = facet_cross / cross_magnitude;
+            }
+        }
+
+        // Which facets meet at each of the object's shared vertices.
+        std::vector<std::vector<size_t>> vertex_to_facets(local_vertex_count);
+        for (size_t k = 0; k < local_indices.size(); k++) {
+            for (int local_vertex: local_indices.at(k)) {
+                if (local_vertex >= 0 && size_t(local_vertex) < local_vertex_count) {
+                    vertex_to_facets.at(size_t(local_vertex)).push_back(k);
+                }
+            }
+        }
+
+        // Assign each smooth group of facets around a vertex its own slot in the global buffer. Facets meeting at more than the crease angle end up in different groups, so a genuine edge stays sharp
+        // instead of the lit side bleeding into the shaded one.
+        std::vector<std::map<size_t, int>> facet_vertex_slot(local_vertex_count);
+
+        for (size_t local_vertex = 0; local_vertex < local_vertex_count; local_vertex++) {
+            const std::vector<size_t> &incident_facets = vertex_to_facets.at(local_vertex);
+            if (incident_facets.empty()) {
+                continue; // a lattice slot no facet reaches; allocating a buffer entry for it would be wasted
+            }
+
+            std::vector<std::vector<size_t>> smooth_groups;
+            for (size_t incident_facet: incident_facets) {
+                bool placed = false;
+                for (std::vector<size_t> &group: smooth_groups) {
+                    for (size_t member_facet: group) {
+                        if (acos_safe(facet_normal.at(incident_facet) * facet_normal.at(member_facet)) <= crease_angle_radians) {
+                            group.push_back(incident_facet);
+                            placed = true;
+                            break;
+                        }
+                    }
+                    if (placed) {
+                        break;
+                    }
+                }
+                if (!placed) {
+                    smooth_groups.push_back({incident_facet});
+                }
+            }
+
+            for (const std::vector<size_t> &group: smooth_groups) {
+                const int global_vertex = int(next_global_vertex);
+                next_global_vertex++;
+                vertex_area.push_back(0.f);
+                for (size_t member_facet: group) {
+                    facet_vertex_slot.at(local_vertex)[member_facet] = global_vertex;
+                }
+            }
+        }
+
+        // Record where each facet's corners landed, and how much area meets at each shared vertex.
+        for (size_t k = 0; k < local_indices.size(); k++) {
+            const std::vector<int> &corners = local_indices.at(k);
+            if (corners.size() != 3 && corners.size() != 4) {
+                continue; // the object does not describe this facet
+            }
+
+            // Resolve every corner before writing any of them. The camera program tells a triangle from a patch by whether the fourth entry is negative, so a partly-resolved patch would be read as a
+            // triangle and interpolated with the wrong weights - a plausible-looking but wrong image rather than a visible failure.
+            int resolved[4] = {-1, -1, -1, -1};
+            bool all_corners_resolved = true;
+            for (size_t c = 0; c < corners.size(); c++) {
+                const int local_vertex = corners.at(c);
+                if (local_vertex < 0 || size_t(local_vertex) >= local_vertex_count) {
+                    all_corners_resolved = false;
+                    break;
+                }
+                auto slot = facet_vertex_slot.at(size_t(local_vertex)).find(k);
+                if (slot == facet_vertex_slot.at(size_t(local_vertex)).end()) {
+                    all_corners_resolved = false;
+                    break;
+                }
+                resolved[c] = slot->second;
+            }
+            if (!all_corners_resolved) {
+                continue; // leave the facet unsmoothed, so the camera keeps its per-primitive value
+            }
+
+            const size_t position = positions.at(k);
+            const float facet_area = smoothing_primitive_area.at(position);
+            for (size_t c = 0; c < corners.size(); c++) {
+                smoothing_vertex_indices.at(4 * position + c) = resolved[c];
+                vertex_area.at(size_t(resolved[c])) += facet_area;
+            }
+        }
+    }
+
+    smoothing_vertex_count = next_global_vertex;
+    smoothing_vertex_area = vertex_area;
+
+    geometry_data.smoothing_vertex_indices = smoothing_vertex_indices;
+    geometry_data.smoothing_vertex_count = smoothing_vertex_count;
+}
+
+void RadiationModel::accumulateCameraFluxAtVertices(const std::vector<float> &flux_top, const std::vector<float> &flux_bottom, size_t band_count, std::vector<float> &vertex_flux_top,
+                                                    std::vector<float> &vertex_flux_bottom) const {
+
+    vertex_flux_top.assign(smoothing_vertex_count * band_count, 0.f);
+    vertex_flux_bottom.assign(smoothing_vertex_count * band_count, 0.f);
+
+    if (smoothing_vertex_count == 0) {
+        return;
+    }
+
+    const size_t primitive_count = context_UUIDs.size();
+
+    // A topology built against a different primitive ordering would attribute each facet's flux to whichever vertices now occupy those slots, producing a plausible but wrong image with no other symptom.
+    if (smoothing_vertex_indices.size() != 4 * primitive_count || smoothing_primitive_area.size() != primitive_count) {
+        helios_runtime_error("ERROR (RadiationModel::accumulateCameraFluxAtVertices): The camera flux smoothing topology describes " + std::to_string(smoothing_vertex_indices.size() / 4) +
+                             " primitives but the geometry holds " + std::to_string(primitive_count) +
+                             ". The topology is built by updateGeometry() and is only valid for the primitive ordering that build produced. Call updateGeometry() after changing the geometry.");
+    }
+    if (flux_top.size() < primitive_count * band_count || flux_bottom.size() < primitive_count * band_count) {
+        helios_runtime_error("ERROR (RadiationModel::accumulateCameraFluxAtVertices): The outgoing radiation buffers hold " + std::to_string(flux_top.size()) + " entries but " +
+                             std::to_string(primitive_count * band_count) + " are required for " + std::to_string(primitive_count) + " primitives across " + std::to_string(band_count) + " bands.");
+    }
+
+    for (size_t position = 0; position < primitive_count; position++) {
+        if (smoothing_vertex_indices.at(4 * position) < 0) {
+            continue; // this primitive takes no part in smoothing
+        }
+        const float facet_area = smoothing_primitive_area.at(position);
+        if (facet_area <= 0.f) {
+            continue;
+        }
+
+        for (size_t c = 0; c < 4; c++) {
+            const int global_vertex = smoothing_vertex_indices.at(4 * position + c);
+            if (global_vertex < 0) {
+                continue; // a triangle, which has only three corners
+            }
+            for (size_t b = 0; b < band_count; b++) {
+                vertex_flux_top.at(size_t(global_vertex) * band_count + b) += facet_area * flux_top.at(position * band_count + b);
+                vertex_flux_bottom.at(size_t(global_vertex) * band_count + b) += facet_area * flux_bottom.at(position * band_count + b);
+            }
+        }
+    }
+
+    for (size_t vertex = 0; vertex < smoothing_vertex_count; vertex++) {
+        const float total_area = smoothing_vertex_area.at(vertex);
+        if (total_area <= 0.f) {
+            continue; // no facet meets here, so the slot is never read; leaving it at zero avoids dividing by nothing
+        }
+        for (size_t b = 0; b < band_count; b++) {
+            vertex_flux_top.at(vertex * band_count + b) /= total_area;
+            vertex_flux_bottom.at(vertex * band_count + b) /= total_area;
+        }
+    }
+}
+
 void RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) {
 
     if (message_flag) {
@@ -1977,6 +2247,9 @@ void RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) {
     // CRITICAL: context_UUIDs must match GPU buffer ordering (primitive_UUIDs_ordered)
     // Emission data is indexed by position, which corresponds to primitive_UUIDs order
     context_UUIDs = geometry_data.primitive_UUIDs;
+
+    // The smoothing topology names primitives by their position in the buffer just built, so it is only meaningful for this ordering and must be rebuilt whenever the ordering is.
+    buildCameraFluxSmoothingTopology();
 
     backend->updateGeometry(geometry_data);
     backend->buildAccelerationStructure();
@@ -4363,6 +4636,14 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         // Cameras read from radiation_out during hits, so we upload camera scatter there
         if (Ncameras > 0 && scatteringenabled) {
             backend->uploadRadiationOut(scatter_top_cam, scatter_bottom_cam);
+
+            // Resample the same field the cameras are about to read onto the shared mesh vertices. It has to be this array rather than flux_top: what a camera integrates is the scattered radiance weighted by
+            // its own spectral response, with the emitted flux folded in, which is a different quantity from the primitive's band-weighted outgoing flux.
+            if (cameraflux_smoothing_enabled && smoothing_vertex_count > 0) {
+                std::vector<float> vertex_flux_top, vertex_flux_bottom;
+                accumulateCameraFluxAtVertices(scatter_top_cam, scatter_bottom_cam, Nbands_launch, vertex_flux_top, vertex_flux_bottom);
+                backend->uploadVertexRadiationOut(vertex_flux_top, vertex_flux_bottom);
+            }
         }
 
         // Setup solar disk rendering for cameras (enables lens flare effects)

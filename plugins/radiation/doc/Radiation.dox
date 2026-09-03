@@ -920,6 +920,41 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
 
  \image html specular_exponent_comparison.png
 
+ \subsubsection RadCamSmoothing Camera Flux Smoothing
+
+ A camera builds each pixel from a single outgoing flux value per primitive, so every pixel that lands on a given facet reads the same value. On a surface whose tessellation is coarse relative to the way its flux varies - a stem or trunk built as a \ref helios::Tube "Tube" object with six to ten radial divisions, a low-subdivision \ref helios::Sphere "Sphere", a mesh imported at low resolution - the image is a set of flat panels with a visible step at every facet edge, even though the surface being represented is smooth.
+
+ \ref RadiationModel::enableCameraFluxSmoothing() "enableCameraFluxSmoothing()" reconstructs the image differently. The outgoing flux is first averaged onto the vertices that neighbouring facets share, weighted by facet area,
+
+ \f[ \Phi_v = \frac{\sum_f A_f \Phi_f}{\sum_f A_f} \f]
+
+ where the sums run over the facets \f$f\f$ meeting at vertex \f$v\f$, and is then interpolated back across each facet from its own corners. The result is a continuous field over the object rather than one constant per facet, so a tessellated curve reads as a curve. The top and bottom faces are averaged separately, so a thin leaf does not render as the average of its lit and shaded sides.
+
+ ~~~~~~{.cpp}
+    RadiationModel radiation(&context);
+    radiation.enableCameraFluxSmoothing();      //!< optionally takes a crease angle in degrees; default 30
+    ...
+    radiation.runBand("SW");
+ ~~~~~~
+
+ <b>This changes what the camera reports.</b> A pixel no longer carries the outgoing flux of the primitive behind it, but a blend of that primitive's value with those of its neighbours, so pixel values no longer correspond exactly to the `radiation_flux_*` primitive data. This is a deliberate trade: the interpolated value is a better estimate of the flux leaving the smooth surface that the tessellation approximates, and a worse answer to the question "what is the flux on this particular facet". Smoothing is therefore <b>off by default</b>, and users doing sensor simulation should enable it deliberately. Nothing else is affected - the radiation solve, the `radiation_flux_*` values themselves, and the pixel label and depth images are all unchanged, and ray generation, cosine weighting and scattering all continue to use the flat per-primitive normal and flux.
+
+ Smoothing applies to the object types whose facet edges are an artifact of the tessellation:
+
+ <table>
+ <tr><th>Object type</th><th>Behavior</th></tr>
+ <tr><td>\ref helios::Tube "Tube", \ref helios::Cone "Cone"</td><td>Smoothed around the circumference. Vertices are <em>not</em> shared between segments, so variation along the length of the object - a shadow edge crossing a trunk - is left alone, since consecutive nodes resolve it.</td></tr>
+ <tr><td>\ref helios::Sphere "Sphere"</td><td>Smoothed around the azimuth. The rings bounding each zenith band are kept separate, by the same rule as a tube.</td></tr>
+ <tr><td>\ref helios::Polymesh "Polymesh"</td><td>Smoothed across the face table retained by \ref helios::Context::loadOBJ() "loadOBJ()" and \ref helios::Context::loadPLY() "loadPLY()", subject to the crease angle. A mesh assembled from loose primitives by \ref helios::Context::addPolymeshObject() "addPolymeshObject()" carries no face table and is left alone.</td></tr>
+ <tr><td>\ref helios::Tile "Tile", \ref helios::AdaptiveTile "AdaptiveTile"</td><td>Smoothed bilinearly across the sub-patch grid. Note that a tile's faces are genuinely planar, so unlike the curved types there is no faceting artifact to remove here; smoothing instead blurs real per-sub-patch variation, which is worth weighing against the reduction in per-sub-patch Monte-Carlo noise.</td></tr>
+ <tr><td>\ref helios::Box "Box", \ref helios::Disk "Disk"</td><td>Not smoothed. Their faces are flat, so the per-facet value is already correct everywhere on them.</td></tr>
+ <tr><td>Primitives with no parent object</td><td>Not smoothed. A standalone patch or triangle has no neighbour to share a vertex with. Its pixels are identical whether smoothing is on or off.</td></tr>
+ </table>
+
+ The crease angle, given in degrees to \ref RadiationModel::enableCameraFluxSmoothing() "enableCameraFluxSmoothing()", is the angle between adjacent facet normals above which a shared edge is treated as a hard edge and flux is not averaged across it. It applies to \ref helios::Polymesh "Polymesh" objects only: an imported mesh may contain an edge that is genuinely there, such as the edge of a cube, and averaging across it would bleed the lit face into the shadowed one. The curved object types are smooth by construction and are never creased - a tube of six radial divisions has sixty degrees between neighbouring facets, which is under-resolution rather than a crease, so applying a crease test to it would defeat the feature entirely.
+
+ \note Vertex normals are neither required nor used. Smoothing interpolates a scalar flux, not a direction, so a mesh reporting \ref helios::NORMAL_SOURCE_NONE is smoothed just as one carrying authored normals is. This is unrelated to the \ref Visualizer smooth shading controlled by \ref Visualizer::enableSmoothShading(), which does interpolate normals and is a pure rendering concern with no measurement semantics.
+
  \subsubsection RadCamCalibColor Radiation Camera Color Calibration
 
  By default, it is assumed that the spectral sensitivity is 100\% across all wavelengths. This is not the case for any real camera, as sensitivity of the sensor usually varies greatly with wavelength as shown in the image below. We need to set the spectral response of each camera channel. This can be done using the \ref RadiationModel::setCameraSpectralResponse() method. Three arguments must be provided: 1) the label for the camera to be set (first argument to the camera adder method), 2) the label for the camera channel (e.g., "red", "PAR", etc.), and 3) the label for global data in the Context containing spectral response data. The 3rd point is similar to how spectral data is specified for sources and radiative properties - a vector of wavelength and intensity values.

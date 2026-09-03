@@ -910,6 +910,31 @@ size_t LiDARcloud::loadASCIIFile(uint scanID, const std::string &ASCII_data_file
     }
     const ScanMetadata &scan_data = scans.at(scanID);
 
+    // Count the data lines before reading any, so the hit-point array and its scalar-data columns can be
+    // grown once rather than reallocating geometrically as points are appended. The old and new buffers
+    // are both live during each reallocation, so for a cloud of tens of millions of returns that transient
+    // is gigabytes on top of the steady-state cost -- and on Windows it is charged against the system
+    // commit limit at allocation time, so a file that fits once loaded can still fail while loading.
+    // The count is an upper bound (blank and '#' comment lines are skipped when actually parsed), and
+    // over-reserving is harmless. Reading the file twice costs one extra sequential pass, which is
+    // negligible beside the reallocation traffic it removes.
+    {
+        std::size_t line_estimate = 0;
+        std::ifstream counter(resolved_filename);
+        if (counter.is_open()) {
+            std::string line;
+            while (std::getline(counter, line)) {
+                const size_t first = line.find_first_not_of(" \t\r");
+                if (first != std::string::npos && line[first] != '#') {
+                    line_estimate++; // a data line (blank and comment lines carry no hit)
+                }
+            }
+        }
+        if (line_estimate > 0) {
+            reserveHitPoints(getHitCount() + line_estimate);
+        }
+    }
+
     vec3 temp_xyz;
     float temp_zenith, temp_azimuth;
     RGBcolor temp_rgb;
@@ -1482,7 +1507,16 @@ void LiDARcloud::exportPointCloud(const char *filename, uint scanID, bool write_
 
             const int code = col_resolved[c];
             if (code >= 0) { // scalar-data column slot
-                if (hit_data_present[code][r] != char(0)) {
+                // A virtualized gap-filled miss has no row in the columnar store (its index lies above
+                // hits.size()); read it through the accessors, which reconstruct its small label set.
+                if (size_t(r) >= hit_data_columns[code].size()) {
+                    const std::string &lbl = hit_data_labels[size_t(code)];
+                    if (doesHitDataExist(uint(r), lbl.c_str())) {
+                        file << getHitData(uint(r), lbl.c_str());
+                    } else {
+                        file << -9999;
+                    }
+                } else if (hit_data_present[code][r] != char(0)) {
                     file << hit_data_columns[code][r];
                 } else {
                     file << -9999;

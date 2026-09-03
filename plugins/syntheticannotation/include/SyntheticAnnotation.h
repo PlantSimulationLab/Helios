@@ -78,7 +78,10 @@ public:
 
     //! Set the sky dome texture image used as the background of the RGB rendering
     /**
-     * \param[in] filename Path to the sky dome texture image (JPEG or PNG).
+     * The sky dome is drawn over the background colour, so it is what a viewer sees unless it is removed. Pass an empty filename to remove it and leave the flat colour set by
+     * \ref setBackgroundColor(const helios::RGBcolor &color) "setBackgroundColor()" showing, which is what reproducing a photographed backdrop calls for.
+     *
+     * \param[in] filename Path to the sky dome texture image (JPEG or PNG), or an empty string to render against the background colour alone.
      */
     void addSkyDome(const char *filename);
 

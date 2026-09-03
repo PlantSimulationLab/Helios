@@ -352,6 +352,9 @@ void OptiX6Backend::initialize() {
     addBuffer("radiation_in", radiation_in_RTbuffer, radiation_in_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("radiation_out_top", radiation_out_top_RTbuffer, radiation_out_top_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("radiation_out_bottom", radiation_out_bottom_RTbuffer, radiation_out_bottom_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
+    addBuffer("smoothing_vertex_indices", smoothing_vertex_indices_RTbuffer, smoothing_vertex_indices_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_INT, 1);
+    addBuffer("vertex_radiation_out_top", vertex_radiation_out_top_RTbuffer, vertex_radiation_out_top_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
+    addBuffer("vertex_radiation_out_bottom", vertex_radiation_out_bottom_RTbuffer, vertex_radiation_out_bottom_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("radiation_in_camera", radiation_in_camera_RTbuffer, radiation_in_camera_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("camera_pixel_label", camera_pixel_label_RTbuffer, camera_pixel_label_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_UNSIGNED_INT, 1);
     addBuffer("camera_pixel_depth", camera_pixel_depth_RTbuffer, camera_pixel_depth_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
@@ -899,6 +902,19 @@ void OptiX6Backend::zeroScatterBuffers() {
 
     // NOTE: Camera scatter buffers are NOT zeroed here
     // They accumulate across all scatter iterations and are only zeroed once in zeroRadiationBuffers()
+}
+
+void OptiX6Backend::uploadVertexRadiationOut(const std::vector<float> &vertex_radiation_out_top, const std::vector<float> &vertex_radiation_out_bottom) {
+    if (!is_initialized) {
+        helios_runtime_error("ERROR (OptiX6Backend::uploadVertexRadiationOut): Backend not initialized.");
+    }
+
+    if (vertex_radiation_out_top.empty() || vertex_radiation_out_bottom.empty()) {
+        return; // camera flux smoothing is disabled, so there is nothing for the camera program to read
+    }
+
+    initializeBuffer1Df(vertex_radiation_out_top_RTbuffer, vertex_radiation_out_top);
+    initializeBuffer1Df(vertex_radiation_out_bottom_RTbuffer, vertex_radiation_out_bottom);
 }
 
 void OptiX6Backend::zeroCameraScatterBuffers(size_t launch_band_count) {
@@ -1525,6 +1541,18 @@ void OptiX6Backend::geometryToBuffers(const RayTracingGeometry &geometry) {
             flags_with_bbox.push_back(1); // bboxes are two-sided
         }
         initializeBuffer1Dchar(twosided_flag_RTbuffer, flags_with_bbox);
+    }
+
+    // Camera flux smoothing topology, four entries per primitive. The bbox primitives OptiX appends to the geometry take no part in smoothing, so their entries are negative.
+    if (!geometry.smoothing_vertex_indices.empty()) {
+        std::vector<int> indices_with_bbox = geometry.smoothing_vertex_indices;
+        indices_with_bbox.resize(indices_with_bbox.size() + 4 * geometry.bbox_count, -1);
+        initializeBuffer1Di(smoothing_vertex_indices_RTbuffer, indices_with_bbox);
+    } else {
+        // Smoothing is off, so leave a buffer too short for any primitive to index into; the camera program falls back to the per-primitive value.
+        zeroBuffer1D(smoothing_vertex_indices_RTbuffer, 1);
+        zeroBuffer1D(vertex_radiation_out_top_RTbuffer, 1);
+        zeroBuffer1D(vertex_radiation_out_bottom_RTbuffer, 1);
     }
 
     // Solid fractions: append bbox fractions for OptiX

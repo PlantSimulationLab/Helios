@@ -665,6 +665,39 @@ TEST_CASE("Coordinate System Conversions") {
         ss << sc;
         DOCTEST_CHECK(ss.str() == "helios::SphericalCoord<1, 0.5, 1.5>");
     }
+    SUBCASE("Copied SphericalCoord owns its elevation/zenith") {
+        // `elevation` and `zenith` are read-only references onto the struct's own private storage. A copy
+        // must bind them to its OWN storage: binding them to the source instead makes every copy alias the
+        // object it came from, so the copy reports the source's angle after the source changes and reads
+        // freed memory once the source dies (the usual case -- a SphericalCoord copied into a container
+        // outlives the temporary it was built from). References cannot be rebound, so assigning to such a
+        // copy also leaves the reference reporting the pre-assignment value.
+        SphericalCoord source(1.f, 0.35f, 0.9f);
+        std::vector<SphericalCoord> stored;
+        stored.push_back(source);
+        DOCTEST_CHECK(stored[0].elevation == doctest::Approx(0.35f));
+
+        // Mutating the source must not disturb the copy.
+        source = SphericalCoord(1.f, -0.31f, 0.9f);
+        DOCTEST_CHECK(stored[0].elevation == doctest::Approx(0.35f));
+        DOCTEST_CHECK(stored[0].zenith == doctest::Approx(0.5f * PI_F - 0.35f));
+
+        // Assigning through a copy must be observable through its own reference members. `original` is an
+        // lvalue so this genuinely runs the copy constructor rather than being elided.
+        SphericalCoord original(1.f, 0.10f, 0.f);
+        SphericalCoord copy(original);
+        copy = SphericalCoord(1.f, 0.77f, 0.f);
+        DOCTEST_CHECK(copy.elevation == doctest::Approx(0.77f));
+        DOCTEST_CHECK(copy.zenith == doctest::Approx(0.5f * PI_F - 0.77f));
+
+        // A copy must stay valid once the object it was copied from has gone out of scope.
+        SphericalCoord outlives;
+        {
+            SphericalCoord temporary(1.f, 0.42f, 0.2f);
+            outlives = SphericalCoord(temporary);
+        }
+        DOCTEST_CHECK(outlives.elevation == doctest::Approx(0.42f));
+    }
     SUBCASE("Cartesian to Spherical and back") {
         SphericalCoord sph = make_SphericalCoord(1.f, 0.25 * PI_F, 1.5 * PI_F);
         vec3 cart = sphere2cart(sph);

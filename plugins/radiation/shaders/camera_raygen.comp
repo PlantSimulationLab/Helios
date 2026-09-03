@@ -59,6 +59,7 @@ layout(set = 0, binding = 14) readonly buffer MaskIDsBuffer { int mask_ids[]; } 
 layout(set = 0, binding = 15) readonly buffer UVDataBuffer { vec2 uv_data[]; } uv_data_buf;
 layout(set = 0, binding = 16) readonly buffer UVIDsBuffer { int uv_ids[]; } uv_ids_buf;
 layout(set = 0, binding = 17) readonly buffer BboxVerticesBuffer { float vertices[]; } bbox_verts_buf;
+layout(set = 0, binding = 18) readonly buffer SmoothingVertexIndicesBuffer { int indices[]; } smoothing_indices_buf;
 
 // ========== Descriptor Set 1: Materials/Sources ==========
 // NOTE on the three-float source/sky arrays below: std430 gives an array of `vec3` a 16-byte
@@ -88,6 +89,8 @@ vec3 get_source_rotation(uint source_index) {
 // ========== Descriptor Set 2: Result Buffers ==========
 layout(set = 2, binding = 1) readonly buffer RadiationOutTopBuffer { float radiation_out_top[]; };
 layout(set = 2, binding = 2) readonly buffer RadiationOutBottomBuffer { float radiation_out_bottom[]; };
+layout(set = 2, binding = 11) readonly buffer VertexRadiationOutTopBuffer { float vertex_radiation_out_top[]; };
+layout(set = 2, binding = 12) readonly buffer VertexRadiationOutBottomBuffer { float vertex_radiation_out_bottom[]; };
 layout(set = 2, binding = 5) buffer CameraRadiationBuffer { float camera_radiation[]; };
 layout(set = 2, binding = 10) readonly buffer RadiationSpecularBuffer { float radiation_specular[]; } radiation_specular_buf;
 
@@ -282,9 +285,10 @@ void main() {
 
     uint hit_prim = UINT_MAX;
     float closest_t;
+    vec2 hit_uv = vec2(0.0);
 
     for (int wrap = 0; wrap < 10; ++wrap) {
-        hit_prim = traverse_cwbvh(ray_origin, ray_dir, 1e-5, UINT_MAX, closest_t);
+        hit_prim = traverse_cwbvh(ray_origin, ray_dir, 1e-5, UINT_MAX, closest_t, hit_uv);
 
         if (pc.bbox_count == 0) break; // No periodic boundaries
 
@@ -327,6 +331,38 @@ void main() {
         // Determine which face was hit
         bool face = dot(normal, ray_dir) < 0.0; // true = hit top face
 
+        // Resolve the shared vertices of the facet that was hit, and the weights to blend them with. Done once for the whole hit rather than once per band.
+        int smooth_v0 = -1;
+        int smooth_v1 = -1;
+        int smooth_v2 = -1;
+        int smooth_v3 = -1;
+        float smooth_w0 = 0.0;
+        float smooth_w1 = 0.0;
+        float smooth_w2 = 0.0;
+        float smooth_w3 = 0.0;
+
+        if (smoothing_indices_buf.indices.length() > int(hit_position) * 4 + 3 && vertex_radiation_out_top.length() > 0) {
+            smooth_v0 = smoothing_indices_buf.indices[int(hit_position) * 4 + 0];
+            if (smooth_v0 >= 0) {
+                smooth_v1 = smoothing_indices_buf.indices[int(hit_position) * 4 + 1];
+                smooth_v2 = smoothing_indices_buf.indices[int(hit_position) * 4 + 2];
+                smooth_v3 = smoothing_indices_buf.indices[int(hit_position) * 4 + 3];
+
+                if (smooth_v3 < 0) {
+                    // Triangle: barycentric weights, the traversal having reported the weights of the second and third corners.
+                    smooth_w1 = hit_uv.x;
+                    smooth_w2 = hit_uv.y;
+                    smooth_w0 = 1.0 - smooth_w1 - smooth_w2;
+                } else {
+                    // Patch: bilinear weights over the patch-local coordinates, whose corners run (0,0), (1,0), (1,1), (0,1).
+                    smooth_w0 = (1.0 - hit_uv.x) * (1.0 - hit_uv.y);
+                    smooth_w1 = hit_uv.x * (1.0 - hit_uv.y);
+                    smooth_w2 = hit_uv.x * hit_uv.y;
+                    smooth_w3 = (1.0 - hit_uv.x) * hit_uv.y;
+                }
+            }
+        }
+
         // Process each band
         for (uint b = 0; b < pc.band_count; b++) {
             float source_radiance = 0.0;
@@ -368,8 +404,28 @@ void main() {
 
             // Read surface scattered radiation (from radiation_out buffers populated by copyScatterToRadiation)
             uint buf_idx = hit_position * pc.band_count + b;
+            bool use_top_face = (face || prim_types_buf.types[hit_prim] == 4u);
+
             float surface_strength;
-            if (face || prim_types_buf.types[hit_prim] == 4u) {
+            if (smooth_v0 >= 0) {
+                // Camera flux smoothing: blend the outgoing flux across the facet from the values carried by the vertices it shares with its neighbours, so that a coarsely tessellated curved surface does
+                // not render as flat panels with a step at every facet edge.
+                float outgoing_flux;
+                if (use_top_face) {
+                    outgoing_flux = smooth_w0 * vertex_radiation_out_top[smooth_v0 * int(pc.band_count) + int(b)] + smooth_w1 * vertex_radiation_out_top[smooth_v1 * int(pc.band_count) + int(b)] +
+                                    smooth_w2 * vertex_radiation_out_top[smooth_v2 * int(pc.band_count) + int(b)];
+                    if (smooth_v3 >= 0) {
+                        outgoing_flux += smooth_w3 * vertex_radiation_out_top[smooth_v3 * int(pc.band_count) + int(b)];
+                    }
+                } else {
+                    outgoing_flux = smooth_w0 * vertex_radiation_out_bottom[smooth_v0 * int(pc.band_count) + int(b)] + smooth_w1 * vertex_radiation_out_bottom[smooth_v1 * int(pc.band_count) + int(b)] +
+                                    smooth_w2 * vertex_radiation_out_bottom[smooth_v2 * int(pc.band_count) + int(b)];
+                    if (smooth_v3 >= 0) {
+                        outgoing_flux += smooth_w3 * vertex_radiation_out_bottom[smooth_v3 * int(pc.band_count) + int(b)];
+                    }
+                }
+                surface_strength = outgoing_flux * strength;
+            } else if (use_top_face) {
                 surface_strength = radiation_out_top[buf_idx] * strength;
             } else {
                 surface_strength = radiation_out_bottom[buf_idx] * strength;
