@@ -191,7 +191,7 @@ int main(){
     // Customize training parameters
     std::map<std::string, float> build_params = {
         {"vine_spacing", 3.0},       // 3.0 m vine spacing (canes auto-sized)
-        {"trunk_height", 0.15}       // 15 cm trunk height
+        {"trunk_height", 0.9}        // 90 cm trunk height
     };
 
     vec3 base_position = nullorigin;
@@ -223,7 +223,7 @@ The VSP grapevine model uses vine spacing to automatically calculate appropriate
 | Parameter | Default | Valid Range | Units | Description |
 |-----------|---------|-------------|-------|-------------|
 | vine_spacing | 2.4 | 0.5-5.0 | m | Plant-to-plant spacing (cane nodes auto-calculated to span half this distance) |
-| trunk_height | 0.1 | 0.05-1.0 | m | Total trunk height |
+| trunk_height | 0.8 | 0.05-1.0 | m | Total trunk height |
 
 <b>Grapevine Wye (grapevine_Wye)</b>
 
@@ -260,7 +260,7 @@ Parameters specified as floats will be automatically cast to unsigned integers w
 ~~~~~~
 std::map<std::string, float> params = {
     {"vine_spacing", 3.0},        // 3.0 m between plants (canes auto-sized to span 1.5 m each)
-    {"trunk_height", 0.15}        // 15 cm trunk height
+    {"trunk_height", 0.9}         // 90 cm trunk height
 };
 plantarchitecture.buildPlantInstanceFromLibrary( position, age, params );
 ~~~~~~
@@ -584,6 +584,7 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | flower_prototype_function | function pointer | - | Pointer to a function that generates the flower prototype model. Function takes arguments ( helios::Context*, uint subdivisions, bool flower_is_open ) and returns an object ID (uint). |
 | fruit_prototype_scale | RandomParameter_float | - | Scaling factor applied to the fruit prototype. Usually the prototype has unit length, so this sets the physical length of the fruit. |
 | fruit_prototype_function | function pointer | - | Pointer to a function that generates the fruit prototype model. Function takes arguments ( helios::Context*, uint subdivisions, float time_since_fruit_set ) and returns an object ID (uint). |
+| inflorescence_maturity_period | RandomParameter_float | days | Time for the inflorescence to expand from its initial quarter size to full size. A non-positive value (the default) defers to the plant-level fruit-maturity threshold set by <code>setPlantPhenologicalThresholds()</code>. Set this where the inflorescence finishes elongating on a different schedule from the fruit, as in maize, where the tassel is fully expanded at VT roughly two months before the ear finishes grain fill. |
 | unique_prototypes | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of unique flower/fruit prototypes to generate per shoot type. If = 0, every leaf will be unique. Increasing this value gives more variability across the plant, but it will take longer to initially generate the plant model. |
 
 <!--
@@ -824,7 +825,7 @@ The \htmlonly<span style="font-family: Courier, monospace; color: blue;">elongat
 
 \subsubsection ShootParam_girth_area_factor girth_area_factor
 
-When the shoot is created, the internode radius is set to the value of the phytomer parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">internode.radius_initial</span>\endhtmlonly. The girth of the internode will increase over time based on the amount of leaf area downstream of the internode. The girth of the internode is determined by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">girth_area_factor</span>\endhtmlonly, which is the cross-sectional area of the internode (girth) in cm^2 per m^2 of downstream leaf area. The girth will only increase and does not decrease if leaves are lost. Set this factor to 0 to prevent girth scaling.
+When the shoot is created, the internode radius is set to the value of the phytomer parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">internode.radius_initial</span>\endhtmlonly. The girth of the internode will increase over time based on the amount of leaf area downstream of the internode. The girth of the internode is determined by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">girth_area_factor</span>\endhtmlonly, which is the cross-sectional area of the internode (girth) in cm^2 per m^2 of downstream leaf area. The girth will only increase and does not decrease if leaves are lost. Set this factor to 0 to prevent girth scaling. On a herbaceous plant that bears a terminal inflorescence at the apex of its stem, such as a sorghum panicle or a maize tassel, the area of that inflorescence is counted alongside the leaf area, since the stem has to carry it. A lateral flower cluster, and any inflorescence on a woody stem, does not contribute to girth.
 
 \subsubsection PlantArchBuild_custom Modifying Parameters of a Plant from the Library
 
@@ -905,6 +906,15 @@ constexpr int ears_per_plant = 1;
 ~~~~~~
 
 Setting \htmlonly<span style="font-family: Courier, monospace; color: blue;">ears_per_plant</span>\endhtmlonly to 2 additionally bears an ear at the node immediately below the apical one, representing the second sub-apical ear seen at low planting density and high nitrogen.
+
+\subsubsection PlantArchBuild_maize_upper_canopy Maize Upper Canopy and Flag Leaf
+
+Maize leaf area follows a bell-shaped profile along the stem that peaks at or just below the ear and falls away sharply over the last few ranks, so the flag leaf is the smallest blade on the plant -- near a quarter of the largest leaf's area. The leaf taper in <span style="font-family: Courier, monospace;">MaizePhytomerCreationFunction()</span> is a fit to published vertical profiles for commercial hybrids and reaches full size about six ranks below the tassel.
+
+The flag leaf is also the <I>most erect</I> leaf on a maize plant, which is the opposite of sorghum, where it is the most horizontal. Modern hybrids are bred for an erectophile upper canopy, and leaf angle from vertical decreases steadily toward the top of the plant without reversing at the tassel. Two consequences for anyone retuning this model:
+
+- The near-zero petiole pitch that \ref PlantArchitecture applies to the last phytomer of every shoot would leave the flag leaf lying along the tassel's peduncle, so maize rotates it 18 degrees clear. What that value has to preserve is the flag leaf's blade angle, not its insertion angle: the erectophile gradient in this model comes from the stiffening of the upper leaves rather than from how they are inserted, since every rank draws its petiole pitch from the same distribution. Rotating far enough to match sorghum's 25 degrees would begin to flatten the blade toward the lower canopy's posture.
+- Because the upper leaves are stiffened rather than re-inserted, blade curvature rather than insertion angle is the lever for upper-canopy posture. See the discussion of <span style="font-family: Courier, monospace;">flexibility</span> above.
 
 \subsection PlantArchShootTypeDiscovery Discovering Available Shoot Types
 
@@ -1116,6 +1126,294 @@ void PlantArchitecture::initializePlantModelRegistrations() {
         [this](const helios::vec3& pos){ return buildNewPlant(pos); });
 }
 ~~~~~~
+
+\section PlantArchReconstruction Reconstructing a Plant from Measured Geometry
+
+The shoot-creation methods described above all build a shoot by extrapolation: the base rotation orients the first internode, and each subsequent internode continues along the current axis, bent by the shoot type's gravitropic curvature and tortuosity. This is what you want when generating a plant, but it means the path of a shoot cannot be specified directly. With curvature and tortuosity both zero a shoot is exactly straight, and since the base rotation applies only to the first phytomer, no combination of arguments will make a single shoot follow a measured curve.
+
+\ref PlantArchitecture::addShootFromNodePositions() covers that case. It builds one shoot from a list of internode node positions and radii, which is the form measured data usually takes -- a QSM branch, a digitized skeleton, or a skeleton extracted from photogrammetry.
+
+~~~~~~{cpp}
+// N+1 node positions define N internodes, ordered from the base of the shoot to its tip.
+std::vector<helios::vec3> node_positions = { /* measured positions, in world coordinates */ };
+std::vector<float> node_radii = { /* one radius per node */ };
+
+uint plantID = plantarchitecture.addPlantInstance(node_positions.front(), 0);
+
+// parent_shoot_ID of -1 creates the base stem shoot of the plant.
+uint trunkID = plantarchitecture.addShootFromNodePositions(plantID, -1, 0, node_positions, node_radii, "wood");
+
+// A branch attaches at a node of an existing shoot, as with addChildShoot().
+uint branchID = plantarchitecture.addShootFromNodePositions(plantID, trunkID, 4, branch_positions, branch_radii, "wood");
+~~~~~~
+
+Some points worth knowing when reconstructing a skeleton this way:
+
+- <b>One branch should be one shoot.</b> A shoot is the botanical axis, and the whole shoot is rendered as a single continuous tube. Splitting a measured branch across several chained shoots gives a separate capped tube per link, which visibly separates wherever the path bends.
+- <b>The supplied positions are the phytomer endpoints.</b> The number of internodes -- and therefore the internode length -- is determined by how many nodes you supply. The phytomer parameter `internode.length_segments` still controls how finely each internode is subdivided for rendering, with the intermediate nodes interpolated along the straight segment between the two supplied endpoints.
+- <b>The prescribed section does not change as the plant grows.</b> Those phytomers are created fully elongated, so \ref PlantArchitecture::advanceTime() neither re-scales nor re-curves them. New phytomers added at the apex are generated normally, continuing from the direction of the last prescribed internode and using the mean of the prescribed internode lengths as their target length. Which parameters govern that new growth is the subject of the next subsection.
+- <b>Radii are a lower bound, not a fixed value.</b> If the shoot type has a non-zero \ref ShootParameters::girth_area_factor, the pipe model may thicken an internode as the plant grows; it never thins one. Set the girth area factor to zero to preserve the measured radii exactly, or to a small value if you want the measured radii to be a genuine starting point that one more season's growth builds on. Note that this factor is always taken from the type the wood was built with, never from a separate growth type, precisely so that a measurement cannot be thickened by parameters chosen for new growth.
+- <b>A child's base is seated on its parent.</b> As with \ref PlantArchitecture::addChildShoot(), the base of a child shoot is offset from the attachment node out to the surface of the parent internode, and the supplied path is translated onto that point. Relative geometry -- directions, internode lengths and curvature -- is preserved exactly; only the absolute position shifts, and only by the discrepancy between your first supplied position and the attachment point. If that discrepancy is large enough that the shoot would not be connected to its parent, an error is raised rather than producing a detached branch.
+- <b>A leafless shoot type is usually what you want</b> for a woody skeleton: set `petioles_per_internode` to 0. Such a shoot still grows -- when a phytomer has no petioles its vegetative buds are created directly on the internode -- so a leaf-off reconstruction can still be grown forward.
+- <b>Bud break is a property of the wood the bud sits on.</b> \ref ShootParameters::vegetative_bud_break_probability_min and its companions are read from the shoot *bearing* the bud, not from the type the resulting shoot will become. For buds on measured wood, that means they must be set on the type that wood was built with.
+
+Note that, as with every manually-built plant, the new shoots are created dormant and no phenological thresholds are set. See the notes on default phenology and maximum age in \ref PlantArchPhenoMod before calling \ref PlantArchitecture::advanceTime().
+
+A reconstruction survives \ref PlantArchitecture::writePlantStructureXML() and
+\ref PlantArchitecture::readPlantStructureXML() intact: the measured node positions and radii are written
+alongside the usual per-phytomer values, and the shoot is rebuilt from them rather than re-derived from its
+base rotation, so the reloaded plant follows the same path the measurement did.
+
+\subsection PlantArchReconstructionGrowth Separating Measured Geometry from Growth Parameters
+
+A \ref ShootParameters describes a shoot type, and for a plant you generate that is the whole story: the
+values that determine what a shoot looks like are the same values that determine how it grows. A
+reconstruction breaks that identity. Building measured wood calls for particular values --
+
+- `gravitropic_curvature` and `tortuosity` of zero, so nothing bends the measured path;
+- a `max_nodes` at least as large as the longest measured branch, since one phytomer is created per
+  measured internode and \ref PlantArchitecture::addShootFromNodePositions() rejects a shoot longer than
+  the cap;
+- often a `girth_area_factor` of zero, so the measured radii are preserved.
+
+-- and none of those describe how the plant should grow next. A shoot that inherits them extends
+perfectly straight and never reaches its node cap. Neither failure raises an error; the plant simply
+grows wrongly.
+
+Supply the growth parameters as a second shoot type to keep the two apart:
+
+~~~~~~{cpp}
+// The type that BUILDS the measured wood.
+ShootParameters measured_wood = plantarchitecture.getCurrentShootParameters("almond_shoot");
+measured_wood.gravitropic_curvature = 0;   // do not fight the measured path
+measured_wood.tortuosity = 0;
+measured_wood.max_nodes = 2000;            // long enough for the longest measured branch
+measured_wood.girth_area_factor = 0;       // preserve the measured radii
+plantarchitecture.defineShootType("measured_wood", measured_wood);
+
+// The type that governs what the plant does NEXT. These are ordinary growth parameters -- here, the
+// library's own, unmodified.
+ShootParameters new_growth = plantarchitecture.getCurrentShootParameters("almond_shoot");
+plantarchitecture.defineShootType("new_growth", new_growth);
+
+// Build with the first, grow with the second.
+uint trunkID = plantarchitecture.addShootFromNodePositions(plantID, -1, 0, node_positions, node_radii, "measured_wood", "new_growth");
+~~~~~~
+
+The growth type governs the node caps consulted as the shoot extends, the gravitropic curvature of
+phytomers added at the apex, and -- most importantly -- the type of the shoots this shoot's vegetative
+buds produce. That last point is what makes the separation necessary rather than merely tidy: which type
+a bud becomes is decided when its phytomer is created, so without a growth type the buds on measured wood
+are stamped with the type the measurement was built with, and every shoot grown from them inherits the
+reconstruction's zeroed curvature and inflated node cap.
+
+Two things are deliberately *not* taken from the growth type. \ref ShootParameters::girth_area_factor
+stays with the wood, for the reason given in the previous subsection. So does bud-break probability, which
+is read from the shoot bearing the bud.
+
+Without a growth type the single-argument form still applies: one type both builds and grows, which is
+correct whenever the measured geometry and the growth model agree about the shoot.
+
+\subsection PlantArchReconstructionOrgans Prescribing Petiole and Leaf Placement
+
+The methods above prescribe the woody skeleton. Where the measurements also resolve the organs hanging off
+it -- a per-organ-labelled point cloud, for instance -- \ref PlantArchitecture::setPetioleNodePositions()
+and \ref PlantArchitecture::setPetioleLeafGeometry() prescribe a petiole's path and the placement of the
+leaves on it, in the same spirit and with the same guarantee that the result is not overwritten as the
+plant grows.
+
+Unlike the shoot-level method, these act on a phytomer that already exists: build the shoot first, then
+prescribe the organs on whichever nodes were measured.
+
+~~~~~~{cpp}
+// A shoot whose type carries petioles and leaves, built from measured internode positions as above.
+uint shootID = plantarchitecture.addShootFromNodePositions(plantID, -1, 0, node_positions, node_radii, "stem");
+
+// The petiole path on node 3, ordered from the petiole base outward. The first position should be the
+// tip of that internode; supply as many nodes as the measurement resolves.
+std::vector<helios::vec3> petiole_nodes = { /* measured positions, in world coordinates */ };
+std::vector<float> petiole_radii = { /* one radius per node */ };
+plantarchitecture.setPetioleNodePositions(plantID, shootID, 3, 0, petiole_nodes, petiole_radii);
+
+// Then every leaf on that petiole, one entry per leaf. A compound leaf is prescribed leaflet by leaflet
+// in a single call; a species with one leaf per petiole passes one-element vectors.
+std::vector<helios::vec3> leaf_bases = { /* measured leaflet attachment points */ };
+std::vector<AxisRotation> leaf_rotations = { /* roll, pitch, yaw of each leaflet, in radians */ };
+std::vector<float> leaf_sizes = { /* fully-elongated size of each leaflet, in metres */ };
+plantarchitecture.setPetioleLeafGeometry(plantID, shootID, 3, 0, leaf_bases, leaf_rotations, leaf_sizes);
+~~~~~~
+
+Points worth knowing:
+
+- <b>Prescribe the petiole before its leaves.</b> Each leaf is oriented from the petiole's axis, so
+  prescribing the leaves first orients them from the path that the petiole call is about to replace.
+- <b>The petiole base is snapped onto the internode tip.</b> Your first supplied position may sit at the tip
+  or within a tolerance of it, and the whole path is then translated onto the tip exactly; relative geometry
+  is preserved and only the absolute position changes. Beyond that tolerance an error is raised rather than
+  producing a petiole detached from the stem. The snap is not cosmetic: every petiole is re-seated onto its
+  internode tip on each timestep (see \ref PlantArchConventionsReseat), by translating the phytomer by the
+  discrepancy, so a base that merely sits near the tip would be shifted again on every timestep.
+- <b>The number of petiole nodes is free.</b> It need not match the shoot type's `petiole.length_segments`;
+  the petiole tube is rebuilt to match what you supply.
+- <b>The number of leaves is not free.</b> It is fixed when the phytomer is created, because a leaflet's
+  roll and yaw signs and the blade prototype it is a copy of both follow from its position along the
+  petiole. Supplying a different number raises an error; set `leaf.leaves_per_petiole` on the shoot type
+  instead.
+- <b>Leaf rotations are in the petiole and internode frame, not the world frame.</b> They mean exactly what
+  \ref Phytomer::leaf_rotation stores: roll, pitch and yaw in radians relative to the petiole and internode
+  axes. The full chain that places a leaf also folds in the petiole's own azimuth and a size-dependent
+  correction and is not invertible, so there is no exact conversion from a measured world-frame blade
+  orientation. Fit by forward evaluation instead -- set angles, read the resulting geometry back from the
+  Context, and iterate.
+- <b>Prescribed organs do not change as the plant grows.</b> The petiole is not re-scaled and the leaves are
+  neither re-scaled nor re-placed by \ref PlantArchitecture::advanceTime(). Prescribed leaves are also
+  exempt from the self-weight droop, so the blade keeps the prototype's rest shape rather than continuing to
+  arch over as the leaf ages.
+- <b>Rebuilding a leaf discards primitive data attached to it.</b> Each leaf object is rebuilt from its
+  prototype so that it can be given an absolute orientation. The object label and material are restored;
+  any other primitive data a caller has set on that leaf is not.
+
+\subsection PlantArchRealizedParameters Measuring What the Model Actually Built
+
+\ref PlantArchitecture::getCurrentShootParameters() reports a shoot \e type: the distributions the model
+was asked to draw from. It cannot tell you what the model produced. For calibration that is the wrong
+half of the comparison -- fitting a model against measurements means comparing the distribution of organ
+sizes and angles the plant actually delivered against the distribution the data shows.
+
+Three methods report the delivered values, measured from the geometry that was built:
+
+~~~~~~{cpp}
+std::vector<float> leaf_areas        = plantarchitecture.getPlantLeafAreas(plantID);
+std::vector<float> internode_lengths = plantarchitecture.getPlantInternodeLengths(plantID);
+std::vector<float> leaf_inclinations = plantarchitecture.getPlantLeafInclinations(plantID);
+~~~~~~
+
+Each returns one entry per organ rather than a summary, so a calibration script can compute whatever
+statistic it needs -- a mean, a percentile, a full histogram -- without the library having to guess which.
+
+The distinction between these and the shoot type is not a formality. A \ref RandomParameter_float caches
+its first draw and returns that same value until something resamples it, and a shoot holds a copy of its
+type's parameters taken when the shoot was created. A plant can therefore be delivered with every leaf
+exactly the same size while the leaf parameters it was built from describe a wide spread -- and a getter
+that reported the stored draw would report the spread, showing nothing wrong. Measuring the built
+geometry is what makes the two distinguishable.
+
+Points worth knowing:
+
+- <b>Areas are present size, not full size.</b> Unlike \ref Phytomer::getLeafArea(), which reports the area
+  a growing leaf is expanding toward, \ref PlantArchitecture::getPlantLeafAreas() reports the area a leaf
+  has now. A canopy part-way through expansion legitimately shows a spread of leaf sizes for that reason
+  alone.
+- <b>Inclination is folded about the horizontal.</b> 0 degrees is a horizontal blade and 90 degrees a
+  vertical one. A blade is a surface, so a normal pointing down describes the same inclination as its
+  opposite pointing up; the angle never exceeds 90 degrees. It is computed from the area-weighted normal,
+  so a curved or folded blade is summarized by the direction it mostly faces.
+- <b>Organs are visited shoot by shoot, then phytomer by phytomer</b>, the same order as
+  \ref PlantArchitecture::getPlantLeafObjectIDs(), so the leaf-level results line up with each other.
+- <b>Missing geometry is omitted, not reported as zero.</b> A leaf that has been removed or has not been
+  built contributes no entry, so the leaf-level results can be shorter than
+  \ref PlantArchitecture::getPlantLeafCount(). Internodes always contribute one entry per phytomer.
+- <b>Compound leaves report one entry per leaflet</b>, since each leaflet is its own object. A species that
+  sizes its lateral leaflets differently from its terminal one will show that as spread.
+
+\section PlantArchConventions Coordinate Frames and Internal Storage Conventions
+
+These are the conventions the model builds geometry against. They matter when reading a plant's geometry
+back out, when writing a \ref PhytomerParameters::phytomer_creation_function or
+\ref PhytomerParameters::phytomer_callback_function, and above all when fitting the model to measured
+data, where a frame assumed wrongly puts an organ in the wrong place without any error being raised.
+
+\subsection PlantArchConventionsRotation What a Shoot's Base Rotation is Measured Against
+
+The \ref AxisRotation passed to \ref PlantArchitecture::addBaseStemShoot(),
+\ref PlantArchitecture::appendShoot() and \ref PlantArchitecture::addChildShoot() orients the first
+internode of the new shoot. It is applied **only to the first phytomer**, in this order, and always about
+the axes of the *parent*:
+
+1. `roll` about the parent internode axis,
+2. `pitch` about `-cross(parent_internode_axis, parent_petiole_axis)`,
+3. `yaw` about the parent internode axis.
+
+The parent petiole axis in step 2 is the real petiole axis when the parent phytomer bears petioles, and
+otherwise a constructed "ghost petiole" perpendicular to the internode, rotated about it by the
+cumulative phyllotactic angle. **The two give different frames**, so a base rotation solved against one
+will not reproduce the same direction under the other: a shoot type built with
+`petioles_per_internode = 0` and one built with petioles do not interpret the same `AxisRotation`
+identically.
+
+For the base stem shoot of a plant (`parent_shoot_ID` of -1) the model assumes a parent internode axis of
+`(0,0,1)` and a parent petiole axis of `(0,-1,0)`.
+
+Two further rotations act before and after the base rotation and will move the internode away from the
+direction the base rotation alone implies:
+
+- `internode.pitch` rotates the first internode by half its value about the petiole rotation axis
+  *before* the base rotation is applied;
+- `gravitropic_curvature` and `tortuosity` rotate the axis progressively as each internode segment is
+  laid down.
+
+With all three at zero a shoot is exactly straight and its direction follows from the base rotation
+alone. That is why \ref PlantArchReconstruction "reconstruction" from measured geometry normally sets
+them to zero -- or avoids the question entirely by using
+\ref PlantArchitecture::addShootFromNodePositions(), which prescribes the path rather than deriving it.
+
+\subsection PlantArchConventionsStorage How Internode Nodes are Stored
+
+`Shoot::shoot_internode_vertices` is indexed first by phytomer and second by segment within that
+phytomer's internode. The first phytomer's group holds **both** of its endpoints; **every later group
+holds only its far node**, because the near node is the previous phytomer's far node and is not repeated.
+
+A shoot of N phytomers with `internode.length_segments = 1` therefore stores N+1 nodes in total, as
+`{2, 1, 1, ...}` rather than `{2, 2, 2, ...}`. Code that iterates each group and accumulates
+`back() - front()` will silently measure only the first internode and report a length that is wrong by a
+factor of N. To recover the full centerline, flatten all the groups into one list in order:
+
+~~~~~~{cpp}
+std::vector<helios::vec3> centerline;
+for (const auto &group: shoot->shoot_internode_vertices) {
+    for (const helios::vec3 &node: group) {
+        if (centerline.empty() || (node - centerline.back()).magnitude() > 1e-7f) {
+            centerline.push_back(node);
+        }
+    }
+}
+~~~~~~
+
+\ref Phytomer::getInternodeNodePositions() returns a single phytomer's own node positions with the
+shared node included, and is the safer accessor when only one phytomer is of interest.
+
+\subsection PlantArchConventionsReseat Child Shoots are Re-Seated on Their Parent
+
+Whenever a shoot's nodes are rebuilt -- which happens on every call to
+\ref PlantArchitecture::advanceTime() -- each of its child shoots has its base re-derived as the parent's
+attachment node plus an outward offset of 0.9 of the parent internode radius, and the whole child is
+translated rigidly onto that point. The correction then cascades to that child's own children.
+
+The outward offset exists so that a lateral branch emerges from the surface of its parent rather than
+from inside it, and so it applies only to a lateral branch -- one created by
+\ref PlantArchitecture::addChildShoot() or \ref PlantArchitecture::addShootFromNodePositions(). A shoot
+created by \ref PlantArchitecture::appendShoot() instead continues its parent's axis onward from the tip
+and keeps the parent's rank, so it is re-seated directly on the attachment node with no offset.
+
+Two consequences worth knowing:
+
+- **A base position written directly into a child's geometry does not survive the next timestep.** The
+  re-seating overwrites it. Geometry that must persist should be supplied through
+  \ref PlantArchitecture::addShootFromNodePositions(), whose contract accounts for this.
+- **Petioles are re-seated by the same mechanism**, onto the tip of the internode they grow from, and the
+  whole phytomer -- petioles, leaves, peduncles and floral buds -- is translated by the discrepancy. A
+  petiole path that must persist should likewise be supplied through
+  \ref PlantArchitecture::setPetioleNodePositions(), which seats its base so that the discrepancy is zero.
+- Because the correction is a rigid translation, all relative geometry of the child -- internode
+  lengths, directions, curvature -- is preserved exactly. Only its absolute position changes.
+
+\subsection PlantArchConventionsUnits Units
+
+Lengths and positions are in metres and angles at the API boundary are in degrees, with the exception of
+\ref AxisRotation, whose `pitch`, `yaw` and `roll` are in **radians**; use \ref helios::deg2rad() when
+constructing one from degrees. \ref ShootParameters::girth_area_factor is in cm<sup>2</sup> of branch
+cross-sectional area per m<sup>2</sup> of downstream leaf area. \ref ShootParameters::tortuosity is in
+degrees per square root of a metre, and \ref ShootParameters::gravitropic_curvature in degrees per metre.
 
 \section PlantArchPruning Shoot Pruning and Hierarchical Management
 

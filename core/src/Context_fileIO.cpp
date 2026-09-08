@@ -21,6 +21,25 @@ using namespace helios;
 // Triangles with area below this threshold are considered degenerate and skipped
 static constexpr float MIN_TRIANGLE_AREA_THRESHOLD = 1e-8f;
 
+// Crease angle used when generating vertex normals for a mesh whose source file supplied none.
+//
+// 180 degrees smooths across every edge, which is the only value that leaves the mesh topology untouched.
+// A narrower angle splits each vertex whose incident faces straddle it into one copy per smooth group, and
+// that splitting unwelds the shared vertices the mesh was loaded with: a cube reloaded from PLY went from 8
+// vertices to 24 and stopped reporting as closed, so isPolymeshObjectClosed() turned false and
+// getPolymeshObjectVolume() threw for geometry that is genuinely watertight. Generating normals must not
+// cost a mesh its topology, since a file that omits normals says nothing about whether its author cared
+// about volume queries.
+//
+// Smoothing everything is also the right default for the meshes this actually affects. Exporters omit
+// normals for organic, densely-tessellated surfaces far more often than for hard-surface models: the
+// shipped SoybeanPod has a median dihedral angle of 11 degrees with only 3.4% of its edges above 60, so
+// there is almost nothing there that should read as a hard edge. A model that genuinely needs hard edges
+// generally ships the authored normals that express them, and those are never overwritten; a caller who
+// wants a specific crease angle can still call computePolymeshObjectVertexNormals() explicitly, accepting
+// the vertex split that implies.
+static constexpr float default_import_crease_angle_degrees = 180.f;
+
 int XMLparser::parse_data_float(const pugi::xml_node &node_data, std::vector<float> &data) {
     std::string data_str = node_data.child_value();
     data.resize(0);
@@ -4386,6 +4405,12 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
     if (!UUID.empty()) {
         uint polymesh_ObjID = addPolymeshObject(UUID);
         getPolymeshObjectPointer_private(polymesh_ObjID)->setTopology(vertices, mesh_faces, mesh_face_UUIDs, normals, {}, ifNormal ? NORMAL_SOURCE_AUTHORED : NORMAL_SOURCE_NONE);
+
+        // See the equivalent block in loadOBJ(): a mesh whose file supplied no normals would otherwise shade
+        // faceted, so generate them from the connectivity attached above.
+        if (!ifNormal) {
+            computePolymeshObjectVertexNormals(polymesh_ObjID, default_import_crease_angle_degrees);
+        }
     }
 
     if (!silent) {
@@ -4845,6 +4870,19 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
         std::string exception_message;
         bool exception_occurred = false;
 
+        // Each face writes its triangles into its own bucket rather than into a shared list behind a
+        // critical section. The old code took a lock once per *triangle*, which both serialized the
+        // loop and made the returned UUID order depend on thread scheduling. Concatenating the
+        // buckets in face order afterwards is lock-free and reproduces the serial ordering exactly,
+        // so loadOBJ now returns the same UUIDs in the same order on every run regardless of thread
+        // count - that determinism is the main reason for this structure.
+        //
+        // The wall-clock win is modest, because parsing the file dominates loadOBJ rather than this
+        // loop: on an 18 MB / 146k-primitive OBJ (Windows, MSVC Release, 20 cores) the loop went
+        // from 1.18 s at 20 threads and 1.14 s at 1 thread - i.e. slower with more threads - to
+        // 1.08 s and 1.12 s respectively. The point is that added threads no longer make it worse.
+        std::vector<std::vector<TriangleData>> face_triangles(material_faces.size());
+
 #ifdef USE_OPENMP
 #pragma omp parallel for schedule(dynamic)
 #endif
@@ -4922,12 +4960,7 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
                                                  "or add texture coordinates (vt) and face texture indices (f v1/vt1 v2/vt2 v3/vt3) to the OBJ file.");
                         }
 
-#ifdef USE_OPENMP
-#pragma omp critical
-#endif
-                        {
-                            triangleDataList.push_back(triangleData);
-                        }
+                        face_triangles[i].push_back(triangleData);
                     }
                 }
             } catch (const std::exception &e) {
@@ -4947,6 +4980,16 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
         // Rethrow captured exception after parallel region
         if (exception_occurred) {
             helios_runtime_error(exception_message);
+        }
+
+        // Flatten the per-face buckets in face order (see note above the parallel loop).
+        size_t triangle_count = 0;
+        for (const auto &bucket: face_triangles) {
+            triangle_count += bucket.size();
+        }
+        triangleDataList.reserve(triangleDataList.size() + triangle_count);
+        for (auto &bucket: face_triangles) {
+            triangleDataList.insert(triangleDataList.end(), std::make_move_iterator(bucket.begin()), std::make_move_iterator(bucket.end()));
         }
     }
 
@@ -5037,6 +5080,15 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
         uint polymesh_ObjID = addPolymeshObject(UUID);
         getPolymeshObjectPointer_private(polymesh_ObjID)
                 ->setTopology(mesh_vertices, mesh_faces, mesh_face_UUIDs, mesh_vertex_normals, {}, file_supplied_normals ? NORMAL_SOURCE_AUTHORED : NORMAL_SOURCE_NONE);
+
+        // A file with no authored normals leaves the mesh shading flat, facet by facet, however the renderer
+        // is configured. Generate normals from the connectivity that was just attached so that a curved
+        // surface reads as curved; an exporter that omitted normals is far more often one that simply did not
+        // write them than one asking for faceted shading. Normals that came from the file are left alone --
+        // they are the author's intent and may encode shading the geometry alone does not imply.
+        if (!file_supplied_normals) {
+            computePolymeshObjectVertexNormals(polymesh_ObjID, default_import_crease_angle_degrees);
+        }
     }
 
     if (!silent) {

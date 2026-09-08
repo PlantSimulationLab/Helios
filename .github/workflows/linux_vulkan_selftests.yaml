@@ -12,9 +12,10 @@ name: Build and Run Radiation on Vulkan (lavapipe)
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "release" ]
   pull_request:
     branches: [ "master" ]
+  workflow_dispatch: {}
 
 env:
   BUILD_TYPE: Release

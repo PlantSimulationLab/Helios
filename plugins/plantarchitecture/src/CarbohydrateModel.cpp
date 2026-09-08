@@ -627,7 +627,7 @@ void PlantArchitecture::incrementPhytomerInternodeGirth_carb(uint plantID, uint 
 }
 
 
-bool Shoot::sampleVegetativeBudBreak_carb(uint node_index) const {
+bool Shoot::sampleVegetativeBudBreak_carb(uint node_index) {
     const CarbohydrateParameters &carbohydrate_params = plantarchitecture_ptr->plant_instances.at(plantID).carb_parameters;
     float shoot_volume = calculateShootInternodeVolume();
 
@@ -635,9 +635,11 @@ bool Shoot::sampleVegetativeBudBreak_carb(uint node_index) const {
         helios_runtime_error("ERROR (PlantArchitecture::sampleVegetativeBudBreak): Invalid node index. Node index must be less than the number of phytomers on the shoot.");
     }
 
-    float probability_min = plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_types_snapshot.at(this->shoot_type_label).vegetative_bud_break_probability_min.val();
+    // Read from this shoot rather than from its type, matching Shoot::sampleVegetativeBudBreak(). The
+    // maximum is not a parameter here: it is the carbohydrate pool that caps it below.
+    float probability_min = shoot_parameters.vegetative_bud_break_probability_min.val();
     float probability_max = 1.f;
-    float probability_decay = plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_types_snapshot.at(this->shoot_type_label).vegetative_bud_break_probability_decay_rate.val();
+    float probability_decay = shoot_parameters.vegetative_bud_break_probability_decay_rate.val();
 
     if (total_carbohydrate_pool_molC < carbohydrate_params.carbohydrate_vegetative_break_threshold * shoot_volume * carbohydrate_params.stem_density / C_molecular_wt) {
         probability_max = total_carbohydrate_pool_molC / (carbohydrate_params.carbohydrate_vegetative_break_threshold * shoot_volume * carbohydrate_params.stem_density / C_molecular_wt);

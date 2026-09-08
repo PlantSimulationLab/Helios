@@ -473,6 +473,7 @@ CameraProperties RadiationModel::getCameraParameters(const std::string &camera_l
     camera_properties.lens_specification = camera.lens_specification;
     camera_properties.exposure = camera.exposure;
     camera_properties.shutter_speed = camera.shutter_speed;
+    camera_properties.exposure_target = camera.exposure_target;
     camera_properties.white_balance = camera.white_balance;
     camera_properties.camera_zoom = camera.camera_zoom;
     camera_properties.FOV_aspect_ratio = camera.FOV_aspect_ratio;
@@ -530,6 +531,7 @@ void RadiationModel::updateCameraParameters(const std::string &camera_label, con
     camera.manufacturer = camera_properties.manufacturer;
     camera.model = camera_properties.model;
     camera.exposure = camera_properties.exposure;
+    camera.exposure_target = camera_properties.exposure_target;
     camera.shutter_speed = camera_properties.shutter_speed;
     camera.white_balance = camera_properties.white_balance;
     camera.camera_zoom = camera_properties.camera_zoom;
@@ -3310,9 +3312,14 @@ void RadiationCamera::applyCameraExposure(helios::Context *context) {
             std::size_t median_idx = N / 2;
             float median_luminance = sorted_luminance[median_idx];
 
-            // Target 18% gray
-            float target_median = 0.18f;
-            float auto_gain = target_median / std::max(median_luminance, 1e-6f);
+            // Target median luminance, 18% grey by default. It is a property of the scene being
+            // imaged rather than a universal constant: a canopy viewed from above is darker than a
+            // grey card, so reproducing a real camera's output can need a lower value.
+            if (exposure_target <= 0.f) {
+                helios_runtime_error("ERROR (RadiationCamera::applyCameraExposure): camera '" + label + "' has exposure_target " + std::to_string(exposure_target) +
+                                     ", which must be positive. Auto exposure scales the image by target/median, so a non-positive target would blacken or invert every pixel.");
+            }
+            float auto_gain = exposure_target / std::max(median_luminance, 1e-6f);
             applied_exposure_gain = auto_gain;
 
             // Apply gain to all bands

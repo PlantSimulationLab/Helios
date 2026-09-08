@@ -56,9 +56,16 @@ void Visualizer::printWindow(const char *outfile, const std::string &image_forma
 
     // Re-render so that the captured frame reflects the hidden navigation gizmo. This has to be a full plotUpdate():
     // a caller may hand the Visualizer a Context and capture straight away without an intervening plotUpdate(), and
-    // only the full path builds that geometry. It is no longer the expensive call it once was, because
-    // buildContextGeometry_private() now rebuilds only primitives that actually changed since the last build.
-    this->plotUpdate(true);
+    // only the full path builds that geometry.
+    //
+    // It is skipped only when the frame already on the GPU is the one that would be captured, which
+    // requires that a render has happened, that nothing has dirtied the geometry since, and that the
+    // camera has not moved. Hiding the gizmo just above deletes its geometry, so a scene that had a
+    // visible gizmo always fails the dirty check and re-renders - which is exactly what the capture
+    // needs.
+    if (!rendered_frame_is_current || !geometry_handler.getDirtyUUIDs().empty() || geometry_handler.doesBufferNeedFullUpdate() || cameraHasChanged()) {
+        this->plotUpdate(true);
+    }
 
     std::string outfile_str = outfile;
 
@@ -239,6 +246,10 @@ void Visualizer::printWindow(const char *outfile, const std::string &image_forma
     if (gizmo_was_visible) {
         showNavigationGizmo();
     }
+
+    // The capture rendered with the gizmo hidden, and restoring it above puts geometry back that the
+    // rendered frame does not contain, so the next capture has to render again.
+    rendered_frame_is_current = false;
 }
 
 helios::vec4 Visualizer::buildImageDisplayGeometry(const std::vector<unsigned char> &pixel_data, uint width_pixels, uint height_pixels) {
@@ -616,11 +627,22 @@ void Visualizer::getFramebufferSize(uint &width, uint &height) const {
 }
 
 void Visualizer::closeWindow() const {
+    // An EGL headless Visualizer owns no window and never initialized GLFW, so there is nothing to
+    // hide and calling into GLFW here would be an error.
+    if (window == nullptr) {
+        return;
+    }
     glfwHideWindow((GLFWwindow *) window);
     glfwPollEvents();
 }
 
 std::vector<helios::vec3> Visualizer::plotInteractive() {
+    // Interactive plotting needs a window to show and a keyboard to read; a headless Visualizer has
+    // neither. Saying so is better than the alternatives, which are a 1x1 window that never appears
+    // (GLFW headless) or a null window handle passed straight into GLFW (EGL headless).
+    if (headless) {
+        helios_runtime_error("ERROR (Visualizer::plotInteractive): The Visualizer was constructed in headless mode, which has no window to interact with. Use plotUpdate() and printWindow() to render to a file instead.");
+    }
     if (message_flag) {
         std::cout << "Generating interactive plot..." << std::flush;
     }
@@ -756,10 +778,7 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
         primaryShader.setSmoothShading(smooth_shading_enabled);
         primaryShader.setPhongMaterialTable(phong_material_table_size);
 
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, depthTexture);
-        glUniform1i(primaryShader.shadowmapUniform, 1);
-        glActiveTexture(GL_TEXTURE0);
+        bindShadowMap();
 
         buffers_swapped_since_render = false;
         render(false);
@@ -905,10 +924,7 @@ void Visualizer::plotOnce(bool getKeystrokes) {
     primaryShader.setSmoothShading(smooth_shading_enabled);
     primaryShader.setPhongMaterialTable(phong_material_table_size);
 
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, depthTexture);
-    glUniform1i(primaryShader.shadowmapUniform, 1);
-    glActiveTexture(GL_TEXTURE0);
+    bindShadowMap();
 
     // Set buffer state before rendering (plotOnce doesn't call glfwSwapBuffers)
     buffers_swapped_since_render = false;
@@ -956,30 +972,45 @@ void Visualizer::transferBufferData() {
         return;
     }
 
-    auto ensureArrayBuffer = [](GLuint buf, GLenum target, GLsizeiptr size, const void *data) {
+    // Whether a buffer needs reallocating is decided against the size recorded when it was last
+    // uploaded, rather than by asking the driver with glGetBufferParameteriv. That query is a
+    // synchronous round trip, and there are twelve buffers for each of four geometry types, so
+    // asking cost 48 pipeline stalls on every call.
+    //
+    // When the size is unchanged there is deliberately no full-buffer glBufferSubData here: the
+    // per-dirty-primitive loop further down writes exactly the primitives that changed, so
+    // rewriting the whole buffer first uploaded the entire scene twice on every frame that touched
+    // any geometry at all. The case the incremental loop cannot cover is a buffer whose contents
+    // were rearranged without every affected primitive being marked dirty, which is what
+    // doesBufferNeedFullUpdate() reports.
+    const bool force_full_upload = geometry_handler.doesBufferNeedFullUpdate();
+
+    auto ensureArrayBuffer = [&](GLuint buf, GLenum target, GLsizeiptr size, const void *data, GLsizeiptr &last_uploaded_size) {
+        if (size == last_uploaded_size && !force_full_upload) {
+            return;
+        }
         glBindBuffer(target, buf);
-        GLint current_size = 0;
-        glGetBufferParameteriv(target, GL_BUFFER_SIZE, &current_size);
-        if (current_size != size) {
+        if (size != last_uploaded_size) {
             glBufferData(target, size, data, GL_STATIC_DRAW);
         } else {
-            // Buffer size matches, but data may have changed
-            // Update the buffer contents
             glBufferSubData(target, 0, size, data);
         }
+        last_uploaded_size = size;
     };
 
-    auto ensureTextureBuffer = [](GLuint buf, GLuint tex, GLenum format, GLsizeiptr size, const void *data) {
+    auto ensureTextureBuffer = [&](GLuint buf, GLuint tex, GLenum format, GLsizeiptr size, const void *data, GLsizeiptr &last_uploaded_size) {
+        if (size == last_uploaded_size && !force_full_upload) {
+            glBindTexture(GL_TEXTURE_BUFFER, tex);
+            glTexBuffer(GL_TEXTURE_BUFFER, format, buf);
+            return;
+        }
         glBindBuffer(GL_TEXTURE_BUFFER, buf);
-        GLint current_size = 0;
-        glGetBufferParameteriv(GL_TEXTURE_BUFFER, GL_BUFFER_SIZE, &current_size);
-        if (current_size != size) {
+        if (size != last_uploaded_size) {
             glBufferData(GL_TEXTURE_BUFFER, size, data, GL_STATIC_DRAW);
         } else {
-            // Buffer size matches, but data may have changed (e.g., visibility flags)
-            // Update the buffer contents
             glBufferSubData(GL_TEXTURE_BUFFER, 0, size, data);
         }
+        last_uploaded_size = size;
         glBindTexture(GL_TEXTURE_BUFFER, tex);
         glTexBuffer(GL_TEXTURE_BUFFER, format, buf);
     };
@@ -1000,18 +1031,18 @@ void Visualizer::transferBufferData() {
         const auto *sky_geometry_flag_data = geometry_handler.getSkyGeometryFlagData_ptr(geometry_type);
         const auto *visible_flag_data = geometry_handler.getVisibilityFlagData_ptr(geometry_type);
 
-        ensureArrayBuffer(vertex_buffer.at(gi), GL_ARRAY_BUFFER, vertex_data->size() * sizeof(GLfloat), vertex_data->data());
-        ensureArrayBuffer(uv_buffer.at(gi), GL_ARRAY_BUFFER, uv_data->size() * sizeof(GLfloat), uv_data->data());
-        ensureArrayBuffer(vertex_normal_buffer.at(gi), GL_ARRAY_BUFFER, vertex_normal_data->size() * sizeof(GLfloat), vertex_normal_data->data());
-        ensureArrayBuffer(face_index_buffer.at(gi), GL_ARRAY_BUFFER, face_index_data->size() * sizeof(GLint), face_index_data->data());
-        ensureTextureBuffer(color_buffer.at(gi), color_texture_object.at(gi), GL_RGBA32F, color_data->size() * sizeof(GLfloat), color_data->data());
-        ensureTextureBuffer(normal_buffer.at(gi), normal_texture_object.at(gi), GL_RGB32F, normal_data->size() * sizeof(GLfloat), normal_data->data());
-        ensureTextureBuffer(texture_flag_buffer.at(gi), texture_flag_texture_object.at(gi), GL_R32I, texture_flag_data->size() * sizeof(GLint), texture_flag_data->data());
-        ensureTextureBuffer(material_index_buffer.at(gi), material_index_texture_object.at(gi), GL_R32I, material_index_data->size() * sizeof(GLint), material_index_data->data());
-        ensureTextureBuffer(texture_ID_buffer.at(gi), texture_ID_texture_object.at(gi), GL_R32I, texture_ID_data->size() * sizeof(GLint), texture_ID_data->data());
-        ensureTextureBuffer(coordinate_flag_buffer.at(gi), coordinate_flag_texture_object.at(gi), GL_R32I, coordinate_flag_data->size() * sizeof(GLint), coordinate_flag_data->data());
-        ensureTextureBuffer(sky_geometry_flag_buffer.at(gi), sky_geometry_flag_texture_object.at(gi), GL_R8I, sky_geometry_flag_data->size() * sizeof(GLbyte), sky_geometry_flag_data->data());
-        ensureTextureBuffer(hidden_flag_buffer.at(gi), hidden_flag_texture_object.at(gi), GL_R8I, visible_flag_data->size() * sizeof(GLbyte), visible_flag_data->data());
+        ensureArrayBuffer(vertex_buffer.at(gi), GL_ARRAY_BUFFER, vertex_data->size() * sizeof(GLfloat), vertex_data->data(), last_uploaded_buffer_sizes.at(gi).at(0));
+        ensureArrayBuffer(uv_buffer.at(gi), GL_ARRAY_BUFFER, uv_data->size() * sizeof(GLfloat), uv_data->data(), last_uploaded_buffer_sizes.at(gi).at(1));
+        ensureArrayBuffer(vertex_normal_buffer.at(gi), GL_ARRAY_BUFFER, vertex_normal_data->size() * sizeof(GLfloat), vertex_normal_data->data(), last_uploaded_buffer_sizes.at(gi).at(2));
+        ensureArrayBuffer(face_index_buffer.at(gi), GL_ARRAY_BUFFER, face_index_data->size() * sizeof(GLint), face_index_data->data(), last_uploaded_buffer_sizes.at(gi).at(3));
+        ensureTextureBuffer(color_buffer.at(gi), color_texture_object.at(gi), GL_RGBA32F, color_data->size() * sizeof(GLfloat), color_data->data(), last_uploaded_buffer_sizes.at(gi).at(4));
+        ensureTextureBuffer(normal_buffer.at(gi), normal_texture_object.at(gi), GL_RGB32F, normal_data->size() * sizeof(GLfloat), normal_data->data(), last_uploaded_buffer_sizes.at(gi).at(5));
+        ensureTextureBuffer(texture_flag_buffer.at(gi), texture_flag_texture_object.at(gi), GL_R32I, texture_flag_data->size() * sizeof(GLint), texture_flag_data->data(), last_uploaded_buffer_sizes.at(gi).at(6));
+        ensureTextureBuffer(material_index_buffer.at(gi), material_index_texture_object.at(gi), GL_R32I, material_index_data->size() * sizeof(GLint), material_index_data->data(), last_uploaded_buffer_sizes.at(gi).at(7));
+        ensureTextureBuffer(texture_ID_buffer.at(gi), texture_ID_texture_object.at(gi), GL_R32I, texture_ID_data->size() * sizeof(GLint), texture_ID_data->data(), last_uploaded_buffer_sizes.at(gi).at(8));
+        ensureTextureBuffer(coordinate_flag_buffer.at(gi), coordinate_flag_texture_object.at(gi), GL_R32I, coordinate_flag_data->size() * sizeof(GLint), coordinate_flag_data->data(), last_uploaded_buffer_sizes.at(gi).at(9));
+        ensureTextureBuffer(sky_geometry_flag_buffer.at(gi), sky_geometry_flag_texture_object.at(gi), GL_R8I, sky_geometry_flag_data->size() * sizeof(GLbyte), sky_geometry_flag_data->data(), last_uploaded_buffer_sizes.at(gi).at(10));
+        ensureTextureBuffer(hidden_flag_buffer.at(gi), hidden_flag_texture_object.at(gi), GL_R8I, visible_flag_data->size() * sizeof(GLbyte), visible_flag_data->data(), last_uploaded_buffer_sizes.at(gi).at(11));
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindTexture(GL_TEXTURE_BUFFER, 0);
@@ -1221,6 +1252,13 @@ void Visualizer::transferTextureData() {
     glBindBuffer(GL_TEXTURE_BUFFER, 0);
 }
 
+
+void Visualizer::bindShadowMap() const {
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, depthTexture != 0 ? depthTexture : shadow_map_placeholder_texture);
+    glUniform1i(primaryShader.shadowmapUniform, 1);
+    glActiveTexture(GL_TEXTURE0);
+}
 
 void Visualizer::render(bool shadow) const {
     size_t rectangle_ind = std::find(GeometryHandler::all_geometry_types.begin(), GeometryHandler::all_geometry_types.end(), GeometryHandler::GEOMETRY_TYPE_RECTANGLE) - GeometryHandler::all_geometry_types.begin();
@@ -1797,10 +1835,7 @@ void Visualizer::plotUpdate(bool hide_window) {
     primaryShader.setSmoothShading(smooth_shading_enabled);
     primaryShader.setPhongMaterialTable(phong_material_table_size);
 
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, depthTexture);
-    glUniform1i(primaryShader.shadowmapUniform, 1);
-    glActiveTexture(GL_TEXTURE0);
+    bindShadowMap();
 
     buffers_swapped_since_render = false;
     render(false);
@@ -1827,6 +1862,10 @@ void Visualizer::plotUpdate(bool hide_window) {
         glfwSwapBuffers((GLFWwindow *) window);
         buffers_swapped_since_render = true;
     }
+
+    // The frame on the GPU now reflects the current geometry and camera, so printWindow() can
+    // capture it without rendering again.
+    rendered_frame_is_current = true;
 
     if (message_flag) {
         std::cout << "done." << std::endl;
@@ -2380,6 +2419,14 @@ void Visualizer::updateWatermark() {
 
     float window_aspect = float(Wframebuffer) / float(Hframebuffer);
     float width = 0.07f * texture_aspect / window_aspect;
+
+    // The watermark's geometry depends only on its width, so an unchanged width means the rectangle
+    // already on screen is the one this call would produce. Rebuilding it anyway dirtied a primitive
+    // on every frame, which alone was enough to deny transferBufferData() its "nothing changed" path.
+    if (watermark_ID != 0 && width == watermark_built_width) {
+        return;
+    }
+
     if (watermark_ID != 0) {
         geometry_handler.deleteGeometry(watermark_ID);
     }
@@ -2389,6 +2436,7 @@ void Visualizer::updateWatermark() {
     // logo's edges, which is what made both the outer border and the black-on-white boundary
     // inside it look jagged.
     watermark_ID = addAlphaBlendedRectangleByCenter(make_vec3(0.75f * width, 0.95f, 0), make_vec2(width, 0.07), make_SphericalCoord(0, 0), watermarkPath.c_str(), COORDINATES_WINDOW_NORMALIZED);
+    watermark_built_width = width;
 }
 
 void Visualizer::updateColorbar() {
@@ -2410,6 +2458,30 @@ void Visualizer::updateColorbar() {
     // This keeps the colorbar height constant in normalized coordinates while adjusting width
     float corrected_width = colorbar_size.y * colorbar_intended_aspect_ratio / window_aspect;
 
+    // Rebuilding the colorbar deletes and re-adds every chip, border, tick mark and character
+    // rectangle in it. This runs on every plotUpdate(), so on an unchanged scene it was marking a
+    // hundred-odd primitives dirty each frame purely to restore identical geometry, which kept
+    // transferBufferData() from ever taking its "nothing changed" path. The fingerprint covers
+    // exactly the values addColorbarByCenter() reads, so it cannot go stale against a change that
+    // would alter the result.
+    std::vector<float> current_state{corrected_width,
+                                     colorbar_size.y,
+                                     colorbar_position.x,
+                                     colorbar_position.y,
+                                     colorbar_position.z,
+                                     colorbar_fontcolor.r,
+                                     colorbar_fontcolor.g,
+                                     colorbar_fontcolor.b,
+                                     float(colorbar_fontsize),
+                                     float(colorbar_integer_data),
+                                     colormap_current.getLowerLimit(),
+                                     colormap_current.getUpperLimit()};
+    current_state.insert(current_state.end(), colorbar_ticks.begin(), colorbar_ticks.end());
+
+    if (!colorbar_IDs.empty() && current_state == colorbar_built_state && colorbar_title == colorbar_built_title) {
+        return;
+    }
+
     // Delete old colorbar geometry
     if (!colorbar_IDs.empty()) {
         geometry_handler.deleteGeometry(colorbar_IDs);
@@ -2418,6 +2490,9 @@ void Visualizer::updateColorbar() {
 
     // Create new colorbar with aspect-corrected size
     colorbar_IDs = addColorbarByCenter(colorbar_title.c_str(), make_vec2(corrected_width, colorbar_size.y), colorbar_position, colorbar_fontcolor, colormap_current);
+
+    colorbar_built_state = std::move(current_state);
+    colorbar_built_title = colorbar_title;
 }
 
 

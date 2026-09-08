@@ -124,6 +124,28 @@ public:
      */
     void setCameraPosition(const std::vector<helios::vec3> &camera_position, const std::vector<helios::vec3> &camera_lookat);
 
+    //! Set the camera vertical field of view
+    /**
+     * The rasterized camera is a pinhole perspective projection whose vertical field of view this
+     * sets; the horizontal field of view follows from the window aspect ratio set by
+     * setWindowSize(). To reproduce the geometry of a RadiationModel camera specified by a
+     * horizontal field of view, convert with VFOV = 2*atan( tan(HFOV/2) * H_pixels / W_pixels ).
+     *
+     * \param[in] angle_FOV Vertical field of view in degrees. Default is 45.
+     */
+    void setCameraFieldOfView(float angle_FOV);
+
+    //! Enable writing of the shaded RGB rendering alongside the annotations (default is enabled)
+    void enableRGBRendering();
+
+    //! Disable writing of the shaded RGB rendering, generating only the annotations
+    /**
+     * The RGB pass shades and rasterizes the scene a second time purely to produce a preview
+     * image. When only the annotations are wanted it is pure overhead, and it is the dominant
+     * cost for scenes with many primitives.
+     */
+    void disableRGBRendering();
+
     //! Enable calculation and writing of rectangular bounding boxes for object detection when render() function is called
     void enableObjectDetection();
 
@@ -172,6 +194,12 @@ private:
 
     uint window_width, window_height;
 
+    //! Camera vertical field of view in degrees
+    float camera_FOV;
+
+    //! Whether render() also writes the shaded RGB preview image
+    bool rgbrendering_enabled;
+
     std::vector<helios::vec3> camera_position;
 
     std::vector<helios::vec3> camera_lookat;
@@ -186,7 +214,19 @@ private:
 
     int rgb2int(helios::RGBcolor color) const;
 
-    uint getGroupRectangularBBox(uint ID, const std::vector<uint> &pixels, uint framebuffer_width, uint framebuffer_height, helios::int4 &bbox) const;
+    //! Compute the rectangular bounding box of every labeled object visible in a rendered ID image
+    /**
+     * A single pass over the framebuffer accumulates one box per decoded ID, rather than rescanning
+     * the whole image once per object.
+     *
+     * \param[in] pixels RGB framebuffer returned by Visualizer::getWindowPixelsRGB(), bottom-up
+     * \param[in] framebuffer_width Framebuffer width in pixels
+     * \param[in] framebuffer_height Framebuffer height in pixels
+     * \return Map from object ID code to its bounding box (xmin, xmax, ymin, ymax, origin at the
+     * top-left as the YOLO format requires) paired with the number of pixels the object covers.
+     * IDs not present in the image are absent from the map.
+     */
+    std::map<int, std::pair<helios::int4, uint>> buildRectangularBBoxes(const std::vector<uint> &pixels, uint framebuffer_width, uint framebuffer_height) const;
 
     //! Build a binary mask for each labeled object visible in the rendered ID image
     /**

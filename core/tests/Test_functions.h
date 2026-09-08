@@ -535,6 +535,25 @@ TEST_CASE("String, File Path, and Parsing Utilities") {
         DOCTEST_CHECK(validateOutputPath(path4, {".txt"}) == true);
         DOCTEST_CHECK(path4.back() != '/'); // Should NOT have trailing slash (it's a file)
 
+        // Test 5: A path that already ends in a separator must not gain a second one. The check
+        // used to look for '/' in parent_path(), which never carries a trailing separator, so the
+        // condition was always true and a redundant separator was appended - producing "dir//", or
+        // "dir\/" on Windows where parent_path() returns backslashes.
+        std::string path5 = temp_dir.string() + "/";
+        DOCTEST_CHECK(validateOutputPath(path5) == true);
+        DOCTEST_CHECK(path5 == temp_dir.string() + "/"); // unchanged - no separator appended
+        DOCTEST_CHECK(path5.find("//") == std::string::npos);
+
+        // Test 6: Same, for a native (backslash) trailing separator. Windows-only: on POSIX a
+        // backslash is an ordinary filename character rather than a separator, so the path would
+        // take a different branch entirely and the assertion would not mean the same thing.
+#ifdef _WIN32
+        std::string path6 = temp_dir.string() + "\\";
+        DOCTEST_CHECK(validateOutputPath(path6) == true);
+        DOCTEST_CHECK(path6 == temp_dir.string() + "\\"); // unchanged - no '/' appended after '\'
+        DOCTEST_CHECK(path6.find("\\/") == std::string::npos);
+#endif
+
         // Clean up
         std::filesystem::remove_all(temp_dir);
         std::filesystem::remove_all(temp_dir.string() + "_nonexistent");
@@ -869,6 +888,90 @@ TEST_CASE("Miscellaneous Utilities") {
             CHECK(ri <= 10);
             CHECK(randu(3, 3) == 3);
         }
+        CHECK(randu(10, 3) == 10); // inverted range returns imin
+    }
+    SUBCASE("randu(int,int) resolves the full range on every platform") {
+        // Regression test for the std::rand()/RAND_MAX implementation. RAND_MAX is 32767 on MSVC
+        // and 2147483647 on glibc, so on Windows randu() could only take ~32768 distinct values and
+        // randu(0,N-1) could only return ~32768 evenly-spaced indices no matter how large N was.
+        // Drawing 5000 indices out of a million should therefore almost never collide (~12 expected
+        // collisions); with only 32768 reachable outputs the birthday bound predicts ~360.
+        constexpr int sample_count = 5000;
+        constexpr int range_max = 1000000;
+        std::set<int> distinct_values;
+        for (int i = 0; i < sample_count; ++i) {
+            int v = randu(0, range_max - 1);
+            CHECK(v >= 0);
+            CHECK(v < range_max);
+            distinct_values.insert(v);
+        }
+        CHECK(distinct_values.size() > 4900);
+    }
+    SUBCASE("randu(int,int) is uniform including the endpoints") {
+        // The old implementation computed imin + lround(range * ru) with ru drawn from [0,1). Only
+        // half of the rounding interval fell inside the range at each end, so imin and imax each
+        // came up about half as often as the interior values.
+        constexpr int draws = 60000;
+        constexpr int bucket_count = 5; // values 0..4
+        std::vector<int> histogram(bucket_count, 0);
+        for (int i = 0; i < draws; ++i) {
+            int v = randu(0, bucket_count - 1);
+            REQUIRE(v >= 0);
+            REQUIRE(v < bucket_count);
+            histogram[v]++;
+        }
+        const int expected = draws / bucket_count; // 12000
+        for (int bucket = 0; bucket < bucket_count; ++bucket) {
+            // Generous tolerance: a fair generator lands well inside it, while the old endpoint
+            // weighting (~6000 against ~12000) falls far outside.
+            CHECK(histogram[bucket] > expected * 4 / 5);
+            CHECK(histogram[bucket] < expected * 6 / 5);
+        }
+    }
+    SUBCASE("seedRandomGenerator makes randu reproducible") {
+        seedRandomGenerator(12345);
+        std::vector<float> first_sequence;
+        for (int i = 0; i < 32; ++i) {
+            first_sequence.push_back(randu());
+        }
+
+        seedRandomGenerator(12345);
+        for (int i = 0; i < 32; ++i) {
+            CHECK(randu() == first_sequence[i]); // identical seed reproduces the sequence exactly
+        }
+
+        seedRandomGenerator(54321);
+        bool any_difference = false;
+        for (int i = 0; i < 32; ++i) {
+            if (randu() != first_sequence[i]) {
+                any_difference = true;
+            }
+        }
+        CHECK(any_difference); // a different seed produces a different sequence
+    }
+    SUBCASE("seedRandomGenerator seeds every thread, not just the caller") {
+        // The seed must be global. When the engine was thread-local, a seed set here did not reach
+        // any other thread: each one lazily seeded itself from std::random_device, so the sequence
+        // a worker thread drew was different on every run and the caller's seed silently did
+        // nothing. Seeding on the main thread and drawing on a worker is the case that exposes it.
+        auto draw_on_worker = [](unsigned int seed) {
+            seedRandomGenerator(seed); // seeded here, on the main thread
+            std::vector<float> sequence;
+            std::thread worker([&sequence]() {
+                for (int i = 0; i < 16; ++i) {
+                    sequence.push_back(randu()); // drawn there, on another thread
+                }
+            });
+            worker.join();
+            return sequence;
+        };
+
+        const std::vector<float> first_run = draw_on_worker(2024);
+        const std::vector<float> second_run = draw_on_worker(2024);
+        CHECK(first_run == second_run); // same seed, same sequence, even across a thread boundary
+
+        const std::vector<float> other_seed = draw_on_worker(9876);
+        CHECK(other_seed != first_run); // and a different seed still diverges
     }
 }
 

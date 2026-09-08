@@ -1613,6 +1613,10 @@ private:
 
     /**
      * \brief Generate uniform sample directions within a cone
+     *
+     * The directions are laid out on a deterministic equal-area spiral over the spherical cap subtended by the cone, so the same cone always yields the same
+     * set of directions and cone queries are reproducible from one run to the next.
+     *
      * \param[in] apex Cone apex position
      * \param[in] central_axis Central axis direction (normalized)
      * \param[in] half_angle Half-angle of cone in radians

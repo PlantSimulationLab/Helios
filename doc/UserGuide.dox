@@ -2077,8 +2077,10 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
   ~~~~~~
 
   Vertex normals declared in the file with 'vn' records are read and attached to the mesh, and \ref helios::Context::getPolymeshObjectVertexNormalSource() reports \ref helios::NORMAL_SOURCE_AUTHORED for
-  them. Normals are never generated implicitly: a file that supplies none leaves \ref helios::Context::doesPolymeshObjectHaveVertexNormals() false and the source reported as
-  \ref helios::NORMAL_SOURCE_NONE, in which case the face normal is the correct value to use. Call \ref helios::Context::computePolymeshObjectVertexNormals() to generate them explicitly.
+  them. A file that supplies no normals does not leave the mesh shading faceted: normals are generated from the mesh connectivity as it is loaded, and the source is reported as
+  \ref helios::NORMAL_SOURCE_COMPUTED. Generated normals are blended across every edge, which leaves the mesh's shared-vertex topology unchanged so that queries such as
+  \ref helios::Context::isPolymeshObjectClosed() and \ref helios::Context::getPolymeshObjectVolume() continue to work. Normals authored in the file are never overwritten. Call
+  \ref helios::Context::computePolymeshObjectVertexNormals() to regenerate them at a crease angle that keeps sharp edges hard, noting that this splits the vertices straddling such an edge.
 
   All four OBJ face forms are supported ('v', 'v/vt', 'v//vn' and 'v/vt/vn'), as are negative (relative) indices.
 

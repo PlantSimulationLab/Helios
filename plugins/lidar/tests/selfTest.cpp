@@ -2994,14 +2994,6 @@ DOCTEST_TEST_CASE("LiDAR Eight Voxel Multi-Return Gaussian Weighting Test") {
     DOCTEST_CHECK_NOTHROW(synthetic_mr8.syntheticScan(&context_mr8, 100, 0.1f, true, true));
     uint hits_grid_true = synthetic_mr8.getHitCount();
 
-    // Check if we're actually getting multiple returns per pulse
-    uint multi_return_count = 0;
-    for (uint i = 0; i < hits_grid_true; i++) {
-        if (synthetic_mr8.doesHitDataExist(i, "target_count") && synthetic_mr8.getHitData(i, "target_count") > 1) {
-            multi_return_count++;
-        }
-    }
-
     // Triangulate using base overload - first returns automatically filtered for multi-return data
     DOCTEST_CHECK_NOTHROW(synthetic_mr8.triangulateHitPoints(0.04, 10));
     DOCTEST_CHECK(synthetic_mr8.getTriangleCount() > 0);
@@ -4071,6 +4063,12 @@ DOCTEST_TEST_CASE("LiDAR Strongest-Plus-Last Dual Return - Dedup To Single") {
 
     auto runScan = [&](ReturnMode mode, SingleReturnSelection policy) {
         Context ctx;
+        // The near patch is a deliberately peripheral sliver, so whether the beam's stochastic
+        // footprint sub-rays (drawn from ctx.randu()) happen to strike it decides between a
+        // one-hit and a two-hit cloud. Unseeded, this test missed the sliver in roughly 1 run in
+        // 40 and failed the hit-count REQUIRE below. Seeding fixes the sub-ray pattern so the
+        // scan is reproducible.
+        ctx.seedRandomGenerator(2024u);
         buildScene(ctx);
         LiDARcloud lidar;
         lidar.disableMessages();
@@ -4479,13 +4477,7 @@ DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Multi-Return Data") {
     uint hits_before = lidar.getHitCount();
 
     // Check if multi-return data was created (depends on beam spreading and geometry)
-    bool has_multi_return = false;
-    for (size_t r = 0; r < lidar.getHitCount(); r++) {
-        if (lidar.doesHitDataExist(r, "target_count") && lidar.getHitData(r, "target_count") > 1) {
-            has_multi_return = true;
-            break;
-        }
-    }
+    bool has_multi_return = lidar.isMultiReturnData();
     // Note: Multi-return creation depends on beam parameters and geometry interaction
     // Test verifies gapfilling works regardless
 
@@ -6048,8 +6040,21 @@ static void checkVirtualMaterializedEquivalence(const std::function<void(LiDARcl
     DOCTEST_CHECK(virt.getVirtualMissCount() > 0); // the virtual path was actually exercised
     DOCTEST_CHECK(mat.getVirtualMissCount() == 0);
 
+    // Bin both clouds before comparing grid cells. Unbinned, every hit's cell is the "never set"
+    // sentinel, so the getHitGridCell() comparison below would be -1 == -1 for every point -- vacuous,
+    // and one warning per call. The two boxes split the 10 m hit sphere at z = 0 and are far too small
+    // to reach a miss at LIDAR_MISS_DISTANCE, so real returns land in cell 0 or cell 1 and every miss
+    // (virtual or materialized) in -1, which is exactly the distinction the comparison should catch.
+    for (LiDARcloud *cloud: {&virt, &mat}) {
+        cloud->addGridCell(make_vec3(0, 0, 7.5f), make_vec3(30, 30, 15), 0.f);
+        cloud->addGridCell(make_vec3(0, 0, -7.5f), make_vec3(30, 30, 15), 0.f);
+        cloud->calculateHitGridCell();
+    }
+    DOCTEST_CHECK(virt.getVirtualMissCount() > 0); // binning must not have materialized the misses
+
     const char *labels[] = {"is_miss", "row", "column", "nRaysHit", "gapfillMisses_code", "timestamp", "intensity"};
 
+    size_t binned_hits = 0;
     for (uint i = 0; i < virt.getHitCount(); i++) {
         DOCTEST_REQUIRE(virt.getHitScanID(i) == mat.getHitScanID(i));
         const vec3 pv = virt.getHitXYZ(i), pm = mat.getHitXYZ(i);
@@ -6060,7 +6065,11 @@ static void checkVirtualMaterializedEquivalence(const std::function<void(LiDARcl
         DOCTEST_REQUIRE(ov.x == om.x);
         DOCTEST_REQUIRE(ov.y == om.y);
         DOCTEST_REQUIRE(ov.z == om.z);
-        DOCTEST_REQUIRE(virt.getHitGridCell(i) == mat.getHitGridCell(i));
+        const int gv = virt.getHitGridCell(i), gm = mat.getHitGridCell(i);
+        DOCTEST_REQUIRE(gv == gm);
+        if (gv >= 0) {
+            binned_hits++;
+        }
         const RGBcolor cv = virt.getHitColor(i), cm = mat.getHitColor(i);
         DOCTEST_REQUIRE(cv.r == cm.r);
         DOCTEST_REQUIRE(cv.g == cm.g);
@@ -6073,6 +6082,10 @@ static void checkVirtualMaterializedEquivalence(const std::function<void(LiDARcl
             }
         }
     }
+
+    // Real returns must actually have been binned into a cell, or the grid-cell comparison above
+    // degenerates back into comparing -1 with -1 for every point.
+    DOCTEST_REQUIRE(binned_hits > 0);
 
     // The bulk getter must agree with the per-index getter on the virtual cloud too.
     for (const char *lbl: labels) {
@@ -6829,6 +6842,42 @@ DOCTEST_TEST_CASE("LiDAR Grid Cell Binning - Rotated Cell Reject Is Conservative
     DOCTEST_CHECK(lidar.getHitGridCell(0) == 0);
     // The far-away point belongs to no cell.
     DOCTEST_CHECK(lidar.getHitGridCell(1) == -1);
+}
+
+DOCTEST_TEST_CASE("LiDAR Grid Cell Binning - Unbinned Hit Warns and Returns -1") {
+    // getHitGridCell() must not pass the internal "never set" sentinel off as a real answer. On a
+    // cloud that was never binned it returns -1 and says on stderr that calculateHitGridCell[*] was
+    // likely forgotten -- which is indistinguishable, by return value alone, from the legitimate
+    // "this point is in no cell" answer it gives after binning.
+    LiDARcloud lidar;
+    lidar.disableMessages();
+
+    ScanMetadata scan(make_vec3(0, 0, 0), 4, 0.05, 0.95 * M_PI, 4, 0.0, 2.0 * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, {});
+    lidar.addScan(scan);
+    const vec3 xyz = make_vec3(1.f, 0.f, 1.f);
+    lidar.addHitPoint(0, xyz, cart2sphere(xyz));
+    lidar.addGridCell(xyz, make_vec3(2, 2, 2), 0.f);
+
+    int cell = 0;
+    std::string message;
+    {
+        capture_cerr capture;
+        cell = lidar.getHitGridCell(0);
+        message = capture.get_captured_output();
+    } // capture destroyed before the assertions below
+    DOCTEST_CHECK(cell == -1);
+    DOCTEST_CHECK(message.find("WARNING (LiDARcloud::getHitGridCell)") != std::string::npos);
+    DOCTEST_CHECK(message.find("was never set") != std::string::npos);
+
+    // Once binned, the same query is answered from real data and says nothing.
+    lidar.calculateHitGridCell();
+    {
+        capture_cerr capture;
+        cell = lidar.getHitGridCell(0);
+        message = capture.get_captured_output();
+    }
+    DOCTEST_CHECK(cell == 0);
+    DOCTEST_CHECK(message.empty());
 }
 
 DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Top-Down Sweep Terminates") {
@@ -8069,4 +8118,51 @@ DOCTEST_TEST_CASE("LiDAR Spinning Multibeam XML Load And Export Round-Trip") {
     DOCTEST_CHECK(lidar2.getScanRevolutions(0) == doctest::Approx(2.0).epsilon(0.001));
 
     std::filesystem::remove_all(dir);
+}
+
+DOCTEST_TEST_CASE("LiDARcloud::isMultiReturnData") {
+    // Single-return cloud: every hit carries target_count == 1.
+    LiDARcloud single;
+    single.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 5), 2, 0.f, 0.f, 2, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, {});
+    single.addScan(scan);
+    for (uint i = 0; i < 2; i++) {
+        std::map<std::string, double> data{{"target_count", 1}, {"target_index", 0}, {"timestamp", double(i)}};
+        single.addHitPoint(0, make_vec3(float(i), 0, 0), make_SphericalCoord(0.f, 0.f), data);
+    }
+    DOCTEST_CHECK(single.isMultiReturnData() == false);
+
+    // Multi-return cloud: one pulse produced two returns, and both companion fields are present.
+    LiDARcloud multi;
+    multi.disableMessages();
+    multi.addScan(scan);
+    for (uint i = 0; i < 2; i++) {
+        std::map<std::string, double> data{{"target_count", 2}, {"target_index", double(i)}, {"timestamp", 0.0}};
+        multi.addHitPoint(0, make_vec3(0, 0, float(i)), make_SphericalCoord(0.f, 0.f), data);
+    }
+    DOCTEST_CHECK(multi.isMultiReturnData() == true);
+
+    // A cloud with no target_count data at all is single-return, not an error.
+    LiDARcloud bare;
+    bare.disableMessages();
+    bare.addScan(scan);
+    bare.addHitPoint(0, make_vec3(0, 0, 0), make_SphericalCoord(0.f, 0.f));
+    DOCTEST_CHECK(bare.isMultiReturnData() == false);
+
+    // target_count > 1 without the timestamp needed to group returns into beams must throw,
+    // rather than reporting an answer the triangulation cannot act on.
+    LiDARcloud no_timestamp;
+    no_timestamp.disableMessages();
+    no_timestamp.addScan(scan);
+    std::map<std::string, double> missing_timestamp{{"target_count", 2}, {"target_index", 0}};
+    no_timestamp.addHitPoint(0, make_vec3(0, 0, 0), make_SphericalCoord(0.f, 0.f), missing_timestamp);
+    DOCTEST_CHECK_THROWS(no_timestamp.isMultiReturnData());
+
+    // Likewise for a missing target_index, which selects first returns.
+    LiDARcloud no_target_index;
+    no_target_index.disableMessages();
+    no_target_index.addScan(scan);
+    std::map<std::string, double> missing_index{{"target_count", 2}, {"timestamp", 0.0}};
+    no_target_index.addHitPoint(0, make_vec3(0, 0, 0), make_SphericalCoord(0.f, 0.f), missing_index);
+    DOCTEST_CHECK_THROWS(no_target_index.isMultiReturnData());
 }

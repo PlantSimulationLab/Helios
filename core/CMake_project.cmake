@@ -19,8 +19,26 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # If a build type is not specified, explicitly set it to Debug.
+#
+# The default is deliberately left at Debug, but it is announced loudly rather than applied
+# silently. An unoptimized Helios build is dramatically slower than a Release one, and the gap is
+# widest on Windows: MSVC's Debug defaults are "/Od /RTC1", where /RTC1 adds stack-frame and
+# uninitialized-variable checks around every local, whereas GCC/Clang's "-O0" adds no comparable
+# instrumentation. Someone who runs a canopy simulation from an accidentally-Debug build can
+# easily see an order-of-magnitude slowdown with nothing on screen to explain it.
 if (NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
+    message(WARNING "[Helios] No build type specified; defaulting to Debug, which is MUCH slower "
+                    "than Release (especially on Windows). Configure with "
+                    "-DCMAKE_BUILD_TYPE=Release for performance work or production runs.")
+endif()
+
+# Multi-config generators (Visual Studio, Ninja Multi-Config) ignore CMAKE_BUILD_TYPE and pick the
+# configuration at build time, defaulting to Debug when '--config' is omitted. That is the same
+# trap by a different mechanism, and it is the common one on Windows, so warn about it too.
+if (CMAKE_CONFIGURATION_TYPES)
+    message(STATUS "[Helios] Multi-config generator detected. Remember to build with "
+                   "'cmake --build . --config Release' - omitting --config builds Debug, which is MUCH slower.")
 endif()
 
 message(STATUS "[Helios] Build type: ${CMAKE_BUILD_TYPE}")

@@ -2,7 +2,10 @@ name: Build and Deploy Documentation
 
 "on":
   push:
-    branches: [ "master", "main" ]
+    # "release" builds the docs on a release candidate so a broken \ref or Doxygen
+    # warning is caught before the tag; the deploy jobs below are gated on
+    # github.ref == master, so nothing is published from a release branch.
+    branches: [ "master", "main", "release" ]
   pull_request:
     branches: [ "master", "main" ]
     types: [opened, synchronize]

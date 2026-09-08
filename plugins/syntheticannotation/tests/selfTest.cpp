@@ -147,18 +147,41 @@ TEST_CASE("SyntheticAnnotation labelUnlabeledPrimitives labels the remainder") {
     test_instance.labelUnlabeledPrimitives("background");
 
     // Every primitive must now carry an object label...
-    DOCTEST_CHECK(context_test.doesPrimitiveDataExist(labeled, "object_label"));
-    DOCTEST_CHECK(context_test.doesPrimitiveDataExist(unlabeled_a, "object_label"));
-    DOCTEST_CHECK(context_test.doesPrimitiveDataExist(unlabeled_b, "object_label"));
+    DOCTEST_CHECK(context_test.doesPrimitiveDataExist(labeled, "syntheticannotation_labelID"));
+    DOCTEST_CHECK(context_test.doesPrimitiveDataExist(unlabeled_a, "syntheticannotation_labelID"));
+    DOCTEST_CHECK(context_test.doesPrimitiveDataExist(unlabeled_b, "syntheticannotation_labelID"));
 
     // ...and the two formerly-unlabeled primitives must be distinct objects, not one group.
     uint id_a = 0, id_b = 0, id_labeled = 0;
-    context_test.getPrimitiveData(unlabeled_a, "object_label", id_a);
-    context_test.getPrimitiveData(unlabeled_b, "object_label", id_b);
-    context_test.getPrimitiveData(labeled, "object_label", id_labeled);
+    context_test.getPrimitiveData(unlabeled_a, "syntheticannotation_labelID", id_a);
+    context_test.getPrimitiveData(unlabeled_b, "syntheticannotation_labelID", id_b);
+    context_test.getPrimitiveData(labeled, "syntheticannotation_labelID", id_labeled);
     DOCTEST_CHECK(id_a != id_b);
     DOCTEST_CHECK(id_a != id_labeled);
     DOCTEST_CHECK(id_b != id_labeled);
+}
+
+TEST_CASE("SyntheticAnnotation setCameraFieldOfView") {
+    Context context_test;
+    SyntheticAnnotation test_instance(&context_test);
+
+    DOCTEST_CHECK_NOTHROW(test_instance.setCameraFieldOfView(44.5f));
+    DOCTEST_CHECK_NOTHROW(test_instance.setCameraFieldOfView(179.f));
+
+    // A field of view outside (0,180) has no perspective projection, so it is rejected here rather
+    // than producing a silently degenerate projection matrix inside the Visualizer.
+    DOCTEST_CHECK_THROWS(test_instance.setCameraFieldOfView(0.f));
+    DOCTEST_CHECK_THROWS(test_instance.setCameraFieldOfView(-10.f));
+    DOCTEST_CHECK_THROWS(test_instance.setCameraFieldOfView(180.f));
+    DOCTEST_CHECK_THROWS(test_instance.setCameraFieldOfView(200.f));
+}
+
+TEST_CASE("SyntheticAnnotation RGB rendering enable/disable") {
+    Context context_test;
+    SyntheticAnnotation test_instance(&context_test);
+
+    DOCTEST_CHECK_NOTHROW(test_instance.disableRGBRendering());
+    DOCTEST_CHECK_NOTHROW(test_instance.enableRGBRendering());
 }
 
 TEST_CASE("SyntheticAnnotation setMinimumLabelPixels") {
@@ -182,18 +205,18 @@ TEST_CASE("SyntheticAnnotation setMinimumLabelPixels") {
 // ---------------------------------------------------------------------------
 // Regression tests for render() output correctness.
 //
-// render() constructs a non-headless Visualizer, so these tests only run when a
-// display is available. They exercise the annotation-writing code paths, which
+// render() rasterizes through a Visualizer, so these tests only run where an
+// OpenGL context can be created. They exercise the annotation-writing code paths, which
 // were previously untested: every other test in this file is a CHECK_NOTHROW on
 // a setter.
 // ---------------------------------------------------------------------------
 
 //! Returns true if an OpenGL context usable by render() can be created on this machine
 /**
- * render() draws its RGB pass through a Visualizer, so the tests that call it cannot run where no
- * OpenGL context can be created. Unlike the visualizer plug-in's tests, these are not skipped by
+ * render() rasterizes through a Visualizer, so the tests that call it cannot run where no OpenGL
+ * context can be created at all. Unlike the visualizer plug-in's tests, these are not skipped by
  * name in CI (`--visbuildonly` skips only executables whose name contains "visualizer"), so this
- * guard is what keeps them from failing on a headless runner.
+ * guard is what keeps them from failing on a runner with no GL driver.
  *
  * The check is a probe rather than a platform assumption: it constructs a Visualizer exactly as
  * render() does and reports whether that succeeded. Inspecting DISPLAY/WAYLAND_DISPLAY cannot
@@ -202,10 +225,9 @@ TEST_CASE("SyntheticAnnotation setMinimumLabelPixels") {
  * all three create no OpenGL context at all. Probing also covers the case where a display is
  * advertised but the driver still cannot produce a context.
  *
- * Note that the probe must construct the Visualizer with the same arguments render() uses, because
- * Visualizer::initialize() promotes any construction to headless when CI=true is set on macOS and
- * Windows regardless of the requested mode. Probing a headless Visualizer instead would therefore
- * exercise a different code path than the one under test.
+ * The probe constructs the Visualizer with the same arguments render() uses. render() now draws
+ * both of its passes headless, so the probe is headless too; probing a windowed Visualizer would
+ * report "no display" on batch machines where render() in fact works.
  *
  * The result is computed once and cached: each probe builds and tears down a real GL context, and
  * repeating that for every test case is slow and needlessly re-enters GLFW init/terminate.
@@ -215,9 +237,15 @@ static bool syntheticAnnotationDisplayAvailable() {
         try {
             // Same arguments as the RGB pass in SyntheticAnnotation::render(), at minimum size:
             // the probe only needs the context to come up, not to draw anything.
-            Visualizer probe(16, 16, 8, false, false);
+            Visualizer probe(16, 16, 8, false, true);
             probe.disableMessages();
+        } catch (const std::exception &e) {
+            // Report why, so that a runner silently skipping every render test is distinguishable
+            // from one that has no graphics at all.
+            std::cerr << "NOTE: SyntheticAnnotation render tests skipped -- no OpenGL context: " << e.what() << std::endl;
+            return false;
         } catch (...) {
+            std::cerr << "NOTE: SyntheticAnnotation render tests skipped -- no OpenGL context." << std::endl;
             return false;
         }
         return true;
@@ -481,6 +509,167 @@ TEST_CASE("SyntheticAnnotation pixel row indexing stays in bounds") {
     DOCTEST_CHECK(every_row_visited_once);
 }
 
+TEST_CASE("SyntheticAnnotation does not collide with existing object_label data") {
+    // "object_label" is an established convention across Helios for a *string* naming the organ or
+    // material a primitive belongs to: PlantArchitecture sets "leaf"/"petiole"/"peduncle",
+    // ProjectBuilder filters on those names, and Context::loadOBJ records material group names
+    // there. This plug-in used the same key for its own uint label ID, so annotating any such scene
+    // aborted with a primitive-data type conflict -- and had the types agreed, the appearance guard
+    // would have deleted the scene's own labels on the way out.
+
+    if (!syntheticAnnotationDisplayAvailable()) {
+        return;
+    }
+
+    Context context;
+    std::vector<std::vector<uint>> groups = buildTwoObjectScene(context);
+    for (const std::vector<uint> &group: groups) {
+        context.setPrimitiveData(group, "object_label", "leaf");
+    }
+
+    SyntheticAnnotation annotation(&context);
+    annotation.disableMessages();
+    annotation.disableRGBRendering();
+    annotation.setWindowSize(200, 200);
+    annotation.setCameraPosition(make_vec3(0, -3, 0), make_vec3(0, 0, 0));
+    annotation.enableObjectDetection();
+    annotation.disableSemanticSegmentation();
+    annotation.disableInstanceSegmentation();
+    annotation.labelPrimitives(groups, "patch");
+
+    const std::string outdir = "./sa_test_labelcollide/";
+    std::filesystem::remove_all(outdir);
+    DOCTEST_CHECK_NOTHROW(annotation.render(outdir.c_str()));
+
+    // The scene's own labels survive the round trip, with their original type and value.
+    for (const std::vector<uint> &group: groups) {
+        for (uint UUID: group) {
+            DOCTEST_CHECK(context.doesPrimitiveDataExist(UUID, "object_label"));
+            std::string organ;
+            context.getPrimitiveData(UUID, "object_label", organ);
+            DOCTEST_CHECK(organ == "leaf");
+        }
+    }
+
+    std::filesystem::remove_all(outdir);
+}
+
+TEST_CASE("SyntheticAnnotation camera field of view scales the rendered geometry") {
+    // The field of view is what makes a rasterized annotation pass geometrically comparable to a
+    // camera specified elsewhere (e.g. a RadiationModel camera given by its HFOV). Without it the
+    // projection was pinned at the Visualizer's 45 degree default, so bounding boxes came out at
+    // the wrong scale no matter how the camera was placed.
+    //
+    // Halving the field of view must magnify the subject: the same patch at the same distance has
+    // to occupy a larger fraction of the frame.
+
+    if (!syntheticAnnotationDisplayAvailable()) {
+        return;
+    }
+
+    auto box_area_fraction = [](float fov, const std::string &outdir) -> float {
+        Context context;
+        context.addPatch(make_vec3(0, 0, 0), make_vec2(0.6f, 0.6f), make_SphericalCoord(0.5f * M_PI, 0.f));
+
+        SyntheticAnnotation annotation(&context);
+        annotation.disableMessages();
+        annotation.disableRGBRendering();
+        annotation.setWindowSize(200, 200);
+        annotation.setCameraPosition(make_vec3(0, -3, 0), make_vec3(0, 0, 0));
+        annotation.setCameraFieldOfView(fov);
+        annotation.enableObjectDetection();
+        annotation.disableSemanticSegmentation();
+        annotation.disableInstanceSegmentation();
+        annotation.labelPrimitives(context.getAllUUIDs(), "patch");
+
+        std::filesystem::remove_all(outdir);
+        annotation.render(outdir.c_str());
+
+        // YOLO bounding boxes: class cx cy w h, normalized to the frame.
+        std::ifstream file(outdir + "view00000/RGB_rendering.txt");
+        int cls;
+        float cx, cy, w, h;
+        float area = 0.f;
+        while (file >> cls >> cx >> cy >> w >> h) {
+            area = std::max(area, w * h);
+        }
+        return area;
+    };
+
+    const float area_wide = box_area_fraction(60.f, "./sa_test_fov_wide/");
+    const float area_narrow = box_area_fraction(30.f, "./sa_test_fov_narrow/");
+
+    DOCTEST_CHECK(area_wide > 0.f);
+    DOCTEST_CHECK(area_narrow > 0.f);
+
+    // The patch subtends a fixed angle, so its width in the frame scales as tan(FOV/2) and the
+    // area as its square. Halving 60 deg to 30 deg gives tan(30)/tan(15) = 2.155 in width, so
+    // roughly 4.6x in area. The tolerance is wide because the box is quantized to 200 pixels.
+    const float ratio = area_narrow / area_wide;
+    DOCTEST_CHECK(ratio == doctest::Approx(4.64f).epsilon(0.15));
+
+    std::filesystem::remove_all("./sa_test_fov_wide/");
+    std::filesystem::remove_all("./sa_test_fov_narrow/");
+}
+
+TEST_CASE("SyntheticAnnotation RGB rendering can be skipped") {
+    // The RGB pass rasterizes the whole scene a second time only to produce a preview image. It
+    // dominates the cost of a large scene, so a caller that wants only annotations must be able to
+    // turn it off -- and turning it off must not disturb the annotations themselves.
+
+    if (!syntheticAnnotationDisplayAvailable()) {
+        return;
+    }
+
+    Context context;
+    std::vector<std::vector<uint>> groups = buildTwoObjectScene(context);
+
+    auto run = [&](bool rgb_enabled, const std::string &outdir) {
+        SyntheticAnnotation annotation(&context);
+        annotation.disableMessages();
+        if (rgb_enabled) {
+            annotation.enableRGBRendering();
+        } else {
+            annotation.disableRGBRendering();
+        }
+        annotation.setWindowSize(200, 200);
+        annotation.setCameraPosition(make_vec3(0, -3, 0), make_vec3(0, 0, 0));
+        annotation.enableObjectDetection();
+        annotation.disableSemanticSegmentation();
+        annotation.disableInstanceSegmentation();
+        annotation.labelPrimitives(groups, "patch");
+
+        std::filesystem::remove_all(outdir);
+        annotation.render(outdir.c_str());
+    };
+
+    run(true, "./sa_test_rgb_on/");
+    run(false, "./sa_test_rgb_off/");
+
+    DOCTEST_CHECK(std::filesystem::exists("./sa_test_rgb_on/view00000/RGB_rendering.jpeg"));
+    DOCTEST_CHECK(!std::filesystem::exists("./sa_test_rgb_off/view00000/RGB_rendering.jpeg"));
+
+    // The annotations are unaffected by whether the preview was written.
+    auto read_labels = [](const std::string &path) {
+        std::vector<std::string> lines;
+        std::ifstream file(path);
+        std::string line;
+        while (std::getline(file, line)) {
+            if (!line.empty()) {
+                lines.push_back(line);
+            }
+        }
+        return lines;
+    };
+    const std::vector<std::string> labels_on = read_labels("./sa_test_rgb_on/view00000/RGB_rendering.txt");
+    const std::vector<std::string> labels_off = read_labels("./sa_test_rgb_off/view00000/RGB_rendering.txt");
+    DOCTEST_CHECK(labels_on.size() == 2);
+    DOCTEST_CHECK(labels_on == labels_off);
+
+    std::filesystem::remove_all("./sa_test_rgb_on/");
+    std::filesystem::remove_all("./sa_test_rgb_off/");
+}
+
 TEST_CASE("SyntheticAnnotation label IDs survive the render round trip") {
     // Regression test for the ID encoding, which is the mechanism the whole plug-in rests on:
     // each label ID is encoded as an RGB color, rendered, and decoded back from the pixels.
@@ -655,7 +844,7 @@ TEST_CASE("SyntheticAnnotation semantic segmentation writes one multi-class mask
 TEST_CASE("SyntheticAnnotation render restores primitive appearance and clears label data") {
     // Regression test: render() recolors every primitive with its label's ID code and restored
     // the colors in a plain loop at the end of the function, so any error thrown partway through
-    // left the caller's whole scene painted in ID codes. It also never removed the "object_label"
+    // left the caller's whole scene painted in ID codes. It also never removed the label-ID
     // primitive data it added, leaking internal state into the user's Context.
 
     if (!syntheticAnnotationDisplayAvailable()) {
@@ -690,11 +879,11 @@ TEST_CASE("SyntheticAnnotation render restores primitive appearance and clears l
     DOCTEST_CHECK(after.b == doctest::Approx(original_color.b));
 
     // The internal label data must not be left behind in the user's Context.
-    DOCTEST_CHECK(!context.doesPrimitiveDataExist(UUID, "object_label"));
+    DOCTEST_CHECK(!context.doesPrimitiveDataExist(UUID, "syntheticannotation_labelID"));
 }
 
 TEST_CASE("SyntheticAnnotation render is repeatable") {
-    // render() clears the "object_label" data it sets, so the coloring pass must re-establish it
+    // render() clears the "syntheticannotation_labelID" data it sets, so the coloring pass must re-establish it
     // rather than assume it survived. Otherwise a second render() would treat every primitive as
     // unlabeled, color them all white, and silently write blank annotations.
 

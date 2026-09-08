@@ -2984,60 +2984,32 @@ std::vector<helios::vec3> CollisionDetection::sampleDirectionsInCone(const vec3 
     v = cross(axis, u);
     v.normalize();
 
-    // Generate uniform samples within the cone using rejection sampling on hemisphere
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> uniform_dist(0.0f, 1.0f);
+    // Deterministic low-discrepancy sampling of the spherical cap subtended by the cone. The pattern is a
+    // function of the cone geometry alone, so repeating a query against unchanged geometry always gives the
+    // same answer. This previously seeded a std::mt19937 from std::random_device on every call, which made
+    // findNearestSolidObstacleInCone() nondeterministic from one run to the next: an obstacle covering only
+    // a thin sliver of the cone was found on most runs and missed on the rest, and no seeding by the caller
+    // could pin it down.
+    const float cos_half_angle = cosf(half_angle);
 
-    int samples_generated = 0;
-    int max_attempts = num_samples * 10; // Limit attempts to prevent infinite loops
-    int attempts = 0;
+    // Golden angle, pi*(3-sqrt(5)). Successive samples advance in azimuth by an irrational fraction of a
+    // turn, so the spiral never closes on itself and the cap fills evenly for any number of samples.
+    constexpr float golden_angle = 2.39996322972865332f;
 
-    while (samples_generated < num_samples && attempts < max_attempts) {
-        attempts++;
+    for (int sample = 0; sample < num_samples; sample++) {
 
-        // Generate uniform sample on unit hemisphere using spherical coordinates
-        float u1 = uniform_dist(gen);
-        float u2 = uniform_dist(gen);
+        // Equal-area strata along the axis: cos(theta) is spread uniformly over [cos(half_angle), 1], which
+        // is what makes the directions uniform over the cap rather than bunched around the axis.
+        const float stratum_center = (static_cast<float>(sample) + 0.5f) / static_cast<float>(num_samples);
+        const float cos_theta = 1.0f - stratum_center * (1.0f - cos_half_angle);
+        const float sin_theta = sqrtf(std::max(0.0f, 1.0f - cos_theta * cos_theta));
+        const float phi = golden_angle * static_cast<float>(sample);
 
-        // Use stratified sampling for better distribution
-        if (samples_generated > 0) {
-            float stratum_u1 = (float) samples_generated / (float) num_samples;
-            float stratum_u2 = uniform_dist(gen);
-            u1 = (stratum_u1 + u1 / (float) num_samples);
-            if (u1 > 1.0f)
-                u1 -= 1.0f;
-        }
-
-        // Convert to spherical coordinates
-        // For uniform sampling within cone, we need:
-        // cos(theta) uniformly distributed between cos(half_angle) and 1
-        float cos_half_angle = cosf(half_angle);
-        float cos_theta = cos_half_angle + u1 * (1.0f - cos_half_angle);
-        float sin_theta = sqrtf(1.0f - cos_theta * cos_theta);
-        float phi = 2.0f * M_PI * u2;
-
-        // Convert to Cartesian coordinates in local coordinate system
-        float x = sin_theta * cosf(phi);
-        float y = sin_theta * sinf(phi);
-        float z = cos_theta;
-
-        // Transform from local coordinates to world coordinates
-        vec3 local_direction = make_vec3(x, y, z);
+        const vec3 local_direction = make_vec3(sin_theta * cosf(phi), sin_theta * sinf(phi), cos_theta);
         vec3 world_direction = u * local_direction.x + v * local_direction.y + axis * local_direction.z;
         world_direction.normalize();
 
-        // Verify the direction is within the cone (numerical precision check)
-        float dot_product = world_direction * axis;
-        if (dot_product >= cos_half_angle - 1e-6f) {
-            directions.push_back(world_direction);
-            samples_generated++;
-        }
-    }
-
-    // If we couldn't generate enough samples, fill with the central axis
-    while (directions.size() < (size_t) num_samples) {
-        directions.push_back(axis);
+        directions.push_back(world_direction);
     }
 
     return directions;

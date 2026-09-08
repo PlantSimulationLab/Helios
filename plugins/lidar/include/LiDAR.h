@@ -1056,10 +1056,13 @@ private:
      * \param[in] context Pointer to the Helios context
      * \param[in] min_voxel_hits Minimum number of allowable LiDAR hits per voxel
      * \param[in] element_width Characteristic vegetation element width [m] (<= 0 reports sampling-only uncertainty)
-     * \param[in] supplied_Gtheta If > 0, this G(theta) is used for every voxel and triangulation is NOT required. If <=
-     *            0 (the sentinel), G(theta) is computed per voxel from triangulation, which must have been performed.
+     * \param[in] supplied_Gtheta Controls the source of G(theta):
+     *            - empty: G(theta) is computed per voxel from triangulation, which must have been performed.
+     *            - size 1: the single value is broadcast to every voxel; triangulation is NOT required.
+     *            - size == grid-cell count: the value is used per voxel in cell order; triangulation is NOT required.
+     *            Any other size is an error. Every supplied value must be in (0,1].
      */
-    void calculateLeafArea_inner(helios::Context *context, int min_voxel_hits, float element_width, float supplied_Gtheta);
+    void calculateLeafArea_inner(helios::Context *context, int min_voxel_hits, float element_width, const std::vector<float> &supplied_Gtheta);
 
     //! Perform LAD inversion for a single voxel using secant method
     /**
@@ -1189,12 +1192,6 @@ private:
     bool ciValidPimont(float L, float L1, int N, float confidence_level) const;
 
     // -------- MULTI-RETURN HELPERS --------- //
-
-    //! Detect if point cloud contains multi-return data
-    /**
-     * \return True if multi-return data detected (target_count > 1), false otherwise
-     */
-    bool isMultiReturnData() const;
 
     //! Beam grouping structure for multi-return data (compressed-sparse-row layout)
     /** A pulse ("beam") may produce several returns. Rather than a vector-of-vectors (one small heap allocation per
@@ -1967,6 +1964,26 @@ public:
      * \return True if at least one hit is a miss (see \ref isHitMiss()).
      */
     bool hasMisses() const;
+
+    //! Determine whether the point cloud contains multi-return data
+    /**
+     * Multi-return data is data in which a single laser pulse produced more than one recorded
+     * return. This is a behavioral switch, not just a descriptive property: \ref triangulateHitPoints()
+     * branches on it, triangulating first returns only (with an adaptive separation filter) for
+     * multi-return data, and treating every return as an independent single return otherwise. The two
+     * branches can differ substantially in reconstructed surface area, so a caller that assembles a
+     * cloud itself (e.g. via \ref loadASCIIFile()) can use this to confirm which one will run.
+     *
+     * Multi-return data must also carry the `timestamp` and `target_index` hit-data fields, which
+     * \ref triangulateHitPoints() needs to group returns into beams and to select first returns. If
+     * `target_count > 1` is found but either field is absent, this function throws rather than
+     * reporting an answer the rest of the pipeline cannot act on.
+     *
+     * \return True if any hit has a `target_count` value greater than 1, false otherwise.
+     * \note Throws a runtime error if multi-return data is detected but the `timestamp` or
+     *       `target_index` hit-data field is missing.
+     */
+    bool isMultiReturnData() const;
 
     //! Get color of hit point
     /**
@@ -2966,6 +2983,25 @@ public:
      *       call \ref gapfillMisses() first.
      */
     void calculateLeafArea(helios::Context *context, float Gtheta, int min_voxel_hits, float element_width);
+
+    //! Calculate the leaf area for each grid volume using a caller-supplied PER-VOXEL G(theta), without requiring triangulation
+    /**
+     * Identical to the single-G(theta) overload above, but takes one G(theta) per grid cell instead of a single value
+     * applied everywhere. This supports a vertically-varying (or otherwise spatially-varying) leaf-angle distribution -
+     * e.g. a canopy whose leaf inclination changes with height - without triangulating. Like the scalar overload it
+     * inverts Beer's law from each beam's own origin and does NOT require \ref triangulateHitPoints().
+     *
+     * \param[in] context Pointer to the Helios context
+     * \param[in] Gtheta_per_cell Mean leaf-projection coefficient G(theta) for each grid cell, in grid-cell order (the
+     *            same order as \ref getCellCenter()). Its length must equal \ref getGridCellCount(). Every value must be
+     *            in (0,1].
+     * \param[in] min_voxel_hits Minimum number of allowable LiDAR hits per voxel
+     * \param[in] element_width Characteristic vegetation element width [m]; see the three-argument overload. Pass <= 0
+     *            to report sampling-only uncertainty.
+     * \note Requires miss points (transmitted beams), like the other overloads; supply a miss-retaining scan format or
+     *       call \ref gapfillMisses() first.
+     */
+    void calculateLeafArea(helios::Context *context, const std::vector<float> &Gtheta_per_cell, int min_voxel_hits, float element_width);
 
     //! Calculate the leaf area for each grid volume (DEPRECATED - use calculateLeafArea)
     /**

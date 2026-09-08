@@ -29,6 +29,11 @@ usage() {
 }
 
 # Function to run commands with proper redirection (compatible with all bash versions)
+#
+# In quiet mode the output is captured rather than discarded, and replayed if the command fails.
+# Previously it went to /dev/null, so a fatal error (a failed CMake configure, say) surfaced only as
+# a bare "...failed." with nothing to act on, and the run had to be repeated with --verbose to learn
+# anything at all.
 run_command() {
     if [ -n "$LOG_FILE" ]; then
         if [ "$VERBOSE" == "ON" ]; then
@@ -40,7 +45,16 @@ run_command() {
     elif [ "$VERBOSE" == "ON" ]; then
         "$@"
     else
-        "$@" >/dev/null 2>&1
+        local quiet_output quiet_status
+        quiet_output="$("$@" 2>&1)"
+        quiet_status=$?
+        if [ ${quiet_status} -ne 0 ]; then
+            echo "" >&2
+            echo "--- output of failed command: $* ---" >&2
+            echo "${quiet_output}" >&2
+            echo "--- end of output (re-run with --verbose for the full log) ---" >&2
+        fi
+        return ${quiet_status}
     fi
 }
 
@@ -675,33 +689,20 @@ else
           echo -ne "Running memcheck for test $test_exe..."
         fi
         
+        # No ".exe" handling here: this whole block is already gated on OSTYPE != msys* above, so
+        # Windows never reaches it. The nested "msys" checks that used to sit inside each branch
+        # were unreachable dead code.
         if [[ "${OSTYPE}" == "darwin"* ]]; then
-          if [[ "${OSTYPE}" == "msys"* ]]; then
-            if [ ${#TEST_ARGS_ARRAY[@]} -gt 0 ]; then
-              run_command leaks --atExit -- "./${test_exe}.exe" "${TEST_ARGS_ARRAY[@]}"
-            else
-              run_command leaks --atExit -- "./${test_exe}.exe"
-            fi
+          if [ ${#TEST_ARGS_ARRAY[@]} -gt 0 ]; then
+            run_command leaks --atExit -- "./${test_exe}" "${TEST_ARGS_ARRAY[@]}"
           else
-            if [ ${#TEST_ARGS_ARRAY[@]} -gt 0 ]; then
-              run_command leaks --atExit -- "./${test_exe}" "${TEST_ARGS_ARRAY[@]}"
-            else
-              run_command leaks --atExit -- "./${test_exe}"
-            fi
+            run_command leaks --atExit -- "./${test_exe}"
           fi
         else
-          if [[ "${OSTYPE}" == "msys"* ]]; then
-            if [ ${#TEST_ARGS_ARRAY[@]} -gt 0 ]; then
-              run_command valgrind --leak-check=full --error-exitcode=1 "./${test_exe}.exe" "${TEST_ARGS_ARRAY[@]}"
-            else
-              run_command valgrind --leak-check=full --error-exitcode=1 "./${test_exe}.exe"
-            fi
+          if [ ${#TEST_ARGS_ARRAY[@]} -gt 0 ]; then
+            run_command valgrind --leak-check=full --error-exitcode=1 "./${test_exe}" "${TEST_ARGS_ARRAY[@]}"
           else
-            if [ ${#TEST_ARGS_ARRAY[@]} -gt 0 ]; then
-              run_command valgrind --leak-check=full --error-exitcode=1 "./${test_exe}" "${TEST_ARGS_ARRAY[@]}"
-            else
-              run_command valgrind --leak-check=full --error-exitcode=1 "./${test_exe}"
-            fi
+            run_command valgrind --leak-check=full --error-exitcode=1 "./${test_exe}"
           fi
         fi
         

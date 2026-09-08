@@ -2,7 +2,11 @@ name: Build and Run on Windows EC2 GPU Instance
 
 on:
   push:
-    branches: [ "master" ]
+    # Runs on the release branch only. The release flow validates a candidate on
+    # release/<version>, then fast-forwards master to that exact commit, so a second
+    # run on master would re-test an identical SHA on a billed EC2 GPU instance.
+    branches: [ "release" ]
+  workflow_dispatch: {}
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)

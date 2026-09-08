@@ -21,6 +21,27 @@ fi
 UTILPATH="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 HELIOS_BASE_DIR="$(dirname "$UTILPATH")"
 
+# Convert a shell path to one that native cmake.exe can resolve.
+#
+# Under Git Bash/MSYS/Cygwin on Windows, pwd yields a POSIX-style path such as
+# /c/Users/name/Helios. That form is only meaningful to the MSYS runtime: cmake.exe is a native
+# Windows binary and cannot resolve it, so writing it into CMakeLists.txt as BASE_DIRECTORY makes
+# configure fail with "include could not find requested file". MSYS auto-converts POSIX paths in
+# command-line arguments to native executables, but not text written into a file, so the
+# conversion has to be explicit here. On Linux/macOS this is a no-op.
+to_cmake_path() {
+    case "${OSTYPE}" in
+        msys*|cygwin*|mingw*)
+            if command -v cygpath >/dev/null 2>&1; then
+                cygpath -m "${1}"    # -m gives C:/foo/bar (forward slashes, no escaping needed)
+            else
+                echo "${1}"
+            fi
+            ;;
+        *) echo "${1}" ;;
+    esac
+}
+
 if [ ! -e "${DIRPATH}" ]; then
     echo "Directory ""${DIRPATH}"" does not exist. Creating it...";
     if ! mkdir -p "${DIRPATH}"; then
@@ -88,11 +109,11 @@ elif [[ "${DIRPATH}" = /* ]]; then
             done
         fi
     else
-        BASE_DIR_REL="${HELIOS_BASE_DIR}"  # Use absolute path
+        BASE_DIR_REL="$(to_cmake_path "${HELIOS_BASE_DIR}")"  # Use absolute path (native form for cmake.exe)
     fi
 else
     # Other relative paths - use absolute path as fallback for reliability
-    BASE_DIR_REL="${HELIOS_BASE_DIR}"
+    BASE_DIR_REL="$(to_cmake_path "${HELIOS_BASE_DIR}")"
 fi
 
 echo -e '#provide the path to Helios base directory, either as an absolute path or a path relative to the location of this file\nset( BASE_DIRECTORY "'"${BASE_DIR_REL}"'" )\n'  >> CMakeLists.txt

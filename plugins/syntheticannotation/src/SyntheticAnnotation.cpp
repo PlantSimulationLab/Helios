@@ -48,11 +48,17 @@ namespace {
                 if (!texture_overridden.at(p)) {
                     context->usePrimitiveTextureColor(UUIDs.at(p));
                 }
-                // "object_label" is set by labelPrimitives() purely to drive this rendering pass.
-                // Leaving it behind would let a later render() -- or any user code inspecting
-                // primitive data -- see labels from a previous run.
-                if (context->doesPrimitiveDataExist(UUIDs.at(p), "object_label")) {
-                    context->clearPrimitiveData(UUIDs.at(p), "object_label");
+                // "syntheticannotation_labelID" is set by labelPrimitives() purely to drive this
+                // rendering pass. Leaving it behind would let a later render() -- or any user code
+                // inspecting primitive data -- see labels from a previous run.
+                //
+                // The key is namespaced because this plug-in previously used "object_label", which
+                // PlantArchitecture, ProjectBuilder and Context::loadOBJ all set as a *string*
+                // naming the organ or material ("leaf", "petiole", ...). Annotating any such scene
+                // therefore aborted on a primitive-data type conflict, and had the types agreed
+                // this destructor would have deleted the scene's own labels.
+                if (context->doesPrimitiveDataExist(UUIDs.at(p), "syntheticannotation_labelID")) {
+                    context->clearPrimitiveData(UUIDs.at(p), "syntheticannotation_labelID");
                 }
             }
         }
@@ -80,6 +86,8 @@ SyntheticAnnotation::SyntheticAnnotation(helios::Context *__context) {
     labelminpixels = 10;
     window_width = 1000;
     window_height = 800;
+    camera_FOV = 45;
+    rgbrendering_enabled = true;
     camera_position.push_back(make_vec3(1, 0, 1));
     camera_lookat.push_back(make_vec3(0, 0, 1));
 }
@@ -110,8 +118,8 @@ void SyntheticAnnotation::labelPrimitives(const std::vector<std::vector<uint>> &
     for (size_t group = 0; group < UUIDs.size(); group++) { // looping over label groups, which is the outer index of the UUIDs vector
         for (size_t p = 0; p < UUIDs.at(group).size(); p++) { // looping over primitives in label group, which is hte inner index of the UUIDs vector
             if (context->doesPrimitiveExist(UUIDs.at(group).at(p))) {
-                // set object_label primitive data for this group
-                context->setPrimitiveData(UUIDs.at(group).at(p), "object_label", currentLabelID);
+                // set the label-ID primitive data for this group
+                context->setPrimitiveData(UUIDs.at(group).at(p), "syntheticannotation_labelID", currentLabelID);
             }
         }
         IDs.at(group) = currentLabelID;
@@ -137,7 +145,7 @@ void SyntheticAnnotation::labelUnlabeledPrimitives(const char *label) {
     // interprets the outer index of a vector of UUID groups.
     std::vector<std::vector<uint>> unlabeled_groups;
     for (uint UUID: context->getAllUUIDs()) {
-        if (!context->doesPrimitiveDataExist(UUID, "object_label")) {
+        if (!context->doesPrimitiveDataExist(UUID, "syntheticannotation_labelID")) {
             unlabeled_groups.push_back({UUID});
         }
     }
@@ -168,6 +176,21 @@ void SyntheticAnnotation::addSkyDome(const char *filename) {
 void SyntheticAnnotation::setWindowSize(const uint __window_width, const uint __window_height) {
     window_width = __window_width;
     window_height = __window_height;
+}
+
+void SyntheticAnnotation::setCameraFieldOfView(float angle_FOV) {
+    if (angle_FOV <= 0.f || angle_FOV >= 180.f) {
+        helios_runtime_error("ERROR (SyntheticAnnotation::setCameraFieldOfView): Field of view must be between 0 and 180 degrees, but " + std::to_string(angle_FOV) + " was given.");
+    }
+    camera_FOV = angle_FOV;
+}
+
+void SyntheticAnnotation::enableRGBRendering() {
+    rgbrendering_enabled = true;
+}
+
+void SyntheticAnnotation::disableRGBRendering() {
+    rgbrendering_enabled = false;
 }
 
 void SyntheticAnnotation::setMinimumLabelPixels(int a_labelminpixels) {
@@ -346,47 +369,54 @@ void SyntheticAnnotation::render(const char *outputdir) {
 
     //------ RGB rendering with no labels --------//
 
-    if (printmessages) {
-        std::cout << "Rendering RGB image containing " << UUIDs_all.size() / 1000.f << "K primitives..." << std::flush;
-    }
+    if (rgbrendering_enabled) {
 
-    Visualizer vis_RGB(window_width, window_height, 8, false, false);
-    vis_RGB.disableMessages();
+        if (printmessages) {
+            std::cout << "Rendering RGB image containing " << UUIDs_all.size() / 1000.f << "K primitives..." << std::flush;
+        }
 
-    vis_RGB.getFramebufferSize(framebufferW, framebufferH);
+        // Rendered headless, for the same reason the ID pass below is: the windowed path guesses
+        // which of the front and back buffers holds the current frame, and it also requires a
+        // display, which the batch machines that generate datasets do not have.
+        Visualizer vis_RGB(window_width, window_height, 8, false, true);
+        vis_RGB.disableMessages();
 
-    vis_RGB.buildContextGeometry(context);
-    vis_RGB.hideWatermark();
-    vis_RGB.setBackgroundColor(background_color);
-    // The sky dome is drawn over the background colour, so a caller that has set a flat colour would otherwise never see it. Clearing the sky texture is how that caller asks for the plain colour instead,
-    // which is what matching a photographed backdrop needs.
-    if (!skydome_texture_file.empty()) {
-        vis_RGB.setBackgroundSkyTexture(skydome_texture_file.c_str(), 30);
-    }
-    vis_RGB.setLightDirection(sphere2cart(make_SphericalCoord(30 * M_PI / 180.f, 205 * M_PI / 180.f)));
-    vis_RGB.setLightingModel(Visualizer::LIGHTING_PHONG_SHADOWED);
+        vis_RGB.getFramebufferSize(framebufferW, framebufferH);
 
-    for (int view = 0; view < camera_position.size(); view++) {
+        vis_RGB.buildContextGeometry(context);
+        vis_RGB.hideWatermark();
+        vis_RGB.setBackgroundColor(background_color);
+        // The sky dome is drawn over the background colour, so a caller that has set a flat colour would otherwise never see it. Clearing the sky texture is how that caller asks for the plain colour instead,
+        // which is what matching a photographed backdrop needs.
+        if (!skydome_texture_file.empty()) {
+            vis_RGB.setBackgroundSkyTexture(skydome_texture_file.c_str(), 30);
+        }
+        vis_RGB.setLightDirection(sphere2cart(make_SphericalCoord(30 * M_PI / 180.f, 205 * M_PI / 180.f)));
+        vis_RGB.setLightingModel(Visualizer::LIGHTING_PHONG_SHADOWED);
+        vis_RGB.setCameraFieldOfView(camera_FOV);
 
-        vis_RGB.setCameraPosition(camera_position.at(view), camera_lookat.at(view));
+        for (int view = 0; view < camera_position.size(); view++) {
 
-        vis_RGB.plotUpdate(true);
+            vis_RGB.setCameraPosition(camera_position.at(view), camera_lookat.at(view));
 
-        outfile.clear();
-        outfile.str("");
-        outfile << odir << "view" << std::setfill('0') << std::setw(5) << view << "/RGB_rendering.jpeg";
-        // std::snprintf(outfile, odir.size()+48, "%sview%05d/RGB_rendering.jpeg", odir.c_str(),view);
-        vis_RGB.printWindow(outfile.str().c_str());
-    }
+            vis_RGB.plotUpdate(true);
 
-    vis_RGB.closeWindow();
+            outfile.clear();
+            outfile.str("");
+            outfile << odir << "view" << std::setfill('0') << std::setw(5) << view << "/RGB_rendering.jpeg";
+            vis_RGB.printWindow(outfile.str().c_str());
+        }
 
-    if (printmessages) {
-        std::cout << "done." << std::endl;
+        vis_RGB.closeWindow();
+
+        if (printmessages) {
+            std::cout << "done." << std::endl;
+        }
     }
 
     // Record the original color and texture-override flag of every primitive, and restore them --
-    // along with clearing the "object_label" data -- when this function returns by any path.
+    // along with clearing the "syntheticannotation_labelID" data -- when this function returns by
+    // any path.
     PrimitiveAppearanceGuard appearance_guard(context, UUIDs_all);
 
     //------ Combined image labeled by RGB color code --------//
@@ -410,6 +440,7 @@ void SyntheticAnnotation::render(const char *outputdir) {
     vis.disableMessages();
     vis.enableExactColorMode();
     vis.setLightingModel(Visualizer::LIGHTING_NONE);
+    vis.setCameraFieldOfView(camera_FOV);
 
     vis.getFramebufferSize(framebufferW, framebufferH);
 
@@ -461,13 +492,13 @@ void SyntheticAnnotation::render(const char *outputdir) {
 
                 // labelUUIDs only ever contains primitives that were labeled, so every UUID
                 // reaching here belongs to this group and gets the group's ID color code. The
-                // "object_label" data is re-established here rather than assumed to still be
+                // "syntheticannotation_labelID" data is re-established here rather than assumed to still be
                 // present: it is cleared when render() returns, so that a second render() call
                 // does not see labels left behind by the first.
                 if (!context->doesPrimitiveExist(UUIDs_group.at(p))) {
                     continue;
                 }
-                context->setPrimitiveData(UUIDs_group.at(p), "object_label", uint(gID));
+                context->setPrimitiveData(UUIDs_group.at(p), "syntheticannotation_labelID", uint(gID));
                 context->setPrimitiveColor(UUIDs_group.at(p), code);
                 context->overridePrimitiveTextureColor(UUIDs_group.at(p));
             }
@@ -477,7 +508,7 @@ void SyntheticAnnotation::render(const char *outputdir) {
     // make all unlabeled primitives white
     for (size_t p = 0; p < UUIDs_all.size(); p++) {
 
-        if (!context->doesPrimitiveDataExist(UUIDs_all.at(p), "object_label")) { // primitive has NOT been labeled
+        if (!context->doesPrimitiveDataExist(UUIDs_all.at(p), "syntheticannotation_labelID")) { // primitive has NOT been labeled
             context->setPrimitiveColor(UUIDs_all.at(p), make_RGBcolor(1, 1, 1));
         }
         context->overridePrimitiveTextureColor(UUIDs_all.at(p));
@@ -530,6 +561,9 @@ void SyntheticAnnotation::render(const char *outputdir) {
 
             int4 bbox;
 
+            // Every object's box comes from a single pass over the rendered ID image.
+            const std::map<int, std::pair<helios::int4, uint>> all_bboxes = buildRectangularBBoxes(pixels, framebufferW, framebufferH);
+
             // All of the view's boxes go into a single file named after the image, which is the
             // layout the YOLO format expects and what Visualizer::displayImageWithBoundingBoxes()
             // looks for. The class of each box is carried in its first column rather than by being
@@ -541,7 +575,12 @@ void SyntheticAnnotation::render(const char *outputdir) {
 
                     gID = g->second.at(group);
 
-                    uint pixelcount = getGroupRectangularBBox(gID, pixels, framebufferW, framebufferH, bbox);
+                    const auto entry = all_bboxes.find(int(gID));
+                    if (entry == all_bboxes.end()) { // object not visible in this view
+                        continue;
+                    }
+                    bbox = entry->second.first;
+                    const uint pixelcount = entry->second.second;
 
                     if (pixelcount >= labelminpixels) {
                         annotation::YOLOBox yolo_box;
@@ -720,55 +759,48 @@ void SyntheticAnnotation::render(const char *outputdir) {
 
     vis.clearGeometry();
 
-    // Primitive colors and "object_label" data are restored by appearance_guard's destructor.
+    // Primitive colors and "syntheticannotation_labelID" data are restored by appearance_guard's destructor.
 }
 
-uint SyntheticAnnotation::getGroupRectangularBBox(const uint ID, const std::vector<uint> &pixels, const uint framebuffer_width, const uint framebuffer_height, helios::int4 &bbox) const {
+std::map<int, std::pair<helios::int4, uint>> SyntheticAnnotation::buildRectangularBBoxes(const std::vector<uint> &pixels, const uint framebuffer_width, const uint framebuffer_height) const {
 
-    int t = 0;
-    int xmin = framebuffer_width;
-    int xmax = 0;
-    int ymin = framebuffer_height;
-    int ymax = 0;
-    int pixelcount = 0;
+    const int background_ID = rgb2int(make_RGBcolor(1, 1, 1));
 
+    std::map<int, std::pair<helios::int4, uint>> boxes;
+
+    // One pass over the framebuffer, accumulating a box per decoded ID. Computing this per object
+    // instead -- rescanning the whole image once for each -- is O(objects x pixels), which is what
+    // made annotating a realistic scene impractical: a 2592x2048 frame containing 50,000 labeled
+    // leaves needs 2.6e11 pixel tests that way, against 5.3e6 here.
+    //
     // The bounding box is reported in image coordinates with the origin at the TOP-left, which is
     // what the YOLO annotation format requires. getWindowPixelsRGB() returns the framebuffer
     // bottom-up, so source row (framebuffer_height-1-j) supplies image row j.
-    for (int j = 0; j < framebuffer_height; j++) {
-        for (int i = 0; i < framebuffer_width; i++) {
+    for (uint j = 0; j < framebuffer_height; j++) {
+        for (uint i = 0; i < framebuffer_width; i++) {
 
-            t = 3 * ((framebuffer_height - 1 - j) * framebuffer_width + i);
+            const size_t t = 3 * (size_t(framebuffer_height - 1 - j) * size_t(framebuffer_width) + size_t(i));
+            const int ID = rgb2int(make_RGBcolor(pixels[t] / 255.f, pixels[t + 1] / 255.f, pixels[t + 2] / 255.f));
 
-            if (rgb2int(make_RGBcolor(pixels[t] / 255.f, pixels[t + 1] / 255.f, pixels[t + 2] / 255.f)) != ID) {
+            if (ID == background_ID) { // background and unlabeled primitives
                 continue;
             }
 
-            if (i < xmin) {
-                xmin = i;
+            auto entry = boxes.find(ID);
+            if (entry == boxes.end()) {
+                boxes[ID] = std::make_pair(make_int4(int(i), int(i), int(j), int(j)), 1u);
+                continue;
             }
-            if (i > xmax) {
-                xmax = i;
-            }
-            if (j < ymin) {
-                ymin = j;
-            }
-            if (j > ymax) {
-                ymax = j;
-            }
-
-            pixelcount++;
+            helios::int4 &bbox = entry->second.first;
+            bbox.x = std::min(bbox.x, int(i));
+            bbox.y = std::max(bbox.y, int(i));
+            bbox.z = std::min(bbox.z, int(j));
+            bbox.w = std::max(bbox.w, int(j));
+            entry->second.second++;
         }
     }
 
-    bbox = make_int4(xmin, xmax, ymin, ymax);
-
-    if (xmin == framebuffer_width || xmax == 0 || ymin == framebuffer_height || ymax == 0) {
-        bbox = make_int4(0, 0, 0, 0);
-        return 0;
-    } else {
-        return pixelcount;
-    }
+    return boxes;
 }
 
 std::map<int, std::vector<std::vector<bool>>> SyntheticAnnotation::buildObjectMasks(const std::vector<uint> &pixels, const uint framebuffer_width, const uint framebuffer_height) const {

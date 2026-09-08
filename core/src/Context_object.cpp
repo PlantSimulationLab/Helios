@@ -1136,6 +1136,9 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
 
     tile_new->object_origin = center;
 
+    // Sub-patches are constructed directly rather than through addPatch(), so the cache is invalidated here.
+    invalidateAllUUIDsCache();
+
     objects[currentObjectID] = tile_new;
     currentObjectID++;
     return currentObjectID - 1;
@@ -1354,6 +1357,9 @@ uint Context::addAdaptiveTileObject(const vec3 &center, const vec2 &size, const 
     }
 
     tile_new->object_origin = center;
+
+    // Sub-patches are constructed directly rather than through addPatch(), so the cache is invalidated here.
+    invalidateAllUUIDsCache();
 
     objects[currentObjectID] = tile_new;
     currentObjectID++;

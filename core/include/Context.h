@@ -627,8 +627,10 @@ namespace helios {
 
     //! Provenance of the vertex normals stored on a \ref helios::Polymesh "Polymesh" object
     /**
-     * Helios never synthesizes vertex normals implicitly. A mesh loaded from a file that did not supply normals reports \ref helios::NORMAL_SOURCE_NONE, and consumers should fall back to the face normal
-     * (see \ref helios::Polymesh::getVertexNormals()). Normals are only computed on an explicit call to \ref helios::Polymesh::computeVertexNormals().
+     * A mesh loaded from a file that supplied normals reports \ref helios::NORMAL_SOURCE_AUTHORED. A file loader that finds no normals in the file generates them from the mesh connectivity and reports
+     * \ref helios::NORMAL_SOURCE_COMPUTED, so that a curved surface does not shade faceted merely because its exporter omitted them. \ref helios::NORMAL_SOURCE_NONE therefore arises only for a mesh
+     * assembled programmatically through \ref helios::Context::setPolymeshObjectTopology() without normals; consumers should fall back to the face normal in that case (see \ref helios::Polymesh::getVertexNormals()),
+     * and can generate them with \ref helios::Polymesh::computeVertexNormals().
      */
     enum VertexNormalSource {
         //! No vertex normals are stored. Consumers should fall back to the face normal.
@@ -7050,7 +7052,8 @@ namespace helios {
 
         //! Compute per-vertex normals for a Polygon Mesh object by area-weighted averaging of adjacent face normals
         /**
-         * Vertex normals are never generated implicitly when a mesh is loaded. This method must be called explicitly to generate them for a mesh whose source file did not supply them.
+         * The file loaders call this automatically for a mesh whose source file supplied no normals, so it is only needed for a mesh assembled programmatically through \ref setPolymeshObjectTopology(), or to
+         * regenerate normals at a different crease angle or after the mesh has been deformed.
          * \param[in] ObjID object ID of the Polygon Mesh object
          * \param[in] crease_angle_degrees Angle (in degrees) between adjacent face normals above which the shared edge is treated as a hard crease and the normals are not blended across it.
          */

@@ -74,6 +74,17 @@ struct CameraProperties {
     //! Camera shutter speed in seconds (used for ISO-based exposure calculations). Example: 1/125 second = 0.008
     float shutter_speed;
 
+    //! Target median scene luminance for "auto" exposure, as a fraction of full scale
+    /**
+     * Auto exposure scales every band so that the median pixel luminance lands here. The default of
+     * 0.18 is the middle-grey convention, which assumes a scene whose average reflectance is that of
+     * a grey card. A canopy imaged from above is darker than that, so matching a real camera's
+     * output may need a lower value; conversely a bright scene may need a higher one.
+     *
+     * Ignored when exposure is "manual" or "ISOXXX".
+     */
+    float exposure_target = 0.18f;
+
     //! White balance mode: "auto" (automatic white balance using spectral response) or "off" (no white balance correction)
     std::string white_balance;
 
@@ -193,6 +204,7 @@ struct RadiationCamera {
         lens_model = camera_properties.lens_model;
         lens_specification = camera_properties.lens_specification;
         exposure = camera_properties.exposure;
+        exposure_target = camera_properties.exposure_target;
         shutter_speed = camera_properties.shutter_speed;
         white_balance = camera_properties.white_balance;
         camera_zoom = camera_properties.camera_zoom;
@@ -230,6 +242,9 @@ struct RadiationCamera {
     std::string lens_specification;
     // Exposure mode: "auto", "ISOXXX" (e.g., "ISO100"), or "manual"
     std::string exposure;
+
+    //! Target median luminance for "auto" exposure (see CameraProperties::exposure_target)
+    float exposure_target = 0.18f;
     // Camera shutter speed in seconds
     float shutter_speed;
     // White balance mode: "auto" or "off"

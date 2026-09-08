@@ -342,15 +342,19 @@ std::vector<std::vector<CollisionDetection::HitResult>> CollisionDetection::calc
     // Initialize result structure - one vector of HitResults per voxel
     std::vector<std::vector<HitResult>> result(num_voxels);
 
-// OpenMP parallel loop over rays for performance
-#pragma omp parallel for schedule(dynamic, 1000)
-    for (int ray_idx = 0; ray_idx < static_cast<int>(num_rays); ++ray_idx) {
-        const vec3 &ray_direction = ray_directions[ray_idx];
+    // Parallelize over voxels rather than rays. Each iteration then owns result[voxel_idx]
+    // exclusively, so the per-hit "#pragma omp critical" this loop used to need is gone. That lock
+    // was taken once per ray-voxel intersection and serialized the entire nest; it also made the
+    // order of hits within a voxel depend on thread scheduling, whereas iterating rays inside a
+    // voxel yields the same (ray-ordered) result on every run.
+#pragma omp parallel for schedule(dynamic)
+    for (int voxel_idx = 0; voxel_idx < static_cast<int>(num_voxels); ++voxel_idx) {
+        const vec3 &voxel_center = voxel_centers[voxel_idx];
+        const vec3 &voxel_size = voxel_sizes[voxel_idx];
 
-        // Process each voxel for this ray
-        for (size_t voxel_idx = 0; voxel_idx < num_voxels; ++voxel_idx) {
-            const vec3 &voxel_center = voxel_centers[voxel_idx];
-            const vec3 &voxel_size = voxel_sizes[voxel_idx];
+        // Process each ray for this voxel
+        for (size_t ray_idx = 0; ray_idx < num_rays; ++ray_idx) {
+            const vec3 &ray_direction = ray_directions[ray_idx];
 
             // Calculate voxel AABB from center and size
             const vec3 half_size = voxel_size * 0.5f;
@@ -373,11 +377,8 @@ std::vector<std::vector<CollisionDetection::HitResult>> CollisionDetection::calc
                     hit_result.normal = make_vec3(0, 0, 0); // Not applicable
                     hit_result.path_length = path_length; // This is what we want!
 
-// Thread-safe update of results
-#pragma omp critical
-                    {
-                        result[voxel_idx].push_back(hit_result);
-                    }
+                    // No lock needed: this iteration is the sole writer of result[voxel_idx].
+                    result[voxel_idx].push_back(hit_result);
                 }
             }
         }

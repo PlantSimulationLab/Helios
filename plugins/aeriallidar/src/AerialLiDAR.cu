@@ -213,14 +213,10 @@ __host__ __device__ float AERIALLIDAR_CUDA::acos_safe(float x) {
 }
 
 __host__ int AERIALLIDAR_CUDA::randu(int imin, int imax) {
-
-    float ru = float(rand()) / float(RAND_MAX + 1.);
-
-    if (imin == imax || imin > imax) {
-        return imin;
-    } else {
-        return imin + round(float(imax - imin) * ru);
-    }
+    // Delegates rather than duplicating the draw: this carried its own copy of the old
+    // std::rand()/RAND_MAX formula, which yields only ~32768 distinct values on Windows against
+    // ~2.1 billion on Linux (see the note above globalRandomGenerator() in core/src/global.cpp).
+    return helios::randu(imin, imax);
 }
 
 __device__ float2 AERIALLIDAR_CUDA::d_sampleDisk(float radius, uint seed) {

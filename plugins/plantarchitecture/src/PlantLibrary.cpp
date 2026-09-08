@@ -1294,7 +1294,7 @@ void PlantArchitecture::initializeBindweedShoots() {
     phytomer_parameters_bindweed.leaf.leaves_per_petiole = 1;
     phytomer_parameters_bindweed.leaf.pitch.uniformDistribution(5, 30);
     phytomer_parameters_bindweed.leaf.yaw = 0;
-    phytomer_parameters_bindweed.leaf.roll = 90;
+    phytomer_parameters_bindweed.leaf.roll = 0;
     phytomer_parameters_bindweed.leaf.prototype_scale = 0.05;
     phytomer_parameters_bindweed.leaf.prototype.OBJ_model_file = "BindweedLeaf.obj";
 
@@ -1320,13 +1320,13 @@ void PlantArchitecture::initializeBindweedShoots() {
     shoot_parameters_primary.girth_area_factor = 0;
     shoot_parameters_primary.internode_length_max = 0.03;
     shoot_parameters_primary.internode_length_decay_rate = 0;
-    shoot_parameters_primary.insertion_angle_tip.uniformDistribution(50, 80);
+    shoot_parameters_primary.insertion_angle_tip.uniformDistribution(70, 80);
     shoot_parameters_primary.flowers_require_dormancy = false;
     shoot_parameters_primary.growth_requires_dormancy = false;
     shoot_parameters_primary.flower_bud_break_probability = 0.2;
     shoot_parameters_primary.determinate_shoot_growth = false;
     shoot_parameters_primary.max_nodes = 15;
-    shoot_parameters_primary.gravitropic_curvature = 40;
+    shoot_parameters_primary.gravitropic_curvature = 30;
     shoot_parameters_primary.tortuosity = 0;
     shoot_parameters_primary.defineChildShootTypes({"secondary_bindweed"}, {1.f});
 
@@ -1354,6 +1354,7 @@ void PlantArchitecture::initializeBindweedShoots() {
 
     ShootParameters shoot_parameters_children = shoot_parameters_primary;
     shoot_parameters_children.base_roll = 0;
+    shoot_parameters_children.insertion_angle_tip.uniformDistribution(50, 80);
 
     defineShootType("base_bindweed", shoot_parameters_base);
     defineShootType("primary_bindweed", shoot_parameters_primary);
@@ -1901,7 +1902,7 @@ void PlantArchitecture::initializeCowpeaShoots() {
     phytomer_parameters_trifoliate.leaf.roll = -15;
     phytomer_parameters_trifoliate.leaf.leaflet_offset = 0.4;
     phytomer_parameters_trifoliate.leaf.leaflet_scale = 0.9;
-    phytomer_parameters_trifoliate.leaf.prototype_scale.uniformDistribution(0.09, 0.12);
+    phytomer_parameters_trifoliate.leaf.prototype_scale.uniformDistribution(0.08, 0.105);
     phytomer_parameters_trifoliate.leaf.prototype = leaf_prototype_trifoliate;
 
     phytomer_parameters_trifoliate.peduncle.length.uniformDistribution(0.3, 0.4);
@@ -1942,10 +1943,10 @@ void PlantArchitecture::initializeCowpeaShoots() {
     shoot_parameters_trifoliate.phytomer_parameters = phytomer_parameters_trifoliate;
     shoot_parameters_trifoliate.phytomer_parameters.phytomer_creation_function = CowpeaPhytomerCreationFunction;
 
-    shoot_parameters_trifoliate.max_nodes = 20;
+    shoot_parameters_trifoliate.max_nodes = 13;
     shoot_parameters_trifoliate.insertion_angle_tip.uniformDistribution(40, 60);
     //    shoot_parameters_trifoliate.child_insertion_angle_decay_rate = 0; (default)
-    shoot_parameters_trifoliate.internode_length_max = 0.025;
+    shoot_parameters_trifoliate.internode_length_max = 0.04;
     //    shoot_parameters_trifoliate.child_internode_length_min = 0.0; (default)
     //    shoot_parameters_trifoliate.child_internode_length_decay_rate = 0; (default)
     shoot_parameters_trifoliate.base_roll = 90;
@@ -1959,7 +1960,7 @@ void PlantArchitecture::initializeCowpeaShoots() {
     shoot_parameters_trifoliate.vegetative_bud_break_probability_min = 0.2;
     shoot_parameters_trifoliate.vegetative_bud_break_probability_decay_rate = -0.4;
     //    shoot_parameters_trifoliate.max_terminal_floral_buds = 0; (default)
-    shoot_parameters_trifoliate.flower_bud_break_probability.uniformDistribution(0.1, 0.15);
+    shoot_parameters_trifoliate.flower_bud_break_probability.uniformDistribution(0.3, 0.4);
     shoot_parameters_trifoliate.fruit_set_probability = 0.4;
     //    shoot_parameters_trifoliate.flowers_require_dormancy = false; (default)
     //    shoot_parameters_trifoliate.growth_requires_dormancy = false; (default)
@@ -2135,7 +2136,7 @@ uint PlantArchitecture::buildGrapevineVSP(const helios::vec3 &base_position) {
 
     // Get training system parameters
     auto vine_spacing = getParameterValue(current_build_parameters, "vine_spacing", 2.4f, 0.5f, 5.f, "plant-to-plant spacing in meters");
-    auto trunk_height = getParameterValue(current_build_parameters, "trunk_height", 0.1f, 0.05f, 1.f, "total trunk height in meters");
+    auto trunk_height = getParameterValue(current_build_parameters, "trunk_height", 0.8f, 0.05f, 1.f, "total trunk height in meters");
 
     // Calculate trunk nodes based on desired height
     float trunk_internode_length = 0.1f;
@@ -2558,12 +2559,29 @@ void PlantArchitecture::initializeMaizeShoots() {
     phytomer_parameters_maize.peduncle.radial_subdivisions = 6;
     phytomer_parameters_maize.peduncle.length_segments = 2;
 
-    phytomer_parameters_maize.inflorescence.flowers_per_peduncle = 7;
+    // The tassel is assembled from one copy of MaizeTassel.obj per primary branch, distributed along the terminal peduncle. Modern commercial hybrids carry 10-12 primary branches: Gage et al. (2018,
+    // Genetics 210:1125) measured 12.0 in the 1930s BSSSC0 population against about 10.2 in ex-PVP lines from the 1980s-90s, the reduction in branch number being one of the clearer architectural signatures
+    // of hybrid breeding. Eleven sits in the middle of that.
+    phytomer_parameters_maize.inflorescence.flowers_per_peduncle = 11;
     phytomer_parameters_maize.inflorescence.pitch.uniformDistribution(0, 30);
     phytomer_parameters_maize.inflorescence.roll = 0;
-    phytomer_parameters_maize.inflorescence.flower_offset = 0.1;
-    phytomer_parameters_maize.inflorescence.fruit_prototype_scale = 0.15;
+
+    // Spreads the branches over the upper 90% of the peduncle, which is the branch zone. The bound that matters is not clampOffset() -- its denominator is derived for compound leaves, where the index is
+    // divided by petioles_per_internode, and is roughly twice too loose for an inflorescence, where that divisor is 1. The real constraint is that the lowest branch attaches at
+    // frac = 1 - (flowers_per_peduncle - 1.5) * flower_offset, which must stay positive or interpolateTube() trips its assert in a debug build and silently returns the peduncle base in a release one. At
+    // eleven branches that caps the offset at 0.105; 0.095 leaves the lowest branch at frac 0.098.
+    phytomer_parameters_maize.inflorescence.flower_offset = 0.095;
+
+    // Primary branch length near 20 cm, the modal value over 180 three-dimensionally scanned tassels (Zhang et al. 2023, Plant Methods 19:76). The prototype is 1.027 units along its own axis, so the scale
+    // is the target length divided by that.
+    phytomer_parameters_maize.inflorescence.fruit_prototype_scale = 0.195;
     phytomer_parameters_maize.inflorescence.fruit_prototype_function = MaizeTasselPrototype;
+
+    // The tassel finishes elongating at VT and does not grow afterward: "the tassel is at maximum size" at that stage (Abendroth et al. 2011, Iowa State PMR 1009), and VT "begins approximately 2-3 days
+    // before silk emergence" (Ritchie, Hanway & Benson, How a Corn Plant Develops, Iowa State Special Report 48, p.11). Without a period of its own the tassel inherits dd_to_fruit_maturity, which is the
+    // ear's 58-day R1-to-R6 grain fill, leaving it at roughly 40% of full size at silking and still expanding at physiological maturity. Six days covers the exsertion of an already-elongated tassel from the
+    // whorl, which is what the growth ramp is standing in for here.
+    phytomer_parameters_maize.inflorescence.inflorescence_maturity_period = 6;
 
     phytomer_parameters_maize.phytomer_creation_function = MaizePhytomerCreationFunction;
 

@@ -404,6 +404,21 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
     // getFaceIndexForPrimitive() raises for a member the table omits, and writeOBJ() calls it for every primitive of any object reporting a non-zero face count.
     if (!mesh_faces.empty() && mesh_face_UUIDs.size() == context_ptr->getObjectPrimitiveUUIDs(objID).size()) {
         context_ptr->setPolymeshObjectTopology(objID, mesh_vertices, mesh_faces, mesh_face_UUIDs, {}, mesh_vertex_uv, helios::NORMAL_SOURCE_NONE);
+
+        // Generate vertex normals from that topology. The blade is assembled from individual triangles,
+        // which carry only a face normal, and Helios never synthesizes vertex normals implicitly -- so
+        // without this a generated leaf renders faceted however the shading model is configured, and
+        // the midrib fold and lateral curl that the lattice went to the trouble of describing read as
+        // flat panels.
+        //
+        // The crease angle is 180 degrees, which smooths across every edge. A narrower angle splits the
+        // shared vertices along any fold sharper than it -- a grass leaf's midrib is exactly such a
+        // fold -- and a split rewrites the vertex array, which breaks consumers that read
+        // getPolymeshObjectVertices() expecting the lattice's own row-major ordering. Smoothing the
+        // whole blade is also what is wanted visually: the fold is a curve in the surface, not a
+        // structural crease that should catch a hard highlight.
+        constexpr float leaf_crease_angle_degrees = 180.f;
+        context_ptr->computePolymeshObjectVertexNormals(objID, leaf_crease_angle_degrees);
     }
 
     return objID;
@@ -432,7 +447,7 @@ void AlmondPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint sho
         phytomer->setVegetativeBudState(BUD_DEAD);
         phytomer->scaleLeafPrototypeScale(0.8);
         phytomer->setFloralBudState(BUD_DEAD);
-        phytomer->parent_shoot_ptr->shoot_parameters.max_nodes_per_season = 7;
+        phytomer->parent_shoot_ptr->growth_state.max_nodes_per_season_growth_cap = 7;
     }
 
     // blind nodes
@@ -464,7 +479,7 @@ void ApplePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoo
         phytomer->setVegetativeBudState(BUD_DEAD);
         phytomer->scaleLeafPrototypeScale(0.8);
         phytomer->setFloralBudState(BUD_DEAD);
-        phytomer->parent_shoot_ptr->shoot_parameters.max_nodes_per_season = 6;
+        phytomer->parent_shoot_ptr->growth_state.max_nodes_per_season_growth_cap = 6;
     }
 }
 
@@ -668,9 +683,21 @@ uint CowpeaFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool
 
 void CowpeaPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
 
-    if (shoot_node_index > 5 || phytomer->rank > 1) {
+    // Cowpea branches from its basal nodes and flowers from the upper nodes of every axis, which is what holds
+    // the pods above the foliage (IBPGR "peduncle position: mostly above canopy"). Floral buds were previously
+    // allowed on every node of a rank-2 shoot and on every node above the fifth of the main stem and its
+    // branches, so most peduncles started at about half the canopy height and the pods they carried hung
+    // back down into the leaves. Floral buds are now confined to the upper half of each shoot, on every rank;
+    // the basal nodes carry vegetative buds on the main stem and its primary branches (this is where the
+    // branches come from) and nothing on higher-order shoots.
+    const uint first_floral_node = std::max(5u, shoot_max_nodes / 2);
+    const bool can_branch = phytomer->rank <= 1;
+    if (shoot_node_index >= first_floral_node) {
         phytomer->setVegetativeBudState(BUD_DEAD);
+    } else if (can_branch) {
+        phytomer->setFloralBudState(BUD_DEAD);
     } else {
+        phytomer->setVegetativeBudState(BUD_DEAD);
         phytomer->setFloralBudState(BUD_DEAD);
     }
 
@@ -687,7 +714,10 @@ void CowpeaPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint sho
 
 // Function to generate random float between min and max
 float random_float(float min, float max) {
-    return min + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / (max - min));
+    // Uses helios::randu() rather than std::rand()/RAND_MAX: RAND_MAX is 32767 on MSVC against
+    // 2147483647 on glibc, so the raw form drew from ~65000x fewer distinct values on Windows than
+    // on Linux. See the note above globalRandomGenerator() in core/src/global.cpp.
+    return min + helios::randu() * (max - min);
 }
 
 // Function to check if two spheres overlap
@@ -827,9 +857,17 @@ void MaizePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoo
     if (shoot_node_index <= 5) {
         scale = fmin(1.f, 0.7 + 0.3 * float(shoot_node_index) / 5.f);
         phytomer->scaleInternodeMaxLength(scale);
-    } else if (shoot_node_index >= phytomer->shoot_index.z - 5) {
-        scale = fmin(1.f, 0.65 + 0.35 * float(phytomer->shoot_index.z - shoot_node_index) / 3.f);
     }
+
+    // Maize leaf area follows a bell-shaped profile that peaks at or just below the ear and falls away sharply over the last few ranks, so the upper leaves are much smaller than the ear leaf and the flag
+    // leaf is the smallest blade on the plant. Fan et al. (2021, Journal of Agricultural Science 158:676) fit area = y0*exp(-(rank - x0)^2 / 2a^2) to two commercial hybrids: ZD958 (22 leaves, x0 = 13.8,
+    // a = 4.5) and XY335 (21 leaves, x0 = 13.9, a = 4.3). Evaluating those over the top five ranks and taking the square root -- the prototype scale is linear, area goes as its square -- gives a decline
+    // that is very nearly straight in ranks-from-the-top, and the ramp below is a least-squares fit to it (residual 6e-5). It reaches full size about six ranks down, which is where the two fitted profiles
+    // are within a few percent of their peak.
+    //
+    // The previous ramp was far too shallow: it left the top three leaves at full size and the flag leaf at 0.767, which is 0.59 of the largest leaf's AREA against the 0.19-0.26 the two hybrids give.
+    const float ranks_from_top = float(phytomer->shoot_index.z - 1 - int(shoot_node_index));
+    scale = fmin(scale, fmin(1.f, 0.475f + 0.092f * ranks_from_top));
 
     phytomer->scaleLeafPrototypeScale(scale);
 
@@ -876,7 +914,21 @@ void MaizePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoo
         phytomer->setFloralBudState(BUD_DEAD);
     }
 
-    //    phytomer->setFloralBudState( BUD_DEAD );
+    // The terminal phytomer bears the flag leaf. Phytomer::createPetiole() pins the last phytomer on a shoot to a near-zero 5 degree petiole pitch, and the terminal floral bud carrying the tassel is
+    // anchored to that same node tip (Shoot::addTerminalFloralBud) with maize's peduncle.pitch of 0, so the flag leaf leaves the culm on very nearly the peduncle's own axis and the blade passes through
+    // the tassel.
+    //
+    // The correction stays smaller than the 25 degrees sorghum uses for the same problem, because the two species hold their flag leaves differently: sorghum's is the most horizontal leaf on the plant,
+    // whereas maize is bred for an erectophile upper canopy -- 22.9 degrees from vertical for the leaves above the ear against 41.9 for those below it (Tang et al. 2021, Euphytica 217:75, measured on the
+    // hybrid Pioneer 335), a gradient that does not reverse at the top.
+    //
+    // What has to be preserved is that the flag leaf is the most erect BLADE, which is what Tang et al. measure and not the same thing as the most erect insertion. In this model the erectophile gradient
+    // comes almost entirely from the leaf_flexibility taper above rather than from insertion angle: every rank is inserted from the same U(16,30) distribution, and it is the stiffening of the upper leaves
+    // that keeps their blades from arcing over. The flag leaf is the stiffest leaf on the plant, so it holds a blade inclination near 27 degrees from vertical against 38 for the leaf below it and 53 near
+    // the base -- an 11 degree margin that a rotation of this size does not close.
+    if (shoot_max_nodes > 0 && shoot_node_index + 1 == shoot_max_nodes && !phytomer->petiole_vertices.empty()) {
+        phytomer->rotatePetiole(0, make_AxisRotation(deg2rad(18.f), 0.f, 0.f));
+    }
 }
 
 uint OliveLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype_parameters, int compound_leaf_index) {

@@ -1461,3 +1461,76 @@ TEST_CASE("PLY File I/O and Mesh Topology") {
         std::remove(test_file);
     }
 }
+
+DOCTEST_TEST_CASE("Context loadOBJ generates vertex normals when the file supplies none") {
+    // Regression test: a mesh loaded from a file with no authored normals used to be left with
+    // NORMAL_SOURCE_NONE, so every consumer fell back to the per-face normal and the mesh rendered
+    // faceted no matter how the shading model was configured. Most OBJ exporters omit normals unless
+    // asked -- 51 of the 52 OBJ assets shipped with the plantarchitecture plug-in have no 'vn' records,
+    // which is why soybean pods and every other loaded organ mesh shaded flat. Normals are now generated
+    // from the connectivity at load time.
+    Context ctx;
+
+    // This model has no 'vn' records.
+    const std::vector<uint> UUIDs = ctx.loadOBJ("lib/models/test_triangle_simple.obj", true);
+    DOCTEST_REQUIRE(!UUIDs.empty());
+
+    const uint objID = ctx.getPrimitiveParentObjectID(UUIDs.front());
+    DOCTEST_REQUIRE(objID != 0);
+    DOCTEST_REQUIRE(ctx.getObjectType(objID) == OBJECT_TYPE_POLYMESH);
+
+    // Generated, not authored: the distinction is what tells a consumer where the normals came from.
+    DOCTEST_REQUIRE(ctx.doesPolymeshObjectHaveVertexNormals(objID));
+    DOCTEST_CHECK(ctx.getPolymeshObjectVertexNormalSource(objID) == NORMAL_SOURCE_COMPUTED);
+
+    const std::vector<vec3> normals = ctx.getPolymeshObjectVertexNormals(objID);
+    DOCTEST_REQUIRE(normals.size() == ctx.getPolymeshObjectVertexCount(objID));
+    for (const vec3 &n: normals) {
+        DOCTEST_CHECK(n.magnitude() == doctest::Approx(1.f).epsilon(1e-5));
+    }
+}
+
+DOCTEST_TEST_CASE("Context generating vertex normals on load preserves mesh topology") {
+    // Generating normals must not cost the mesh its shared-vertex topology. Computing them at a crease
+    // angle below 180 degrees splits every vertex whose incident faces straddle that angle into one copy
+    // per smooth group, which unwelds the mesh: a cube loaded this way went from 8 shared vertices to 24,
+    // isPolymeshObjectClosed() turned false, and getPolymeshObjectVolume() threw for geometry that is
+    // genuinely watertight. A file that omits normals says nothing about whether its author cared about
+    // volume queries, so the generation smooths across every edge and leaves the vertex count alone.
+    Context ctx;
+
+    // A closed solid whose PLY supplies no per-vertex normals.
+    const std::vector<uint> UUIDs = ctx.loadOBJ("lib/models/test_triangle_simple.obj", true);
+    DOCTEST_REQUIRE(!UUIDs.empty());
+    const uint objID = ctx.getPrimitiveParentObjectID(UUIDs.front());
+    DOCTEST_REQUIRE(objID != 0);
+
+    // One normal per vertex, and no vertex was duplicated to carry a second one: the file has 3 vertices.
+    DOCTEST_CHECK(ctx.getPolymeshObjectVertexCount(objID) == 3);
+    DOCTEST_CHECK(ctx.getPolymeshObjectVertexNormals(objID).size() == 3);
+}
+
+DOCTEST_TEST_CASE("Context loadOBJ keeps authored normals and hard edges") {
+    // The companion to the test above: generating normals must not override what a file actually
+    // supplied, and the generation must not smooth a mesh that is meant to have hard edges. The cube
+    // carries one normal per face, so its 8 corners split into 24 mesh vertices; blending across those
+    // edges would round off the cube.
+    Context ctx;
+
+    const std::vector<uint> UUIDs = ctx.loadOBJ("lib/models/test_cube_medium.obj", true);
+    DOCTEST_REQUIRE(!UUIDs.empty());
+
+    const uint objID = ctx.getPrimitiveParentObjectID(UUIDs.front());
+    DOCTEST_REQUIRE(objID != 0);
+
+    // Authored normals are left exactly as the file gave them.
+    DOCTEST_CHECK(ctx.getPolymeshObjectVertexNormalSource(objID) == NORMAL_SOURCE_AUTHORED);
+    DOCTEST_CHECK(ctx.getPolymeshObjectVertexCount(objID) == 24);
+
+    // Every normal is axis-aligned, which is only true if nothing was averaged across the cube's edges.
+    const std::vector<vec3> normals = ctx.getPolymeshObjectVertexNormals(objID);
+    for (const vec3 &n: normals) {
+        const float largest_component = std::max(std::fabs(n.x), std::max(std::fabs(n.y), std::fabs(n.z)));
+        DOCTEST_CHECK(largest_component == doctest::Approx(1.f).epsilon(1e-4));
+    }
+}

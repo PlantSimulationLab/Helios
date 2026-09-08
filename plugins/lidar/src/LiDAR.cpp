@@ -15,6 +15,7 @@
 
 #include "LiDAR.h"
 
+#include <limits> // numeric_limits, for the ray/slab intersection bounds
 #include <random> // per-beam range-noise RNG in the parallelized syntheticScan post-processing
 #include <set>
 
@@ -1487,7 +1488,13 @@ void LiDARcloud::getHitDataColumn(const char *label, std::vector<double> &data, 
             const bool is_const = (key == "is_miss" || key == "nRaysHit");
             const double const_value = (key == "is_miss") ? 1.0 : 0.0;
             if (!is_row && !is_col && !is_ts && !is_code && !is_const) {
-                std::fill(data.begin() + long(scan_base), data.begin() + long(scan_base + size_t(vm.count())), absent_value);
+                // std::ptrdiff_t, not long: these are element offsets into a point-cloud-sized
+                // vector, and long is 32 bits on Windows (LLP64) against 64 on Linux/macOS (LP64),
+                // so a long cast would silently truncate past ~2.1e9 elements on Windows only and
+                // produce an out-of-range fill. ptrdiff_t is the iterator difference type and is
+                // 64-bit on all three. Same reasoning as the long long note in
+                // Context::addAdaptiveTileObject().
+                std::fill(data.begin() + std::ptrdiff_t(scan_base), data.begin() + std::ptrdiff_t(scan_base + size_t(vm.count())), absent_value);
                 continue;
             }
             for (int row = 0; row < vm.Ntheta; row++) {
@@ -1516,7 +1523,7 @@ void LiDARcloud::getHitDataColumn(const char *label, std::vector<double> &data, 
     auto it = hit_data_label_index.find(label);
     if (it == hit_data_label_index.end()) {
         // Label never set on any stored hit: every stored entry is absent.
-        std::fill(data.begin(), data.begin() + long(N), absent_value);
+        std::fill(data.begin(), data.begin() + std::ptrdiff_t(N), absent_value);
         return;
     }
 
@@ -2052,6 +2059,10 @@ void LiDARcloud::addLeafReconstructionToVisualizer(Visualizer *visualizer) const
 
     for (size_t g = 0; g < Ngroups; g++) {
 
+        // Deliberately a continuous draw, not randu(0,Ngroups-1): this indexes nothing, it is a
+        // position along the colormap, which query() interpolates over [0,Ngroups-1]. The
+        // round-to-nearest endpoint bias that applies to the integer index draws elsewhere in this
+        // file does not arise here.
         float randi = randu() * (Ngroups - 1);
         RGBcolor color = colormap.query(randi);
 
@@ -2163,7 +2174,9 @@ std::vector<uint> LiDARcloud::addReconstructedTriangleGroupsToContext(helios::Co
 
     for (size_t g = 0; g < Ngroups; g++) {
 
-        int leafGroup = round(context->randu() * (Ngroups - 1));
+        // randu(0,N-1) rather than round(randu()*(N-1)): the latter rounds a continuous draw to
+        // nearest, which gives the first and last group only half the weight of the others.
+        int leafGroup = context->randu(0, int(Ngroups) - 1);
 
         for (size_t t = 0; t < reconstructed_triangles.at(g).size(); t++) {
 
@@ -3211,7 +3224,7 @@ void LiDARcloud::getHitScanIDColumn(std::vector<int> &scanID) const {
             continue;
         }
         const size_t base = hits.size() + size_t(scan_virtual_offset[sc]);
-        std::fill(scanID.begin() + long(base), scanID.begin() + long(base + size_t(vm.count())), int(sc));
+        std::fill(scanID.begin() + std::ptrdiff_t(base), scanID.begin() + std::ptrdiff_t(base + size_t(vm.count())), int(sc));
     }
 }
 
@@ -3760,12 +3773,14 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses_timestamp(uint scanID, const
             // upward edge points
             if (hit_table2D.at(j).front().at(2) > theta_range.x) {
 
-                // Step by the MAGNITUDE of the average theta increment. The sign of dtheta_avg only
-                // encodes the sweep direction (a top-down scanner gives dtheta_avg < 0); it must not be
-                // allowed to flip the direction this loop walks, which is always from the first sample
-                // down toward the lower theta bound. Using the signed value on a top-down scan walks
-                // theta away from its bound, and because theta is a float the step eventually falls below
-                // the ULP and the loop never terminates.
+                // Step by the MAGNITUDE of the mean zenith increment. dtheta_avg is a signed mean, and
+                // its sign encodes only which way the scanner sweeps: a top-down scanner (RIEGL VZ-series
+                // exports, where zenith decreases along the pulse train) yields dtheta_avg < 0. Using the
+                // signed value here walked theta AWAY from theta_range.x, so the loop below could never
+                // satisfy its exit condition -- and because theta is a float, it saturated (the step falls
+                // below the ULP around 8192 rad) and stopped changing entirely, leaving a true infinite
+                // loop that spun in direction2rc forever. The bounds/dedup guards inside the loop kept it
+                // from adding points, so it burned CPU silently rather than crashing.
                 float dtheta = std::fabs(dtheta_avg);
                 if (dtheta == 0) {
                     continue;
@@ -3773,7 +3788,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses_timestamp(uint scanID, const
                 float theta = hit_table2D.at(j).at(0).at(2) - dtheta;
                 // just use the last value of phi in the sweep
                 float phi = hit_table2D.at(j).at(0).at(3);
-                float timestep = hit_table2D.at(j).at(0).at(1) - dt_avg;
+                float timestep = hit_table2D.at(j).at(0).at(1) - std::fabs(dt_avg);
 
                 while (theta > theta_range.x) {
 
@@ -3814,7 +3829,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses_timestamp(uint scanID, const
                     }
 
                     theta = theta - dtheta;
-                    timestep = timestep - dt_avg;
+                    timestep = timestep - std::fabs(dt_avg);
                 }
             }
 
@@ -3823,14 +3838,15 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses_timestamp(uint scanID, const
 
                 int sz = hit_table2D.at(j).size();
                 // same concept as above for downward edge points: step by the magnitude, never the
-                // signed average, so the walk always advances toward the upper theta bound.
+                // signed average, so a top-down sweep (dtheta_avg < 0) walks theta UP toward
+                // theta_range.y instead of away from it.
                 float dtheta = std::fabs(dtheta_avg);
                 if (dtheta == 0) {
                     continue;
                 }
                 float theta = hit_table2D.at(j).at(sz - 1).at(2) + dtheta;
                 float phi = hit_table2D.at(j).at(sz - 1).at(3);
-                float timestep = hit_table2D.at(j).at(sz - 1).at(1) + dt_avg;
+                float timestep = hit_table2D.at(j).at(sz - 1).at(1) + std::fabs(dt_avg);
                 while (theta < theta_range.y) {
 
                     // Convert to grid indices using proper direction2rc method
@@ -3870,7 +3886,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMisses_timestamp(uint scanID, const
                     }
 
                     theta = theta + dtheta;
-                    timestep = timestep + dt_avg;
+                    timestep = timestep + std::fabs(dt_avg);
                 }
             }
         }
@@ -5104,7 +5120,8 @@ void LiDARcloud::leafReconstructionAlphaMask(float minimum_leaf_group_area, floa
             position = position + reconstructed_triangles.at(group).at(t).vertex0 / float(reconstructed_triangles.at(group).size());
         }
 
-        int gind = round(randu() * (reconstructed_triangles.at(group).size() - 1));
+        // See the note at leafGroup above: round(randu()*(N-1)) under-weights both end indices.
+        int gind = randu(0, int(reconstructed_triangles.at(group).size()) - 1);
 
         reconstructed_alphamasks_center.push_back(position);
         float l = Lavg.at(reconstructed_triangles.at(group).front().gridcell) * sqrt(leaf_aspect_ratio / solidfraction);
@@ -5204,7 +5221,7 @@ void LiDARcloud::backfillLeavesAlphaMask(const vector<float> &leaf_size, float l
 
             while (leaf_area_current.at(v) < leaf_area_total) {
 
-                int randi = round(randu() * (tri_rots.size() - 1));
+                int randi = randu(0, int(tri_rots.size()) - 1); // unbiased over all indices
 
                 helios::vec3 cellsize = getCellSize(v);
                 helios::vec3 cellcenter = getCellCenterUnrotated(v);
@@ -5226,7 +5243,7 @@ void LiDARcloud::backfillLeavesAlphaMask(const vector<float> &leaf_size, float l
 
             while (leaf_area_current.at(v) > leaf_area_total) {
 
-                int randi = round(randu() * (group_gridcell.at(v).size() - 1));
+                int randi = randu(0, int(group_gridcell.at(v).size()) - 1); // unbiased over all indices
 
                 int group_index = group_gridcell.at(v).at(randi);
 
@@ -5239,7 +5256,7 @@ void LiDARcloud::backfillLeavesAlphaMask(const vector<float> &leaf_size, float l
 
             while (leaf_area_current.at(v) < leaf_area_total) {
 
-                int randi = round(randu() * (group_gridcell.at(v).size() - 1));
+                int randi = randu(0, int(group_gridcell.at(v).size()) - 1); // unbiased over all indices
 
                 int group_index = group_gridcell.at(v).at(randi);
 
@@ -5718,16 +5735,36 @@ void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits)
 }
 
 void LiDARcloud::calculateLeafArea(helios::Context *context, int min_voxel_hits, float element_width) {
-    // Triangulation-derived G(theta) (the original behavior). Sentinel < 0 => compute G(theta) per voxel.
-    calculateLeafArea_inner(context, min_voxel_hits, element_width, -1.f);
+    // Triangulation-derived G(theta) (the original behavior): an empty supplied-G(theta) vector tells the inner
+    // routine to compute G(theta) per voxel from triangulation.
+    calculateLeafArea_inner(context, min_voxel_hits, element_width, std::vector<float>{});
 }
 
 void LiDARcloud::calculateLeafArea(helios::Context *context, float Gtheta, int min_voxel_hits, float element_width) {
-    // Caller-supplied G(theta) for scans that cannot be triangulated (e.g. moving-platform scans).
+    // Caller-supplied G(theta) for scans that cannot be triangulated (e.g. moving-platform scans). A single value is
+    // broadcast to every voxel by the inner routine.
     if (!(Gtheta > 0.f) || Gtheta > 1.f) {
         helios_runtime_error("ERROR (LiDARcloud::calculateLeafArea): The supplied G(theta) must be in the range (0,1], but " + std::to_string(Gtheta) + " was provided. Use 0.5 for a spherical (random) leaf-angle distribution.");
     }
-    calculateLeafArea_inner(context, min_voxel_hits, element_width, Gtheta);
+    calculateLeafArea_inner(context, min_voxel_hits, element_width, std::vector<float>{Gtheta});
+}
+
+void LiDARcloud::calculateLeafArea(helios::Context *context, const std::vector<float> &Gtheta_per_cell, int min_voxel_hits, float element_width) {
+    // Caller-supplied PER-VOXEL G(theta) (e.g. a vertically-varying leaf-angle distribution). The length must match the
+    // grid-cell count and every value must be in (0,1]; the inner routine uses each value for its corresponding voxel.
+    const uint Ncells = getGridCellCount();
+    if (Gtheta_per_cell.size() != Ncells) {
+        helios_runtime_error("ERROR (LiDARcloud::calculateLeafArea): The per-voxel G(theta) vector has " + std::to_string(Gtheta_per_cell.size()) + " entries but the grid has " + std::to_string(Ncells) +
+                             " cells. Supply exactly one G(theta) per cell, in grid-cell order.");
+    }
+    for (size_t v = 0; v < Gtheta_per_cell.size(); v++) {
+        const float g = Gtheta_per_cell[v];
+        if (!(g > 0.f) || g > 1.f) {
+            helios_runtime_error("ERROR (LiDARcloud::calculateLeafArea): Per-voxel G(theta) values must be in the range (0,1], but cell " + std::to_string(v) + " was given " + std::to_string(g) +
+                                 ". Use 0.5 for a spherical (random) leaf-angle distribution.");
+        }
+    }
+    calculateLeafArea_inner(context, min_voxel_hits, element_width, Gtheta_per_cell);
 }
 
 void LiDARcloud::setExactPathLengths(bool exact) {
@@ -5932,6 +5969,20 @@ LiDARcloud::VoxelLattice LiDARcloud::detectVoxelLattice() const {
     for (uint c = 0; c < Ncells; c++) {
         const GridCell &cell = grid_cells.at(c);
 
+        // Terrain-following grids are NOT a regular lattice: addGrid() shifts each
+        // column's cells vertically by a per-column offset (recorded in
+        // ground_height) so the columns track a surface. The DDA fast path below
+        // assumes a regular axis-aligned lattice and reconstructs cell corners from
+        // (origin + ijk*extent) with NO per-column offset, so a terrain grid that
+        // slipped through would get wrong cell bounds and the lifted (uphill) voxels
+        // would receive no beams (empty/NaN LAD). The expected-center check further
+        // down catches any meaningful offset via position tolerance, but key off the
+        // explicit flag too so the rejection can't depend on a tolerance that a tiny
+        // offset could sneak under. Any non-zero column offset => brute-force path.
+        if (cell.ground_height != 0.f) {
+            return lattice;
+        }
+
         // Shared lattice parameters
         if (cell.global_count.x != count.x || cell.global_count.y != count.y || cell.global_count.z != count.z) {
             return lattice;
@@ -5975,9 +6026,11 @@ LiDARcloud::VoxelLattice LiDARcloud::detectVoxelLattice() const {
     return lattice;
 }
 
-void LiDARcloud::calculateLeafArea_inner(helios::Context *context, int min_voxel_hits, float element_width, float supplied_Gtheta) {
+void LiDARcloud::calculateLeafArea_inner(helios::Context *context, int min_voxel_hits, float element_width, const std::vector<float> &supplied_Gtheta) {
 
-    const bool use_supplied_Gtheta = (supplied_Gtheta > 0.f);
+    // An empty vector means "compute G(theta) per voxel from triangulation"; a non-empty vector (size 1 = broadcast, or
+    // size == Ncells = per-voxel) means the caller supplied G(theta) and triangulation is not required.
+    const bool use_supplied_Gtheta = !supplied_Gtheta.empty();
 
     if (printmessages) {
         std::cout << "Calculating leaf area (CollisionDetection)..." << std::endl;
@@ -6416,11 +6469,18 @@ void LiDARcloud::calculateLeafArea_inner(helios::Context *context, int min_voxel
             }
         }
 
-        // Obtain G(theta) per voxel. Normally computed from triangulation; when the caller supplied a value (e.g. for a
-        // moving-platform scan that cannot be triangulated), apply that single value to every voxel instead.
+        // Obtain G(theta) per voxel. Normally computed from triangulation; when the caller supplied G(theta) (e.g. for a
+        // moving-platform scan that cannot be triangulated, or a prescribed leaf-angle distribution) use that instead -
+        // a single supplied value is broadcast to every voxel, a per-voxel vector is used as-is. The public overloads
+        // validate the length (1 or Ncells) and range (0,1] before calling this; assert the size invariant here.
         std::vector<float> Gtheta;
         if (use_supplied_Gtheta) {
-            Gtheta.assign(Ncells, supplied_Gtheta);
+            if (supplied_Gtheta.size() == 1) {
+                Gtheta.assign(Ncells, supplied_Gtheta[0]);
+            } else {
+                assert(supplied_Gtheta.size() == Ncells);
+                Gtheta = supplied_Gtheta;
+            }
         } else {
             computeGtheta(Ncells, Nscans, Gtheta, Gtheta_bar);
         }

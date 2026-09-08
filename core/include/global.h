@@ -29,6 +29,7 @@ constexpr float PI_F = 3.14159265358979323846f;
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -685,12 +686,38 @@ namespace helios {
      */
     [[nodiscard]] int JulianDay(const Date &date);
 
-    //! Random number from a uniform distribution between 0 and 1
-    /** \ingroup functions */
+    //! Seed the random number generator used by the free-function randu()
+    /**
+     * By default the generator is seeded non-deterministically from std::random_device, so each run
+     * produces a different sequence. Call this with a fixed value to make a run reproducible.
+     *
+     * The generator is shared by all threads and access to it is synchronized, so a seed set from
+     * any thread applies to every subsequent randu() call. Note that seeding fixes the sequence of
+     * values drawn, not which thread draws which value: a parallel loop that calls randu() will
+     * still consume that sequence in a scheduling-dependent order, so seeding alone does not make
+     * such a loop reproducible. Give each iteration its own independently seeded generator, or use
+     * the Context's generator (Context::getRandomGenerator()), when that is needed.
+     *
+     * \param[in] seed Value used to seed the generator
+     * \ingroup functions
+     */
+    void seedRandomGenerator(unsigned int seed);
+
+    //! Random number from a uniform distribution over [0,1)
+    /**
+     * \sa seedRandomGenerator()
+     * \ingroup functions
+     */
     [[nodiscard]] float randu();
 
-    //! Random integer from a uniform distribution between imin and imax
+    //! Random integer from a uniform distribution over the inclusive range [imin,imax]
     /**
+     * Every value in the range, endpoints included, is equally likely. If imin >= imax, imin is
+     * returned.
+     *
+     * \param[in] imin Lower bound of the range (inclusive)
+     * \param[in] imax Upper bound of the range (inclusive)
+     * \sa seedRandomGenerator()
      * \ingroup functions
      */
     [[nodiscard]] int randu(int imin, int imax);

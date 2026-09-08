@@ -791,7 +791,9 @@ void AerialLiDARcloud::generateHeightModel(int maxIter, float threshDist_ground,
         calculateHitGridCell();
     }
 
-    std::srand(time(NULL));
+    // No seeding call here any more: helios::randu(), which RANSAC() below draws its sample indices
+    // from, no longer uses std::rand() and seeds itself non-deterministically from
+    // std::random_device. Call helios::seedRandomGenerator() instead to make a run reproducible.
 
     uint Nscans = getScanCount();
 

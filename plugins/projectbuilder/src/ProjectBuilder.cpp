@@ -162,40 +162,88 @@ void toggle_button(const char *str_id, bool *v) {
 // Global flag to track NFD corruption
 static bool nfd_corrupted_imgui = false;
 
+#ifdef _WIN32
+// Buffer length for the Windows common file dialogs, in characters.
+//
+// The ANSI dialogs were previously given a 260-character (MAX_PATH) buffer. GetOpenFileName fails
+// outright when the selected path does not fit in the caller's buffer, so any file under a deep
+// directory - a OneDrive-synced Documents folder is enough - simply reported "No file selected".
+// 32768 is the documented maximum path length for the Unicode variants of the Win32 file APIs.
+static constexpr DWORD WIN_PATH_BUFFER_CHARS = 32768;
+
+// Convert a UTF-16 Windows string to UTF-8 for use as a std::string.
+//
+// The dialogs use the wide-character (W) entry points rather than the ANSI (A) ones so that paths
+// containing non-ASCII characters survive: the A variants transcode through the process's active
+// code page, which silently mangles any character it cannot represent.
+static std::string wide_to_utf8(const wchar_t *wide_string) {
+    if (wide_string == nullptr || wide_string[0] == L'\0') {
+        return "";
+    }
+    const int byte_count = WideCharToMultiByte(CP_UTF8, 0, wide_string, -1, nullptr, 0, nullptr, nullptr);
+    if (byte_count <= 0) {
+        return "";
+    }
+    std::string utf8_string(static_cast<size_t>(byte_count - 1), '\0'); // byte_count includes the null terminator
+    WideCharToMultiByte(CP_UTF8, 0, wide_string, -1, utf8_string.data(), byte_count, nullptr, nullptr);
+    return utf8_string;
+}
+
+// Convert a UTF-8 std::string to UTF-16 for the wide-character Win32 APIs.
+static std::wstring utf8_to_wide(const std::string &utf8_string) {
+    if (utf8_string.empty()) {
+        return L"";
+    }
+    const int char_count = MultiByteToWideChar(CP_UTF8, 0, utf8_string.c_str(), static_cast<int>(utf8_string.size()), nullptr, 0);
+    if (char_count <= 0) {
+        return L"";
+    }
+    std::wstring wide_string(static_cast<size_t>(char_count), L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, utf8_string.c_str(), static_cast<int>(utf8_string.size()), wide_string.data(), char_count);
+    return wide_string;
+}
+#endif
+
 std::string file_dialog() {
     std::string file_name;
 #ifdef ENABLE_HELIOS_VISUALIZER
 #ifdef _WIN32
     // save CWD
-    char CWD[MAX_PATH];
-    GetCurrentDirectory(MAX_PATH, CWD);
+    std::wstring CWD(WIN_PATH_BUFFER_CHARS, L'\0');
+    CWD.resize(GetCurrentDirectoryW(WIN_PATH_BUFFER_CHARS, CWD.data()));
 
-    OPENFILENAME ofn;
-    char szFile[260] = {0};
+    OPENFILENAMEW ofn;
+    std::wstring szFile(WIN_PATH_BUFFER_CHARS, L'\0');
 
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = nullptr;
-    ofn.lpstrFile = szFile;
-    ofn.nMaxFile = sizeof(szFile);
-    ofn.lpstrFilter = "All Files\0*.*\0Text Files\0*.txt\0";
+    ofn.lpstrFile = szFile.data();
+    ofn.nMaxFile = WIN_PATH_BUFFER_CHARS;
+    ofn.lpstrFilter = L"All Files\0*.*\0Text Files\0*.txt\0";
     ofn.nFilterIndex = 1;
     ofn.lpstrFileTitle = nullptr;
     ofn.nMaxFileTitle = 0;
     ofn.lpstrInitialDir = nullptr;
-    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+    // OFN_NOCHANGEDIR keeps the common dialog from changing the process working directory. Without
+    // it the dialog leaves the CWD wherever the user last browsed, which breaks every subsequent
+    // relative asset path. The CWD is saved/restored below as well, since the flag is documented as
+    // advisory and is ignored by some shell extensions.
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
 
-    if (GetOpenFileName(&ofn)) {
-        std::cout << "Selected file: " << ofn.lpstrFile << std::endl;
-    } else {
+    const BOOL selected = GetOpenFileNameW(&ofn);
+
+    // Restore the CWD before returning on *either* path. Doing this only on success left the
+    // process in the browsed-to directory whenever the user cancelled the dialog.
+    SetCurrentDirectoryW(CWD.c_str());
+
+    if (!selected) {
         std::cout << "No file selected." << std::endl;
         return "";
     }
 
-    // correct CWD
-    SetCurrentDirectory(CWD);
-
-    file_name = (std::string) ofn.lpstrFile;
+    file_name = wide_to_utf8(ofn.lpstrFile);
+    std::cout << "Selected file: " << file_name << std::endl;
 #elif defined(__APPLE__)
     nfdchar_t *outPath = nullptr;
     nfdresult_t result = NFD_OpenDialog(nullptr, nullptr, &outPath);
@@ -239,39 +287,44 @@ std::string save_as_file_dialog(std::vector<std::string> extensions) {
 #ifdef ENABLE_HELIOS_VISUALIZER
 #ifdef _WIN32
     // save CWD
-    char CWD[MAX_PATH];
-    GetCurrentDirectory(MAX_PATH, CWD);
+    std::wstring CWD(WIN_PATH_BUFFER_CHARS, L'\0');
+    CWD.resize(GetCurrentDirectoryW(WIN_PATH_BUFFER_CHARS, CWD.data()));
 
-    OPENFILENAME ofn;
-    char szFile[260] = {0};
+    OPENFILENAMEW ofn;
+    std::wstring szFile(WIN_PATH_BUFFER_CHARS, L'\0');
 
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = nullptr;
-    ofn.lpstrFile = szFile;
-    ofn.nMaxFile = sizeof(szFile);
-    std::string filterList = "";
-    for (std::string extension: extensions) {
+    ofn.lpstrFile = szFile.data();
+    ofn.nMaxFile = WIN_PATH_BUFFER_CHARS;
+    std::wstring filterList;
+    for (const std::string &extension: extensions) {
         std::string ext_lower = extension;
         std::string ext_upper = extension;
         std::transform(ext_lower.begin(), ext_lower.end(), ext_lower.begin(), ::tolower);
         std::transform(ext_upper.begin(), ext_upper.end(), ext_upper.begin(), ::toupper);
-        filterList += ext_upper + " Files (*." + ext_lower + ")";
-        filterList += '\0';
-        filterList += "*." + ext_lower;
-        filterList += '\0';
+        filterList += utf8_to_wide(ext_upper + " Files (*." + ext_lower + ")");
+        filterList += L'\0';
+        filterList += utf8_to_wide("*." + ext_lower);
+        filterList += L'\0';
     }
-    filterList += '\0';
+    filterList += L'\0';
     ofn.lpstrFilter = filterList.c_str();
     ofn.nFilterIndex = 1;
     ofn.lpstrFileTitle = nullptr;
     ofn.nMaxFileTitle = 0;
     ofn.lpstrInitialDir = nullptr;
-    ofn.Flags = OFN_PATHMUSTEXIST;
+    // See the note in file_dialog(): OFN_NOCHANGEDIR stops the dialog from moving the process
+    // working directory, and the CWD is restored unconditionally below as a belt-and-braces measure.
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
 
-    if (GetSaveFileName(&ofn)) {
-        std::cout << "Selected file: " << ofn.lpstrFile << std::endl;
-    } else {
+    const BOOL selected = GetSaveFileNameW(&ofn);
+
+    // Restore the CWD before returning on *either* path (the cancel path used to skip this).
+    SetCurrentDirectoryW(CWD.c_str());
+
+    if (!selected) {
         std::cout << "No file selected." << std::endl;
         return "";
     }
@@ -280,10 +333,8 @@ std::string save_as_file_dialog(std::vector<std::string> extensions) {
     std::transform(ext_.begin(), ext_.end(), ext_.begin(), ::tolower);
     std::string ext = "." + ext_;
 
-    // correct CWD
-    SetCurrentDirectory(CWD);
-
-    file_name = (std::string) ofn.lpstrFile;
+    file_name = wide_to_utf8(ofn.lpstrFile);
+    std::cout << "Selected file: " << file_name << std::endl;
 
     std::filesystem::path file_path(file_name);
     if (file_path.extension().empty()) {

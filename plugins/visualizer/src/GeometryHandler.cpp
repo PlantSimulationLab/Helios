@@ -1067,6 +1067,11 @@ void GeometryHandler::defragmentBuffers() {
 
     // Reset deleted count
     deleted_primitive_count = 0;
+
+    // Every primitive's buffer indices were just rewritten and the backing vectors replaced, so the
+    // GPU's copy corresponds to none of them. The incremental upload path writes only the dirty
+    // primitives' new slots, which would leave every other primitive rendering from a stale one.
+    buffer_needs_full_update = true;
 }
 
 void GeometryHandler::registerUUID(size_t UUID, const VisualizerGeometryType &geometry_type) {

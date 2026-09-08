@@ -37,6 +37,10 @@ void Visualizer::buildContextGeometry(helios::Context *context_ptr) {
 
     build_all_context_geometry = true;
 
+    // Geometry from this Context has not been rendered yet, so a capture must render rather than
+    // reuse whatever frame is on the GPU.
+    rendered_frame_is_current = false;
+
     // Restore navigation gizmo if it was enabled before displaying an image
     if (navigation_gizmo_was_enabled_before_image_display) {
         this->showNavigationGizmo();
@@ -56,6 +60,8 @@ void Visualizer::buildContextGeometry(helios::Context *context_ptr, const std::v
 
     build_all_context_geometry = false;
     contextUUIDs_build = UUIDs;
+
+    rendered_frame_is_current = false;
 
     // Restore navigation gizmo if it was enabled before displaying an image
     if (navigation_gizmo_was_enabled_before_image_display) {
@@ -83,27 +89,28 @@ void Visualizer::buildContextGeometry_private() {
     std::vector<uint> contextUUIDs_needupdate;
     contextUUIDs_needupdate.reserve(contextUUIDs_build.size());
 
-    for (uint UUID: contextUUIDs_build) {
+    // Partition contextUUIDs_build in place with a write cursor: primitives still present in the
+    // Context are kept and collected for update, and primitives deleted from the Context since the
+    // last build are dropped from this list and from the geometry handler. The cursor replaces a
+    // range-for that swap-and-popped the very vector it was iterating - which invalidated the loop's
+    // cached end iterator - and that located the element it was already positioned on with a
+    // std::find, making a scene-wide deletion quadratic.
+    size_t surviving_count = 0;
+    for (size_t read_index = 0; read_index < contextUUIDs_build.size(); read_index++) {
+        const uint UUID = contextUUIDs_build[read_index];
 
-        // Check if primitives in contextUUIDs_build have since been deleted from the Context. If so, remove them from contextUUIDs_build and from the geometry handler
-        if (!context->doesPrimitiveExist(UUID)) {
-            auto it = std::find(contextUUIDs_build.begin(), contextUUIDs_build.end(), UUID);
-            if (it != contextUUIDs_build.end()) {
-                // swap-and-pop delete from contextUUIDs_build
-                *it = contextUUIDs_build.back();
-                contextUUIDs_build.pop_back();
-                // delete from the geometry handler
-                if (geometry_handler.doesGeometryExist(UUID)) {
-                    geometry_handler.deleteGeometry(UUID);
-                }
-                contextUUIDs_uploaded.erase(UUID);
-            }
-        }
-        // check if the primitive is dirty, if so, add it to contextUUIDs_needupdate
-        else {
+        if (context->doesPrimitiveExist(UUID)) {
+            contextUUIDs_build[surviving_count] = UUID;
+            surviving_count++;
             contextUUIDs_needupdate.push_back(UUID);
+        } else {
+            if (geometry_handler.doesGeometryExist(UUID)) {
+                geometry_handler.deleteGeometry(UUID);
+            }
+            contextUUIDs_uploaded.erase(UUID);
         }
     }
+    contextUUIDs_build.resize(surviving_count);
 
     // Context dirty flags are sticky - only the user's call to Context::markGeometryClean() clears them, once every
     // plug-in has processed the change - so getDirtyUUIDs() keeps reporting the whole scene on every frame. Rebuilding

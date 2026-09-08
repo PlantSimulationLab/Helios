@@ -23,6 +23,11 @@
 #ifndef APIENTRY
 #define APIENTRY
 #endif
+// GLEW must precede any header that pulls in <GL/gl.h> (glfw3.h does). This header declares
+// members of OpenGL 1.5+ types such as GLsizeiptr, which the <GL/gl.h> Windows ships is frozen
+// at OpenGL 1.1 and does not define -- so without this the header only compiles in a
+// translation unit that happened to include glew itself first.
+#include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -1338,10 +1343,23 @@ public:
     void plotUpdate(bool hide_window);
 
     //! Print the current graphics window to a JPEG image file. File will be given a default filename and saved to the current directory from which the executable was run.
+    /**
+     * \sa printWindow(const char*, const std::string&) for how the frame being captured is produced.
+     */
     void printWindow();
 
     //! Print the current graphics window to an image file
     /**
+     * The frame is rendered as part of the capture, so it is not necessary to call \ref plotUpdate()
+     * beforehand: handing the Visualizer a Context with \ref buildContextGeometry() and calling this
+     * straight away produces a correct image. A render is performed whenever the frame currently on
+     * the GPU is not the one that would be captured - because geometry changed, the camera moved, or
+     * the navigation gizmo had to be hidden for the capture - and is skipped when it would produce an
+     * identical frame. Calling \ref plotUpdate() first is therefore harmless but redundant.
+     *
+     * The navigation gizmo is always absent from the captured image, and is restored afterwards if it
+     * was enabled.
+     *
      * \param[in] outfile Path to file where image should be saved.
      * \param[in] image_format Format of the output image: "jpeg" (default) or "png".
      * \note If using PNG format with transparent background mode (setBackgroundTransparent()), the output will have alpha channel transparency.
@@ -1623,6 +1641,24 @@ private:
 
     void createOffscreenContext();
 
+    //! Create a headless OpenGL context through EGL, with no display server of any kind
+    /**
+     * The GLFW headless path is a hidden 1x1 window, which still needs X11 or Wayland; on a batch
+     * compute node there is neither, and glfwInit() itself fails. EGL's device platform binds
+     * directly to the GPU, so this is the only way to rasterize on a cluster -- and it is hardware
+     * accelerated, not a software fallback.
+     *
+     * Available on Linux only, and only when the build found EGL. Leaves the GLFW window pointer
+     * null, so every GLFW-specific operation must be guarded on it.
+     *
+     * \return True if an EGL context was created and made current; false if EGL is unavailable or
+     * no device could provide an OpenGL 3.3 context, in which case the caller falls back to GLFW.
+     */
+    bool createEGLContext();
+
+    //! Release the EGL context and display created by createEGLContext(), if any
+    void destroyEGLContext();
+
     //! Create the shadow-map framebuffer and depth texture
     /**
      * Called lazily the first time shadowed lighting is actually rendered, in both windowed
@@ -1631,6 +1667,17 @@ private:
      * Does nothing if the framebuffer has already been created.
      */
     void createShadowFramebuffer();
+
+    //! Create the 1x1 placeholder depth texture used until a real shadow map exists
+    /** \sa shadow_map_placeholder_texture */
+    void createShadowMapPlaceholderTexture();
+
+    //! Bind the shadow map to texture unit 1 for the currently active shader
+    /**
+     * Binds \ref depthTexture, or \ref shadow_map_placeholder_texture when no shadow map has
+     * been created yet, and points the `shadowMap` sampler at it.
+     */
+    void bindShadowMap() const;
 
     //! Setup offscreen framebuffer for headless rendering
     void setupOffscreenFramebuffer();
@@ -1830,6 +1877,17 @@ private:
     /** \note This will be recast to have type GLFWwindow*.  This has to be done in order to keep library-dependent variables out of the header. */
     void *window;
 
+    //! EGL display handle when the context came from createEGLContext(), null otherwise
+    void *egl_display;
+
+    //! EGL context handle when the context came from createEGLContext(), null otherwise
+    /**
+     * Non-null exactly when rendering through EGL. Where `window` distinguishes "has a GLFW
+     * window", this distinguishes "has a current OpenGL context at all", which is what GL resource
+     * cleanup has to test.
+     */
+    void *egl_context;
+
     //! (x,y,z) coordinates of location where the camera is looking
     helios::vec3 camera_lookat_center;
 
@@ -1852,6 +1910,16 @@ private:
 
     uint framebufferID = 0;
     uint depthTexture = 0;
+
+    //! 1x1 depth texture bound to the shadow-map sampler while no shadow map exists
+    /** The primary and line shaders always declare `shadowMap` as a sampler2D, and a sampler
+        must have a complete texture bound on every draw call even when the shader never reads
+        it. Shadowed lighting is off by default and the real shadow map is allocated lazily by
+        \ref createShadowFramebuffer(), so binding \ref depthTexture unconditionally would
+        leave texture 0 -- an incomplete texture -- attached to the sampler for the whole of an
+        unshadowed render. The placeholder holds a depth of 1 (the far plane), so a lookup
+        against it can never darken a fragment. */
+    uint shadow_map_placeholder_texture = 0;
 
     // Separate framebuffer/texture for updateDepthBuffer(), which renders a camera-space
     // depth map at the window resolution rather than the shadow map's own resolution.
@@ -1942,6 +2010,16 @@ private:
      * \return Map from material ID to its dense index in the packed table.
      */
     std::unordered_map<uint, int> buildPhongMaterialTable(const helios::Context *context, const std::set<uint> &referenced_material_IDs);
+
+    //! Upload the packed Phong material table to its texture buffer
+    /**
+     * Creates the buffer and texture on the first call. An empty table is padded to one unused
+     * entry, because a zero-size buffer is not a valid texture buffer source and would leave the
+     * `phongMaterialTable` sampler incomplete on every draw call.
+     *
+     * \param[in] table Packed table of (ambient, diffuse, specular, shininess) quadruples.
+     */
+    void uploadPhongMaterialTable(std::vector<GLfloat> table);
 
     //! Resolve per-material Phong parameters and stamp the resulting table index onto each primitive
     /**
@@ -2071,6 +2149,15 @@ private:
     std::vector<GLuint> color_buffer, normal_buffer, texture_flag_buffer, texture_ID_buffer, coordinate_flag_buffer, sky_geometry_flag_buffer, hidden_flag_buffer, material_index_buffer;
     //! Texture objects to hold per-primitive data.
     std::vector<GLuint> color_texture_object, normal_texture_object, texture_flag_texture_object, texture_ID_texture_object, coordinate_flag_texture_object, sky_geometry_flag_texture_object, hidden_flag_texture_object, material_index_texture_object;
+
+    //! Size in bytes each GPU buffer held when it was last uploaded, indexed [geometry type][buffer]
+    /**
+     * transferBufferData() reallocates a buffer only when its size has changed. Comparing against
+     * this rather than querying the driver for GL_BUFFER_SIZE avoids a synchronous round trip per
+     * buffer per geometry type on every call. A size of -1 marks a buffer that has never been
+     * uploaded, which is distinct from one that is legitimately empty.
+     */
+    std::vector<std::array<GLsizeiptr, 12>> last_uploaded_buffer_sizes;
 
     //! Buffer and texture holding the packed per-material Phong parameter table
     /** One RGBA32F texel per material: (ambient, diffuse, specular, shininess). Primitives index
@@ -2291,6 +2378,17 @@ private:
 
         //! Path to the texture file to be loaded.
         std::string texture_file;
+        //! Content-derived key identifying what this texture holds.
+        /**
+         * Two textures with the same key hold the same image, so a registration request whose key
+         * matches an existing texture is answered with that texture's ID instead of adding another
+         * one. For file-backed textures the key is the file path, distinguished by whether the file
+         * was loaded as a full image or as an alpha-only mask, since those produce different data
+         * from the same file. For glyphs and raw pixel data it is a digest of the pixel bytes,
+         * which is what lets a rebuilt colorbar reuse the letter it already registered rather than
+         * adding a texture array layer for every character of every frame.
+         */
+        std::string texture_key;
         //! Data structure representing a glyph object.
         Glyph glyph;
         //! Represents the resolution of a texture in 2D space.
@@ -2319,6 +2417,66 @@ private:
      * This container is used to manage and access textures efficiently via their unique IDs.
      */
     std::unordered_map<uint, Texture> texture_manager;
+
+    /**
+     * \brief Maps a texture's content key to its ID in \ref texture_manager.
+     *
+     * Registration consults this map so that a texture already present is reused rather than
+     * duplicated. Nothing is ever erased from \ref texture_manager - a texture's ID doubles as its
+     * layer index in the GPU texture array, so IDs cannot be reused - and this map therefore needs
+     * no invalidation.
+     */
+    std::unordered_map<std::string, uint> texture_key_to_ID;
+
+    //! Values the colorbar geometry currently on screen was built from
+    /**
+     * updateColorbar() runs on every plotUpdate() and rebuilds the colorbar by deleting and re-adding
+     * every chip, border, tick and character rectangle. Comparing against this lets an unchanged
+     * colorbar be left alone, so that a static scene dirties no geometry between frames. It holds
+     * exactly the values \ref addColorbarByCenter reads, alongside \ref colorbar_built_title for the
+     * one that is not a float.
+     */
+    std::vector<float> colorbar_built_state;
+
+    //! Title the colorbar geometry currently on screen was built from. \sa colorbar_built_state
+    std::string colorbar_built_title;
+
+    //! Whether the last rendered frame still reflects everything that would be drawn now
+    /**
+     * printWindow() renders before capturing, because the navigation gizmo is hidden for the capture
+     * and because a caller may have handed the Visualizer a Context without ever calling
+     * plotUpdate(), leaving no geometry built at all. When the previous render already produced the
+     * frame that would be captured, that render is skipped. Anything that changes what would be
+     * drawn clears this: a new Context, a geometry change, a camera move, or a change to the
+     * overlays or the framebuffer size.
+     */
+    bool rendered_frame_is_current = false;
+
+    //! Width the watermark rectangle currently on screen was built at
+    /**
+     * The watermark's size and position derive from this alone, so an unchanged width means
+     * updateWatermark() would rebuild identical geometry. \sa colorbar_built_state
+     */
+    float watermark_built_width = 0.f;
+
+    //! Look up an already-registered texture by its content key
+    /**
+     * \param[in] texture_key Content key as built by the \ref Texture constructors.
+     * \param[in] expected_resolution Resolution the caller expects. A stored texture whose
+     *            resolution differs is treated as a non-match, so that a digest collision costs a
+     *            redundant layer rather than displaying the wrong image.
+     * \param[out] textureID ID of the matching texture. Left untouched when there is no match.
+     * \return True when a matching texture is already registered.
+     */
+    [[nodiscard]] bool findRegisteredTexture(const std::string &texture_key, const helios::uint2 &expected_resolution, uint &textureID) const;
+
+    //! Add a texture to the manager, or return the ID of an identical one already registered
+    /**
+     * \param[in] candidate Texture to register, already constructed so that its content key and
+     *            resolution reflect any border and size clamp its constructor applied.
+     * \return ID of the registered texture, newly assigned or that of the existing match.
+     */
+    uint registerTexture(Texture &&candidate);
 
     friend struct Shader;
     friend struct Texture;

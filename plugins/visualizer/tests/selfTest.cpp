@@ -110,6 +110,16 @@ public:
         return visualizer.geometry_handler.getDirtyUUIDs().size();
     }
 
+    //! Placeholder depth texture bound to the `shadowMap` sampler before a shadow map exists
+    static uint getShadowMapPlaceholderTexture(const Visualizer &visualizer) {
+        return visualizer.shadow_map_placeholder_texture;
+    }
+
+    //! Texture object backing the packed Phong material table
+    static GLuint getPhongMaterialTableTexture(const Visualizer &visualizer) {
+        return visualizer.phong_material_table_texture;
+    }
+
     //! Force the framebuffer dimensions independently of the window dimensions
     /**
      * Headless mode always initializes the framebuffer to match the window, so the high-DPI case
@@ -126,6 +136,16 @@ public:
     //! Resolution in texels of the bitmap backing a registered texture
     static helios::uint2 getTextureResolution(const Visualizer &visualizer, uint textureID) {
         return visualizer.getTextureResolution(textureID);
+    }
+
+    //! Number of distinct textures registered, which is the layer count of the GPU texture array
+    /**
+     * Every entry is one layer of the texture array. The array uses immutable storage sized to the
+     * largest texture in it, so a layer count that changes forces the whole array to be destroyed,
+     * reallocated and re-uploaded. \sa Visualizer::transferTextureData
+     */
+    static size_t getTextureCount(const Visualizer &visualizer) {
+        return visualizer.texture_manager.size();
     }
 
     //! ID of the most recently registered texture. Glyphs are registered one texture per letter.
@@ -339,20 +359,38 @@ DOCTEST_TEST_CASE("Visualizer::setColorbarTicks - call ordering is documented an
     // explicit range, so a caller who wants their range respected has a way to get it.
     const std::vector<float> ticks{-5.f, 5.f, 25.f};
 
-    Visualizer ticks_first(1000, 800, 16, true, true);
-    ticks_first.setColorbarTicks(ticks);
-    ticks_first.setColorbarRange(0.f, 10.f);
+    // Both orderings widen the range at the setColorbarTicks() call and so both warn, which is
+    // the behavior the test above asserts. The warnings are captured here only to keep them out
+    // of the test log; the captures are closed before any assertion so that a doctest failure
+    // message still reaches the terminal.
+    std::string ticks_first_output;
+    std::string range_first_output;
 
-    DOCTEST_CHECK(VisualizerTestHelper::getColorbarMin(ticks_first) == doctest::Approx(0.f));
-    DOCTEST_CHECK(VisualizerTestHelper::getColorbarMax(ticks_first) == doctest::Approx(10.f));
+    Visualizer ticks_first(1000, 800, 16, true, true);
+    {
+        capture_cerr cerr_buffer;
+        ticks_first.setColorbarTicks(ticks);
+        ticks_first_output = cerr_buffer.get_captured_output();
+    }
+    ticks_first.setColorbarRange(0.f, 10.f);
 
     // In the reverse order the ticks widen the range, per the documented contract.
     Visualizer range_first(1000, 800, 16, true, true);
     range_first.setColorbarRange(0.f, 10.f);
-    range_first.setColorbarTicks(ticks);
+    {
+        capture_cerr cerr_buffer;
+        range_first.setColorbarTicks(ticks);
+        range_first_output = cerr_buffer.get_captured_output();
+    }
+
+    DOCTEST_CHECK(VisualizerTestHelper::getColorbarMin(ticks_first) == doctest::Approx(0.f));
+    DOCTEST_CHECK(VisualizerTestHelper::getColorbarMax(ticks_first) == doctest::Approx(10.f));
 
     DOCTEST_CHECK(VisualizerTestHelper::getColorbarMin(range_first) == doctest::Approx(-5.f));
     DOCTEST_CHECK(VisualizerTestHelper::getColorbarMax(range_first) == doctest::Approx(25.f));
+
+    DOCTEST_CHECK_MESSAGE(ticks_first_output.find("setColorbarTicks") != std::string::npos, "expected a range-expansion warning, but got: " << ticks_first_output);
+    DOCTEST_CHECK_MESSAGE(range_first_output.find("setColorbarTicks") != std::string::npos, "expected a range-expansion warning, but got: " << range_first_output);
 }
 
 DOCTEST_TEST_CASE("Visualizer::setColorbarRange - an explicit zero range survives auto-ranging") {
@@ -446,6 +484,73 @@ DOCTEST_TEST_CASE("Visualizer colorbar geometry does not accumulate across refre
     const size_t live_geometry_after = VisualizerTestHelper::getLiveGeometryCount(visualizer);
 
     DOCTEST_CHECK_MESSAGE(live_geometry_after == live_geometry_baseline, "colorbar geometry accumulated across " << refresh_count << " refreshes (" << live_geometry_baseline << " -> " << live_geometry_after << "); geometry created by addColorbarByCenter() is not being tracked for deletion");
+}
+
+DOCTEST_TEST_CASE("Visualizer texture array does not grow across repeated renders") {
+    // registerTextureGlyph() had no deduplication, unlike the file-backed registration functions
+    // beside it, and nothing is ever erased from texture_manager. updateColorbar() rebuilds the
+    // colorbar on every plotUpdate(), and each tick label and title character is a separate glyph,
+    // so every frame added a texture for a letter that was already registered. transferTextureData()
+    // sizes the texture array to texture_manager.size() using immutable storage, so a changed layer
+    // count destroys the array, reallocates it and re-uploads every layer - at the resolution of the
+    // largest texture in the scene. The cost therefore grew without bound frame over frame.
+    Context context;
+    for (uint i = 0; i < 12; i++) {
+        uint UUID = context.addPatch(make_vec3(float(i) * 0.1f, 0, 0), make_vec2(0.09f, 1.f));
+        context.setPrimitiveData(UUID, "testdata", 305.5f + 0.5f * float(i));
+    }
+
+    Visualizer visualizer(800, 600, 0, true, true);
+    visualizer.disableMessages();
+    visualizer.buildContextGeometry(&context);
+    visualizer.colorContextPrimitivesByData("testdata");
+    visualizer.enableColorbar();
+    visualizer.setColorbarTitle("test data value");
+    visualizer.plotUpdate(true);
+
+    // The colorbar is what registers the glyphs, so without it this test would pass on the bug.
+    DOCTEST_REQUIRE(VisualizerTestHelper::getColorbarGeometryCount(visualizer) > 0);
+
+    const size_t textures_after_first_render = VisualizerTestHelper::getTextureCount(visualizer);
+    DOCTEST_REQUIRE(textures_after_first_render > 0);
+
+    const int render_count = 8;
+    for (int render = 0; render < render_count; render++) {
+        visualizer.plotUpdate(true);
+    }
+    const size_t textures_after = VisualizerTestHelper::getTextureCount(visualizer);
+
+    DOCTEST_CHECK_MESSAGE(textures_after == textures_after_first_render, "texture array grew from " << textures_after_first_render << " to " << textures_after << " layers across " << render_count << " identical renders; every layer is reallocated and re-uploaded when the count changes");
+}
+
+DOCTEST_TEST_CASE("Visualizer::printWindow does not grow the texture array") {
+    // printWindow() renders the frame itself, so a caller who also calls plotUpdate() first renders
+    // twice. Each render used to enlarge the texture array, which made that second render - the one
+    // inside printWindow() - progressively more expensive than the first.
+    Context context;
+    for (uint i = 0; i < 12; i++) {
+        uint UUID = context.addPatch(make_vec3(float(i) * 0.1f, 0, 0), make_vec2(0.09f, 1.f));
+        context.setPrimitiveData(UUID, "testdata", 305.5f + 0.5f * float(i));
+    }
+
+    Visualizer visualizer(800, 600, 0, true, true);
+    visualizer.disableMessages();
+    visualizer.buildContextGeometry(&context);
+    visualizer.colorContextPrimitivesByData("testdata");
+    visualizer.enableColorbar();
+    visualizer.setColorbarTitle("test data value");
+    visualizer.plotUpdate(true);
+
+    const size_t textures_after_plotUpdate = VisualizerTestHelper::getTextureCount(visualizer);
+    DOCTEST_REQUIRE(textures_after_plotUpdate > 0);
+
+    const std::string test_filename = "test_printWindow_texture_growth.jpg";
+    DOCTEST_CHECK_NOTHROW(visualizer.printWindow(test_filename.c_str()));
+
+    DOCTEST_CHECK_MESSAGE(VisualizerTestHelper::getTextureCount(visualizer) == textures_after_plotUpdate, "printWindow() grew the texture array from " << textures_after_plotUpdate << " to " << VisualizerTestHelper::getTextureCount(visualizer) << " layers");
+
+    std::error_code remove_error;
+    std::filesystem::remove(test_filename, remove_error);
 }
 
 DOCTEST_TEST_CASE("Visualizer::setColorbarRange - rejects an inverted range regardless of messages") {
@@ -884,10 +989,11 @@ TEST_CASE("Visualizer texture array layers are sized to their contents") {
     // colorbar's worth of text cost hundreds of megabytes of VRAM. Layers are now sized to the
     // largest texture actually present.
     Visualizer visualizer(1000, 800, 16, false, true);
+    visualizer.disableMessages();
 
     std::vector<size_t> UUIDs = visualizer.addTextboxByCenter("Wg", make_vec3(0.5f, 0.5f, 0.f), make_SphericalCoord(0, 0), RGB::black, 12, "OpenSans-Regular", Visualizer::COORDINATES_WINDOW_NORMALIZED);
     DOCTEST_REQUIRE(UUIDs.size() == 2);
-    DOCTEST_CHECK_NOTHROW(visualizer.plotUpdate());
+    DOCTEST_CHECK_NOTHROW(visualizer.plotUpdate(true));
 
     const uint2 layer_size = VisualizerTestHelper::getTextureArrayLayerSize(visualizer);
     const uint2 max_size = VisualizerTestHelper::getMaximumTextureSize(visualizer);
@@ -2018,7 +2124,7 @@ static void renderShadowScene(bool headless, bool include_occluder, bool set_lig
     visualizer.setBackgroundColor(make_RGBcolor(0.f, 0.f, 1.f));
 
     // Base color is deliberately dim: at 0.5 the lit ground saturates to white, which
-    // clips the lit sample and compresses the shadow contrast ratio from 3.6 to ~1.5.
+    // clips the lit sample and compresses the shadow contrast ratio severely.
     RGBcolor gray = make_RGBcolor(0.25f, 0.25f, 0.25f);
 
     // Ground: 8x8 at z=0, wound counter-clockwise viewed from +z so the normal is +z.
@@ -2032,6 +2138,15 @@ static void renderShadowScene(bool headless, bool include_occluder, bool set_lig
     }
 
     visualizer.setLightingModel(Visualizer::LIGHTING_PHONG_SHADOWED);
+
+    // The ambient term is a floor on how dark a shadow can get: a shadowed fragment receives
+    // ambient light only, so at the default ambient weight of 1.0 the measured contrast is
+    // dominated by the fill rather than by the shadow. Weighting it down leaves the direct term
+    // as the dominant signal, which is what this test is actually trying to detect.
+    Visualizer::PhongMaterial shadow_material;
+    shadow_material.ambient = 0.25f;
+    visualizer.setPhongMaterial(shadow_material);
+
     if (set_light_direction) {
         // light_direction points FROM the surface TOWARD the light: computeShadowDepthMVP()
         // negates it to place the shadow camera at centroid + light_direction*100. Passed
@@ -2053,7 +2168,7 @@ static void renderShadowScene(bool headless, bool include_occluder, bool set_lig
 
 // Fractional bounds of the shadow core, calibrated by rendering the scene and reading off
 // a coarse brightness map. Chosen strictly inside the umbra so the penumbra at the shadow
-// edges does not dilute the mean (sampling the penumbra drops the ratio from 3.60 to ~1.5).
+// edges does not dilute the mean (sampling the penumbra roughly halves the measured ratio).
 // The explicit light direction (0.6,0,0.8) throws the shadow toward -x; the default
 // direction (1,1,1)/sqrt(3) throws it toward -x AND -y, so it lands lower in the image.
 static constexpr float shadow_x_min = 14.f / 48.f;
@@ -2096,6 +2211,35 @@ static float measureShadowRatio(bool headless, bool set_light_direction, const s
     return mean_clear / mean_occluded;
 }
 
+DOCTEST_TEST_CASE("Visualizer binds a real texture to every sampler the primary shader declares") {
+    // REGRESSION TEST: the primary shader declares `shadowMap` (sampler2D) and `phongMaterialTable`
+    // (samplerBuffer) unconditionally, but the textures behind them were only created on demand --
+    // the shadow map on the first shadowed render, the material table only while building geometry
+    // from a Context. A visualizer that used neither feature therefore bound texture 0 to both
+    // samplers on every draw call, which is an incomplete texture. Nothing rendered incorrectly,
+    // because neither sampler is read on that path, but the state is invalid and macOS drivers
+    // report it once per process ("unit N ... is unloadable and bound to sampler type (Float)"),
+    // which put driver noise into the output of a passing test suite.
+    //
+    // The scene below is deliberately the case that used to hit both: geometry added directly to
+    // the visualizer rather than through a Context, shaded by a lighting model that has no shadow
+    // pass. Lighting must be on for the material table to be consulted at all, so LIGHTING_NONE
+    // would not exercise the second sampler.
+    Visualizer visualizer(400, 400, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.hideWatermark();
+    visualizer.hideNavigationGizmo();
+    visualizer.disableColorbar();
+
+    std::vector<vec3> ground_vertices{make_vec3(-1, -1, 0), make_vec3(1, -1, 0), make_vec3(1, 1, 0), make_vec3(-1, 1, 0)};
+    visualizer.addRectangleByVertices(ground_vertices, make_RGBcolor(0.5f, 0.5f, 0.5f), Visualizer::COORDINATES_CARTESIAN);
+    visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
+    DOCTEST_CHECK_NOTHROW(visualizer.plotUpdate(true));
+
+    DOCTEST_CHECK_MESSAGE(VisualizerTestHelper::getShadowMapPlaceholderTexture(visualizer) != 0, "no placeholder depth texture exists, so the shadowMap sampler is bound to texture 0 whenever shadowed lighting has not been used");
+    DOCTEST_CHECK_MESSAGE(VisualizerTestHelper::getPhongMaterialTableTexture(visualizer) != 0, "no Phong material table texture exists, so the phongMaterialTable sampler is bound to texture 0 for any scene built without a Context");
+}
+
 DOCTEST_TEST_CASE("Visualizer shadows render in headless mode") {
     // REGRESSION TEST: Visualizer::initialize() created the shadow-map framebuffer and
     // depth texture only under `if (!headless)`, so in headless mode framebufferID and
@@ -2104,21 +2248,23 @@ DOCTEST_TEST_CASE("Visualizer shadows render in headless mode") {
     // framebuffer) and bound texture 0 as the shadow map.
     //
     // The metric is deliberately a CONTRAST RATIO rather than an absolute darkness
-    // threshold. On the buggy code, sampling texture 0 returns 0.0, and the depth
-    // comparison in primaryShader.frag is `0.0 < proj.z`, which is true for essentially
-    // all geometry -- so every one of the four Poisson taps darkens every fragment and
-    // the ENTIRE scene renders at the fully-shadowed brightness. A test asserting "the
-    // shadow region is dark" would therefore PASS on the buggy code. A ratio collapses
-    // to 1.0 whether the broken output is uniformly dark or uniformly lit.
+    // threshold, because a missing shadow map does not necessarily produce a bright scene.
+    // On the buggy code the shadow-map sampler read texture 0, which returns 0.0, and the
+    // depth comparison in primaryShader.frag is `0.0 < proj.z` -- true for essentially all
+    // geometry, so every one of the four Poisson taps darkened every fragment and the ENTIRE
+    // scene rendered at the fully-shadowed brightness. A test asserting "the shadow region is
+    // dark" would therefore have PASSED on the buggy code. A ratio collapses to 1.0 whether
+    // the broken output is uniformly dark or uniformly lit, which covers that variant as well
+    // as the present one, where an absent shadow map leaves the whole scene uniformly lit.
     //
-    // Measured values: 3.60 with a working shadow map, exactly 1.00 without one (the
-    // two renders are byte-identical, since the occluder is invisible as well).
+    // Measured value: 5.27 with a working shadow map, exactly 1.00 without one (the two
+    // renders are byte-identical, since the occluder is invisible as well).
 
     float shadow_ratio = measureShadowRatio(true, true, "headless");
 
     DOCTEST_CHECK_MESSAGE(shadow_ratio > 2.f, "No shadow was rendered in headless mode: the occluded region is only "
                                                       << shadow_ratio
-                                                      << "x darker than the same region rendered without the occluder (expected ~3.6; a value of ~1.0 means the shadow map is missing entirely). The "
+                                                      << "x darker than the same region rendered without the occluder (expected ~5.3; a value of ~1.0 means the shadow map is missing entirely). The "
                                                          "shadow-map framebuffer/depth texture are likely not being created in headless mode.");
 
     DOCTEST_CHECK_MESSAGE(shadow_ratio < 12.f, "Shadow contrast is implausibly large (" << shadow_ratio << "); the sample region may have fallen off the ground geometry");
@@ -2138,7 +2284,7 @@ DOCTEST_TEST_CASE("Visualizer shadows render in headless mode with the default l
 
     float shadow_ratio = measureShadowRatio(true, false, "headless_default_light");
 
-    DOCTEST_CHECK_MESSAGE(shadow_ratio > 2.f, "No shadow was rendered in headless mode using the default light direction (ratio " << shadow_ratio << ", expected ~3.6).");
+    DOCTEST_CHECK_MESSAGE(shadow_ratio > 2.f, "No shadow was rendered in headless mode using the default light direction (ratio " << shadow_ratio << ", expected ~4.4).");
 }
 
 DOCTEST_TEST_CASE("Visualizer default light direction matches between headless and windowed modes") {
@@ -4207,4 +4353,49 @@ TEST_CASE("Visualizer does not illuminate surfaces facing away from the light") 
     REQUIRE(sun_overhead > 0); // the leaf must actually cover the sampled pixel
     REQUIRE(sun_underneath > 0);
     DOCTEST_CHECK(sun_overhead < sun_underneath);
+}
+
+TEST_CASE("Visualizer renders a camera looking straight down") {
+    // The view matrix is built with glm::lookAt against a world up vector. When the camera looks
+    // straight down, the view direction is parallel to a fixed +z up vector, cross(forward, up) is
+    // the zero vector, and normalizing it makes the entire matrix NaN -- so nothing rasterizes and
+    // the frame comes back empty, with no error. A nadir camera over a canopy is the standard
+    // overhead view, so this rendered nothing at all for the most ordinary case there is.
+    //
+    // The patch fills the field of view from directly above, so essentially every pixel must carry
+    // it. An oblique camera at the same distance is included as a control: it worked before and
+    // must still work.
+    auto coveredFraction = [](const helios::vec3 &eye) {
+        Context context;
+        const uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(20, 20));
+        context.setPrimitiveColor(UUID, make_RGBcolor(1.f, 1.f, 1.f));
+
+        Visualizer visualizer(120, 120, 0, true, true); // headless
+        visualizer.disableMessages();
+        visualizer.setLightingModel(Visualizer::LIGHTING_NONE);
+        visualizer.setBackgroundColor(make_RGBcolor(0.f, 0.f, 0.f));
+        visualizer.buildContextGeometry(&context);
+        visualizer.setCameraPosition(eye, make_vec3(0, 0, 0));
+        visualizer.plotUpdate();
+
+        std::vector<uint> pixels;
+        uint w = 0, h = 0;
+        visualizer.getWindowPixelsRGB(pixels, w, h);
+        REQUIRE(w > 0);
+        REQUIRE(h > 0);
+
+        size_t lit = 0;
+        for (size_t i = 0; i < size_t(w) * size_t(h); i++) {
+            if (pixels.at(3 * i) > 128) {
+                lit++;
+            }
+        }
+        return double(lit) / double(size_t(w) * size_t(h));
+    };
+
+    const double nadir = coveredFraction(make_vec3(0, 0, 10));
+    const double oblique = coveredFraction(make_vec3(0, -6, 8));
+
+    DOCTEST_CHECK(nadir > 0.9);
+    DOCTEST_CHECK(oblique > 0.5);
 }

@@ -914,6 +914,65 @@ DOCTEST_TEST_CASE("CollisionDetection Soft/Hard Detection Integration - Differen
 }
 
 
+DOCTEST_TEST_CASE("CollisionDetection Cone Sampling Is Deterministic") {
+    // findNearestSolidObstacleInCone() spreads sample directions across the cone and reports the nearest hit
+    // among them. The sampling used to seed a std::mt19937 from std::random_device on every call, so the
+    // answer moved from one run of the same binary to the next: the reported distance and direction came from
+    // whichever sample happened to land closest, and an obstacle covering only part of the cone was found on
+    // most runs and missed on the rest. That made the self-test above fail about once in every 250 runs on
+    // Windows CI with no code change, and it also meant a caller could not reproduce a growth simulation.
+    // The sample pattern must depend on the cone alone.
+    Context context;
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.disableGPUAcceleration();
+
+    const vec3 apex = make_vec3(0, 0, 0);
+    const vec3 axis = make_vec3(0, 0, 1);
+    constexpr float half_angle = 0.5f;
+    constexpr float height = 3.f;
+
+    // Offset from the axis so that the hit lands on some interior sample rather than on the axis direction,
+    // which every sampling scheme includes and which would therefore hide a moving pattern.
+    uint obstacle = context.addPatch(make_vec3(0.3f, 0, 1.5f), make_vec2(0.6f, 0.6f));
+    const std::vector<uint> obstacles = {obstacle};
+    collision.buildBVH(obstacles);
+
+    float first_distance = 0.f;
+    vec3 first_direction;
+    const bool first_hit = collision.findNearestSolidObstacleInCone(apex, axis, half_angle, height, obstacles, first_distance, first_direction);
+    DOCTEST_REQUIRE(first_hit == true);
+
+    for (int repeat = 0; repeat < 20; repeat++) {
+        float distance = 0.f;
+        vec3 direction;
+        const bool hit = collision.findNearestSolidObstacleInCone(apex, axis, half_angle, height, obstacles, distance, direction);
+        DOCTEST_REQUIRE(hit == first_hit);
+        DOCTEST_REQUIRE(distance == first_distance);
+        DOCTEST_REQUIRE(direction.x == first_direction.x);
+        DOCTEST_REQUIRE(direction.y == first_direction.y);
+        DOCTEST_REQUIRE(direction.z == first_direction.z);
+    }
+
+    // The samples must also cover the cone evenly enough that a small obstacle is resolved at all. Random
+    // draws clump, leaving gaps that a target this size can hide in; equal-area strata do not.
+    Context small_context;
+    CollisionDetection small_collision(&small_context);
+    small_collision.disableMessages();
+    small_collision.disableGPUAcceleration();
+
+    uint small_obstacle = small_context.addPatch(make_vec3(0.5f, 0, 1.5f), make_vec2(0.25f, 0.25f));
+    const std::vector<uint> small_obstacles = {small_obstacle};
+    small_collision.buildBVH(small_obstacles);
+
+    float small_distance = 0.f;
+    vec3 small_direction;
+    const bool small_hit = small_collision.findNearestSolidObstacleInCone(apex, axis, half_angle, height, small_obstacles, small_distance, small_direction);
+    DOCTEST_CHECK(small_hit == true);
+}
+
+
 DOCTEST_TEST_CASE("CollisionDetection Soft/Hard Detection Integration - BVH Rebuild Behavior") {
     Context context;
 

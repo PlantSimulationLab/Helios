@@ -473,7 +473,12 @@ int Context::randu(int minrange, int maxrange) {
     } else if (maxrange == minrange) {
         return minrange;
     } else {
-        return minrange + (int) lroundf(unif_distribution(generator) * float(maxrange - minrange));
+        // uniform_int_distribution weights every value in [minrange,maxrange] equally. The previous
+        // "minrange + lroundf(unif * range)" drew a continuous value from a half-open interval and
+        // rounded it to nearest, so only half of the rounding window fell inside the range at each
+        // end and the two endpoints came up about half as often as the interior values.
+        std::uniform_int_distribution<int> uniform_distribution(minrange, maxrange);
+        return uniform_distribution(generator);
     }
 }
 
@@ -2058,16 +2063,26 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
 
             primitives[currentUUID] = patch_new;
 
-            // Set context pointer and use default material
+            // Set context pointer
             patch_new->context_ptr = this;
-            patch_new->materialID = 0; // Default material
+
+            // Create or reuse material with de-duplication
+            std::string mat_label = generateMaterialLabel(make_RGBAcolor(0, 0, 0, 1), texturefile, false);
+            if (!doesMaterialExist(mat_label)) {
+                patch_new->materialID = addMaterial_internal(mat_label, make_RGBAcolor(0, 0, 0, 1), texturefile);
+            } else {
+                patch_new->materialID = getMaterialIDFromLabel(mat_label);
+            }
             // Increment material reference count
-            materials[0].reference_count++;
+            materials[patch_new->materialID].reference_count++;
 
             currentUUID++;
             UUID.push_back(currentUUID - 1);
         }
     }
+
+    // Sub-patches are constructed directly rather than through addPatch(), so the cache is invalidated here.
+    invalidateAllUUIDsCache();
 
     return UUID;
 }

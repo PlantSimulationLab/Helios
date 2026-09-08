@@ -91,7 +91,17 @@ vec3 linearToSrgb(vec3 c){
 //ACES filmic tone curve (Narkowicz 2015 fit). Maps unbounded linear radiance into [0,1] with a
 //soft highlight rolloff, so bright sunlit surfaces desaturate gracefully instead of clipping flat
 //to white the way a hard clamp does.
+//
+//The published coefficients fit a PRE-EXPOSED version of the ACES RRT+ODT, chosen so that an input
+//of 1 lands near 0.8 for the author's art direction. Fed raw linear radiance they brighten
+//everything below about 0.73 rather than tone-mapping it - mid-grey came out lighter than it went
+//in, which is the opposite of what a tone curve should do. Narkowicz's note gives the correction
+//for matching the unmodified ACES response: scale the input by 0.6 first. The output remains
+//linear and is encoded to sRGB separately by the caller; no transfer function is baked in here.
+const float ACES_PRE_EXPOSURE = 0.6;
+
 vec3 tonemapACES(vec3 x){
+    x *= ACES_PRE_EXPOSURE;
     const float a = 2.51;
     const float b = 0.03;
     const float c = 2.43;
@@ -186,6 +196,14 @@ void main(){
                     visibility-=0.35;
                 }
             }
+
+            // Four occluded taps subtract 1.4 from a starting value of 1.0, so a fully-shadowed fragment
+            // lands at -0.4. Since visibility multiplies (diffuse + specular) below, a negative value
+            // SUBTRACTS light instead of removing it -- and it does so per channel, against an albedo and an
+            // ambient colour that differ per channel, so the channels cross zero at different points and
+            // deep shadow picks up a colour cast rather than going neutrally dark. Clamp so that full
+            // occlusion means "no direct light" and never "negative light".
+            visibility = clamp(visibility, 0.0, 1.0);
 
         }
     }

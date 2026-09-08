@@ -1512,6 +1512,30 @@ TEST_CASE("Texture Management") {
         float solid_frac = tex.getSolidFraction(uv);
         DOCTEST_CHECK(solid_frac == doctest::Approx(1.f));
     }
+
+    SUBCASE("addTile with texture assigns a texture-carrying material") {
+        // The textured addTile() overload used to hardcode the default material onto every sub-patch it
+        // created, unlike addPatch() and addTileObject() which build a material from the texture file.
+        // Because the renderer reads the texture from the material, tiles built this way drew as the
+        // default material's flat black rather than the texture image.
+        Context ctx;
+
+        const std::string texture_file = "lib/images/disk_texture.png";
+        std::vector<uint> UUIDs = ctx.addTile(nullorigin, make_vec2(1, 1), nullrotation, make_int2(2, 2), texture_file.c_str());
+
+        DOCTEST_CHECK(!UUIDs.empty());
+        for (uint UUID: UUIDs) {
+            DOCTEST_CHECK(ctx.getPrimitiveTextureFile(UUID) == texture_file);
+            DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(UUID) != "__default__");
+            DOCTEST_CHECK(ctx.getMaterialTexture(ctx.getPrimitiveMaterialLabel(UUID)) == texture_file);
+        }
+
+        // Sub-patches sharing one texture should share one de-duplicated material rather than each
+        // creating its own.
+        for (uint UUID: UUIDs) {
+            DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(UUID) == ctx.getPrimitiveMaterialLabel(UUIDs.front()));
+        }
+    }
 }
 
 TEST_CASE("Triangle Management") {
@@ -2717,6 +2741,33 @@ TEST_CASE("Edge Cases and Additional Coverage") {
         DOCTEST_CHECK(rn == doctest::Approx(0.f));
     }
 
+    SUBCASE("randu(int,int) is uniform including the endpoints") {
+        // Context::randu(int,int) used to compute minrange + lroundf(unif * range). Rounding a
+        // continuous draw to nearest leaves only half a rounding window inside the range at each
+        // end, so the two endpoint values came up roughly half as often as the interior ones.
+        // LiDARcloud draws group indices this way, so the first and last group were under-sampled.
+        Context ctx;
+        ctx.seedRandomGenerator(20240904);
+
+        constexpr int draws = 60000;
+        constexpr int bucket_count = 5; // values 0..4
+        std::vector<int> histogram(bucket_count, 0);
+        for (int i = 0; i < draws; ++i) {
+            int v = ctx.randu(0, bucket_count - 1);
+            REQUIRE(v >= 0);
+            REQUIRE(v < bucket_count);
+            histogram[v]++;
+        }
+
+        const int expected = draws / bucket_count; // 12000
+        for (int bucket = 0; bucket < bucket_count; ++bucket) {
+            // A fair generator sits well inside this band; the old endpoint weighting (~6000
+            // against ~12000 for the interior) falls far outside it.
+            DOCTEST_CHECK(histogram[bucket] > expected * 4 / 5);
+            DOCTEST_CHECK(histogram[bucket] < expected * 6 / 5);
+        }
+    }
+
     SUBCASE("texture edge cases") {
         capture_cerr cerr_buffer; // Capture deprecation warnings from overridePrimitiveTextureColor/usePrimitiveTextureColor
         Context ctx;
@@ -3493,6 +3544,59 @@ TEST_CASE("getAllUUIDs Cache Performance") {
         DOCTEST_CHECK(std::find(step5.begin(), step5.end(), p2) == step5.end());
         DOCTEST_CHECK(std::find(step5.begin(), step5.end(), p1) != step5.end());
         DOCTEST_CHECK(std::find(step5.begin(), step5.end(), p3) != step5.end());
+    }
+
+    SUBCASE("Cache invalidation on textured addTile") {
+        // The textured addTile() overload constructs its sub-patches directly rather than going
+        // through addPatch(), and so has to invalidate the getAllUUIDs cache itself. It did not,
+        // so a tile added after anything had already called getAllUUIDs() was missing from every
+        // subsequent call -- and because the cache is only rebuilt when something else invalidates
+        // it, the primitives stayed invisible to any caller that enumerates the Context.
+        Context ctx;
+
+        uint patch = ctx.addPatch();
+        DOCTEST_CHECK(ctx.getAllUUIDs().size() == 1); // populates the cache
+
+        std::vector<uint> tile = ctx.addTile(make_vec3(5, 0, 0), make_vec2(1, 1), nullrotation, make_int2(2, 2), "lib/images/disk_texture.png");
+        DOCTEST_CHECK(!tile.empty());
+
+        std::vector<uint> all = ctx.getAllUUIDs();
+        DOCTEST_CHECK(all.size() == 1 + tile.size());
+        DOCTEST_CHECK(std::find(all.begin(), all.end(), patch) != all.end());
+        for (uint UUID: tile) {
+            DOCTEST_CHECK(std::find(all.begin(), all.end(), UUID) != all.end());
+        }
+    }
+
+    SUBCASE("Cache invalidation on textured tile objects") {
+        // Same defect as the textured addTile() above: the textured overloads of addTileObject() and
+        // addAdaptiveTileObject() construct their sub-patches directly, while the untextured overloads
+        // go through addPatch() and so were never affected.
+        {
+            Context ctx;
+            uint patch = ctx.addPatch();
+            DOCTEST_CHECK(ctx.getAllUUIDs().size() == 1); // populates the cache
+
+            uint objID = ctx.addTileObject(make_vec3(5, 0, 0), make_vec2(1, 1), nullrotation, make_int2(2, 2), "lib/images/disk_texture.png");
+            size_t n_object = ctx.getObjectPrimitiveUUIDs(objID).size();
+            DOCTEST_CHECK(n_object > 0);
+
+            std::vector<uint> all = ctx.getAllUUIDs();
+            DOCTEST_CHECK(all.size() == 1 + n_object);
+            DOCTEST_CHECK(std::find(all.begin(), all.end(), patch) != all.end());
+        }
+        {
+            Context ctx;
+            ctx.addPatch();
+            DOCTEST_CHECK(ctx.getAllUUIDs().size() == 1); // populates the cache
+
+            AdaptiveTileRefinement refinement;
+            uint objID = ctx.addAdaptiveTileObject(make_vec3(5, 0, 0), make_vec2(4, 4), nullrotation, refinement, "lib/images/disk_texture.png");
+            size_t n_object = ctx.getObjectPrimitiveUUIDs(objID).size();
+            DOCTEST_CHECK(n_object > 0);
+
+            DOCTEST_CHECK(ctx.getAllUUIDs().size() == 1 + n_object);
+        }
     }
 }
 
@@ -6151,7 +6255,7 @@ TEST_CASE("Polymesh volume comes from the parts of the mesh that enclose somethi
         const uint ObjID = ctx.addPolymeshObject(face_UUIDs);
         ctx.setPolymeshObjectTopology(ObjID, vertices, faces, face_UUIDs, {}, {}, NORMAL_SOURCE_NONE);
 
-        DOCTEST_CHECK_THROWS_AS(ctx.getPolymeshObjectVolume(ObjID), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(static_cast<void>(ctx.getPolymeshObjectVolume(ObjID)), std::runtime_error);
     }
 
     SUBCASE("A mesh with no face table is still checked before its volume is reported") {
@@ -6163,7 +6267,7 @@ TEST_CASE("Polymesh volume comes from the parts of the mesh that enclose somethi
         flap_UUIDs.push_back(ctx.addTriangle(make_vec3(3, 0, 5), make_vec3(4, 1, 5), make_vec3(3, 1, 5)));
         const uint flap_ObjID = ctx.addPolymeshObject(flap_UUIDs);
         DOCTEST_REQUIRE(ctx.getPolymeshObjectFaceCount(flap_ObjID) == 0);
-        DOCTEST_CHECK_THROWS_AS(ctx.getPolymeshObjectVolume(flap_ObjID), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(static_cast<void>(ctx.getPolymeshObjectVolume(flap_ObjID)), std::runtime_error);
 
         // A closed solid grouped the same way is still measured, since its facets do meet up.
         std::vector<uint> cube_UUIDs;

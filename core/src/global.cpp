@@ -303,18 +303,55 @@ bool helios::Date::isLeapYear() const {
     }
 }
 
+// Engine backing the free-function randu().
+//
+// This used to be std::rand(), scaled by RAND_MAX. RAND_MAX is only guaranteed to be at least
+// 32767 and MSVC defines it as exactly that, whereas glibc defines it as 2147483647 - so the same
+// code drew from ~32k distinct values on Windows and ~2.1 billion on Linux. That is not merely a
+// resolution difference: randu(0,N-1) could only ever return one of ~32768 evenly-spaced indices
+// on Windows, so for any collection larger than that most elements could never be selected at all.
+// AerialLiDARcloud::RANSAC() samples point-cloud indices this way, and point clouds are routinely
+// far larger than 32768 points. std::mt19937 has identical behaviour on every platform.
+//
+// There is one engine shared by every thread, guarded by a mutex. It is deliberately NOT
+// thread_local: a thread-local engine cannot be seeded, because each thread would seed itself
+// lazily from std::random_device, so seedRandomGenerator() would only ever reach the calling
+// thread's sequence and a seed set on the main thread would silently do nothing anywhere else.
+// Making the seed global is the entire point of exposing seedRandomGenerator(), so the state has
+// to be shared and therefore has to be synchronized.
+//
+// The lock costs nothing in practice: no caller of the free randu() in this codebase is inside a
+// parallel region. Code that does draw per-iteration inside an OpenMP loop should use the
+// Context's own generator (Context::getRandomGenerator()) rather than these free functions.
+static std::mutex random_generator_mutex;
+
+static std::mt19937 &globalRandomGenerator() {
+    // Seeded non-deterministically so that an unseeded run still varies between invocations.
+    static std::mt19937 generator(std::random_device{}());
+    return generator;
+}
+
+void helios::seedRandomGenerator(unsigned int seed) {
+    std::lock_guard<std::mutex> lock(random_generator_mutex);
+    globalRandomGenerator().seed(seed);
+}
+
 float helios::randu() {
-    return float(rand()) / float(RAND_MAX + 1.);
+    std::uniform_real_distribution<float> uniform_distribution(0.f, 1.f);
+    std::lock_guard<std::mutex> lock(random_generator_mutex);
+    return uniform_distribution(globalRandomGenerator());
 }
 
 int helios::randu(int imin, int imax) {
-    float ru = randu();
-
-    if (imin == imax || imin > imax) {
+    if (imin >= imax) { // preserves the previous contract for empty/inverted ranges
         return imin;
-    } else {
-        return imin + (int) lround(float(imax - imin) * ru);
     }
+    // uniform_int_distribution covers [imin,imax] inclusive with equal probability. The previous
+    // "imin + lround(range * ru)" gave the two endpoints only half the weight of interior values,
+    // because ru is drawn from a half-open interval and lround rounds to nearest.
+    std::uniform_int_distribution<int> uniform_distribution(imin, imax);
+    std::lock_guard<std::mutex> lock(random_generator_mutex);
+    return uniform_distribution(globalRandomGenerator());
 }
 
 float helios::acos_safe(float x) {
@@ -2817,8 +2854,12 @@ bool helios::validateOutputPath(std::string &output_path, const std::vector<std:
 
     if (output_file.empty()) { // path was a directory without a file
 
-        // Make sure directory has a trailing slash
-        if (output_dir.find_last_of('/') != output_dir.length() - 1) {
+        // Make sure directory has a trailing slash. Test output_path itself, not output_dir:
+        // parent_path() never keeps a trailing separator on any platform, so checking output_dir
+        // was always true and appended a redundant separator (yielding "dir//", or "dir\/" on
+        // Windows where parent_path() returns backslashes). Both separators are accepted here, as
+        // in the sibling branch below.
+        if (output_path.back() != '/' && output_path.back() != '\\') {
             output_path += "/";
         }
     } else if (isDirectoryPath(output_path)) {

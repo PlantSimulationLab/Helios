@@ -300,8 +300,9 @@ int RadiationModel::selfTest(int argc, char **argv) {
 }
 
 DOCTEST_TEST_CASE("Backend Identification") {
-    // GPU-LINT-OK: reports which backends are compiled in and whether one is usable, which has
-    // to be printed on non-GPU runners too; the model is only constructed under gpu_available.
+    // GPU-LINT-OK: the no-backend configuration is part of what is asserted - a build with no ray
+    // tracing backend compiled in must report no GPU - so this branches on availability itself
+    // instead of skipping via GPU_TEST_CASE. The model is only constructed under gpu_available.
     std::string compiled_backends;
 #ifdef HELIOS_HAVE_OPTIX8
     compiled_backends += "OptiX8 ";
@@ -314,15 +315,27 @@ DOCTEST_TEST_CASE("Backend Identification") {
 #endif
     if (compiled_backends.empty())
         compiled_backends = "(none)";
-    DOCTEST_MESSAGE("Compiled backends: " << compiled_backends);
 
-    bool gpu_available = RadiationModelTestHelper::isGPUAvailable();
-    DOCTEST_MESSAGE("GPU available: " << std::string(gpu_available ? "yes" : "no"));
+    const bool gpu_available = RadiationModelTestHelper::isGPUAvailable();
+    DOCTEST_INFO("Compiled backends: " << compiled_backends);
+    DOCTEST_INFO("GPU available: " << std::string(gpu_available ? "yes" : "no"));
+
+    // A build with no backend compiled in cannot report a usable GPU, whatever the hardware.
+    if (compiled_backends == "(none)") {
+        DOCTEST_CHECK_FALSE(gpu_available);
+        return;
+    }
 
     if (gpu_available) {
         Context context;
         RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
-        DOCTEST_MESSAGE("Active backend: " << model.getBackendName());
+        const std::string active = model.getBackendName();
+        DOCTEST_INFO("Active backend: " << active);
+        // The reported backend must be one that was actually compiled in - a name from neither
+        // family would mean the factory handed back a backend this build does not contain.
+        DOCTEST_CHECK_FALSE(active.empty());
+        DOCTEST_CHECK((active.find("OptiX") != std::string::npos || active.find("Vulkan") != std::string::npos));
+        DOCTEST_CHECK(compiled_backends.find(active.find("OptiX") != std::string::npos ? "OptiX" : "Vulkan") != std::string::npos);
     }
 }
 
@@ -601,8 +614,14 @@ GPU_TEST_CASE("RadiationModel Geometry Initialization Flag Default") {
     };
 
     Context context;
-    FlagProbe model(&context);
-    DOCTEST_CHECK(model.isgeometryinitialized == false);
+    // The public constructor prints its backend banner before any disableMessages() call can be
+    // reached, so construction happens inside a capture; the capture is out of scope by the CHECK.
+    std::unique_ptr<FlagProbe> model;
+    {
+        capture_cout banner;
+        model = std::make_unique<FlagProbe>(&context);
+    }
+    DOCTEST_CHECK(model->isgeometryinitialized == false);
 }
 
 GPU_TEST_CASE("RadiationModel Geometry Auto-Initialized By runBand") {
@@ -8572,8 +8591,6 @@ GPU_TEST_CASE("RadiationModel - Specular Reflection Camera Rendering") {
 
     float difference = avg_with_specular - avg_no_specular;
 
-    DOCTEST_MESSAGE("No specular avg: " << avg_no_specular << ", With specular avg: " << avg_with_specular << ", Difference: " << difference);
-
     // Specular should add a visible highlight when sun, camera, and normal are aligned
     DOCTEST_CHECK_MESSAGE(difference > 5.0f, "Specular exponent should increase camera intensity. "
                                              "No specular: "
@@ -8651,8 +8668,6 @@ GPU_TEST_CASE("RadiationModel - Specular Reflection Multiple Cameras") {
 
     // Pure diffuse baseline: reflectivity(0.05) * flux(1000) / pi ≈ 15.9
     float diffuse_baseline = 15.0f;
-
-    DOCTEST_MESSAGE("Camera A avg: " << avg_A << ", Camera B avg: " << avg_B << ", Diffuse baseline ~" << diffuse_baseline);
 
     // Both cameras should see specular (both are at the same position, both see the highlight)
     DOCTEST_CHECK_MESSAGE(avg_A > diffuse_baseline * 2.0f, "Camera A should show specular highlight. avg_A: " << avg_A);
@@ -9093,9 +9108,9 @@ DOCTEST_TEST_CASE("SIF V&V Tier 1 (v2): Fluspect-B C++ port matches MATLAB refer
             ++n_total;
         }
     }
-    DOCTEST_MESSAGE("Fluspect Mf max relative error: " << max_rel_err_Mf);
-    DOCTEST_MESSAGE("Fluspect Mb max relative error: " << max_rel_err_Mb);
-    DOCTEST_MESSAGE("Elements compared: Mf=" << n_checked_Mf << "/" << n_total << " Mb=" << n_checked_Mb << "/" << n_total << " (rest below 1e-10 magnitude floor — anti-Stokes wavelengths)");
+    DOCTEST_INFO("Fluspect Mf max relative error: " << max_rel_err_Mf);
+    DOCTEST_INFO("Fluspect Mb max relative error: " << max_rel_err_Mb);
+    DOCTEST_INFO("Elements compared: Mf=" << n_checked_Mf << "/" << n_total << " Mb=" << n_checked_Mb << "/" << n_total << " (rest below 1e-10 magnitude floor — anti-Stokes wavelengths)");
     // Sanity: at least 90% of kernel elements should be above the floor for this
     // biochemistry (otherwise the kernel is degenerate or the test data wrong).
     DOCTEST_CHECK(n_checked_Mf > 0.9 * n_total);
@@ -9199,9 +9214,9 @@ GPU_TEST_CASE("SIF V&V Tier 2 (v2): full pipeline with solar source + SIF camera
     DOCTEST_REQUIRE(ctx.doesPrimitiveDataExist(leaf, "fluorescence_yield"));
     float phi_f = -1.f;
     ctx.getPrimitiveData(leaf, "fluorescence_yield", phi_f);
+    DOCTEST_INFO("Leaf Phi_F = " << phi_f);
     DOCTEST_CHECK(phi_f > 0.f);
     DOCTEST_CHECK(phi_f < 0.1f);
-    DOCTEST_MESSAGE("Leaf Phi_F = " << phi_f);
 
     // Sensor flux: nonzero in both bands, far-red dominates red source emission
     // (Fluspect-B source ratio with Cab=40 is ~1.15 red:farred, but red reabsorbs
@@ -9209,7 +9224,7 @@ GPU_TEST_CASE("SIF V&V Tier 2 (v2): full pipeline with solar source + SIF camera
     float flux_red = 0.f, flux_farred = 0.f;
     ctx.getPrimitiveData(sensor, "radiation_flux_SIF_red", flux_red);
     ctx.getPrimitiveData(sensor, "radiation_flux_SIF_farred", flux_farred);
-    DOCTEST_MESSAGE("Sensor F_red=" << flux_red << " F_farred=" << flux_farred << " ratio=" << (flux_red / std::max(flux_farred, 1e-12f)));
+    DOCTEST_INFO("Sensor F_red=" << flux_red << " F_farred=" << flux_farred << " ratio=" << (flux_red / std::max(flux_farred, 1e-12f)));
     DOCTEST_CHECK(std::isfinite(flux_red));
     DOCTEST_CHECK(std::isfinite(flux_farred));
     DOCTEST_CHECK(flux_red > 0.f);
@@ -9316,7 +9331,7 @@ GPU_TEST_CASE("SIF regression: piggybacked excitation bands receive direct sourc
     ctx.getPrimitiveData(sensor, "radiation_flux_SIF_red", flux_red);
     ctx.getPrimitiveData(sensor, "radiation_flux_SIF_farred", flux_farred);
 
-    DOCTEST_MESSAGE("piggyback APAR path: F_red=" << flux_red << " F_farred=" << flux_farred);
+    DOCTEST_INFO("piggyback APAR path: F_red=" << flux_red << " F_farred=" << flux_farred);
     DOCTEST_CHECK(std::isfinite(flux_red));
     DOCTEST_CHECK(std::isfinite(flux_farred));
     DOCTEST_CHECK(flux_red > 0.f);
@@ -9432,7 +9447,7 @@ GPU_TEST_CASE("SIF V&V Tier 3 (v2): multi-camera pipeline with distinct excitati
     ctx.getPrimitiveData(sensor, "radiation_flux_SIF_red_fine", flux_red_fine);
     ctx.getPrimitiveData(sensor, "radiation_flux_SIF_red_coarse", flux_red_coarse);
     ctx.getPrimitiveData(sensor, "radiation_flux_SIF_farred_fine", flux_farred_fine);
-    DOCTEST_MESSAGE("Sensor F_red_fine=" << flux_red_fine << " F_red_coarse=" << flux_red_coarse << " F_farred_fine=" << flux_farred_fine);
+    DOCTEST_INFO("Sensor F_red_fine=" << flux_red_fine << " F_red_coarse=" << flux_red_coarse << " F_farred_fine=" << flux_farred_fine);
     DOCTEST_CHECK(flux_red_fine > 0.f);
     DOCTEST_CHECK(flux_red_coarse > 0.f);
     DOCTEST_CHECK(flux_farred_fine > 0.f);
@@ -9539,8 +9554,11 @@ GPU_TEST_CASE("SIF warnings: leaves have biochemistry but lack electron_transpor
     DOCTEST_CHECK(setup_captured.find("electron_transport_ratio") == std::string::npos);
 
     // Runtime: computeSIFEmission warns about missing electron_transport_ratio.
+    // Messages stay enabled because the warning under test is gated on message_flag; that also
+    // turns on the ray-trace progress chatter, which is swallowed here rather than left on stdout.
     std::string runtime_captured;
     {
+        capture_cout progress_cap;
         capture_cerr cap;
         radiation.updateGeometry();
         const std::vector<std::string> sif_bands = {"SIF_red"};
@@ -9642,6 +9660,7 @@ GPU_TEST_CASE("SIF: disabled emission on a SIF band is soft-overridden with warn
 
     std::string captured;
     {
+        capture_cout progress_cap; // messages are on for the warning below; discard the progress chatter
         capture_cerr cap;
         radiation.updateGeometry();
         const std::vector<std::string> sif_bands = {"SIF_farred"};
@@ -10087,7 +10106,7 @@ GPU_TEST_CASE("Launch batching covers every primitive") {
     context.setPrimitiveData(UUIDs, "twosided_flag", uint(0));
     context.setPrimitiveData(UUIDs, "reflectivity_SW", 0.0f); // fully absorbing -> flux == incident
 
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
     radiation.addRadiationBand("SW");
     radiation.disableEmission("SW");
@@ -10412,7 +10431,15 @@ GPU_TEST_CASE("Backend Invariant - Multiple Collimated Sources Each Contribute")
     model.disableMessages();
 
     uint source_zenith = model.addCollimatedRadiationSource(make_vec3(0.f, 0.f, 1.f)); // cos = 1.0
-    uint source_oblique = model.addCollimatedRadiationSource(make_vec3(0.6f, 0.f, 0.8f)); // cos = 0.8 once normalized
+    uint source_oblique = 0;
+    std::string multi_sun_warning;
+    {
+        capture_cerr cap;
+        source_oblique = model.addCollimatedRadiationSource(make_vec3(0.6f, 0.f, 0.8f)); // cos = 0.8 once normalized
+        multi_sun_warning = cap.get_captured_output();
+    }
+    // Adding a second sun is deliberate here, and warning about it is the documented behavior.
+    DOCTEST_CHECK(multi_sun_warning.find("Multiple sun sources") != std::string::npos);
 
     model.addRadiationBand("SW");
     model.disableEmission("SW");
@@ -10573,7 +10600,16 @@ GPU_TEST_CASE("Backend Invariant - Per-Source Radiative Properties") {
 
         // Both sources are geometrically identical, so only the spectrum can change the result.
         uint source_a = model.addCollimatedRadiationSource(make_vec3(0.f, 0.f, 1.f));
-        uint source_b = model.addCollimatedRadiationSource(make_vec3(0.f, 0.f, 1.f));
+        uint source_b = 0;
+        std::string multi_sun_warning;
+        {
+            capture_cerr cap;
+            // The second sun is deliberate -- the pair is what makes this a per-source test -- so the
+            // "multiple sun sources" warning is expected output and is asserted rather than printed.
+            source_b = model.addCollimatedRadiationSource(make_vec3(0.f, 0.f, 1.f));
+            multi_sun_warning = cap.get_captured_output();
+        }
+        DOCTEST_CHECK(multi_sun_warning.find("Multiple sun sources") != std::string::npos);
         model.setSourceSpectrum(source_a, which == 0 ? active_spectrum : idle_spectrum);
         model.setSourceSpectrum(source_b, which == 0 ? idle_spectrum : active_spectrum);
 
@@ -10932,8 +10968,7 @@ GPU_TEST_CASE("Camera Flux Smoothing - leaves geometry that does not take part u
 }
 
 GPU_TEST_CASE("Camera Flux Smoothing - needs no stored vertex normals") {
-    // Smoothing interpolates a scalar, not a direction, so it must work on a mesh whose source file carried no vertex normals at all. This pins that invariant against a future change that assumes normals
-    // are available: test_complex_large.obj has no vn records, so its polymesh reports NORMAL_SOURCE_NONE.
+    // Smoothing interpolates a scalar, not a direction, so it must work on a mesh that carries no vertex normals at all. This pins that invariant against a future change that assumes normals are available.
     Context context;
     const std::vector<uint> mesh_UUIDs = context.loadOBJ("lib/models/test_complex_large.obj", make_vec3(0, 0, 0), 2.f, nullrotation, RGB::red, true);
     DOCTEST_REQUIRE(!mesh_UUIDs.empty());
@@ -10941,7 +10976,21 @@ GPU_TEST_CASE("Camera Flux Smoothing - needs no stored vertex normals") {
     const uint ObjID = context.getPrimitiveParentObjectID(mesh_UUIDs.front());
     DOCTEST_REQUIRE(ObjID != 0);
     DOCTEST_REQUIRE(context.getObjectType(ObjID) == OBJECT_TYPE_POLYMESH);
+
+    // test_complex_large.obj has no vn records, but the loader generates normals for any file that supplies none, so the mesh arrives reporting NORMAL_SOURCE_COMPUTED. Re-attaching the same topology
+    // without them is what puts the mesh in the state under test. The loader blends across every edge (crease angle 180 degrees) and so splits no vertex, meaning the connectivity read back here is the
+    // connectivity the file described.
+    DOCTEST_REQUIRE(context.getPolymeshObjectVertexNormalSource(ObjID) == NORMAL_SOURCE_COMPUTED);
+    const std::vector<vec3> mesh_vertices = context.getPolymeshObjectVertices(ObjID);
+    const std::vector<int3> mesh_faces = context.getPolymeshObjectFaces(ObjID);
+    std::vector<uint> face_UUIDs(mesh_faces.size());
+    for (size_t face = 0; face < mesh_faces.size(); face++) {
+        face_UUIDs.at(face) = context.getPolymeshObjectPrimitiveUUIDForFace(ObjID, face);
+    }
+    context.setPolymeshObjectTopology(ObjID, mesh_vertices, mesh_faces, face_UUIDs, {}, context.getPolymeshObjectVertexUV(ObjID), NORMAL_SOURCE_NONE);
+
     DOCTEST_REQUIRE(context.getPolymeshObjectVertexNormalSource(ObjID) == NORMAL_SOURCE_NONE);
+    DOCTEST_REQUIRE(!context.doesPolymeshObjectHaveVertexNormals(ObjID));
     DOCTEST_REQUIRE(context.doesObjectHaveSharedVertexTopology(ObjID));
 
     context.setPrimitiveData(mesh_UUIDs, "temperature", 340.f);
@@ -11203,4 +11252,69 @@ GPU_TEST_CASE("Camera Flux Smoothing - can be switched on and off after the geom
     DOCTEST_CHECK(before == doctest::Approx(expected_radiance).epsilon(0.05));
     DOCTEST_CHECK(during == doctest::Approx(expected_radiance).epsilon(0.05));
     DOCTEST_CHECK(after == doctest::Approx(expected_radiance).epsilon(0.05));
+}
+
+GPU_TEST_CASE("Camera auto-exposure honours exposure_target") {
+    // Auto exposure scales every band so the median pixel luminance lands on a target, which was a
+    // hardcoded 0.18 -- the middle-grey convention, which assumes a scene whose mean reflectance is
+    // that of a grey card. A plant canopy imaged from above is darker than that, so reproducing a
+    // real camera's output can require a different target, and there was no way to ask for one.
+    //
+    // The check is the defining property rather than a recorded value: the median luminance of the
+    // exposed image must equal the requested target, whatever that target is. A second target at
+    // half the first must also halve the median, which no constant-gain implementation can satisfy.
+
+    Context context;
+    // A textureless patch under one collimated source: uniform enough that the median is stable,
+    // and bright enough that the gain is well away from the 1e-6 guard in the exposure code.
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4));
+    context.setPrimitiveData(patch, "reflectivity_red", 0.4f);
+    context.setPrimitiveData(patch, "reflectivity_green", 0.4f);
+    context.setPrimitiveData(patch, "reflectivity_blue", 0.4f);
+
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiationmodel.disableMessages();
+    for (const char *band: {"red", "green", "blue"}) {
+        radiationmodel.addRadiationBand(band);
+        // Emission is on by default and would have to sum with reflectivity to 1; these are
+        // shortwave bands lit by a diffuse source, so it is disabled rather than balanced.
+        radiationmodel.disableEmission(band);
+        radiationmodel.setScatteringDepth(band, 1);
+        radiationmodel.setDiffuseRadiationFlux(band, 1.f);
+    }
+
+    auto medianLuminance = [&](float target) {
+        CameraProperties camera_props;
+        camera_props.camera_resolution = make_int2(48, 48);
+        camera_props.HFOV = 30.f;
+        camera_props.lens_diameter = 0.f;
+        camera_props.exposure = "auto";
+        camera_props.exposure_target = target;
+        camera_props.white_balance = "off"; // isolate exposure from any channel scaling
+
+        const std::string label = "cam_" + std::to_string(int(target * 1000));
+        radiationmodel.addRadiationCamera(label, {"red", "green", "blue"}, make_vec3(0, 0, 6), make_vec3(0, 0, 0), camera_props, 1);
+        radiationmodel.updateGeometry();
+        radiationmodel.runBand({"red", "green", "blue"});
+
+        const std::vector<float> r = radiationmodel.getCameraPixelData(label, "red");
+        const std::vector<float> g = radiationmodel.getCameraPixelData(label, "green");
+        const std::vector<float> b = radiationmodel.getCameraPixelData(label, "blue");
+        REQUIRE(!r.empty());
+        std::vector<float> lum(r.size());
+        for (size_t i = 0; i < r.size(); i++) {
+            lum[i] = 0.2126f * r[i] + 0.7152f * g[i] + 0.0722f * b[i];
+        }
+        std::sort(lum.begin(), lum.end());
+        return lum.at(lum.size() / 2);
+    };
+
+    const float median_default = medianLuminance(0.18f);
+    const float median_low = medianLuminance(0.09f);
+
+    // The exposed median is the target, by construction of the gain.
+    DOCTEST_CHECK(median_default == doctest::Approx(0.18f).epsilon(0.02));
+    DOCTEST_CHECK(median_low == doctest::Approx(0.09f).epsilon(0.02));
+    // And halving the target halves the image, which a hardcoded target cannot do.
+    DOCTEST_CHECK(median_low == doctest::Approx(0.5f * median_default).epsilon(0.05));
 }

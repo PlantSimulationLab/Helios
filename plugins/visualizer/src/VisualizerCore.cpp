@@ -27,6 +27,12 @@ extern "C" {
 
 #include "json.hpp"
 
+#ifdef HELIOS_VISUALIZER_EGL
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#endif
+
+
 using namespace helios;
 
 // Reference counter for GLFW initialization
@@ -611,6 +617,92 @@ void Visualizer::openWindow() {
     }
 }
 
+
+bool Visualizer::createEGLContext() {
+#ifndef HELIOS_VISUALIZER_EGL
+    return false;
+#else
+    auto queryDevices = (PFNEGLQUERYDEVICESEXTPROC) eglGetProcAddress("eglQueryDevicesEXT");
+    auto getPlatformDisplay = (PFNEGLGETPLATFORMDISPLAYEXTPROC) eglGetProcAddress("eglGetPlatformDisplayEXT");
+    if (queryDevices == nullptr || getPlatformDisplay == nullptr) {
+        // EGL_EXT_platform_device is what allows binding to a GPU with no display server. Without
+        // it EGL still needs a native display and offers nothing over the GLFW path.
+        return false;
+    }
+
+    constexpr EGLint max_devices = 16;
+    EGLDeviceEXT devices[max_devices];
+    EGLint device_count = 0;
+    if (queryDevices(max_devices, devices, &device_count) == EGL_FALSE || device_count == 0) {
+        return false;
+    }
+
+    const EGLint config_attributes[] = {EGL_SURFACE_TYPE, EGL_PBUFFER_BIT, EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT, EGL_NONE};
+    const EGLint context_attributes[] = {EGL_CONTEXT_MAJOR_VERSION, 3, EGL_CONTEXT_MINOR_VERSION, 3, EGL_NONE};
+
+    // Devices are tried in order. A node commonly enumerates several, most of which fail to
+    // initialize (they are display connectors with nothing attached), and the software rasterizer
+    // may appear alongside the GPU. The first device that yields a working 3.3 context wins.
+    for (EGLint i = 0; i < device_count; i++) {
+        EGLDisplay display = getPlatformDisplay(EGL_PLATFORM_DEVICE_EXT, devices[i], nullptr);
+        if (display == EGL_NO_DISPLAY) {
+            continue;
+        }
+        EGLint major = 0, minor = 0;
+        if (eglInitialize(display, &major, &minor) == EGL_FALSE) {
+            continue;
+        }
+        EGLConfig config;
+        EGLint config_count = 0;
+        if (eglChooseConfig(display, config_attributes, &config, 1, &config_count) == EGL_FALSE || config_count == 0) {
+            eglTerminate(display);
+            continue;
+        }
+        // Desktop OpenGL, not OpenGL ES: the shaders are GLSL 3.30 core.
+        if (eglBindAPI(EGL_OPENGL_API) == EGL_FALSE) {
+            eglTerminate(display);
+            continue;
+        }
+        EGLContext egl_ctx = eglCreateContext(display, config, EGL_NO_CONTEXT, context_attributes);
+        if (egl_ctx == EGL_NO_CONTEXT) {
+            eglTerminate(display);
+            continue;
+        }
+        // Surfaceless: all drawing goes to framebuffer objects, which is what headless rendering
+        // does anyway (see setupOffscreenFramebuffer()).
+        if (eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, egl_ctx) == EGL_FALSE) {
+            eglDestroyContext(display, egl_ctx);
+            eglTerminate(display);
+            continue;
+        }
+
+        egl_display = (void *) display;
+        egl_context = (void *) egl_ctx;
+        window = nullptr;
+
+        // Offscreen rendering is sized from the requested display size, not from any window.
+        Wframebuffer = Wdisplay;
+        Hframebuffer = Hdisplay;
+        return true;
+    }
+
+    return false;
+#endif
+}
+
+void Visualizer::destroyEGLContext() {
+#ifdef HELIOS_VISUALIZER_EGL
+    if (egl_context != nullptr) {
+        EGLDisplay display = (EGLDisplay) egl_display;
+        eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+        eglDestroyContext(display, (EGLContext) egl_context);
+        eglTerminate(display);
+    }
+#endif
+    egl_context = nullptr;
+    egl_display = nullptr;
+}
+
 void Visualizer::createOffscreenContext() {
     // Create an offscreen context for headless rendering
     // This avoids the need for a display server on CI systems
@@ -706,6 +798,34 @@ void Visualizer::createOffscreenContext() {
     // setupOffscreenFramebuffer();
 
     // Note: In headless mode, we won't set up window callbacks since there's no user interaction
+}
+
+void Visualizer::createShadowMapPlaceholderTexture() {
+
+    if (shadow_map_placeholder_texture != 0) {
+        return; // already created
+    }
+
+    glActiveTexture(GL_TEXTURE1);
+    glGenTextures(1, &shadow_map_placeholder_texture);
+    glBindTexture(GL_TEXTURE_2D, shadow_map_placeholder_texture);
+
+    // A depth of 1 is the far plane, so the shader's "occluder is nearer than this fragment"
+    // test can never succeed against the placeholder and no fragment is ever darkened by it.
+    const GLfloat far_plane_depth = 1.f;
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, 1, 1, 0, GL_DEPTH_COMPONENT, GL_FLOAT, &far_plane_depth);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+
+    glActiveTexture(GL_TEXTURE0);
+
+    if (!checkerrors()) {
+        helios_runtime_error("ERROR (Visualizer::createShadowMapPlaceholderTexture): OpenGL setup failed while creating the placeholder shadow-map texture.");
+    }
 }
 
 void Visualizer::createShadowFramebuffer() {
@@ -1278,6 +1398,9 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     textures_dirty = false;
 
     // Initialize offscreen rendering variables
+    window = nullptr;
+    egl_display = nullptr;
+    egl_context = nullptr;
     offscreenFramebufferID = 0;
     offscreenColorTexture = 0;
     offscreenDepthTexture = 0;
@@ -1341,6 +1464,15 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     // Initialize OpenGL context for both regular and headless modes
     // Headless mode needs an offscreen context for geometry operations
 
+    // Headless rendering prefers EGL, which binds straight to the GPU. GLFW's headless mode is a
+    // hidden window, so it still needs X11 or Wayland -- and glfwInit() below fails outright when
+    // neither is present, which is the normal state of a batch compute node. EGL is tried first so
+    // that case works at all; when EGL is unavailable (non-Linux, or no EGL at build time) this is
+    // a no-op and the GLFW path runs exactly as before.
+    const bool egl_context_created = headless && createEGLContext();
+
+    if (!egl_context_created) {
+
     // Initialize GLFW using reference counting
     // GLFW should be initialized once and kept alive to avoid macOS-specific issues
     // with rapid init/terminate cycles (pixel format caching, autorelease pool issues)
@@ -1394,12 +1526,22 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
         openWindow();
     }
 
+    } // end of the GLFW context branch
+
     // Initialize GLEW - required for both headless and windowed modes
     glewExperimental = GL_TRUE; // Needed in core profile
     GLenum glew_result = glewInit();
+    // GLEW loads the core OpenGL entry points first and only then queries the GLX extensions. On an
+    // EGL context there is no GLX display to query, so it reports GLEW_ERROR_NO_GLX_DISPLAY even
+    // though every function pointer this plug-in uses was resolved successfully (GLEW issue #172).
+    // Accepted only on the EGL path: on a GLX context the same code would mean GLX really is broken.
+    if (glew_result == GLEW_ERROR_NO_GLX_DISPLAY && egl_context != nullptr) {
+        glew_result = GLEW_OK;
+    }
     if (glew_result != GLEW_OK) {
         std::string error_msg = "ERROR (Visualizer::initialize): Failed to initialize GLEW. ";
-        error_msg += "GLEW error: " + std::string((const char *) glewGetErrorString(glew_result));
+        error_msg += "GLEW error " + std::to_string(glew_result) + ": " + std::string((const char *) glewGetErrorString(glew_result));
+        error_msg += egl_context != nullptr ? " (EGL context)" : " (GLFW context)";
 
         if (headless) {
             error_msg += "\nIn headless mode, this usually indicates:";
@@ -1532,6 +1674,13 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
         vertex_buffer.resize(Ntypes);
         uv_buffer.resize(Ntypes);
         vertex_normal_buffer.resize(Ntypes);
+
+        // -1 rather than 0, so that a buffer which is legitimately empty on the first upload is still
+        // recognized as never having been uploaded and gets its glBufferData call.
+        last_uploaded_buffer_sizes.assign(Ntypes, std::array<GLsizeiptr, 12>{});
+        for (auto &sizes: last_uploaded_buffer_sizes) {
+            sizes.fill(-1);
+        }
 
         // Generate per-vertex buffers with immediate error checking
         glGenBuffers((GLsizei) face_index_buffer.size(), face_index_buffer.data());
@@ -1717,6 +1866,12 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     primaryShader.useShader();
 
+    // Both samplers below are declared by the primary shader whether or not the features
+    // behind them are used, and an unbound sampler is an incomplete one on every draw call.
+    // They are therefore given valid, inert contents up front rather than left at texture 0.
+    createShadowMapPlaceholderTexture();
+    uploadPhongMaterialTable({});
+
     // The shadow-map framebuffer is created lazily by createShadowFramebuffer() the first
     // time shadowed lighting is actually rendered, in both windowed and headless modes.
     if (headless) {
@@ -1836,6 +1991,10 @@ Visualizer::~Visualizer() {
         glDeleteTextures(1, &depthTexture);
         depthTexture = 0;
     }
+    if (shadow_map_placeholder_texture != 0) {
+        glDeleteTextures(1, &shadow_map_placeholder_texture);
+        shadow_map_placeholder_texture = 0;
+    }
 
     // Clean up the depth-map framebuffer used by updateDepthBuffer()
     if (depthbufferFramebufferID != 0) {
@@ -1852,8 +2011,9 @@ Visualizer::~Visualizer() {
         cleanupOffscreenFramebuffer();
     }
 
-    // Clean up common OpenGL resources regardless of mode
-    if (window != nullptr) {
+    // Clean up common OpenGL resources regardless of mode. The test is for a live OpenGL context,
+    // which an EGL headless Visualizer has without ever owning a GLFW window.
+    if (window != nullptr || egl_context != nullptr) {
 
         glDeleteBuffers((GLsizei) face_index_buffer.size(), face_index_buffer.data());
         glDeleteBuffers((GLsizei) vertex_buffer.size(), vertex_buffer.data());
@@ -1900,6 +2060,8 @@ Visualizer::~Visualizer() {
         glDeleteBuffers(1, &uv_rescale_buffer);
         glDeleteTextures(1, &uv_rescale_texture_object);
 
+        if (window != nullptr) {
+
         // CRITICAL for macOS: Process events to clean up window state before destroying
         // Without this, macOS Cocoa/NSGL backend leaves cached state that causes crashes
         // See: https://github.com/glfw/glfw/issues/1412, #1018, #721
@@ -1931,6 +2093,10 @@ Visualizer::~Visualizer() {
         if (glfw_reference_count == 0) {
             glfwTerminate();
         }
+
+        } // end of the GLFW-owned teardown
+
+        destroyEGLContext();
     }
 }
 
@@ -2108,6 +2274,12 @@ std::unordered_map<uint, int> Visualizer::buildPhongMaterialTable(const helios::
     }
 
     phong_material_table_size = static_cast<GLint>(table.size() / 4);
+    uploadPhongMaterialTable(std::move(table));
+
+    return material_ID_to_index;
+}
+
+void Visualizer::uploadPhongMaterialTable(std::vector<GLfloat> table) {
 
     // The table is tiny (four floats per material), so it is uploaded whole rather than diffed.
     if (phong_material_table_buffer == 0) {
@@ -2125,8 +2297,6 @@ std::unordered_map<uint, int> Visualizer::buildPhongMaterialTable(const helios::
     glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, phong_material_table_buffer);
     glBindBuffer(GL_TEXTURE_BUFFER, 0);
     glBindTexture(GL_TEXTURE_BUFFER, 0);
-
-    return material_ID_to_index;
 }
 
 void Visualizer::removeBackgroundRectangle() {
@@ -2518,6 +2688,27 @@ bool Visualizer::cameraHasChanged() const {
     return (camera_eye_location - previous_camera_eye_location).magnitude() > epsilon || (camera_lookat_center - previous_camera_lookat_center).magnitude() > epsilon;
 }
 
+//! World up vector to use for a camera looking along a given direction
+/**
+ * glm::lookAt builds its basis from cross(forward, up), which is the zero vector when the two are
+ * parallel; normalizing it yields NaN and the whole view matrix, and therefore every rendered
+ * pixel, becomes NaN. A camera pointing straight down at the ground -- the standard overhead view
+ * for a plant canopy -- hits this exactly, and rendered an empty frame with no diagnostic.
+ *
+ * Any up vector not parallel to the view direction gives a valid basis; the choice only fixes the
+ * roll of the image. +z is kept wherever it works so that ordinary oblique views are unchanged,
+ * and a near-vertical view falls back to +y, which puts world +y at the top of the frame.
+ */
+static glm::vec3 cameraUpVector(const helios::vec3 &eye, const helios::vec3 &lookat) {
+    const helios::vec3 forward = lookat - eye;
+    const float length = forward.magnitude();
+    if (length < 1e-9f) {
+        return {0, 0, 1}; // degenerate camera; lookAt cannot be salvaged, leave the default
+    }
+    const float vertical_component = std::fabs(forward.z / length);
+    return vertical_component > 0.999f ? glm::vec3(0, 1, 0) : glm::vec3(0, 0, 1);
+}
+
 void Visualizer::updatePerspectiveTransformation(bool shadow) {
     float dist = glm::distance(glm_vec3(camera_lookat_center), glm_vec3(camera_eye_location));
     float nearPlane = std::max(0.1f, 0.05f * dist); // avoid 0
@@ -2527,7 +2718,7 @@ void Visualizer::updatePerspectiveTransformation(bool shadow) {
     } else {
         cameraProjectionMatrix = glm::infinitePerspective(glm::radians(camera_FOV), float(Wframebuffer) / float(Hframebuffer), nearPlane);
     }
-    cameraViewMatrix = glm::lookAt(glm_vec3(camera_eye_location), glm_vec3(camera_lookat_center), glm::vec3(0, 0, 1));
+    cameraViewMatrix = glm::lookAt(glm_vec3(camera_eye_location), glm_vec3(camera_lookat_center), cameraUpVector(camera_eye_location, camera_lookat_center));
 
     perspectiveTransformationMatrix = cameraProjectionMatrix * cameraViewMatrix;
 }
@@ -3025,6 +3216,36 @@ glm::mat4 Visualizer::computeShadowDepthMVP() const {
     return bias * lightProj * lightView;
 }
 
+//! Digest of a texture's pixel bytes, used to recognize a texture that is already registered
+/**
+ * The resolution and channel count are folded in alongside the bytes so that two textures agreeing
+ * only by coincidence of content length do not collide. A collision would display the wrong image,
+ * so callers additionally verify the resolution before reusing an ID.
+ *
+ * \param[in] data Pixel bytes of the texture.
+ * \param[in] resolution Resolution of the texture in texels.
+ * \param[in] num_channels Number of channels in the pixel data.
+ * \return Hexadecimal digest of the texture contents.
+ */
+static std::string hashTextureContent(const std::vector<unsigned char> &data, const helios::uint2 &resolution, unsigned char num_channels) {
+
+    // FNV-1a over the pixel bytes. The digest only has to distinguish textures that are actually
+    // registered together - a colorbar's alphabet, a scene's leaf images - so 64 bits is ample, and
+    // a false match is caught by the resolution check at the call site.
+    uint64_t hash = 14695981039346656037ULL;
+    constexpr uint64_t prime = 1099511628211ULL;
+    for (unsigned char byte: data) {
+        hash = (hash ^ byte) * prime;
+    }
+    for (uint dimension: {resolution.x, resolution.y, static_cast<uint>(num_channels)}) {
+        hash = (hash ^ dimension) * prime;
+    }
+
+    std::ostringstream digest;
+    digest << std::hex << hash;
+    return digest.str();
+}
+
 Visualizer::Texture::Texture(const std::string &texture_file, uint textureID, const helios::uint2 &maximum_texture_size, bool loadalphaonly) : texture_file(texture_file), glyph(), textureID(textureID) {
 #ifdef HELIOS_DEBUG
     if (loadalphaonly) {
@@ -3041,6 +3262,10 @@ Visualizer::Texture::Texture(const std::string &texture_file, uint textureID, co
     } else {
         num_channels = 4;
     }
+
+    // The same file loaded as an alpha-only mask and as a full image produce different data, so the
+    // two must not be deduplicated against each other.
+    texture_key = (loadalphaonly ? "mask:" : "image:") + texture_file;
 
     std::vector<unsigned char> image_data;
 
@@ -3086,6 +3311,10 @@ Visualizer::Texture::Texture(const Glyph *glyph_ptr, uint textureID, const helio
     }
 
     num_channels = 1;
+
+    // Keyed after the border and any clamp have been applied, so the digest describes the bytes that
+    // actually get uploaded rather than the glyph they were built from.
+    texture_key = "glyph:" + hashTextureContent(texture_data, texture_resolution, num_channels);
 }
 
 Visualizer::Texture::Texture(const std::vector<unsigned char> &pixel_data, uint textureID, const helios::uint2 &image_resolution, const helios::uint2 &maximum_texture_size) : textureID(textureID) {
@@ -3102,6 +3331,8 @@ Visualizer::Texture::Texture(const std::vector<unsigned char> &pixel_data, uint 
         const uint2 new_texture_resolution(std::min(texture_resolution.x, maximum_texture_size.x), std::min(texture_resolution.y, maximum_texture_size.y));
         resizeTexture(new_texture_resolution);
     }
+
+    texture_key = "pixels:" + hashTextureContent(texture_data, texture_resolution, num_channels);
 }
 
 void Visualizer::Texture::resizeTexture(const helios::uint2 &new_image_resolution) {
@@ -3149,24 +3380,61 @@ void Visualizer::Texture::resizeTexture(const helios::uint2 &new_image_resolutio
 }
 
 
+bool Visualizer::findRegisteredTexture(const std::string &texture_key, const helios::uint2 &expected_resolution, uint &textureID) const {
+
+    const auto it = texture_key_to_ID.find(texture_key);
+    if (it == texture_key_to_ID.end()) {
+        return false;
+    }
+
+    // The key is a digest for glyph and raw-pixel textures, so confirm the resolution before handing
+    // the caller an ID. A digest collision then costs a duplicate layer instead of the wrong image.
+    if (texture_manager.at(it->second).texture_resolution != expected_resolution) {
+        return false;
+    }
+
+    textureID = it->second;
+    return true;
+}
+
+//! Adds a texture to the manager, or returns the ID of an identical one already registered
+/**
+ * Every registerTexture* function funnels through here so that the deduplication and the
+ * texture_key_to_ID bookkeeping cannot drift apart between them. Reusing an existing texture
+ * deliberately leaves textures_dirty alone: nothing about the GPU-side texture array has changed, and
+ * setting it would force the array to be re-uploaded for no reason.
+ *
+ * \param[in] candidate Texture to register, already constructed so that its content key and final
+ *            resolution reflect any border and size clamp the constructor applied.
+ * \return ID of the registered texture, which is either newly assigned or that of the existing match.
+ */
+uint Visualizer::registerTexture(Texture &&candidate) {
+
+    uint existing_textureID = 0;
+    if (findRegisteredTexture(candidate.texture_key, candidate.texture_resolution, existing_textureID)) {
+        return existing_textureID;
+    }
+
+    const uint textureID = candidate.textureID;
+    texture_key_to_ID.emplace(candidate.texture_key, textureID);
+    texture_manager.try_emplace(textureID, std::move(candidate));
+    textures_dirty = true;
+
+    return textureID;
+}
+
 uint Visualizer::registerTextureImage(const std::string &texture_file) {
 #ifdef HELIOS_DEBUG
     // assert( validateTextureFile(texture_file) );
 #endif
 
-    for (const auto &[textureID, texture]: texture_manager) {
-        if (texture.texture_file == texture_file) {
-            // if it does, return its texture ID
-            return textureID;
-        }
+    // Keyed on the file path, so a repeat request is answered without reading the file from disk.
+    const auto it = texture_key_to_ID.find("image:" + texture_file);
+    if (it != texture_key_to_ID.end()) {
+        return it->second;
     }
 
-    const uint textureID = texture_manager.size();
-
-    texture_manager.try_emplace(textureID, texture_file, textureID, this->maximum_texture_size, false);
-    textures_dirty = true;
-
-    return textureID;
+    return registerTexture(Texture(texture_file, texture_manager.size(), this->maximum_texture_size, false));
 }
 
 uint Visualizer::registerTextureImage(const std::vector<unsigned char> &texture_data, const helios::uint2 &image_resolution) {
@@ -3174,12 +3442,7 @@ uint Visualizer::registerTextureImage(const std::vector<unsigned char> &texture_
     assert(!texture_data.empty() && texture_data.size() == 4 * image_resolution.x * image_resolution.y);
 #endif
 
-    const uint textureID = texture_manager.size();
-
-    texture_manager.try_emplace(textureID, texture_data, textureID, image_resolution, this->maximum_texture_size);
-    textures_dirty = true;
-
-    return textureID;
+    return registerTexture(Texture(texture_data, texture_manager.size(), image_resolution, this->maximum_texture_size));
 }
 
 uint Visualizer::registerTextureTransparencyMask(const std::string &texture_file) {
@@ -3187,29 +3450,23 @@ uint Visualizer::registerTextureTransparencyMask(const std::string &texture_file
     assert(validateTextureFile(texture_file));
 #endif
 
-    for (const auto &[textureID, texture]: texture_manager) {
-        if (texture.texture_file == texture_file) {
-            // if it does, return its texture ID
-            return textureID;
-        }
+    // Keyed separately from the full-image form of the same file: this one loads only the alpha
+    // channel, so the two hold different data and must not be deduplicated against each other.
+    const auto it = texture_key_to_ID.find("mask:" + texture_file);
+    if (it != texture_key_to_ID.end()) {
+        return it->second;
     }
 
-    const uint textureID = texture_manager.size();
-
-    texture_manager.try_emplace(textureID, texture_file, textureID, this->maximum_texture_size, true);
-    textures_dirty = true;
-
-    return textureID;
+    return registerTexture(Texture(texture_file, texture_manager.size(), this->maximum_texture_size, true));
 }
 
 uint Visualizer::registerTextureGlyph(const Glyph *glyph) {
 
-    const uint textureID = texture_manager.size();
-
-    texture_manager.try_emplace(textureID, glyph, textureID, this->maximum_texture_size);
-    textures_dirty = true;
-
-    return textureID;
+    // Text is drawn one rectangle per character, and the colorbar rebuilds its labels on every
+    // frame, so without deduplication every frame added a texture array layer per letter. The layer
+    // count is what the array's immutable storage is sized to, so a growing count meant destroying,
+    // reallocating and re-uploading every layer of the array on every frame.
+    return registerTexture(Texture(glyph, texture_manager.size(), this->maximum_texture_size));
 }
 
 helios::uint2 Visualizer::getTextureResolution(uint textureID) const {
@@ -3286,10 +3543,14 @@ glm::mat4 Visualizer::getPerspectiveTransformationMatrix() const {
 }
 
 glm::mat4 Visualizer::getViewMatrix() const {
+    // Built from the same world up vector as updatePerspectiveTransformation(), so that the two
+    // agree; cross() against a fixed +z is the zero vector for a camera looking straight down.
+    const glm::vec3 world_up = cameraUpVector(camera_eye_location, camera_lookat_center);
+
     vec3 forward = camera_lookat_center - camera_eye_location;
     forward = forward.normalize();
 
-    vec3 right = cross(vec3(0, 0, 1), forward);
+    vec3 right = cross(vec3(world_up.x, world_up.y, world_up.z), forward);
     right = right.normalize();
 
     vec3 up = cross(forward, right);

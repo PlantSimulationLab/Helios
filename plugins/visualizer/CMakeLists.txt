@@ -28,7 +28,12 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/freetype-2.7")
 target_link_libraries( visualizer PRIVATE freetype )
 
 #glew
+# PUBLIC rather than directory-scoped: Visualizer.h includes <GL/glew.h> for the OpenGL 1.5+
+# types it declares (GLsizeiptr), and that header is consumed by the lidar, aeriallidar,
+# syntheticannotation and projectbuilder plugins and by the samples, none of which are in this
+# directory's scope. The library itself stays PRIVATE -- only the declarations propagate.
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/lib/glew-2.2.0/include")
+target_include_directories( visualizer PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/lib/glew-2.2.0/include" )
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/glew-2.2.0/build/cmake")
 target_link_libraries( visualizer PRIVATE glew_s )
 # Disable OpenGL deprecation warnings for GLEW
@@ -64,6 +69,20 @@ if(OPENGL_FOUND)
 		target_compile_definitions(visualizer PRIVATE GL_SILENCE_DEPRECATION)
 	endif()
 endif(OPENGL_FOUND)
+
+#EGL -- optional, Linux only. Provides a headless OpenGL context bound directly to the GPU, which
+# is the only way to rasterize on a batch compute node: GLFW's headless mode is a hidden window and
+# still requires X11 or Wayland. When EGL is absent the visualizer builds and behaves exactly as
+# before, and headless rendering keeps using the GLFW path.
+if(UNIX AND NOT APPLE)
+	find_path(EGL_INCLUDE_DIR EGL/egl.h)
+	find_library(EGL_LIBRARY NAMES EGL)
+	if(EGL_INCLUDE_DIR AND EGL_LIBRARY)
+		target_include_directories( visualizer PRIVATE ${EGL_INCLUDE_DIR} )
+		target_link_libraries( visualizer PRIVATE ${EGL_LIBRARY} )
+		target_compile_definitions( visualizer PRIVATE HELIOS_VISUALIZER_EGL )
+	endif()
+endif()
 
 #X11      
 find_package(X11 REQUIRED)
