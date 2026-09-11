@@ -293,9 +293,25 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &qu
             helios_runtime_error("ERROR (CollisionDetection::findCollisions): One or more invalid target UUIDs provided");
         }
 
-        // Build BVH with only the target geometry (with caching)
+        // Build BVH with only the target geometry (with caching). This narrowing is scoped to this query: it is
+        // recorded as query-scoped so that the next query needing all geometry (an unrestricted findCollisions(),
+        // a castRay() with no targets, ...) widens the BVH again instead of inheriting the target-only BVH.
         if (!all_target_UUIDs.empty()) {
-            updateBVH(all_target_UUIDs, false); // Use caching logic instead of direct rebuild
+            // A BVH that already holds exactly the targets is left alone (the same test updateBVH() returns early on),
+            // and must not be marked query-scoped either: that would let the next all-geometry query widen away an
+            // explicit buildBVH(subset) restriction over these same primitives.
+            const std::set<uint> target_geometry(all_target_UUIDs.begin(), all_target_UUIDs.end());
+            if (bvh_dirty || target_geometry != last_bvh_geometry) {
+                if (!bvh_restriction_query_scoped) {
+                    // Remember an explicit restriction this query is about to replace, so that widening restores it.
+                    query_scope_restores_explicit_restriction = bvh_geometry_restricted;
+                    explicit_excluded_geometry_before_query = bvh_geometry_restricted ? bvh_excluded_geometry : std::set<uint>();
+                }
+                updateBVH(all_target_UUIDs, false); // Use caching logic instead of direct rebuild
+                // Marked after the update in every case: updateBVH() may have narrowed the BVH through the incremental
+                // path, which does not go through buildBVH() and so does not record the restriction itself.
+                bvh_restriction_query_scoped = true;
+            }
         }
     }
 
@@ -423,33 +439,39 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
     auto cache_it = primitive_aabbs_cache.begin();
     while (cache_it != primitive_aabbs_cache.end()) {
         if (current_primitives.find(cache_it->first) == current_primitives.end()) {
+            primitive_transform_fingerprints.erase(cache_it->first);
             cache_it = primitive_aabbs_cache.erase(cache_it);
         } else {
             ++cache_it;
         }
     }
 
-    // Primitives the Context reports as modified since the last build. A primitive that was moved, rotated or
-    // scaled keeps its UUID and stays in primitive_aabbs_cache, so without this its stale build-time AABB would be
-    // reused forever and the BVH would bound the geometry's OLD position. dirty_primitive_cache alone cannot cover
-    // this: nothing ever inserts into it, so it is always empty.
-    const std::vector<uint> context_dirty_for_aabbs = context->getDirtyUUIDs(false); // Don't include deleted
-    const std::unordered_set<uint> context_dirty_set(context_dirty_for_aabbs.begin(), context_dirty_for_aabbs.end());
-
-    // Update only dirty or missing cache entries
+    // Refresh the bounding box of every primitive whose geometry changed since it was last recorded. A primitive
+    // that was moved, rotated or scaled keeps its UUID and stays in primitive_aabbs_cache, so without this its stale
+    // build-time AABB would be reused forever and the BVH would bound the geometry's OLD position. The comparison is
+    // against a fingerprint of the recorded transformation matrix rather than the Context dirty flag: the flag is
+    // sticky until the user clears it and is also raised by non-geometric edits, so it would force a recompute of
+    // every primitive on every build, while the fingerprint identifies exactly the primitives that moved.
     for (uint UUID: primitives_to_include) {
         if (!context->doesPrimitiveExist(UUID)) {
             continue; // Skip invalid primitive
         }
 
-        // Only update if not cached or marked as dirty
-        bool needs_update = (primitive_aabbs_cache.find(UUID) == primitive_aabbs_cache.end()) || (dirty_primitive_cache.find(UUID) != dirty_primitive_cache.end()) || (context_dirty_set.find(UUID) != context_dirty_set.end());
+        uint64_t current_transform_fingerprint = 0;
+        const bool moved = primitiveTransformChanged(UUID, current_transform_fingerprint);
+        const bool needs_update = moved || (primitive_aabbs_cache.find(UUID) == primitive_aabbs_cache.end()) || (dirty_primitive_cache.find(UUID) != dirty_primitive_cache.end());
 
         if (needs_update) {
             vec3 aabb_min, aabb_max;
             context->getPrimitiveBoundingBox(UUID, aabb_min, aabb_max);
             primitive_aabbs_cache[UUID] = {aabb_min, aabb_max};
+            primitive_transform_fingerprints[UUID] = current_transform_fingerprint;
             dirty_primitive_cache.erase(UUID); // Mark as clean
+        }
+        if (moved) {
+            // The ray-cast vertex cache holds this primitive's vertices at the position it had when first cached.
+            // Drop just this entry so the next ray cast re-reads the current vertices; the rest of the cache is kept.
+            primitive_cache.erase(UUID);
         }
     }
 
@@ -496,6 +518,7 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
     // deliberately left out. ensureBVHCurrent() consults these so an automatic rebuild keeps excluding exactly the
     // same primitives instead of silently widening the BVH to all geometry.
     bvh_geometry_restricted = !UUIDs.empty();
+    bvh_restriction_query_scoped = false; // a query that narrows the BVH re-marks it after this returns
     bvh_excluded_geometry.clear();
     if (bvh_geometry_restricted) {
         for (uint uuid: context->getAllUUIDs()) {
@@ -677,6 +700,23 @@ void CollisionDetection::ensureBVHCurrent() {
         return;
     }
 
+    // Every caller of this function needs the BVH to cover all Context geometry. If the BVH is currently narrowed
+    // to the targets of an earlier target-restricted findCollisions() call, it is too narrow for this query and
+    // must be widened, or everything outside those targets would silently go unreported. An explicit
+    // buildBVH(subset) restriction is different: that is the caller's decision and is kept (handled below), and if the
+    // query replaced one, widening restores it rather than rebuilding over all geometry.
+    if (bvh_restriction_query_scoped) {
+        if (printmessages) {
+            std::cout << "BVH is restricted to the targets of an earlier query, rebuilding over the geometry it replaced..." << std::endl;
+        }
+        if (query_scope_restores_explicit_restriction) {
+            rebuildBVHExcluding(explicit_excluded_geometry_before_query);
+        } else {
+            buildBVH();
+        }
+        return;
+    }
+
     // Use two-level dirty tracking pattern (similar to Visualizer plugin)
     // Get dirty UUIDs from Context (but don't clear them - that's for the user)
     std::vector<uint> context_dirty_uuids = context->getDirtyUUIDs(false); // Don't include deleted
@@ -690,9 +730,17 @@ void CollisionDetection::ensureBVHCurrent() {
     bool has_new_dirty = false;
     bool has_new_deleted = false;
 
-    // Check for new dirty UUIDs we haven't processed
+    // Check for new dirty UUIDs we haven't processed, and for primitives already in the BVH whose geometry was
+    // modified in place since the build. The second case cannot be told from the UUID sets alone: a translated,
+    // rotated or scaled primitive keeps its UUID, and buildBVH() records every BVH member in last_processed_uuids,
+    // so only a change in its transformation matrix reveals that the stored node bounds no longer contain it.
     for (uint uuid: current_dirty) {
         if (last_processed_uuids.find(uuid) == last_processed_uuids.end()) {
+            has_new_dirty = true;
+            break;
+        }
+        uint64_t current_transform_fingerprint = 0;
+        if (primitive_transform_fingerprints.find(uuid) != primitive_transform_fingerprints.end() && context->doesPrimitiveExist(uuid) && primitiveTransformChanged(uuid, current_transform_fingerprint)) {
             has_new_dirty = true;
             break;
         }
@@ -718,21 +766,7 @@ void CollisionDetection::ensureBVHCurrent() {
             // added to the Context since that build is still absorbed (callers rely on new primitives appearing
             // automatically); only the primitives that were explicitly excluded stay excluded. Deleted primitives
             // are dropped.
-            std::vector<uint> rebuild_geometry;
-            for (uint uuid: context->getAllUUIDs()) {
-                if (bvh_excluded_geometry.find(uuid) == bvh_excluded_geometry.end()) {
-                    rebuild_geometry.push_back(uuid);
-                }
-            }
-
-            if (!rebuild_geometry.empty()) {
-                // Preserve the exclusion set across this rebuild: buildBVH() recomputes it from the primitives it is
-                // given, which would otherwise forget the original exclusions once new geometry is absorbed.
-                const std::set<uint> preserved_exclusions = bvh_excluded_geometry;
-                buildBVH(rebuild_geometry); // This will update our internal tracking
-                bvh_excluded_geometry = preserved_exclusions;
-                bvh_geometry_restricted = true;
-            }
+            rebuildBVHExcluding(bvh_excluded_geometry);
         } else {
             buildBVH(); // This will update our internal tracking
         }
@@ -740,6 +774,51 @@ void CollisionDetection::ensureBVHCurrent() {
 
     // Note: We do NOT call context->markGeometryClean() here
     // That should only be done by the user after all plugins have processed the changes
+}
+
+void CollisionDetection::rebuildBVHExcluding(const std::set<uint> &excluded_geometry) {
+    // Copied first: the argument may be bvh_excluded_geometry itself, which buildBVH() recomputes from the primitives it
+    // is given and would otherwise forget the original exclusions once new geometry is absorbed.
+    const std::set<uint> preserved_exclusions = excluded_geometry;
+
+    std::vector<uint> rebuild_geometry;
+    for (uint uuid: context->getAllUUIDs()) {
+        if (preserved_exclusions.find(uuid) == preserved_exclusions.end()) {
+            rebuild_geometry.push_back(uuid);
+        }
+    }
+
+    if (rebuild_geometry.empty()) {
+        return;
+    }
+
+    buildBVH(rebuild_geometry); // This will update our internal tracking
+    bvh_excluded_geometry = preserved_exclusions;
+    bvh_geometry_restricted = true;
+}
+
+bool CollisionDetection::primitiveTransformChanged(uint UUID, uint64_t &current_fingerprint) const {
+    float transform[16];
+    context->getPrimitiveTransformationMatrix(UUID, transform);
+
+    // FNV-1a over the bytes of the matrix. Each step is a bijection of the running hash, so two matrices that differ in
+    // a single byte always hash differently; matrices differing in several bytes share a hash with probability about
+    // 2^-64. A bitwise comparison also counts -0 and +0 as a change, which costs at most one unnecessary AABB refresh.
+    constexpr uint64_t FNV_offset_basis = 14695981039346656037ull;
+    constexpr uint64_t FNV_prime = 1099511628211ull;
+    uint64_t hash = FNV_offset_basis;
+    const auto *bytes = reinterpret_cast<const unsigned char *>(transform);
+    for (size_t i = 0; i < sizeof(transform); i++) {
+        hash ^= bytes[i];
+        hash *= FNV_prime;
+    }
+    current_fingerprint = hash;
+
+    const auto recorded = primitive_transform_fingerprints.find(UUID);
+    if (recorded == primitive_transform_fingerprints.end()) {
+        return true;
+    }
+    return recorded->second != current_fingerprint;
 }
 
 bool CollisionDetection::isBVHValid() const {
@@ -2377,10 +2456,13 @@ void CollisionDetection::markBVHDirty() {
     // The recorded subset is gone, so there is nothing left to keep excluding; drop the restriction along with it
     // (rebuildBVH() calls this before an unrestricted buildBVH(), which must rebuild over all geometry).
     bvh_geometry_restricted = false;
+    bvh_restriction_query_scoped = false;
+    query_scope_restores_explicit_restriction = false;
+    explicit_excluded_geometry_before_query.clear();
     bvh_excluded_geometry.clear();
 
-    // Note: Don't clear primitive_cache here - it will be cleared only when
-    // buildBVH() detects actual primitive set changes, not just geometry updates
+    // Note: Don't clear primitive_cache here. buildBVH() clears it when the primitive set changes and evicts the
+    // individual entries of primitives whose transformation matrix changed, so the rest of the cache stays valid.
 
     // Free GPU memory since BVH will be rebuilt
 #ifdef HELIOS_CUDA_AVAILABLE

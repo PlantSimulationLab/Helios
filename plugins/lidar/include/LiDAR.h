@@ -22,6 +22,8 @@
 
 #include "triangulation_cdt.h"
 
+#include <atomic>
+#include <cstdint>
 #include <functional>
 
 template<class datatype>
@@ -135,6 +137,13 @@ struct HitPoint {
         color = __color;
         gridcell = -2;
     }
+};
+
+//! Storage type of a per-hit scalar-data column (see \ref LiDARcloud::createHitDataColumn)
+enum class HitDataType {
+    FLOAT64, //!< 8-byte double. Holds any value exactly; the type of every label the plug-in does not recognize, and of any narrower column that has been widened.
+    FLOAT32, //!< 4-byte float. For measurements such as intensity or reflectance. Created implicitly, a column widens to FLOAT64 on the first value a float does not hold exactly; created explicitly, it stores values at float precision.
+    INT32 //!< 4-byte signed integer. For counts and indices. Created implicitly, a column widens to FLOAT64 on the first value that is not a 32-bit integer; created explicitly, such a value is an error.
 };
 
 struct Triangulation {
@@ -684,9 +693,25 @@ struct ScanMetadata {
 
 //! Primary class for terrestrial LiDAR scan
 class LiDARcloud {
-private:
-    size_t Nhits;
+public:
+    //! Returns the last leaf-area inversion inferred from `target_count` rather than read from the cloud
+    /** Filled by \ref calculateLeafArea(). When a pulse has fewer returns in the cloud than its `target_count`, the removed returns
+        are placed from the surviving `target_index` values: below the smallest are before it, above the largest are beyond it,
+        and any in between cannot be placed. All counts are per return except the
+        two `beams_*` fields, which count pulses. `hidden_before` is expected after any culling of near returns and changes
+        nothing; `hidden_after` changes the per-voxel transmittance and is the count a caller would report; `hidden_ambiguous`
+        returns could not be placed and were left out, so a non-zero value means the cloud was cropped INSIDE the grid and the
+        inversion is biased for the affected beams. */
+    struct CroppedReturnStats {
+        uint64_t beams_with_hidden_returns = 0; //!< Pulses with at least one return recovered from `target_count`
+        uint64_t hidden_before = 0; //!< Removed returns placed before the first surviving return (no effect on P)
+        uint64_t hidden_after = 0; //!< Removed returns placed beyond the last surviving return (counted as transmitted)
+        uint64_t hidden_ambiguous = 0; //!< Removed returns between two surviving returns (position unknown; not counted)
+        uint64_t beams_ambiguous = 0; //!< Pulses carrying at least one ambiguous removed return
+        uint64_t standins_ignored = 0; //!< Stand-in misses left out of the counts because the inference covered them
+    };
 
+private:
     std::vector<ScanMetadata> scans;
 
     std::vector<HitPoint> hits;
@@ -695,15 +720,173 @@ private:
     // Per-hit scalar fields are stored column-wise (one contiguous array per label) rather than as one
     // std::map<std::string,double> per hit. This makes bulk field extraction a cache-linear pass instead
     // of N cache-cold red-black-tree lookups, matching the speed of XYZ/RGB export.
-    // INVARIANT: every column in hit_data_columns and every mask in hit_data_present has length
-    // hits.size() at all times. Column slot `s` holds label hit_data_labels[s]; a value is meaningful
-    // only where hit_data_present[s][i] != 0 (a hit may be missing a value for a label). The values
-    // for slot s of hit i are hit_data_columns[s][i]. These structures are kept in lockstep with the
-    // `hits` vector everywhere it is mutated (addHitPoint, deleteHitPoint's swap-and-pop, clearHits).
+    // INVARIANT: every column in hit_data_columns has length hits.size() at all times. Column slot `s`
+    // holds label hit_data_labels[s]; a value is meaningful only where the column's presence bit for
+    // hit i is set (a hit may be missing a value for a label). These structures are kept in lockstep
+    // with the `hits` vector everywhere it is mutated (addHitPoint, addHitPoints, deleteHitPoint's
+    // swap-and-pop, deleteHitPoints, clearHits, materializeVirtualMisses, the syntheticScan merge).
+    //
+    // Each column has a fixed storage type chosen when it is created (see \ref HitDataType and
+    // \ref createHitDataColumn): 8-byte double for labels that need it (timestamps), 4-byte float for
+    // measurements, 4-byte integer for counts and indices. Presence is one bit per hit. Against the
+    // previous dense double + byte layout (9 bytes per hit per label) a float or integer label costs
+    // 4.125 bytes per hit, which on a 100-million-return cloud with five labels is 2 GB instead of 4.5.
+    //
+    // THREADING: values may be scattered into distinct rows from several threads, but presence bits
+    // share 64-bit words between neighbouring rows, so presence is always written serially
+    // (setPresent / setPresentRange after the parallel value scatter). Never set a presence bit from
+    // inside a parallel region.
+    struct HitDataColumn {
+        HitDataType type;
+        bool explicit_type = false; //!< Type fixed by createHitDataColumn(): never widened (see \ref HitDataType)
+        std::vector<double> f64; //!< Populated when type == FLOAT64
+        std::vector<float> f32; //!< Populated when type == FLOAT32
+        std::vector<int32_t> i32; //!< Populated when type == INT32
+        std::vector<uint64_t> present; //!< Presence bitset: hit i is present iff (present[i>>6] >> (i&63)) & 1
+        size_t length = 0; //!< Number of rows (== hits.size())
+
+        explicit HitDataColumn(HitDataType t) : type(t) {
+        }
+
+        size_t size() const {
+            return length;
+        }
+        //! Grow (absent, zero-valued) or shrink to n rows.
+        void resize(size_t n);
+        void reserve(size_t n);
+        //! Value at row i (caller checks presence). Widened to double regardless of storage type.
+        double get(size_t i) const {
+            switch (type) {
+                case HitDataType::FLOAT32:
+                    return double(f32[i]);
+                case HitDataType::INT32:
+                    return double(i32[i]);
+                default:
+                    return f64[i];
+            }
+        }
+        //! Store v at row i, converting to the column type. The caller has established \ref accepts(v) (see
+        //! LiDARcloud::prepareHitDataColumn), which is what makes the conversion well defined.
+        void set(size_t i, double v) {
+            switch (type) {
+                case HitDataType::FLOAT32:
+                    f32[i] = float(v);
+                    break;
+                case HitDataType::INT32:
+                    i32[i] = int32_t(v);
+                    break;
+                default:
+                    f64[i] = v;
+                    break;
+            }
+        }
+        //! Whether v is stored and read back exactly: always for FLOAT64; for FLOAT32 when a float represents v
+        //! (a NaN or an infinity included); for INT32 when v is an integer in the 32-bit range.
+        bool holds(double v) const {
+            switch (type) {
+                case HitDataType::FLOAT32:
+                    return !std::isfinite(v) || (std::fabs(v) <= double(std::numeric_limits<float>::max()) && double(float(v)) == v);
+                case HitDataType::INT32:
+                    return std::isfinite(v) && v == std::floor(v) && v >= -2147483648.0 && v <= 2147483647.0;
+                default:
+                    return true;
+            }
+        }
+        //! Whether v may be stored without widening: \ref holds(v), or -- for a FLOAT32 column the caller typed
+        //! explicitly, which asked for float precision -- any value within the float range.
+        bool accepts(double v) const {
+            return holds(v) || (type == HitDataType::FLOAT32 && explicit_type && std::fabs(v) <= double(std::numeric_limits<float>::max()));
+        }
+        //! Convert the column to FLOAT64 in place, keeping every value exactly and every presence bit.
+        void widenToFloat64();
+        bool isPresent(size_t i) const {
+            return ((present[i >> 6] >> (i & 63)) & 1ull) != 0;
+        }
+        void setPresent(size_t i) {
+            present[i >> 6] |= (1ull << (i & 63));
+        }
+        void clearPresent(size_t i) {
+            present[i >> 6] &= ~(1ull << (i & 63));
+        }
+        //! Mark rows [first, first+count) present. Word-wise, so cheap for the whole tail of a bulk append.
+        void setPresentRange(size_t first, size_t count);
+        //! Swap row i with the last row and drop the last row (mirrors deleteHitPoint on `hits`).
+        void swapAndPop(size_t i);
+        //! Remove rows [first, first+count) preserving the order of the rest (mirrors deleteHitPoints).
+        void eraseRange(size_t first, size_t count);
+        //! Bytes of value storage per row for a column of the given type.
+        static size_t valueBytes(HitDataType t) {
+            return t == HitDataType::FLOAT64 ? sizeof(double) : 4;
+        }
+    };
+
     std::vector<std::string> hit_data_labels; //!< Column order; hit_data_labels[s] is the label of slot s.
     std::unordered_map<std::string, size_t> hit_data_label_index; //!< label -> column slot.
-    std::vector<std::vector<double>> hit_data_columns; //!< [slot][hit_index] scalar values.
-    std::vector<std::vector<char>> hit_data_present; //!< [slot][hit_index] presence flag (0 = absent).
+    std::vector<HitDataColumn> hit_data_columns; //!< One typed column per label, indexed by slot.
+
+    //! Storage type a label receives when its column is created implicitly (see \ref createHitDataColumn).
+    static HitDataType defaultHitDataType(const std::string &label);
+
+    //! Raise the error for a value an explicitly typed column cannot take (see HitDataColumn::accepts). Always throws.
+    void throwHitDataDoesNotFit(const std::string &label, HitDataType type, double value) const;
+
+    //! Make column \p slot able to store \p value: a column typed implicitly is widened to FLOAT64 if it does not hold
+    //! the value exactly; a column typed explicitly that cannot take it raises an error naming the remedy.
+    void prepareHitDataColumn(size_t slot, double value);
+
+    //! Throw, before anything is changed, if a value of \p data (NaN values excepted: they are absent) could not be
+    //! stored in the explicitly typed column of its label. Implicit columns take any value (they widen).
+    void rejectHitDataForIngest(const std::map<std::string, double> &data) const;
+
+    //! Shared body of the \ref getHitDataColumn overloads: one pass over the column, then the virtual tail.
+    template<typename T>
+    void readHitDataColumn(const char *label, std::vector<T> &data, T absent_value) const;
+
+    // ---- Per-scan hit index ----
+    // Which stored hits belong to which scan, without walking the whole cloud once per scan. Every
+    // loader and the synthetic scanner append hits grouped by ascending scan ID, in which case the index
+    // is just a CSR offset table over `hits` and costs O(Nscans). A cloud whose order was scrambled (a
+    // filter's swap-and-pop, or hits added in interleaved scan order) additionally gets a stable
+    // permutation `scan_hit_order` -- one 4-byte entry per hit, built ONCE per invalidation, not once
+    // per scan. The index is rebuilt lazily by the per-scan readers; the per-index accessors never
+    // touch it (filters call deleteHitPoint per hit, which would otherwise rebuild it N times).
+    // Virtual misses are already grouped per scan by scan_virtual_offset and need no entry here.
+    //
+    // THREADING: const readers may be called from several threads at once on a cloud that is not being mutated, and
+    // the first of them after a mutation rebuilds the index. The rebuild runs under the guard's mutex and the index is
+    // published as valid only once it is complete, so concurrent readers build it once and never see it half-built.
+    // (Mutations themselves are not thread-safe.) A copied cloud gets a fresh mutex and rebuilds its own index.
+    struct ScanIndexGuard {
+        std::mutex mutex;
+        std::atomic<bool> valid{false};
+        ScanIndexGuard() = default;
+        ScanIndexGuard(const ScanIndexGuard &) {
+        }
+        ScanIndexGuard &operator=(const ScanIndexGuard &) {
+            valid.store(false);
+            return *this;
+        }
+    };
+    mutable ScanIndexGuard scan_index_guard;
+    mutable std::vector<size_t> scan_hit_offsets; //!< Size scans.size()+1; scan s owns positions [offsets[s], offsets[s+1]) of the order.
+    mutable std::vector<uint> scan_hit_order; //!< Stored hit index at each position; EMPTY means identity (already grouped).
+    void invalidateScanIndex() {
+        scan_index_guard.valid.store(false);
+    }
+    void ensureScanIndex() const;
+    //! Test hooks (see LiDARTestHelper): how many times the per-scan index has been rebuilt, and a callback run inside
+    //! each rebuild so a test can observe rebuilds that overlap.
+    mutable size_t scan_index_builds = 0;
+    std::function<void()> scan_index_build_hook;
+    //! Number of STORED (non-virtual) hits in a scan. Builds the index if needed.
+    size_t scanRealHitCount(uint scanID) const;
+    //! Stored index of the local-th stored hit of a scan (index must already be built).
+    uint scanRealHitIndex(uint scanID, size_t local) const;
+    //! Number of virtualized misses in a scan.
+    size_t scanVirtualMissCount(uint scanID) const;
+    //! Shared body of the \ref getScanHitDataColumn overloads.
+    template<typename T>
+    void readScanHitDataColumn(uint scanID, const char *label, std::vector<T> &data, T absent_value) const;
 
     // ---- Virtualized gap-filled misses ----
     //! Per-scan population of misses synthesized by \ref gapfillMisses_rowcolumn(), stored implicitly.
@@ -719,9 +902,13 @@ private:
     /** A raster scan steps its beam by a fixed angular increment per row and per column, so over the
         whole grid
 
-        \f[ \mathrm{zenith} = z_0 + z_1\,\mathrm{row}, \qquad \mathrm{azimuth} = a_0 + a_1\,\mathrm{column} \f]
+        \f[ \mathrm{zenith} = z_0 + z_1\,\mathrm{row}, \qquad \mathrm{azimuth} = a_0 + a_1\,\mathrm{column} + a_2\,\mathrm{row} \f]
 
-        with four coefficients for the entire scan.
+        with five coefficients for the entire scan. The row term in the azimuth is the continuous sweep of a
+        terrestrial scanner's head: it rotates while the fast mirror sweeps a column, so the azimuth advances
+        by one column step over the column. Helios' own synthetic scanner models exactly that drift, and a
+        model without the term places every synthesized miss of a column at the column's mean azimuth,
+        up to half a column step from the beam that was actually fired there.
 
         The surveying literature does describe departures from this: a scanner's collimation and
         trunnion axis errors make the horizontal angle depend on the vertical one, as
@@ -750,8 +937,38 @@ private:
         non-uniform, so \ref zenith_per_row holds them instead and the linear form is not used. */
     struct ScanGridModel {
         double z0 = 0.0, z1 = 0.0; //!< zenith = z0 + z1*row (raster pattern).
-        double a0 = 0.0, a1 = 0.0; //!< azimuth = a0 + a1*column.
-        std::vector<double> zenith_per_row; //!< Per-row zenith for spinning-multibeam; empty otherwise.
+        double a0 = 0.0, a1 = 0.0, a2 = 0.0; //!< azimuth = a0 + a1*column + a2*row.
+        //! Orthonormal basis the zenith and azimuth are measured in: e3 is the head's rotation axis as fitted from the
+        //! returns, so a scanner that was not level is modelled exactly rather than absorbed into the residual. When
+        //! `rotated` is false the basis is the world frame and the model evaluates exactly as it did without it.
+        bool rotated = false;
+        helios::vec3 e1 = helios::make_vec3(1, 0, 0), e2 = helios::make_vec3(0, 1, 0), e3 = helios::make_vec3(0, 0, 1);
+
+        //! World-frame unit direction of the beam at a scan-grid cell.
+        helios::vec3 direction(int row, int column) const {
+            const double zen = zenith(row), az = azimuth(row, column);
+            if (!rotated) {
+                return helios::sphere2cart(helios::SphericalCoord(1.f, 0.5f * float(M_PI) - float(zen), float(az)));
+            }
+            // The same spherical convention as the world frame (sphere2cart), applied in the fitted basis.
+            const helios::vec3 f = helios::sphere2cart(helios::SphericalCoord(1.f, 0.5f * float(M_PI) - float(zen), float(az)));
+            return helios::make_vec3(f.x * e1.x + f.y * e2.x + f.z * e3.x, f.x * e1.y + f.y * e2.y + f.z * e3.y, f.x * e1.z + f.y * e2.z + f.z * e3.z);
+        }
+        //! Zenith and azimuth of a world-frame direction in this model's basis (same convention as cart2sphere).
+        void toFrame(const helios::vec3 &d, double &zen, double &az) const {
+            if (!rotated) {
+                const helios::SphericalCoord sc = helios::cart2sphere(d);
+                zen = sc.zenith;
+                az = sc.azimuth;
+                return;
+            }
+            const helios::vec3 f = helios::make_vec3(d.x * e1.x + d.y * e1.y + d.z * e1.z, d.x * e2.x + d.y * e2.y + d.z * e2.z, d.x * e3.x + d.y * e3.y + d.z * e3.z);
+            const helios::SphericalCoord sc = helios::cart2sphere(f);
+            zen = sc.zenith;
+            az = sc.azimuth;
+        }
+        std::vector<double> zenith_per_row; //!< Per-row zenith: spinning-multibeam channels, or a raster whose sweep deviates measurably from a line in the row; empty otherwise.
+        std::vector<double> azimuth_per_row; //!< Per-row azimuth offset added to the plane (a sweep plane not through the head axis drifts in azimuth along the line); empty otherwise.
         double zenith_residual = 0.0; //!< RMS residual of the zenith fit, in radians (see fitScanGridModel).
 
         //! Zenith of the beam in the given row.
@@ -763,9 +980,14 @@ private:
             return z0 + z1 * (double) row;
         }
 
-        //! Azimuth of the beam in the given column, wrapped to [0, 2pi).
-        double azimuth(int column) const {
-            double a = std::fmod(a0 + a1 * (double) column, 2.0 * M_PI);
+        //! Azimuth of the beam at the given scan-grid cell, wrapped to [0, 2pi).
+        double azimuth(int row, int column) const {
+            double a = a0 + a1 * (double) column + a2 * (double) row;
+            if (!azimuth_per_row.empty()) {
+                const size_t i = (size_t) row < azimuth_per_row.size() ? (size_t) row : azimuth_per_row.size() - 1;
+                a += azimuth_per_row[i];
+            }
+            a = std::fmod(a, 2.0 * M_PI);
             if (a < 0.0) {
                 a += 2.0 * M_PI;
             }
@@ -782,7 +1004,9 @@ private:
         bool add_flags = false; //!< Whether gapfillMisses_code is reported for these misses.
         bool emit_timestamp = false; //!< Whether a reconstructed timestamp is reported.
         double t0 = 0.0, pulse_period = 1.0; //!< For reconstructing per-cell timestamps.
-        helios::vec3 origin; //!< Scan origin captured at gap-fill time.
+        double line_period = 0.0; //!< Time from one column's first pulse to the next's; 0 means Ntheta*pulse_period (a continuous pulse train).
+        helios::vec3 origin; //!< Scan origin captured at gap-fill time (static scans).
+        bool moving = false; //!< Moving-platform scan: each miss is emitted from the platform pose at its reconstructed timestamp (see virtualMissOrigin).
 
         //! Number of virtual misses in this scan.
         uint64_t count() const {
@@ -792,6 +1016,9 @@ private:
     std::vector<VirtualMissSet> virtual_misses; //!< Parallel to \ref scans.
     uint64_t Nvirtual = 0; //!< Total virtual misses across all scans.
     std::vector<uint64_t> scan_virtual_offset; //!< Size scans.size()+1; prefix sum of per-scan counts.
+
+    //! Tally of returns the last leaf-area inversion inferred from `target_count` (see \ref getCroppedReturnStats()).
+    CroppedReturnStats cropped_return_stats;
 
     //! Returns sampled when fitting a \ref ScanGridModel. The model has four coefficients over a highly
     //! redundant grid, so this is far more than needed: 5,000 and 50,000 agreed to five decimal places
@@ -827,6 +1054,38 @@ private:
     //! Reconstruct a virtual miss's direction from its cell and the stored per-row model.
     helios::SphericalCoord virtualMissDirection(const VirtualMissSet &vm, int row, int col) const;
 
+    //! Emission origin of a virtual miss: the captured scan origin, or for a moving scan the platform pose at the cell's time.
+    helios::vec3 virtualMissOrigin(const VirtualMissSet &vm, uint scanID, int row, int col) const;
+
+    //! Reconstructed acquisition time of a virtual miss's cell (pulse ordinal = column*Ntheta + row, or column*line_period + row*pulse_period when the mirror has dead time between columns).
+    static double virtualMissTimestamp(const VirtualMissSet &vm, int row, int col) {
+        if (vm.line_period > 0.0) {
+            return vm.t0 + (double) col * vm.line_period + (double) row * vm.pulse_period;
+        }
+        return vm.t0 + ((double) col * (double) vm.Ntheta + (double) row) * vm.pulse_period;
+    }
+
+    //! Fit the head (frame) rotation axis of a scan from returns that carry scan-grid cells
+    /** Within one column the beam sweeps about the head's horizontal line axis; across columns those line axes turn
+        about the head axis, which is therefore the direction perpendicular to all of them: the smallest-eigenvalue
+        direction of their scatter. Returns false (identity basis) when the samples do not span at least two rows in
+        two columns, or the fitted axis is within 1e-4 rad of +z.
+        \param[in] columns Column of each sample
+        \param[in] rows Row of each sample
+        \param[in] dirs World-frame unit direction of each sample
+        \param[out] e1 First basis vector (perpendicular to e3)
+        \param[out] e2 Second basis vector (e3 x e1)
+        \param[out] e3 The head axis (chosen with a non-negative z component) */
+    static bool fitHeadAxis(const std::vector<int> &columns, const std::vector<int> &rows, const std::vector<helios::vec3> &dirs, helios::vec3 &e1, helios::vec3 &e2, helios::vec3 &e3);
+
+    //! Determine the pulse time base t = t0 + ordinal*period of a scan from its returns
+    /** The scan's declared (t0, pulse_period) are kept when they reproduce the timestamps of the returns that carry
+        row/column indices (the synthetic scanner's own clock, or a moving scan's trajectory time base). Otherwise --
+        an imported scan whose timestamps are, say, GPS seconds -- the two are estimated by least squares of timestamp
+        on pulse ordinal over a bounded sample. \return false when fewer than two returns carry both a timestamp and a
+        valid row/column, in which case the declared values are returned unchanged. */
+    bool fitPulseTimeBase(uint scanID, size_t sample_limit, double &t0, double &period) const;
+
     //! Look up a virtual miss's value for \p label; returns false when the miss does not carry it.
     bool virtualMissData(uint index, const char *label, double &value) const;
 
@@ -855,6 +1114,13 @@ private:
 
     //! Clear all hits AND their columnar scalar data, keeping the two in lockstep.
     void clearHits();
+
+    //! Grow `hits` and every column by \p count rows in one step (default-constructed points, absent data)
+    /** The shared first half of every bulk append (\ref addHitPoints, the synthetic-scan chunk merge,
+        materializing virtual misses): one capacity check, one growth of each array, and the index
+        invalidation. The caller then scatters values into rows [old size, old size + count) -- in parallel
+        if it likes, since rows are distinct -- and marks presence serially. \return The first new row. */
+    size_t appendHitRows(size_t count);
 
     //! Apply an in-place transform to hit `index`'s per-pulse emission origin (labels origin_x/y/z), if
     //! it carries one. All-three-or-none semantics. Used by coordinateShift/coordinateRotation.
@@ -892,10 +1158,32 @@ private:
     //! each other; has no effect on results, only on which code path computes them.
     bool force_bruteforce_LAD = false;
 
+    //! Test/diagnostic hook: the largest per-scan working array \ref calculateLeafArea_inner() allocated in its most
+    //! recent run (elements, i.e. hits of the largest scan). The self-tests assert that this tracks the largest scan
+    //! rather than the whole cloud, which is the property that keeps the inversion's scratch bounded by one scan.
+    size_t leafarea_max_scan_scratch = 0;
+
     std::vector<Triangulation> triangles;
 
-    //! 2D map of hits, one value for each (theta,phi) combo of scan. = -1 if no hit, = index if hit - size = (Ntheta)x(Nphi)
-    std::vector<HitTable<int>> hit_tables;
+    // ---- Streamed triangulation ----
+    // When a sink is set, triangulateHitPoints() hands each scan's triangles to it instead of retaining them in
+    // `triangles`, and keeps only the per-cell G(theta) sufficient statistics the leaf-area inversion needs
+    // (the same three sums computeGtheta() would form from the retained mesh, accumulated in the same order so the
+    // inversion is bit-identical). Consumers that need the mesh itself throw while triangles_streamed is set.
+    std::function<void(uint, const std::vector<Triangulation> &)> triangulation_sink;
+    bool triangles_streamed = false; //!< True once a run has streamed its triangles to the sink (cleared by clearTriangulation)
+    std::vector<float> gtheta_stream_num; //!< Per cell: sum of |n.r| * area * |sin(theta)| over streamed triangles
+    std::vector<float> gtheta_stream_den; //!< Per cell: sum of |sin(theta)| * area
+    std::vector<uint> gtheta_stream_count; //!< Per cell: streamed triangles counted
+
+    //! Discard the retained mesh and the streamed sufficient statistics together.
+    void clearTriangulation();
+
+    //! Throw if the mesh was streamed to a sink and is therefore not available to \p caller.
+    void requireRetainedTriangles(const char *caller) const;
+
+    //! Hit sink for a streaming synthetic scan (see \ref setSyntheticScanHitSink)
+    std::function<void(size_t, size_t)> synthetic_hit_sink;
 
     //! Flag denoting whether \ref LiDARcloud::calculateHitGridCell[*]() has been called previously.
     bool hitgridcellcomputed;
@@ -934,6 +1222,10 @@ private:
      *         true otherwise, including scans that were skipped because they contained no triangulable points.
      */
     bool triangulateScanSecondPass(uint s, float Lmax, float max_aspect_ratio, bool use_adaptive_threshold, float adaptive_sep_threshold, const char *scalar_field, float threshold, const char *comparator, int &Ntriangles);
+
+    //! Gather one scan's in-grid stored returns as (zenith, azimuth) points for the multi-return calibration pass of
+    //! \ref triangulateHitPoints(). \p hit_indices receives the global hit index of each point.
+    void gatherFirstReturnsForTriangulation(uint s, bool skip_non_first_returns, std::vector<Shx> &pts, std::vector<int> &hit_indices) const;
 
     //! Return the index of the grid cell containing point \p p, or -1 if \p p lies outside every
     //! cell. Uses the same axis-aligned containment test (with inverse rotation for rotated cells)
@@ -1054,7 +1346,7 @@ private:
      * per-pulse emission origin recorded on each hit (\ref getHitOrigin()), so it is correct for both static and
      * moving-platform scans.
      * \param[in] context Pointer to the Helios context
-     * \param[in] min_voxel_hits Minimum number of allowable LiDAR hits per voxel
+     * \param[in] min_voxel_hits Minimum number of beams that must have entered a voxel (see \ref getCellBeamCount()) for its leaf area to be inverted; voxels with fewer beams are assigned zero leaf area
      * \param[in] element_width Characteristic vegetation element width [m] (<= 0 reports sampling-only uncertainty)
      * \param[in] supplied_Gtheta Controls the source of G(theta):
      *            - empty: G(theta) is computed per voxel from triangulation, which must have been performed.
@@ -1062,7 +1354,7 @@ private:
      *            - size == grid-cell count: the value is used per voxel in cell order; triangulation is NOT required.
      *            Any other size is an error. Every supplied value must be in (0,1].
      */
-    void calculateLeafArea_inner(helios::Context *context, int min_voxel_hits, float element_width, const std::vector<float> &supplied_Gtheta);
+    void calculateLeafArea_inner(helios::Context *context, int min_voxel_hits, float element_width, const std::vector<float> &supplied_Gtheta, const helios::int3 *ijk_min = nullptr, const helios::int3 *ijk_max = nullptr);
 
     //! Perform LAD inversion for a single voxel using secant method
     /**
@@ -1200,7 +1492,7 @@ private:
         the [start,end) range of each beam within it. Beam \c k owns members[beam_offsets[k] .. beam_offsets[k+1]). */
     struct BeamGrouping {
         uint Nbeams = 0;
-        std::vector<uint> beam_members; //!< All returns' global hit indices, grouped contiguously by beam
+        std::vector<uint> beam_members; //!< All returns' LOCAL positions within the scan (see getScanHitIndices), grouped contiguously by beam
         std::vector<uint> beam_offsets; //!< Size Nbeams+1; beam k spans beam_members[beam_offsets[k] .. beam_offsets[k+1])
 
         //! Number of returns in beam \p k
@@ -1209,12 +1501,14 @@ private:
         }
     };
 
-    //! Group hit points by timestamp into beams
-    /**
-     * \param[in] scan_indices Vector of hit indices for a specific scan
+    //! Group one scan's hit points by timestamp into beams
+    /** Reads the scan's timestamps once through the per-scan column reader; the returned members are
+        the scan's LOCAL positions, i.e. indices into the arrays \ref getScanHitXYZColumn and
+        \ref getScanHitDataColumn fill for that scan (stored returns first, then virtualized misses).
+     * \param[in] scanID Scan to group
      * \return BeamGrouping structure with beam organization
      */
-    BeamGrouping groupHitsByTimestamp(const std::vector<uint> &scan_indices) const;
+    BeamGrouping groupHitsByTimestamp(uint scanID) const;
 
     //! Description of a regular voxel lattice reconstructed from the grid cells, used by the fast LAD inversion path
     /** When every grid cell shares a common anchor, size, division count, and azimuthal rotation (the case produced by
@@ -1231,7 +1525,16 @@ private:
         float rotation = 0.f; //!< Shared azimuthal rotation about z [rad]
         helios::int3 count; //!< Number of cells along each axis (= global_count)
         std::vector<int> ijk_to_index; //!< Dense (i,j,k)->cell-index map (size count.x*count.y*count.z); -1 if no cell occupies that slot
+        helios::int3 ijk_offset = helios::make_int3(0, 0, 0); //!< Global lattice (i,j,k) of this lattice's cell (0,0,0); non-zero for a block restricted by restrictLattice()
+        helios::vec3 global_origin; //!< Minimum corner of the WHOLE lattice, kept unchanged by restrictLattice() so a block walk computes cell bounds from exactly the whole grid's origin
     };
+
+    //! Restrict a lattice to the block [ijk_min, ijk_max], mapping its slots to indices into \p active_cells
+    /** The returned lattice covers only the block (its origin and count are the block's; global_origin stays the whole
+        grid's, from which the walk computes every cell bound), and its
+        ijk_to_index yields the position of the cell in \p active_cells (the list of cell indices the inversion is
+        accumulating), so a beam walked through it touches only block voxels and indexes only block-sized scratch. */
+    static VoxelLattice restrictLattice(const VoxelLattice &lattice, const helios::int3 &ijk_min, const helios::int3 &ijk_max, const std::vector<int> &cell_to_active);
 
     //! Detect whether the current grid cells form a regular lattice and reconstruct its geometry
     /** \return A \ref VoxelLattice with \p valid set appropriately. When valid, the DDA fast path in
@@ -1252,9 +1555,34 @@ private:
         \param[in,out] P_equal_numerator Running sum of per-beam transmittance fractions for this voxel
         \param[in,out] P_equal_denominator Running count of beams contributing to this voxel
         \param[in,out] P_equal_sumsq Running sum of squared per-beam fractions (sampling-variance guard)
-        \param[in,out] dr_array_cell Per-voxel path-length samples (one push_back per contributing beam) */
+        \param[in,out] dr_array_cell Per-voxel path-length samples (one push_back per contributing beam)
+        \param[in] max_path Longest path a beam can take through this voxel (its diagonal), bounding the path-length histogram
+        \param[in] extra_after Returns of this beam that were removed from the cloud but are known from `target_count` to
+                   have terminated BEYOND the grid (see \ref inferHiddenReturns()). Folded into E_after whenever the beam
+                   pierces the voxel, so a cropped beam keeps the transmittance fraction its full record would have had. */
     void accumulateBeamCell(const uint *return_indices, size_t Nreturns, const std::vector<float> &dr, const std::vector<uint> &hit_location, float &P_equal_numerator, float &P_equal_denominator, float &P_equal_sumsq,
-                                   PathLengthAccumulator &dr_array_cell, float max_path) const;
+                                   PathLengthAccumulator &dr_array_cell, float max_path, float extra_after = 0.f) const;
+
+    //! Recover, per beam, the returns a pulse recorded that are no longer in the cloud, from `target_count` and the surviving `target_index` values
+    /** A pulse's returns are ordered by range, and a beam crosses a convex voxel grid in one contiguous segment. So when
+        a cloud has been cropped to the grid (or otherwise had returns removed) but its surviving returns still carry the
+        per-pulse `target_index` / `target_count` the scanner wrote, the missing returns can be placed relative to the grid
+        without their coordinates: indices below the smallest surviving index terminated before the first surviving return,
+        indices above the largest surviving index terminated beyond the last one, and only indices BETWEEN two surviving
+        returns are of unknown position. Under the crop-to-grid assumption the first group is before every voxel
+        (contributes nothing), the second is beyond every voxel (a transmission for each voxel the beam pierces), and the
+        third is left uncounted and reported as ambiguous. A stand-in miss (a return flagged `is_miss` sharing the pulse's
+        timestamp, which a cropping tool may emit to mark the removed energy) is ignored for counting when the inference
+        applies, since the count already covers it; its geometry still sets the beam direction.
+
+        Beams whose real returns lack either column, or whose declared count is not larger than the number of real returns
+        present, are untouched and behave exactly as before. Misses grouped alone (gap-filled or recorded) are unaffected.
+        \param[in] scanID Scan whose beams are being inverted
+        \param[in] beams Beam grouping for that scan, as returned by \ref groupHitsByTimestamp() (scan-local positions)
+        \param[out] beam_extra_after Per-beam count of removed returns known to lie beyond the grid (size beams.Nbeams)
+        \param[out] standin_local Per-local-hit flag: 1 if the hit is a stand-in miss to leave out of the counts (size \ref getScanHitCount())
+        Accumulates into \ref cropped_return_stats. */
+    void inferHiddenReturns(uint scanID, const BeamGrouping &beams, std::vector<float> &beam_extra_after, std::vector<uint8_t> &standin_local);
 
     //! Helper method for loading TreeQSM cylinder files with different coloring strategies
     /**
@@ -1267,14 +1595,18 @@ private:
      */
     std::vector<uint> loadTreeQSM_impl(helios::Context *context, const std::string &filename, uint radial_subdivisions, bool use_colormap, const std::string &colormap_or_texture);
 
-    //! Timestamp-based implementation of gap filling (see \ref gapfillMisses). Reconstructs the scan grid from per-hit timestamps.
-    /**
+    //! Timestamp-based implementation of gap filling (see \ref gapfillMisses).
+    /** Assigns each return its scan-grid cell from the pulse clock (ordinal = (timestamp - t0) / period, row = ordinal
+        mod Ntheta, column = ordinal / Ntheta), records the cells as row/column hit data, and then runs the shared
+        row/column core (\ref gapfillMisses_rowcolumn) so both paths synthesize the same virtualized miss population.
      * \param[in] scanID ID of scan to gapfill
-     * \param[in] gapfill_grid_only if true, missing points are gapfilled only within the axis-aligned bounding box of the voxel grid
+     * \param[in] gapfill_grid_only if true, only the rows whose beams can reach the voxel grid are filled (the core measures the grid's zenith window in the fitted model's frame)
      * \param[in] add_flags if true, gapfillMisses_code is added as hitpoint data
-     * \return (x,y,z) of missing points added to the scan from gapfilling
+     * \param[in] collect_positions if true, \p xyz_filled receives the position of every synthesized miss
+     * \param[out] xyz_filled (x,y,z) of missing points added to the scan (only when \p collect_positions)
+     * \return Number of missing points added to the scan
      */
-    std::vector<helios::vec3> gapfillMisses_timestamp(uint scanID, const bool gapfill_grid_only, const bool add_flags);
+    size_t gapfillMisses_timestamp(uint scanID, const bool gapfill_grid_only, const bool add_flags, const bool collect_positions, std::vector<helios::vec3> &xyz_filled);
 
     //! Row/column-based implementation of gap filling (see \ref gapfillMisses).
     /**
@@ -1286,12 +1618,27 @@ private:
      * large blank near-zenith regions to be extrapolated rather than only interpolated. Every empty grid cell is then
      * emitted as a miss along its reconstructed direction.
      *
+     * This is the shared core of both gap-filling paths: the timestamp path assigns every return its scan-grid cell
+     * from the pulse clock, records it as row/column hit data, and then calls this.
      * \param[in] scanID ID of scan to gapfill
      * \param[in] add_flags if true, gapfillMisses_code is added as hitpoint data (0 = original points, 1 = gapfilled). Code 4 ("extrapolated row") is retired: the scan-grid model is fitted across the whole scan
      *                        rather than row by row, so a row with no returns of its own is evaluated from the same coefficients as any other and is no longer a distinct case.
-     * \return (x,y,z) of missing points added to the scan from gapfilling
+     * \param[in] collect_positions if true, the filled positions are reconstructed and returned
+     * \param[out] filled_count Number of misses synthesized
+     * \param[in] allow_moving Accept a moving-platform scan (each miss is then emitted from the platform pose at its reconstructed time); the row/column-only entry rejects them
+     * \param[in] grid_only_rows Fill only the rows whose model zenith lies within the zenith window of the voxel grid, measured in the model's own frame (the grid-only mode of the timestamp path; see \ref gridZenithRangeInFrame)
+     * \param[in] time_base_t0 If non-null, the pulse time base to stamp misses with (with \p time_base_period); otherwise determined by \ref fitPulseTimeBase
+     * \param[in] time_base_period See \p time_base_t0
+     * \param[in] line_period Time from one column's first pulse to the next's when the mirror has dead time between columns (0: continuous pulse train, Ntheta pulses per column)
+     * \return (x,y,z) of missing points added to the scan from gapfilling (empty unless \p collect_positions)
      */
-    std::vector<helios::vec3> gapfillMisses_rowcolumn(uint scanID, const bool add_flags, const bool collect_positions, size_t &filled_count);
+    std::vector<helios::vec3> gapfillMisses_rowcolumn(uint scanID, const bool add_flags, const bool collect_positions, size_t &filled_count, bool allow_moving = false, bool grid_only_rows = false, const double *time_base_t0 = nullptr,
+                                                      const double *time_base_period = nullptr, double line_period = 0.0);
+
+    //! Zenith range an axis-aligned box spans as seen from \p origin, measured about the axis of \p model
+    /** The frame of a \ref ScanGridModel's zenith: its fitted head axis when \p model is rotated, world +z otherwise. Exact:
+        0 or pi where the axis ray from the origin pierces the box, otherwise the extremes over the box's edges. */
+    static void gridZenithRangeInFrame(const ScanGridModel &model, const helios::vec3 &origin, const helios::vec3 &boxmin, const helios::vec3 &boxmax, double &zenith_min, double &zenith_max);
 
     //! Recompute \ref Nvirtual and \ref scan_virtual_offset from the per-scan virtual miss sets.
     void rebuildVirtualMissIndex();
@@ -1309,6 +1656,11 @@ public:
     //! Self-test (unit test) function
     static int selfTest(int argc = 0, char **argv = nullptr);
 
+    //! Reject ray-direction validation for moving-platform scans
+    /** Raises an error if any scan is a moving-platform scan, whose per-pulse origins make a single-origin direction
+        check meaningless. For static scans it performs no per-hit check: it used to compare hits located through a
+        per-scan (row, column) table that no loader ever populated, so it never examined a hit, and that table has
+        been removed. */
     void validateRayDirections();
 
     //! Disable all print messages to the screen except for fatal error messages
@@ -1375,7 +1727,7 @@ public:
     // ------- SCANS -------- //
 
     //! Get number of scans in point cloud
-    uint getScanCount();
+    uint getScanCount() const;
 
     //! Add a LiDAR scan to the point cloud
     /**
@@ -1639,11 +1991,47 @@ public:
      */
     void addHitPoint(uint scanID, const helios::vec3 &xyz, const helios::int2 &row_column, const helios::RGBcolor &color, const std::map<std::string, double> &data);
 
+    //! Add many hit points to a scan in one call, from contiguous arrays
+    /** The bulk form of \ref addHitPoint() for clouds that arrive from a file or another process in
+        row chunks. One call appends \p n points with a single capacity check, a single growth of the
+        point array and of every scalar-data column, and a parallel scatter of the values -- so a loop
+        of calls over successive chunks costs amortised O(1) per point and never re-copies the cloud.
+        Positions are taken as doubles and converted point by point, so the caller does not need a
+        single-precision copy of its data; reserve the eventual total with \ref reserveHitPoints()
+        first to avoid the growth transient entirely.
+
+        The scalar-data columns for \p labels are created on first use as described at
+        \ref createHitDataColumn() and read back every value exactly; NaN marks a value as absent for
+        that point. A value an explicitly typed column cannot take raises an error, as do an unknown scan
+        and a batch beyond \ref setMaxHitPoints(), before anything in the cloud is changed.
+     * \param[in] scanID ID of the scan the points belong to.
+     * \param[in] n Number of points.
+     * \param[in] xyz Row-major n x 3 array of (x,y,z) positions.
+     * \param[in] dir_spherical Row-major n x 3 array of beam directions as (radius, elevation, azimuth), the
+     *            layout of \ref helios::SphericalCoord; or nullptr to derive each direction from the point's
+     *            position relative to the scan origin, as the ASCII loader does.
+     * \param[in] labels Scalar-data labels carried by every point (may be empty).
+     * \param[in] values Row-major n x labels.size() array of values, or nullptr when \p labels is empty. A NaN
+     *            entry leaves that label absent on that point.
+     */
+    void addHitPoints(uint scanID, size_t n, const double *xyz, const float *dir_spherical, const std::vector<std::string> &labels, const double *values);
+
     //! Delete a hit point in the scan
     /**
      * \param[in] index Index of hit point in the point cloud
      */
     void deleteHitPoint(uint index);
+
+    //! Delete a contiguous range of hit points, preserving the order of the rest
+    /** Removes hits [first, first+count). Unlike \ref deleteHitPoint(), which fills the freed slot with
+        the last hit, this keeps every surviving hit in its relative order, so removing the tail of the
+        cloud -- the drain step of a streaming \ref syntheticScan(), see \ref setSyntheticScanHitSink() --
+        costs O(count) and leaves earlier indices unchanged. Gap-filled misses held in virtualized form are
+        materialized first, as for \ref deleteHitPoint().
+     * \param[in] first Index of the first hit to delete
+     * \param[in] count Number of hits to delete
+     */
+    void deleteHitPoints(size_t first, size_t count);
 
     //! Get the number of hit points in the point cloud
     uint getHitCount() const;
@@ -1657,12 +2045,14 @@ public:
     //! Get the number of scan points in the theta (zenithal) direction
     /**
      * \param[in] scanID ID of scan.
+     * \note Gap-filling a scan from its timestamps replaces a declared size that does not describe the returns with the measured one.
      */
     uint getScanSizeTheta(uint scanID) const;
 
     //! Get the number of scan points in the phi (azimuthal) direction
     /**
      * \param[in] scanID ID of scan.
+     * \note Gap-filling a scan from its timestamps replaces a declared size that does not describe the returns with the measured one.
      */
     uint getScanSizePhi(uint scanID) const;
 
@@ -1928,6 +2318,53 @@ public:
      */
     void getHitDataColumn(const char *label, std::vector<double> &data, double absent_value = -9999) const;
 
+    //! Bulk-read a per-hit scalar field into a float array (see the double overload)
+    /** Reads a FLOAT32 column without widening it to 8 bytes per hit; a FLOAT64 or INT32 column is
+        converted element-wise. Virtualized misses are included, as in the double overload.
+     * \param[in] label Label of the data value.
+     * \param[out] data Filled with one value per hit (resized to \ref getHitCount()).
+     * \param[in] absent_value Value written for hits that lack the label.
+     */
+    void getHitDataColumn(const char *label, std::vector<float> &data, float absent_value = -9999.f) const;
+
+    //! Bulk-read a per-hit scalar field into a 32-bit integer array (see the double overload)
+    /** Reads an INT32 column without widening it. A value that is not an integer in the 32-bit range (a
+        fractional value, a NaN, or a timestamp, say) raises an error naming the label: read such a label
+        into the double overload.
+     * \param[in] label Label of the data value.
+     * \param[out] data Filled with one value per hit (resized to \ref getHitCount()).
+     * \param[in] absent_value Value written for hits that lack the label.
+     */
+    void getHitDataColumn(const char *label, std::vector<int32_t> &data, int32_t absent_value = -9999) const;
+
+    //! Create a per-hit scalar-data column with an explicit storage type
+    /** Every label is stored in one contiguous column. A column created implicitly (by the first
+        \ref addHitPoint, \ref setHitData, \ref addHitPoints, file load or synthetic scan that carries the
+        label) starts with a type chosen from the label's name -- 32-bit integers for the standard count and
+        index labels (target_index, target_count, is_miss, nRaysHit, channel, gapfillMisses_code, row,
+        column), 32-bit floats for the standard measurement labels (intensity, distance, deviation,
+        echo_width, reflectance, reflectivity_lidar), 64-bit doubles for timestamp, pulse_id, origin_x/y/z
+        and every label the plug-in does not recognize -- and widens itself to a double column the first
+        time it is given a value it does not hold exactly, so every value reads back as it was stored.
+
+        Call this before adding data to fix the type instead. An explicit INT32 column rejects a value
+        that is not a 32-bit integer with an error naming the label; an explicit FLOAT32 column stores
+        values at float precision. Neither is ever widened.
+     * \param[in] label Label of the data value.
+     * \param[in] type Storage type for the column.
+     * \note Throws if the column already exists with a different type, unless \p type is FLOAT64 and the
+     *       existing column was typed implicitly (it is then widened).
+     */
+    void createHitDataColumn(const char *label, HitDataType type);
+
+    //! Storage type of an existing per-hit scalar-data column (see \ref createHitDataColumn)
+    /**
+     * \param[in] label Label of the data value.
+     * \return The column's current storage type (an implicitly typed column may since have widened to FLOAT64).
+     * \note Throws if no column exists for the label (see \ref getHitDataColumnIndex()).
+     */
+    [[nodiscard]] HitDataType getHitDataType(const char *label) const;
+
     //! Distance (m) at which a "miss" point is placed along its beam direction.
     /** A fired pulse that returns nothing (transmitted to the sky) is represented as a
      * point at this distance from the scan origin along the beam. The value is far beyond
@@ -1985,6 +2422,10 @@ public:
      */
     bool isMultiReturnData() const;
 
+    //! Tally of returns inferred from `target_count` by the most recent \ref calculateLeafArea() call
+    /** All zero before the first inversion and for a cloud whose pulses are complete. */
+    CroppedReturnStats getCroppedReturnStats() const;
+
     //! Get color of hit point
     /**
      * \param[in] index Hit number
@@ -1997,19 +2438,24 @@ public:
      */
     int getHitScanID(uint index) const;
 
-    //! Get the index of a scan point based on its row and column in the hit table
+    //! Get the index of the hit recorded at a scan-grid cell
     /**
+     * The cell of a hit is its "row" and "column" hit data (carried by a scan loaded with those columns, and
+     * recorded by \ref gapfillMisses(), whose synthesized misses carry it too). Returns the first stored hit of the
+     * scan whose row/column name the cell, else the virtualized miss synthesized for it. Costs O(hits in the scan).
      * \param[in] scanID ID of scan.
      * \param[in] row Row in the 2D scan data table (elevation angle).
      * \param[in] column Column in the 2D scan data table (azimuthal angle).
-     * \note If the point was not a hit, the function will return `-1'.
+     * \return Index of the hit, or -1 if no hit of the scan is recorded at that cell.
+     * \note Throws if the scan, row or column is out of range, or if no hit of the scan carries row/column data
+     *       (no cell of any hit is known, so an empty cell could not be told apart from an unknown one).
      */
     int getHitIndex(uint scanID, uint row, uint column) const;
 
     //! Get the grid cell in which the hit point resides
     /**
      * \param[in] index Hit number
-     * \note If the point does not reside in any grid cells, this function returns `-1'.
+     * \note If the point does not reside in any grid cells, this function returns -1.
      * \note Calling this function requires that the function calculateHitGridCell[*]() has been called previously.
      */
     int getHitGridCell(uint index) const;
@@ -2383,7 +2829,7 @@ public:
     //! Filter scan by imposing a minimum reflectance value
     /**
      * \param[in] minreflectance Miniimum hit point reflectance value
-     * \note If `reflectance' data was not provided for a hit point when calling \ref LiDARcloud::addHitPoint(), the point will not be filtered.
+     * \note If "reflectance" data was not provided for a hit point when calling \ref LiDARcloud::addHitPoint(), the point will not be filtered.
      */
     void reflectanceFilter(float minreflectance);
 
@@ -2449,6 +2895,22 @@ public:
      */
     void triangulateHitPoints(float Lmax, float max_aspect_ratio, const char *scalar_field, float threshold, const char *comparator);
 
+    //! Stream each scan's triangles to a callback instead of retaining the mesh in memory
+    /** A 30-million-return scan triangulates to tens of millions of triangles, each 64 bytes, which the cloud
+        would otherwise hold until it is destroyed. With a sink set, \ref triangulateHitPoints() calls it once
+        per scan with that scan's finished triangles (after every filter, in the order they would have been
+        stored) and then releases them, keeping only the per-voxel leaf-angle sums the leaf-area inversion needs,
+        so \ref calculateLeafArea() still works and gives the same result. Retained memory is then one scan's
+        triangles at a time. The per-scan tessellation itself still needs working memory proportional to the
+        scan's returns; the sink bounds what is kept, not that transient.
+
+        While a run's triangles have been streamed, \ref getTriangleCount() reports zero and the consumers of
+        the mesh -- \ref getTriangle(), \ref addTrianglesToContext(), the exportTriangle*() functions and the
+        leaf reconstruction -- throw rather than silently operate on an empty mesh.
+     * \param[in] sink Callback receiving (scanID, triangles) once per scan; pass an empty std::function to clear it
+     */
+    void setTriangulationSink(std::function<void(uint scanID, const std::vector<Triangulation> &triangles)> sink);
+
     //! Replace the internal triangulation with an externally-supplied world-space mesh
     /**
      * Bypasses the internal Constrained-Delaunay triangulation so a mesh produced elsewhere
@@ -2485,6 +2947,21 @@ public:
 
     //! Get the number of cells in the grid
     uint getGridCellCount() const;
+
+    //! Lattice index of a grid cell along x, y and z
+    /** For a grid built by \ref addGrid() this is the cell's position in the ndiv.x by ndiv.y by ndiv.z lattice;
+        cells are stored in the order k*ny*nx + j*nx + i. It is the coordinate the block overloads of
+        \ref calculateLeafArea() take.
+     * \param[in] index Index of a grid cell
+     * \return (i, j, k) of the cell
+     */
+    [[nodiscard]] helios::int3 getCellGlobalIJK(uint index) const;
+
+    //! Number of lattice cells along x, y and z of the grid (the ndiv passed to \ref addGrid())
+    /**
+     * \return (nx, ny, nz); throws if the grid is empty or its cells do not form a regular lattice
+     */
+    [[nodiscard]] helios::int3 getGridGlobalCount() const;
 
     //! Add a cell to the grid
     /**
@@ -2655,6 +3132,18 @@ public:
      */
     void setSyntheticScanMemoryBudget(size_t bytes);
 
+    //! Hand each traced chunk of a synthetic scan to a callback as soon as it is stored
+    /** \ref syntheticScan() traces a scan in chunks whose size is bounded by \ref setSyntheticScanMemoryBudget();
+        without a sink every chunk's returns accumulate in the cloud until the scan finishes, so a 100-million-pulse
+        scan holds every return before the caller can read any. With a sink set, the callback is invoked after each
+        chunk's returns have landed in the cloud, with the index of the first new hit and the number of new hits.
+        Inside the callback the caller can read them (through the column readers, for example), write them out,
+        and then release them with \ref deleteHitPoints() -- the new hits are always the tail of the
+        cloud, so that erase is cheap and the cloud never holds more than one chunk.
+     * \param[in] sink Callback receiving (first, count) after each chunk; pass an empty std::function to clear it
+     */
+    void setSyntheticScanHitSink(std::function<void(size_t first, size_t count)> sink);
+
     //! Get the soft memory budget (in bytes) for the transient ray-tracing buffers used during \ref syntheticScan.
     /**
      * \return The explicitly configured budget in bytes, or 0 if using the automatic path-dependent default (8 GiB on a
@@ -2720,6 +3209,10 @@ public:
 
     //! Get the number of beams that entered a grid cell during the leaf-area inversion
     /**
+     * A beam entered the cell if at least one of its returns (or its miss) lies inside or beyond the cell along the
+     * beam. Beams whose returns all terminated in front of the cell are not counted even though their ray line
+     * crosses it; this is the population over which the transmission probability, the mean path length and the
+     * sampling variance are defined (Pimont et al. 2018).
      * \param[in] index Index of a grid cell.
      * \return Beam count N, or -1 if \ref calculateLeafArea() has not been run for this cell.
      */
@@ -2787,9 +3280,14 @@ public:
     //! For scans that are missing points (e.g., sky points), this function will attempt to fill in missing points. This increases the accuracy of LAD calculations because it makes sure all pulses are accounted for.
     /**
      * \param[in] scanID ID of scan to gapfill
-     * \param[in] gapfill_grid_only if true, missing points are gapfilled only within the axis-aligned bounding box of the voxel grid. If false missing points are gap filled across the range of phi and theta values specified in the scan xml file.
-     * \param[in] add_flags if true, gapfillMisses_code is added as hitpoint data. 0 = original points, 1 = gapfilled, 2 = extrapolated at downward edge, 3 = extrapolated at upward edge
+     * \param[in] gapfill_grid_only if true, a scan gap-filled from its timestamps is filled only in the rows whose beams can reach the voxel grid (the rows whose modelled zenith lies within the zenith range the grid spans, both measured about the
+     * fitted head axis). If false, every empty cell of the scan's raster is filled.
+     * \param[in] add_flags if true, gapfillMisses_code is added as hitpoint data: 0 = original points, 1 = gap-filled misses
      * \return (x,y,z) of missing points added to the scan from gapfilling
+     * \note On the timestamp path the declared Ntheta x Nphi may approximate the instrument's raster: when the declared clock and size
+     *       do not describe the returns, the raster is measured from the timestamps and beam angles within the declared angular extent,
+     *       and the measured size replaces the declared one (see \ref getScanSizeTheta()). See the gap-filling section of the plug-in
+     *       documentation for the details and the declared-range conventions.
      */
     std::vector<helios::vec3> gapfillMisses(uint scanID, const bool gapfill_grid_only, const bool add_flags);
 
@@ -2799,7 +3297,7 @@ public:
         which for a fine raster is a large allocation the caller usually does not need; prefer this
         form when only the count matters.
      * \param[in] scanID ID of scan to gapfill
-     * \param[in] gapfill_grid_only if true, missing points are gapfilled only within the axis-aligned bounding box of the voxel grid
+     * \param[in] gapfill_grid_only see \ref gapfillMisses(uint,bool,bool)
      * \param[in] add_flags if true, gapfillMisses_code is added as hitpoint data
      * \return Number of missing points added to the scan
      */
@@ -2830,6 +3328,49 @@ public:
      * \param[out] scanID Resized to \ref getHitCount() and filled with each hit's scan index
      */
     void getHitScanIDColumn(std::vector<int> &scanID) const;
+
+    //! Number of hit points (stored returns plus virtualized misses) belonging to one scan
+    /**
+     * \param[in] scanID Scan index
+     * \return Number of hits in that scan, i.e. the length of the arrays the per-scan readers fill
+     */
+    [[nodiscard]] size_t getScanHitCount(uint scanID) const;
+
+    //! Global indices of one scan's hit points, in the order the per-scan readers use
+    /** A scan's hits need not be contiguous in the global index space (a filter's swap-and-pop
+        deletion reorders the cloud, and gap-filled misses live above every stored return). The
+        per-scan readers (\ref getScanHitXYZColumn, \ref getScanHitDataColumn) therefore present a
+        scan's hits in their own local order; this returns the global index at each local position so
+        a result computed per scan can be mapped back to \ref getHitXYZ() and friends. Stored returns
+        come first, in stored order, followed by the scan's virtualized misses.
+     * \param[in] scanID Scan index
+     * \param[out] indices Resized to \ref getScanHitCount(); indices[local] is the global hit index
+     */
+    void getScanHitIndices(uint scanID, std::vector<uint> &indices) const;
+
+    //! Read one scan's hit positions in a single pass (see \ref getHitXYZColumn)
+    /** Costs O(hits in the scan), not O(hits in the cloud): the scan's stored returns are located
+        through an index that is built once and kept until the cloud changes, and its virtualized
+        misses are walked in occupancy order rather than resolved one at a time.
+     * \param[in] scanID Scan index
+     * \param[out] xyz Resized to \ref getScanHitCount(); the position of each of the scan's hits in local order
+     */
+    void getScanHitXYZColumn(uint scanID, std::vector<helios::vec3> &xyz) const;
+
+    //! Read one scan's values of a scalar-data label in a single pass (see \ref getHitDataColumn)
+    /**
+     * \param[in] scanID Scan index
+     * \param[in] label Label of the data value
+     * \param[out] data Resized to \ref getScanHitCount(); one value per hit in local order
+     * \param[in] absent_value Value written for hits that lack the label
+     */
+    void getScanHitDataColumn(uint scanID, const char *label, std::vector<double> &data, double absent_value = -9999) const;
+
+    //! Read one scan's values of a scalar-data label into a float array (see the double overload)
+    void getScanHitDataColumn(uint scanID, const char *label, std::vector<float> &data, float absent_value = -9999.f) const;
+
+    //! Read one scan's values of a scalar-data label into a 32-bit integer array (see the double overload)
+    void getScanHitDataColumn(uint scanID, const char *label, std::vector<int32_t> &data, int32_t absent_value = -9999) const;
 
     //! Direction of the beam at a scan-grid cell, from the model fitted during gap-filling
     /** Available once \ref gapfillMisses() has run on the scan through the row/column path. This is the
@@ -2913,10 +3454,13 @@ public:
 
         This only reserves capacity; it does not create hit points, and \ref getHitCount() is unchanged.
         Reserving less than the eventual total is harmless (growth resumes normally), as is reserving more
-        (the excess is released by \ref clearHits()).
+        (the excess is released when the hits are cleared).
      * \param[in] hit_count Expected total number of hit points in the cloud
      */
     void reserveHitPoints(size_t hit_count);
+
+    //! Number of hit points the cloud can hold before its arrays reallocate (see \ref reserveHitPoints)
+    [[nodiscard]] size_t getHitPointCapacity() const;
 
     //! Convert every virtualized gap-filled miss into a stored hit point
     /** Every observable is unchanged by this call -- it trades the memory saving for real storage.
@@ -2936,7 +3480,7 @@ public:
     //! Calculate the leaf area for each grid volume
     /**
      * \param[in] context Pointer to the Helios context
-     * \param[in] min_voxel_hits Minimum number of allowable LiDAR hits per voxel
+     * \param[in] min_voxel_hits Minimum number of beams that must have entered a voxel (see \ref getCellBeamCount()) for its leaf area to be inverted; voxels with fewer beams are assigned zero leaf area
      * \note Requires that the point cloud contains miss points (transmitted beams), which
      *       count the beams transmitted through each voxel for the transmission-probability
      *       inversion. Supply them via a miss-retaining scan format or \ref gapfillMisses();
@@ -2949,7 +3493,7 @@ public:
     //! Calculate the leaf area for each grid volume, with element size for uncertainty estimation
     /**
      * \param[in] context Pointer to the Helios context
-     * \param[in] min_voxel_hits Minimum number of allowable LiDAR hits per voxel
+     * \param[in] min_voxel_hits Minimum number of beams that must have entered a voxel (see \ref getCellBeamCount()) for its leaf area to be inverted; voxels with fewer beams are assigned zero leaf area
      * \param[in] element_width Characteristic vegetation element width [m] (e.g. mean leaf width),
      *            used by the per-voxel LAD sampling-uncertainty estimate (the element-position
      *            variance term; Pimont et al. 2018, Appendix A). Pass a value <= 0 to omit that
@@ -2976,7 +3520,7 @@ public:
      * \param[in] context Pointer to the Helios context
      * \param[in] Gtheta Mean leaf-projection coefficient G(theta), applied to every voxel. Must be in (0,1]. Use 0.5
      *            for a spherical (random) leaf-angle distribution; supply a measured/assumed value otherwise.
-     * \param[in] min_voxel_hits Minimum number of allowable LiDAR hits per voxel
+     * \param[in] min_voxel_hits Minimum number of beams that must have entered a voxel (see \ref getCellBeamCount()) for its leaf area to be inverted; voxels with fewer beams are assigned zero leaf area
      * \param[in] element_width Characteristic vegetation element width [m]; see the three-argument overload. Pass <= 0
      *            to report sampling-only uncertainty.
      * \note Requires miss points (transmitted beams), like the other overloads; supply a miss-retaining scan format or
@@ -2995,13 +3539,55 @@ public:
      * \param[in] Gtheta_per_cell Mean leaf-projection coefficient G(theta) for each grid cell, in grid-cell order (the
      *            same order as \ref getCellCenter()). Its length must equal \ref getGridCellCount(). Every value must be
      *            in (0,1].
-     * \param[in] min_voxel_hits Minimum number of allowable LiDAR hits per voxel
+     * \param[in] min_voxel_hits Minimum number of beams that must have entered a voxel (see \ref getCellBeamCount()) for its leaf area to be inverted; voxels with fewer beams are assigned zero leaf area
      * \param[in] element_width Characteristic vegetation element width [m]; see the three-argument overload. Pass <= 0
      *            to report sampling-only uncertainty.
      * \note Requires miss points (transmitted beams), like the other overloads; supply a miss-retaining scan format or
      *       call \ref gapfillMisses() first.
      */
     void calculateLeafArea(helios::Context *context, const std::vector<float> &Gtheta_per_cell, int min_voxel_hits, float element_width);
+
+    //! Calculate the leaf area for only a block of the voxel grid
+    /**
+     * Inverts only the cells whose lattice index lies in [ijk_min, ijk_max] (inclusive, see \ref getCellGlobalIJK()),
+     * leaving every other cell's results untouched, so a grid can be inverted block by block and the union of the
+     * block calls equals one whole-grid call cell for cell. The scratch the inversion allocates is sized to the
+     * block rather than the grid, and only the hit points passed in are visited -- the intended use is to build one
+     * cloud per block holding just the beams (returns and misses) that intersect the block's bounding box, with a
+     * margin of one voxel, so that neither the cloud nor the working memory ever scales with the whole scene. Beams
+     * that do not reach the block contribute nothing to it, which is what makes that culling result-neutral.
+     *
+     * Requires a regular lattice grid (as built by \ref addGrid()); triangulation supplies G(theta) as in the
+     * three-argument overload.
+     * \param[in] context Pointer to the Helios context
+     * \param[in] min_voxel_hits Minimum number of beams that must have entered a voxel for its leaf area to be inverted
+     * \param[in] element_width Characteristic vegetation element width [m]; see the three-argument overload
+     * \param[in] ijk_min Lattice index of the block's first cell along x, y and z
+     * \param[in] ijk_max Lattice index of the block's last cell along x, y and z (inclusive)
+     */
+    void calculateLeafArea(helios::Context *context, int min_voxel_hits, float element_width, const helios::int3 &ijk_min, const helios::int3 &ijk_max);
+
+    //! Calculate the leaf area for only a block of the voxel grid, with a caller-supplied G(theta)
+    /** The block form of the single-G(theta) overload; see the block overload above and \ref calculateLeafArea(helios::Context*,float,int,float).
+     * \param[in] context Pointer to the Helios context
+     * \param[in] Gtheta Mean leaf-projection coefficient applied to every voxel, in (0,1]
+     * \param[in] min_voxel_hits Minimum number of beams that must have entered a voxel for its leaf area to be inverted
+     * \param[in] element_width Characteristic vegetation element width [m]
+     * \param[in] ijk_min Lattice index of the block's first cell along x, y and z
+     * \param[in] ijk_max Lattice index of the block's last cell along x, y and z (inclusive)
+     */
+    void calculateLeafArea(helios::Context *context, float Gtheta, int min_voxel_hits, float element_width, const helios::int3 &ijk_min, const helios::int3 &ijk_max);
+
+    //! Calculate the leaf area for only a block of the voxel grid, with a caller-supplied per-voxel G(theta)
+    /** The block form of the per-voxel-G(theta) overload; \p Gtheta_per_cell still has one entry per grid cell.
+     * \param[in] context Pointer to the Helios context
+     * \param[in] Gtheta_per_cell G(theta) for every grid cell, in grid-cell order; length \ref getGridCellCount()
+     * \param[in] min_voxel_hits Minimum number of beams that must have entered a voxel for its leaf area to be inverted
+     * \param[in] element_width Characteristic vegetation element width [m]
+     * \param[in] ijk_min Lattice index of the block's first cell along x, y and z
+     * \param[in] ijk_max Lattice index of the block's last cell along x, y and z (inclusive)
+     */
+    void calculateLeafArea(helios::Context *context, const std::vector<float> &Gtheta_per_cell, int min_voxel_hits, float element_width, const helios::int3 &ijk_min, const helios::int3 &ijk_max);
 
     //! Calculate the leaf area for each grid volume (DEPRECATED - use calculateLeafArea)
     /**
@@ -3017,7 +3603,7 @@ public:
      * \deprecated This function has been renamed to calculateLeafArea(). The GPU-specific implementation has been replaced with CollisionDetection plugin integration. Use calculateLeafArea() instead. For GPU acceleration, call
      * enableCDGPUAcceleration() before calculateLeafArea().
      * \param[in] context Pointer to the Helios context
-     * \param[in] min_voxel_hits Minimum number of allowable LiDAR hits per voxel
+     * \param[in] min_voxel_hits Minimum number of beams that must have entered a voxel (see \ref getCellBeamCount()) for its leaf area to be inverted; voxels with fewer beams are assigned zero leaf area
      */
     [[deprecated("Use calculateLeafArea(context, min_voxel_hits) instead. GPU functionality is now provided by the CollisionDetection plugin.")]]
     void calculateLeafAreaGPU(helios::Context *context, int min_voxel_hits);

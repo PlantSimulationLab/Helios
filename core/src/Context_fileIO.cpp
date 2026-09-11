@@ -306,12 +306,15 @@ int XMLparser::parse_transform(const pugi::xml_node &node, float (&transform)[16
         float tmp;
         int i = 0;
         while (stream >> tmp_s) {
-            if (parse_float(tmp_s, tmp)) {
-                transform[i] = tmp;
-                i++;
-            } else {
+            if (!parse_float(tmp_s, tmp)) {
                 return 2;
             }
+            if (i >= 16) {
+                // More than 16 values: stop before writing past the end of the caller's array.
+                return 3;
+            }
+            transform[i] = tmp;
+            i++;
         }
         if (i != 16) {
             return 3;
@@ -1575,7 +1578,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         float transform[16];
         int result = XMLparser::parse_transform(p, transform);
         if (result == 3) {
-            helios_runtime_error("ERROR (Context::loadXML): Patch <transform> node contains less than 16 data values.");
+            helios_runtime_error("ERROR (Context::loadXML): Patch <transform> node does not contain exactly 16 data values.");
         } else if (result == 2) {
             helios_runtime_error("ERROR (Context::loadXML): Patch <transform> node contains invalid data.");
         }
@@ -1698,7 +1701,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         float transform[16];
         int result = XMLparser::parse_transform(tri, transform);
         if (result == 3) {
-            helios_runtime_error("ERROR (Context::loadXML): Triangle <transform> node contains less than 16 data values.");
+            helios_runtime_error("ERROR (Context::loadXML): Triangle <transform> node does not contain exactly 16 data values.");
         } else if (result == 2) {
             helios_runtime_error("ERROR (Context::loadXML): Triangle <transform> node contains invalid data.");
         }
@@ -1822,7 +1825,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         float transform[16];
         int result = XMLparser::parse_transform(p, transform);
         if (result == 3) {
-            helios_runtime_error("ERROR (Context::loadXML): Voxel <transform> node contains less than 16 data values.");
+            helios_runtime_error("ERROR (Context::loadXML): Voxel <transform> node does not contain exactly 16 data values.");
         } else if (result == 2) {
             helios_runtime_error("ERROR (Context::loadXML): Voxel <transform> node contains invalid data.");
         }
@@ -1914,7 +1917,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         float transform[16];
         int result = XMLparser::parse_transform(p, transform);
         if (result == 3) {
-            helios_runtime_error("ERROR (Context::loadXML): Tile <transform> node contains less than 16 data values.");
+            helios_runtime_error("ERROR (Context::loadXML): Tile <transform> node does not contain exactly 16 data values.");
         } else if (result == 2) {
             helios_runtime_error("ERROR (Context::loadXML): Tile <transform> node contains invalid data.");
         }
@@ -2030,7 +2033,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         float transform[16];
         int result = XMLparser::parse_transform(p, transform);
         if (result == 3) {
-            helios_runtime_error("ERROR (Context::loadXML): Adaptive tile <transform> node contains less than 16 data values.");
+            helios_runtime_error("ERROR (Context::loadXML): Adaptive tile <transform> node does not contain exactly 16 data values.");
         } else if (result == 2) {
             helios_runtime_error("ERROR (Context::loadXML): Adaptive tile <transform> node contains invalid data.");
         }
@@ -2141,7 +2144,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         float transform[16];
         int result = XMLparser::parse_transform(p, transform);
         if (result == 3) {
-            helios_runtime_error("ERROR (Context::loadXML): Sphere <transform> node contains less than 16 data values.");
+            helios_runtime_error("ERROR (Context::loadXML): Sphere <transform> node does not contain exactly 16 data values.");
         } else if (result == 2) {
             helios_runtime_error("ERROR (Context::loadXML): Sphere <transform> node contains invalid data.");
         }
@@ -2225,7 +2228,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         float transform[16];
         int result = XMLparser::parse_transform(p, transform);
         if (result == 3) {
-            helios_runtime_error("ERROR (Context::loadXML): Tube <transform> node contains less than 16 data values.");
+            helios_runtime_error("ERROR (Context::loadXML): Tube <transform> node does not contain exactly 16 data values.");
         } else if (result == 2) {
             helios_runtime_error("ERROR (Context::loadXML): Tube <transform> node contains invalid data.");
         }
@@ -2327,7 +2330,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         float transform[16];
         int result = XMLparser::parse_transform(p, transform);
         if (result == 3) {
-            helios_runtime_error("ERROR (Context::loadXML): Box <transform> node contains less than 16 data values.");
+            helios_runtime_error("ERROR (Context::loadXML): Box <transform> node does not contain exactly 16 data values.");
         } else if (result == 2) {
             helios_runtime_error("ERROR (Context::loadXML): Box <transform> node contains invalid data.");
         }
@@ -2411,7 +2414,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         float transform[16];
         int result = XMLparser::parse_transform(p, transform);
         if (result == 3) {
-            helios_runtime_error("ERROR (Context::loadXML): Disk <transform> node contains less than 16 data values.");
+            helios_runtime_error("ERROR (Context::loadXML): Disk <transform> node does not contain exactly 16 data values.");
         } else if (result == 2) {
             helios_runtime_error("ERROR (Context::loadXML): Disk <transform> node contains invalid data.");
         }
@@ -2495,7 +2498,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         float transform[16];
         int result = XMLparser::parse_transform(p, transform);
         if (result == 3) {
-            helios_runtime_error("ERROR (Context::loadXML): Cone <transform> node contains less than 16 data values.");
+            helios_runtime_error("ERROR (Context::loadXML): Cone <transform> node does not contain exactly 16 data values.");
         } else if (result == 2) {
             helios_runtime_error("ERROR (Context::loadXML): Cone <transform> node contains invalid data.");
         }
@@ -2594,7 +2597,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         float polymesh_transform[16];
         int polymesh_transform_result = XMLparser::parse_transform(p, polymesh_transform);
         if (polymesh_transform_result == 3) {
-            helios_runtime_error("ERROR (Context::loadXML): Polymesh <transform> node contains less than 16 data values.");
+            helios_runtime_error("ERROR (Context::loadXML): Polymesh <transform> node does not contain exactly 16 data values.");
         } else if (polymesh_transform_result == 2) {
             helios_runtime_error("ERROR (Context::loadXML): Polymesh <transform> node contains invalid data.");
         } else if (polymesh_transform_result == 0) {
@@ -4132,13 +4135,24 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
 
     std::string temp_string;
 
+    // Properties are recorded per element: 'properties' holds the scalar properties of the vertex element, in file
+    // order, and face_properties holds every property of the face element together with whether it is a list. The
+    // vertex reader consumes exactly the vertex properties, and the face reader consumes exactly the face properties,
+    // so a scalar property declared on the face element (e.g. 'property int flags') neither shifts the vertex rows
+    // nor is left behind to be misread as the next face's vertex count.
+    std::string current_element;
+    std::vector<std::pair<std::string, bool>> face_properties; // (name, is_list)
+
     while ("end_header" != line) {
-        inputPly >> line;
+        if (!(inputPly >> line)) {
+            helios_runtime_error("ERROR (Context::loadPLY): Reached the end of " + std::string(filename) + " before the 'end_header' line was found. The header is incomplete or the file is truncated.");
+        }
 
         if ("comment" == line) {
             getline(inputPly, line);
         } else if ("element" == line) {
             inputPly >> line;
+            current_element = line;
 
             if ("vertex" == line) {
                 inputPly >> temp_string;
@@ -4153,11 +4167,21 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
             }
         } else if ("property" == line) {
             inputPly >> line; // type
-
-            if ("list" != line) {
-                inputPly >> prop; // value
-                properties.push_back(prop);
+            const bool is_list = ("list" == line);
+            if (is_list) {
+                inputPly >> temp_string >> temp_string; // count type, index type
             }
+            inputPly >> prop; // property name
+
+            if (current_element == "vertex") {
+                if (is_list) {
+                    helios_runtime_error("ERROR (Context::loadPLY): List properties of the vertex element are not supported (property '" + prop + "').");
+                }
+                properties.push_back(prop);
+            } else if (current_element == "face") {
+                face_properties.emplace_back(prop, is_list);
+            }
+            // Properties of any other element are ignored, as before.
         }
     }
 
@@ -4348,20 +4372,49 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
     std::vector<uint> UUID;
     std::vector<int3> mesh_faces;
     std::vector<uint> mesh_face_UUIDs;
-    for (uint row = 0; row < faceCount; row++) {
-        inputPly >> temp_string;
-
-        if (!parse_uint(temp_string, v)) {
-            helios_runtime_error("ERROR (Context::loadPLY): Vertex count for face " + std::to_string(row) + " should be a non-negative integer.");
+    bool face_element_has_index_list = false;
+    for (const auto &face_property: face_properties) {
+        if (face_property.second) {
+            face_element_has_index_list = true;
+            break;
         }
+    }
+    if (faceCount > 0 && !face_element_has_index_list) {
+        helios_runtime_error("ERROR (Context::loadPLY): The face element of " + std::string(filename) + " declares no list property holding the vertex indices of each face.");
+    }
 
-        faces.at(row).resize(v);
-
-        for (uint i = 0; i < v; i++) {
-            inputPly >> temp_string;
-            if (!parse_int(temp_string, faces.at(row).at(i))) {
-                helios_runtime_error("ERROR (Context::loadPLY): Vertex index for face " + std::to_string(row) + " is invalid and could not be read.");
+    for (uint row = 0; row < faceCount; row++) {
+        // Consume the face row property by property. The first list property is the vertex index list; any scalar
+        // property, and any further list property, is read and discarded.
+        bool indices_read = false;
+        for (const auto &face_property: face_properties) {
+            if (!face_property.second) {
+                inputPly >> temp_string;
+                continue;
             }
+
+            inputPly >> temp_string;
+            uint list_length;
+            if (!parse_uint(temp_string, list_length)) {
+                helios_runtime_error("ERROR (Context::loadPLY): Length of list property '" + face_property.first + "' for face " + std::to_string(row) + " should be a non-negative integer.");
+            }
+
+            if (indices_read) {
+                for (uint i = 0; i < list_length; i++) {
+                    inputPly >> temp_string;
+                }
+                continue;
+            }
+
+            v = list_length;
+            faces.at(row).resize(v);
+            for (uint i = 0; i < v; i++) {
+                inputPly >> temp_string;
+                if (!parse_int(temp_string, faces.at(row).at(i))) {
+                    helios_runtime_error("ERROR (Context::loadPLY): Vertex index for face " + std::to_string(row) + " is invalid and could not be read.");
+                }
+            }
+            indices_read = true;
         }
 
         // Add triangles to context

@@ -2,9 +2,9 @@ name: Build and Run on Linux EC2 GPU Instance
 
 on:
   push:
-    # Runs on the release branch only. The release flow validates a candidate on
-    # release/<version>, then fast-forwards master to that exact commit, so a second
-    # run on master would re-test an identical SHA on a billed EC2 GPU instance.
+    # Runs on the release branch only. The release flow validates a candidate on "release",
+    # then fast-forwards master to that exact commit, so a run on master would re-test an
+    # identical SHA -- doubly wasteful here, where the runner is a billed EC2 GPU instance.
     branches: [ "release" ]
   workflow_dispatch: {}
 

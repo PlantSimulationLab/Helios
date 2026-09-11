@@ -1054,6 +1054,7 @@ size_t LiDARcloud::loadASCIIFile(uint scanID, const std::string &ASCII_data_file
 
 void LiDARcloud::exportTriangleNormals(const char *filename) {
 
+    requireRetainedTriangles("exportTriangleNormals");
     ensureOutputDirectoryExists(filename);
 
     ofstream file;
@@ -1083,6 +1084,7 @@ void LiDARcloud::exportTriangleNormals(const char *filename) {
 
 void LiDARcloud::exportTriangleNormals(const char *filename, int gridcell) {
 
+    requireRetainedTriangles("exportTriangleNormals");
     ensureOutputDirectoryExists(filename);
 
     ofstream file;
@@ -1115,6 +1117,7 @@ void LiDARcloud::exportTriangleNormals(const char *filename, int gridcell) {
 
 void LiDARcloud::exportTriangleAreas(const char *filename) {
 
+    requireRetainedTriangles("exportTriangleAreas");
     ensureOutputDirectoryExists(filename);
 
     ofstream file;
@@ -1137,6 +1140,7 @@ void LiDARcloud::exportTriangleAreas(const char *filename) {
 
 void LiDARcloud::exportTriangleAreas(const char *filename, int gridcell) {
 
+    requireRetainedTriangles("exportTriangleAreas");
     ensureOutputDirectoryExists(filename);
 
     ofstream file;
@@ -1162,6 +1166,7 @@ void LiDARcloud::exportTriangleAreas(const char *filename, int gridcell) {
 
 void LiDARcloud::exportTriangleInclinationDistribution(const char *filename, uint Nbins) {
 
+    requireRetainedTriangles("exportTriangleInclinationDistribution");
     ensureOutputDirectoryExists(filename);
 
     std::vector<std::vector<float>> inclinations(getGridCellCount());
@@ -1223,6 +1228,7 @@ void LiDARcloud::exportTriangleInclinationDistribution(const char *filename, uin
 
 void LiDARcloud::exportTriangleAzimuthDistribution(const char *filename, uint Nbins) {
 
+    requireRetainedTriangles("exportTriangleAzimuthDistribution");
     ensureOutputDirectoryExists(filename);
 
     std::vector<std::vector<float>> azimuths(getGridCellCount());
@@ -1516,8 +1522,8 @@ void LiDARcloud::exportPointCloud(const char *filename, uint scanID, bool write_
                     } else {
                         file << -9999;
                     }
-                } else if (hit_data_present[code][r] != char(0)) {
-                    file << hit_data_columns[code][r];
+                } else if (hit_data_columns[code].isPresent(size_t(r))) {
+                    file << hit_data_columns[code].get(size_t(r));
                 } else {
                     file << -9999;
                 }

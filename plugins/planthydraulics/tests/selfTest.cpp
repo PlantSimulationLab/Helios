@@ -159,6 +159,53 @@ DOCTEST_TEST_CASE("PlantHydraulicsModel - Documentation Example 1") {
     }
 }
 
+DOCTEST_TEST_CASE("PlantHydraulicsModel - stem and root water potentials are independent of plant leaf area") {
+    // Two plants with identical per-area transpiration, coefficients and soil water potential but different total leaf
+    // area (1 m^2 vs 4 m^2). The plant-level transpiration in the governing equations is the area-weighted MEAN flux
+    // (W/m^2), and the conductances are per unit leaf area, so the steady-state stem and root potentials must agree.
+    Context context_test;
+
+    uint objID_small = context_test.addTileObject(nullorigin, make_vec2(1, 1), nullrotation, make_int2(5, 5));
+    uint objID_large = context_test.addTileObject(make_vec3(10, 0, 0), make_vec2(2, 2), nullrotation, make_int2(5, 5));
+    std::vector<uint> leaves_small = context_test.getObjectPrimitiveUUIDs(objID_small);
+    std::vector<uint> leaves_large = context_test.getObjectPrimitiveUUIDs(objID_large);
+    context_test.setObjectData(objID_small, "plantID", 1);
+    context_test.setObjectData(objID_large, "plantID", 2);
+    context_test.setPrimitiveData(leaves_small, "latent_flux", 100.f);
+    context_test.setPrimitiveData(leaves_large, "latent_flux", 100.f);
+
+    float area_small, area_large;
+    DOCTEST_CHECK_NOTHROW(area_small = context_test.sumPrimitiveSurfaceArea(leaves_small));
+    DOCTEST_CHECK_NOTHROW(area_large = context_test.sumPrimitiveSurfaceArea(leaves_large));
+    DOCTEST_CHECK(area_small == doctest::Approx(1.f).epsilon(err_tol));
+    DOCTEST_CHECK(area_large == doctest::Approx(4.f).epsilon(err_tol));
+
+    PlantHydraulicsModel hydraulics(&context_test);
+    PlantHydraulicsModelCoefficients phmc;
+    DOCTEST_CHECK_NOTHROW(phmc.setLeafHydraulicCapacitanceFromLibrary("pistachio"));
+    DOCTEST_CHECK_NOTHROW(hydraulics.setModelCoefficients(phmc));
+
+    float soil_water_potential = -0.05;
+    DOCTEST_CHECK_NOTHROW(hydraulics.setSoilWaterPotentialOfPlant(1, soil_water_potential));
+    DOCTEST_CHECK_NOTHROW(hydraulics.setSoilWaterPotentialOfPlant(2, soil_water_potential));
+
+    std::vector<uint> all_leaves = leaves_small;
+    all_leaves.insert(all_leaves.end(), leaves_large.begin(), leaves_large.end());
+    DOCTEST_CHECK_NOTHROW(hydraulics.run(all_leaves));
+
+    float psi_stem_small = hydraulics.getStemWaterPotentialOfPlant(1);
+    float psi_stem_large = hydraulics.getStemWaterPotentialOfPlant(2);
+    float psi_root_small = hydraulics.getRootWaterPotentialOfPlant(1);
+    float psi_root_large = hydraulics.getRootWaterPotentialOfPlant(2);
+
+    // The 1 m^2 plant reproduces the documented steady-state value from Documentation Example 1
+    DOCTEST_CHECK(psi_stem_small == doctest::Approx(-0.0590909).epsilon(err_tol));
+
+    // The 4 m^2 plant must give the same answer: a whole-plant SUM of latent flux would make its potential drop 4x larger
+    DOCTEST_CHECK(psi_stem_large == doctest::Approx(psi_stem_small).epsilon(err_tol));
+    DOCTEST_CHECK(psi_root_large == doctest::Approx(psi_root_small).epsilon(err_tol));
+}
+
 DOCTEST_TEST_CASE("PlantHydraulicsModel - computeCapacitance first derivative correctness") {
     // Bug 1: computeCapacitance was using the second derivative stencil (f0 - 2f1 + f2)/(h^2)
     // instead of the first derivative stencil (f2 - f0)/(2h).

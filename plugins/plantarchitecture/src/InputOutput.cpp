@@ -562,8 +562,22 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
         // reader re-integrated from the default axis and stood the whole branch upright, preserving internode
         // lengths but discarding the measured shape.
         if (shoot->growth_state.geometry_is_prescribed) {
-            const std::vector<vec3> prescribed_nodes = flatten(shoot->shoot_internode_vertices);
-            const std::vector<float> prescribed_radii = flatten(shoot->shoot_internode_radii);
+            // One node per PHYTOMER, which is what addShootFromNodePositions() consumes on the way back in.
+            // The shoot's vertex list is not that list: each phytomer stores its internode subdivided into
+            // internode.length_segments pieces, so writing it flattened handed the reader one node per
+            // SEGMENT and it rebuilt the shoot with length_segments times as many phytomers, each that
+            // fraction of its measured length. The path and endpoints were reproduced exactly, so only the
+            // phytomer count gave it away. Taking the base node and each phytomer's last node loses nothing:
+            // a prescribed internode is straight between its endpoints and its intermediate nodes are their
+            // linear interpolation, which the reader regenerates.
+            std::vector<vec3> prescribed_nodes;
+            std::vector<float> prescribed_radii;
+            prescribed_nodes.push_back(shoot->shoot_internode_vertices.front().front());
+            prescribed_radii.push_back(shoot->shoot_internode_radii.front().front());
+            for (uint node_phytomer = 0; node_phytomer < shoot->shoot_internode_vertices.size(); node_phytomer++) {
+                prescribed_nodes.push_back(shoot->shoot_internode_vertices.at(node_phytomer).back());
+                prescribed_radii.push_back(shoot->shoot_internode_radii.at(node_phytomer).back());
+            }
             output_xml << "\t\t\t<prescribed_internode_nodes>";
             for (const vec3 &node: prescribed_nodes) {
                 output_xml << " " << node.x << " " << node.y << " " << node.z;
@@ -682,6 +696,20 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                 output_xml << "\t\t\t\t\t\t<petiole_rotation_axis>" << phytomer->petiole_rotation_axis.at(petiole).x << " " << phytomer->petiole_rotation_axis.at(petiole).y << " "
                            << phytomer->petiole_rotation_axis.at(petiole).z << "</petiole_rotation_axis>" << std::endl;
 
+                // A centerline set by setPetioleNodePositions() cannot be rebuilt from the length, pitch and curvature above, so its nodes are recorded as given.
+                if (petiole < phytomer->petiole_path_prescribed.size() && phytomer->petiole_path_prescribed.at(petiole)) {
+                    output_xml << "\t\t\t\t\t\t<prescribed_petiole_nodes>";
+                    for (const vec3 &node: phytomer->petiole_vertices.at(petiole)) {
+                        output_xml << " " << node.x << " " << node.y << " " << node.z;
+                    }
+                    output_xml << " </prescribed_petiole_nodes>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t<prescribed_petiole_radii>";
+                    for (const float radius: phytomer->petiole_radii.at(petiole)) {
+                        output_xml << " " << radius;
+                    }
+                    output_xml << " </prescribed_petiole_radii>" << std::endl;
+                }
+
                 if (phytomer->leaf_rotation.at(petiole).size() <= 1 || phytomer->leaf_size_max.at(petiole).empty()) { // not compound leaf
                     output_xml << "\t\t\t\t\t\t<leaflet_scale>" << 1.0 << "</leaflet_scale>" << std::endl;
                 } else {
@@ -709,6 +737,12 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                     // reloaded plant was built from a different set of blades than the one that was saved.
                     if (petiole < phytomer->leaf_prototype_index.size() && leaf < phytomer->leaf_prototype_index.at(petiole).size()) {
                         output_xml << "\t\t\t\t\t\t\t<leaf_prototype>" << phytomer->leaf_prototype_index.at(petiole).at(leaf) << "</leaf_prototype>" << std::endl;
+                    }
+                    // A leaf posed by setPetioleLeafGeometry() is placed and oriented from the caller's values rather than from the petiole, so its base and the fact that its pose was prescribed are recorded.
+                    if (petiole < phytomer->leaf_pose_prescribed.size() && leaf < phytomer->leaf_pose_prescribed.at(petiole).size() && phytomer->leaf_pose_prescribed.at(petiole).at(leaf)) {
+                        const vec3 &leaf_base = phytomer->leaf_bases.at(petiole).at(leaf);
+                        output_xml << "\t\t\t\t\t\t\t<leaf_prescribed>1</leaf_prescribed>" << std::endl;
+                        output_xml << "\t\t\t\t\t\t\t<leaf_base>" << leaf_base.x << " " << leaf_base.y << " " << leaf_base.z << "</leaf_base>" << std::endl;
                     }
                     output_xml << "\t\t\t\t\t\t</leaf>" << std::endl;
                 }
@@ -1167,7 +1201,8 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
             vec3 base_rot = parse_xml_tag_vec3(shoot.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
             AxisRotation base_rotation(deg2rad(base_rot.x), deg2rad(base_rot.y), deg2rad(base_rot.z));
 
-            for (pugi::xml_node phytomer = shoot.child("phytomer"); phytomer; phytomer = phytomer.next_sibling("phytomer")) {
+            uint phytomer_index_in_file = 0; // position of the <phytomer> node within this shoot
+            for (pugi::xml_node phytomer = shoot.child("phytomer"); phytomer; phytomer = phytomer.next_sibling("phytomer"), phytomer_index_in_file++) {
 
                 // Optional: files written before this tag existed leave the phytomer at age zero, as they did.
                 float phytomer_age = 0.f;
@@ -1261,7 +1296,11 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 std::vector<std::vector<float>> leaf_pitch;
                 std::vector<std::vector<float>> leaf_yaw;
                 std::vector<std::vector<float>> leaf_roll;
-                std::vector<std::vector<int>> leaf_prototype; // index of the unique leaf prototype each blade was copied from; -1 when the file does not record it
+                std::vector<std::vector<int>> leaf_prototype; // index of the unique leaf prototype each blade was copied from; -1 for a blade built from the prototype function; -2 when the file does not record it
+                std::vector<std::vector<bool>> leaf_prescribed; // whether each leaf's pose was prescribed by setPetioleLeafGeometry()
+                std::vector<std::vector<vec3>> leaf_prescribed_base; // base position of each prescribed leaf
+                std::vector<std::vector<vec3>> prescribed_petiole_nodes_all; // measured centerline of each petiole; empty for a generated petiole
+                std::vector<std::vector<float>> prescribed_petiole_radii_all; // radius at each node of a measured centerline
 
                 // Floral bud data structures
                 struct FloralBudData {
@@ -1353,6 +1392,36 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         }
                     }
 
+                    // A measured centerline, present only for a petiole set by setPetioleNodePositions(). It cannot be rebuilt from the length, pitch and curvature above.
+                    std::vector<vec3> prescribed_petiole_nodes;
+                    std::vector<float> prescribed_petiole_radii;
+                    if (pugi::xml_node nodes_node = petiole.child("prescribed_petiole_nodes")) {
+                        std::vector<float> node_values;
+                        std::istringstream nodes_stream(nodes_node.child_value());
+                        float value;
+                        while (nodes_stream >> value) {
+                            node_values.push_back(value);
+                        }
+                        pugi::xml_node radii_node = petiole.child("prescribed_petiole_radii");
+                        if (node_values.size() % 3 != 0 || !radii_node) {
+                            helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A <prescribed_petiole_nodes> in '" + filename + "' holds " + std::to_string(node_values.size()) +
+                                                 " values, which must be a whole number of xyz positions accompanied by <prescribed_petiole_radii>.");
+                        }
+                        for (size_t v = 0; v + 2 < node_values.size(); v += 3) {
+                            prescribed_petiole_nodes.push_back(make_vec3(node_values.at(v), node_values.at(v + 1), node_values.at(v + 2)));
+                        }
+                        std::istringstream radii_stream(radii_node.child_value());
+                        while (radii_stream >> value) {
+                            prescribed_petiole_radii.push_back(value);
+                        }
+                        if (prescribed_petiole_radii.size() != prescribed_petiole_nodes.size()) {
+                            helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A prescribed petiole in '" + filename + "' has " + std::to_string(prescribed_petiole_nodes.size()) + " node positions but " +
+                                                 std::to_string(prescribed_petiole_radii.size()) + " radii.");
+                        }
+                    }
+                    prescribed_petiole_nodes_all.push_back(prescribed_petiole_nodes);
+                    prescribed_petiole_radii_all.push_back(prescribed_petiole_radii);
+
                     // Store petiole properties in vectors
                     have_saved_petiole_axes_all.push_back(have_saved_petiole_axes);
                     saved_petiole_axis_initial_all.push_back(saved_petiole_axis_initial);
@@ -1372,6 +1441,8 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     leaf_yaw.resize(leaf_yaw.size() + 1);
                     leaf_roll.resize(leaf_roll.size() + 1);
                     leaf_prototype.resize(leaf_prototype.size() + 1);
+                    leaf_prescribed.resize(leaf_prescribed.size() + 1);
+                    leaf_prescribed_base.resize(leaf_prescribed_base.size() + 1);
                     floral_bud_data.resize(floral_bud_data.size() + 1); // Always resize to stay in sync with leaf vectors
 
                     std::vector<vec3> saved_leaf_bases; // Saved leaf attachment positions
@@ -1412,8 +1483,25 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         if (leaf.child(node_string.c_str())) {
                             leaf_prototype.back().push_back(parse_xml_tag_int(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML"));
                         } else {
-                            leaf_prototype.back().push_back(-1);
+                            leaf_prototype.back().push_back(-2);
                         }
+
+                        // Whether the leaf's pose was prescribed, and where its base was placed. Optional: absent for a generated leaf and in files written before prescribed poses were recorded.
+                        bool prescribed_pose = false;
+                        vec3 prescribed_base(0, 0, 0);
+                        node_string = "leaf_prescribed";
+                        if (leaf.child(node_string.c_str())) {
+                            prescribed_pose = parse_xml_tag_int(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML") != 0;
+                        }
+                        if (prescribed_pose) {
+                            node_string = "leaf_base";
+                            if (!leaf.child(node_string.c_str())) {
+                                helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A leaf in '" + filename + "' is marked <leaf_prescribed> but has no <leaf_base>, so it cannot be placed.");
+                            }
+                            prescribed_base = parse_xml_tag_vec3(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+                        }
+                        leaf_prescribed.back().push_back(prescribed_pose);
+                        leaf_prescribed_base.back().push_back(prescribed_base);
                     }
 
                     // Store saved_leaf_bases for this petiole
@@ -1632,23 +1720,20 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     restored_shoot->growth_state.max_nodes_per_season_growth_cap = max_nodes_per_season_growth_cap;
 
                     base_shoot = false;
-
-                    // A prescribed shoot was built complete, with every phytomer at its measured position. The
-                    // rest of this loop exists to append phytomers one at a time and then overwrite their
-                    // internode vertices from the saved lengths and angles, which would discard exactly the
-                    // measured path that was just restored.
-                    if (!prescribed_internode_nodes.empty()) {
-                        continue;
-                    }
-                } else {
-                    if (!prescribed_internode_nodes.empty()) {
-                        continue;
-                    }
+                } else if (prescribed_internode_nodes.empty()) {
                     appendPhytomerToShoot(plantID, current_shoot_ID, shoot_parameters.phytomer_parameters, internode_radius, internode_length, 1, 1);
                 }
 
-                // Get pointer to the newly created phytomer
-                auto phytomer_ptr = plant_instances.at(plantID).shoot_tree.at(current_shoot_ID)->phytomers.back();
+                // A prescribed shoot was built complete above, with every phytomer at its measured position, so its phytomers are not appended one at a time and their internode vertices
+                // are not overwritten from the saved lengths and angles below, which would discard exactly the measured path. The organs hanging off each of them - petioles, leaves,
+                // buds - are still restored, since a phytomer built from node positions carries the shoot type's generated organs until then.
+                const bool phytomer_prebuilt = !prescribed_internode_nodes.empty();
+                if (phytomer_prebuilt && phytomer_index_in_file >= plant_instances.at(plantID).shoot_tree.at(current_shoot_ID)->phytomers.size()) {
+                    helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): Shoot " + std::to_string(shootID) + " in '" + filename + "' lists more <phytomer> nodes than its <prescribed_internode_nodes> define internodes.");
+                }
+
+                // Get pointer to the phytomer this <phytomer> node describes
+                auto phytomer_ptr = phytomer_prebuilt ? plant_instances.at(plantID).shoot_tree.at(current_shoot_ID)->phytomers.at(phytomer_index_in_file) : plant_instances.at(plantID).shoot_tree.at(current_shoot_ID)->phytomers.back();
 
                 // Restore internode properties from saved values
                 phytomer_ptr->internode_pitch = deg2rad(internode_pitch);
@@ -1667,7 +1752,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
 
                 // Get shoot pointer for internode geometry restoration
                 auto shoot_ptr = plant_instances.at(plantID).shoot_tree.at(current_shoot_ID);
-                uint phytomer_index_in_shoot = shoot_ptr->phytomers.size() - 1;
+                uint phytomer_index_in_shoot = phytomer_prebuilt ? phytomer_index_in_file : uint(shoot_ptr->phytomers.size() - 1);
 
                 // Helper function to recompute internode orientation vectors from parent phytomer context
                 auto recomputeInternodeOrientationVectors_local = [this, plantID](std::shared_ptr<Phytomer> phytomer_ptr, uint phytomer_index_in_shoot, float internode_pitch_rad, float internode_phyllotactic_angle_rad,
@@ -1833,7 +1918,9 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 // phytomer makes the flattened array P-1 nodes too long and the next setTubeRadii() throws.
                 // Consumers that walk these vectors (Phytomer::getInternodeNodePositions(),
                 // Phytomer::setInternodeLengthScaleFraction()) likewise assume the shared node is absent.
-                if (phytomer_index_in_shoot == 0) {
+                if (phytomer_prebuilt) {
+                    // The measured internode path of a prescribed shoot is kept exactly as it was rebuilt from its node positions.
+                } else if (phytomer_index_in_shoot == 0) {
                     shoot_ptr->shoot_internode_vertices[phytomer_index_in_shoot] = reconstructed_vertices;
                     shoot_ptr->shoot_internode_radii[phytomer_index_in_shoot] = reconstructed_radii;
                 } else {
@@ -2102,6 +2189,11 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                             renameAutoMaterial(context_ptr, phytomer_ptr->petiole_objIDs[p], petiole_material_name);
                         }
 
+                        // A measured centerline is re-imposed over the reconstruction above, exactly as setPetioleNodePositions() imposed it on the saved plant.
+                        if (p < prescribed_petiole_nodes_all.size() && !prescribed_petiole_nodes_all[p].empty()) {
+                            phytomer_ptr->setPetioleNodePositions(uint(p), prescribed_petiole_nodes_all[p], prescribed_petiole_radii_all[p]);
+                        }
+
                         // Restore saved leaf base positions (already in saved_leaf_bases_all_petioles)
                         if (p < saved_leaf_bases_all_petioles.size() && !saved_leaf_bases_all_petioles[p].empty()) {
                             for (size_t leaf = 0; leaf < phytomer_ptr->leaf_bases[p].size(); leaf++) {
@@ -2318,21 +2410,23 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     // reloaded grass had rigid leaves however flexible its species is.
                     phytomer_ptr->leaf_prototype_index.at(petiole).assign(leaves_per_petiole, -1);
                     phytomer_ptr->leaf_last_deformed_scale.at(petiole).assign(leaves_per_petiole, -1.f);
+                    phytomer_ptr->leaf_pose_prescribed.at(petiole).assign(leaves_per_petiole, false);
 
                     for (int leaf = 0; leaf < leaves_per_petiole; leaf++) {
                         float ind_from_tip = float(leaf) - float(leaves_per_petiole - 1) / 2.f;
 
                         // Copy leaf from prototype (matching constructor logic)
                         uint objID_leaf;
-                        if (phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes > 0) {
+                        const int saved_prototype = (leaf < int(leaf_prototype[petiole].size())) ? leaf_prototype[petiole][leaf] : -2;
+                        if (phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes > 0 && saved_prototype != -1) {
                             // Use the prototype the saved leaf was built from. The species' prototypes are
                             // different shapes, so drawing one at random here - which is what happened before
                             // <leaf_prototype> was written - rebuilt the plant from a different set of blades
                             // than the one saved, leaving every leaf a few degrees off however exactly the rest
                             // of the reconstruction matched. Files written before the tag existed record -1 and
-                            // still draw at random, since the information is simply not in them.
-                            const int saved_prototype = (leaf < int(leaf_prototype[petiole].size())) ? leaf_prototype[petiole][leaf] : -1;
-                            if (saved_prototype >= phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes) {
+                            // still draw at random, since the information is simply not in them. A leaf recorded with -1 was built from the prototype function instead and is handled below.
+                            // Compared as signed: against the unsigned count, an unrecorded index (-2) converted to a huge value and was rejected.
+                            if (saved_prototype >= int(phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes)) {
                                 helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): <leaf_prototype> in '" + filename + "' is " + std::to_string(saved_prototype) + ", but shoot type '" + shoot_type_label + "' defines only " +
                                                      std::to_string(phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes) + " unique leaf prototypes. The file was written against a different definition of this species.");
                             }
@@ -2341,10 +2435,21 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                             uint uid = phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototype_identifier;
                             assert(this->unique_leaf_prototype_objIDs.find(uid) != this->unique_leaf_prototype_objIDs.end());
                             assert(this->unique_leaf_prototype_objIDs.at(uid).size() > prototype);
-                            assert(this->unique_leaf_prototype_objIDs.at(uid).at(prototype).size() > leaf);
+                            // The cache holds one blade per leaflet position for the shoot type's own leaflet count, so a copied leaf past that count means the file describes a different species definition.
+                            if (leaf >= int(this->unique_leaf_prototype_objIDs.at(uid).at(prototype).size())) {
+                                helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A petiole in '" + filename + "' carries " + std::to_string(leaves_per_petiole) + " leaves copied from cached prototypes, but shoot type '" +
+                                                     shoot_type_label + "' caches blades for only " + std::to_string(this->unique_leaf_prototype_objIDs.at(uid).at(prototype).size()) +
+                                                     " leaflet positions. The file was written against a different definition of this species.");
+                            }
                             objID_leaf = context_ptr->copyObject(this->unique_leaf_prototype_objIDs.at(uid).at(prototype).at(leaf));
                         } else {
+                            // Built from the prototype function: either the species caches no prototypes, or the saved leaf was itself built that way (a <leaf_prototype> of -1, as written for a leaf
+                            // rebuilt by setPetioleLeafCount() or setPetioleLeafGeometry(), whose leaflet count may exceed the cache). Such a leaf has no cached rest shape, so its prototype index stays -1.
                             objID_leaf = phytomer_ptr->phytomer_parameters.leaf.prototype.prototype_function(context_ptr, &phytomer_ptr->phytomer_parameters.leaf.prototype, ind_from_tip);
+                            if (phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes > 0) {
+                                phytomer_ptr->labelLeafPrototype(objID_leaf);
+                                renameAutoMaterial(context_ptr, objID_leaf, plant_instances.at(plantID).plant_name + "_" + shoot_type_label + "_leaf");
+                            }
                         }
 
                         // Scale leaf
@@ -2370,10 +2475,12 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         const float saved_yaw = deg2rad(leaf_yaw[petiole][leaf]);
                         const float saved_roll = deg2rad(leaf_roll[petiole][leaf]);
 
-                        phytomer_ptr->orientLeaf(objID_leaf, petiole, leaf, leaves_per_petiole, ind_from_tip, compound_rotation, petiole_tip_axis, saved_roll, saved_pitch, saved_yaw);
+                        // A prescribed leaf is oriented from its angles in its rest frame on the petiole and put back where it was placed, exactly as setPetioleLeafGeometry() posed it on the saved plant.
+                        const bool prescribed_pose = leaf < int(leaf_prescribed[petiole].size()) && leaf_prescribed[petiole][leaf];
+                        phytomer_ptr->orientLeaf(objID_leaf, petiole, leaf, leaves_per_petiole, ind_from_tip, compound_rotation, petiole_tip_axis, saved_roll, saved_pitch, saved_yaw, prescribed_pose);
 
                         // Auto-calculate leaf base from petiole geometry (handles compound leaves)
-                        vec3 leaf_base = phytomer_ptr->petiole_vertices[petiole].back(); // Default: petiole tip
+                        vec3 leaf_base = prescribed_pose ? leaf_prescribed_base[petiole][leaf] : phytomer_ptr->petiole_vertices[petiole].back(); // Default: petiole tip
 
                         // Use the enclosing leaves_per_petiole, taken from the number of <leaf_scale> entries
                         // in the file. Re-drawing it from the shoot type's RandomParameter here could return a
@@ -2381,7 +2488,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         // leaflets of a compound leaf as though it were unifoliate and vice versa.
                         float leaflet_offset_val = clampOffset(leaves_per_petiole, phytomer_ptr->phytomer_parameters.leaf.leaflet_offset.val());
 
-                        if (leaves_per_petiole > 1 && leaflet_offset_val > 0) {
+                        if (!prescribed_pose && leaves_per_petiole > 1 && leaflet_offset_val > 0) {
                             // Compound leaf: calculate lateral leaflet positions along petiole
                             int ind_from_tip = leaf - int(floor(float(leaves_per_petiole - 1) / 2.f));
                             if (ind_from_tip != 0) { // Terminal leaflet stays at tip
@@ -2393,6 +2500,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
 
                         phytomer_ptr->leaf_objIDs[petiole][leaf] = objID_leaf;
                         phytomer_ptr->leaf_bases[petiole][leaf] = leaf_base;
+                        phytomer_ptr->leaf_pose_prescribed.at(petiole).at(leaf) = prescribed_pose;
 
                         // The blade is placed at its rest shape above, exactly as the Phytomer constructor
                         // places it. During growth the droop is then applied by setLeafScaleFraction() on every
@@ -2405,6 +2513,10 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 // Step 4: Restore saved object data
                 for (int petiole = 0; petiole < phytomer_ptr->leaf_objIDs.size(); petiole++) {
                     for (int leaf = 0; leaf < phytomer_ptr->leaf_objIDs[petiole].size(); leaf++) {
+                        // A petiole restored with more leaves than the phytomer was constructed with has no saved data for the extra ones.
+                        if (petiole >= saved_leaf_data_int.size() || leaf >= saved_leaf_data_int[petiole].size()) {
+                            continue;
+                        }
                         uint objID = phytomer_ptr->leaf_objIDs[petiole][leaf];
                         std::vector<uint> UUIDs = context_ptr->getObjectPrimitiveUUIDs(objID);
 
@@ -2477,7 +2589,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                             // Rotation: computed from bud_index and number of buds (matches growth algorithm)
                             if (fbud.isterminal) {
                                 // Terminal buds attach at the tip of this phytomer's internode
-                                fbud.base_position = phytomer_ptr->parent_shoot_ptr->shoot_internode_vertices.back().back();
+                                fbud.base_position = phytomer_ptr->parent_shoot_ptr->shoot_internode_vertices.at(phytomer_index_in_shoot).back();
                             } else {
                                 // Axillary buds attach at the base of the parent petiole
                                 if (petiole < phytomer_ptr->petiole_vertices.size()) {

@@ -151,10 +151,11 @@ void PlantArchitecture::accumulateHourlyLeafPhotosynthesis() const {
     }
 }
 
-void PlantArchitecture::accumulateShootPhotosynthesis() const {
+void PlantArchitecture::accumulateShootPhotosynthesis(uint plantID) const {
     uint A_prim_data_missing = 0;
 
-    for (auto &[plantID, plant_instance]: plant_instances) {
+    {
+        const PlantInstance &plant_instance = plant_instances.at(plantID);
 
         const auto shoot_tree = &plant_instance.shoot_tree;
 
@@ -212,8 +213,9 @@ void PlantArchitecture::accumulateShootPhotosynthesis() const {
     }
 }
 
-void PlantArchitecture::subtractShootMaintenanceCarbon(float dt) const {
-    for (const auto &[plantID, plant_instance]: plant_instances) {
+void PlantArchitecture::subtractShootMaintenanceCarbon(uint plantID, float dt) const {
+    {
+        const PlantInstance &plant_instance = plant_instances.at(plantID);
         auto shoot_tree = &plant_instance.shoot_tree;
 
         const CarbohydrateParameters &carbohydrate_params = plant_instances.at(plantID).carb_parameters;
@@ -237,8 +239,9 @@ void PlantArchitecture::subtractShootMaintenanceCarbon(float dt) const {
     }
 }
 
-void PlantArchitecture::subtractShootGrowthCarbon() {
-    for (auto &[plantID, plant_instance]: plant_instances) {
+void PlantArchitecture::subtractShootGrowthCarbon(uint plantID) {
+    {
+        PlantInstance &plant_instance = plant_instances.at(plantID);
         const auto shoot_tree = &plant_instance.shoot_tree;
 
         const CarbohydrateParameters &carbohydrate_params = plant_instances.at(plantID).carb_parameters;
@@ -335,8 +338,9 @@ float Phytomer::calculateFruitConstructionCosts(const FloralBud &fbud) const {
     return fruit_carbon_cost;
 }
 
-void PlantArchitecture::checkCarbonPool_abortOrgans(float dt) {
-    for (auto &[plantID, plant_instance]: plant_instances) {
+void PlantArchitecture::checkCarbonPool_abortOrgans(uint plantID, float dt) {
+    {
+        PlantInstance &plant_instance = plant_instances.at(plantID);
         const auto shoot_tree = &plant_instance.shoot_tree;
         const CarbohydrateParameters &carbohydrate_params = plant_instances.at(plantID).carb_parameters;
 
@@ -438,8 +442,9 @@ void PlantArchitecture::checkCarbonPool_abortOrgans(float dt) {
 }
 
 
-void PlantArchitecture::checkCarbonPool_adjustPhyllochron(float dt) {
-    for (auto &[plantID, plant_instance]: plant_instances) {
+void PlantArchitecture::checkCarbonPool_adjustPhyllochron(uint plantID, float dt) {
+    {
+        PlantInstance &plant_instance = plant_instances.at(plantID);
         const auto shoot_tree = &plant_instance.shoot_tree;
         const CarbohydrateParameters &carbohydrate_params = plant_instances.at(plantID).carb_parameters;
 
@@ -459,8 +464,9 @@ void PlantArchitecture::checkCarbonPool_adjustPhyllochron(float dt) {
     }
 }
 
-void PlantArchitecture::checkCarbonPool_transferCarbon(float dt) {
-    for (auto &[plantID, plant_instance]: plant_instances) {
+void PlantArchitecture::checkCarbonPool_transferCarbon(uint plantID, float dt) {
+    {
+        PlantInstance &plant_instance = plant_instances.at(plantID);
         const auto shoot_tree = &plant_instance.shoot_tree;
         const auto shoot_tree_ptr = &plant_instances.at(plantID).shoot_tree;
         const CarbohydrateParameters &carbohydrate_params = plant_instances.at(plantID).carb_parameters;

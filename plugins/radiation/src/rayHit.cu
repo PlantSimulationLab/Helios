@@ -316,17 +316,24 @@ RT_PROGRAM void closest_hit_diffuse() {
                     }
                 }
                 if (Ncameras > 0) {
-                    // Use BufferIndexer for camera material: [source][primitive][band][camera]
-                    size_t indc = cam_mat_indexer(prd.source_ID, origin_position, b_global, camera_ID);
-                    float t_rho_cam = rho_cam[indc];
-                    float t_tau_cam = tau_cam[indc];
-                    if ((t_rho_cam > 0 || t_tau_cam > 0) && strength > 0) {
-                        if (prd.face) { // reflection from top, transmission from bottom
-                            atomicFloatAdd(&scatter_buff_top_cam[ind_origin], strength * t_rho_cam); // reflection
-                            atomicFloatAdd(&scatter_buff_bottom_cam[ind_origin], strength * t_tau_cam); // transmission
-                        } else { // reflection from bottom, transmission from top
-                            atomicFloatAdd(&scatter_buff_bottom_cam[ind_origin], strength * t_rho_cam); // reflection
-                            atomicFloatAdd(&scatter_buff_top_cam[ind_origin], strength * t_tau_cam); // transmission
+                    // Camera-weighted scatter, accumulated once per camera into that camera's [primitive][band]
+                    // block. This launch runs once per dispatch, not once per camera, so camera_ID is not
+                    // meaningful here; weighting by a single camera handed every other camera that camera's image.
+                    size_t cam_scatter_stride = (size_t) Nprimitives * Nbands_launch;
+                    for (unsigned int cam = 0; cam < Ncameras; cam++) {
+                        // Use BufferIndexer for camera material: [source][primitive][band][camera]
+                        size_t indc = cam_mat_indexer(prd.source_ID, origin_position, b_global, cam);
+                        float t_rho_cam = rho_cam[indc];
+                        float t_tau_cam = tau_cam[indc];
+                        size_t ind_cam = cam * cam_scatter_stride + ind_origin;
+                        if ((t_rho_cam > 0 || t_tau_cam > 0) && strength > 0) {
+                            if (prd.face) { // reflection from top, transmission from bottom
+                                atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_rho_cam); // reflection
+                                atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_tau_cam); // transmission
+                            } else { // reflection from bottom, transmission from top
+                                atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_rho_cam); // reflection
+                                atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_tau_cam); // transmission
+                            }
                         }
                     }
                     // Note: Don't accumulate scattered radiation to radiation_specular
@@ -879,17 +886,24 @@ RT_PROGRAM void miss_direct() {
             }
         }
         if (Ncameras > 0) {
-            // Use BufferIndexer: [source][primitive][band][camera]
-            size_t indc = cam_mat_indexer(prd.source_ID, origin_position, b_global, camera_ID);
-            float t_rho_cam = rho_cam[indc];
-            float t_tau_cam = tau_cam[indc];
-            if ((t_rho_cam > 0 || t_tau_cam > 0) && strength > 0) {
-                if (prd.face) { // reflection from top, transmission from bottom
-                    atomicFloatAdd(&scatter_buff_top_cam[ind_origin], strength * t_rho_cam); // reflection
-                    atomicFloatAdd(&scatter_buff_bottom_cam[ind_origin], strength * t_tau_cam); // transmission
-                } else { // reflection from bottom, transmission from top
-                    atomicFloatAdd(&scatter_buff_bottom_cam[ind_origin], strength * t_rho_cam); // reflection
-                    atomicFloatAdd(&scatter_buff_top_cam[ind_origin], strength * t_tau_cam); // transmission
+            // Camera-weighted scatter, accumulated once per camera into that camera's [primitive][band]
+            // block. This launch runs once per dispatch, not once per camera, so camera_ID is not
+            // meaningful here; weighting by a single camera handed every other camera that camera's image.
+            size_t cam_scatter_stride = (size_t) Nprimitives * Nbands_launch;
+            for (unsigned int cam = 0; cam < Ncameras; cam++) {
+                // Use BufferIndexer: [source][primitive][band][camera]
+                size_t indc = cam_mat_indexer(prd.source_ID, origin_position, b_global, cam);
+                float t_rho_cam = rho_cam[indc];
+                float t_tau_cam = tau_cam[indc];
+                size_t ind_cam = cam * cam_scatter_stride + ind_origin;
+                if ((t_rho_cam > 0 || t_tau_cam > 0) && strength > 0) {
+                    if (prd.face) { // reflection from top, transmission from bottom
+                        atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_rho_cam); // reflection
+                        atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_tau_cam); // transmission
+                    } else { // reflection from bottom, transmission from top
+                        atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_rho_cam); // reflection
+                        atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_tau_cam); // transmission
+                    }
                 }
             }
             // Accumulate incident radiation for specular for ALL cameras (per source, camera-weighted).
@@ -1013,17 +1027,24 @@ RT_PROGRAM void miss_diffuse() {
                     }
                 }
                 if (Ncameras > 0) {
-                    // Use BufferIndexer: [source][primitive][band][camera]
-                    size_t indc = cam_mat_indexer(prd.source_ID, origin_position, b_global, camera_ID);
-                    float t_rho_cam = rho_cam[indc];
-                    float t_tau_cam = tau_cam[indc];
-                    if ((t_rho_cam > 0 || t_tau_cam > 0) && prd.strength > 0) {
-                        if (prd.face) { // reflection from top, transmission from bottom
-                            atomicFloatAdd(&scatter_buff_top_cam[ind_origin], strength * t_rho_cam); // reflection
-                            atomicFloatAdd(&scatter_buff_bottom_cam[ind_origin], strength * t_tau_cam); // transmission
-                        } else { // reflection from bottom, transmission from top
-                            atomicFloatAdd(&scatter_buff_bottom_cam[ind_origin], strength * t_rho_cam); // reflection
-                            atomicFloatAdd(&scatter_buff_top_cam[ind_origin], strength * t_tau_cam); // transmission
+                    // Camera-weighted scatter, accumulated once per camera into that camera's [primitive][band]
+                    // block. This launch runs once per dispatch, not once per camera, so camera_ID is not
+                    // meaningful here; weighting by a single camera handed every other camera that camera's image.
+                    size_t cam_scatter_stride = (size_t) Nprimitives * Nbands_launch;
+                    for (unsigned int cam = 0; cam < Ncameras; cam++) {
+                        // Use BufferIndexer: [source][primitive][band][camera]
+                        size_t indc = cam_mat_indexer(prd.source_ID, origin_position, b_global, cam);
+                        float t_rho_cam = rho_cam[indc];
+                        float t_tau_cam = tau_cam[indc];
+                        size_t ind_cam = cam * cam_scatter_stride + ind_origin;
+                        if ((t_rho_cam > 0 || t_tau_cam > 0) && prd.strength > 0) {
+                            if (prd.face) { // reflection from top, transmission from bottom
+                                atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_rho_cam); // reflection
+                                atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_tau_cam); // transmission
+                            } else { // reflection from bottom, transmission from top
+                                atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_rho_cam); // reflection
+                                atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_tau_cam); // transmission
+                            }
                         }
                     }
                     // Note: Don't accumulate diffuse sky radiation to radiation_specular

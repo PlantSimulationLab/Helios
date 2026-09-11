@@ -947,7 +947,7 @@ private:
         uint unique_prototypes;
         //! Days for the inflorescence to expand from its initial quarter size to full size. A non-positive value defers to the plant-level fruit-maturity threshold, which is the default.
         /**
-         * Set this where the inflorescence finishes elongating on a different schedule from the fruit the plant carries, since ef PlantArchitecture::setPlantPhenologicalThresholds() supplies only one
+         * Set this where the inflorescence finishes elongating on a different schedule from the fruit the plant carries, since \ref PlantArchitecture::setPlantPhenologicalThresholds() supplies only one
          * fruit-ripening period for the whole plant. A maize tassel is fully expanded at VT and never grows afterward, roughly two months ahead of the ear's grain fill, so driving it from the plant-level
          * value leaves it undersized for its entire life.
          */
@@ -1490,18 +1490,27 @@ public:
      * petiole is set in one call, because a compound leaf's leaflets are not independent: their roll and yaw signs, and the prototype each is a copy of, are all determined by the leaflet's position along the
      * petiole.
      *
-     * Each leaf object is rebuilt from its prototype and re-oriented through the same rotation chain the phytomer constructor uses, so that a prescribed leaf is oriented by exactly the same code as a grown one.
+     * Each leaf object is rebuilt from its prototype and oriented from the caller's angles in the leaf's rest frame on the petiole, as described for PlantArchitecture::setPetioleLeafGeometry().
      * The prescribed geometry is exempted from the leaf expansion performed by PlantArchitecture::advanceTime(), and prescribed leaves do not droop under self-weight: the blade keeps the prototype's rest shape.
      *
      * \param[in] petiole_index Index of the petiole within this phytomer.
      * \param[in] leaf_bases_new Base position of each leaf in world coordinates, one per leaf on the petiole and ordered as the petiole's existing leaves are.
-     * \param[in] leaf_rotations_new Roll, pitch and yaw of each leaf in radians, in the same convention as Phytomer::leaf_rotation, i.e. relative to the petiole and internode axes rather than to world axes.
+     * \param[in] leaf_rotations_new Roll, pitch and yaw of each leaf in radians, as intrinsic rotations in the leaf's rest frame on the petiole (see PlantArchitecture::setPetioleLeafGeometry()).
      * \param[in] leaf_sizes_new Fully-elongated size of each leaf in meters. All sizes must be greater than zero.
-     * \note The number of leaves on a petiole is fixed when the phytomer is created. Supplying a different number of leaves raises an error rather than adding or removing leaves; set LeafParameters::leaves_per_petiole
-     * on the shoot type to change it.
+     * \note Supplying a different number of leaves than the petiole carries raises an error rather than adding or removing leaves; change the count with setPetioleLeafCount() first.
      * \note Rebuilding each leaf object discards any primitive data a caller has attached to it. The object label and material are restored, but other primitive data is not.
      */
     void setPetioleLeafGeometry(uint petiole_index, const std::vector<helios::vec3> &leaf_bases_new, const std::vector<AxisRotation> &leaf_rotations_new, const std::vector<float> &leaf_sizes_new);
+
+    //! Change the number of leaves (leaflets) on a petiole, rebuilding them procedurally.
+    /**
+     * The existing leaf objects on the petiole are deleted and leaf_count new ones are built from the leaf prototype, sized, oriented and spaced along the petiole exactly as a freshly created phytomer's
+     * leaves are, using the phytomer's own leaf parameters. The rebuilt leaves do not droop as they age, and the petiole's expansion fraction is pinned first (see lockPetioleScale()) so that leaf_size_max
+     * means the fully-elongated size. Afterwards setPetioleLeafGeometry() expects leaf_count entries.
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_count New number of leaves on the petiole; must be at least one.
+     */
+    void setPetioleLeafCount(uint petiole_index, uint leaf_count);
 
     //! Set the fully-elongated (maximum) leaf prototype scale. Value is uniformly applied for all leaves/leaflets in the petiole.
     /**
@@ -1820,9 +1829,19 @@ public:
      * \param[in] petiole_tip_axis Direction of the petiole at its tip, in world coordinates.
      * \param[in] leaf_roll_angle Leaf roll angle (radians), as stored in \ref leaf_rotation rather than as applied.
      * \param[in] leaf_pitch_angle Leaf pitch angle (radians), as stored in \ref leaf_rotation rather than as applied.
-     * \param[in] leaf_yaw_angle Leaf yaw angle (radians), already carrying the sign for this leaflet's side of the petiole. Ignored when ind_from_tip is zero.
+     * \param[in] leaf_yaw_angle Leaf yaw angle (radians), as stored in \ref leaf_rotation rather than as applied.
+     * \param[in] prescribed Whether the angles were prescribed from measurements. A prescribed leaf does not go through the procedural chain: its angles are intrinsic rotations in the leaf's rest frame on
+     * the petiole, the same for every leaf position and node (see PlantArchitecture::setPetioleLeafGeometry()), and it receives no side signs, elevation offsets or blade-up correction.
      */
-    void orientLeaf(uint objID_leaf, uint petiole_index, uint leaf_index, int leaves_per_petiole, float ind_from_tip, float compound_rotation, const helios::vec3 &petiole_tip_axis, float leaf_roll_angle, float leaf_pitch_angle, float leaf_yaw_angle);
+    void orientLeaf(uint objID_leaf, uint petiole_index, uint leaf_index, int leaves_per_petiole, float ind_from_tip, float compound_rotation, const helios::vec3 &petiole_tip_axis, float leaf_roll_angle, float leaf_pitch_angle, float leaf_yaw_angle,
+                    bool prescribed = false);
+
+    //! Label a freshly built leaf object's blade primitives "leaf" and colour its petiolule, as the cached prototypes are.
+    /**
+     * A generic prototype arrives unlabelled except for a petiolule it may carry, which keeps its own label. A prototype loaded from an OBJ is already labelled by its file groups and is left alone.
+     * \param[in] objID_leaf Leaf object to label.
+     */
+    void labelLeafPrototype(uint objID_leaf);
 
     //! Rotation about the petiole that separates one leaflet of a compound leaf from the others
     /**
@@ -1840,6 +1859,12 @@ public:
 
     //! Which cached prototype each leaf was copied from, so its undeformed rest shape can be found again. Indexed as <code>leaf_objIDs</code>; -1 for a leaf that does not droop.
     std::vector<std::vector<int>> leaf_prototype_index;
+
+    //! Whether each leaf's pose was prescribed by setPetioleLeafGeometry() rather than generated. Indexed as <code>leaf_objIDs</code>. Recorded by PlantArchitecture::writePlantStructureXML() so that the pose is restored.
+    std::vector<std::vector<bool>> leaf_pose_prescribed;
+
+    //! Whether each petiole's centerline was prescribed by setPetioleNodePositions() rather than generated. Indexed by petiole within the internode. Recorded by PlantArchitecture::writePlantStructureXML().
+    std::vector<bool> petiole_path_prescribed;
 
     //! Leaf scale at which each leaf was last deflected, used to skip redeforming a leaf that has not measurably grown. Indexed as <code>leaf_objIDs</code>.
     std::vector<std::vector<float>> leaf_last_deformed_scale;
@@ -2246,7 +2271,8 @@ struct Shoot {
 
     float gravitropic_curvature = 0;
 
-    const float internode_length_max_shoot_initial;
+    //! Target length of internodes grown at the apex; see PlantArchitecture::setShootInternodeLengthMax().
+    float internode_length_max_shoot_initial;
 
     //! Sentinel value for internode_tube_objID meaning "no internode tube object exists in the Context"
     /**
@@ -2777,7 +2803,7 @@ public:
      * subdivided, with the intermediate nodes interpolated along the straight segment between the two prescribed endpoints. The caller controls internode length by choosing how many nodes to supply.
      *
      * The prescribed phytomers are created fully elongated and are therefore not re-scaled or re-curved by subsequent calls to advanceTime(). New phytomers added at the shoot apex as the plant grows are generated
-     * normally from the shoot type's own parameters, continuing from the direction of the final prescribed internode, and use the mean of the prescribed internode lengths as their target length. Prescribed radii
+     * normally from the shoot type's own parameters, continuing from the direction of the final prescribed internode, and use the mean of the prescribed internode lengths as their target length (change it with setShootInternodeLengthMax()). Prescribed radii
      * act as a lower bound: if the shoot type has a non-zero ShootParameters::girth_area_factor the pipe model may thicken an internode during growth, but never thins one, so a shoot type with a girth area factor
      * of zero preserves the prescribed radii exactly.
      *
@@ -3083,6 +3109,17 @@ public:
      */
     void setPhytomerLeafScale(uint plantID, uint shootID, uint node_number, float leaf_scale_factor_fraction);
 
+    //! Set the target length of internodes grown at the apex of an existing shoot.
+    /**
+     * Each phytomer added at the shoot apex elongates toward this length. A shoot built by addBaseStemShoot(), appendShoot() or addChildShoot() starts with the internode length it was created with; a shoot built
+     * by addShootFromNodePositions() starts with the mean of its prescribed internode lengths, which for a measured seedling is mostly hypocotyl and says little about how long its next internodes will be.
+     * Internodes that already exist are not changed.
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot within the plant.
+     * \param[in] internode_length_max Target internode length in metres; must be greater than zero.
+     */
+    void setShootInternodeLengthMax(uint plantID, uint shootID, float internode_length_max);
+
     //! Prescribe the path of a petiole on an existing phytomer from measured node positions.
     /**
      * This is the organ-level counterpart of addShootFromNodePositions(). Where that method prescribes the internode skeleton of a shoot, this one prescribes the centerline of a single petiole hanging off it, so
@@ -3118,14 +3155,17 @@ public:
      * This is the leaf-level counterpart of setPetioleNodePositions(), intended for the same reconstruction workflow. Every leaf on the petiole is prescribed in one call: for a compound leaf the leaflets are not
      * independent, since a leaflet's roll and yaw signs and the prototype it is a copy of all follow from its position along the petiole. A species with one leaf per petiole passes one-element vectors.
      *
-     * Each leaf is rebuilt from its prototype and re-oriented through the same rotation chain used when a leaf is grown, so that a prescribed leaf and a grown one are oriented by identical code.
+     * Each leaf is rebuilt from its prototype and oriented from the supplied angles, which are intrinsic rotations in the leaf's rest frame on the petiole rather than inputs to the procedural rotation chain
+     * a grown leaf goes through. The frame is built from the petiole tip axis t, the horizontal direction h perpendicular to it (world +y when t is vertical) and the upward normal of the petiole plane
+     * n = t x h. At zero angles the leaf's midrib is t turned about n by the leaflet's position on a compound leaf (t for a terminal or single leaf, h or -h for a lateral leaflet held off the tip, evenly fanned
+     * for leaflets attached at the tip), and its blade normal is n. Yaw then turns the leaf about n, pitch raises its tip toward n, and roll turns the blade about its own midrib, right-handed, in that order.
+     * The convention is the same for every leaf whatever its position on the petiole or the node it hangs from, and involves no size-dependent correction, so the angles follow directly from a measured midrib
+     * and blade normal expressed in that frame.
      *
      * The prescribed base, orientation and size are held exactly and are not changed by subsequent calls to advanceTime(). Prescribed leaves are additionally exempt from the self-weight droop, so the blade keeps
      * the prototype's rest shape rather than continuing to bend as the leaf ages.
      *
-     * Leaf rotations are given in the same convention as Phytomer::leaf_rotation: roll, pitch and yaw in radians relative to the petiole and internode axes, not to world axes. The full chain that places a leaf
-     * includes the petiole's own azimuth and a size-dependent correction, and is not invertible, so there is no exact conversion from a world-frame blade orientation. A caller fitting to measured data should
-     * iterate by forward evaluation, reading back the resulting geometry from the Context.
+     * The prescribed pose, the base positions and a prescribed petiole path are written by writePlantStructureXML() and restored by readPlantStructureXML().
      *
      * \param[in] plantID ID of the plant instance.
      * \param[in] shootID ID of the shoot carrying the phytomer.
@@ -3134,12 +3174,25 @@ public:
      * \param[in] leaf_bases Base position of each leaf in world coordinates, one per leaf on the petiole.
      * \param[in] leaf_rotations Roll, pitch and yaw of each leaf in radians, one per leaf on the petiole.
      * \param[in] leaf_sizes Fully-elongated size of each leaf in meters, one per leaf on the petiole. All sizes must be greater than zero.
-     * \note The number of leaves on a petiole is fixed when the phytomer is created. Supplying a different number raises an error rather than adding or removing leaves; set LeafParameters::leaves_per_petiole on
-     * the shoot type to change it.
+     * \note Supplying a different number of leaves than the petiole carries raises an error rather than adding or removing leaves; change the count with setPetioleLeafCount() first.
      * \note Rebuilding each leaf discards primitive data a caller has attached to it. The object label and material are restored; other primitive data is not.
      */
     void setPetioleLeafGeometry(uint plantID, uint shootID, uint node_index, uint petiole_index, const std::vector<helios::vec3> &leaf_bases, const std::vector<AxisRotation> &leaf_rotations,
                                 const std::vector<float> &leaf_sizes);
+
+    //! Change the number of leaves (leaflets) on a petiole of an existing phytomer.
+    /**
+     * A shoot type fixes leaf.leaves_per_petiole for every phytomer it builds, but a measured compound leaf carries whatever number of leaflets it has: a young tomato leaf three or five, a mature one seven
+     * or more, a cotyledon one. This deletes the petiole's leaves and rebuilds leaf_count of them procedurally from the leaf prototype, sized by leaflet_scale and prototype_scale, oriented with the
+     * phytomer's leaf angles and spaced along the petiole by leaflet_offset, exactly as a new phytomer's leaves are. Call it before setPetioleLeafGeometry(), which then expects leaf_count entries. The rebuilt
+     * leaves are exempt from drooping with age and, like prescribed leaves, are not re-posed by advanceTime().
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot within the plant.
+     * \param[in] node_index Index of the phytomer along the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] leaf_count New number of leaves on the petiole; must be at least one.
+     */
+    void setPetioleLeafCount(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_count);
 
     /**
      * \brief Sets the base position of a plant with the specified ID.
@@ -4277,16 +4330,47 @@ protected:
     void pruneSolidBoundaryCollisions();
 
     // --- Carbohydrate Model --- //
+    // Each of these operates on a single plant. They are called from inside advanceTime()'s per-plant
+    // loop, so iterating over every plant instance here would apply the carbon balance N_plants times
+    // per sub-step and let advancing one plant alter the pools of every other plant.
 
-    void accumulateShootPhotosynthesis() const;
+    //! Move the photosynthate accumulated on a plant's leaves into its shoot sugar pools
+    /**
+     * \param[in] plantID ID of the plant whose shoots are credited
+     */
+    void accumulateShootPhotosynthesis(uint plantID) const;
 
-    void subtractShootMaintenanceCarbon(float dt) const;
+    //! Debit stem and root maintenance respiration from each shoot of a plant
+    /**
+     * \param[in] plantID ID of the plant whose shoots are debited
+     * \param[in] dt Length of the sub-step (days)
+     */
+    void subtractShootMaintenanceCarbon(uint plantID, float dt) const;
 
-    void subtractShootGrowthCarbon();
+    //! Debit structural growth and growth respiration carbon from each shoot of a plant
+    /**
+     * \param[in] plantID ID of the plant whose shoots are debited
+     */
+    void subtractShootGrowthCarbon(uint plantID);
 
-    void checkCarbonPool_abortOrgans(float dt);
-    void checkCarbonPool_adjustPhyllochron(float dt);
-    void checkCarbonPool_transferCarbon(float dt);
+    //! Abort floral buds and prune shoots of a plant that cannot sustain their carbon balance
+    /**
+     * \param[in] plantID ID of the plant to check
+     * \param[in] dt Length of the sub-step (days)
+     */
+    void checkCarbonPool_abortOrgans(uint plantID, float dt);
+    //! Slow the phyllochron of each shoot of a plant according to its carbon status
+    /**
+     * \param[in] plantID ID of the plant to check
+     * \param[in] dt Length of the sub-step (days)
+     */
+    void checkCarbonPool_adjustPhyllochron(uint plantID, float dt);
+    //! Sequester starch and move sugar between parent and child shoots of a plant
+    /**
+     * \param[in] plantID ID of the plant to check
+     * \param[in] dt Length of the sub-step (days)
+     */
+    void checkCarbonPool_transferCarbon(uint plantID, float dt);
 
     bool carbon_model_enabled = false;
 

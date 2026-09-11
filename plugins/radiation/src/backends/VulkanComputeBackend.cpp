@@ -967,6 +967,10 @@ namespace helios {
             return; // No geometry or sources
         }
 
+        // The shader writes one camera-scatter block per camera; refuse to index past buffers sized for another camera set.
+        requireCameraScatterBuffersSized("launchDirectRays");
+
+
         // Build band mapping (same logic as diffuse)
         launch_to_global_band.clear();
         for (uint32_t g = 0; g < band_count; g++) {
@@ -1092,8 +1096,8 @@ namespace helios {
         push_constants.domain_ymin = domain_bounds[2];
         push_constants.domain_ymax = domain_bounds[3];
         push_constants.specular_reflection_enabled = params.specular_reflection_enabled;
-        // Camera-weighted scatter accumulates for a single camera, matching OptiX, whose camera_ID is
-        // 0 during direct and diffuse launches (those run once, not once per camera).
+        // Camera-weighted scatter accumulates for every camera at once (the shader loops over camera_count), since
+        // direct and diffuse launches run once per dispatch rather than once per camera.
         push_constants.camera_count = static_cast<uint32_t>(camera_count);
         push_constants.camera_id = params.camera_id;
 
@@ -1213,6 +1217,10 @@ namespace helios {
         if (primitive_count == 0) {
             return; // No geometry
         }
+
+        // The shader writes one camera-scatter block per camera; refuse to index past buffers sized for another camera set.
+        requireCameraScatterBuffersSized("launchDiffuseRays");
+
 
         // Ensure radiation_out_top/bottom buffers exist (required by shader)
         size_t rad_out_size = primitive_count * launch_band_count * sizeof(float);
@@ -2035,28 +2043,30 @@ namespace helios {
         // different integral over wavelength than the band-weighted rho/tau driving the scattering
         // iterations. The two coincide only when every camera response is uniform, so these must be
         // read back separately rather than aliased onto scatter_buff_top/bottom.
-        results.scatter_buff_top_cam.resize(buffer_size);
-        if (camera_scatter_top_buffer.buffer != VK_NULL_HANDLE && camera_scatter_top_buffer.size >= buffer_size * sizeof(float)) {
+        // One [primitive][band] block per camera, so every camera gets the scatter weighted by its own response. The
+        // buffers are read back only when they are sized for the current camera set; otherwise the vectors are left
+        // empty rather than zero-filled, so a caller that consumes camera scatter detects the mismatch instead of
+        // silently integrating zeros (and a caller that does not, such as a sky-energy query, is unaffected).
+        const size_t camera_buffer_size = camera_count * buffer_size;
+        const size_t camera_buffer_bytes = camera_buffer_size * sizeof(float);
+        results.scatter_buff_top_cam.clear();
+        results.scatter_buff_bottom_cam.clear();
+        if (camera_count > 0 && camera_scatter_top_buffer.buffer != VK_NULL_HANDLE && camera_scatter_bottom_buffer.buffer != VK_NULL_HANDLE && camera_scatter_top_buffer.size == camera_buffer_bytes &&
+            camera_scatter_bottom_buffer.size == camera_buffer_bytes) {
             void *mapped;
+            results.scatter_buff_top_cam.resize(camera_buffer_size);
             requireMapSucceeded(vmaMapMemory(device->getAllocator(), camera_scatter_top_buffer.allocation, &mapped), "camera_scatter_top");
             vmaInvalidateAllocation(device->getAllocator(), camera_scatter_top_buffer.allocation, 0, VK_WHOLE_SIZE);
-            std::memcpy(results.scatter_buff_top_cam.data(), mapped, buffer_size * sizeof(float));
+            std::memcpy(results.scatter_buff_top_cam.data(), mapped, camera_buffer_bytes);
             vmaUnmapMemory(device->getAllocator(), camera_scatter_top_buffer.allocation);
             requireFiniteResults(results.scatter_buff_top_cam, "camera_scatter_top", launch_band_count);
-        } else {
-            std::fill(results.scatter_buff_top_cam.begin(), results.scatter_buff_top_cam.end(), 0.0f);
-        }
 
-        results.scatter_buff_bottom_cam.resize(buffer_size);
-        if (camera_scatter_bottom_buffer.buffer != VK_NULL_HANDLE && camera_scatter_bottom_buffer.size >= buffer_size * sizeof(float)) {
-            void *mapped;
+            results.scatter_buff_bottom_cam.resize(camera_buffer_size);
             requireMapSucceeded(vmaMapMemory(device->getAllocator(), camera_scatter_bottom_buffer.allocation, &mapped), "camera_scatter_bottom");
             vmaInvalidateAllocation(device->getAllocator(), camera_scatter_bottom_buffer.allocation, 0, VK_WHOLE_SIZE);
-            std::memcpy(results.scatter_buff_bottom_cam.data(), mapped, buffer_size * sizeof(float));
+            std::memcpy(results.scatter_buff_bottom_cam.data(), mapped, camera_buffer_bytes);
             vmaUnmapMemory(device->getAllocator(), camera_scatter_bottom_buffer.allocation);
             requireFiniteResults(results.scatter_buff_bottom_cam, "camera_scatter_bottom", launch_band_count);
-        } else {
-            std::fill(results.scatter_buff_bottom_cam.begin(), results.scatter_buff_bottom_cam.end(), 0.0f);
         }
     }
 
@@ -2377,12 +2387,28 @@ namespace helios {
         uploadBufferData(vertex_radiation_out_bottom_buffer, vertex_radiation_out_bottom.data(), bottom_bytes);
     }
 
+    void VulkanComputeBackend::requireCameraScatterBuffersSized(const char *caller) const {
+        if (camera_count == 0) {
+            return; // The shaders loop over zero cameras and never touch the camera-scatter buffers
+        }
+        const size_t required_bytes = camera_count * primitive_count * launch_band_count * sizeof(float);
+        if (camera_scatter_top_buffer.size != required_bytes || camera_scatter_bottom_buffer.size != required_bytes) {
+            helios_runtime_error(std::string("ERROR (VulkanComputeBackend::") + caller + "): The camera-weighted scatter buffers hold " + std::to_string(camera_scatter_top_buffer.size) + " bytes, but " + std::to_string(camera_count) +
+                                 " camera(s) x " + std::to_string(primitive_count) + " primitives x " + std::to_string(launch_band_count) + " launched band(s) require " + std::to_string(required_bytes) +
+                                 ". zeroCameraScatterBuffers() must be called for the current camera set before rays are launched.");
+        }
+    }
+
     void VulkanComputeBackend::zeroCameraScatterBuffers(size_t launch_band_count_param) {
         if (primitive_count == 0 || launch_band_count_param == 0) {
             return; // No geometry or bands
         }
 
-        size_t buffer_size = primitive_count * launch_band_count_param * sizeof(float);
+        // One [primitive][band] block per camera (see getRadiationResults); the shaders index it camera-major.
+        size_t buffer_size = camera_count * primitive_count * launch_band_count_param * sizeof(float);
+        if (buffer_size == 0) {
+            return; // No cameras registered, so the shaders never touch these buffers
+        }
 
         // Create or resize camera_scatter_top_buffer
         if (camera_scatter_top_buffer.buffer == VK_NULL_HANDLE || camera_scatter_top_buffer.size != buffer_size) {

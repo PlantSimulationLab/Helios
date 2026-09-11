@@ -2,7 +2,10 @@ name: Build and Run on MacOS
 
 on:
   push:
-    branches: [ "master", "release" ]
+    # Release candidates are validated on "release" and master is then fast-forwarded to that
+    # exact commit, so re-running here would test an identical SHA -- and a flaky test could
+    # turn an already-validated tagged commit red. Pull requests still run against master.
+    branches: [ "release" ]
   pull_request:
     branches: [ "master" ]
   workflow_dispatch: {}

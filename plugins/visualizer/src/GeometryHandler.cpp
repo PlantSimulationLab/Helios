@@ -762,6 +762,17 @@ float GeometryHandler::getSize(size_t UUID) const {
     return size_data.at(index_map.geometry_type).at(size_ind);
 }
 
+bool GeometryHandler::isContextGeometry(size_t UUID) const {
+
+#ifdef HELIOS_DEBUG
+    assert(UUID_map.find(UUID) != UUID_map.end());
+#endif
+
+    const PrimitiveIndexMap &index_map = UUID_map.at(UUID);
+
+    return context_geometry_flag_data.at(index_map.geometry_type).at(index_map.context_geometry_flag_index);
+}
+
 const std::vector<float> *GeometryHandler::getSizeData_ptr(VisualizerGeometryType geometry_type) const {
 #ifdef HELIOS_DEBUG
     assert(size_data.find(geometry_type) != size_data.end());

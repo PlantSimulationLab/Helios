@@ -180,7 +180,8 @@ layout(set = 2, binding = 4) buffer ScatterBottomBuffer {
 } scatter_bottom_buf;
 
 // ========== Descriptor Set 3: Sky Parameters ==========
-// Camera-weighted scatter, accumulated against rho_cam/tau_cam alongside the band-weighted scatter.
+// Camera-weighted scatter, accumulated against rho_cam/tau_cam alongside the band-weighted scatter, with one
+// [primitive][band] block per camera (camera-major) so every camera gets its own spectral weighting.
 layout(set = 2, binding = 8) buffer CameraScatterTopBuffer {
     float camera_scatter_top[];
 } camera_scatter_top_buf;
@@ -588,9 +589,6 @@ void main() {
                 uint mat_idx = prim_idx * pc.material_band_count + global_b;
                 float rho = reflectivity_buf.reflectivity[mat_idx];
                 float tau = transmissivity_buf.transmissivity[mat_idx];
-                uint cam_mat_idx = mat_idx * pc.camera_count + pc.camera_id;
-                float rho_cam = (pc.camera_count > 0u) ? reflectivity_cam_buf.reflectivity_cam[cam_mat_idx] : 0.0;
-                float tau_cam = (pc.camera_count > 0u) ? transmissivity_cam_buf.transmissivity_cam[cam_mat_idx] : 0.0;
 
                 // Compute energy contributions unconditionally (zero for inactive path).
                 // subgroupAdd must be called by all active threads in the subgroup at the same
@@ -598,8 +596,9 @@ void main() {
                 float absorption_val = 0.0;
                 float scatter_top_val = 0.0;
                 float scatter_bottom_val = 0.0;
-                float scatter_top_cam_val = 0.0;
-                float scatter_bottom_cam_val = 0.0;
+                // Energy arriving at this primitive that the camera-weighted scatter below applies
+                // each camera's rho_cam/tau_cam to (hit energy, or sky energy on a miss).
+                float camera_energy = 0.0;
 
                 if (hit_found) {
                     // ========== HIT: Ray intersected another surface ==========
@@ -617,18 +616,13 @@ void main() {
 
                     float reflect_energy = hit_energy * rho;
                     float transmit_energy = hit_energy * tau;
-                    float reflect_energy_cam = hit_energy * rho_cam;
-                    float transmit_energy_cam = hit_energy * tau_cam;
+                    camera_energy = hit_energy;
                     if (pc.launch_face == 1) {
                         scatter_top_val    = reflect_energy;
                         scatter_bottom_val = transmit_energy;
-                        scatter_top_cam_val    = reflect_energy_cam;
-                        scatter_bottom_cam_val = transmit_energy_cam;
                     } else {
                         scatter_bottom_val = reflect_energy;
                         scatter_top_val    = transmit_energy;
-                        scatter_bottom_cam_val = reflect_energy_cam;
-                        scatter_top_cam_val    = transmit_energy_cam;
                     }
 
                 } else {
@@ -650,18 +644,13 @@ void main() {
 
                         float sky_reflect  = sky_energy * rho;
                         float sky_transmit = sky_energy * tau;
-                        float sky_reflect_cam  = sky_energy * rho_cam;
-                        float sky_transmit_cam = sky_energy * tau_cam;
+                        camera_energy = sky_energy;
                         if (pc.launch_face == 1) {
                             scatter_top_val    = sky_reflect;
                             scatter_bottom_val = sky_transmit;
-                            scatter_top_cam_val    = sky_reflect_cam;
-                            scatter_bottom_cam_val = sky_transmit_cam;
                         } else {
                             scatter_bottom_val = sky_reflect;
                             scatter_top_val    = sky_transmit;
-                            scatter_bottom_cam_val = sky_reflect_cam;
-                            scatter_top_cam_val    = sky_transmit_cam;
                         }
                     }
                 }
@@ -670,8 +659,6 @@ void main() {
                 float absorption_sum    = subgroupAdd(absorption_val);
                 float scatter_top_sum   = subgroupAdd(scatter_top_val);
                 float scatter_bottom_sum = subgroupAdd(scatter_bottom_val);
-                float scatter_top_cam_sum = subgroupAdd(scatter_top_cam_val);
-                float scatter_bottom_cam_sum = subgroupAdd(scatter_bottom_cam_val);
                 if (subgroupElect()) {
                     if (absorption_sum != 0.0)
                         atomicAdd(rad_in_buf.radiation_in[global_idx], absorption_sum);
@@ -679,10 +666,29 @@ void main() {
                         atomicAdd(scatter_top_buf.scatter_top[global_idx], scatter_top_sum);
                     if (scatter_bottom_sum != 0.0)
                         atomicAdd(scatter_bottom_buf.scatter_bottom[global_idx], scatter_bottom_sum);
-                    if (scatter_top_cam_sum != 0.0)
-                        atomicAdd(camera_scatter_top_buf.camera_scatter_top[global_idx], scatter_top_cam_sum);
-                    if (scatter_bottom_cam_sum != 0.0)
-                        atomicAdd(camera_scatter_bottom_buf.camera_scatter_bottom[global_idx], scatter_bottom_cam_sum);
+                }
+
+                // Camera-weighted scatter, once per camera against that camera's rho_cam/tau_cam. This
+                // launch runs once per dispatch rather than once per camera, so weighting by a single
+                // camera here would hand every other camera that camera's image. The loop bound is a
+                // push constant, so control flow stays uniform and the subgroup reductions are reached
+                // by every active invocation.
+                uint cam_scatter_stride = pc.primitive_count * pc.band_count;
+                for (uint cam = 0u; cam < pc.camera_count; cam++) {
+                    uint cam_mat_idx = mat_idx * pc.camera_count + cam;
+                    float reflect_energy_cam  = camera_energy * reflectivity_cam_buf.reflectivity_cam[cam_mat_idx];
+                    float transmit_energy_cam = camera_energy * transmissivity_cam_buf.transmissivity_cam[cam_mat_idx];
+                    float scatter_top_cam_val    = (pc.launch_face == 1) ? reflect_energy_cam : transmit_energy_cam;
+                    float scatter_bottom_cam_val = (pc.launch_face == 1) ? transmit_energy_cam : reflect_energy_cam;
+                    float scatter_top_cam_sum = subgroupAdd(scatter_top_cam_val);
+                    float scatter_bottom_cam_sum = subgroupAdd(scatter_bottom_cam_val);
+                    uint cam_global_idx = cam * cam_scatter_stride + global_idx;
+                    if (subgroupElect()) {
+                        if (scatter_top_cam_sum != 0.0)
+                            atomicAdd(camera_scatter_top_buf.camera_scatter_top[cam_global_idx], scatter_top_cam_sum);
+                        if (scatter_bottom_cam_sum != 0.0)
+                            atomicAdd(camera_scatter_bottom_buf.camera_scatter_bottom[cam_global_idx], scatter_bottom_cam_sum);
+                    }
                 }
             } // band loop
         } // ii loop (sub-patches)

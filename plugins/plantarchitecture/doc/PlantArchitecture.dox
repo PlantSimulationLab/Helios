@@ -1151,7 +1151,9 @@ Some points worth knowing when reconstructing a skeleton this way:
 
 - <b>One branch should be one shoot.</b> A shoot is the botanical axis, and the whole shoot is rendered as a single continuous tube. Splitting a measured branch across several chained shoots gives a separate capped tube per link, which visibly separates wherever the path bends.
 - <b>The supplied positions are the phytomer endpoints.</b> The number of internodes -- and therefore the internode length -- is determined by how many nodes you supply. The phytomer parameter `internode.length_segments` still controls how finely each internode is subdivided for rendering, with the intermediate nodes interpolated along the straight segment between the two supplied endpoints.
-- <b>The prescribed section does not change as the plant grows.</b> Those phytomers are created fully elongated, so \ref PlantArchitecture::advanceTime() neither re-scales nor re-curves them. New phytomers added at the apex are generated normally, continuing from the direction of the last prescribed internode and using the mean of the prescribed internode lengths as their target length. Which parameters govern that new growth is the subject of the next subsection.
+- <b>The prescribed section does not change as the plant grows.</b> Those phytomers are created fully elongated, so \ref PlantArchitecture::advanceTime() neither re-scales nor re-curves them. New phytomers added at the apex are generated normally, continuing from the direction of the last prescribed internode and using the mean of the prescribed internode lengths as their target length. That target can be
+  changed with setShootInternodeLengthMax(), which a reconstruction that will be grown forward usually
+  needs: the measured internodes of a seedling are mostly hypocotyl. Which parameters govern that new growth is the subject of the next subsection.
 - <b>Radii are a lower bound, not a fixed value.</b> If the shoot type has a non-zero \ref ShootParameters::girth_area_factor, the pipe model may thicken an internode as the plant grows; it never thins one. Set the girth area factor to zero to preserve the measured radii exactly, or to a small value if you want the measured radii to be a genuine starting point that one more season's growth builds on. Note that this factor is always taken from the type the wood was built with, never from a separate growth type, precisely so that a measurement cannot be thickened by parameters chosen for new growth.
 - <b>A child's base is seated on its parent.</b> As with \ref PlantArchitecture::addChildShoot(), the base of a child shoot is offset from the attachment node out to the surface of the parent internode, and the supplied path is translated onto that point. Relative geometry -- directions, internode lengths and curvature -- is preserved exactly; only the absolute position shifts, and only by the discrepancy between your first supplied position and the attachment point. If that discrepancy is large enough that the shoot would not be connected to its parent, an error is raised rather than producing a detached branch.
 - <b>A leafless shoot type is usually what you want</b> for a woody skeleton: set `petioles_per_internode` to 0. Such a shoot still grows -- when a phytomer has no petioles its vegetative buds are created directly on the internode -- so a leaf-off reconstruction can still be grown forward.
@@ -1255,20 +1257,32 @@ Points worth knowing:
   discrepancy, so a base that merely sits near the tip would be shifted again on every timestep.
 - <b>The number of petiole nodes is free.</b> It need not match the shoot type's `petiole.length_segments`;
   the petiole tube is rebuilt to match what you supply.
-- <b>The number of leaves is not free.</b> It is fixed when the phytomer is created, because a leaflet's
-  roll and yaw signs and the blade prototype it is a copy of both follow from its position along the
-  petiole. Supplying a different number raises an error; set `leaf.leaves_per_petiole` on the shoot type
-  instead.
-- <b>Leaf rotations are in the petiole and internode frame, not the world frame.</b> They mean exactly what
-  \ref Phytomer::leaf_rotation stores: roll, pitch and yaw in radians relative to the petiole and internode
-  axes. The full chain that places a leaf also folds in the petiole's own azimuth and a size-dependent
-  correction and is not invertible, so there is no exact conversion from a measured world-frame blade
-  orientation. Fit by forward evaluation instead -- set angles, read the resulting geometry back from the
-  Context, and iterate.
+- <b>The number of leaves is fixed until you change it.</b> It is set when the phytomer is created, because
+  a leaflet's place on the petiole and the blade prototype it is a copy of both follow from its position
+  along the petiole, so setPetioleLeafGeometry() raises an error on a different count. A measured compound
+  leaf rarely has the shoot type's count (a young tomato leaf has three or five leaflets, a mature one
+  seven or more, a cotyledon one), so call setPetioleLeafCount() first: it deletes the petiole's leaves and
+  rebuilds the new number procedurally, after which setPetioleLeafGeometry() expects that many entries.
+- <b>Leaf angles are rotations in the leaf's rest frame on its petiole.</b> The frame is built from the petiole
+  tip axis \f$t\f$, the horizontal direction \f$h\f$ perpendicular to it (world +y when the petiole tip is
+  vertical) and the upward normal of the petiole plane \f$n=t\times h\f$. With all three angles zero, a leaf's
+  midrib is \f$t\f$ turned about \f$n\f$ by the leaflet's place on a compound leaf -- \f$t\f$ for a terminal or
+  single leaf, \f$h\f$ or \f$-h\f$ for a lateral leaflet held off the tip, evenly fanned for leaflets attached
+  at the tip -- and its blade normal is \f$n\f$. Yaw then turns the leaf about \f$n\f$, pitch raises its tip
+  toward \f$n\f$, and roll turns the blade about its own midrib (right-handed), in that order. The convention
+  is identical for every leaf whatever its position on the petiole or the parity of its node, and involves
+  no size-dependent correction, so the angles of a measured blade follow directly from its midrib and blade
+  normal expressed in that frame. Generated leaves are placed by a different, procedural chain (side-signed
+  leaflet rolls, a terminal leaflet that only pitches, a blade-up correction for single leaves), so the
+  \ref Phytomer::leaf_rotation values of a grown leaf do not reproduce its pose when prescribed.
 - <b>Prescribed organs do not change as the plant grows.</b> The petiole is not re-scaled and the leaves are
   neither re-scaled nor re-placed by \ref PlantArchitecture::advanceTime(). Prescribed leaves are also
   exempt from the self-weight droop, so the blade keeps the prototype's rest shape rather than continuing to
   arch over as the leaf ages.
+- <b>Prescribed organs survive a save and reload.</b> \ref PlantArchitecture::writePlantStructureXML() records a
+  prescribed petiole path, and each prescribed leaf's base and pose, and
+  \ref PlantArchitecture::readPlantStructureXML() restores them. A prescribed leaf is rebuilt from the prototype
+  function on reload, as every re-prescription after the first already is.
 - <b>Rebuilding a leaf discards primitive data attached to it.</b> Each leaf object is rebuilt from its
   prototype so that it can be given an absolute orientation. The object label and material are restored;
   any other primitive data a caller has set on that leaf is not.

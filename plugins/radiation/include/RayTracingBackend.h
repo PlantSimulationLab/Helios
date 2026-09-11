@@ -243,8 +243,9 @@ namespace helios {
          *
          * @param[in] launch_band_count Number of bands being launched in current iteration
          *
-         * Buffers are sized by launch_band_count to prevent double-counting when accumulating
-         * camera scatter across multiple ray launches.
+         * Buffers are sized [camera][primitive][launch band], so each camera accumulates the scatter weighted by
+         * its own spectral response, and by launch_band_count to prevent double-counting when accumulating camera
+         * scatter across multiple ray launches.
          */
         virtual void zeroCameraScatterBuffers(size_t launch_band_count) = 0;
 

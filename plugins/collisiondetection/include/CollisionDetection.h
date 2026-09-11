@@ -1046,6 +1046,12 @@ private:
     void buildPrimitiveCache();
 
     /**
+     * \brief Read one primitive's vertices (and texture transparency data) from the Context into \ref primitive_cache
+     * \param[in] UUID Primitive to cache; must exist in the Context
+     */
+    void cachePrimitive(uint UUID);
+
+    /**
      * \brief Rebuild the dense, BVH-leaf-ordered primitive cache (\ref primitive_cache_dense) from the UUID-keyed
      * \ref primitive_cache to match the current \ref primitive_indices ordering.
      *
@@ -1190,6 +1196,23 @@ private:
     //! Cached primitive bounding boxes (optimization for BVH construction)
     std::unordered_map<uint, std::pair<helios::vec3, helios::vec3>> primitive_aabbs_cache;
 
+    //! Fingerprint of the transformation matrix of each BVH primitive as it was when its bounding box was last computed.
+    //! Every Helios primitive's world-space geometry is a function of its transformation matrix alone, so a changed
+    //! fingerprint tells whether a primitive has been moved, rotated or scaled in place since the last build. Context
+    //! dirty flags cannot answer that: they are sticky until the user clears them, and are also set for non-geometric
+    //! edits such as primitive data or color. A 64-bit hash is kept rather than the 16-element matrix because this record
+    //! exists for every BVH primitive (see primitiveTransformChanged()). Used by \ref ensureBVHCurrent() to trigger a
+    //! rebuild and by \ref buildBVH() to refresh the bounding box and evict the stale \ref primitive_cache entry.
+    std::unordered_map<uint, uint64_t> primitive_transform_fingerprints;
+
+    /**
+     * \brief Check whether a primitive's geometry has changed since its transformation matrix was last recorded
+     * \param[in] UUID Primitive to check
+     * \param[out] current_fingerprint Fingerprint of the primitive's current transformation matrix (always filled in)
+     * \return True if the primitive has no recorded fingerprint, or its current fingerprint differs from the record
+     */
+    [[nodiscard]] bool primitiveTransformChanged(uint UUID, uint64_t &current_fingerprint) const;
+
     //! OPTIMIZATION: Cache validity tracking to avoid rebuilding unchanged primitive AABBs
     std::unordered_set<uint> dirty_primitive_cache;
 
@@ -1323,6 +1346,32 @@ private:
     //! An automatic rebuild keeps excluding exactly these, while still absorbing primitives added to the Context
     //! afterwards (which the caller never had the chance to exclude). Empty when the BVH is unrestricted.
     std::set<uint> bvh_excluded_geometry;
+
+    //! True when the current restriction was imposed by a query (the target-taking \ref findCollisions() overload
+    //! narrows the BVH to its targets as an optimization) rather than by an explicit \ref buildBVH() call with a UUID
+    //! list. A query-scoped restriction is an implementation detail of that one call: the next query that needs all
+    //! geometry must widen the BVH again, whereas an explicit restriction is a caller decision that \ref
+    //! ensureBVHCurrent() preserves. Cleared by buildBVH(), set by the restricting query after it narrows the BVH.
+    bool bvh_restriction_query_scoped = false;
+
+    //! True when the query-scoped restriction replaced an explicit \ref buildBVH() restriction, whose exclusions are then
+    //! held in \ref explicit_excluded_geometry_before_query. Widening restores that restriction instead of rebuilding over
+    //! all geometry, so a targeted query cannot silently discard a subset the caller chose. Set by the restricting query.
+    bool query_scope_restores_explicit_restriction = false;
+
+    //! Exclusions of the explicit restriction that a target-restricted \ref findCollisions() replaced when it narrowed the
+    //! BVH to its targets. Only meaningful while \ref bvh_restriction_query_scoped and
+    //! \ref query_scope_restores_explicit_restriction are both true.
+    std::set<uint> explicit_excluded_geometry_before_query;
+
+    /**
+     * \brief Rebuild the BVH over all Context geometry except the given primitives, keeping it recorded as a restriction
+     *
+     * Primitives added to the Context after the exclusions were recorded are included. Does nothing if every primitive
+     * is excluded.
+     * \param[in] excluded_geometry Primitives to keep out of the BVH
+     */
+    void rebuildBVHExcluding(const std::set<uint> &excluded_geometry);
 
     //! Flag to track if BVH needs rebuilding
     bool bvh_dirty;
@@ -1514,6 +1563,9 @@ private:
      *
      * This method automatically checks if the Context geometry is dirty
      * and rebuilds the BVH as needed. It replaces manual BVH management.
+     * A rebuild is triggered by primitives added to or deleted from the Context since the last build, and by
+     * primitives already in the BVH that were translated, rotated or scaled in place (detected by comparing each
+     * dirty primitive's transformation matrix against \ref primitive_transform_fingerprints).
      */
     void ensureBVHCurrent();
 

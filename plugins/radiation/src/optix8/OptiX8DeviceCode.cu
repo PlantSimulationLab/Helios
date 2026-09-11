@@ -560,22 +560,28 @@ extern "C" __global__ void __miss__direct() {
             }
         }
 
-        // Camera-weighted scatter: mirrors scatter_buff but uses rho_cam/tau_cam
+        // Camera-weighted scatter: mirrors scatter_buff but uses rho_cam/tau_cam, accumulated once per
+        // camera into that camera's [prim][band] block. This launch runs once per dispatch, not once per
+        // camera, so params.camera_ID is not meaningful here; weighting by a single camera handed every
+        // other camera that camera's image.
         if (params.Ncameras > 0 && params.rho_cam && params.scatter_buff_top_cam) {
             const uint32_t Ncameras   = params.Ncameras;
-            const uint32_t cam_id     = params.camera_ID;
-            const uint32_t rc_idx     = prd->source_ID * Nprims * Nbands_global * Ncameras
-                                      + origin_position * Nbands_global * Ncameras
-                                      + b_global * Ncameras + cam_id;
-            const float t_rho_cam = params.rho_cam[rc_idx];
-            const float t_tau_cam = params.tau_cam ? params.tau_cam[rc_idx] : 0.f;
-            if ((t_rho_cam > 0.f || t_tau_cam > 0.f) && strength > 0.0) {
-                if (prd->face) {
-                    atomicFloatAdd(&params.scatter_buff_top_cam[ind_origin],    (float)(strength * t_rho_cam));
-                    atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_origin], (float)(strength * t_tau_cam));
-                } else {
-                    atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_origin], (float)(strength * t_rho_cam));
-                    atomicFloatAdd(&params.scatter_buff_top_cam[ind_origin],    (float)(strength * t_tau_cam));
+            const uint32_t cam_stride = Nprims * Nbands_launch;
+            for (uint32_t cam = 0; cam < Ncameras; cam++) {
+                const uint32_t rc_idx     = prd->source_ID * Nprims * Nbands_global * Ncameras
+                                          + origin_position * Nbands_global * Ncameras
+                                          + b_global * Ncameras + cam;
+                const float t_rho_cam = params.rho_cam[rc_idx];
+                const float t_tau_cam = params.tau_cam ? params.tau_cam[rc_idx] : 0.f;
+                const uint32_t ind_cam = cam * cam_stride + ind_origin;
+                if ((t_rho_cam > 0.f || t_tau_cam > 0.f) && strength > 0.0) {
+                    if (prd->face) {
+                        atomicFloatAdd(&params.scatter_buff_top_cam[ind_cam],    (float)(strength * t_rho_cam));
+                        atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_cam], (float)(strength * t_tau_cam));
+                    } else {
+                        atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_cam], (float)(strength * t_rho_cam));
+                        atomicFloatAdd(&params.scatter_buff_top_cam[ind_cam],    (float)(strength * t_tau_cam));
+                    }
                 }
             }
         }
@@ -652,22 +658,28 @@ extern "C" __global__ void __miss__diffuse() {
             }
         }
 
-        // Camera-weighted scatter: mirrors scatter_buff but uses rho_cam/tau_cam
+        // Camera-weighted scatter: mirrors scatter_buff but uses rho_cam/tau_cam, accumulated once per
+        // camera into that camera's [prim][band] block. This launch runs once per dispatch, not once per
+        // camera, so params.camera_ID is not meaningful here; weighting by a single camera handed every
+        // other camera that camera's image.
         if (params.Ncameras > 0 && params.rho_cam && params.scatter_buff_top_cam) {
             const uint32_t Ncameras   = params.Ncameras;
-            const uint32_t cam_id     = params.camera_ID;
-            const uint32_t rc_idx     = prd->source_ID * Nprims * Nbands_global * Ncameras
-                                      + origin_position * Nbands_global * Ncameras
-                                      + b_global * Ncameras + cam_id;
-            const float t_rho_cam = params.rho_cam[rc_idx];
-            const float t_tau_cam = params.tau_cam ? params.tau_cam[rc_idx] : 0.f;
-            if ((t_rho_cam > 0.f || t_tau_cam > 0.f) && strength > 0.f) {
-                if (prd->face) {
-                    atomicFloatAdd(&params.scatter_buff_top_cam[ind_origin],    strength * t_rho_cam);
-                    atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_origin], strength * t_tau_cam);
-                } else {
-                    atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_origin], strength * t_rho_cam);
-                    atomicFloatAdd(&params.scatter_buff_top_cam[ind_origin],    strength * t_tau_cam);
+            const uint32_t cam_stride = Nprims * Nbands_launch;
+            for (uint32_t cam = 0; cam < Ncameras; cam++) {
+                const uint32_t rc_idx     = prd->source_ID * Nprims * Nbands_global * Ncameras
+                                          + origin_position * Nbands_global * Ncameras
+                                          + b_global * Ncameras + cam;
+                const float t_rho_cam = params.rho_cam[rc_idx];
+                const float t_tau_cam = params.tau_cam ? params.tau_cam[rc_idx] : 0.f;
+                const uint32_t ind_cam = cam * cam_stride + ind_origin;
+                if ((t_rho_cam > 0.f || t_tau_cam > 0.f) && strength > 0.f) {
+                    if (prd->face) {
+                        atomicFloatAdd(&params.scatter_buff_top_cam[ind_cam],    strength * t_rho_cam);
+                        atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_cam], strength * t_tau_cam);
+                    } else {
+                        atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_cam], strength * t_rho_cam);
+                        atomicFloatAdd(&params.scatter_buff_top_cam[ind_cam],    strength * t_tau_cam);
+                    }
                 }
             }
         }
@@ -982,22 +994,28 @@ extern "C" __global__ void __closesthit__diffuse() {
             }
         }
 
-        // Camera-weighted scatter: mirrors scatter_buff but uses rho_cam/tau_cam
+        // Camera-weighted scatter: mirrors scatter_buff but uses rho_cam/tau_cam, accumulated once per
+        // camera into that camera's [prim][band] block. This launch runs once per dispatch, not once per
+        // camera, so params.camera_ID is not meaningful here; weighting by a single camera handed every
+        // other camera that camera's image.
         if (params.Ncameras > 0 && params.rho_cam && params.scatter_buff_top_cam) {
             const uint32_t Ncameras   = params.Ncameras;
-            const uint32_t cam_id     = params.camera_ID;
-            const uint32_t rc_idx     = prd->source_ID * Nprims * Nbands_global * Ncameras
-                                      + origin_position * Nbands_global * Ncameras
-                                      + b_global * Ncameras + cam_id;
-            const float t_rho_cam = params.rho_cam[rc_idx];
-            const float t_tau_cam = params.tau_cam ? params.tau_cam[rc_idx] : 0.f;
-            if ((t_rho_cam > 0.f || t_tau_cam > 0.f) && strength > 0.0) {
-                if (prd->face) {
-                    atomicFloatAdd(&params.scatter_buff_top_cam[ind_origin],    (float)(strength * t_rho_cam));
-                    atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_origin], (float)(strength * t_tau_cam));
-                } else {
-                    atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_origin], (float)(strength * t_rho_cam));
-                    atomicFloatAdd(&params.scatter_buff_top_cam[ind_origin],    (float)(strength * t_tau_cam));
+            const uint32_t cam_stride = Nprims * Nbands_launch;
+            for (uint32_t cam = 0; cam < Ncameras; cam++) {
+                const uint32_t rc_idx     = prd->source_ID * Nprims * Nbands_global * Ncameras
+                                          + origin_position * Nbands_global * Ncameras
+                                          + b_global * Ncameras + cam;
+                const float t_rho_cam = params.rho_cam[rc_idx];
+                const float t_tau_cam = params.tau_cam ? params.tau_cam[rc_idx] : 0.f;
+                const uint32_t ind_cam = cam * cam_stride + ind_origin;
+                if ((t_rho_cam > 0.f || t_tau_cam > 0.f) && strength > 0.0) {
+                    if (prd->face) {
+                        atomicFloatAdd(&params.scatter_buff_top_cam[ind_cam],    (float)(strength * t_rho_cam));
+                        atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_cam], (float)(strength * t_tau_cam));
+                    } else {
+                        atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_cam], (float)(strength * t_rho_cam));
+                        atomicFloatAdd(&params.scatter_buff_top_cam[ind_cam],    (float)(strength * t_tau_cam));
+                    }
                 }
             }
         }

@@ -288,12 +288,16 @@ namespace helios {
         size_t   current_band_count      = 0;
         size_t   current_camera_count    = 0;
         size_t   current_launch_band_count = 0;   //!< Nbands_launch used for camera buffers
+        size_t   camera_scatter_buffer_bytes = 0; //!< Bytes allocated to each of d_scatter_buff_top_cam/d_scatter_buff_bottom_cam by zeroCameraScatterBuffers()
         uint32_t current_camera_launch_id  = 0xFFFFFFFFu; //!< Camera ID from last launchCameraRays
 
         // ---- Private helper methods ----
 
         /// Free a device pointer if non-null, then set it to 0
         void freeCUdeviceptr(CUdeviceptr &ptr);
+
+        /// Raise an error unless the camera-scatter device buffers hold one [prim][band] block per current camera, as the kernels index them
+        void requireCameraScatterBuffersSized(const char *caller, size_t launch_band_count) const;
 
         /// Free all geometry-related device buffers
         void freeGeometryBuffers();

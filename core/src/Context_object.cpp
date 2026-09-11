@@ -2715,17 +2715,24 @@ void CompoundObject::deleteChildPrimitive(uint UUID) {
 void CompoundObject::deleteChildPrimitive(const std::vector<uint> &a_UUIDs) {
     // Erase the members first and repair once for the whole batch, rather than repairing after each individual erase. For a derived type whose repair touches the entire object (such as the face table of a
     // Polymesh) the per-primitive form is quadratic in the number of primitives deleted.
+    // The members are removed in a single order-preserving pass rather than by a find-and-erase per UUID, which shifted the tail of the member list on every erase and made deleting k of N members
+    // O(N*k). The erased UUIDs are reported in member order, which is the ascending creation order writeXML() relies on.
+    const std::unordered_set<uint> UUIDs_to_erase(a_UUIDs.begin(), a_UUIDs.end());
     std::vector<uint> erased_UUIDs;
-    erased_UUIDs.reserve(a_UUIDs.size());
-    for (uint UUID: a_UUIDs) {
-        auto it = find(UUIDs.begin(), UUIDs.end(), UUID);
-        if (it != UUIDs.end()) {
-            UUIDs.erase(it);
-            primitivesarecomplete = false;
+    erased_UUIDs.reserve(std::min(a_UUIDs.size(), UUIDs.size()));
+    size_t surviving_count = 0;
+    for (size_t read_index = 0; read_index < UUIDs.size(); read_index++) {
+        const uint UUID = UUIDs[read_index];
+        if (UUIDs_to_erase.find(UUID) != UUIDs_to_erase.end()) {
             erased_UUIDs.push_back(UUID);
+        } else {
+            UUIDs[surviving_count] = UUID;
+            surviving_count++;
         }
     }
+    UUIDs.resize(surviving_count);
     if (!erased_UUIDs.empty()) {
+        primitivesarecomplete = false;
         onChildPrimitivesDeleted(erased_UUIDs);
     }
 }

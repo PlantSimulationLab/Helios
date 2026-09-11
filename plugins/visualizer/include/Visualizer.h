@@ -1221,11 +1221,10 @@ public:
      */
     void buildContextGeometry(helios::Context *context_ptr, const std::vector<uint> &UUIDs);
 
-    //! Updates the colors of context primitives based on current visualization settings.
+    //! Recolors the displayed Context geometry with the current colormap, colorbar range and color source.
     /**
-     * This method processes all primitive geometries within the context, applies appropriate color mapping
-     * based on configured data or object data, updates their color values, and handles internal logic for
-     * colormap range adjustments and primitive existence checks.
+     * When the colorbar range was not set by the user it is first recomputed from the displayed data-colored primitives.
+     * Geometry added directly to the Visualizer is left alone, and without a Context there is nothing to recolor.
      */
     void updateContextPrimitiveColors();
 
@@ -2206,7 +2205,7 @@ private:
 
     bool build_all_context_geometry = false;
 
-    //! UUIDs that have already been built into the geometry handler, and the Context dirty state they were built from
+    //! UUIDs that have already been built into the geometry handler, each with a fingerprint of the Context state it was built from
     /**
      * Context dirty flags are sticky: Context::markGeometryClean() is the only thing that clears them, and it is the
      * user's call to make once every plug-in has processed the change. A plug-in must therefore not clear them itself,
@@ -2217,11 +2216,74 @@ private:
      * buildContextGeometry_private() re-upload only genuinely new or changed primitives, which is what makes the
      * per-frame cost proportional to what actually changed rather than to the size of the scene.
      *
-     * \sa buildContextGeometry_private()
+     * A sticky dirty flag cannot say whether a primitive changed again after it was uploaded, so the value stored here is
+     * a fingerprint of everything the build reads from the primitive (see computeContextPrimitiveFingerprint()). A dirty
+     * primitive whose fingerprint still matches is skipped; one whose fingerprint differs was modified in place - moved,
+     * recolored, retextured, or given new color-by data - and is rebuilt.
+     *
+     * \sa buildContextGeometry_private(), computeContextPrimitiveFingerprint()
      */
-    std::unordered_set<uint> contextUUIDs_uploaded;
+    std::unordered_map<uint, uint64_t> contextUUIDs_uploaded;
+
+    //! Fingerprint of the Context state of a primitive that determines what the geometry handler holds for it
+    /**
+     * Covers the transformation matrix, the RGBA color, the texture file and texture coordinates, the texture color override
+     * flag, and - when coloring by primitive or object data - the data value that is mapped through the colormap.
+     * \param[in] UUID Unique identifier of the Context primitive
+     * \return Hash that changes whenever any of those inputs changes
+     */
+    [[nodiscard]] uint64_t computeContextPrimitiveFingerprint(uint UUID) const;
+
+    //! Look up the data value used to color a primitive when coloring by primitive or object data
+    /**
+     * \param[in] UUID Unique identifier of the Context primitive
+     * \param[out] value Data value that is mapped through the colormap for this primitive
+     * \return true if the primitive is colored by data and a value was found, false otherwise
+     */
+    [[nodiscard]] bool getContextPrimitiveColorValue(uint UUID, float &value) const;
+
+    //! Context primitives currently on display: live geometry uploaded from the Context whose primitive still exists
+    [[nodiscard]] std::vector<uint> getDisplayedContextPrimitiveUUIDs() const;
+
+    //! Set the automatic colorbar range to span the color-by data values of a set of primitives
+    /**
+     * \param[in] UUIDs Context primitives whose values the range must span; primitives not colored by data are ignored
+     */
+    void updateColorbarRangeFromData(const std::vector<uint> &UUIDs);
+
+    //! Recolor the displayed Context geometry in place with the current color mapping, without re-adding it
+    /**
+     * \param[in] UUIDs_to_skip Context primitives to leave alone, such as those just built with the current mapping
+     */
+    void recolorContextGeometry(const std::unordered_set<uint> &UUIDs_to_skip);
+
+    //! Whether a textured Context primitive is drawn in its own color masked by the texture's alpha, rather than from the texture
+    /**
+     * True for a primitive colored by data and for one whose Context material overrides the texture color.
+     * \param[in] UUID Unique identifier of the Context primitive
+     * \return true if the texture color is overridden
+     */
+    [[nodiscard]] bool isContextPrimitiveTextureColorOverridden(uint UUID) const;
+
+    //! Colormap range the Context geometry was last built with, used to detect a range change that recolors every data-colored primitive
+    helios::vec2 colorbar_range_last_build;
 
     bool primitiveColorsNeedUpdate;
+
+    //! Number of Context primitives the most recent buildContextGeometry_private() added or re-added to the geometry handler
+    size_t context_primitives_added_last_build = 0;
+
+    //! Number of Context geometry elements the most recent buildContextGeometry_private() recolored in place without re-adding them
+    size_t context_primitives_recolored_last_build = 0;
+
+    //! Number of times buildContextGeometry_private() has walked the Context to settle which primitives are colored by data
+    size_t color_primitive_set_refills = 0;
+
+    //! Whether the data-colored set must be settled on the next build because the color source changed or was cleared
+    bool color_primitive_set_stale = true;
+
+    //! Context primitive count when the data-colored set was last settled, so that added primitives settle it again
+    size_t color_primitive_set_primitive_count = 0;
 
     helios::Context *context;
 

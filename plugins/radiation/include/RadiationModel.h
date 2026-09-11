@@ -2274,9 +2274,9 @@ protected:
     void initializeOptiX();
 
     //! Sets radiative properties for all primitives
-    /** DEPRECATED: This function is no longer required - material properties are automatically updated when runBand() is called.
-        Handles spectrum-based material loading and camera spectral response weighting.
-        Called internally during runBand() when spectrum interpolation is configured.
+    /** DEPRECATED: This function is no longer required - material properties are automatically rebuilt from the Context on every call to runBand().
+        Handles per-band values, spectrum-based material loading (integrated once per unique spectrum) and camera spectral response weighting,
+        and uploads the result to the ray-tracing backend.
         \note This is a private method called automatically - users should not call this directly.
     */
     void updateRadiativeProperties();
@@ -2365,11 +2365,8 @@ protected:
     void buildTextureData();
 
     //! Build UUID-to-array-position mapping from geometry_data
-    //! Must be called after buildGeometryData() and before buildMaterialData()
+    //! Must be called after buildGeometryData() and before updateRadiativeProperties()
     void buildUUIDMapping();
-
-    //! Build backend-agnostic material data from Context primitive data
-    void buildMaterialData();
 
     //! Build backend-agnostic source data from radiation_sources
     void buildSourceData();

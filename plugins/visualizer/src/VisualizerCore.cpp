@@ -28,6 +28,19 @@ extern "C" {
 #include "json.hpp"
 
 #ifdef HELIOS_VISUALIZER_EGL
+// eglplatform.h selects its native types from the platform it thinks is in use, and defaults
+// to X11 on Linux, pulling in Xlib.h. Xlib declares `typedef XID Colormap` at global scope,
+// which collides with the global `struct Colormap` declared in Visualizer.h; the two cannot
+// coexist in either include order. This context is always created through
+// EGL_PLATFORM_DEVICE_EXT with pbuffer surfaces and never touches an X11 display, window or
+// visual, so the X11 platform headers are not needed here. EGL_NO_X11 is the current spelling
+// and MESA_EGL_NO_X11_HEADERS the older Mesa one; both are defined for compatibility.
+#ifndef EGL_NO_X11
+#define EGL_NO_X11
+#endif
+#ifndef MESA_EGL_NO_X11_HEADERS
+#define MESA_EGL_NO_X11_HEADERS
+#endif
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #endif
@@ -1417,6 +1430,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     context = nullptr;
     primitiveColorsNeedUpdate = false;
+    colorbar_range_last_build = make_vec2(0, 0);
 
     isWatermarkVisible = true;
     watermark_ID = 0;
@@ -2768,9 +2782,16 @@ void Visualizer::setColorbarRange(float cmin, float cmax) {
         }
         return;
     }
+    const bool range_changed = !colorbar_range_set || cmin != colorbar_min || cmax != colorbar_max;
     colorbar_min = cmin;
     colorbar_max = cmax;
     colorbar_range_set = true;
+    // Only a different range changes the mapping from data value to color, and only then must every data-colored primitive
+    // already on the GPU be recolored. Setting the range already in force - as a render loop commonly does every frame - must
+    // not cost a pass over the displayed scene.
+    if (range_changed) {
+        primitiveColorsNeedUpdate = true;
+    }
 }
 
 void Visualizer::setColorbarTicks(const std::vector<float> &ticks) {
@@ -3138,6 +3159,8 @@ void Visualizer::setColormap(Ctable colormap_name) {
     } else {
         helios_runtime_error("ERROR (Visualizer::setColormap): Invalid colormap.");
     }
+    // Every data-colored primitive already on display takes its color from the colormap.
+    primitiveColorsNeedUpdate = true;
 }
 
 void Visualizer::setColormap(const std::vector<RGBcolor> &colors, const std::vector<float> &divisions) {
@@ -3148,6 +3171,8 @@ void Visualizer::setColormap(const std::vector<RGBcolor> &colors, const std::vec
     Colormap colormap_custom(colors, divisions, 100, 0, 1);
 
     colormap_current = colormap_custom;
+    // Every data-colored primitive already on display takes its color from the colormap.
+    primitiveColorsNeedUpdate = true;
 }
 
 Colormap Visualizer::getCurrentColormap() const {

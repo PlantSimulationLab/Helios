@@ -1366,3 +1366,131 @@ TEST_CASE("Context XML I/O Functions") {
 
     // Note: scanXMLForTag testing removed due to complex XML tag structure requirements
 }
+
+TEST_CASE("XMLparser::parse_transform rejects a transform with more than 16 values") {
+    // A <transform> node holding more than 16 numbers used to be copied straight into the caller's float[16]
+    // before the value count was checked, writing past the end of the array. The return code cannot reveal that
+    // (it was 3 both before and after the overrun), so the 16-element array is carved out of the front of a
+    // larger heap block whose tail is filled with a sentinel, and the tail is checked afterwards. The block is
+    // heap-allocated and escapes into an opaque call, so the compiler must re-read the sentinels after the call.
+    const float sentinel = 12345.f;
+    std::vector<float> block(24, sentinel);
+    float(&transform)[16] = *reinterpret_cast<float(*)[16]>(block.data());
+
+    pugi::xml_document doc;
+    pugi::xml_node patch = doc.append_child("patch");
+    patch.append_child("transform").text().set("1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 99 98 97 96");
+
+    int result = XMLparser::parse_transform(patch, transform);
+    DOCTEST_CHECK(result == 3);
+    for (size_t i = 16; i < block.size(); i++) {
+        DOCTEST_CHECK(block.at(i) == sentinel);
+    }
+
+    // Through the public loader the same file must be rejected with an error rather than read.
+    const char *test_file = "helios_test_transform_overflow.xml";
+    {
+        std::ofstream out(test_file);
+        out << "<helios>\n<patch>\n<transform>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 99 98 97 96</transform>\n</patch>\n</helios>\n";
+    }
+    Context ctx;
+    DOCTEST_CHECK_THROWS(static_cast<void>(ctx.loadXML(test_file, true)));
+    std::remove(test_file);
+}
+
+TEST_CASE("loadPLY header handling") {
+    SUBCASE("truncated header without end_header fails instead of hanging") {
+        // The header loop used to spin forever once the stream hit end-of-file before 'end_header'. The load runs on a
+        // worker thread so that a regression fails this check after a timeout instead of hanging the whole test run. A
+        // hung worker cannot be stopped, so it is detached and owns its own Context and outcome record; it spins until the
+        // process exits, and the test file is then left behind rather than removed out from under it.
+        const char *test_file = "helios_test_truncated_header.ply";
+        {
+            std::ofstream out(test_file);
+            out << "ply\nformat ascii 1.0\n";
+            out << "element vertex 3\n";
+            out << "property float x\nproperty float y\nproperty float z\n";
+        }
+
+        struct LoadOutcome {
+            std::mutex mutex;
+            bool finished = false;
+            bool threw = false;
+        };
+        const auto outcome = std::make_shared<LoadOutcome>();
+        std::thread([outcome, test_file]() {
+            bool threw = false;
+            try {
+                Context worker_context;
+                static_cast<void>(worker_context.loadPLY(test_file, make_vec3(0, 0, 0), 0, "ZUP", true));
+            } catch (const std::exception &) {
+                threw = true;
+            }
+            std::lock_guard<std::mutex> lock(outcome->mutex);
+            outcome->threw = threw;
+            outcome->finished = true;
+        }).detach();
+
+        // Loading this three-line file takes milliseconds; the timeout only has to be far longer than that on a loaded runner.
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+        bool finished = false;
+        bool threw = false;
+        while (std::chrono::steady_clock::now() < deadline) {
+            {
+                std::lock_guard<std::mutex> lock(outcome->mutex);
+                finished = outcome->finished;
+                threw = outcome->threw;
+            }
+            if (finished) {
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+
+        DOCTEST_CHECK_MESSAGE(finished, "loadPLY() did not return within 30 s on a PLY file truncated before 'end_header'");
+        DOCTEST_CHECK_MESSAGE((!finished || threw), "loadPLY() accepted a PLY file truncated before 'end_header' instead of raising an error");
+        if (finished) {
+            std::remove(test_file);
+        }
+    }
+
+    SUBCASE("scalar properties of the face element do not shift the vertex reader") {
+        // Every non-list property of every element used to be treated as a vertex property, so a face element
+        // carrying e.g. 'property int flags' made the vertex reader consume one extra token per vertex row.
+        const char *test_file = "helios_test_face_scalar_property.ply";
+        {
+            std::ofstream out(test_file);
+            out << "ply\nformat ascii 1.0\n";
+            out << "element vertex 4\n";
+            out << "property float x\nproperty float y\nproperty float z\n";
+            out << "element face 2\n";
+            out << "property list uchar int vertex_indices\n";
+            out << "property int flags\n";
+            out << "end_header\n";
+            out << "0 0 0\n";
+            out << "1 0 0\n";
+            out << "1 1 0\n";
+            out << "0 1 0\n";
+            out << "3 0 1 2 7\n";
+            out << "3 0 2 3 7\n";
+        }
+        Context ctx;
+        std::vector<uint> UUIDs;
+        DOCTEST_REQUIRE_NOTHROW(UUIDs = ctx.loadPLY(test_file, make_vec3(0, 0, 0), 0, "ZUP", true));
+        DOCTEST_REQUIRE(UUIDs.size() == 2);
+
+        std::vector<vec3> first = ctx.getPrimitiveVertices(UUIDs.at(0));
+        DOCTEST_REQUIRE(first.size() == 3);
+        DOCTEST_CHECK(first.at(0) == make_vec3(0, 0, 0));
+        DOCTEST_CHECK(first.at(1) == make_vec3(1, 0, 0));
+        DOCTEST_CHECK(first.at(2) == make_vec3(1, 1, 0));
+
+        std::vector<vec3> second = ctx.getPrimitiveVertices(UUIDs.at(1));
+        DOCTEST_REQUIRE(second.size() == 3);
+        DOCTEST_CHECK(second.at(0) == make_vec3(0, 0, 0));
+        DOCTEST_CHECK(second.at(1) == make_vec3(1, 1, 0));
+        DOCTEST_CHECK(second.at(2) == make_vec3(0, 1, 0));
+
+        std::remove(test_file);
+    }
+}

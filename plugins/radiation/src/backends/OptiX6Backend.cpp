@@ -606,6 +606,13 @@ void OptiX6Backend::launchDirectRays(const RayTracingLaunchParams &params) {
     // Validate context to ensure acceleration structure is built and buffers are synchronized
     RT_CHECK_ERROR(rtContextValidate(OptiX_Context));
 
+    // Early return when there are no rays to launch (e.g. setDirectRayCount(band,0) on an emission-only band). Without
+    // this, rays_per_primitive=0 divides by zero when sizing the batches and yields Nlaunches=0, so the launch below is
+    // skipped silently rather than reported.
+    if (params.rays_per_primitive == 0 || params.launch_count == 0) {
+        return;
+    }
+
     // OptiX 6.5 batching: limit total rays per launch to avoid GPU timeout/memory issues
     // Maximum rays per launch (1 billion = OptiX practical limit)
     size_t maxRays = 1024 * 1024 * 1024;
@@ -867,9 +874,9 @@ void OptiX6Backend::zeroRadiationBuffers(size_t launch_band_count) {
     }
 
     // Zero camera scatter buffers (use launch_band_count for per-launch sizing)
-    // Camera scatter uses same indexing as regular scatter: [primitive][band]
+    // Camera scatter holds one [primitive][band] block per camera: [camera][primitive][band]
     if (current_camera_count > 0) {
-        size_t cam_scatter_size = current_primitive_count * launch_band_count;
+        size_t cam_scatter_size = current_camera_count * current_primitive_count * launch_band_count;
         if (cam_scatter_size > 0) {
             zeroBuffer1D(scatter_buff_top_cam_RTbuffer, cam_scatter_size);
             zeroBuffer1D(scatter_buff_bottom_cam_RTbuffer, cam_scatter_size);
@@ -927,9 +934,9 @@ void OptiX6Backend::zeroCameraScatterBuffers(size_t launch_band_count) {
         helios_runtime_error("ERROR (OptiX6Backend::zeroCameraScatterBuffers): launch_band_count (" + std::to_string(launch_band_count) + ") exceeds current_band_count (" + std::to_string(current_band_count) + ").");
     }
 
-    // Zero camera scatter buffers (use launch_band_count for per-launch sizing)
+    // Zero camera scatter buffers (use launch_band_count for per-launch sizing); one [primitive][band] block per camera
     if (current_camera_count > 0) {
-        size_t buffer_size = current_primitive_count * launch_band_count;
+        size_t buffer_size = current_camera_count * current_primitive_count * launch_band_count;
         if (buffer_size > 0) {
             zeroBuffer1D(scatter_buff_top_cam_RTbuffer, buffer_size);
             zeroBuffer1D(scatter_buff_bottom_cam_RTbuffer, buffer_size);

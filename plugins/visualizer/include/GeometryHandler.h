@@ -405,6 +405,17 @@ public:
     [[nodiscard]] float getSize(size_t UUID) const;
 
     /**
+     * \brief Whether a geometry element was uploaded from the Context rather than added directly to the Visualizer.
+     *
+     * Context geometry is keyed by its 32-bit Context UUID; everything else carries a random 64-bit ID, so the ID alone
+     * cannot tell the two apart once it is cast to a UUID.
+     *
+     * \param[in] UUID Unique identifier of the geometry.
+     * \return True if the geometry came from the Context.
+     */
+    [[nodiscard]] bool isContextGeometry(size_t UUID) const;
+
+    /**
      * \brief Retrieves a pointer to the size data associated with the specified geometry type.
      *
      * \param[in] geometry_type The type of visualizer geometry for which the size data is requested.

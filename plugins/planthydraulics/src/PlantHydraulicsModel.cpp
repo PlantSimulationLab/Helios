@@ -245,8 +245,11 @@ void PlantHydraulicsModel::updateRootAndStemWaterPotentialsOfPlant(const std::ve
     float stem_temperature = getOrInitializePrimitiveData(UUIDs.front(), "air_temperature", 298.15f, false);
     float root_temperature = stem_temperature - 5.f;
 
-    context->calculatePrimitiveDataAreaWeightedSum(UUIDs, "latent_flux", canopy_transpiration); // Wm2 -> W
-    canopy_transpiration /= 44000.f; // W/m2 -> mol/m2/s
+    // Plant-level transpiration is the leaf-area-weighted MEAN of the per-leaf latent flux (W/m^2), consistent with the
+    // per-unit-leaf-area hydraulic conductances (mol/m^2/s/MPa). Using the area-weighted sum (W) would make the stem and
+    // root water potential drops scale with the total leaf area of the plant.
+    context->calculatePrimitiveDataAreaWeightedMean(UUIDs, "latent_flux", canopy_transpiration); // W/m^2
+    canopy_transpiration /= 44000.f; // W/m^2 -> mol/m^2/s
 
     // Steady State Solution is assumed if time step is not specified/equal to 0.f
     if (steadystate) {

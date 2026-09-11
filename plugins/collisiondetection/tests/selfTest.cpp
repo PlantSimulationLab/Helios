@@ -547,6 +547,97 @@ DOCTEST_TEST_CASE("CollisionDetection Restricted BVH Survives Automatic Rebuild"
 }
 
 
+DOCTEST_TEST_CASE("CollisionDetection Target-Restricted findCollisions Does Not Restrict Later Unrestricted Queries") {
+    // Regression test: the target-restricted findCollisions() overload narrows the BVH to the target geometry as an
+    // optimization. That narrowing must not outlive the call. Previously it was recorded exactly like an explicit
+    // buildBVH(subset), so every later "all geometry" query - the unrestricted findCollisions() overloads and a
+    // castRay() with no targets - silently traversed the target-only BVH and never saw the rest of the scene.
+    Context context;
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.disableGPUAcceleration();
+
+    // A overlaps both B and C; B and C do not overlap each other.
+    uint UUID_A = context.addTriangle(make_vec3(-1, -1, 0), make_vec3(1, -1, 0), make_vec3(0, 1, 0));
+    uint UUID_B = context.addTriangle(make_vec3(0.5, -0.5, 0), make_vec3(2.5, -0.5, 0), make_vec3(1.5, 1.5, 0));
+    uint UUID_C = context.addTriangle(make_vec3(-2.5, -0.5, 0), make_vec3(-0.5, -0.5, 0), make_vec3(-1.5, 1.5, 0));
+
+    // Query restricted to B: only B may be reported.
+    std::vector<uint> restricted = collision.findCollisions({UUID_A}, {}, {UUID_B}, {});
+    DOCTEST_CHECK(std::find(restricted.begin(), restricted.end(), UUID_B) != restricted.end());
+    DOCTEST_CHECK(std::find(restricted.begin(), restricted.end(), UUID_C) == restricted.end());
+
+    // Unrestricted query afterwards: C must be reported again.
+    std::vector<uint> unrestricted = collision.findCollisions(UUID_A);
+    DOCTEST_CHECK(std::find(unrestricted.begin(), unrestricted.end(), UUID_B) != unrestricted.end());
+    DOCTEST_CHECK(std::find(unrestricted.begin(), unrestricted.end(), UUID_C) != unrestricted.end());
+
+    // Same through the target-taking overload with empty targets ("all geometry").
+    std::vector<uint> unrestricted_all = collision.findCollisions({UUID_A}, {}, {}, {});
+    DOCTEST_CHECK(std::find(unrestricted_all.begin(), unrestricted_all.end(), UUID_C) != unrestricted_all.end());
+
+    // Restrict again, then a ray with no targets through C must hit C.
+    restricted = collision.findCollisions({UUID_A}, {}, {UUID_B}, {});
+    DOCTEST_CHECK(std::find(restricted.begin(), restricted.end(), UUID_C) == restricted.end());
+
+    CollisionDetection::HitResult hit = collision.castRay(make_vec3(-1.5f, 0.f, 5.f), make_vec3(0, 0, -1), -1.0f);
+    DOCTEST_CHECK(hit.hit == true);
+    DOCTEST_CHECK(hit.primitive_UUID == UUID_C);
+}
+
+
+DOCTEST_TEST_CASE("CollisionDetection Explicit Restriction Survives Target-Restricted findCollisions") {
+    // Regression test: a target-restricted findCollisions() narrows the BVH to its targets for that one call, and the
+    // next all-geometry query widens it again. That widening must restore a restriction the caller set with
+    // buildBVH(subset), not discard it. The query used to mark the BVH query-scoped even when it had not changed it
+    // (targets identical to the explicit subset), and the widening always rebuilt over all geometry, so the next
+    // castRay() or unrestricted findCollisions() reported primitives the caller had deliberately excluded.
+    Context context;
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.disableGPUAcceleration();
+
+    // Horizontal patches stacked above the origin; only far_UUID is in the explicit subset.
+    uint near_UUID = context.addPatch(make_vec3(0, 0, 2), make_vec2(10, 10));
+    uint far_UUID = context.addPatch(make_vec3(0, 0, 8), make_vec2(10, 10));
+    // A patch well away from the stack, used as the target of a query on a different set.
+    uint side_UUID = context.addPatch(make_vec3(30, 0, 5), make_vec2(2, 2));
+    // Vertical query triangles: the first spans the height of the stack, so its bounding box overlaps both stacked
+    // patches; the second overlaps side_UUID only.
+    uint stack_query_UUID = context.addTriangle(make_vec3(0, -0.5f, 0.5f), make_vec3(0, 0.5f, 0.5f), make_vec3(0, 0, 9.5f));
+    uint side_query_UUID = context.addTriangle(make_vec3(30, -0.5f, 4), make_vec3(30, 0.5f, 4), make_vec3(30, 0, 6));
+
+    auto contains = [](const std::vector<uint> &UUIDs, uint UUID) { return std::find(UUIDs.begin(), UUIDs.end(), UUID) != UUIDs.end(); };
+
+    collision.buildBVH({far_UUID});
+    DOCTEST_REQUIRE(collision.getPrimitiveCount() == 1);
+
+    SUBCASE("targets identical to the explicit subset") {
+        std::vector<uint> targeted = collision.findCollisions({stack_query_UUID}, {}, {far_UUID}, {});
+        DOCTEST_CHECK(contains(targeted, far_UUID));
+        DOCTEST_CHECK(!contains(targeted, near_UUID));
+    }
+
+    SUBCASE("targets different from the explicit subset") {
+        std::vector<uint> targeted = collision.findCollisions({side_query_UUID}, {}, {side_UUID}, {});
+        DOCTEST_CHECK(contains(targeted, side_UUID));
+    }
+
+    // All-geometry queries afterwards see the explicit subset again, and only it.
+    std::vector<uint> unrestricted = collision.findCollisions(stack_query_UUID);
+    DOCTEST_CHECK(contains(unrestricted, far_UUID));
+    DOCTEST_CHECK(!contains(unrestricted, near_UUID));
+    DOCTEST_CHECK(collision.getPrimitiveCount() == 1);
+
+    CollisionDetection::HitResult hit = collision.castRay(make_vec3(0, 0, 0), make_vec3(0, 0, 1), -1.0f);
+    DOCTEST_CHECK(hit.hit == true);
+    DOCTEST_CHECK(hit.primitive_UUID == far_UUID);
+    DOCTEST_CHECK(hit.distance == doctest::Approx(8.0f).epsilon(0.01));
+}
+
+
 DOCTEST_TEST_CASE("CollisionDetection Automatic Rebuild Tracks New Geometry") {
     // Companion to the restricted-BVH test above: when the BVH was built over ALL geometry
     // (the default), adding new primitives must still trigger an automatic rebuild that picks
@@ -763,6 +854,89 @@ DOCTEST_TEST_CASE("CollisionDetection isBVHValid Reports Moved Geometry As Stale
     // After an explicit rebuild it must report valid again.
     collision.rebuildBVH();
     DOCTEST_CHECK(collision.isBVHValid() == true);
+}
+
+
+DOCTEST_TEST_CASE("CollisionDetection castRay Follows In-Place Primitive Move Without Manual Rebuild") {
+    // Regression test: moving a primitive that is already in the BVH keeps its UUID, so the UUID-set bookkeeping in
+    // ensureBVHCurrent() never saw a "new" dirty primitive and never rebuilt. Rays kept hitting the old position and
+    // missing the new one until the user called rebuildBVH() by hand.
+    Context context;
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.disableGPUAcceleration();
+
+    uint UUID = context.addPatch(make_vec3(0, 0, 5), make_vec2(1, 1));
+    collision.buildBVH();
+
+    CollisionDetection::HitResult before = collision.castRay(make_vec3(0, 0, 0), make_vec3(0, 0, 1));
+    DOCTEST_REQUIRE(before.hit == true);
+    DOCTEST_CHECK(before.primitive_UUID == UUID);
+    DOCTEST_CHECK(before.distance == doctest::Approx(5.f));
+
+    // Move the patch sideways so the old ray no longer intersects it. No explicit rebuild.
+    context.translatePrimitive(UUID, make_vec3(20, 0, 0));
+
+    CollisionDetection::HitResult old_position = collision.castRay(make_vec3(0, 0, 0), make_vec3(0, 0, 1));
+    DOCTEST_CHECK(old_position.hit == false);
+
+    CollisionDetection::HitResult new_position = collision.castRay(make_vec3(20, 0, 0), make_vec3(0, 0, 1));
+    DOCTEST_REQUIRE(new_position.hit == true);
+    DOCTEST_CHECK(new_position.primitive_UUID == UUID);
+    DOCTEST_CHECK(new_position.distance == doctest::Approx(5.f));
+
+    // A primitive that is dirty but has not moved must not be refreshed into a different answer either.
+    context.setPrimitiveData(UUID, "unrelated", 1.f);
+    CollisionDetection::HitResult still_there = collision.castRay(make_vec3(20, 0, 0), make_vec3(0, 0, 1));
+    DOCTEST_CHECK(still_there.hit == true);
+}
+
+
+DOCTEST_TEST_CASE("CollisionDetection Batched castRays Uses Current Vertices After rebuildBVH") {
+    // Regression test: the batched ray paths intersect against a per-primitive vertex cache that was only cleared
+    // when the primitive *set* changed. Moving a primitive and then calling rebuildBVH() refreshed the node
+    // bounding boxes but kept the old vertices, so rays through the new position entered the correct node and then
+    // missed the (stale) triangle inside it.
+    Context context;
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.disableGPUAcceleration();
+
+    uint UUID = context.addPatch(make_vec3(0, 0, 5), make_vec2(1, 1));
+    collision.buildBVH();
+
+    std::vector<CollisionDetection::RayQuery> queries;
+    queries.emplace_back(make_vec3(0, 0, 0), make_vec3(0, 0, 1));
+    queries.emplace_back(make_vec3(20, 0, 0), make_vec3(0, 0, 1));
+
+    // First batch populates the vertex cache.
+    std::vector<CollisionDetection::HitResult> before = collision.castRays(queries);
+    DOCTEST_REQUIRE(before.size() == 2);
+    DOCTEST_CHECK(before[0].hit == true);
+    DOCTEST_CHECK(before[1].hit == false);
+
+    context.translatePrimitive(UUID, make_vec3(20, 0, 0));
+    collision.rebuildBVH();
+
+    std::vector<CollisionDetection::HitResult> after = collision.castRays(queries);
+    DOCTEST_REQUIRE(after.size() == 2);
+    DOCTEST_CHECK(after[0].hit == false);
+    DOCTEST_REQUIRE(after[1].hit == true);
+    DOCTEST_CHECK(after[1].primitive_UUID == UUID);
+    DOCTEST_CHECK(after[1].distance == doctest::Approx(5.f));
+
+    // Same check through the SoA entry point, which shares the cache.
+    std::vector<helios::vec3> origins = {make_vec3(0, 0, 0), make_vec3(20, 0, 0)};
+    std::vector<helios::vec3> directions = {make_vec3(0, 0, 1), make_vec3(0, 0, 1)};
+    std::vector<float> distances(2);
+    std::vector<helios::vec3> normals(2);
+    std::vector<uint> hit_UUIDs(2);
+    collision.castRaysSoA(origins.data(), directions.data(), 2, -1.f, distances.data(), normals.data(), hit_UUIDs.data());
+    DOCTEST_CHECK(hit_UUIDs[0] == 0xFFFFFFFFu);
+    DOCTEST_CHECK(hit_UUIDs[1] == UUID);
+    DOCTEST_CHECK(distances[1] == doctest::Approx(5.f));
 }
 
 

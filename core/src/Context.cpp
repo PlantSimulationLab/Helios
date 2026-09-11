@@ -575,36 +575,20 @@ bool Context::isPrimitiveHidden(uint UUID) const {
 }
 
 void Context::cleanDeletedUUIDs(std::vector<uint> &UUIDs) const {
-    for (size_t i = UUIDs.size(); i-- > 0;) {
-        if (!doesPrimitiveExist(UUIDs.at(i))) {
-            UUIDs.erase(UUIDs.begin() + i);
-        }
-    }
+    // Single remove-erase pass. Erasing each stale entry individually shifts the whole tail of the vector every time,
+    // which made cleaning a list of N UUIDs with k deleted cost O(N*k); this keeps the surviving order in O(N).
+    UUIDs.erase(std::remove_if(UUIDs.begin(), UUIDs.end(), [this](uint UUID) { return !doesPrimitiveExist(UUID); }), UUIDs.end());
 }
 
 void Context::cleanDeletedUUIDs(std::vector<std::vector<uint>> &UUIDs) const {
     for (auto &vec: UUIDs) {
-        for (auto it = vec.begin(); it != vec.end();) {
-            if (!doesPrimitiveExist(*it)) {
-                it = vec.erase(it);
-            } else {
-                ++it;
-            }
-        }
+        cleanDeletedUUIDs(vec);
     }
 }
 
 void Context::cleanDeletedUUIDs(std::vector<std::vector<std::vector<uint>>> &UUIDs) const {
     for (auto &vec2D: UUIDs) {
-        for (auto &vec: vec2D) {
-            for (auto it = vec.begin(); it != vec.end();) {
-                if (!doesPrimitiveExist(*it)) {
-                    it = vec.erase(it);
-                } else {
-                    ++it;
-                }
-            }
-        }
+        cleanDeletedUUIDs(vec2D);
     }
 }
 
@@ -999,16 +983,21 @@ void Context::getDomainBoundingSphere(const std::vector<uint> &UUIDs, vec3 &cent
 void Context::cropDomainX(const vec2 &xbounds) {
     const std::vector<uint> &UUIDs_all = getAllUUIDs();
 
+    // Collect the rejected primitives and delete them in one batch. Deleting them one at a time made each removal of an
+    // object member a linear search-and-erase in the parent object's UUID list (and a full mesh repair for a Polymesh),
+    // so cropping an object with N primitives cost O(N^2); the batch overload repairs each parent object once.
+    std::vector<uint> UUIDs_to_delete;
     for (uint p: UUIDs_all) {
         const std::vector<vec3> &vertices = getPrimitivePointer_private(p)->getVertices();
 
         for (auto &vertex: vertices) {
             if (vertex.x < xbounds.x || vertex.x > xbounds.y) {
-                deletePrimitive(p);
+                UUIDs_to_delete.push_back(p);
                 break;
             }
         }
     }
+    deletePrimitive(UUIDs_to_delete);
 
     if (getPrimitiveCount() == 0) {
         std::cerr << "WARNING (Context::cropDomainX): No primitives were inside cropped area, and thus all primitives were deleted." << std::endl;
@@ -1018,16 +1007,21 @@ void Context::cropDomainX(const vec2 &xbounds) {
 void Context::cropDomainY(const vec2 &ybounds) {
     const std::vector<uint> &UUIDs_all = getAllUUIDs();
 
+    // Collect the rejected primitives and delete them in one batch. Deleting them one at a time made each removal of an
+    // object member a linear search-and-erase in the parent object's UUID list (and a full mesh repair for a Polymesh),
+    // so cropping an object with N primitives cost O(N^2); the batch overload repairs each parent object once.
+    std::vector<uint> UUIDs_to_delete;
     for (uint p: UUIDs_all) {
         const std::vector<vec3> &vertices = getPrimitivePointer_private(p)->getVertices();
 
         for (auto &vertex: vertices) {
             if (vertex.y < ybounds.x || vertex.y > ybounds.y) {
-                deletePrimitive(p);
+                UUIDs_to_delete.push_back(p);
                 break;
             }
         }
     }
+    deletePrimitive(UUIDs_to_delete);
 
     if (getPrimitiveCount() == 0) {
         std::cerr << "WARNING (Context::cropDomainY): No primitives were inside cropped area, and thus all primitives were deleted." << std::endl;
@@ -1037,16 +1031,21 @@ void Context::cropDomainY(const vec2 &ybounds) {
 void Context::cropDomainZ(const vec2 &zbounds) {
     const std::vector<uint> &UUIDs_all = getAllUUIDs();
 
+    // Collect the rejected primitives and delete them in one batch. Deleting them one at a time made each removal of an
+    // object member a linear search-and-erase in the parent object's UUID list (and a full mesh repair for a Polymesh),
+    // so cropping an object with N primitives cost O(N^2); the batch overload repairs each parent object once.
+    std::vector<uint> UUIDs_to_delete;
     for (uint p: UUIDs_all) {
         const std::vector<vec3> &vertices = getPrimitivePointer_private(p)->getVertices();
 
         for (auto &vertex: vertices) {
             if (vertex.z < zbounds.x || vertex.z > zbounds.y) {
-                deletePrimitive(p);
+                UUIDs_to_delete.push_back(p);
                 break;
             }
         }
     }
+    deletePrimitive(UUIDs_to_delete);
 
     if (getPrimitiveCount() == 0) {
         std::cerr << "WARNING (Context::cropDomainZ): No primitives were inside cropped area, and thus all primitives were deleted." << std::endl;
@@ -1054,20 +1053,21 @@ void Context::cropDomainZ(const vec2 &zbounds) {
 }
 
 void Context::cropDomain(std::vector<uint> &UUIDs, const vec2 &xbounds, const vec2 &ybounds, const vec2 &zbounds) {
-    size_t delete_count = 0;
+    // Collect the rejected primitives and delete them in one batch (see cropDomainX() for why).
+    std::vector<uint> UUIDs_to_delete;
     for (uint UUID: UUIDs) {
         const std::vector<vec3> &vertices = getPrimitivePointer_private(UUID)->getVertices();
 
         for (auto &vertex: vertices) {
             if (vertex.x < xbounds.x || vertex.x > xbounds.y || vertex.y < ybounds.x || vertex.y > ybounds.y || vertex.z < zbounds.x || vertex.z > zbounds.y) {
-                deletePrimitive(UUID);
-                delete_count++;
+                UUIDs_to_delete.push_back(UUID);
                 break;
             }
         }
     }
+    deletePrimitive(UUIDs_to_delete);
 
-    if (delete_count == UUIDs.size()) {
+    if (UUIDs_to_delete.size() == UUIDs.size()) {
         std::cerr << "WARNING (Context::cropDomain): No specified primitives were entirely inside cropped area, and thus all specified primitives were deleted." << std::endl;
     }
 
@@ -1090,38 +1090,19 @@ bool Context::areObjectPrimitivesComplete(uint objID) const {
 }
 
 void Context::cleanDeletedObjectIDs(std::vector<uint> &objIDs) const {
-    for (auto it = objIDs.begin(); it != objIDs.end();) {
-        if (!doesObjectExist(*it)) {
-            it = objIDs.erase(it);
-        } else {
-            ++it;
-        }
-    }
+    // Single remove-erase pass, for the same reason as cleanDeletedUUIDs(): per-entry erase is O(N*k).
+    objIDs.erase(std::remove_if(objIDs.begin(), objIDs.end(), [this](uint objID) { return !doesObjectExist(objID); }), objIDs.end());
 }
 
 void Context::cleanDeletedObjectIDs(std::vector<std::vector<uint>> &objIDs) const {
     for (auto &vec: objIDs) {
-        for (auto it = vec.begin(); it != vec.end();) {
-            if (!doesObjectExist(*it)) {
-                it = vec.erase(it);
-            } else {
-                ++it;
-            }
-        }
+        cleanDeletedObjectIDs(vec);
     }
 }
 
 void Context::cleanDeletedObjectIDs(std::vector<std::vector<std::vector<uint>>> &objIDs) const {
     for (auto &vec2D: objIDs) {
-        for (auto &vec: vec2D) {
-            for (auto it = vec.begin(); it != vec.end();) {
-                if (!doesObjectExist(*it)) {
-                    it = vec.erase(it);
-                } else {
-                    ++it;
-                }
-            }
-        }
+        cleanDeletedObjectIDs(vec2D);
     }
 }
 

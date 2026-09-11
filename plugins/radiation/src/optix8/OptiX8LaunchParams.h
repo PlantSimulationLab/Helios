@@ -131,8 +131,8 @@ struct OptiX8LaunchParams {
     float*    scatter_buff_top;       //!< [prim * Nbands_global + band]
     float*    scatter_buff_bottom;    //!< [prim * Nbands_global + band]
     float*    radiation_in_camera;    //!< [prim * Nbands_launch + band]
-    float*    scatter_buff_top_cam;   //!< [prim * Nbands_launch + band]
-    float*    scatter_buff_bottom_cam;
+    float*    scatter_buff_top_cam;   //!< [cam * Nprims * Nbands_launch + prim * Nbands_launch + band]
+    float*    scatter_buff_bottom_cam; //!< same layout as scatter_buff_top_cam
     float*    radiation_specular;     //!< [src*Ncams*Nprims*Nbands + cam*Nprims*Nbands + prim*Nbands + band]
     float*    Rsky;                   //!< Sky energy absorbed [band]
 

@@ -3740,6 +3740,23 @@ void RadiationModel::runBand(const std::string &label) {
     runBand(labels);
 }
 
+//! Add one launch's camera-weighted scatter, downloaded from the backend, into the per-camera accumulators of runBand()
+/**
+ * The accumulators hold one [primitive][band] block per camera. A download of any other size means the backend's camera-scatter buffers are out of step with the
+ * current camera set, and adding it element by element would read or write out of bounds, so it is an error.
+ */
+static void accumulateCameraScatter(const helios::RayTracingResults &launch_results, std::vector<float> &scatter_top_cam, std::vector<float> &scatter_bottom_cam) {
+    if (launch_results.scatter_buff_top_cam.size() != scatter_top_cam.size() || launch_results.scatter_buff_bottom_cam.size() != scatter_bottom_cam.size()) {
+        helios_runtime_error("ERROR (RadiationModel::runBand): The ray-tracing backend returned " + std::to_string(launch_results.scatter_buff_top_cam.size()) +
+                             " camera-weighted scatter values, but the current cameras, primitives and launched bands require " + std::to_string(scatter_top_cam.size()) +
+                             ". The backend's camera-scatter buffers were not sized for the current camera set.");
+    }
+    for (size_t i = 0; i < scatter_top_cam.size(); i++) {
+        scatter_top_cam[i] += launch_results.scatter_buff_top_cam[i];
+        scatter_bottom_cam[i] += launch_results.scatter_buff_bottom_cam[i];
+    }
+}
+
 void RadiationModel::runBand(const std::vector<std::string> &label) {
 
     //----- VERIFICATIONS -----//
@@ -3917,15 +3934,11 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         }
     }
 
-    if (radiativepropertiesneedupdate) {
-        // Use old material path (handles spectrum interpolation)
-        updateRadiativeProperties();
-        // DON'T call backend->updateMaterials() - old code already uploaded via direct OptiX calls
-    } else {
-        // Use new backend path (per-band materials only)
-        buildMaterialData();
-        backend->updateMaterials(material_data);
-    }
+    // Rebuild the material properties from the Context on every dispatch, so that primitive data edited between
+    // calls (reflectivity_<band>, *_spectrum, glass_*, specular_*) is picked up without an explicit call. This is
+    // the only material builder: it caches the spectral integrations per unique spectrum and applies the documented
+    // precedence (a per-band value overrides a spectrum), and it uploads the result to the backend itself.
+    updateRadiativeProperties();
 
     // Upload sources to backend (always use new path)
     buildSourceData();
@@ -4075,6 +4088,13 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
     // Zero radiation buffers via backend
     backend->zeroRadiationBuffers(Nbands_launch);
+
+    // Size and zero the camera-weighted scatter buffers for the current camera set before the first launch. Every direct and
+    // diffuse launch accumulates one block per camera whether or not this band scatters, so buffers left at the size of an
+    // earlier camera set (a camera registered since the last call) would be indexed past their end.
+    if (Ncameras > 0) {
+        backend->zeroCameraScatterBuffers(Nbands_launch);
+    }
 
     std::vector<float> TBS_top, TBS_bottom;
     TBS_top.resize(Nbands_launch * Nprimitives, 0);
@@ -4240,12 +4260,6 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         std::vector<bool> band_flags(band_launch_flag.begin(), band_launch_flag.end());
         params.band_launch_flag = band_flags;
 
-        // Pre-allocate camera scatter buffers before direct launch so __miss__direct can fill them.
-        // This ensures current_launch_band_count > 0 so getRadiationResults downloads them after.
-        if (Ncameras > 0 && scatteringenabled) {
-            backend->zeroCameraScatterBuffers(Nbands_launch);
-        }
-
         backend->launchDirectRays(params);
 
         if (message_flag) {
@@ -4261,12 +4275,17 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     flux_top.resize(Nbands_launch * Nprimitives, 0);
     flux_bottom = flux_top;
 
-    // Camera scatter accumulation vectors (declare early for use throughout ray tracing)
+    // Camera scatter accumulation vectors (declare early for use throughout ray tracing).
+    // Laid out [camera][primitive][band]: the direct, diffuse and scattering launches run once per dispatch, not
+    // once per camera, so they accumulate the scattered energy weighted by every camera's spectral response at
+    // the same time, and each camera is later handed its own slice as the radiance it integrates. A single
+    // [primitive][band] accumulator weighted by one camera's response gave every other camera that camera's image.
+    const size_t camera_scatter_stride = Nprimitives * Nbands_launch;
     std::vector<float> scatter_top_cam;
     std::vector<float> scatter_bottom_cam;
     if (Ncameras > 0) {
-        scatter_top_cam.resize(Nprimitives * Nbands_launch, 0.0f);
-        scatter_bottom_cam.resize(Nprimitives * Nbands_launch, 0.0f);
+        scatter_top_cam.resize(Ncameras * camera_scatter_stride, 0.0f);
+        scatter_bottom_cam.resize(Ncameras * camera_scatter_stride, 0.0f);
     }
 
     if (scatteringenabled && rundirect) {
@@ -4278,10 +4297,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
         // Accumulate camera scatter from direct rays
         if (Ncameras > 0) {
-            for (size_t i = 0; i < scatter_results.scatter_buff_top_cam.size(); i++) {
-                scatter_top_cam[i] += scatter_results.scatter_buff_top_cam[i];
-                scatter_bottom_cam[i] += scatter_results.scatter_buff_bottom_cam[i];
-            }
+            accumulateCameraScatter(scatter_results, scatter_top_cam, scatter_bottom_cam);
             // Zero GPU camera scatter buffers to prevent double-counting on next iteration
             backend->zeroCameraScatterBuffers(Nbands_launch);
         }
@@ -4378,8 +4394,9 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                             }
                         }
                         flux_top.at(ind) += out_top;
-                        if (Ncameras > 0) {
-                            scatter_top_cam[ind] += out_top;
+                        // Emission is not weighted by a spectral response, so every camera receives the same value.
+                        for (size_t cam = 0; cam < Ncameras; cam++) {
+                            scatter_top_cam[cam * camera_scatter_stride + ind] += out_top;
                         }
                         // Check twosided_flag - check material first, then primitive data
                         uint twosided_flag = context->getPrimitiveTwosidedFlag(p, 1);
@@ -4388,8 +4405,8 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                                 // SIF two-sided: use Mb-derived bottom flux rather than copying
                                 // the Mf-derived top flux. Physically distinct emission lobes.
                                 flux_bottom.at(ind) += sif_bottom_flux;
-                                if (Ncameras > 0) {
-                                    scatter_bottom_cam[ind] += sif_bottom_flux;
+                                for (size_t cam = 0; cam < Ncameras; cam++) {
+                                    scatter_bottom_cam[cam * camera_scatter_stride + ind] += sif_bottom_flux;
                                 }
                             } else {
                                 // Two-sided emission: the bottom face emits only its own emitted
@@ -4399,8 +4416,8 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                                 // violating energy conservation. This matches the camera-scatter
                                 // accumulator below and the SIF branch above.
                                 flux_bottom.at(ind) += out_top;
-                                if (Ncameras > 0) {
-                                    scatter_bottom_cam[ind] += out_top;
+                                for (size_t cam = 0; cam < Ncameras; cam++) {
+                                    scatter_bottom_cam[cam * camera_scatter_stride + ind] += out_top;
                                 }
                             }
                         }
@@ -4485,10 +4502,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         if (Ncameras > 0) {
             helios::RayTracingResults primary_results;
             backend->getRadiationResults(primary_results);
-            for (size_t i = 0; i < primary_results.scatter_buff_top_cam.size(); i++) {
-                scatter_top_cam[i] += primary_results.scatter_buff_top_cam[i];
-                scatter_bottom_cam[i] += primary_results.scatter_buff_bottom_cam[i];
-            }
+            accumulateCameraScatter(primary_results, scatter_top_cam, scatter_bottom_cam);
             // Zero GPU camera scatter buffers to prevent double-counting on next iteration
             backend->zeroCameraScatterBuffers(Nbands_launch);
         }
@@ -4610,10 +4624,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             if (Ncameras > 0) {
                 helios::RayTracingResults post_launch;
                 backend->getRadiationResults(post_launch);
-                for (size_t i = 0; i < post_launch.scatter_buff_top_cam.size(); i++) {
-                    scatter_top_cam[i] += post_launch.scatter_buff_top_cam[i];
-                    scatter_bottom_cam[i] += post_launch.scatter_buff_bottom_cam[i];
-                }
+                accumulateCameraScatter(post_launch, scatter_top_cam, scatter_bottom_cam);
                 // Zero GPU camera scatter buffers to prevent double-counting on next iteration
                 backend->zeroCameraScatterBuffers(Nbands_launch);
             }
@@ -4630,21 +4641,6 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
     // **** CAMERA RAY TRACE **** //
     if (Ncameras > 0) {
-
-        // Upload accumulated camera scatter to radiation_out for cameras to read
-        // scatter_top_cam contains camera-weighted scattered energy from all ray types
-        // Cameras read from radiation_out during hits, so we upload camera scatter there
-        if (Ncameras > 0 && scatteringenabled) {
-            backend->uploadRadiationOut(scatter_top_cam, scatter_bottom_cam);
-
-            // Resample the same field the cameras are about to read onto the shared mesh vertices. It has to be this array rather than flux_top: what a camera integrates is the scattered radiance weighted by
-            // its own spectral response, with the emitted flux folded in, which is a different quantity from the primitive's band-weighted outgoing flux.
-            if (cameraflux_smoothing_enabled && smoothing_vertex_count > 0) {
-                std::vector<float> vertex_flux_top, vertex_flux_bottom;
-                accumulateCameraFluxAtVertices(scatter_top_cam, scatter_bottom_cam, Nbands_launch, vertex_flux_top, vertex_flux_bottom);
-                backend->uploadVertexRadiationOut(vertex_flux_top, vertex_flux_bottom);
-            }
-        }
 
         // Setup solar disk rendering for cameras (enables lens flare effects)
         // Find sun-like sources (collimated or sun_sphere) and compute solar disk radiance
@@ -4729,6 +4725,25 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 if (!camera_in_dispatch) {
                     ++cam;
                     continue;
+                }
+
+                // Hand this camera its own slice of the accumulated camera-weighted scatter as the radiance it
+                // integrates. Cameras read radiation_out during hits, and what a camera integrates is the scattered
+                // radiance weighted by its own spectral response with the emitted flux folded in, which is a different
+                // quantity both from the primitive's band-weighted outgoing flux and from another camera's slice.
+                if (scatteringenabled) {
+                    const auto camera_top_begin = scatter_top_cam.begin() + static_cast<std::ptrdiff_t>(cam * camera_scatter_stride);
+                    const auto camera_bottom_begin = scatter_bottom_cam.begin() + static_cast<std::ptrdiff_t>(cam * camera_scatter_stride);
+                    const std::vector<float> camera_scatter_top(camera_top_begin, camera_top_begin + static_cast<std::ptrdiff_t>(camera_scatter_stride));
+                    const std::vector<float> camera_scatter_bottom(camera_bottom_begin, camera_bottom_begin + static_cast<std::ptrdiff_t>(camera_scatter_stride));
+                    backend->uploadRadiationOut(camera_scatter_top, camera_scatter_bottom);
+
+                    // Resample the same field this camera is about to read onto the shared mesh vertices.
+                    if (cameraflux_smoothing_enabled && smoothing_vertex_count > 0) {
+                        std::vector<float> vertex_flux_top, vertex_flux_bottom;
+                        accumulateCameraFluxAtVertices(camera_scatter_top, camera_scatter_bottom, Nbands_launch, vertex_flux_top, vertex_flux_bottom);
+                        backend->uploadVertexRadiationOut(vertex_flux_top, vertex_flux_bottom);
+                    }
                 }
 
                 // Validate antialiasing samples don't exceed maximum
@@ -6530,287 +6545,6 @@ void RadiationModel::buildUUIDMapping() {
     geometry_data.mapper.build(geometry_data.primitive_UUIDs);
 }
 
-static void validateAndCorrectMaterialProperties(float &rho, float &tau, float eps, bool emission_enabled, uint scattering_depth, const std::string &band_label, uint UUID, bool is_sif_band = false,
-                                                  helios::WarningAggregator *warnings = nullptr) {
-    // Helper function to enforce energy conservation constraints on material properties
-    // Mirrors the validation logic from updateRadiativeProperties() (lines 2672-2686)
-
-    // 1. Clamp rho and tau to [0,1] with warnings for out-of-range values
-    if (rho < 0.f || rho > 1.f) {
-        if (warnings) {
-            warnings->addWarning("material_property_clamping", "Reflectivity out of range [0,1] for band " + band_label + ", primitive #" + std::to_string(UUID) + ": rho=" + std::to_string(rho) + ". Clamping to valid range.");
-        }
-        rho = std::max(0.f, std::min(1.f, rho));
-    }
-
-    if (tau < 0.f || tau > 1.f) {
-        if (warnings) {
-            warnings->addWarning("material_property_clamping", "Transmissivity out of range [0,1] for band " + band_label + ", primitive #" + std::to_string(UUID) + ": tau=" + std::to_string(tau) + ". Clamping to valid range.");
-        }
-        tau = std::max(0.f, std::min(1.f, tau));
-    }
-
-    // SIF-flagged bands bypass the Stefan-Boltzmann ε+ρ+τ=1 conservation constraint
-    // because their emission is sourced from the Fluspect-B per-leaf kernel (see
-    // computeSIFEmission) rather than ε·σ·T⁴. Epsilon is not consulted for SIF bands.
-    // We still enforce the non-emission-style constraint ρ+τ ≤ 1 (physically required
-    // regardless of the emission mechanism).
-    if (is_sif_band) {
-        if (rho + tau > 1.f) {
-            helios_runtime_error(std::string("ERROR (RadiationModel): reflectivity and transmissivity must sum to less than or equal to 1 to ensure energy conservation. Band ") + band_label + ", Primitive #" +
-                                 std::to_string(UUID) + ": tau=" + std::to_string(tau) + ", rho=" + std::to_string(rho) + ".");
-        }
-        return;
-    }
-
-    // 2. Apply emission-specific constraints
-    if (emission_enabled) {
-        // Special case: blackbody emission (scatteringDepth=0 requires eps=1, rho=0, tau=0)
-        if (scattering_depth == 0 && eps != 1.f) {
-            if (warnings && (rho != 0.f || tau != 0.f)) {
-                warnings->addWarning("blackbody_override", "Band " + band_label + " has emission with scatteringDepth=0, " + "enforcing blackbody behavior (eps=1, rho=0, tau=0) for primitive #" + std::to_string(UUID));
-            }
-            rho = 0.f;
-            tau = 0.f;
-        }
-        // General emission case: check energy conservation (eps + rho + tau = 1)
-        else if (eps != 1.f && rho == 0 && tau == 0) {
-            // Auto-correct: set rho = 1 - eps
-            rho = 1.f - eps;
-        } else if (std::abs(eps + rho + tau - 1.f) > 1e-5f && eps > 0.f) {
-            // Cannot auto-correct, throw error
-            helios_runtime_error(std::string("ERROR (RadiationModel): emissivity, transmissivity, and reflectivity ") + "must sum to 1 to ensure energy conservation. Band " + band_label + ", Primitive #" + std::to_string(UUID) +
-                                 ": eps=" + std::to_string(eps) + ", tau=" + std::to_string(tau) + ", rho=" + std::to_string(rho) + ". It is also possible that you forgot to disable emission for this band.");
-        }
-    } else {
-        // 3. Non-emission case: rho + tau must be ≤ 1
-        if (rho + tau > 1.f) {
-            helios_runtime_error(std::string("ERROR (RadiationModel): transmissivity and reflectivity cannot sum to ") + "greater than 1 to ensure energy conservation. Band " + band_label + ", Primitive #" + std::to_string(UUID) +
-                                 ": eps=" + std::to_string(eps) + ", tau=" + std::to_string(tau) + ", rho=" + std::to_string(rho) + ". It is also possible that you forgot to disable emission for this band.");
-        }
-    }
-}
-
-void RadiationModel::buildMaterialData() {
-    // Build backend-agnostic material data from Context primitive data
-
-    // Warning aggregator for energy conservation issues
-    helios::WarningAggregator warnings;
-
-    size_t Nprims = geometry_data.primitive_count;
-    size_t Nbands = radiation_bands.size();
-    size_t Nsources = radiation_sources.size();
-
-    material_data.num_primitives = Nprims;
-    material_data.num_bands = Nbands;
-    material_data.num_sources = Nsources;
-    material_data.num_cameras = cameras.size();
-
-    // Allocate arrays (indexed as [source][primitive][band] using MaterialPropertyIndexer)
-    // NOTE: Bboxes don't need material properties (they only wrap rays for periodic boundaries)
-    size_t total_size = Nsources * Nbands * Nprims;
-    material_data.reflectivity.resize(total_size, 0.0f);
-    material_data.transmissivity.resize(total_size, 0.0f);
-    material_data.specular_exponent.resize(Nprims, -1.0f); // Default -1 means disabled
-    material_data.specular_scale.resize(Nprims, 0.0f);
-
-    // Create indexer for material properties: [source][primitive][band]
-    MaterialPropertyIndexer mat_indexer(Nsources, Nprims, Nbands);
-
-    // Cache unique spectral data to avoid redundant loads
-    std::map<std::string, std::vector<helios::vec2>> unique_rho_spectra;
-    std::map<std::string, std::vector<helios::vec2>> unique_tau_spectra;
-
-    for (size_t p = 0; p < Nprims; p++) {
-        uint UUID = geometry_data.primitive_UUIDs[p];
-
-        // Cache reflectivity spectra
-        if (context->doesPrimitiveDataExist(UUID, "reflectivity_spectrum")) {
-            std::string spectrum_label;
-            context->getPrimitiveData(UUID, "reflectivity_spectrum", spectrum_label);
-            if (unique_rho_spectra.find(spectrum_label) == unique_rho_spectra.end()) {
-                // Only load if spectrum exists in global data
-                if (context->doesGlobalDataExist(spectrum_label.c_str())) {
-                    unique_rho_spectra[spectrum_label] = loadSpectralData(spectrum_label);
-                }
-            }
-        }
-
-        // Cache transmissivity spectra
-        if (context->doesPrimitiveDataExist(UUID, "transmissivity_spectrum")) {
-            std::string spectrum_label;
-            context->getPrimitiveData(UUID, "transmissivity_spectrum", spectrum_label);
-            if (unique_tau_spectra.find(spectrum_label) == unique_tau_spectra.end()) {
-                // Only load if spectrum exists in global data
-                if (context->doesGlobalDataExist(spectrum_label.c_str())) {
-                    unique_tau_spectra[spectrum_label] = loadSpectralData(spectrum_label);
-                }
-            }
-        }
-    }
-
-    // Extract material properties from Context primitives
-    size_t b_idx = 0;
-    for (const auto &band_pair: radiation_bands) {
-        std::string band_label = band_pair.second.label;
-
-        for (size_t s = 0; s < Nsources; s++) {
-            for (size_t p = 0; p < Nprims; p++) {
-                uint UUID = geometry_data.primitive_UUIDs[p];
-
-                // Use BufferIndexer for safe, verifiable indexing
-                // Note: p is already the array position, so we use p directly (not UUID)
-                size_t idx = mat_indexer(s, p, b_idx);
-
-                // Get reflectivity - try spectrum first, then per-band label
-                float rho = rho_default;
-
-                if (context->doesPrimitiveDataExist(UUID, "reflectivity_spectrum")) {
-                    // Spectrum-based reflectivity
-                    std::string spectrum_label;
-                    context->getPrimitiveData(UUID, "reflectivity_spectrum", spectrum_label);
-
-                    // Get spectrum from cache
-                    if (unique_rho_spectra.find(spectrum_label) != unique_rho_spectra.end()) {
-                        const std::vector<helios::vec2> &spectrum = unique_rho_spectra.at(spectrum_label);
-
-                        // Get band wavelength bounds
-                        helios::vec2 wavebounds = band_pair.second.wavebandBounds;
-
-                        // Only require wavelength bounds if band performs scattering/absorption
-                        // Emission-only bands (scatteringDepth==0) use Stefan-Boltzmann and don't need spectral integration
-                        // Ray launches for emission don't require wavelength bounds since emission properties are wavelength-independent
-                        bool needs_spectral_integration = (band_pair.second.scatteringDepth > 0);
-
-                        if (needs_spectral_integration && wavebounds.x == 0 && wavebounds.y == 0) {
-                            helios_runtime_error("ERROR (RadiationModel::buildMaterialData): Band '" + band_label + "' has no wavelength bounds - required for spectral integration");
-                        }
-
-                        // Integrate spectrum over band wavelength range (only if bounds are defined)
-                        if (wavebounds.x != 0 || wavebounds.y != 0) {
-                            if (!radiation_sources[s].source_spectrum.empty()) {
-                                // Weight by source spectrum
-                                rho = integrateSpectrum(s, spectrum, wavebounds.x, wavebounds.y);
-                            } else {
-                                // Uniform integration (divide by wavelength range to normalize)
-                                rho = integrateSpectrum(spectrum, wavebounds.x, wavebounds.y) / (wavebounds.y - wavebounds.x);
-                            }
-                        }
-                        // else: emission-only band, rho remains at default value (should be 0 for blackbody)
-                    }
-                } else {
-                    // Per-band reflectivity (backward compatibility)
-                    std::string rho_label = "reflectivity_" + band_label;
-                    if (context->doesPrimitiveDataExist(UUID, rho_label.c_str())) {
-                        context->getPrimitiveData(UUID, rho_label.c_str(), rho);
-                    }
-                }
-
-                // Get transmissivity - try spectrum first, then per-band label
-                float tau = tau_default;
-
-                if (context->doesPrimitiveDataExist(UUID, "transmissivity_spectrum")) {
-                    // Spectrum-based transmissivity
-                    std::string spectrum_label;
-                    context->getPrimitiveData(UUID, "transmissivity_spectrum", spectrum_label);
-
-                    // Get spectrum from cache
-                    if (unique_tau_spectra.find(spectrum_label) != unique_tau_spectra.end()) {
-                        const std::vector<helios::vec2> &spectrum = unique_tau_spectra.at(spectrum_label);
-
-                        // Get band wavelength bounds
-                        helios::vec2 wavebounds = band_pair.second.wavebandBounds;
-
-                        // Only require wavelength bounds if band performs scattering/absorption
-                        // Emission-only bands (scatteringDepth==0) use Stefan-Boltzmann and don't need spectral integration
-                        // Ray launches for emission don't require wavelength bounds since emission properties are wavelength-independent
-                        bool needs_spectral_integration = (band_pair.second.scatteringDepth > 0);
-
-                        if (needs_spectral_integration && wavebounds.x == 0 && wavebounds.y == 0) {
-                            helios_runtime_error("ERROR (RadiationModel::buildMaterialData): Band '" + band_label + "' has no wavelength bounds - required for spectral integration");
-                        }
-
-                        // Integrate spectrum over band wavelength range (only if bounds are defined)
-                        if (wavebounds.x != 0 || wavebounds.y != 0) {
-                            if (!radiation_sources[s].source_spectrum.empty()) {
-                                // Weight by source spectrum
-                                tau = integrateSpectrum(s, spectrum, wavebounds.x, wavebounds.y);
-                            } else {
-                                // Uniform integration
-                                tau = integrateSpectrum(spectrum, wavebounds.x, wavebounds.y) / (wavebounds.y - wavebounds.x);
-                            }
-                        }
-                        // else: emission-only band, tau remains at default value (should be 0 for blackbody)
-                    }
-                } else {
-                    // Per-band transmissivity (backward compatibility)
-                    std::string tau_label = "transmissivity_" + band_label;
-                    if (context->doesPrimitiveDataExist(UUID, tau_label.c_str())) {
-                        context->getPrimitiveData(UUID, tau_label.c_str(), tau);
-                    }
-                }
-
-                // Get emissivity for validation
-                float eps = eps_default;
-                std::string eps_label = "emissivity_" + band_label;
-                if (context->doesPrimitiveDataExist(UUID, eps_label.c_str())) {
-                    context->getPrimitiveData(UUID, eps_label.c_str(), eps);
-                }
-
-                // Validate and correct material properties to ensure energy conservation.
-                // SIF-flagged bands skip the Stefan-Boltzmann ε+ρ+τ=1 check because their
-                // emission is sourced from Fluspect-B, not ε·σ·T⁴.
-                const RadiationBand &band = band_pair.second;
-                const bool is_sif_band = sif_emission_bands.count(band_label) > 0;
-                validateAndCorrectMaterialProperties(rho, tau, eps, band.emissionFlag, band.scatteringDepth, band_label, UUID, is_sif_band, &warnings);
-
-                // Store validated properties
-                material_data.reflectivity[idx] = rho;
-                material_data.transmissivity[idx] = tau;
-            }
-        }
-        b_idx++;
-    }
-
-    // NOTE: Bboxes don't need material properties - they only wrap rays for periodic boundaries
-    // Material buffers are sized for real primitives only (Nprims), not including bboxes
-
-    // Load specular reflection properties from primitive data
-    bool specular_exponent_specified = false;
-    bool specular_scale_specified = false;
-
-    for (size_t p = 0; p < Nprims; p++) {
-        uint UUID = geometry_data.primitive_UUIDs[p];
-
-        if (context->doesPrimitiveDataExist(UUID, "specular_exponent") && context->getPrimitiveDataType("specular_exponent") == helios::HELIOS_TYPE_FLOAT) {
-            context->getPrimitiveData(UUID, "specular_exponent", material_data.specular_exponent.at(p));
-            if (material_data.specular_exponent.at(p) >= 0.f) {
-                specular_exponent_specified = true;
-            }
-        }
-
-        if (context->doesPrimitiveDataExist(UUID, "specular_scale") && context->getPrimitiveDataType("specular_scale") == helios::HELIOS_TYPE_FLOAT) {
-            context->getPrimitiveData(UUID, "specular_scale", material_data.specular_scale.at(p));
-            if (material_data.specular_scale.at(p) > 0.f) {
-                specular_scale_specified = true;
-            }
-        }
-    }
-
-    // Auto-enable specular reflection if specular properties are specified on any primitive
-    if (specular_exponent_specified) {
-        if (specular_scale_specified) {
-            specular_reflection_mode = 2; // Mode 2: use primitive specular_scale
-        } else {
-            specular_reflection_mode = 1; // Mode 1: use default 0.25 scale
-        }
-    } else {
-        specular_reflection_mode = 0; // Disabled
-    }
-
-    // Report any accumulated warnings
-    warnings.report();
-}
 
 void RadiationModel::buildSourceData() {
     // Build backend-agnostic source data from radiation_sources
@@ -6861,6 +6595,6 @@ std::vector<helios::RayTracingSource> &RadiationModel::getSourceData() {
 
 void RadiationModel::testBuildAllBackendData() {
     buildGeometryData(context->getAllUUIDs());
-    buildMaterialData();
+    updateRadiativeProperties();
     buildSourceData();
 }

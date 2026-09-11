@@ -655,6 +655,110 @@ GPU_TEST_CASE("RadiationModel Geometry Auto-Initialized By runBand") {
     DOCTEST_CHECK(error <= 0.01);
 }
 
+GPU_TEST_CASE("RadiationModel::runBand uses the same material properties on every call") {
+    // Regression test. The first runBand() built the material properties through updateRadiativeProperties(),
+    // where a per-band value such as reflectivity_PAR overrides reflectivity_spectrum. Every later call that
+    // found the properties not flagged dirty went through a second builder that gave the spectrum precedence
+    // (and re-integrated it for every primitive). The same scene therefore absorbed a different flux on the
+    // second call than on the first. Only the source flux changes between the two runs here, so the absorbed
+    // flux must scale with it and reflectivity_PAR must win both times.
+    Context context;
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(patch, "twosided_flag", uint(0));
+    context.setPrimitiveData(patch, "reflectivity_PAR", 0.6f);
+    std::vector<vec2> flat_spectrum = {{400.f, 0.05f}, {500.f, 0.05f}, {600.f, 0.05f}, {700.f, 0.05f}, {800.f, 0.05f}};
+    context.setGlobalData("flat_reflectivity_005", flat_spectrum);
+    context.setPrimitiveData(patch, "reflectivity_spectrum", "flat_reflectivity_005");
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("PAR", 400.f, 700.f);
+    radiation.disableEmission("PAR");
+    // Surface properties only take effect with a non-zero scattering depth; the single patch has nothing to
+    // scatter onto, so its absorbed flux is exactly (1 - rho) times the incident flux.
+    radiation.setScatteringDepth("PAR", 1);
+    radiation.setDirectRayCount("PAR", 10000);
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceFlux(sun, "PAR", 1000.f);
+    radiation.updateGeometry();
+
+    radiation.runBand("PAR");
+    float flux_first;
+    context.getPrimitiveData(patch, "radiation_flux_PAR", flux_first);
+
+    radiation.setSourceFlux(sun, "PAR", 2000.f);
+    radiation.runBand("PAR");
+    float flux_second;
+    context.getPrimitiveData(patch, "radiation_flux_PAR", flux_second);
+
+    // reflectivity_PAR = 0.6 applies on both calls: 400 W/m^2, then 800 W/m^2 (the spectrum would give ~1900)
+    DOCTEST_CHECK(fabsf(flux_first - 400.f) / 400.f <= 0.01f);
+    DOCTEST_CHECK(fabsf(flux_second - 800.f) / 800.f <= 0.01f);
+}
+
+GPU_TEST_CASE("RadiationModel::runBand renders a camera band without wavelength bounds the same on repeat calls") {
+    // Regression test. A band created without wavelength bounds, whose primitives carry reflectivity_spectrum and whose
+    // only consumer is a camera with a spectral response, rendered on the first call (the camera sees the
+    // response-weighted integral of the spectrum) but the second runBand() went through a different material builder
+    // that demanded wavelength bounds and threw. Both calls must render the same image, and it must be the surface seen
+    // through the camera's response.
+    Context context;
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(patch, "twosided_flag", uint(0));
+    // Flat across the camera's response and much brighter beyond it, so the camera must see exactly 0.12. It is sampled at
+    // the response's nodes because the camera-weighted reflectivity is integrated on the spectrum's own sample points.
+    std::vector<vec2> leaf_spectrum = {{400.f, 0.12f}, {550.f, 0.12f}, {700.f, 0.12f}, {750.f, 0.4f}};
+    context.setGlobalData("leaf_reflectivity_repeat_test", leaf_spectrum);
+    context.setPrimitiveData(patch, "reflectivity_spectrum", "leaf_reflectivity_repeat_test");
+    std::vector<vec2> green_response = {{400.f, 0.f}, {550.f, 1.f}, {700.f, 0.f}};
+    context.setGlobalData("green_response_repeat_test", green_response);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("green");
+    radiation.disableEmission("green");
+    radiation.setScatteringDepth("green", 1);
+    radiation.setDiffuseRadiationFlux("green", 0.f);
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceFlux(sun, "green", 1000.f);
+
+    // Looking straight down with a field of view narrower than the patch, so that every pixel sees the patch.
+    CameraProperties cam_props;
+    cam_props.camera_resolution = make_int2(8, 8);
+    cam_props.HFOV = 20;
+    cam_props.focal_plane_distance = 2;
+    cam_props.lens_diameter = 0.f;
+    cam_props.exposure = "manual";
+    cam_props.white_balance = "off";
+    radiation.addRadiationCamera("green_cam", {"green"}, make_vec3(0, 0, 2), make_vec3(0, 0, 0), cam_props, 1);
+    radiation.setCameraSpectralResponse("green_cam", "green", "green_response_repeat_test");
+    radiation.updateGeometry();
+
+    auto render_mean_pixel = [&]() {
+        radiation.runBand("green");
+        const std::vector<float> pixels = radiation.getCameraPixelData("green_cam", "green");
+        DOCTEST_REQUIRE(pixels.size() == 64);
+        double sum = 0;
+        for (float pixel: pixels) {
+            DOCTEST_REQUIRE(std::isfinite(pixel));
+            sum += pixel;
+        }
+        return float(sum / double(pixels.size()));
+    };
+
+    float first_call = 0.f;
+    float second_call = 0.f;
+    DOCTEST_REQUIRE_NOTHROW(first_call = render_mean_pixel());
+    DOCTEST_REQUIRE_NOTHROW(second_call = render_mean_pixel());
+    DOCTEST_CAPTURE(first_call);
+    DOCTEST_CAPTURE(second_call);
+
+    // A Lambertian patch of reflectivity 0.12 under 1000 W/m^2 has radiance 0.12 * 1000 / pi.
+    const float rho_camera = 0.12f;
+    DOCTEST_CHECK(first_call == doctest::Approx(rho_camera * 1000.f / PI_F).epsilon(0.05));
+    DOCTEST_CHECK(second_call == doctest::Approx(first_call).epsilon(0.02));
+}
+
 GPU_TEST_CASE("RadiationModel Rebuilds Geometry Added After First runBand") {
     // Regression test: geometry added to the Context AFTER a first runBand() must be traced.
     //
@@ -8407,7 +8511,7 @@ GPU_TEST_CASE("RadiationModel - Pixel Label UUID Mapping With Non-Sequential Obj
 }
 
 GPU_TEST_CASE("Material Backend Migration - Spectrum Interpolation Integration") {
-    // Test that spectrum interpolation configs are properly applied in buildMaterialData()
+    // Test that spectrum interpolation configs are properly applied in updateRadiativeProperties()
 
     helios::Context context;
     RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
@@ -8439,7 +8543,7 @@ GPU_TEST_CASE("Material Backend Migration - Spectrum Interpolation Integration")
     uint source = radiationmodel.addCollimatedRadiationSource();
     radiationmodel.setSourceFlux(source, "PAR", 1000.f);
 
-    // Update geometry and run - this triggers buildMaterialData()
+    // Update geometry and run - this triggers updateRadiativeProperties()
     radiationmodel.updateGeometry();
     radiationmodel.runBand("PAR");
 
@@ -10721,6 +10825,221 @@ GPU_TEST_CASE("Backend Invariant - Camera-Weighted Scatter") {
     DOCTEST_CHECK(ratio == doctest::Approx(4.f).epsilon(0.25));
 }
 
+// The direct and diffuse launches run once per dispatch, not once per camera, and used to accumulate the
+// camera-weighted scatter for a single camera that was then handed to every camera as the radiance it integrates. With
+// two cameras of different spectral response, every camera but that one was rendered through the wrong response. The
+// scene below is the one from the previous test with both cameras registered on the same model: each camera's image
+// must match the image it renders when it is the model's only camera, which a camera handed the other's weighting
+// misses by a factor of four. Both registration orders are checked.
+GPU_TEST_CASE("Backend Invariant - Camera-Weighted Scatter Is Per Camera") {
+    const std::vector<vec2> surface_rho = {make_vec2(400, 0.2f), make_vec2(590, 0.2f), make_vec2(610, 0.8f), make_vec2(800, 0.8f)};
+    const std::vector<vec2> flat_source = {make_vec2(400, 1.f), make_vec2(800, 1.f)};
+    const std::vector<vec2> response_low = {make_vec2(400, 1.f), make_vec2(590, 1.f), make_vec2(610, 0.f), make_vec2(800, 0.f)};
+    const std::vector<vec2> response_high = {make_vec2(400, 0.f), make_vec2(590, 0.f), make_vec2(610, 1.f), make_vec2(800, 1.f)};
+
+    // Renders the given (label, response) cameras, registered in the order given, on one model and returns the mean
+    // pixel of each, keyed by label.
+    auto render = [&](const std::vector<std::pair<std::string, std::string>> &cameras) {
+        Context context;
+        context.setGlobalData("probe_surface_rho", surface_rho);
+        context.setGlobalData("probe_response_low", response_low);
+        context.setGlobalData("probe_response_high", response_high);
+
+        std::vector<uint> ground = context.addTile(make_vec3(0, 0, 0), make_vec2(4, 4), nullrotation, make_int2(8, 8));
+        context.setPrimitiveData(ground, "reflectivity_spectrum", "probe_surface_rho");
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+
+        uint sun = model.addCollimatedRadiationSource(make_vec3(0.f, 0.f, 1.f));
+        model.setSourceSpectrum(sun, flat_source);
+
+        model.addRadiationBand("SW", 400, 800);
+        model.disableEmission("SW");
+        model.setScatteringDepth("SW", 1);
+        model.setDirectRayCount("SW", 200);
+        model.setDiffuseRayCount("SW", 200);
+        model.setDiffuseRadiationFlux("SW", 0.f);
+        model.setSourceFlux(sun, "SW", 1000.f);
+
+        CameraProperties camera_properties;
+        camera_properties.camera_resolution = make_int2(16, 16);
+        camera_properties.HFOV = 40.f;
+        camera_properties.focal_plane_distance = 2.f;
+        camera_properties.lens_diameter = 0.f;
+        camera_properties.exposure = "manual";
+        camera_properties.white_balance = "off";
+
+        for (const auto &[label, response_label]: cameras) {
+            model.addRadiationCamera(label, {"SW"}, make_vec3(0, 0, 2.f), make_vec3(0, 0, 0), camera_properties, 4);
+            model.setCameraSpectralResponse(label, "SW", response_label);
+        }
+
+        model.updateGeometry();
+        model.runBand("SW");
+
+        std::map<std::string, float> means;
+        for (const auto &camera: cameras) {
+            std::vector<float> pixels;
+            context.getGlobalData(("camera_" + camera.first + "_SW").c_str(), pixels);
+            DOCTEST_REQUIRE(!pixels.empty());
+            double sum = 0;
+            for (float pixel: pixels) {
+                DOCTEST_REQUIRE(std::isfinite(pixel));
+                sum += pixel;
+            }
+            means[camera.first] = float(sum / double(pixels.size()));
+        }
+        return means;
+    };
+
+    const std::pair<std::string, std::string> camera_low{"cam_low", "probe_response_low"};
+    const std::pair<std::string, std::string> camera_high{"cam_high", "probe_response_high"};
+
+    const float reference_low = render({camera_low}).at("cam_low");
+    const float reference_high = render({camera_high}).at("cam_high");
+    DOCTEST_REQUIRE(reference_low > 0.f);
+    // The camera confined to the long-wavelength half sees the surface's 0.8 reflectance, the other its 0.2.
+    DOCTEST_CHECK(reference_high / reference_low == doctest::Approx(4.f).epsilon(0.25));
+
+    for (bool low_camera_first: {true, false}) {
+        DOCTEST_CAPTURE(low_camera_first);
+        const std::map<std::string, float> means = low_camera_first ? render({camera_low, camera_high}) : render({camera_high, camera_low});
+        DOCTEST_CHECK(means.at("cam_low") == doctest::Approx(reference_low).epsilon(0.1));
+        DOCTEST_CHECK(means.at("cam_high") == doctest::Approx(reference_high).epsilon(0.1));
+    }
+}
+
+// A camera registered after an earlier runBand() must be served on every later band. The camera-scatter buffers are
+// laid out one block per camera and every launch accumulates into all of them, but they were resized to the current
+// camera set only on a band that scatters. A band without scattering run after a camera was added therefore launched
+// against buffers still sized for the old camera set: OptiX 8 downloaded past the end of its device allocation, and the
+// Vulkan shaders indexed past theirs. The scene runs a scattering band with one camera, registers a second camera, then
+// runs a non-scattering shortwave band, an emitting longwave band and the scattering band again. Every camera must
+// render what it renders on a model where it is the only camera.
+GPU_TEST_CASE("Backend Invariant - Camera Added Between runBand Calls") {
+    const std::vector<vec2> surface_rho = {make_vec2(400, 0.2f), make_vec2(590, 0.2f), make_vec2(610, 0.8f), make_vec2(800, 0.8f)};
+    const std::vector<vec2> flat_source = {make_vec2(400, 1.f), make_vec2(800, 1.f)};
+    const std::vector<vec2> response_low = {make_vec2(400, 1.f), make_vec2(590, 1.f), make_vec2(610, 0.f), make_vec2(800, 0.f)};
+    const std::vector<vec2> response_high = {make_vec2(400, 0.f), make_vec2(590, 0.f), make_vec2(610, 1.f), make_vec2(800, 1.f)};
+
+    struct CameraSpec {
+        std::string label;
+        std::string response;
+    };
+    const CameraSpec camera_low{"cam_low", "probe_response_low"};
+    const CameraSpec camera_high{"cam_high", "probe_response_high"};
+    const std::vector<std::string> bands = {"SW", "SW0", "LW"};
+
+    // Mean pixel of every camera in every band, keyed "<camera>_<band>".
+    auto render = [&](const std::vector<CameraSpec> &cameras_before_first_run, const std::vector<CameraSpec> &cameras_after_first_run) {
+        Context context;
+        context.setGlobalData("probe_surface_rho", surface_rho);
+        context.setGlobalData("probe_response_low", response_low);
+        context.setGlobalData("probe_response_high", response_high);
+
+        std::vector<uint> ground = context.addTile(make_vec3(0, 0, 0), make_vec2(4, 4), nullrotation, make_int2(8, 8));
+        context.setPrimitiveData(ground, "reflectivity_spectrum", "probe_surface_rho");
+        context.setPrimitiveData(ground, "temperature", 300.f);
+        context.setPrimitiveData(ground, "reflectivity_LW", 0.f); // a black body in the longwave, overriding the spectrum
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+
+        uint sun = model.addCollimatedRadiationSource(make_vec3(0.f, 0.f, 1.f));
+        model.setSourceSpectrum(sun, flat_source);
+
+        model.addRadiationBand("SW", 400, 800);
+        model.disableEmission("SW");
+        model.setScatteringDepth("SW", 1);
+        model.setDirectRayCount("SW", 200);
+        model.setDiffuseRayCount("SW", 200);
+        model.setDiffuseRadiationFlux("SW", 0.f);
+        model.setSourceFlux(sun, "SW", 1000.f);
+
+        // The same shortwave band without scattering: its direct launch still accumulates camera-weighted scatter.
+        model.addRadiationBand("SW0", 400, 800);
+        model.disableEmission("SW0");
+        model.setScatteringDepth("SW0", 0);
+        model.setDirectRayCount("SW0", 200);
+        model.setDiffuseRadiationFlux("SW0", 0.f);
+        model.setSourceFlux(sun, "SW0", 1000.f);
+
+        // Emission longwave band: every camera must see the surface's own emission, which carries no spectral weighting.
+        // It scatters because a camera renders emitted radiance only on a band that scatters.
+        model.addRadiationBand("LW");
+        model.setScatteringDepth("LW", 1);
+        model.setDirectRayCount("LW", 0);
+        model.setDiffuseRayCount("LW", 200);
+        model.setDiffuseRadiationFlux("LW", 0.f);
+
+        CameraProperties camera_properties;
+        camera_properties.camera_resolution = make_int2(16, 16);
+        camera_properties.HFOV = 40.f;
+        camera_properties.focal_plane_distance = 2.f;
+        camera_properties.lens_diameter = 0.f;
+        camera_properties.exposure = "manual";
+        camera_properties.white_balance = "off";
+
+        auto add_camera = [&](const CameraSpec &spec) {
+            model.addRadiationCamera(spec.label, bands, make_vec3(0, 0, 2.f), make_vec3(0, 0, 0), camera_properties, 4);
+            model.setCameraSpectralResponse(spec.label, "SW", spec.response);
+            model.setCameraSpectralResponse(spec.label, "SW0", spec.response);
+        };
+
+        for (const CameraSpec &spec: cameras_before_first_run) {
+            add_camera(spec);
+        }
+        model.updateGeometry();
+        model.runBand("SW");
+
+        for (const CameraSpec &spec: cameras_after_first_run) {
+            add_camera(spec);
+        }
+        model.runBand("SW0");
+        model.runBand("LW");
+        model.runBand("SW");
+
+        std::vector<CameraSpec> all_cameras = cameras_before_first_run;
+        all_cameras.insert(all_cameras.end(), cameras_after_first_run.begin(), cameras_after_first_run.end());
+        std::map<std::string, float> means;
+        for (const CameraSpec &spec: all_cameras) {
+            for (const std::string &band: bands) {
+                std::vector<float> pixels;
+                context.getGlobalData(("camera_" + spec.label + "_" + band).c_str(), pixels);
+                DOCTEST_REQUIRE(!pixels.empty());
+                double sum = 0;
+                for (float pixel: pixels) {
+                    DOCTEST_REQUIRE(std::isfinite(pixel));
+                    sum += pixel;
+                }
+                means[spec.label + "_" + band] = float(sum / double(pixels.size()));
+            }
+        }
+        return means;
+    };
+
+    const std::map<std::string, float> reference_low = render({camera_low}, {});
+    const std::map<std::string, float> reference_high = render({camera_high}, {});
+    const std::map<std::string, float> combined = render({camera_low}, {camera_high});
+
+    for (const std::string &band: bands) {
+        for (const auto &[reference, label]: {std::make_pair(&reference_low, camera_low.label), std::make_pair(&reference_high, camera_high.label)}) {
+            const std::string key = label + "_" + band;
+            const float expected = reference->at(key);
+            const float seen = combined.at(key);
+            DOCTEST_CAPTURE(key);
+            DOCTEST_CAPTURE(expected);
+            DOCTEST_CAPTURE(seen);
+            DOCTEST_CHECK(std::fabs(seen - expected) <= 0.1f * std::max(std::fabs(expected), std::fabs(seen)) + 1e-4f);
+        }
+    }
+
+    // The scene must actually exercise the per-camera weighting and the emission path.
+    DOCTEST_CHECK(combined.at("cam_low_LW") > 0.f);
+    DOCTEST_REQUIRE(combined.at("cam_low_SW") > 0.f);
+    DOCTEST_CHECK(combined.at("cam_high_SW") / combined.at("cam_low_SW") == doctest::Approx(4.f).epsilon(0.25));
+}
 
 
 // Camera flux smoothing tests

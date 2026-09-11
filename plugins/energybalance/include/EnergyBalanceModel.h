@@ -122,6 +122,44 @@ public:
      */
     void evaluateAirEnergyBalance(const std::vector<uint> &UUIDs, float dt_sec, float time_advance_sec);
 
+    //! Enable the canopy airspace model, which resolves within-canopy air temperature and humidity from a resistance network
+    /**
+     * This model computes the within-canopy (aerodynamic) air temperature \f$T_{ac}\f$ and vapor pressure \f$e_{ac}\f$ that surround leaves, allowing the canopy to feed back on the air that drives its own transpiration. The canopy airspace is
+     * discretized into \p num_layers vertical layers of equal leaf area index, each of which exchanges sensible heat and water vapor with the leaves it contains, with its neighboring layers, and (for the bottom and top layers) with the soil
+     * surface and the above-canopy reference air. Setting \p num_layers to 1 yields a single within-canopy node whose neighbors are the reference air above and the soil below.
+     *
+     * Unlike \ref enableAirEnergyBalance(), this model imposes the measured above-canopy air temperature and humidity as a fixed boundary condition at the canopy top rather than evolving a prognostic atmospheric boundary layer. It is therefore
+     * appropriate for canopies subject to advection and mesoscale forcing (e.g., an orchard block) where the assumption of an infinite horizontal canopy does not hold.
+     *
+     * When enabled, \ref run() iterates the surface energy balance and the airspace solution to convergence, since leaf temperature and the airspace state are mutually dependent. Because the model solves for a steady state, it is not
+     * compatible with the dynamic (non-steady-state) forms of \ref run() that take a timestep argument.
+     *
+     * This routine sets primitive data 'air_temperature', 'air_humidity', and 'wind_speed' for all primitives in \p canopy_UUIDs, and adds 'boundarylayer_conductance_out' to the optional outputs because the airspace solution requires it.
+     *
+     * The above-canopy boundary condition is read from global data 'air_temperature_reference', 'air_humidity_reference', and 'wind_speed_reference' if present, and otherwise falls back to this model's default values.
+     *
+     * \param[in] canopy_UUIDs Universal unique identifiers for canopy (leaf) primitives that exchange heat and moisture with the canopy airspace.
+     * \param[in] ground_UUIDs Universal unique identifiers for ground primitives forming the soil node beneath the canopy. May be empty, in which case there is no exchange with the soil surface.
+     * \param[in] canopy_height_m Height of the canopy in meters.
+     * \param[in] reference_height_m Height at which the above-canopy air temperature, humidity, and wind speed are measured in meters. Must be greater than the canopy height.
+     * \param[in] leaf_area_index One-sided leaf area index of the canopy on a ground-area basis (m² leaf area per m² ground area).
+     * \param[in] num_layers Number of vertical canopy airspace layers of equal leaf area index. A value of 1 gives a single within-canopy node.
+     */
+    void enableCanopyAirspaceModel(const std::vector<uint> &canopy_UUIDs, const std::vector<uint> &ground_UUIDs, float canopy_height_m, float reference_height_m, float leaf_area_index, uint num_layers);
+
+    //! Disable the canopy airspace model
+    /**
+     * Subsequent calls to \ref run() will perform a single surface energy balance pass using whatever 'air_temperature' and 'air_humidity' primitive data are currently set.
+     */
+    void disableCanopyAirspaceModel();
+
+    //! Set convergence criteria for the canopy airspace model iteration
+    /**
+     * \param[in] tolerance_K Convergence tolerance for canopy airspace temperature in Kelvin. Iteration stops when the maximum change in any layer's air temperature falls below this value. Default is 0.01 K.
+     * \param[in] max_iterations Maximum number of iterations of the coupled surface energy balance and airspace solution. Default is 50.
+     */
+    void setCanopyAirspaceConvergence(float tolerance_K, uint max_iterations);
+
     //! Add optional output primitive data values to the Context
     /**
      * \param[in] label Name of primitive data (e.g., vapor_pressure_deficit)
@@ -161,6 +199,68 @@ public:
 
 private:
     void evaluateSurfaceEnergyBalance(const std::vector<uint> &UUIDs, float dt);
+
+    //! Solve the coupled surface energy balance and canopy airspace state to convergence
+    /**
+     * \param[in] UUIDs Universal unique identifiers for primitives included in the surface energy balance.
+     */
+    void evaluateCanopyAirspace(const std::vector<uint> &UUIDs);
+
+    //! Assign canopy primitives to vertical airspace layers containing equal leaf area
+    /**
+     * Layer 0 is the bottom layer and layer (num_layers-1) is the top layer. Primitives are sorted by the height of their centroid above the base of the canopy and divided such that each layer contains an equal one-sided leaf area.
+     */
+    void assignCanopyAirspaceLayers();
+
+    //! Write the within-canopy wind speed profile to primitive data 'wind_speed'
+    /**
+     * Applies the exponential within-canopy profile of Cionco (1972), U(z) = U(h_c)*exp[-a*(1-z/h_c)], where the attenuation coefficient a is one half of the leaf area index.
+     * \param[in] wind_speed_canopy_top_m_s Wind speed at the top of the canopy in m/s.
+     */
+    void updateCanopyWindProfile(float wind_speed_canopy_top_m_s);
+
+    //! Calculate aerodynamic resistance above the canopy following Perrier (1975)
+    /**
+     * \param[in] wind_speed_reference_m_s Wind speed at the reference height in m/s.
+     * \return Aerodynamic resistance between the canopy top and the reference height in s/m.
+     */
+    [[nodiscard]] float calculateAerodynamicResistance(float wind_speed_reference_m_s) const;
+
+    //! Flag indicating whether the canopy airspace model is enabled
+    bool canopy_airspace_enabled = false;
+
+    //! Canopy primitives exchanging heat and moisture with the canopy airspace
+    std::vector<uint> canopy_airspace_UUIDs;
+
+    //! Ground primitives forming the soil node beneath the canopy airspace
+    std::vector<uint> canopy_airspace_ground_UUIDs;
+
+    //! Number of vertical canopy airspace layers
+    uint canopy_airspace_layer_count = 1;
+
+    //! One-sided leaf area index of the canopy on a ground-area basis
+    float canopy_airspace_LAI = 0.f;
+
+    //! Convergence tolerance for canopy airspace temperature, Kelvin
+    float canopy_airspace_tolerance_K = 0.01f;
+
+    //! Maximum number of canopy airspace iterations
+    uint canopy_airspace_max_iterations = 50;
+
+    //! Index of the airspace layer containing each primitive in canopy_airspace_UUIDs
+    std::vector<uint> canopy_airspace_layer_index;
+
+    //! Height of the base of the canopy above which layers are assigned, meters
+    float canopy_airspace_base_height_m = 0.f;
+
+    //! Height of the midpoint of each canopy airspace layer above the canopy base, meters
+    std::vector<float> canopy_airspace_layer_midpoint_m;
+
+    //! Height of the upper boundary of each canopy airspace layer above the canopy base, meters
+    std::vector<float> canopy_airspace_layer_top_m;
+
+    //! Flag indicating whether layer assignment is current
+    bool canopy_airspace_layers_assigned = false;
 
 #ifdef HELIOS_CUDA_AVAILABLE
     //! GPU implementation using CUDA
@@ -213,8 +313,8 @@ private:
     //! Dimensions of the canopy (x, y, z) in meters
     helios::vec3 canopy_dimensions;
 
-    float canopy_height_m;
-    float reference_height_m;
+    float canopy_height_m = 0.f;
+    float reference_height_m = 0.f;
 
     //! Flag controlling whether messages are printed to standard output
     bool message_flag;

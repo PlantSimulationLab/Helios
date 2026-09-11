@@ -36,6 +36,25 @@ static bool windowedContextAvailable() {
     return context_available;
 }
 
+//! Returns true if a headless (offscreen) OpenGL context can be created on this machine
+/**
+ * Headless mode renders to an offscreen framebuffer, but still needs an OpenGL context to do it, which a machine with no
+ * GL driver at all cannot create. Like windowedContextAvailable(), this is a probe that constructs a Visualizer with the
+ * arguments the guarded tests use, and the result is cached.
+ */
+static bool headlessContextAvailable() {
+    static const bool context_available = []() {
+        try {
+            Visualizer probe(16, 16, 0, true, true); // headless, matching the guarded tests
+            probe.disableMessages();
+        } catch (...) {
+            return false;
+        }
+        return true;
+    }();
+    return context_available;
+}
+
 //! Test-only accessor for Visualizer's private tick-generation helpers and colorbar state
 /**
  * Declared a friend of Visualizer (see Visualizer.h) and defined only here, so none of this is
@@ -98,8 +117,8 @@ public:
 
     //! Number of primitives the visualizer considers already uploaded to the geometry handler
     /**
-     * Context dirty flags are sticky, so this is what keeps a build from re-uploading the whole
-     * scene every frame. \sa Visualizer::contextUUIDs_uploaded
+     * Context dirty flags are sticky, so this (with a per-primitive fingerprint of the Context state)
+     * is what keeps a build from re-uploading the whole scene every frame. \sa Visualizer::contextUUIDs_uploaded
      */
     static size_t getUploadedPrimitiveCount(const Visualizer &visualizer) {
         return visualizer.contextUUIDs_uploaded.size();
@@ -108,6 +127,37 @@ public:
     //! Number of geometry elements the handler will push to the GPU on the next transferBufferData()
     static size_t getDirtyGeometryCount(const Visualizer &visualizer) {
         return visualizer.geometry_handler.getDirtyUUIDs().size();
+    }
+
+    //! Vertices of one geometry element as they currently sit in the geometry handler
+    static std::vector<helios::vec3> getGeometryVertices(const Visualizer &visualizer, size_t geometry_id) {
+        return visualizer.geometry_handler.getVertices(geometry_id);
+    }
+
+    //! Texture ID of one geometry element in the geometry handler
+    static int getGeometryTextureID(const Visualizer &visualizer, size_t geometry_id) {
+        return visualizer.geometry_handler.getTextureID(geometry_id);
+    }
+
+    //! Texture flag of one geometry element: whether it is drawn from its texture or in its color masked by the texture
+    static int getGeometryTextureFlag(const Visualizer &visualizer, size_t geometry_id) {
+        const auto &index_map = visualizer.geometry_handler.getIndexMap(geometry_id);
+        return visualizer.geometry_handler.getTextureFlagData_ptr(index_map.geometry_type)->at(index_map.texture_flag_index);
+    }
+
+    //! Context primitives the most recent Context build added or re-added to the geometry handler
+    static size_t getContextPrimitivesAddedLastBuild(const Visualizer &visualizer) {
+        return visualizer.context_primitives_added_last_build;
+    }
+
+    //! Context geometry the most recent Context build recolored in place, without re-adding it
+    static size_t getContextPrimitivesRecoloredLastBuild(const Visualizer &visualizer) {
+        return visualizer.context_primitives_recolored_last_build;
+    }
+
+    //! Times a build has walked the Context to settle which primitives are colored by data
+    static size_t getColorPrimitiveSetRefills(const Visualizer &visualizer) {
+        return visualizer.color_primitive_set_refills;
     }
 
     //! Placeholder depth texture bound to the `shadowMap` sampler before a shadow map exists
@@ -131,6 +181,15 @@ public:
 
     static float getDPIScale(const Visualizer &visualizer) {
         return visualizer.getDPIScale();
+    }
+
+    //! Add a point straight to the geometry handler under a caller-chosen ID
+    /**
+     * addPoint() draws a random 64-bit ID, so a collision between a point's ID and a Context UUID is rare and cannot be
+     * reproduced; choosing the ID makes it deterministic.
+     */
+    static void addPointWithID(Visualizer &visualizer, size_t geometry_id, const helios::vec3 &position) {
+        visualizer.geometry_handler.addGeometry(geometry_id, GeometryHandler::GEOMETRY_TYPE_POINT, {position}, helios::make_RGBAcolor(1, 0, 0, 1), {}, -1, false, false, Visualizer::COORDINATES_CARTESIAN, true, false, false, 1.f);
     }
 
     //! Resolution in texels of the bitmap backing a registered texture
@@ -177,6 +236,15 @@ public:
     static std::vector<size_t> addSegmentationMaskOverlay(Visualizer &visualizer, const std::vector<Visualizer::SegmentationMask> &masks, const helios::vec4 &image_extent, float fill_opacity, float line_width,
                                                           uint fontsize, bool show_labels = true) {
         return visualizer.addSegmentationMaskOverlay(masks, image_extent, fill_opacity, line_width, fontsize, show_labels);
+    }
+
+    //! Visibility flag of every point geometry element, in the order the points were added
+    /**
+     * Point culling writes these flags, and nothing public reads them back, so this is the only way
+     * to check that a culled flag landed on the point it was computed for.
+     */
+    static std::vector<char> getPointVisibilityFlags(const Visualizer &visualizer) {
+        return *visualizer.geometry_handler.getVisibilityFlagData_ptr(GeometryHandler::GEOMETRY_TYPE_POINT);
     }
 
     //! Switch the rendering target to the offscreen buffer
@@ -1256,6 +1324,55 @@ TEST_CASE("Visualizer::point culling metrics functionality") {
     DOCTEST_CHECK_NOTHROW(visualizer.getPointRenderingMetrics(total, rendered, time));
 
     // Note: plotUpdate disabled in headless mode for testing - would require full OpenGL context
+}
+
+TEST_CASE("Visualizer point culling assigns visibility to the point it was computed for") {
+    // The point culling passes matched the i-th entry of the point vertex array to the i-th
+    // point-type UUID in geometry-handler map order, which is a hash order rather than insertion
+    // order, so a point's visibility flag was written onto a different point. They also rebuilt the
+    // full UUID list for every point, which made a render of N points cost O(N^2).
+    if (!headlessContextAvailable()) {
+        // Skip test silently when no OpenGL context can be created, not even an offscreen one
+        return;
+    }
+
+    Visualizer visualizer(400, 300, 0, true, true);
+    visualizer.disableMessages();
+    visualizer.setPointCullingEnabled(true);
+    visualizer.setPointCullingThreshold(1);
+    visualizer.setPointMaxRenderDistance(100.f);
+    visualizer.setCameraPosition(make_vec3(0, 0, 5), make_vec3(0, 0, 0));
+
+    // Even points sit near the look-at point; odd points sit 500 m away, beyond the render distance.
+    const size_t point_count = 4000;
+    for (size_t i = 0; i < point_count; i++) {
+        const vec3 position = (i % 2 == 0) ? make_vec3(0.01f * float(i % 20) - 0.1f, 0.01f * float((i / 20) % 20) - 0.1f, 0.f) : make_vec3(0.f, 0.f, 500.f);
+        const size_t id = visualizer.addPoint(position, RGB::red, 1.f, Visualizer::COORDINATES_CARTESIAN);
+        DOCTEST_CHECK(id != 0);
+    }
+
+    const auto start = std::chrono::steady_clock::now();
+    visualizer.plotUpdate(true);
+    const double seconds = double(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count()) / 1000.0;
+
+    const std::vector<char> flags = VisualizerTestHelper::getPointVisibilityFlags(visualizer);
+    DOCTEST_REQUIRE(flags.size() == point_count);
+    size_t misassigned = 0;
+    for (size_t i = 0; i < point_count; i++) {
+        const bool expected_visible = (i % 2 == 0);
+        if (bool(flags.at(i)) != expected_visible) {
+            misassigned++;
+        }
+    }
+    DOCTEST_CHECK_MESSAGE(misassigned == 0, misassigned << " of " << point_count << " points carry the visibility flag computed for a different point");
+
+    size_t total = 0, rendered = 0;
+    float culling_ms = 0.f;
+    visualizer.getPointRenderingMetrics(total, rendered, culling_ms);
+    DOCTEST_CHECK(total == point_count);
+    DOCTEST_CHECK(rendered == point_count / 2);
+    // A linear-time cull of 4000 points is milliseconds; the quadratic one was seconds.
+    DOCTEST_CHECK_MESSAGE(seconds < 2.0, "culling 4000 points took " << seconds << " s");
 }
 
 TEST_CASE("Visualizer::point size edge cases") {
@@ -4081,6 +4198,81 @@ TEST_CASE("Visualizer per-material Phong parameters override the global material
     DOCTEST_CHECK(glossy_brightness > matte_brightness);
 }
 
+DOCTEST_TEST_CASE("Visualizer material indexing ignores non-Context geometry whose ID truncates to a Context UUID") {
+    // Geometry added straight to the Visualizer (points, lines, text) carries a random 64-bit ID, while a Context
+    // primitive is keyed by its 32-bit UUID. Material indexing cast every live ID to 32 bits and took a match with any
+    // Context primitive to be that primitive. When the match was a primitive the Visualizer never uploaded - a hidden
+    // one, such as the leaf prototypes a plant model caches - it threw "UUID ... does not exist in the visualizer
+    // geometry". With a million overlay points and a few thousand primitives that happened on a large share of renders.
+    if (!headlessContextAvailable()) {
+        // Skip test silently when no OpenGL context can be created, not even an offscreen one
+        return;
+    }
+
+    Context context;
+    const uint visible_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    const uint hidden_UUID = context.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+    context.hidePrimitive(hidden_UUID);
+
+    Visualizer visualizer(400, 300, 0, true, true);
+    visualizer.disableMessages();
+    visualizer.buildContextGeometry(&context);
+
+    // IDs whose low 32 bits are the hidden and the visible primitive's UUID.
+    VisualizerTestHelper::addPointWithID(visualizer, (size_t(1) << 32) + size_t(hidden_UUID), make_vec3(0, 0, 1));
+    VisualizerTestHelper::addPointWithID(visualizer, (size_t(1) << 33) + size_t(visible_UUID), make_vec3(0, 0, 2));
+
+    DOCTEST_CHECK_NOTHROW(VisualizerTestHelper::buildContextGeometry_private(visualizer));
+}
+
+DOCTEST_TEST_CASE("Visualizer recoloring ignores non-Context geometry whose ID truncates to a data-colored Context UUID") {
+    // Recoloring the displayed Context geometry walks every live geometry ID. Geometry added straight to the Visualizer
+    // carries a random 64-bit ID, and cast to a 32-bit UUID that ID can equal a data-colored Context primitive, which then
+    // painted the point with that primitive's colormap color. The point must keep its own color, and the primitive must
+    // still get the colormap color for its value.
+    if (!headlessContextAvailable()) {
+        // Skip test silently when no OpenGL context can be created, not even an offscreen one
+        return;
+    }
+
+    Context context;
+    const uint colored_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    const uint other_UUID = context.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(colored_UUID, "value", 1.f);
+    context.setPrimitiveData(other_UUID, "value", 0.f);
+
+    Visualizer visualizer(64, 64, 0, true, true);
+    visualizer.disableMessages();
+    visualizer.buildContextGeometry(&context);
+    visualizer.colorContextPrimitivesByData("value");
+    visualizer.setColorbarRange(0.f, 1.f);
+
+    // A red point whose ID has the data-colored primitive's UUID in its low 32 bits.
+    const size_t point_ID = (size_t(1) << 32) + size_t(colored_UUID);
+    VisualizerTestHelper::addPointWithID(visualizer, point_ID, make_vec3(0, 0, 1));
+
+    auto checkColors = [&]() {
+        const helios::RGBAcolor point_color = VisualizerTestHelper::getGeometryColor(visualizer, point_ID);
+        DOCTEST_CHECK(point_color.r == doctest::Approx(1.f));
+        DOCTEST_CHECK(point_color.g == doctest::Approx(0.f));
+        DOCTEST_CHECK(point_color.b == doctest::Approx(0.f));
+
+        const helios::RGBcolor expected = visualizer.getCurrentColormap().query(1.f);
+        const helios::RGBAcolor primitive_color = VisualizerTestHelper::getGeometryColor(visualizer, colored_UUID);
+        DOCTEST_CHECK(primitive_color.r == doctest::Approx(expected.r));
+        DOCTEST_CHECK(primitive_color.g == doctest::Approx(expected.g));
+        DOCTEST_CHECK(primitive_color.b == doctest::Approx(expected.b));
+    };
+
+    // Coloring by data recolors the displayed geometry at the next build: when the scene is first built, and again when the
+    // color source is selected anew for a scene that is already on display.
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    checkColors();
+    visualizer.colorContextPrimitivesByData("value");
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    checkColors();
+}
+
 TEST_CASE("Visualizer per-material Phong parameters partially override the global material") {
     // A material that specifies only one of the four parameters must inherit the rest from the
     // global material, rather than silently resetting them to some built-in default.
@@ -4195,6 +4387,384 @@ DOCTEST_TEST_CASE("Visualizer rebuilds only primitives that changed since the la
     context.deletePrimitive(new_UUID);
     VisualizerTestHelper::buildContextGeometry_private(visualizer);
     DOCTEST_CHECK(VisualizerTestHelper::getUploadedPrimitiveCount(visualizer) == 50);
+}
+
+DOCTEST_TEST_CASE("Visualizer re-uploads a displayed primitive that was modified in place") {
+    // The build skips Context primitives it has already uploaded, because Context dirty flags are
+    // sticky and would otherwise re-upload the whole scene every frame. That skip must not extend to
+    // a primitive whose geometry, color, or color-by data changed since it was uploaded: translating,
+    // recoloring, or updating the data of an existing primitive has to reach the GPU on the next
+    // plotUpdate() without the user having to clear and rebuild the whole scene.
+    if (!headlessContextAvailable()) {
+        // Skip test silently when no OpenGL context can be created, not even an offscreen one
+        return;
+    }
+
+    Context context;
+    const uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, RGB::red);
+
+    Visualizer visualizer(64, 64, 0, true, true); // headless
+    visualizer.disableMessages();
+    visualizer.buildContextGeometry(&context);
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    visualizer.plotUpdate(true);
+    DOCTEST_REQUIRE(VisualizerTestHelper::getUploadedPrimitiveCount(visualizer) == 1);
+
+    SUBCASE("translated primitive moves in the geometry handler") {
+        context.translatePrimitive(UUID, make_vec3(5, 0, 0));
+        VisualizerTestHelper::buildContextGeometry_private(visualizer);
+
+        const std::vector<helios::vec3> context_vertices = context.getPrimitiveVertices(UUID);
+        const std::vector<helios::vec3> uploaded_vertices = VisualizerTestHelper::getGeometryVertices(visualizer, UUID);
+        DOCTEST_REQUIRE(uploaded_vertices.size() == context_vertices.size());
+        for (size_t i = 0; i < context_vertices.size(); i++) {
+            DOCTEST_CHECK(uploaded_vertices.at(i).x == doctest::Approx(context_vertices.at(i).x));
+            DOCTEST_CHECK(uploaded_vertices.at(i).y == doctest::Approx(context_vertices.at(i).y));
+            DOCTEST_CHECK(uploaded_vertices.at(i).z == doctest::Approx(context_vertices.at(i).z));
+        }
+        DOCTEST_CHECK(VisualizerTestHelper::getDirtyGeometryCount(visualizer) == 1);
+    }
+
+    SUBCASE("recolored primitive changes color in the geometry handler") {
+        context.setPrimitiveColor(UUID, RGB::blue);
+        VisualizerTestHelper::buildContextGeometry_private(visualizer);
+
+        const helios::RGBAcolor uploaded_color = VisualizerTestHelper::getGeometryColor(visualizer, UUID);
+        DOCTEST_CHECK(uploaded_color.r == doctest::Approx(0.f));
+        DOCTEST_CHECK(uploaded_color.b == doctest::Approx(1.f));
+    }
+
+    SUBCASE("changed color-by data recolors the primitive") {
+        const uint UUID_other = context.addPatch(make_vec3(3, 0, 0), make_vec2(1, 1));
+        context.setPrimitiveData(UUID, "value", 0.f);
+        context.setPrimitiveData(UUID_other, "value", 1.f);
+        visualizer.colorContextPrimitivesByData("value");
+        visualizer.setColorbarRange(0.f, 1.f);
+        VisualizerTestHelper::buildContextGeometry_private(visualizer);
+        visualizer.plotUpdate(true);
+        const helios::RGBAcolor color_at_zero = VisualizerTestHelper::getGeometryColor(visualizer, UUID);
+        const helios::RGBAcolor color_at_one = VisualizerTestHelper::getGeometryColor(visualizer, UUID_other);
+
+        context.setPrimitiveData(UUID, "value", 1.f);
+        VisualizerTestHelper::buildContextGeometry_private(visualizer);
+
+        const helios::RGBAcolor updated_color = VisualizerTestHelper::getGeometryColor(visualizer, UUID);
+        DOCTEST_CHECK(updated_color.r == doctest::Approx(color_at_one.r));
+        DOCTEST_CHECK(updated_color.g == doctest::Approx(color_at_one.g));
+        DOCTEST_CHECK(updated_color.b == doctest::Approx(color_at_one.b));
+        DOCTEST_CHECK((updated_color.r != color_at_zero.r || updated_color.g != color_at_zero.g || updated_color.b != color_at_zero.b));
+    }
+
+    SUBCASE("an unchanged primitive is still not re-uploaded") {
+        VisualizerTestHelper::buildContextGeometry_private(visualizer);
+        DOCTEST_CHECK(VisualizerTestHelper::getDirtyGeometryCount(visualizer) == 0);
+    }
+}
+
+DOCTEST_TEST_CASE("Visualizer::colorContextPrimitivesRandomly recolors a scene that was already displayed") {
+    // colorContextPrimitivesRandomly() writes the random values into the Context and switches the
+    // color source, but a scene already uploaded to the GPU has to be recolored for that to show.
+    if (!headlessContextAvailable()) {
+        // Skip test silently when no OpenGL context can be created, not even an offscreen one
+        return;
+    }
+
+    Context context;
+    const uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_RGBcolor(0.25f, 0.25f, 0.25f));
+
+    Visualizer visualizer(64, 64, 0, true, true); // headless
+    visualizer.disableMessages();
+    visualizer.buildContextGeometry(&context);
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    visualizer.plotUpdate(true);
+    const helios::RGBAcolor original_color = VisualizerTestHelper::getGeometryColor(visualizer, UUID);
+
+    visualizer.colorContextPrimitivesRandomly();
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+
+    // The random value is mapped through the colormap; whatever it lands on, the flat gray the
+    // primitive was created with is not a colormap color, so the uploaded color must have changed.
+    const helios::RGBAcolor random_color = VisualizerTestHelper::getGeometryColor(visualizer, UUID);
+    DOCTEST_CHECK((random_color.r != original_color.r || random_color.g != original_color.g || random_color.b != original_color.b));
+}
+
+DOCTEST_TEST_CASE("Visualizer::setColorbarRange followed by addGridWireFrame without a Context does not crash") {
+    // setColorbarRange() flags the displayed Context geometry for recoloring, and addGridWireFrame() acts on that flag
+    // straight away. With no Context attached there is nothing to recolor, and the recolor must not reach for one.
+    if (!headlessContextAvailable()) {
+        // Skip test silently when no OpenGL context can be created, not even an offscreen one
+        return;
+    }
+
+    Visualizer visualizer(64, 64, 0, true, true);
+    visualizer.disableMessages();
+    visualizer.setColorbarRange(0.f, 1.f);
+    DOCTEST_CHECK_NOTHROW(visualizer.addGridWireFrame(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(2, 2, 2)));
+    DOCTEST_CHECK(VisualizerTestHelper::getLiveGeometryCount(visualizer) > 0);
+}
+
+DOCTEST_TEST_CASE("Visualizer re-uploads a displayed primitive whose texture was changed") {
+    // The build skips primitives whose Context state matches what was uploaded. A new texture file changes what the
+    // primitive looks like without moving or recoloring it, so it has to count as a change too.
+    if (!headlessContextAvailable()) {
+        // Skip test silently when no OpenGL context can be created, not even an offscreen one
+        return;
+    }
+
+    Context context;
+    const uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "plugins/visualizer/textures/AlmondLeaf.png");
+
+    Visualizer visualizer(64, 64, 0, true, true);
+    visualizer.disableMessages();
+    visualizer.buildContextGeometry(&context);
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    const int texture_before = VisualizerTestHelper::getGeometryTextureID(visualizer, UUID);
+    DOCTEST_REQUIRE(texture_before >= 0);
+
+    context.setPrimitiveTextureFile(UUID, "plugins/visualizer/textures/GrapeLeaf.png");
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+
+    const int texture_after = VisualizerTestHelper::getGeometryTextureID(visualizer, UUID);
+    DOCTEST_CHECK(texture_after >= 0);
+    DOCTEST_CHECK(texture_after != texture_before);
+}
+
+DOCTEST_TEST_CASE("Visualizer recoloring keeps a Context texture color override") {
+    // A textured primitive whose Context material overrides the texture color is drawn in its own color, masked by the
+    // texture's alpha. Recoloring the displayed scene - here prompted by a colorbar range change - must apply the rule
+    // the build applies, not switch every textured primitive that is not colored by data back to its texture color.
+    if (!headlessContextAvailable()) {
+        // Skip test silently when no OpenGL context can be created, not even an offscreen one
+        return;
+    }
+
+    Context context;
+    const uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "plugins/visualizer/textures/AlmondLeaf.png");
+    context.setPrimitiveColor(UUID, RGB::blue);
+    context.overridePrimitiveTextureColor(UUID);
+
+    Visualizer visualizer(64, 64, 0, true, true);
+    visualizer.disableMessages();
+    visualizer.buildContextGeometry(&context);
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    const int flag_as_built = VisualizerTestHelper::getGeometryTextureFlag(visualizer, UUID);
+
+    visualizer.setColorbarRange(0.f, 1.f);
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+
+    DOCTEST_CHECK(VisualizerTestHelper::getGeometryTextureFlag(visualizer, UUID) == flag_as_built);
+    const helios::RGBAcolor color = VisualizerTestHelper::getGeometryColor(visualizer, UUID);
+    DOCTEST_CHECK(color.b == doctest::Approx(1.f));
+}
+
+DOCTEST_TEST_CASE("Visualizer::setColormap recolors a scene that was already displayed") {
+    // Selecting a different colormap changes the color of every data-colored primitive without changing any primitive.
+    if (!headlessContextAvailable()) {
+        // Skip test silently when no OpenGL context can be created, not even an offscreen one
+        return;
+    }
+
+    Context context;
+    const uint UUID_high = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    const uint UUID_low = context.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(UUID_high, "value", 1.f);
+    context.setPrimitiveData(UUID_low, "value", 0.f);
+
+    Visualizer visualizer(64, 64, 0, true, true);
+    visualizer.disableMessages();
+    visualizer.buildContextGeometry(&context);
+    visualizer.colorContextPrimitivesByData("value");
+    visualizer.setColorbarRange(0.f, 1.f);
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    // A second frame with nothing changed, so that nothing but the colormap differs going into the next build.
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    const helios::RGBcolor hot_high = visualizer.getCurrentColormap().query(1.f);
+
+    visualizer.setColormap(Visualizer::COLORMAP_COOL);
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    const helios::RGBcolor cool_high = visualizer.getCurrentColormap().query(1.f);
+    DOCTEST_REQUIRE((cool_high.r != hot_high.r || cool_high.g != hot_high.g || cool_high.b != hot_high.b));
+
+    const helios::RGBAcolor color = VisualizerTestHelper::getGeometryColor(visualizer, UUID_high);
+    DOCTEST_CHECK(color.r == doctest::Approx(cool_high.r));
+    DOCTEST_CHECK(color.g == doctest::Approx(cool_high.g));
+    DOCTEST_CHECK(color.b == doctest::Approx(cool_high.b));
+}
+
+DOCTEST_TEST_CASE("Visualizer recolors every displayed data-colored primitive when the automatic colorbar range changes") {
+    // With the range derived from the data, a new value on one primitive can move the range and with it the color of
+    // every other data-colored primitive. Those others need not be dirty - once the caller has marked the Context
+    // geometry clean only the edited primitive is - so both the range and the recoloring must cover everything displayed.
+    if (!headlessContextAvailable()) {
+        // Skip test silently when no OpenGL context can be created, not even an offscreen one
+        return;
+    }
+
+    Context context;
+    const uint UUID_edited = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    const uint UUID_untouched = context.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(UUID_edited, "value", 0.f);
+    context.setPrimitiveData(UUID_untouched, "value", 1.f);
+
+    Visualizer visualizer(64, 64, 0, true, true);
+    visualizer.disableMessages();
+    visualizer.buildContextGeometry(&context);
+    visualizer.colorContextPrimitivesByData("value");
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    DOCTEST_REQUIRE(VisualizerTestHelper::getColorbarMin(visualizer) == doctest::Approx(0.f));
+    DOCTEST_REQUIRE(VisualizerTestHelper::getColorbarMax(visualizer) == doctest::Approx(1.f));
+
+    context.markGeometryClean();
+    context.setPrimitiveData(UUID_edited, "value", 2.f);
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+
+    DOCTEST_CHECK(VisualizerTestHelper::getColorbarMin(visualizer) == doctest::Approx(1.f));
+    DOCTEST_CHECK(VisualizerTestHelper::getColorbarMax(visualizer) == doctest::Approx(2.f));
+    const Colormap colormap = visualizer.getCurrentColormap();
+    const helios::RGBcolor expected_edited = colormap.query(2.f);
+    const helios::RGBcolor expected_untouched = colormap.query(1.f);
+    const helios::RGBAcolor color_edited = VisualizerTestHelper::getGeometryColor(visualizer, UUID_edited);
+    const helios::RGBAcolor color_untouched = VisualizerTestHelper::getGeometryColor(visualizer, UUID_untouched);
+    DOCTEST_CHECK(color_edited.r == doctest::Approx(expected_edited.r));
+    DOCTEST_CHECK(color_edited.g == doctest::Approx(expected_edited.g));
+    DOCTEST_CHECK(color_edited.b == doctest::Approx(expected_edited.b));
+    DOCTEST_CHECK(color_untouched.r == doctest::Approx(expected_untouched.r));
+    DOCTEST_CHECK(color_untouched.g == doctest::Approx(expected_untouched.g));
+    DOCTEST_CHECK(color_untouched.b == doctest::Approx(expected_untouched.b));
+}
+
+DOCTEST_TEST_CASE("Visualizer recolors a displayed scene in a single pass over the geometry") {
+    // A change to the color mapping alone - a new colorbar range or colormap - changes no primitive. It must be applied by
+    // one pass that recolors each displayed primitive once, not by re-adding every primitive to the geometry handler and
+    // then recoloring each one again, and a build with nothing changed must do no work at all - including the build right
+    // after coloring by data was switched on.
+    if (!headlessContextAvailable()) {
+        // Skip test silently when no OpenGL context can be created, not even an offscreen one
+        return;
+    }
+
+    Context context;
+    const std::vector<uint> UUIDs = context.addTile(make_vec3(0, 0, 0), make_vec2(10, 5), nullrotation, make_int2(10, 5));
+    for (size_t i = 0; i < UUIDs.size(); i++) {
+        context.setPrimitiveData(UUIDs.at(i), "value", float(i));
+    }
+    const size_t primitive_count = UUIDs.size();
+
+    Visualizer visualizer(64, 64, 0, true, true);
+    visualizer.disableMessages();
+    visualizer.buildContextGeometry(&context);
+    visualizer.colorContextPrimitivesByData("value");
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+
+    auto checkColors = [&]() {
+        const Colormap colormap = visualizer.getCurrentColormap();
+        size_t wrong = 0;
+        for (size_t i = 0; i < UUIDs.size(); i++) {
+            const helios::RGBcolor expected = colormap.query(float(i));
+            const helios::RGBAcolor color = VisualizerTestHelper::getGeometryColor(visualizer, UUIDs.at(i));
+            if (std::fabs(color.r - expected.r) > 1e-5f || std::fabs(color.g - expected.g) > 1e-5f || std::fabs(color.b - expected.b) > 1e-5f) {
+                wrong++;
+            }
+        }
+        return wrong;
+    };
+    DOCTEST_CHECK(checkColors() == 0);
+
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    DOCTEST_CHECK(VisualizerTestHelper::getContextPrimitivesAddedLastBuild(visualizer) == 0);
+    DOCTEST_CHECK(VisualizerTestHelper::getContextPrimitivesRecoloredLastBuild(visualizer) == 0);
+
+    visualizer.setColorbarRange(0.f, 100.f);
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    size_t work = VisualizerTestHelper::getContextPrimitivesAddedLastBuild(visualizer) + VisualizerTestHelper::getContextPrimitivesRecoloredLastBuild(visualizer);
+    DOCTEST_CHECK_MESSAGE(work <= primitive_count, "a colorbar range change touched primitives " << work << " times for " << primitive_count << " primitives");
+    DOCTEST_CHECK(checkColors() == 0);
+
+    visualizer.setColormap(Visualizer::COLORMAP_COOL);
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    work = VisualizerTestHelper::getContextPrimitivesAddedLastBuild(visualizer) + VisualizerTestHelper::getContextPrimitivesRecoloredLastBuild(visualizer);
+    DOCTEST_CHECK_MESSAGE(work <= primitive_count, "a colormap change touched primitives " << work << " times for " << primitive_count << " primitives");
+    DOCTEST_CHECK(checkColors() == 0);
+
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    DOCTEST_CHECK(VisualizerTestHelper::getContextPrimitivesAddedLastBuild(visualizer) == 0);
+    DOCTEST_CHECK(VisualizerTestHelper::getContextPrimitivesRecoloredLastBuild(visualizer) == 0);
+}
+
+DOCTEST_TEST_CASE("Visualizer builds of a data-colored scene do Context-wide work only when something changed") {
+    // A scene colored by data walked every Context UUID to settle which primitives are data-colored on every build, idle
+    // frames included, and setColorbarRange() with the range already in force recolored every displayed primitive, so an
+    // application that sets its range each frame paid a pass over the whole scene per frame for an unchanged picture.
+    if (!headlessContextAvailable()) {
+        // Skip test silently when no OpenGL context can be created, not even an offscreen one
+        return;
+    }
+
+    Context context;
+    const std::vector<uint> UUIDs = context.addTile(make_vec3(0, 0, 0), make_vec2(10, 5), nullrotation, make_int2(10, 5));
+    for (size_t i = 0; i < UUIDs.size(); i++) {
+        context.setPrimitiveData(UUIDs.at(i), "value", float(i));
+    }
+
+    Visualizer visualizer(64, 64, 0, true, true);
+    visualizer.disableMessages();
+    visualizer.buildContextGeometry(&context);
+    visualizer.colorContextPrimitivesByData("value");
+    visualizer.setColorbarRange(0.f, 100.f);
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    const size_t refills_after_first_build = VisualizerTestHelper::getColorPrimitiveSetRefills(visualizer);
+    DOCTEST_CHECK(refills_after_first_build >= 1);
+
+    SUBCASE("idle builds do not re-scan the Context") {
+        for (int frame = 0; frame < 5; frame++) {
+            VisualizerTestHelper::buildContextGeometry_private(visualizer);
+        }
+        const size_t extra_refills = VisualizerTestHelper::getColorPrimitiveSetRefills(visualizer) - refills_after_first_build;
+        DOCTEST_CHECK_MESSAGE(extra_refills == 0, "5 idle builds re-scanned the Context " << extra_refills << " times");
+    }
+
+    SUBCASE("setting the range already in force recolors nothing") {
+        visualizer.setColorbarRange(0.f, 100.f);
+        VisualizerTestHelper::buildContextGeometry_private(visualizer);
+        DOCTEST_CHECK(VisualizerTestHelper::getContextPrimitivesRecoloredLastBuild(visualizer) == 0);
+        DOCTEST_CHECK(VisualizerTestHelper::getContextPrimitivesAddedLastBuild(visualizer) == 0);
+    }
+
+    SUBCASE("a changed range still recolors") {
+        visualizer.setColorbarRange(0.f, 50.f);
+        VisualizerTestHelper::buildContextGeometry_private(visualizer);
+        DOCTEST_CHECK(VisualizerTestHelper::getContextPrimitivesRecoloredLastBuild(visualizer) > 0);
+        const helios::RGBcolor expected = visualizer.getCurrentColormap().query(20.f);
+        const helios::RGBAcolor color = VisualizerTestHelper::getGeometryColor(visualizer, UUIDs.at(20));
+        DOCTEST_CHECK(std::fabs(color.r - expected.r) <= 1e-5f);
+        DOCTEST_CHECK(std::fabs(color.g - expected.g) <= 1e-5f);
+        DOCTEST_CHECK(std::fabs(color.b - expected.b) <= 1e-5f);
+    }
+
+    SUBCASE("an added primitive still settles the set again") {
+        const uint added = context.addPatch(make_vec3(0, 0, 1), make_vec2(1, 1));
+        context.setPrimitiveData(added, "value", 30.f);
+        VisualizerTestHelper::buildContextGeometry_private(visualizer);
+        DOCTEST_CHECK(VisualizerTestHelper::getColorPrimitiveSetRefills(visualizer) > refills_after_first_build);
+    }
+
+    SUBCASE("a deleted primitive still settles the set again") {
+        context.deletePrimitive(UUIDs.at(3));
+        VisualizerTestHelper::buildContextGeometry_private(visualizer);
+        DOCTEST_CHECK(VisualizerTestHelper::getColorPrimitiveSetRefills(visualizer) > refills_after_first_build);
+    }
+
+    SUBCASE("handing over a different Context with the same primitive count settles the set again") {
+        Context other_context;
+        const std::vector<uint> other_UUIDs = other_context.addTile(make_vec3(0, 0, 0), make_vec2(10, 5), nullrotation, make_int2(10, 5));
+        for (size_t i = 0; i < other_UUIDs.size(); i++) {
+            other_context.setPrimitiveData(other_UUIDs.at(i), "value", float(i));
+        }
+        DOCTEST_REQUIRE(other_context.getPrimitiveCount() == context.getPrimitiveCount());
+        visualizer.buildContextGeometry(&other_context);
+        VisualizerTestHelper::buildContextGeometry_private(visualizer);
+        DOCTEST_CHECK(VisualizerTestHelper::getColorPrimitiveSetRefills(visualizer) > refills_after_first_build);
+    }
 }
 
 DOCTEST_TEST_CASE("Visualizer::printWindow builds Context geometry that was never plotted") {

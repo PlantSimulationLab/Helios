@@ -1,7 +1,9 @@
 #include "LiDAR.h"
 #include <filesystem>
 #include <fstream>
+#include <atomic>
 #include <functional>
+#include <set>
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
@@ -22,6 +24,47 @@ class LiDARTestHelper {
 public:
     static void forceBruteForceLeafArea(LiDARcloud &pointcloud, bool force) {
         pointcloud.force_bruteforce_LAD = force;
+    }
+    //! Largest per-scan working array the last calculateLeafArea() allocated (elements).
+    static size_t leafAreaMaxScanScratch(const LiDARcloud &pointcloud) {
+        return pointcloud.leafarea_max_scan_scratch;
+    }
+    //! Every scalar-data label the cloud currently stores, in column order.
+    static std::vector<std::string> hitDataLabels(const LiDARcloud &pointcloud) {
+        return pointcloud.hit_data_labels;
+    }
+    //! The direction stored on a hit (not the one getHitRaydir() recomputes from position - origin).
+    static SphericalCoord storedDirection(const LiDARcloud &pointcloud, uint index) {
+        return pointcloud.hits.at(index).getDirection();
+    }
+    //! Cell-by-cell containment scan, the reference the lattice binning fast path must reproduce.
+    static int containingGridCell(const LiDARcloud &pointcloud, const vec3 &p) {
+        return pointcloud.getContainingGridCell(p);
+    }
+    //! Drop every hit (and its scalar data) but keep the scans and grid.
+    static void clearHits(LiDARcloud &pointcloud) {
+        pointcloud.clearHits();
+    }
+    //! Number of stored (non-virtual) hit points.
+    static size_t storedHitCount(const LiDARcloud &pointcloud) {
+        return pointcloud.hits.size();
+    }
+    //! Number of times the per-scan index has been rebuilt.
+    static size_t scanIndexBuilds(const LiDARcloud &pointcloud) {
+        return pointcloud.scan_index_builds;
+    }
+    //! Run a callback inside every rebuild of the per-scan index (nullptr clears it).
+    static void setScanIndexBuildHook(LiDARcloud &pointcloud, std::function<void()> hook) {
+        pointcloud.scan_index_build_hook = std::move(hook);
+    }
+    //! Mark the per-scan index stale, as every mutation of the cloud does.
+    static void invalidateScanIndex(LiDARcloud &pointcloud) {
+        pointcloud.invalidateScanIndex();
+    }
+    //! Drop every grid cell so a test can define a different grid on the same cloud.
+    static void clearGrid(LiDARcloud &pointcloud) {
+        pointcloud.grid_cells.clear();
+        pointcloud.hitgridcellcomputed = false;
     }
 };
 
@@ -4230,142 +4273,137 @@ DOCTEST_TEST_CASE("LiDAR N-Return - Backward Compatibility (single/multi unchang
     }
 }
 
+//! Scan geometry shared by the synthetic gap-fill tests: a full-sphere raster about a small sphere target, on a
+//! declared grid small enough to inspect cell by cell (the whole declared raster is synthesized as misses).
+static void addSphereSceneScan(LiDARcloud &lidar, uint Ntheta, uint Nphi) {
+    ScanMetadata scan(make_vec3(-5.f, 0.f, 0.5f), Ntheta, 0.f, float(M_PI), Nphi, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>{"x", "y", "z", "timestamp"});
+    lidar.addScan(scan);
+    lidar.addGrid(make_vec3(0, 0, 0.5f), make_vec3(1, 1, 1), make_int3(2, 2, 2), 0);
+}
+
 DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Grid Position Verification") {
+    // Gap-filling a scan from its timestamps synthesizes one miss for every cell of the declared scan grid that has
+    // no return -- the same population the row/column path produces -- so after the call every cell is accounted
+    // for exactly once, originals are flagged 0 and synthesized misses 1.
     LiDARcloud lidar;
     lidar.disableMessages();
     Context context;
-
-    // 1. Load existing test configuration with grid
-    DOCTEST_CHECK_NOTHROW(lidar.loadXML("plugins/lidar/xml/synthetic_test_8.xml"));
-
-    vec3 scan_origin = lidar.getScanOrigin(0);
-    uint Ntheta = lidar.getScanSizeTheta(0);
-    uint Nphi = lidar.getScanSizePhi(0);
-
-    // 2. Create simple geometry - small sphere that partially occludes
+    const uint Ntheta = 150, Nphi = 200;
+    addSphereSceneScan(lidar, Ntheta, Nphi);
     std::vector<uint> sphere_uuids = context.addSphere(10, make_vec3(0, 0, 1.0), 0.3);
 
-    // 3. Perform synthetic scan WITHOUT miss recording
-    lidar.syntheticScan(&context, false, false); // scan_grid_only=false, record_misses=false
-    uint hits_before_gapfill = lidar.getHitCount();
+    lidar.syntheticScan(&context, false, false); // record_misses = false: the sphere's hits only
+    const uint hits_before = lidar.getHitCount();
+    DOCTEST_REQUIRE(hits_before > 0);
+    DOCTEST_REQUIRE(hits_before < Ntheta * Nphi);
 
-    // Sphere should block some rays creating gaps
-    DOCTEST_CHECK(hits_before_gapfill > 0);
+    std::vector<vec3> filled = lidar.gapfillMisses(0, false, true);
+    DOCTEST_CHECK(filled.size() == Ntheta * Nphi - hits_before);
+    DOCTEST_CHECK(lidar.getHitCount() == Ntheta * Nphi);
 
-    // 4. Apply gapfilling with flags
-    std::vector<vec3> filled_points = lidar.gapfillMisses(0, false, true);
-    uint hits_after_gapfill = lidar.getHitCount();
-
-    // 5. Verify gapfilling added points
-    DOCTEST_CHECK(hits_after_gapfill > hits_before_gapfill);
-    DOCTEST_CHECK(filled_points.size() > 0);
-
-    // 6. QUANTITATIVE CHECK: Build position map by grid coordinates
-    //    Use hit table to track which grid positions are filled
-    std::map<std::pair<int, int>, bool> filled_grid_positions;
-
-    for (uint r = 0; r < lidar.getHitCount(); r++) {
-        if (lidar.getHitScanID(r) == 0) {
-            SphericalCoord raydir = lidar.getHitRaydir(r);
-            // Convert direction to grid indices using scan metadata
-            float theta = raydir.zenith;
-            float phi = raydir.azimuth;
-            vec2 theta_range = lidar.getScanRangeTheta(0);
-            vec2 phi_range = lidar.getScanRangePhi(0);
-
-            int row = round((theta - theta_range.x) / (theta_range.y - theta_range.x) * (Ntheta - 1));
-            int col = round((phi - phi_range.x) / (phi_range.y - phi_range.x) * (Nphi - 1));
-
-            filled_grid_positions[std::make_pair(row, col)] = true;
+    // Every hit -- return or synthesized miss -- occupies a distinct cell of the declared grid.
+    std::vector<int32_t> row, col, code, is_miss;
+    lidar.getHitDataColumn("row", row, int32_t(-1));
+    lidar.getHitDataColumn("column", col, int32_t(-1));
+    lidar.getHitDataColumn("gapfillMisses_code", code, int32_t(-1));
+    lidar.getHitDataColumn("is_miss", is_miss, int32_t(-1));
+    std::vector<uint64_t> seen(((size_t) Ntheta * Nphi + 63) / 64, 0ull);
+    size_t distinct = 0, code0 = 0, code1 = 0, other_codes = 0;
+    for (uint i = 0; i < lidar.getHitCount(); i++) {
+        DOCTEST_REQUIRE(row[i] >= 0);
+        DOCTEST_REQUIRE(col[i] >= 0);
+        const size_t bit = (size_t) row[i] * Nphi + (size_t) col[i];
+        if (((seen[bit >> 6] >> (bit & 63)) & 1ull) == 0) {
+            seen[bit >> 6] |= 1ull << (bit & 63);
+            distinct++;
+        }
+        if (code[i] == 0) {
+            code0++;
+            DOCTEST_CHECK(is_miss[i] == 0);
+        } else if (code[i] == 1) {
+            code1++;
+            DOCTEST_CHECK(is_miss[i] == 1);
+        } else {
+            other_codes++;
         }
     }
-
-    uint filled_cells = filled_grid_positions.size();
-
-    // 7. QUANTITATIVE CHECK: Verify flag values
-    uint flag_0_count = 0; // Original hits
-    uint flag_1_count = 0; // Interior gapfilled
-    uint flag_2_count = 0; // Downward edge
-    uint flag_3_count = 0; // Upward edge
-
-    for (uint r = 0; r < lidar.getHitCount(); r++) {
-        if (lidar.getHitScanID(r) == 0 && lidar.doesHitDataExist(r, "gapfillMisses_code")) {
-            int code = (int) lidar.getHitData(r, "gapfillMisses_code");
-            if (code == 0)
-                flag_0_count++;
-            else if (code == 1)
-                flag_1_count++;
-            else if (code == 2)
-                flag_2_count++;
-            else if (code == 3)
-                flag_3_count++;
-        }
-    }
-
-    DOCTEST_CHECK(flag_0_count == hits_before_gapfill); // Original hits preserved
-    DOCTEST_CHECK((flag_1_count + flag_2_count + flag_3_count) == filled_points.size());
-
-    // NOTE: Interior fills (flag_1) may be 0 for sparse data
-    // Edge fills (flag_2, flag_3) should exist since algorithm extrapolates edges
-    DOCTEST_CHECK((flag_1_count + flag_2_count + flag_3_count) > 0); // At least some fills occurred
+    DOCTEST_CHECK(distinct == Ntheta * Nphi);
+    DOCTEST_CHECK(code0 == hits_before);
+    DOCTEST_CHECK(code1 == filled.size());
+    DOCTEST_CHECK(other_codes == 0);
 }
 
 DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Comparison with Record Misses") {
+    // A synthetic scan that records its misses is the ground truth for the pulses that reached the scene's bounding
+    // box; gap-filling the same scan traced without misses must reproduce every one of those misses at the same
+    // cell, along the same beam, with the same timestamp -- and complete the raster beyond them.
     LiDARcloud lidar1, lidar2;
     lidar1.disableMessages();
     lidar2.disableMessages();
-
     Context context;
-
-    // Load existing test configuration with voxel grid
-    DOCTEST_CHECK_NOTHROW(lidar1.loadXML("plugins/lidar/xml/synthetic_test_8.xml"));
-    DOCTEST_CHECK_NOTHROW(lidar2.loadXML("plugins/lidar/xml/synthetic_test_8.xml"));
-
-    // Create geometry that creates both hits and misses
+    const uint Ntheta = 150, Nphi = 200;
+    addSphereSceneScan(lidar1, Ntheta, Nphi);
+    addSphereSceneScan(lidar2, Ntheta, Nphi);
     std::vector<uint> sphere_uuids = context.addSphere(10, make_vec3(0, 0, 1.0), 0.3);
 
-    // === METHOD 1: Synthetic scan WITH miss recording ===
     lidar1.syntheticScan(&context, false, true); // record_misses = TRUE
-    uint hits_with_misses = lidar1.getHitCount();
-
-    // === METHOD 2: Synthetic scan WITHOUT miss recording, then gapfill ===
     lidar2.syntheticScan(&context, false, false); // record_misses = FALSE
-    uint hits_before_gapfill = lidar2.getHitCount();
-
+    const uint returns = lidar2.getHitCount();
+    DOCTEST_REQUIRE(returns > 0);
     std::vector<vec3> filled = lidar2.gapfillMisses(0, false, false);
-    uint hits_after_gapfill = lidar2.getHitCount();
-
-    // === QUANTITATIVE VERIFICATION ===
-
-    // 1. Gapfilling should have added points
-    DOCTEST_CHECK(hits_after_gapfill > hits_before_gapfill);
     DOCTEST_CHECK(filled.size() > 0);
+    DOCTEST_CHECK(lidar2.getHitCount() == Ntheta * Nphi);
+    DOCTEST_CHECK(lidar1.getHitCount() <= Ntheta * Nphi); // only pulses that reached the scene's bounding box were traced
 
-    // 2. With duplicate prevention, gapfillMisses should produce similar hit counts
-    //    May be slightly different due to algorithmic differences, but should be close
-    float hit_ratio = float(hits_after_gapfill) / float(hits_with_misses);
-    DOCTEST_CHECK(hit_ratio > 0.7f); // Within reasonable range
-    DOCTEST_CHECK(hit_ratio < 1.3f);
-
-    // 3. Verify both methods cover similar grid positions by comparing actual hits (non-misses)
-    //    Count hits that are NOT far-field points
-    uint real_hits_method1 = 0;
-    uint real_hits_method2 = 0;
-
-    for (uint r = 0; r < lidar1.getHitCount(); r++) {
-        float dist = sqrt(pow(lidar1.getHitXYZ(r).x - lidar1.getScanOrigin(0).x, 2) + pow(lidar1.getHitXYZ(r).y - lidar1.getScanOrigin(0).y, 2) + pow(lidar1.getHitXYZ(r).z - lidar1.getScanOrigin(0).z, 2));
-        if (dist < 1000)
-            real_hits_method1++; // Not a far-field miss
+    // Same returns.
+    std::vector<int32_t> miss1, miss2;
+    lidar1.getHitDataColumn("is_miss", miss1, int32_t(-1));
+    lidar2.getHitDataColumn("is_miss", miss2, int32_t(-1));
+    size_t real1 = 0, real2 = 0;
+    for (int32_t m: miss1) {
+        real1 += (m == 0) ? 1 : 0;
     }
-
-    for (uint r = 0; r < lidar2.getHitCount(); r++) {
-        float dist = sqrt(pow(lidar2.getHitXYZ(r).x - lidar2.getScanOrigin(0).x, 2) + pow(lidar2.getHitXYZ(r).y - lidar2.getScanOrigin(0).y, 2) + pow(lidar2.getHitXYZ(r).z - lidar2.getScanOrigin(0).z, 2));
-        if (dist < 1000)
-            real_hits_method2++;
+    for (int32_t m: miss2) {
+        real2 += (m == 0) ? 1 : 0;
     }
+    DOCTEST_CHECK(real1 == returns);
+    DOCTEST_CHECK(real2 == returns);
 
-    // Real hits (on geometry) should match between methods
-    DOCTEST_CHECK(real_hits_method1 == real_hits_method2);
+    // Every recorded miss has a synthesized counterpart at the same pulse (timestamp) along the same beam.
+    std::vector<double> t1, t2;
+    lidar1.getHitDataColumn("timestamp", t1, -1.0);
+    lidar2.getHitDataColumn("timestamp", t2, -1.0);
+    std::vector<vec3> p1, p2;
+    lidar1.getHitXYZColumn(p1);
+    lidar2.getHitXYZColumn(p2);
+    const vec3 origin = lidar1.getScanOrigin(0);
+    std::map<long long, size_t> by_pulse; // pulse ordinal -> index of the synthesized miss in lidar2
+    for (size_t i = 0; i < t2.size(); i++) {
+        if (miss2[i] == 1) {
+            by_pulse[(long long) std::llround(t2[i])] = i;
+        }
+    }
+    size_t recorded_misses = 0, matched = 0, aligned = 0;
+    for (size_t i = 0; i < t1.size(); i++) {
+        if (miss1[i] != 1) {
+            continue;
+        }
+        recorded_misses++;
+        auto it = by_pulse.find((long long) std::llround(t1[i]));
+        if (it == by_pulse.end()) {
+            continue;
+        }
+        matched++;
+        vec3 d1 = p1[i] - origin, d2 = p2[it->second] - origin;
+        d1.normalize();
+        d2.normalize();
+        if (d1 * d2 > cosf(0.05f * float(M_PI) / 180.f)) { // within 0.05 degrees
+            aligned++;
+        }
+    }
+    DOCTEST_CHECK(recorded_misses > 0);
+    DOCTEST_CHECK(matched == recorded_misses);
+    DOCTEST_CHECK(aligned == recorded_misses);
 }
 
 DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Edge Cases") {
@@ -4415,35 +4453,57 @@ DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Edge Cases") {
 }
 
 DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Grid Only Mode") {
-    LiDARcloud lidar;
-    lidar.disableMessages();
+    // Grid-only mode fills only the rows whose beams can reach the voxel grid, so it synthesizes fewer misses than
+    // the full raster and every miss it does synthesize points into the grid's zenith window.
     Context context;
-
-    // Load configuration with voxel grid
-    DOCTEST_CHECK_NOTHROW(lidar.loadXML("plugins/lidar/xml/synthetic_test_8.xml"));
-
-    // Add geometry
     std::vector<uint> sphere_uuids = context.addSphere(10, make_vec3(0, 0, 1.0), 0.3);
+    const uint Ntheta = 150, Nphi = 200;
 
-    // Perform scan without miss recording
-    lidar.syntheticScan(&context, false, false);
-    uint hits_before = lidar.getHitCount();
+    LiDARcloud grid_only, full;
+    grid_only.disableMessages();
+    full.disableMessages();
+    addSphereSceneScan(grid_only, Ntheta, Nphi);
+    addSphereSceneScan(full, Ntheta, Nphi);
+    grid_only.syntheticScan(&context, false, false);
+    full.syntheticScan(&context, false, false);
+    const uint returns = full.getHitCount();
+    DOCTEST_REQUIRE(grid_only.getHitCount() == returns);
 
-    // Test grid-only mode (should fill fewer points than full mode)
-    std::vector<vec3> filled_grid_only = lidar.gapfillMisses(0, true, false);
-    uint hits_grid_only = lidar.getHitCount();
+    const size_t n_grid_only = grid_only.gapfillMissesCount(0, true, false);
+    const size_t n_full = full.gapfillMissesCount(0, false, false);
+    DOCTEST_CHECK(n_full == Ntheta * Nphi - returns);
+    DOCTEST_CHECK(n_grid_only < n_full);
+    DOCTEST_CHECK(n_grid_only > 0);
 
-    // Reset and test full mode
-    LiDARcloud lidar2;
-    lidar2.disableMessages();
-    DOCTEST_CHECK_NOTHROW(lidar2.loadXML("plugins/lidar/xml/synthetic_test_8.xml"));
-    lidar2.syntheticScan(&context, false, false);
-
-    std::vector<vec3> filled_full = lidar2.gapfillMisses(0, false, false);
-    uint hits_full = lidar2.getHitCount();
-
-    // Grid-only mode should fill same or fewer points (limited to grid bounds)
-    DOCTEST_CHECK(filled_grid_only.size() <= filled_full.size());
+    // The grid's zenith window as seen from the scanner (the 1 m cube centred 5 m away spans well under a hemisphere).
+    const vec3 origin = full.getScanOrigin(0);
+    float min_theta = float(M_PI), max_theta = 0.f;
+    for (int sx = 0; sx < 2; sx++) {
+        for (int sy = 0; sy < 2; sy++) {
+            for (int sz = 0; sz < 2; sz++) {
+                const vec3 corner = make_vec3(-0.5f + float(sx), -0.5f + float(sy), float(sz));
+                const float zenith = cart2sphere(corner - origin).zenith;
+                min_theta = std::min(min_theta, zenith);
+                max_theta = std::max(max_theta, zenith);
+            }
+        }
+    }
+    std::vector<vec3> xyz;
+    std::vector<int32_t> is_miss;
+    grid_only.getHitXYZColumn(xyz);
+    grid_only.getHitDataColumn("is_miss", is_miss, int32_t(-1));
+    const float slack = float(M_PI) / float(Ntheta); // one row
+    size_t outside = 0;
+    for (size_t i = 0; i < xyz.size(); i++) {
+        if (is_miss[i] != 1) {
+            continue;
+        }
+        const float zenith = cart2sphere(xyz[i] - origin).zenith;
+        if (zenith < min_theta - slack || zenith > max_theta + slack) {
+            outside++;
+        }
+    }
+    DOCTEST_CHECK(outside == 0);
 }
 
 DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Multi-Return Data") {
@@ -5032,6 +5092,1060 @@ DOCTEST_TEST_CASE("LiDAR Columnar Hit Data - Origin Survives coordinateShift") {
     // Static hit: still carries no origin labels.
     DOCTEST_CHECK(cloud.doesHitDataExist(1, "origin_x") == false);
     DOCTEST_CHECK(cloud.getHitXYZ(1).x == doctest::Approx(10.f + 100.f));
+}
+
+DOCTEST_TEST_CASE("LiDAR Typed Hit Data Columns - Registry and Exact Round Trip") {
+    // Each label's column has a storage type fixed at creation: standard count/index labels are 32-bit
+    // integers, standard measurements are 32-bit floats, timestamp and every unrecognized label are
+    // 64-bit doubles. Values must round-trip exactly through both the per-hit and the bulk readers.
+    LiDARcloud cloud;
+    cloud.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 0), 4, 0.25f * float(M_PI), 0.75f * float(M_PI), 4, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, {});
+    cloud.addScan(scan);
+
+    const double gps_time = 1.7e9 + 1e-6; // microsecond resolution at GPS-epoch magnitude: only a double keeps it
+    const double custom = 1234567.890123;
+    for (int i = 0; i < 5; i++) {
+        std::map<std::string, double> data;
+        data["target_index"] = i; // registry -> INT32
+        data["intensity"] = 0.25 * i; // registry -> FLOAT32 (exactly representable)
+        data["timestamp"] = gps_time + i; // registry -> FLOAT64
+        data["my_custom_field"] = custom + i; // unrecognized -> FLOAT64
+        cloud.addHitPoint(0, make_vec3(float(i), 0.f, 1.f), SphericalCoord(1.f, 0.f, 0.f), data);
+    }
+
+    DOCTEST_CHECK(cloud.getHitDataType("target_index") == HitDataType::INT32);
+    DOCTEST_CHECK(cloud.getHitDataType("intensity") == HitDataType::FLOAT32);
+    DOCTEST_CHECK(cloud.getHitDataType("timestamp") == HitDataType::FLOAT64);
+    DOCTEST_CHECK(cloud.getHitDataType("my_custom_field") == HitDataType::FLOAT64);
+    DOCTEST_CHECK_THROWS(static_cast<void>(cloud.getHitDataType("never_set")));
+
+    for (uint i = 0; i < 5; i++) {
+        DOCTEST_CHECK(cloud.getHitData(i, "target_index") == double(i));
+        DOCTEST_CHECK(cloud.getHitData(i, "intensity") == 0.25 * i);
+        DOCTEST_CHECK(cloud.getHitData(i, "timestamp") == gps_time + i); // exact, not Approx
+        DOCTEST_CHECK(cloud.getHitData(i, "my_custom_field") == custom + i);
+    }
+
+    // A value a float does not hold exactly widens the automatically typed column to double, keeping every value.
+    cloud.setHitData(0, "intensity", 0.1);
+    DOCTEST_CHECK(cloud.getHitData(0, "intensity") == 0.1);
+    DOCTEST_CHECK(cloud.getHitData(1, "intensity") == 0.25);
+    DOCTEST_CHECK(cloud.getHitDataType("intensity") == HitDataType::FLOAT64);
+
+    // Typed bulk readers return the column's own type without widening; all three overloads agree.
+    std::vector<int32_t> ti_i32;
+    std::vector<float> ti_f32;
+    std::vector<double> ti_f64;
+    cloud.getHitDataColumn("target_index", ti_i32);
+    cloud.getHitDataColumn("target_index", ti_f32);
+    cloud.getHitDataColumn("target_index", ti_f64);
+    std::vector<double> ts_f64;
+    cloud.getHitDataColumn("timestamp", ts_f64);
+    DOCTEST_REQUIRE(ti_i32.size() == 5);
+    for (size_t i = 0; i < 5; i++) {
+        DOCTEST_CHECK(ti_i32[i] == int32_t(i));
+        DOCTEST_CHECK(ti_f32[i] == float(i));
+        DOCTEST_CHECK(ti_f64[i] == double(i));
+        DOCTEST_CHECK(ts_f64[i] == gps_time + double(i));
+    }
+
+    // Absent entries take the caller's sentinel in every overload.
+    cloud.setHitData(2, "sparse", 7.0);
+    std::vector<int32_t> sp_i32;
+    std::vector<float> sp_f32;
+    cloud.getHitDataColumn("sparse", sp_i32, -1);
+    cloud.getHitDataColumn("sparse", sp_f32, -2.5f);
+    DOCTEST_CHECK(sp_i32[2] == 7);
+    DOCTEST_CHECK(sp_i32[1] == -1);
+    DOCTEST_CHECK(sp_f32[2] == 7.f);
+    DOCTEST_CHECK(sp_f32[3] == -2.5f);
+
+    // The memory estimate charges each column its current width: 4 bytes for INT32/FLOAT32, 8 for FLOAT64 (here
+    // target_index stays INT32, intensity has widened, timestamp and the custom and sparse fields are doubles), plus
+    // one presence bit per point packed into 64-bit words.
+    const size_t words = (1000 + 63) / 64;
+    const size_t expected = 1000 * (sizeof(HitPoint) + 4 + 8 + 8 + 8 + 8) + 5 * words * sizeof(uint64_t);
+    DOCTEST_CHECK(cloud.estimateHitPointMemory(1000) == expected);
+}
+
+DOCTEST_TEST_CASE("LiDAR Typed Hit Data Columns - Automatic Integer Columns Widen, Explicit Ones Reject") {
+    // An integer column typed automatically from the label's name widens to double on the first value that is not a
+    // 32-bit integer, keeping every value exactly. A column whose type the caller fixed with createHitDataColumn() is a
+    // contract instead: an explicit INT32 column rejects such a value with an error naming the label and the remedy,
+    // and the rejected hit is not added; an explicit FLOAT32 column stores values at float precision.
+    LiDARcloud cloud;
+    cloud.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 0), 4, 0.25f * float(M_PI), 0.75f * float(M_PI), 4, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, {});
+    cloud.addScan(scan);
+
+    std::map<std::string, double> ok;
+    ok["row"] = 3;
+    cloud.addHitPoint(0, make_vec3(1, 0, 1), SphericalCoord(1.f, 0.f, 0.f), ok);
+    DOCTEST_CHECK(cloud.getHitDataType("row") == HitDataType::INT32);
+    cloud.setHitData(0, "row", 2.5);
+    DOCTEST_CHECK(cloud.getHitData(0, "row") == 2.5);
+    DOCTEST_CHECK(cloud.getHitDataType("row") == HitDataType::FLOAT64);
+    std::map<std::string, double> fractional;
+    fractional["row"] = 4.5;
+    cloud.addHitPoint(0, make_vec3(2, 0, 1), SphericalCoord(1.f, 0.f, 0.f), fractional);
+    DOCTEST_CHECK(cloud.getHitCount() == 2);
+    DOCTEST_CHECK(cloud.getHitData(1, "row") == 4.5);
+    cloud.setHitData(0, "row", 3.0e9);
+    DOCTEST_CHECK(cloud.getHitData(0, "row") == 3.0e9);
+    cloud.setHitData(0, "row", std::numeric_limits<double>::quiet_NaN());
+    DOCTEST_CHECK(std::isnan(cloud.getHitData(0, "row")));
+
+    // Choosing the type explicitly, before any data, overrides the automatic choice and is never widened.
+    LiDARcloud cloud2;
+    cloud2.disableMessages();
+    cloud2.addScan(scan);
+    cloud2.createHitDataColumn("row", HitDataType::FLOAT64);
+    DOCTEST_CHECK(cloud2.getHitDataType("row") == HitDataType::FLOAT64);
+    cloud2.addHitPoint(0, make_vec3(1, 0, 1), SphericalCoord(1.f, 0.f, 0.f), fractional);
+    DOCTEST_CHECK(cloud2.getHitData(0, "row") == 4.5);
+    DOCTEST_CHECK_NOTHROW(cloud2.createHitDataColumn("row", HitDataType::FLOAT64)); // same type: no-op
+    DOCTEST_CHECK_THROWS_AS(cloud2.createHitDataColumn("row", HitDataType::INT32), std::runtime_error); // type is fixed
+    cloud2.createHitDataColumn("big_custom", HitDataType::FLOAT32);
+    DOCTEST_CHECK(cloud2.getHitDataType("big_custom") == HitDataType::FLOAT32);
+    cloud2.setHitData(0, "big_custom", 0.1);
+    DOCTEST_CHECK(cloud2.getHitData(0, "big_custom") == double(0.1f));
+    DOCTEST_CHECK(cloud2.getHitDataType("big_custom") == HitDataType::FLOAT32);
+
+    cloud2.createHitDataColumn("count", HitDataType::INT32);
+    std::string message;
+    try {
+        cloud2.setHitData(0, "count", 2.5);
+        DOCTEST_CHECK_MESSAGE(false, "setHitData should have rejected 2.5 for an explicitly typed INT32 column");
+    } catch (const std::runtime_error &e) {
+        message = e.what();
+    }
+    DOCTEST_CHECK(message.find("count") != std::string::npos);
+    DOCTEST_CHECK(message.find("createHitDataColumn") != std::string::npos);
+    DOCTEST_CHECK(!cloud2.doesHitDataExist(0, "count")); // untouched
+    std::map<std::string, double> bad;
+    bad["count"] = 4.5;
+    DOCTEST_CHECK_THROWS_AS(cloud2.addHitPoint(0, make_vec3(2, 0, 1), SphericalCoord(1.f, 0.f, 0.f), bad), std::runtime_error);
+    DOCTEST_CHECK(cloud2.getHitCount() == 1); // the rejected hit was not added
+    DOCTEST_CHECK_THROWS_AS(cloud2.setHitData(0, "count", 3.0e9), std::runtime_error); // out of 32-bit range
+    // Widening an automatically typed column to double on request is lossless, so it is allowed.
+    DOCTEST_CHECK_NOTHROW(cloud.createHitDataColumn("row", HitDataType::FLOAT64));
+}
+
+DOCTEST_TEST_CASE("LiDAR Typed Hit Data Columns - Presence Bits Survive Delete and Materialize") {
+    // Presence is one bit per hit packed into 64-bit words; swap-and-pop deletion and materializing
+    // virtual misses must keep those bits in lockstep with the hits across word boundaries.
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    const int Ntheta = 12, Nphi = 30;
+    ScanMetadata scan(make_vec3(0, 0, 0), uint(Ntheta), 0.05, 0.95 * M_PI, uint(Nphi), 0.0, 2.0 * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, {});
+    lidar.addScan(scan);
+    uint nreal = 0;
+    for (int row = 0; row < Ntheta; row++) {
+        for (int col = 0; col < Nphi; col++) {
+            if (row >= 3 && row <= 6 && col >= 8 && col <= 20) {
+                continue; // blank region for the gap filler
+            }
+            const float theta = 0.05f + (0.95f * float(M_PI) - 0.05f) * float(row) / float(Ntheta);
+            const float phi = 2.f * float(M_PI) * float(col) / float(Nphi);
+            SphericalCoord dir(1.f, 0.5f * float(M_PI) - theta, phi);
+            vec3 xyz = sphere2cart(SphericalCoord(10.f, 0.5f * float(M_PI) - theta, phi));
+            std::map<std::string, double> data;
+            data["row"] = row;
+            data["column"] = col;
+            if (nreal % 7 == 0) {
+                data["sparse"] = double(nreal); // present on every 7th hit only
+            }
+            lidar.addHitPoint(0, xyz, dir, data);
+            nreal++;
+        }
+    }
+    lidar.gapfillMisses(0, false, true);
+    DOCTEST_REQUIRE(lidar.getVirtualMissCount() > 0);
+    lidar.materializeMisses();
+    const uint ntotal = lidar.getHitCount();
+    DOCTEST_CHECK(ntotal > nreal);
+    // The gap filler stamps is_miss = 0 / gapfillMisses_code = 0 on the original returns and 1 / 1 on
+    // the misses it synthesizes, so both labels are present everywhere and distinguish the two by value.
+    for (uint i = 0; i < ntotal; i++) {
+        const bool is_real = i < nreal;
+        DOCTEST_CHECK(lidar.doesHitDataExist(i, "sparse") == (is_real && i % 7 == 0));
+        DOCTEST_CHECK(lidar.doesHitDataExist(i, "is_miss"));
+        DOCTEST_CHECK(lidar.doesHitDataExist(i, "gapfillMisses_code"));
+        DOCTEST_CHECK(lidar.getHitData(i, "is_miss") == (is_real ? 0.0 : 1.0));
+        DOCTEST_CHECK(lidar.getHitData(i, "gapfillMisses_code") == (is_real ? 0.0 : 1.0));
+        if (is_real && i % 7 == 0) {
+            DOCTEST_CHECK(lidar.getHitData(i, "sparse") == double(i));
+        }
+    }
+    // Delete every third hit from the back; the survivor swapped into each slot keeps its own bits.
+    std::vector<std::pair<vec3, bool>> expected; // (position, has sparse)
+    for (uint i = 0; i < ntotal; i++) {
+        expected.emplace_back(lidar.getHitXYZ(i), lidar.doesHitDataExist(i, "sparse"));
+    }
+    for (int i = int(ntotal) - 1; i >= 0; i -= 3) {
+        lidar.deleteHitPoint(uint(i));
+    }
+    for (uint i = 0; i < lidar.getHitCount(); i++) {
+        const vec3 p = lidar.getHitXYZ(i);
+        bool found = false;
+        for (const auto &e: expected) {
+            if (e.first.x == p.x && e.first.y == p.y && e.first.z == p.z) {
+                DOCTEST_CHECK(lidar.doesHitDataExist(i, "sparse") == e.second);
+                found = true;
+                break;
+            }
+        }
+        DOCTEST_CHECK(found);
+    }
+}
+
+// ---- Per-scan hit index and per-scan readers ----
+
+//! Copy every hit of `src` into `dst` (which must already hold the same scans and grid), interleaving the
+//! scans round-robin so that no scan's hits are contiguous in the destination's index space.
+static void copyHitsInterleaved(const LiDARcloud &src, LiDARcloud &dst) {
+    const uint Nscans = src.getScanCount();
+    std::vector<std::vector<uint>> per_scan(Nscans);
+    for (uint s = 0; s < Nscans; s++) {
+        src.getScanHitIndices(s, per_scan[s]);
+    }
+    const std::vector<std::string> labels = LiDARTestHelper::hitDataLabels(src);
+    size_t longest = 0;
+    for (const auto &v: per_scan) {
+        longest = std::max(longest, v.size());
+    }
+    for (size_t k = 0; k < longest; k++) {
+        for (uint s = 0; s < Nscans; s++) {
+            if (k >= per_scan[s].size()) {
+                continue;
+            }
+            const uint i = per_scan[s][k];
+            std::map<std::string, double> data;
+            for (const std::string &label: labels) {
+                if (src.doesHitDataExist(i, label.c_str())) {
+                    data[label] = src.getHitData(i, label.c_str());
+                }
+            }
+            dst.addHitPoint(uint(src.getHitScanID(i)), src.getHitXYZ(i), LiDARTestHelper::storedDirection(src, i), src.getHitColor(i), data);
+        }
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR Per-Scan Index - Interleaved Scans Give the Same Triangulation") {
+    // sphere.xml holds four scans, loaded scan after scan so each scan's hits are contiguous. Rebuilding
+    // the same cloud with the four scans interleaved hit by hit must produce the identical mesh: the
+    // per-scan gather locates a scan's hits through the index (a permutation here) rather than by
+    // position, and the mesh only depends on which hits belong to which scan.
+    LiDARcloud ordered;
+    ordered.disableMessages();
+    ordered.loadXML("plugins/lidar/xml/sphere.xml");
+    DOCTEST_REQUIRE(ordered.getScanCount() == 4);
+
+    LiDARcloud interleaved;
+    interleaved.disableMessages();
+    interleaved.loadXML("plugins/lidar/xml/sphere.xml");
+    LiDARTestHelper::clearHits(interleaved); // keep the scans and grid, drop the hits
+    DOCTEST_REQUIRE(interleaved.getHitCount() == 0);
+    copyHitsInterleaved(ordered, interleaved);
+    DOCTEST_REQUIRE(interleaved.getHitCount() == ordered.getHitCount());
+    // The interleaved cloud really is out of scan order.
+    bool saw_descent = false;
+    for (uint i = 1; i < interleaved.getHitCount() && !saw_descent; i++) {
+        saw_descent = interleaved.getHitScanID(i) < interleaved.getHitScanID(i - 1);
+    }
+    DOCTEST_CHECK(saw_descent);
+    for (uint s = 0; s < 4; s++) {
+        DOCTEST_CHECK(interleaved.getScanHitCount(s) == ordered.getScanHitCount(s));
+    }
+
+    ordered.triangulateHitPoints(0.5, 5);
+    interleaved.triangulateHitPoints(0.5, 5);
+    DOCTEST_REQUIRE(interleaved.getTriangleCount() == ordered.getTriangleCount());
+    DOCTEST_CHECK(ordered.getTriangleCount() == 383u);
+    // Same triangles, in the same per-scan order (the second cloud's vertex IDs differ, the geometry does not).
+    for (uint t = 0; t < ordered.getTriangleCount(); t++) {
+        const Triangulation a = ordered.getTriangle(t);
+        const Triangulation b = interleaved.getTriangle(t);
+        DOCTEST_CHECK(a.scanID == b.scanID);
+        DOCTEST_CHECK(a.vertex0.x == b.vertex0.x);
+        DOCTEST_CHECK(a.vertex1.y == b.vertex1.y);
+        DOCTEST_CHECK(a.vertex2.z == b.vertex2.z);
+        DOCTEST_CHECK(a.area == b.area);
+        DOCTEST_CHECK(a.gridcell == b.gridcell);
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR Per-Scan Index - Interleaved and Filter-Scrambled Scans Give the Same Leaf Area") {
+    // Two synthetic scans of the leaf cube from different positions, inverted three ways: as scanned
+    // (each scan's hits contiguous), rebuilt with the scans interleaved hit by hit, and with the stored
+    // order scrambled by a filter's swap-and-pop deletions. Per-cell leaf area, G(theta) and beam counts
+    // must agree, and the inversion's largest per-scan working array must be the size of the largest
+    // scan -- not the cloud -- which is what keeps its scratch bounded by one scan.
+    Context context;
+    context.seedRandomGenerator(0);
+    context.loadXML("plugins/lidar/xml/leaf_cube_LAI2_lw0_01_spherical.xml", true);
+
+    auto add_scans_and_grid = [](LiDARcloud &lidar) {
+        ScanMetadata scan0(vec3(-5.f, 0.f, 0.5f), 2000, 0.f, float(M_PI), 3000, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>{});
+        ScanMetadata scan1(vec3(0.f, 4.f, 0.6f), 300, 0.f, float(M_PI), 450, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>{});
+        lidar.addScan(scan0);
+        lidar.addScan(scan1);
+        lidar.addGrid(vec3(0.f, 0.f, 0.5f), vec3(1.f, 1.f, 1.f), make_int3(2, 2, 2), 0);
+    };
+    auto invert = [&](LiDARcloud &lidar, std::vector<float> &leaf_area, std::vector<float> &gtheta, std::vector<int> &beam_count) {
+        lidar.calculateHitGridCell();
+        lidar.triangulateHitPoints(0.04, 10);
+        lidar.calculateLeafArea(&context);
+        const uint Ncells = lidar.getGridCellCount();
+        leaf_area.resize(Ncells);
+        gtheta.resize(Ncells);
+        beam_count.resize(Ncells);
+        for (uint c = 0; c < Ncells; c++) {
+            leaf_area[c] = lidar.getCellLeafArea(c);
+            gtheta[c] = lidar.getCellGtheta(c);
+            beam_count[c] = lidar.getCellBeamCount(c);
+        }
+    };
+    auto compare = [](const std::vector<float> &la_a, const std::vector<float> &g_a, const std::vector<int> &bc_a, const std::vector<float> &la_b, const std::vector<float> &g_b, const std::vector<int> &bc_b, const char *what) {
+        DOCTEST_REQUIRE(la_a.size() == la_b.size());
+        for (size_t c = 0; c < la_a.size(); c++) {
+            DOCTEST_CHECK_MESSAGE(la_a[c] == doctest::Approx(la_b[c]).epsilon(1e-4f), std::string(what) << ": leaf_area mismatch in cell " << c);
+            DOCTEST_CHECK_MESSAGE(g_a[c] == doctest::Approx(g_b[c]).epsilon(1e-4f), std::string(what) << ": Gtheta mismatch in cell " << c);
+            DOCTEST_CHECK_MESSAGE(bc_a[c] == bc_b[c], std::string(what) << ": beam_count mismatch in cell " << c);
+        }
+    };
+
+    LiDARcloud ordered;
+    ordered.disableMessages();
+    add_scans_and_grid(ordered);
+    ordered.syntheticScan(&context, true, true); // scan_grid_only, record_misses
+    DOCTEST_REQUIRE(ordered.getScanHitCount(0) > 10 * ordered.getScanHitCount(1));
+    DOCTEST_REQUIRE(ordered.getScanHitCount(1) > 0);
+    std::vector<float> la_o, g_o;
+    std::vector<int> bc_o;
+    invert(ordered, la_o, g_o, bc_o);
+    for (size_t c = 0; c < la_o.size(); c++) {
+        DOCTEST_CHECK(bc_o[c] > 0);
+    }
+    // Scratch bound: the largest per-scan array is the largest scan, not the whole cloud.
+    DOCTEST_CHECK(LiDARTestHelper::leafAreaMaxScanScratch(ordered) == ordered.getScanHitCount(0));
+    DOCTEST_CHECK(LiDARTestHelper::leafAreaMaxScanScratch(ordered) < ordered.getHitCount());
+
+    // (1) Interleaved: the same hits, scans alternating hit by hit.
+    LiDARcloud interleaved;
+    interleaved.disableMessages();
+    add_scans_and_grid(interleaved);
+    copyHitsInterleaved(ordered, interleaved);
+    DOCTEST_REQUIRE(interleaved.getHitCount() == ordered.getHitCount());
+    std::vector<float> la_i, g_i;
+    std::vector<int> bc_i;
+    invert(interleaved, la_i, g_i, bc_i);
+    compare(la_o, g_o, bc_o, la_i, g_i, bc_i, "interleaved");
+
+    // (2) Scrambled by a filter: rebuild the cloud in scan order but with throw-away hits of the OTHER scan
+    // interleaved every few hundred points (placed far behind the scanners so their beams point away from
+    // the grid), then delete them with a box filter. Each swap-and-pop deletion of an interior dummy drops
+    // the cloud's last stored hit -- a genuine scan-1 return -- into scan 0's block, so the survivors are
+    // out of scan order even though no genuine hit was removed.
+    LiDARcloud scrambled;
+    scrambled.disableMessages();
+    add_scans_and_grid(scrambled);
+    {
+        const std::vector<std::string> labels = LiDARTestHelper::hitDataLabels(ordered);
+        int dummy = 0;
+        for (uint s = 0; s < 2; s++) {
+            std::vector<uint> indices;
+            ordered.getScanHitIndices(s, indices);
+            for (size_t k = 0; k < indices.size(); k++) {
+                const uint i = indices[k];
+                std::map<std::string, double> data;
+                for (const std::string &label: labels) {
+                    if (ordered.doesHitDataExist(i, label.c_str())) {
+                        data[label] = ordered.getHitData(i, label.c_str());
+                    }
+                }
+                scrambled.addHitPoint(s, ordered.getHitXYZ(i), LiDARTestHelper::storedDirection(ordered, i), ordered.getHitColor(i), data);
+                if (s == 0 && k % 400 == 0) {
+                    const vec3 away = vec3(0.f, 3000.f + 0.5f * float(dummy++), 0.6f); // behind scan 1's scanner
+                    std::map<std::string, double> dummy_data;
+                    dummy_data["is_miss"] = 0.0;
+                    scrambled.addHitPoint(1, away, cart2sphere(away - scrambled.getScanOrigin(1)), dummy_data);
+                }
+            }
+        }
+        DOCTEST_REQUIRE(dummy > 10);
+    }
+    scrambled.xyzFilter(-2000.f, 2000.f, -2000.f, 2000.f, -2000.f, 2000.f); // keeps every genuine hit, including misses at ~1001 m
+    DOCTEST_REQUIRE(scrambled.getHitCount() == ordered.getHitCount());
+    bool saw_descent = false;
+    for (uint i = 1; i < scrambled.getHitCount() && !saw_descent; i++) {
+        saw_descent = scrambled.getHitScanID(i) < scrambled.getHitScanID(i - 1);
+    }
+    DOCTEST_CHECK(saw_descent);
+    std::vector<float> la_s, g_s;
+    std::vector<int> bc_s;
+    invert(scrambled, la_s, g_s, bc_s);
+    compare(la_o, g_o, bc_o, la_s, g_s, bc_s, "scrambled");
+}
+
+DOCTEST_TEST_CASE("LiDAR Per-Scan Readers Match Per-Index Accessors on a Gap-Filled Multi-Scan Cloud") {
+    // Two row/column scans, both gap-filled so each has stored returns in the real prefix of the index
+    // space and virtualized misses in the tail. The per-scan readers must enumerate exactly the hits the
+    // per-index accessors attribute to that scan, in the order getScanHitIndices reports.
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    for (uint s = 0; s < 2; s++) {
+        const int Ntheta = 10 + int(s) * 4, Nphi = 24;
+        ScanMetadata scan(make_vec3(float(s) * 3.f, 0, 0), uint(Ntheta), 0.05, 0.95 * M_PI, uint(Nphi), 0.0, 2.0 * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, {});
+        lidar.addScan(scan);
+        for (int row = 0; row < Ntheta; row++) {
+            for (int col = 0; col < Nphi; col++) {
+                if ((row + col + int(s)) % 3 == 0) {
+                    continue;
+                }
+                const float theta = 0.05f + (0.95f * float(M_PI) - 0.05f) * float(row) / float(Ntheta);
+                const float phi = 2.f * float(M_PI) * float(col) / float(Nphi);
+                SphericalCoord dir(1.f, 0.5f * float(M_PI) - theta, phi);
+                vec3 xyz = lidar.getScanOrigin(s) + sphere2cart(SphericalCoord(10.f, 0.5f * float(M_PI) - theta, phi));
+                std::map<std::string, double> data;
+                data["row"] = row;
+                data["column"] = col;
+                data["intensity"] = 0.5 * row + col;
+                lidar.addHitPoint(s, xyz, dir, data);
+            }
+        }
+    }
+    lidar.gapfillMisses(0, false, true);
+    lidar.gapfillMisses(1, false, true);
+    DOCTEST_REQUIRE(lidar.getVirtualMissCount() > 0);
+
+    size_t total = 0;
+    for (uint s = 0; s < 2; s++) {
+        std::vector<uint> indices;
+        std::vector<vec3> xyz;
+        std::vector<double> intensity, code;
+        std::vector<int32_t> row;
+        lidar.getScanHitIndices(s, indices);
+        lidar.getScanHitXYZColumn(s, xyz);
+        lidar.getScanHitDataColumn(s, "intensity", intensity, -1.0);
+        lidar.getScanHitDataColumn(s, "gapfillMisses_code", code, -1.0);
+        lidar.getScanHitDataColumn(s, "row", row, int32_t(-1));
+        const size_t n = lidar.getScanHitCount(s);
+        DOCTEST_REQUIRE(indices.size() == n);
+        DOCTEST_REQUIRE(xyz.size() == n);
+        DOCTEST_REQUIRE(intensity.size() == n);
+        DOCTEST_REQUIRE(row.size() == n);
+        total += n;
+        for (size_t i = 0; i < n; i++) {
+            const uint g = indices[i];
+            DOCTEST_CHECK(lidar.getHitScanID(g) == int(s));
+            const vec3 p = lidar.getHitXYZ(g);
+            DOCTEST_CHECK(xyz[i].x == p.x);
+            DOCTEST_CHECK(xyz[i].y == p.y);
+            DOCTEST_CHECK(xyz[i].z == p.z);
+            DOCTEST_CHECK(intensity[i] == (lidar.doesHitDataExist(g, "intensity") ? lidar.getHitData(g, "intensity") : -1.0));
+            DOCTEST_CHECK(code[i] == (lidar.doesHitDataExist(g, "gapfillMisses_code") ? lidar.getHitData(g, "gapfillMisses_code") : -1.0));
+            DOCTEST_CHECK(row[i] == int32_t(lidar.getHitData(g, "row")));
+        }
+    }
+    DOCTEST_CHECK(total == lidar.getHitCount());
+    DOCTEST_CHECK_THROWS(static_cast<void>(lidar.getScanHitCount(2)));
+}
+
+DOCTEST_TEST_CASE("LiDAR Hit Grid Cell Binning - Lattice Fast Path Matches Cell-by-Cell Containment") {
+    // On a regular lattice the containing cell is located arithmetically; the assignment must be the one
+    // the cell-by-cell containment scan (getContainingGridCell) makes, including on a rotated grid and
+    // for hits on cell faces. A non-lattice grid takes the scan itself and must also agree.
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    lidar.loadXML("plugins/lidar/xml/sphere.xml");
+    const uint N = lidar.getHitCount();
+    DOCTEST_REQUIRE(N > 0);
+
+    auto check_all = [&](const char *what) {
+        lidar.calculateHitGridCell();
+        size_t inside = 0;
+        for (uint i = 0; i < N; i++) {
+            const int expected = LiDARTestHelper::containingGridCell(lidar, lidar.getHitXYZ(i));
+            DOCTEST_CHECK_MESSAGE(lidar.getHitGridCell(i) == expected, std::string(what) << ": hit " << i);
+            inside += expected >= 0 ? 1 : 0;
+        }
+        DOCTEST_CHECK_MESSAGE(inside > 0, std::string(what) << ": no hit fell inside the grid");
+    };
+
+    // Rotated lattice covering part of the sphere, plus points placed exactly on interior cell faces.
+    LiDARTestHelper::clearGrid(lidar);
+    lidar.addGrid(vec3(0.f, 0.f, 0.f), vec3(1.2f, 0.9f, 1.5f), make_int3(3, 2, 4), 30.f);
+    for (int k = 0; k < 12; k++) {
+        std::map<std::string, double> data;
+        lidar.addHitPoint(0, vec3(-0.6f + 0.4f * float(k % 4), -0.45f + 0.45f * float((k / 4) % 3), 0.f), SphericalCoord(1.f, 0.f, 0.f), data);
+    }
+    const uint N2 = lidar.getHitCount();
+    DOCTEST_REQUIRE(N2 == N + 12);
+    {
+        lidar.calculateHitGridCell();
+        for (uint i = 0; i < N2; i++) {
+            DOCTEST_CHECK(lidar.getHitGridCell(i) == LiDARTestHelper::containingGridCell(lidar, lidar.getHitXYZ(i)));
+        }
+    }
+
+    // Un-rotated lattice.
+    LiDARTestHelper::clearGrid(lidar);
+    lidar.addGrid(vec3(0.f, 0.f, 0.f), vec3(1.2f, 0.9f, 1.5f), make_int3(3, 2, 4), 0.f);
+    check_all("axis-aligned lattice");
+
+    // Non-lattice grid: two cells of different size (the scan path).
+    LiDARTestHelper::clearGrid(lidar);
+    lidar.addGridCell(vec3(0.f, 0.f, 0.f), vec3(1.f, 1.f, 1.f), 0.f);
+    lidar.addGridCell(vec3(0.f, 0.f, 1.f), vec3(0.5f, 0.5f, 1.f), 0.f);
+    check_all("non-lattice");
+}
+
+// ---- Bulk ingest ----
+
+DOCTEST_TEST_CASE("LiDAR addHitPoints - Chunked Ingest Equals One Call and Equals addHitPoint") {
+    // The downstream pattern is a loop over row chunks read from disk. Ten chunks must produce a cloud
+    // identical to a single call over the same rows, and identical to adding the same points one at a
+    // time with addHitPoint(): positions, stored directions, scan IDs, and every label's value and
+    // presence (NaN in the bulk array means absent).
+    const size_t N = 20000, CHUNK = 2000;
+    const std::vector<std::string> labels = {"target_index", "intensity", "timestamp", "custom"};
+    std::vector<double> xyz(3 * N), values(N * labels.size());
+    std::vector<float> dir(3 * N);
+    for (size_t i = 0; i < N; i++) {
+        const double a = 2.0 * M_PI * double(i) / double(N);
+        xyz[3 * i] = 5.0 * cos(a);
+        xyz[3 * i + 1] = 5.0 * sin(a);
+        xyz[3 * i + 2] = 1.0 + 0.001 * double(i % 97);
+        const SphericalCoord d = cart2sphere(make_vec3(float(xyz[3 * i]), float(xyz[3 * i + 1]), float(xyz[3 * i + 2])) - make_vec3(0.f, 0.f, 1.f));
+        dir[3 * i] = d.radius;
+        dir[3 * i + 1] = d.elevation;
+        dir[3 * i + 2] = d.azimuth;
+        values[i * 4 + 0] = double(i % 3); // INT32
+        values[i * 4 + 1] = 0.25 * double(i % 8); // FLOAT32 (exact)
+        values[i * 4 + 2] = 1.7e9 + 1e-6 * double(i); // FLOAT64
+        values[i * 4 + 3] = (i % 5 == 0) ? std::numeric_limits<double>::quiet_NaN() : double(i); // absent on every 5th
+    }
+    ScanMetadata scan(make_vec3(0, 0, 1), 10, 0.05, 0.95 * M_PI, 10, 0.0, 2.0 * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, {});
+
+    LiDARcloud one, chunked, single;
+    one.disableMessages();
+    chunked.disableMessages();
+    single.disableMessages();
+    one.addScan(scan);
+    chunked.addScan(scan);
+    single.addScan(scan);
+
+    one.addHitPoints(0, N, xyz.data(), dir.data(), labels, values.data());
+    for (size_t c = 0; c < N; c += CHUNK) {
+        chunked.addHitPoints(0, CHUNK, xyz.data() + 3 * c, dir.data() + 3 * c, labels, values.data() + c * labels.size());
+    }
+    for (size_t i = 0; i < N; i++) {
+        std::map<std::string, double> data;
+        for (size_t k = 0; k < labels.size(); k++) {
+            if (!std::isnan(values[i * 4 + k])) {
+                data[labels[k]] = values[i * 4 + k];
+            }
+        }
+        single.addHitPoint(0, make_vec3(float(xyz[3 * i]), float(xyz[3 * i + 1]), float(xyz[3 * i + 2])), SphericalCoord(dir[3 * i], dir[3 * i + 1], dir[3 * i + 2]), data);
+    }
+
+    DOCTEST_REQUIRE(one.getHitCount() == N);
+    DOCTEST_REQUIRE(chunked.getHitCount() == N);
+    DOCTEST_REQUIRE(single.getHitCount() == N);
+    DOCTEST_CHECK(one.getHitDataType("target_index") == HitDataType::INT32);
+    DOCTEST_CHECK(chunked.getHitDataType("custom") == HitDataType::FLOAT64);
+
+    auto same = [&](const LiDARcloud &a, const LiDARcloud &b, const char *what) {
+        std::vector<vec3> xa, xb;
+        a.getHitXYZColumn(xa);
+        b.getHitXYZColumn(xb);
+        std::vector<int> sa, sb;
+        a.getHitScanIDColumn(sa);
+        b.getHitScanIDColumn(sb);
+        size_t mismatches = 0;
+        for (size_t i = 0; i < N; i++) {
+            if (xa[i].x != xb[i].x || xa[i].y != xb[i].y || xa[i].z != xb[i].z || sa[i] != sb[i]) {
+                mismatches++;
+            }
+            const SphericalCoord da = LiDARTestHelper::storedDirection(a, uint(i));
+            const SphericalCoord db = LiDARTestHelper::storedDirection(b, uint(i));
+            if (da.radius != db.radius || da.elevation != db.elevation || da.azimuth != db.azimuth) {
+                mismatches++;
+            }
+        }
+        for (const std::string &label: labels) {
+            std::vector<double> va, vb;
+            a.getHitDataColumn(label.c_str(), va, -12345.0);
+            b.getHitDataColumn(label.c_str(), vb, -12345.0);
+            for (size_t i = 0; i < N; i++) {
+                if (va[i] != vb[i]) {
+                    mismatches++;
+                }
+            }
+        }
+        DOCTEST_CHECK_MESSAGE(mismatches == 0, std::string(what) << ": " << mismatches << " mismatching entries");
+    };
+    same(one, chunked, "one call vs chunked");
+    same(one, single, "one call vs addHitPoint loop");
+
+    // Values landed exactly, and NaN produced an absent entry rather than a stored NaN.
+    DOCTEST_CHECK(one.getHitData(7, "timestamp") == 1.7e9 + 1e-6 * 7.0);
+    DOCTEST_CHECK(one.getHitData(7, "intensity") == 0.25 * 7.0);
+    DOCTEST_CHECK(one.doesHitDataExist(5, "custom") == false);
+    DOCTEST_CHECK(one.doesHitDataExist(6, "custom") == true);
+
+    // A null direction array derives each direction from the scan origin, like the ASCII loader.
+    LiDARcloud derived;
+    derived.disableMessages();
+    derived.addScan(scan);
+    derived.addHitPoints(0, N, xyz.data(), nullptr, {}, nullptr);
+    for (uint i = 0; i < N; i += 997) {
+        const SphericalCoord expect = cart2sphere(derived.getHitXYZ(i) - make_vec3(0.f, 0.f, 1.f));
+        const SphericalCoord got = LiDARTestHelper::storedDirection(derived, i);
+        DOCTEST_CHECK(got.zenith == expect.zenith);
+        DOCTEST_CHECK(got.azimuth == expect.azimuth);
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR addHitPoints - Reserve Removes the Growth Transient; Errors Leave the Cloud Unchanged") {
+    const size_t N = 50000, CHUNK = 5000;
+    std::vector<double> xyz(3 * N, 1.0), values(N, 1.0);
+    ScanMetadata scan(make_vec3(0, 0, 0), 10, 0.05, 0.95 * M_PI, 10, 0.0, 2.0 * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, {});
+
+    // Reserved: the arrays never reallocate across the chunk loop (capacity is pinned), so peak memory
+    // during ingest is the steady state.
+    LiDARcloud reserved;
+    reserved.disableMessages();
+    reserved.addScan(scan);
+    reserved.reserveHitPoints(N);
+    const size_t capacity_before = reserved.getHitPointCapacity();
+    DOCTEST_CHECK(capacity_before >= N);
+    for (size_t c = 0; c < N; c += CHUNK) {
+        reserved.addHitPoints(0, CHUNK, xyz.data() + 3 * c, nullptr, {"intensity"}, values.data() + c);
+        DOCTEST_CHECK(reserved.getHitPointCapacity() == capacity_before);
+    }
+    DOCTEST_CHECK(reserved.getHitCount() == N);
+
+    // Unreserved: geometric growth keeps the over-allocation bounded (at most 2x the final size).
+    LiDARcloud grown;
+    grown.disableMessages();
+    grown.addScan(scan);
+    for (size_t c = 0; c < N; c += CHUNK) {
+        grown.addHitPoints(0, CHUNK, xyz.data() + 3 * c, nullptr, {"intensity"}, values.data() + c);
+    }
+    DOCTEST_CHECK(grown.getHitPointCapacity() >= N);
+    DOCTEST_CHECK(grown.getHitPointCapacity() <= 2 * N);
+
+    // A batch carrying a value its explicitly typed integer column cannot hold is rejected before anything is appended.
+    LiDARcloud rejected;
+    rejected.disableMessages();
+    rejected.addScan(scan);
+    rejected.createHitDataColumn("row", HitDataType::INT32);
+    rejected.addHitPoints(0, 10, xyz.data(), nullptr, {"row"}, values.data());
+    DOCTEST_CHECK(rejected.getHitCount() == 10);
+    std::vector<double> bad(10, 2.5);
+    DOCTEST_CHECK_THROWS_AS(rejected.addHitPoints(0, 10, xyz.data(), nullptr, {"row"}, bad.data()), std::runtime_error);
+    DOCTEST_CHECK(rejected.getHitCount() == 10);
+
+    // The hit-point cap applies to bulk ingest, before any allocation.
+    rejected.setMaxHitPoints(15);
+    DOCTEST_CHECK_THROWS_AS(rejected.addHitPoints(0, 10, xyz.data(), nullptr, {}, nullptr), std::runtime_error);
+    DOCTEST_CHECK(rejected.getHitCount() == 10);
+    DOCTEST_CHECK_NOTHROW(rejected.addHitPoints(0, 5, xyz.data(), nullptr, {}, nullptr));
+    DOCTEST_CHECK(rejected.getHitCount() == 15);
+    DOCTEST_CHECK_THROWS_AS(rejected.addHitPoints(3, 1, xyz.data(), nullptr, {}, nullptr), std::runtime_error); // no such scan
+    DOCTEST_CHECK_THROWS_AS(rejected.addHitPoints(0, 1, nullptr, nullptr, {}, nullptr), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(rejected.addHitPoints(0, 1, xyz.data(), nullptr, {"row"}, nullptr), std::runtime_error);
+}
+
+DOCTEST_TEST_CASE("LiDAR deleteHitPoints - Order-Preserving Range Erase Keeps Columns in Lockstep") {
+    LiDARcloud cloud;
+    cloud.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 0), 10, 0.05, 0.95 * M_PI, 10, 0.0, 2.0 * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, {});
+    cloud.addScan(scan);
+    const size_t N = 300;
+    for (size_t i = 0; i < N; i++) {
+        std::map<std::string, double> data;
+        data["intensity"] = double(i);
+        if (i % 3 == 0) {
+            data["sparse"] = double(2 * i);
+        }
+        cloud.addHitPoint(0, make_vec3(float(i), 0.f, 1.f), SphericalCoord(1.f, 0.f, 0.f), data);
+    }
+    // Erase an interior range spanning several presence words; survivors keep their order and data.
+    cloud.deleteHitPoints(70, 130);
+    DOCTEST_REQUIRE(cloud.getHitCount() == N - 130);
+    for (uint i = 0; i < cloud.getHitCount(); i++) {
+        const size_t original = i < 70 ? i : i + 130;
+        DOCTEST_CHECK(cloud.getHitXYZ(i).x == float(original));
+        DOCTEST_CHECK(cloud.getHitData(i, "intensity") == double(original));
+        DOCTEST_CHECK(cloud.doesHitDataExist(i, "sparse") == (original % 3 == 0));
+        if (original % 3 == 0) {
+            DOCTEST_CHECK(cloud.getHitData(i, "sparse") == double(2 * original));
+        }
+    }
+    // Erase the tail (the streaming drain), then the rest.
+    cloud.deleteHitPoints(cloud.getHitCount() - 50, 50);
+    DOCTEST_CHECK(cloud.getHitCount() == N - 180);
+    DOCTEST_CHECK(cloud.getHitXYZ(cloud.getHitCount() - 1).x == float(N - 51));
+    DOCTEST_CHECK_THROWS_AS(cloud.deleteHitPoints(cloud.getHitCount() - 1, 2), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(cloud.deleteHitPoints(cloud.getHitCount(), 1), std::runtime_error);
+    DOCTEST_CHECK_NOTHROW(cloud.deleteHitPoints(5, 0));
+    cloud.deleteHitPoints(0, cloud.getHitCount());
+    DOCTEST_CHECK(cloud.getHitCount() == 0);
+    // The cloud is still usable afterwards.
+    cloud.addHitPoint(0, make_vec3(1, 2, 3), SphericalCoord(1.f, 0.f, 0.f));
+    DOCTEST_CHECK(cloud.getHitCount() == 1);
+    DOCTEST_CHECK(cloud.doesHitDataExist(0, "intensity") == false);
+}
+
+// ---- Block-tiled leaf-area inversion ----
+
+DOCTEST_TEST_CASE("LiDAR Block-Tiled Leaf Area - Union of Block Inversions Equals the Whole-Grid Inversion") {
+    // A block call inverts only the cells inside [ijk_min, ijk_max] and leaves every other cell untouched, so
+    // covering the grid with blocks must reproduce the whole-grid inversion cell for cell -- for triangulation-
+    // derived G(theta), a scalar G(theta), and a per-cell G(theta), on the DDA path and on the brute-force path.
+    Context context;
+    context.seedRandomGenerator(0);
+    context.loadXML("plugins/lidar/xml/leaf_cube_LAI2_lw0_01_spherical.xml", true);
+
+    struct CellResult {
+        float leaf_area, gtheta, lad_var;
+        int beam_count;
+    };
+    auto read_cells = [](const LiDARcloud &lidar) {
+        std::vector<CellResult> out(lidar.getGridCellCount());
+        for (uint c = 0; c < out.size(); c++) {
+            out[c] = CellResult{lidar.getCellLeafArea(c), lidar.getCellGtheta(c), lidar.getCellLADVariance(c), lidar.getCellBeamCount(c)};
+        }
+        return out;
+    };
+    auto compare = [](const std::vector<CellResult> &a, const std::vector<CellResult> &b, const char *what) {
+        DOCTEST_REQUIRE(a.size() == b.size());
+        for (size_t c = 0; c < a.size(); c++) {
+            DOCTEST_CHECK_MESSAGE(a[c].leaf_area == doctest::Approx(b[c].leaf_area).epsilon(1e-5f), std::string(what) << ": leaf_area mismatch in cell " << c);
+            DOCTEST_CHECK_MESSAGE(a[c].gtheta == doctest::Approx(b[c].gtheta).epsilon(1e-5f), std::string(what) << ": Gtheta mismatch in cell " << c);
+            DOCTEST_CHECK_MESSAGE(a[c].beam_count == b[c].beam_count, std::string(what) << ": beam_count mismatch in cell " << c);
+            if (a[c].lad_var < 0.f || b[c].lad_var < 0.f) {
+                DOCTEST_CHECK_MESSAGE(a[c].lad_var == b[c].lad_var, std::string(what) << ": LAD_variance sign mismatch in cell " << c);
+            } else {
+                DOCTEST_CHECK_MESSAGE(a[c].lad_var == doctest::Approx(b[c].lad_var).epsilon(1e-4f), std::string(what) << ": LAD_variance mismatch in cell " << c);
+            }
+        }
+    };
+    const float SENTINEL = -7.f;
+    auto reset_cells = [&](LiDARcloud &lidar) {
+        for (uint c = 0; c < lidar.getGridCellCount(); c++) {
+            lidar.setCellLeafArea(SENTINEL, c);
+        }
+    };
+
+    enum GthetaMode { TRIANGULATED, SCALAR, PER_CELL };
+    auto invert = [&](LiDARcloud &lidar, GthetaMode mode, const std::vector<float> &per_cell, const int3 *lo, const int3 *hi) {
+        if (mode == TRIANGULATED) {
+            if (lo == nullptr) {
+                lidar.calculateLeafArea(&context, 1, 0.05f);
+            } else {
+                lidar.calculateLeafArea(&context, 1, 0.05f, *lo, *hi);
+            }
+        } else if (mode == SCALAR) {
+            if (lo == nullptr) {
+                lidar.calculateLeafArea(&context, 0.5f, 1, 0.05f);
+            } else {
+                lidar.calculateLeafArea(&context, 0.5f, 1, 0.05f, *lo, *hi);
+            }
+        } else {
+            if (lo == nullptr) {
+                lidar.calculateLeafArea(&context, per_cell, 1, 0.05f);
+            } else {
+                lidar.calculateLeafArea(&context, per_cell, 1, 0.05f, *lo, *hi);
+            }
+        }
+    };
+
+    auto run = [&](int3 divisions, const vec3 &grid_size, bool force_bruteforce, GthetaMode mode) {
+        LiDARcloud lidar;
+        lidar.disableMessages();
+        ScanMetadata scan(vec3(-5.f, 0.f, 0.5f), 1000, 0.f, float(M_PI), 1500, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>{});
+        lidar.addScan(scan);
+        lidar.addGrid(vec3(0.f, 0.f, 0.5f), grid_size, divisions, 0);
+        lidar.syntheticScan(&context, true, true); // scan_grid_only, record_misses
+        lidar.triangulateHitPoints(0.04, 10);
+        LiDARTestHelper::forceBruteForceLeafArea(lidar, force_bruteforce);
+        const uint Ncells = lidar.getGridCellCount();
+        std::vector<float> per_cell(Ncells);
+        for (uint c = 0; c < Ncells; c++) {
+            per_cell[c] = 0.35f + 0.02f * float(c);
+        }
+        DOCTEST_CHECK(lidar.getGridGlobalCount().x == divisions.x);
+        DOCTEST_CHECK(lidar.getGridGlobalCount().z == divisions.z);
+        for (uint c = 0; c < Ncells; c++) {
+            const int3 ijk = lidar.getCellGlobalIJK(c);
+            DOCTEST_CHECK(ijk.x == int(c) % divisions.x);
+            DOCTEST_CHECK(ijk.y == (int(c) / divisions.x) % divisions.y);
+            DOCTEST_CHECK(ijk.z == int(c) / (divisions.x * divisions.y));
+        }
+
+        invert(lidar, mode, per_cell, nullptr, nullptr);
+        const std::vector<CellResult> whole = read_cells(lidar);
+        bool any_leaf = false;
+        for (const CellResult &r: whole) {
+            any_leaf = any_leaf || r.leaf_area > 0.f;
+        }
+        DOCTEST_CHECK(any_leaf);
+
+        // One block per cell; every other cell must keep its sentinel until its own block is inverted.
+        reset_cells(lidar);
+        for (uint c = 0; c < Ncells; c++) {
+            const int3 ijk = lidar.getCellGlobalIJK(c);
+            invert(lidar, mode, per_cell, &ijk, &ijk);
+            for (uint other = c + 1; other < Ncells; other++) {
+                DOCTEST_CHECK(lidar.getCellLeafArea(other) == SENTINEL);
+            }
+        }
+        compare(read_cells(lidar), whole, "1x1x1 blocks");
+
+        // Blocks spanning several cells: split x at the midpoint, take all of y, pair z.
+        reset_cells(lidar);
+        const int xsplit = std::max(1, divisions.x / 2);
+        for (int k0 = 0; k0 < divisions.z; k0 += 2) {
+            for (int x0 = 0; x0 < divisions.x; x0 += xsplit) {
+                const int3 lo = make_int3(x0, 0, k0);
+                const int3 hi = make_int3(std::min(x0 + xsplit, divisions.x) - 1, divisions.y - 1, std::min(k0 + 2, divisions.z) - 1);
+                invert(lidar, mode, per_cell, &lo, &hi);
+            }
+        }
+        compare(read_cells(lidar), whole, "multi-cell blocks");
+
+        // Invalid blocks are rejected.
+        const int3 bad_lo = make_int3(0, 0, 0), bad_hi = make_int3(divisions.x, 0, 0);
+        DOCTEST_CHECK_THROWS_AS(invert(lidar, mode, per_cell, &bad_lo, &bad_hi), std::runtime_error);
+        const int3 inverted_lo = make_int3(1, 0, 0), inverted_hi = make_int3(0, 0, 0);
+        DOCTEST_CHECK_THROWS_AS(invert(lidar, mode, per_cell, &inverted_lo, &inverted_hi), std::runtime_error);
+    };
+
+    run(make_int3(2, 2, 2), vec3(1.f, 1.f, 1.f), false, TRIANGULATED);
+    run(make_int3(2, 2, 2), vec3(1.f, 1.f, 1.f), false, SCALAR);
+    run(make_int3(3, 2, 4), vec3(1.5f, 1.f, 1.2f), false, PER_CELL);
+    run(make_int3(2, 2, 2), vec3(1.f, 1.f, 1.f), true, SCALAR); // brute-force path
+
+    // A grid that is not a lattice cannot be tiled.
+    LiDARcloud nonlattice;
+    nonlattice.disableMessages();
+    ScanMetadata scan(vec3(-5.f, 0.f, 0.5f), 200, 0.f, float(M_PI), 300, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>{});
+    nonlattice.addScan(scan);
+    nonlattice.addGridCell(vec3(0.f, 0.f, 0.25f), vec3(1.f, 1.f, 0.5f), 0.f);
+    nonlattice.addGridCell(vec3(0.f, 0.f, 0.75f), vec3(0.5f, 0.5f, 0.5f), 0.f);
+    nonlattice.syntheticScan(&context, true, true);
+    const int3 zero = make_int3(0, 0, 0);
+    DOCTEST_CHECK_THROWS_AS(nonlattice.calculateLeafArea(&context, 0.5f, 1, 0.05f, zero, zero), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(static_cast<void>(nonlattice.getGridGlobalCount()), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(static_cast<void>(nonlattice.getCellGlobalIJK(5)), std::runtime_error);
+}
+
+// ---- Streamed outputs ----
+
+DOCTEST_TEST_CASE("LiDAR Triangulation Sink - Streamed Mesh Equals the Retained Mesh and Gives the Same Leaf Area") {
+    // With a sink set, each scan's triangles go to the callback instead of the cloud. The streamed triangles must be
+    // the retained mesh exactly, mesh consumers must refuse to run on the empty retained mesh, and the leaf-area
+    // inversion -- which needs only per-voxel sums of the mesh -- must give the same answer either way.
+    LiDARcloud retained;
+    retained.disableMessages();
+    retained.loadXML("plugins/lidar/xml/sphere.xml");
+    retained.triangulateHitPoints(0.5, 5);
+    DOCTEST_REQUIRE(retained.getTriangleCount() == 383u);
+
+    LiDARcloud streamed;
+    streamed.disableMessages();
+    streamed.loadXML("plugins/lidar/xml/sphere.xml");
+    std::vector<Triangulation> collected;
+    std::vector<uint> scans_seen;
+    streamed.setTriangulationSink([&](uint scanID, const std::vector<Triangulation> &tris) {
+        scans_seen.push_back(scanID);
+        collected.insert(collected.end(), tris.begin(), tris.end());
+    });
+    streamed.triangulateHitPoints(0.5, 5);
+
+    DOCTEST_CHECK(streamed.getTriangleCount() == 0u); // nothing retained
+    DOCTEST_REQUIRE(collected.size() == 383u);
+    DOCTEST_CHECK(streamed.getTriangulationCandidateCount() == retained.getTriangulationCandidateCount());
+    for (size_t t = 0; t < collected.size(); t++) {
+        const Triangulation a = retained.getTriangle(uint(t));
+        const Triangulation &b = collected[t];
+        DOCTEST_CHECK(a.scanID == b.scanID);
+        DOCTEST_CHECK(a.gridcell == b.gridcell);
+        DOCTEST_CHECK(a.ID0 == b.ID0);
+        DOCTEST_CHECK(a.vertex0.x == b.vertex0.x);
+        DOCTEST_CHECK(a.vertex1.y == b.vertex1.y);
+        DOCTEST_CHECK(a.vertex2.z == b.vertex2.z);
+        DOCTEST_CHECK(a.area == b.area);
+    }
+    // One callback per scan that produced triangles, in scan order.
+    for (size_t i = 1; i < scans_seen.size(); i++) {
+        DOCTEST_CHECK(scans_seen[i] > scans_seen[i - 1]);
+    }
+
+    // Mesh consumers refuse to run on the streamed (empty) mesh rather than silently doing nothing.
+    Context context;
+    DOCTEST_CHECK_THROWS_AS(streamed.addTrianglesToContext(&context), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(static_cast<void>(streamed.getTriangle(0)), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(streamed.exportTriangleNormals("plugins/lidar/tests/.streamed_normals.txt"), std::runtime_error);
+
+    // Clearing the sink restores retention, and a new run starts from an empty mesh (no accumulation across runs).
+    streamed.setTriangulationSink(nullptr);
+    streamed.triangulateHitPoints(0.5, 5);
+    DOCTEST_CHECK(streamed.getTriangleCount() == 383u);
+    streamed.triangulateHitPoints(0.5, 5);
+    DOCTEST_CHECK(streamed.getTriangleCount() == 383u);
+    DOCTEST_CHECK_NOTHROW(streamed.addTrianglesToContext(&context));
+
+    // Leaf area from the streamed mesh equals leaf area from the retained mesh.
+    Context scene;
+    scene.seedRandomGenerator(0);
+    scene.loadXML("plugins/lidar/xml/leaf_cube_LAI2_lw0_01_spherical.xml", true);
+    auto build = [&](bool with_sink, std::vector<float> &leaf_area, std::vector<float> &gtheta) {
+        LiDARcloud lidar;
+        lidar.disableMessages();
+        ScanMetadata scan(vec3(-5.f, 0.f, 0.5f), 1000, 0.f, float(M_PI), 1500, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>{});
+        lidar.addScan(scan);
+        lidar.addGrid(vec3(0.f, 0.f, 0.5f), vec3(1.f, 1.f, 1.f), make_int3(2, 2, 2), 0);
+        lidar.syntheticScan(&scene, true, true);
+        size_t streamed_count = 0;
+        if (with_sink) {
+            lidar.setTriangulationSink([&](uint, const std::vector<Triangulation> &tris) { streamed_count += tris.size(); });
+        }
+        lidar.triangulateHitPoints(0.04, 10);
+        if (with_sink) {
+            DOCTEST_CHECK(streamed_count > 0);
+            DOCTEST_CHECK(lidar.getTriangleCount() == 0u);
+        } else {
+            DOCTEST_CHECK(lidar.getTriangleCount() > 0u);
+        }
+        lidar.calculateLeafArea(&scene);
+        const uint Ncells = lidar.getGridCellCount();
+        leaf_area.resize(Ncells);
+        gtheta.resize(Ncells);
+        for (uint c = 0; c < Ncells; c++) {
+            leaf_area[c] = lidar.getCellLeafArea(c);
+            gtheta[c] = lidar.getCellGtheta(c);
+        }
+    };
+    std::vector<float> la_r, g_r, la_s, g_s;
+    build(false, la_r, g_r);
+    build(true, la_s, g_s);
+    DOCTEST_REQUIRE(la_r.size() == la_s.size());
+    for (size_t c = 0; c < la_r.size(); c++) {
+        DOCTEST_CHECK_MESSAGE(g_s[c] == g_r[c], "Gtheta mismatch in cell " << c); // same sums, same order: bit-identical
+        DOCTEST_CHECK_MESSAGE(la_s[c] == doctest::Approx(la_r[c]).epsilon(1e-4f), "leaf_area mismatch in cell " << c);
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR Synthetic Scan Hit Sink - Every Chunk Is Streamed and a Draining Sink Bounds the Cloud") {
+    // A scan large enough to trace in more than one chunk (the chunk floor is ~1.05M rays). The sink must be handed
+    // every stored return exactly once, in order, and a callback that drains the cloud must keep it at one chunk.
+    Context context;
+    context.addTriangle(make_vec3(0.f, -2.f, -2.f), make_vec3(0.f, 2.f, -2.f), make_vec3(0.f, 2.f, 2.f), RGB::green);
+    context.addTriangle(make_vec3(0.f, -2.f, -2.f), make_vec3(0.f, 2.f, 2.f), make_vec3(0.f, -2.f, 2.f), RGB::green);
+
+    vec3 scan_origin(-5.f, 0.f, 0.5f);
+    const uint Ntheta = 1100, Nphi = 1000; // 1.1M single-ray pulses => two chunks (1.05M + remainder)
+    float thetaMin = 0.5f * float(M_PI) - 6.f * float(M_PI) / 180.f;
+    float thetaMax = 0.5f * float(M_PI) + 6.f * float(M_PI) / 180.f;
+    float phiMin = 0.5f * float(M_PI) - 20.f * float(M_PI) / 180.f;
+    float phiMax = 0.5f * float(M_PI) + 20.f * float(M_PI) / 180.f;
+    ScanMetadata scan(scan_origin, Ntheta, thetaMin, thetaMax, Nphi, phiMin, phiMax, 0.f, 0.f, 0.f, 0.f, std::vector<std::string>{});
+
+    LiDARcloud batch;
+    batch.disableMessages();
+    batch.addScan(scan);
+    batch.setSyntheticScanMemoryBudget(8u * 1024u * 1024u);
+    batch.syntheticScan(&context, false, true); // record misses so every pulse yields a return
+    const uint N = batch.getHitCount();
+    DOCTEST_REQUIRE(N == Ntheta * Nphi);
+    std::vector<vec3> batch_xyz;
+    std::vector<int32_t> batch_miss;
+    batch.getHitXYZColumn(batch_xyz);
+    batch.getHitDataColumn("is_miss", batch_miss, int32_t(-1));
+
+    // Non-draining sink: the (first, count) ranges tile [0, N) exactly, in order.
+    {
+        LiDARcloud tiled;
+        tiled.disableMessages();
+        tiled.addScan(scan);
+        tiled.setSyntheticScanMemoryBudget(8u * 1024u * 1024u);
+        size_t expected_first = 0, callbacks = 0;
+        bool contiguous = true;
+        tiled.setSyntheticScanHitSink([&](size_t first, size_t count) {
+            contiguous = contiguous && (first == expected_first) && (first + count == tiled.getHitCount());
+            expected_first = first + count;
+            callbacks++;
+        });
+        tiled.syntheticScan(&context, false, true);
+        DOCTEST_CHECK(contiguous);
+        DOCTEST_CHECK(expected_first == N);
+        DOCTEST_CHECK(callbacks >= 2);
+        DOCTEST_CHECK(tiled.getHitCount() == N);
+    }
+
+    // Draining sink: copy each chunk out and delete it; the cloud never holds more than one chunk.
+    {
+        LiDARcloud drained;
+        drained.disableMessages();
+        drained.addScan(scan);
+        drained.setSyntheticScanMemoryBudget(8u * 1024u * 1024u);
+        std::vector<vec3> got_xyz;
+        std::vector<int32_t> got_miss;
+        size_t max_held = 0, callbacks = 0;
+        bool always_tail_from_zero = true;
+        drained.setSyntheticScanHitSink([&](size_t first, size_t count) {
+            callbacks++;
+            always_tail_from_zero = always_tail_from_zero && (first == 0) && (drained.getHitCount() == count);
+            max_held = std::max(max_held, size_t(drained.getHitCount()));
+            std::vector<vec3> xyz;
+            std::vector<int32_t> miss;
+            drained.getHitXYZColumn(xyz);
+            drained.getHitDataColumn("is_miss", miss, int32_t(-1));
+            got_xyz.insert(got_xyz.end(), xyz.begin() + std::ptrdiff_t(first), xyz.end());
+            got_miss.insert(got_miss.end(), miss.begin() + std::ptrdiff_t(first), miss.end());
+            drained.deleteHitPoints(first, count);
+        });
+        drained.syntheticScan(&context, false, true);
+        DOCTEST_CHECK(callbacks >= 2);
+        DOCTEST_CHECK(always_tail_from_zero);
+        DOCTEST_CHECK(drained.getHitCount() == 0);
+        DOCTEST_CHECK(max_held < N);
+        DOCTEST_CHECK(max_held <= 1050000u);
+        DOCTEST_REQUIRE(got_xyz.size() == N);
+        size_t mismatches = 0;
+        for (uint i = 0; i < N; i++) {
+            if (got_xyz[i].x != batch_xyz[i].x || got_xyz[i].y != batch_xyz[i].y || got_xyz[i].z != batch_xyz[i].z || got_miss[i] != batch_miss[i]) {
+                mismatches++;
+            }
+        }
+        DOCTEST_CHECK(mismatches == 0);
+    }
+
+    // The all-miss path (no beam reaches the scene's bounding box) also reports its recorded misses to the sink.
+    {
+        Context empty_scene;
+        empty_scene.addTriangle(make_vec3(50.f, -1.f, -1.f), make_vec3(50.f, 1.f, -1.f), make_vec3(50.f, 1.f, 1.f), RGB::green);
+        LiDARcloud away;
+        away.disableMessages();
+        ScanMetadata small(scan_origin, 10, thetaMin, thetaMax, 10, float(M_PI) + phiMin, float(M_PI) + phiMax, 0.f, 0.f, 0.f, 0.f, std::vector<std::string>{}); // looking away from the triangle
+        away.addScan(small);
+        size_t reported = 0, callbacks = 0;
+        away.setSyntheticScanHitSink([&](size_t first, size_t count) {
+            callbacks++;
+            reported += count;
+            DOCTEST_CHECK(first + count == away.getHitCount());
+        });
+        away.syntheticScan(&context, false, true);
+        DOCTEST_CHECK(callbacks == 1);
+        DOCTEST_CHECK(reported == away.getHitCount());
+        DOCTEST_CHECK(reported == 100u);
+    }
 }
 
 DOCTEST_TEST_CASE("LiDAR Synthetic Scan Texture Color Sampling") {
@@ -6128,6 +7242,1445 @@ static void buildRowColumnScan(LiDARcloud &lidar, int Ntheta, int Nphi, float ti
     (void) filled;
 }
 
+// ---- Review regressions: typed columns, rejected adds, readers, concurrency, block tiling, empty scans ----
+
+DOCTEST_TEST_CASE("LiDAR Typed Hit Data Columns - Values Stored as Doubles Read Back Exactly on Every Ingest Path") {
+    // REGRESSION: typing the columns narrowed or rejected values that callers had always stored as doubles. A projected
+    // easting came back rounded to a float (612345.678 -> 612345.6875), a range lost its last digits, and a pulse id
+    // above 2^31, a NaN target_index and a fractional row threw. A column keeps its narrow type only while every value
+    // fits it exactly; the first value that does not widens it, and a NaN is an absent value on both ingest paths.
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    const std::vector<std::string> labels = {"origin_x", "distance", "pulse_id", "target_index", "row", "intensity", "target_count"};
+    const std::vector<double> first = {1.0, 2.0, 3.0, 0.0, 4.0, 0.25, 1.0}; // fits every label's narrow type
+    const std::vector<double> second = {612345.678, 1234.5678, 3.0e9, nan, 2.5, 0.1, 2.0}; // does not, except target_count
+    ScanMetadata scan(make_vec3(0, 0, 0), 4, 0.5f, 2.5f, 4, 0.f, 6.f, 0.f, 0.f, 0.f, 0.f, {});
+
+    auto check = [&](const LiDARcloud &cloud, const char *path) {
+        DOCTEST_REQUIRE(cloud.getHitCount() == 2);
+        for (size_t k = 0; k < labels.size(); k++) {
+            const char *label = labels[k].c_str();
+            DOCTEST_CHECK_MESSAGE(cloud.getHitData(0, label) == first[k], path << ": " << label << " on the first hit");
+            std::vector<double> column;
+            cloud.getHitDataColumn(label, column, -1.0);
+            if (std::isnan(second[k])) {
+                DOCTEST_CHECK_MESSAGE(!cloud.doesHitDataExist(1, label), path << ": a NaN " << label << " must be absent");
+                DOCTEST_CHECK(column[1] == -1.0);
+            } else {
+                DOCTEST_CHECK_MESSAGE(cloud.getHitData(1, label) == second[k], path << ": " << label << " did not read back exactly");
+                DOCTEST_CHECK_MESSAGE(column[1] == second[k], path << ": bulk read of " << label);
+            }
+        }
+        DOCTEST_CHECK(cloud.getHitDataType("origin_x") == HitDataType::FLOAT64);
+        DOCTEST_CHECK(cloud.getHitDataType("pulse_id") == HitDataType::FLOAT64);
+        DOCTEST_CHECK(cloud.getHitDataType("distance") == HitDataType::FLOAT64); // widened by 1234.5678
+        DOCTEST_CHECK(cloud.getHitDataType("row") == HitDataType::FLOAT64); // widened by 2.5
+        DOCTEST_CHECK(cloud.getHitDataType("target_count") == HitDataType::INT32); // every value fits: stays narrow
+        DOCTEST_CHECK(cloud.getHitDataType("target_index") == HitDataType::INT32); // a NaN is absent, not a value
+    };
+
+    LiDARcloud single;
+    single.disableMessages();
+    single.addScan(scan);
+    for (const std::vector<double> *values: {&first, &second}) {
+        std::map<std::string, double> data;
+        for (size_t k = 0; k < labels.size(); k++) {
+            data[labels[k]] = (*values)[k];
+        }
+        single.addHitPoint(0, make_vec3(1, 2, 3), SphericalCoord(1, 0, 0), data);
+    }
+    check(single, "addHitPoint");
+
+    LiDARcloud bulk;
+    bulk.disableMessages();
+    bulk.addScan(scan);
+    const std::vector<double> xyz = {1, 2, 3, 1, 2, 3};
+    std::vector<double> values = first;
+    values.insert(values.end(), second.begin(), second.end());
+    bulk.addHitPoints(0, 2, xyz.data(), nullptr, labels, values.data());
+    check(bulk, "addHitPoints");
+
+    // setHitData stores exactly the value it is given, as it always has -- including a NaN, as a present value.
+    single.setHitData(0, "target_count", 2.75);
+    DOCTEST_CHECK(single.getHitData(0, "target_count") == 2.75);
+    DOCTEST_CHECK(single.getHitData(1, "target_count") == 2.0);
+    single.setHitData(0, "target_index", nan);
+    DOCTEST_CHECK(single.doesHitDataExist(0, "target_index"));
+    DOCTEST_CHECK(std::isnan(single.getHitData(0, "target_index")));
+
+    // A column whose type the caller fixed explicitly is a contract: a value it cannot hold is an error naming the
+    // label and the remedy, and the rejected hit is not added.
+    LiDARcloud typed;
+    typed.disableMessages();
+    typed.addScan(scan);
+    typed.createHitDataColumn("my_count", HitDataType::INT32);
+    std::map<std::string, double> fractional;
+    fractional["my_count"] = 2.5;
+    std::string message;
+    try {
+        typed.addHitPoint(0, make_vec3(1, 2, 3), SphericalCoord(1, 0, 0), fractional);
+    } catch (const std::runtime_error &e) {
+        message = e.what();
+    }
+    DOCTEST_CHECK(message.find("my_count") != std::string::npos);
+    DOCTEST_CHECK(message.find("createHitDataColumn") != std::string::npos);
+    DOCTEST_CHECK(typed.getHitCount() == 0);
+}
+
+DOCTEST_TEST_CASE("LiDAR addHitPoint and addHitPoints - A Rejected Call Leaves the Cloud Unchanged") {
+    // REGRESSION: a rejected add first collapsed every virtualized miss into stored points and created a column for
+    // each label it carried, so a call that failed still reshaped the cloud.
+    LiDARcloud cloud;
+    cloud.disableMessages();
+    buildRowColumnScan(cloud, 20, 36, 0.f, false, false, 5, 9, 10, 15); // gap-filled: holds virtualized misses
+    cloud.createHitDataColumn("explicit_int", HitDataType::INT32);
+    const uint count = cloud.getHitCount();
+    const size_t virtual_count = cloud.getVirtualMissCount();
+    const size_t stored = LiDARTestHelper::storedHitCount(cloud);
+    const std::vector<std::string> labels = LiDARTestHelper::hitDataLabels(cloud);
+    DOCTEST_REQUIRE(virtual_count > 0);
+    auto unchanged = [&](const char *what) {
+        DOCTEST_CHECK_MESSAGE(cloud.getHitCount() == count, std::string(what) << ": hit count changed");
+        DOCTEST_CHECK_MESSAGE(cloud.getVirtualMissCount() == virtual_count, std::string(what) << ": virtualized misses were materialized");
+        DOCTEST_CHECK_MESSAGE(LiDARTestHelper::storedHitCount(cloud) == stored, std::string(what) << ": stored hit count changed");
+        DOCTEST_CHECK_MESSAGE((LiDARTestHelper::hitDataLabels(cloud) == labels), std::string(what) << ": a label column was created");
+    };
+    const vec3 xyz = make_vec3(1, 2, 3);
+    const SphericalCoord dir(1, 0, 0);
+    std::map<std::string, double> new_label;
+    new_label["brand_new"] = 1.0;
+    std::map<std::string, double> bad_value = new_label;
+    bad_value["explicit_int"] = 2.5;
+    const std::vector<std::string> bulk_labels = {"brand_new", "explicit_int"};
+    const std::vector<std::string> one_label = {"brand_new"};
+    const std::vector<double> bulk_xyz = {1, 2, 3, 4, 5, 6};
+    const std::vector<double> bulk_values = {1.0, 2.0, 1.0, 2.5};
+
+    DOCTEST_CHECK_THROWS_AS(cloud.addHitPoint(7, xyz, dir, new_label), std::runtime_error);
+    unchanged("addHitPoint to a scan that does not exist");
+    DOCTEST_CHECK_THROWS_AS(cloud.addHitPoint(7, xyz, make_int2(0, 0), RGB::red, new_label), std::runtime_error);
+    unchanged("addHitPoint(row, column) to a scan that does not exist");
+    DOCTEST_CHECK_THROWS_AS(cloud.addHitPoint(0, xyz, dir, bad_value), std::runtime_error);
+    unchanged("addHitPoint with a value its explicitly typed column cannot hold");
+    DOCTEST_CHECK_THROWS_AS(cloud.addHitPoints(7, 2, bulk_xyz.data(), nullptr, bulk_labels, bulk_values.data()), std::runtime_error);
+    unchanged("addHitPoints to a scan that does not exist");
+    DOCTEST_CHECK_THROWS_AS(cloud.addHitPoints(0, 2, bulk_xyz.data(), nullptr, bulk_labels, bulk_values.data()), std::runtime_error);
+    unchanged("addHitPoints with a value its explicitly typed column cannot hold");
+    cloud.setMaxHitPoints(cloud.getHitCount());
+    DOCTEST_CHECK_THROWS_AS(cloud.addHitPoint(0, xyz, dir, new_label), std::runtime_error);
+    unchanged("addHitPoint beyond the hit-point cap");
+    DOCTEST_CHECK_THROWS_AS(cloud.addHitPoints(0, 2, bulk_xyz.data(), nullptr, one_label, bulk_values.data()), std::runtime_error);
+    unchanged("addHitPoints beyond the hit-point cap");
+}
+
+DOCTEST_TEST_CASE("LiDAR Typed Hit Data Columns - Integer Readers Reject Values an int32 Cannot Hold") {
+    // REGRESSION: the int32_t column readers converted each value with int32_t(value), which is undefined behaviour
+    // for a NaN or for a value outside the 32-bit range (a GPS timestamp, say). They raise an error naming the label.
+    LiDARcloud cloud;
+    cloud.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 0), 4, 0.5f, 2.5f, 4, 0.f, 6.f, 0.f, 0.f, 0.f, 0.f, {});
+    cloud.addScan(scan);
+    std::map<std::string, double> data;
+    data["timestamp"] = 1.7e9 + 0.5;
+    data["big"] = 3.0e9;
+    data["whole"] = 7.0;
+    data["frac"] = 2.5;
+    data["lowest"] = -2147483648.0;
+    cloud.addHitPoint(0, make_vec3(1, 2, 3), SphericalCoord(1, 0, 0), data);
+    cloud.setHitData(0, "not_a_number", std::numeric_limits<double>::quiet_NaN());
+    for (const char *label: {"timestamp", "big", "frac", "not_a_number"}) {
+        std::vector<int32_t> values;
+        std::string message;
+        try {
+            cloud.getHitDataColumn(label, values);
+        } catch (const std::runtime_error &e) {
+            message = e.what();
+        }
+        DOCTEST_CHECK_MESSAGE(message.find(label) != std::string::npos, "getHitDataColumn(int32_t) of " << label << " did not raise an error naming it");
+        message.clear();
+        try {
+            cloud.getScanHitDataColumn(0, label, values);
+        } catch (const std::runtime_error &e) {
+            message = e.what();
+        }
+        DOCTEST_CHECK_MESSAGE(message.find(label) != std::string::npos, "getScanHitDataColumn(int32_t) of " << label << " did not raise an error naming it");
+    }
+    std::vector<int32_t> whole, lowest, missing;
+    cloud.getHitDataColumn("whole", whole);
+    cloud.getHitDataColumn("lowest", lowest);
+    cloud.getHitDataColumn("never_set", missing, -5);
+    DOCTEST_CHECK(whole[0] == 7);
+    DOCTEST_CHECK(lowest[0] == std::numeric_limits<int32_t>::min());
+    DOCTEST_CHECK(missing[0] == -5);
+
+    // The virtualized tail is held to the same rule. Returns at even pulse ordinals carry integral timestamps
+    // (ordinal / 2); the synthesized misses at odd ordinals are stamped halfway between, which no int32 holds.
+    LiDARcloud filled;
+    filled.disableMessages();
+    const int Ntheta = 12, Nphi = 16;
+    ScanMetadata raster(make_vec3(0, 0, 0), uint(Ntheta), 0.3f, 2.8f, uint(Nphi), 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, {});
+    raster.pulse_period = 0.5; // the clock the returns were stamped on, so every version of the gap filler keeps it
+    filled.addScan(raster);
+    for (int col = 0; col < Nphi; col++) {
+        for (int row = 0; row < Ntheta; row++) {
+            const int ordinal = col * Ntheta + row;
+            if (ordinal % 2 != 0) {
+                continue;
+            }
+            const float zenith = 0.3f + 2.5f * float(row) / float(Ntheta - 1);
+            const SphericalCoord d(1.f, 0.5f * float(M_PI) - zenith, 2.f * float(M_PI) * float(col) / float(Nphi));
+            std::map<std::string, double> rc;
+            rc["row"] = row;
+            rc["column"] = col;
+            rc["timestamp"] = 0.5 * ordinal;
+            filled.addHitPoint(0, 10.f * sphere2cart(d), d, rc);
+        }
+    }
+    filled.gapfillMissesCount(0, false, false);
+    DOCTEST_REQUIRE(filled.getVirtualMissCount() > 0);
+    std::vector<int32_t> stamps;
+    DOCTEST_CHECK_THROWS_AS(filled.getHitDataColumn("timestamp", stamps), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(filled.getScanHitDataColumn(0, "timestamp", stamps), std::runtime_error);
+    std::vector<int32_t> rows;
+    DOCTEST_CHECK_NOTHROW(filled.getHitDataColumn("row", rows));
+}
+
+DOCTEST_TEST_CASE("LiDAR Per-Scan Index - Concurrent Const Readers Build the Index Exactly Once") {
+    // REGRESSION: the per-scan index was rebuilt lazily inside const readers without synchronization, so const calls
+    // from several threads on a freshly mutated cloud all rebuilt it at once, writing the same arrays concurrently.
+    LiDARcloud cloud;
+    cloud.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 0), 10, 0.5f, 2.5f, 10, 0.f, 6.f, 0.f, 0.f, 0.f, 0.f, {});
+    cloud.addScan(scan);
+    cloud.addScan(scan);
+    std::vector<std::vector<vec3>> expected(2);
+    for (int i = 0; i < 4000; i++) {
+        const uint s = uint(i % 2); // interleaved, so the index needs its permutation
+        const vec3 p = make_vec3(float(i), float(i % 17), 1.f);
+        cloud.addHitPoint(s, p, SphericalCoord(1, 0, 0));
+        expected[s].push_back(p);
+    }
+    std::vector<vec3> warm;
+    cloud.getScanHitXYZColumn(0, warm);
+    LiDARTestHelper::invalidateScanIndex(cloud); // what every mutation of the cloud does
+
+    std::atomic<int> active{0}, peak{0};
+    LiDARTestHelper::setScanIndexBuildHook(cloud, [&]() {
+        const int now = ++active;
+        int seen = peak.load();
+        while (now > seen && !peak.compare_exchange_weak(seen, now)) {
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        --active;
+    });
+    const size_t builds_before = LiDARTestHelper::scanIndexBuilds(cloud);
+    const int Nthreads = 8;
+    std::vector<std::vector<vec3>> got(Nthreads);
+    std::vector<std::thread> threads;
+    for (int t = 0; t < Nthreads; t++) {
+        threads.emplace_back([&cloud, &got, t]() { cloud.getScanHitXYZColumn(uint(t % 2), got[t]); });
+    }
+    for (std::thread &thread: threads) {
+        thread.join();
+    }
+    LiDARTestHelper::setScanIndexBuildHook(cloud, nullptr);
+    DOCTEST_CHECK_MESSAGE(peak.load() == 1, peak.load() << " threads rebuilt the index at the same time");
+    DOCTEST_CHECK(LiDARTestHelper::scanIndexBuilds(cloud) - builds_before == 1);
+    for (int t = 0; t < Nthreads; t++) {
+        const std::vector<vec3> &want = expected[size_t(t % 2)];
+        DOCTEST_REQUIRE(got[t].size() == want.size());
+        size_t mismatches = 0;
+        for (size_t i = 0; i < want.size(); i++) {
+            mismatches += (got[t][i].x != want[i].x || got[t][i].y != want[i].y) ? 1 : 0;
+        }
+        DOCTEST_CHECK(mismatches == 0);
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR Block-Tiled Leaf Area - Exact on a Rotated Grid With Non-Representable Cell Extents") {
+    // REGRESSION: a block walk shifted the lattice origin by ijk_min * extent and the cell bounds shifted it back,
+    // which in floating point can miss the whole-grid origin by one ULP, so a block's result could differ from the
+    // whole-grid inversion in its last bits. Tiled results must equal the whole grid exactly.
+    Context context;
+    context.seedRandomGenerator(0);
+    context.loadXML("plugins/lidar/xml/leaf_cube_LAI2_lw0_01_spherical.xml", true);
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    ScanMetadata scan(vec3(-5.f, 0.3f, 0.5f), 600, 0.f, float(M_PI), 900, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>{});
+    lidar.addScan(scan);
+    const int3 divisions = make_int3(3, 3, 3);
+    lidar.addGrid(vec3(0.0137f, -0.0211f, 0.5173f), vec3(1.031f, 0.973f, 1.009f), divisions, 0.3f);
+    lidar.syntheticScan(&context, true, true);
+    const uint Ncells = lidar.getGridCellCount();
+    DOCTEST_REQUIRE(Ncells == 27);
+
+    struct Cell {
+        float leaf_area, lad_var;
+        int beams;
+    };
+    auto read = [&]() {
+        std::vector<Cell> out(Ncells);
+        for (uint c = 0; c < Ncells; c++) {
+            out[c] = Cell{lidar.getCellLeafArea(c), lidar.getCellLADVariance(c), lidar.getCellBeamCount(c)};
+        }
+        return out;
+    };
+    lidar.calculateLeafArea(&context, 0.5f, 1, 0.05f);
+    const std::vector<Cell> whole = read();
+    size_t with_leaves = 0;
+    for (const Cell &cell: whole) {
+        with_leaves += cell.leaf_area > 0.f ? 1 : 0;
+    }
+    DOCTEST_REQUIRE(with_leaves > 5);
+
+    auto compare = [&](const char *what) {
+        const std::vector<Cell> tiled = read();
+        size_t mismatches = 0;
+        for (uint c = 0; c < Ncells; c++) {
+            if (tiled[c].leaf_area != whole[c].leaf_area || tiled[c].beams != whole[c].beams || tiled[c].lad_var != whole[c].lad_var) {
+                mismatches++;
+            }
+        }
+        DOCTEST_CHECK_MESSAGE(mismatches == 0, std::string(what) << ": " << mismatches << " of " << Ncells << " cells differ from the whole-grid inversion");
+    };
+    for (uint c = 0; c < Ncells; c++) {
+        const int3 ijk = lidar.getCellGlobalIJK(c);
+        lidar.calculateLeafArea(&context, 0.5f, 1, 0.05f, ijk, ijk);
+    }
+    compare("1 x 1 x 1 blocks");
+    for (int k = 0; k < divisions.z; k++) {
+        const int3 lo = make_int3(1, 0, k), hi = make_int3(2, 2, k);
+        lidar.calculateLeafArea(&context, 0.5f, 1, 0.05f, lo, hi);
+        const int3 lo0 = make_int3(0, 0, k), hi0 = make_int3(0, 2, k);
+        lidar.calculateLeafArea(&context, 0.5f, 1, 0.05f, lo0, hi0);
+    }
+    compare("blocks offset from the lattice origin");
+}
+
+//! Returns of a level raster carrying row/column indices (and nothing else) for one scan, with a blank block.
+static size_t addRowColumnReturns(LiDARcloud &cloud, uint scanID, int Ntheta, int Nphi, int blank_r0, int blank_r1, int blank_c0, int blank_c1) {
+    const vec3 origin = cloud.getScanOrigin(scanID);
+    size_t n = 0;
+    for (int row = 0; row < Ntheta; row++) {
+        for (int col = 0; col < Nphi; col++) {
+            if (row >= blank_r0 && row <= blank_r1 && col >= blank_c0 && col <= blank_c1) {
+                continue;
+            }
+            const float theta = 0.05f + (0.95f * float(M_PI) - 0.05f) * float(row) / float(Ntheta);
+            const float phi = 2.f * float(M_PI) * float(col) / float(Nphi);
+            const SphericalCoord dir(1.f, 0.5f * float(M_PI) - theta, phi);
+            std::map<std::string, double> data;
+            data["row"] = row;
+            data["column"] = col;
+            cloud.addHitPoint(scanID, origin + sphere2cart(SphericalCoord(10.f, 0.5f * float(M_PI) - theta, phi)), dir, data);
+            n++;
+        }
+    }
+    return n;
+}
+
+DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Gap-Filling One Scan Keeps Every Other Scan's Misses Virtual") {
+    // REGRESSION: gap-filling a scan whose returns lacked is_miss, or with add_flags set, first collapsed every other
+    // scan's virtualized misses into stored points (writing a column value on a stored row renumbers nothing, so
+    // that was never needed), and each gap-fill threw away the per-scan index and rebuilt it.
+    LiDARcloud cloud;
+    cloud.disableMessages();
+    ScanMetadata a(make_vec3(0, 0, 0), 20, 0.05f, 0.95f * float(M_PI), 36, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, {});
+    ScanMetadata b(make_vec3(3, 0, 0), 24, 0.05f, 0.95f * float(M_PI), 30, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, {});
+    cloud.addScan(a);
+    cloud.addScan(b);
+    const size_t returns = addRowColumnReturns(cloud, 0, 20, 36, 5, 9, 10, 15) + addRowColumnReturns(cloud, 1, 24, 30, 2, 6, 3, 8);
+
+    const size_t n0 = cloud.gapfillMissesCount(0, false, true);
+    DOCTEST_REQUIRE(cloud.getVirtualMissCount() == n0);
+    std::vector<vec3> scan0_before;
+    cloud.getScanHitXYZColumn(0, scan0_before);
+    const size_t builds = LiDARTestHelper::scanIndexBuilds(cloud);
+
+    const size_t n1 = cloud.gapfillMissesCount(1, false, false);
+    DOCTEST_CHECK(cloud.getVirtualMissCount() == n0 + n1);
+    DOCTEST_CHECK(LiDARTestHelper::storedHitCount(cloud) == returns);
+    DOCTEST_CHECK(cloud.getHitCount() == returns + n0 + n1);
+    DOCTEST_CHECK(LiDARTestHelper::scanIndexBuilds(cloud) == builds);
+    std::vector<vec3> scan0_after;
+    cloud.getScanHitXYZColumn(0, scan0_after);
+    DOCTEST_REQUIRE(scan0_after.size() == scan0_before.size());
+    size_t moved = 0;
+    for (size_t i = 0; i < scan0_before.size(); i++) {
+        moved += (scan0_after[i].x != scan0_before[i].x || scan0_after[i].y != scan0_before[i].y || scan0_after[i].z != scan0_before[i].z) ? 1 : 0;
+    }
+    DOCTEST_CHECK(moved == 0);
+
+    // Gap-filling a scan again replaces its own population and still leaves the other scan's virtual.
+    DOCTEST_CHECK(cloud.gapfillMissesCount(0, false, true) == n0);
+    DOCTEST_CHECK(cloud.getVirtualMissCount() == n0 + n1);
+    DOCTEST_CHECK(LiDARTestHelper::storedHitCount(cloud) == returns);
+    DOCTEST_CHECK(LiDARTestHelper::scanIndexBuilds(cloud) == builds);
+
+    // And each scan's population is the one it gets in a cloud of its own.
+    LiDARcloud alone;
+    alone.disableMessages();
+    alone.addScan(b);
+    addRowColumnReturns(alone, 0, 24, 30, 2, 6, 3, 8);
+    DOCTEST_CHECK(alone.gapfillMissesCount(0, false, false) == n1);
+}
+
+DOCTEST_TEST_CASE("LiDAR Per-Scan Index - Empty Middle and Last Scans Change Nothing") {
+    // A scan with no hits, in the middle of the scan list or at its end, must not change any per-scan result: the
+    // per-scan readers report it empty, and triangulation, the leaf-area inversion and gap-filling of the other scans
+    // are exactly those of the same cloud without it.
+    Context context;
+    context.seedRandomGenerator(0);
+    context.loadXML("plugins/lidar/xml/leaf_cube_LAI2_lw0_01_spherical.xml", true);
+    const vec3 origin0 = make_vec3(-5.f, 0.f, 0.5f), origin1 = make_vec3(0.f, -5.f, 0.5f), nowhere = make_vec3(9.f, 9.f, 9.f);
+    auto add_scan = [](LiDARcloud &cloud, const vec3 &origin) {
+        ScanMetadata scan(origin, 500, 0.f, float(M_PI), 750, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, {});
+        cloud.addScan(scan);
+    };
+    auto add_grid = [](LiDARcloud &cloud) { cloud.addGrid(make_vec3(0, 0, 0.5f), make_vec3(1, 1, 1), make_int3(2, 2, 2), 0.f); };
+
+    LiDARcloud base;
+    base.disableMessages();
+    add_scan(base, origin0);
+    add_scan(base, origin1);
+    add_grid(base);
+    base.syntheticScan(&context, true, true);
+    DOCTEST_REQUIRE(base.getScanHitCount(0) > 0);
+    DOCTEST_REQUIRE(base.getScanHitCount(1) > 0);
+
+    // Copy a scan's stored hits, stored directions and every label (absent values stay absent) into another cloud.
+    auto copy_scan = [&](uint from, LiDARcloud &dst, uint to) {
+        std::vector<uint> indices;
+        base.getScanHitIndices(from, indices);
+        const std::vector<std::string> labels = LiDARTestHelper::hitDataLabels(base);
+        std::vector<std::vector<double>> columns(labels.size());
+        for (size_t k = 0; k < labels.size(); k++) {
+            base.getScanHitDataColumn(from, labels[k].c_str(), columns[k], std::numeric_limits<double>::quiet_NaN());
+        }
+        std::vector<double> xyz, values;
+        std::vector<float> dir;
+        for (size_t i = 0; i < indices.size(); i++) {
+            const vec3 p = base.getHitXYZ(indices[i]);
+            const SphericalCoord d = LiDARTestHelper::storedDirection(base, indices[i]);
+            xyz.insert(xyz.end(), {double(p.x), double(p.y), double(p.z)});
+            dir.insert(dir.end(), {d.radius, d.elevation, d.azimuth});
+            for (size_t k = 0; k < labels.size(); k++) {
+                values.push_back(columns[k][i]);
+            }
+        }
+        dst.addHitPoints(to, indices.size(), xyz.data(), dir.data(), labels, values.data());
+    };
+    LiDARcloud middle, last;
+    middle.disableMessages();
+    last.disableMessages();
+    add_scan(middle, origin0);
+    add_scan(middle, nowhere);
+    add_scan(middle, origin1);
+    add_grid(middle);
+    copy_scan(0, middle, 0);
+    copy_scan(1, middle, 2);
+    add_scan(last, origin0);
+    add_scan(last, origin1);
+    add_scan(last, nowhere);
+    add_grid(last);
+    copy_scan(0, last, 0);
+    copy_scan(1, last, 1);
+
+    for (const std::pair<LiDARcloud *, uint> &empty: {std::make_pair(&middle, uint(1)), std::make_pair(&last, uint(2))}) {
+        LiDARcloud &cloud = *empty.first;
+        DOCTEST_CHECK(cloud.getScanHitCount(empty.second) == 0);
+        std::vector<uint> indices;
+        std::vector<vec3> xyz;
+        std::vector<double> stamps;
+        cloud.getScanHitIndices(empty.second, indices);
+        cloud.getScanHitXYZColumn(empty.second, xyz);
+        cloud.getScanHitDataColumn(empty.second, "timestamp", stamps);
+        DOCTEST_CHECK(indices.empty());
+        DOCTEST_CHECK(xyz.empty());
+        DOCTEST_CHECK(stamps.empty());
+    }
+
+    auto mesh = [](LiDARcloud &cloud, size_t &count) {
+        cloud.triangulateHitPoints(0.1f, 10.f);
+        count = cloud.getTriangleCount();
+        double sum = 0.0;
+        for (uint t = 0; t < cloud.getTriangleCount(); t++) {
+            const Triangulation tri = cloud.getTriangle(t);
+            sum += double(tri.vertex0.x) + double(tri.vertex0.y) + double(tri.vertex0.z) + double(tri.vertex1.x) + double(tri.vertex1.y) + double(tri.vertex1.z) + double(tri.vertex2.x) + double(tri.vertex2.y) + double(tri.vertex2.z) +
+                   double(tri.area);
+        }
+        return sum;
+    };
+    auto leaf = [&](LiDARcloud &cloud, bool triangulated) {
+        if (triangulated) {
+            cloud.calculateLeafArea(&context, 1, 0.05f);
+        } else {
+            cloud.calculateLeafArea(&context, 0.5f, 1, 0.05f);
+        }
+        std::vector<std::pair<float, int>> out;
+        for (uint c = 0; c < cloud.getGridCellCount(); c++) {
+            out.emplace_back(cloud.getCellLeafArea(c), cloud.getCellBeamCount(c));
+        }
+        return out;
+    };
+    size_t count_base = 0, count_middle = 0, count_last = 0;
+    const double sum_base = mesh(base, count_base);
+    DOCTEST_REQUIRE(count_base > 0);
+    DOCTEST_CHECK(mesh(middle, count_middle) == sum_base);
+    DOCTEST_CHECK(mesh(last, count_last) == sum_base);
+    DOCTEST_CHECK(count_middle == count_base);
+    DOCTEST_CHECK(count_last == count_base);
+    for (bool triangulated: {true, false}) {
+        const auto want = leaf(base, triangulated);
+        DOCTEST_CHECK((leaf(middle, triangulated) == want));
+        DOCTEST_CHECK((leaf(last, triangulated) == want));
+    }
+
+    // Gap-filling every scan skips the empty one and fills the others exactly as without it.
+    ScanMetadata ra(make_vec3(0, 0, 0), 20, 0.05f, 0.95f * float(M_PI), 36, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, {});
+    ScanMetadata rb(make_vec3(3, 0, 0), 24, 0.05f, 0.95f * float(M_PI), 30, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, {});
+    ScanMetadata re(nowhere, 10, 0.05f, 0.95f * float(M_PI), 10, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, {});
+    LiDARcloud gap_base, gap_middle, gap_last;
+    for (LiDARcloud *cloud: {&gap_base, &gap_middle, &gap_last}) {
+        cloud->disableMessages();
+    }
+    gap_base.addScan(ra);
+    gap_base.addScan(rb);
+    gap_middle.addScan(ra);
+    gap_middle.addScan(re);
+    gap_middle.addScan(rb);
+    gap_last.addScan(ra);
+    gap_last.addScan(rb);
+    gap_last.addScan(re);
+    addRowColumnReturns(gap_base, 0, 20, 36, 5, 9, 10, 15);
+    addRowColumnReturns(gap_base, 1, 24, 30, 2, 6, 3, 8);
+    addRowColumnReturns(gap_middle, 0, 20, 36, 5, 9, 10, 15);
+    addRowColumnReturns(gap_middle, 2, 24, 30, 2, 6, 3, 8);
+    addRowColumnReturns(gap_last, 0, 20, 36, 5, 9, 10, 15);
+    addRowColumnReturns(gap_last, 1, 24, 30, 2, 6, 3, 8);
+    const size_t filled = gap_base.gapfillMissesCount();
+    DOCTEST_CHECK(gap_middle.gapfillMissesCount() == filled);
+    DOCTEST_CHECK(gap_last.gapfillMissesCount() == filled);
+    DOCTEST_CHECK(gap_middle.getScanHitCount(2) == gap_base.getScanHitCount(1));
+    DOCTEST_CHECK(gap_last.getScanHitCount(1) == gap_base.getScanHitCount(1));
+    DOCTEST_CHECK(gap_middle.getScanHitCount(1) == 0);
+    DOCTEST_CHECK(gap_last.getScanHitCount(2) == 0);
+}
+
+DOCTEST_TEST_CASE("LiDAR Synthetic Scan - A Seeded Scan Does Not Depend on How It Is Chunked") {
+    // REGRESSION: each chunk drew its beams' divergence random numbers and then their aperture random numbers, so a
+    // scan traced in several chunks interleaved the two streams differently from a scan traced in one chunk and gave a
+    // different (equally valid) realization for the same seed. The chunk size depends on the memory budget and on the
+    // per-return staging cap, so a seeded scan could change with either. The draws now follow the single-chunk order
+    // however the scan is chunked. (Fewer than 500 primitives keeps every chunk on the CPU traversal, so the
+    // comparison is exact on GPU builds too.)
+    struct Run {
+        std::vector<vec3> xyz;
+        std::vector<double> timestamp, distance, target_index;
+        size_t chunks = 0;
+    };
+    auto run = [](size_t budget) {
+        Context context;
+        context.seedRandomGenerator(11);
+        context.addPatch(make_vec3(5, 0, 1), make_vec2(10, 8), make_SphericalCoord(0.5f * float(M_PI), 0.5f * float(M_PI)));
+        for (int k = 0; k < 3; k++) {
+            context.addPatch(make_vec3(1.f + 0.8f * float(k), -0.6f + 0.5f * float(k), 0.7f + 0.3f * float(k)), make_vec2(0.9f, 0.7f), make_SphericalCoord(0.3f * float(k), 0.5f * float(k)));
+        }
+        LiDARcloud lidar;
+        lidar.disableMessages();
+        ScanMetadata scan(make_vec3(-3, 0, 1), 350, 1.3f, 1.84f, 350, 1.3f, 1.84f, 0.01f, 0.003f, 0.f, 0.f, {});
+        lidar.addScan(scan);
+        if (budget > 0) {
+            lidar.setSyntheticScanMemoryBudget(budget);
+        }
+        Run out;
+        lidar.setSyntheticScanHitSink([&out](size_t, size_t) { out.chunks++; });
+        lidar.syntheticScan(&context, 10, 0.02f, RETURN_MODE_MULTI, false, true, false);
+        lidar.getHitXYZColumn(out.xyz);
+        lidar.getHitDataColumn("timestamp", out.timestamp);
+        lidar.getHitDataColumn("distance", out.distance);
+        lidar.getHitDataColumn("target_index", out.target_index);
+        return out;
+    };
+    const Run single = run(0); // the default budget holds the whole scan
+    const Run chunked = run(8u * 1024u * 1024u); // floors each chunk at ~1.05M sub-rays: two chunks
+    DOCTEST_REQUIRE(single.chunks == 1);
+    DOCTEST_REQUIRE(chunked.chunks > 1);
+    DOCTEST_REQUIRE(chunked.xyz.size() == single.xyz.size());
+    size_t mismatches = 0;
+    for (size_t i = 0; i < single.xyz.size(); i++) {
+        if (single.xyz[i].x != chunked.xyz[i].x || single.xyz[i].y != chunked.xyz[i].y || single.xyz[i].z != chunked.xyz[i].z || single.timestamp[i] != chunked.timestamp[i] || single.distance[i] != chunked.distance[i] ||
+            single.target_index[i] != chunked.target_index[i]) {
+            mismatches++;
+        }
+    }
+    DOCTEST_CHECK_MESSAGE(mismatches == 0, mismatches << " of " << single.xyz.size() << " hits differ between the single-chunk and the chunked scan");
+}
+
+DOCTEST_TEST_CASE("LiDAR getHitIndex - Looks Up the Hit at a Scan-Grid Cell From Row/Column Data") {
+    // The (row, column) -> hit table getHitIndex() used to read was allocated for every scan but never written, so the
+    // call returned -1 for every cell. It now finds the hit whose row/column data names the cell: a stored return,
+    // or a virtualized miss after gap-filling.
+    LiDARcloud cloud;
+    cloud.disableMessages();
+    ScanMetadata a(make_vec3(0, 0, 0), 20, 0.05f, 0.95f * float(M_PI), 36, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, {});
+    cloud.addScan(a);
+    const size_t returns = addRowColumnReturns(cloud, 0, 20, 36, 5, 9, 10, 15);
+    DOCTEST_CHECK(cloud.getHitIndex(0, 3, 4) == 3 * 36 + 4); // stored in row-major order
+    DOCTEST_CHECK(cloud.getHitIndex(0, 7, 12) == -1); // blank block: no hit recorded there yet
+    DOCTEST_CHECK_THROWS_AS(static_cast<void>(cloud.getHitIndex(0, 20, 0)), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(static_cast<void>(cloud.getHitIndex(0, 0, 36)), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(static_cast<void>(cloud.getHitIndex(1, 0, 0)), std::runtime_error);
+
+    cloud.gapfillMissesCount(0, false, false);
+    const int miss = cloud.getHitIndex(0, 7, 12);
+    DOCTEST_REQUIRE(miss >= int(returns));
+    DOCTEST_CHECK(cloud.getHitData(uint(miss), "row") == 7.0);
+    DOCTEST_CHECK(cloud.getHitData(uint(miss), "column") == 12.0);
+    DOCTEST_CHECK(cloud.getHitData(uint(miss), "is_miss") == 1.0);
+    DOCTEST_CHECK(cloud.getHitIndex(0, 3, 4) == 3 * 36 + 4);
+
+    // Without row/column data there is no cell to look up, which is an error rather than an empty cell.
+    LiDARcloud plain;
+    plain.disableMessages();
+    plain.addScan(a);
+    plain.addHitPoint(0, make_vec3(1, 2, 3), SphericalCoord(1, 0, 0));
+    DOCTEST_CHECK_THROWS_AS(static_cast<void>(plain.getHitIndex(0, 0, 0)), std::runtime_error);
+}
+
+DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Timestamp Path Count-Only Overload Builds the Same Cloud") {
+    // The timestamp gap filler stages its misses and appends them in one step; the count-only overload skips
+    // collecting the positions but must synthesize exactly the same misses, in the same order, with the same data.
+    auto build = [](LiDARcloud &lidar) {
+        const uint Ntheta = 120, Nphi = 90;
+        const float thetaMin = 0.3f, thetaMax = 2.8f;
+        ScanMetadata scan(make_vec3(0, 0, 0), Ntheta, thetaMin, thetaMax, Nphi, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, {});
+        lidar.addScan(scan);
+        size_t pulse = 0;
+        for (uint column = 0; column < Nphi; column++) {
+            for (uint row = 0; row < Ntheta; row++, pulse++) {
+                if ((pulse * 2654435761u) % 10 < 3) {
+                    continue; // ~30% of pulses missing
+                }
+                const float zenith = thetaMin + (thetaMax - thetaMin) * float(row) / float(Ntheta - 1);
+                const float azimuth = 2.f * float(M_PI) * float(column) / float(Nphi);
+                const SphericalCoord d(1.f, 0.5f * float(M_PI) - zenith, azimuth);
+                std::map<std::string, double> data;
+                data["timestamp"] = double(pulse);
+                data["target_index"] = 0;
+                data["target_count"] = 1;
+                lidar.addHitPoint(0, 8.f * sphere2cart(d), d, data);
+            }
+        }
+    };
+    LiDARcloud a, b;
+    a.disableMessages();
+    b.disableMessages();
+    build(a);
+    build(b);
+    const uint nreal = a.getHitCount();
+    DOCTEST_REQUIRE(nreal == b.getHitCount());
+
+    const std::vector<vec3> filled = a.gapfillMisses(0, false, true);
+    const size_t count = b.gapfillMissesCount(0, false, true);
+    DOCTEST_CHECK(filled.size() > 1000);
+    DOCTEST_CHECK(count == filled.size());
+    DOCTEST_REQUIRE(a.getHitCount() == nreal + filled.size());
+    DOCTEST_REQUIRE(b.getHitCount() == a.getHitCount());
+
+    // The returned positions are the appended misses, in order; both clouds carry identical misses and data.
+    for (uint i = 0; i < filled.size(); i++) {
+        const vec3 pa = a.getHitXYZ(nreal + i);
+        DOCTEST_CHECK(pa.x == filled[i].x);
+        DOCTEST_CHECK(pa.y == filled[i].y);
+        DOCTEST_CHECK(pa.z == filled[i].z);
+    }
+    for (const char *label: {"timestamp", "target_index", "nRaysHit", "is_miss", "gapfillMisses_code"}) {
+        std::vector<double> va, vb;
+        a.getHitDataColumn(label, va, -12345.0);
+        b.getHitDataColumn(label, vb, -12345.0);
+        size_t mismatches = 0;
+        for (size_t i = 0; i < va.size(); i++) {
+            mismatches += (va[i] != vb[i]) ? 1 : 0;
+        }
+        DOCTEST_CHECK_MESSAGE(mismatches == 0, label << ": " << mismatches << " mismatches");
+    }
+    std::vector<vec3> xa, xb;
+    a.getHitXYZColumn(xa);
+    b.getHitXYZColumn(xb);
+    size_t xyz_mismatches = 0;
+    for (size_t i = 0; i < xa.size(); i++) {
+        xyz_mismatches += (xa[i].x != xb[i].x || xa[i].y != xb[i].y || xa[i].z != xb[i].z) ? 1 : 0;
+    }
+    DOCTEST_CHECK(xyz_mismatches == 0);
+    // Every synthesized point is a flagged miss with an interior or edge code; every original is code 0.
+    for (uint i = 0; i < a.getHitCount(); i++) {
+        const bool synthesized = i >= nreal;
+        DOCTEST_CHECK(a.getHitData(i, "is_miss") == (synthesized ? 1.0 : 0.0));
+        const double code = a.getHitData(i, "gapfillMisses_code");
+        DOCTEST_CHECK((synthesized ? (code >= 1.0 && code <= 3.0) : code == 0.0));
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Timestamp and Row/Column Paths Synthesize the Same Misses") {
+    // The same returns described by their scan-grid indices and by their pulse timestamps must yield the identical
+    // virtualized miss population: same cells, same directions, same count. A third cloud carries GPS-like
+    // timestamps (seconds since an epoch at a 10 kHz pulse rate) with the first pulses of the scan missing, so the
+    // declared clock does not apply and the pulse clock must be recovered and anchored from the data.
+    GenerativeGrid g{30, 48, 0.05, 0.95 * M_PI, 0.0, 1.5 * M_PI, 1.0e-3, 0.0};
+    auto returns_present = [&](int row, int col) { return !(row >= 6 && row <= 11 && col >= 10 && col <= 20) && !((row * 7 + col * 3) % 11 == 0); };
+    auto add_scan = [&](LiDARcloud &lidar) {
+        ScanMetadata scan(make_vec3(0, 0, 0), g.Ntheta, g.theta_min, g.theta_max, g.Nphi, g.phi_min, g.phi_max, 0.0f, 0.0f, 0.0f, 0.0f, {});
+        lidar.addScan(scan);
+    };
+    enum Mode { ROWCOL, PULSE_CLOCK, GPS_TIME };
+    const double gps_epoch = 1.7e9, gps_period = 1.0e-4;
+    auto build = [&](LiDARcloud &lidar, Mode mode) {
+        add_scan(lidar);
+        for (int col = 0; col < g.Nphi; col++) {
+            for (int row = 0; row < g.Ntheta; row++) {
+                if (!returns_present(row, col)) {
+                    continue;
+                }
+                const long long ordinal = (long long) col * g.Ntheta + row;
+                if (mode == GPS_TIME && ordinal < 37) {
+                    continue; // the scan's first pulses are missing: the earliest return is not pulse 0
+                }
+                SphericalCoord dir = g.direction(row, col);
+                vec3 xyz = helios::sphere2cart(make_SphericalCoord(10.f, dir.elevation, dir.azimuth));
+                std::map<std::string, double> data;
+                if (mode == ROWCOL) {
+                    data["row"] = row;
+                    data["column"] = col;
+                } else if (mode == PULSE_CLOCK) {
+                    data["timestamp"] = double(ordinal);
+                } else {
+                    data["timestamp"] = gps_epoch + gps_period * double(ordinal);
+                }
+                lidar.addHitPoint(0, xyz, dir, make_RGBcolor(1, 0, 0), data);
+            }
+        }
+    };
+
+    LiDARcloud by_rowcol, by_clock, by_gps;
+    by_rowcol.disableMessages();
+    by_clock.disableMessages();
+    by_gps.disableMessages();
+    build(by_rowcol, ROWCOL);
+    build(by_clock, PULSE_CLOCK);
+    build(by_gps, GPS_TIME);
+    const uint returns_rowcol = by_rowcol.getHitCount();
+    const uint returns_gps = by_gps.getHitCount();
+    DOCTEST_REQUIRE(by_clock.getHitCount() == returns_rowcol);
+    DOCTEST_REQUIRE(returns_gps < returns_rowcol);
+
+    const size_t filled_rowcol = by_rowcol.gapfillMissesCount(0, false, true);
+    const size_t filled_clock = by_clock.gapfillMissesCount(0, false, true);
+    const size_t filled_gps = by_gps.gapfillMissesCount(0, false, true);
+    DOCTEST_CHECK(filled_rowcol == size_t(g.Ntheta * g.Nphi) - returns_rowcol);
+    DOCTEST_CHECK(filled_clock == filled_rowcol);
+    DOCTEST_CHECK(filled_gps == size_t(g.Ntheta * g.Nphi) - returns_gps);
+    DOCTEST_CHECK(by_rowcol.getVirtualMissCount() == filled_rowcol);
+    DOCTEST_CHECK(by_clock.getVirtualMissCount() == filled_clock);
+
+    // Cell for cell, the timestamp path placed its returns where the row/column data said they were, and the two
+    // virtual populations are bit-identical.
+    auto compare = [&](LiDARcloud &a, LiDARcloud &b, const char *what) {
+        std::vector<int32_t> ra, ca, rb, cb, ma, mb;
+        a.getHitDataColumn("row", ra, int32_t(-1));
+        a.getHitDataColumn("column", ca, int32_t(-1));
+        b.getHitDataColumn("row", rb, int32_t(-1));
+        b.getHitDataColumn("column", cb, int32_t(-1));
+        a.getHitDataColumn("is_miss", ma, int32_t(-1));
+        b.getHitDataColumn("is_miss", mb, int32_t(-1));
+        std::vector<vec3> pa, pb;
+        a.getHitXYZColumn(pa);
+        b.getHitXYZColumn(pb);
+        DOCTEST_REQUIRE(pa.size() == pb.size());
+        size_t mismatches = 0;
+        for (size_t i = 0; i < pa.size(); i++) {
+            if (ra[i] != rb[i] || ca[i] != cb[i] || ma[i] != mb[i] || pa[i].x != pb[i].x || pa[i].y != pb[i].y || pa[i].z != pb[i].z) {
+                mismatches++;
+            }
+        }
+        DOCTEST_CHECK_MESSAGE(mismatches == 0, std::string(what) << ": " << mismatches << " of " << pa.size() << " hits differ");
+    };
+    compare(by_rowcol, by_clock, "row/column vs pulse-clock timestamps");
+
+    // GPS-time cloud: every return landed in its true cell, and each synthesized miss carries the time its pulse
+    // was fired on the recovered clock.
+    {
+        std::vector<int32_t> row, col, is_miss;
+        std::vector<double> t;
+        by_gps.getHitDataColumn("row", row, int32_t(-1));
+        by_gps.getHitDataColumn("column", col, int32_t(-1));
+        by_gps.getHitDataColumn("is_miss", is_miss, int32_t(-1));
+        by_gps.getHitDataColumn("timestamp", t, -1.0);
+        size_t wrong_cell = 0, wrong_time = 0;
+        for (size_t i = 0; i < t.size(); i++) {
+            const long long ordinal = (long long) col[i] * g.Ntheta + row[i];
+            const double expected = gps_epoch + gps_period * double(ordinal);
+            if (std::fabs(t[i] - expected) > 1e-6 * gps_period + 1e-9 * gps_epoch) {
+                wrong_time++;
+            }
+            if (is_miss[i] == 0 && !returns_present(row[i], col[i])) {
+                wrong_cell++;
+            }
+        }
+        DOCTEST_CHECK(wrong_cell == 0);
+        DOCTEST_CHECK(wrong_time == 0);
+        // Directions of the recovered population agree with the row/column cloud's cell for cell.
+        std::vector<vec3> pg;
+        by_gps.getHitXYZColumn(pg);
+        std::map<std::pair<int, int>, vec3> rc_position;
+        {
+            std::vector<int32_t> rr, cc;
+            std::vector<vec3> pr;
+            by_rowcol.getHitDataColumn("row", rr, int32_t(-1));
+            by_rowcol.getHitDataColumn("column", cc, int32_t(-1));
+            by_rowcol.getHitXYZColumn(pr);
+            for (size_t i = 0; i < pr.size(); i++) {
+                rc_position[{rr[i], cc[i]}] = pr[i];
+            }
+        }
+        double max_err = 0.0;
+        for (size_t i = 0; i < pg.size(); i++) {
+            if (is_miss[i] != 1) {
+                continue;
+            }
+            auto it = rc_position.find({row[i], col[i]});
+            DOCTEST_REQUIRE(it != rc_position.end());
+            max_err = std::max(max_err, angularError(cart2sphere(pg[i]), cart2sphere(it->second)));
+        }
+        DOCTEST_CHECK(max_err < 1e-3);
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Timestamp Path Recovers the Pulse Clock on a Large Scan") {
+    // REGRESSION: the pulse period was estimated from the spacing of consecutive members of the bounded direction
+    // sample, which on a scan larger than the sample limit are hundreds of pulses apart, so the "period" came out
+    // hundreds of times too large and every return landed in the wrong cell (the grid-model fit then failed with a
+    // residual error). The period must come from returns consecutive in time. This scan is ~10x the sample limit.
+    const uint Ntheta = 300, Nphi = 1000;
+    const float thetaMin = 0.2f, thetaMax = 2.9f;
+    const double gps_epoch = 1.7e9, gps_period = 1.0e-4;
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 0), Ntheta, thetaMin, thetaMax, Nphi, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, {});
+    lidar.addScan(scan);
+    const size_t Npulses = size_t(Ntheta) * Nphi;
+    std::vector<double> xyz, values;
+    std::vector<float> dir;
+    const std::vector<std::string> labels = {"timestamp"};
+    size_t returns = 0;
+    for (size_t p = 0; p < Npulses; p++) {
+        if ((p * 2654435761u) % 10 < 3 || p < 123) {
+            continue; // 30% of pulses missing, and the first 123 pulses of the scan absent
+        }
+        const int column = int(p / Ntheta), row = int(p % Ntheta);
+        const float zenith = thetaMin + (thetaMax - thetaMin) * float(row) / float(Ntheta - 1);
+        const float azimuth = 2.f * float(M_PI) * float(column) / float(Nphi);
+        const SphericalCoord d(1.f, 0.5f * float(M_PI) - zenith, azimuth);
+        const vec3 u = sphere2cart(d);
+        xyz.push_back(10.0 * u.x);
+        xyz.push_back(10.0 * u.y);
+        xyz.push_back(10.0 * u.z);
+        dir.push_back(d.radius);
+        dir.push_back(d.elevation);
+        dir.push_back(d.azimuth);
+        values.push_back(gps_epoch + gps_period * double(p));
+        returns++;
+    }
+    lidar.addHitPoints(0, returns, xyz.data(), dir.data(), labels, values.data());
+    DOCTEST_REQUIRE(returns > 200000);
+
+    const size_t filled = lidar.gapfillMissesCount(0, false, false);
+    DOCTEST_CHECK(filled == Npulses - returns);
+    DOCTEST_CHECK(lidar.getVirtualMissCount() == filled);
+    std::vector<int32_t> row, col;
+    std::vector<double> t;
+    lidar.getHitDataColumn("row", row, int32_t(-1));
+    lidar.getHitDataColumn("column", col, int32_t(-1));
+    lidar.getHitDataColumn("timestamp", t, -1.0);
+    size_t wrong_cell = 0, wrong_time = 0;
+    for (size_t i = 0; i < t.size(); i++) {
+        const long long ordinal = (long long) std::llround((t[i] - gps_epoch) / gps_period);
+        if (row[i] != int(ordinal % Ntheta) || col[i] != int(ordinal / Ntheta)) {
+            wrong_cell++;
+        }
+        if (i >= returns && std::fabs(t[i] - (gps_epoch + gps_period * double((long long) col[i] * Ntheta + row[i]))) > 1e-6 * gps_period + 1e-9 * gps_epoch) {
+            wrong_time++;
+        }
+    }
+    DOCTEST_CHECK(wrong_cell == 0);
+    DOCTEST_CHECK(wrong_time == 0);
+}
+
+DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Timestamp Path Reconstructs a Raster With Mirror Dead Time and a Tilted Head") {
+    // A terrestrial scanner's mirror fires through part of each rotation only, so a column of Ntheta pulses is
+    // followed by hundreds of pulse periods of silence, and the head is never perfectly level. From timestamps alone
+    // the gap filler must recover the columns (including columns with no return at all and columns whose first
+    // pulses returned nothing), place every return in its true cell, and synthesize the missing pulses along the
+    // beams the tilted head actually fired.
+    const int Ntheta = 400, Nphi = 300;
+    const double period = 3.4e-6, dead_periods = 500.0, line_period = (Ntheta + dead_periods) * period, gps_epoch = 1.7e9;
+    const float thetaMin = 0.5136f, zen_step = 0.0007f, phi0 = 5.0f, frame_step = 0.000873f;
+    const float tilt = 1.5f * float(M_PI) / 180.f; // head axis tilted about world x
+    auto true_direction = [&](int row, int col) {
+        const float zen = thetaMin + zen_step * float(row), az = phi0 + frame_step * float(col);
+        const vec3 d = sphere2cart(SphericalCoord(1.f, 0.5f * float(M_PI) - zen, az));
+        return make_vec3(d.x, d.y * cosf(tilt) - d.z * sinf(tilt), d.y * sinf(tilt) + d.z * cosf(tilt));
+    };
+    auto pulse_present = [&](int row, int col) {
+        if (col == 50 || col == 51 || col == 200) {
+            return false; // whole columns of sky
+        }
+        if (col % 7 == 0 && row < 25) {
+            return false; // the first pulses of these columns returned nothing
+        }
+        return ((size_t) (col * Ntheta + row) * 2654435761u) % 10 >= 3; // and 30% of the rest
+    };
+
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    ScanMetadata scan(make_vec3(1.f, -2.f, 0.5f), uint(Ntheta), thetaMin, thetaMin + zen_step * float(Ntheta - 1), uint(Nphi), phi0, phi0 + frame_step * float(Nphi - 1), 0.f, 0.f, 0.f, 0.f, {});
+    lidar.addScan(scan);
+    const vec3 origin = lidar.getScanOrigin(0);
+    std::vector<double> xyz, values;
+    std::vector<float> dir;
+    size_t returns = 0;
+    for (int col = 0; col < Nphi; col++) {
+        for (int row = 0; row < Ntheta; row++) {
+            if (!pulse_present(row, col)) {
+                continue;
+            }
+            const vec3 d = true_direction(row, col);
+            const float range = 6.f + 2.f * sinf(0.01f * float(row)) * cosf(0.03f * float(col));
+            xyz.push_back(double(origin.x + range * d.x));
+            xyz.push_back(double(origin.y + range * d.y));
+            xyz.push_back(double(origin.z + range * d.z));
+            const SphericalCoord sd = cart2sphere(d);
+            dir.push_back(1.f);
+            dir.push_back(sd.elevation);
+            dir.push_back(sd.azimuth);
+            values.push_back(gps_epoch + double(col) * line_period + double(row) * period);
+            returns++;
+        }
+    }
+    lidar.addHitPoints(0, returns, xyz.data(), dir.data(), {"timestamp"}, values.data());
+
+    const size_t filled = lidar.gapfillMissesCount(0, false, false);
+    DOCTEST_CHECK(filled == size_t(Ntheta) * Nphi - returns);
+    DOCTEST_CHECK(lidar.getVirtualMissCount() == filled);
+
+    std::vector<int32_t> row, col, is_miss;
+    std::vector<double> t;
+    std::vector<vec3> pos;
+    lidar.getHitDataColumn("row", row, int32_t(-1));
+    lidar.getHitDataColumn("column", col, int32_t(-1));
+    lidar.getHitDataColumn("is_miss", is_miss, int32_t(-1));
+    lidar.getHitDataColumn("timestamp", t, -1.0);
+    lidar.getHitXYZColumn(pos);
+    size_t wrong_cell = 0, wrong_time = 0, present_cells_filled = 0;
+    double max_angle_error = 0.0;
+    for (size_t i = 0; i < pos.size(); i++) {
+        const long long ordinal = (long long) std::llround((t[i] - gps_epoch - double(col[i]) * line_period) / period); // row implied by the time, given the column
+        const bool return_here = is_miss[i] == 0;
+        if (return_here) {
+            // Cell from the return's own timestamp: column from the column period, row from the pulse period.
+            const long long true_col = (long long) std::llround((t[i] - gps_epoch) / line_period);
+            const long long true_row = (long long) std::llround((t[i] - gps_epoch - double(true_col) * line_period) / period);
+            if (row[i] != true_row || col[i] != true_col) {
+                wrong_cell++;
+            }
+        } else {
+            if (pulse_present(row[i], col[i])) {
+                present_cells_filled++;
+            }
+            if (ordinal != row[i]) {
+                wrong_time++;
+            }
+            vec3 d = pos[i] - origin;
+            d.normalize();
+            // Chord between unit vectors: equal to the angle to first order and, unlike acosf of a float dot
+            // product, resolves angles far below a milliradian.
+            max_angle_error = std::max(max_angle_error, (double) (d - true_direction(row[i], col[i])).magnitude());
+        }
+    }
+    DOCTEST_CHECK(wrong_cell == 0);
+    DOCTEST_CHECK(present_cells_filled == 0);
+    DOCTEST_CHECK(wrong_time == 0);
+    DOCTEST_CHECK_MESSAGE(max_angle_error < 2e-4, "synthesized miss direction error " << max_angle_error * 180.0 / M_PI << " deg");
+    // The whole-column gaps were filled as complete columns of misses.
+    size_t col50 = 0;
+    for (size_t i = 0; i < pos.size(); i++) {
+        if (col[i] == 50 && is_miss[i] == 1) {
+            col50++;
+        }
+    }
+    DOCTEST_CHECK(col50 == size_t(Ntheta));
+}
+
+DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Timestamp Path Misses Are Virtualized and Materialize Identically") {
+    checkVirtualMaterializedEquivalence([](LiDARcloud &c) {
+        ScanMetadata scan(make_vec3(0, 0, 0), 20, 0.05, 0.95 * M_PI, 36, 0.0, 2.0 * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, {});
+        c.addScan(scan);
+        for (int col = 0; col < 36; col++) {
+            for (int row = 0; row < 20; row++) {
+                if (row >= 5 && row <= 9 && col >= 10 && col <= 15) {
+                    continue;
+                }
+                const float theta = 0.05f + (0.95f * float(M_PI) - 0.05f) * float(row) / 20.f;
+                const float phi = 2.f * float(M_PI) * float(col) / 36.f;
+                SphericalCoord dir(1.f, 0.5f * float(M_PI) - theta, phi);
+                std::map<std::string, double> data;
+                data["timestamp"] = double(col * 20 + row);
+                data["intensity"] = 0.5;
+                c.addHitPoint(0, sphere2cart(SphericalCoord(10.f, 0.5f * float(M_PI) - theta, phi)), dir, data);
+            }
+        }
+        c.gapfillMisses(0, false, true);
+    });
+}
+
+DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Moving Scan Misses Are Virtualized With Per-Pulse Origins") {
+    // A moving-platform scan's synthesized misses are held virtually too; each reports the platform pose at its
+    // pulse's time as its origin, and materializing them writes the same origins into origin_x/y/z.
+    auto build = [](LiDARcloud &lidar) {
+        Context context;
+        context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+        const uint Ntheta = 8, Nphi = 60;
+        const float H = 6.0f, v = 3.0f;
+        ScanMetadata scan(make_vec3(0, 0, H), Ntheta, 0.93f * float(M_PI), float(M_PI), Nphi, 0.0f, 2.0f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, std::vector<std::string>());
+        const float pulseRate = float(Ntheta * Nphi);
+        const double t_total = double(Ntheta * Nphi) / double(pulseRate);
+        std::vector<double> traj_t;
+        std::vector<vec3> traj_pos, traj_rpy;
+        for (int k = 0; k < 20; k++) {
+            const double tk = t_total * double(k) / 19.0;
+            traj_t.push_back(tk);
+            traj_pos.push_back(make_vec3(float(v * tk), 0.f, H));
+            traj_rpy.push_back(make_vec3(0, 0, 0));
+        }
+        lidar.addScanMoving(scan, traj_t, traj_pos, traj_rpy, make_vec3(0, 0, 0), make_vec3(0, 0, 0), pulseRate, 0.0);
+        lidar.syntheticScan(&context, false, false);
+        lidar.gapfillMisses(0, false, true);
+    };
+    LiDARcloud virt, mat;
+    virt.disableMessages();
+    mat.disableMessages();
+    build(virt);
+    build(mat);
+    DOCTEST_REQUIRE(virt.getVirtualMissCount() > 0);
+    mat.materializeMisses();
+    DOCTEST_REQUIRE(mat.getHitCount() == virt.getHitCount());
+    const float v = 3.0f, H = 6.0f;
+    size_t checked = 0;
+    for (uint i = 0; i < virt.getHitCount(); i++) {
+        if (virt.getHitData(i, "is_miss") != 1.0) {
+            continue;
+        }
+        DOCTEST_REQUIRE(virt.doesHitDataExist(i, "origin_x"));
+        DOCTEST_REQUIRE(mat.doesHitDataExist(i, "origin_x"));
+        const vec3 ov = virt.getHitOrigin(i), om = mat.getHitOrigin(i);
+        DOCTEST_CHECK(ov.x == om.x);
+        DOCTEST_CHECK(ov.y == om.y);
+        DOCTEST_CHECK(ov.z == om.z);
+        DOCTEST_CHECK(virt.getHitData(i, "origin_x") == mat.getHitData(i, "origin_x"));
+        const double t = virt.getHitData(i, "timestamp");
+        DOCTEST_CHECK(ov.x == doctest::Approx(float(v * t)).epsilon(0.02));
+        DOCTEST_CHECK(ov.z == doctest::Approx(H).epsilon(0.01));
+        const vec3 pv = virt.getHitXYZ(i), pm = mat.getHitXYZ(i);
+        DOCTEST_CHECK(pv.x == pm.x);
+        DOCTEST_CHECK(pv.z == pm.z);
+        checked++;
+    }
+    DOCTEST_CHECK(checked > 0);
+    // The bulk readers report the per-pulse origins for the virtual misses too.
+    std::vector<float> ox;
+    virt.getHitDataColumn("origin_x", ox, -9999.f);
+    size_t absent = 0;
+    for (uint i = 0; i < virt.getHitCount(); i++) {
+        if (virt.getHitData(i, "is_miss") == 1.0 && ox[i] == -9999.f) {
+            absent++;
+        }
+    }
+    DOCTEST_CHECK(absent == 0);
+}
+
+// ---- Review regressions: timestamp gap-fill on approximate rasters, grid-only frame, multi-scan, moving leaf area ----
+
+//! A terrestrial raster fired column after column with GPS-epoch timestamps: pulses within a column are `period`
+//! apart and columns `line_period` apart (Ntheta periods for a continuous pulse train, more when the mirror has dead
+//! time). Beam (row, column) points at zenith thetaMin + row*dtheta and azimuth phiMin + column*dphi +
+//! row*dphi/Ntheta -- the synthetic scanner's sweep -- in the scanner head's frame, which is tilted about world x.
+struct TimestampRaster {
+    int Ntheta = 150, Nphi = 200;
+    float thetaMin = 0.35f, thetaMax = 2.6f, phiMin = 0.2f, phiMax = 4.0f;
+    double epoch = 1.7e9, period = 1.0e-4, line_period = 150 * 1.0e-4;
+    float tilt = 0.f;
+    vec3 origin = make_vec3(0, 0, 0);
+    float dtheta() const {
+        return (thetaMax - thetaMin) / float(Ntheta - 1);
+    }
+    float dphi() const {
+        return (phiMax - phiMin) / float(Nphi - 1);
+    }
+    vec3 beam(int row, int col) const {
+        const float zenith = thetaMin + dtheta() * float(row);
+        const float azimuth = phiMin + dphi() * float(col) + dphi() * float(row) / float(Ntheta);
+        const vec3 d = sphere2cart(SphericalCoord(1.f, 0.5f * float(M_PI) - zenith, azimuth));
+        return make_vec3(d.x, d.y * std::cos(tilt) - d.z * std::sin(tilt), d.y * std::sin(tilt) + d.z * std::cos(tilt));
+    }
+    double time(int row, int col) const {
+        return epoch + double(col) * line_period + double(row) * period;
+    }
+};
+
+//! Add the returns of a TimestampRaster (in firing order, timestamp their only label) to a scan; returns the count.
+static size_t addTimestampRasterReturns(LiDARcloud &cloud, uint scanID, const TimestampRaster &raster, const std::function<bool(int, int)> &returned) {
+    std::vector<double> xyz, stamps;
+    for (int col = 0; col < raster.Nphi; col++) {
+        for (int row = 0; row < raster.Ntheta; row++) {
+            if (!returned(row, col)) {
+                continue;
+            }
+            const vec3 p = raster.origin + raster.beam(row, col) * 10.f;
+            xyz.insert(xyz.end(), {double(p.x), double(p.y), double(p.z)});
+            stamps.push_back(raster.time(row, col));
+        }
+    }
+    const std::vector<std::string> labels = {"timestamp"};
+    cloud.addHitPoints(scanID, stamps.size(), xyz.data(), nullptr, labels, stamps.data());
+    return stamps.size();
+}
+
+DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Timestamp Path Tolerates an Approximate Declared Raster") {
+    // REGRESSION: a caller that estimates a scan's raster from its point count declares a size close to, but not
+    // exactly, the instrument's. The timestamp path cut columns wherever the silence exceeded the DECLARED column and
+    // numbered them from the first column with a return, so a 150 x 200 raster declared as 142 x 211 or 158 x 190
+    // threw ("a single column of returns"), and columns before the first return were never filled. (The version
+    // before the rework interpolated along each column instead and filled most, but not all, of such a raster.) The
+    // raster is now measured from the timestamps and the beam angles within the declared angular extent: every miss of
+    // the instrument's raster is synthesized, and the scan's size is updated to the measured one.
+    auto returned = [](int row, int col) {
+        if (col < 12) {
+            return false; // leading columns with no return at all
+        }
+        if (row >= 40 && row <= 70 && col >= 90 && col <= 120) {
+            return false;
+        }
+        return ((unsigned(row) * 2654435761u) ^ (unsigned(col) * 40503u)) % 4u != 0u;
+    };
+    auto run = [&](const TimestampRaster &raster, uint declared_theta, uint declared_phi, bool check_cells, const char *what) {
+        LiDARcloud cloud;
+        cloud.disableMessages();
+        ScanMetadata scan(raster.origin, declared_theta, raster.thetaMin, raster.thetaMax, declared_phi, raster.phiMin, raster.phiMax, 0.f, 0.f, 0.f, 0.f, {});
+        cloud.addScan(scan);
+        const size_t returns = addTimestampRasterReturns(cloud, 0, raster, returned);
+        size_t filled = 0;
+        try {
+            filled = cloud.gapfillMissesCount(0, false, false);
+        } catch (const std::exception &e) {
+            DOCTEST_CHECK_MESSAGE(false, std::string(what) << ": gap-filling threw: " << e.what());
+            return;
+        }
+        const size_t pulses = size_t(raster.Ntheta) * size_t(raster.Nphi);
+        DOCTEST_CHECK_MESSAGE(filled == pulses - returns, std::string(what) << ": filled " << filled << ", the raster has " << pulses - returns << " misses");
+        DOCTEST_CHECK_MESSAGE(cloud.getScanSizeTheta(0) == uint(raster.Ntheta), std::string(what) << ": measured " << cloud.getScanSizeTheta(0) << " rows");
+        DOCTEST_CHECK_MESSAGE(cloud.getScanSizePhi(0) == uint(raster.Nphi), std::string(what) << ": measured " << cloud.getScanSizePhi(0) << " columns");
+        if (!check_cells) {
+            return;
+        }
+        // Every synthesized miss lies along the beam of a distinct cell of the true raster that returned nothing.
+        std::vector<vec3> xyz;
+        std::vector<int32_t> is_miss;
+        cloud.getHitXYZColumn(xyz);
+        cloud.getHitDataColumn("is_miss", is_miss, int32_t(-1));
+        std::set<long long> cells;
+        size_t off_raster = 0, onto_return = 0, leading = 0;
+        double worst = 0.0;
+        for (size_t i = 0; i < xyz.size(); i++) {
+            if (is_miss[i] != 1) {
+                continue;
+            }
+            vec3 d = xyz[i] - raster.origin;
+            d.normalize();
+            const SphericalCoord sc = cart2sphere(d);
+            const int row = int(std::lround((sc.zenith - raster.thetaMin) / raster.dtheta()));
+            double azimuth = double(sc.azimuth) - raster.phiMin - raster.dphi() * float(row) / float(raster.Ntheta);
+            if (azimuth < -0.5 * raster.dphi()) {
+                azimuth += 2.0 * M_PI;
+            }
+            const int col = int(std::lround(azimuth / raster.dphi()));
+            if (row < 0 || row >= raster.Ntheta || col < 0 || col >= raster.Nphi) {
+                off_raster++;
+                continue;
+            }
+            if (returned(row, col)) {
+                onto_return++;
+                continue;
+            }
+            cells.insert((long long) col * raster.Ntheta + row);
+            const vec3 b = raster.beam(row, col);
+            worst = std::max(worst, std::sqrt((double(d.x) - b.x) * (double(d.x) - b.x) + (double(d.y) - b.y) * (double(d.y) - b.y) + (double(d.z) - b.z) * (double(d.z) - b.z))); // chord, in double
+            leading += (col < 12) ? 1 : 0;
+        }
+        DOCTEST_CHECK_MESSAGE(off_raster == 0, std::string(what) << ": " << off_raster << " misses off the raster");
+        DOCTEST_CHECK_MESSAGE(onto_return == 0, std::string(what) << ": " << onto_return << " misses on cells that returned");
+        DOCTEST_CHECK_MESSAGE(cells.size() == filled, std::string(what) << ": " << filled - cells.size() << " misses share a cell");
+        DOCTEST_CHECK_MESSAGE(worst < 0.1 * raster.dtheta(), std::string(what) << ": a miss is " << worst << " rad off its beam");
+        DOCTEST_CHECK_MESSAGE(leading == 12 * size_t(raster.Ntheta), std::string(what) << ": " << leading << " misses in the 12 leading empty columns");
+    };
+
+    TimestampRaster continuous;
+    run(continuous, 150, 200, true, "continuous pulse train, exact size");
+    run(continuous, 142, 211, true, "continuous pulse train, declared 142 x 211");
+    run(continuous, 158, 190, true, "continuous pulse train, declared 158 x 190");
+    TimestampRaster dead_time = continuous;
+    dead_time.line_period = (150 + 400) * dead_time.period;
+    run(dead_time, 150, 200, true, "mirror dead time, exact size");
+    run(dead_time, 142, 211, true, "mirror dead time, declared 142 x 211");
+    run(dead_time, 158, 190, true, "mirror dead time, declared 158 x 190");
+    // A full turn: a rotation has no recoverable starting angle, so columns are numbered from the first column that
+    // returned; only the population and the measured size are checked.
+    TimestampRaster full_turn = continuous;
+    full_turn.phiMin = 0.f;
+    full_turn.phiMax = 2.f * float(M_PI) * float(full_turn.Nphi - 1) / float(full_turn.Nphi);
+    run(full_turn, 142, 211, false, "full turn, declared 142 x 211");
+    run(full_turn, 158, 190, false, "full turn, declared 158 x 190");
+}
+
+DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Grid-Only Mode Selects Rows in the Scanner Head's Frame") {
+    // REGRESSION: grid-only mode computed the grid's zenith window about world +z but compared it with the fitted
+    // model's zenith, which is measured about the scanner head's axis. On a head tilted by a few degrees the window
+    // was off by up to the tilt, so rows whose beams reach the grid were left unfilled and rows whose beams cannot
+    // reach it were filled.
+    TimestampRaster raster;
+    raster.Ntheta = 120;
+    raster.Nphi = 160;
+    raster.thetaMin = 0.6f;
+    raster.thetaMax = 2.4f;
+    raster.phiMin = 0.f;
+    raster.phiMax = 2.f * float(M_PI) * 159.f / 160.f;
+    raster.line_period = 120 * raster.period;
+    raster.tilt = 6.f * float(M_PI) / 180.f;
+    LiDARcloud cloud;
+    cloud.disableMessages();
+    ScanMetadata scan(raster.origin, uint(raster.Ntheta), raster.thetaMin, raster.thetaMax, uint(raster.Nphi), raster.phiMin, raster.phiMax, 0.f, 0.f, 0.f, 0.f, {});
+    cloud.addScan(scan);
+    const vec3 box_center = make_vec3(0.f, 4.f, 2.5f), box_size = make_vec3(2, 2, 2);
+    cloud.addGrid(box_center, box_size, make_int3(1, 1, 1), 0.f);
+    addTimestampRasterReturns(cloud, 0, raster, [](int row, int col) { return (row * 31 + col * 17) % 5 >= 2; });
+    const size_t filled = cloud.gapfillMissesCount(0, true, false);
+    DOCTEST_REQUIRE(filled > 0);
+
+    // The grid's zenith range about the head axis, sampled finely over the box surface.
+    double zmin = M_PI, zmax = 0.0;
+    const int n = 41;
+    const float ct = std::cos(raster.tilt), st = std::sin(raster.tilt);
+    for (int axis = 0; axis < 3; axis++) {
+        for (int side = 0; side < 2; side++) {
+            for (int a = 0; a < n; a++) {
+                for (int b = 0; b < n; b++) {
+                    float u[3];
+                    u[axis] = float(side);
+                    u[(axis + 1) % 3] = float(a) / float(n - 1);
+                    u[(axis + 2) % 3] = float(b) / float(n - 1);
+                    const vec3 p = box_center + make_vec3((u[0] - 0.5f) * box_size.x, (u[1] - 0.5f) * box_size.y, (u[2] - 0.5f) * box_size.z) - raster.origin;
+                    const vec3 head = make_vec3(p.x, p.y * ct + p.z * st, -p.y * st + p.z * ct);
+                    const double zenith = std::acos(double(head.z) / double(head.magnitude()));
+                    zmin = std::min(zmin, zenith);
+                    zmax = std::max(zmax, zenith);
+                }
+            }
+        }
+    }
+    std::vector<int32_t> row, is_miss;
+    cloud.getHitDataColumn("row", row, int32_t(-1));
+    cloud.getHitDataColumn("is_miss", is_miss, int32_t(-1));
+    std::vector<size_t> misses_in_row(raster.Ntheta, 0);
+    for (size_t i = 0; i < row.size(); i++) {
+        if (is_miss[i] == 1 && row[i] >= 0 && row[i] < raster.Ntheta) {
+            misses_in_row[size_t(row[i])]++;
+        }
+    }
+    const double step = raster.dtheta();
+    size_t wrongly_filled = 0, wrongly_empty = 0, inside = 0;
+    for (int r = 0; r < raster.Ntheta; r++) {
+        const double zenith = raster.thetaMin + step * r;
+        if (zenith < zmin - step || zenith > zmax + step) {
+            wrongly_filled += misses_in_row[r] > 0 ? 1 : 0;
+        } else if (zenith > zmin + step && zenith < zmax - step) {
+            inside++;
+            wrongly_empty += misses_in_row[r] == 0 ? 1 : 0;
+        }
+    }
+    DOCTEST_REQUIRE(inside >= 10);
+    DOCTEST_CHECK_MESSAGE(wrongly_filled == 0, wrongly_filled << " rows whose beams cannot reach the grid were filled");
+    DOCTEST_CHECK_MESSAGE(wrongly_empty == 0, wrongly_empty << " of " << inside << " rows whose beams reach the grid were left empty");
+}
+
+DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Timestamp Path Keeps Every Other Scan's Misses Virtual") {
+    // REGRESSION: the timestamp path collapsed every other scan's virtualized misses into stored points before writing
+    // row/column data onto its own returns, which renumbers nothing and never required it.
+    TimestampRaster r0;
+    r0.Ntheta = 40;
+    r0.Nphi = 60;
+    r0.line_period = 40 * r0.period;
+    TimestampRaster r1 = r0;
+    r1.origin = make_vec3(4, 0, 0);
+    r1.epoch += 100.0;
+    auto returned = [](int row, int col) { return (row * 7 + col * 3) % 4 != 0; };
+    LiDARcloud cloud;
+    cloud.disableMessages();
+    for (const TimestampRaster *r: {&r0, &r1}) {
+        ScanMetadata scan(r->origin, uint(r->Ntheta), r->thetaMin, r->thetaMax, uint(r->Nphi), r->phiMin, r->phiMax, 0.f, 0.f, 0.f, 0.f, {});
+        cloud.addScan(scan);
+    }
+    const size_t returns = addTimestampRasterReturns(cloud, 0, r0, returned) + addTimestampRasterReturns(cloud, 1, r1, returned);
+    const size_t n0 = cloud.gapfillMissesCount(0, false, false);
+    DOCTEST_REQUIRE(n0 > 0);
+    std::vector<vec3> scan0_before;
+    cloud.getScanHitXYZColumn(0, scan0_before);
+    const size_t builds = LiDARTestHelper::scanIndexBuilds(cloud);
+    const size_t n1 = cloud.gapfillMissesCount(1, false, false);
+    DOCTEST_CHECK(cloud.getVirtualMissCount() == n0 + n1);
+    DOCTEST_CHECK(LiDARTestHelper::storedHitCount(cloud) == returns);
+    DOCTEST_CHECK(LiDARTestHelper::scanIndexBuilds(cloud) == builds);
+    std::vector<vec3> scan0_after;
+    cloud.getScanHitXYZColumn(0, scan0_after);
+    DOCTEST_REQUIRE(scan0_after.size() == scan0_before.size());
+    size_t moved = 0;
+    for (size_t i = 0; i < scan0_before.size(); i++) {
+        moved += (scan0_after[i].x != scan0_before[i].x || scan0_after[i].y != scan0_before[i].y || scan0_after[i].z != scan0_before[i].z) ? 1 : 0;
+    }
+    DOCTEST_CHECK(moved == 0);
+}
+
+DOCTEST_TEST_CASE("LiDAR Leaf Area - A Moving Scan's Virtualized Misses Are Traced From Their Own Pulse Origins") {
+    // REGRESSION: when no stored hit carried origin_x/y/z, the inversion traced a moving scan's virtualized misses from
+    // the scan's static origin while getHitOrigin() reported each miss's own pulse pose, so the same cloud gave a
+    // different leaf area virtualized than materialized. Also: gap-filling a moving scan a second time dispatched to the
+    // row/column path (the first pass records row/column data on the returns), which rejects moving scans.
+    Context context;
+    for (int k = 0; k < 6; k++) {
+        context.addPatch(make_vec3(0.3f + 0.45f * float(k), -0.3f + 0.12f * float(k), 0.3f + 0.2f * float(k % 3)), make_vec2(0.25f, 0.25f));
+    }
+    const uint Ntheta = 40, Nphi = 120;
+    const float H = 6.f, speed = 3.f;
+    const float pulse_rate = float(Ntheta * Nphi);
+    std::vector<double> traj_t;
+    std::vector<vec3> traj_pos, traj_rpy;
+    for (int k = 0; k < 20; k++) {
+        const double t = double(k) / 19.0;
+        traj_t.push_back(t);
+        traj_pos.push_back(make_vec3(float(speed * t), 0.f, H));
+        traj_rpy.push_back(make_vec3(0, 0, 0));
+    }
+    auto build = [&](LiDARcloud &lidar) {
+        LiDARcloud source;
+        source.disableMessages();
+        ScanMetadata source_scan(make_vec3(0, 0, H), Ntheta, 0.8f * float(M_PI), float(M_PI), Nphi, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>());
+        source.addScanMoving(source_scan, traj_t, traj_pos, traj_rpy, make_vec3(0, 0, 0), make_vec3(0, 0, 0), pulse_rate, 0.0);
+        source.syntheticScan(&context, false, false);
+        ScanMetadata scan(make_vec3(0, 0, H), Ntheta, 0.8f * float(M_PI), float(M_PI), Nphi, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>());
+        lidar.addScanMoving(scan, traj_t, traj_pos, traj_rpy, make_vec3(0, 0, 0), make_vec3(0, 0, 0), pulse_rate, 0.0);
+        // The returns with their timestamps only: no origin_x/y/z column anywhere in the cloud.
+        std::vector<double> xyz, stamps;
+        std::vector<float> dir;
+        for (uint i = 0; i < source.getHitCount(); i++) {
+            const vec3 p = source.getHitXYZ(i);
+            const SphericalCoord d = LiDARTestHelper::storedDirection(source, i);
+            xyz.insert(xyz.end(), {double(p.x), double(p.y), double(p.z)});
+            dir.insert(dir.end(), {d.radius, d.elevation, d.azimuth});
+            stamps.push_back(source.getHitData(i, "timestamp"));
+        }
+        const std::vector<std::string> labels = {"timestamp"};
+        lidar.addHitPoints(0, stamps.size(), xyz.data(), dir.data(), labels, stamps.data());
+        lidar.addGrid(make_vec3(1.5f, 0.f, 0.5f), make_vec3(3, 1, 1), make_int3(3, 1, 1), 0.f);
+        lidar.gapfillMissesCount(0, false, false);
+    };
+    LiDARcloud virt, mat;
+    virt.disableMessages();
+    mat.disableMessages();
+    build(virt);
+    build(mat);
+    const size_t virtual_count = virt.getVirtualMissCount();
+    DOCTEST_REQUIRE(virtual_count > 0);
+    size_t again = 0;
+    try {
+        again = virt.gapfillMissesCount(0, false, false);
+    } catch (const std::exception &e) {
+        DOCTEST_CHECK_MESSAGE(false, "a second gap-fill of the moving scan threw: " << e.what());
+        again = virtual_count;
+    }
+    DOCTEST_CHECK(again == virtual_count);
+    mat.materializeMisses();
+    DOCTEST_REQUIRE(mat.getHitCount() == virt.getHitCount());
+
+    virt.calculateLeafArea(&context, 0.5f, 1, 0.05f);
+    mat.calculateLeafArea(&context, 0.5f, 1, 0.05f);
+    size_t with_leaves = 0, mismatches = 0;
+    for (uint c = 0; c < virt.getGridCellCount(); c++) {
+        with_leaves += mat.getCellLeafArea(c) > 0.f ? 1 : 0;
+        if (virt.getCellLeafArea(c) != mat.getCellLeafArea(c) || virt.getCellBeamCount(c) != mat.getCellBeamCount(c)) {
+            mismatches++;
+        }
+    }
+    DOCTEST_CHECK(with_leaves > 0);
+    DOCTEST_CHECK_MESSAGE(mismatches == 0, mismatches << " cells differ between the virtualized and the materialized cloud");
+}
+
+DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Row/Column Misses Follow the Scanner's Beams on a Raster Through the Poles") {
+    // REGRESSION (predates the large-cloud rework): the azimuth fit unwrapped its samples in a single chain sorted by
+    // column, so a return at the zenith or nadir -- whose azimuth is meaningless -- could shift every later sample by
+    // a full turn and put the column-to-azimuth line on the wrong branch. On the synthetic scanner's own full-sphere
+    // raster the synthesized misses were on average about two degrees off the beams it fires (checked against the
+    // misses it records itself). Each sample now weighs in by how well its direction determines its azimuth.
+    const int Ntheta = 60, Nphi = 90;
+    const float dtheta = float(M_PI) / float(Ntheta - 1), dphi = 2.f * float(M_PI) / float(Nphi - 1);
+    auto beam = [&](int row, int col) {
+        const float zenith = dtheta * float(row);
+        const float azimuth = dphi * float(col) + dphi * float(row) / float(Ntheta);
+        return SphericalCoord(1.f, 0.5f * float(M_PI) - zenith, azimuth);
+    };
+    const vec3 origin = make_vec3(-5.f, 0.f, 0.5f);
+    LiDARcloud cloud;
+    cloud.disableMessages();
+    ScanMetadata scan(origin, uint(Ntheta), 0.f, float(M_PI), uint(Nphi), 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, {});
+    cloud.addScan(scan);
+    for (int row = 0; row < Ntheta; row++) {
+        for (int col = 0; col < Nphi; col++) {
+            if ((row * 7 + col * 13) % 5 == 0 || (row >= 20 && row <= 35 && col >= 30 && col <= 50)) {
+                continue;
+            }
+            const SphericalCoord d = beam(row, col);
+            std::map<std::string, double> data;
+            data["row"] = row;
+            data["column"] = col;
+            cloud.addHitPoint(0, origin + sphere2cart(SphericalCoord(8.f, d.elevation, d.azimuth)), d, data);
+        }
+    }
+    const uint returns = cloud.getHitCount();
+    cloud.gapfillMissesCount(0, false, false);
+    DOCTEST_REQUIRE(cloud.getHitCount() > returns);
+    double worst = 0.0, total = 0.0;
+    size_t n = 0;
+    for (uint i = returns; i < cloud.getHitCount(); i++) {
+        const int row = int(cloud.getHitData(i, "row")), col = int(cloud.getHitData(i, "column"));
+        vec3 d = cloud.getHitXYZ(i) - origin;
+        d.normalize();
+        // Chord between the unit vectors, in double: equal to the angle to first order, and unlike acos of a float dot
+        // product it resolves angles far below a milliradian.
+        const vec3 b = sphere2cart(beam(row, col));
+        const double error = std::sqrt((double(d.x) - b.x) * (double(d.x) - b.x) + (double(d.y) - b.y) * (double(d.y) - b.y) + (double(d.z) - b.z) * (double(d.z) - b.z));
+        worst = std::max(worst, error);
+        total += error;
+        n++;
+    }
+    DOCTEST_CHECK_MESSAGE(worst < 1e-4, "worst miss is " << worst * 180.0 / M_PI << " degrees off its beam (mean " << total / double(n) * 180.0 / M_PI << ")");
+}
+
 DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Virtual and Materialized Misses Are Identical") {
     // Idealized grid, no flags.
     checkVirtualMaterializedEquivalence([](LiDARcloud &c) { buildRowColumnScan(c, 20, 36, 0.f, false, false, 5, 9, 10, 15); });
@@ -6634,7 +9187,8 @@ DOCTEST_TEST_CASE("LiDAR Hit Point Capacity Limit") {
     ScanMetadata scan(make_vec3(0, 0, 0), 10, 0.05, 0.95 * M_PI, 10, 0.0, 2.0 * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, {});
     lidar.addScan(scan);
 
-    // The estimate reflects the dense columnar layout: sizeof(HitPoint) plus 9 bytes per label per point.
+    // The estimate reflects the dense columnar layout: sizeof(HitPoint) plus, per label, the column's value
+    // type on every point and one presence bit per point packed into 64-bit words.
     DOCTEST_CHECK(lidar.getMaxHitPoints() == LiDARcloud::DEFAULT_MAX_HIT_POINTS);
     const size_t empty_estimate = lidar.estimateHitPointMemory(1000);
     DOCTEST_CHECK(empty_estimate == 1000 * sizeof(HitPoint));
@@ -6644,8 +9198,10 @@ DOCTEST_TEST_CASE("LiDAR Hit Point Capacity Limit") {
     data["intensity"] = 1.0;
     data["distance"] = 2.0;
     lidar.addHitPoint(0, xyz, cart2sphere(xyz), data);
-    // Two labels now exist, so each point costs sizeof(HitPoint) + 2*(8+1).
-    DOCTEST_CHECK(lidar.estimateHitPointMemory(1000) == 1000 * (sizeof(HitPoint) + 2 * 9));
+    // Two FLOAT32 labels (intensity, distance) now exist: 4 bytes of value per point each, plus a
+    // 64-bit presence word per 64 points each.
+    const size_t presence_words = (1000 + 63) / 64;
+    DOCTEST_CHECK(lidar.estimateHitPointMemory(1000) == 1000 * (sizeof(HitPoint) + 2 * 4) + 2 * presence_words * sizeof(uint64_t));
 
     // A request beyond the cap fails with a message naming the counts and the memory, rather than
     // dying inside the allocator where neither is visible.
@@ -7100,6 +9656,264 @@ DOCTEST_TEST_CASE("LiDAR LAD Inversion Uncertainty") {
         DOCTEST_CHECK(!row.empty());
     }
     std::remove(uncertainty_file);
+}
+
+// ---- Golden values: results pinned against the code that preceded the large-point-cloud rework ----
+
+//! Deterministic three-layer leaf scene built only from exactly representable coordinates (no trigonometry in the
+//! geometry), so its hit cloud is identical on every platform: one scan of 128 x 128 beams aimed through a
+//! 2 x 2 x 2 grid, each beam returning from the first leaf layer present along it and otherwise recorded as a miss.
+//! The y < 0 half of the nearest layer is dense, so the voxels behind it are reached mostly through other voxels.
+static void buildGoldenLeafLayerScan(LiDARcloud &lidar) {
+    const vec3 O = make_vec3(-4.0f, 0.25f, 0.5f);
+    ScanMetadata scan(O, 128, 1.0f, 2.0f, 128, 1.0f, 2.0f, 0.f, 0.f, 0.f, 0.f, {});
+    lidar.addScan(scan);
+    lidar.addGrid(make_vec3(0.5f, 0.f, 0.5f), make_vec3(1, 1, 1), make_int3(2, 2, 2), 0.f);
+    const float layer_x[3] = {0.125f, 0.375f, 0.625f};
+    const int N = 128;
+    long long beam = 0;
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++, beam++) {
+            const float ay = -0.5f + (float(i) + 0.5f) / float(N) + float((i * 7 + j * 3) % 5 - 2) / 1024.f;
+            const float az = (float(j) + 0.5f) / float(N) + float((i * 3 + j * 5) % 5 - 2) / 1024.f;
+            const vec3 A = make_vec3(0.f, ay, az);
+            const vec3 D = A - O;
+            int hit_layer = -1;
+            for (int k = 0; k < 3 && hit_layer < 0; k++) {
+                const vec3 P = O + D * ((layer_x[k] - O.x) / (A.x - O.x));
+                const unsigned h = (unsigned(i) * 73856093u) ^ (unsigned(j) * 19349663u) ^ (unsigned(k + 1) * 83492791u);
+                const unsigned percent = (k == 0) ? (P.y < 0.f ? 92u : 15u) : 30u;
+                if (h % 100u < percent) {
+                    hit_layer = k;
+                }
+            }
+            std::map<std::string, double> data;
+            data["timestamp"] = double(beam);
+            data["target_index"] = 0;
+            data["target_count"] = 1;
+            data["is_miss"] = hit_layer >= 0 ? 0 : 1;
+            const vec3 P = hit_layer >= 0 ? O + D * ((layer_x[hit_layer] - O.x) / (A.x - O.x)) : O + D * 1024.f;
+            lidar.addHitPoint(0, P, cart2sphere(D), data);
+        }
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR Golden Values - Triangulation and Leaf Area of a Deterministic Leaf-Layer Scene") {
+    // Pins the triangulation and the leaf-area inversion of a scene whose input is bit-identical everywhere, against
+    // the values the plug-in produced before the large-point-cloud rework (per-scan index, typed hit-data columns,
+    // block tiling, streaming), which must not change them. The mesh is compared exactly: its vertices are input
+    // positions. G(theta) and leaf area pass through libm (acos, log), whose last bit is not guaranteed to agree
+    // between the platforms Helios is built on, so they are compared to a relative 1e-6 -- far below any change an
+    // algorithmic edit produces (the beam-count fix below moved leaf area by up to 9%).
+    //
+    // Values that changed ON PURPOSE: the beam-count fix ("beam count, path length and min_voxel_hits use only beams
+    // that entered the voxel") changed every voxel that beams reach after crossing leaves elsewhere in the grid. The
+    // value each such cell had before that fix is recorded beside it; cells 2 and 6, which beams reach directly from
+    // outside the grid, did not change.
+    Context context;
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    buildGoldenLeafLayerScan(lidar);
+    DOCTEST_REQUIRE(lidar.getHitCount() == 16384);
+
+    lidar.triangulateHitPoints(0.05f, 5.f);
+    DOCTEST_REQUIRE(lidar.getTriangleCount() == 14157);
+    double checksum = 0.0;
+    for (uint t = 0; t < lidar.getTriangleCount(); t++) {
+        const Triangulation tri = lidar.getTriangle(t);
+        checksum +=
+                double(tri.vertex0.x) + double(tri.vertex0.y) + double(tri.vertex0.z) + double(tri.vertex1.x) + double(tri.vertex1.y) + double(tri.vertex1.z) + double(tri.vertex2.x) + double(tri.vertex2.y) + double(tri.vertex2.z) + double(tri.area);
+    }
+    // Compared to a relative tolerance, not exactly: every triangle's area is Heron's formula over three edge
+    // magnitudes, so the sum carries four libm sqrt results per triangle and its last bits differ between platforms
+    // (this assertion passed on macOS and failed on glibc with both sides printing as 18412.9). The vertex checks
+    // below stay exact -- those are input positions, carried through unchanged.
+    DOCTEST_CHECK(checksum == doctest::Approx(0x1.1fb3bcc94875ep+14).epsilon(1e-9));
+    const Triangulation first = lidar.getTriangle(0);
+    const Triangulation last = lidar.getTriangle(lidar.getTriangleCount() - 1);
+    DOCTEST_CHECK((first.vertex0 == make_vec3(0x1p-3f, -0x1.e47p-2f, 0x1.9b34p-1f)));
+    DOCTEST_CHECK((first.vertex1 == make_vec3(0x1p-3f, -0x1.da2p-2f, 0x1.9a2cp-1f)));
+    DOCTEST_CHECK((first.vertex2 == make_vec3(0x1p-3f, -0x1.e26p-2f, 0x1.9714p-1f)));
+    DOCTEST_CHECK(first.gridcell == 4);
+    DOCTEST_CHECK((last.vertex0 == make_vec3(0x1p-3f, -0x1.eaap-2f, 0x1.31p-6f)));
+    DOCTEST_CHECK((last.vertex1 == make_vec3(0x1p-3f, -0x1.e368p-2f, 0x1.bdp-7f)));
+    DOCTEST_CHECK((last.vertex2 == make_vec3(0x1p-3f, -0x1.e89p-2f, 0x1.5ap-7f)));
+    DOCTEST_CHECK(last.gridcell == 0);
+
+    struct Golden {
+        float leaf_area;
+        int beams;
+        float leaf_area_before_beam_count_fix;
+        int beams_before_beam_count_fix;
+    };
+    const float gtheta[8] = {0x1.fabdc4p-1f, 0x1.fe016cp-1f, 0x1.fe14d8p-1f, 0x1.fe9d9p-1f, 0x1.fabf78p-1f, 0x1.fdb3b2p-1f, 0x1.fe15fcp-1f, 0x1.fee31ep-1f};
+    const Golden triangulated[8] = {{0x1.013494p-2f, 4284, 0x1.0248ep-2f, 4312}, {0x1.8df1a8p-4f, 327, 0x1.7ac4bap-4f, 3390}, {0x1.009718p-3f, 4096, 0x1.009718p-3f, 4096}, {0x1.993932p-4f, 1934, 0x1.97625p-4f, 3237},
+                                    {0x1.024aap-2f, 4279, 0x1.03c47ep-2f, 4314}, {0x1.56823cp-4f, 309, 0x1.3a8294p-4f, 3389}, {0x1.02a372p-3f, 4096, 0x1.02a372p-3f, 4096}, {0x1.7c1156p-4f, 1908, 0x1.7aa1cep-4f, 3238}};
+    const Golden scalar[8] = {{0x1.fd2094p-2f, 4284, 0x1.ff4382p-2f, 4312}, {0x1.8c64d2p-3f, 327, 0x1.794bp-3f, 3390},   {0x1.ff41e6p-3f, 4096, 0x1.ff41e6p-3f, 4096}, {0x1.981decp-3f, 1934, 0x1.96484cp-3f, 3237},
+                              {0x1.ff48bp-2f, 4279, 0x1.011a56p-1f, 4314},  {0x1.54f8b2p-3f, 309, 0x1.39193cp-3f, 3389}, {0x1.01abeap-2f, 4096, 0x1.01abeap-2f, 4096}, {0x1.7b3ddap-3f, 1908, 0x1.79cf2p-3f, 3238}};
+    auto compare = [&](const Golden golden[8], const char *mode, bool check_gtheta) {
+        DOCTEST_REQUIRE(lidar.getGridCellCount() == 8);
+        for (uint c = 0; c < 8; c++) {
+            DOCTEST_CHECK_MESSAGE(lidar.getCellLeafArea(c) == doctest::Approx(golden[c].leaf_area).epsilon(1e-6), mode << " leaf area, cell " << c);
+            DOCTEST_CHECK_MESSAGE(lidar.getCellBeamCount(c) == golden[c].beams, mode << " beam count, cell " << c);
+            if (check_gtheta) {
+                DOCTEST_CHECK_MESSAGE(lidar.getCellGtheta(c) == doctest::Approx(gtheta[c]).epsilon(1e-6), mode << " G(theta), cell " << c);
+            }
+            // Documentation of intent: only the cells beams reach through other voxels changed with the fix.
+            const bool reached_directly = (c == 2 || c == 6);
+            DOCTEST_CHECK((golden[c].beams == golden[c].beams_before_beam_count_fix) == reached_directly);
+            DOCTEST_CHECK((golden[c].leaf_area == golden[c].leaf_area_before_beam_count_fix) == reached_directly);
+        }
+    };
+    lidar.calculateLeafArea(&context, 1, 0.05f);
+    compare(triangulated, "triangulated G(theta)", true);
+    lidar.calculateLeafArea(&context, 0.5f, 1, 0.05f);
+    compare(scalar, "scalar G(theta)", false);
+}
+
+DOCTEST_TEST_CASE("LiDAR LAD Inversion beam count only counts beams that reached the voxel") {
+
+    // A 2 x 2 x 1 grid of 1 m voxels scanned from x = -5: two voxels along +x (near, far) in each of two columns
+    // (y < 0, y > 0). The y < 0 column has an opaque wall (two triangles in the y-z plane) inside its near voxel; every
+    // beam that strikes it terminates there and never enters the far voxel behind it. The y > 0 column is empty, so
+    // beams through it are transmitted (recorded as misses), which the inversion requires to be present at all.
+    //
+    // Pimont et al. (2018) define N as the number of beams that ENTERED the voxel, and the transmission probability P
+    // is already accumulated over exactly that population. The beam count, the mean path length, and every quantity
+    // derived from N (binomial variance, confidence-interval validity, min_voxel_hits gating) must therefore also
+    // exclude beams that were blocked before the voxel, rather than count every beam whose ray LINE crosses it.
+    //
+    // With the wall covering the whole voxel face, no beam enters the far blocked voxel and its count must be exactly
+    // zero. With the wall covering 90% of the face, only beams through the 10% gap enter it, so its count must be a
+    // small fraction of the near blocked voxel's count (which is unaffected: every beam crossing the near voxel either
+    // hits the wall inside it or passes through it, so all of them entered).
+
+    auto run_scene = [](float wall_top_z, int &near_count, int &far_count) {
+        Context context;
+        // Wall at x = 0.5 covering the y < 0 column (with overlap past both of its y edges) from below the voxel up to
+        // wall_top_z.
+        const vec3 v0 = make_vec3(0.5f, -0.6f, -0.1f);
+        const vec3 v1 = make_vec3(0.5f, 0.05f, -0.1f);
+        const vec3 v2 = make_vec3(0.5f, 0.05f, wall_top_z);
+        const vec3 v3 = make_vec3(0.5f, -0.6f, wall_top_z);
+        context.addTriangle(v0, v1, v2);
+        context.addTriangle(v0, v2, v3);
+
+        LiDARcloud lidar;
+        lidar.disableMessages();
+
+        std::vector<std::string> columnFormat;
+        ScanMetadata scan(make_vec3(-5.f, 0.f, 0.5f), 600, 0.f, float(M_PI), 1200, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, columnFormat);
+        lidar.addScan(scan);
+
+        // Cells: x in [0,1] (near) and [1,2] (far), y in [-0.5,0] (blocked column) and [0,0.5] (open column), z in [0,1].
+        lidar.addGrid(make_vec3(1.f, 0.f, 0.5f), make_vec3(2.f, 1.f, 1.f), make_int3(2, 2, 1), 0.f);
+        DOCTEST_REQUIRE(lidar.getGridCellCount() == 4);
+        int near_blocked = -1, far_blocked = -1;
+        for (uint c = 0; c < 4; c++) {
+            const vec3 center = lidar.getCellCenter(c);
+            if (center.y < 0.f) {
+                if (center.x < 1.f) {
+                    near_blocked = int(c);
+                } else {
+                    far_blocked = int(c);
+                }
+            }
+        }
+        DOCTEST_REQUIRE(near_blocked >= 0);
+        DOCTEST_REQUIRE(far_blocked >= 0);
+
+        // Single-return scan restricted to rays that cross the grid, recording misses so that a transmitted beam is a
+        // transmission event for the voxels it crosses (the scene bounding box would otherwise be just the wall, and
+        // rays through the open column would never be traced).
+        lidar.syntheticScan(&context, true, true);
+        lidar.triangulateHitPoints(0.04f, 10);
+        lidar.calculateLeafArea(&context, 1, -1.f);
+
+        near_count = lidar.getCellBeamCount(uint(near_blocked));
+        far_count = lidar.getCellBeamCount(uint(far_blocked));
+    };
+
+    int near_count = -1, far_count = -1;
+
+    // Full occlusion: the wall covers the whole face of the blocked column.
+    run_scene(1.1f, near_count, far_count);
+    DOCTEST_CHECK(near_count > 100);
+    DOCTEST_CHECK_MESSAGE(far_count == 0, "far voxel counted " << far_count << " beams although the wall blocked all of them (near voxel: " << near_count << ")");
+
+    // Partial occlusion: only beams through the top 10% of the near voxel face reach the far voxel.
+    run_scene(0.9f, near_count, far_count);
+    DOCTEST_CHECK(near_count > 100);
+    DOCTEST_CHECK(far_count > 0);
+    const float entered_fraction = float(far_count) / float(near_count);
+    DOCTEST_CHECK_MESSAGE(entered_fraction < 0.25f, "far voxel counted " << far_count << " of " << near_count << " beams; only ~10% pass the wall");
+}
+
+DOCTEST_TEST_CASE("LiDAR lastHitFilter keeps only the last return of each pulse") {
+
+    // Pulses with 1, 3, 2 and 4 returns, using both the 0-based and the 1-based target_index convention. After
+    // lastHitFilter() exactly one hit per pulse must remain, and it must be the one with the highest target_index.
+    const std::vector<int> returns_per_pulse = {1, 3, 2, 4};
+
+    for (int index_base: {0, 1}) {
+        LiDARcloud lidar;
+        lidar.disableMessages();
+
+        std::vector<std::string> columnFormat;
+        ScanMetadata scan(make_vec3(0.f, 0.f, 0.f), 10, 0.f, float(M_PI), 10, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, columnFormat);
+        lidar.addScan(scan);
+
+        uint total_hits = 0;
+        for (size_t pulse = 0; pulse < returns_per_pulse.size(); pulse++) {
+            for (int t = 0; t < returns_per_pulse.at(pulse); t++) {
+                std::map<std::string, double> data;
+                data["target_index"] = index_base + t;
+                data["target_count"] = returns_per_pulse.at(pulse);
+                data["pulse"] = double(pulse);
+                const vec3 xyz = make_vec3(1.f + float(pulse), 0.f, 1.f + float(t));
+                lidar.addHitPoint(0, xyz, cart2sphere(xyz), data);
+                total_hits++;
+            }
+        }
+        DOCTEST_REQUIRE(lidar.getHitCount() == total_hits);
+
+        lidar.lastHitFilter();
+
+        DOCTEST_CHECK_MESSAGE(lidar.getHitCount() == returns_per_pulse.size(), "index base " << index_base << ": " << lidar.getHitCount() << " hits remain, expected one per pulse");
+
+        std::vector<bool> pulse_seen(returns_per_pulse.size(), false);
+        for (uint r = 0; r < lidar.getHitCount(); r++) {
+            const int pulse = int(lidar.getHitData(r, "pulse"));
+            const int expected_last_index = index_base + returns_per_pulse.at(pulse) - 1;
+            DOCTEST_CHECK_MESSAGE(int(lidar.getHitData(r, "target_index")) == expected_last_index,
+                                  "index base " << index_base << ", pulse " << pulse << ": surviving target_index " << lidar.getHitData(r, "target_index") << " is not the last return " << expected_last_index);
+            DOCTEST_CHECK(!pulse_seen.at(pulse));
+            pulse_seen.at(pulse) = true;
+        }
+    }
+
+    // firstHitFilter() is the mirror image and must keep exactly the first return of each pulse.
+    {
+        LiDARcloud lidar;
+        lidar.disableMessages();
+        std::vector<std::string> columnFormat;
+        ScanMetadata scan(make_vec3(0.f, 0.f, 0.f), 10, 0.f, float(M_PI), 10, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, columnFormat);
+        lidar.addScan(scan);
+        for (size_t pulse = 0; pulse < returns_per_pulse.size(); pulse++) {
+            for (int t = 0; t < returns_per_pulse.at(pulse); t++) {
+                std::map<std::string, double> data;
+                data["target_index"] = t;
+                data["target_count"] = returns_per_pulse.at(pulse);
+                const vec3 xyz = make_vec3(1.f + float(pulse), 0.f, 1.f + float(t));
+                lidar.addHitPoint(0, xyz, cart2sphere(xyz), data);
+            }
+        }
+        lidar.firstHitFilter();
+        DOCTEST_CHECK(lidar.getHitCount() == returns_per_pulse.size());
+        for (uint r = 0; r < lidar.getHitCount(); r++) {
+            DOCTEST_CHECK(int(lidar.getHitData(r, "target_index")) == 0);
+        }
+    }
 }
 
 // =====================================================================================================================
@@ -7874,6 +10688,155 @@ DOCTEST_TEST_CASE("LiDAR Moving Platform Gapfill Writes Per-Pulse Origins") {
 // user supplies physical instrument parameters (channel elevations, azimuth resolution, PRF, trajectory) and Helios
 // derives the internal grid, rotation rate, and revolution count. A stationary capture is two coincident trajectory poses.
 // =====================================================================================================================
+
+DOCTEST_TEST_CASE("LiDAR LAD Infers Cropped Returns From target_count") {
+    // A pulse's returns are ordered by range and a beam crosses the (convex) grid once, so when a cloud has been cropped
+    // to the grid but keeps target_index / target_count, the removed returns can be placed before or beyond the grid from
+    // the surviving indices alone. Three clouds of one scene, one voxel, G(theta) supplied:
+    //   full     pulse A = 4 returns (1 inside the voxel at x=0, 3 beyond it at x=2,3,4); pulse B = a sky miss
+    //   cropped  pulse A keeps its inside return plus one far-field stand-in flagged is_miss; target_count still 4
+    //   legacy   as cropped, but without target_index / target_count, so nothing can be inferred
+    // Equal weighting (Eq. 7) gives P = (3/4 + 1)/2 for full. The inference must reproduce that from the cropped cloud;
+    // the legacy cloud sees a two-return beam (1 inside + 1 after) and gets P = (1/2 + 1)/2, a much larger LAD.
+    Context context;
+    context.addPatch(make_vec3(0, 0, -50), make_vec2(1, 1)); // collision detection wants a primitive; far from the grid
+    const vec3 origin = make_vec3(-5.f, 0.f, 0.5f);
+
+    enum Mode { FULL = 0, CROPPED = 1, LEGACY = 2 };
+    auto build = [&](Mode mode, LiDARcloud &cloud) -> float {
+        cloud.disableMessages();
+        ScanMetadata scan(origin, 10, 0.f, float(M_PI), 10, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>());
+        cloud.addScan(scan);
+        cloud.addGrid(make_vec3(0, 0, 0.5f), make_vec3(1, 1, 1), make_int3(1, 1, 1), 0.f);
+        auto add = [&](const vec3 &xyz, double t, int ti, int tc, bool miss, bool with_index) {
+            std::map<std::string, double> data;
+            data["timestamp"] = t;
+            data["is_miss"] = miss ? 1.0 : 0.0;
+            if (with_index) {
+                data["target_index"] = ti;
+                data["target_count"] = tc;
+            }
+            cloud.addHitPoint(0, xyz, cart2sphere(xyz - origin), data);
+        };
+        // Pulse A along +x through the voxel centre.
+        if (mode == FULL) {
+            add(make_vec3(0, 0, 0.5f), 1.0, 0, 4, false, true);
+            add(make_vec3(2, 0, 0.5f), 1.0, 1, 4, false, true);
+            add(make_vec3(3, 0, 0.5f), 1.0, 2, 4, false, true);
+            add(make_vec3(4, 0, 0.5f), 1.0, 3, 4, false, true);
+        } else {
+            add(make_vec3(0, 0, 0.5f), 1.0, 0, 4, false, mode == CROPPED);
+            add(make_vec3(995, 0, 0.5f), 1.0, 1, 4, true, mode == CROPPED); // stand-in for the cropped energy
+        }
+        // Pulse B: a recorded sky miss whose beam also crosses the voxel (slightly off-axis). Carries no per-pulse
+        // columns, like a gap-filled miss.
+        vec3 dirB = make_vec3(5.f, 0.2f, 0.f);
+        dirB.normalize();
+        add(origin + dirB * 1000.f, 2.0, 0, 1, true, false);
+
+        cloud.calculateLeafArea(&context, 0.5f, 1, 0.05f);
+        return cloud.getCellLeafAreaDensity(0);
+    };
+
+    LiDARcloud full, cropped, legacy;
+    const float lad_full = build(FULL, full);
+    const float lad_cropped = build(CROPPED, cropped);
+    const float lad_legacy = build(LEGACY, legacy);
+    DOCTEST_REQUIRE(lad_full == lad_full);
+    DOCTEST_REQUIRE(lad_full > 0.f);
+
+    // P = 0.875 vs 0.75 at G = 0.5 and dr ~ 1 m: LAD ~ 0.27 vs ~ 0.58.
+    DOCTEST_CHECK_MESSAGE(fabs(lad_cropped - lad_full) < 1e-3f, "cropped cloud must invert to the full cloud's LAD: full=" << lad_full << " cropped=" << lad_cropped);
+    DOCTEST_CHECK_MESSAGE(lad_legacy > 1.5f * lad_full, "without target_count the cropped beam must read as more intercepted: full=" << lad_full << " legacy=" << lad_legacy);
+
+    // The tally says exactly what was recovered.
+    LiDARcloud::CroppedReturnStats st_full = full.getCroppedReturnStats();
+    DOCTEST_CHECK(st_full.beams_with_hidden_returns == 0);
+    DOCTEST_CHECK(st_full.hidden_after == 0);
+    LiDARcloud::CroppedReturnStats st = cropped.getCroppedReturnStats();
+    DOCTEST_CHECK(st.beams_with_hidden_returns == 1);
+    DOCTEST_CHECK(st.hidden_before == 0);
+    DOCTEST_CHECK(st.hidden_after == 3);
+    DOCTEST_CHECK(st.hidden_ambiguous == 0);
+    DOCTEST_CHECK(st.beams_ambiguous == 0);
+    DOCTEST_CHECK(st.standins_ignored == 1);
+    LiDARcloud::CroppedReturnStats st_legacy = legacy.getCroppedReturnStats();
+    DOCTEST_CHECK(st_legacy.beams_with_hidden_returns == 0);
+
+    // A return removed from BETWEEN two surviving returns cannot be placed: it is reported as ambiguous and left out, and
+    // a return removed from before the first surviving one is placed before the grid and changes nothing.
+    {
+        LiDARcloud amb;
+        amb.disableMessages();
+        ScanMetadata scan(origin, 10, 0.f, float(M_PI), 10, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>());
+        amb.addScan(scan);
+        amb.addGrid(make_vec3(0, 0, 0.5f), make_vec3(1, 1, 1), make_int3(1, 1, 1), 0.f);
+        auto add = [&](const vec3 &xyz, double t, int ti, int tc, bool miss) {
+            std::map<std::string, double> data;
+            data["timestamp"] = t;
+            data["is_miss"] = miss ? 1.0 : 0.0;
+            data["target_index"] = ti;
+            data["target_count"] = tc;
+            amb.addHitPoint(0, xyz, cart2sphere(xyz - origin), data);
+        };
+        // Pulse: 5 returns declared; present are index 2 (inside) and index 4 (beyond). No return in this scan carries
+        // index 0, so the indices are read as 1-based (the rule lastHitFilter and gapfillMisses apply): index 1 was
+        // before the first surviving return, index 3 sits between the two survivors (ambiguous), index 5 was beyond.
+        add(make_vec3(0, 0, 0.5f), 1.0, 2, 5, false);
+        add(make_vec3(3, 0, 0.5f), 1.0, 4, 5, false);
+        vec3 dirB = make_vec3(5.f, 0.2f, 0.f);
+        dirB.normalize();
+        add(origin + dirB * 1000.f, 2.0, 0, 1, true);
+        amb.calculateLeafArea(&context, 0.5f, 1, 0.05f);
+        LiDARcloud::CroppedReturnStats sa = amb.getCroppedReturnStats();
+        DOCTEST_CHECK(sa.beams_with_hidden_returns == 1);
+        DOCTEST_CHECK(sa.hidden_before == 1);
+        DOCTEST_CHECK(sa.hidden_after == 1);
+        DOCTEST_CHECK(sa.hidden_ambiguous == 1);
+        DOCTEST_CHECK(sa.beams_ambiguous == 1);
+        // Beam fraction: 1 inside, 1 present after + 1 inferred after = 2/3; with the miss, P = (2/3 + 1)/2.
+        const float lad_amb = amb.getCellLeafAreaDensity(0);
+        const float expected = -std::log((2.f / 3.f + 1.f) / 2.f) / 0.5f; // dr ~ 1 m
+        DOCTEST_CHECK_MESSAGE(fabs(lad_amb - expected) < 0.02f, "ambiguous return must be left out: lad=" << lad_amb << " expected~" << expected);
+    }
+
+    // Beams are grouped per scan in scan-local order, so the per-pulse columns must be read from the scan being inverted.
+    // Put the cropped pulse in the SECOND scan, after a first scan holding a complete two-return pulse fired away from
+    // the grid: reading scan 1's local positions as cloud-wide hit indices would land on that complete pulse and infer
+    // nothing.
+    {
+        LiDARcloud two;
+        two.disableMessages();
+        ScanMetadata scan(origin, 10, 0.f, float(M_PI), 10, 0.f, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, std::vector<std::string>());
+        two.addScan(scan);
+        two.addScan(scan);
+        two.addGrid(make_vec3(0, 0, 0.5f), make_vec3(1, 1, 1), make_int3(1, 1, 1), 0.f);
+        auto add = [&](uint scanID, const vec3 &xyz, double t, int ti, int tc, bool miss, bool with_index) {
+            std::map<std::string, double> data;
+            data["timestamp"] = t;
+            data["is_miss"] = miss ? 1.0 : 0.0;
+            if (with_index) {
+                data["target_index"] = ti;
+                data["target_count"] = tc;
+            }
+            two.addHitPoint(scanID, xyz, cart2sphere(xyz - origin), data);
+        };
+        add(0, make_vec3(-7, 0, 0.5f), 1.0, 0, 2, false, true); // scan 0: complete pulse along -x, never reaches the grid
+        add(0, make_vec3(-8, 0, 0.5f), 1.0, 1, 2, false, true);
+        add(1, make_vec3(0, 0, 0.5f), 1.0, 0, 4, false, true); // scan 1: the cropped cloud above
+        add(1, make_vec3(995, 0, 0.5f), 1.0, 1, 4, true, true);
+        vec3 dirB = make_vec3(5.f, 0.2f, 0.f);
+        dirB.normalize();
+        add(1, origin + dirB * 1000.f, 2.0, 0, 1, true, false);
+        two.calculateLeafArea(&context, 0.5f, 1, 0.05f);
+        LiDARcloud::CroppedReturnStats s2 = two.getCroppedReturnStats();
+        DOCTEST_CHECK(s2.beams_with_hidden_returns == 1);
+        DOCTEST_CHECK(s2.hidden_after == 3);
+        DOCTEST_CHECK(s2.standins_ignored == 1);
+        const float lad_two = two.getCellLeafAreaDensity(0);
+        DOCTEST_CHECK_MESSAGE(fabs(lad_two - lad_full) < 1e-3f, "cropped pulse in the second scan must invert to the full cloud's LAD: full=" << lad_full << " two-scan=" << lad_two);
+    }
+}
 
 DOCTEST_TEST_CASE("LiDAR Spinning Multibeam Multi-Revolution Derivation") {
     // A spinning sensor carried along a straight trajectory for several revolutions. Verify that the derived rotation

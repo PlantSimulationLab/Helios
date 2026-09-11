@@ -191,9 +191,10 @@ layout(set = 2, binding = 4) buffer ScatterBottomBuffer {
     float scatter_bottom[];
 } scatter_bottom_buf;
 
-// Camera-weighted scatter. Mirrors scatter_top/scatter_bottom but accumulates against rho_cam/tau_cam.
-// RadiationModel uploads the accumulated result into radiation_out before the camera trace, so the
-// camera sees radiance weighted by its own spectral response rather than by the band.
+// Camera-weighted scatter. Mirrors scatter_top/scatter_bottom but accumulates against rho_cam/tau_cam,
+// with one [primitive][band] block per camera (camera-major). RadiationModel uploads each camera's block
+// into radiation_out before that camera's trace, so every camera sees radiance weighted by its own
+// spectral response rather than by the band or by another camera's response.
 layout(set = 2, binding = 8) buffer CameraScatterTopBuffer {
     float camera_scatter_top[];
 } camera_scatter_top_buf;
@@ -736,20 +737,27 @@ void main() {
                     }
 
                     // Camera-weighted scatter, accumulated in parallel with the band-weighted scatter
-                    // above. subgroupAdd is called outside the branch: it must be reached by every
-                    // active invocation in the subgroup, so the camera_count test cannot gate it.
-                    uint cam_mat_idx = ((src_idx * pc.primitive_count + prim_idx) * pc.material_band_count + global_b) * pc.camera_count + pc.camera_id;
-                    float rho_cam = (pc.camera_count > 0u) ? reflectivity_cam_buf.reflectivity_cam[cam_mat_idx] : 0.0;
-                    float tau_cam = (pc.camera_count > 0u) ? transmissivity_cam_buf.transmissivity_cam[cam_mat_idx] : 0.0;
-                    float scatter_rho_cam_sum = subgroupAdd(flux * strength * rho_cam);
-                    float scatter_tau_cam_sum = subgroupAdd(flux * strength * tau_cam);
-                    if (pc.camera_count > 0u && subgroupElect()) {
-                        if (is_top_face) {
-                            atomicAdd(camera_scatter_top_buf.camera_scatter_top[rad_idx], scatter_rho_cam_sum);
-                            atomicAdd(camera_scatter_bottom_buf.camera_scatter_bottom[rad_idx], scatter_tau_cam_sum);
-                        } else {
-                            atomicAdd(camera_scatter_bottom_buf.camera_scatter_bottom[rad_idx], scatter_rho_cam_sum);
-                            atomicAdd(camera_scatter_top_buf.camera_scatter_top[rad_idx], scatter_tau_cam_sum);
+                    // above, once per camera against that camera's rho_cam/tau_cam. This launch runs
+                    // once per dispatch rather than once per camera, so weighting by a single camera
+                    // here would hand every other camera that camera's image. The loop bound is a push
+                    // constant, so control flow stays uniform and subgroupAdd is reached by every
+                    // active invocation in the subgroup.
+                    uint cam_scatter_stride = pc.primitive_count * pc.band_count;
+                    for (uint cam = 0u; cam < pc.camera_count; cam++) {
+                        uint cam_mat_idx = ((src_idx * pc.primitive_count + prim_idx) * pc.material_band_count + global_b) * pc.camera_count + cam;
+                        float rho_cam = reflectivity_cam_buf.reflectivity_cam[cam_mat_idx];
+                        float tau_cam = transmissivity_cam_buf.transmissivity_cam[cam_mat_idx];
+                        float scatter_rho_cam_sum = subgroupAdd(flux * strength * rho_cam);
+                        float scatter_tau_cam_sum = subgroupAdd(flux * strength * tau_cam);
+                        uint cam_rad_idx = cam * cam_scatter_stride + rad_idx;
+                        if (subgroupElect()) {
+                            if (is_top_face) {
+                                atomicAdd(camera_scatter_top_buf.camera_scatter_top[cam_rad_idx], scatter_rho_cam_sum);
+                                atomicAdd(camera_scatter_bottom_buf.camera_scatter_bottom[cam_rad_idx], scatter_tau_cam_sum);
+                            } else {
+                                atomicAdd(camera_scatter_bottom_buf.camera_scatter_bottom[cam_rad_idx], scatter_rho_cam_sum);
+                                atomicAdd(camera_scatter_top_buf.camera_scatter_top[cam_rad_idx], scatter_tau_cam_sum);
+                            }
                         }
                     }
 

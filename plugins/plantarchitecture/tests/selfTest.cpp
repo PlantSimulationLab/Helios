@@ -853,6 +853,110 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model grows a plant when carbo
     DOCTEST_CHECK(total_sugar > 0.f);
 }
 
+//! Snapshot of every shoot's carbon pools on one plant, keyed by shoot ID.
+static std::map<uint, std::pair<float, float>> snapshotPlantCarbonPools(const PlantArchitecture &plantarchitecture, uint plantID) {
+    std::map<uint, std::pair<float, float>> pools;
+    for (const uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+        const std::shared_ptr<Shoot> &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+        pools[shootID] = {shoot->sugar_pool_molC, shoot->starch_pool_molC};
+    }
+    return pools;
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model touches only the plants being advanced") {
+    // The carbon-balance steps (maintenance respiration, growth cost, transfer, phyllochron adjustment,
+    // organ abortion) are applied inside advanceTime()'s per-plant loop, but each of them iterated over
+    // every plant instance in the model. With N plants every pool was therefore debited N times per
+    // sub-step, and advancing a single plant also ran the carbon balance on every other plant.
+    //
+    // Two invariants pin this down:
+    //  (1) advancing plant B must leave plant A's pools bit-for-bit unchanged; and
+    //  (2) plant A's pools after advancing {A, B} together must equal its pools after advancing A alone
+    //      from the same state. Both scenes are built identically from the same seed, and A is processed
+    //      first in the per-plant loop, so A's random stream through the final step is identical in both.
+    //
+    // Both plants are built at age 0 and fed photosynthate so that they stay alive with non-zero pools;
+    // a plant built at a non-zero age with no carbon supplied starves during construction and is left
+    // with only pruned shells whose pools are identically zero.
+    constexpr uint seed = 12345;
+    constexpr float initial_concentration_molC_m3 = 1.5e4f;
+    constexpr int warmup_days = 3;
+
+    // Builds A, warms it up, then builds B and advances B one day. Returns A's pools before and after B's
+    // day so that invariant (1) can be checked by the caller.
+    auto buildTwoPlantScene = [&](Context &context, PlantArchitecture &plantarchitecture, uint &plantA, uint &plantB, std::map<uint, std::pair<float, float>> &poolsA_before_B,
+                                  std::map<uint, std::pair<float, float>> &poolsA_after_B_advanced) {
+        context.seedRandomGenerator(seed);
+        plantarchitecture.disableMessages();
+        plantarchitecture.enableCarbohydrateModel();
+        plantarchitecture.loadPlantModelFromLibrary("bean");
+
+        plantA = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+        plantarchitecture.initializePlantCarbohydratePool(plantA, initial_concentration_molC_m3);
+        for (int day = 0; day < warmup_days; day++) {
+            drivePhotosynthesisForOneDay(context, plantarchitecture, plantA, 10.f, 12);
+            plantarchitecture.advanceTime(plantA, 1);
+        }
+        poolsA_before_B = snapshotPlantCarbonPools(plantarchitecture, plantA);
+
+        plantB = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(2, 0, 0), 0);
+        plantarchitecture.initializePlantCarbohydratePool(plantB, initial_concentration_molC_m3);
+        drivePhotosynthesisForOneDay(context, plantarchitecture, plantB, 10.f, 12);
+        plantarchitecture.advanceTime(plantB, 1);
+        poolsA_after_B_advanced = snapshotPlantCarbonPools(plantarchitecture, plantA);
+
+        drivePhotosynthesisForOneDay(context, plantarchitecture, plantA, 10.f, 12);
+        drivePhotosynthesisForOneDay(context, plantarchitecture, plantB, 10.f, 12);
+    };
+
+    // --- Reference scene: final step advances A alone --- //
+    std::map<uint, std::pair<float, float>> reference_pools_after;
+    {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        uint plantA = 0;
+        uint plantB = 0;
+        std::map<uint, std::pair<float, float>> poolsA_before_B;
+        std::map<uint, std::pair<float, float>> poolsA_after_B_advanced;
+        buildTwoPlantScene(context, plantarchitecture, plantA, plantB, poolsA_before_B, poolsA_after_B_advanced);
+        plantarchitecture.advanceTime(plantA, 1);
+        reference_pools_after = snapshotPlantCarbonPools(plantarchitecture, plantA);
+    }
+    DOCTEST_REQUIRE(!reference_pools_after.empty());
+
+    // --- Test scene: final step advances A and B together --- //
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    uint plantA = 0;
+    uint plantB = 0;
+    std::map<uint, std::pair<float, float>> poolsA_before_B;
+    std::map<uint, std::pair<float, float>> poolsA_after_B_advanced;
+    buildTwoPlantScene(context, plantarchitecture, plantA, plantB, poolsA_before_B, poolsA_after_B_advanced);
+    DOCTEST_REQUIRE(plantA != plantB);
+    DOCTEST_REQUIRE(!poolsA_before_B.empty());
+    float total_sugar_A = 0.f;
+    for (const auto &entry: poolsA_before_B) {
+        total_sugar_A += entry.second.first;
+    }
+    DOCTEST_REQUIRE(total_sugar_A > 0.f);
+
+    // (1) Advancing B must not touch A.
+    DOCTEST_CHECK(poolsA_after_B_advanced == poolsA_before_B);
+
+    // (2) A's pools after advancing {A, B} must match A advanced alone from the same state.
+    plantarchitecture.advanceTime(std::vector<uint>{plantA, plantB}, 1);
+    const std::map<uint, std::pair<float, float>> poolsA_after_both_advanced = snapshotPlantCarbonPools(plantarchitecture, plantA);
+
+    DOCTEST_REQUIRE(poolsA_after_both_advanced.size() == reference_pools_after.size());
+    for (const auto &entry: reference_pools_after) {
+        const uint shootID = entry.first;
+        DOCTEST_CAPTURE(shootID);
+        DOCTEST_REQUIRE(poolsA_after_both_advanced.count(shootID) == 1);
+        DOCTEST_CHECK(poolsA_after_both_advanced.at(shootID).first == doctest::Approx(entry.second.first).epsilon(1e-6));
+        DOCTEST_CHECK(poolsA_after_both_advanced.at(shootID).second == doctest::Approx(entry.second.second).epsilon(1e-6));
+    }
+}
+
 DOCTEST_TEST_CASE("PlantArchitecture shoot topology accessors") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
@@ -7976,6 +8080,49 @@ DOCTEST_TEST_CASE("PlantArchitecture addShootFromNodePositions grows new phytome
     }
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture setShootInternodeLengthMax sets the length of internodes grown at the apex") {
+    // A shoot built from measured nodes grows new internodes toward the mean of its prescribed internode
+    // lengths. A seedling's measured stem is mostly hypocotyl, so that mean says nothing about how long the
+    // internodes it grows next should be, and a caller growing a reconstruction forward must be able to set it.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    definePrescribedGeometryShootType(context, plantarchitecture);
+
+    const std::vector<vec3> node_positions = {make_vec3(0, 0, 0), make_vec3(0, 0, 0.02f), make_vec3(0, 0, 0.04f), make_vec3(0, 0, 0.06f)};
+    const std::vector<float> node_radii = {0.004f, 0.0035f, 0.003f, 0.0025f};
+
+    auto longestGrownInternode = [&](bool set_length, uint &plantID, uint &shootID) {
+        plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0.f);
+        shootID = plantarchitecture.addShootFromNodePositions(plantID, -1, 0, node_positions, node_radii, "leafless");
+        const size_t prescribed = plantarchitecture.getPlantShoot(plantID, shootID)->phytomers.size();
+        if (set_length) {
+            plantarchitecture.setShootInternodeLengthMax(plantID, shootID, 0.06f);
+        }
+        plantarchitecture.breakPlantDormancy(plantID);
+        plantarchitecture.advanceTime(plantID, 60);
+        const std::vector<float> lengths = plantarchitecture.getPlantInternodeLengths(plantID);
+        DOCTEST_REQUIRE(lengths.size() > prescribed);
+        return *std::max_element(lengths.begin() + long(prescribed), lengths.end());
+    };
+
+    uint control_plantID, control_shootID;
+    const float control = longestGrownInternode(false, control_plantID, control_shootID);
+    DOCTEST_CHECK_MESSAGE(control < 0.021f, "without the setter the grown internodes follow the prescribed mean of 0.02 m, but reached " << control);
+
+    uint plantID, shootID;
+    const float grown = longestGrownInternode(true, plantID, shootID);
+    DOCTEST_CHECK_MESSAGE(grown > 0.05f, "after setting 0.06 m the longest grown internode is only " << grown << " m");
+    DOCTEST_CHECK(grown < 0.063f);
+
+    capture_cerr cerr_buffer;
+    DOCTEST_CHECK_THROWS(plantarchitecture.setShootInternodeLengthMax(plantID, shootID, 0.f));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setShootInternodeLengthMax(plantID, shootID, -0.01f));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setShootInternodeLengthMax(plantID, shootID + 100, 0.03f));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setShootInternodeLengthMax(plantID + 100, shootID, 0.03f));
+}
+
 DOCTEST_TEST_CASE("PlantArchitecture addShootFromNodePositions rejects invalid input") {
     Context context;
     context.seedRandomGenerator(12345);
@@ -8670,6 +8817,99 @@ DOCTEST_TEST_CASE("PlantArchitecture XML round-trip restores a petiole-free pres
     std::remove(xml_filename.c_str());
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture XML round-trip preserves the phytomer count of a subdivided prescribed shoot") {
+    // A prescribed shoot is recorded as its node positions, and a phytomer's internode is stored as
+    // internode.length_segments subdivisions of itself -- so the shoot's vertex list holds Ndiv nodes per
+    // phytomer, not one. Writing the flattened vertex list therefore handed the reader one node per
+    // SEGMENT, and addShootFromNodePositions() -- which takes one node per PHYTOMER -- rebuilt the shoot
+    // with Ndiv times as many phytomers, each Ndiv times too short. The path and endpoints came back
+    // exactly right, which is why the round-trip tests above never saw it: they use a shoot type with
+    // length_segments = 1, where the two counts coincide.
+    //
+    // Ndiv = 3 here so the failure is unambiguous (3 phytomers in, 9 out) rather than an off-by-one.
+    const std::string xml_filename = "prescribed_subdivided_roundtrip.xml";
+
+    const uint Ninternodes = 3;
+    const uint length_segments = 3;
+
+    std::vector<vec3> node_positions;
+    std::vector<float> node_radii;
+    measuredWoodPath(Ninternodes, node_positions, node_radii);
+
+    // Same petiole-free skeleton as definePrescribedGeometryShootType(), but with the internode
+    // subdivided, which is the ordinary case for any real shoot type.
+    auto defineSubdividedShootType = [&](Context &context, PlantArchitecture &plantarchitecture) {
+        PhytomerParameters phytomer_parameters(context.getRandomGenerator());
+        phytomer_parameters.internode.pitch = 0;
+        phytomer_parameters.internode.phyllotactic_angle = 0;
+        phytomer_parameters.internode.length_segments = length_segments;
+        phytomer_parameters.petiole.petioles_per_internode = 0;
+        phytomer_parameters.leaf.leaves_per_petiole = 0;
+
+        ShootParameters shoot_parameters(context.getRandomGenerator());
+        shoot_parameters.phytomer_parameters = phytomer_parameters;
+        shoot_parameters.gravitropic_curvature = 0;
+        shoot_parameters.tortuosity = 0;
+        shoot_parameters.max_nodes = 40;
+        shoot_parameters.vegetative_bud_break_probability_min = 0;
+        shoot_parameters.girth_area_factor = 0;
+        shoot_parameters.defineChildShootTypes({"subdivided"}, {1.f});
+        plantarchitecture.defineShootType("subdivided", shoot_parameters);
+    };
+
+    std::vector<float> original_internode_lengths;
+    {
+        Context context;
+        context.seedRandomGenerator(12345);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        defineSubdividedShootType(context, plantarchitecture);
+
+        const uint plantID = plantarchitecture.addPlantInstance(node_positions.front(), 0.f);
+        const uint shootID = plantarchitecture.addShootFromNodePositions(plantID, -1, 0, node_positions, node_radii, "subdivided");
+
+        const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+        DOCTEST_REQUIRE(shoot->phytomers.size() == Ninternodes);
+        for (const auto &phytomer: shoot->phytomers) {
+            original_internode_lengths.push_back(phytomer->getInternodeLength());
+        }
+
+        DOCTEST_REQUIRE_NOTHROW(plantarchitecture.writePlantStructureXML(plantID, xml_filename));
+    }
+
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    defineSubdividedShootType(context, plantarchitecture);
+
+    std::vector<uint> restored_plantIDs;
+    DOCTEST_REQUIRE_NOTHROW(restored_plantIDs = plantarchitecture.readPlantStructureXML(xml_filename, true));
+    DOCTEST_REQUIRE(restored_plantIDs.size() == 1);
+
+    const auto &restored_shoot = plantarchitecture.getPlantShoot(restored_plantIDs.front(), 0);
+
+    // The count is the claim. A shoot measured as 3 internodes is 3 phytomers, whatever its internodes
+    // are subdivided into for rendering.
+    DOCTEST_CHECK(restored_shoot->phytomers.size() == Ninternodes);
+
+    // ...and each phytomer is still as long as it was measured, rather than one segment of itself.
+    DOCTEST_REQUIRE(restored_shoot->phytomers.size() == original_internode_lengths.size());
+    for (size_t p = 0; p < original_internode_lengths.size(); p++) {
+        DOCTEST_CHECK(restored_shoot->phytomers.at(p)->getInternodeLength() == doctest::Approx(original_internode_lengths.at(p)).epsilon(1e-4));
+    }
+
+    // The internode is still subdivided the way the shoot type asks, so the shape it was measured with is
+    // preserved rather than being traded away for the count.
+    const std::vector<vec3> restored_nodes = flatten(restored_shoot->shoot_internode_vertices);
+    DOCTEST_CHECK(restored_nodes.size() == Ninternodes * length_segments + 1);
+    for (size_t node = 0; node < node_positions.size(); node++) {
+        DOCTEST_CHECK((restored_nodes.at(node * length_segments) - node_positions.at(node)).magnitude() < 1e-4f);
+    }
+
+    std::remove(xml_filename.c_str());
+}
+
 DOCTEST_TEST_CASE("PlantArchitecture XML round-trip reads back an ordinary petiole-free shoot") {
     // The petiole-free failure is not confined to prescribed geometry. A shoot built the ordinary way
     // from a shoot type with petioles_per_internode = 0 is restored by appending phytomers one at a time,
@@ -9133,6 +9373,456 @@ DOCTEST_TEST_CASE("PlantArchitecture setPetioleLeafGeometry places leaves and su
             DOCTEST_CHECK(transform_after[element] == doctest::Approx(transforms_before[leaf][element]).epsilon(1e-4));
         }
     }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture setPetioleLeafCount rebuilds a petiole with a different number of leaflets") {
+    // A measured compound leaf has however many leaflets it has, which is rarely the shoot type's
+    // leaves_per_petiole (a young tomato leaf has three or five, a mature one seven or more, and a
+    // cotyledon one). setPetioleLeafGeometry() cannot change the count, so this has to.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    uint plantID, shootID;
+    buildLeafyPrescribedShoot(context, plantarchitecture, plantID, shootID);
+
+    const auto shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+    const auto phytomer = shoot->phytomers.at(1);
+    const vec3 internode_tip = shoot->shoot_internode_vertices.at(1).back();
+    plantarchitecture.setPetioleNodePositions(plantID, shootID, 1, 0, measuredPetiolePath(internode_tip), measuredPetioleRadii());
+
+    const uint initial_count = uint(phytomer->leaf_objIDs.at(0).size());
+    const std::vector<uint> old_objIDs = phytomer->leaf_objIDs.at(0);
+    const uint new_count = initial_count + 2;
+
+    plantarchitecture.setPetioleLeafCount(plantID, shootID, 1, 0, new_count);
+
+    DOCTEST_CHECK(phytomer->leaf_objIDs.at(0).size() == new_count);
+    DOCTEST_CHECK(phytomer->leaf_bases.at(0).size() == new_count);
+    DOCTEST_CHECK(phytomer->leaf_size_max.at(0).size() == new_count);
+    DOCTEST_CHECK(phytomer->leaf_rotation.at(0).size() == new_count);
+    for (const uint objID: old_objIDs) {
+        DOCTEST_CHECK(!context.doesObjectExist(objID));
+    }
+    for (uint leaf = 0; leaf < new_count; leaf++) {
+        DOCTEST_REQUIRE(context.doesObjectExist(phytomer->leaf_objIDs.at(0).at(leaf)));
+        DOCTEST_CHECK(phytomer->leaf_size_max.at(0).at(leaf) > 0.f);
+        // Rebuilt leaflets sit on the petiole, like the originals.
+        float distance_to_petiole = -1.f;
+        for (const vec3 &vertex: phytomer->petiole_vertices.at(0)) {
+            const float d = (vertex - phytomer->leaf_bases.at(0).at(leaf)).magnitude();
+            if (distance_to_petiole < 0.f || d < distance_to_petiole) {
+                distance_to_petiole = d;
+            }
+        }
+        DOCTEST_CHECK(distance_to_petiole < 0.02f);
+    }
+    // Other phytomers are untouched.
+    DOCTEST_CHECK(shoot->phytomers.at(0)->leaf_objIDs.at(0).size() == initial_count);
+    DOCTEST_CHECK(plantarchitecture.getPlantLeafObjectIDs(plantID).size() == initial_count + new_count);
+
+    // The new count is what setPetioleLeafGeometry() now expects.
+    std::vector<vec3> leaf_bases;
+    std::vector<AxisRotation> leaf_rotations;
+    std::vector<float> leaf_sizes;
+    for (uint leaf = 0; leaf < new_count; leaf++) {
+        leaf_bases.push_back(internode_tip + make_vec3(0.01f * float(leaf + 1), 0.005f * float(leaf), 0.01f));
+        leaf_rotations.push_back(make_AxisRotation(0.f, 0.3f, 0.f));
+        leaf_sizes.push_back(0.02f + 0.002f * float(leaf));
+    }
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.setPetioleLeafGeometry(plantID, shootID, 1, 0, leaf_bases, leaf_rotations, leaf_sizes));
+    DOCTEST_CHECK(phytomer->leaf_objIDs.at(0).size() == new_count);
+
+    // And it survives growth.
+    std::vector<std::array<float, 16>> transforms_before(new_count);
+    for (uint leaf = 0; leaf < new_count; leaf++) {
+        float transform[16];
+        context.getObjectTransformationMatrix(phytomer->leaf_objIDs.at(0).at(leaf), transform);
+        std::copy(transform, transform + 16, transforms_before.at(leaf).begin());
+    }
+    plantarchitecture.breakPlantDormancy(plantID);
+    plantarchitecture.advanceTime(plantID, 20);
+    DOCTEST_CHECK(phytomer->leaf_objIDs.at(0).size() == new_count);
+    for (uint leaf = 0; leaf < new_count; leaf++) {
+        DOCTEST_REQUIRE(context.doesObjectExist(phytomer->leaf_objIDs.at(0).at(leaf)));
+        float transform_after[16];
+        context.getObjectTransformationMatrix(phytomer->leaf_objIDs.at(0).at(leaf), transform_after);
+        for (uint element = 0; element < 16; element++) {
+            DOCTEST_CHECK(transform_after[element] == doctest::Approx(transforms_before.at(leaf).at(element)).epsilon(1e-4));
+        }
+    }
+
+    // A single leaflet (a cotyledon or simple leaf) is allowed; zero and bad indices are not.
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.setPetioleLeafCount(plantID, shootID, 0, 0, 1));
+    DOCTEST_CHECK(shoot->phytomers.at(0)->leaf_objIDs.at(0).size() == 1);
+    capture_cerr cerr_buffer;
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPetioleLeafCount(plantID, shootID, 0, 0, 0));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPetioleLeafCount(plantID, shootID, 0, 5, 3));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPetioleLeafCount(plantID, shootID, 99, 0, 3));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPetioleLeafCount(plantID + 100, shootID, 0, 0, 3));
+}
+
+//! Expected world-frame midrib and blade normal of a prescribed leaf, derived independently of Phytomer::orientLeaf().
+/**
+ * A prescribed leaf's angles are intrinsic rotations in the leaf's rest frame on its petiole. With t the petiole tip axis, h the horizontal direction
+ * perpendicular to it (world +y when t is vertical) and n = t x h the upward normal of the petiole plane, the rest midrib is t turned about n by the
+ * leaflet's compound rotation and the rest blade normal is n. Yaw then turns the leaf about n, pitch raises its tip toward n, and roll turns the blade
+ * about its own midrib (right-handed).
+ */
+static void expectedPrescribedLeafFrame(const vec3 &petiole_tip_axis, float compound_rotation, const AxisRotation &rotation, vec3 &midrib, vec3 &normal) {
+    vec3 t = petiole_tip_axis;
+    t.normalize();
+    const float horizontal = std::sqrt(t.x * t.x + t.y * t.y);
+    const vec3 h = (horizontal < 1e-6f) ? make_vec3(0, 1, 0) : make_vec3(-t.y / horizontal, t.x / horizontal, 0);
+    const vec3 n = cross(t, h);
+
+    const vec3 midrib_rest = std::cos(compound_rotation) * t + std::sin(compound_rotation) * h;
+    const vec3 lateral_rest = -std::sin(compound_rotation) * t + std::cos(compound_rotation) * h;
+
+    const vec3 midrib_yawed = std::cos(rotation.yaw) * midrib_rest + std::sin(rotation.yaw) * lateral_rest;
+    const vec3 lateral_yawed = -std::sin(rotation.yaw) * midrib_rest + std::cos(rotation.yaw) * lateral_rest;
+
+    midrib = std::cos(rotation.pitch) * midrib_yawed + std::sin(rotation.pitch) * n;
+    const vec3 normal_pitched = -std::sin(rotation.pitch) * midrib_yawed + std::cos(rotation.pitch) * n;
+
+    normal = std::cos(rotation.roll) * normal_pitched - std::sin(rotation.roll) * lateral_yawed;
+}
+
+//! Angle in degrees between two directions
+static float angleBetweenDeg(vec3 a, vec3 b) {
+    a.normalize();
+    b.normalize();
+    return rad2deg(acos_safe(a * b));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture prescribed leaf angles are rotations in the leaf's rest frame on the petiole") {
+    // A prescribed leaf's roll, pitch and yaw used to go through the procedural rotation chain. A single leaf's roll was negated on every other
+    // node, a lateral leaflet's roll was signed by its side of the petiole and offset by the petiole's elevation, a terminal leaflet's pitch was
+    // offset by that elevation, and yaw turned the leaf about the world vertical rather than about the blade normal. The same measured angles
+    // therefore gave different blades depending on node parity and leaflet position. Each prescribed leaf below is checked against the frame
+    // derived independently by expectedPrescribedLeafFrame(), read back from the leaf object's transformation matrix.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    definePrescribedLeafGeometryShootType(context, plantarchitecture);
+
+    // Four phytomers: nodes 0 and 1 carry a single leaf on a measured petiole (opposite node parity, same angles), node 2 a three-leaflet leaf on a
+    // measured petiole, and node 3 a single leaf on a vertical petiole, where the horizontal reference direction falls back to world +y.
+    const std::vector<vec3> node_positions = {make_vec3(0, 0, 0), make_vec3(0, 0, 0.1f), make_vec3(0, 0, 0.2f), make_vec3(0, 0, 0.3f), make_vec3(0, 0, 0.4f)};
+    const std::vector<float> node_radii = {0.01f, 0.009f, 0.008f, 0.007f, 0.006f};
+    const uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0.f);
+    const uint shootID = plantarchitecture.addShootFromNodePositions(plantID, -1, 0, node_positions, node_radii, "leafy");
+    const auto shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+    DOCTEST_REQUIRE(shoot->phytomers.size() == 4);
+
+    const std::vector<float> leaflet_sizes = {0.03f, 0.04f, 0.03f};
+    for (uint node = 0; node < 4; node++) {
+        const vec3 internode_tip = shoot->shoot_internode_vertices.at(node).back();
+        if (node == 3) {
+            const std::vector<vec3> vertical_path = {internode_tip, internode_tip + make_vec3(0, 0, 0.03f), internode_tip + make_vec3(0, 0, 0.06f)};
+            plantarchitecture.setPetioleNodePositions(plantID, shootID, node, 0, vertical_path, {0.002f, 0.0015f, 0.001f});
+        } else {
+            // A different azimuth per node so that the petioles do not all share one frame.
+            std::vector<vec3> path = measuredPetiolePath(internode_tip);
+            const float azimuth = 1.3f * float(node);
+            for (vec3 &position: path) {
+                position = internode_tip + rotatePointAboutLine(position - internode_tip, nullorigin, make_vec3(0, 0, 1), azimuth);
+            }
+            plantarchitecture.setPetioleNodePositions(plantID, shootID, node, 0, path, measuredPetioleRadii());
+        }
+        if (node != 2) {
+            plantarchitecture.setPetioleLeafCount(plantID, shootID, node, 0, 1);
+        }
+    }
+
+    const AxisRotation single_rotation = make_AxisRotation(0.35f, 0.25f, -0.4f); // roll, pitch, yaw
+    const std::vector<AxisRotation> leaflet_rotations = {make_AxisRotation(-0.3f, 0.2f, 0.5f), make_AxisRotation(0.6f, -0.35f, 0.45f), make_AxisRotation(0.25f, 0.4f, -0.3f)};
+
+    for (uint node = 0; node < 4; node++) {
+        const vec3 internode_tip = shoot->shoot_internode_vertices.at(node).back();
+        if (node == 2) {
+            const std::vector<vec3> bases = {internode_tip + make_vec3(0.02f, 0, 0.01f), internode_tip + make_vec3(0.05f, 0, 0.01f), internode_tip + make_vec3(0.03f, 0.01f, 0.01f)};
+            plantarchitecture.setPetioleLeafGeometry(plantID, shootID, node, 0, bases, leaflet_rotations, leaflet_sizes);
+        } else {
+            plantarchitecture.setPetioleLeafGeometry(plantID, shootID, node, 0, {internode_tip + make_vec3(0.04f, 0.01f, 0.01f)}, {single_rotation}, {0.05f});
+        }
+    }
+
+    auto checkLeaf = [&](uint node, uint leaf, const AxisRotation &rotation) {
+        const auto &phytomer = shoot->phytomers.at(node);
+        const uint leaf_count = uint(phytomer->leaf_objIDs.at(0).size());
+        const vec3 petiole_tip_axis = phytomer->getPetioleAxisVector(1.f, 0);
+        // The three-leaflet shoot type has a non-zero leaflet offset, so the laterals sit at -90 and +90 degrees and the terminal at zero.
+        const float compound_rotation = Phytomer::compoundLeafRotation(int(leaf_count), int(leaf), 0.3f);
+        vec3 midrib_expected, normal_expected;
+        expectedPrescribedLeafFrame(petiole_tip_axis, compound_rotation, rotation, midrib_expected, normal_expected);
+
+        float transform[16];
+        context.getObjectTransformationMatrix(phytomer->leaf_objIDs.at(0).at(leaf), transform);
+        const vec3 midrib_realized = make_vec3(transform[0], transform[4], transform[8]);
+        const vec3 normal_realized = make_vec3(transform[2], transform[6], transform[10]);
+
+        DOCTEST_CAPTURE(node);
+        DOCTEST_CAPTURE(leaf);
+        DOCTEST_CHECK(angleBetweenDeg(midrib_realized, midrib_expected) < 1.f);
+        DOCTEST_CHECK(angleBetweenDeg(normal_realized, normal_expected) < 1.f);
+        DOCTEST_CHECK(phytomer->leaf_rotation.at(0).at(leaf).roll == doctest::Approx(rotation.roll));
+        DOCTEST_CHECK(phytomer->leaf_rotation.at(0).at(leaf).pitch == doctest::Approx(rotation.pitch));
+        DOCTEST_CHECK(phytomer->leaf_rotation.at(0).at(leaf).yaw == doctest::Approx(rotation.yaw));
+    };
+
+    checkLeaf(0, 0, single_rotation);
+    checkLeaf(1, 0, single_rotation);
+    for (uint leaf = 0; leaf < 3; leaf++) {
+        checkLeaf(2, leaf, leaflet_rotations.at(leaf));
+    }
+    checkLeaf(3, 0, single_rotation);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture prescribed leaves keep the leaf object label") {
+    // Every leaf blade primitive carries object_label "leaf"; downstream code (optical properties,
+    // per-organ area sums, point-cloud fitting) tells blades from petioles and stems by it. A leaf
+    // rebuilt by setPetioleLeafGeometry() or setPetioleLeafCount() from the prototype function rather
+    // than the cache must carry the label too.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    uint plantID, shootID;
+    buildLeafyPrescribedShoot(context, plantarchitecture, plantID, shootID);
+    const auto shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+    const auto phytomer = shoot->phytomers.at(1);
+    const vec3 internode_tip = shoot->shoot_internode_vertices.at(1).back();
+    plantarchitecture.setPetioleNodePositions(plantID, shootID, 1, 0, measuredPetiolePath(internode_tip), measuredPetioleRadii());
+
+    auto countLabelled = [&](uint objID) {
+        size_t labelled = 0, total = 0;
+        for (const uint UUID: context.getObjectPrimitiveUUIDs(objID)) {
+            total++;
+            if (context.doesPrimitiveDataExist(UUID, "object_label")) {
+                std::string label;
+                context.getPrimitiveData(UUID, "object_label", label);
+                if (label == "leaf") {
+                    labelled++;
+                }
+            }
+        }
+        return std::make_pair(labelled, total);
+    };
+
+    // The default leaves are labelled.
+    for (const uint objID: phytomer->leaf_objIDs.at(0)) {
+        const std::pair<size_t, size_t> counts = countLabelled(objID);
+        DOCTEST_CHECK(counts.first > 0);
+    }
+
+    const size_t count = phytomer->leaf_objIDs.at(0).size();
+    std::vector<vec3> leaf_bases(count, internode_tip + make_vec3(0.05f, 0.03f, 0.01f));
+    std::vector<AxisRotation> leaf_rotations(count, make_AxisRotation(0.f, 0.3f, 0.f));
+    std::vector<float> leaf_sizes(count, 0.03f);
+    plantarchitecture.setPetioleLeafGeometry(plantID, shootID, 1, 0, leaf_bases, leaf_rotations, leaf_sizes);
+    for (const uint objID: phytomer->leaf_objIDs.at(0)) {
+        const std::pair<size_t, size_t> counts = countLabelled(objID);
+        DOCTEST_CHECK_MESSAGE(counts.first > 0, "prescribed leaf object " << objID << " has " << counts.second << " primitives and none labelled 'leaf'");
+    }
+
+    // A second prescription rebuilds from the prototype function rather than the cache, which is the
+    // path every re-posing after the first takes.
+    plantarchitecture.setPetioleLeafGeometry(plantID, shootID, 1, 0, leaf_bases, leaf_rotations, leaf_sizes);
+    for (const uint objID: phytomer->leaf_objIDs.at(0)) {
+        const std::pair<size_t, size_t> counts = countLabelled(objID);
+        DOCTEST_CHECK_MESSAGE(counts.first > 0, "re-prescribed leaf object " << objID << " has " << counts.second << " primitives and none labelled 'leaf'");
+    }
+
+    plantarchitecture.setPetioleLeafCount(plantID, shootID, 1, 0, uint(count + 2));
+    for (const uint objID: phytomer->leaf_objIDs.at(0)) {
+        const std::pair<size_t, size_t> counts = countLabelled(objID);
+        DOCTEST_CHECK_MESSAGE(counts.first > 0, "rebuilt leaf object " << objID << " has " << counts.second << " primitives and none labelled 'leaf'");
+    }
+    std::vector<vec3> more_bases(count + 2, internode_tip + make_vec3(0.05f, 0.03f, 0.01f));
+    std::vector<AxisRotation> more_rotations(count + 2, make_AxisRotation(0.f, 0.3f, 0.f));
+    std::vector<float> more_sizes(count + 2, 0.03f);
+    plantarchitecture.setPetioleLeafGeometry(plantID, shootID, 1, 0, more_bases, more_rotations, more_sizes);
+    for (const uint objID: phytomer->leaf_objIDs.at(0)) {
+        const std::pair<size_t, size_t> counts = countLabelled(objID);
+        DOCTEST_CHECK_MESSAGE(counts.first > 0, "re-prescribed rebuilt leaf object " << objID << " has " << counts.second << " primitives and none labelled 'leaf'");
+    }
+}
+
+//! Checks that every leaf on one petiole of a reloaded phytomer matches the saved one: count, prototype source, size, base, stored angles and pose
+static void checkRestoredPetioleLeaves(Context &context, const std::shared_ptr<Phytomer> &saved, Context &restored_context, const std::shared_ptr<Phytomer> &restored, uint petiole) {
+    DOCTEST_REQUIRE(restored->leaf_objIDs.at(petiole).size() == saved->leaf_objIDs.at(petiole).size());
+    for (uint leaf = 0; leaf < saved->leaf_objIDs.at(petiole).size(); leaf++) {
+        DOCTEST_CAPTURE(leaf);
+        DOCTEST_CHECK(restored->leaf_prototype_index.at(petiole).at(leaf) == saved->leaf_prototype_index.at(petiole).at(leaf));
+        DOCTEST_CHECK(restored->leaf_size_max.at(petiole).at(leaf) * restored->current_leaf_scale_factor.at(petiole) ==
+                      doctest::Approx(saved->leaf_size_max.at(petiole).at(leaf) * saved->current_leaf_scale_factor.at(petiole)).epsilon(1e-4));
+        DOCTEST_CHECK((restored->leaf_bases.at(petiole).at(leaf) - saved->leaf_bases.at(petiole).at(leaf)).magnitude() < 1e-4f);
+        DOCTEST_CHECK(restored->leaf_rotation.at(petiole).at(leaf).roll == doctest::Approx(saved->leaf_rotation.at(petiole).at(leaf).roll).epsilon(1e-4));
+        DOCTEST_CHECK(restored->leaf_rotation.at(petiole).at(leaf).pitch == doctest::Approx(saved->leaf_rotation.at(petiole).at(leaf).pitch).epsilon(1e-4));
+        DOCTEST_CHECK(restored->leaf_rotation.at(petiole).at(leaf).yaw == doctest::Approx(saved->leaf_rotation.at(petiole).at(leaf).yaw).epsilon(1e-4));
+
+        DOCTEST_REQUIRE(restored_context.doesObjectExist(restored->leaf_objIDs.at(petiole).at(leaf)));
+        float transform_saved[16];
+        float transform_restored[16];
+        context.getObjectTransformationMatrix(saved->leaf_objIDs.at(petiole).at(leaf), transform_saved);
+        restored_context.getObjectTransformationMatrix(restored->leaf_objIDs.at(petiole).at(leaf), transform_restored);
+        float worst_element = 0.f;
+        for (uint element = 0; element < 16; element++) {
+            worst_element = std::max(worst_element, std::fabs(transform_restored[element] - transform_saved[element]));
+        }
+        DOCTEST_CHECK(worst_element < 2e-4f);
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture readPlantStructureXML restores a petiole whose leaflet count was changed") {
+    // Regression test. setPetioleLeafCount() rebuilds a petiole's leaves from the prototype function, so a petiole can carry more leaflets than
+    // the shoot type's cached prototypes hold. readPlantStructureXML() copied every leaf from that cache, indexing it by leaflet position, and
+    // threw std::out_of_range for the first leaflet past the cached count. A leaf built from the prototype function is also recorded with
+    // <leaf_prototype> -1, which the reader took to mean "a file written before the tag existed" and replaced with a randomly drawn cached blade.
+    const std::string xml_filename = "plantarchitecture_leaf_count_roundtrip.xml";
+
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    // A grown shoot rather than one built from node positions: the reader restores each phytomer's organs through the per-phytomer path.
+    definePrescribedLeafGeometryShootType(context, plantarchitecture);
+    const uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0.f);
+    const uint shootID = plantarchitecture.addBaseStemShoot(plantID, 2, make_AxisRotation(0, 0, 0), 0.01f, 0.1f, 1.f, 1.f, 0, "leafy");
+
+    plantarchitecture.setPetioleLeafCount(plantID, shootID, 1, 0, 5);
+    plantarchitecture.setPetioleLeafCount(plantID, shootID, 0, 0, 1);
+    DOCTEST_REQUIRE_NOTHROW(plantarchitecture.writePlantStructureXML(plantID, xml_filename));
+
+    Context restored_context;
+    PlantArchitecture restored_plantarchitecture(&restored_context);
+    restored_plantarchitecture.disableMessages();
+    definePrescribedLeafGeometryShootType(restored_context, restored_plantarchitecture);
+    std::vector<uint> restored_plantIDs;
+    DOCTEST_REQUIRE_NOTHROW(restored_plantIDs = restored_plantarchitecture.readPlantStructureXML(xml_filename, true));
+    std::remove(xml_filename.c_str());
+    DOCTEST_REQUIRE(restored_plantIDs.size() == 1);
+
+    const auto saved_shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+    const auto restored_shoot = restored_plantarchitecture.getPlantShoot(restored_plantIDs.front(), 0);
+    DOCTEST_REQUIRE(restored_shoot->phytomers.size() == saved_shoot->phytomers.size());
+    for (uint node = 0; node < saved_shoot->phytomers.size(); node++) {
+        DOCTEST_CAPTURE(node);
+        checkRestoredPetioleLeaves(context, saved_shoot->phytomers.at(node), restored_context, restored_shoot->phytomers.at(node), 0);
+    }
+    DOCTEST_CHECK(restored_plantarchitecture.getPlantLeafObjectIDs(restored_plantIDs.front()).size() == 6);
+
+    // A file written before <leaf_prototype> existed records no prototype, and its leaves are drawn from the cache at random. The reader compared the saved
+    // index with the unsigned count of cached prototypes, so an unrecorded (or explicit -1) index converted to a huge value and the file was rejected.
+    Context legacy_context;
+    legacy_context.seedRandomGenerator(12345);
+    PlantArchitecture legacy_plantarchitecture(&legacy_context);
+    legacy_plantarchitecture.disableMessages();
+    definePrescribedLeafGeometryShootType(legacy_context, legacy_plantarchitecture);
+    const uint legacy_plantID = legacy_plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0.f);
+    legacy_plantarchitecture.addBaseStemShoot(legacy_plantID, 2, make_AxisRotation(0, 0, 0), 0.01f, 0.1f, 1.f, 1.f, 0, "leafy");
+    const std::string legacy_filename = "plantarchitecture_legacy_leaf_prototype.xml";
+    DOCTEST_REQUIRE_NOTHROW(legacy_plantarchitecture.writePlantStructureXML(legacy_plantID, legacy_filename));
+    std::string legacy_contents;
+    {
+        std::ifstream legacy_in(legacy_filename);
+        std::string line;
+        while (std::getline(legacy_in, line)) {
+            if (line.find("<leaf_prototype>") == std::string::npos) {
+                legacy_contents += line + "\n";
+            }
+        }
+    }
+    {
+        std::ofstream legacy_out(legacy_filename);
+        legacy_out << legacy_contents;
+    }
+
+    Context legacy_restored_context;
+    PlantArchitecture legacy_restored_plantarchitecture(&legacy_restored_context);
+    legacy_restored_plantarchitecture.disableMessages();
+    definePrescribedLeafGeometryShootType(legacy_restored_context, legacy_restored_plantarchitecture);
+    std::vector<uint> legacy_restored_plantIDs;
+    DOCTEST_CHECK_NOTHROW(legacy_restored_plantIDs = legacy_restored_plantarchitecture.readPlantStructureXML(legacy_filename, true));
+    std::remove(legacy_filename.c_str());
+    DOCTEST_REQUIRE(legacy_restored_plantIDs.size() == 1);
+    DOCTEST_CHECK(legacy_restored_plantarchitecture.getPlantLeafObjectIDs(legacy_restored_plantIDs.front()).size() == legacy_plantarchitecture.getPlantLeafObjectIDs(legacy_plantID).size());
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture readPlantStructureXML restores prescribed petiole paths and prescribed leaves") {
+    // Regression test. writePlantStructureXML() recorded neither a petiole path set by setPetioleNodePositions() nor that a leaf's pose had been
+    // prescribed by setPetioleLeafGeometry(), nor where its base was placed. The reader rebuilt the petiole from its length, pitch and curvature,
+    // placed each leaf where the shoot type would have, and oriented it through the procedural chain, so a reconstructed plant came back with
+    // generated petioles and leaves rather than the measured ones.
+    const std::string xml_filename = "plantarchitecture_prescribed_organs_roundtrip.xml";
+
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    uint plantID, shootID;
+    buildLeafyPrescribedShoot(context, plantarchitecture, plantID, shootID);
+    const auto shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+
+    // Node 1: a measured three-leaflet leaf. Node 0: a single prescribed leaf on a petiole whose leaflet count was changed first.
+    const vec3 tip1 = shoot->shoot_internode_vertices.at(1).back();
+    plantarchitecture.setPetioleNodePositions(plantID, shootID, 1, 0, measuredPetiolePath(tip1), measuredPetioleRadii());
+    const std::vector<vec3> leaf_bases = {tip1 + make_vec3(0.040f, 0.018f, 0.017f), tip1 + make_vec3(0.075f, 0.063f, -0.004f), tip1 + make_vec3(0.058f, 0.030f, 0.010f)};
+    const std::vector<AxisRotation> leaf_rotations = {make_AxisRotation(0.10f, 0.25f, 0.30f), make_AxisRotation(0.2f, 0.40f, -0.15f), make_AxisRotation(-0.10f, 0.25f, -0.30f)};
+    plantarchitecture.setPetioleLeafGeometry(plantID, shootID, 1, 0, leaf_bases, leaf_rotations, {0.022f, 0.035f, 0.022f});
+
+    const vec3 tip0 = shoot->shoot_internode_vertices.at(0).back();
+    std::vector<vec3> path0 = measuredPetiolePath(tip0);
+    for (vec3 &position: path0) {
+        position = tip0 + rotatePointAboutLine(position - tip0, nullorigin, make_vec3(0, 0, 1), 2.5f);
+    }
+    plantarchitecture.setPetioleNodePositions(plantID, shootID, 0, 0, path0, measuredPetioleRadii());
+    plantarchitecture.setPetioleLeafCount(plantID, shootID, 0, 0, 1);
+    plantarchitecture.setPetioleLeafGeometry(plantID, shootID, 0, 0, {path0.back() + make_vec3(0.005f, 0, 0)}, {make_AxisRotation(0.3f, -0.2f, 0.6f)}, {0.04f});
+
+    DOCTEST_REQUIRE_NOTHROW(plantarchitecture.writePlantStructureXML(plantID, xml_filename));
+
+    Context restored_context;
+    PlantArchitecture restored_plantarchitecture(&restored_context);
+    restored_plantarchitecture.disableMessages();
+    definePrescribedLeafGeometryShootType(restored_context, restored_plantarchitecture);
+    std::vector<uint> restored_plantIDs;
+    DOCTEST_REQUIRE_NOTHROW(restored_plantIDs = restored_plantarchitecture.readPlantStructureXML(xml_filename, true));
+    std::remove(xml_filename.c_str());
+    DOCTEST_REQUIRE(restored_plantIDs.size() == 1);
+    const uint restored_plantID = restored_plantIDs.front();
+    const auto restored_shoot = restored_plantarchitecture.getPlantShoot(restored_plantID, 0);
+    DOCTEST_REQUIRE(restored_shoot->phytomers.size() == shoot->phytomers.size());
+
+    for (uint node = 0; node < 2; node++) {
+        DOCTEST_CAPTURE(node);
+        const auto &saved = shoot->phytomers.at(node);
+        const auto &restored = restored_shoot->phytomers.at(node);
+        DOCTEST_REQUIRE(restored->petiole_vertices.at(0).size() == saved->petiole_vertices.at(0).size());
+        for (size_t vertex = 0; vertex < saved->petiole_vertices.at(0).size(); vertex++) {
+            DOCTEST_CHECK((restored->petiole_vertices.at(0).at(vertex) - saved->petiole_vertices.at(0).at(vertex)).magnitude() < 1e-5f);
+            DOCTEST_CHECK(restored->petiole_radii.at(0).at(vertex) == doctest::Approx(saved->petiole_radii.at(0).at(vertex)).epsilon(1e-4));
+        }
+        checkRestoredPetioleLeaves(context, saved, restored_context, restored, 0);
+    }
+
+    // Still prescribed after the reload: growth neither re-poses the leaves nor re-scales the petiole.
+    const std::shared_ptr<Phytomer> restored_node1 = restored_shoot->phytomers.at(1); // a copy: growth appends phytomers and reallocates the vector
+    float transform_before[16];
+    restored_context.getObjectTransformationMatrix(restored_node1->leaf_objIDs.at(0).at(1), transform_before);
+    const std::vector<vec3> petiole_before = restored_node1->petiole_vertices.at(0);
+    restored_plantarchitecture.breakPlantDormancy(restored_plantID);
+    restored_plantarchitecture.advanceTime(restored_plantID, 10);
+    float transform_after[16];
+    restored_context.getObjectTransformationMatrix(restored_node1->leaf_objIDs.at(0).at(1), transform_after);
+    for (uint element = 0; element < 16; element++) {
+        DOCTEST_CHECK(transform_after[element] == doctest::Approx(transform_before[element]).epsilon(1e-4));
+    }
+    DOCTEST_CHECK((restored_node1->petiole_vertices.at(0).back() - petiole_before.back()).magnitude() < 1e-5f);
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture prescribed leaf scale bookkeeping stays consistent") {
@@ -9878,4 +10568,102 @@ DOCTEST_TEST_CASE("PlantArchitecture inflorescence pitch is measured from the pe
     const float slope = covariance / elevation_variance;
     DOCTEST_CAPTURE(slope);
     DOCTEST_CHECK(std::fabs(slope) < 0.05f);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture phytomer production does not depend on how advanceTime is chunked") {
+    // Regression test. advanceTime() sub-steps at the smallest phyllochron_min of the shoots present when it is
+    // called, and each shoot appended at most ONE phytomer per sub-step. A shoot type created during the call with a
+    // shorter phyllochron than anything present at entry (bindweed: the base shoot has phyllochron 2, the primary
+    // shoots it spawns have phyllochron 1) therefore produced one node per sub-step instead of one per phyllochron,
+    // and its phyllochron counter grew without bound. Advancing 14 days in one call and advancing 1 day fourteen
+    // times gave different plants.
+    //
+    // The two schedules below are built from the same seed and, once the sub-step is chosen from every shoot type
+    // the plant can produce, take identical sub-steps, so they draw the same random numbers and must agree exactly.
+    auto grow = [](float total_days, float chunk_days) {
+        Context context;
+        context.seedRandomGenerator(12345);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("bindweed");
+        uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0.f);
+
+        for (float elapsed = 0.f; elapsed < total_days - 1e-4f; elapsed += chunk_days) {
+            plantarchitecture.advanceTime(plantID, chunk_days);
+        }
+
+        std::vector<uint> node_counts;
+        for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            node_counts.push_back(plantarchitecture.getShootNodeCount(plantID, shootID));
+        }
+        return node_counts;
+    };
+
+    const std::vector<uint> nodes_single_call = grow(14.f, 14.f);
+    const std::vector<uint> nodes_daily = grow(14.f, 1.f);
+
+    uint total_single_call = 0;
+    for (uint n: nodes_single_call) {
+        total_single_call += n;
+    }
+    uint total_daily = 0;
+    for (uint n: nodes_daily) {
+        total_daily += n;
+    }
+    DOCTEST_CAPTURE(total_single_call);
+    DOCTEST_CAPTURE(total_daily);
+
+    // The primary shoots must have grown at all for the comparison to mean anything.
+    DOCTEST_REQUIRE(nodes_daily.size() > 1);
+    DOCTEST_REQUIRE(total_daily > nodes_daily.size() * 2);
+
+    DOCTEST_CHECK(nodes_single_call.size() == nodes_daily.size());
+    DOCTEST_CHECK(total_single_call == total_daily);
+    for (size_t s = 0; s < std::min(nodes_single_call.size(), nodes_daily.size()); s++) {
+        DOCTEST_CAPTURE(s);
+        DOCTEST_CHECK(nodes_single_call.at(s) == nodes_daily.at(s));
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture epicormic shoot emergence is sampled once per day, not once per sub-step") {
+    // Regression test. Inside the sub-step loop of advanceTime(), Shoot::sampleEpicormicShoot() was handed the
+    // whole time span of the call rather than the sub-step, so every sub-step re-ran the daily Bernoulli trials for
+    // the entire span: a 100-day call at a 2-day sub-step sampled 50 x 100 = 5000 trials instead of 100, inflating
+    // the emergence rate by the number of sub-steps (and drawing thousands of random numbers per shoot).
+    //
+    // A vertical apple trunk whose own buds never break (vegetative_bud_break_probability_min = 0), starting at
+    // 5 m and elongating over 40 days, with 0.01 emergences per metre per day, expects about 3 epicormic shoots.
+    // The buggy code expects twenty times as many (and every one of those shoots samples the same way, so the
+    // error compounds).
+    //
+    // The trunk's max_nodes is raised well above what it can reach: a shoot whose apical meristem has terminated is
+    // skipped before the epicormic sampling in advanceTime(), so a trunk built at its node cap would never sample.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    ShootParameters trunk_parameters = plantarchitecture.getCurrentShootParameters("trunk");
+    trunk_parameters.max_nodes = 500;
+    plantarchitecture.updateCurrentShootParameters("trunk", trunk_parameters);
+
+    uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0.f);
+    // 20 nodes x 0.25 m internodes = 5 m of trunk.
+    plantarchitecture.addBaseStemShoot(plantID, 20, make_AxisRotation(0, 0, 0), 0.01f, 0.25f, 1.f, 1.f, 0, "trunk");
+    plantarchitecture.breakPlantDormancy(plantID);
+    plantarchitecture.enableEpicormicChildShoots(plantID, "proleptic", 0.01f);
+
+    const size_t shoots_before = plantarchitecture.getAllShootIDs(plantID).size();
+    DOCTEST_REQUIRE(shoots_before == 1);
+
+    plantarchitecture.advanceTime(plantID, 40.f);
+
+    const size_t epicormic_shoots = plantarchitecture.getAllShootIDs(plantID).size() - shoots_before;
+    DOCTEST_CAPTURE(epicormic_shoots);
+    // Expected value roughly 3 (0.01 per metre per day over 5-10 m for 40 days, plus a negligible contribution
+    // from the short epicormic shoots themselves); the chance of exceeding 15 by sampling alone is below 1e-6,
+    // while the buggy code lands well above 50.
+    DOCTEST_CHECK(epicormic_shoots <= 15);
+    // The trunk kept growing, so it was still sampling for epicormic shoots throughout.
+    DOCTEST_CHECK(plantarchitecture.getShootNodeCount(plantID, 0) > 20);
 }

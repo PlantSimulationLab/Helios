@@ -271,8 +271,8 @@ namespace helios {
         std::vector<float> radiation_out_bottom; //!< Emitted radiation (bottom face) per [primitive][band]
         std::vector<float> scatter_buff_top; //!< Scattered radiation buffer (top) for multi-bounce
         std::vector<float> scatter_buff_bottom; //!< Scattered radiation buffer (bottom) for multi-bounce
-        std::vector<float> scatter_buff_top_cam; //!< Camera-weighted scattered radiation buffer (top) per [primitive][band]
-        std::vector<float> scatter_buff_bottom_cam; //!< Camera-weighted scattered radiation buffer (bottom) per [primitive][band]
+        std::vector<float> scatter_buff_top_cam; //!< Camera-weighted scattered radiation buffer (top) per [camera][primitive][band]
+        std::vector<float> scatter_buff_bottom_cam; //!< Camera-weighted scattered radiation buffer (bottom) per [camera][primitive][band]
         std::vector<float> radiation_specular; //!< Specular reflection per [source][camera][primitive][band]
         std::vector<float> sky_energy; //!< Energy absorbed by sky per band
 

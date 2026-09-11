@@ -166,7 +166,9 @@ float BLConductanceModel::calculateBoundaryLayerConductance(uint gH_model, float
                 // Nearly vertical plates - use vertical plate correlation
                 Nu_free = 0.59f * std::pow(Gr, 0.25f);
             }
-            gH = Nu_free * (alpha / L);
+            // Nu*alpha/L is a velocity (m/s); multiply by the molar density of air (41.4 mol/m^3 at
+            // standard conditions) to get mol/m^2/s, consistent with the mixed-convection branch below.
+            gH = 41.4f * alpha / L * Nu_free;
             return gH;
         }
 

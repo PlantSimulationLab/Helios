@@ -324,6 +324,15 @@ namespace helios {
         uint32_t launch_band_count = 0; // Current runBand() band count (set by zeroRadiationBuffers)
         std::vector<uint32_t> launch_to_global_band; // Maps launch band index → global band index
 
+        //! Raise an error unless the camera-weighted scatter buffers are sized for the current camera set
+        /**
+         * The direct and diffuse shaders write one [primitive][band] block per camera, so launching against buffers still
+         * sized for an earlier camera set indexes past their end. RadiationModel::runBand() sizes them with
+         * zeroCameraScatterBuffers() before its first launch.
+         * \param[in] caller Name of the calling method, for the error message
+         */
+        void requireCameraScatterBuffersSized(const char *caller) const;
+
         // Descriptor set update tracking
         bool descriptors_dirty = false;
 

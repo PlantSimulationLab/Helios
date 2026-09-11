@@ -2708,10 +2708,17 @@ void Visualizer::cullPointsByFrustum() {
 
     std::vector<glm::vec4> frustum_planes = extractFrustumPlanes();
 
-    // Check each point against all 6 frustum planes
-    size_t point_count = vertex_data->size() / 3;
-    for (size_t i = 0; i < point_count; ++i) {
-        glm::vec3 point(vertex_data->at(i * 3), vertex_data->at(i * 3 + 1), vertex_data->at(i * 3 + 2));
+    // One pass over the geometry: a point's slot in the vertex array is recorded in its index map, so
+    // the point is read from there directly. Searching the UUID list for the i-th point instead is
+    // both quadratic in the point count and wrong, because the UUID map iterates in hash order rather
+    // than insertion order.
+    for (const size_t UUID: geometry_handler.getAllGeometryIDs()) {
+        const auto &index_map = geometry_handler.getIndexMap(UUID);
+        if (index_map.geometry_type != GeometryHandler::GEOMETRY_TYPE_POINT) {
+            continue;
+        }
+        const size_t v = index_map.vertex_index;
+        const glm::vec3 point(vertex_data->at(v), vertex_data->at(v + 1), vertex_data->at(v + 2));
 
         bool inside_frustum = true;
         for (const auto &plane: frustum_planes) {
@@ -2722,19 +2729,7 @@ void Visualizer::cullPointsByFrustum() {
                 break;
             }
         }
-
-        // Find the UUID for this point index and update visibility
-        std::vector<size_t> all_UUIDs = geometry_handler.getAllGeometryIDs();
-        size_t point_index = 0;
-        for (size_t UUID: all_UUIDs) {
-            if (geometry_handler.getIndexMap(UUID).geometry_type == GeometryHandler::GEOMETRY_TYPE_POINT) {
-                if (point_index == i) {
-                    geometry_handler.setVisibility(UUID, inside_frustum);
-                    break;
-                }
-                point_index++;
-            }
-        }
+        geometry_handler.setVisibility(UUID, inside_frustum);
     }
 }
 
@@ -2743,13 +2738,21 @@ void Visualizer::cullPointsByDistance(float maxDistance, float lodFactor) {
     if (!vertex_data || vertex_data->empty()) {
         return;
     }
+    const std::vector<char> *visible_flags = geometry_handler.getVisibilityFlagData_ptr(GeometryHandler::GEOMETRY_TYPE_POINT);
 
     glm::vec3 camera_pos(camera_eye_location.x, camera_eye_location.y, camera_eye_location.z);
 
-    // Apply distance-based culling with level-of-detail and adaptive sizing
-    size_t point_count = vertex_data->size() / 3;
-    for (size_t i = 0; i < point_count; ++i) {
-        glm::vec3 point(vertex_data->at(i * 3), vertex_data->at(i * 3 + 1), vertex_data->at(i * 3 + 2));
+    // Apply distance-based culling with level-of-detail and adaptive sizing. This runs after the
+    // frustum pass and only ever hides points: a point the frustum pass has already culled stays
+    // culled.
+    for (const size_t UUID: geometry_handler.getAllGeometryIDs()) {
+        const auto &index_map = geometry_handler.getIndexMap(UUID);
+        if (index_map.geometry_type != GeometryHandler::GEOMETRY_TYPE_POINT) {
+            continue;
+        }
+        const size_t v = index_map.vertex_index;
+        const size_t i = v / 3;
+        const glm::vec3 point(vertex_data->at(v), vertex_data->at(v + 1), vertex_data->at(v + 2));
 
         float distance = glm::length(point - camera_pos);
         bool should_render = true;
@@ -2773,24 +2776,14 @@ void Visualizer::cullPointsByDistance(float maxDistance, float lodFactor) {
             }
         }
 
-        // Find the UUID for this point index and update visibility and size
-        std::vector<size_t> all_UUIDs = geometry_handler.getAllGeometryIDs();
-        size_t point_index = 0;
-        for (size_t UUID: all_UUIDs) {
-            if (geometry_handler.getIndexMap(UUID).geometry_type == GeometryHandler::GEOMETRY_TYPE_POINT) {
-                if (point_index == i) {
-                    geometry_handler.setVisibility(UUID, should_render);
-                    if (should_render) {
-                        // Apply adaptive sizing to maintain visual quality
-                        float original_size = geometry_handler.getSize(UUID);
-                        if (original_size <= 0)
-                            original_size = 1.0f;
-                        geometry_handler.setSize(UUID, original_size * adaptive_size);
-                    }
-                    break;
-                }
-                point_index++;
-            }
+        const bool currently_visible = visible_flags->at(index_map.visible_index) != 0;
+        geometry_handler.setVisibility(UUID, currently_visible && should_render);
+        if (currently_visible && should_render) {
+            // Apply adaptive sizing to maintain visual quality
+            float original_size = geometry_handler.getSize(UUID);
+            if (original_size <= 0)
+                original_size = 1.0f;
+            geometry_handler.setSize(UUID, original_size * adaptive_size);
         }
     }
 }
@@ -2824,8 +2817,15 @@ void Visualizer::updatePointCulling() {
     // Apply distance-based culling with configurable parameters
     cullPointsByDistance(max_distance, point_lod_factor);
 
-    // Update metrics
-    points_rendered_count = geometry_handler.getPointCount(false); // Count only visible points
+    // Update metrics: the points that survived both passes.
+    points_rendered_count = 0;
+    const std::vector<char> *visible_flags = geometry_handler.getVisibilityFlagData_ptr(GeometryHandler::GEOMETRY_TYPE_POINT);
+    for (const size_t UUID: geometry_handler.getAllGeometryIDs()) {
+        const auto &index_map = geometry_handler.getIndexMap(UUID);
+        if (index_map.geometry_type == GeometryHandler::GEOMETRY_TYPE_POINT && visible_flags->at(index_map.visible_index) != 0) {
+            points_rendered_count++;
+        }
+    }
 
     auto end_time = std::chrono::high_resolution_clock::now();
     last_culling_time_ms = std::chrono::duration<float, std::milli>(end_time - start_time).count();

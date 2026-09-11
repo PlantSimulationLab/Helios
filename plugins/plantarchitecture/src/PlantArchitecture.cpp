@@ -1966,7 +1966,9 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     leaf_bases.resize(phytomer_parameters.petiole.petioles_per_internode);
     leaf_objIDs.resize(phytomer_parameters.petiole.petioles_per_internode);
     leaf_prototype_index.resize(phytomer_parameters.petiole.petioles_per_internode);
+    leaf_pose_prescribed.resize(phytomer_parameters.petiole.petioles_per_internode);
     leaf_last_deformed_scale.resize(phytomer_parameters.petiole.petioles_per_internode);
+    petiole_path_prescribed.assign(phytomer_parameters.petiole.petioles_per_internode, false);
 
     // Resolved once here and held for the life of the phytomer. This also honours the retired leaf_buckle_* parameters when the flexibility itself was never set, so that code written against them still
     // produces a drooping leaf rather than a rigid one.
@@ -2446,28 +2448,12 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
                 for (int leaf = 0; leaf < leaves_per_petiole; leaf++) {
                     float ind_from_tip = float(leaf) - float(leaves_per_petiole - 1) / 2.f;
                     uint objID_leaf = phytomer_parameters.leaf.prototype.prototype_function(context_ptr, &phytomer_parameters.leaf.prototype, ind_from_tip);
-                    if (phytomer_parameters.leaf.prototype.prototype_function == GenericLeafPrototype) {
-                        // A petiolule loaded from an OBJ arrives already labelled by its own group in the file. Labelling the whole object "leaf" would overwrite that, and the filter below - which gives the
-                        // petiolule the petiole's colour, and which downstream code uses to give it the petiole's optical properties rather than the blade's - would then match nothing.
-                        const std::vector<uint> object_UUIDs = context_ptr->getObjectPrimitiveUUIDs(objID_leaf);
-                        const std::vector<uint> labelled_UUIDs = context_ptr->filterPrimitivesByData(object_UUIDs, "object_label", "petiolule");
-                        const std::set<uint> keep_label(labelled_UUIDs.begin(), labelled_UUIDs.end());
-                        std::vector<uint> blade_UUIDs;
-                        blade_UUIDs.reserve(object_UUIDs.size());
-                        for (uint UUID: object_UUIDs) {
-                            if (keep_label.find(UUID) == keep_label.end()) {
-                                blade_UUIDs.push_back(UUID);
-                            }
-                        }
-                        context_ptr->setPrimitiveData(blade_UUIDs, "object_label", "leaf");
-                    }
+                    labelLeafPrototype(objID_leaf);
                     plantarchitecture_ptr->unique_leaf_prototype_objIDs.at(phytomer_parameters.leaf.prototype.unique_prototype_identifier).at(prototype).push_back(objID_leaf);
 
                     plantarchitecture_ptr->recordLeafPrototypeRestGeometry(phytomer_parameters.leaf.prototype, prototype, objID_leaf, leaf_flexibility);
                     std::string material_base_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_" + parent_shoot->shoot_type_label + "_leaf";
                     renameAutoMaterial(context_ptr, objID_leaf, material_base_name);
-                    std::vector<uint> petiolule_UUIDs = context_ptr->filterPrimitivesByData(context_ptr->getObjectPrimitiveUUIDs(objID_leaf), "object_label", "petiolule");
-                    context_ptr->setPrimitiveColor(petiolule_UUIDs, phytomer_parameters.petiole.color);
                     context_ptr->hideObject(objID_leaf);
                 }
             }
@@ -2542,6 +2528,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             leaf_objIDs.at(petiole).push_back(objID_leaf);
             leaf_bases.at(petiole).push_back(leaf_base);
             leaf_prototype_index.at(petiole).push_back(leaf_prototype_source);
+            leaf_pose_prescribed.at(petiole).push_back(false);
             // Nothing has been deflected yet, so record a scale that no leaf can already be at; the first growth step then always deforms.
             leaf_last_deformed_scale.at(petiole).push_back(-1.f);
         }
@@ -3474,8 +3461,53 @@ float Phytomer::compoundLeafRotation(int leaves_per_petiole, int leaf_index, flo
     return compound_rotation;
 }
 
+void Phytomer::labelLeafPrototype(uint objID_leaf) {
+    if (phytomer_parameters.leaf.prototype.prototype_function == GenericLeafPrototype) {
+        // A petiolule loaded from an OBJ arrives already labelled by its own group in the file. Labelling the whole object "leaf" would overwrite that, and the filter below - which gives the
+        // petiolule the petiole's colour, and which downstream code uses to give it the petiole's optical properties rather than the blade's - would then match nothing.
+        const std::vector<uint> object_UUIDs = context_ptr->getObjectPrimitiveUUIDs(objID_leaf);
+        const std::vector<uint> labelled_UUIDs = context_ptr->filterPrimitivesByData(object_UUIDs, "object_label", "petiolule");
+        const std::set<uint> keep_label(labelled_UUIDs.begin(), labelled_UUIDs.end());
+        std::vector<uint> blade_UUIDs;
+        blade_UUIDs.reserve(object_UUIDs.size());
+        for (const uint UUID: object_UUIDs) {
+            if (keep_label.find(UUID) == keep_label.end()) {
+                blade_UUIDs.push_back(UUID);
+            }
+        }
+        context_ptr->setPrimitiveData(blade_UUIDs, "object_label", "leaf");
+    }
+    const std::vector<uint> petiolule_UUIDs = context_ptr->filterPrimitivesByData(context_ptr->getObjectPrimitiveUUIDs(objID_leaf), "object_label", "petiolule");
+    context_ptr->setPrimitiveColor(petiolule_UUIDs, phytomer_parameters.petiole.color);
+}
+
 void Phytomer::orientLeaf(uint objID_leaf, uint petiole_index, uint leaf_index, int leaves_per_petiole, float ind_from_tip, float compound_rotation, const helios::vec3 &petiole_tip_axis, float leaf_roll_angle, float leaf_pitch_angle,
-                          float leaf_yaw_angle) {
+                          float leaf_yaw_angle, bool prescribed) {
+
+    if (prescribed) {
+        // A prescribed leaf's angles are intrinsic rotations in the leaf's rest frame on the petiole, identical for every leaf whatever its position along the petiole or the parity of its node, so that
+        // measured angles reproduce the measured blade. In the rest frame the midrib is the petiole tip axis turned about the petiole-plane normal by the compound rotation, and the blade normal is that
+        // normal. Yaw turns the leaf about the normal, pitch raises its tip toward the normal, and roll turns the blade about its own midrib. None of the procedural chain below applies: no side signs,
+        // no petiole-elevation offsets and no blade-up correction. Rotations about the fixed axes at the origin compose in reverse, so roll is applied first and the petiole's own orientation last.
+        leaf_rotation.at(petiole_index).at(leaf_index).roll = leaf_roll_angle;
+        leaf_rotation.at(petiole_index).at(leaf_index).pitch = leaf_pitch_angle;
+        leaf_rotation.at(petiole_index).at(leaf_index).yaw = leaf_yaw_angle;
+
+        vec3 tip_axis = petiole_tip_axis;
+        tip_axis.normalize();
+        const float elevation = asin_safe(tip_axis.z);
+        // A vertical petiole has no azimuth; the horizontal reference direction of the frame is then world +y.
+        const float horizontal = std::sqrt(tip_axis.x * tip_axis.x + tip_axis.y * tip_axis.y);
+        const float azimuth = (horizontal < 1e-6f) ? 0.f : std::atan2(tip_axis.y, tip_axis.x);
+
+        context_ptr->rotateObject(objID_leaf, leaf_roll_angle, "x");
+        context_ptr->rotateObject(objID_leaf, -leaf_pitch_angle, "y");
+        context_ptr->rotateObject(objID_leaf, leaf_yaw_angle, "z");
+        context_ptr->rotateObject(objID_leaf, compound_rotation, "z");
+        context_ptr->rotateObject(objID_leaf, -elevation, "y");
+        context_ptr->rotateObject(objID_leaf, azimuth, "z");
+        return;
+    }
 
     // leaf roll rotation
     // Roll-X here only applies the user-configured `leaf.roll` parameter; the
@@ -3655,7 +3687,7 @@ void Phytomer::setPetioleLeafGeometry(uint petiole_index, const std::vector<heli
     if (leaf_bases_new.size() != leaves_per_petiole) {
         helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeafGeometry): " + std::to_string(leaf_bases_new.size()) + " leaf positions were given, but petiole " + std::to_string(petiole_index) +
                              " carries " + std::to_string(leaves_per_petiole) +
-                             " leaves. The number of leaves per petiole is fixed when the phytomer is created; set leaf.leaves_per_petiole on the shoot type to change it.");
+                             " leaves. Change the number of leaves on the petiole with setPetioleLeafCount() first.");
     } else if (leaf_rotations_new.size() != leaves_per_petiole) {
         helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeafGeometry): Number of leaf rotations (" + std::to_string(leaf_rotations_new.size()) + ") must equal the number of leaves on the petiole (" +
                              std::to_string(leaves_per_petiole) + ").");
@@ -3694,6 +3726,8 @@ void Phytomer::setPetioleLeafGeometry(uint petiole_index, const std::vector<heli
             objID_leaf_new = context_ptr->copyObject(plantarchitecture_ptr->unique_leaf_prototype_objIDs.at(uid).at(prototype).at(leaf));
         } else {
             objID_leaf_new = phytomer_parameters.leaf.prototype.prototype_function(context_ptr, &phytomer_parameters.leaf.prototype, int(ind_from_tip));
+            // Built fresh rather than copied from the cache, so it carries none of the cache's labelling.
+            labelLeafPrototype(objID_leaf_new);
         }
 
         context_ptr->scaleObject(objID_leaf_new, leaf_sizes_new.at(leaf) * make_vec3(1, 1, 1));
@@ -3703,7 +3737,7 @@ void Phytomer::setPetioleLeafGeometry(uint petiole_index, const std::vector<heli
 
         const float compound_rotation = compoundLeafRotation(int(leaves_per_petiole), int(leaf), leaflet_offset_val);
         orientLeaf(objID_leaf_new, petiole_index, leaf, int(leaves_per_petiole), ind_from_tip, compound_rotation, petiole_tip_axis, leaf_rotations_new.at(leaf).roll, leaf_rotations_new.at(leaf).pitch,
-                   leaf_rotations_new.at(leaf).yaw);
+                   leaf_rotations_new.at(leaf).yaw, true);
 
         context_ptr->translateObject(objID_leaf_new, leaf_bases_new.at(leaf));
 
@@ -3720,6 +3754,7 @@ void Phytomer::setPetioleLeafGeometry(uint petiole_index, const std::vector<heli
         // with no cached rest geometry to deflect from.
         leaf_prototype_index.at(petiole_index).at(leaf) = -1;
         leaf_last_deformed_scale.at(petiole_index).at(leaf) = -1.f;
+        leaf_pose_prescribed.at(petiole_index).at(leaf) = true;
     }
 }
 
@@ -3864,6 +3899,79 @@ void Phytomer::scalePetioleGeometry(uint petiole_index, float target_length, flo
     }
 }
 
+void Phytomer::setPetioleLeafCount(uint petiole_index, uint leaf_count) {
+    if (petiole_index >= leaf_objIDs.size()) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeafCount): Petiole index of " + std::to_string(petiole_index) + " was given, but this phytomer has " + std::to_string(leaf_objIDs.size()) + " petioles.");
+    }
+    if (leaf_count == 0) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeafCount): A petiole must carry at least one leaf.");
+    }
+    if (petiole_vertices.at(petiole_index).size() < 2) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeafCount): Petiole " + std::to_string(petiole_index) + " has no centerline, so there is no axis to place its leaves along.");
+    }
+    if (leaf_count == leaf_objIDs.at(petiole_index).size()) {
+        return;
+    }
+
+    // Pin the growth fraction so that leaf_size_max is the fully-elongated size, as it is for prescribed leaves.
+    lockPetioleScale(petiole_index);
+
+    for (const uint objID: leaf_objIDs.at(petiole_index)) {
+        if (context_ptr->doesObjectExist(objID)) {
+            context_ptr->deleteObject(objID);
+        }
+    }
+    leaf_objIDs.at(petiole_index).assign(leaf_count, 0);
+    leaf_bases.at(petiole_index).assign(leaf_count, make_vec3(0, 0, 0));
+    leaf_size_max.at(petiole_index).assign(leaf_count, 0.f);
+    leaf_rotation.at(petiole_index).assign(leaf_count, make_AxisRotation(0, 0, 0));
+    leaf_prototype_index.at(petiole_index).assign(leaf_count, -1);
+    leaf_pose_prescribed.at(petiole_index).assign(leaf_count, false);
+    leaf_last_deformed_scale.at(petiole_index).assign(leaf_count, -1.f);
+    // The phytomer's own copy of the parameters is what the rest of its code reads the count from.
+    phytomer_parameters.leaf.leaves_per_petiole = int(leaf_count);
+
+    const vec3 petiole_tip_axis = getPetioleAxisVector(1.f, petiole_index);
+    const float leaflet_offset_val = clampOffset(int(leaf_count), phytomer_parameters.leaf.leaflet_offset.val());
+    const float petiole_length_val = petiole_length.at(petiole_index);
+    const std::string material_base_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_" + parent_shoot_ptr->shoot_type_label + "_leaf";
+
+    for (uint leaf = 0; leaf < leaf_count; leaf++) {
+        const float ind_from_tip = float(leaf) - float(leaf_count - 1) / 2.f;
+
+        // Built fresh rather than copied: the cached prototypes are stored per leaflet position for the shoot type's own count, and a different count has different positions.
+        const uint objID_leaf = phytomer_parameters.leaf.prototype.prototype_function(context_ptr, &phytomer_parameters.leaf.prototype, int(ind_from_tip));
+        labelLeafPrototype(objID_leaf);
+        renameAutoMaterial(context_ptr, objID_leaf, material_base_name);
+
+        float size = phytomer_parameters.leaf.prototype_scale.val();
+        if (leaf_count > 1 && phytomer_parameters.leaf.leaflet_scale.val() != 1.f && ind_from_tip != 0.f) {
+            size = powf(phytomer_parameters.leaf.leaflet_scale.val(), fabs(ind_from_tip)) * phytomer_parameters.leaf.prototype_scale.val();
+        }
+        leaf_size_max.at(petiole_index).at(leaf) = size;
+        context_ptr->scaleObject(objID_leaf, size * make_vec3(1, 1, 1));
+
+        const float compound_rotation = compoundLeafRotation(int(leaf_count), int(leaf), leaflet_offset_val);
+        const float leaf_roll_angle = deg2rad(phytomer_parameters.leaf.roll.val());
+        const float leaf_pitch_angle = deg2rad(phytomer_parameters.leaf.pitch.val());
+        float leaf_yaw_angle = 0.f;
+        if (ind_from_tip != 0.f) {
+            leaf_yaw_angle = -compound_rotation / fabs(compound_rotation) * deg2rad(phytomer_parameters.leaf.yaw.val());
+        }
+        orientLeaf(objID_leaf, petiole_index, leaf, int(leaf_count), ind_from_tip, compound_rotation, petiole_tip_axis, leaf_roll_angle, leaf_pitch_angle, leaf_yaw_angle);
+
+        vec3 leaf_base = petiole_vertices.at(petiole_index).back();
+        if (leaf_count > 1 && leaflet_offset_val > 0.f && ind_from_tip != 0.f && petiole_length_val > 0.f) {
+            const float offset = (fabs(ind_from_tip) - 0.5f) * leaflet_offset_val * petiole_length_val;
+            leaf_base = PlantArchitecture::interpolateTube(petiole_vertices.at(petiole_index), 1.f - offset / petiole_length_val);
+        }
+        context_ptr->translateObject(objID_leaf, leaf_base);
+
+        leaf_objIDs.at(petiole_index).at(leaf) = objID_leaf;
+        leaf_bases.at(petiole_index).at(leaf) = leaf_base;
+    }
+}
+
 void Phytomer::lockPetioleScale(uint petiole_index) {
     if (current_leaf_scale_factor.size() <= petiole_index) {
         helios_runtime_error("ERROR (PlantArchitecture::Phytomer::lockPetioleScale): Invalid petiole index " + std::to_string(petiole_index) + ".");
@@ -3966,6 +4074,7 @@ void Phytomer::setPetioleNodePositions(uint petiole_index, const std::vector<hel
         }
     }
 
+    petiole_path_prescribed.at(petiole_index) = true;
     lockPetioleScale(petiole_index);
 }
 
@@ -4003,7 +4112,9 @@ void Phytomer::removeLeaf() {
     leaf_bases.clear();
     // These are indexed in lockstep with leaf_objIDs, so they have to be cleared with it or a later leaf would be deflected against a stale prototype.
     leaf_prototype_index.clear();
+    leaf_pose_prescribed.clear();
     leaf_last_deformed_scale.clear();
+    petiole_path_prescribed.clear();
 
     if (build_context_geometry_petiole) {
         context_ptr->deleteObject(getExistingPetioleObjIDs());
@@ -4864,6 +4975,14 @@ void PlantArchitecture::setPhytomerLeafScale(uint plantID, uint shootID, uint no
     parent_shoot->phytomers.at(node_number)->setLeafScaleFraction(leaf_scale_factor_fraction);
 }
 
+void PlantArchitecture::setShootInternodeLengthMax(uint plantID, uint shootID, float internode_length_max) {
+    validateShootID(plantID, shootID, "setShootInternodeLengthMax");
+    if (!(internode_length_max > 0.f)) {
+        helios_runtime_error("ERROR (PlantArchitecture::setShootInternodeLengthMax): The internode length must be greater than zero, but " + std::to_string(internode_length_max) + " was given.");
+    }
+    plant_instances.at(plantID).shoot_tree.at(shootID)->internode_length_max_shoot_initial = internode_length_max;
+}
+
 void PlantArchitecture::setPetioleNodePositions(uint plantID, uint shootID, uint node_index, uint petiole_index, const std::vector<helios::vec3> &petiole_node_positions, const std::vector<float> &petiole_node_radii) {
     validateShootID(plantID, shootID, "setPetioleNodePositions");
 
@@ -4887,6 +5006,17 @@ void PlantArchitecture::setPetioleLeafGeometry(uint plantID, uint shootID, uint 
     }
 
     parent_shoot->phytomers.at(node_index)->setPetioleLeafGeometry(petiole_index, leaf_bases, leaf_rotations, leaf_sizes);
+}
+
+void PlantArchitecture::setPetioleLeafCount(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_count) {
+    validateShootID(plantID, shootID, "setPetioleLeafCount");
+
+    const auto &parent_shoot = plant_instances.at(plantID).shoot_tree.at(shootID);
+    if (node_index >= parent_shoot->phytomers.size()) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeafCount): Shoot " + std::to_string(shootID) + " does not have a node " + std::to_string(node_index) + "; it has " + std::to_string(parent_shoot->phytomers.size()) + " nodes.");
+    }
+
+    parent_shoot->phytomers.at(node_index)->setPetioleLeafCount(petiole_index, leaf_count);
 }
 
 void PlantArchitecture::setPlantBasePosition(uint plantID, const helios::vec3 &base_position) {
@@ -6793,6 +6923,13 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
     }
 
     // accounting for case of time_step_days>phyllochron_min
+    //
+    // The sub-step is the shortest phyllochron the plants can exhibit during this call, taken over the shoots that
+    // already exist AND over every shoot type the plants can still produce. Using only the existing shoots let a
+    // child shoot type with a shorter phyllochron than its parent (bindweed primary shoots, grapevine main shoots)
+    // appear mid-call and then be advanced on its parent's coarser sub-step, so it produced fewer phytomers than
+    // its phyllochron calls for and the result depended on whether the caller advanced a season in one call or a
+    // day at a time.
     float phyllochron_min = 9999;
     for (uint plantID: plantIDs) {
         PlantInstance &plant_instance = plant_instances.at(plantID);
@@ -6800,17 +6937,11 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
         if (shoot_tree->empty()) {
             continue;
         }
-        float phyllochron_min_shoot = shoot_tree->front()->shoot_parameters.phyllochron_min.val();
-        if (phyllochron_min_shoot < phyllochron_min) {
-            phyllochron_min = phyllochron_min_shoot;
+        for (const auto &shoot: *shoot_tree) {
+            phyllochron_min = std::min(phyllochron_min, shoot->shoot_parameters.phyllochron_min.val());
         }
-        for (int i = 1; i < shoot_tree->size(); i++) {
-            if (shoot_tree->at(i)->shoot_parameters.phyllochron_min.val() < phyllochron_min) {
-                phyllochron_min_shoot = shoot_tree->at(i)->shoot_parameters.phyllochron_min.val();
-                if (phyllochron_min_shoot < phyllochron_min) {
-                    phyllochron_min = phyllochron_min_shoot;
-                }
-            }
+        for (auto &[shoot_type_label, shoot_type_parameters]: plant_instance.shoot_types_snapshot) {
+            phyllochron_min = std::min(phyllochron_min, shoot_type_parameters.phyllochron_min.val());
         }
     }
     if (phyllochron_min == 9999) {
@@ -6819,7 +6950,9 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
     // **** accumulate photosynthate **** //
     if (carbon_model_enabled) {
-        accumulateShootPhotosynthesis();
+        for (uint plantID: plantIDs) {
+            accumulateShootPhotosynthesis(plantID);
+        }
     }
 
     float dt_max_days;
@@ -7199,8 +7332,14 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 }
 
                 // ****** PHYLLOCHRON - NEW PHYTOMERS ****** //
+                //
+                // A sub-step can be longer than this shoot's phyllochron: the sub-step is chosen from the sampled
+                // phyllochron_min of the shoot types at the start of the call, while each shoot draws its own value
+                // from that distribution. Append every phytomer the accumulated counter has earned rather than at
+                // most one, so the node production rate is the phyllochron and not the sub-step length. The node cap
+                // is re-checked each time because reaching it terminates apical growth.
                 shoot->phyllochron_counter += dt_max_days;
-                if (shoot->phyllochron_counter >= shoot->phyllochron_instantaneous && !shoot->phytomers.back()->isdormant) {
+                while (shoot->phyllochron_instantaneous > 0.f && shoot->phyllochron_counter >= shoot->phyllochron_instantaneous && !shoot->phytomers.back()->isdormant && shoot->current_node_number < shoot->getGrowthNodeCap()) {
                     float internode_radius = shoot->shoot_parameters.phytomer_parameters.internode.radius_initial.val();
                     shoot->shoot_parameters.phytomer_parameters.internode.radius_initial.resample();
                     float internode_length_max = shoot->internode_length_max_shoot_initial;
@@ -7217,7 +7356,9 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 std::string epicormic_shoot_label = plant_instance.epicormic_shoot_probability_perlength_per_day.first;
                 if (!epicormic_shoot_label.empty()) {
                     std::vector<float> epicormic_fraction;
-                    uint Nepicormic = shoot->sampleEpicormicShoot(time_step_days, epicormic_fraction);
+                    // Sample the sub-step, not the whole call: the sampler runs one Bernoulli trial per day of the
+                    // interval it is given, and this block runs once per sub-step.
+                    uint Nepicormic = shoot->sampleEpicormicShoot(dt_max_days, epicormic_fraction);
                     for (int s = 0; s < Nepicormic; s++) {
                         float internode_radius = plant_instance.shoot_types_snapshot.at(epicormic_shoot_label).phytomer_parameters.internode.radius_initial.val();
                         plant_instance.shoot_types_snapshot.at(epicormic_shoot_label).phytomer_parameters.internode.radius_initial.resample();
@@ -7259,11 +7400,11 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
             // **** subtract maintenance carbon costs **** //
             if (carbon_model_enabled) {
-                subtractShootMaintenanceCarbon(dt_max_days);
-                subtractShootGrowthCarbon();
-                checkCarbonPool_transferCarbon(dt_max_days);
-                checkCarbonPool_adjustPhyllochron(dt_max_days);
-                checkCarbonPool_abortOrgans(dt_max_days);
+                subtractShootMaintenanceCarbon(plantID, dt_max_days);
+                subtractShootGrowthCarbon(plantID);
+                checkCarbonPool_transferCarbon(plantID, dt_max_days);
+                checkCarbonPool_adjustPhyllochron(plantID, dt_max_days);
+                checkCarbonPool_abortOrgans(plantID, dt_max_days);
             }
 
             // Assign current volume as old volume for your next timestep

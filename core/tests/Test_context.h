@@ -1558,6 +1558,167 @@ TEST_CASE("Triangle Management") {
     }
 }
 
+//! Time an operation at a small size and at 32x that size, and report whether its cost grew linearly
+/**
+ * A linear algorithm gives a time ratio near 32 and a quadratic one near 1024. The bound of 128 (four times the size ratio)
+ * leaves room for cache effects and timer noise on a loaded machine while still failing the quadratic case by a factor of
+ * eight, so a single comparison decides the result and nothing is retried. Each size takes the minimum of three
+ * repetitions, which keeps one scheduling hiccup out of a timing without re-running the comparison, and the small-size time
+ * is floored at 1 ms so that a sub-millisecond measurement cannot inflate the ratio.
+ * \param[in] timed_run Runs the operation at the given size and returns the wall-clock seconds it took.
+ * \param[in] small_size Size of the smaller run.
+ * \param[out] measured_ratio Ratio of the larger run's time to the smaller run's, for the failure message.
+ * \return True if the ratio stayed within the bound.
+ */
+static bool scalesLinearly(const std::function<double(size_t)> &timed_run, size_t small_size, double &measured_ratio) {
+    constexpr size_t size_ratio = 32;
+    constexpr double ratio_bound = 4.0 * double(size_ratio);
+    auto min_seconds_at = [&timed_run](size_t size) {
+        double best = std::numeric_limits<double>::max();
+        for (int repeat = 0; repeat < 3; repeat++) {
+            best = std::min(best, timed_run(size));
+        }
+        return best;
+    };
+    const double t_small = std::max(min_seconds_at(small_size), 1e-3);
+    const double t_large = min_seconds_at(size_ratio * small_size);
+    measured_ratio = t_large / t_small;
+    return measured_ratio < ratio_bound;
+}
+
+TEST_CASE("Deleted-ID cleaning and batch primitive deletion scale linearly") {
+    // Regression tests for two O(N*k) paths. cleanDeletedUUIDs() and cleanDeletedObjectIDs() erased stale entries from the
+    // middle of the vector one at a time, shifting the tail on every erase, so cleaning a list of N IDs with k stale cost
+    // O(N*k). The batch form of deletePrimitive() hands each parent object its deleted members in one call, but the object
+    // then found and erased them one at a time, so deleting k of an object's N primitives cost O(N*k) as well.
+    SUBCASE("cleanDeletedUUIDs on a long list") {
+        auto time_clean = [](size_t live_count) {
+            Context ctx;
+            // Interleave every live UUID with one that does not exist in the Context, so half the entries are stale.
+            std::vector<uint> UUIDs;
+            UUIDs.reserve(2 * live_count);
+            std::vector<uint> expected;
+            expected.reserve(live_count);
+            for (size_t i = 0; i < live_count; i++) {
+                uint UUID = ctx.addPatch();
+                UUIDs.push_back(UUID);
+                expected.push_back(UUID);
+                UUIDs.push_back(UUID + 1000000000u);
+            }
+
+            auto t0 = std::chrono::steady_clock::now();
+            ctx.cleanDeletedUUIDs(UUIDs);
+            auto t1 = std::chrono::steady_clock::now();
+
+            // Correctness: only the live UUIDs remain, in their original order.
+            DOCTEST_CHECK(UUIDs == expected);
+            return std::chrono::duration<double>(t1 - t0).count();
+        };
+
+        double measured_ratio = 0;
+        const bool linear = scalesLinearly(time_clean, 5000, measured_ratio);
+        DOCTEST_CHECK_MESSAGE(linear, "cleanDeletedUUIDs() time grew by more than 128x for 32x the entries (ratio: " << measured_ratio << ")");
+    }
+
+    SUBCASE("cleanDeletedObjectIDs preserves order") {
+        Context ctx;
+        std::vector<uint> objIDs;
+        std::vector<uint> expected;
+        for (int i = 0; i < 50; i++) {
+            uint objID = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(1, 1));
+            objIDs.push_back(objID);
+            expected.push_back(objID);
+            objIDs.push_back(objID + 1000000u);
+        }
+        ctx.cleanDeletedObjectIDs(objIDs);
+        DOCTEST_CHECK(objIDs == expected);
+    }
+
+    SUBCASE("batch deletePrimitive of half of a tile object's patches") {
+        auto time_delete = [](size_t patches_along_x) {
+            Context ctx;
+            const uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(2, 1), nullrotation, make_int2(int(patches_along_x), 2));
+            const std::vector<uint> members = ctx.getObjectPrimitiveUUIDs(tile);
+            std::vector<uint> deleted;
+            std::vector<uint> surviving;
+            for (size_t i = 0; i < members.size(); i++) {
+                (i % 2 == 0 ? deleted : surviving).push_back(members.at(i));
+            }
+
+            auto t0 = std::chrono::steady_clock::now();
+            ctx.deletePrimitive(deleted);
+            auto t1 = std::chrono::steady_clock::now();
+
+            // Correctness: exactly the deleted patches are gone and the survivors keep their order within the object.
+            DOCTEST_CHECK(ctx.getPrimitiveCount() == surviving.size());
+            DOCTEST_CHECK(ctx.getObjectPrimitiveUUIDs(tile) == surviving);
+            return std::chrono::duration<double>(t1 - t0).count();
+        };
+
+        double measured_ratio = 0;
+        const bool linear = scalesLinearly(time_delete, 1000, measured_ratio); // 2000 patches in the small tile
+        DOCTEST_CHECK_MESSAGE(linear, "deletePrimitive() of half of an object's primitives grew by more than 128x for 32x the primitives (ratio: " << measured_ratio << ")");
+    }
+}
+
+TEST_CASE("Domain cropping scales linearly") {
+    // Regression test for a quadratic path. cropDomain*() deleted the primitives it rejected one at a time, and each single
+    // deletion of an object member did a linear find-and-erase in the parent object's UUID list and copied that whole list
+    // to test whether the object was empty, so cropping a tile with half of its N patches outside the bounds cost O(N^2).
+    SUBCASE("cropDomainX on a tile object") {
+        auto time_crop = [](int patches_along_x) {
+            Context ctx;
+            // Tile spanning x in [-1, 1]; cropping to x in [0, 1] rejects the half of the patches at negative x. The
+            // bounds are padded by a quarter of a patch width so that float rounding of the vertices that sit exactly
+            // on x = 0 and x = 1 cannot push them outside. A second, fully-inside tile checks that an object that loses
+            // no primitives is untouched.
+            uint tile_cropped = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(2, 1), nullrotation, make_int2(patches_along_x, 2));
+            uint tile_kept = ctx.addTileObject(make_vec3(0.5f, 2, 0), make_vec2(1, 1), nullrotation, make_int2(2, 2));
+            const size_t count_before = ctx.getPrimitiveCount();
+            const size_t count_cropped_before = ctx.getObjectPrimitiveCount(tile_cropped);
+            const float pad = 0.25f * 2.f / float(patches_along_x);
+            const vec2 xbounds = make_vec2(-pad, 1.f + pad);
+
+            auto t0 = std::chrono::steady_clock::now();
+            ctx.cropDomainX(xbounds);
+            auto t1 = std::chrono::steady_clock::now();
+
+            // Correctness: exactly the negative-x half of the cropped tile is gone, the kept tile is intact, and every
+            // surviving primitive has all of its vertices inside the bounds.
+            DOCTEST_CHECK(ctx.getPrimitiveCount() == count_before - count_cropped_before / 2);
+            DOCTEST_CHECK(ctx.doesObjectExist(tile_cropped));
+            DOCTEST_CHECK(ctx.getObjectPrimitiveCount(tile_cropped) == count_cropped_before / 2);
+            DOCTEST_CHECK(ctx.doesObjectExist(tile_kept));
+            DOCTEST_CHECK(ctx.getObjectPrimitiveCount(tile_kept) == 4);
+            bool all_inside = true;
+            for (uint UUID: ctx.getAllUUIDs()) {
+                for (const vec3 &v: ctx.getPrimitiveVertices(UUID)) {
+                    if (v.x < xbounds.x || v.x > xbounds.y) {
+                        all_inside = false;
+                    }
+                }
+            }
+            DOCTEST_CHECK(all_inside);
+            return std::chrono::duration<double>(t1 - t0).count();
+        };
+
+        double measured_ratio = 0;
+        const bool linear = scalesLinearly([&](size_t patches_along_x) { return time_crop(int(patches_along_x)); }, 1000, measured_ratio); // 2000 patches in the small cropped tile
+        DOCTEST_CHECK_MESSAGE(linear, "cropDomainX() time grew by more than 128x for 32x the primitives (ratio: " << measured_ratio << ")");
+    }
+
+    SUBCASE("cropDomainX removes an object whose primitives are all outside") {
+        Context ctx;
+        uint tile_outside = ctx.addTileObject(make_vec3(-5, 0, 0), make_vec2(1, 1), nullrotation, make_int2(3, 3));
+        uint tile_inside = ctx.addTileObject(make_vec3(0.5f, 0, 0), make_vec2(1, 1), nullrotation, make_int2(3, 3));
+        ctx.cropDomainX(make_vec2(0.f, 1.f));
+        DOCTEST_CHECK(!ctx.doesObjectExist(tile_outside));
+        DOCTEST_CHECK(ctx.doesObjectExist(tile_inside));
+        DOCTEST_CHECK(ctx.getObjectPrimitiveCount(tile_inside) == 9);
+        DOCTEST_CHECK(ctx.getPrimitiveCount() == 9);
+    }
+}
+
 TEST_CASE("UUID and Object Management") {
     SUBCASE("getAllUUIDs and cleanDeletedUUIDs") {
         Context ctx;

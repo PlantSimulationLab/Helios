@@ -1728,24 +1728,7 @@ void CollisionDetection::buildPrimitiveCache() {
     for (uint primitive_id: all_primitives) {
         if (context->doesPrimitiveExist(primitive_id)) {
             try {
-                PrimitiveType type = context->getPrimitiveType(primitive_id);
-                std::vector<vec3> vertices = context->getPrimitiveVertices(primitive_id);
-
-                CachedPrimitive cached(type, vertices);
-                cached.UUID = primitive_id;
-
-                // Cache texture transparency data so that ray hits on transparent texels can be
-                // rejected during traversal (mirrors the OptiX rtIgnoreIntersection behavior).
-                // Reading the Context here keeps the parallel traversal thread-safe. Primitives
-                // without a transparency channel (no texture, or e.g. JPEG) keep a null mask and
-                // are treated as fully solid, preserving the original behavior.
-                if (context->primitiveTextureHasTransparencyChannel(primitive_id)) {
-                    cached.transparency_mask = context->getPrimitiveTextureTransparencyData(primitive_id);
-                    cached.texture_size = context->getPrimitiveTextureSize(primitive_id);
-                    cached.uv = context->getPrimitiveTextureUV(primitive_id);
-                }
-
-                primitive_cache[primitive_id] = std::move(cached);
+                cachePrimitive(primitive_id);
             } catch (const std::exception &e) {
                 // Skip this primitive if it no longer exists or can't be accessed
                 // This can happen when UUIDs from previous contexts persist
@@ -1761,18 +1744,48 @@ void CollisionDetection::buildPrimitiveCache() {
     rebuildDensePrimitiveCache();
 }
 
+void CollisionDetection::cachePrimitive(uint UUID) {
+    PrimitiveType type = context->getPrimitiveType(UUID);
+    std::vector<vec3> vertices = context->getPrimitiveVertices(UUID);
+
+    CachedPrimitive cached(type, vertices);
+    cached.UUID = UUID;
+
+    // Cache texture transparency data so that ray hits on transparent texels can be
+    // rejected during traversal (mirrors the OptiX rtIgnoreIntersection behavior).
+    // Reading the Context here keeps the parallel traversal thread-safe. Primitives
+    // without a transparency channel (no texture, or e.g. JPEG) keep a null mask and
+    // are treated as fully solid, preserving the original behavior.
+    if (context->primitiveTextureHasTransparencyChannel(UUID)) {
+        cached.transparency_mask = context->getPrimitiveTextureTransparencyData(UUID);
+        cached.texture_size = context->getPrimitiveTextureSize(UUID);
+        cached.uv = context->getPrimitiveTextureUV(UUID);
+    }
+
+    primitive_cache[UUID] = std::move(cached);
+}
+
 void CollisionDetection::rebuildDensePrimitiveCache() {
     // Build the dense, BVH-leaf-ordered cache (slot i <-> primitive_indices[i]) from the UUID-keyed cache so the
     // hot traversal loop indexes it directly without an unordered_map lookup. Must be called whenever
     // primitive_indices is (re)ordered — buildBVH() reorders it in place even when the primitive set is unchanged.
-    // Any primitive_indices entry with no cache entry gets a default CachedPrimitive whose empty vertex list makes
-    // every intersection test fail safely — the same outcome as the previous find()==end() miss.
+    // A BVH primitive missing from the UUID-keyed cache — because buildBVH() evicted it after it moved, or because
+    // it was added to the Context after the cache was first built — is read from the Context here, so the dense
+    // cache always holds the current vertices of every BVH leaf. A leaf whose primitive no longer exists in the
+    // Context (possible only when automatic rebuilds are disabled) keeps a default CachedPrimitive whose empty
+    // vertex list makes every intersection test fail safely, as before.
     primitive_cache_dense.assign(primitive_indices.size(), CachedPrimitive());
     for (size_t i = 0; i < primitive_indices.size(); i++) {
-        auto it = primitive_cache.find(primitive_indices[i]);
-        if (it != primitive_cache.end()) {
-            primitive_cache_dense[i] = it->second;
+        const uint UUID = primitive_indices[i];
+        auto it = primitive_cache.find(UUID);
+        if (it == primitive_cache.end()) {
+            if (!context->doesPrimitiveExist(UUID)) {
+                continue;
+            }
+            cachePrimitive(UUID);
+            it = primitive_cache.find(UUID);
         }
+        primitive_cache_dense[i] = it->second;
     }
 }
 

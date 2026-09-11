@@ -1581,6 +1581,83 @@ float Context::sumPrimitiveSurfaceArea(const std::vector<uint> &UUIDs) const {
     return area;
 }
 
+float Context::sumAreaIndexPrimitives_private(const std::vector<uint> &UUIDs, const std::string &argument_name) const {
+
+    // Validate before summing. Context::sumPrimitiveSurfaceArea() queries the primitive area before checking that the
+    // primitive exists, so a stale UUID must be rejected here rather than passed through to it.
+    for (uint UUID: UUIDs) {
+        if (!doesPrimitiveExist(UUID)) {
+            helios_runtime_error("ERROR (Context::calculateAreaIndex): Primitive with UUID of " + std::to_string(UUID) + " given in '" + argument_name + "' does not exist in the Context.");
+        }
+        if (getPrimitiveType(UUID) == PRIMITIVE_TYPE_VOXEL) {
+            helios_runtime_error("ERROR (Context::calculateAreaIndex): Primitive with UUID of " + std::to_string(UUID) + " given in '" + argument_name +
+                                 "' is a voxel. The area of a voxel is its total enclosing surface area rather than a one-sided area, and cannot contribute to an area index.");
+        }
+    }
+
+    return sumPrimitiveSurfaceArea(UUIDs);
+}
+
+float Context::calculateAreaIndex(const std::vector<uint> &leaf_UUIDs) const {
+    // Note the explicit empty vector: a braced initializer here would resolve to the float (ground area) overload.
+    return calculateAreaIndex(leaf_UUIDs, std::vector<uint>{});
+}
+
+float Context::calculateAreaIndex(const std::vector<uint> &leaf_UUIDs, float ground_area) const {
+    return calculateAreaIndex(leaf_UUIDs, std::vector<uint>{}, ground_area);
+}
+
+float Context::calculateAreaIndex(const std::vector<uint> &leaf_UUIDs, const std::vector<uint> &wood_UUIDs) const {
+
+    if (leaf_UUIDs.empty() && wood_UUIDs.empty()) {
+        helios_runtime_error("ERROR (Context::calculateAreaIndex): No primitives were given. An area index is undefined without leaf or woody primitives.");
+    }
+
+    if (getPrimitiveCount() == 0) {
+        helios_runtime_error("ERROR (Context::calculateAreaIndex): The Context contains no primitives, so the ground area basis is undefined.");
+    }
+
+    // The ground area basis is the horizontal footprint of the whole domain, which is the same extent the radiation
+    // model derives when enforcing a periodic boundary.
+    vec2 xbounds, ybounds, zbounds;
+    getDomainBoundingBox(xbounds, ybounds, zbounds);
+
+    float x_extent = xbounds.y - xbounds.x;
+    float y_extent = ybounds.y - ybounds.x;
+
+    // A scene lying in a single vertical plane has no horizontal extent in one direction. Rotating a
+    // primitive into that plane leaves a small floating-point residue rather than an exactly zero
+    // span, so compare against the scale of the domain rather than against zero.
+    float extent_tolerance = 1e-6f * std::max(x_extent, y_extent);
+    if (x_extent <= extent_tolerance || y_extent <= extent_tolerance) {
+        helios_runtime_error("ERROR (Context::calculateAreaIndex): The domain bounding box has no horizontal extent in at least one direction (x extent of " + std::to_string(x_extent) + ", y extent of " + std::to_string(y_extent) +
+                             "), so the ground area basis is undefined. This occurs when all primitives in the Context lie in a single vertical plane. Supply the ground area explicitly instead.");
+    }
+
+    float ground_area = x_extent * y_extent;
+
+    return calculateAreaIndex(leaf_UUIDs, wood_UUIDs, ground_area);
+}
+
+float Context::calculateAreaIndex(const std::vector<uint> &leaf_UUIDs, const std::vector<uint> &wood_UUIDs, float ground_area) const {
+
+    if (leaf_UUIDs.empty() && wood_UUIDs.empty()) {
+        helios_runtime_error("ERROR (Context::calculateAreaIndex): No primitives were given. An area index is undefined without leaf or woody primitives.");
+    }
+
+    if (ground_area <= 0.f) {
+        helios_runtime_error("ERROR (Context::calculateAreaIndex): The ground area basis must be positive, but a value of " + std::to_string(ground_area) + " was given.");
+    }
+
+    float leaf_area = sumAreaIndexPrimitives_private(leaf_UUIDs, "leaf_UUIDs");
+
+    // A tube or cone encloses the branch it represents, so its primitives sum to the full surface of the cylinder.
+    // Beer's law requires the projected area, which is one half of that.
+    float wood_area = 0.5f * sumAreaIndexPrimitives_private(wood_UUIDs, "wood_UUIDs");
+
+    return (leaf_area + wood_area) / ground_area;
+}
+
 std::vector<uint> Context::filterPrimitivesByData(const std::vector<uint> &UUIDs, const std::string &primitive_data_label, float filter_value, const std::string &comparator) const {
 
     if (comparator != "==" && comparator != ">" && comparator != "<" && comparator != ">=" && comparator != "<=") {

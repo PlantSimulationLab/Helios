@@ -832,6 +832,15 @@ void OptiX8Backend::launchDirectRays(const RayTracingLaunchParams &launch_params
 
     applyLaunchParams(launch_params);
 
+    // The kernels write one camera-scatter block per camera; refuse to index past buffers sized for another camera set.
+    requireCameraScatterBuffersSized("launchDirectRays", launch_params.num_bands_launch);
+
+    // Early return when there are no rays to launch (e.g. setDirectRayCount(band,0) on an emission-only band), matching
+    // launchDiffuseRays(). Without this, rays_per_primitive=0 gives launch_dim_x=0 and optixLaunch reports "width is 0".
+    if (launch_params.rays_per_primitive == 0 || launch_params.launch_count == 0) {
+        return;
+    }
+
     // Upload band_launch_flag (vector<bool> → device bool array)
     if (d_band_launch_flag) { freeCUdeviceptr(d_band_launch_flag); }
     const size_t Nbands_g = launch_params.band_launch_flag.size();
@@ -891,6 +900,9 @@ void OptiX8Backend::launchDiffuseRays(const RayTracingLaunchParams &launch_param
     }
 
     applyLaunchParams(launch_params);
+
+    // The kernels write one camera-scatter block per camera; refuse to index past buffers sized for another camera set.
+    requireCameraScatterBuffersSized("launchDiffuseRays", launch_params.num_bands_launch);
 
     // Upload radiation_out buffers (emission + scattered energy from previous iteration).
     // This must happen here because RadiationModel adds emission to flux_top/bottom AFTER
@@ -1146,11 +1158,16 @@ void OptiX8Backend::getRadiationResults(RayTracingResults &results) {
         if (d_scatter_buff_bottom)  results.scatter_buff_bottom  = downloadFloat(d_scatter_buff_bottom,  total);
     }
 
-    // Camera scatter buffers: sized Nprims × Nbands_launch (may differ from Nbands_global)
-    if (Nprims > 0 && current_launch_band_count > 0) {
-        const size_t cam_total = Nprims * current_launch_band_count;
-        if (d_scatter_buff_top_cam)    results.scatter_buff_top_cam    = downloadFloat(d_scatter_buff_top_cam,    cam_total);
-        if (d_scatter_buff_bottom_cam) results.scatter_buff_bottom_cam = downloadFloat(d_scatter_buff_bottom_cam, cam_total);
+    // Camera scatter buffers: one [prim][band] block per camera, Ncameras × Nprims × Nbands_launch (Nbands_launch may
+    // differ from Nbands_global). Read back only when the allocation made by zeroCameraScatterBuffers() is exactly that
+    // size, since a buffer allocated for an earlier camera set would be read past its end. Otherwise the vectors stay
+    // empty, so a caller consuming camera scatter detects the mismatch rather than integrating garbage.
+    if (Nprims > 0 && current_launch_band_count > 0 && current_camera_count > 0) {
+        const size_t cam_total = current_camera_count * Nprims * current_launch_band_count;
+        if (d_scatter_buff_top_cam && d_scatter_buff_bottom_cam && camera_scatter_buffer_bytes == cam_total * sizeof(float)) {
+            results.scatter_buff_top_cam    = downloadFloat(d_scatter_buff_top_cam,    cam_total);
+            results.scatter_buff_bottom_cam = downloadFloat(d_scatter_buff_bottom_cam, cam_total);
+        }
     }
 }
 
@@ -1281,9 +1298,10 @@ void OptiX8Backend::uploadVertexRadiationOut(const std::vector<float> &vertex_ra
 
 void OptiX8Backend::zeroCameraScatterBuffers(size_t launch_band_count) {
     const size_t Nprims = current_primitive_count;
-    if (Nprims == 0 || launch_band_count == 0) return;
+    if (Nprims == 0 || launch_band_count == 0 || current_camera_count == 0) return;
 
-    const size_t bytes = Nprims * launch_band_count * sizeof(float);
+    // One [prim][band] block per camera, so each camera accumulates scatter weighted by its own response
+    const size_t bytes = current_camera_count * Nprims * launch_band_count * sizeof(float);
     reallocDevice(d_scatter_buff_top_cam,    bytes);
     reallocDevice(d_scatter_buff_bottom_cam, bytes);
     CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_scatter_buff_top_cam),    0, bytes));
@@ -1292,6 +1310,19 @@ void OptiX8Backend::zeroCameraScatterBuffers(size_t launch_band_count) {
     h_params.scatter_buff_top_cam    = reinterpret_cast<float *>(d_scatter_buff_top_cam);
     h_params.scatter_buff_bottom_cam = reinterpret_cast<float *>(d_scatter_buff_bottom_cam);
     current_launch_band_count        = launch_band_count;
+    camera_scatter_buffer_bytes      = bytes;
+}
+
+void OptiX8Backend::requireCameraScatterBuffersSized(const char *caller, size_t launch_band_count) const {
+    if (current_camera_count == 0) {
+        return; // The kernels loop over zero cameras and never touch the camera-scatter buffers
+    }
+    const size_t required_bytes = current_camera_count * current_primitive_count * launch_band_count * sizeof(float);
+    if (!d_scatter_buff_top_cam || !d_scatter_buff_bottom_cam || camera_scatter_buffer_bytes != required_bytes) {
+        helios_runtime_error(std::string("ERROR (OptiX8Backend::") + caller + "): The camera-weighted scatter buffers hold " + std::to_string(camera_scatter_buffer_bytes) + " bytes, but " +
+                             std::to_string(current_camera_count) + " camera(s) x " + std::to_string(current_primitive_count) + " primitives x " + std::to_string(launch_band_count) +
+                             " launched band(s) require " + std::to_string(required_bytes) + ". zeroCameraScatterBuffers() must be called for the current camera set before rays are launched.");
+    }
 }
 
 void OptiX8Backend::uploadSourceFluxes(const std::vector<float> &fluxes) {
