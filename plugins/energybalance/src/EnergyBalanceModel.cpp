@@ -14,6 +14,7 @@
 */
 
 #include "EnergyBalanceModel.h"
+#include <iomanip>
 #include "../include/EnergyBalanceModel.h"
 
 #include "global.h"
@@ -131,13 +132,19 @@ void EnergyBalanceModel::initializeGPUAcceleration() {
 
 void EnergyBalanceModel::evaluateSurfaceEnergyBalance(const std::vector<uint> &UUIDs, float dt) {
 #ifdef HELIOS_CUDA_AVAILABLE
-    if (gpu_acceleration_enabled) {
+    // Santanello-Friedl G is an algebraic function of the CURRENT trial soil
+    // temperature through Rn_s(Ts).  The CPU residual below evaluates G(Ts)
+    // inside each root-function evaluation.  Until the CUDA residual is patched
+    // with the same term, canopy-airspace solves that include ground must use
+    // the CPU residual to remain physically identical.
+    if (canopy_airspace_enabled && !canopy_airspace_ground_UUIDs.empty()) {
+        evaluateSurfaceEnergyBalance_CPU(UUIDs, dt);
+    } else if (gpu_acceleration_enabled) {
         evaluateSurfaceEnergyBalance_GPU(UUIDs, dt);
     } else {
         evaluateSurfaceEnergyBalance_CPU(UUIDs, dt);
     }
 #else
-    // CPU-only build: always use OpenMP implementation
     evaluateSurfaceEnergyBalance_CPU(UUIDs, dt);
 #endif
 }
@@ -595,7 +602,6 @@ void EnergyBalanceModel::evaluateCanopyAirspace(const std::vector<uint> &UUIDs) 
     warnings.setEnabled(message_flag);
 
     // -- Above-canopy boundary condition -- //
-
     float air_temperature_reference = air_temperature_default;
     if (context->doesGlobalDataExist("air_temperature_reference") && context->getGlobalDataType("air_temperature_reference") == helios::HELIOS_TYPE_FLOAT) {
         context->getGlobalData("air_temperature_reference", air_temperature_reference);
@@ -610,10 +616,8 @@ void EnergyBalanceModel::evaluateCanopyAirspace(const std::vector<uint> &UUIDs) 
     if (context->doesGlobalDataExist("wind_speed_reference") && context->getGlobalDataType("wind_speed_reference") == helios::HELIOS_TYPE_FLOAT) {
         context->getGlobalData("wind_speed_reference", wind_speed_reference);
     }
-
     if (wind_speed_reference <= 0.f) {
-        helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): Reference wind speed must be greater than zero for the canopy airspace model, since aerodynamic resistance is inversely proportional to wind speed. Set global data "
-                             "'wind_speed_reference' to a positive value.");
+        helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): Reference wind speed must be greater than zero.");
     }
 
     float Patm = pressure_default;
@@ -621,33 +625,14 @@ void EnergyBalanceModel::evaluateCanopyAirspace(const std::vector<uint> &UUIDs) 
         context->getGlobalData("air_pressure", Patm);
     }
 
-    // Layer assignment and the canopy base height are cached, so verify the geometry they describe is still present. A primitive deleted since enableCanopyAirspaceModel() would otherwise fail deep inside the reduction.
     for (uint UUID: canopy_airspace_UUIDs) {
         if (!context->doesPrimitiveExist(UUID)) {
-            helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): Canopy primitive UUID " + std::to_string(UUID) +
-                                 " no longer exists in the Context. If the geometry changed since the canopy airspace model was enabled, call enableCanopyAirspaceModel() again with the current primitive UUIDs.");
+            helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): Canopy primitive UUID " + std::to_string(UUID) + " no longer exists.");
         }
     }
     for (uint UUID: canopy_airspace_ground_UUIDs) {
         if (!context->doesPrimitiveExist(UUID)) {
-            helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): Ground primitive UUID " + std::to_string(UUID) +
-                                 " no longer exists in the Context. If the geometry changed since the canopy airspace model was enabled, call enableCanopyAirspaceModel() again with the current primitive UUIDs.");
-        }
-    }
-
-    // The canopy and the soil are both part of the airspace solution, so their surface energy balance must be solved alongside it. A primitive that the airspace drives but that run() never solves would keep a surface temperature that does not
-    // correspond to the air it is exchanging with.
-    std::unordered_set<uint> solved_UUIDs(UUIDs.begin(), UUIDs.end());
-    for (uint UUID: canopy_airspace_UUIDs) {
-        if (solved_UUIDs.find(UUID) == solved_UUIDs.end()) {
-            helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): Canopy primitive UUID " + std::to_string(UUID) +
-                                 " was given to enableCanopyAirspaceModel() but is not included in the primitives passed to run(). Every primitive exchanging with the canopy airspace must also have its surface energy balance solved.");
-        }
-    }
-    for (uint UUID: canopy_airspace_ground_UUIDs) {
-        if (solved_UUIDs.find(UUID) == solved_UUIDs.end()) {
-            helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): Ground primitive UUID " + std::to_string(UUID) +
-                                 " was given to enableCanopyAirspaceModel() but is not included in the primitives passed to run(). The soil exchanges heat with the lowest canopy layer, so its surface energy balance must be solved alongside it.");
+            helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): Ground primitive UUID " + std::to_string(UUID) + " no longer exists.");
         }
     }
 
@@ -655,62 +640,195 @@ void EnergyBalanceModel::evaluateCanopyAirspace(const std::vector<uint> &UUIDs) 
         assignCanopyAirspaceLayers();
     }
 
-    size_t Ncanopy = canopy_airspace_UUIDs.size();
-    uint Nlayers = canopy_airspace_layer_count;
+    const size_t Ncanopy = canopy_airspace_UUIDs.size();
+    const uint Nlayers = canopy_airspace_layer_count;
+    const bool soil_node_present = !canopy_airspace_ground_UUIDs.empty();
 
-    // -- Resistance network geometry -- //
+    // -- Aerodynamic / within-canopy conductances -- //
+    const float rho_air_mol_m3 = Patm / (R * air_temperature_reference);
+    const float aerodynamic_resistance_s_m = calculateAerodynamicResistance(wind_speed_reference);
+    const float g_a = rho_air_mol_m3 / aerodynamic_resistance_s_m;
 
-    // Aerodynamic resistance between the canopy top and the reference height, converted from a resistance per unit ground area to a molar conductance.
-    float rho_air_mol_m3 = Patm / (R * air_temperature_reference);
-    float aerodynamic_resistance_s_m = calculateAerodynamicResistance(wind_speed_reference);
-    float g_a = rho_air_mol_m3 / aerodynamic_resistance_s_m;
+    // ---------------------------------------------------------------------
+    // TSEB-neutral aerodynamic geometry.
+    //
+    // Match the pyTSEB configuration used by the manuscript baseline:
+    //     d0  = 0.65 * h_c
+    //     z0M = 0.125 * h_c
+    //
+    // With kB = 0, z0H = z0M.  The same d0/z0M geometry is used for
+    // aerodynamic resistance and for extrapolating measured reference wind
+    // down to canopy-top wind.
+    // ---------------------------------------------------------------------
+    const float displacement_height = 0.65f * canopy_height_m;
+    const float zo_m = 0.125f * canopy_height_m;
 
-    // Wind speed at the canopy top, obtained by extrapolating the reference wind speed down to the canopy height with the same log law used for the aerodynamic resistance.
-    float exp_half_LAI = std::exp(-0.5f * canopy_airspace_LAI);
-    float zo_m = canopy_height_m * exp_half_LAI * (1.f - exp_half_LAI);
-    float displacement_height = canopy_height_m * (1.f - 2.f / canopy_airspace_LAI * (1.f - exp_half_LAI));
-    float wind_speed_canopy_top = wind_speed_reference * std::log((canopy_height_m - displacement_height) / zo_m) / std::log((reference_height_m - displacement_height) / zo_m);
+    if (!(zo_m > 0.f) ||
+        !(reference_height_m > displacement_height) ||
+        !(canopy_height_m > displacement_height)) {
+        helios_runtime_error(
+            "ERROR (EnergyBalanceModel::evaluateCanopyAirspace): "
+            "Invalid TSEB aerodynamic geometry. Require h_c > d0, "
+            "z_ref > d0, and z0M > 0.");
+    }
+
+    const float log_wind_reference =
+        std::log((reference_height_m - displacement_height) / zo_m);
+    const float log_wind_canopy_top =
+        std::log((canopy_height_m - displacement_height) / zo_m);
+
+    if (!(log_wind_reference > 0.f) || !(log_wind_canopy_top > 0.f)) {
+        helios_runtime_error(
+            "ERROR (EnergyBalanceModel::evaluateCanopyAirspace): "
+            "Invalid logarithmic wind-profile geometry for TSEB d0/z0M.");
+    }
+
+    float wind_speed_canopy_top =
+        wind_speed_reference *
+        log_wind_canopy_top /
+        log_wind_reference;
+
     wind_speed_canopy_top = std::fmax(wind_speed_canopy_top, 0.01f);
 
-    // Conductance between adjacent canopy airspace layers, from the eddy diffusivity for heat divided by the distance between layer midpoints. Turbulent mixing is strongly damped with depth into the canopy, so the diffusivity decays
-    // exponentially from its canopy-top value with the same attenuation coefficient used for the wind profile (Cionco 1972; the K/dz discretization follows standard multilayer canopy practice, e.g. Bonan et al. 2018).
-    float friction_velocity = von_Karman_constant * wind_speed_reference / std::log((reference_height_m - displacement_height) / zo_m);
-    float eddy_diffusivity_canopy_top = von_Karman_constant * friction_velocity * (canopy_height_m - displacement_height);
+    const float friction_velocity =
+        von_Karman_constant * wind_speed_reference /
+        log_wind_reference;
+
+    const float eddy_diffusivity_canopy_top =
+        von_Karman_constant *
+        friction_velocity *
+        (canopy_height_m - displacement_height);
+
+    // Export the exact TSEB aerodynamic geometry used by the airspace model.
+    context->setGlobalData("canopy_displacement_height", displacement_height);
+    context->setGlobalData("canopy_roughness_length_momentum", zo_m);
+
+    // ---------------------------------------------------------------------
+    // Within-canopy wind attenuation.
+    //
+    // canopy_wind_model = 0 : original Helios/Cionco
+    //                         a = 0.5 * LAI
+    //
+    // canopy_wind_model = 1 : Goudriaan formulation used by TSEB
+    //                         a = 0.28 * LAI^(2/3)
+    //                                   * h_c^(1/3)
+    //                                   * leaf_width^(-1/3)
+    //
+    // main.cpp sets canopy_wind_model and canopy_leaf_width_m.
+    // ---------------------------------------------------------------------
+    uint canopy_wind_model = 0;
+    if (context->doesGlobalDataExist("canopy_wind_model") &&
+        context->getGlobalDataType("canopy_wind_model") == helios::HELIOS_TYPE_UINT) {
+        context->getGlobalData("canopy_wind_model", canopy_wind_model);
+    }
+
     float attenuation_coefficient = 0.5f * canopy_airspace_LAI;
 
-    // Conductance between layer j and layer j+1, evaluated at the shared layer boundary. Sized Nlayers so that the last entry, which has no layer above it, is unused.
+    if (canopy_wind_model == 1) {
+        float canopy_leaf_width_m = NAN;
+
+        if (!context->doesGlobalDataExist("canopy_leaf_width_m") ||
+            context->getGlobalDataType("canopy_leaf_width_m") != helios::HELIOS_TYPE_FLOAT) {
+            helios_runtime_error(
+                "ERROR (EnergyBalanceModel::evaluateCanopyAirspace): "
+                "Goudriaan wind model requested, but canopy_leaf_width_m "
+                "is missing or is not a float.");
+        }
+
+        context->getGlobalData("canopy_leaf_width_m", canopy_leaf_width_m);
+
+        if (!(canopy_leaf_width_m > 0.f) || !std::isfinite(canopy_leaf_width_m)) {
+            helios_runtime_error(
+                "ERROR (EnergyBalanceModel::evaluateCanopyAirspace): "
+                "Goudriaan wind model requires canopy_leaf_width_m > 0.");
+        }
+
+        attenuation_coefficient =
+            0.28f *
+            std::pow(canopy_airspace_LAI, 2.f / 3.f) *
+            std::pow(canopy_height_m, 1.f / 3.f) *
+            std::pow(canopy_leaf_width_m, -1.f / 3.f);
+    } else if (canopy_wind_model != 0) {
+        helios_runtime_error(
+            "ERROR (EnergyBalanceModel::evaluateCanopyAirspace): "
+            "canopy_wind_model must be 0 (Cionco) or 1 (Goudriaan).");
+    }
+
+    // Export the exact attenuation coefficient used by this calculation.
+    context->setGlobalData("canopy_wind_attenuation_coefficient",
+                           attenuation_coefficient);
+
     std::vector<float> g_layer(Nlayers, 0.f);
     for (uint j = 0; j + 1 < Nlayers; j++) {
-        float boundary_height = canopy_airspace_layer_top_m.at(j);
-        float separation = canopy_airspace_layer_midpoint_m.at(j + 1) - canopy_airspace_layer_midpoint_m.at(j);
+        const float boundary_height = canopy_airspace_layer_top_m.at(j);
+        const float separation = canopy_airspace_layer_midpoint_m.at(j + 1) - canopy_airspace_layer_midpoint_m.at(j);
         if (separation <= 0.f) {
-            helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): Canopy airspace layers " + std::to_string(j) + " and " + std::to_string(j + 1) +
-                                 " have coincident midpoints, so the conductance between them is undefined. This indicates that leaf area is concentrated at a single height and cannot be divided into the requested number of layers.");
+            helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): Coincident airspace layer midpoints.");
         }
-        float eddy_diffusivity = eddy_diffusivity_canopy_top * std::exp(-attenuation_coefficient * (1.f - boundary_height / canopy_height_m));
+        const float eddy_diffusivity = eddy_diffusivity_canopy_top *
+                                       std::exp(-attenuation_coefficient * (1.f - boundary_height / canopy_height_m));
         g_layer.at(j) = rho_air_mol_m3 * eddy_diffusivity / separation;
     }
 
-    // Conductance between the bottom layer and the soil surface. The soil has its own roughness sublayer, so this uses the ground boundary-layer conductance of Kustas and Norman (1999) evaluated at the wind speed near the soil surface rather
-    // than the within-canopy turbulent diffusivity.
-    bool soil_node_present = !canopy_airspace_ground_UUIDs.empty();
-    float wind_speed_soil = wind_speed_canopy_top * std::exp(-attenuation_coefficient);
-    float g_soil = 0.166f + 0.5f * wind_speed_soil;
-
-    // Water vapor diffuses more readily than heat, so conductances to moisture are larger by the ratio of diffusivities.
+    const float wind_speed_soil = wind_speed_canopy_top * std::exp(-attenuation_coefficient);
     constexpr float moisture_conductance_ratio = 1.08f;
 
+    // Assign the within-canopy wind speed to each canopy primitive.
+    // updateCanopyWindProfile() writes primitive data "wind_speed".
     updateCanopyWindProfile(wind_speed_canopy_top);
 
-    // -- Initialize the airspace state to the above-canopy boundary condition -- //
+    // ---------------------------------------------------------------------
+    // Export wind diagnostics used by this exact EnergyBalance calculation.
+    //
+    // canopy_top_wind_speed : neutral-profile wind at canopy top
+    // soil_wind_speed       : attenuated wind used in the KN99 soil resistance
+    // canopy_wind_speed     : canopy-area-weighted mean of primitive wind speeds
+    // ---------------------------------------------------------------------
+    double canopy_wind_area_sum = 0.0;
+    double canopy_area_sum = 0.0;
 
-    float moisture_reference = air_humidity_reference * esat_Pa(air_temperature_reference) / Patm;
+    for (uint UUID : canopy_airspace_UUIDs) {
+        float primitive_wind_speed = NAN;
+        context->getPrimitiveData(UUID, "wind_speed", primitive_wind_speed);
 
+        const float primitive_area = context->getPrimitiveArea(UUID);
+
+        if (std::isfinite(primitive_wind_speed) && primitive_area > 0.f) {
+            canopy_wind_area_sum +=
+                static_cast<double>(primitive_wind_speed) *
+                static_cast<double>(primitive_area);
+            canopy_area_sum += static_cast<double>(primitive_area);
+        }
+    }
+
+    const float canopy_wind_speed =
+        (canopy_area_sum > 0.0)
+            ? static_cast<float>(canopy_wind_area_sum / canopy_area_sum)
+            : NAN;
+
+    context->setGlobalData("canopy_wind_speed", canopy_wind_speed);
+    context->setGlobalData("canopy_top_wind_speed", wind_speed_canopy_top);
+    context->setGlobalData("soil_wind_speed", wind_speed_soil);
+
+    const float moisture_reference = air_humidity_reference * esat_Pa(air_temperature_reference) / Patm;
+
+    // State variables of the coupled airspace problem.
+    //
+    // Thermal state:
+    //   T_ac  -> the TSEB-like canopy-air node temperature.
+    //
+    // Moisture state:
+    //   x_ac  -> canopy-air water-vapor mole fraction.
+    //
+    // These are the ONLY variables used to determine convergence of the
+    // outer fixed-point iteration. H and LE are diagnosed afterwards from
+    // the converged state; they are not independently forced.
     std::vector<float> T_ac(Nlayers, air_temperature_reference);
     std::vector<float> x_ac(Nlayers, moisture_reference);
-    // Warm-start from the previous solution so that repeated calls across a diurnal simulation converge in fewer iterations. The per-layer profile is preferred over the canopy mean because it preserves the vertical structure, and it is
-    // used only when its length matches the current layer count so that a profile left over from a different configuration is ignored.
-    if (context->doesGlobalDataExist("canopy_air_temperature_layers") && context->getGlobalDataType("canopy_air_temperature_layers") == helios::HELIOS_TYPE_FLOAT) {
+
+    // Warm-start temperature from the previous call when available.
+    if (context->doesGlobalDataExist("canopy_air_temperature_layers") &&
+        context->getGlobalDataType("canopy_air_temperature_layers") == helios::HELIOS_TYPE_FLOAT) {
         std::vector<float> T_previous_layers;
         context->getGlobalData("canopy_air_temperature_layers", T_previous_layers);
         if (T_previous_layers.size() == Nlayers) {
@@ -718,85 +836,207 @@ void EnergyBalanceModel::evaluateCanopyAirspace(const std::vector<uint> &UUIDs) 
         }
     }
 
-    // Seed the primitive data that the surface energy balance reads on its first pass.
-    for (size_t u = 0; u < Ncanopy; u++) {
-        uint layer = canopy_airspace_layer_index.at(u);
-        context->setPrimitiveData(canopy_airspace_UUIDs.at(u), "air_temperature", T_ac.at(layer));
-        context->setPrimitiveData(canopy_airspace_UUIDs.at(u), "air_humidity", std::fmin(x_ac.at(layer) * Patm / esat_Pa(T_ac.at(layer)), 1.f));
+    // Warm-start moisture from the previous layer relative humidity using the
+    // current layer temperature.  Previously x_ac was reset to the above-canopy
+    // reference every call, which needlessly increased the number of iterations.
+    if (context->doesGlobalDataExist("canopy_air_humidity_layers") &&
+        context->getGlobalDataType("canopy_air_humidity_layers") == helios::HELIOS_TYPE_FLOAT) {
+        std::vector<float> RH_previous_layers;
+        context->getGlobalData("canopy_air_humidity_layers", RH_previous_layers);
+        if (RH_previous_layers.size() == Nlayers) {
+            for (uint j = 0; j < Nlayers; j++) {
+                const float RH = std::fmin(std::fmax(RH_previous_layers.at(j), 0.f), 1.f);
+                x_ac.at(j) = RH * esat_Pa(T_ac.at(j)) / Patm;
+            }
+        }
     }
-    if (soil_node_present) {
-        context->setPrimitiveData(canopy_airspace_ground_UUIDs, "air_temperature", T_ac.front());
-        context->setPrimitiveData(canopy_airspace_ground_UUIDs, "air_humidity", std::fmin(x_ac.front() * Patm / esat_Pa(T_ac.front()), 1.f));
-        context->setPrimitiveData(canopy_airspace_ground_UUIDs, "wind_speed", wind_speed_soil);
+
+    // Ground-area basis used by every canopy/soil reduction below.
+    const float total_canopy_area = context->sumPrimitiveSurfaceArea(canopy_airspace_UUIDs);
+    const float ground_area = total_canopy_area / canopy_airspace_LAI;
+    if (!(ground_area > 0.f)) {
+        helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): Ground area inferred from canopy area/LAI is not positive.");
     }
 
-    // -- Outer fixed-point iteration between the surface energy balance and the airspace state -- //
+    auto write_air_state_to_primitives = [&](const std::vector<float>& Tair, const std::vector<float>& xair) {
+        for (size_t u = 0; u < Ncanopy; u++) {
+            const uint layer = canopy_airspace_layer_index.at(u);
+            const float RH = std::fmin(std::fmax(xair.at(layer) * Patm / esat_Pa(Tair.at(layer)), 0.f), 1.f);
+            context->setPrimitiveData(canopy_airspace_UUIDs.at(u), "air_temperature", Tair.at(layer));
+            context->setPrimitiveData(canopy_airspace_UUIDs.at(u), "air_humidity", RH);
+            // Keep the primitive surface-EB vapor calculation on the same
+            // pressure basis as the airspace moisture network.
+            context->setPrimitiveData(canopy_airspace_UUIDs.at(u), "air_pressure", Patm);
+        }
+        if (soil_node_present) {
+            const float RHs = std::fmin(std::fmax(xair.front() * Patm / esat_Pa(Tair.front()), 0.f), 1.f);
+            context->setPrimitiveData(canopy_airspace_ground_UUIDs, "air_temperature", Tair.front());
+            context->setPrimitiveData(canopy_airspace_ground_UUIDs, "air_humidity", RHs);
+            context->setPrimitiveData(canopy_airspace_ground_UUIDs, "air_pressure", Patm);
+            context->setPrimitiveData(canopy_airspace_ground_UUIDs, "wind_speed", wind_speed_soil);
+        }
+    };
 
-    // Ground area basis for the leaf area weighting. The leaf area index relates total one-sided leaf area to ground area, so the ground area follows from the total canopy area.
-    float total_canopy_area = context->sumPrimitiveSurfaceArea(canopy_airspace_UUIDs);
-    float ground_area = total_canopy_area / canopy_airspace_LAI;
+    // Make sure the very first surface solve sees the initialized airspace state.
+    write_air_state_to_primitives(T_ac, x_ac);
 
-    std::vector<float> T_ac_previous(Nlayers);
-    std::vector<float> x_ac_previous(Nlayers);
+    // Ground heat flux G is not an externally fixed forcing.  For airspace-ground
+    // primitives it is evaluated directly inside the soil surface-energy-balance
+    // residual from the CURRENT trial soil net radiation:
+    //
+    //   G(Ts) = A_SF * Rn_s(Ts) * cos[2*pi*(seconds_from_noon + 10800)/74000].
+    //
+    // Therefore G converges automatically with Ts and the coupled airspace state;
+    // there is no separate G fixed-point update in this outer loop.
 
-    // Tridiagonal system coefficients: sub-diagonal, diagonal, super-diagonal, and right-hand side.
+    // Soil sensible-heat resistance: use the same Kustas & Norman (1999) formulation
+    // used by TSEB, and force that SAME conductance into the ground primitive surface EB.
+    //
+    //   R_s = 1 / [0.0038 * max(T_s - T_ac, 0)^(1/3) + 0.012 * U_s]   [s m-1]
+    //   g_H,s = rho_mol / R_s                                             [mol m-2 s-1]
+    //
+    // A single bulk R_s is evaluated from the area-weighted soil temperature and the
+    // lowest canopy-air temperature. Every ground primitive then receives this same g_H,s.
+    // At convergence, both the primitive ground EB and the airspace resistance network
+    // therefore use exactly the same Kustas-Norman soil resistance.
+    float soil_resistance_KN_s_m = NAN;
+    float soil_heat_conductance_KN_mol_m2_s = NAN;
+    float soil_temperature_KN_K = NAN;
+
+    auto update_KN_soil_conductance = [&](float Tac_K) {
+        if (!soil_node_present) {
+            soil_resistance_KN_s_m = NAN;
+            soil_heat_conductance_KN_mol_m2_s = NAN;
+            soil_temperature_KN_K = NAN;
+            return;
+        }
+
+        float soil_T_area_sum = 0.f;
+        const float soil_area = context->sumPrimitiveSurfaceArea(canopy_airspace_ground_UUIDs);
+        if (!(soil_area > 0.f)) {
+            helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): Ground primitive area is not positive.");
+        }
+        // On the very first canopy-airspace iteration, ground primitives may not yet
+        // have a solved surface temperature.  Use Tac as the initial bulk-soil
+        // temperature for the KN99 resistance; subsequent iterations use the solved Ts.
+        bool ground_temperature_available = false;
+        for (uint UUID : canopy_airspace_ground_UUIDs) {
+            if (context->doesPrimitiveDataExist(UUID, "temperature") &&
+                context->getPrimitiveDataType("temperature") == helios::HELIOS_TYPE_FLOAT) {
+                ground_temperature_available = true;
+                break;
+            }
+        }
+
+        if (ground_temperature_available) {
+            context->calculatePrimitiveDataAreaWeightedSum(canopy_airspace_ground_UUIDs,
+                                                           "temperature",
+                                                           soil_T_area_sum);
+            soil_temperature_KN_K = soil_T_area_sum / soil_area;
+        } else {
+            soil_temperature_KN_K = Tac_K;
+        }
+
+        const float dT_positive_K = std::fmax(soil_temperature_KN_K - Tac_K, 0.f);
+        const float conductance_velocity_m_s =
+            0.0038f * std::cbrt(dT_positive_K) + 0.012f * wind_speed_soil;
+
+        if (!(conductance_velocity_m_s > 0.f)) {
+            helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): Kustas-Norman soil heat conductance is not positive.");
+        }
+
+        soil_resistance_KN_s_m = 1.f / conductance_velocity_m_s;
+        soil_heat_conductance_KN_mol_m2_s = rho_air_mol_m3 * conductance_velocity_m_s;
+
+        // evaluateSurfaceEnergyBalance() gives primitive data 'boundarylayer_conductance'
+        // precedence over its internally calculated plate boundary-layer conductance.
+        // Thus the primitive sensible flux and the airspace network use the same R_s.
+        context->setPrimitiveData(canopy_airspace_ground_UUIDs,
+                                  "boundarylayer_conductance",
+                                  soil_heat_conductance_KN_mol_m2_s);
+    };
+
     std::vector<float> sub(Nlayers), diag(Nlayers), super(Nlayers), rhs(Nlayers);
+    std::vector<float> T_ac_previous(Nlayers), x_ac_previous(Nlayers);
 
+    // Diagnostics retained from the final converged iteration.
+    float Hc_primitive = NAN, Hs_primitive = NAN, LEc_primitive = NAN, LEs_primitive = NAN;
+    float Hc_network = NAN, Hs_network = NAN, H_atmosphere = NAN;
+    float LEc_network = NAN, LEs_network = NAN, LE_atmosphere = NAN;
+    float Hc_sync = NAN, Hs_sync = NAN, LEc_sync = NAN, LEs_sync = NAN;
+    float sensible_closure = NAN, latent_closure = NAN;
+    float Tc_effective = NAN, Ts_effective = NAN;
+    float Gc_effective = NAN, Gs_effective = NAN;
+
+    const float flux_tolerance_W_m2 = 0.1f;
     uint iteration = 0;
     bool converged = false;
+
+    // Picard under-relaxation.  The coupled mapping
+    //   (Tac,xac) -> surface EB -> resistance network -> (Tac,xac)
+    // is strongly nonlinear because Ts changes R_s and both Ts/Tc change
+    // vapor pressure.  A full (relaxation=1) update can oscillate indefinitely.
+    // Under-relaxation changes only the numerical path, not the converged
+    // physical fixed point.
+    constexpr float airspace_relaxation = 0.5f;
+
     while (iteration < canopy_airspace_max_iterations && !converged) {
 
         T_ac_previous = T_ac;
         x_ac_previous = x_ac;
 
-        // 1) Update leaf temperatures given the current airspace state.
+        // One surface-energy-balance solve per outer iteration. Canopy AND ground primitives
+        // therefore use exactly the air state from T_ac_previous/x_ac_previous.
+        // Update the Kustas-Norman soil resistance first because R_s depends on T_s - T_ac.
+        // The T_s used here is the current (previous-iteration) ground surface temperature;
+        // the fixed-point iteration updates it until T_s, T_ac and R_s are mutually consistent.
+        update_KN_soil_conductance(T_ac_previous.front());
         evaluateSurfaceEnergyBalance(UUIDs, 0.f);
 
-        // The airspace solution weights each leaf by its boundary-layer conductance, so verify once that the surface energy balance produced it rather than testing every primitive on every iteration.
-        if (iteration == 0) {
-            for (uint UUID: canopy_airspace_UUIDs) {
-                if (!context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_out")) {
-                    helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): Primitive data 'boundarylayer_conductance_out' was not produced by the surface energy balance for primitive UUID " + std::to_string(UUID) +
-                                         ", so leaf contributions to the canopy airspace cannot be weighted. Check that this primitive is included in the set of UUIDs passed to run().");
-                }
-            }
-        }
+        std::vector<double> sum_gA_T(Nlayers, 0.0);
+        std::vector<double> sum_gA(Nlayers, 0.0);
+        std::vector<double> sum_gA_dT_old(Nlayers, 0.0);
+        std::vector<double> sum_gA_dT_new(Nlayers, 0.0);
+        std::vector<float> sum_gM_xs(Nlayers, 0.f);
+        std::vector<float> sum_gM(Nlayers, 0.f);
 
-        // 2) Reduce leaf temperature and boundary-layer conductance onto the airspace layers, weighting each leaf by its boundary-layer conductance and its area fraction of the ground.
-        std::vector<float> sum_gA_T(Nlayers, 0.f);
-        std::vector<float> sum_gA(Nlayers, 0.f);
-        std::vector<float> sum_gA_e(Nlayers, 0.f);
-        std::vector<float> sum_gA_moisture(Nlayers, 0.f);
+        Hc_primitive = 0.f;
+        LEc_primitive = 0.f;
 
+        // -- Exact canopy reduction of the primitive sensible and latent formulations -- //
         for (size_t u = 0; u < Ncanopy; u++) {
-            uint UUID = canopy_airspace_UUIDs.at(u);
-            uint layer = canopy_airspace_layer_index.at(u);
+            const uint UUID = canopy_airspace_UUIDs.at(u);
+            const uint layer = canopy_airspace_layer_index.at(u);
+            const float area_fraction = context->getPrimitiveArea(UUID) / ground_area;
 
-            float T_leaf;
-            context->getPrimitiveData(UUID, "temperature", T_leaf);
+            float T_surface;
+            context->getPrimitiveData(UUID, "temperature", T_surface);
 
-            float g_bl;
-            context->getPrimitiveData(UUID, "boundarylayer_conductance_out", g_bl);
+            float gH;
+            if (!context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_out")) {
+                helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): Missing boundarylayer_conductance_out on canopy primitive.");
+            }
+            context->getPrimitiveData(UUID, "boundarylayer_conductance_out", gH);
 
-            float area_fraction = context->getPrimitiveArea(UUID) / ground_area;
-            float weight = g_bl * area_fraction;
+            const double gA =
+                static_cast<double>(gH) * static_cast<double>(area_fraction);
 
-            sum_gA.at(layer) += weight;
-            sum_gA_T.at(layer) += weight * T_leaf;
+            sum_gA.at(layer) += gA;
+            sum_gA_T.at(layer) += gA * static_cast<double>(T_surface);
 
-            // Water vapor leaves the substomatal airspace through the stomata and the boundary layer in series, so the moisture source is weighted by the total conductance to moisture rather than by the boundary-layer conductance alone. A leaf
-            // with closed stomata contributes no moisture to the canopy airspace.
-            float gS;
+            // Direct temperature-difference accumulation avoids subtracting
+            // two large, nearly equal weighted-temperature sums.
+            sum_gA_dT_old.at(layer) +=
+                gA * (static_cast<double>(T_surface) -
+                      static_cast<double>(T_ac_previous.at(layer)));
+
+            float gS = gS_default;
             if (context->doesPrimitiveDataExist(UUID, "moisture_conductance") && context->getPrimitiveDataType("moisture_conductance") == helios::HELIOS_TYPE_FLOAT) {
                 context->getPrimitiveData(UUID, "moisture_conductance", gS);
-            } else {
-                gS = gS_default;
             }
 
-            // 'boundarylayer_conductance_out' is the conductance summed over both faces of a two-sided primitive, whereas water vapor leaves through the stomata-bearing faces only. The sidedness partition below is the same expression the
-            // surface energy balance uses to compute the latent flux, so that the moisture weighted into the airspace matches the water the leaf actually transpired.
             float stomatal_sidedness = 0.f;
-            uint twosided_flag = context->getPrimitiveTwosidedFlag(UUID, 1);
+            const uint twosided_flag = context->getPrimitiveTwosidedFlag(UUID, 1);
             if (twosided_flag != 0) {
                 if (context->doesPrimitiveDataExist(UUID, "stomatal_sidedness") && context->getPrimitiveDataType("stomatal_sidedness") == helios::HELIOS_TYPE_FLOAT) {
                     context->getPrimitiveData(UUID, "stomatal_sidedness", stomatal_sidedness);
@@ -807,131 +1047,661 @@ void EnergyBalanceModel::evaluateCanopyAirspace(const std::vector<uint> &UUIDs) 
                 }
             }
 
-            float g_M = 0.f;
-            if (g_bl != 0.f && gS != 0.f) {
-                g_M = moisture_conductance_ratio * g_bl * gS * (stomatal_sidedness / (moisture_conductance_ratio * g_bl + gS * stomatal_sidedness) + (1.f - stomatal_sidedness) / (moisture_conductance_ratio * g_bl + gS * (1.f - stomatal_sidedness)));
+            float gM = 0.f;
+            if (gH != 0.f && gS != 0.f) {
+                gM = moisture_conductance_ratio * gH * gS *
+                     (stomatal_sidedness / (moisture_conductance_ratio * gH + gS * stomatal_sidedness) +
+                      (1.f - stomatal_sidedness) / (moisture_conductance_ratio * gH + gS * (1.f - stomatal_sidedness)));
             }
-            float moisture_weight = g_M * area_fraction;
 
-            // The substomatal airspace is assumed saturated at the leaf surface temperature.
-            sum_gA_moisture.at(layer) += moisture_weight;
-            sum_gA_e.at(layer) += moisture_weight * esat_Pa(T_leaf) / Patm;
+            float surface_humidity = surface_humidity_default;
+            if (context->doesPrimitiveDataExist(UUID, "surface_humidity") && context->getPrimitiveDataType("surface_humidity") == helios::HELIOS_TYPE_FLOAT) {
+                context->getPrimitiveData(UUID, "surface_humidity", surface_humidity);
+            }
+            const float x_surface = surface_humidity * esat_Pa(T_surface) / Patm;
+            sum_gM.at(layer) += gM * area_fraction;
+            sum_gM_xs.at(layer) += gM * area_fraction * x_surface;
+
+            float qh = 0.f, ql = 0.f;
+            context->getPrimitiveData(UUID, "sensible_flux", qh);
+            context->getPrimitiveData(UUID, "latent_flux", ql);
+            Hc_primitive += qh * context->getPrimitiveArea(UUID) / ground_area;
+            LEc_primitive += ql * context->getPrimitiveArea(UUID) / ground_area;
         }
 
-        // 3) Soil surface temperature, area-weighted over the ground primitives.
-        float T_soil = air_temperature_reference;
+        // -- Exact soil reduction of the SAME primitive conductances used by the surface EB -- //
+        double soil_sum_gA = 0.0;
+        double soil_sum_gA_T = 0.0;
+        double soil_sum_gA_dT_old = 0.0;
+        double soil_sum_gA_dT_new = 0.0;
+        float soil_sum_gM = 0.f;
+        float soil_sum_gM_xs = 0.f;
+        Hs_primitive = 0.f;
+        LEs_primitive = 0.f;
+
         if (soil_node_present) {
-            float soil_area_weighted_sum;
-            context->calculatePrimitiveDataAreaWeightedSum(canopy_airspace_ground_UUIDs, "temperature", soil_area_weighted_sum);
-            float soil_area = context->sumPrimitiveSurfaceArea(canopy_airspace_ground_UUIDs);
-            if (soil_area <= 0.f) {
-                helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): The ground primitives given to enableCanopyAirspaceModel() have zero total surface area, so the soil node temperature cannot be determined.");
-            }
-            T_soil = soil_area_weighted_sum / soil_area;
-            // A missing 'temperature' label produces an area-weighted sum of zero rather than an error, which would drive the bottom layer toward absolute zero.
-            if (T_soil < 100.f) {
-                helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): The area-weighted soil surface temperature evaluated to " + std::to_string(T_soil) +
-                                     " K, which is not physical. Check that primitive data 'temperature' is set in Kelvin for every ground primitive given to enableCanopyAirspaceModel().");
+            for (uint UUID: canopy_airspace_ground_UUIDs) {
+                const float area_fraction = context->getPrimitiveArea(UUID) / ground_area;
+
+                float T_surface;
+                context->getPrimitiveData(UUID, "temperature", T_surface);
+
+                float gH;
+                if (!context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_out")) {
+                    helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): Missing boundarylayer_conductance_out on ground primitive.");
+                }
+                context->getPrimitiveData(UUID, "boundarylayer_conductance_out", gH);
+                const double gA =
+                    static_cast<double>(gH) * static_cast<double>(area_fraction);
+
+                soil_sum_gA += gA;
+                soil_sum_gA_T += gA * static_cast<double>(T_surface);
+                soil_sum_gA_dT_old +=
+                    gA * (static_cast<double>(T_surface) -
+                          static_cast<double>(T_ac_previous.front()));
+
+                float gS = gS_default;
+                if (context->doesPrimitiveDataExist(UUID, "moisture_conductance") && context->getPrimitiveDataType("moisture_conductance") == helios::HELIOS_TYPE_FLOAT) {
+                    context->getPrimitiveData(UUID, "moisture_conductance", gS);
+                }
+
+                float stomatal_sidedness = 0.f;
+                const uint twosided_flag = context->getPrimitiveTwosidedFlag(UUID, 1);
+                if (twosided_flag != 0) {
+                    if (context->doesPrimitiveDataExist(UUID, "stomatal_sidedness") && context->getPrimitiveDataType("stomatal_sidedness") == helios::HELIOS_TYPE_FLOAT) {
+                        context->getPrimitiveData(UUID, "stomatal_sidedness", stomatal_sidedness);
+                    } else if (context->doesPrimitiveDataExist(UUID, "evaporating_faces") && context->getPrimitiveDataType("evaporating_faces") == helios::HELIOS_TYPE_UINT) {
+                        uint evaporating_faces;
+                        context->getPrimitiveData(UUID, "evaporating_faces", evaporating_faces);
+                        stomatal_sidedness = (evaporating_faces == 2) ? 0.5f : 0.f;
+                    }
+                }
+
+                float gM = 0.f;
+                if (gH != 0.f && gS != 0.f) {
+                    gM = moisture_conductance_ratio * gH * gS *
+                         (stomatal_sidedness / (moisture_conductance_ratio * gH + gS * stomatal_sidedness) +
+                          (1.f - stomatal_sidedness) / (moisture_conductance_ratio * gH + gS * (1.f - stomatal_sidedness)));
+                }
+
+                float surface_humidity = surface_humidity_default;
+                if (context->doesPrimitiveDataExist(UUID, "surface_humidity") && context->getPrimitiveDataType("surface_humidity") == helios::HELIOS_TYPE_FLOAT) {
+                    context->getPrimitiveData(UUID, "surface_humidity", surface_humidity);
+                }
+                const float x_surface = surface_humidity * esat_Pa(T_surface) / Patm;
+                soil_sum_gM += gM * area_fraction;
+                soil_sum_gM_xs += gM * area_fraction * x_surface;
+
+                float qh = 0.f, ql = 0.f;
+                context->getPrimitiveData(UUID, "sensible_flux", qh);
+                context->getPrimitiveData(UUID, "latent_flux", ql);
+                Hs_primitive += qh * context->getPrimitiveArea(UUID) / ground_area;
+                LEs_primitive += ql * context->getPrimitiveArea(UUID) / ground_area;
             }
         }
 
-        // 4) Solve the tridiagonal system for layer air temperature. Layer 0 is the bottom layer, exchanging with the soil below; layer (Nlayers-1) is the top layer, exchanging with the reference air above.
+        // Solve temperature network. The soil link uses the exact conductance-weighted
+        // primitive reduction, not a separate empirical bulk g_soil.
         for (uint j = 0; j < Nlayers; j++) {
-            // g_layer[j] is the conductance across the boundary between layer j and layer j+1, so the link below layer j is g_layer[j-1].
-            float g_below = (j == 0) ? (soil_node_present ? g_soil : 0.f) : g_layer.at(j - 1);
-            float g_above = (j == Nlayers - 1) ? g_a : g_layer.at(j);
-
+            const float g_below =
+                (j == 0)
+                    ? (soil_node_present ? static_cast<float>(soil_sum_gA) : 0.f)
+                    : g_layer.at(j - 1);
+            const float g_above = (j == Nlayers - 1) ? g_a : g_layer.at(j);
             sub.at(j) = (j == 0) ? 0.f : -g_layer.at(j - 1);
             super.at(j) = (j == Nlayers - 1) ? 0.f : -g_layer.at(j);
-            diag.at(j) = sum_gA.at(j) + g_below + g_above;
-            rhs.at(j) = sum_gA_T.at(j);
-
+            diag.at(j) =
+                static_cast<float>(sum_gA.at(j)) + g_below + g_above;
+            rhs.at(j) = static_cast<float>(sum_gA_T.at(j));
             if (j == 0 && soil_node_present) {
-                rhs.at(j) += g_soil * T_soil;
+                rhs.at(j) += static_cast<float>(soil_sum_gA_T);
             }
             if (j == Nlayers - 1) {
                 rhs.at(j) += g_a * air_temperature_reference;
             }
         }
-        solveTridiagonal(sub, diag, super, rhs, T_ac);
+        std::vector<float> T_ac_candidate;
+        solveTridiagonal(sub, diag, super, rhs, T_ac_candidate);
 
-        // 5) Solve the tridiagonal system for layer moisture mole fraction. Evaporation from the soil surface is assumed to be zero, so the bottom layer has no moisture exchange with the soil.
-        // Turbulent transport moves heat and water vapor with the same eddies, so the layer-to-layer and layer-to-reference conductances are the same for both. The ratio of vapor to heat diffusivity applies only to the molecular leaf
-        // boundary layer, and is already carried in the leaf weighting above.
+        // Under-relax the nonlinear thermal fixed-point update.
         for (uint j = 0; j < Nlayers; j++) {
-            float g_above = (j == Nlayers - 1) ? g_a : g_layer.at(j);
-            float g_below = (j == 0) ? 0.f : g_layer.at(j - 1);
+            T_ac.at(j) = T_ac_previous.at(j) +
+                         airspace_relaxation *
+                         (T_ac_candidate.at(j) - T_ac_previous.at(j));
+        }
 
+        // Solve vapor network using the exact primitive gM and surface_humidity formulation.
+        for (uint j = 0; j < Nlayers; j++) {
+            const float g_below = (j == 0) ? (soil_node_present ? soil_sum_gM : 0.f) : g_layer.at(j - 1);
+            const float g_above = (j == Nlayers - 1) ? g_a : g_layer.at(j);
             sub.at(j) = (j == 0) ? 0.f : -g_layer.at(j - 1);
             super.at(j) = (j == Nlayers - 1) ? 0.f : -g_layer.at(j);
-            diag.at(j) = sum_gA_moisture.at(j) + g_below + g_above;
-            rhs.at(j) = sum_gA_e.at(j);
-
+            diag.at(j) = sum_gM.at(j) + g_below + g_above;
+            rhs.at(j) = sum_gM_xs.at(j);
+            if (j == 0 && soil_node_present) {
+                rhs.at(j) += soil_sum_gM_xs;
+            }
             if (j == Nlayers - 1) {
                 rhs.at(j) += g_a * moisture_reference;
             }
         }
-        solveTridiagonal(sub, diag, super, rhs, x_ac);
+        std::vector<float> x_ac_candidate;
+        solveTridiagonal(sub, diag, super, rhs, x_ac_candidate);
 
-        // 6) Write the updated airspace state back to the primitives that the surface energy balance reads.
+        // Under-relax the nonlinear moisture fixed-point update, then enforce
+        // physical bounds using the relaxed air temperature.
         for (uint j = 0; j < Nlayers; j++) {
-            float x_saturation = esat_Pa(T_ac.at(j)) / Patm;
-            if (x_ac.at(j) > x_saturation) {
-                warnings.addWarning("canopy_airspace_supersaturated", "Canopy airspace moisture exceeded saturation and was capped. This can occur when transpiration is high relative to ventilation.");
-                x_ac.at(j) = x_saturation;
-            }
-            if (x_ac.at(j) < 0.f) {
-                x_ac.at(j) = 0.f;
-            }
+            x_ac.at(j) = x_ac_previous.at(j) +
+                         airspace_relaxation *
+                         (x_ac_candidate.at(j) - x_ac_previous.at(j));
+            const float x_sat = esat_Pa(T_ac.at(j)) / Patm;
+            x_ac.at(j) = std::fmin(std::fmax(x_ac.at(j), 0.f), x_sat);
         }
 
-        // Relative humidity of each layer, clamped to physical bounds so that every consumer of this state sees the same value.
-        std::vector<float> humidity_ac(Nlayers);
+        // Build direct sensible-temperature differences at the NEW relaxed
+        // air state. This is numerically stable even for very large canopies.
         for (uint j = 0; j < Nlayers; j++) {
-            humidity_ac.at(j) = std::fmin(std::fmax(x_ac.at(j) * Patm / esat_Pa(T_ac.at(j)), 0.f), 1.f);
+            sum_gA_dT_new.at(j) =
+                sum_gA_T.at(j) -
+                sum_gA.at(j) * static_cast<double>(T_ac.at(j));
         }
-
-        for (size_t u = 0; u < Ncanopy; u++) {
-            uint layer = canopy_airspace_layer_index.at(u);
-            context->setPrimitiveData(canopy_airspace_UUIDs.at(u), "air_temperature", T_ac.at(layer));
-            context->setPrimitiveData(canopy_airspace_UUIDs.at(u), "air_humidity", humidity_ac.at(layer));
-        }
-
-        // The soil exchanges heat with the lowest canopy layer, so its own energy balance must be driven by that layer's air rather than by the air above the canopy. The wind speed near the soil surface is the one already used to form the
-        // soil conductance.
         if (soil_node_present) {
-            context->setPrimitiveData(canopy_airspace_ground_UUIDs, "air_temperature", T_ac.front());
-            context->setPrimitiveData(canopy_airspace_ground_UUIDs, "air_humidity", humidity_ac.front());
-            context->setPrimitiveData(canopy_airspace_ground_UUIDs, "wind_speed", wind_speed_soil);
+            soil_sum_gA_dT_new =
+                soil_sum_gA_T -
+                soil_sum_gA * static_cast<double>(T_ac.front());
         }
 
-        // 7) Test for convergence of the airspace state. Moisture is tested alongside temperature because the two are
-        // coupled through the saturation vapor pressure at the leaf surface and can converge at different rates.
+        // Network fluxes evaluated with the NEW network state.
+        Hc_network = 0.f;
+        LEc_network = 0.f;
+        for (uint j = 0; j < Nlayers; j++) {
+            Hc_network += static_cast<float>(
+                static_cast<double>(cp_air_mol) * sum_gA_dT_new.at(j));
+            LEc_network += lambda_mol * (sum_gM_xs.at(j) - sum_gM.at(j) * x_ac.at(j));
+        }
+        Hs_network = soil_node_present
+                         ? static_cast<float>(
+                               static_cast<double>(cp_air_mol) *
+                               soil_sum_gA_dT_new)
+                         : 0.f;
+        LEs_network = soil_node_present ? lambda_mol * (soil_sum_gM_xs - soil_sum_gM * x_ac.front()) : 0.f;
+        H_atmosphere = cp_air_mol * g_a * (T_ac.back() - air_temperature_reference);
+        LE_atmosphere = lambda_mol * g_a * (x_ac.back() - moisture_reference);
+        sensible_closure = Hc_network + Hs_network - H_atmosphere;
+        latent_closure = LEc_network + LEs_network - LE_atmosphere;
+
+        // Same-state primitive/network identity. These are evaluated at the OLD air state,
+        // i.e. the exact state that produced the primitive fluxes in this iteration.
+        float Hc_same_state = 0.f, LEc_same_state = 0.f;
+        for (uint j = 0; j < Nlayers; j++) {
+            Hc_same_state += static_cast<float>(
+                static_cast<double>(cp_air_mol) * sum_gA_dT_old.at(j));
+            LEc_same_state += lambda_mol * (sum_gM_xs.at(j) - sum_gM.at(j) * x_ac_previous.at(j));
+        }
+        const float Hs_same_state =
+            soil_node_present
+                ? static_cast<float>(
+                      static_cast<double>(cp_air_mol) *
+                      soil_sum_gA_dT_old)
+                : 0.f;
+        const float LEs_same_state = soil_node_present ? lambda_mol * (soil_sum_gM_xs - soil_sum_gM * x_ac_previous.front()) : 0.f;
+
+        Hc_sync = Hc_same_state - Hc_primitive;
+        LEc_sync = LEc_same_state - LEc_primitive;
+        Hs_sync = Hs_same_state - Hs_primitive;
+        LEs_sync = LEs_same_state - LEs_primitive;
+
+        // At a common fixed point the primitive source fluxes must also equal transport to the atmosphere.
+        const float H_atm_old = cp_air_mol * g_a * (T_ac_previous.back() - air_temperature_reference);
+        const float LE_atm_old = lambda_mol * g_a * (x_ac_previous.back() - moisture_reference);
+        const float primitive_H_network_residual = Hc_primitive + Hs_primitive - H_atm_old;
+        const float primitive_LE_network_residual = LEc_primitive + LEs_primitive - LE_atm_old;
+
+        // Changes in the RELAXED state are useful for diagnostics, but they are
+        // not the correct fixed-point residual when under-relaxation is used.
         float max_change_T = 0.f;
         float max_change_x = 0.f;
+        float max_fixedpoint_T = 0.f;
+        float max_fixedpoint_x = 0.f;
         for (uint j = 0; j < Nlayers; j++) {
             max_change_T = std::fmax(max_change_T, std::fabs(T_ac.at(j) - T_ac_previous.at(j)));
             max_change_x = std::fmax(max_change_x, std::fabs(x_ac.at(j) - x_ac_previous.at(j)));
+
+            // Raw network candidate minus the state that generated the surface EB.
+            // This is the actual residual of the TSEB-like fixed-point equation.
+            max_fixedpoint_T = std::fmax(max_fixedpoint_T,
+                                         std::fabs(T_ac_candidate.at(j) - T_ac_previous.at(j)));
+            max_fixedpoint_x = std::fmax(max_fixedpoint_x,
+                                         std::fabs(x_ac_candidate.at(j) - x_ac_previous.at(j)));
         }
-        // The moisture tolerance is expressed as the change in vapor mole fraction that corresponds to the temperature
-        // tolerance, so that a single user-facing tolerance controls both.
-        float moisture_tolerance = canopy_airspace_tolerance_K * (esat_Pa(air_temperature_reference + 0.5f) - esat_Pa(air_temperature_reference - 0.5f)) / Patm;
-        if (max_change_T < canopy_airspace_tolerance_K && max_change_x < moisture_tolerance) {
-            converged = true;
+
+        const float moisture_tolerance_base =
+            canopy_airspace_tolerance_K *
+            (esat_Pa(air_temperature_reference + 0.5f) -
+             esat_Pa(air_temperature_reference - 0.5f)) / Patm;
+
+        // Feed the newly relaxed state to the next surface-EB iteration.
+        write_air_state_to_primitives(T_ac, x_ac);
+
+        // ---------------------------------------------------------------
+        // Convergence criterion
+        // ---------------------------------------------------------------
+        //
+        // Converge the STATE fixed point, not H or LE themselves.
+        //
+        // With one airspace layer, the raw temperature residual is exactly
+        // related to the network sensible-heat residual by
+        //
+        //   H_residual = cp * (Gc + Gs + ga) * (Tac_candidate - Tac_old).
+        //
+        // Likewise for vapor:
+        //
+        //   LE_residual = lambda * (GMc + GMs + ga) * (xac_candidate - xac_old).
+        //
+        // Therefore use a state tolerance that is tight enough to imply the
+        // requested 0.1 W m-2 transport closure, while still remaining a
+        // STATE-based convergence criterion.
+        float temperature_tolerance = canopy_airspace_tolerance_K;
+        float moisture_tolerance = moisture_tolerance_base;
+
+        if (Nlayers == 1) {
+            const double Gthermal_total =
+                sum_gA.front() +
+                (soil_node_present ? soil_sum_gA : 0.0) +
+                static_cast<double>(g_a);
+            if (Gthermal_total > 0.f) {
+                temperature_tolerance = std::fmin(
+                    temperature_tolerance,
+                    static_cast<float>(
+                        static_cast<double>(flux_tolerance_W_m2) /
+                        (static_cast<double>(cp_air_mol) *
+                         Gthermal_total)));
+            }
+
+            const float Gmoisture_total = sum_gM.front() +
+                                          (soil_node_present ? soil_sum_gM : 0.f) +
+                                          g_a;
+            if (Gmoisture_total > 0.f) {
+                moisture_tolerance = std::fmin(
+                    moisture_tolerance,
+                    flux_tolerance_W_m2 / (lambda_mol * Gmoisture_total));
+            }
+        }
+
+        const bool temperature_converged =
+            max_fixedpoint_T < temperature_tolerance;
+        const bool moisture_converged =
+            max_fixedpoint_x < moisture_tolerance;
+        const bool state_converged =
+            temperature_converged && moisture_converged;
+
+        // Diagnostic checks only.  These do not control convergence.
+        const bool sensible_sync_ok =
+            std::fabs(Hc_sync) < flux_tolerance_W_m2 &&
+            std::fabs(Hs_sync) < flux_tolerance_W_m2;
+        const bool latent_sync_ok =
+            std::fabs(LEc_sync) < flux_tolerance_W_m2 &&
+            std::fabs(LEs_sync) < flux_tolerance_W_m2;
+        const bool transport_balance_ok =
+            std::fabs(primitive_H_network_residual) < flux_tolerance_W_m2 &&
+            std::fabs(primitive_LE_network_residual) < flux_tolerance_W_m2;
+
+        // G is algebraic in the CURRENT trial Ts through Rn_s(Ts), so no
+        // independent G convergence test is needed.
+        converged = state_converged;
+
+        // Concise diagnostic.  The iteration stops from dT/dx only, while the
+        // flux diagnostics show whether the converged implementation is internally
+        // consistent.
+        if (iteration < 5 || iteration % 5 == 0 || converged ||
+            iteration + 1 == canopy_airspace_max_iterations) {
+            std::cerr
+                << "AIRSPACE iter=" << iteration
+                << " | dT_relaxed=" << max_change_T
+                << " | dx_relaxed=" << max_change_x
+                << " | dT_fixed=" << max_fixedpoint_T
+                << " | dx_fixed=" << max_fixedpoint_x
+                << " | Ttol=" << temperature_tolerance
+                << " | xtol=" << moisture_tolerance
+                << " | Tconv=" << temperature_converged
+                << " | xconv=" << moisture_converged
+                << " | Hc_sync=" << Hc_sync
+                << " | Hs_sync=" << Hs_sync
+                << " | LEc_sync=" << LEc_sync
+                << " | LEs_sync=" << LEs_sync
+                << " | H_balance=" << primitive_H_network_residual
+                << " | LE_balance=" << primitive_LE_network_residual
+                << " | Hsync_ok=" << sensible_sync_ok
+                << " | LEsync_ok=" << latent_sync_ok
+                << " | transport_ok=" << transport_balance_ok
+                << std::endl;
         }
 
         iteration++;
     }
 
     if (!converged) {
-        warnings.addWarning("canopy_airspace_not_converged", "Canopy airspace model did not converge within " + std::to_string(canopy_airspace_max_iterations) +
-                                                                     " iterations. Results may be unreliable. Consider increasing the maximum number of iterations via setCanopyAirspaceConvergence().");
+        warnings.addWarning("canopy_airspace_not_converged",
+                            "Canopy airspace model did not reach the coupled T_ac/x_ac state fixed point within " +
+                            std::to_string(canopy_airspace_max_iterations) + " iterations.");
     }
 
-    // -- Write diagnostic output to global data -- //
+    // Final surface solve at the converged FINAL air state.
+    //
+    // IMPORTANT: explicitly write the converged T_ac and x_ac to every canopy
+    // and soil primitive BEFORE recomputing Kustas-Norman R_s and BEFORE the
+    // final primitive surface-energy-balance solve.  This removes any possible
+    // one-iteration lag between the state used by the primitive EB and the
+    // state used by the final network reduction.
+    write_air_state_to_primitives(T_ac, x_ac);
 
-    float T_ac_mean = 0.f;
-    float x_ac_mean = 0.f;
+    update_KN_soil_conductance(T_ac.front());
+    evaluateSurfaceEnergyBalance(UUIDs, 0.f);
+
+    // Recompute primitive totals at the final state for diagnostics/output.
+    Hc_primitive = LEc_primitive = Hs_primitive = LEs_primitive = 0.f;
+    context->calculatePrimitiveDataAreaWeightedSum(canopy_airspace_UUIDs, "sensible_flux", Hc_primitive);
+    context->calculatePrimitiveDataAreaWeightedSum(canopy_airspace_UUIDs, "latent_flux", LEc_primitive);
+    Hc_primitive /= ground_area;
+    LEc_primitive /= ground_area;
+    if (soil_node_present) {
+        context->calculatePrimitiveDataAreaWeightedSum(canopy_airspace_ground_UUIDs, "sensible_flux", Hs_primitive);
+        context->calculatePrimitiveDataAreaWeightedSum(canopy_airspace_ground_UUIDs, "latent_flux", LEs_primitive);
+        Hs_primitive /= ground_area;
+        LEs_primitive /= ground_area;
+    }
+
+    // Exact final-state reduction. Recompute both heat and vapor source terms after the
+    // final surface solve, so all exported primitive/network diagnostics refer to the SAME state.
+    double Gc = 0.0, GcT = 0.0, Gs = 0.0, GsT = 0.0;
+    double Hc_direct_sum = 0.0, Hs_direct_sum = 0.0;
+    float canopy_Ta_min = std::numeric_limits<float>::infinity();
+    float canopy_Ta_max = -std::numeric_limits<float>::infinity();
+    float soil_Ta_min = std::numeric_limits<float>::infinity();
+    float soil_Ta_max = -std::numeric_limits<float>::infinity();
+    float canopy_max_abs_dTa = 0.f;
+    float soil_max_abs_dTa = 0.f;
+    float GMc = 0.f, GMcXs = 0.f, GMs = 0.f, GMsXs = 0.f;
+
+    auto primitive_moisture_terms = [&](uint UUID, float gH, float Tsrf, float &gM_out, float &xs_out) {
+        float gS = gS_default;
+        if (context->doesPrimitiveDataExist(UUID, "moisture_conductance") && context->getPrimitiveDataType("moisture_conductance") == helios::HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(UUID, "moisture_conductance", gS);
+        }
+        float stomatal_sidedness = 0.f;
+        const uint twosided_flag = context->getPrimitiveTwosidedFlag(UUID, 1);
+        if (twosided_flag != 0) {
+            if (context->doesPrimitiveDataExist(UUID, "stomatal_sidedness") && context->getPrimitiveDataType("stomatal_sidedness") == helios::HELIOS_TYPE_FLOAT) {
+                context->getPrimitiveData(UUID, "stomatal_sidedness", stomatal_sidedness);
+            } else if (context->doesPrimitiveDataExist(UUID, "evaporating_faces") && context->getPrimitiveDataType("evaporating_faces") == helios::HELIOS_TYPE_UINT) {
+                uint evaporating_faces;
+                context->getPrimitiveData(UUID, "evaporating_faces", evaporating_faces);
+                stomatal_sidedness = (evaporating_faces == 2) ? 0.5f : 0.f;
+            }
+        }
+        gM_out = 0.f;
+        if (gH != 0.f && gS != 0.f) {
+            gM_out = moisture_conductance_ratio * gH * gS *
+                     (stomatal_sidedness / (moisture_conductance_ratio * gH + gS * stomatal_sidedness) +
+                      (1.f - stomatal_sidedness) / (moisture_conductance_ratio * gH + gS * (1.f - stomatal_sidedness)));
+        }
+        float surface_humidity = surface_humidity_default;
+        if (context->doesPrimitiveDataExist(UUID, "surface_humidity") && context->getPrimitiveDataType("surface_humidity") == helios::HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(UUID, "surface_humidity", surface_humidity);
+        }
+        xs_out = surface_humidity * esat_Pa(Tsrf) / Patm;
+    };
+
+    for (uint UUID: canopy_airspace_UUIDs) {
+        float gH, Tsrf;
+        context->getPrimitiveData(UUID, "boundarylayer_conductance_out", gH);
+        context->getPrimitiveData(UUID, "temperature", Tsrf);
+        const float af = context->getPrimitiveArea(UUID) / ground_area;
+        const double gA =
+            static_cast<double>(gH) * static_cast<double>(af);
+        Gc += gA;
+        GcT += gA * static_cast<double>(Tsrf);
+        Hc_direct_sum +=
+            gA * (static_cast<double>(Tsrf) -
+                  static_cast<double>(T_ac.front()));
+
+        float Ta_primitive = T_ac.front();
+        if (context->doesPrimitiveDataExist(UUID, "air_temperature") &&
+            context->getPrimitiveDataType("air_temperature") == helios::HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(UUID, "air_temperature", Ta_primitive);
+        }
+        canopy_Ta_min = std::fmin(canopy_Ta_min, Ta_primitive);
+        canopy_Ta_max = std::fmax(canopy_Ta_max, Ta_primitive);
+        canopy_max_abs_dTa = std::fmax(
+            canopy_max_abs_dTa,
+            std::fabs(Ta_primitive - T_ac.front()));
+
+        float gM, xs;
+        primitive_moisture_terms(UUID, gH, Tsrf, gM, xs);
+        GMc += gM * af;
+        GMcXs += gM * af * xs;
+    }
+    if (soil_node_present) {
+        for (uint UUID: canopy_airspace_ground_UUIDs) {
+            float gH, Tsrf;
+            context->getPrimitiveData(UUID, "boundarylayer_conductance_out", gH);
+            context->getPrimitiveData(UUID, "temperature", Tsrf);
+            const float af = context->getPrimitiveArea(UUID) / ground_area;
+            const double gA =
+                static_cast<double>(gH) * static_cast<double>(af);
+            Gs += gA;
+            GsT += gA * static_cast<double>(Tsrf);
+            Hs_direct_sum +=
+                gA * (static_cast<double>(Tsrf) -
+                      static_cast<double>(T_ac.front()));
+
+            float Ta_primitive = T_ac.front();
+            if (context->doesPrimitiveDataExist(UUID, "air_temperature") &&
+                context->getPrimitiveDataType("air_temperature") == helios::HELIOS_TYPE_FLOAT) {
+                context->getPrimitiveData(UUID, "air_temperature", Ta_primitive);
+            }
+            soil_Ta_min = std::fmin(soil_Ta_min, Ta_primitive);
+            soil_Ta_max = std::fmax(soil_Ta_max, Ta_primitive);
+            soil_max_abs_dTa = std::fmax(
+                soil_max_abs_dTa,
+                std::fabs(Ta_primitive - T_ac.front()));
+
+            float gM, xs;
+            primitive_moisture_terms(UUID, gH, Tsrf, gM, xs);
+            GMs += gM * af;
+            GMsXs += gM * af * xs;
+        }
+    }
+
+    Gc_effective = static_cast<float>(Gc);
+    Gs_effective = static_cast<float>(Gs);
+    Tc_effective = (Gc > 0.0)
+                       ? static_cast<float>(GcT / Gc)
+                       : air_temperature_reference;
+    Ts_effective = (Gs > 0.0)
+                       ? static_cast<float>(GsT / Gs)
+                       : air_temperature_reference;
+
+    // Export the exact bulk surface-temperature nodes used by the final
+    // one-layer canopy-airspace resistance network. These are the temperatures
+    // paired with Gc/Gs (and therefore Rx/Rs) in the Tac reconstruction.
+    context->setGlobalData(
+        "canopy_airspace_canopy_temperature",
+        Tc_effective);
+
+    context->setGlobalData(
+        "canopy_airspace_soil_temperature",
+        Ts_effective);
+
+    float Hc_sync_from_air_temperature = NAN;
+    float Hs_sync_from_air_temperature = NAN;
+
+    if (Nlayers == 1) {
+        Hc_network = static_cast<float>(
+            static_cast<double>(cp_air_mol) * Hc_direct_sum);
+        Hs_network = static_cast<float>(
+            static_cast<double>(cp_air_mol) * Hs_direct_sum);
+        H_atmosphere = cp_air_mol * g_a * (T_ac.front() - air_temperature_reference);
+        LEc_network = lambda_mol * (GMcXs - GMc * x_ac.front());
+        LEs_network = lambda_mol * (GMsXs - GMs * x_ac.front());
+        LE_atmosphere = lambda_mol * g_a * (x_ac.front() - moisture_reference);
+        Hc_sync = Hc_network - Hc_primitive;
+        Hs_sync = Hs_network - Hs_primitive;
+
+        // If primitive sensible heat is QH = cp*gH*(Ts-Ta_primitive), then
+        // these expressions MUST reproduce Hc_sync/Hs_sync exactly.  A match
+        // identifies a primitive-air-temperature mismatch; a non-match points
+        // instead to gH/area/flux bookkeeping.
+        double canopy_Ta_difference_sum = 0.0;
+        for (uint UUID : canopy_airspace_UUIDs) {
+            float gH = 0.f;
+            float Ta_primitive = T_ac.front();
+            context->getPrimitiveData(UUID, "boundarylayer_conductance_out", gH);
+            if (context->doesPrimitiveDataExist(UUID, "air_temperature")) {
+                context->getPrimitiveData(UUID, "air_temperature", Ta_primitive);
+            }
+            const double af =
+                static_cast<double>(context->getPrimitiveArea(UUID)) /
+                static_cast<double>(ground_area);
+            canopy_Ta_difference_sum +=
+                static_cast<double>(gH) * af *
+                (static_cast<double>(Ta_primitive) -
+                 static_cast<double>(T_ac.front()));
+        }
+
+        double soil_Ta_difference_sum = 0.0;
+        for (uint UUID : canopy_airspace_ground_UUIDs) {
+            float gH = 0.f;
+            float Ta_primitive = T_ac.front();
+            context->getPrimitiveData(UUID, "boundarylayer_conductance_out", gH);
+            if (context->doesPrimitiveDataExist(UUID, "air_temperature")) {
+                context->getPrimitiveData(UUID, "air_temperature", Ta_primitive);
+            }
+            const double af =
+                static_cast<double>(context->getPrimitiveArea(UUID)) /
+                static_cast<double>(ground_area);
+            soil_Ta_difference_sum +=
+                static_cast<double>(gH) * af *
+                (static_cast<double>(Ta_primitive) -
+                 static_cast<double>(T_ac.front()));
+        }
+
+        Hc_sync_from_air_temperature = static_cast<float>(
+            static_cast<double>(cp_air_mol) *
+            canopy_Ta_difference_sum);
+        Hs_sync_from_air_temperature = static_cast<float>(
+            static_cast<double>(cp_air_mol) *
+            soil_Ta_difference_sum);
+        LEc_sync = LEc_network - LEc_primitive;
+        LEs_sync = LEs_network - LEs_primitive;
+        sensible_closure = Hc_network + Hs_network - H_atmosphere;
+        latent_closure = LEc_network + LEs_network - LE_atmosphere;
+    }
+
+    // -----------------------------------------------------------------
+    // FINAL PHYSICS CONSISTENCY CHECKS
+    // -----------------------------------------------------------------
+    // These are deliberately evaluated AFTER state convergence.
+    //
+    // 1) primitive H vs resistance-network H
+    // 2) primitive LE vs vapor-network LE
+    // 3) network transport closure to the atmosphere
+    //
+    // A failure here means an implementation/reduction inconsistency.  It
+    // does NOT mean Tac or xac should be forced until the mismatch disappears.
+    const bool final_H_sync_ok =
+        std::fabs(Hc_sync) < flux_tolerance_W_m2 &&
+        std::fabs(Hs_sync) < flux_tolerance_W_m2;
+    const bool final_LE_sync_ok =
+        std::fabs(LEc_sync) < flux_tolerance_W_m2 &&
+        std::fabs(LEs_sync) < flux_tolerance_W_m2;
+    const bool final_H_closure_ok =
+        std::fabs(sensible_closure) < flux_tolerance_W_m2;
+    const bool final_LE_closure_ok =
+        std::fabs(latent_closure) < flux_tolerance_W_m2;
+
+    std::cerr << std::setprecision(9)
+        << "AIRSPACE FINAL"
+        << " | iterations=" << iteration
+        << " | Hc_sync=" << Hc_sync
+        << " | Hs_sync=" << Hs_sync
+        << " | LEc_sync=" << LEc_sync
+        << " | LEs_sync=" << LEs_sync
+        << " | H_closure=" << sensible_closure
+        << " | LE_closure=" << latent_closure
+        << " | Hc_sync_from_Ta=" << Hc_sync_from_air_temperature
+        << " | Hs_sync_from_Ta=" << Hs_sync_from_air_temperature
+        << " | canopy_Ta_min=" << canopy_Ta_min
+        << " | canopy_Ta_max=" << canopy_Ta_max
+        << " | Tac=" << T_ac.front()
+        << " | canopy_max_abs_dTa=" << canopy_max_abs_dTa
+        << " | soil_Ta_min=" << soil_Ta_min
+        << " | soil_Ta_max=" << soil_Ta_max
+        << " | soil_max_abs_dTa=" << soil_max_abs_dTa
+        << " | Hsync_ok=" << final_H_sync_ok
+        << " | LEsync_ok=" << final_LE_sync_ok
+        << " | Hclosure_ok=" << final_H_closure_ok
+        << " | LEclosure_ok=" << final_LE_closure_ok
+        << std::endl;
+
+    // Export pass/fail flags as uints for downstream diagnostics.
+    context->setGlobalData("canopy_airspace_H_sync_ok", static_cast<uint>(final_H_sync_ok));
+    context->setGlobalData("canopy_airspace_LE_sync_ok", static_cast<uint>(final_LE_sync_ok));
+    context->setGlobalData("canopy_airspace_H_closure_ok", static_cast<uint>(final_H_closure_ok));
+    context->setGlobalData("canopy_airspace_LE_closure_ok", static_cast<uint>(final_LE_closure_ok));
+    context->setGlobalData("canopy_airspace_Hc_sync_from_air_temperature", Hc_sync_from_air_temperature);
+    context->setGlobalData("canopy_airspace_Hs_sync_from_air_temperature", Hs_sync_from_air_temperature);
+    context->setGlobalData("canopy_airspace_canopy_max_abs_dTa", canopy_max_abs_dTa);
+    context->setGlobalData("canopy_airspace_soil_max_abs_dTa", soil_max_abs_dTa);
+
+    if (Nlayers == 1) {
+        // For one layer, this is the exact resistance-network reconstruction of Tac:
+        // Tac = (Gc*Tc + Gs*Ts + ga*Ta)/(Gc+Gs+ga).
+        const float Tac_reconstructed = (Gc * Tc_effective + Gs * Ts_effective + g_a * air_temperature_reference) /
+                                        (Gc + Gs + g_a);
+        context->setGlobalData("canopy_airspace_Tac_reconstructed", Tac_reconstructed);
+        context->setGlobalData("canopy_airspace_Tac_reconstruction_error", T_ac.front() - Tac_reconstructed);
+
+        // Keep the numerically stable canopy/soil reductions in double precision
+        // internally, but export resistances as FLOAT globals so main.cpp can read
+        // them consistently with the rest of the Helios/TSEB interface.
+        const float canopy_resistance_s_m =
+            (Gc > 0.0)
+                ? static_cast<float>(
+                      static_cast<double>(rho_air_mol_m3) / Gc)
+                : NAN;
+
+        const float soil_resistance_effective_s_m =
+            (Gs > 0.0)
+                ? static_cast<float>(
+                      static_cast<double>(rho_air_mol_m3) / Gs)
+                : NAN;
+
+        context->setGlobalData(
+            "canopy_airspace_canopy_resistance",
+            canopy_resistance_s_m);
+
+        // Raw Kustas-Norman soil resistance used by the ground surface EB and by the
+        // resistance network. For a ground tiling whose total area equals ground_area,
+        // this is also rho_mol/Gs exactly.
+        context->setGlobalData(
+            "canopy_airspace_soil_resistance",
+            soil_resistance_KN_s_m);
+
+        context->setGlobalData(
+            "canopy_airspace_soil_resistance_effective",
+            soil_resistance_effective_s_m);
+
+        context->setGlobalData(
+            "canopy_airspace_soil_heat_conductance_KN",
+            soil_heat_conductance_KN_mol_m2_s);
+
+        context->setGlobalData(
+            "canopy_airspace_soil_temperature_KN",
+            soil_temperature_KN_K);
+    }
+
+    float T_ac_mean = 0.f, x_ac_mean = 0.f;
     for (uint j = 0; j < Nlayers; j++) {
         T_ac_mean += T_ac.at(j);
         x_ac_mean += x_ac.at(j);
@@ -941,6 +1711,18 @@ void EnergyBalanceModel::evaluateCanopyAirspace(const std::vector<uint> &UUIDs) 
 
     context->setGlobalData("canopy_air_temperature", T_ac_mean);
     context->setGlobalData("canopy_air_humidity", x_ac_mean * Patm / esat_Pa(T_ac_mean));
+
+    // Air state immediately above the soil is the lowest canopy-airspace node.
+    // For Nlayers = 1 this is identical to the single canopy-air temperature
+    // and humidity.  For Nlayers > 1 it remains the bottom-layer air state
+    // that is actually used for soil-air exchange in the resistance network.
+    const float soil_air_temperature = T_ac.front();
+    const float soil_air_humidity =
+        x_ac.front() * Patm / esat_Pa(soil_air_temperature);
+
+    context->setGlobalData("soil_air_temperature", soil_air_temperature);
+    context->setGlobalData("soil_air_humidity", soil_air_humidity);
+
     context->setGlobalData("canopy_air_temperature_layers", T_ac);
     context->setGlobalData("aerodynamic_resistance", aerodynamic_resistance_s_m);
     context->setGlobalData("canopy_airspace_iterations", iteration);
@@ -950,6 +1732,20 @@ void EnergyBalanceModel::evaluateCanopyAirspace(const std::vector<uint> &UUIDs) 
         humidity_layers.at(j) = x_ac.at(j) * Patm / esat_Pa(T_ac.at(j));
     }
     context->setGlobalData("canopy_air_humidity_layers", humidity_layers);
+
+    context->setGlobalData("canopy_airspace_canopy_sensible_flux", Hc_network);
+    context->setGlobalData("canopy_airspace_soil_sensible_flux", Hs_network);
+    context->setGlobalData("canopy_airspace_atmospheric_sensible_flux", H_atmosphere);
+    context->setGlobalData("canopy_airspace_canopy_latent_flux", LEc_network);
+    context->setGlobalData("canopy_airspace_soil_latent_flux", LEs_network);
+    context->setGlobalData("canopy_airspace_atmospheric_latent_flux", LE_atmosphere);
+
+    context->setGlobalData("canopy_airspace_canopy_sensible_sync_error", Hc_sync);
+    context->setGlobalData("canopy_airspace_soil_sensible_sync_error", Hs_sync);
+    context->setGlobalData("canopy_airspace_canopy_latent_sync_error", LEc_sync);
+    context->setGlobalData("canopy_airspace_soil_latent_sync_error", LEs_sync);
+    context->setGlobalData("canopy_airspace_sensible_closure_error", sensible_closure);
+    context->setGlobalData("canopy_airspace_latent_closure_error", latent_closure);
 
     warnings.report(std::cerr);
 }
@@ -1045,34 +1841,113 @@ void EnergyBalanceModel::assignCanopyAirspaceLayers() {
 
 float EnergyBalanceModel::calculateAerodynamicResistance(float wind_speed_reference_m_s) const {
 
-    // Roughness length for momentum and zero-plane displacement height following Perrier (1982).
-    float exp_half_LAI = std::exp(-0.5f * canopy_airspace_LAI);
-    float zo_m = canopy_height_m * exp_half_LAI * (1.f - exp_half_LAI);
-    float displacement_height = canopy_height_m * (1.f - 2.f / canopy_airspace_LAI * (1.f - exp_half_LAI));
-
-    // Guard against a degenerate roughness geometry, which would otherwise produce a division by zero or a negative resistance.
-    if (zo_m <= 0.f || displacement_height >= canopy_height_m) {
-        helios_runtime_error("ERROR (EnergyBalanceModel::calculateAerodynamicResistance): Canopy roughness geometry is degenerate for a canopy height of " + std::to_string(canopy_height_m) + " m and a leaf area index of " +
-                             std::to_string(canopy_airspace_LAI) + ". Check that the canopy height and leaf area index are physically reasonable.");
+    // ---------------------------------------------------------------------
+    // Neutral aerodynamic resistance matched to the TSEB configuration.
+    //
+    //     d0  = 0.65 * h_c
+    //     z0M = 0.125 * h_c
+    //     z0H = z0M / exp(kB)
+    //
+    // main.cpp currently sets canopy_kB = 0, therefore z0H = z0M.
+    //
+    //     R_A = ln((z_u-d0)/z0M) * ln((z_T-d0)/z0H)
+    //           ------------------------------------------------
+    //                         kappa^2 U_ref
+    // ---------------------------------------------------------------------
+    if (!(wind_speed_reference_m_s > 0.f)) {
+        helios_runtime_error(
+            "ERROR (EnergyBalanceModel::calculateAerodynamicResistance): "
+            "Reference wind speed must be greater than zero.");
     }
 
-    // Aerodynamic resistance between the canopy top and the reference height following Perrier (1975).
-    float ln_momentum = std::log((reference_height_m - displacement_height) / zo_m);
-    float ln_heat = std::log((reference_height_m - displacement_height) / (canopy_height_m - displacement_height));
+    const float displacement_height = 0.65f * canopy_height_m;
+    const float zo_m = 0.125f * canopy_height_m;
 
-    // Both logarithms vanish as the reference height approaches the canopy top, which would make the canopy perfectly coupled to the reference air. Require a physically meaningful separation rather than returning a near-zero resistance.
-    if (ln_momentum <= 0.f || ln_heat <= 0.f) {
-        helios_runtime_error("ERROR (EnergyBalanceModel::calculateAerodynamicResistance): The reference height (" + std::to_string(reference_height_m) + " m) is too close to the canopy top (" + std::to_string(canopy_height_m) +
-                             " m) for the aerodynamic resistance to be defined, given a leaf area index of " + std::to_string(canopy_airspace_LAI) + ". Increase the reference height so that it lies within the surface layer above the canopy.");
+    float temperature_reference_height_m = reference_height_m;
+    if (context->doesGlobalDataExist("air_temperature_reference_height") &&
+        context->getGlobalDataType("air_temperature_reference_height") == helios::HELIOS_TYPE_FLOAT) {
+        context->getGlobalData(
+            "air_temperature_reference_height",
+            temperature_reference_height_m);
     }
 
-    return ln_momentum * ln_heat / (von_Karman_constant * von_Karman_constant * wind_speed_reference_m_s);
+    float kB = 0.f;
+    if (context->doesGlobalDataExist("canopy_kB") &&
+        context->getGlobalDataType("canopy_kB") == helios::HELIOS_TYPE_FLOAT) {
+        context->getGlobalData("canopy_kB", kB);
+    }
+
+    const float zo_h = zo_m / std::exp(kB);
+
+    if (!(zo_m > 0.f) ||
+        !(zo_h > 0.f) ||
+        !(reference_height_m > displacement_height) ||
+        !(temperature_reference_height_m > displacement_height)) {
+        helios_runtime_error(
+            "ERROR (EnergyBalanceModel::calculateAerodynamicResistance): "
+            "Invalid TSEB aerodynamic geometry.");
+    }
+
+    const float ln_momentum =
+        std::log((reference_height_m - displacement_height) / zo_m);
+
+    const float ln_heat =
+        std::log((temperature_reference_height_m - displacement_height) / zo_h);
+
+    if (!(ln_momentum > 0.f) || !(ln_heat > 0.f)) {
+        helios_runtime_error(
+            "ERROR (EnergyBalanceModel::calculateAerodynamicResistance): "
+            "Invalid logarithmic terms for TSEB aerodynamic resistance.");
+    }
+
+    return ln_momentum * ln_heat /
+           (von_Karman_constant *
+            von_Karman_constant *
+            wind_speed_reference_m_s);
 }
 
 void EnergyBalanceModel::updateCanopyWindProfile(float wind_speed_canopy_top_m_s) {
 
-    // Exponential within-canopy wind profile of Cionco (1972), with an attenuation coefficient of one half of the leaf area index.
+    // Use the same attenuation formulation as evaluateCanopyAirspace() so the
+    // primitive canopy wind speeds, soil wind speed, and inter-layer mixing
+    // are all based on one consistent profile.
+    uint canopy_wind_model = 0;
+    if (context->doesGlobalDataExist("canopy_wind_model") &&
+        context->getGlobalDataType("canopy_wind_model") == helios::HELIOS_TYPE_UINT) {
+        context->getGlobalData("canopy_wind_model", canopy_wind_model);
+    }
+
     float attenuation_coefficient = 0.5f * canopy_airspace_LAI;
+
+    if (canopy_wind_model == 1) {
+        float canopy_leaf_width_m = NAN;
+
+        if (!context->doesGlobalDataExist("canopy_leaf_width_m") ||
+            context->getGlobalDataType("canopy_leaf_width_m") != helios::HELIOS_TYPE_FLOAT) {
+            helios_runtime_error(
+                "ERROR (EnergyBalanceModel::updateCanopyWindProfile): "
+                "Goudriaan wind model requested, but canopy_leaf_width_m "
+                "is missing or is not a float.");
+        }
+
+        context->getGlobalData("canopy_leaf_width_m", canopy_leaf_width_m);
+
+        if (!(canopy_leaf_width_m > 0.f) || !std::isfinite(canopy_leaf_width_m)) {
+            helios_runtime_error(
+                "ERROR (EnergyBalanceModel::updateCanopyWindProfile): "
+                "Goudriaan wind model requires canopy_leaf_width_m > 0.");
+        }
+
+        attenuation_coefficient =
+            0.28f *
+            std::pow(canopy_airspace_LAI, 2.f / 3.f) *
+            std::pow(canopy_height_m, 1.f / 3.f) *
+            std::pow(canopy_leaf_width_m, -1.f / 3.f);
+    } else if (canopy_wind_model != 0) {
+        helios_runtime_error(
+            "ERROR (EnergyBalanceModel::updateCanopyWindProfile): "
+            "canopy_wind_model must be 0 (Cionco) or 1 (Goudriaan).");
+    }
 
     for (uint UUID: canopy_airspace_UUIDs) {
         std::vector<vec3> vertices = context->getPrimitiveVertices(UUID);
@@ -1131,6 +2006,16 @@ void EnergyBalanceModel::enableCanopyAirspaceModel(const std::vector<uint> &cano
     canopy_airspace_LAI = leaf_area_index;
     canopy_airspace_layer_count = num_layers;
     canopy_airspace_layers_assigned = false;
+
+    // Ground heat flux G is calculated internally from the current trial soil net
+    // radiation in the surface-energy-balance residual. Ensure final Rn and G are
+    // written so the simulation can aggregate the exact converged soil balance.
+    if (!ground_UUIDs.empty() && std::find(output_prim_data.begin(), output_prim_data.end(), "storage_flux") == output_prim_data.end()) {
+        output_prim_data.emplace_back("storage_flux");
+    }
+    if (!ground_UUIDs.empty() && std::find(output_prim_data.begin(), output_prim_data.end(), "net_radiation_flux") == output_prim_data.end()) {
+        output_prim_data.emplace_back("net_radiation_flux");
+    }
 
     // The airspace solution weights leaf temperatures by their boundary-layer conductance, so this output must be available in the Context.
     if (std::find(output_prim_data.begin(), output_prim_data.end(), "boundarylayer_conductance_out") == output_prim_data.end()) {
@@ -1324,7 +2209,7 @@ void EnergyBalanceModel::printDefaultValueReport(const std::vector<uint> &UUIDs)
 
 // Helper function: CPU version of energy balance evaluation
 static inline float evaluateEnergyBalance_CPU(float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gS, uint Nsides, float stomatal_sidedness, float heatcapacity, float surfacehumidity, float dt,
-                                              float Tprev) {
+                                              float Tprev, bool is_airspace_ground, float santanello_friedl_phase, float santanello_friedl_amplitude) {
 
     // Outgoing emission flux
     float Rout = float(Nsides) * eps * 5.67e-8F * T * T * T * T;
@@ -1333,7 +2218,11 @@ static inline float evaluateEnergyBalance_CPU(float T, float R, float Qother, fl
     float QH = cp_air_mol * gH * (T - Ta);
 
     // Latent heat flux
-    float es = 611.0f * expf(17.502f * (T - 273.f) / (T - 273.f + 240.97f));
+    // Use the exact same saturation-vapor-pressure function as the
+    // canopy-airspace vapor network.  Using a different approximation here
+    // prevents LE_primitive and LE_network from becoming identical even at
+    // the same T/x state.
+    float es = esat_Pa(T);
     // A zero boundary-layer conductance (gH) or zero stomatal conductance (gS) means there is no vapor
     // pathway, so gM is zero. Guarding both cases also avoids a 0/0 in the series-conductance expression
     // when gH == 0 and the stomatal sidedness makes one of the denominators vanish.
@@ -1344,14 +2233,29 @@ static inline float evaluateEnergyBalance_CPU(float T, float R, float Qother, fl
 
     float QL = gM * lambda_mol * (es * surfacehumidity - ea) / pressure;
 
-    // Storage heat flux
+    // Dynamic material heat storage (zero in the steady canopy-airspace solve).
     float storage = 0.f;
     if (dt > 0) {
         storage = heatcapacity * (T - Tprev) / dt;
     }
 
-    // Residual
-    return R - Rout - QH - QL - Qother - storage;
+    // Ground heat flux G following the Santanello-Friedl formulation used by
+    // the TSEB baseline.  It MUST use soil NET radiation at the current trial
+    // temperature, not absorbed radiation alone:
+    //
+    //   Rn_soil(T) = R_absorbed - eps*sigma*T^4
+    //   G(T) = 0.35 * Rn_soil(T) * cos[2*pi*(t_from_noon + 10800)/74000]
+    //
+    // For canopy and all non-airspace-ground primitives G = 0.
+    float ground_heat_flux = 0.f;
+    if (is_airspace_ground) {
+        const float Rnet_soil = R - Rout;
+        ground_heat_flux = santanello_friedl_amplitude * Rnet_soil * santanello_friedl_phase;
+    }
+
+    // Residual.  For an airspace ground primitive this is exactly
+    // Rn_s - H_s - LE_s - G = 0 (plus any explicitly supplied non-G Qother).
+    return R - Rout - QH - QL - Qother - ground_heat_flux - storage;
 }
 void EnergyBalanceModel::evaluateSurfaceEnergyBalance_CPU(const std::vector<uint> &UUIDs, float dt) {
 
@@ -1434,6 +2338,30 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_CPU(const std::vector<uint
     std::vector<float> stomatal_sidedness(Nprimitives);
     std::vector<float> heatcapacity(Nprimitives);
     std::vector<float> surfacehumidity(Nprimitives);
+    std::vector<unsigned char> is_airspace_ground(Nprimitives, 0);
+
+    // Santanello-Friedl parameters.  For canopy-airspace ground, G is evaluated
+    // directly inside evaluateEnergyBalance_CPU() at each trial Ts using the
+    // corresponding trial soil net radiation.
+    float santanello_friedl_phase = 0.f;
+    float santanello_friedl_amplitude = 0.35f;
+    if (canopy_airspace_enabled && !canopy_airspace_ground_UUIDs.empty()) {
+        float seconds_from_solar_noon = NAN;
+        if (context->doesGlobalDataExist("santanello_friedl_seconds_from_solar_noon") &&
+            context->getGlobalDataType("santanello_friedl_seconds_from_solar_noon") == helios::HELIOS_TYPE_FLOAT) {
+            context->getGlobalData("santanello_friedl_seconds_from_solar_noon", seconds_from_solar_noon);
+        }
+        if (!std::isfinite(seconds_from_solar_noon)) {
+            helios_runtime_error("ERROR (EnergyBalanceModel::evaluateSurfaceEnergyBalance_CPU): canopy-airspace ground requires global float data 'santanello_friedl_seconds_from_solar_noon'.");
+        }
+        if (context->doesGlobalDataExist("santanello_friedl_amplitude") &&
+            context->getGlobalDataType("santanello_friedl_amplitude") == helios::HELIOS_TYPE_FLOAT) {
+            context->getGlobalData("santanello_friedl_amplitude", santanello_friedl_amplitude);
+        }
+        santanello_friedl_phase = std::cos(2.f * float(M_PI) *
+                                           (seconds_from_solar_noon + 10800.f) / 74000.f);
+    }
+    std::unordered_set<uint> airspace_ground_set(canopy_airspace_ground_UUIDs.begin(), canopy_airspace_ground_UUIDs.end());
 
     bool calculated_blconductance_used = false;
     bool primitive_length_used = false;
@@ -1559,8 +2487,14 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_CPU(const std::vector<uint
             gS[u] = gS_default;
         }
 
-        // Other fluxes
-        if (context->doesPrimitiveDataExist(p, "other_surface_flux") && context->getPrimitiveDataType("other_surface_flux") == helios::HELIOS_TYPE_FLOAT) {
+        // Identify soil primitives coupled to the canopy-airspace model.
+        // Their Santanello-Friedl G is calculated INSIDE the residual from the
+        // current trial Rn_s(Ts), so it must not also be supplied in Qother.
+        is_airspace_ground[u] = (canopy_airspace_enabled && airspace_ground_set.find(p) != airspace_ground_set.end()) ? 1 : 0;
+
+        if (is_airspace_ground[u]) {
+            Qother[u] = 0.f;
+        } else if (context->doesPrimitiveDataExist(p, "other_surface_flux") && context->getPrimitiveDataType("other_surface_flux") == helios::HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(p, "other_surface_flux", Qother[u]);
         } else {
             Qother[u] = Qother_default;
@@ -1665,8 +2599,8 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_CPU(const std::vector<uint
         }
 
         // Evaluate residual at initial guesses
-        float resid_old = evaluateEnergyBalance_CPU(T_old, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
-        float resid_old_old = evaluateEnergyBalance_CPU(T_old_old, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
+        float resid_old = evaluateEnergyBalance_CPU(T_old, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p], is_airspace_ground[p] != 0, santanello_friedl_phase, santanello_friedl_amplitude);
+        float resid_old_old = evaluateEnergyBalance_CPU(T_old_old, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p], is_airspace_ground[p] != 0, santanello_friedl_phase, santanello_friedl_amplitude);
 
         // Secant method iteration. Initialize the result to the current best guess so that a degenerate
         // early exit (identical residuals) never leaves the surface temperature uninitialized.
@@ -1683,7 +2617,7 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_CPU(const std::vector<uint
 
             T_new = fabs((T_old_old * resid_old - T_old * resid_old_old) / (resid_old - resid_old_old));
 
-            resid = evaluateEnergyBalance_CPU(T_new, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
+            resid = evaluateEnergyBalance_CPU(T_new, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p], is_airspace_ground[p] != 0, santanello_friedl_phase, santanello_friedl_amplitude);
 
             // Relative change of the newest secant step (measures the latest iterate, not the previous one)
             err = fabs(T_new - T_old) / fabs(T_old);
@@ -1761,8 +2695,17 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_CPU(const std::vector<uint
                 if (dt > 0) {
                     storage = heatcapacity[u] * (T[u] - To[u]) / dt;
                 }
-                context->setPrimitiveData(UUID, "storage_flux", storage);
+                float G_report = 0.f;
+                if (airspace_ground_set.find(UUID) != airspace_ground_set.end()) {
+                    const float Rnet_final = R[u] - float(Nsides[u]) * eps[u] * 5.67e-8F * std::pow(T[u], 4);
+                    G_report = santanello_friedl_amplitude * Rnet_final * santanello_friedl_phase;
+                    context->setPrimitiveData(UUID, "ground_heat_flux", G_report);
+                }
+                context->setPrimitiveData(UUID, "storage_flux", storage + G_report);
             }
         }
     }
 }
+
+
+
