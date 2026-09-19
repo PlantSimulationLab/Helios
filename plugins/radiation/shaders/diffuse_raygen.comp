@@ -140,6 +140,12 @@ layout(set = 1, binding = 15) readonly buffer TransmissivityCamBuffer {
     float transmissivity_cam[];
 } transmissivity_cam_buf;
 
+// Camera-weighted reflectivity of a spectrally flat, perfectly white surface, indexed [source][band_global][camera]. Weighting the
+// light arriving at a primitive by it gives what each camera would record from a white surface there: its white reference.
+layout(set = 1, binding = 16) readonly buffer WhiteReferenceCamBuffer {
+    float white_reference_cam[];
+} white_reference_cam_buf;
+
 layout(set = 1, binding = 10) readonly buffer BandMapBuffer {
     uint map[]; // Maps launch band index → global band index
 } band_map_buf;
@@ -189,6 +195,15 @@ layout(set = 2, binding = 8) buffer CameraScatterTopBuffer {
 layout(set = 2, binding = 9) buffer CameraScatterBottomBuffer {
     float camera_scatter_bottom[];
 } camera_scatter_bottom_buf;
+
+// Each camera's white reference, laid out like the camera-weighted scatter. Zeroed once per runBand(), so it accumulates over all its launches.
+layout(set = 2, binding = 13) buffer WhiteReferenceTopBuffer {
+    float white_reference_top[];
+} white_reference_top_buf;
+
+layout(set = 2, binding = 14) buffer WhiteReferenceBottomBuffer {
+    float white_reference_bottom[];
+} white_reference_bottom_buf;
 
 layout(set = 3, binding = 0) readonly buffer DiffuseFluxBuffer {
     float diffuse_flux[]; // [band] - Sky irradiance per band
@@ -599,6 +614,9 @@ void main() {
                 // Energy arriving at this primitive that the camera-weighted scatter below applies
                 // each camera's rho_cam/tau_cam to (hit energy, or sky energy on a miss).
                 float camera_energy = 0.0;
+                // Sky energy only: the white reference counts light straight from the sky, not light
+                // already coloured by another surface.
+                float white_reference_energy = 0.0;
 
                 if (hit_found) {
                     // ========== HIT: Ray intersected another surface ==========
@@ -645,6 +663,7 @@ void main() {
                         float sky_reflect  = sky_energy * rho;
                         float sky_transmit = sky_energy * tau;
                         camera_energy = sky_energy;
+                        white_reference_energy = sky_energy;
                         if (pc.launch_face == 1) {
                             scatter_top_val    = sky_reflect;
                             scatter_bottom_val = sky_transmit;
@@ -688,6 +707,21 @@ void main() {
                             atomicAdd(camera_scatter_top_buf.camera_scatter_top[cam_global_idx], scatter_top_cam_sum);
                         if (scatter_bottom_cam_sum != 0.0)
                             atomicAdd(camera_scatter_bottom_buf.camera_scatter_bottom[cam_global_idx], scatter_bottom_cam_sum);
+                    }
+                }
+
+                // White reference: sky light arriving at the launch face, weighted by each camera's response to a white
+                // surface. Diffuse rays carry source 0, as the camera-weighted reflectivity above does.
+                for (uint cam = 0u; cam < pc.camera_count; cam++) {
+                    float white = white_reference_cam_buf.white_reference_cam[global_b * pc.camera_count + cam];
+                    float white_reference_sum = subgroupAdd(white_reference_energy * white);
+                    uint white_global_idx = cam * cam_scatter_stride + global_idx;
+                    if (subgroupElect() && white_reference_sum != 0.0) {
+                        if (pc.launch_face == 1) {
+                            atomicAdd(white_reference_top_buf.white_reference_top[white_global_idx], white_reference_sum);
+                        } else {
+                            atomicAdd(white_reference_bottom_buf.white_reference_bottom[white_global_idx], white_reference_sum);
+                        }
                     }
                 }
             } // band loop

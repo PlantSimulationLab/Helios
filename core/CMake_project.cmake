@@ -153,6 +153,11 @@ endif()
 add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 # Enable parallel compilation on Windows (use all available cores)
 add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
+# Raise the COFF section limit. The doctest test cases of the core, and of the larger plugins, are
+# each gathered into a single translation unit large enough to approach MSVC's default 65,536-section
+# limit; how close depends on the toolchain, and cl 19.44 exceeds it on core/tests/selfTest.cpp with
+# "error C1128: number of sections exceeded object file format limit".
+add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/bigobj>)
 cmake_policy(SET CMP0079 NEW)
 set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
 

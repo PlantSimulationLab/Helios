@@ -2039,3 +2039,117 @@ DOCTEST_TEST_CASE("gpuRequiredByEnvironment and requireGPUOrFail") {
         test_unsetenv("HELIOS_NO_GPU");
     }
 }
+
+DOCTEST_TEST_CASE("Beta and ellipsoidal leaf angle distribution CDFs") {
+    // These CDFs exist to be inverted: the leaf angle distribution code assigns a target angle to a leaf by
+    // evaluating the inverse at that leaf's rank, rather than drawing an independent random sample per leaf.
+    // So the property that actually matters is that each CDF describes the distribution its own sampler draws
+    // from - an analytically correct CDF for a DIFFERENT parameterization would be silently useless here.
+
+    SUBCASE("Beta CDF matches the distribution sample_Beta_distribution() draws") {
+        // Both are reachable only through the same (mu,nu) convention, in which nu is the first shape parameter
+        // of the underlying Beta variate and mu the second. Getting that pair backwards mirrors the distribution
+        // about pi/4, which this comparison catches and a self-consistency check on the CDF alone would not.
+        const std::vector<vec2> parameters = {make_vec2(2.770f, 1.172f), make_vec2(1.101f, 1.930f), make_vec2(3.326f, 3.326f)};
+
+        for (const vec2 &parameter: parameters) {
+            const float mu = parameter.x;
+            const float nu = parameter.y;
+
+            std::minstd_rand0 generator(17);
+            constexpr int sample_count = 40000;
+            std::vector<float> samples(sample_count);
+            for (int i = 0; i < sample_count; i++) {
+                samples.at(i) = sample_Beta_distribution(mu, nu, &generator);
+            }
+            std::sort(samples.begin(), samples.end());
+
+            // Kolmogorov-Smirnov style comparison: the largest gap between the empirical and the analytic CDF.
+            float worst_deviation = 0.f;
+            for (int i = 0; i < sample_count; i++) {
+                const float empirical = float(i + 1) / float(sample_count);
+                const float analytic = evaluate_Beta_distribution_CDF(samples.at(i), mu, nu);
+                worst_deviation = std::max(worst_deviation, std::fabs(empirical - analytic));
+            }
+            DOCTEST_INFO("mu=" << mu << " nu=" << nu << " worst CDF deviation=" << worst_deviation);
+            DOCTEST_CHECK(worst_deviation < 0.02f);
+        }
+    }
+
+    SUBCASE("Beta CDF is bounded, monotonic and invertible") {
+        const float mu = 2.770f;
+        const float nu = 1.172f;
+
+        DOCTEST_CHECK(evaluate_Beta_distribution_CDF(0.f, mu, nu) == doctest::Approx(0.f).epsilon(1e-5));
+        DOCTEST_CHECK(evaluate_Beta_distribution_CDF(0.5f * PI_F, mu, nu) == doctest::Approx(1.f).epsilon(1e-5));
+
+        float previous = -1.f;
+        for (int i = 0; i <= 40; i++) {
+            const float theta = 0.5f * PI_F * float(i) / 40.f;
+            const float cdf = evaluate_Beta_distribution_CDF(theta, mu, nu);
+            DOCTEST_CHECK(cdf >= previous - 1e-6f);
+            DOCTEST_CHECK(cdf >= -1e-6f);
+            DOCTEST_CHECK(cdf <= 1.f + 1e-6f);
+            previous = cdf;
+        }
+
+        // Round trip: inverting a probability and re-evaluating must return the same probability.
+        for (int i = 1; i < 20; i++) {
+            const float probability = float(i) / 20.f;
+            const float theta = invert_Beta_distribution_CDF(probability, mu, nu);
+            DOCTEST_CHECK(theta >= 0.f);
+            DOCTEST_CHECK(theta <= 0.5f * PI_F);
+            DOCTEST_CHECK(evaluate_Beta_distribution_CDF(theta, mu, nu) == doctest::Approx(probability).epsilon(1e-3));
+        }
+
+        capture_cerr capture;
+        DOCTEST_CHECK_THROWS(static_cast<void>(evaluate_Beta_distribution_CDF(0.5f, -1.f, 1.f)));
+        DOCTEST_CHECK_THROWS(static_cast<void>(invert_Beta_distribution_CDF(1.5f, 1.f, 1.f)));
+    }
+
+    SUBCASE("Ellipsoidal azimuth CDF matches the distribution sample_ellipsoidal_azimuth() draws") {
+        // The sampler draws the ellipse parameter t uniformly and returns the polar angle of that boundary
+        // point, which is NOT uniform along the perimeter. The CDF therefore has to invert the sampler's own
+        // mapping; integrating the ellipsoidal density instead would disagree with what is actually drawn.
+        const float eccentricity = 0.7f;
+        const float rotation_degrees = 35.f;
+
+        std::minstd_rand0 generator(29);
+        constexpr int sample_count = 40000;
+        std::vector<float> cumulative(sample_count);
+        for (int i = 0; i < sample_count; i++) {
+            const float phi = sample_ellipsoidal_azimuth(eccentricity, rotation_degrees, &generator);
+            cumulative.at(i) = evaluate_ellipsoidal_azimuth_CDF(phi, eccentricity, rotation_degrees);
+        }
+        std::sort(cumulative.begin(), cumulative.end());
+
+        // Applying a distribution's own CDF to its own samples must give a uniform variate on [0,1].
+        float worst_deviation = 0.f;
+        for (int i = 0; i < sample_count; i++) {
+            const float empirical = float(i + 1) / float(sample_count);
+            worst_deviation = std::max(worst_deviation, std::fabs(empirical - cumulative.at(i)));
+        }
+        DOCTEST_INFO("worst ellipsoidal CDF deviation=" << worst_deviation);
+        DOCTEST_CHECK(worst_deviation < 0.02f);
+    }
+
+    SUBCASE("Ellipsoidal azimuth CDF round trip") {
+        const float eccentricity = 0.5f;
+        const float rotation_degrees = 20.f;
+
+        for (int i = 0; i < 20; i++) {
+            const float probability = float(i) / 20.f;
+            const float phi = invert_ellipsoidal_azimuth_CDF(probability, eccentricity, rotation_degrees);
+            DOCTEST_CHECK(phi >= 0.f);
+            DOCTEST_CHECK(phi < 2.f * PI_F + 1e-5f);
+            DOCTEST_CHECK(evaluate_ellipsoidal_azimuth_CDF(phi, eccentricity, rotation_degrees) == doctest::Approx(probability).epsilon(1e-3));
+        }
+
+        // A circular distribution (e=0) is the degenerate case where the parameter and the polar angle agree.
+        DOCTEST_CHECK(invert_ellipsoidal_azimuth_CDF(0.25f, 0.f, 0.f) == doctest::Approx(0.5f * PI_F).epsilon(1e-4));
+
+        capture_cerr capture;
+        DOCTEST_CHECK_THROWS(static_cast<void>(evaluate_ellipsoidal_azimuth_CDF(0.f, 1.5f, 0.f)));
+        DOCTEST_CHECK_THROWS(static_cast<void>(invert_ellipsoidal_azimuth_CDF(-0.1f, 0.5f, 0.f)));
+    }
+}

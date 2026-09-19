@@ -181,8 +181,11 @@ namespace helios {
         destroyBuffer(camera_pixel_depth_buffer);
         destroyBuffer(camera_scatter_top_buffer);
         destroyBuffer(camera_scatter_bottom_buffer);
+        destroyBuffer(white_reference_top_buffer);
+        destroyBuffer(white_reference_bottom_buffer);
         destroyBuffer(reflectivity_cam_buffer);
         destroyBuffer(transmissivity_cam_buffer);
+        destroyBuffer(white_reference_cam_buffer);
         destroyBuffer(radiation_specular_buffer);
         destroyBuffer(diffuse_flux_buffer);
         destroyBuffer(diffuse_peak_dir_buffer);
@@ -681,6 +684,7 @@ namespace helios {
     void VulkanComputeBackend::updateMaterials(const RayTracingMaterial &materials) {
         band_count = materials.num_bands;
         camera_count = materials.num_cameras;
+        specular_reflection_enabled = materials.specular_reflection_enabled;
 
         if (primitive_count == 0) {
             return; // No geometry uploaded yet
@@ -745,6 +749,21 @@ namespace helios {
             }
             transmissivity_cam_buffer = createBuffer(materials.transmissivity_cam.size() * sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
             uploadBufferData(transmissivity_cam_buffer, materials.transmissivity_cam.data(), materials.transmissivity_cam.size() * sizeof(float));
+        }
+
+        // Camera-weighted reflectivity of a spectrally flat, perfectly white surface, indexed [source][band_global][camera]. The direct and diffuse shaders weight the light arriving at each
+        // primitive by it to accumulate each camera's white reference.
+        if (!materials.white_reference_cam.empty()) {
+            const size_t expected_white_reference_size = materials.num_sources * band_count * materials.num_cameras;
+            if (materials.white_reference_cam.size() != expected_white_reference_size) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): white_reference_cam size mismatch. Expected " + std::to_string(expected_white_reference_size) +
+                                     " entries (Nsources * Nbands * Ncameras), got " + std::to_string(materials.white_reference_cam.size()));
+            }
+            if (white_reference_cam_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(white_reference_cam_buffer);
+            }
+            white_reference_cam_buffer = createBuffer(materials.white_reference_cam.size() * sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            uploadBufferData(white_reference_cam_buffer, materials.white_reference_cam.data(), materials.white_reference_cam.size() * sizeof(float));
         }
 
         // Upload specular exponent buffer (per primitive)
@@ -969,6 +988,8 @@ namespace helios {
 
         // The shader writes one camera-scatter block per camera; refuse to index past buffers sized for another camera set.
         requireCameraScatterBuffersSized("launchDirectRays");
+        requireWhiteReferenceBuffersSized("launchDirectRays");
+        requireSpecularBufferSized("launchDirectRays", params);
 
 
         // Build band mapping (same logic as diffuse)
@@ -1059,7 +1080,7 @@ namespace helios {
             float domain_xmax;
             float domain_ymin;
             float domain_ymax;
-            uint specular_reflection_enabled; // 0=disabled, 1=default scale, 2=user scale
+            uint specular_reflection_enabled; // 0=disabled, 1=enabled
             uint camera_count; // Number of cameras (trailing stride of rho_cam/tau_cam); 0 = no camera-weighted scatter
             uint camera_id; // Camera whose weighting the camera-scatter buffers accumulate
         } push_constants;
@@ -1220,6 +1241,7 @@ namespace helios {
 
         // The shader writes one camera-scatter block per camera; refuse to index past buffers sized for another camera set.
         requireCameraScatterBuffersSized("launchDiffuseRays");
+        requireWhiteReferenceBuffersSized("launchDiffuseRays");
 
 
         // Ensure radiation_out_top/bottom buffers exist (required by shader)
@@ -1593,6 +1615,7 @@ namespace helios {
         if (primitive_count == 0) {
             return; // No geometry
         }
+        requireSpecularBufferSized("launchCameraRays", params);
 
         // Build band mapping (same logic as direct/diffuse)
         launch_to_global_band.clear();
@@ -2070,6 +2093,24 @@ namespace helios {
         }
     }
 
+    void VulkanComputeBackend::getWhiteReferenceResults(std::vector<float> &white_reference_top, std::vector<float> &white_reference_bottom) {
+        white_reference_top.clear();
+        white_reference_bottom.clear();
+        const size_t white_reference_size = camera_count * primitive_count * launch_band_count;
+        if (white_reference_size == 0) {
+            return; // No cameras, geometry or bands, so zeroRadiationBuffers() left the placeholders in place
+        }
+        requireWhiteReferenceBuffersSized("getWhiteReferenceResults");
+
+        // Read back through the staging path, as getCameraResults() does: with many primitives the buffers are large, and mapping a large host-visible allocation directly can fault.
+        white_reference_top.resize(white_reference_size);
+        white_reference_bottom.resize(white_reference_size);
+        downloadBufferData(white_reference_top_buffer, white_reference_top.data(), white_reference_size * sizeof(float));
+        downloadBufferData(white_reference_bottom_buffer, white_reference_bottom.data(), white_reference_size * sizeof(float));
+        requireFiniteResults(white_reference_top, "white_reference_top", launch_band_count);
+        requireFiniteResults(white_reference_bottom, "white_reference_bottom", launch_band_count);
+    }
+
     void VulkanComputeBackend::getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels, std::vector<float> &pixel_depths, uint camera_id, const helios::int2 &resolution) {
         size_t total_pixels = size_t(resolution.x) * size_t(resolution.y);
         if (total_pixels == 0) {
@@ -2165,18 +2206,31 @@ namespace helios {
             radiation_in_buffer = createBuffer(buffer_size * sizeof(float), usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
         }
 
-        // Create or resize radiation_specular buffer [source * primitive * band]
-        // Only create if source_count > 0 (specular requires sources)
-        if (source_count > 0) {
-            size_t specular_buffer_size = source_count * primitive_count * launch_band_count;
-            if (radiation_specular_buffer.buffer == VK_NULL_HANDLE || radiation_specular_buffer.size != specular_buffer_size * sizeof(float)) {
-                if (radiation_specular_buffer.buffer != VK_NULL_HANDLE) {
-                    destroyBuffer(radiation_specular_buffer);
+        // Create or resize radiation_specular buffer [source * primitive * band]. It is needed only when there are sources and specular
+        // reflection is enabled; otherwise the shaders never touch it, and a one-element placeholder keeps the descriptor set complete.
+        const size_t specular_bytes = specular_reflection_enabled ? source_count * primitive_count * launch_band_count * sizeof(float) : 0;
+        const size_t specular_buffer_bytes = specular_bytes > 0 ? specular_bytes : sizeof(float);
+        if (radiation_specular_buffer.buffer == VK_NULL_HANDLE || radiation_specular_buffer.size != specular_buffer_bytes) {
+            if (radiation_specular_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(radiation_specular_buffer);
+            }
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            radiation_specular_buffer = createBuffer(specular_buffer_bytes, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+        }
+        zeroBuffer(radiation_specular_buffer);
+
+        // Create or resize each camera's white reference [camera * primitive * band]. Unlike the camera scatter buffers, these are zeroed only
+        // here, so they accumulate over all the direct and diffuse launches of a runBand(). A one-element placeholder stands in when there are no cameras.
+        const size_t white_reference_bytes = camera_count > 0 ? camera_count * buffer_size * sizeof(float) : sizeof(float);
+        for (Buffer *white_reference_buffer: {&white_reference_top_buffer, &white_reference_bottom_buffer}) {
+            if (white_reference_buffer->buffer == VK_NULL_HANDLE || white_reference_buffer->size != white_reference_bytes) {
+                if (white_reference_buffer->buffer != VK_NULL_HANDLE) {
+                    destroyBuffer(*white_reference_buffer);
                 }
                 VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-                radiation_specular_buffer = createBuffer(specular_buffer_size * sizeof(float), usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+                *white_reference_buffer = createBuffer(white_reference_bytes, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
             }
-            zeroBuffer(radiation_specular_buffer);
+            zeroBuffer(*white_reference_buffer);
         }
 
         // Zero radiation buffers
@@ -2396,6 +2450,30 @@ namespace helios {
             helios_runtime_error(std::string("ERROR (VulkanComputeBackend::") + caller + "): The camera-weighted scatter buffers hold " + std::to_string(camera_scatter_top_buffer.size) + " bytes, but " + std::to_string(camera_count) +
                                  " camera(s) x " + std::to_string(primitive_count) + " primitives x " + std::to_string(launch_band_count) + " launched band(s) require " + std::to_string(required_bytes) +
                                  ". zeroCameraScatterBuffers() must be called for the current camera set before rays are launched.");
+        }
+    }
+
+    void VulkanComputeBackend::requireWhiteReferenceBuffersSized(const char *caller) const {
+        if (camera_count == 0) {
+            return; // The shaders loop over zero cameras and never touch the white reference buffers
+        }
+        const size_t required_bytes = camera_count * primitive_count * launch_band_count * sizeof(float);
+        if (white_reference_top_buffer.size != required_bytes || white_reference_bottom_buffer.size != required_bytes) {
+            helios_runtime_error(std::string("ERROR (VulkanComputeBackend::") + caller + "): The white reference buffers hold " + std::to_string(white_reference_top_buffer.size) + " bytes, but " + std::to_string(camera_count) +
+                                 " camera(s) x " + std::to_string(primitive_count) + " primitives x " + std::to_string(launch_band_count) + " launched band(s) require " + std::to_string(required_bytes) +
+                                 ". zeroRadiationBuffers() must be called for the current camera set before rays are launched.");
+        }
+    }
+
+    void VulkanComputeBackend::requireSpecularBufferSized(const char *caller, const RayTracingLaunchParams &params) const {
+        if (params.specular_reflection_enabled == 0 || source_count == 0) {
+            return; // The shaders do not touch radiation_specular
+        }
+        const size_t required_bytes = source_count * primitive_count * launch_band_count * sizeof(float);
+        if (radiation_specular_buffer.size != required_bytes) {
+            helios_runtime_error(std::string("ERROR (VulkanComputeBackend::") + caller + "): Specular reflection is enabled for this launch, but radiation_specular holds " + std::to_string(radiation_specular_buffer.size) +
+                                 " bytes instead of the " + std::to_string(required_bytes) +
+                                 " its sources, primitives and launched bands require. updateMaterials() must enable specular reflection, and zeroRadiationBuffers() be called, before rays are launched.");
         }
     }
 
@@ -2849,6 +2927,7 @@ namespace helios {
                 {13, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Translucent cover: glass_KL (float)
                 {14, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Reflectivity (camera-weighted)
                 {15, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Transmissivity (camera-weighted)
+                {16, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // White reference weights (camera-weighted reflectivity of a white surface)
         };
 
         layout_info.bindingCount = static_cast<uint32_t>(material_bindings.size());
@@ -2873,6 +2952,8 @@ namespace helios {
                 {10, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // radiation_specular
                 {11, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // vertex_radiation_out_top
                 {12, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // vertex_radiation_out_bottom
+                {13, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // white_reference_top
+                {14, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // white_reference_bottom
         };
 
         layout_info.bindingCount = static_cast<uint32_t>(result_bindings.size());
@@ -2917,7 +2998,7 @@ namespace helios {
         // ========== Create Descriptor Pool ==========
 
         std::vector<VkDescriptorPoolSize> pool_sizes = {
-                {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 72}, // All sets: 19 geo + 16 mat + 13 result + 9 sky + 1 debug + margin
+                {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 72}, // All sets: 19 geo + 17 mat + 15 result + 9 sky + 1 debug + margin
         };
 
         VkDescriptorPoolCreateInfo pool_info{};
@@ -2990,6 +3071,10 @@ namespace helios {
         zeroBuffer(camera_scatter_top_buffer);
         camera_scatter_bottom_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
         zeroBuffer(camera_scatter_bottom_buffer);
+        white_reference_top_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+        zeroBuffer(white_reference_top_buffer);
+        white_reference_bottom_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+        zeroBuffer(white_reference_bottom_buffer);
 
         // ========== Create placeholder specular buffers ==========
         // MoltenVK requires these before pipeline creation (camera/direct shaders reference them)
@@ -3005,6 +3090,8 @@ namespace helios {
         zeroBuffer(reflectivity_cam_buffer);
         transmissivity_cam_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         zeroBuffer(transmissivity_cam_buffer);
+        white_reference_cam_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(white_reference_cam_buffer);
         radiation_specular_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         zeroBuffer(radiation_specular_buffer);
 
@@ -3982,6 +4069,24 @@ namespace helios {
             descriptor_writes.push_back(write);
         }
 
+        // White reference weights: binding 16.
+        VkDescriptorBufferInfo white_reference_cam_info{};
+        white_reference_cam_info.buffer = white_reference_cam_buffer.buffer;
+        white_reference_cam_info.offset = 0;
+        white_reference_cam_info.range = VK_WHOLE_SIZE;
+
+        if (white_reference_cam_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_materials;
+            write.dstBinding = 16;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &white_reference_cam_info;
+            descriptor_writes.push_back(write);
+        }
+
         // ========== Set 2: Result Buffers ==========
 
         VkDescriptorBufferInfo rad_in_info{};
@@ -4205,6 +4310,40 @@ namespace helios {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &vertex_radiation_out_bottom_info;
+            descriptor_writes.push_back(write);
+        }
+
+        VkDescriptorBufferInfo white_reference_top_info{};
+        white_reference_top_info.buffer = white_reference_top_buffer.buffer;
+        white_reference_top_info.offset = 0;
+        white_reference_top_info.range = VK_WHOLE_SIZE;
+
+        if (white_reference_top_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_results;
+            write.dstBinding = 13;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &white_reference_top_info;
+            descriptor_writes.push_back(write);
+        }
+
+        VkDescriptorBufferInfo white_reference_bottom_info{};
+        white_reference_bottom_info.buffer = white_reference_bottom_buffer.buffer;
+        white_reference_bottom_info.offset = 0;
+        white_reference_bottom_info.range = VK_WHOLE_SIZE;
+
+        if (white_reference_bottom_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_results;
+            write.dstBinding = 14;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &white_reference_bottom_info;
             descriptor_writes.push_back(write);
         }
 

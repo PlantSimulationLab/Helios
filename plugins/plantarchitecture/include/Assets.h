@@ -25,6 +25,31 @@
  */
 std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, float scale, float mature_scale, float flexibility, float taper = 1.f);
 
+//! Bend a petiole centerline as a tapered cantilever loaded by the leaflets attached along it
+/**
+ * The centerline is clamped at its first node. Each load acts at its arclength along the centerline, and the rotation of segment j is
+ *
+ *     theta_j = 2 * compliance / (reference_load * L^2) * (r_base / r_j)^4 * integral over segment j of M(s) ds,
+ *
+ * where L is the total centerline length, r_j the mean radius of the segment (with r_j / r_base floored at 0.5), and M(s) the bending moment at s: the sum over loads beyond s of the load times its horizontal
+ * lever arm along the segment's heading, clamped to be non-negative. The cumulative rotation of the segments before j - the curvature accumulated up to segment j's own base - lowers segment j's elevation
+ * within its own vertical plane, so its horizontal heading is kept and it never passes hanging straight down. The first segment is therefore left at its rest direction, as a cantilever built in at its
+ * support has no slope change there: the centerline leaves its base at the angle it was given and the bend appears beyond that as curvature accumulating along the length. The lever arms are those of the
+ * bent shape, found by an under-relaxed fixed-point iteration from the rest shape. With this normalization a straight, horizontal, untapered centerline whose whole reference load acts at its tip turns
+ * through \p compliance radians from base to tip in the small-deflection limit, independently of its length; the last segment's own share of that turn falls beyond it, so its direction falls short of the
+ * total by a fraction equal to the square of one segment's share of the length.
+ * \param[in] rest_offsets Undeformed centerline nodes, as offsets from the base; at least two, with no coincident neighbours.
+ * \param[in] radii Radius at each node, parallel to \p rest_offsets. Only ratios to the first radius are used; a non-positive first radius leaves the stiffness uniform.
+ * \param[in] load_arclength_fractions Position of each load as a fraction of the centerline's arclength, in [0, 1].
+ * \param[in] load_weights Weight of each load, in the same arbitrary units as \p reference_load; non-negative.
+ * \param[in] reference_load Load that \p compliance is normalized against (the petiole's full-grown leaflet load). A non-positive value returns the rest shape.
+ * \param[in] compliance Dimensionless bending compliance; non-negative. Zero returns the rest shape.
+ * \param[out] equilibrium_residual If not null, receives the largest difference in radians between a segment's elevation and the elevation the moments of the returned shape call for; zero when the rest shape is returned.
+ * \return Bent centerline nodes, as offsets from the base, parallel to \p rest_offsets.
+ */
+std::vector<helios::vec3> bendPetioleCenterline(const std::vector<helios::vec3> &rest_offsets, const std::vector<float> &radii, const std::vector<float> &load_arclength_fractions, const std::vector<float> &load_weights,
+                                                float reference_load, float compliance, float *equilibrium_residual = nullptr);
+
 uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype_parameters, int compound_leaf_index);
 
 uint GeneralSphericalFruitPrototype(helios::Context *context_ptr, uint subdivisions);

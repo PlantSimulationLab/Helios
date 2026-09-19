@@ -122,6 +122,8 @@ namespace helios {
         void getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels,
                               std::vector<float> &pixel_depths, uint camera_id,
                               const helios::int2 &resolution) override;
+        void getWhiteReferenceResults(std::vector<float> &white_reference_top,
+                                      std::vector<float> &white_reference_bottom) override;
 
         // Buffer utilities
         void zeroRadiationBuffers(size_t launch_band_count) override;
@@ -220,6 +222,7 @@ namespace helios {
         CUdeviceptr d_tau                    = 0;
         CUdeviceptr d_rho_cam                = 0;
         CUdeviceptr d_tau_cam                = 0;
+        CUdeviceptr d_white_reference_cam    = 0; //!< Camera-weighted reflectivity of a white surface [source][band][camera]
         CUdeviceptr d_specular_exponent      = 0;
         CUdeviceptr d_specular_scale         = 0;
         CUdeviceptr d_glass_n                = 0; //!< Translucent-cover refractive index
@@ -238,6 +241,8 @@ namespace helios {
         CUdeviceptr d_radiation_in_camera    = 0;
         CUdeviceptr d_scatter_buff_top_cam   = 0;
         CUdeviceptr d_scatter_buff_bottom_cam= 0;
+        CUdeviceptr d_white_reference_top_cam    = 0; //!< Each camera's white reference (top face) [camera][prim][launch band]
+        CUdeviceptr d_white_reference_bottom_cam = 0; //!< Each camera's white reference (bottom face) [camera][prim][launch band]
         CUdeviceptr d_radiation_specular     = 0;
         CUdeviceptr d_Rsky                   = 0;
 
@@ -289,6 +294,9 @@ namespace helios {
         size_t   current_camera_count    = 0;
         size_t   current_launch_band_count = 0;   //!< Nbands_launch used for camera buffers
         size_t   camera_scatter_buffer_bytes = 0; //!< Bytes allocated to each of d_scatter_buff_top_cam/d_scatter_buff_bottom_cam by zeroCameraScatterBuffers()
+        size_t   white_reference_buffer_bytes = 0; //!< Bytes allocated to each of d_white_reference_top_cam/d_white_reference_bottom_cam by zeroRadiationBuffers()
+        size_t   radiation_specular_buffer_bytes = 0; //!< Bytes allocated to d_radiation_specular by zeroRadiationBuffers()
+        bool     specular_reflection_enabled = false; //!< Set by updateMaterials(); d_radiation_specular is allocated only when true
         uint32_t current_camera_launch_id  = 0xFFFFFFFFu; //!< Camera ID from last launchCameraRays
 
         // ---- Private helper methods ----
@@ -298,6 +306,12 @@ namespace helios {
 
         /// Raise an error unless the camera-scatter device buffers hold one [prim][band] block per current camera, as the kernels index them
         void requireCameraScatterBuffersSized(const char *caller, size_t launch_band_count) const;
+
+        /// Raise an error unless the white reference device buffers hold one [prim][band] block per current camera, as the direct and diffuse kernels index them
+        void requireWhiteReferenceBuffersSized(const char *caller, size_t launch_band_count) const;
+
+        /// Raise an error if a launch with specular reflection enabled would read or write a d_radiation_specular that zeroRadiationBuffers() did not allocate for it
+        void requireSpecularBufferSized(const char *caller, const RayTracingLaunchParams &launch_params) const;
 
         /// Free all geometry-related device buffers
         void freeGeometryBuffers();

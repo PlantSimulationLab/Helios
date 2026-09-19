@@ -100,6 +100,7 @@ namespace helios {
         // ========== Results Retrieval ==========
         void getRadiationResults(RayTracingResults &results) override;
         void getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels, std::vector<float> &pixel_depths, uint camera_id, const helios::int2 &resolution) override;
+        void getWhiteReferenceResults(std::vector<float> &white_reference_top, std::vector<float> &white_reference_bottom) override;
 
         // ========== Buffer Management Utilities ==========
         void zeroRadiationBuffers(size_t launch_band_count) override;
@@ -235,6 +236,7 @@ namespace helios {
         //! are both present; the camera image must be built from these rather than the band-weighted pair.
         Buffer reflectivity_cam_buffer;
         Buffer transmissivity_cam_buffer;
+        Buffer white_reference_cam_buffer; //!< Camera-weighted reflectivity of a white surface [source][band][camera]
         Buffer specular_exponent_buffer; //!< Per-primitive Blinn-Phong exponent
         Buffer specular_scale_buffer; //!< Per-primitive specular scale coefficient
         Buffer source_fluxes_cam_buffer; //!< Camera spectral response weights [source × band]
@@ -257,6 +259,8 @@ namespace helios {
         Buffer camera_pixel_depth_buffer; //!< Camera pixel depth values
         Buffer camera_scatter_top_buffer; //!< Camera-weighted scatter (top face)
         Buffer camera_scatter_bottom_buffer; //!< Camera-weighted scatter (bottom face)
+        Buffer white_reference_top_buffer; //!< Each camera's white reference (top face) [camera × primitive × launch band], accumulated over all the launches of a runBand()
+        Buffer white_reference_bottom_buffer; //!< Each camera's white reference (bottom face), same layout
         Buffer radiation_specular_buffer; //!< Accumulated incident radiation for specular [source × primitive × band]
 
         // Sky parameter buffers (Set 3)
@@ -332,6 +336,24 @@ namespace helios {
          * \param[in] caller Name of the calling method, for the error message
          */
         void requireCameraScatterBuffersSized(const char *caller) const;
+
+        //! Raise an error unless the white reference buffers are sized for the current camera set
+        /**
+         * The direct and diffuse shaders write one [primitive][band] block per camera. RadiationModel::runBand() sizes the buffers with zeroRadiationBuffers() before its first launch.
+         * \param[in] caller Name of the calling method, for the error message
+         */
+        void requireWhiteReferenceBuffersSized(const char *caller) const;
+
+        //! Raise an error if a launch with specular reflection enabled would index radiation_specular past its end
+        /**
+         * zeroRadiationBuffers() sizes radiation_specular for every source, primitive and launched band only when the last updateMaterials() call enabled specular reflection, and leaves a
+         * one-element placeholder otherwise.
+         * \param[in] caller Name of the calling method, for the error message
+         * \param[in] params Parameters of the launch about to be made
+         */
+        void requireSpecularBufferSized(const char *caller, const RayTracingLaunchParams &params) const;
+
+        bool specular_reflection_enabled = false; //!< Set by updateMaterials(); radiation_specular is sized only when true
 
         // Descriptor set update tracking
         bool descriptors_dirty = false;

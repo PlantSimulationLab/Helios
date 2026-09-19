@@ -181,15 +181,29 @@ namespace helios {
          */
         virtual void getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels, std::vector<float> &pixel_depths, uint camera_id, const helios::int2 &resolution) = 0;
 
+        /**
+         * @brief Get each camera's white reference, accumulated by every direct and diffuse launch since zeroRadiationBuffers()
+         *
+         * @param[out] white_reference_top White reference of the top face of every primitive [camera][primitive][launch band]
+         * @param[out] white_reference_bottom White reference of the bottom face, same layout
+         *
+         * The white reference is what each camera would record from a spectrally flat, perfectly white surface in place of the primitive, lit by the light arriving there straight from a
+         * radiation source or the sky. Both vectors are left empty when there are no cameras.
+         */
+        virtual void getWhiteReferenceResults(std::vector<float> &white_reference_top, std::vector<float> &white_reference_bottom) = 0;
+
         // ========== Buffer Management Utilities ==========
 
         /**
-         * @brief Zero all radiation result buffers (radiation_in, radiation_out, radiation_specular)
+         * @brief Zero all radiation result buffers (radiation_in, radiation_out, radiation_specular, white reference)
          *
          * @param[in] launch_band_count Number of bands being launched in current iteration
          *
          * Camera scatter buffers are sized by launch_band_count (not global band count) to match
          * per-launch accumulation semantics. All other buffers use the global band count.
+         *
+         * The white reference buffers are sized [camera][primitive][launch band] and, unlike the camera scatter buffers, are zeroed only here, so they accumulate over all the launches
+         * of a runBand() and are read once with getWhiteReferenceResults(). radiation_specular is allocated only when the last updateMaterials() call had specular reflection enabled.
          */
         virtual void zeroRadiationBuffers(size_t launch_band_count) = 0;
 

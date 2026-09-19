@@ -2592,9 +2592,9 @@ void CanopyGenerator::buildCanopy(const WhiteSpruceCanopyParameters &params) {
         for (int i = 0; i < params.plant_count.x; i++) {
 
             vec3 center;
-            if (cconfig != "uniform") {
+            if (cconfig == "uniform") {
                 center = params.canopy_origin + make_vec3(-0.5f * canopy_extent.x + (float(i) + 0.5f) * params.plant_spacing.x, -0.5f * canopy_extent.y + (float(j) + 0.5f) * params.plant_spacing.y, 0);
-            } else if (cconfig != "random") {
+            } else if (cconfig == "random") {
                 float rx = unif_distribution(generator);
                 float ry = unif_distribution(generator);
                 center = params.canopy_origin + make_vec3(-0.5f * canopy_extent.x + float(i) * params.plant_spacing.x + r + (params.plant_spacing.x - 2.f * r) * rx,

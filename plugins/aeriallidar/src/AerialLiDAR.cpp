@@ -471,7 +471,7 @@ helios::int3 AerialLiDARcloud::gridindex2ijk(const int index) const {
 
 int AerialLiDARcloud::gridijk2index(const helios::int3 &ijk) const {
 
-    int index = ijk.z * gridresolution.x * gridresolution.y + ijk.y * gridresolution.y + ijk.x;
+    int index = ijk.z * gridresolution.x * gridresolution.y + ijk.y * gridresolution.x + ijk.x;
 
     if (index < 0 || index >= gridresolution.x * gridresolution.y * gridresolution.z) {
         return -1;

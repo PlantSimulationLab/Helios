@@ -679,6 +679,9 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                 output_xml << "\t\t\t\t\t\t<petiole_curvature>" << phytomer->petiole_curvature.at(petiole) << "</petiole_curvature>" << std::endl;
                 // Note: petiole_base_position is no longer written to XML - it is auto-calculated from the parent internode tip during XML reading
                 output_xml << "\t\t\t\t\t\t<current_leaf_scale_factor>" << phytomer->current_leaf_scale_factor.at(petiole) << "</current_leaf_scale_factor>" << std::endl;
+                // How far the petiole itself has elongated. It is recorded separately from the leaf's fraction because the two advance on separate rates: a petiole elongates on its shoot's internode rate
+                // and goes on extending after the blade it carries has stopped, so the leaf's fraction no longer says how much elongating the petiole has left to do.
+                output_xml << "\t\t\t\t\t\t<current_petiole_scale_factor>" << phytomer->current_petiole_scale_factor.at(petiole) << "</current_petiole_scale_factor>" << std::endl;
 
                 // Bulk parameters for exact petiole reconstruction
                 output_xml << "\t\t\t\t\t\t<petiole_taper>" << phytomer->petiole_taper.at(petiole) << "</petiole_taper>" << std::endl;
@@ -1277,6 +1280,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 float petiole_pitch;
                 float petiole_curvature;
                 float current_leaf_scale_factor_value;
+                float current_petiole_scale_factor_value;
                 float leaflet_scale;
                 float leaflet_offset;
                 std::vector<float> petiole_lengths; // actual length of each petiole within internode
@@ -1285,6 +1289,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 std::vector<float> petiole_curvatures; // curvature of each petiole within internode
                 std::vector<vec3> petiole_base_positions; // actual base position of each petiole within internode
                 std::vector<float> current_leaf_scale_factors; // scale factor of each petiole within internode
+                std::vector<float> current_petiole_scale_factors; // elongation fraction of each petiole within internode
                 std::vector<float> petiole_tapers; // taper value for each petiole
                 std::vector<bool> have_saved_petiole_axes_all; // whether the file recorded this petiole's axes
                 std::vector<vec3> saved_petiole_axis_initial_all; // petiole axis before curvature, as built
@@ -1351,6 +1356,16 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     // current leaf scale factor
                     node_string = "current_leaf_scale_factor";
                     current_leaf_scale_factor_value = parse_xml_tag_float(petiole.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+                    // How far the petiole itself has elongated. Optional: a file written before the petiole was given a
+                    // growth fraction of its own was written by a version that moved the petiole with the leaf, so the
+                    // leaf's fraction is that file's petiole fraction.
+                    node_string = "current_petiole_scale_factor";
+                    if (petiole.child(node_string.c_str())) {
+                        current_petiole_scale_factor_value = parse_xml_tag_float(petiole.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+                    } else {
+                        current_petiole_scale_factor_value = current_leaf_scale_factor_value;
+                    }
 
                     // petiole taper
                     node_string = "petiole_taper";
@@ -1431,6 +1446,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     petiole_pitches.push_back(petiole_pitch);
                     petiole_curvatures.push_back(petiole_curvature);
                     current_leaf_scale_factors.push_back(current_leaf_scale_factor_value);
+                    current_petiole_scale_factors.push_back(current_petiole_scale_factor_value);
                     petiole_base_positions.push_back(petiole_base_pos);
                     petiole_tapers.push_back(petiole_taper);
                     petiole_length_segments_all.push_back(length_segments);
@@ -1738,9 +1754,26 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 // Restore internode properties from saved values
                 phytomer_ptr->internode_pitch = deg2rad(internode_pitch);
                 phytomer_ptr->internode_phyllotactic_angle = deg2rad(internode_phyllotactic_angle);
+                // The accumulated azimuth was computed when the phytomer was rebuilt, from an angle drawn afresh rather than the
+                // saved one. Phytomers are restored in order along the shoot, so the previous one is already corrected.
+                {
+                    const auto &restored_phytomers = plant_instances.at(plantID).shoot_tree.at(current_shoot_ID)->phytomers;
+                    const auto position = std::find(restored_phytomers.begin(), restored_phytomers.end(), phytomer_ptr);
+                    const size_t index = static_cast<size_t>(position - restored_phytomers.begin());
+                    phytomer_ptr->internode_phyllotactic_azimuth = (index == 0) ? 0.f : restored_phytomers.at(index - 1)->internode_phyllotactic_azimuth + phytomer_ptr->internode_phyllotactic_angle;
+                }
                 // The creation calls above pass internode_length as the max length, so restore the saved
                 // maximum here; it sets the elongation target used by subsequent growth.
                 phytomer_ptr->internode_length_max = internode_length_max;
+                // An internode that was still elongating when the file was written has to come back still
+                // elongating. Every shoot above is rebuilt at elongation fraction 1, so without this the
+                // restored internode believes it has already reached internode_length_max and never grows
+                // again -- a plant saved mid-season and reloaded kept expanding its leaves on a frozen stem.
+                // Files written before <internode_length_max> existed default it to the current length, which
+                // gives a fraction of 1 and leaves those plants as they were.
+                if (internode_length_max > 0.f) {
+                    phytomer_ptr->current_internode_scale_factor = fmin(1.f, internode_length / internode_length_max);
+                }
                 phytomer_ptr->age = phytomer_age;
 
                 // The perturbations were parsed above and used to rebuild this phytomer's internode
@@ -2102,6 +2135,15 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         phytomer_ptr->petiole_curvature.at(p) = petiole_curvatures[p];
                         phytomer_ptr->petiole_taper.at(p) = petiole_tapers[p];
                         phytomer_ptr->current_leaf_scale_factor.at(p) = current_leaf_scale_factors[p];
+                        phytomer_ptr->current_petiole_scale_factor.at(p) = current_petiole_scale_factors[p];
+                        // The length the petiole is still growing toward, recovered from the length it has reached and the
+                        // fraction of the way there it is. A petiole whose elongation was pinned - a prescribed centerline,
+                        // say - was saved at a fraction of 1 and so is restored already fully elongated.
+                        if (current_petiole_scale_factors[p] > 0.f) {
+                            phytomer_ptr->petiole_length_max.at(p) = petiole_lengths[p] / current_petiole_scale_factors[p];
+                        } else {
+                            phytomer_ptr->petiole_length_max.at(p) = petiole_lengths[p];
+                        }
 
                         // Update phytomer parameters for geometry construction
                         phytomer_ptr->phytomer_parameters.petiole.length_segments = petiole_length_segments_all[p];
@@ -2126,10 +2168,9 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         // petiole that had not finished expanding, so a reloaded plant's petioles pointed a
                         // degree or two away from where the grown plant had them and every leaf hanging off
                         // them inherited the error. The mature length is recovered the same way the mature leaf
-                        // size is, since Phytomer::setLeafScaleFraction() scales petiole_length and
-                        // current_leaf_scale_factor together.
+                        // size is, from the length the petiole has reached and how far along its elongation it is.
                         float dr_petiole = petiole_lengths[p] / float(Ndiv_petiole_length);
-                        float dr_petiole_max = petiole_lengths[p] / (current_leaf_scale_factors[p] * float(Ndiv_petiole_length));
+                        float dr_petiole_max = phytomer_ptr->petiole_length_max.at(p) / float(Ndiv_petiole_length);
 
                         // Recompute orientation vectors from parent context
                         vec3 recomputed_axis;
@@ -2171,9 +2212,12 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                             // Position next vertex
                             phytomer_ptr->petiole_vertices.at(p).at(j) = phytomer_ptr->petiole_vertices.at(p).at(j - 1) + dr_petiole * petiole_axis_actual;
 
-                            // Apply taper to radius
-                            phytomer_ptr->petiole_radii.at(p).at(j) = current_leaf_scale_factors[p] * petiole_radii_values[p] * (1.0f - petiole_tapers[p] / float(Ndiv_petiole_length) * float(j));
+                            // Apply taper to radius. The saved base radius is already the petiole's current radius, so it is not scaled by the leaf growth fraction again: doing so thinned every node beyond the
+                            // base of a still-expanding petiole by its growth fraction, and since bending stiffness goes with the fourth power of radius it also made such a petiole far too compliant.
+                            phytomer_ptr->petiole_radii.at(p).at(j) = petiole_radii_values[p] * (1.0f - petiole_tapers[p] / float(Ndiv_petiole_length) * float(j));
                         }
+                        // The centerline was rebuilt at its rest shape, which is what it is bent from once its leaves are in place below.
+                        phytomer_ptr->recordPetioleRestShape(uint(p));
 
                         // Rebuild petiole Context geometry
                         if (context_ptr->doesObjectExist(phytomer_ptr->petiole_objIDs[p])) {
@@ -2319,26 +2363,32 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 float leaflet_offset_val = 0.f; // Will be set from saved data if available
 
                 // Create unique leaf prototypes if they don't exist (matching Phytomer constructor)
-                if (leaf_scale.size() > 0) {
-                    // Find maximum leaves per petiole across all petioles
-                    int max_leaves_per_petiole = 0;
-                    for (size_t i = 0; i < leaf_scale.size(); i++) {
-                        max_leaves_per_petiole = std::max(max_leaves_per_petiole, (int) leaf_scale[i].size());
+                // One set per leaflet count present on this phytomer, because a blade is built from its position along
+                // the compound leaf and the set built for one count cannot serve a petiole carrying a different number
+                // of leaflets. Building only the largest count, as this did, left a shorter petiole of the same
+                // phytomer with no set of its own.
+                std::set<int> cached_leaflet_counts;
+                for (size_t i = 0; i < leaf_scale.size(); i++) {
+                    if (!leaf_scale[i].empty()) {
+                        cached_leaflet_counts.insert(int(leaf_scale[i].size()));
                     }
-                    int leaves_per_petiole = max_leaves_per_petiole;
+                }
+                for (const int leaves_per_petiole: cached_leaflet_counts) {
                     assert(phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototype_identifier != 0);
+                    const LeafPrototypeCacheKey leaf_prototype_cache_key(phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototype_identifier, uint(leaves_per_petiole));
 
-                    if (phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes > 0 &&
-                        this->unique_leaf_prototype_objIDs.find(phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototype_identifier) == this->unique_leaf_prototype_objIDs.end()) {
-                        this->unique_leaf_prototype_objIDs[phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototype_identifier].resize(phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes);
-                        this->unique_leaf_prototype_rest_geometry[phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototype_identifier].resize(phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes);
+                    if (phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes > 0 && this->unique_leaf_prototype_objIDs.find(leaf_prototype_cache_key) == this->unique_leaf_prototype_objIDs.end()) {
+                        this->unique_leaf_prototype_objIDs[leaf_prototype_cache_key].resize(phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes);
+                        this->unique_leaf_prototype_rest_geometry[leaf_prototype_cache_key].resize(phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes);
 
-                        // Keyed on the prototype identifier so that this set of blade shapes is the same one the
-                        // saved plant was built from. Both here and in the Phytomer constructor the set is built
-                        // lazily, at the first phytomer that needs it, but the two arrive there having drawn
+                        // Keyed on the prototype identifier and the leaflet count so that this set of blade shapes is
+                        // the same one the saved plant was built from. Both here and in the Phytomer constructor the set
+                        // is built lazily, at the first phytomer that needs it, but the two arrive there having drawn
                         // different amounts of randomness from the Context -- so drawing the shapes from the shared
                         // stream produced five differently-curved blades on read than on growth, and <leaf_prototype>
-                        // then restored each leaf to the right index of the wrong set.
+                        // then restored each leaf to the right index of the wrong set. The private stream is seeded on
+                        // the identifier alone, exactly as the constructor seeds it, so that a set for a given leaflet
+                        // count comes out the same whichever counts were built before it.
                         std::minstd_rand0 prototype_generator(phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototype_identifier);
                         std::minstd_rand0 *context_generator = phytomer_ptr->phytomer_parameters.leaf.prototype.setRandomGenerator(&prototype_generator);
 
@@ -2361,12 +2411,12 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                     }
                                     context_ptr->setPrimitiveData(blade_UUIDs, "object_label", "leaf");
                                 }
-                                this->unique_leaf_prototype_objIDs.at(phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototype_identifier).at(prototype).push_back(objID_leaf);
+                                this->unique_leaf_prototype_objIDs.at(leaf_prototype_cache_key).at(prototype).push_back(objID_leaf);
                                 // Without this the rest-shape cache stayed empty on the reader's path, so
                                 // Phytomer::deformLeafUnderSelfWeight() had nothing to deflect from and every leaf of a
                                 // reloaded grass came back rigid - sorghum blades were up to 77 degrees away from where
                                 // the grown plant had them.
-                                this->recordLeafPrototypeRestGeometry(phytomer_ptr->phytomer_parameters.leaf.prototype, prototype, objID_leaf, phytomer_ptr->leaf_flexibility);
+                                this->recordLeafPrototypeRestGeometry(phytomer_ptr->phytomer_parameters.leaf.prototype, leaves_per_petiole, prototype, objID_leaf, phytomer_ptr->leaf_flexibility);
                                 std::string leaf_material_name = plant_instances.at(plantID).plant_name + "_" + shoot_type_label + "_leaf";
                                 renameAutoMaterial(context_ptr, objID_leaf, leaf_material_name);
                                 std::vector<uint> petiolule_UUIDs = context_ptr->filterPrimitivesByData(context_ptr->getObjectPrimitiveUUIDs(objID_leaf), "object_label", "petiolule");
@@ -2411,6 +2461,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     phytomer_ptr->leaf_prototype_index.at(petiole).assign(leaves_per_petiole, -1);
                     phytomer_ptr->leaf_last_deformed_scale.at(petiole).assign(leaves_per_petiole, -1.f);
                     phytomer_ptr->leaf_pose_prescribed.at(petiole).assign(leaves_per_petiole, false);
+                    phytomer_ptr->leaf_angle_steering.at(petiole).assign(leaves_per_petiole, Phytomer::LeafAngleSteering());
 
                     for (int leaf = 0; leaf < leaves_per_petiole; leaf++) {
                         float ind_from_tip = float(leaf) - float(leaves_per_petiole - 1) / 2.f;
@@ -2432,16 +2483,10 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                             }
                             int prototype = (saved_prototype >= 0) ? saved_prototype : context_ptr->randu(0, phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes - 1);
                             phytomer_ptr->leaf_prototype_index.at(petiole).at(leaf) = prototype;
-                            uint uid = phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototype_identifier;
-                            assert(this->unique_leaf_prototype_objIDs.find(uid) != this->unique_leaf_prototype_objIDs.end());
-                            assert(this->unique_leaf_prototype_objIDs.at(uid).size() > prototype);
-                            // The cache holds one blade per leaflet position for the shoot type's own leaflet count, so a copied leaf past that count means the file describes a different species definition.
-                            if (leaf >= int(this->unique_leaf_prototype_objIDs.at(uid).at(prototype).size())) {
-                                helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A petiole in '" + filename + "' carries " + std::to_string(leaves_per_petiole) + " leaves copied from cached prototypes, but shoot type '" +
-                                                     shoot_type_label + "' caches blades for only " + std::to_string(this->unique_leaf_prototype_objIDs.at(uid).at(prototype).size()) +
-                                                     " leaflet positions. The file was written against a different definition of this species.");
-                            }
-                            objID_leaf = context_ptr->copyObject(this->unique_leaf_prototype_objIDs.at(uid).at(prototype).at(leaf));
+                            // The set cached for this petiole's own leaflet count, which was built above. A blade past the end of that set is no longer possible now that the count is part of the cache key,
+                            // but the lookup reports it rather than indexing out of range.
+                            objID_leaf = context_ptr->copyObject(this->getCachedLeafPrototypeObjID(phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototype_identifier, uint(leaves_per_petiole), uint(prototype), uint(leaf),
+                                                                                                   "PlantArchitecture::readPlantStructureXML"));
                         } else {
                             // Built from the prototype function: either the species caches no prototypes, or the saved leaf was itself built that way (a <leaf_prototype> of -1, as written for a leaf
                             // rebuilt by setPetioleLeafCount() or setPetioleLeafGeometry(), whose leaflet count may exceed the cache). Such a leaf has no cached rest shape, so its prototype index stays -1.
@@ -2508,6 +2553,9 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         // of a flexible species kept undrooped leaves.
                         phytomer_ptr->deformLeafUnderSelfWeight(petiole, leaf);
                     }
+
+                    // The petiole was rebuilt above at its rest shape and its leaves placed on it, so the bend it had under its leaflets' weight is re-applied here for the same reason as the blade droop.
+                    phytomer_ptr->bendPetioleUnderLeafWeight(uint(petiole));
                 }
 
                 // Step 4: Restore saved object data

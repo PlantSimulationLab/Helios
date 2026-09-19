@@ -175,15 +175,9 @@ float BLConductanceModel::calculateBoundaryLayerConductance(uint gH_model, float
         float F1 = 0.399f * std::pow(Pr, 1.f / 3.f) * pow(1.f + pow(0.0468f / Pr, 2.f / 3.f), -0.25f);
         float F2 = 0.75f * std::pow(Pr, 0.5f) * pow(2.5f * (1.f + 2.f * pow(Pr, 0.5f) + 2.f * Pr), -0.25f);
 
-        // direction of free convection
-        float free_direction;
-        if (TL >= Ta) {
-            free_direction = 1;
-        } else {
-            free_direction = -1;
-        }
-
-        // free_direction=1;
+        // The mean wind is always orthogonal to gravity (transverse flow), so buoyancy never opposes the forced flow and the
+        // buoyancy-assisting (+) form of the correlation applies whether the surface is warmer or cooler than the air.
+        const float free_direction = 1.f;
 
         if (inclination < 75.f * M_PI / 180.f || inclination > 105.f * M_PI / 180.f) {
 

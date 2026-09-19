@@ -986,7 +986,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
         }
 
         // combine stomatal (gM) and boundary-layer (gH) conductances
-        if (gH == 0 && gM == 0) { // if somehow both go to zero, can get NaN
+        if (gH == 0 || gM == 0) { // conductances in series: if either is zero there is no CO2 supply (and the expression below is 0/0)
             gM = 0;
         } else {
             gM = 1.08f * gH * gM * (stomatal_sidedness / (1.08f * gH + gM * stomatal_sidedness) + (1.f - stomatal_sidedness) / (1.08f * gH + gM * (1.f - stomatal_sidedness)));

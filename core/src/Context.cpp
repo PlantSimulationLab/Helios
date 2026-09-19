@@ -3664,11 +3664,16 @@ void Context::addMaterial(const std::string &material_label) {
     }
 
     // Check if label already exists - overwrite with warning
-    if (material_label_to_id.find(material_label) != material_label_to_id.end()) {
+    auto existing = material_label_to_id.find(material_label);
+    if (existing != material_label_to_id.end()) {
         std::cerr << "WARNING (Context::addMaterial): Material with label '" << material_label << "' already exists. Overwriting." << std::endl;
-        // Remove old material
-        uint oldID = material_label_to_id[material_label];
-        materials.erase(oldID);
+        // Replace the material in place, keeping its ID and reference count. Primitives hold the material ID, so any primitive assigned
+        // to this label stays assigned to it and sees the new material; erasing the ID instead would leave them referencing nothing.
+        const uint existingID = existing->second;
+        const uint reference_count = materials.at(existingID).reference_count;
+        materials.at(existingID) = Material(existingID, material_label, make_RGBAcolor(0, 0, 0, 1), "", false);
+        materials.at(existingID).reference_count = reference_count;
+        return;
     }
 
     // Create new material with default properties
@@ -3685,9 +3690,14 @@ uint Context::addMaterial_internal(const std::string &label, const RGBAcolor &co
     }
 
     // Check if label already exists - silently overwrite for internal use
-    if (material_label_to_id.find(label) != material_label_to_id.end()) {
-        uint oldID = material_label_to_id[label];
-        materials.erase(oldID);
+    auto existing = material_label_to_id.find(label);
+    if (existing != material_label_to_id.end()) {
+        // Replace in place, keeping the ID and reference count, so primitives already assigned to the label are not left referencing an erased ID
+        const uint existingID = existing->second;
+        const uint reference_count = materials.at(existingID).reference_count;
+        materials.at(existingID) = Material(existingID, label, color, texture, false);
+        materials.at(existingID).reference_count = reference_count;
+        return existingID;
     }
 
     // Create new material with specified properties
@@ -4493,11 +4503,11 @@ void Context::setObjectAverageNormal(uint ObjID, const vec3 &origin, const vec3 
     float M_mid[16];
     getObjectPointer_private(ObjID)->getTransformationMatrix(M_mid);
 
-    vec3 localX{1, 0, 0};
-    vec3 t1;
-    // vecmult multiplies the 4×4 M_mid by v3 (w=0), writing into t1
-    vecmult(M_mid, localX, t1);
-    t1 = normalize(t1);
+    // The local +X AXIS, not the point (1,0,0): a direction is carried by the rotation block alone. Using
+    // helios::vecmult() here was wrong, because it multiplies by the full 4x4 with w=1 and so adds the
+    // object's translation - which for an object far from the origin dominates the axis entirely and made
+    // the twist below depend on where the object happened to sit rather than on how it was oriented.
+    vec3 t1 = normalize(make_vec3(M_mid[0], M_mid[4], M_mid[8]));
 
     // 5) Compute desired forward = world‐X projected into the new plane
     vec3 worldX{1, 0, 0};

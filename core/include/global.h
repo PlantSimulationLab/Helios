@@ -1383,6 +1383,44 @@ namespace helios {
      */
     [[nodiscard]] float sample_ellipsoidal_azimuth(float e, float phi0_degrees, std::minstd_rand0 *generator);
 
+    //! Cumulative distribution function of the Beta leaf-inclination distribution sampled by \ref helios::sample_Beta_distribution()
+    /**
+     * Gives the probability that a leaf inclination drawn by \ref helios::sample_Beta_distribution() is no greater than \a theta. The two functions share the same parameterization, in which \a nu is the first shape
+     * parameter of the underlying Beta variate and \a mu the second, so that the mean inclination is (pi/2)*nu/(mu+nu).
+     * \param[in] theta Leaf inclination angle (radians), measured from vertical and clamped to [0, pi/2].
+     * \param[in] mu First parameter of beta distribution.
+     * \param[in] nu Second parameter of beta distribution.
+     * \return Cumulative probability in [0,1].
+     */
+    [[nodiscard]] float evaluate_Beta_distribution_CDF(float theta, float mu, float nu);
+
+    //! Inverse of \ref helios::evaluate_Beta_distribution_CDF(), giving the inclination angle at a given cumulative probability
+    /**
+     * \param[in] probability Cumulative probability in [0,1].
+     * \param[in] mu First parameter of beta distribution.
+     * \param[in] nu Second parameter of beta distribution.
+     * \return Leaf inclination angle (radians) in [0, pi/2].
+     */
+    [[nodiscard]] float invert_Beta_distribution_CDF(float probability, float mu, float nu);
+
+    //! Cumulative distribution function of the ellipsoidal azimuth distribution sampled by \ref helios::sample_ellipsoidal_azimuth()
+    /**
+     * \param[in] phi Azimuth angle (radians), wrapped into [0, 2*pi).
+     * \param[in] e Eccentricity of the ellipsoidal distribution.
+     * \param[in] phi0_degrees Azimuthal rotation of ellipse (degrees).
+     * \return Cumulative probability in [0,1], measured from the ellipse rotation \a phi0_degrees.
+     */
+    [[nodiscard]] float evaluate_ellipsoidal_azimuth_CDF(float phi, float e, float phi0_degrees);
+
+    //! Inverse of \ref helios::evaluate_ellipsoidal_azimuth_CDF(), giving the azimuth angle at a given cumulative probability
+    /**
+     * \param[in] probability Cumulative probability in [0,1].
+     * \param[in] e Eccentricity of the ellipsoidal distribution.
+     * \param[in] phi0_degrees Azimuthal rotation of ellipse (degrees).
+     * \return Azimuth angle (radians) in [0, 2*pi).
+     */
+    [[nodiscard]] float invert_ellipsoidal_azimuth_CDF(float probability, float e, float phi0_degrees);
+
     inline std::vector<float> &operator+=(std::vector<float> &lhs, const std::vector<float> &rhs) {
         // Make sure vectors have the same size
         if (lhs.size() != rhs.size()) {

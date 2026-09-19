@@ -2864,94 +2864,6 @@ void RadiationCamera::whiteBalanceWhitePatch(const std::string &red_band_label, 
 }
 
 
-void RadiationCamera::whiteBalanceSpectral(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, helios::Context *context) {
-
-#ifdef HELIOS_DEBUG
-    if (pixel_data.find(red_band_label) == pixel_data.end() || pixel_data.find(green_band_label) == pixel_data.end() || pixel_data.find(blue_band_label) == pixel_data.end()) {
-        helios_runtime_error("ERROR (RadiationCamera::whiteBalanceSpectral): One or more specified band labels do not exist for the camera pixel data.");
-    }
-#endif
-
-    // Check if spectral response data exists for all bands
-    if (band_spectral_response.find(red_band_label) == band_spectral_response.end() || band_spectral_response.find(green_band_label) == band_spectral_response.end() || band_spectral_response.find(blue_band_label) == band_spectral_response.end()) {
-        helios_runtime_error("ERROR (RadiationCamera::whiteBalanceSpectral): Spectral response data not found for one or more bands. Ensure camera spectral responses are properly initialized.");
-    }
-
-    // Get spectral response identifiers
-    std::string red_response_id = band_spectral_response.at(red_band_label);
-    std::string green_response_id = band_spectral_response.at(green_band_label);
-    std::string blue_response_id = band_spectral_response.at(blue_band_label);
-
-    // Skip if using uniform response (cannot apply spectral white balance)
-    if (red_response_id == "uniform" && green_response_id == "uniform" && blue_response_id == "uniform") {
-        return;
-    }
-
-    // Access spectral response data from global data (assuming vec2 format: wavelength, response)
-    std::vector<helios::vec2> red_spectrum, green_spectrum, blue_spectrum;
-
-    if (red_response_id != "uniform" && context->doesGlobalDataExist(red_response_id.c_str())) {
-        context->getGlobalData(red_response_id.c_str(), red_spectrum);
-    }
-    if (green_response_id != "uniform" && context->doesGlobalDataExist(green_response_id.c_str())) {
-        context->getGlobalData(green_response_id.c_str(), green_spectrum);
-    }
-    if (blue_response_id != "uniform" && context->doesGlobalDataExist(blue_response_id.c_str())) {
-        context->getGlobalData(blue_response_id.c_str(), blue_spectrum);
-    }
-
-    // Verify we have spectral data for all channels
-    if (red_spectrum.empty() || green_spectrum.empty() || blue_spectrum.empty()) {
-        helios_runtime_error("ERROR (RadiationCamera::whiteBalanceSpectral): Could not retrieve spectral response curves for all bands from global data.");
-    }
-
-    // Compute integrated response (area under curve) for each channel using trapezoidal integration
-    // This represents the total sensitivity of each channel assuming a flat light source spectrum
-    float red_integrated = 0.0f, green_integrated = 0.0f, blue_integrated = 0.0f;
-
-    for (size_t i = 1; i < red_spectrum.size(); ++i) {
-        float dw = red_spectrum[i].x - red_spectrum[i - 1].x;
-        red_integrated += 0.5f * (red_spectrum[i].y + red_spectrum[i - 1].y) * dw;
-    }
-    for (size_t i = 1; i < green_spectrum.size(); ++i) {
-        float dw = green_spectrum[i].x - green_spectrum[i - 1].x;
-        green_integrated += 0.5f * (green_spectrum[i].y + green_spectrum[i - 1].y) * dw;
-    }
-    for (size_t i = 1; i < blue_spectrum.size(); ++i) {
-        float dw = blue_spectrum[i].x - blue_spectrum[i - 1].x;
-        blue_integrated += 0.5f * (blue_spectrum[i].y + blue_spectrum[i - 1].y) * dw;
-    }
-
-    // Check for valid integrated values
-    if (red_integrated <= 0 || green_integrated <= 0 || blue_integrated <= 0) {
-        helios_runtime_error("ERROR (RadiationCamera::whiteBalanceSpectral): Invalid integrated spectral response (non-positive value). Check spectral response data.");
-    }
-
-    // Compute white balance factors relative to each channel's integrated spectral response
-    // Normalize relative to the maximum integrated response to preserve brightness
-    // This ensures that an object with flat spectral reflectance appears correctly white balanced
-    // while keeping the brightest channel at unity gain (factor = 1.0)
-    float max_integrated = std::max({red_integrated, green_integrated, blue_integrated});
-
-    helios::vec3 white_balance_factors;
-    white_balance_factors.x = max_integrated / red_integrated;
-    white_balance_factors.y = max_integrated / green_integrated;
-    white_balance_factors.z = max_integrated / blue_integrated;
-    applied_white_balance_factors = white_balance_factors;
-
-    // Apply white balance factors to pixel data
-    auto &data_red = pixel_data.at(red_band_label);
-    auto &data_green = pixel_data.at(green_band_label);
-    auto &data_blue = pixel_data.at(blue_band_label);
-
-    const std::size_t N = data_red.size();
-    for (std::size_t i = 0; i < N; ++i) {
-        data_red[i] *= white_balance_factors.x;
-        data_green[i] *= white_balance_factors.y;
-        data_blue[i] *= white_balance_factors.z;
-    }
-}
-
 void RadiationCamera::reinhardToneMapping(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label) {
 
 #ifdef HELIOS_DEBUG
@@ -3461,52 +3373,75 @@ void RadiationCamera::applyCameraExposure(helios::Context *context) {
     helios_runtime_error("ERROR (RadiationCamera::applyCameraExposure): Unknown exposure mode '" + exposure_mode + "'. Must be 'auto', 'ISOXXX' (e.g., 'ISO100'), or 'manual'.");
 }
 
-void RadiationCamera::applyCameraWhiteBalance(helios::Context *context) {
+std::string RadiationCamera::applyCameraWhiteBalance() {
     // Skip if pixel_data is empty (camera hasn't been rendered yet)
     if (pixel_data.empty()) {
-        return;
+        return "";
     }
 
     // Verify that all expected bands exist in pixel_data
     for (const auto &band: band_labels) {
         if (pixel_data.find(band) == pixel_data.end()) {
-            return; // Skip white balance if not all bands are populated yet
+            return ""; // Skip white balance if not all bands are populated yet
         }
-    }
-
-    // Parse white balance mode
-    std::string wb_mode = white_balance;
-
-    // "off" mode: no white balance correction
-    if (wb_mode == "off") {
-        return;
     }
 
     // Skip white balance for single-channel images (grayscale/thermal)
     if (band_labels.size() < 3) {
-        return;
+        return "";
     }
 
-    // "auto" mode: apply spectral white balance
-    if (wb_mode == "auto") {
-        // For 3+ channel images, apply white balance to first 3 channels
-        // Assume standard RGB ordering for the first 3 bands
-        std::string red_band = band_labels[0];
-        std::string green_band = band_labels[1];
-        std::string blue_band = band_labels[2];
+    // For 3+ channel images, apply white balance to first 3 channels
+    // Assume standard RGB ordering for the first 3 bands
+    const std::string &red_band = band_labels[0];
+    const std::string &green_band = band_labels[1];
+    const std::string &blue_band = band_labels[2];
 
-        try {
-            whiteBalanceSpectral(red_band, green_band, blue_band, context);
-        } catch (const std::exception &e) {
-            // If spectral white balance fails (e.g., no spectral data), silently skip
-            // This matches the behavior of whiteBalanceSpectral which returns early
-            // when all bands use "uniform" response
+    // The white reference totals are set when a band is rendered and consumed here, so an image not re-rendered since it was last balanced is not balanced again.
+    if (white_reference_band_totals.find(red_band) == white_reference_band_totals.end() || white_reference_band_totals.find(green_band) == white_reference_band_totals.end() ||
+        white_reference_band_totals.find(blue_band) == white_reference_band_totals.end()) {
+        return "";
+    }
+    const helios::vec3 white_reference(float(white_reference_band_totals.at(red_band)), float(white_reference_band_totals.at(green_band)), float(white_reference_band_totals.at(blue_band)));
+    white_reference_band_totals.erase(red_band);
+    white_reference_band_totals.erase(green_band);
+    white_reference_band_totals.erase(blue_band);
+
+    // "off" mode: no white balance correction
+    if (white_balance == "off") {
+        return "";
+    }
+
+    if (white_balance != "auto") {
+        helios_runtime_error("ERROR (RadiationCamera::applyCameraWhiteBalance): Unknown white_balance mode '" + white_balance + "'. Must be 'auto' or 'off'.");
+    }
+
+    // "auto" mode: scale each channel so that a white surface under the light reaching the surfaces in view comes out neutral, keeping the brightest channel at unit gain.
+    std::string unlit_bands;
+    for (const auto &[band, total]: {std::make_pair(red_band, white_reference.x), std::make_pair(green_band, white_reference.y), std::make_pair(blue_band, white_reference.z)}) {
+        if (!(total > 0.f)) {
+            unlit_bands += (unlit_bands.empty() ? "'" : ", '") + band + "'";
         }
-        return;
+    }
+    if (!unlit_bands.empty()) {
+        return "Camera '" + label + "' has white_balance \"auto\", but no surface in its view receives light in band(s) " + unlit_bands +
+               ", so there is no light to balance against (for example, the camera sees only sky). White balance was not applied to this camera's image.";
     }
 
-    // Unknown white balance mode
-    helios_runtime_error("ERROR (RadiationCamera::applyCameraWhiteBalance): Unknown white_balance mode '" + wb_mode + "'. Must be 'auto' or 'off'.");
+    const float max_white_reference = std::max({white_reference.x, white_reference.y, white_reference.z});
+    const helios::vec3 white_balance_factors(max_white_reference / white_reference.x, max_white_reference / white_reference.y, max_white_reference / white_reference.z);
+    applied_white_balance_factors = white_balance_factors;
+
+    auto &data_red = pixel_data.at(red_band);
+    auto &data_green = pixel_data.at(green_band);
+    auto &data_blue = pixel_data.at(blue_band);
+    const std::size_t N = data_red.size();
+    for (std::size_t i = 0; i < N; ++i) {
+        data_red[i] *= white_balance_factors.x;
+        data_green[i] *= white_balance_factors.y;
+        data_blue[i] *= white_balance_factors.z;
+    }
+    return "";
 }
 
 void RadiationCamera::adjustBrightnessContrast(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float brightness, float contrast) {

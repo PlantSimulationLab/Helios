@@ -37,7 +37,7 @@ layout(push_constant) uniform PushConstants {
     float domain_xmax;             // 4 bytes, offset 112
     float domain_ymin;             // 4 bytes, offset 116
     float domain_ymax;             // 4 bytes, offset 120
-    uint specular_reflection_enabled;  // 4 bytes, offset 124 (0=disabled, 1=default scale, 2=user scale)
+    uint specular_reflection_enabled;  // 4 bytes, offset 124 (0=disabled, 1=enabled)
 } pc; // Total: 128 bytes
 
 // ========== Descriptor Set 0: Geometry ==========
@@ -475,11 +475,8 @@ void main() {
                         }
                         float exp_val = specular_exponent_buf.specular_exponent[hit_position];
 
-                        // Apply user-defined scale coefficient if mode == 2
-                        float scale = 1.0;
-                        if (pc.specular_reflection_enabled == 2) {
-                            scale = specular_scale_buf.specular_scale[hit_position];
-                        }
+                        // Primitive's specular scale coefficient (1 for a primitive without "specular_scale" data)
+                        float scale = specular_scale_buf.specular_scale[hit_position];
 
                         // Blinn-Phong specular BRDF:
                         // (exp+2)/(2π) normalizes the distribution to unity

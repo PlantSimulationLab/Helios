@@ -33,7 +33,7 @@ layout(push_constant) uniform PushConstants {
     float domain_xmax;
     float domain_ymin;
     float domain_ymax;
-    uint specular_reflection_enabled;  // 0=disabled, 1=default scale, 2=user scale
+    uint specular_reflection_enabled;  // 0=disabled, 1=enabled
     uint camera_count;                 // Number of cameras; 0 = skip camera-weighted scatter
     uint camera_id;                    // Camera whose weighting the camera-scatter buffers accumulate
 } pc;
@@ -152,6 +152,12 @@ layout(set = 1, binding = 15) readonly buffer TransmissivityCamBuffer {
     float transmissivity_cam[];
 } transmissivity_cam_buf;
 
+// Camera-weighted reflectivity of a spectrally flat, perfectly white surface, indexed [source][band_global][camera]. Weighting the
+// light arriving at a primitive by it gives what each camera would record from a white surface there: its white reference.
+layout(set = 1, binding = 16) readonly buffer WhiteReferenceCamBuffer {
+    float white_reference_cam[];
+} white_reference_cam_buf;
+
 layout(set = 1, binding = 10) readonly buffer BandMapBuffer {
     uint map[]; // Maps launch band index → global band index
 } band_map_buf;
@@ -206,6 +212,15 @@ layout(set = 2, binding = 9) buffer CameraScatterBottomBuffer {
 layout(set = 2, binding = 10) buffer RadiationSpecularBuffer {
     float radiation_specular[]; // [source * primitive * band] accumulated incident radiation
 } radiation_specular_buf;
+
+// Each camera's white reference, laid out like the camera-weighted scatter. Zeroed once per runBand(), so it accumulates over all its launches.
+layout(set = 2, binding = 13) buffer WhiteReferenceTopBuffer {
+    float white_reference_top[];
+} white_reference_top_buf;
+
+layout(set = 2, binding = 14) buffer WhiteReferenceBottomBuffer {
+    float white_reference_bottom[];
+} white_reference_bottom_buf;
 
 // ========== Include common shader utilities ==========
 #include "common/random.glsl"
@@ -757,6 +772,21 @@ void main() {
                             } else {
                                 atomicAdd(camera_scatter_bottom_buf.camera_scatter_bottom[cam_rad_idx], scatter_rho_cam_sum);
                                 atomicAdd(camera_scatter_top_buf.camera_scatter_top[cam_rad_idx], scatter_tau_cam_sum);
+                            }
+                        }
+                    }
+
+                    // White reference: the light arriving at this face straight from the source, weighted by each camera's
+                    // response to a white surface. A camera's "auto" white balance neutralizes it.
+                    for (uint cam = 0u; cam < pc.camera_count; cam++) {
+                        float white = white_reference_cam_buf.white_reference_cam[(src_idx * pc.material_band_count + global_b) * pc.camera_count + cam];
+                        float white_reference_sum = subgroupAdd(flux * strength * white);
+                        uint white_rad_idx = cam * cam_scatter_stride + rad_idx;
+                        if (subgroupElect()) {
+                            if (is_top_face) {
+                                atomicAdd(white_reference_top_buf.white_reference_top[white_rad_idx], white_reference_sum);
+                            } else {
+                                atomicAdd(white_reference_bottom_buf.white_reference_bottom[white_rad_idx], white_reference_sum);
                             }
                         }
                     }

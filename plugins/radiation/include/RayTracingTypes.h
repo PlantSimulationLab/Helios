@@ -174,8 +174,16 @@ namespace helios {
         std::vector<float> transmissivity; //!< Transmissivity per [source][primitive][band]
         std::vector<float> reflectivity_cam; //!< Camera-weighted reflectivity
         std::vector<float> transmissivity_cam; //!< Camera-weighted transmissivity
+        //! Camera-weighted reflectivity of a spectrally flat, perfectly white surface, per [source][band][camera] (band is the global band index)
+        /**
+         * This is the value reflectivity_cam takes for a reflectivity spectrum equal to 1 at every wavelength. The direct and diffuse launches weight the light arriving at each primitive by it to
+         * accumulate the white reference that a camera's "auto" white balance is computed from.
+         */
+        std::vector<float> white_reference_cam;
         std::vector<float> specular_exponent; //!< Specular reflection exponent per primitive
         std::vector<float> specular_scale; //!< Specular reflection scale coefficient per primitive
+        //! Whether any primitive has a specular exponent. The incident radiation that camera specular reflection reads (radiation_specular) is allocated only when it does.
+        bool specular_reflection_enabled = false;
 
         // Translucent cover (glass/plastic) material. When is_glass != 0 for a [source][primitive][band]
         // entry, the angular transmittance/reflectance is computed on-device from glass_n and glass_KL
@@ -256,7 +264,7 @@ namespace helios {
         std::vector<float> vertex_radiation_out_bottom; //!< Area-weighted mean outgoing radiation (bottom face) per [vertex][band]
 
         // Flags
-        uint specular_reflection_enabled = 0; //!< Specular reflection mode: 0=disabled, 1=default 0.25 scale, 2=user-defined scale
+        uint specular_reflection_enabled = 0; //!< Specular reflection: 0 = disabled, 1 = enabled (each primitive scaled by its specular_scale material value)
     };
 
     /**

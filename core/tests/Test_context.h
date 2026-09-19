@@ -4336,6 +4336,44 @@ TEST_CASE("File path resolution priority") {
         DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(p1) == "__default__");
     }
 
+    SUBCASE("Material System - Overwriting a material that is in use") {
+        // Regression test. addMaterial() on an existing label erased the old material but left every primitive assigned to it
+        // holding the erased material ID, so the next query of such a primitive threw std::out_of_range from the material map.
+        Context ctx;
+
+        ctx.addMaterial("reused_mat");
+        ctx.setMaterialColor("reused_mat", make_RGBAcolor(1, 0, 0, 1));
+
+        uint p1 = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        uint p2 = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+        ctx.assignMaterialToPrimitive(p1, "reused_mat");
+        ctx.assignMaterialToPrimitive(p2, "reused_mat");
+
+        {
+            capture_cerr c; // Capture warning about overwriting
+            ctx.addMaterial("reused_mat");
+        }
+
+        // The primitives stay assigned to the label, and see the fresh (default-property) material
+        DOCTEST_CHECK(ctx.doesMaterialExist("reused_mat"));
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(p1) == "reused_mat");
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(p2) == "reused_mat");
+        RGBcolor color;
+        DOCTEST_CHECK_NOTHROW(color = ctx.getPrimitiveColor(p1));
+        DOCTEST_CHECK(color == make_RGBcolor(0, 0, 0));
+        DOCTEST_CHECK(ctx.getPrimitivesUsingMaterial("reused_mat").size() == 2);
+
+        // The material is still shared by both primitives, so changing it through the label reaches both...
+        ctx.setMaterialColor("reused_mat", make_RGBAcolor(0, 1, 0, 1));
+        DOCTEST_CHECK(ctx.getPrimitiveColor(p1) == make_RGBcolor(0, 1, 0));
+        DOCTEST_CHECK(ctx.getPrimitiveColor(p2) == make_RGBcolor(0, 1, 0));
+
+        // ...while changing one primitive's color copies the material rather than recoloring the other primitive
+        ctx.setPrimitiveColor(p1, make_RGBcolor(0, 0, 1));
+        DOCTEST_CHECK(ctx.getPrimitiveColor(p1) == make_RGBcolor(0, 0, 1));
+        DOCTEST_CHECK(ctx.getPrimitiveColor(p2) == make_RGBcolor(0, 1, 0));
+    }
+
     SUBCASE("Material System - XML Round-Trip") {
         Context ctx;
 
@@ -6463,4 +6501,57 @@ TEST_CASE("Polymesh volume comes from the parts of the mesh that enclose somethi
 
         DOCTEST_CHECK(ctx.getPolymeshObjectVolume(ObjID) == doctest::Approx(2.f * 8.f * h * h * h).epsilon(1e-4));
     }
+}
+
+DOCTEST_TEST_CASE("setObjectAverageNormal does not depend on where the object sits") {
+    // Setting an object's average normal is a statement about its ORIENTATION, so moving the same object
+    // somewhere else in the scene and asking for the same normal has to leave it in the same orientation.
+    //
+    // It did not. After aligning the normal, the function applies a second "twist" about the new normal that
+    // spins the object so its local +X axis points as close to world +X as it can. That axis was being
+    // computed with helios::vecmult(), which multiplies by the full 4x4 with w=1 - so it returns the
+    // transformed POINT (1,0,0), i.e. the object's world position plus its X axis, rather than the direction
+    // of the axis itself. The call site's own comment claims w=0. For an object far from the origin the
+    // translation dominates completely and the twist is driven by the object's position.
+    //
+    // Two copies of one object, identical but for a translation, are therefore the observable: with the bug
+    // they end up twisted differently about their (identical) normals.
+
+    const vec3 target_normal = normalize(make_vec3(0.3f, -0.4f, 0.8f));
+
+    // Reads back the world-space direction of the object's local +X axis: the axis the twist step aims.
+    auto localXAxisDirection = [](const Context &ctx, uint ObjID) {
+        float T[16];
+        ctx.getObjectTransformationMatrix(ObjID, T);
+        // Row-major 4x4; the image of the local +X direction is the first column of the rotation block.
+        return normalize(make_vec3(T[0], T[4], T[8]));
+    };
+
+    Context ctx;
+
+    // Same geometry, same orientation; the only difference is where each one sits.
+    const uint at_origin = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(2, 2));
+    const uint far_away = ctx.addTileObject(make_vec3(40, -25, 12), make_vec2(1, 1), nullrotation, make_int2(2, 2));
+
+    ctx.setObjectAverageNormal(at_origin, ctx.getObjectCenter(at_origin), target_normal);
+    ctx.setObjectAverageNormal(far_away, ctx.getObjectCenter(far_away), target_normal);
+
+    // Both must actually reach the requested normal.
+    const vec3 normal_at_origin = normalize(ctx.getObjectAverageNormal(at_origin));
+    const vec3 normal_far_away = normalize(ctx.getObjectAverageNormal(far_away));
+    DOCTEST_CHECK(normal_at_origin.x == doctest::Approx(target_normal.x).epsilon(1e-3));
+    DOCTEST_CHECK(normal_at_origin.y == doctest::Approx(target_normal.y).epsilon(1e-3));
+    DOCTEST_CHECK(normal_at_origin.z == doctest::Approx(target_normal.z).epsilon(1e-3));
+    DOCTEST_CHECK(normal_far_away.x == doctest::Approx(target_normal.x).epsilon(1e-3));
+    DOCTEST_CHECK(normal_far_away.y == doctest::Approx(target_normal.y).epsilon(1e-3));
+    DOCTEST_CHECK(normal_far_away.z == doctest::Approx(target_normal.z).epsilon(1e-3));
+
+    // And, having been given the same normal, they must have been twisted about it by the same amount.
+    const vec3 axis_at_origin = localXAxisDirection(ctx, at_origin);
+    const vec3 axis_far_away = localXAxisDirection(ctx, far_away);
+    const float axis_disagreement = rad2deg(acos_safe(std::clamp(axis_at_origin * axis_far_away, -1.f, 1.f)));
+
+    DOCTEST_INFO("local +X at origin: (" << axis_at_origin.x << "," << axis_at_origin.y << "," << axis_at_origin.z << "), translated: (" << axis_far_away.x << "," << axis_far_away.y << "," << axis_far_away.z << "), disagreement=" << axis_disagreement
+                                         << " deg");
+    DOCTEST_CHECK(axis_disagreement < 1.f);
 }

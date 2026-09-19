@@ -85,7 +85,11 @@ struct CameraProperties {
      */
     float exposure_target = 0.18f;
 
-    //! White balance mode: "auto" (automatic white balance using spectral response) or "off" (no white balance correction)
+    //! White balance mode: "auto" (default) or "off" (no white balance correction)
+    /**
+     * With "auto", the red, green and blue bands (the camera's first three) are scaled so that a spectrally flat surface renders neutral under the light reaching the surfaces in view, as seen through
+     * the camera's spectral responses. See \ref RadCamWhiteBalance.
+     */
     std::string white_balance;
 
     /**! \brief Camera optical zoom multiplier (1.0 = no zoom, 2.0 = 2x zoom, etc.)
@@ -271,6 +275,13 @@ struct RadiationCamera {
     //! White balance factors [R,G,B] that were actually applied to pixel data ({1,1,1} if off)
     helios::vec3 applied_white_balance_factors = helios::make_vec3(1.f, 1.f, 1.f);
 
+    //! White reference of each band rendered since the camera was last white balanced, summed over the camera's pixels
+    /**
+     * The value a band would take, summed over the image, if every surface in view were spectrally flat and perfectly white, lit by the light reaching it straight from the radiation sources and the
+     * sky. Set by RadiationModel::runBand() when the band is rendered, and consumed by applyCameraWhiteBalance().
+     */
+    std::map<std::string, double> white_reference_band_totals;
+
     //! Flag indicating whether lens flare rendering is enabled for this camera
     bool lens_flare_enabled = false;
 
@@ -310,20 +321,6 @@ struct RadiationCamera {
      * \param[in] percentile [optional] Percentile of brightest pixels to use. Default is 0.99 (top 1%).
      */
     void whiteBalanceWhitePatch(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float percentile = 0.99f);
-
-
-    //! Apply spectral-based white balance using integrated camera response curves
-    /**
-     * Normalizes image channels based on the integrated spectral response of each camera band.
-     * This method assumes a flat light source spectrum and normalizes each channel such that
-     * an object with flat spectral reflectance appears correctly white balanced.
-     * Each channel is multiplied by the reciprocal of its integrated spectral response.
-     * \param[in] red_band_label Label for red channel band
-     * \param[in] green_band_label Label for green channel band
-     * \param[in] blue_band_label Label for blue channel band
-     * \param[in] context Pointer to Helios context for accessing spectral data
-     */
-    void whiteBalanceSpectral(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, helios::Context *context);
 
     //! Apply Reinhard tone mapping curve to image data
     /**
@@ -405,16 +402,19 @@ struct RadiationCamera {
     //! Apply automatic white balance correction to camera image data
     /**
      * Applies white balance correction based on the camera's white_balance setting:
-     * - "auto": Applies spectral white balance using camera spectral response curves
+     * - "auto": Scales the first three bands (red, green, blue) so that a spectrally flat surface renders neutral under the light illuminating the scene. The scale of each band is the reciprocal of
+     *   its white reference total (white_reference_band_totals), normalized so that the band with the largest total keeps unit gain.
      * - "off": No white balance correction applied
      *
-     * White balance is automatically skipped for single-channel (grayscale) images.
-     * For multi-channel images, white balance is applied simultaneously to all channels.
+     * White balance is skipped for single-channel (grayscale) images, and until all three bands have been rendered since the last balance. For multi-channel images, white balance is applied
+     * simultaneously to all channels.
+     * \note With "auto", if the surfaces the camera sees receive no light in one of the bands (for example, the camera sees only sky), the image is left unbalanced and the reason is returned so
+     * the caller can report it as a warning.
      *
      * This method should be called after rendering and exposure adjustment are complete.
-     * \param[in] context Pointer to Helios context for accessing spectral data
+     * \return Empty if white balance was applied or was not needed; otherwise a message explaining why it was not applied.
      */
-    void applyCameraWhiteBalance(helios::Context *context);
+    std::string applyCameraWhiteBalance();
 
     //! Adjust brightness and contrast of image data
     /**
@@ -2056,7 +2056,7 @@ protected:
     //! Flag to determine if status messages are output to the screen
     bool message_flag;
 
-    //! Specular reflection mode: 0=disabled, 1=default scale (0.25), 2=user scale
+    //! Specular reflection: 0 = disabled (no primitive has a specular exponent), 1 = enabled, each primitive scaled by its own specular_scale (1 if unset)
     uint specular_reflection_mode = 0;
 
     //! Pointer to the context
@@ -2465,6 +2465,18 @@ protected:
      * \param[out] vertex_flux_bottom Area-weighted mean bottom-face radiation at each shared vertex, indexed [vertex][band].
      */
     void accumulateCameraFluxAtVertices(const std::vector<float> &flux_top, const std::vector<float> &flux_bottom, size_t band_count, std::vector<float> &vertex_flux_top, std::vector<float> &vertex_flux_bottom) const;
+
+    //! Sum a camera's white reference over the surfaces its pixels see, for its "auto" white balance
+    /**
+     * Each pixel contributes the white reference of the primitive its centre ray hit, on the face of that primitive that looks towards the camera, so the sum weights the light illuminating the scene by
+     * how much of the image it lights. Pixels that see the sky contribute nothing.
+     * \param[inout] camera Camera whose pixel_label_UUID holds the labels of the render just completed. Its white_reference_band_totals entry is set for each of its bands in \p band_labels.
+     * \param[in] camera_index Position of the camera in the per-camera blocks of the white reference buffers.
+     * \param[in] band_labels Bands of the current launch, in the order of the white reference buffers.
+     * \param[in] white_reference_top_cam White reference of the top face of every primitive, indexed [camera][primitive][band].
+     * \param[in] white_reference_bottom_cam White reference of the bottom face, same layout.
+     */
+    void sumCameraWhiteReference(RadiationCamera &camera, uint camera_index, const std::vector<std::string> &band_labels, const std::vector<float> &white_reference_top_cam, const std::vector<float> &white_reference_bottom_cam) const;
 
     std::vector<bool> isbandpropertyinitialized;
 

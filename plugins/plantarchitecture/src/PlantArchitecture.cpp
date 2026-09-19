@@ -80,6 +80,35 @@ static float clampOffset(int count_per_axis, float offset) {
     return offset;
 }
 
+//! Maximum size of one leaflet of a compound leaf, before the phytomer's own scale fraction is applied.
+/**
+ * Two morphologies share this one rule. A simply pinnate leaf - the default, when intercalary_leaflet_scale is zero -
+ * steps leaflet_scale once per slot out from the tip, so leaflet size falls monotonically. An interruptedly pinnate
+ * leaf - tomato, potato, much of the Rosaceae - carries small intercalary leaflets between its major pairs, so the
+ * odd-numbered pairs out from the tip are the major ones and step leaflet_scale once per MAJOR pair, while the
+ * even-numbered pairs are intercalary and take intercalary_leaflet_scale of the major pair just distal to them.
+ *
+ * \param[in] ind_from_tip Signed leaflet index measured from the terminal leaflet, as used throughout Phytomer.
+ * \param[in] leaflet_scale Multiplier stepped along the rachis; see LeafParameters::leaflet_scale.
+ * \param[in] intercalary_leaflet_scale Relative size of the intercalary leaflets; zero gives a simply pinnate leaf.
+ * \param[in] prototype_scale Size of the terminal leaflet.
+ */
+static float leafletSizeMax(float ind_from_tip, float leaflet_scale, float intercalary_leaflet_scale, float prototype_scale) {
+    const float slot = std::fabs(ind_from_tip);
+    if (slot == 0.f || leaflet_scale == 1.f) {
+        return prototype_scale;
+    }
+    if (intercalary_leaflet_scale <= 0.f) {
+        return powf(leaflet_scale, slot) * prototype_scale;
+    }
+    // Pairs counted out from the tip. ceil() so that a paripinnate leaf, whose slots are half-integral because it has
+    // no terminal leaflet, numbers its pairs 1, 2, 3 just as an imparipinnate one does.
+    const int pair_index = int(std::ceil(slot));
+    const float size = powf(leaflet_scale, float((pair_index + 1) / 2)) * prototype_scale;
+    const bool is_intercalary = (pair_index % 2 == 0);
+    return is_intercalary ? intercalary_leaflet_scale * size : size;
+}
+
 float PlantArchitecture::interpolateTube(const std::vector<float> &P, const float frac) {
     assert(frac >= 0 && frac <= 1);
     assert(!P.empty());
@@ -321,6 +350,9 @@ PhytomerParameters::PhytomerParameters(std::minstd_rand0 *generator) {
     petiole.color = RGB::forestgreen;
     petiole.length_segments = 1;
     petiole.radial_subdivisions = 7;
+    // Defaults to a rigid petiole that keeps the pitch it was created with, as every petiole did before these parameters existed.
+    petiole.flexibility.initialize(0, generator);
+    petiole.flexibility_aging.initialize(0, generator);
 
     //--- leaf ---//
     leaf.leaves_per_petiole.initialize(1, generator);
@@ -329,6 +361,7 @@ PhytomerParameters::PhytomerParameters(std::minstd_rand0 *generator) {
     leaf.roll.initialize(0, generator);
     leaf.leaflet_offset.initialize(0, generator);
     leaf.leaflet_scale = 1;
+    leaf.intercalary_leaflet_scale = 0;
     leaf.prototype_scale.initialize(0.05, generator);
     leaf.prototype = LeafPrototype(generator);
 
@@ -383,6 +416,10 @@ ShootParameters::ShootParameters(std::minstd_rand0 *generator) {
     phyllochron_min.initialize(2, generator);
 
     elongation_rate_max.initialize(0.2, generator);
+    // Negative means "not set": leaves expand at elongation_rate_max, which is what every shoot type did before
+    // the leaf rate could be separated from the internode rate. A constant-valued RandomParameter draws nothing
+    // from the generator, so introducing this parameter does not perturb the random sequence of existing models.
+    leaf_expansion_rate_max.initialize(ShootParameters::leaf_expansion_rate_unset, generator);
     girth_area_factor.initialize(0, generator);
 
     vegetative_bud_break_time.initialize(5, generator);
@@ -534,7 +571,10 @@ helios::vec3 Phytomer::getPetioleAxisVectorOrGhost(const uint petiole_index, con
         ghost_petiole_axis = make_vec3(0, 1, 0);
     }
     ghost_petiole_axis.normalize();
-    return rotatePointAboutLine(ghost_petiole_axis, make_vec3(0, 0, 0), internode_axis, float(phytomer_index) * this->internode_phyllotactic_angle);
+    // The accumulated azimuth, not phytomer_index times this phytomer's own draw: the product agrees with the sum only when
+    // every phytomer drew the same angle.
+    static_cast<void>(phytomer_index);
+    return rotatePointAboutLine(ghost_petiole_axis, make_vec3(0, 0, 0), internode_axis, this->internode_phyllotactic_azimuth);
 }
 
 helios::vec3 Phytomer::getPeduncleAxisVector(const float stem_fraction, const uint petiole_index, const uint bud_index) const {
@@ -583,8 +623,36 @@ float Phytomer::getInternodeLength() const {
 }
 
 float Phytomer::getPetioleLength() const {
-    // \todo
-    return 0;
+    // Petioles borne at the same node are parallel structures rather than segments in series, so their lengths
+    // are not additive the way the leaf areas summed by getLeafArea() are; the mean is what represents the
+    // phytomer. Every petiole on a phytomer is built from the same draw of petiole.length -- the Phytomer
+    // constructor resamples that parameter only after its per-petiole loop -- so the mean equals each petiole's
+    // own length unless a caller has prescribed or rescaled them individually.
+    if (petiole_length.empty()) {
+        // No petioles on this phytomer, which is the normal case for a leafless woody skeleton
+        // (petioles_per_internode = 0) and for a phytomer whose leaf has been shed by removeLeaf().
+        return 0;
+    }
+    float total_length = 0;
+    for (const float length: petiole_length) {
+        total_length += length;
+    }
+    return total_length / float(petiole_length.size());
+}
+
+float Phytomer::getPetioleLength(const uint petiole_index) const {
+    if (petiole_index >= petiole_length.size()) {
+        helios_runtime_error("ERROR (Phytomer::getPetioleLength): Petiole index of " + std::to_string(petiole_index) + " was given, but this phytomer has " + std::to_string(petiole_length.size()) + " petioles.");
+    }
+    // Read from the stored scalar rather than re-summing petiole_vertices. The two agree by construction: the
+    // generated centerline is laid out in segments of exactly petiole_length/length_segments, setLeafScaleFraction()
+    // scales the scalar and the vertices about the base by the same factor, scalePetioleGeometry() does likewise,
+    // setPetioleNodePositions() assigns the scalar the measured arclength of the path it was given, and
+    // bendPetioleUnderLeafWeight() is inextensible (bendPetioleCenterline() rotates segments but never changes their
+    // lengths), so it moves the vertices without touching either. The scalar is also the only one of the two that
+    // removeLeaf() clears, so it -- and not the centerline, which removeLeaf() deliberately leaves in place -- is what
+    // reports that a shed leaf's petiole is gone.
+    return petiole_length.at(petiole_index);
 }
 
 float Phytomer::getInternodeRadius(const float stem_fraction) const {
@@ -1251,8 +1319,7 @@ int Shoot::appendPhytomerInternal(float internode_radius, float internode_length
                 }
                 parent_petiole_axis.normalize();
                 // Rotate ghost petiole by cumulative phyllotactic angle to match phyllotactic patterning
-                float phyllotactic_angle = shoot_tree_ptr->at(parent_shoot_ID)->phytomers.at(parent_node_index)->internode_phyllotactic_angle;
-                float cumulative_rotation = float(parent_node_index) * phyllotactic_angle;
+                const float cumulative_rotation = shoot_tree_ptr->at(parent_shoot_ID)->phytomers.at(parent_node_index)->internode_phyllotactic_azimuth;
                 parent_petiole_axis = rotatePointAboutLine(parent_petiole_axis, make_vec3(0, 0, 0), parent_internode_axis, cumulative_rotation);
             } else {
                 parent_petiole_axis = shoot_tree_ptr->at(parent_shoot_ID)->phytomers.at(parent_node_index)->getPetioleAxisVector(0.f, parent_petiole_index);
@@ -1271,9 +1338,7 @@ int Shoot::appendPhytomerInternal(float internode_radius, float internode_length
             }
             parent_petiole_axis.normalize();
             // Rotate ghost petiole by cumulative phyllotactic angle to match phyllotactic patterning
-            uint prev_phytomer_index = phytomers.size() - 1;
-            float phyllotactic_angle = phytomers.back()->internode_phyllotactic_angle;
-            float cumulative_rotation = float(prev_phytomer_index) * phyllotactic_angle;
+            const float cumulative_rotation = phytomers.back()->internode_phyllotactic_azimuth;
             parent_petiole_axis = rotatePointAboutLine(parent_petiole_axis, make_vec3(0, 0, 0), parent_internode_axis, cumulative_rotation);
         } else {
             parent_petiole_axis = phytomers.back()->getPetioleAxisVector(0.f, 0);
@@ -1392,10 +1457,34 @@ int Shoot::appendPhytomerInternal(float internode_radius, float internode_length
         }
     }
 
+    // A prescribed internode describes wood that already exists, so the phytomer creation function does not
+    // get to resize it. The function still runs -- species use it to set leaf scale, flowering and more -- but
+    // whatever it does to the measured internode's length is undone below. Library creation functions rescale
+    // the internode target length by node position or plant age, which either shrank reconstructed wood below
+    // the geometry it was measured from, or left its elongation fraction under 1 so that measured wood quietly
+    // started elongating on the next timestep.
+    const size_t prescribed_phytomer_index = shoot_tree_ptr->at(ID)->phytomers.size() - 1;
+    std::vector<vec3> measured_internode_vertices;
+    std::vector<float> measured_internode_radii;
+    float measured_internode_length_max = 0;
+    if (prescribed_internode != nullptr) {
+        measured_internode_vertices = shoot_tree_ptr->at(ID)->shoot_internode_vertices.at(prescribed_phytomer_index);
+        measured_internode_radii = shoot_tree_ptr->at(ID)->shoot_internode_radii.at(prescribed_phytomer_index);
+        measured_internode_length_max = phytomer->internode_length_max;
+    }
+
     if (phytomer_parameters.phytomer_creation_function != nullptr) {
         phytomer_parameters.phytomer_creation_function(phytomer, current_node_number, this->parent_node_index, shoot_parameters.max_nodes.val(), plantarchitecture_ptr->plant_instances.at(plantID).current_age);
     }
 
+    if (prescribed_internode != nullptr && (phytomer->internode_length_max != measured_internode_length_max || phytomer->current_internode_scale_factor != 1.f)) {
+        auto &prescribed_shoot = shoot_tree_ptr->at(ID);
+        prescribed_shoot->shoot_internode_vertices.at(prescribed_phytomer_index) = measured_internode_vertices;
+        prescribed_shoot->shoot_internode_radii.at(prescribed_phytomer_index) = measured_internode_radii;
+        phytomer->internode_length_max = measured_internode_length_max;
+        phytomer->current_internode_scale_factor = 1.f;
+        prescribed_shoot->updateShootNodes(true);
+    }
 
     return (int) phytomers.size() - 1;
 }
@@ -1564,8 +1653,7 @@ static helios::vec3 childShootOutwardAxis(const std::shared_ptr<Shoot> &parent_s
         parent_petiole_axis = make_vec3(0, 1, 0);
     }
     parent_petiole_axis.normalize();
-    const float phyllotactic_angle = parent_shoot->phytomers.at(parent_node_index)->internode_phyllotactic_angle;
-    parent_petiole_axis = rotatePointAboutLine(parent_petiole_axis, nullorigin, parent_internode_axis, float(parent_node_index) * phyllotactic_angle);
+    parent_petiole_axis = rotatePointAboutLine(parent_petiole_axis, nullorigin, parent_internode_axis, parent_shoot->phytomers.at(parent_node_index)->internode_phyllotactic_azimuth);
 
     if (!parent_shoot->phytomers.at(parent_node_index)->petiole_vertices.empty()) {
         // The petiole gives the side of the parent the child grows out of, but not a radial direction: a
@@ -1883,6 +1971,10 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     current_internode_scale_factor = internode_length_scale_factor_fraction;
     current_leaf_scale_factor.resize(phytomer_parameters.petiole.petioles_per_internode);
     std::fill(current_leaf_scale_factor.begin(), current_leaf_scale_factor.end(), leaf_scale_factor_fraction);
+    // The petiole starts at the same fraction as the leaf it carries; the two only separate as the phytomer grows, and
+    // only for a shoot type that gives its leaves an expansion rate of their own.
+    current_petiole_scale_factor.resize(phytomer_parameters.petiole.petioles_per_internode);
+    std::fill(current_petiole_scale_factor.begin(), current_petiole_scale_factor.end(), leaf_scale_factor_fraction);
 
     if (internode_radius == 0.f) {
         internode_radius = MIN_TUBE_RADIUS_FOR_GEOMETRY;
@@ -1916,9 +2008,13 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     phytomer_parameters.internode.pitch.resample();
     internode_phyllotactic_angle = deg2rad(phytomer_parameters.internode.phyllotactic_angle.val());
     phytomer_parameters.internode.phyllotactic_angle.resample();
+    // The first phytomer of a shoot is not rotated (the petiole-bearing path below rotates only when phytomer_index != 0),
+    // so it sits at zero and every later phytomer adds its own angle to the one before it.
+    internode_phyllotactic_azimuth = (phytomer_index == 0 || parent_shoot->phytomers.empty()) ? 0.f : parent_shoot->phytomers.back()->internode_phyllotactic_azimuth + internode_phyllotactic_angle;
 
     // initialize petiole variables
     petiole_length.resize(phytomer_parameters.petiole.petioles_per_internode);
+    petiole_length_max.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_vertices.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_radii.resize(phytomer_parameters.petiole.petioles_per_internode);
 
@@ -1945,9 +2041,18 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
 
         suppress_petiole_geometry.at(p) = (phytomer_parameters.petiole.radius.val() <= 0.f || phytomer_parameters.petiole.length.val() <= 0.f);
 
-        petiole_length.at(p) = leaf_scale_factor_fraction * phytomer_parameters.petiole.length.val();
+        // Recorded rather than read back from the parameter later: the draw is resampled once every petiole on this
+        // phytomer has been built, so consulting petiole.length again would give the length of some other phytomer's
+        // petiole. PlantArchitecture::advanceTime() measures each elongation step against this.
+        petiole_length_max.at(p) = phytomer_parameters.petiole.length.val();
+        petiole_length.at(p) = leaf_scale_factor_fraction * petiole_length_max.at(p);
         if (petiole_length.at(p) <= 0.f) {
+            // A petiole whose length parameter is zero or negative still needs a centerline, because that is what its
+            // leaves are oriented from, so it is given the shortest length the tube builder will accept. It is treated
+            // as already fully elongated: there is no target length for it to grow into.
             petiole_length.at(p) = MIN_TUBE_LENGTH_FOR_GEOMETRY;
+            petiole_length_max.at(p) = MIN_TUBE_LENGTH_FOR_GEOMETRY;
+            current_petiole_scale_factor.at(p) = 1.f;
         }
         dr_petiole.at(p) = petiole_length.at(p) / float(phytomer_parameters.petiole.length_segments);
         dr_petiole_max.at(p) = phytomer_parameters.petiole.length.val() / float(phytomer_parameters.petiole.length_segments);
@@ -1967,12 +2072,17 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     leaf_objIDs.resize(phytomer_parameters.petiole.petioles_per_internode);
     leaf_prototype_index.resize(phytomer_parameters.petiole.petioles_per_internode);
     leaf_pose_prescribed.resize(phytomer_parameters.petiole.petioles_per_internode);
+    leaf_angle_steering.resize(phytomer_parameters.petiole.petioles_per_internode);
     leaf_last_deformed_scale.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_path_prescribed.assign(phytomer_parameters.petiole.petioles_per_internode, false);
 
     // Resolved once here and held for the life of the phytomer. This also honours the retired leaf_buckle_* parameters when the flexibility itself was never set, so that code written against them still
     // produces a drooping leaf rather than a rigid one.
     leaf_flexibility = phytomer_parameters.leaf.prototype.resolveFlexibility();
+    petiole_flexibility = std::max(0.f, phytomer_parameters.petiole.flexibility.val());
+    phytomer_parameters.petiole.flexibility.resample();
+    petiole_rest_offsets.resize(phytomer_parameters.petiole.petioles_per_internode);
+    petiole_bend_state.assign(phytomer_parameters.petiole.petioles_per_internode, make_vec3(-1, 0, 0));
     leaf_size_max.resize(phytomer_parameters.petiole.petioles_per_internode);
     leaf_rotation.resize(phytomer_parameters.petiole.petioles_per_internode);
     int leaves_per_petiole = phytomer_parameters.leaf.leaves_per_petiole.val();
@@ -2163,13 +2273,25 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         vec3 final_direction = internode_axis; // Start with current direction (includes hard obstacle avoidance if applied)
 
         if (attraction_active) {
-            // Always apply attraction points if they're found
+            // Always apply attraction points if they're found.
+            //
+            // Read the weight from this plant when it has attraction points of its own, matching where the
+            // points themselves were read from in calculateAttractionPointDirection(). Taking it from the
+            // global setting instead meant the weight passed to setPlantAttractionPoints() was silently
+            // discarded: the plant followed its own trellis, but always with whatever strength the global
+            // default happened to carry.
             float attraction_weight = plantarchitecture_ptr->attraction_weight;
+            float obstacle_reduction_factor = plantarchitecture_ptr->attraction_obstacle_reduction_factor;
+            const auto plant_it = plantarchitecture_ptr->plant_instances.find(plantID);
+            if (plant_it != plantarchitecture_ptr->plant_instances.end() && plant_it->second.attraction_points_enabled && !plant_it->second.attraction_points.empty()) {
+                attraction_weight = plant_it->second.attraction_weight;
+                obstacle_reduction_factor = plant_it->second.attraction_obstacle_reduction_factor;
+            }
 
             if (obstacle_found) {
                 // When hard obstacles are present, reduce attraction influence to allow obstacle avoidance
                 // but maintain some attraction to keep plant near surface
-                attraction_weight *= plantarchitecture_ptr->attraction_obstacle_reduction_factor; // Reduce attraction when avoiding hard obstacles
+                attraction_weight *= obstacle_reduction_factor; // Reduce attraction when avoiding hard obstacles
             }
 
             // Blend current direction (which may include obstacle avoidance) with attraction direction
@@ -2384,6 +2506,8 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             assert(!std::isnan(petiole_vertices.at(petiole).at(j).x) && std::isfinite(petiole_vertices.at(petiole).at(j).x));
             assert(!std::isnan(petiole_radii.at(petiole).at(j)) && std::isfinite(petiole_radii.at(petiole).at(j)));
         }
+        // The generated centerline is the undeformed shape the petiole bends from under its leaf's weight.
+        recordPetioleRestShape(petiole);
 
         if (build_context_geometry_petiole && !suppress_petiole_geometry.at(petiole)) {
             petiole_objIDs.at(petiole) = makePetioleTube(Ndiv_petiole_radius, petiole_vertices.at(petiole), petiole_radii.at(petiole), petiole_colors, context_ptr);
@@ -2430,10 +2554,14 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
 
         // Create unique leaf prototypes for each shoot type so we can simply copy them for each leaf
         assert(phytomer_parameters.leaf.prototype.unique_prototype_identifier != 0);
-        if (phytomer_parameters.leaf.prototype.unique_prototypes > 0 &&
-            plantarchitecture_ptr->unique_leaf_prototype_objIDs.find(phytomer_parameters.leaf.prototype.unique_prototype_identifier) == plantarchitecture_ptr->unique_leaf_prototype_objIDs.end()) {
-            plantarchitecture_ptr->unique_leaf_prototype_objIDs[phytomer_parameters.leaf.prototype.unique_prototype_identifier].resize(phytomer_parameters.leaf.prototype.unique_prototypes);
-            plantarchitecture_ptr->unique_leaf_prototype_rest_geometry[phytomer_parameters.leaf.prototype.unique_prototype_identifier].resize(phytomer_parameters.leaf.prototype.unique_prototypes);
+        // Each leaflet count gets its own set of blades: a blade is built from its position along the compound leaf,
+        // which is measured from the count, so the set built for one count cannot serve a petiole carrying a different
+        // number of leaflets. Keying on the identifier alone let a one-leaflet cotyledon type sharing a compound type's
+        // prototype -- or a single shoot type whose leaflet count is a random parameter -- read past the end of the set.
+        const PlantArchitecture::LeafPrototypeCacheKey leaf_prototype_cache_key(phytomer_parameters.leaf.prototype.unique_prototype_identifier, uint(std::max(leaves_per_petiole, 0)));
+        if (phytomer_parameters.leaf.prototype.unique_prototypes > 0 && plantarchitecture_ptr->unique_leaf_prototype_objIDs.find(leaf_prototype_cache_key) == plantarchitecture_ptr->unique_leaf_prototype_objIDs.end()) {
+            plantarchitecture_ptr->unique_leaf_prototype_objIDs[leaf_prototype_cache_key].resize(phytomer_parameters.leaf.prototype.unique_prototypes);
+            plantarchitecture_ptr->unique_leaf_prototype_rest_geometry[leaf_prototype_cache_key].resize(phytomer_parameters.leaf.prototype.unique_prototypes);
 
             // The set of unique blade shapes is drawn from a private stream keyed on the prototype identifier
             // rather than from the Context's generator. The set is built lazily, at the first phytomer that needs
@@ -2441,6 +2569,11 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             // sequence of random draws than growing the plant does -- so drawing from the shared stream gave a
             // reloaded plant a different set of blade shapes than the one that was saved. See the matching block
             // in readPlantStructureXML().
+            //
+            // The seed is the prototype identifier alone and not the leaflet count as well: every set is built from a
+            // stream seeded the same way and drawn from only by that set's own blades, so a given (identifier, count)
+            // always produces the same blades however many other counts were built before it, and a species with a
+            // single leaflet count draws exactly the shapes it drew before the count entered the key.
             std::minstd_rand0 prototype_generator(phytomer_parameters.leaf.prototype.unique_prototype_identifier);
             std::minstd_rand0 *context_generator = phytomer_parameters.leaf.prototype.setRandomGenerator(&prototype_generator);
 
@@ -2449,9 +2582,9 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
                     float ind_from_tip = float(leaf) - float(leaves_per_petiole - 1) / 2.f;
                     uint objID_leaf = phytomer_parameters.leaf.prototype.prototype_function(context_ptr, &phytomer_parameters.leaf.prototype, ind_from_tip);
                     labelLeafPrototype(objID_leaf);
-                    plantarchitecture_ptr->unique_leaf_prototype_objIDs.at(phytomer_parameters.leaf.prototype.unique_prototype_identifier).at(prototype).push_back(objID_leaf);
+                    plantarchitecture_ptr->unique_leaf_prototype_objIDs.at(leaf_prototype_cache_key).at(prototype).push_back(objID_leaf);
 
-                    plantarchitecture_ptr->recordLeafPrototypeRestGeometry(phytomer_parameters.leaf.prototype, prototype, objID_leaf, leaf_flexibility);
+                    plantarchitecture_ptr->recordLeafPrototypeRestGeometry(phytomer_parameters.leaf.prototype, leaves_per_petiole, prototype, objID_leaf, leaf_flexibility);
                     std::string material_base_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_" + parent_shoot->shoot_type_label + "_leaf";
                     renameAutoMaterial(context_ptr, objID_leaf, material_base_name);
                     context_ptr->hideObject(objID_leaf);
@@ -2471,10 +2604,8 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
                 // copy the existing prototype
                 int prototype = context_ptr->randu(0, phytomer_parameters.leaf.prototype.unique_prototypes - 1);
                 leaf_prototype_source = prototype;
-                assert(plantarchitecture_ptr->unique_leaf_prototype_objIDs.find(phytomer_parameters.leaf.prototype.unique_prototype_identifier) != plantarchitecture_ptr->unique_leaf_prototype_objIDs.end());
-                assert(plantarchitecture_ptr->unique_leaf_prototype_objIDs.at(phytomer_parameters.leaf.prototype.unique_prototype_identifier).size() > prototype);
-                assert(plantarchitecture_ptr->unique_leaf_prototype_objIDs.at(phytomer_parameters.leaf.prototype.unique_prototype_identifier).at(prototype).size() > leaf);
-                objID_leaf = context_ptr->copyObject(plantarchitecture_ptr->unique_leaf_prototype_objIDs.at(phytomer_parameters.leaf.prototype.unique_prototype_identifier).at(prototype).at(leaf));
+                objID_leaf = context_ptr->copyObject(
+                        plantarchitecture_ptr->getCachedLeafPrototypeObjID(phytomer_parameters.leaf.prototype.unique_prototype_identifier, uint(leaves_per_petiole), uint(prototype), uint(leaf), "PlantArchitecture::Phytomer"));
             } else {
                 // load a new prototype
                 objID_leaf = phytomer_parameters.leaf.prototype.prototype_function(context_ptr, &phytomer_parameters.leaf.prototype, ind_from_tip);
@@ -2484,8 +2615,8 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
 
             // -- leaf scaling -- //
 
-            if (leaves_per_petiole > 0 && phytomer_parameters.leaf.leaflet_scale.val() != 1.f && ind_from_tip != 0) {
-                leaf_size_max.at(petiole).at(leaf) = powf(phytomer_parameters.leaf.leaflet_scale.val(), fabs(ind_from_tip)) * phytomer_parameters.leaf.prototype_scale.val();
+            if (leaves_per_petiole > 0) {
+                leaf_size_max.at(petiole).at(leaf) = leafletSizeMax(ind_from_tip, phytomer_parameters.leaf.leaflet_scale.val(), phytomer_parameters.leaf.intercalary_leaflet_scale.val(), phytomer_parameters.leaf.prototype_scale.val());
             } else {
                 leaf_size_max.at(petiole).at(leaf) = phytomer_parameters.leaf.prototype_scale.val();
             }
@@ -2529,9 +2660,12 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             leaf_bases.at(petiole).push_back(leaf_base);
             leaf_prototype_index.at(petiole).push_back(leaf_prototype_source);
             leaf_pose_prescribed.at(petiole).push_back(false);
+            leaf_angle_steering.at(petiole).push_back(LeafAngleSteering());
             // Nothing has been deflected yet, so record a scale that no leaf can already be at; the first growth step then always deforms.
             leaf_last_deformed_scale.at(petiole).push_back(-1.f);
         }
+        // A new petiole already carries a (small) leaf, so it starts at the bend that leaf's weight gives it rather than waiting for the next growth step.
+        bendPetioleUnderLeafWeight(petiole);
         phytomer_parameters.leaf.prototype_scale.resample();
 
         inflorescence_bending_axis = cross(parent_internode_axis, petiole_axis_actual);
@@ -3225,6 +3359,15 @@ void Phytomer::rotatePetiole(uint petiole_index, const AxisRotation &rotation) {
         for (auto &vertex: petiole_vertices.at(petiole_index)) {
             vertex = rotatePointAboutLine(vertex, base, axis, angle);
         }
+        // The rest shape turns with the petiole, and the bent shape has to be recomputed from it: gravity does not turn with the petiole, so the rigidly rotated bent shape is no longer in balance.
+        if (petiole_index < petiole_rest_offsets.size()) {
+            for (auto &offset: petiole_rest_offsets.at(petiole_index)) {
+                offset = rotatePointAboutLine(offset, nullorigin, axis, angle);
+            }
+        }
+        if (petiole_index < petiole_bend_state.size()) {
+            petiole_bend_state.at(petiole_index) = make_vec3(-1, 0, 0);
+        }
         if (petiole_index < leaf_bases.size()) {
             for (auto &leaf_base: leaf_bases.at(petiole_index)) {
                 leaf_base = rotatePointAboutLine(leaf_base, base, axis, angle);
@@ -3330,28 +3473,72 @@ void Phytomer::setInternodeMaxRadius(float internode_radius_max_new) {
     this->internode_radius_max = internode_radius_max_new;
 }
 
+void Phytomer::scalePetioleMaxLength(const float scale_factor) {
+    if (scale_factor <= 0.f) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::scalePetioleMaxLength): Scale factor must be positive, but " + std::to_string(scale_factor) + " was given.");
+    }
+
+    for (uint petiole_index = 0; petiole_index < petiole_length_max.size(); petiole_index++) {
+        petiole_length_max.at(petiole_index) *= scale_factor;
+
+        // The elongated fraction moves the other way so that the petiole's present length is unchanged; only the length
+        // it is growing toward moves. Mirrors scaleInternodeMaxLength().
+        if (petiole_index < current_petiole_scale_factor.size()) {
+            current_petiole_scale_factor.at(petiole_index) = current_petiole_scale_factor.at(petiole_index) / scale_factor;
+            if (current_petiole_scale_factor.at(petiole_index) >= 1.f) {
+                setPetioleScaleFraction(petiole_index, 1.f);
+                current_petiole_scale_factor.at(petiole_index) = 1.f;
+            }
+        }
+    }
+}
+
 
 void Phytomer::setLeafScaleFraction(uint petiole_index, float leaf_scale_factor_fraction) {
-    assert(leaf_scale_factor_fraction >= 0 && leaf_scale_factor_fraction <= 1);
+    if (current_petiole_scale_factor.size() <= petiole_index) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::setLeafScaleFraction): Invalid petiole index for leaf scale factor.");
+    }
+    // The petiole is carried to the same fraction, which is the behaviour every caller outside the growth model wants:
+    // a leaf and the petiole it sits on being posed together.
+    setPetioleAndLeafScaleFraction(petiole_index, leaf_scale_factor_fraction, leaf_scale_factor_fraction);
+}
 
+void Phytomer::setPetioleScaleFraction(uint petiole_index, float petiole_scale_factor_fraction) {
     if (current_leaf_scale_factor.size() <= petiole_index) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::setPetioleScaleFraction): Invalid petiole index for petiole scale factor.");
+    }
+    setPetioleAndLeafScaleFraction(petiole_index, petiole_scale_factor_fraction, current_leaf_scale_factor.at(petiole_index));
+}
+
+void Phytomer::setPetioleAndLeafScaleFraction(uint petiole_index, float petiole_scale_factor_fraction, float leaf_scale_factor_fraction) {
+    assert(leaf_scale_factor_fraction >= 0 && leaf_scale_factor_fraction <= 1);
+    assert(petiole_scale_factor_fraction >= 0 && petiole_scale_factor_fraction <= 1);
+
+    if (current_leaf_scale_factor.size() <= petiole_index || current_petiole_scale_factor.size() <= petiole_index) {
         helios_runtime_error("ERROR (PlantArchitecture::Phytomer): Invalid petiole index for leaf scale factor.");
     }
 
-    // If the leaf is already at leaf_scale_factor_fraction, or there are no petioles/leaves, nothing to do.
-    if (leaf_scale_factor_fraction == current_leaf_scale_factor.at(petiole_index) || (leaf_objIDs.at(petiole_index).empty() && !context_ptr->doesObjectExist(petiole_objIDs.at(petiole_index)))) {
-        // The leaf has not changed size, so none of the scaling below has anything to do. The deflection is still applied: a leaf reaches its full length before it reaches its final droop, and this is the
+    // If neither the petiole nor the leaf has changed size, or there are no petioles/leaves, nothing to do.
+    if ((petiole_scale_factor_fraction == current_petiole_scale_factor.at(petiole_index) && leaf_scale_factor_fraction == current_leaf_scale_factor.at(petiole_index)) ||
+        (leaf_objIDs.at(petiole_index).empty() && !context_ptr->doesObjectExist(petiole_objIDs.at(petiole_index)))) {
+        // Nothing has changed size, so none of the scaling below has anything to do. The deflection is still applied: a leaf reaches its full length before it reaches its final droop, and this is the
         // path every mature leaf takes on every timestep from then on, so returning outright here would freeze each leaf at whatever droop it happened to have while it was still expanding.
+        // The same holds for the petiole, which goes on bending as it ages.
+        bendPetioleUnderLeafWeight(petiole_index);
         for (uint leaf = 0; leaf < leaf_objIDs.at(petiole_index).size(); leaf++) {
             deformLeafUnderSelfWeight(petiole_index, leaf);
         }
         return;
     }
 
+    // The petiole and the blade have separate deltas because they grow on separate rates: the petiole on its shoot's internode elongation rate, the blade on the leaf expansion rate. For a shoot type that
+    // does not distinguish the two the fractions are equal at every step, and the two deltas are then the same number.
+    const float petiole_delta_scale = petiole_scale_factor_fraction / current_petiole_scale_factor.at(petiole_index);
     float delta_scale = leaf_scale_factor_fraction / current_leaf_scale_factor.at(petiole_index);
 
-    petiole_length.at(petiole_index) *= delta_scale;
+    petiole_length.at(petiole_index) *= petiole_delta_scale;
 
+    current_petiole_scale_factor.at(petiole_index) = petiole_scale_factor_fraction;
     current_leaf_scale_factor.at(petiole_index) = leaf_scale_factor_fraction;
 
     assert(leaf_objIDs.size() == leaf_bases.size());
@@ -3363,11 +3550,23 @@ void Phytomer::setLeafScaleFraction(uint petiole_index, float leaf_scale_factor_
     // work from the same scaled state.
     const vec3 base = petiole_vertices.at(petiole_index).at(0);
     for (uint node = 0; node < petiole_radii.at(petiole_index).size(); node++) {
-        petiole_radii.at(petiole_index).at(node) *= delta_scale;
+        petiole_radii.at(petiole_index).at(node) *= petiole_delta_scale;
     }
     for (uint node = 1; node < petiole_vertices.at(petiole_index).size(); node++) {
         vec3 offset = petiole_vertices.at(petiole_index).at(node) - base;
-        petiole_vertices.at(petiole_index).at(node) = base + offset * delta_scale;
+        petiole_vertices.at(petiole_index).at(node) = base + offset * petiole_delta_scale;
+    }
+    // The rest shape grows with the petiole. Scaling the bent shape about the same base leaves it a similar figure with the same tangents, so the leaves placed on it below keep their orientation, and
+    // bendPetioleUnderLeafWeight() then carries them onto the shape the heavier leaf bends the scaled rest shape to.
+    if (petiole_index < petiole_rest_offsets.size()) {
+        for (vec3 &offset: petiole_rest_offsets.at(petiole_index)) {
+            offset = offset * petiole_delta_scale;
+        }
+    }
+    // A petiole that lengthened has to be bent again for its new length, and the load that decides whether bending is
+    // needed does not change when only the petiole grows. Bending is skipped unless it is told the shape moved.
+    if (petiole_delta_scale != 1.f && petiole_index < petiole_bend_state.size()) {
+        petiole_bend_state.at(petiole_index) = make_vec3(-1, 0, 0);
     }
 
     if (context_ptr->doesObjectExist(petiole_objIDs.at(petiole_index))) {
@@ -3405,9 +3604,29 @@ void Phytomer::setLeafScaleFraction(uint petiole_index, float leaf_scale_factor_
 
         deformLeafUnderSelfWeight(petiole_index, leaf);
     }
+
+    // The heavier leaf now bends the petiole further, and a petiole that lengthened is bent again from its rescaled rest shape. Bending is dimensionless -- it works in arclength fractions, radius ratios and
+    // a load relative to the full-grown load -- so a petiole rescaled about its base comes back with the same arch, larger; the bend is neither undone by the rescaling nor applied a second time on top of it.
+    bendPetioleUnderLeafWeight(petiole_index);
 }
 
-void PlantArchitecture::recordLeafPrototypeRestGeometry(const LeafPrototype &prototype_params, int prototype_index, uint objID_leaf, float leaf_flexibility) {
+uint PlantArchitecture::getCachedLeafPrototypeObjID(uint prototype_identifier, uint leaves_per_petiole, uint prototype_index, uint leaf_index, const std::string &calling_function) const {
+
+    const auto cached_prototypes = unique_leaf_prototype_objIDs.find(LeafPrototypeCacheKey(prototype_identifier, leaves_per_petiole));
+    if (cached_prototypes == unique_leaf_prototype_objIDs.end()) {
+        helios_runtime_error("ERROR (" + calling_function + "): No leaf blade prototypes have been cached for a petiole of " + std::to_string(leaves_per_petiole) +
+                             " leaflets. The cached blades of a leaf prototype are built for one leaflet count at a time, and this count was never built.");
+    } else if (cached_prototypes->second.size() <= prototype_index) {
+        helios_runtime_error("ERROR (" + calling_function + "): Leaf prototype " + std::to_string(prototype_index) + " was requested, but only " + std::to_string(cached_prototypes->second.size()) +
+                             " unique leaf prototypes were cached for a petiole of " + std::to_string(leaves_per_petiole) + " leaflets.");
+    } else if (cached_prototypes->second.at(prototype_index).size() <= leaf_index) {
+        helios_runtime_error("ERROR (" + calling_function + "): Leaflet " + std::to_string(leaf_index) + " was requested, but the cached leaf prototype holds blades for only " +
+                             std::to_string(cached_prototypes->second.at(prototype_index).size()) + " leaflet positions of a petiole of " + std::to_string(leaves_per_petiole) + " leaflets.");
+    }
+    return cached_prototypes->second.at(prototype_index).at(leaf_index);
+}
+
+void PlantArchitecture::recordLeafPrototypeRestGeometry(const LeafPrototype &prototype_params, int leaves_per_petiole, int prototype_index, uint objID_leaf, float leaf_flexibility) {
 
     // Keep the prototype's undeformed blade so that a drooping leaf can be re-deflected from its rest shape as it grows, instead of being bent further from wherever it already is. Stored once
     // per prototype and shared by every leaf copied from it, so this costs a handful of meshes per plant type rather than one per leaf. Only leaves that actually droop are recorded.
@@ -3438,7 +3657,7 @@ void PlantArchitecture::recordLeafPrototypeRestGeometry(const LeafPrototype &pro
             rest_geometry.subdivisions_x = 0;
         }
     }
-    unique_leaf_prototype_rest_geometry[prototype_params.unique_prototype_identifier].at(prototype_index).push_back(rest_geometry);
+    unique_leaf_prototype_rest_geometry[LeafPrototypeCacheKey(prototype_params.unique_prototype_identifier, uint(std::max(leaves_per_petiole, 0)))].at(prototype_index).push_back(rest_geometry);
 }
 
 float Phytomer::compoundLeafRotation(int leaves_per_petiole, int leaf_index, float leaflet_offset_val) {
@@ -3459,6 +3678,208 @@ float Phytomer::compoundLeafRotation(int leaves_per_petiole, int leaf_index, flo
         }
     }
     return compound_rotation;
+}
+
+// fallback axis if v×u is (near) zero:
+static vec3 orthonormal_axis(const vec3 &v) {
+    // try X axis
+    vec3 ax = cross(v, vec3(1.f, 0.f, 0.f));
+    if (ax.magnitude() < 1e-6f)
+        ax = cross(v, vec3(0.f, 1.f, 0.f));
+    return ax.normalize();
+}
+
+// Rodrigues formula: rotate v about unit‐axis k by angle α
+static vec3 rodrigues(const vec3 &v, const vec3 &k, float a) {
+    float c = std::cos(a);
+    float s = std::sin(a);
+    // dot = k·v
+    float kv = k * v;
+    return v * c + cross(k, v) * s + k * (kv * (1.f - c));
+}
+
+// Rotation carrying vector v onto vector u by the minimal angle, as an axis and an angle. Returns false when
+// the two already agree, in which case there is nothing to apply.
+static bool minimalRotationBetween(const vec3 &v, const vec3 &u, vec3 &axis, float &angle) {
+    const float dot = std::clamp(v * u, -1.f, 1.f);
+    angle = acos_safe(dot);
+    if (angle < 1e-6f) {
+        return false;
+    }
+
+    axis = cross(v, u);
+    if (axis.magnitude() < 1e-6f) {
+        // Exactly antiparallel: every perpendicular axis turns v onto u, so any one of them will do.
+        axis = orthonormal_axis(v);
+    } else {
+        axis = axis.normalize();
+    }
+    return true;
+}
+
+// The direction a leaf's blade faces: the area-weighted mean normal over the primitives labelled "leaf".
+//
+// Deliberately not Context::getObjectAverageNormal(), which averages every primitive in the object without
+// weighting them. A leaf object also carries its petiolule, a stalk whose facets point every which way and
+// which is a fraction of the blade's area but a comparable fraction of its primitive COUNT, so an unweighted
+// mean over the whole object sits about eight degrees off the blade on a bean. Phytomer::setLeafNormal() aims
+// this quantity and PlantArchitecture::getPlantLeafInclinationAngleDistribution() reports it, so the leaf
+// angle distribution code has to measure it too: steering toward one definition while scoring another leaves
+// every leaf landing a bin short of where it was aimed, and an angle bin that can never be filled goes on
+// attracting leaves forever.
+//
+// Returns false for a leaf with no blade geometry, or one whose facet normals cancel.
+static bool leafBladeNormal(const helios::Context *context_ptr, uint objID_leaf, vec3 &normal, float &area) {
+    if (!context_ptr->doesObjectExist(objID_leaf)) {
+        return false;
+    }
+
+    const std::vector<uint> object_UUIDs = context_ptr->getObjectPrimitiveUUIDs(objID_leaf);
+    std::vector<uint> blade_UUIDs = context_ptr->filterPrimitivesByData(object_UUIDs, "object_label", "leaf");
+    if (blade_UUIDs.empty()) {
+        blade_UUIDs = object_UUIDs;
+    }
+
+    normal = make_vec3(0, 0, 0);
+    area = 0;
+    for (const uint UUID: blade_UUIDs) {
+        const float primitive_area = context_ptr->getPrimitiveArea(UUID);
+        if (!std::isfinite(primitive_area)) {
+            continue;
+        }
+        normal = normal + primitive_area * context_ptr->getPrimitiveNormal(UUID);
+        area += primitive_area;
+    }
+
+    // The accumulator is area-weighted, so its length scales with the leaf's area rather than sitting near
+    // one: a leaf newly emerged at a hundredth of full size has an area of order 1e-7 and a sum of the same
+    // order. The test for "this blade faces no single direction" therefore has to be relative to the area
+    // that went into it -- an absolute floor rejects every young leaf, which silently turned the whole
+    // distribution tracker into a no-op because targets are assigned exactly when a leaf emerges.
+    if (area <= 0.f || normal.magnitude() < 1e-4f * area) {
+        return false;
+    }
+    normal = normal.normalize();
+    return true;
+}
+
+void Phytomer::setLeafNormal(uint petiole_index, uint leaf_index, const helios::vec3 &target_normal) {
+    if (petiole_index >= leaf_objIDs.size()) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::setLeafNormal): Invalid petiole index " + std::to_string(petiole_index) + ".");
+    } else if (leaf_index >= leaf_objIDs.at(petiole_index).size()) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::setLeafNormal): Invalid leaf index " + std::to_string(leaf_index) + ".");
+    }
+
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+    if (!context_ptr->doesObjectExist(objID_leaf)) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::setLeafNormal): Leaf " + std::to_string(leaf_index) + " on petiole " + std::to_string(petiole_index) + " has no geometry in the Context.");
+    }
+
+    vec3 target = target_normal;
+    if (target.magnitude() < 1e-6f) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::setLeafNormal): Target normal has zero length.");
+    }
+    target = target.normalize();
+
+    // ---- current orientation, as a rotation matrix ----
+    // The leaf transform is a translation, a rotation and a uniform scale, so normalizing the columns of the
+    // 3x3 block recovers the rotation on its own.
+    float T[16];
+    context_ptr->getObjectTransformationMatrix(objID_leaf, T);
+    if (make_vec3(T[0], T[4], T[8]).magnitude() < 1e-9f || make_vec3(T[1], T[5], T[9]).magnitude() < 1e-9f || make_vec3(T[2], T[6], T[10]).magnitude() < 1e-9f) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::setLeafNormal): Leaf " + std::to_string(leaf_index) + " on petiole " + std::to_string(petiole_index) + " has a degenerate transformation matrix.");
+    }
+
+    // ---- the direction the blade currently faces ----
+    // Through the shared helper, which is also what the leaf angle distribution code measures with. This was
+    // a second copy of that calculation, and it kept an absolute floor on the length of the area-weighted sum
+    // that the helper has since been corrected away from: because the sum scales with the leaf's area, that
+    // floor rejected any leaf much below full size, so aiming a young or small leaf failed outright.
+    vec3 world_normal;
+    float area_total = 0;
+    if (!leafBladeNormal(context_ptr, objID_leaf, world_normal, area_total)) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::setLeafNormal): Leaf " + std::to_string(leaf_index) + " on petiole " + std::to_string(petiole_index) +
+                             " has no single direction it faces; its facet normals cancel. It cannot be aimed at a target normal.");
+    }
+
+    const int leaves_per_petiole = int(leaf_objIDs.at(petiole_index).size());
+
+    auto rotateAboutY = [](float angle, const vec3 &v) { return make_vec3(v.x * std::cos(angle) + v.z * std::sin(angle), v.y, -v.x * std::sin(angle) + v.z * std::cos(angle)); };
+    auto rotateAboutZ = [](float angle, const vec3 &v) { return make_vec3(v.x * std::cos(angle) - v.y * std::sin(angle), v.x * std::sin(angle) + v.y * std::cos(angle), v.z); };
+
+    // ---- turn the leaf onto the target ----
+    // Applied as the single minimal rotation carrying the blade's measured normal onto the target, about the
+    // leaf's own base so it stays attached to its petiole.
+    //
+    // Turning the leaf and recording the result are kept separate on purpose. Solving for a (roll, pitch)
+    // pair on the procedural chain and rebuilding from those cannot work: orientLeaf() does not end with
+    // roll and pitch innermost, because a unifoliate leaf also receives the curvature-aware blade-up
+    // correction, itself a roll about the petiole axis applied AFTER the pitch and azimuth. The two angles
+    // therefore span a surface rather than the full space of orientations, and fitting an arbitrary turn
+    // onto it reproduced the blade normal while leaving the pose several degrees out on reload.
+    vec3 delta_axis;
+    float delta_angle;
+    if (minimalRotationBetween(world_normal, target, delta_axis, delta_angle)) {
+        context_ptr->rotateObject(objID_leaf, delta_angle, leaf_bases.at(petiole_index).at(leaf_index), delta_axis);
+    }
+
+    // ---- record the pose that was just built ----
+    // readPlantStructureXML() rebuilds every leaf by replaying orientLeaf() from the stored angles, so the
+    // record has to describe the leaf exactly as it now stands.
+    //
+    // The angles are recorded against the PRESCRIBED branch of orientLeaf(), and the leaf is marked as
+    // prescribed, because only that branch can represent an arbitrary orientation. The procedural branch
+    // applies the curvature-aware blade-up correction after the pitch and azimuth, so its roll and pitch
+    // span a two-parameter surface while a leaf aimed at a freely chosen normal needs all three angles;
+    // fitting the turn onto that surface reproduced the blade normal but not the full pose, and leaves came
+    // back from a reload several degrees out. The prescribed branch has no blade-up correction, no side
+    // signs and no petiole-elevation offsets, so the three angles below invert it exactly.
+    //
+    // The prescribed chain is R_z(azimuth) * R_y(-elevation) * R_z(compound) * R_z(yaw) * R_y(-pitch) * R_x(roll),
+    // so the angles are recovered by undoing the petiole frame and reading the remainder as an intrinsic
+    // z-y-x triple.
+    {
+        float T_new[16];
+        context_ptr->getObjectTransformationMatrix(objID_leaf, T_new);
+        vec3 axis_x = normalize(make_vec3(T_new[0], T_new[4], T_new[8]));
+        vec3 axis_y = normalize(make_vec3(T_new[1], T_new[5], T_new[9]));
+        vec3 axis_z = normalize(make_vec3(T_new[2], T_new[6], T_new[10]));
+
+        vec3 tip_axis = getPetioleAxisVector(1.f, petiole_index);
+        tip_axis.normalize();
+        const float elevation = asin_safe(tip_axis.z);
+        const float horizontal = std::sqrt(tip_axis.x * tip_axis.x + tip_axis.y * tip_axis.y);
+        const float azimuth = (horizontal < 1e-6f) ? 0.f : std::atan2(tip_axis.y, tip_axis.x);
+        const float compound_rotation = (leaves_per_petiole > 1) ? compoundLeafRotation(leaves_per_petiole, int(leaf_index), clampOffset(leaves_per_petiole, phytomer_parameters.leaf.leaflet_offset.val())) : 0.f;
+
+        // Strip the petiole's own placement, leaving R_z(yaw) * R_y(-pitch) * R_x(roll).
+        auto undoPetioleFrame = [&](const vec3 &v) {
+            vec3 result = rotateAboutZ(-azimuth, v);
+            result = rotateAboutY(elevation, result);
+            return rotateAboutZ(-compound_rotation, result);
+        };
+        axis_x = undoPetioleFrame(axis_x);
+        axis_y = undoPetioleFrame(axis_y);
+        axis_z = undoPetioleFrame(axis_z);
+
+        // Read the intrinsic z-y-x angles off the remaining rotation, whose columns are axis_x/y/z.
+        const float recorded_yaw = std::atan2(axis_x.y, axis_x.x);
+        const float recorded_pitch_angle = std::atan2(axis_x.z, std::sqrt(axis_x.x * axis_x.x + axis_x.y * axis_x.y));
+        // Sign note: the roll is read with a positive numerator. Taking it as atan2(-y.z, z.z) inverts it,
+        // and the leaf is then rebuilt rolled the opposite way about its own midrib -- a residual of exactly
+        // twice the recorded angle, which is what a reloaded plant showed.
+        const float recorded_roll_angle = std::atan2(axis_y.z, axis_z.z);
+
+        leaf_rotation.at(petiole_index).at(leaf_index).yaw = recorded_yaw;
+        leaf_rotation.at(petiole_index).at(leaf_index).pitch = recorded_pitch_angle;
+        leaf_rotation.at(petiole_index).at(leaf_index).roll = recorded_roll_angle;
+
+        // From here on this leaf is posed, not generated: its recorded angles are intrinsic, so orientLeaf()
+        // must take the prescribed branch when the leaf is rebuilt.
+        if (petiole_index < leaf_pose_prescribed.size() && leaf_index < leaf_pose_prescribed.at(petiole_index).size()) {
+            leaf_pose_prescribed.at(petiole_index).at(leaf_index) = true;
+        }
+    }
 }
 
 void Phytomer::labelLeafPrototype(uint objID_leaf) {
@@ -3519,7 +3940,12 @@ void Phytomer::orientLeaf(uint objID_leaf, uint petiole_index, uint leaf_index, 
         int sign = (shoot_index.x % 2 == 0) ? 1 : -1;
         roll_rot = -leaf_roll_angle * sign;
     } else if (ind_from_tip != 0) {
-        roll_rot = (asin_safe(petiole_tip_axis.z) + leaf_roll_angle) * compound_rotation / std::fabs(compound_rotation);
+        // A lateral leaflet is turned 90 degrees to stand out sideways, so its blade has to be rolled about its own midrib
+        // to lie in the plane of a leaf whose petiole rises at elevation e. The compensation must roll it back down by e;
+        // it was added with the same sign as the elevation instead, which left every lateral blade tilted 2e out of the
+        // leaf plane and fully edge-on at 45 degrees. The user-set roll keeps its existing sign, so a species with
+        // horizontal petioles (e = 0) is unchanged.
+        roll_rot = (leaf_roll_angle - asin_safe(petiole_tip_axis.z)) * compound_rotation / std::fabs(compound_rotation);
     }
     leaf_rotation.at(petiole_index).at(leaf_index).roll = leaf_roll_angle;
     context_ptr->rotateObject(objID_leaf, roll_rot, "x");
@@ -3574,6 +4000,35 @@ void Phytomer::orientLeaf(uint objID_leaf, uint petiole_index, uint leaf_index, 
     }
 }
 
+//! How far through its ageing a leaf blade is
+/**
+ * \param[in] age Age of the phytomer in days.
+ * \param[in] aging_days Timescale of the softening in days; must be positive.
+ * \return Progress from exactly zero at emergence, rising sigmoidally to one: flat for about twice aging_days, then rising over a window of similar length.
+ */
+static float flexibilityAgingProgress(float age, float aging_days) {
+    // Sigmoidal rather than exponential: a blade holds its shape while its tissue is still maturing, then softens over a relatively short window once maturation completes, and stops changing again.
+    // A plain exponential instead starts softening the moment the leaf appears, so it drooped the still-erect leaves of the middle canopy long before their turn.
+    // Normalised so the progress is exactly 0 on an organ that has just appeared, rather than starting part-way up the curve: a newly emerged organ must be as stiff as its species' base parameters say,
+    // or the ageing term silently changes the behaviour of every organ including the youngest.
+    const float t = age / aging_days;
+    const float sigmoid = 1.f / (1.f + expf(-2.f * (t - 2.f)));
+    const float sigmoid_at_emergence = 1.f / (1.f + expf(4.f));
+    return std::clamp((sigmoid - sigmoid_at_emergence) / (1.f - sigmoid_at_emergence), 0.f, 1.f);
+}
+
+//! Factor by which a leaf blade's compliance has grown through ageing
+/**
+ * \param[in] age Age of the phytomer in days.
+ * \param[in] aging_days Timescale of the softening in days; must be positive.
+ * \param[in] aging_max Largest multiple of the base compliance that ageing can reach. Values below one are treated as one.
+ * \return Multiplier on the base compliance, exactly one at emergence and rising sigmoidally to aging_max.
+ */
+static float flexibilityAgingMultiplier(float age, float aging_days, float aging_max) {
+    const float aging_ceiling = std::max(1.f, aging_max);
+    return 1.f + (aging_ceiling - 1.f) * flexibilityAgingProgress(age, aging_days);
+}
+
 void Phytomer::deformLeafUnderSelfWeight(uint petiole_index, uint leaf_index) {
 
     if (leaf_flexibility <= 0.f) {
@@ -3587,16 +4042,7 @@ void Phytomer::deformLeafUnderSelfWeight(uint petiole_index, uint leaf_index) {
     float flexibility = leaf_flexibility;
     const float aging_doubling_days = phytomer_parameters.leaf.prototype.flexibility_aging.val();
     if (aging_doubling_days > 0.f) {
-        const float aging_ceiling = std::max(1.f, phytomer_parameters.leaf.prototype.flexibility_aging_max.val());
-        // Sigmoidal rather than exponential: a blade holds its shape while its tissue is still maturing, then softens over a relatively short window once maturation completes, and stops changing again.
-        // A plain exponential instead starts softening the moment the leaf appears, so it drooped the still-erect leaves of the middle canopy long before their turn.
-        // Normalised so the multiplier is exactly 1 on a leaf that has just appeared, rather than starting part-way up the curve: a newly emerged blade must be as stiff as the species' base flexibility says,
-        // or the ageing term silently changes the behaviour of every leaf including the youngest.
-        const float t = age / aging_doubling_days;
-        const float sigmoid = 1.f / (1.f + expf(-2.f * (t - 2.f)));
-        const float sigmoid_at_emergence = 1.f / (1.f + expf(4.f));
-        const float progress = std::clamp((sigmoid - sigmoid_at_emergence) / (1.f - sigmoid_at_emergence), 0.f, 1.f);
-        flexibility *= 1.f + (aging_ceiling - 1.f) * progress;
+        flexibility *= flexibilityAgingMultiplier(age, aging_doubling_days, phytomer_parameters.leaf.prototype.flexibility_aging_max.val());
     }
 
     if (petiole_index >= leaf_prototype_index.size() || leaf_index >= leaf_prototype_index.at(petiole_index).size()) {
@@ -3607,8 +4053,9 @@ void Phytomer::deformLeafUnderSelfWeight(uint petiole_index, uint leaf_index) {
         return;
     }
 
-    const uint prototype_identifier = phytomer_parameters.leaf.prototype.unique_prototype_identifier;
-    auto rest_cache = plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.find(prototype_identifier);
+    // The rest shapes are cached per leaflet count alongside the blades themselves, so the lookup is keyed on the number of leaflets this petiole carries.
+    const PlantArchitecture::LeafPrototypeCacheKey rest_cache_key(phytomer_parameters.leaf.prototype.unique_prototype_identifier, uint(leaf_prototype_index.at(petiole_index).size()));
+    auto rest_cache = plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.find(rest_cache_key);
     if (rest_cache == plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.end() || rest_cache->second.size() <= uint(prototype) || rest_cache->second.at(prototype).size() <= leaf_index) {
         return;
     }
@@ -3668,6 +4115,215 @@ void Phytomer::deformLeafUnderSelfWeight(uint petiole_index, uint leaf_index) {
     last_scale = deflection_state;
 }
 
+//! Cumulative arclength at each node of a polyline
+static std::vector<float> polylineNodeArclengths(const std::vector<vec3> &polyline) {
+    std::vector<float> arclength(polyline.size(), 0.f);
+    for (size_t node = 1; node < polyline.size(); node++) {
+        arclength.at(node) = arclength.at(node - 1) + (polyline.at(node) - polyline.at(node - 1)).magnitude();
+    }
+    return arclength;
+}
+
+//! Index of the segment of a polyline containing a given arclength, for a polyline of at least two nodes
+static size_t polylineSegmentAtArclength(const std::vector<float> &node_arclength, float arclength) {
+    size_t segment = 0;
+    while (segment + 2 < node_arclength.size() && arclength > node_arclength.at(segment + 1)) {
+        segment++;
+    }
+    return segment;
+}
+
+//! Point at a given arclength along a polyline, for a polyline of at least two nodes
+static vec3 polylinePointAtArclength(const std::vector<vec3> &polyline, const std::vector<float> &node_arclength, float arclength) {
+    const size_t segment = polylineSegmentAtArclength(node_arclength, arclength);
+    const float segment_length = node_arclength.at(segment + 1) - node_arclength.at(segment);
+    const float t = segment_length > 0.f ? std::clamp((arclength - node_arclength.at(segment)) / segment_length, 0.f, 1.f) : 0.f;
+    return polyline.at(segment) + t * (polyline.at(segment + 1) - polyline.at(segment));
+}
+
+//! Unit tangent at a given arclength along a polyline, blended linearly between the tangents at its nodes so that it turns continuously along the curve rather than jumping at each node
+static vec3 polylineTangentAtArclength(const std::vector<vec3> &polyline, const std::vector<float> &node_arclength, float arclength) {
+    const size_t segment = polylineSegmentAtArclength(node_arclength, arclength);
+    auto segmentDirection = [&polyline](size_t s) { return normalize(polyline.at(s + 1) - polyline.at(s)); };
+    auto nodeTangent = [&](size_t node) {
+        if (node == 0) {
+            return segmentDirection(0);
+        } else if (node + 1 == polyline.size()) {
+            return segmentDirection(node - 1);
+        }
+        const vec3 sum = segmentDirection(node - 1) + segmentDirection(node);
+        return sum.magnitude() > 1e-6f ? normalize(sum) : segmentDirection(node);
+    };
+    const float segment_length = node_arclength.at(segment + 1) - node_arclength.at(segment);
+    const float t = segment_length > 0.f ? std::clamp((arclength - node_arclength.at(segment)) / segment_length, 0.f, 1.f) : 0.f;
+    const vec3 blended = (1.f - t) * nodeTangent(segment) + t * nodeTangent(segment + 1);
+    return blended.magnitude() > 1e-6f ? normalize(blended) : segmentDirection(segment);
+}
+
+//! Arclength along a polyline of the point on it closest to a given point, for a polyline of at least two nodes
+static float polylineArclengthOfClosestPoint(const std::vector<vec3> &polyline, const std::vector<float> &node_arclength, const vec3 &point) {
+    float nearest_distance = std::numeric_limits<float>::max();
+    float nearest_arclength = 0.f;
+    for (size_t segment = 0; segment + 1 < polyline.size(); segment++) {
+        const vec3 span = polyline.at(segment + 1) - polyline.at(segment);
+        const float span_squared = span * span;
+        const float t = span_squared > 0.f ? std::clamp(((point - polyline.at(segment)) * span) / span_squared, 0.f, 1.f) : 0.f;
+        const float distance = (point - (polyline.at(segment) + t * span)).magnitude();
+        if (distance < nearest_distance) {
+            nearest_distance = distance;
+            nearest_arclength = node_arclength.at(segment) + t * (node_arclength.at(segment + 1) - node_arclength.at(segment));
+        }
+    }
+    return nearest_arclength;
+}
+
+void Phytomer::recordPetioleRestShape(uint petiole_index) {
+    if (petiole_index >= petiole_vertices.size()) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::recordPetioleRestShape): Petiole index of " + std::to_string(petiole_index) + " was given, but this phytomer has " +
+                             std::to_string(petiole_vertices.size()) + " petioles.");
+    }
+    if (petiole_rest_offsets.size() < petiole_vertices.size()) {
+        petiole_rest_offsets.resize(petiole_vertices.size());
+    }
+    if (petiole_bend_state.size() < petiole_vertices.size()) {
+        petiole_bend_state.resize(petiole_vertices.size(), make_vec3(-1, 0, 0));
+    }
+    const std::vector<vec3> &nodes = petiole_vertices.at(petiole_index);
+    std::vector<vec3> &rest = petiole_rest_offsets.at(petiole_index);
+    rest.resize(nodes.size());
+    for (size_t node = 0; node < nodes.size(); node++) {
+        rest.at(node) = nodes.at(node) - nodes.front();
+    }
+    petiole_bend_state.at(petiole_index) = make_vec3(-1, 0, 0);
+}
+
+void Phytomer::bendPetioleUnderLeafWeight(uint petiole_index) {
+
+    if (petiole_flexibility <= 0.f) {
+        // The species' petioles are rigid. This is the common case and must cost nothing beyond the check.
+        return;
+    }
+    if (petiole_index >= petiole_vertices.size()) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::bendPetioleUnderLeafWeight): Petiole index of " + std::to_string(petiole_index) + " was given, but this phytomer has " +
+                             std::to_string(petiole_vertices.size()) + " petioles.");
+    }
+    if (petiole_index >= leaf_objIDs.size() || petiole_index >= petiole_radii.size() || petiole_index >= leaf_size_max.size()) {
+        // The leaves have been removed from this phytomer (see removeLeaf()), taking the petiole with them, so there is nothing to bend.
+        return;
+    }
+
+    // Measured geometry is never moved: neither a prescribed centerline nor a petiole whose leaves were placed from measurements, which would be pulled away from the positions they were given.
+    if (petiole_index < petiole_path_prescribed.size() && petiole_path_prescribed.at(petiole_index)) {
+        return;
+    }
+    if (petiole_index < leaf_pose_prescribed.size()) {
+        for (const bool prescribed: leaf_pose_prescribed.at(petiole_index)) {
+            if (prescribed) {
+                return;
+            }
+        }
+    }
+
+    std::vector<vec3> &nodes = petiole_vertices.at(petiole_index);
+    if (nodes.size() < 2) {
+        return;
+    }
+    if (petiole_index >= petiole_rest_offsets.size() || petiole_rest_offsets.at(petiole_index).size() != nodes.size() || petiole_index >= petiole_bend_state.size()) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::bendPetioleUnderLeafWeight): Petiole " + std::to_string(petiole_index) +
+                             " has no rest shape matching its centerline. Any code that replaces a petiole centerline must call Phytomer::recordPetioleRestShape() afterward.");
+    }
+    if (petiole_radii.at(petiole_index).size() != nodes.size()) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::bendPetioleUnderLeafWeight): Petiole " + std::to_string(petiole_index) + " has " + std::to_string(nodes.size()) + " centerline nodes but " +
+                             std::to_string(petiole_radii.at(petiole_index).size()) + " radii.");
+    }
+
+    // The compliance grows linearly with age and has no ceiling: a petiole goes on lowering after its leaf has stopped growing, and the bound comes from the geometry, since no segment can be turned past hanging
+    // straight down.
+    float compliance = petiole_flexibility;
+    const float aging_days = phytomer_parameters.petiole.flexibility_aging.val();
+    if (aging_days > 0.f) {
+        compliance *= 1.f + age / aging_days;
+    }
+    const float growth_fraction = petiole_index < current_leaf_scale_factor.size() ? std::clamp(current_leaf_scale_factor.at(petiole_index), 0.f, 1.f) : 1.f;
+
+    // Each leaflet weighs in proportion to its area, the square of its mature size, times how far the leaf has expanded. The reference that the dimensionless flexibility is measured against is the full-grown
+    // load, so a growing leaf bends its petiole progressively further. The petiole's own weight is not included: it has no density relative to the blades to be expressed in, and being spread along the
+    // petiole it loads it much as the leaflets along the rachis already do, so its effect is absorbed into the flexibility.
+    const std::vector<vec3> &leaf_base_positions = leaf_bases.at(petiole_index);
+    const size_t leaf_count = std::min(leaf_base_positions.size(), leaf_size_max.at(petiole_index).size());
+    float reference_load = 0.f;
+    for (size_t leaf = 0; leaf < leaf_count; leaf++) {
+        const float size = leaf_size_max.at(petiole_index).at(leaf);
+        reference_load += size * size;
+    }
+
+    // Skip the whole computation when nothing that sets the shape has changed. Anything that replaces or rescales the rest shape resets this state, and the leaflet count and reference load catch leaves being
+    // rebuilt or rescaled.
+    const vec3 bend_state = make_vec3(compliance * growth_fraction, reference_load, float(leaf_count));
+    if (petiole_bend_state.at(petiole_index) == bend_state) {
+        return;
+    }
+
+    const std::vector<float> previous_arclength = polylineNodeArclengths(nodes);
+    const float previous_length = previous_arclength.back();
+    if (previous_length <= 0.f) {
+        return;
+    }
+
+    std::vector<float> leaf_arclength_fraction(leaf_count);
+    std::vector<float> leaf_weight(leaf_count);
+    for (size_t leaf = 0; leaf < leaf_count; leaf++) {
+        leaf_arclength_fraction.at(leaf) = std::clamp(polylineArclengthOfClosestPoint(nodes, previous_arclength, leaf_base_positions.at(leaf)) / previous_length, 0.f, 1.f);
+        const float size = leaf_size_max.at(petiole_index).at(leaf);
+        leaf_weight.at(leaf) = size * size * growth_fraction;
+    }
+
+    const std::vector<vec3> bent_offsets = bendPetioleCenterline(petiole_rest_offsets.at(petiole_index), petiole_radii.at(petiole_index), leaf_arclength_fraction, leaf_weight, reference_load, compliance);
+
+    const vec3 base = nodes.front();
+    std::vector<vec3> bent_nodes(nodes.size());
+    float largest_displacement = 0.f;
+    for (size_t node = 0; node < nodes.size(); node++) {
+        bent_nodes.at(node) = base + bent_offsets.at(node);
+        largest_displacement = std::max(largest_displacement, (bent_nodes.at(node) - nodes.at(node)).magnitude());
+    }
+    petiole_bend_state.at(petiole_index) = bend_state;
+    if (largest_displacement < 1e-6f) {
+        // Below what single-precision positions resolve, so the geometry is left untouched. The shape stored is still the one the leaves were last carried along, so nothing is lost by skipping.
+        return;
+    }
+
+    const std::vector<float> bent_arclength = polylineNodeArclengths(bent_nodes);
+
+    // Every leaf stays attached at its arclength along the centerline and turns with the centerline there: the rotation carrying the old tangent at that point onto the new one is applied about the leaf's base,
+    // and the leaf is then moved to the new position of that point. Leaflets near the tip, where the centerline has turned furthest, tilt more than those near the base. Rotating and translating the object,
+    // rather than rebuilding it, carries the change into its transformation matrix, which is what deformLeafUnderSelfWeight() deflects the blade through.
+    for (size_t leaf = 0; leaf < leaf_count; leaf++) {
+        const float previous_leaf_arclength = leaf_arclength_fraction.at(leaf) * previous_length;
+        const float bent_leaf_arclength = leaf_arclength_fraction.at(leaf) * bent_arclength.back();
+        const vec3 previous_tangent = polylineTangentAtArclength(nodes, previous_arclength, previous_leaf_arclength);
+        const vec3 bent_tangent = polylineTangentAtArclength(bent_nodes, bent_arclength, bent_leaf_arclength);
+        const vec3 previous_base = leaf_base_positions.at(leaf);
+        const vec3 bent_base = polylinePointAtArclength(bent_nodes, bent_arclength, bent_leaf_arclength);
+
+        const uint objID_leaf = leaf < leaf_objIDs.at(petiole_index).size() ? leaf_objIDs.at(petiole_index).at(leaf) : 0;
+        if (leaf < leaf_objIDs.at(petiole_index).size() && context_ptr->doesObjectExist(objID_leaf)) {
+            const vec3 turn_axis = cross(previous_tangent, bent_tangent);
+            const float turn_angle = std::atan2(turn_axis.magnitude(), previous_tangent * bent_tangent);
+            if (turn_angle > 1e-7f && turn_axis.magnitude() > 0.f) {
+                context_ptr->rotateObject(objID_leaf, turn_angle, previous_base, normalize(turn_axis));
+            }
+            context_ptr->translateObject(objID_leaf, bent_base - previous_base);
+        }
+        leaf_bases.at(petiole_index).at(leaf) = bent_base;
+    }
+
+    nodes = bent_nodes;
+    if (petiole_index < petiole_objIDs.size() && context_ptr->doesObjectExist(petiole_objIDs.at(petiole_index))) {
+        context_ptr->setTubeNodes(petiole_objIDs.at(petiole_index), nodes);
+    }
+}
+
 void Phytomer::setLeafScaleFraction(float leaf_scale_factor_fraction) {
     for (uint petiole_index = 0; petiole_index < leaf_objIDs.size(); petiole_index++) {
         setLeafScaleFraction(petiole_index, leaf_scale_factor_fraction);
@@ -3722,8 +4378,9 @@ void Phytomer::setPetioleLeafGeometry(uint petiole_index, const std::vector<heli
         uint objID_leaf_new;
         const int prototype = leaf_prototype_index.at(petiole_index).at(leaf);
         if (prototype >= 0 && phytomer_parameters.leaf.prototype.unique_prototypes > 0) {
-            const uint uid = phytomer_parameters.leaf.prototype.unique_prototype_identifier;
-            objID_leaf_new = context_ptr->copyObject(plantarchitecture_ptr->unique_leaf_prototype_objIDs.at(uid).at(prototype).at(leaf));
+            // A leaf that still carries a prototype index was copied from the set cached for this petiole's own leaflet count: setPetioleLeafCount() clears the index of every leaf it rebuilds.
+            objID_leaf_new = context_ptr->copyObject(plantarchitecture_ptr->getCachedLeafPrototypeObjID(phytomer_parameters.leaf.prototype.unique_prototype_identifier, uint(leaves_per_petiole), uint(prototype),
+                                                                                                       uint(leaf), "PlantArchitecture::setPetioleLeafGeometry"));
         } else {
             objID_leaf_new = phytomer_parameters.leaf.prototype.prototype_function(context_ptr, &phytomer_parameters.leaf.prototype, int(ind_from_tip));
             // Built fresh rather than copied from the cache, so it carries none of the cache's labelling.
@@ -3755,6 +4412,10 @@ void Phytomer::setPetioleLeafGeometry(uint petiole_index, const std::vector<heli
         leaf_prototype_index.at(petiole_index).at(leaf) = -1;
         leaf_last_deformed_scale.at(petiole_index).at(leaf) = -1.f;
         leaf_pose_prescribed.at(petiole_index).at(leaf) = true;
+        // The leaf has been replaced, so anything it was being steered toward no longer applies to it.
+        if (petiole_index < leaf_angle_steering.size() && leaf < leaf_angle_steering.at(petiole_index).size()) {
+            leaf_angle_steering.at(petiole_index).at(leaf) = LeafAngleSteering();
+        }
     }
 }
 
@@ -3814,6 +4475,33 @@ void Phytomer::scaleLeafPrototypeScale(float scale_factor) {
     }
 }
 
+void Phytomer::scaleLeafSizeMax(const float scale_factor) {
+    if (scale_factor <= 0.f) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::scaleLeafSizeMax): Scale factor must be positive, but " + std::to_string(scale_factor) + " was given.");
+    }
+
+    for (uint petiole_index = 0; petiole_index < leaf_size_max.size(); petiole_index++) {
+        for (float &size: leaf_size_max.at(petiole_index)) {
+            size *= scale_factor;
+        }
+
+        // The expanded fraction moves the other way so that the blade's present size is unchanged; only the size it is
+        // growing toward moves. Mirrors scaleInternodeMaxLength() and scalePetioleMaxLength().
+        if (petiole_index < current_leaf_scale_factor.size()) {
+            current_leaf_scale_factor.at(petiole_index) = current_leaf_scale_factor.at(petiole_index) / scale_factor;
+
+            // Lowering the target below the size the leaf already has would leave it more than fully expanded, which
+            // no growth step can undo. The leaf is taken down to the new target instead, as the internode and petiole
+            // are: the blade does move here, and only here. The fraction left above is exactly what makes that call
+            // scale the blade by the right amount. The petiole is passed its own current fraction rather than going
+            // through setLeafScaleFraction(), which would carry it to full length alongside the leaf.
+            if (current_leaf_scale_factor.at(petiole_index) >= 1.f) {
+                setPetioleAndLeafScaleFraction(petiole_index, current_petiole_scale_factor.at(petiole_index), 1.f);
+            }
+        }
+    }
+}
+
 void Phytomer::scalePetioleGeometry(uint petiole_index, float target_length, float target_base_radius) {
     if (petiole_index >= petiole_length.size()) {
         helios_runtime_error("ERROR (PlantArchitecture::Phytomer::scalePetioleGeometry): Invalid petiole index " + std::to_string(petiole_index) + ".");
@@ -3826,9 +4514,22 @@ void Phytomer::scalePetioleGeometry(uint petiole_index, float target_length, flo
     float current_length = petiole_length.at(petiole_index);
     float current_base_radius = petiole_radii.at(petiole_index).at(0);
 
+    // The caller is setting the petiole's length *now*, not the length it is growing toward, so the fully-elongated
+    // length moves with it and the fraction the petiole has elongated to is left where it was. Leaving petiole_length_max
+    // behind would have PlantArchitecture::advanceTime() measure the next growth step against the length the petiole had
+    // before it was rescaled.
+    auto rescaleFullyElongatedLength = [this, petiole_index](float new_length) {
+        if (petiole_index >= petiole_length_max.size() || petiole_index >= current_petiole_scale_factor.size()) {
+            return;
+        }
+        const float fraction = current_petiole_scale_factor.at(petiole_index);
+        petiole_length_max.at(petiole_index) = (fraction > 0.f) ? new_length / fraction : new_length;
+    };
+
     if (current_length <= 0.f || current_base_radius <= 0.f) {
         // Petiole wasn't properly initialized, just update the stored values
         petiole_length.at(petiole_index) = target_length;
+        rescaleFullyElongatedLength(target_length);
         if (!petiole_radii.at(petiole_index).empty()) {
             petiole_radii.at(petiole_index).at(0) = target_base_radius;
         }
@@ -3846,6 +4547,15 @@ void Phytomer::scalePetioleGeometry(uint petiole_index, float target_length, flo
         vec3 offset = petiole_vertices.at(petiole_index).at(j) - petiole_base;
         petiole_vertices.at(petiole_index).at(j) = petiole_base + offset * length_scale;
     }
+    // The rest shape the petiole bends from scales with it, and the bend has to be recomputed for the new length and radii.
+    if (petiole_index < petiole_rest_offsets.size()) {
+        for (vec3 &offset: petiole_rest_offsets.at(petiole_index)) {
+            offset = offset * length_scale;
+        }
+    }
+    if (petiole_index < petiole_bend_state.size()) {
+        petiole_bend_state.at(petiole_index) = make_vec3(-1, 0, 0);
+    }
 
     // Update stored radii: scale by radius factor
     for (size_t j = 0; j < petiole_radii.at(petiole_index).size(); j++) {
@@ -3854,6 +4564,7 @@ void Phytomer::scalePetioleGeometry(uint petiole_index, float target_length, flo
 
     // Update scalar length
     petiole_length.at(petiole_index) = target_length;
+    rescaleFullyElongatedLength(target_length);
 
     // Update the Context geometry in place if it exists. The tube keeps its object ID, its
     // primitive data and its material, so none of those need to be reapplied.
@@ -3927,6 +4638,7 @@ void Phytomer::setPetioleLeafCount(uint petiole_index, uint leaf_count) {
     leaf_rotation.at(petiole_index).assign(leaf_count, make_AxisRotation(0, 0, 0));
     leaf_prototype_index.at(petiole_index).assign(leaf_count, -1);
     leaf_pose_prescribed.at(petiole_index).assign(leaf_count, false);
+    leaf_angle_steering.at(petiole_index).assign(leaf_count, LeafAngleSteering());
     leaf_last_deformed_scale.at(petiole_index).assign(leaf_count, -1.f);
     // The phytomer's own copy of the parameters is what the rest of its code reads the count from.
     phytomer_parameters.leaf.leaves_per_petiole = int(leaf_count);
@@ -3945,8 +4657,8 @@ void Phytomer::setPetioleLeafCount(uint petiole_index, uint leaf_count) {
         renameAutoMaterial(context_ptr, objID_leaf, material_base_name);
 
         float size = phytomer_parameters.leaf.prototype_scale.val();
-        if (leaf_count > 1 && phytomer_parameters.leaf.leaflet_scale.val() != 1.f && ind_from_tip != 0.f) {
-            size = powf(phytomer_parameters.leaf.leaflet_scale.val(), fabs(ind_from_tip)) * phytomer_parameters.leaf.prototype_scale.val();
+        if (leaf_count > 1) {
+            size = leafletSizeMax(ind_from_tip, phytomer_parameters.leaf.leaflet_scale.val(), phytomer_parameters.leaf.intercalary_leaflet_scale.val(), phytomer_parameters.leaf.prototype_scale.val());
         }
         leaf_size_max.at(petiole_index).at(leaf) = size;
         context_ptr->scaleObject(objID_leaf, size * make_vec3(1, 1, 1));
@@ -3975,6 +4687,16 @@ void Phytomer::setPetioleLeafCount(uint petiole_index, uint leaf_count) {
 void Phytomer::lockPetioleScale(uint petiole_index) {
     if (current_leaf_scale_factor.size() <= petiole_index) {
         helios_runtime_error("ERROR (PlantArchitecture::Phytomer::lockPetioleScale): Invalid petiole index " + std::to_string(petiole_index) + ".");
+    }
+
+    // The petiole's own elongation fraction is pinned the same way the leaf's is below: its present length becomes the length it counts as fully elongated at, so the geometry does not move and
+    // PlantArchitecture::advanceTime() has nothing left to elongate. Both fractions have to be pinned -- either one still below 1 leaves the measured geometry being rescaled on every timestep. The length is
+    // adopted even when the fraction is already 1, because setPetioleNodePositions() replaces the length outright with the arclength it measured, which is not the length the petiole was built toward.
+    if (petiole_index < current_petiole_scale_factor.size()) {
+        if (petiole_index < petiole_length_max.size() && petiole_index < petiole_length.size()) {
+            petiole_length_max.at(petiole_index) = petiole_length.at(petiole_index);
+        }
+        current_petiole_scale_factor.at(petiole_index) = 1.f;
     }
 
     const float old_scale_factor = current_leaf_scale_factor.at(petiole_index);
@@ -4044,6 +4766,8 @@ void Phytomer::setPetioleNodePositions(uint petiole_index, const std::vector<hel
 
     petiole_vertices.at(petiole_index) = seated_positions;
     petiole_radii.at(petiole_index) = petiole_node_radii;
+    // The measured path replaces any bend the generated petiole had accrued, and is exempt from bending from here on.
+    recordPetioleRestShape(petiole_index);
 
     float total_length = 0.f;
     for (size_t node = 0; node + 1 < seated_positions.size(); node++) {
@@ -4103,6 +4827,7 @@ void Phytomer::removeLeaf() {
     //    this->petiole_vertices.resize(0);
     this->petiole_colors.resize(0);
     this->petiole_length.resize(0);
+    this->petiole_length_max.resize(0);
     this->leaf_size_max.resize(0);
     this->leaf_rotation.resize(0);
     this->leaf_bases.resize(0);
@@ -4113,6 +4838,7 @@ void Phytomer::removeLeaf() {
     // These are indexed in lockstep with leaf_objIDs, so they have to be cleared with it or a later leaf would be deflected against a stale prototype.
     leaf_prototype_index.clear();
     leaf_pose_prescribed.clear();
+    leaf_angle_steering.clear();
     leaf_last_deformed_scale.clear();
     petiole_path_prescribed.clear();
 
@@ -4242,6 +4968,11 @@ Shoot::Shoot(uint plant_ID, int shoot_ID, int parent_shoot_ID, uint parent_node,
     context_ptr = plant_architecture_ptr->context_ptr;
     phyllochron_instantaneous = shoot_parameters.phyllochron_min.val();
     elongation_rate_instantaneous = shoot_parameters.elongation_rate_max.val();
+    // A shoot type that does not specify a leaf expansion rate leaves it negative, meaning its leaves expand at the
+    // rate its internodes elongate. Resolved here, once per shoot, so that the leaf rate is a per-shoot quantity in
+    // the same way the elongation rate is, and so that a distributed leaf rate is drawn once rather than per timestep.
+    const float leaf_expansion_rate_sampled = shoot_parameters.leaf_expansion_rate_max.val();
+    leaf_expansion_rate_instantaneous = (leaf_expansion_rate_sampled < 0.f) ? elongation_rate_instantaneous : leaf_expansion_rate_sampled;
 
     if (parent_shoot_ID >= 0) {
         plant_architecture_ptr->plant_instances.at(plantID).shoot_tree.at(parent_shoot_ID)->childIDs[(int) parent_node_index].push_back(shoot_ID);
@@ -5079,6 +5810,490 @@ void PlantArchitecture::setPlantLeafAngleDistribution(uint plantID, float Beta_m
     setPlantLeafAngleDistribution_private({plantID}, Beta_mu_inclination, Beta_nu_inclination, eccentricity, ellipse_rotation_degrees, true, true);
 }
 
+// Angle bins the tracker sorts leaves into. Inclination is folded into [0,pi/2] and azimuth spans the full
+// circle, so these divide each into bands of five and fifteen degrees respectively.
+static constexpr int leaf_angle_inclination_bin_count = 18;
+static constexpr int leaf_angle_azimuth_bin_count = 24;
+
+void PlantArchitecture::enablePlantLeafAngleDistributionTracking(uint plantID, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity, float ellipse_rotation_degrees, float lambda_degrees) {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::enablePlantLeafAngleDistributionTracking): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    enablePlantLeafAngleDistributionTracking_private(plantID, Beta_mu_inclination, Beta_nu_inclination, eccentricity, ellipse_rotation_degrees, lambda_degrees, true, true);
+}
+
+void PlantArchitecture::enablePlantLeafAngleDistributionTracking(const std::vector<uint> &plantIDs, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity, float ellipse_rotation_degrees, float lambda_degrees) {
+    for (const uint plantID: plantIDs) {
+        enablePlantLeafAngleDistributionTracking(plantID, Beta_mu_inclination, Beta_nu_inclination, eccentricity, ellipse_rotation_degrees, lambda_degrees);
+    }
+}
+
+void PlantArchitecture::enablePlantLeafElevationAngleDistributionTracking(uint plantID, float Beta_mu_inclination, float Beta_nu_inclination, float lambda_degrees) {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::enablePlantLeafElevationAngleDistributionTracking): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    enablePlantLeafAngleDistributionTracking_private(plantID, Beta_mu_inclination, Beta_nu_inclination, 0.f, 0.f, lambda_degrees, true, false);
+}
+
+void PlantArchitecture::enablePlantLeafAzimuthAngleDistributionTracking(uint plantID, float eccentricity, float ellipse_rotation_degrees, float lambda_degrees) {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::enablePlantLeafAzimuthAngleDistributionTracking): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    enablePlantLeafAngleDistributionTracking_private(plantID, 1.f, 1.f, eccentricity, ellipse_rotation_degrees, lambda_degrees, false, true);
+}
+
+void PlantArchitecture::enablePlantLeafAngleDistributionTracking_private(uint plantID, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity, float ellipse_rotation_degrees, float lambda_degrees, bool track_elevation,
+                                                                         bool track_azimuth) {
+    if (track_elevation && (Beta_mu_inclination <= 0.f || Beta_nu_inclination <= 0.f)) {
+        helios_runtime_error("ERROR (PlantArchitecture::enablePlantLeafAngleDistributionTracking): Beta distribution parameters must be positive.");
+    }
+    if (track_azimuth && (eccentricity < 0.f || eccentricity > 1.f)) {
+        helios_runtime_error("ERROR (PlantArchitecture::enablePlantLeafAngleDistributionTracking): Eccentricity must be in [0,1].");
+    }
+    if (lambda_degrees < 0.f) {
+        helios_runtime_error("ERROR (PlantArchitecture::enablePlantLeafAngleDistributionTracking): lambda must not be negative. Zero leaves the plant's own leaf angles unchanged; larger values pull the population onto the target.");
+    }
+
+    PlantInstance &plant_instance = plant_instances.at(plantID);
+    PlantInstance::LeafAngleDistributionTracker &tracker = plant_instance.leaf_angle_tracker;
+
+    tracker.track_elevation = track_elevation;
+    tracker.track_azimuth = track_azimuth;
+    tracker.Beta_mu_inclination = Beta_mu_inclination;
+    tracker.Beta_nu_inclination = Beta_nu_inclination;
+    tracker.eccentricity_azimuth = eccentricity;
+    tracker.ellipse_rotation_azimuth_degrees = ellipse_rotation_degrees;
+    tracker.lambda = deg2rad(lambda_degrees);
+
+    // Seeded from the plant's own identity and the requested distribution, and deliberately NOT by drawing
+    // from the Context generator. Steering runs inside advanceTime(), so any draw it takes -- including a
+    // single one taken here to seed itself -- shifts the stream the plant's own random parameters come from,
+    // and the plant grows into a different plant than it would have. That defeats the whole point: with
+    // lambda at zero, switching tracking on has to leave the plant exactly as it was, and it cannot do that
+    // if enabling it has already moved the random stream along.
+    const uint tracker_seed = plantID * 2654435761u + uint(std::llround(1000.0 * double(Beta_mu_inclination))) * 40503u + uint(std::llround(1000.0 * double(Beta_nu_inclination))) * 2246822519u +
+                              uint(std::llround(1000.0 * double(eccentricity))) * 3266489917u + uint(std::llround(1000.0 * double(ellipse_rotation_degrees))) * 668265263u;
+    tracker.generator.seed(tracker_seed);
+
+    // Share of the leaf area the target puts in each bin, from the analytic CDFs. Held as fractions so the
+    // comparison against what the plant actually has is scale-free and works from the first leaf onward.
+    const int bin_count = (track_elevation ? leaf_angle_inclination_bin_count : 1) * (track_azimuth ? leaf_angle_azimuth_bin_count : 1);
+    tracker.bin_target_fraction.assign(bin_count, 0.f);
+    tracker.bin_weight.assign(bin_count, 0.f);
+
+    for (int bin = 0; bin < bin_count; bin++) {
+        const int inclination_bin = track_elevation ? (track_azimuth ? bin / leaf_angle_azimuth_bin_count : bin) : 0;
+        const int azimuth_bin = track_azimuth ? (track_elevation ? bin % leaf_angle_azimuth_bin_count : bin) : 0;
+
+        float fraction = 1.f;
+        if (track_elevation) {
+            const float lower = 0.5f * PI_F * float(inclination_bin) / float(leaf_angle_inclination_bin_count);
+            const float upper = 0.5f * PI_F * float(inclination_bin + 1) / float(leaf_angle_inclination_bin_count);
+            fraction *= std::max(0.f, evaluate_Beta_distribution_CDF(upper, Beta_mu_inclination, Beta_nu_inclination) - evaluate_Beta_distribution_CDF(lower, Beta_mu_inclination, Beta_nu_inclination));
+        }
+        if (track_azimuth) {
+            // Share of the distribution falling in this azimuth bin, measured from the ellipse's own rotation
+            // so that the bins line up with the distribution rather than with the world axes. This used to be
+            // a flat 1/Nbins, which silently made every azimuth target uniform and discarded the requested
+            // eccentricity altogether.
+            const float lower = 2.f * PI_F * float(azimuth_bin) / float(leaf_angle_azimuth_bin_count);
+            const float upper = 2.f * PI_F * float(azimuth_bin + 1) / float(leaf_angle_azimuth_bin_count);
+            const float ellipse_rotation = deg2rad(ellipse_rotation_degrees);
+            const float upper_cdf = (azimuth_bin + 1 == leaf_angle_azimuth_bin_count) ? 1.f : evaluate_ellipsoidal_azimuth_CDF(ellipse_rotation + upper, eccentricity, ellipse_rotation_degrees);
+            fraction *= std::max(0.f, upper_cdf - evaluate_ellipsoidal_azimuth_CDF(ellipse_rotation + lower, eccentricity, ellipse_rotation_degrees));
+        }
+        tracker.bin_target_fraction.at(bin) = fraction;
+    }
+
+    // Normalize, so that rounding in the CDF cannot leave the target fractions summing to something other
+    // than one and quietly bias every shortfall in the same direction.
+    float fraction_total = 0.f;
+    for (const float fraction: tracker.bin_target_fraction) {
+        fraction_total += fraction;
+    }
+    if (fraction_total <= 0.f) {
+        helios_runtime_error("ERROR (PlantArchitecture::enablePlantLeafAngleDistributionTracking): The requested distribution puts no leaf area in any angle bin. Check the Beta parameters.");
+    }
+    for (float &fraction: tracker.bin_target_fraction) {
+        fraction /= fraction_total;
+    }
+
+    tracker.pending_cohort.clear();
+    plant_instance.leaf_angle_tracking_enabled = true;
+}
+
+// As leafBladeNormal(), but reusing a remembered list of the leaf's blade primitives.
+//
+// The uncached form filters the object's primitives by their "object_label" on every call, which is a string
+// comparison per primitive; the tracker calls it for every leaf on the plant on every growth sub-step, so on
+// a canopy that is hundreds of thousands of string comparisons per sub-step and it dominated the cost of
+// tracking. Blade membership only changes when a leaf's geometry is rebuilt, so the list is remembered and
+// re-derived only when the primitive count no longer matches -- which is what a rebuilt, pruned or replaced
+// leaf looks like from here.
+static bool leafBladeNormalCached(const helios::Context *context_ptr, uint objID_leaf, std::map<uint, std::pair<size_t, std::vector<uint>>> &cache, vec3 &normal, float &area) {
+    if (!context_ptr->doesObjectExist(objID_leaf)) {
+        cache.erase(objID_leaf);
+        return false;
+    }
+
+    const std::vector<uint> object_UUIDs = context_ptr->getObjectPrimitiveUUIDs(objID_leaf);
+
+    auto entry = cache.find(objID_leaf);
+    if (entry == cache.end() || entry->second.first != object_UUIDs.size()) {
+        std::vector<uint> blade_UUIDs = context_ptr->filterPrimitivesByData(object_UUIDs, "object_label", "leaf");
+        if (blade_UUIDs.empty()) {
+            blade_UUIDs = object_UUIDs;
+        }
+        entry = cache.insert_or_assign(objID_leaf, std::make_pair(object_UUIDs.size(), std::move(blade_UUIDs))).first;
+    }
+
+    normal = make_vec3(0, 0, 0);
+    area = 0;
+    for (const uint UUID: entry->second.second) {
+        const float primitive_area = context_ptr->getPrimitiveArea(UUID);
+        if (!std::isfinite(primitive_area)) {
+            continue;
+        }
+        normal = normal + primitive_area * context_ptr->getPrimitiveNormal(UUID);
+        area += primitive_area;
+    }
+
+    if (area <= 0.f || normal.magnitude() < 1e-4f * area) {
+        return false;
+    }
+    normal = normal.normalize();
+    return true;
+}
+
+// Which angle bin a blade normal falls in, for the bins the given tracker was set up with.
+static int leafAngleBinIndex(const PlantInstance::LeafAngleDistributionTracker &tracker, float inclination, float azimuth) {
+    int inclination_bin = 0;
+    if (tracker.track_elevation) {
+        inclination_bin = int(float(leaf_angle_inclination_bin_count) * inclination / (0.5f * PI_F));
+        inclination_bin = std::clamp(inclination_bin, 0, leaf_angle_inclination_bin_count - 1);
+    }
+
+    int azimuth_bin = 0;
+    if (tracker.track_azimuth) {
+        float offset = azimuth - deg2rad(tracker.ellipse_rotation_azimuth_degrees);
+        offset = std::fmod(offset, 2.f * PI_F);
+        if (offset < 0.f) {
+            offset += 2.f * PI_F;
+        }
+        azimuth_bin = int(float(leaf_angle_azimuth_bin_count) * offset / (2.f * PI_F));
+        azimuth_bin = std::clamp(azimuth_bin, 0, leaf_angle_azimuth_bin_count - 1);
+    }
+
+    if (tracker.track_elevation && tracker.track_azimuth) {
+        return inclination_bin * leaf_angle_azimuth_bin_count + azimuth_bin;
+    }
+    return tracker.track_elevation ? inclination_bin : azimuth_bin;
+}
+
+// A representative direction for a bin: its centre in whichever angles are being tracked, and the leaf's own
+// angle in whichever are not, so that an untracked angle is left exactly as the model set it.
+static vec3 leafAngleBinDirection(const PlantInstance::LeafAngleDistributionTracker &tracker, int bin, float leaf_inclination, float leaf_azimuth) {
+    float inclination = leaf_inclination;
+    float azimuth = leaf_azimuth;
+
+    if (tracker.track_elevation) {
+        const int inclination_bin = tracker.track_azimuth ? bin / leaf_angle_azimuth_bin_count : bin;
+        inclination = 0.5f * PI_F * (float(inclination_bin) + 0.5f) / float(leaf_angle_inclination_bin_count);
+    }
+    if (tracker.track_azimuth) {
+        const int azimuth_bin = tracker.track_elevation ? bin % leaf_angle_azimuth_bin_count : bin;
+        azimuth = deg2rad(tracker.ellipse_rotation_azimuth_degrees) + 2.f * PI_F * (float(azimuth_bin) + 0.5f) / float(leaf_angle_azimuth_bin_count);
+    }
+
+    return sphere2cart(SphericalCoord(1.f, 0.5f * PI_F - inclination, azimuth));
+}
+
+// Choose the angle bin a leaf should be aimed at, and a target direction inside it.
+//
+// The choice trades staying near the orientation the model gave the leaf against filling whichever bins the
+// population is short of, and it is deliberately re-made on every growth step for as long as the leaf is
+// still expanding. Assigning a target once, when the leaf emerges, ties it to the deficits of the moment the
+// plant was at its smallest and its statistics least reliable, and nothing afterward can revise it; the
+// errors of those early assignments then accumulate over the plant's whole life, and the harder lambda
+// weights the deficit the further the population ends up from the target. Re-choosing closes the loop.
+//
+// Returns false when there is nothing to aim at.
+static bool chooseLeafAngleTarget(PlantInstance::LeafAngleDistributionTracker &tracker, float inclination, float azimuth, float total_weight, vec3 &target_normal) {
+    if (tracker.lambda <= 0.f || tracker.bin_target_fraction.empty()) {
+        return false;
+    }
+
+    const vec3 proposed_normal = sphere2cart(SphericalCoord(1.f, 0.5f * PI_F - inclination, azimuth));
+
+    int best_bin = -1;
+    float best_cost = 0.f;
+    for (size_t bin = 0; bin < tracker.bin_target_fraction.size(); bin++) {
+        const float target_weight = tracker.bin_target_fraction.at(bin) * std::max(total_weight, 1e-9f);
+        // Shortfall as a fraction of what this bin is owed, clamped so that a wildly overfull or empty bin
+        // cannot dominate the whole cost.
+        const float shortfall = std::clamp((target_weight - tracker.bin_weight.at(bin)) / std::max(target_weight, 1e-9f), -1.f, 1.f);
+
+        const vec3 bin_direction = leafAngleBinDirection(tracker, int(bin), inclination, azimuth);
+        const float angular_distance = acos_safe(std::clamp(proposed_normal * bin_direction, -1.f, 1.f));
+
+        // Angular distance spans [0,pi] and the shortfall is clamped to [-1,1], so lambda is measured on the
+        // same scale as the distance it is trading against.
+        const float cost = angular_distance - tracker.lambda * shortfall;
+        if (best_bin < 0 || cost < best_cost) {
+            best_cost = cost;
+            best_bin = int(bin);
+        }
+    }
+    if (best_bin < 0) {
+        return false;
+    }
+
+    // Somewhere inside the chosen bin rather than at its centre, so that the leaves filling one bin do not
+    // all end up at exactly the same angle.
+    std::uniform_real_distribution<float> within_bin(0.f, 1.f);
+    float target_inclination = inclination;
+    float target_azimuth = azimuth;
+    if (tracker.track_elevation) {
+        const int inclination_bin = tracker.track_azimuth ? best_bin / leaf_angle_azimuth_bin_count : best_bin;
+        const float lower = 0.5f * PI_F * float(inclination_bin) / float(leaf_angle_inclination_bin_count);
+        const float upper = 0.5f * PI_F * float(inclination_bin + 1) / float(leaf_angle_inclination_bin_count);
+        target_inclination = lower + within_bin(tracker.generator) * (upper - lower);
+    }
+    if (tracker.track_azimuth) {
+        // Drawn from the distribution restricted to the chosen bin, by inverting its CDF between the bin's
+        // two boundaries, so that an eccentric distribution is reproduced within a bin as well as across
+        // bins. Drawing uniformly here would leave the azimuths flat inside every bin.
+        const int azimuth_bin = tracker.track_elevation ? best_bin % leaf_angle_azimuth_bin_count : best_bin;
+        const float ellipse_rotation = deg2rad(tracker.ellipse_rotation_azimuth_degrees);
+        const float lower = 2.f * PI_F * float(azimuth_bin) / float(leaf_angle_azimuth_bin_count);
+        const float upper = 2.f * PI_F * float(azimuth_bin + 1) / float(leaf_angle_azimuth_bin_count);
+        const float lower_cdf = evaluate_ellipsoidal_azimuth_CDF(ellipse_rotation + lower, tracker.eccentricity_azimuth, tracker.ellipse_rotation_azimuth_degrees);
+        const float upper_cdf = (azimuth_bin + 1 == leaf_angle_azimuth_bin_count) ? 1.f : evaluate_ellipsoidal_azimuth_CDF(ellipse_rotation + upper, tracker.eccentricity_azimuth, tracker.ellipse_rotation_azimuth_degrees);
+        if (upper_cdf > lower_cdf) {
+            target_azimuth = invert_ellipsoidal_azimuth_CDF(lower_cdf + within_bin(tracker.generator) * (upper_cdf - lower_cdf), tracker.eccentricity_azimuth, tracker.ellipse_rotation_azimuth_degrees);
+        } else {
+            target_azimuth = ellipse_rotation + lower + within_bin(tracker.generator) * (upper - lower);
+        }
+    }
+
+    target_normal = sphere2cart(SphericalCoord(1.f, 0.5f * PI_F - target_inclination, target_azimuth));
+    return true;
+}
+
+void PlantArchitecture::updatePlantLeafAngleDistributionTracking(uint plantID) {
+    PlantInstance &plant_instance = plant_instances.at(plantID);
+    if (!plant_instance.leaf_angle_tracking_enabled) {
+        return;
+    }
+    PlantInstance::LeafAngleDistributionTracker &tracker = plant_instance.leaf_angle_tracker;
+
+    // Reads a leaf's blade direction as an inclination folded into [0,pi/2] and an azimuth, or reports that
+    // the blade faces no single direction.
+    auto leafAngles = [&](uint objID, float &inclination, float &azimuth, float &area) {
+        vec3 normal;
+        if (!leafBladeNormalCached(context_ptr, objID, tracker.blade_primitive_cache, normal, area)) {
+            return false;
+        }
+        normal.z = std::fabs(normal.z);
+        const SphericalCoord spherical = cart2sphere(normal);
+        inclination = spherical.zenith;
+        azimuth = spherical.azimuth;
+        return true;
+    };
+
+    // ---- what the plant has now ----
+    // Rebuilt every sub-step rather than carried forward, so that leaves lost to senescence, pruning or
+    // harvest stop counting toward the distribution the moment they go, and so that a leaf still growing into
+    // its target is counted where it currently is rather than where it is headed.
+    std::fill(tracker.bin_weight.begin(), tracker.bin_weight.end(), 0.f);
+    float total_weight = 0.f;
+
+    for (const auto &shoot: plant_instance.shoot_tree) {
+        for (const auto &phytomer: shoot->phytomers) {
+            for (uint petiole_index = 0; petiole_index < phytomer->leaf_objIDs.size(); petiole_index++) {
+                for (uint leaf_index = 0; leaf_index < phytomer->leaf_objIDs.at(petiole_index).size(); leaf_index++) {
+                    float inclination = 0;
+                    float azimuth = 0;
+                    float area = 0;
+                    if (!leafAngles(phytomer->leaf_objIDs.at(petiole_index).at(leaf_index), inclination, azimuth, area)) {
+                        continue;
+                    }
+                    tracker.bin_weight.at(leafAngleBinIndex(tracker, inclination, azimuth)) += area;
+                    total_weight += area;
+                }
+            }
+        }
+    }
+
+    // ---- give this sub-step's new leaves a target ----
+    for (const std::pair<int, uint> &cohort_entry: tracker.pending_cohort) {
+        const int shootID = cohort_entry.first;
+        const uint node_index = cohort_entry.second;
+        if (shootID < 0 || shootID >= int(plant_instance.shoot_tree.size())) {
+            continue;
+        }
+        const std::shared_ptr<Shoot> &shoot = plant_instance.shoot_tree.at(shootID);
+        if (node_index >= shoot->phytomers.size()) {
+            continue;
+        }
+        const std::shared_ptr<Phytomer> &phytomer = shoot->phytomers.at(node_index);
+        // A creation function may have stripped the leaves off this phytomer before it was ever visited.
+        if (!phytomer->hasLeaf()) {
+            continue;
+        }
+
+        for (uint petiole_index = 0; petiole_index < phytomer->leaf_objIDs.size(); petiole_index++) {
+            for (uint leaf_index = 0; leaf_index < phytomer->leaf_objIDs.at(petiole_index).size(); leaf_index++) {
+                if (petiole_index >= phytomer->leaf_angle_steering.size() || leaf_index >= phytomer->leaf_angle_steering.at(petiole_index).size()) {
+                    continue;
+                }
+                Phytomer::LeafAngleSteering &steering = phytomer->leaf_angle_steering.at(petiole_index).at(leaf_index);
+                if (steering.steered) {
+                    continue;
+                }
+
+                float inclination = 0;
+                float azimuth = 0;
+                float area = 0;
+                if (!leafAngles(phytomer->leaf_objIDs.at(petiole_index).at(leaf_index), inclination, azimuth, area)) {
+                    continue;
+                }
+                const vec3 proposed_normal = sphere2cart(SphericalCoord(1.f, 0.5f * PI_F - inclination, azimuth));
+
+                // With lambda at zero there is nothing to trade against staying put, so the leaf keeps the
+                // orientation the model gave it and is simply counted where it already is.
+                vec3 chosen_target;
+                if (!chooseLeafAngleTarget(tracker, inclination, azimuth, total_weight, chosen_target)) {
+                    steering.steered = false;
+                    continue;
+                }
+
+                // Move the leaf's area from the bin it currently occupies to the bin it has just been aimed
+                // at, so the rest of this cohort sees the bin it took and the leaves of one sub-step spread
+                // out instead of all piling into the same empty bin.
+                //
+                // Moved rather than added. The histogram above has already counted this leaf where it
+                // presently sits -- it exists by the time the cohort is solved -- so crediting its target bin
+                // as well counted it twice and inflated the running total with it. Every bin's share of that
+                // total then shifted, so a single new leaf corrupted the shortfall of bins it had nothing to
+                // do with.
+                tracker.bin_weight.at(leafAngleBinIndex(tracker, inclination, azimuth)) -= area;
+                {
+                    vec3 folded = chosen_target;
+                    folded.z = std::fabs(folded.z);
+                    const SphericalCoord target_spherical = cart2sphere(folded);
+                    tracker.bin_weight.at(leafAngleBinIndex(tracker, target_spherical.zenith, target_spherical.azimuth)) += area;
+                }
+
+                steering.steered = true;
+                steering.target_normal = chosen_target;
+                steering.scale_at_last_step = (petiole_index < phytomer->current_leaf_scale_factor.size()) ? phytomer->current_leaf_scale_factor.at(petiole_index) : 0.f;
+            }
+        }
+    }
+    tracker.pending_cohort.clear();
+
+    // ---- turn the expanding leaves a little further toward their targets ----
+    // A leaf covers the fraction of its remaining turn that matches the fraction of its remaining growth it
+    // just completed, so it arrives exactly as it reaches full size and moves monotonically on the way. A
+    // leaf that has finished expanding is never touched again, which is what keeps a grown plant still.
+    for (const auto &shoot: plant_instance.shoot_tree) {
+        for (const auto &phytomer: shoot->phytomers) {
+            for (uint petiole_index = 0; petiole_index < phytomer->leaf_angle_steering.size(); petiole_index++) {
+                if (petiole_index >= phytomer->current_leaf_scale_factor.size()) {
+                    continue;
+                }
+                const float scale = phytomer->current_leaf_scale_factor.at(petiole_index);
+
+                for (uint leaf_index = 0; leaf_index < phytomer->leaf_angle_steering.at(petiole_index).size(); leaf_index++) {
+                    Phytomer::LeafAngleSteering &steering = phytomer->leaf_angle_steering.at(petiole_index).at(leaf_index);
+                    if (!steering.steered) {
+                        continue;
+                    }
+                    if (leaf_index >= phytomer->leaf_objIDs.at(petiole_index).size() || !context_ptr->doesObjectExist(phytomer->leaf_objIDs.at(petiole_index).at(leaf_index))) {
+                        continue;
+                    }
+
+                    const float previous_scale = steering.scale_at_last_step;
+                    const float remaining = 1.f - previous_scale;
+                    // Either the leaf is done growing, or it covers its share of what is left of the turn.
+                    const float step_fraction = (scale >= 1.f || remaining <= 1e-4f) ? 1.f : std::clamp((scale - previous_scale) / remaining, 0.f, 1.f);
+                    if (step_fraction <= 0.f) {
+                        continue;
+                    }
+
+                    vec3 current_normal;
+                    float current_area = 0;
+                    if (!leafBladeNormalCached(context_ptr, phytomer->leaf_objIDs.at(petiole_index).at(leaf_index), tracker.blade_primitive_cache, current_normal, current_area)) {
+                        continue;
+                    }
+                    current_normal.z = std::fabs(current_normal.z);
+
+                    // Re-choose where this leaf is headed, against the deficits as they stand now. A leaf is
+                    // only committed to a target once it stops growing: while it is still expanding the
+                    // population around it is changing under it, and the bins that were short when it emerged
+                    // may be the fullest by the time it finishes. Holding it to that first choice makes the
+                    // controller open-loop, so each leaf carries the error of one early, noisy snapshot for
+                    // the rest of its life.
+                    if (scale < 1.f) {
+                        const SphericalCoord current_spherical = cart2sphere(current_normal);
+                        vec3 rechosen_target;
+                        if (chooseLeafAngleTarget(tracker, current_spherical.zenith, current_spherical.azimuth, total_weight, rechosen_target)) {
+                            // Keep the running histogram consistent with where this leaf is now headed: take
+                            // its area out of the bin it was aimed at and put it in the new one.
+                            vec3 previous_folded = steering.target_normal;
+                            previous_folded.z = std::fabs(previous_folded.z);
+                            const SphericalCoord previous_spherical = cart2sphere(previous_folded);
+                            tracker.bin_weight.at(leafAngleBinIndex(tracker, previous_spherical.zenith, previous_spherical.azimuth)) -= current_area;
+
+                            vec3 new_folded = rechosen_target;
+                            new_folded.z = std::fabs(new_folded.z);
+                            const SphericalCoord new_spherical = cart2sphere(new_folded);
+                            tracker.bin_weight.at(leafAngleBinIndex(tracker, new_spherical.zenith, new_spherical.azimuth)) += current_area;
+
+                            steering.target_normal = rechosen_target;
+                        }
+                    }
+
+                    // Interpolate along the great circle between where the blade faces and where it is going.
+                    const float separation = acos_safe(std::clamp(current_normal * steering.target_normal, -1.f, 1.f));
+                    vec3 step_normal = steering.target_normal;
+                    if (separation > 1e-4f && step_fraction < 1.f) {
+                        vec3 axis = cross(current_normal, steering.target_normal);
+                        if (axis.magnitude() > 1e-6f) {
+                            step_normal = rodrigues(current_normal, axis.normalize(), separation * step_fraction);
+                        }
+                    }
+
+                    phytomer->setLeafNormal(petiole_index, leaf_index, step_normal);
+                    steering.scale_at_last_step = scale;
+
+                    // Once the leaf is fully grown it has arrived, and must never be moved again.
+                    if (scale >= 1.f) {
+                        steering.steered = false;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void PlantArchitecture::disablePlantLeafAngleDistributionTracking(uint plantID) {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::disablePlantLeafAngleDistributionTracking): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    PlantInstance &plant_instance = plant_instances.at(plantID);
+    plant_instance.leaf_angle_tracking_enabled = false;
+    plant_instance.leaf_angle_tracker.pending_cohort.clear();
+}
+
+bool PlantArchitecture::isPlantLeafAngleDistributionTrackingEnabled(uint plantID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::isPlantLeafAngleDistributionTrackingEnabled): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    return plant_instances.at(plantID).leaf_angle_tracking_enabled;
+}
+
 void PlantArchitecture::setPlantLeafAngleDistribution(const std::vector<uint> &plantIDs, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity, float ellipse_rotation_degrees) const {
     if (Beta_mu_inclination <= 0.f) {
         helios_runtime_error("ERROR (PlantArchitecture::setPlantLeafAngleDistribution): Beta_mu_inclination must be greater than or equal to zero.");
@@ -5177,7 +6392,12 @@ std::vector<float> PlantArchitecture::getPlantLeafInclinationAngleDistribution(u
     }
 
     const std::vector<uint> leaf_objIDs = getPlantLeafObjectIDs(plantID);
-    const std::vector<uint> leaf_UUIDs = context_ptr->getObjectPrimitiveUUIDs(leaf_objIDs);
+    // Blade facets only. A leaf object also carries its petiolule, the short stalk joining the leaflet to its
+    // petiole, whose facets wrap a roughly cylindrical stem and so point in every direction -- including
+    // straight up it. Counting them reports leaf area at inclinations where the plant has no lamina at all,
+    // and because the stalk is closer to vertical than the blade the error is not evenly spread: on a bean it
+    // is a fiftieth of the reported area and nearly nine times heavier in the steepest bin than the flattest.
+    const std::vector<uint> leaf_UUIDs = context_ptr->filterPrimitivesByData(context_ptr->getObjectPrimitiveUUIDs(leaf_objIDs), "object_label", "leaf");
 
     std::vector<float> leaf_inclination_angles(Nbins, 0.f);
     const float dtheta = 0.5f * PI_F / float(Nbins);
@@ -5230,7 +6450,9 @@ std::vector<float> PlantArchitecture::getPlantLeafAzimuthAngleDistribution(uint 
     }
 
     const std::vector<uint> leaf_objIDs = getPlantLeafObjectIDs(plantID);
-    const std::vector<uint> leaf_UUIDs = context_ptr->getObjectPrimitiveUUIDs(leaf_objIDs);
+    // Blade facets only, for the same reason as the inclination distribution above: the petiolule shares the
+    // leaf object but is not lamina.
+    const std::vector<uint> leaf_UUIDs = context_ptr->filterPrimitivesByData(context_ptr->getObjectPrimitiveUUIDs(leaf_objIDs), "object_label", "leaf");
 
     std::vector<float> leaf_azimuth_angles(Nbins, 0.f);
     const float dtheta = 2.f * PI_F / static_cast<float>(Nbins);
@@ -5716,24 +6938,6 @@ void PlantArchitecture::pruneBranch(uint plantID, uint shootID, uint node_index)
     }
 }
 
-// fallback axis if v×u is (near) zero:
-static vec3 orthonormal_axis(const vec3 &v) {
-    // try X axis
-    vec3 ax = cross(v, vec3(1.f, 0.f, 0.f));
-    if (ax.magnitude() < 1e-6f)
-        ax = cross(v, vec3(0.f, 1.f, 0.f));
-    return ax.normalize();
-}
-
-// Rodrigues formula: rotate v about unit‐axis k by angle α
-static vec3 rodrigues(const vec3 &v, const vec3 &k, float a) {
-    float c = std::cos(a);
-    float s = std::sin(a);
-    // dot = k·v
-    float kv = k * v;
-    return v * c + cross(k, v) * s + k * (kv * (1.f - c));
-}
-
 void PlantArchitecture::setPlantLeafAngleDistribution_private(const std::vector<uint> &plantIDs, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity_azimuth, float ellipse_rotation_azimuth_degrees, bool set_elevation,
                                                               bool set_azimuth) const {
     for (uint plantID: plantIDs) {
@@ -5741,239 +6945,127 @@ void PlantArchitecture::setPlantLeafAngleDistribution_private(const std::vector<
             helios_runtime_error("ERROR (PlantArchitecture::setPlantLeafAngleDistribution): Plant with ID of " + std::to_string(plantID) + " does not exist.");
         }
     }
-
-    // ── 2) Gather leaves ────────────────────────────────────────────────────
-    // Object IDs and base positions are consumed index-for-index below (each leaf is rotated about
-    // its own base), so they must come from a single traversal. Gathering them via two independent
-    // getters would leave the correspondence resting on an assert that disappears in release builds.
-    std::vector<uint> objIDs;
-    std::vector<vec3> bases;
-    getPlantLeafObjectIDsAndBases(plantIDs, objIDs, bases);
-    size_t N = objIDs.size();
-    assert(bases.size() == N);
-    if (N == 0 || (!set_elevation && !set_azimuth))
-        return;
-
-    // ── 3) Sample current & target (θ,φ) ───────────────────────────────────
-    std::vector<float> theta(N), phi(N), theta_t(N), phi_t(N);
-    for (size_t i = 0; i < N; ++i) {
-        // current normal → (θ,φ)
-        vec3 n0 = context_ptr->getObjectAverageNormal(objIDs[i]);
-        if (!std::isfinite(n0.x) || !std::isfinite(n0.y) || !std::isfinite(n0.z) || n0.magnitude() < 1e-6f) {
-            n0 = vec3(0.f, 0.f, 1.f);
-        } else {
-            n0 = n0.normalize();
-        }
-        n0.z = fabs(n0.z);
-        SphericalCoord sc = cart2sphere(n0);
-        theta[i] = sc.zenith;
-        phi[i] = sc.azimuth;
-
-        // target angles
-        if (set_elevation && !set_azimuth) {
-            theta_t[i] = sample_Beta_distribution(Beta_mu_inclination, Beta_nu_inclination, context_ptr->getRandomGenerator());
-            phi_t[i] = phi[i];
-        } else if (!set_elevation && set_azimuth) {
-            theta_t[i] = theta[i];
-            phi_t[i] = sample_ellipsoidal_azimuth(eccentricity_azimuth, ellipse_rotation_azimuth_degrees, context_ptr->getRandomGenerator());
-        } else {
-            // both elevation & azimuth
-            theta_t[i] = sample_Beta_distribution(Beta_mu_inclination, Beta_nu_inclination, context_ptr->getRandomGenerator());
-            phi_t[i] = sample_ellipsoidal_azimuth(eccentricity_azimuth, ellipse_rotation_azimuth_degrees, context_ptr->getRandomGenerator());
-        }
-    }
-
-    // ── 4) Pure-1D shortcuts ─────────────────────────────────────────────────
-    if (set_elevation && !set_azimuth) {
-        // only θ changes
-        for (size_t i = 0; i < N; ++i) {
-            float elev = PI_F * 0.5f - theta_t[i];
-            vec3 new_n = sphere2cart(SphericalCoord(1.f, elev, phi[i]));
-            context_ptr->setObjectAverageNormal(objIDs[i], bases[i], new_n);
-        }
-        return;
-    }
-    if (!set_elevation && set_azimuth) {
-        // only φ changes
-        for (size_t i = 0; i < N; ++i) {
-            float elev = PI_F * 0.5f - theta[i];
-            vec3 new_n = sphere2cart(SphericalCoord(1.f, elev, phi_t[i]));
-            context_ptr->setObjectAverageNormal(objIDs[i], bases[i], new_n);
-        }
+    if (!set_elevation && !set_azimuth) {
         return;
     }
 
-    // ── 5) Full 2-D case: build V0/V1 ───────────────────────────────────────
-    std::vector<vec3> V0(N), V1(N);
-    for (size_t i = 0; i < N; ++i) {
-        float e0 = PI_F * 0.5f - theta[i];
-        float e1 = PI_F * 0.5f - theta_t[i];
-        V0[i] = sphere2cart(SphericalCoord(1.f, e0, phi[i]));
-        V1[i] = sphere2cart(SphericalCoord(1.f, e1, phi_t[i]));
-    }
+    // ---- gather the leaves ----
+    // Each leaf is re-aimed through Phytomer::setLeafNormal(), which needs the phytomer it belongs to and its
+    // position on the petiole, so the tree is walked directly rather than through getPlantLeafObjectIDs().
+    // That call also keeps Phytomer::leaf_rotation in step with the geometry, which is what carries the
+    // imposed distribution through writePlantStructureXML(); rotating the objects in the Context instead
+    // leaves the record describing the pose the plant was grown with, and a reloaded plant loses the
+    // distribution entirely.
+    struct LeafEntry {
+        std::shared_ptr<Phytomer> phytomer;
+        uint petiole_index;
+        uint leaf_index;
+        float inclination; // zenith angle of the blade normal, folded into [0, pi/2]
+        float azimuth;
+        float weight; // leaf area, so that the distribution describes area rather than leaf count
+    };
+    std::vector<LeafEntry> leaves;
 
-    // ── 6) Solve assignment ─────────────────────────────────────────────────
-    std::vector<int> assignment(N);
-    {
-        HungarianAlgorithm hung;
-        std::vector<std::vector<double>> C(N, std::vector<double>(N));
-        for (size_t i = 0; i < N; ++i) {
-            for (size_t j = 0; j < N; ++j) {
-                double d = (V0[i] - V1[j]).magnitude();
-                C[i][j] = std::isfinite(d) ? d : ((std::numeric_limits<double>::max)() * 0.5);
+    for (const uint plantID: plantIDs) {
+        for (const auto &shoot: plant_instances.at(plantID).shoot_tree) {
+            for (const auto &phytomer: shoot->phytomers) {
+                for (uint petiole_index = 0; petiole_index < phytomer->leaf_objIDs.size(); petiole_index++) {
+                    for (uint leaf_index = 0; leaf_index < phytomer->leaf_objIDs.at(petiole_index).size(); leaf_index++) {
+                        const uint objID = phytomer->leaf_objIDs.at(petiole_index).at(leaf_index);
+                        if (!context_ptr->doesObjectExist(objID)) {
+                            continue;
+                        }
+
+                        vec3 normal;
+                        float area = 0;
+                        if (!leafBladeNormal(context_ptr, objID, normal, area)) {
+                            continue;
+                        }
+                        // A blade is a surface, so a normal pointing down describes the same inclination as
+                        // its opposite pointing up.
+                        normal.z = std::fabs(normal.z);
+                        const SphericalCoord spherical = cart2sphere(normal);
+
+                        leaves.push_back({phytomer, petiole_index, leaf_index, spherical.zenith, spherical.azimuth, area});
+                    }
+                }
             }
         }
-        hung.Solve(C, assignment);
     }
 
-    // ── 7) Rotate & write back ───────────────────────────────────────────────
-    for (size_t i = 0; i < N; ++i) {
-        int j = assignment[i];
-        // pick your target; if out-of-bounds, just keep the original V0[i]
-        vec3 v = V0[i];
-        vec3 u = (j >= 0 && j < (int) N ? V1[j] : V0[i]);
+    const size_t leaf_count = leaves.size();
+    if (leaf_count == 0) {
+        return;
+    }
 
-        // normalize
-        v = (v.magnitude() < 1e-6f ? vec3(0, 0, 1) : v.normalize());
-        u = (u.magnitude() < 1e-6f ? vec3(0, 0, 1) : u.normalize());
+    float total_weight = 0;
+    for (const LeafEntry &leaf: leaves) {
+        total_weight += leaf.weight;
+    }
 
-        // minimal‐angle between them
-        float dot = std::clamp(v * u, -1.f, 1.f);
-        float ang = acos_safe(dot);
-
-        // choose axis
-        vec3 axis = cross(v, u);
-        if (!set_elevation && set_azimuth) {
-            // if it's really just φ, rotate about Z
-            axis = vec3(0.f, 0.f, 1.f);
-        } else if (axis.magnitude() < 1e-6f) {
-            // degenerate → pick any perpendicular
-            axis = orthonormal_axis(v);
-        } else {
-            axis = axis.normalize();
+    // Assigns each leaf a cumulative-probability slot by where its own angle falls in the current ordering,
+    // then reads the target angle off the inverse CDF at that slot. Ordering the assignment this way is what
+    // keeps the plant recognizable: it is the pairing that moves the leaves the least, and a leaf held
+    // steeper than its neighbour stays steeper than it. Drawing an independent sample per leaf reproduces
+    // the same histogram while scrambling that order, which is the difference between imposing a
+    // distribution on a plant and replacing the plant's leaf angles with noise.
+    auto assignByQuantile = [&](std::vector<size_t> &order, const std::function<float(size_t)> &angle_of, const std::function<float(float)> &inverse_cdf, std::vector<float> &targets) {
+        std::sort(order.begin(), order.end(), [&](size_t left, size_t right) { return angle_of(left) < angle_of(right); });
+        float cumulative_weight = 0;
+        for (const size_t index: order) {
+            const float weight = leaves.at(index).weight;
+            // The midpoint of this leaf's own share of the total area, so that a large leaf is placed at the
+            // centre of the band it occupies rather than at its edge.
+            const float quantile = (cumulative_weight + 0.5f * weight) / total_weight;
+            targets.at(index) = inverse_cdf(std::clamp(quantile, 0.f, 1.f));
+            cumulative_weight += weight;
         }
+    };
 
-        // apply Rodrigues + final guard
-        vec3 r = rodrigues(v, axis, ang);
-        if (!std::isfinite(r.x) || !std::isfinite(r.y) || !std::isfinite(r.z) || r.magnitude() < 1e-6f) {
-            r = u;
-        } else {
-            r = r.normalize();
+    std::vector<float> target_inclination(leaf_count);
+    std::vector<float> target_azimuth(leaf_count);
+    for (size_t i = 0; i < leaf_count; i++) {
+        target_inclination.at(i) = leaves.at(i).inclination;
+        target_azimuth.at(i) = leaves.at(i).azimuth;
+    }
+
+    if (set_elevation) {
+        std::vector<size_t> order(leaf_count);
+        for (size_t i = 0; i < leaf_count; i++) {
+            order.at(i) = i;
         }
+        assignByQuantile(order, [&](size_t index) { return leaves.at(index).inclination; }, [&](float quantile) { return invert_Beta_distribution_CDF(quantile, Beta_mu_inclination, Beta_nu_inclination); }, target_inclination);
+    }
 
-        // convert back & set
-        SphericalCoord out = cart2sphere(r);
-        float new_elev = PI_F * 0.5f - out.zenith;
-        vec3 new_n = sphere2cart(SphericalCoord(1.f, new_elev, out.azimuth));
-        context_ptr->setObjectAverageNormal(objIDs[i], bases[i], new_n);
+    if (set_azimuth) {
+        // Azimuth is periodic, so the ordering is taken from the ellipse's own rotation: the leaf nearest
+        // that direction is the first in the sequence, which puts the cut of the circle where the
+        // distribution itself starts rather than at an arbitrary world axis.
+        const float ellipse_rotation = deg2rad(ellipse_rotation_azimuth_degrees);
+        auto offsetAzimuth = [&](size_t index) {
+            float offset = leaves.at(index).azimuth - ellipse_rotation;
+            offset = std::fmod(offset, 2.f * PI_F);
+            if (offset < 0.f) {
+                offset += 2.f * PI_F;
+            }
+            return offset;
+        };
+
+        std::vector<size_t> order(leaf_count);
+        for (size_t i = 0; i < leaf_count; i++) {
+            order.at(i) = i;
+        }
+        assignByQuantile(order, offsetAzimuth, [&](float quantile) { return invert_ellipsoidal_azimuth_CDF(quantile, eccentricity_azimuth, ellipse_rotation_azimuth_degrees); }, target_azimuth);
+    }
+
+    // ---- aim the leaves ----
+    for (size_t i = 0; i < leaf_count; i++) {
+        const LeafEntry &leaf = leaves.at(i);
+        const float elevation = 0.5f * PI_F - target_inclination.at(i);
+        const vec3 target_normal = sphere2cart(SphericalCoord(1.f, elevation, target_azimuth.at(i)));
+        leaf.phytomer->setLeafNormal(leaf.petiole_index, leaf.leaf_index, target_normal);
     }
 }
-
-//     std::vector<uint> objIDs_leaf = getPlantLeafObjectIDs(plantIDs);
-//     std::vector<vec3> leaf_bases = getPlantLeafBases(plantIDs);
-//
-//
-//     assert( objIDs_leaf.size() == leaf_bases.size() );
-//
-//
-//     const size_t Nleaves = objIDs_leaf.size();
-//
-//
-//     std::vector<float> thetaL(Nleaves);
-//     std::vector<float> phiL(Nleaves);
-//     std::vector<float> thetaL_target(Nleaves);
-//     std::vector<float> phiL_target(Nleaves);
-//     for ( int i=0; i<Nleaves; i++ ) {
-//         vec3 norm = context_ptr->getObjectAverageNormal(objIDs_leaf.at(i));
-//         norm.z = fabs(norm.z);
-//         SphericalCoord leaf_angle = cart2sphere(norm);
-//         thetaL.at(i) = leaf_angle.zenith;
-//         phiL.at(i) = leaf_angle.azimuth;
-//         if ( set_elevation && !set_azimuth ) { //only set elevation
-//             thetaL_target.at(i) = sample_Beta_distribution(Beta_mu_inclination, Beta_nu_inclination, context_ptr->getRandomGenerator());
-//             phiL_target.at(i) = phiL.at(i);
-//         }else if ( !set_elevation && set_azimuth ) {
-//             thetaL_target.at(i) = thetaL.at(i);
-//             phiL_target.at(i) = sample_ellipsoidal_azimuth( eccentricity_azimuth, ellipse_rotation_azimuth_degrees, context_ptr->getRandomGenerator() );
-//         }else if ( set_elevation && set_azimuth ) {
-//             thetaL_target.at(i) = sample_Beta_distribution(Beta_mu_inclination, Beta_nu_inclination, context_ptr->getRandomGenerator());
-//             phiL_target.at(i) = sample_ellipsoidal_azimuth( eccentricity_azimuth, ellipse_rotation_azimuth_degrees, context_ptr->getRandomGenerator() );
-//         }else {
-//             return;
-//         }
-//     }
-//
-//
-//     // ── Convert both sets to Cartesian using sphere2cart() ─────────────────
-//     std::vector<vec3> V0, V1;
-//     V0.reserve(Nleaves);  V1.reserve(Nleaves);
-//     for (size_t i = 0; i < Nleaves; ++i) {
-//         // Helios uses (radius, elevation, azimuth), where elevation = π/2 – zenith
-//         float elev0 = PI_F*0.5f - thetaL[i];
-//         SphericalCoord sc0(1.f, elev0, phiL[i]);
-//         V0.push_back(sphere2cart(sc0));
-//
-//
-//         float elev1 = PI_F*0.5f - thetaL_target[i];
-//         SphericalCoord sc1(1.f, elev1, phiL_target[i]);
-//         V1.push_back(sphere2cart(sc1));
-//     }
-//
-//
-//     // ── Build cost matrix of great‐circle angles ───────────────────────────
-//     std::vector<std::vector<double>> cost(Nleaves, std::vector<double>(Nleaves));
-//     for (size_t i = 0; i < Nleaves; ++i) {
-//         for (size_t j = 0; j < Nleaves; ++j) {
-//             float d = std::clamp(V0[i] * V1[j], -1.f, 1.f);  // dot product via operator*
-//             cost[i][j] = std::acos(static_cast<double>(d));
-//         }
-//     }
-//
-//
-//     // ── Global minimal‐sum assignment ──────────────────────────────────────
-//     HungarianAlgorithm hungarian;
-//     std::vector<int> assignment;
-//     double totalCost = hungarian.Solve(cost, assignment);
-//
-//
-//     // ── Rotate each V0[i] → V1[assignment[i]] by minimal axis–angle ────────
-//     std::vector<vec3> V0_matched(Nleaves);
-//     for (size_t i = 0; i < Nleaves; ++i) {
-//         vec3 v = V0[i];
-//         vec3 u = V1[assignment[i]];
-//
-//
-//         float dot = std::clamp(v * u, -1.f, 1.f);
-//         float a   = std::acos(dot);
-//
-//
-//         vec3 axis = cross(v, u);
-//         if (axis.magnitude() < 1e-6f)
-//             axis = orthonormal_axis(v);
-//         else
-//             axis = axis.normalize();
-//
-//
-//         V0_matched[i] = rodrigues(v, axis, a);
-//     }
-//
-//
-//     // ── Convert rotated vectors back to (θ,φ) via cart2sphere() ────
-//     std::vector<float> theta_matched(Nleaves), phi_matched(Nleaves);
-//     for (size_t i = 0; i < Nleaves; ++i) {
-//         SphericalCoord out = cart2sphere(V0_matched[i]);
-//         theta_matched[i] = out.zenith;      // your convention: zenith in [0,π]
-//         phi_matched  [i] = out.azimuth;     // in [0,2π)
-//
-//
-//         vec3 new_normal = sphere2cart(SphericalCoord(1.f, PI_F*0.5f - theta_matched[i], phi_matched[i]));
-//         context_ptr->setObjectAverageNormal(objIDs_leaf.at(i), leaf_bases.at(i), new_normal);
-//     }
-//
-//
-// }
-
-
 uint PlantArchitecture::getShootNodeCount(uint plantID, uint shootID) const {
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::getShootNodeCount): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -6283,6 +7375,8 @@ void PlantArchitecture::deleteAllPrototypes() {
         context_ptr->deleteObject(objID);
     }
     unique_leaf_prototype_objIDs.clear();
+    // Cleared alongside the blades it describes: the two are indexed together, so leaving the rest shapes behind would have a rebuilt cache append to them and every leaf deflect from the wrong entry.
+    unique_leaf_prototype_rest_geometry.clear();
     unique_open_flower_prototype_objIDs.clear();
     unique_closed_flower_prototype_objIDs.clear();
     unique_fruit_prototype_objIDs.clear();
@@ -6696,6 +7790,18 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
 
         // Carbohydrate and nitrogen model configuration. The pools themselves are state rather than
         // configuration and are left at their initial values, since the copy starts at current_age.
+        // Leaf angle distribution tracking, if the source was being steered. Only the configuration is
+        // carried: the cache is keyed by the SOURCE's leaf object IDs and would describe geometry the copy
+        // does not own, and the generator is re-seeded so the two plants do not draw an identical sequence of
+        // targets. Without this the duplicate silently grew untracked.
+        copy.leaf_angle_tracking_enabled = source.leaf_angle_tracking_enabled;
+        if (source.leaf_angle_tracking_enabled) {
+            copy.leaf_angle_tracker = source.leaf_angle_tracker;
+            copy.leaf_angle_tracker.blade_primitive_cache.clear();
+            copy.leaf_angle_tracker.pending_cohort.clear();
+            copy.leaf_angle_tracker.generator.seed(plantID_new * 2654435761u + 1u);
+        }
+
         copy.carb_parameters = source.carb_parameters;
         copy.stem_maintenance_respiration_rate = source.stem_maintenance_respiration_rate;
         copy.root_maintenance_respiration_rate = source.root_maintenance_respiration_rate;
@@ -6776,7 +7882,10 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
             }
             auto phytomer_new = plant_instances.at(plantID_new).shoot_tree.at(shootID_new)->phytomers.back();
             for (uint petiole_index = 0; petiole_index < phytomer->petiole_objIDs.size(); petiole_index++) {
-                phytomer_new->setLeafScaleFraction(petiole_index, phytomer->current_leaf_scale_factor.at(petiole_index));
+                // Both fractions are carried over. On a shoot type whose leaves expand at a rate of their own, a petiole
+                // outlives its blade's expansion, so copying only the leaf's fraction would put the duplicate's petioles
+                // back where its blades are and shorten every petiole that had gone on extending.
+                phytomer_new->setPetioleAndLeafScaleFraction(petiole_index, phytomer->current_petiole_scale_factor.at(petiole_index), phytomer->current_leaf_scale_factor.at(petiole_index));
             }
         }
     }
@@ -7217,26 +8326,46 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                     // scale petiole/leaves
                     if (phytomer->hasLeaf()) {
                         for (uint petiole_index = 0; petiole_index < phytomer->current_leaf_scale_factor.size(); petiole_index++) {
-                            if (phytomer->current_leaf_scale_factor.at(petiole_index) >= 1) {
-                                // The leaf has stopped growing, so there is no scaling left to do - but its shape is not necessarily finished. A blade goes on bending as it ages, so it is still handed to the
+                            const bool leaf_still_expanding = phytomer->current_leaf_scale_factor.at(petiole_index) < 1.f;
+                            const bool petiole_still_elongating = petiole_index < phytomer->current_petiole_scale_factor.size() && phytomer->current_petiole_scale_factor.at(petiole_index) < 1.f;
+                            if (!leaf_still_expanding && !petiole_still_elongating) {
+                                // Neither has any growing left to do - but their shape is not necessarily finished. A blade goes on bending as it ages, so it is still handed to the
                                 // deflection, which returns immediately for a species whose leaves are rigid or whose shape has settled. Skipping the phytomer outright froze every mature leaf at the shape it
-                                // happened to have on the step it reached full size.
+                                // happened to have on the step it reached full size. The petiole likewise keeps bending as it ages.
+                                phytomer->bendPetioleUnderLeafWeight(petiole_index);
                                 for (uint leaf = 0; leaf < phytomer->leaf_objIDs.at(petiole_index).size(); leaf++) {
                                     phytomer->deformLeafUnderSelfWeight(petiole_index, leaf);
                                 }
                                 continue;
                             }
 
-                            // Calculate petiole growth based on target petiole length (similar to internode growth)
-                            // float petiole_target_length = phytomer->phytomer_parameters.petiole.length.val();
-                            // float current_petiole_length = phytomer->petiole_length.at(petiole_index);
-                            // float dL_petiole = dt_max_days * shoot->elongation_rate_instantaneous * petiole_target_length;
-                            // float petiole_scale = fmin(1.f, (current_petiole_length + dL_petiole) / petiole_target_length);
+                            // The petiole elongates on the shoot's internode rate, not on the leaf's. It is a stem segment, and measured petioles go on extending long after the blade they carry has reached
+                            // full size -- a tomato petiole is still lengthening at two weeks, by which time its blade has stopped. Growing it with the blade, which is what scaling the petiole by the leaf's
+                            // growth fraction amounted to, capped it at the blade's timescale and left every mature petiole short.
+                            //
+                            // ShootParameters::elongation_rate_max is a relative rate -- a fraction of the organ's fully-elongated length per day, which is why the internode step above multiplies it by
+                            // internode_length_max -- so the petiole's growth fraction advances by dt times the rate directly. A shoot type that does not set a leaf expansion rate has one rate for both, and
+                            // the petiole then advances in lockstep with the blade exactly as it did when the blade carried it.
+                            float petiole_scale = (petiole_index < phytomer->current_petiole_scale_factor.size()) ? phytomer->current_petiole_scale_factor.at(petiole_index) : 1.f;
+                            if (petiole_still_elongating) {
+                                petiole_scale = fmin(1.f, phytomer->current_petiole_scale_factor.at(petiole_index) + dt_max_days * shoot->elongation_rate_instantaneous);
+                            }
+
+                            if (!leaf_still_expanding) {
+                                // The blade is done; only the petiole is still growing. Its size must be left exactly where it is, and in particular the leaf size parameter must not be resampled, which would
+                                // advance the random sequence for every plant whose petioles outlive their blades.
+                                phytomer->setPetioleScaleFraction(petiole_index, petiole_scale);
+                                continue;
+                            }
 
                             // Also calculate leaf growth for proper leaf scaling
                             float tip_ind = ceil(float(phytomer->leaf_size_max.at(petiole_index).size() - 1) / 2.f);
                             float leaf_length = phytomer->current_leaf_scale_factor.at(petiole_index) * phytomer->leaf_size_max.at(petiole_index).at(tip_ind);
-                            float dL_leaf = dt_max_days * shoot->elongation_rate_instantaneous * phytomer->leaf_size_max.at(petiole_index).at(tip_ind);
+                            // The leaf expands at its own rate, which is the shoot's elongation rate unless the shoot type set
+                            // ShootParameters::leaf_expansion_rate_max. A species whose leaves finish expanding well before its
+                            // internodes stop elongating cannot be represented by a single rate: fitting one to the leaves leaves
+                            // every mature internode at its maximum length, and fitting it to the internodes leaves the leaves small.
+                            float dL_leaf = dt_max_days * shoot->leaf_expansion_rate_instantaneous * phytomer->leaf_size_max.at(petiole_index).at(tip_ind);
                             float leaf_scale = fmin(1.f, (leaf_length + dL_leaf) / phytomer->phytomer_parameters.leaf.prototype_scale.val());
 
                             // Expressed as a fraction of THIS leaf's own full size rather than of the shoot type's prototype_scale. current_leaf_scale_factor means "how far this leaf has grown toward its
@@ -7246,7 +8375,8 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                             const float leaf_size_full = phytomer->leaf_size_max.at(petiole_index).at(tip_ind);
                             float scale = (leaf_size_full > 0.f) ? fmin(1.f, (leaf_length + dL_leaf) / leaf_size_full) : 1.f;
                             phytomer->phytomer_parameters.leaf.prototype_scale.resample();
-                            phytomer->setLeafScaleFraction(petiole_index, scale);
+                            // Applied in one call so that the leaves are scaled, re-seated along the rescaled petiole and bent under their new weight once rather than twice.
+                            phytomer->setPetioleAndLeafScaleFraction(petiole_index, petiole_scale, scale);
                         }
                     }
 
@@ -7310,6 +8440,10 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
                                 uint childID = addChildShoot(plantID, shoot->ID, node_index, 1, base_rotation, internode_radius, internode_length_max, 0.01, 0.01, 0, vbud.shoot_type_label, parent_petiole_index);
 
+                                if (plant_instance.leaf_angle_tracking_enabled) {
+                                    plant_instance.leaf_angle_tracker.pending_cohort.emplace_back(int(childID), 0u);
+                                }
+
                                 phytomer->setVegetativeBudState(BUD_DEAD, vbud);
                                 vbud.shoot_ID = childID;
                                 shoot_tree->at(childID)->isdormant = false;
@@ -7349,6 +8483,10 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                     // ignored anything set on the individual shoot.
                     appendPhytomerToShoot(plantID, shoot->ID, shoot->shoot_parameters.phytomer_parameters, internode_radius, internode_length_max, 0.01,
                                           0.01); //\todo These factors should be set to be consistent with the shoot
+
+                    if (plant_instance.leaf_angle_tracking_enabled && !shoot->phytomers.empty()) {
+                        plant_instance.leaf_angle_tracker.pending_cohort.emplace_back(shoot->ID, uint(shoot->phytomers.size() - 1));
+                    }
                     shoot->phyllochron_counter = shoot->phyllochron_counter - shoot->phyllochron_instantaneous;
                 }
 
@@ -7364,7 +8502,11 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                         plant_instance.shoot_types_snapshot.at(epicormic_shoot_label).phytomer_parameters.internode.radius_initial.resample();
                         float internode_length_max = plant_instance.shoot_types_snapshot.at(epicormic_shoot_label).internode_length_max.val();
                         plant_instance.shoot_types_snapshot.at(epicormic_shoot_label).internode_length_max.resample();
-                        addEpicormicShoot(plantID, shoot->ID, epicormic_fraction.at(s), 1, 0, internode_radius, internode_length_max, 0.01, 0.01, 0, epicormic_shoot_label);
+                        const uint epicormic_shootID = addEpicormicShoot(plantID, shoot->ID, epicormic_fraction.at(s), 1, 0, internode_radius, internode_length_max, 0.01, 0.01, 0, epicormic_shoot_label);
+
+                        if (plant_instance.leaf_angle_tracking_enabled) {
+                            plant_instance.leaf_angle_tracker.pending_cohort.emplace_back(int(epicormic_shootID), 0u);
+                        }
                     }
                 }
                 if (carbon_model_enabled) {
@@ -7377,6 +8519,12 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
 
             // Update Context geometry based on scheduling configuration
+            // Every phytomer this sub-step was going to create has been created, so the leaves that emerged
+            // can be given their targets and the ones still expanding can be turned a little further toward
+            // theirs. Placed before the geometry flush below so that a leaf is moved before its shoot's nodes
+            // are pushed to the Context, not after.
+            updatePlantLeafAngleDistributionTracking(plantID);
+
             bool should_update_context = collision_detection_enabled && (geometry_update_counter >= geometry_update_frequency);
 
             // Force Context update if collision avoidance was applied and force_update_on_collision is enabled
@@ -8034,7 +9182,14 @@ void PlantArchitecture::enableSoftCollisionAvoidance(const std::vector<uint> &ta
     // Create new CollisionDetection instance
     try {
         collision_detection_ptr = new CollisionDetection(context_ptr);
-        collision_detection_ptr->enableMessages(); // Enable debug output for debugging
+        // Inherit this instance's message setting. CollisionDetection enables messages in its own
+        // constructor, so a plant with disableMessages() in effect would otherwise start printing
+        // collision output the moment avoidance was switched on.
+        if (printmessages) {
+            collision_detection_ptr->enableMessages();
+        } else {
+            collision_detection_ptr->disableMessages();
+        }
         owns_collision_detection = true;
         collision_detection_enabled = true;
         collision_target_UUIDs = target_object_UUIDs;
@@ -8161,7 +9316,12 @@ void PlantArchitecture::enableSolidObstacleAvoidance(const std::vector<uint> &ob
     if (collision_detection_ptr == nullptr) {
         try {
             collision_detection_ptr = new CollisionDetection(context_ptr);
-            collision_detection_ptr->enableMessages(); // Enable debug output for debugging
+            // Inherit this instance's message setting -- see the note in enableSoftCollisionAvoidance().
+            if (printmessages) {
+                collision_detection_ptr->enableMessages();
+            } else {
+                collision_detection_ptr->disableMessages();
+            }
             owns_collision_detection = true;
             collision_detection_enabled = true;
 

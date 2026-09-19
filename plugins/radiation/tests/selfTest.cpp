@@ -6923,6 +6923,299 @@ GPU_TEST_CASE("RadiationModel - Camera White Balance") {
     }
 }
 
+GPU_TEST_CASE("RadiationModel - Auto white balance neutralizes the light reaching the surfaces in view") {
+    // A camera with white_balance "auto" must render a spectrally flat surface as neutral grey under whatever light reaches the
+    // surfaces it sees, whatever the colour of that light, and must not be pulled by light that never reaches its view or by the
+    // colour of the scene. Two cameras share each viewpoint: one with white balance and one without, so the raw image shows the
+    // colour cast that the balanced image must remove.
+    Context context;
+
+    // Equal-area Gaussian channel responses centred like a typical RGB sensor. Through them a flat reflector under a flat light is
+    // already neutral, so any cast in the raw image comes from the light.
+    auto gaussian_response = [](float centre_nm) {
+        std::vector<vec2> response;
+        for (float wavelength = 380.f; wavelength <= 720.f; wavelength += 5.f) {
+            const float z = (wavelength - centre_nm) / 30.f;
+            response.push_back(make_vec2(wavelength, std::exp(-0.5f * z * z)));
+        }
+        return response;
+    };
+    auto sampled_spectrum = [](const std::function<float(float)> &value_at) {
+        std::vector<vec2> spectrum;
+        for (float wavelength = 380.f; wavelength <= 720.f; wavelength += 5.f) {
+            spectrum.push_back(make_vec2(wavelength, value_at(wavelength)));
+        }
+        return spectrum;
+    };
+    context.setGlobalData("wb_red_response", gaussian_response(610.f));
+    context.setGlobalData("wb_green_response", gaussian_response(540.f));
+    context.setGlobalData("wb_blue_response", gaussian_response(475.f));
+    context.setGlobalData("wb_white_reflectivity", sampled_spectrum([](float) { return 0.8f; }));
+    context.setGlobalData("wb_green_reflectivity", sampled_spectrum([](float wavelength) {
+                              const float z = (wavelength - 545.f) / 35.f;
+                              return 0.05f + 0.6f * std::exp(-0.5f * z * z);
+                          }));
+    // A cool-white LED: a narrow blue peak, a trough near 480 nm and a broad phosphor hump. A flat reflector under it does not look
+    // neutral through the responses above.
+    const std::vector<vec2> led_spectrum = sampled_spectrum([](float wavelength) {
+        const float peak = (wavelength - 445.f) / 10.f;
+        const float phosphor = (wavelength - 550.f) / 40.f;
+        return 0.4f * std::exp(-0.5f * peak * peak) + std::exp(-0.5f * phosphor * phosphor);
+    });
+    const std::vector<vec2> warm_spectrum = sampled_spectrum([](float wavelength) { return 0.1f + (wavelength - 380.f) / 340.f; });
+    const std::vector<vec2> cool_spectrum = sampled_spectrum([](float wavelength) { return 0.1f + (720.f - wavelength) / 340.f; });
+
+    const std::vector<std::string> bands = {"R", "G", "B"};
+    const std::map<std::string, vec2> band_bounds = {{"R", make_vec2(580, 720)}, {"G", make_vec2(490, 580)}, {"B", make_vec2(380, 490)}};
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    for (const auto &band: bands) {
+        radiation.addRadiationBand(band, band_bounds.at(band).x, band_bounds.at(band).y);
+        radiation.disableEmission(band);
+        radiation.setScatteringDepth(band, 1);
+        radiation.setDiffuseRadiationFlux(band, 0.f);
+    }
+
+    uint white_patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+    context.setPrimitiveData(white_patch, "twosided_flag", uint(0));
+    context.setPrimitiveData(white_patch, "reflectivity_spectrum", "wb_white_reflectivity");
+
+    // Adds a balanced and an unbalanced camera looking from `position` at `lookat`, with the Gaussian response on every band
+    // listed in `bands_with_response`.
+    auto add_camera_pair = [&](const vec3 &position, const vec3 &lookat, float HFOV, const std::vector<std::string> &bands_with_response) {
+        CameraProperties camera_properties;
+        camera_properties.camera_resolution = make_int2(8, 8);
+        camera_properties.HFOV = HFOV;
+        camera_properties.focal_plane_distance = 1;
+        camera_properties.lens_diameter = 0.f;
+        camera_properties.exposure = "manual";
+        camera_properties.white_balance = "auto";
+        radiation.addRadiationCamera("balanced", bands, position, lookat, camera_properties, 1);
+        camera_properties.white_balance = "off";
+        radiation.addRadiationCamera("raw", bands, position, lookat, camera_properties, 1);
+        const std::map<std::string, std::string> response_of_band = {{"R", "wb_red_response"}, {"G", "wb_green_response"}, {"B", "wb_blue_response"}};
+        for (const auto &band: bands_with_response) {
+            radiation.setCameraSpectralResponse("balanced", band, response_of_band.at(band));
+            radiation.setCameraSpectralResponse("raw", band, response_of_band.at(band));
+        }
+    };
+
+    // Mean of each band over the pixels whose ray hit `UUID`
+    auto mean_rgb_on = [&](const std::string &camera, uint UUID) {
+        std::vector<uint> pixel_UUIDs;
+        context.getGlobalData(("camera_" + camera + "_pixel_UUID").c_str(), pixel_UUIDs);
+        vec3 sum;
+        uint count = 0;
+        const std::vector<float> red = radiation.getCameraPixelData(camera, "R");
+        const std::vector<float> green = radiation.getCameraPixelData(camera, "G");
+        const std::vector<float> blue = radiation.getCameraPixelData(camera, "B");
+        for (size_t pixel = 0; pixel < pixel_UUIDs.size(); pixel++) {
+            if (pixel_UUIDs.at(pixel) == UUID + 1) {
+                sum += make_vec3(red.at(pixel), green.at(pixel), blue.at(pixel));
+                count++;
+            }
+        }
+        DOCTEST_REQUIRE(count > 0);
+        return sum / float(count);
+    };
+
+    // Renders and returns the warnings printed while doing so
+    auto render = [&]() {
+        radiation.updateGeometry();
+        radiation.enableMessages();
+        std::string warnings;
+        {
+            capture_cout cout_buffer;
+            capture_cerr cerr_buffer;
+            radiation.runBand(bands);
+            warnings = cerr_buffer.get_captured_output();
+        }
+        radiation.disableMessages();
+        return warnings;
+    };
+
+    auto check_neutral = [](const vec3 &rgb) {
+        DOCTEST_CAPTURE(rgb);
+        DOCTEST_CHECK(rgb.x / rgb.y == doctest::Approx(1.f).epsilon(0.02));
+        DOCTEST_CHECK(rgb.z / rgb.y == doctest::Approx(1.f).epsilon(0.02));
+    };
+    auto check_not_neutral = [](const vec3 &rgb) {
+        DOCTEST_CAPTURE(rgb);
+        DOCTEST_CHECK(std::max(std::fabs(rgb.x / rgb.y - 1.f), std::fabs(rgb.z / rgb.y - 1.f)) > 0.15f);
+    };
+
+    DOCTEST_SUBCASE("A white surface under a cool-white LED renders neutral") {
+        uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        radiation.setSourceSpectrum(sun, led_spectrum);
+        for (const auto &band: bands) {
+            radiation.setSourceFlux(sun, band, 1000.f);
+        }
+        add_camera_pair(make_vec3(0, 0, 2), make_vec3(0, 0, 0), 20, bands);
+
+        const std::string warnings = render();
+        DOCTEST_CHECK(warnings.empty());
+
+        const vec3 raw = mean_rgb_on("raw", white_patch);
+        const vec3 balanced = mean_rgb_on("balanced", white_patch);
+        check_not_neutral(raw);
+        check_neutral(balanced);
+
+        // The band that receives the most light keeps unit gain; the others are raised to match it.
+        const vec3 gains(balanced.x / raw.x, balanced.y / raw.y, balanced.z / raw.z);
+        DOCTEST_CAPTURE(gains);
+        DOCTEST_CHECK(std::min({gains.x, gains.y, gains.z}) == doctest::Approx(1.f).epsilon(0.001));
+    }
+
+    DOCTEST_SUBCASE("A white surface renders neutral when only one band has a spectral response") {
+        // Red sees the LED through its response; green and blue have the default "uniform" response and see the band flux as it is.
+        uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        radiation.setSourceSpectrum(sun, led_spectrum);
+        radiation.setSourceFlux(sun, "R", 1000.f);
+        radiation.setSourceFlux(sun, "G", 700.f);
+        radiation.setSourceFlux(sun, "B", 400.f);
+        add_camera_pair(make_vec3(0, 0, 2), make_vec3(0, 0, 0), 20, {"R"});
+
+        const std::string warnings = render();
+        DOCTEST_CHECK(warnings.empty());
+        check_not_neutral(mean_rgb_on("raw", white_patch));
+        check_neutral(mean_rgb_on("balanced", white_patch));
+    }
+
+    DOCTEST_SUBCASE("A white surface renders neutral under band fluxes of different strength with uniform responses") {
+        // Constant band reflectivities: without a source spectrum or camera response, a reflectivity spectrum is integrated over each band's
+        // bounds, which would make the patch slightly different in each band.
+        for (const auto &band: bands) {
+            context.setPrimitiveData(white_patch, ("reflectivity_" + band).c_str(), 0.8f);
+        }
+        uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        radiation.setSourceFlux(sun, "R", 1500.f);
+        radiation.setSourceFlux(sun, "G", 1000.f);
+        radiation.setSourceFlux(sun, "B", 600.f);
+        add_camera_pair(make_vec3(0, 0, 2), make_vec3(0, 0, 0), 20, {});
+
+        const std::string warnings = render();
+        DOCTEST_CHECK(warnings.empty());
+        check_not_neutral(mean_rgb_on("raw", white_patch));
+        check_neutral(mean_rgb_on("balanced", white_patch));
+    }
+
+    DOCTEST_SUBCASE("Sun and sky light are both balanced against, and each render only against its own light") {
+        // A neutral sun and a blue sky light the patch in separate direct and diffuse launches, so the balance is neutral only if the light of both
+        // launches is counted. Uniform responses and constant band reflectivities, as in the subcase above.
+        for (const auto &band: bands) {
+            context.setPrimitiveData(white_patch, ("reflectivity_" + band).c_str(), 0.8f);
+        }
+        uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        for (const auto &band: bands) {
+            radiation.setSourceFlux(sun, band, 1000.f);
+        }
+        radiation.setDiffuseRadiationFlux("R", 100.f);
+        radiation.setDiffuseRadiationFlux("G", 300.f);
+        radiation.setDiffuseRadiationFlux("B", 900.f);
+        add_camera_pair(make_vec3(0, 0, 2), make_vec3(0, 0, 0), 20, {});
+
+        std::string warnings = render();
+        DOCTEST_CHECK(warnings.empty());
+        check_not_neutral(mean_rgb_on("raw", white_patch));
+        check_neutral(mean_rgb_on("balanced", white_patch));
+
+        // Render again under a blue sun and no sky. The balance must follow the new light alone, not the light of the render before.
+        radiation.setSourceFlux(sun, "R", 400.f);
+        radiation.setSourceFlux(sun, "G", 1000.f);
+        radiation.setSourceFlux(sun, "B", 1600.f);
+        for (const auto &band: bands) {
+            radiation.setDiffuseRadiationFlux(band, 0.f);
+        }
+        warnings = render();
+        DOCTEST_CHECK(warnings.empty());
+        check_not_neutral(mean_rgb_on("raw", white_patch));
+        check_neutral(mean_rgb_on("balanced", white_patch));
+
+        // And again under a red sun, with a camera added in between
+        radiation.setSourceFlux(sun, "R", 1600.f);
+        radiation.setSourceFlux(sun, "B", 400.f);
+        CameraProperties side_camera_properties;
+        side_camera_properties.camera_resolution = make_int2(8, 8);
+        side_camera_properties.HFOV = 20;
+        side_camera_properties.focal_plane_distance = 1;
+        side_camera_properties.lens_diameter = 0.f;
+        side_camera_properties.exposure = "manual";
+        side_camera_properties.white_balance = "auto";
+        radiation.addRadiationCamera("balanced_side", bands, make_vec3(1.5, 0, 1.5), make_vec3(0, 0, 0), side_camera_properties, 1);
+
+        warnings = render();
+        DOCTEST_CHECK(warnings.empty());
+        check_not_neutral(mean_rgb_on("raw", white_patch));
+        check_neutral(mean_rgb_on("balanced", white_patch));
+        check_neutral(mean_rgb_on("balanced_side", white_patch));
+    }
+
+    DOCTEST_SUBCASE("Light that never reaches the view does not affect the balance") {
+        // A strong cool sun overhead is blocked by a black roof that the camera cannot see. The patch in view is lit only by a warm
+        // lamp under the roof, so the balance must neutralize the warm light however much brighter the sun is.
+        uint roof = context.addPatch(make_vec3(0, 0, 1), make_vec2(8, 8));
+        context.setPrimitiveData(roof, "reflectivity_R", 0.f);
+        context.setPrimitiveData(roof, "reflectivity_G", 0.f);
+        context.setPrimitiveData(roof, "reflectivity_B", 0.f);
+        uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        radiation.setSourceSpectrum(sun, cool_spectrum);
+        uint lamp = radiation.addSphereRadiationSource(make_vec3(0.8, 0, 0.4), 0.05);
+        radiation.setSourceSpectrum(lamp, warm_spectrum);
+        for (const auto &band: bands) {
+            radiation.setSourceFlux(sun, band, 20000.f);
+            radiation.setSourceFlux(lamp, band, 50000.f);
+        }
+        for (const auto &band: bands) {
+            radiation.setDirectRayCount(band, 1000);
+        }
+        add_camera_pair(make_vec3(0, 0, 0.6), make_vec3(0, 0, 0), 20, bands);
+
+        const std::string warnings = render();
+        DOCTEST_CHECK(warnings.empty());
+        const vec3 raw = mean_rgb_on("raw", white_patch);
+        DOCTEST_CHECK(raw.x > 1.3f * raw.z); // lit by the warm lamp, not the cool sun
+        check_neutral(mean_rgb_on("balanced", white_patch));
+    }
+
+    DOCTEST_SUBCASE("A mostly green view under a flat light is not pulled away from neutral") {
+        // White balance estimated from the image content (grey world) would take the green of the scene for a green cast.
+        uint green_floor = context.addPatch(make_vec3(0, 0, -0.01), make_vec2(10, 10));
+        context.setPrimitiveData(green_floor, "twosided_flag", uint(0));
+        context.setPrimitiveData(green_floor, "reflectivity_spectrum", "wb_green_reflectivity");
+        uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        radiation.setSourceSpectrum(sun, sampled_spectrum([](float) { return 1.f; }));
+        for (const auto &band: bands) {
+            radiation.setSourceFlux(sun, band, 1000.f);
+        }
+        add_camera_pair(make_vec3(0, 0, 6), make_vec3(0, 0, 0), 60, bands);
+
+        const std::string warnings = render();
+        DOCTEST_CHECK(warnings.empty());
+        const vec3 raw = mean_rgb_on("raw", white_patch);
+        const vec3 balanced = mean_rgb_on("balanced", white_patch);
+        check_neutral(balanced);
+        // Under a flat light through equal-area responses there is nothing to correct, whatever the scene looks like.
+        DOCTEST_CHECK(balanced.x / raw.x == doctest::Approx(1.f).epsilon(0.02));
+        DOCTEST_CHECK(balanced.y / raw.y == doctest::Approx(1.f).epsilon(0.02));
+        DOCTEST_CHECK(balanced.z / raw.z == doctest::Approx(1.f).epsilon(0.02));
+    }
+
+    DOCTEST_SUBCASE("A camera that sees no lit surface warns and is not balanced") {
+        uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        radiation.setSourceSpectrum(sun, led_spectrum);
+        for (const auto &band: bands) {
+            radiation.setSourceFlux(sun, band, 1000.f);
+        }
+        // Looking up into an empty sky
+        add_camera_pair(make_vec3(0, 0, 2), make_vec3(0, 0, 10), 20, bands);
+
+        const std::string warnings = render();
+        DOCTEST_CHECK(warnings.find("'balanced'") != std::string::npos);
+        DOCTEST_CHECK(warnings.find("'raw'") == std::string::npos);
+    }
+}
+
 GPU_TEST_CASE("RadiationModel setDiffuseSpectrum and emission band behavior") {
 
     using namespace helios;
@@ -8699,6 +8992,110 @@ GPU_TEST_CASE("RadiationModel - Specular Reflection Camera Rendering") {
     DOCTEST_CHECK_MESSAGE(difference > 5.0f, "Specular exponent should increase camera intensity. "
                                              "No specular: "
                                                      << avg_no_specular << ", With specular: " << avg_with_specular << ", Difference: " << difference);
+}
+
+GPU_TEST_CASE("RadiationModel - Specular scale multiplies each primitive's highlight") {
+    // "specular_scale" must scale a primitive's specular reflection by its own value, with 1 for a primitive that has none. A scale of
+    // 0 on every primitive turned into full-strength specular, and a primitive without a scale lost its highlight as soon as any other
+    // primitive had a positive one.
+    Context context;
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    // Two identical patches, left and right of the camera axis, so each render gives both at the same viewing geometry.
+    uint left_patch = context.addPatch(make_vec3(-0.6, 0, 0), make_vec2(1, 1));
+    uint right_patch = context.addPatch(make_vec3(0.6, 0, 0), make_vec2(1, 1));
+    const std::vector<uint> patches = {left_patch, right_patch};
+    context.setGlobalData("specular_scale_test_reflectivity", std::vector<vec2>{make_vec2(400, 0.05f), make_vec2(700, 0.05f)});
+    context.setGlobalData("specular_scale_test_transmissivity", std::vector<vec2>{make_vec2(400, 0.0f), make_vec2(700, 0.0f)});
+    context.setPrimitiveData(patches, "twosided_flag", uint(1));
+    context.setPrimitiveData(patches, "reflectivity_spectrum", "specular_scale_test_reflectivity");
+    context.setPrimitiveData(patches, "transmissivity_spectrum", "specular_scale_test_transmissivity");
+
+    radiation.addRadiationBand("SUN");
+    radiation.setScatteringDepth("SUN", 1);
+    radiation.disableEmission("SUN");
+    radiation.setDirectRayCount("SUN", 10000);
+    radiation.setDiffuseRayCount("SUN", 0);
+    uint source = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceFlux(source, "SUN", 1000.0f);
+
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = make_int2(48, 24);
+    camera_properties.lens_diameter = 0.0f;
+    camera_properties.focal_plane_distance = 2.0f;
+    camera_properties.HFOV = 60.0f;
+    camera_properties.exposure = "manual";
+    camera_properties.white_balance = "off";
+    radiation.addRadiationCamera("specular_cam", {"SUN"}, make_vec3(0, 0, 2), make_vec3(0, 0, 0), camera_properties, 50);
+    context.setGlobalData("specular_scale_test_response", std::vector<vec2>{make_vec2(400, 1.0f), make_vec2(700, 1.0f)});
+    radiation.setCameraSpectralResponse("specular_cam", "SUN", "specular_scale_test_response");
+
+    // Renders and returns the mean pixel over each patch: {left, right}
+    auto render = [&]() {
+        radiation.updateGeometry();
+        radiation.runBand("SUN");
+        std::vector<float> pixels;
+        std::vector<uint> pixel_UUIDs;
+        context.getGlobalData("camera_specular_cam_SUN", pixels);
+        context.getGlobalData("camera_specular_cam_pixel_UUID", pixel_UUIDs);
+        double left_sum = 0, right_sum = 0;
+        size_t left_count = 0, right_count = 0;
+        for (size_t pixel = 0; pixel < pixels.size(); pixel++) {
+            if (pixel_UUIDs.at(pixel) == left_patch + 1) {
+                left_sum += pixels.at(pixel);
+                left_count++;
+            } else if (pixel_UUIDs.at(pixel) == right_patch + 1) {
+                right_sum += pixels.at(pixel);
+                right_count++;
+            }
+        }
+        DOCTEST_REQUIRE(left_count > 0);
+        DOCTEST_REQUIRE(right_count > 0);
+        return make_vec2(float(left_sum / double(left_count)), float(right_sum / double(right_count)));
+    };
+
+    // Diffuse only: no primitive has a specular exponent
+    context.setPrimitiveData(patches, "specular_exponent", -1.0f);
+    const vec2 diffuse = render();
+
+    // Specular on, no scale set: the scale is 1
+    context.setPrimitiveData(patches, "specular_exponent", 20.0f);
+    const vec2 unscaled = render();
+    const vec2 unscaled_specular = unscaled - diffuse;
+    DOCTEST_CAPTURE(diffuse);
+    DOCTEST_CAPTURE(unscaled);
+    DOCTEST_REQUIRE(unscaled_specular.x > 2.0f * diffuse.x);
+    DOCTEST_REQUIRE(unscaled_specular.y > 2.0f * diffuse.y);
+
+    DOCTEST_SUBCASE("A scale of 0 on every primitive turns specular off") {
+        context.setPrimitiveData(patches, "specular_scale", 0.0f);
+        const vec2 scaled = render();
+        DOCTEST_CAPTURE(scaled);
+        DOCTEST_CHECK(std::fabs(scaled.x - diffuse.x) < 0.05f * unscaled_specular.x);
+        DOCTEST_CHECK(std::fabs(scaled.y - diffuse.y) < 0.05f * unscaled_specular.y);
+    }
+
+    DOCTEST_SUBCASE("A primitive's scale applies to it alone, and a primitive without one keeps a scale of 1") {
+        context.setPrimitiveData(left_patch, "specular_scale", 0.5f);
+        const vec2 scaled = render();
+        DOCTEST_CAPTURE(scaled);
+        DOCTEST_CHECK((scaled.x - diffuse.x) / unscaled_specular.x == doctest::Approx(0.5f).epsilon(0.1));
+        DOCTEST_CHECK((scaled.y - diffuse.y) / unscaled_specular.y == doctest::Approx(1.0f).epsilon(0.05));
+
+        // Removing the scale again restores the unscaled highlight
+        context.clearPrimitiveData(left_patch, "specular_scale");
+        const vec2 cleared = render();
+        DOCTEST_CAPTURE(cleared);
+        DOCTEST_CHECK((cleared.x - diffuse.x) / unscaled_specular.x == doctest::Approx(1.0f).epsilon(0.05));
+
+        // Removing the exponent from both patches turns specular off again
+        context.clearPrimitiveData(patches, "specular_exponent");
+        const vec2 no_exponent = render();
+        DOCTEST_CAPTURE(no_exponent);
+        DOCTEST_CHECK(std::fabs(no_exponent.x - diffuse.x) < 0.05f * unscaled_specular.x);
+        DOCTEST_CHECK(std::fabs(no_exponent.y - diffuse.y) < 0.05f * unscaled_specular.y);
+    }
 }
 
 GPU_TEST_CASE("RadiationModel - Specular Reflection Multiple Cameras") {
@@ -10996,9 +11393,20 @@ GPU_TEST_CASE("Backend Invariant - Camera Added Between runBand Calls") {
         for (const CameraSpec &spec: cameras_after_first_run) {
             add_camera(spec);
         }
-        model.runBand("SW0");
-        model.runBand("LW");
-        model.runBand("SW");
+        // "SW0" deliberately carries a reflectivity spectrum with scatteringDepth=0, so runBand() is expected to warn
+        // that the surface radiative properties will be ignored. Capture it so passing test output stays clean, and
+        // check it rather than discarding it. The capture is scoped to the runs alone -- no DOCTEST assertion may be
+        // made while it holds std::cerr, or doctest's own failure output would be swallowed.
+        std::string run_warnings;
+        {
+            capture_cerr capture_run;
+            model.runBand("SW0");
+            model.runBand("LW");
+            model.runBand("SW");
+            run_warnings = capture_run.get_captured_output();
+        }
+        DOCTEST_CHECK(run_warnings.find("scattering iterations are disabled") != std::string::npos);
+        DOCTEST_CHECK(run_warnings.find("band SW0") != std::string::npos);
 
         std::vector<CameraSpec> all_cameras = cameras_before_first_run;
         all_cameras.insert(all_cameras.end(), cameras_after_first_run.begin(), cameras_after_first_run.end());
@@ -11636,4 +12044,143 @@ GPU_TEST_CASE("Camera auto-exposure honours exposure_target") {
     DOCTEST_CHECK(median_low == doctest::Approx(0.09f).epsilon(0.02));
     // And halving the target halves the image, which a hardcoded target cannot do.
     DOCTEST_CHECK(median_low == doctest::Approx(0.5f * median_default).epsilon(0.05));
+}
+
+GPU_TEST_CASE("RadiationModel scattering bookkeeping - sky diffuse scattering survives the presence of a direct source") {
+    // Regression test. With a direct source present, emission disabled, and scattering enabled, the first scattering
+    // iteration discarded the scattered energy produced by the primary diffuse launch (the scattered sky radiation) and
+    // re-launched the scattered direct energy that the primary diffuse launch had already propagated. Adding a
+    // negligible sun to a diffuse sky therefore removed most of the multiply-scattered sky radiation.
+    //
+    // The scene is an open-top well with highly reflective inward-facing walls, so multiply-scattered sky radiation
+    // dominates the floor flux, and the sun is 0.1% of the sky flux, so its own contribution is far below the tolerance.
+    // The scattering depth is deep enough that truncation of the scattering series is negligible.
+
+    const float wall_height = 2.f;
+    const float reflectivity = 0.9f;
+    const float sky_flux = 1000.f;
+    const float sun_flux = 1.f;
+
+    auto floorFlux = [&](bool add_sun) {
+        Context context;
+        std::vector<uint> UUIDs;
+        UUIDs.push_back(context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1)));
+        UUIDs.push_back(context.addPatch(make_vec3(-0.5, 0, 0.5 * wall_height), make_vec2(wall_height, 1), make_SphericalCoord(0.5 * M_PI, 0.5 * M_PI)));
+        UUIDs.push_back(context.addPatch(make_vec3(0.5, 0, 0.5 * wall_height), make_vec2(wall_height, 1), make_SphericalCoord(0.5 * M_PI, 1.5 * M_PI)));
+        UUIDs.push_back(context.addPatch(make_vec3(0, -0.5, 0.5 * wall_height), make_vec2(1, wall_height), make_SphericalCoord(0.5 * M_PI, 0)));
+        UUIDs.push_back(context.addPatch(make_vec3(0, 0.5, 0.5 * wall_height), make_vec2(1, wall_height), make_SphericalCoord(0.5 * M_PI, M_PI)));
+        context.setPrimitiveData(UUIDs, "reflectivity_SW", reflectivity);
+
+        RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
+        radiationmodel.disableMessages();
+        radiationmodel.addRadiationBand("SW");
+        radiationmodel.disableEmission("SW");
+        radiationmodel.setDirectRayCount("SW", 10000);
+        radiationmodel.setDiffuseRayCount("SW", 10000);
+        radiationmodel.setScatteringDepth("SW", 20);
+        radiationmodel.setDiffuseRadiationFlux("SW", sky_flux);
+        if (add_sun) {
+            uint sun = radiationmodel.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+            radiationmodel.setSourceFlux(sun, "SW", sun_flux);
+        }
+        radiationmodel.updateGeometry();
+        radiationmodel.runBand("SW");
+
+        float flux;
+        context.getPrimitiveData(UUIDs.front(), "radiation_flux_SW", flux);
+        return flux;
+    };
+
+    const float flux_sky_only = floorFlux(false);
+    const float flux_sky_and_sun = floorFlux(true);
+
+    DOCTEST_CHECK(flux_sky_only > 0.f);
+    // The sun can add at most sun_flux to the floor.
+    DOCTEST_CHECK(flux_sky_and_sun == doctest::Approx(flux_sky_only).epsilon(0.03));
+}
+
+GPU_TEST_CASE("RadiationModel scattering bookkeeping - a band's result does not depend on co-dispatched bands with a different scatteringDepth") {
+    // Regression test. scatteringDepth is per band, but bands dispatched together share one scattering loop that runs
+    // to the deepest band's depth. A band whose depth was exhausted had its launch flag cleared part way through the
+    // loop, which renumbered the launch slots of the remaining bands (and, in the Vulkan backend, left a stale
+    // launch->global band map), so the exhausted band kept scattering with another band's material properties and/or
+    // the surviving bands stopped scattering. Each band must give the same answer dispatched with others as alone.
+    //
+    // Band labels fix the std::map (launch slot) order: "AA" < "MM" < "ZZ". Only a direct source is used, so that the
+    // number of bounces the scattered direct energy receives is the same in every dispatch.
+
+    struct BandSetup {
+        std::string label;
+        uint scattering_depth;
+        float reflectivity;
+        float source_flux;
+    };
+    const std::vector<BandSetup> all_bands = {{"AA", 1, 0.8f, 1000.f}, {"MM", 0, 0.5f, 400.f}, {"ZZ", 3, 0.6f, 5000.f}};
+
+    // Floor lit by the sun, flanked by two tilted two-sided reflective wings that scatter energy back onto it.
+    auto floorFluxes = [&](const std::vector<BandSetup> &bands) {
+        Context context;
+        context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+        context.addPatch(make_vec3(0, -2, 0.5), make_vec2(2, 2), make_SphericalCoord(0.25 * M_PI, 0));
+        context.addPatch(make_vec3(0, 2, 0.5), make_vec2(2, 2), make_SphericalCoord(0.25 * M_PI, M_PI));
+        context.setPrimitiveData(0, "twosided_flag", uint(0));
+
+        RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
+        radiationmodel.disableMessages();
+        uint sun = radiationmodel.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+
+        std::vector<std::string> labels;
+        for (const BandSetup &band: bands) {
+            context.setPrimitiveData(context.getAllUUIDs(), ("reflectivity_" + band.label).c_str(), band.reflectivity);
+            radiationmodel.addRadiationBand(band.label);
+            radiationmodel.disableEmission(band.label);
+            radiationmodel.setDirectRayCount(band.label, 10000);
+            radiationmodel.setDiffuseRayCount(band.label, 10000);
+            radiationmodel.setScatteringDepth(band.label, band.scattering_depth);
+            radiationmodel.setSourceFlux(sun, band.label, band.source_flux);
+            labels.push_back(band.label);
+        }
+        radiationmodel.updateGeometry();
+
+        // Every band here sets a non-default reflectivity, so any band with scatteringDepth=0 ("MM") makes runBand()
+        // warn that those properties will be ignored. That warning is the correct diagnostic for this scene, so it is
+        // captured to keep passing test output clean and checked below. The capture must not be in scope during any
+        // DOCTEST assertion, or doctest's failure output would be captured instead of printed.
+        std::string run_warnings;
+        {
+            capture_cerr capture_run;
+            radiationmodel.runBand(labels);
+            run_warnings = capture_run.get_captured_output();
+        }
+
+        bool expect_scattering_disabled_warning = false;
+        for (const BandSetup &band: bands) {
+            if (band.scattering_depth == 0) {
+                expect_scattering_disabled_warning = true;
+                DOCTEST_CAPTURE(band.label);
+                DOCTEST_CHECK(run_warnings.find("band " + band.label) != std::string::npos);
+            }
+        }
+        DOCTEST_CHECK(run_warnings.empty() == !expect_scattering_disabled_warning);
+
+        std::vector<float> fluxes;
+        for (const BandSetup &band: bands) {
+            float flux;
+            context.getPrimitiveData(0, ("radiation_flux_" + band.label).c_str(), flux);
+            fluxes.push_back(flux);
+        }
+        return fluxes;
+    };
+
+    const std::vector<float> flux_together = floorFluxes(all_bands);
+    for (size_t b = 0; b < all_bands.size(); b++) {
+        const float flux_alone = floorFluxes({all_bands.at(b)}).front();
+        DOCTEST_CAPTURE(all_bands.at(b).label);
+        DOCTEST_CHECK(flux_alone > 0.f);
+        // 1.5% is bounded on both sides: the band with the DEEPEST scattering depth ("ZZ") loses only its scattered energy,
+        // which is a few percent of its total flux on the OptiX backends, so a 2% tolerance left the bug undetected. Below
+        // that, the two dispatches are independent Monte-Carlo estimates of this scene, and their spread is not always under
+        // 1% -- a 1% bound failed on an OptiX 8.1 runner with 226.9 against 229.7 (1.18%) while passing elsewhere.
+        DOCTEST_CHECK(flux_together.at(b) == doctest::Approx(flux_alone).epsilon(0.015));
+    }
 }

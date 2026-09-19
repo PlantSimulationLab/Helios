@@ -3189,6 +3189,159 @@ float helios::sample_ellipsoidal_azimuth(float e, float phi0_degrees, std::minst
     return phi;
 }
 
+// Regularized incomplete beta function I_x(a,b), evaluated with the Lentz continued fraction. Used by
+// evaluate_Beta_distribution_CDF() below; the series converges fastest for x < (a+1)/(a+b+2), so the
+// symmetry I_x(a,b) = 1 - I_{1-x}(b,a) is applied to stay on that side.
+static float regularized_incomplete_beta(float x, float a, float b) {
+    if (x <= 0.f) {
+        return 0.f;
+    }
+    if (x >= 1.f) {
+        return 1.f;
+    }
+
+    const bool swap = (x > (a + 1.f) / (a + b + 2.f));
+    if (swap) {
+        std::swap(a, b);
+        x = 1.f - x;
+    }
+
+    // Leading factor x^a (1-x)^b / (a B(a,b)), formed in logs so that large parameters do not overflow.
+    const double log_prefactor = std::lgamma(double(a) + double(b)) - std::lgamma(double(a)) - std::lgamma(double(b)) + double(a) * std::log(double(x)) + double(b) * std::log1p(-double(x));
+    const double prefactor = std::exp(log_prefactor) / double(a);
+
+    // Modified Lentz algorithm for the continued fraction.
+    constexpr double tiny = 1e-30;
+    constexpr double tolerance = 1e-9;
+    double f = 1.0, c = 1.0, d = 0.0;
+    for (int i = 0; i <= 300; ++i) {
+        const int m = i / 2;
+        double numerator;
+        if (i == 0) {
+            numerator = 1.0;
+        } else if (i % 2 == 0) {
+            numerator = double(m) * (double(b) - double(m)) * double(x) / ((double(a) + 2.0 * double(m) - 1.0) * (double(a) + 2.0 * double(m)));
+        } else {
+            numerator = -(double(a) + double(m)) * (double(a) + double(b) + double(m)) * double(x) / ((double(a) + 2.0 * double(m)) * (double(a) + 2.0 * double(m) + 1.0));
+        }
+
+        d = 1.0 + numerator * d;
+        if (std::fabs(d) < tiny) {
+            d = tiny;
+        }
+        d = 1.0 / d;
+
+        c = 1.0 + numerator / c;
+        if (std::fabs(c) < tiny) {
+            c = tiny;
+        }
+
+        const double delta = c * d;
+        f *= delta;
+        if (std::fabs(delta - 1.0) < tolerance) {
+            break;
+        }
+    }
+
+    const float result = float(prefactor * (f - 1.0));
+    return swap ? 1.f - result : result;
+}
+
+float helios::evaluate_Beta_distribution_CDF(float theta, float mu, float nu) {
+    if (mu <= 0.f || nu <= 0.f) {
+        helios_runtime_error("ERROR (helios::evaluate_Beta_distribution_CDF): Beta distribution parameters must be positive.");
+    }
+
+    // sample_Beta_distribution() draws Beta(alpha=nu, beta=mu) and scales it onto [0,pi/2], so the CDF of
+    // the angle is the regularized incomplete beta of the same two parameters evaluated at theta/(pi/2).
+    const float x = theta / (0.5f * PI_F);
+    return regularized_incomplete_beta(x, nu, mu);
+}
+
+float helios::invert_Beta_distribution_CDF(float probability, float mu, float nu) {
+    if (mu <= 0.f || nu <= 0.f) {
+        helios_runtime_error("ERROR (helios::invert_Beta_distribution_CDF): Beta distribution parameters must be positive.");
+    }
+    if (probability < 0.f || probability > 1.f) {
+        helios_runtime_error("ERROR (helios::invert_Beta_distribution_CDF): Cumulative probability must be in [0,1].");
+    }
+
+    if (probability <= 0.f) {
+        return 0.f;
+    }
+    if (probability >= 1.f) {
+        return 0.5f * PI_F;
+    }
+
+    // The CDF is monotonic on [0,pi/2], so a bisection is both robust and sufficient here: 60 halvings
+    // take the bracket well below the precision of the float it is returned in.
+    float lower = 0.f;
+    float upper = 0.5f * PI_F;
+    for (int iter = 0; iter < 60; ++iter) {
+        const float midpoint = 0.5f * (lower + upper);
+        if (evaluate_Beta_distribution_CDF(midpoint, mu, nu) < probability) {
+            lower = midpoint;
+        } else {
+            upper = midpoint;
+        }
+    }
+    return 0.5f * (lower + upper);
+}
+
+float helios::evaluate_ellipsoidal_azimuth_CDF(float phi, float e, float phi0_degrees) {
+    if (e < 0.f || e > 1.f) {
+        helios_runtime_error("ERROR (helios::evaluate_ellipsoidal_azimuth_CDF): Eccentricity must be in [0,1].");
+    }
+
+    // sample_ellipsoidal_azimuth() draws the ellipse parameter t uniformly on [0,2*pi) and returns the
+    // polar angle of the boundary point at t. The CDF is therefore the value of t that produces this
+    // angle, divided by 2*pi - the exact inverse of the sampler rather than an integral of the density.
+    const float phi0 = deg2rad(phi0_degrees);
+    const float a = 1.f;
+    const float b = std::sqrt(1.f - e * e);
+
+    float d = phi - phi0;
+    // Wrap the offset angle into [0,2*pi) so that the recovered parameter is on the same branch.
+    d = std::fmod(d, 2.f * PI_F);
+    if (d < 0.f) {
+        d += 2.f * PI_F;
+    }
+
+    // A fully degenerate ellipse (e=1) collapses onto the phi0 axis and has no invertible parameter.
+    if (b < 1e-6f) {
+        return (d < PI_F) ? 0.f : 1.f;
+    }
+
+    float t = std::atan2(a * std::sin(d), b * std::cos(d));
+    if (t < 0.f) {
+        t += 2.f * PI_F;
+    }
+
+    return t / (2.f * PI_F);
+}
+
+float helios::invert_ellipsoidal_azimuth_CDF(float probability, float e, float phi0_degrees) {
+    if (e < 0.f || e > 1.f) {
+        helios_runtime_error("ERROR (helios::invert_ellipsoidal_azimuth_CDF): Eccentricity must be in [0,1].");
+    }
+    if (probability < 0.f || probability > 1.f) {
+        helios_runtime_error("ERROR (helios::invert_ellipsoidal_azimuth_CDF): Cumulative probability must be in [0,1].");
+    }
+
+    const float phi0 = deg2rad(phi0_degrees);
+    const float a = 1.f;
+    const float b = std::sqrt(1.f - e * e);
+
+    const float t = probability * 2.f * PI_F;
+    float phi = std::atan2(b * std::sin(t), a * std::cos(t)) + phi0;
+
+    phi = std::fmod(phi, 2.f * PI_F);
+    if (phi < 0.f) {
+        phi += 2.f * PI_F;
+    }
+    return phi;
+}
+
 std::vector<float> helios::linspace(float start, float end, int num) {
     if (num <= 0) {
         helios_runtime_error("ERROR (linspace): Number of points must be greater than 0.");

@@ -615,10 +615,7 @@ RT_PROGRAM void closest_hit_camera() {
                         float3 specular_direction = normalize(light_direction - ray.direction);
 
                         float exponent = specular_exponent[hit_position];
-                        double scale_coefficient = 1.0;
-                        if (specular_reflection_enabled == 2) { // if we are using the scale coefficient
-                            scale_coefficient = specular_scale[hit_position];
-                        }
+                        double scale_coefficient = specular_scale[hit_position]; // 1 for a primitive without "specular_scale" data
 
                         strength_spec += spec * scale_coefficient * pow(max(0.f, dot(specular_direction, normal)), exponent) * (exponent + 2.f) /
                                          (double(launch_dim.x) * 2.f * M_PI); // launch_dim.x is the number of rays launched per pixel, so we divide by it to get the average flux per ray. (exponent+2)/2pi normalizes reflected distribution to unity.
@@ -836,6 +833,28 @@ RT_PROGRAM void any_hit_diffuse() {
     rtIgnoreIntersection();
 }
 
+//! Add light arriving at the face a ray was launched from to every camera's white reference
+/**
+ * The white reference is what each camera would record from a spectrally flat, perfectly white surface in place of the primitive: the arriving light weighted by white_reference_cam. Only light
+ * straight from a radiation source or the sky is added, so a camera's "auto" white balance neutralizes the light illuminating the scene and not light already coloured by other surfaces. Mirrors
+ * accumulateWhiteReference() in optix8/OptiX8DeviceCode.cu.
+ */
+static __device__ __inline__ void accumulateWhiteReference(size_t ind_origin, int b_global, float strength) {
+    if (Ncameras == 0 || strength <= 0) {
+        return;
+    }
+    size_t cam_stride = (size_t) Nprimitives * Nbands_launch;
+    for (unsigned int cam = 0; cam < Ncameras; cam++) {
+        float white = white_reference_cam[((size_t) prd.source_ID * Nbands_global + b_global) * Ncameras + cam];
+        size_t ind_white = cam * cam_stride + ind_origin;
+        if (prd.face) {
+            atomicFloatAdd(&white_reference_top_cam[ind_white], strength * white);
+        } else {
+            atomicFloatAdd(&white_reference_bottom_cam[ind_white], strength * white);
+        }
+    }
+}
+
 RT_PROGRAM void miss_direct() {
 
     // Convert UUID to array position
@@ -906,13 +925,15 @@ RT_PROGRAM void miss_direct() {
                     }
                 }
             }
+            accumulateWhiteReference(ind_origin, b_global, strength);
             // Accumulate incident radiation for specular for ALL cameras (per source, camera-weighted).
             // Direct rays are launched once (not per camera), so we must populate every camera's slot
             // in radiation_specular here so each camera's closest-hit can read its own data. (Mirrors
             // the OptiX 8 path in OptiX8DeviceCode.cu; without the camera loop only camera_ID==0 was
             // populated and additional cameras saw no specular highlight.)
             // Apply camera spectral response weighting: ∫(source × camera) / ∫(source)
-            if (strength > 0) {
+            // radiation_specular is allocated only when specular reflection is enabled.
+            if (strength > 0 && specular_reflection_enabled > 0) {
                 for (unsigned int cam = 0; cam < Ncameras; cam++) {
                     // Use BufferIndexer: [source][band][camera]
                     size_t weight_ind = source_cam_flux_indexer(prd.source_ID, b, cam);
@@ -1047,6 +1068,7 @@ RT_PROGRAM void miss_diffuse() {
                             }
                         }
                     }
+                    accumulateWhiteReference(ind_origin, b_global, strength);
                     // Note: Don't accumulate diffuse sky radiation to radiation_specular
                     // Specular should only reflect DIRECT source radiation (accumulated in miss_direct)
                 }

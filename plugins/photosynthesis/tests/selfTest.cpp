@@ -2204,3 +2204,37 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Farquhar library values match documentati
 int PhotosynthesisModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }
+
+DOCTEST_TEST_CASE("PhotosynthesisModel zero boundary-layer conductance with open stomata does not give NaN") {
+    // Regression test. The guard against a 0/0 when combining the boundary-layer and stomatal conductances only fired when BOTH
+    // were zero, but a zero boundary-layer conductance alone produces the 0/0 for hypostomatous leaves (the default
+    // stomatal_sidedness of 0), so net_photosynthesis came back NaN. With no boundary-layer conductance there is no CO2
+    // supply, which is the same state as both conductances being zero and must give the same (finite) answer.
+    auto netPhotosynthesis = [](float boundarylayer_conductance, float moisture_conductance) {
+        Context context_test;
+        uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 300.f);
+        context_test.setPrimitiveData(UUID, "temperature", 298.f);
+        context_test.setPrimitiveData(UUID, "air_CO2", 400.f);
+        context_test.setPrimitiveData(UUID, "moisture_conductance", moisture_conductance);
+        context_test.setPrimitiveData(UUID, "boundarylayer_conductance", boundarylayer_conductance);
+
+        PhotosynthesisModel photomodel(&context_test);
+        photomodel.disableMessages();
+        photomodel.setModelType_Farquhar();
+        {
+            capture_cerr cerr_buffer; // no CO2 supply: the Ci solver reports non-convergence
+            photomodel.run();
+        }
+        float A = 0.f;
+        context_test.getPrimitiveData(UUID, "net_photosynthesis", A);
+        return A;
+    };
+
+    const float A_no_boundarylayer = netPhotosynthesis(0.f, 0.2f);
+    const float A_no_conductance = netPhotosynthesis(0.f, 0.f);
+
+    DOCTEST_CHECK(std::isfinite(A_no_boundarylayer));
+    DOCTEST_CHECK(std::isfinite(A_no_conductance));
+    DOCTEST_CHECK(A_no_boundarylayer == doctest::Approx(A_no_conductance));
+}

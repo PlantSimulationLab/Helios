@@ -323,6 +323,46 @@ DOCTEST_TEST_CASE("InclinedPlate zero-wind conductance and its jump from the low
     DOCTEST_CHECK(gH_vertical_zero / gH_vertical_low == doctest::Approx(1.947f).epsilon(0.01));
 }
 
+DOCTEST_TEST_CASE("InclinedPlate conductance of a leaf cooler than the air") {
+    // Regression test. The model documents that the wind is always transverse to gravity, so the buoyancy-assisting (+) form of
+    // the Chen et al. (1986) mixed-convection correlation is always taken. The code instead switched to the buoyancy-opposing
+    // (-) form whenever the surface was cooler than the air, which drives the term under the cube root negative once free
+    // convection dominates (low wind, large temperature difference) and returned NaN. With the assisting form the conductance
+    // depends only on the magnitude of the temperature difference.
+    Context context;
+    BLConductanceModel blc(&context);
+    blc.disableMessages();
+
+    const float Ta = 300.f;
+    const float dT = 10.f;
+
+    // A nearly horizontal and a nearly vertical leaf, which take the two different branches of the correlation
+    uint UUID_horizontal = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(30.f * float(M_PI) / 180.f, 0));
+    uint UUID_vertical = context.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1), make_SphericalCoord(0.5f * float(M_PI), 0));
+    std::vector<uint> UUIDs{UUID_horizontal, UUID_vertical};
+    context.setPrimitiveData(UUIDs, "object_length", 0.2f);
+    context.setPrimitiveData(UUIDs, "air_temperature", Ta);
+    context.setPrimitiveData(UUIDs, "wind_speed", 0.1f); // free convection dominates: the opposing form is negative under the root here
+    blc.setBoundaryLayerModel(UUIDs, "InclinedPlate");
+
+    for (uint UUID: UUIDs) {
+        context.setPrimitiveData(UUID, "temperature", Ta - dT);
+        blc.run();
+        float gH_cool = 0.f;
+        context.getPrimitiveData(UUID, "boundarylayer_conductance", gH_cool);
+
+        context.setPrimitiveData(UUID, "temperature", Ta + dT);
+        blc.run();
+        float gH_warm = 0.f;
+        context.getPrimitiveData(UUID, "boundarylayer_conductance", gH_warm);
+
+        DOCTEST_CAPTURE(UUID);
+        DOCTEST_CHECK(std::isfinite(gH_cool));
+        DOCTEST_CHECK(gH_cool > 0.f);
+        DOCTEST_CHECK(gH_cool == doctest::Approx(gH_warm));
+    }
+}
+
 int BLConductanceModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

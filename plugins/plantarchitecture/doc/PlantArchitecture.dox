@@ -223,7 +223,7 @@ The VSP grapevine model uses vine spacing to automatically calculate appropriate
 | Parameter | Default | Valid Range | Units | Description |
 |-----------|---------|-------------|-------|-------------|
 | vine_spacing | 2.4 | 0.5-5.0 | m | Plant-to-plant spacing (cane nodes auto-calculated to span half this distance) |
-| trunk_height | 0.8 | 0.05-1.0 | m | Total trunk height |
+| trunk_height | 0.8 | 0.05-1.0 | m | Height of the fruiting wire the canes are tied to. The head of the trunk sits 8-16% below it. |
 
 <b>Grapevine Wye (grapevine_Wye)</b>
 
@@ -557,6 +557,8 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | color | helios::RGBcolor | - | Diffuse color of the petiole tube. |
 | length_segments | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of longitudinal segment subdivisions of the petiole tube. |
 | radial_subdivisions | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of radial subdivisions segments of the petiole tube (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) |
+| flexibility | RandomParameter_float | - | Dimensionless bending compliance of the petiole, which makes it arch downward under the weight of its leaflets as the leaf grows and the petiole ages. A straight, horizontal, untapered petiole whose full-grown leaf weight acts at its tip turns through this many radians from base to tip in the small-deflection limit, about its clamped insertion angle. =0 (default) gives a petiole that keeps its generated shape. See \ref PlantArch_petioledroop. |
+| flexibility_aging | RandomParameter_float | days | Timescale of the linear growth of the petiole bending compliance with age: the compliance is flexibility &times; (1 + age / flexibility_aging), without a ceiling, so a petiole keeps lowering after its leaf has stopped growing. =0 (default) disables ageing, so a petiole stops bending once its leaf is full-grown. |
 | --- **leaf** --- ||||
 | leaves_per_petiole | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of leaves on each petiole. >1 creates a compound leaf. |
 | pitch | RandomParameter_float | degrees | Angle of the leaf axis with respect to its parent petiole axis. |
@@ -564,6 +566,7 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | roll | RandomParameter_float | degrees | Rotation angle of the leaf about it's own axis (midrib). |
 | leaflet_offset | RandomParameter_float | - | If a compound leaf (leaves_per_petiole>1), this sets the spacing between adjacent leaflets along the petiole as a fraction of the petiole length. Note that the first two leaves from the tip will be offset from the tip by half this value. |
 | leaflet_scale | RandomParameter_float | - | If a compound leaf (leaves_per_petiole>1), this sets the scaling factor of the leaflet moving down the petiole with respect to the previous leaf (<1 scales down, >1 scales up). |
+| intercalary_leaflet_scale | RandomParameter_float | - | If non-zero, the compound leaf is interruptedly pinnate: every second pair of leaflets down the petiole is a small intercalary leaflet, sized by this fraction of the major leaflet just above it. Zero (the default) gives a simply pinnate leaf. |
 | prototype_scale | RandomParameter_float | - | Scaling factor applied to the leaf prototype. Usually the prototype has unit length, so this sets the physical length of the leaf. |
 | prototype | LeafPrototype struct | - | Structure containing information to build leaf prototypes. |
 | --- **peduncle** --- ||||
@@ -697,9 +700,57 @@ parameters, which kinked the leaf by a fixed angle at a fixed station along its 
 The mature leaf is shaped much as it was, but now arrives at that shape as it expands rather than starting out with it. Setting \htmlonly<span style="font-family: Courier, monospace; color: blue;">flexibility</span>\endhtmlonly
 explicitly always takes precedence, and the deprecated parameters will be removed in a future version.
 
+\subsection PlantArch_petioledroop Petiole Droop Under Leaf Weight
+
+The leaf droop described above bends the blade about its own base, so it cannot change the shape of the petiole that carries it. In many dicots the petiole is not rigid: as a leaf enlarges and ages, its petiole
+(and, for a compound leaf, the rachis along which the leaflets attach) arches over under the leaflets' weight, its tip section pointing further down than its base section, and the whole arch keeps lowering
+as the leaf ages. Setting the petiole parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">flexibility</span>\endhtmlonly (in \htmlonly<span style="font-family: Courier, monospace; color: blue;">PhytomerParameters::petiole</span>\endhtmlonly) to a non-zero value turns this on. Zero, the default, leaves every petiole at its generated shape.
+
+<b>Mechanics.</b> The petiole centerline is treated as a tapered cantilever clamped at its insertion. Each leaflet \f$i\f$ is a point load at the arclength \f$s_i\f$ where it attaches, with weight
+\f$W_i = a_i^2\,g\f$, where \f$a_i\f$ is the leaflet's mature size (so \f$a_i^2\f$ is proportional to its area) and \f$g\f$ is the fraction of its full size the leaf has reached. The petiole's own weight is
+not included: there is no parameter giving its density relative to the blades, and being spread along the petiole it loads it much as the leaflets along the rachis do, so its effect is absorbed into the
+flexibility. Each segment \f$j\f$ of the centerline, of length \f$\Delta s_j\f$ and mean radius \f$r_j\f$, is turned downward by
+
+\f[\theta_j = \frac{2\,c(t)}{W_{\mathrm{ref}}\,L^2}\left(\frac{r_0}{r_j}\right)^4 \int_{\mathrm{segment}\ j} M(s)\,ds,\qquad M(s) = \sum_{s_i > s} W_i\,h_i(s),\f]
+
+where \f$L\f$ is the petiole length, \f$r_0\f$ its base radius, \f$W_{\mathrm{ref}} = \sum_i a_i^2\f$ the full-grown load, and \f$h_i(s)\f$ the horizontal lever arm from the point \f$s\f$ to leaflet
+\f$i\f$ along the segment's heading, measured on the bent shape (and never taken as negative). Bending stiffness goes with the fourth power of radius, so the thinner outer part of a tapered petiole bends more
+readily; the radius ratio is floored at 0.5, since a tube tapered to a point would otherwise have an infinitely compliant tip. The rotations accumulate from base to tip: segment \f$j\f$ keeps its horizontal
+heading and its elevation is lowered by \f$\sum_{k < j} \theta_k\f$, the curvature accumulated up to its own base, stopped at hanging straight down. Because the lever arms depend on the bent shape, the balance
+is found by an under-relaxed fixed-point iteration from the rest shape; for compliances up to at least 10 the returned elevations balance their moments to better than \f$10^{-8}\f$ radians.
+
+<b>The insertion angle is held.</b> The sum runs over the segments <i>before</i> \f$j\f$, so the first segment is not turned at all and the petiole leaves the stem at the pitch it was generated with, however
+heavy its leaf becomes; the droop appears beyond the insertion, as curvature accumulating along the length. This is what a cantilever built in at its support does - its slope changes nowhere faster than the
+curvature allows, and not at all at the support itself - and it is what real petioles do. Measured tomato petioles hold a base elevation of 34, 21, 20 and 12 degrees at leaf ages of 3, 6, 9 and 12 days while
+their base-to-tip arch grows from 13 to 19 degrees: the outer petiole arches over while the insertion is roughly held. Turning each segment through its own share of the curvature as well would instead swing
+the insertion down hardest of all, since the bending moment is largest at the base.
+
+<b>Normalization.</b> With this definition a straight, horizontal, untapered petiole whose whole full-grown leaf weight acts at its tip turns through \f$c\f$ radians from base to tip in the small-deflection
+limit, whatever its length. A compound leaf, whose weight is spread along the rachis, bends less at the tip for the same flexibility, and a petiole that starts above horizontal has shorter lever arms and bends
+less than a horizontal one.
+
+<b>Growth and ageing.</b> The load grows with \f$g\f$, so a petiole arches progressively as its leaf expands. The compliance is
+
+\f[c(t) = f\left(1 + \frac{t}{\tau}\right),\f]
+
+where \f$f\f$ is \htmlonly<span style="font-family: Courier, monospace; color: blue;">flexibility</span>\endhtmlonly, \f$t\f$ the phytomer's age in days and \f$\tau\f$ is \htmlonly<span style="font-family: Courier, monospace; color: blue;">flexibility_aging</span>\endhtmlonly (with \f$\tau = 0\f$, the default, meaning \f$c = f\f$). The growth is linear and has no
+ceiling, so a petiole goes on lowering after its leaf has stopped growing; the bound comes from the geometry, since no part of the petiole can be turned past hanging straight down. Without ageing a petiole
+stops moving once its leaf is full-grown.
+
+<b>Leaves and history.</b> Every leaf stays attached at its arclength along the bent centerline and turns with the centerline there, by the rotation that carries the centerline's previous tangent at that point
+onto its new one, so the leaflets near the tip of a compound leaf tilt further than those near its base. Leaf blade droop, if enabled, is applied on top of this. The bent shape is always computed from the
+petiole's stored rest shape, which grows with the petiole and moves with the stem, and never from its previous bent shape, so it does not drift over a long simulation and does not depend on the timestep. A
+plant written with \ref PlantArchitecture::writePlantStructureXML() is rebuilt at its rest shape and bent again when it is read back with \ref PlantArchitecture::readPlantStructureXML() (the shoot type used to
+read the plant must carry the same petiole parameters).
+
+A petiole whose centerline was set by \ref PlantArchitecture::setPetioleNodePositions(), or that carries leaves posed by \ref PlantArchitecture::setPetioleLeafGeometry(), is measured geometry and is never
+bent.
+
 \subsection PlantArch_compound Compound Leaves
 
 Compound leaves consist of a single petiole with multiple leaves (leaflets) attached. The number of leaflets is specified by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">leaves_per_petiole</span>\endhtmlonly in the \ref PhytomerParameters structure (if \htmlonly<span style="font-family: Courier, monospace; color: blue;">leaves_per_petiole</span>\endhtmlonly = 1, it is not a compound leaf). The compound leaf is formed by making a copy of the leaf prototype, and scaling, rotating, and translating it based on the position along the petiole. If there is an even number of leaflets, there will be two leaves attached to the tip of the leaf at an angle of 60 degrees from each other, whereas if the number of leaflets is even there will be a single leaf attached to the tip. The size of these tip leaves is set by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">leaf_prototype_scale</span>\endhtmlonly. If the number of leaflets is greater than 2, additional leaflets are added running down the petiole in an opposite pattern. The spacing between adjacent leaflets is specified as a fraction of the petiole length by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">leaflet_offset</span>\endhtmlonly, and the scaling factor of the leaflet moving down the petiole with respect to the previous leaflet is specified by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">leaflet_offset</span>\endhtmlonly. The leaflets along the petiole can either get bigger or smaller than the tip leaf/(leaves) according to the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">leaflet_scale</span>\endhtmlonly (<1 gets smaller, >1 gets bigger).
+
+The pattern described above is a simply pinnate leaf, in which leaflet size changes monotonically along the petiole. Many species are instead interruptedly pinnate, carrying small intercalary leaflets between their major leaflet pairs: tomato, potato and much of the Rosaceae are of this form. Setting the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">intercalary_leaflet_scale</span>\endhtmlonly to a non-zero value selects this form. Pairs are then counted outward from the tip, and the odd-numbered pairs are the major leaflets, which step by \htmlonly<span style="font-family: Courier, monospace; color: blue;">leaflet_scale</span>\endhtmlonly once per major pair rather than once per leaflet. The even-numbered pairs are the intercalary leaflets, whose size is \htmlonly<span style="font-family: Courier, monospace; color: blue;">intercalary_leaflet_scale</span>\endhtmlonly times the size of the major pair immediately above them. The total number of leaflets is still \htmlonly<span style="font-family: Courier, monospace; color: blue;">leaves_per_petiole</span>\endhtmlonly, so a leaf with three major pairs and the intercalary leaflets between them needs thirteen leaflets rather than seven. A value of zero, the default, leaves the simply pinnate behavior above unchanged.
 
 \image html compound_leaf_schematic.jpeg "Schematic illustration of varying compound leaves and their parameters. (a) A compound leaf with 7 leaflets. (b) A compound leaf with an even number of leaflets (6). (c) A compound leaf with a leaflet offset of 0."
 
@@ -740,6 +791,7 @@ Parameters defining the geometry and growth of the shoot are given in the \ref S
 | --- **Growth Parameters** --- |||||
 | phyllochron_min | RandomParameter_float | 1.0 | days/leaf | Minimum time between the emergence of successive phytomers along the shoot (minimum time or maximum growth rate). The actual phyllochron can be increased dynamically if the carbohydrate model is enabled. |
 | elongation_rate_max | RandomParameter_float | 0.2 | meter/meter/day | Maximum relative rate of elongation of the internode of the shoot. Units are meters of elongation per meter of maximum internode length per day. The actual elongation rate can be reduced dynamically if the carbohydrate model is enabled. |
+| leaf_expansion_rate_max | RandomParameter_float | -1 | meter/meter/day | Maximum relative rate of expansion of the leaf blades of the shoot. Units are meters of expansion per meter of fully-expanded leaf size per day. Petioles are not included: they are stem segments and elongate at \htmlonly<span style="font-family: Courier, monospace; color: blue;">elongation_rate_max</span>\endhtmlonly. A negative value (the default) means the blades expand at the shoot's \htmlonly<span style="font-family: Courier, monospace; color: blue;">elongation_rate_max</span>\endhtmlonly. |
 | girth_area_factor | RandomParameter_float | 0 | cm^2 branch area / m^2 downstream leaf area | Cross-sectional area of internode (girth), determined by the amount of downstream leaf area. The girth will only increase and does not decrease if leaves are lost. Set this factor to 0 to prevent girth scaling. |
 | vegetative_bud_break_time | RandomParameter_float | 5 | days | Amount of time after the bud is created or after dormancy is broken for the vegetative bud to break. |
 | vegetative_bud_break_probability_decay_rate | RandomParameter_float | 0 | 1/nodes | Rate at which the probability a bud produces a shoot changes along the shoot. If >0, probability is 1 at the shoot base and decreases to a value of \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_min</span>\endhtmlonly. If <0, the probability is 1 at the shoot tip and decreases backward. |
@@ -822,6 +874,16 @@ Note that this is called the "minimum" phyllochron because the phyllochron can b
 \subsubsection ShootParam_elongation_rate elongation_rate
 
 The \htmlonly<span style="font-family: Courier, monospace; color: blue;">elongation_rate</span>\endhtmlonly parameter is the rate of axial elongation of the internode of the shoot. When the phytomer is created the internode is small, and will elongate over time according to \htmlonly<span style="font-family: Courier, monospace; color: blue;">elongation_rate</span>\endhtmlonly until it reaches its potential or maximum internode length as determined by the methodology described above. The elongation rate has units of length added to the internode per day.
+
+\subsubsection ShootParam_leaf_expansion_rate leaf_expansion_rate_max
+
+The \htmlonly<span style="font-family: Courier, monospace; color: blue;">leaf_expansion_rate_max</span>\endhtmlonly parameter is the rate at which the leaf blades of the shoot expand, expressed in the same relative form as \htmlonly<span style="font-family: Courier, monospace; color: blue;">elongation_rate_max</span>\endhtmlonly: meters of expansion per meter of fully-expanded leaf size per day. A value of 0.1 therefore takes a leaf from nothing to full size in ten days no matter how large that leaf is.
+
+Leaves and internodes do not necessarily grow on the same schedule. Measured tomato seedlings finish expanding their leaves well before their internodes stop elongating, and a single rate fitted to both makes one of the two wrong: fitting the leaves leaves every mature internode sitting at its maximum length, while fitting the internodes produces leaves that are too small. Setting this parameter separates the two; the internode is unaffected and continues to elongate at \htmlonly<span style="font-family: Courier, monospace; color: blue;">elongation_rate_max</span>\endhtmlonly.
+
+The default value is negative, which is a sentinel meaning the shoot type does not distinguish the two rates: its leaves expand at \htmlonly<span style="font-family: Courier, monospace; color: blue;">elongation_rate_max</span>\endhtmlonly. This is the behavior of every model in the plant library, none of which sets the parameter. A value of zero is a real rate meaning the leaves never expand, and is therefore not the same as leaving the parameter unset.
+
+Petioles are governed by \htmlonly<span style="font-family: Courier, monospace; color: blue;">elongation_rate_max</span>\endhtmlonly rather than by this parameter. A petiole is a stem segment, and measured petioles keep extending long after the blade they carry has reached full size: tomato petioles measured from a segmented point cloud are still lengthening at two weeks, by which time the blade has stopped. Each petiole therefore elongates toward its fully-elongated length on the shoot's internode timescale, while the blade on it expands on the leaf timescale, and a shoot type that leaves \htmlonly<span style="font-family: Courier, monospace; color: blue;">leaf_expansion_rate_max</span>\endhtmlonly unset has one rate for both and moves the two together.
 
 \subsubsection ShootParam_girth_area_factor girth_area_factor
 
@@ -1209,6 +1271,14 @@ a bud becomes is decided when its phytomer is created, so without a growth type 
 are stamped with the type the measurement was built with, and every shoot grown from them inherits the
 reconstruction's zeroed curvature and inflated node cap.
 
+Measured geometry is also protected from the shoot type's \ref PhytomerParameters::phytomer_creation_function
+"phytomer creation function". Most library species use one to scale an internode's target length by node
+position or plant age, which is meaningful for a phytomer the model generated and meaningless for one built
+from a measurement. The function still runs on phytomers created by \ref PlantArchitecture::addShootFromNodePositions(),
+so the leaf scale, flowering and anything else it sets still apply, but any change it makes to the measured
+internode's length or elongation target is undone. Measured wood therefore keeps the size it was measured at,
+and does not begin elongating on a later timestep.
+
 Two things are deliberately *not* taken from the growth type. \ref ShootParameters::girth_area_factor
 stays with the wood, for the reason given in the previous subsection. So does bud-break probability, which
 is read from the shoot bearing the bud.
@@ -1527,6 +1597,131 @@ The PlantArchitecture plugin includes an optional carbohydrate model that simula
 \section PlantArchNitrogen Nitrogen Model
 
 The PlantArchitecture plugin includes an optional nitrogen model that simulates nitrogen uptake, allocation, and stress effects on plant growth. This model tracks nitrogen in a three-level pool structure (root, available, and per-leaf pools), implements rate-limited nitrogen accumulation in leaves, simulates age-based nitrogen remobilization from old to young leaves, and calculates a nitrogen stress factor that other plugins can use to modify photosynthesis and growth rates. For detailed information on using the nitrogen model, see the \subpage NitrogenModelDoc.
+
+\section PlantArchLeafAngle Prescribing the Leaf Angle Distribution
+
+The leaf angles a plant model generates follow from its phytomer parameters, and are whatever the
+species definition produces. Where a particular distribution of leaf angles is wanted instead -- to
+reproduce a measured canopy, or to sweep the distribution as an experimental variable -- the model
+provides two ways of imposing one.
+
+\subsection PlantArchLeafAngleConventions Conventions
+
+Leaf inclination is the zenith angle of the blade normal: 0 is a horizontal blade (its normal
+pointing straight up) and \f$\pi/2\f$ is a vertical one. A blade is a surface rather than a solid, so
+a normal pointing downward describes the same inclination as its opposite pointing up, and
+inclinations are folded into \f$[0, \pi/2]\f$ throughout.
+
+Inclination is drawn from a Beta distribution in the parameterization of \ref
+helios::sample_Beta_distribution(), in which the mean inclination is
+\f$\frac{\pi}{2}\frac{\nu}{\mu+\nu}\f$. A planophile canopy therefore has \f$\nu\f$ small relative to
+\f$\mu\f$; \f$(\mu,\nu) = (2.770, 1.172)\f$ is planophile and \f$(1.101, 1.930)\f$ is close to
+spherical. Azimuth is drawn from an ellipsoidal distribution with a given eccentricity and rotation,
+where an eccentricity of zero is uniform in azimuth.
+
+Both methods weight the distribution by leaf **area**, not by leaf count, matching how a leaf angle
+distribution is measured in the field and how \ref PlantArchitecture::getPlantLeafInclinationAngleDistribution()
+reports it. A plant whose leaves differ greatly in size will therefore not have its leaf *count*
+distributed as requested.
+
+\subsection PlantArchLeafAngleStatic Imposing a Distribution on a Finished Plant
+
+\ref PlantArchitecture::setPlantLeafAngleDistribution() and its elevation-only and azimuth-only
+counterparts re-aim every leaf on a plant that has already been grown:
+
+```
+PlantArchitecture plantarchitecture(&context);
+uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(origin, 0);
+plantarchitecture.advanceTime(plantID, 45);
+
+// Planophile inclination, leaving azimuth as the model generated it.
+plantarchitecture.setPlantLeafElevationAngleDistribution(plantID, 2.770, 1.172);
+```
+
+The leaves are not given angles drawn independently at random, which would reproduce the requested
+histogram while destroying the arrangement the model generated. Instead each leaf is assigned the
+target angle standing at its own position in the ordering of the plant's current leaf angles, so that
+a leaf held more steeply than its neighbour is still held more steeply afterward and every leaf moves
+as little as the distribution allows. The plant keeps its form and acquires the distribution.
+
+Leaf azimuth relative to the petiole is preserved, so blades continue to point away from the shoots
+that bear them. The imposed angles are recorded on the phytomers themselves, so they survive
+\ref PlantArchitecture::writePlantStructureXML() and are restored by
+\ref PlantArchitecture::readPlantStructureXML().
+
+\subsection PlantArchLeafAngleTracking Following a Distribution Through Growth
+
+A plant re-aimed after the fact matches the distribution only at the moment it is re-aimed. To hold a
+distribution across a growing plant -- for an animation, or wherever intermediate ages are used --
+state the target up front and let the plant grow into it:
+
+```
+uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(origin, 0);
+plantarchitecture.enablePlantLeafElevationAngleDistributionTracking(plantID, 2.770, 1.172, 180.f);
+plantarchitecture.advanceTime(plantID, 45);
+```
+
+Each leaf is given a target as it emerges, and turns onto that target over the course of its own
+expansion, arriving as it reaches full size. A leaf that has finished growing is never moved again,
+so nothing shifts about from one timestep to the next and an animation shows leaves unfolding rather
+than the whole canopy twitching.
+
+Targets are assigned by looking at what the plant is short of. The model divides the range of angles
+into bins, and an emerging leaf is given the bin minimizing
+
+\f[ \mathrm{cost}(k) = \Delta\theta_k - \lambda\,d_k \f]
+
+where \f$\Delta\theta_k\f$ is the angle between the orientation the model gave the leaf and bin
+\f$k\f$, and \f$d_k\f$ is how far bin \f$k\f$ falls below its share of the plant's leaf area. Bins the
+population is missing therefore attract leaves, but preferentially the leaves already oriented near
+them.
+
+The `lambda_degrees` argument sets that trade-off. Zero leaves every leaf exactly where the model put
+it, and is inert: enabling tracking with \f$\lambda = 0\f$ produces the same plant, leaf for leaf, as
+not enabling it at all. Values around 180 degrees match the distribution as closely as a growing
+plant allows. Intermediate values interpolate, keeping more of the plant's own character at the cost
+of a looser match.
+
+\subsection PlantArchLeafAngleTrackingLimits What Tracking Can and Cannot Do
+
+Tracking acts only on leaves that have yet to finish expanding, which has consequences worth stating
+plainly:
+
+- **How much it can achieve depends on how many leaves are still to come.** A species that keeps
+  branching and putting out leaves -- bean, cowpea, most broadleaf models -- offers a large
+  population to steer, and tracking pulls the distribution a long way. A determinate grass produces a
+  fixed dozen leaves on one culm and then stops; enabling tracking on such a plant late in its life
+  leaves almost nothing to act on.
+- **Leaves that already exist are never re-aimed.** Enabling tracking on a plant that has already
+  been grown does nothing to the leaves it already carries. Use
+  \ref PlantArchitecture::setPlantLeafAngleDistribution() for those, and tracking for what grows next.
+- **The match is approached, not enforced.** At any instant a proportion of the plant's leaves are
+  part of the way to their targets, so the distribution measured mid-growth lags the target and lags
+  it most just after a flush of new leaves.
+- **A leaf that never finishes expanding never arrives.** Growth cut short by the carbohydrate model,
+  by `max_age`, or by dormancy leaves its leaves part-way.
+- **Tracking state is not written to XML.** A reloaded plant keeps the leaf angles it had, but is no
+  longer tracking; call the enabling method again to resume.
+
+\subsection PlantArchLeafAngleTrackingCost What Tracking Costs
+
+Tracking runs once per growth sub-step per plant. It rebuilds a histogram of the plant's current leaf angles,
+assigns targets to the leaves that emerged that step, and turns the expanding leaves a little further toward
+the targets they have. All three are proportional to the number of leaves, so the cost is proportional to leaf
+count and its share of runtime does not grow with canopy size.
+
+Measured from a seedling grown to 45 days, comparing `advanceTime()` with tracking enabled against the same
+plant grown without it, tracking adds roughly **50%** to growth time -- about a fifth of that for measuring
+the population each step and the rest for aiming leaves. That held from a single cowpea of about 200 leaves up
+to a sixteen-plant canopy of about 4000.
+
+Two things are worth keeping in proportion. Growth is usually a small part of a simulation that also runs
+radiation or collision detection, so tracking is a much smaller share of a whole run than of `advanceTime()`
+alone. And the cost is only incurred while a plant is growing: a plant that has finished growing, or one
+built at an age rather than grown, pays nothing.
+
+Tracking draws no random numbers from the Context generator, so switching it on does not change the
+sequence of random draws the plant is built from.
 
 \section PlantArchQuery Retrieving Information from the Model
 

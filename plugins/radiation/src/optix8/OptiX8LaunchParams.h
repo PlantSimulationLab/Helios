@@ -113,6 +113,7 @@ struct OptiX8LaunchParams {
     float*    tau;        //!< Transmissivity (same layout)
     float*    rho_cam;    //!< Camera-weighted reflectivity
     float*    tau_cam;    //!< Camera-weighted transmissivity
+    float*    white_reference_cam; //!< Camera-weighted reflectivity of a white surface [source * Nbands_global * Ncameras + band_global * Ncameras + camera]
     float*    specular_exponent;
     float*    specular_scale;
 
@@ -133,6 +134,8 @@ struct OptiX8LaunchParams {
     float*    radiation_in_camera;    //!< [prim * Nbands_launch + band]
     float*    scatter_buff_top_cam;   //!< [cam * Nprims * Nbands_launch + prim * Nbands_launch + band]
     float*    scatter_buff_bottom_cam; //!< same layout as scatter_buff_top_cam
+    float*    white_reference_top_cam;    //!< Each camera's white reference, accumulated over all the launches of a runBand(); same layout as scatter_buff_top_cam
+    float*    white_reference_bottom_cam; //!< same layout as white_reference_top_cam
     float*    radiation_specular;     //!< [src*Ncams*Nprims*Nbands + cam*Nprims*Nbands + prim*Nbands + band]
     float*    Rsky;                   //!< Sky energy absorbed [band]
 

@@ -181,6 +181,47 @@ DOCTEST_TEST_CASE("CanopyGenerator Primitive Deletion Test") {
     context_test.deletePrimitive(context_test.getAllUUIDs());
 }
 
+DOCTEST_TEST_CASE("CanopyGenerator White Spruce canopy_configuration selects the plant layout") {
+    // Regression test. buildCanopy(WhiteSpruceCanopyParameters) tested canopy_configuration with != in both branches, so
+    // "uniform" produced the random layout and "random" (the default) produced a regular grid.
+    const int2 plant_count = make_int2(2, 2);
+    const vec2 plant_spacing = make_vec2(10, 10);
+
+    // Largest horizontal distance of any trunk from the center of its grid cell
+    auto maxTrunkOffsetFromGrid = [&](const std::string &configuration) {
+        Context context_test;
+        CanopyGenerator canopygenerator(&context_test);
+        canopygenerator.disableMessages();
+
+        WhiteSpruceCanopyParameters params;
+        params.canopy_configuration = configuration;
+        params.plant_count = plant_count;
+        params.plant_spacing = plant_spacing;
+        canopygenerator.buildCanopy(params);
+
+        DOCTEST_REQUIRE(canopygenerator.getPlantCount() == uint(plant_count.x * plant_count.y));
+
+        float max_offset = 0.f;
+        uint plant_ID = 0;
+        for (int j = 0; j < plant_count.y; j++) {
+            for (int i = 0; i < plant_count.x; i++) {
+                vec2 xbounds, ybounds, zbounds;
+                context_test.getDomainBoundingBox(canopygenerator.getTrunkUUIDs(plant_ID), xbounds, ybounds, zbounds);
+                const vec2 trunk_center(0.5f * (xbounds.x + xbounds.y), 0.5f * (ybounds.x + ybounds.y));
+                const vec2 cell_center((float(i) + 0.5f - 0.5f * float(plant_count.x)) * plant_spacing.x, (float(j) + 0.5f - 0.5f * float(plant_count.y)) * plant_spacing.y);
+                max_offset = std::max(max_offset, (trunk_center - cell_center).magnitude());
+                plant_ID++;
+            }
+        }
+        return max_offset;
+    };
+
+    // Uniform: every trunk stands at the center of its cell
+    DOCTEST_CHECK(maxTrunkOffsetFromGrid("uniform") < 0.01f);
+    // Random: trunks are scattered over cells several meters wide, so it is essentially impossible for all of them to be central
+    DOCTEST_CHECK(maxTrunkOffsetFromGrid("random") > 0.1f);
+}
+
 int CanopyGenerator::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

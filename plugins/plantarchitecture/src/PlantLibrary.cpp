@@ -2028,7 +2028,7 @@ void PlantArchitecture::initializeGrapevineVSPShoots() {
     PhytomerParameters phytomer_parameters_grapevine(context_ptr->getRandomGenerator());
 
     phytomer_parameters_grapevine.internode.pitch = 20;
-    phytomer_parameters_grapevine.internode.phyllotactic_angle.uniformDistribution(160, 200);
+    phytomer_parameters_grapevine.internode.phyllotactic_angle.uniformDistribution(170, 190);
     phytomer_parameters_grapevine.internode.radius_initial = 0.003;
     phytomer_parameters_grapevine.internode.color = make_RGBcolor(0.23, 0.13, 0.062);
     phytomer_parameters_grapevine.internode.length_segments = 1;
@@ -2048,7 +2048,11 @@ void PlantArchitecture::initializeGrapevineVSPShoots() {
     phytomer_parameters_grapevine.leaf.pitch.uniformDistribution(-110, -80);
     phytomer_parameters_grapevine.leaf.yaw.uniformDistribution(-20, 20);
     phytomer_parameters_grapevine.leaf.roll.uniformDistribution(-5, 5);
-    phytomer_parameters_grapevine.leaf.prototype_scale = 0.2;
+    // Sized to a mean blade area of ~124 cm^2, the primary-leaf area measured by destructive whole-vine
+    // defoliation on VSP Pinot noir in the Willamette Valley (121-127 cm^2, Navarrete 2015) and
+    // independently on single-canopy Chenin blanc (123 cm^2, Kliewer & Dokoozlian 2005). Blade area
+    // scales as the square of this parameter.
+    phytomer_parameters_grapevine.leaf.prototype_scale = 0.14;
     phytomer_parameters_grapevine.leaf.prototype = leaf_prototype;
 
     phytomer_parameters_grapevine.peduncle.length = 0.08;
@@ -2070,27 +2074,56 @@ void PlantArchitecture::initializeGrapevineVSPShoots() {
 
     ShootParameters shoot_parameters_main(context_ptr->getRandomGenerator());
     shoot_parameters_main.phytomer_parameters = phytomer_parameters_grapevine;
-    shoot_parameters_main.vegetative_bud_break_probability_min = 0.075;
-    shoot_parameters_main.vegetative_bud_break_probability_decay_rate = 1.;
+    // Flat along the shoot, rather than weighted toward the apex. A positive decay rate makes the break
+    // probability depend on how many nodes the shoot has when the bud is sampled, and buds are sampled as
+    // each phytomer is appended -- so with the maximum left at its default of 1 the formula sits on a
+    // knife edge, giving either every bud or almost none depending on a node index that is not yet final.
+    // A flat probability states the lateral density directly instead: about one bud in nine breaking over
+    // a 20-node shoot puts the laterals near the 27-35% of vine leaf area measured on VSP Pinot noir
+    // (Navarrete 2015).
+    // About one bud in three pushes a summer lateral, which is what puts 27-35% of the vine's leaf area
+    // on laterals -- the fraction measured by destructive whole-vine defoliation on VSP Pinot noir
+    // (Navarrete 2015) and independently on VSP Cabernet (Kliewer & Dokoozlian 2005, 1050 of 3330 cm2
+    // per shoot). Laterals are confined to the basal nodes by GrapevinePhytomerCreationFunction().
+    shoot_parameters_main.vegetative_bud_break_probability_min = 0.30;
+    shoot_parameters_main.vegetative_bud_break_probability_max = 0.30;
+    shoot_parameters_main.vegetative_bud_break_probability_decay_rate = 0.;
     shoot_parameters_main.vegetative_bud_break_time = 30;
     shoot_parameters_main.phyllochron_min.uniformDistribution(1.75, 2.25);
     shoot_parameters_main.elongation_rate_max = 0.15;
     shoot_parameters_main.girth_area_factor = 1.f;
-    shoot_parameters_main.gravitropic_curvature = 400;
-    shoot_parameters_main.tortuosity = 15;
-    shoot_parameters_main.internode_length_max.uniformDistribution(0.06, 0.08);
+    // TEMPORARY DIAGNOSTIC -- revert before committing. Zeroed so the shoots show the frame they
+    // emerge in, with nothing bending them afterwards. Real values: gravitropic_curvature 400, tortuosity 15.
+    shoot_parameters_main.gravitropic_curvature = 300;
+    shoot_parameters_main.tortuosity = 12;
+    // 5.3 cm is the internode length measured on VSP shoots (Kliewer & Dokoozlian 2005, Table 3,
+    // "Vertical" row), which also reports 24 nodes on an unhedged 130 cm shoot.
+    shoot_parameters_main.internode_length_max.uniformDistribution(0.048, 0.058);
     shoot_parameters_main.internode_length_decay_rate = 0;
-    shoot_parameters_main.insertion_angle_tip = 45;
+    // TEMPORARY DIAGNOSTIC -- revert before committing. Real value: insertion_angle_tip 45.
+    // 90 degrees from the parent axis: on a horizontal cordon that is straight up. The spread is the
+    // shoot-to-shoot variation in how upright a bud pushes.
+    shoot_parameters_main.insertion_angle_tip.uniformDistribution(55, 125);
     shoot_parameters_main.insertion_angle_decay_rate = 0;
     shoot_parameters_main.flowers_require_dormancy = false;
     shoot_parameters_main.growth_requires_dormancy = false;
     shoot_parameters_main.determinate_shoot_growth = false;
     shoot_parameters_main.max_terminal_floral_buds = 0;
     shoot_parameters_main.flower_bud_break_probability = 0.5;
-    shoot_parameters_main.fruit_set_probability = 0.2;
-    shoot_parameters_main.max_nodes = 20;
-    shoot_parameters_main.base_roll.uniformDistribution(90 - 25, 90 + 25);
-    shoot_parameters_main.base_yaw = 0;
+    shoot_parameters_main.max_nodes = 17;
+    // Commercial VSP is hedged at the top wire, roughly 1 m above the cordon, so a shoot does not run to
+    // the 24 nodes it would reach unhedged. There is no hedging operation in the model, so the cap stands
+    // in for one. The count also has to leave room for the summer laterals, which carry a further third
+    // of the vine's leaf area on top of what the primary axis bears.
+    shoot_parameters_main.max_nodes = 17;
+    // Roll spins the shoot about its own axis, which sets the azimuth its two-ranked leaf plane faces.
+    // Grapevine phyllotaxy is near 180 degrees, so each shoot carries its leaves in one flat plane; with
+    // a single fixed roll every shoot on the vine presented that plane the same way and the leaves lined
+    // up in ranks across the row. Drawing a roll per shoot spreads the planes around.
+    shoot_parameters_main.base_roll.uniformDistribution(90 - 15, 90 + 15);
+    // Yaw turns the insertion away from the vertical plane of the row, so a spread about zero fans the
+    // shoots to either side of the wire instead of stacking them all in one plane.
+    shoot_parameters_main.base_yaw.uniformDistribution(-30, 30);
 
     ShootParameters shoot_parameters_cane = shoot_parameters_main;
     //    shoot_parameters_cane.phytomer_parameters.internode.image_texture = "GrapeBark.jpg";
@@ -2100,32 +2133,121 @@ void PlantArchitecture::initializeGrapevineVSPShoots() {
     shoot_parameters_cane.phytomer_parameters.internode.phyllotactic_angle = 0;
     shoot_parameters_cane.insertion_angle_tip.uniformDistribution(60, 120);
     shoot_parameters_cane.girth_area_factor = 0.7f;
-    shoot_parameters_cane.max_nodes = 9;
-    shoot_parameters_cane.gravitropic_curvature.uniformDistribution(-20, 20);
-    shoot_parameters_cane.tortuosity = 1;
-    shoot_parameters_cane.gravitropic_curvature = 10;
+    // A cordon is a permanent woody arm laid down at training, not a shoot that elongates: it must stop
+    // at the length the builder lays out. max_nodes is what stops it, so buildGrapevineVSP() overwrites
+    // this with the node count it actually built before growing the plant. The value here only applies
+    // if the shoot type is used without that step.
+    shoot_parameters_cane.max_nodes = 25;
+    shoot_parameters_cane.tortuosity = 0;
+    // A cordon is tied down along the fruiting wire when the vine is trained, so it does not curve up
+    // the way a free shoot does. The upward curvature this carried arced the arm about 35 degrees above
+    // horizontal over its length, lifting the shoot positions with it and smearing the canopy vertically
+    // instead of leaving them in a row along the wire.
+    shoot_parameters_cane.gravitropic_curvature = 0;
     shoot_parameters_cane.vegetative_bud_break_probability_min = 0.9;
     shoot_parameters_cane.defineChildShootTypes({"grapevine_shoot"}, {1.f});
 
     ShootParameters shoot_parameters_trunk = shoot_parameters_main;
     shoot_parameters_trunk.phytomer_parameters.internode.image_texture = "GrapeBark.jpg";
     shoot_parameters_trunk.phytomer_parameters.internode.pitch = 0;
-    shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle = 0;
-    shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.05;
+    // Buds on alternate sides from node to node, as on any grapevine shoot. buildGrapevineVSP() relies on
+    // this to take the two canes off opposite sides of the head.
+    shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle = 180;
+    // Radius partway up the trunk. buildGrapevineVSP() varies it from vine to vine and shapes the flare at
+    // the ground and the swelling of the head around it. 8 cm across is a mature VSP trunk.
+    shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.04;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 25;
     shoot_parameters_trunk.phytomer_parameters.internode.max_floral_buds_per_petiole = 0;
     shoot_parameters_trunk.phyllochron_min = 2.5;
     shoot_parameters_trunk.insertion_angle_tip = 90;
     shoot_parameters_trunk.girth_area_factor = 0;
-    shoot_parameters_trunk.max_nodes = 18;
+    // Room for the closely spaced nodes buildGrapevineVSP() lays the shape of the trunk out with, at the
+    // tallest trunk it accepts.
+    shoot_parameters_trunk.max_nodes = 40;
     shoot_parameters_trunk.tortuosity = 0;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.defineChildShootTypes({"grapevine_shoot"}, {1.f});
 
+    // A lateral (secondary) shoot is not a small copy of the shoot that bore it. On VSP vines the
+    // laterals carry blades about a third the area of the primary leaves -- 39-40 cm^2 against 121-127
+    // -- and contribute 27-35% of the vine's total leaf area (Navarrete 2015, destructive whole-vine
+    // defoliation, Willamette Valley Pinot noir). Without a type of its own a lateral inherits the type
+    // of its parent (see PlantArchitecture.cpp, sampleChildShootType(): an empty child_shoot_type_labels
+    // reuses the parent's label), so every lateral grew full-size primary leaves on a full-length shoot,
+    // and since laterals hold over half the leaves on a mature vine that alone put total leaf area
+    // several times over what a VSP canopy carries.
+    ShootParameters shoot_parameters_lateral = shoot_parameters_main;
+    shoot_parameters_lateral.phytomer_parameters.leaf.prototype_scale = 0.079; // ~39 cm^2 blades
+    shoot_parameters_lateral.phytomer_parameters.internode.max_floral_buds_per_petiole = 0; // laterals do not fruit
+    // Laterals are tucked into the same curtain as the shoot bearing them, so they emerge close to the
+    // parent axis rather than at the wide angles a primary leaves the cordon at. Left at the primary's
+    // spread they pushed out across the row and thickened the canopy.
+    shoot_parameters_lateral.insertion_angle_tip.uniformDistribution(10, 30);
+    shoot_parameters_lateral.base_yaw.uniformDistribution(-15, 15);
+    shoot_parameters_lateral.max_nodes = 9;
+    shoot_parameters_lateral.vegetative_bud_break_probability_min = 0; // no laterals on laterals
+    shoot_parameters_lateral.vegetative_bud_break_probability_max = 0;
+    shoot_parameters_lateral.defineChildShootTypes({"grapevine_lateral"}, {1.f});
+
+    shoot_parameters_main.defineChildShootTypes({"grapevine_lateral"}, {1.f});
+
+    // The two cordons of a bilateral vine run in opposite directions along the row, and a shoot's
+    // insertion angle is measured from the axis of the cordon bearing it. The same insertion angle
+    // therefore swings the shoots of one arm up and the shoots of the other down -- on this model the
+    // second arm's shoots grew straight through the ground. Rolling the insertion 180 degrees about the
+    // cordon axis mirrors it back, so the two arms are reflections of each other rather than rotations.
+    ShootParameters shoot_parameters_main_mirrored = shoot_parameters_main;
+    // Yaw, not roll. Yaw turns the petiole rotation axis about the parent axis, and it is that axis the
+    // insertion pitch then swings around, so half a turn of yaw sends the pitch the other way. Roll spins
+    // the shoot about its own axis once it is already pointing somewhere, which leaves its direction alone.
+    shoot_parameters_main_mirrored.base_yaw.uniformDistribution(180.f - 30.f, 180.f + 30.f);
+    shoot_parameters_main_mirrored.defineChildShootTypes({"grapevine_lateral"}, {1.f});
+
     defineShootType("grapevine_trunk", shoot_parameters_trunk);
     defineShootType("grapevine_cane", shoot_parameters_cane);
     defineShootType("grapevine_shoot", shoot_parameters_main);
+    defineShootType("grapevine_shoot_mirrored", shoot_parameters_main_mirrored);
+    defineShootType("grapevine_lateral", shoot_parameters_lateral);
 }
+
+//! Smooth one-dimensional wander that cannot drift: a sum of sinusoids of given amplitude, wavelength and phase.
+/**
+ * Used to vary the path of trained wood. Trained wood is held in place -- a trunk by its stake, a cane by the wire it is tied to -- so it departs from its trained line by a bounded amount and keeps returning to it.
+ * A random walk does neither, since its excursion grows with the length of the path. A sum of sinusoids never strays further than the sum of its amplitudes however long the path is, which states the constraint
+ * directly, and the wavelengths set how quickly it is allowed to turn.
+ */
+struct BoundedWander {
+
+    //! Add a sinusoidal component.
+    /**
+     * \param[in] amplitude Largest departure this component contributes, in meters.
+     * \param[in] wavelength Distance along the path over which this component repeats, in meters.
+     * \param[in] phase Phase of this component at the start of the path, in radians.
+     */
+    void addComponent(float amplitude, float wavelength, float phase) {
+        amplitudes.push_back(amplitude);
+        wavelengths.push_back(wavelength);
+        phases.push_back(phase);
+    }
+
+    //! Departure from the trained line at a given distance along the path.
+    /**
+     * \param[in] distance Distance along the path, in meters.
+     * \return Departure in meters, whose magnitude never exceeds the sum of the component amplitudes.
+     */
+    [[nodiscard]] float evaluate(float distance) const {
+        float departure = 0.f;
+        for (size_t component = 0; component < amplitudes.size(); component++) {
+            departure += amplitudes.at(component) * std::sin(2.f * PI_F * distance / wavelengths.at(component) + phases.at(component));
+        }
+        return departure;
+    }
+
+private:
+    std::vector<float> amplitudes;
+    std::vector<float> wavelengths;
+    std::vector<float> phases;
+};
 
 uint PlantArchitecture::buildGrapevineVSP(const helios::vec3 &base_position) {
 
@@ -2136,33 +2258,284 @@ uint PlantArchitecture::buildGrapevineVSP(const helios::vec3 &base_position) {
 
     // Get training system parameters
     auto vine_spacing = getParameterValue(current_build_parameters, "vine_spacing", 2.4f, 0.5f, 5.f, "plant-to-plant spacing in meters");
-    auto trunk_height = getParameterValue(current_build_parameters, "trunk_height", 0.8f, 0.05f, 1.f, "total trunk height in meters");
+    auto trunk_height = getParameterValue(current_build_parameters, "trunk_height", 0.8f, 0.05f, 1.f, "height of the fruiting wire in meters");
 
-    // Calculate trunk nodes based on desired height
-    float trunk_internode_length = 0.1f;
-    uint trunk_nodes = uint(trunk_height / trunk_internode_length);
-    if (trunk_nodes < 1)
-        trunk_nodes = 1;
-
-    // Calculate cane nodes to span to neighboring plant
-    float cane_internode_length = 0.15f;
+    // Calculate cane nodes to span to neighboring plant. One node is one bud, and so one shoot position:
+    // spur-pruned cordons are laid down at roughly a bud every 8-12 cm, giving the 10-16 shoots per metre
+    // of cordon that commercial VSP is thinned to (Kliewer & Dokoozlian 2005; OSU Extension EM 9071). At
+    // the 0.15 m this used previously a 2.4 m vine carried only about 5.6 shoots per metre, less than half
+    // the commercial density, and the canopy could not close into a wall no matter how large its leaves.
+    float cane_internode_length = 0.10f;
     float cane_total_length = vine_spacing / 2.f; // Cane extends from center to next plant
     uint cane_nodes = uint(cane_total_length / cane_internode_length);
     if (cane_nodes < 1)
         cane_nodes = 1;
 
-    // Fixed training parameters (not user-customizable)
-    float cane_radius = 0.005f;
-    float cane_pitch_min = float(0.45f * M_PI);
-    float cane_pitch_max = float(0.52f * M_PI);
+    // Catch wires. Vertical shoot positioning is the practice of tucking shoots between pairs of wires
+    // running above the fruiting wire, which is what makes the canopy a narrow vertical curtain rather
+    // than a sprawl; without them the shoots of this model spread roughly 1.7 m across the row where a
+    // VSP curtain is 0.3-0.6 m thick, and the same leaf area smeared over that envelope reads as a thin,
+    // porous canopy. The wires are represented as attraction points, the same mechanism buildGrapevineWye()
+    // uses. They are not drawn -- only their guiding effect on shoot direction is modelled.
+    const float catch_wire_half_separation = 0.075f; // pairs sit +/- this across the row, giving a ~0.15 m curtain
+    const uint catch_wire_pairs = 4;
+    const float catch_wire_lowest = 0.35f; // height of the first wire pair above the cordon
+    const float catch_wire_spacing = 0.20f; // vertical spacing between wire pairs
+    // A wire is represented by a run of points, and a shoot is only steered by one that falls inside its
+    // forward view cone, so the points have to be closer together than the distance that cone looks ahead
+    // or a shoot climbing between two wires sees nothing to follow. Roughly one point every 6 cm.
+    const uint catch_wire_samples = std::max(uint(2), uint(vine_spacing / 0.06f));
+
+    std::vector<std::vector<vec3>> trellis_points;
+    trellis_points.reserve(2 * catch_wire_pairs);
+    for (uint wire = 0; wire < catch_wire_pairs; wire++) {
+        const float wire_height = trunk_height + catch_wire_lowest + float(wire) * catch_wire_spacing;
+        // The cordon runs along y, so the wires do too, spanning the full vine spacing.
+        for (const float side: {-catch_wire_half_separation, catch_wire_half_separation}) {
+            trellis_points.push_back(linspace(make_vec3(side, -0.5f * vine_spacing, wire_height), make_vec3(side, 0.5f * vine_spacing, wire_height), catch_wire_samples));
+        }
+    }
+    for (auto &wire_points: trellis_points) {
+        for (vec3 &point: wire_points) {
+            point += base_position;
+        }
+    }
 
     uint plantID = addPlantInstance(base_position, 0);
 
-    uint uID_stem = addBaseStemShoot(plantID, trunk_nodes, make_AxisRotation(context_ptr->randu(0, 0.05 * M_PI), 0, 0), shoot_types.at("grapevine_trunk").phytomer_parameters.internode.radius_initial.val(), trunk_internode_length, 1, 1, 0.1,
-                                     "grapevine_trunk");
+    // Catch wires: guide the shoots into a narrow vertical curtain (see the trellis_points block above).
+    setPlantAttractionPoints(plantID, flatten(trellis_points), 70.f, 0.35f, 0.15f);
 
-    uint uID_cane_L = appendShoot(plantID, uID_stem, cane_nodes, make_AxisRotation(context_ptr->randu(cane_pitch_min, cane_pitch_max), 0, M_PI), cane_radius, cane_internode_length, 1, 1, 0.5, "grapevine_cane");
-    uint uID_cane_R = appendShoot(plantID, uID_stem, cane_nodes, make_AxisRotation(context_ptr->randu(cane_pitch_min, cane_pitch_max), M_PI, M_PI), cane_radius, cane_internode_length, 1, 1, 0.5, "grapevine_cane");
+    // The trunk and the two cordons are trained wood: a grower ties them to the fruiting wire, so their
+    // shape is imposed rather than grown. They are therefore prescribed node by node instead of being
+    // extrapolated from a base rotation. Deriving them from a pitch angle meant their final shape was the
+    // end of a chain of interacting parameters -- base pitch, per-phytomer internode pitch, tortuosity and
+    // gravitropic curvature -- and tuning any one of them against the others produced a cordon that swept
+    // up out of the horizontal into a "Y" rather than running level along the wire. Prescribing the path
+    // states the trained shape directly, and the growth model leaves it alone: prescribed phytomers are
+    // built fully elongated and are not re-curved or re-scaled by advanceTime().
+    //
+    // Every vine is drawn differently, but none of the variation is a free random walk. A trunk is held by
+    // its stake and a cane by the wire it is tied to, so each departs from its trained line by a bounded
+    // amount and keeps coming back to it -- see BoundedWander.
+    const float fruiting_wire_height = base_position.z + trunk_height;
+
+    // ---- Trunk ---- //
+
+    // The head is the knob of old wood at the top of the trunk that the canes are renewed from each winter.
+    // Cane pruning keeps it a little below the fruiting wire so that the canes can be bent up and over onto
+    // the wire; a head at the wire leaves nowhere for them to go but up.
+    const float head_height = trunk_height * (1.f - context_ptr->randu(0.08f, 0.16f));
+
+    // The trunk bears no shoots, so its nodes are only there to carry its shape and are spaced far more
+    // closely than buds would be. The floor keeps enough of them to seat both canes on a very short trunk.
+    const uint trunk_nodes = std::max(uint(6), uint(std::ceil(head_height / 0.04f)));
+    const float trunk_node_spacing = head_height / float(trunk_nodes);
+
+    // Sway of the trunk axis across (x) and along (y) the row: a slow bend that gets through about half a
+    // cycle over the height of the trunk, and a slight kink or two on top of it. A trunk is trained up a
+    // stake, so it is close to straight; a slow bend any tighter than this reads as a snake.
+    BoundedWander trunk_sway_x;
+    BoundedWander trunk_sway_y;
+    for (BoundedWander *trunk_sway: {&trunk_sway_x, &trunk_sway_y}) {
+        trunk_sway->addComponent(context_ptr->randu(0.015f, 0.04f), context_ptr->randu(1.2f, 2.2f), context_ptr->randu(0.f, 2.f * PI_F));
+        trunk_sway->addComponent(context_ptr->randu(0.002f, 0.006f), context_ptr->randu(0.3f, 0.6f), context_ptr->randu(0.f, 2.f * PI_F));
+    }
+    // The vine is planted where it is planted, so the sway is measured from the base. Across the row the
+    // head is tied in close to the wire, and the lean is whatever gets it there; along the row nothing
+    // holds it, and trunks commonly lean a few centimetres toward one neighbour.
+    const float head_offset_x = context_ptr->randu(-0.015f, 0.015f);
+    const float trunk_lean_x = (head_offset_x - (trunk_sway_x.evaluate(head_height) - trunk_sway_x.evaluate(0.f))) / head_height;
+    const float trunk_lean_y = context_ptr->randu(-0.06f, 0.06f);
+
+    // Girth: a flare into the root collar, a slight taper up the trunk, a swollen head, and shallow lumps
+    // from old pruning wounds.
+    const float trunk_radius = shoot_types.at("grapevine_trunk").phytomer_parameters.internode.radius_initial.val() * context_ptr->randu(0.85f, 1.15f);
+    const float head_swelling = context_ptr->randu(0.3f, 0.6f);
+    BoundedWander trunk_lumps;
+    trunk_lumps.addComponent(context_ptr->randu(0.03f, 0.06f), context_ptr->randu(0.12f, 0.3f), context_ptr->randu(0.f, 2.f * PI_F));
+
+    // The tube is open-ended, so the head is closed over with a dome of three more nodes whose radius
+    // falls away as a quarter circle. They are appended after the loop below.
+    const std::vector<float> dome_angles_degrees = {30.f, 60.f, 85.f};
+
+    std::vector<vec3> trunk_node_positions;
+    std::vector<float> trunk_node_radii;
+    trunk_node_positions.reserve(trunk_nodes + 1 + dome_angles_degrees.size());
+    trunk_node_radii.reserve(trunk_nodes + 1 + dome_angles_degrees.size());
+    for (uint node = 0; node <= trunk_nodes + dome_angles_degrees.size(); node++) {
+        float height = float(node) * trunk_node_spacing;
+        float dome_radius_fraction = 1.f;
+        if (node > trunk_nodes) {
+            const float dome_angle = deg2rad(dome_angles_degrees.at(node - trunk_nodes - 1));
+            height = head_height + trunk_node_radii.at(trunk_nodes) * std::sin(dome_angle);
+            dome_radius_fraction = std::cos(dome_angle);
+        }
+        const float girth_height = std::min(height, head_height); // the dome scales the radius at the top of the head
+        const float root_flare = 0.35f * std::exp(-girth_height / 0.05f);
+        const float taper = -0.18f * girth_height / head_height;
+        const float head_distance = (girth_height - (head_height - 0.02f)) / 0.06f;
+        const float head = head_swelling * std::exp(-head_distance * head_distance);
+        const float radius = trunk_radius * (1.f + root_flare + taper + head) * (1.f + trunk_lumps.evaluate(girth_height));
+
+        const float offset_x = trunk_lean_x * height + trunk_sway_x.evaluate(height) - trunk_sway_x.evaluate(0.f);
+        const float offset_y = trunk_lean_y * height + trunk_sway_y.evaluate(height) - trunk_sway_y.evaluate(0.f);
+        trunk_node_positions.push_back(base_position + make_vec3(offset_x, offset_y, height));
+        trunk_node_radii.push_back(radius * dome_radius_fraction);
+    }
+    uint uID_stem = addShootFromNodePositions(plantID, -1, 0, trunk_node_positions, trunk_node_radii, "grapevine_trunk");
+
+    // ---- Canes ---- //
+
+    // One cane to each side along the row, which runs along y. The two leave the head from adjacent nodes,
+    // each from the one whose bud faces its own side: a child shoot is seated on the surface of its parent
+    // on the side of the petiole, so a cane attached to the wrong node would start on the far side of the
+    // head and run back through it.
+    const auto &trunk_phytomers = plant_instances.at(plantID).shoot_tree.at(uID_stem)->phytomers;
+    const uint head_phytomer = trunk_nodes - 1; // its tip is the node at head_height, just below the dome
+    const bool head_bud_faces_negative_y = trunk_phytomers.at(head_phytomer)->getPetioleAxisVector(0.f, 0).y < 0.f;
+
+    uint uID_cane_L = 0;
+    uint uID_cane_R = 0;
+    for (const float direction: {-1.f, 1.f}) {
+        const uint attachment_phytomer = ((direction < 0.f) == head_bud_faces_negative_y) ? head_phytomer : head_phytomer - 1;
+        const vec3 attachment_node = trunk_node_positions.at(attachment_phytomer + 1);
+
+        // The cane leaves the head climbing, and is bent over onto the wire a short way out.
+        const float rise = fruiting_wire_height - attachment_node.z;
+        const float bend_length = rise * context_ptr->randu(1.8f, 3.f);
+
+        // Along the wire: sag between the ties and a slower drift across the wire as the cane is wrapped
+        // around it, each with a tighter wobble on top.
+        BoundedWander cane_wander_x;
+        cane_wander_x.addComponent(context_ptr->randu(0.008f, 0.018f), context_ptr->randu(0.4f, 0.8f), context_ptr->randu(0.f, 2.f * PI_F));
+        cane_wander_x.addComponent(context_ptr->randu(0.003f, 0.006f), context_ptr->randu(0.15f, 0.3f), context_ptr->randu(0.f, 2.f * PI_F));
+        BoundedWander cane_wander_z;
+        cane_wander_z.addComponent(context_ptr->randu(0.006f, 0.015f), context_ptr->randu(0.5f, 0.9f), context_ptr->randu(0.f, 2.f * PI_F));
+        cane_wander_z.addComponent(context_ptr->randu(0.003f, 0.006f), context_ptr->randu(0.18f, 0.3f), context_ptr->randu(0.f, 2.f * PI_F));
+
+        // The last tie is short of the tip, which is left to droop or spring up a little.
+        const float free_tip_length = 0.2f;
+        const float free_tip_deflection = context_ptr->randu(-0.03f, 0.02f);
+
+        // A cane does not quite reach the vine next door.
+        const float cane_length = cane_total_length * context_ptr->randu(0.93f, 1.f);
+
+        // The first few internodes of a cane are markedly shorter than the rest, and all of them vary. They
+        // are scaled together afterwards so that the cane comes out at its length whatever was drawn.
+        std::vector<float> cane_internode_lengths(cane_nodes);
+        float unscaled_cane_length = 0.f;
+        for (uint internode = 0; internode < cane_nodes; internode++) {
+            const float basal_shortening = std::min(1.f, 0.4f + 0.2f * float(internode));
+            cane_internode_lengths.at(internode) = basal_shortening * context_ptr->randu(0.8f, 1.2f);
+            unscaled_cane_length += cane_internode_lengths.at(internode);
+        }
+        for (float &internode_length: cane_internode_lengths) {
+            internode_length *= cane_length / unscaled_cane_length;
+        }
+
+        // Position of the cane at a given distance along the row from the node it is attached to
+        auto cane_position = [&](float row_distance) {
+            const float bend_fraction = std::min(row_distance / bend_length, 1.f);
+            const float on_wire = bend_fraction * bend_fraction * (3.f - 2.f * bend_fraction); // 0 at the head, 1 once tied to the wire
+            const float tip_fraction = std::max(0.f, (row_distance - (cane_length - free_tip_length)) / free_tip_length);
+            const float x = (1.f - on_wire) * (attachment_node.x - base_position.x) + on_wire * cane_wander_x.evaluate(row_distance);
+            const float z = -rise * (1.f - bend_fraction) * (1.f - bend_fraction) + on_wire * cane_wander_z.evaluate(row_distance) + free_tip_deflection * tip_fraction * tip_fraction;
+            return make_vec3(base_position.x + x, attachment_node.y + direction * row_distance, fruiting_wire_height + z);
+        };
+
+        std::vector<vec3> cane_node_positions;
+        std::vector<float> cane_node_radii;
+        cane_node_positions.reserve(cane_nodes + 1);
+        cane_node_radii.reserve(cane_nodes + 1);
+        const float cane_radius = 0.0055f * context_ptr->randu(0.9f, 1.15f);
+        float row_distance = 0.f;
+        float path_distance = 0.f;
+        for (uint node = 0; node <= cane_nodes; node++) {
+            vec3 node_position = cane_position(row_distance);
+            if (node > 0) {
+                // A grapevine cane zig-zags slightly from node to node.
+                const float zigzag = ((node % 2 == 0) ? 1.f : -1.f) * context_ptr->randu(0.001f, 0.004f);
+                node_position.x += zigzag;
+            }
+            cane_node_positions.push_back(node_position);
+            // Tapering to the tip, and thickened where it comes off the older wood of the head.
+            const float tip_taper = 1.f - 0.4f * float(node) / float(cane_nodes);
+            const float base_thickening = 1.f + 0.8f * std::exp(-path_distance / 0.06f);
+            cane_node_radii.push_back(cane_radius * tip_taper * base_thickening);
+
+            // Step along the row by whatever advances one internode along the cane, which is less than an
+            // internode where the cane is climbing.
+            if (node < cane_nodes) {
+                const float slope_step = 0.005f;
+                const float path_length_per_row_distance = (cane_position(row_distance + slope_step) - cane_position(row_distance)).magnitude() / slope_step;
+                row_distance += cane_internode_lengths.at(node) / path_length_per_row_distance;
+                path_distance += cane_internode_lengths.at(node);
+            }
+        }
+        // Built as a cane, but grown as one too: the growth type is what decides the type of the shoots
+        // its buds produce, and those must be grapevine_shoot.
+        const uint uID_cane = addShootFromNodePositions(plantID, int(uID_stem), attachment_phytomer, cane_node_positions, cane_node_radii, "grapevine_cane", "grapevine_cane");
+        if (direction < 0.f) {
+            uID_cane_L = uID_cane;
+        } else {
+            uID_cane_R = uID_cane;
+        }
+    }
+
+    // A cordon is permanent woody structure -- it carries the buds, it does not keep extending -- but the
+    // model elongates any shoot whose meristem is alive up to its type's max_nodes, and a cane left free
+    // to do that grows on past the end of its allotted span into the neighbouring vine. Killing the apical
+    // meristem leaves the lateral buds, and so the shoots, untouched.
+    plant_instances.at(plantID).shoot_tree.at(uID_cane_L)->meristem_is_alive = false;
+    plant_instances.at(plantID).shoot_tree.at(uID_cane_R)->meristem_is_alive = false;
+
+    // Wake the trained wood and its buds. Two things have to be undone here, both consequences of building
+    // this structure from prescribed node positions rather than with appendShoot().
+    //
+    // First, every bud on a shoot built by addShootFromNodePositions() comes back dead, where the same
+    // cordon built by appendShoot() comes back with nearly all of them active: buds are sampled for break
+    // as each phytomer is appended, against a node index that is not yet final on the prescribed path, and
+    // the apex-weighted probability this shoot type uses then floors every one of them. A cordon whose buds
+    // are all dead bears no shoots at all. They are set dormant rather than sampled, which is the right
+    // behaviour for trained wood in any case: the grower decides how many shoots a cordon carries.
+    //
+    // Second, a prescribed shoot is created dormant, so without clearing the flag the cordons would sit
+    // until the plant's dormancy-break threshold -- 165 days for this model -- and the shoots they bear
+    // would be born after it. That costs those shoots the makeDormant()/breakDormancy() pass at the season
+    // boundary, which is where a shoot's own buds are re-sampled against its final node count, and it is
+    // what collapsed the vine's lateral shoots from roughly thirty to two.
+    for (const uint uID_trained: {uID_stem, uID_cane_L, uID_cane_R}) {
+        const auto &trained_shoot = plant_instances.at(plantID).shoot_tree.at(uID_trained);
+        trained_shoot->isdormant = false;
+        // Only the cordons bear shoots. A bud that pushes on the trunk is a sucker, and a grower strips
+        // those off; left active they added a third again as many shoots as the cordons carried, growing
+        // out of the trunk below the fruiting wire where a VSP canopy has no foliage at all.
+        const bool bears_shoots = (uID_trained != uID_stem);
+        for (auto &phytomer: trained_shoot->phytomers) {
+            phytomer->isdormant = false;
+            for (auto &petiole: phytomer->axillary_vegetative_buds) {
+                for (auto &vegetative_bud: petiole) {
+                    // Active, not dormant: with the shoot's dormancy flag cleared above, advanceTime()
+                    // never calls breakDormancy() on it, so a bud left dormant here would never be woken.
+                    phytomer->setVegetativeBudState(bears_shoots ? BUD_ACTIVE : BUD_DEAD, vegetative_bud);
+                    // A shoot is inserted toward the side of the cane its petiole is on, so where the petiole
+                    // hangs below the cane the insertion angle sends the shoot downward and it has to be
+                    // turned half way round -- see the note on grapevine_shoot_mirrored where the two types
+                    // are defined. Which way a cane's petioles face is inherited from the trunk node it
+                    // comes off and the direction it runs in, so it is read from the petiole itself rather
+                    // than assumed from which of the two canes this is.
+                    const bool petiole_hangs_below_cane = phytomer->getPetioleAxisVector(0.f, 0).z < 0.f;
+                    vegetative_bud.shoot_type_label = petiole_hangs_below_cane ? "grapevine_shoot_mirrored" : "grapevine_shoot";
+                }
+            }
+        }
+    }
+
+    // The trunk is trained wood too: it is taken up to the fruiting wire and stopped there, not left to
+    // keep extending to its type's node cap. Without this it grew on past the cordons, carrying the head
+    // of the vine a metre above the wire they are tied to.
+    plant_instances.at(plantID).shoot_tree.at(uID_stem)->meristem_is_alive = false;
 
     //    makePlantDormant(plantID);
 
@@ -2218,7 +2591,11 @@ void PlantArchitecture::initializeGrapevineWyeShoots() {
     phytomer_parameters_grapevine.leaf.pitch.uniformDistribution(-110, -80);
     phytomer_parameters_grapevine.leaf.yaw.uniformDistribution(-20, 20);
     phytomer_parameters_grapevine.leaf.roll.uniformDistribution(-5, 5);
-    phytomer_parameters_grapevine.leaf.prototype_scale = 0.2;
+    // Individual blade area is a property of the vine rather than of the trellis it is trained to, so
+    // this matches the VSP model: a mean of ~124 cm^2 (Navarrete 2015; Kliewer & Dokoozlian 2005). The
+    // Wye shoot architecture is left as it was -- its lateral regime differs from VSP and no
+    // divided-canopy calibration was available when this was set.
+    phytomer_parameters_grapevine.leaf.prototype_scale = 0.14;
     phytomer_parameters_grapevine.leaf.prototype = leaf_prototype;
 
     phytomer_parameters_grapevine.peduncle.length = 0.04;

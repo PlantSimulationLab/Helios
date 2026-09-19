@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+
+<helios>
+
+  <scan>
+    <center> 5 5 20 </center>
+    <extent> 10 10 </extent>
+    <coneangle> 0 </coneangle>
+    <scandensity> 1000 </scandensity>
+  </scan>
+
+  <grid>
+    <center> 5 5 5 </center>
+    <size> 10 10 10 </size>
+    <Nx> 4 </Nx>
+    <Ny> 8 </Ny>
+    <Nz> 3 </Nz>
+  </grid>
+
+</helios>

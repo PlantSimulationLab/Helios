@@ -5065,7 +5065,8 @@ namespace helios {
         /**
          * \param[in] material_label Unique string identifier for the material
          * \note Creates a material with default properties (black color, no texture).
-         *       If a material with this label already exists, it will be overwritten with a warning.
+         *       If a material with this label already exists, it will be overwritten with a warning: its properties are reset to the
+         *       defaults, and any primitives assigned to the label remain assigned to it.
          */
         void addMaterial(const std::string &material_label);
 

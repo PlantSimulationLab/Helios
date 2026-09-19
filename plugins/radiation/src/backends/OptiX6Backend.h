@@ -97,6 +97,7 @@ namespace helios {
         // Results retrieval
         void getRadiationResults(RayTracingResults &results) override;
         void getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels, std::vector<float> &pixel_depths, uint camera_id, const helios::int2 &resolution) override;
+        void getWhiteReferenceResults(std::vector<float> &white_reference_top, std::vector<float> &white_reference_bottom) override;
 
         // Buffer utilities
         void zeroRadiationBuffers(size_t launch_band_count) override;
@@ -234,6 +235,8 @@ namespace helios {
         RTvariable rho_cam_RTvariable;
         RTbuffer tau_cam_RTbuffer;
         RTvariable tau_cam_RTvariable;
+        RTbuffer white_reference_cam_RTbuffer;
+        RTvariable white_reference_cam_RTvariable;
         RTbuffer specular_exponent_RTbuffer;
         RTvariable specular_exponent_RTvariable;
         RTbuffer specular_scale_RTbuffer;
@@ -276,6 +279,10 @@ namespace helios {
         RTvariable scatter_buff_top_cam_RTvariable;
         RTbuffer scatter_buff_bottom_cam_RTbuffer;
         RTvariable scatter_buff_bottom_cam_RTvariable;
+        RTbuffer white_reference_top_cam_RTbuffer;
+        RTvariable white_reference_top_cam_RTvariable;
+        RTbuffer white_reference_bottom_cam_RTbuffer;
+        RTvariable white_reference_bottom_cam_RTvariable;
 
         // Buffers: Camera (3 buffers)
         RTbuffer camera_pixel_label_RTbuffer;
@@ -399,6 +406,15 @@ namespace helios {
                                const std::vector<float> &camera_diffuse_flux, const std::vector<uint32_t> &band_emission_flag);
         void launchParamsToVariables(const RayTracingLaunchParams &params);
 
+        //! Raise an error if a launch with specular reflection enabled would index radiation_specular past its end
+        /**
+         * zeroRadiationBuffers() sizes radiation_specular for every source, camera, primitive and band only when the last updateMaterials() call enabled specular reflection, and leaves a
+         * one-element placeholder otherwise.
+         * \param[in] caller Name of the calling method, for the error message
+         * \param[in] params Parameters of the launch about to be made
+         */
+        void requireSpecularBufferSized(const char *caller, const RayTracingLaunchParams &params);
+
         // Extraction methods: OptiX → backend-agnostic
         void buffersToResults(RayTracingResults &results);
 
@@ -414,6 +430,7 @@ namespace helios {
         size_t current_source_count = 0;
         size_t current_band_count = 0;
         size_t current_camera_count = 0;
+        bool specular_reflection_enabled = false; //!< Set by updateMaterials(); radiation_specular is sized only when true
         uint32_t current_camera_launch_id = UINT32_MAX;
         size_t current_launch_band_count = 0;
     };

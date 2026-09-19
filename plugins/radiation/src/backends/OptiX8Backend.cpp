@@ -269,6 +269,8 @@ void OptiX8Backend::shutdown() {
     freePtr(d_radiation_in_camera);
     freePtr(d_scatter_buff_top_cam);
     freePtr(d_scatter_buff_bottom_cam);
+    freePtr(d_white_reference_top_cam);
+    freePtr(d_white_reference_bottom_cam);
     freePtr(d_radiation_specular);
     freePtr(d_Rsky);
     freePtr(d_camera_pixel_label);
@@ -585,6 +587,8 @@ void OptiX8Backend::updateMaterials(const RayTracingMaterial &materials) {
         upload(d_rho_cam, materials.reflectivity_cam.data(),  materials.reflectivity_cam.size()  * sizeof(float));
     if (!materials.transmissivity_cam.empty())
         upload(d_tau_cam, materials.transmissivity_cam.data(), materials.transmissivity_cam.size() * sizeof(float));
+    if (!materials.white_reference_cam.empty())
+        upload(d_white_reference_cam, materials.white_reference_cam.data(), materials.white_reference_cam.size() * sizeof(float));
     if (!materials.specular_exponent.empty())
         upload(d_specular_exponent, materials.specular_exponent.data(), materials.specular_exponent.size() * sizeof(float));
     if (!materials.specular_scale.empty())
@@ -623,12 +627,14 @@ void OptiX8Backend::updateMaterials(const RayTracingMaterial &materials) {
     current_band_count   = Nbands;
     current_source_count = materials.num_sources;
     current_camera_count = materials.num_cameras;
+    specular_reflection_enabled = materials.specular_reflection_enabled;
 
     // Update h_params
     h_params.rho                  = reinterpret_cast<float *>(d_rho);
     h_params.tau                  = reinterpret_cast<float *>(d_tau);
     h_params.rho_cam              = reinterpret_cast<float *>(d_rho_cam);
     h_params.tau_cam              = reinterpret_cast<float *>(d_tau_cam);
+    h_params.white_reference_cam  = reinterpret_cast<float *>(d_white_reference_cam);
     h_params.specular_exponent    = reinterpret_cast<float *>(d_specular_exponent);
     h_params.specular_scale       = reinterpret_cast<float *>(d_specular_scale);
     h_params.glass_n              = reinterpret_cast<float *>(d_glass_n);
@@ -834,6 +840,8 @@ void OptiX8Backend::launchDirectRays(const RayTracingLaunchParams &launch_params
 
     // The kernels write one camera-scatter block per camera; refuse to index past buffers sized for another camera set.
     requireCameraScatterBuffersSized("launchDirectRays", launch_params.num_bands_launch);
+    requireWhiteReferenceBuffersSized("launchDirectRays", launch_params.num_bands_launch);
+    requireSpecularBufferSized("launchDirectRays", launch_params);
 
     // Early return when there are no rays to launch (e.g. setDirectRayCount(band,0) on an emission-only band), matching
     // launchDiffuseRays(). Without this, rays_per_primitive=0 gives launch_dim_x=0 and optixLaunch reports "width is 0".
@@ -903,6 +911,7 @@ void OptiX8Backend::launchDiffuseRays(const RayTracingLaunchParams &launch_param
 
     // The kernels write one camera-scatter block per camera; refuse to index past buffers sized for another camera set.
     requireCameraScatterBuffersSized("launchDiffuseRays", launch_params.num_bands_launch);
+    requireWhiteReferenceBuffersSized("launchDiffuseRays", launch_params.num_bands_launch);
 
     // Upload radiation_out buffers (emission + scattered energy from previous iteration).
     // This must happen here because RadiationModel adds emission to flux_top/bottom AFTER
@@ -1035,6 +1044,7 @@ void OptiX8Backend::launchCameraRays(const RayTracingLaunchParams &launch_params
     }
 
     applyLaunchParams(launch_params);
+    requireSpecularBufferSized("launchCameraRays", launch_params);
 
     const uint32_t tile_w       = launch_params.camera_resolution.x;
     const uint32_t tile_h       = launch_params.camera_resolution.y;
@@ -1171,6 +1181,18 @@ void OptiX8Backend::getRadiationResults(RayTracingResults &results) {
     }
 }
 
+void OptiX8Backend::getWhiteReferenceResults(std::vector<float> &white_reference_top, std::vector<float> &white_reference_bottom) {
+    white_reference_top.clear();
+    white_reference_bottom.clear();
+    // Sized by zeroRadiationBuffers(), and left unallocated when there are no cameras
+    if (!d_white_reference_top_cam || !d_white_reference_bottom_cam || white_reference_buffer_bytes == 0) {
+        return;
+    }
+    const size_t count = white_reference_buffer_bytes / sizeof(float);
+    white_reference_top    = downloadFloat(d_white_reference_top_cam,    count);
+    white_reference_bottom = downloadFloat(d_white_reference_bottom_cam, count);
+}
+
 void OptiX8Backend::getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels,
                                       std::vector<float> &pixel_depths, uint camera_id,
                                       const helios::int2 &resolution) {
@@ -1215,14 +1237,28 @@ void OptiX8Backend::zeroRadiationBuffers(size_t launch_band_count) {
     if (d_scatter_buff_top)     CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_scatter_buff_top),     0, bytes));
     if (d_scatter_buff_bottom)  CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_scatter_buff_bottom),  0, bytes));
 
-    // Zero specular buffer: [source × camera × primitive × launch_band_count]
-    const size_t specular_size = current_source_count * current_camera_count * Nprims * launch_band_count;
-    if (specular_size > 0) {
-        const size_t specular_bytes = specular_size * sizeof(float);
-        reallocDevice(d_radiation_specular, specular_bytes);
-        CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_radiation_specular), 0, specular_bytes));
-        h_params.radiation_specular = reinterpret_cast<float *>(d_radiation_specular);
+    // Each camera's white reference: one [prim][band] block per camera, zeroed only here so that it accumulates over all the
+    // direct and diffuse launches of a runBand()
+    const size_t white_reference_bytes = current_camera_count * Nprims * launch_band_count * sizeof(float);
+    reallocDevice(d_white_reference_top_cam,    white_reference_bytes);
+    reallocDevice(d_white_reference_bottom_cam, white_reference_bytes);
+    if (white_reference_bytes > 0) {
+        CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_white_reference_top_cam),    0, white_reference_bytes));
+        CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_white_reference_bottom_cam), 0, white_reference_bytes));
     }
+    h_params.white_reference_top_cam    = reinterpret_cast<float *>(d_white_reference_top_cam);
+    h_params.white_reference_bottom_cam = reinterpret_cast<float *>(d_white_reference_bottom_cam);
+    white_reference_buffer_bytes        = white_reference_bytes;
+
+    // Zero specular buffer: [source × camera × primitive × launch_band_count]. Without specular reflection nothing reads or
+    // writes it, so it is freed rather than holding a value for every source, camera, primitive and band.
+    const size_t specular_bytes = specular_reflection_enabled ? current_source_count * current_camera_count * Nprims * launch_band_count * sizeof(float) : 0;
+    reallocDevice(d_radiation_specular, specular_bytes);
+    if (specular_bytes > 0) {
+        CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_radiation_specular), 0, specular_bytes));
+    }
+    h_params.radiation_specular = reinterpret_cast<float *>(d_radiation_specular);
+    radiation_specular_buffer_bytes = specular_bytes;
 }
 
 void OptiX8Backend::zeroScatterBuffers() {
@@ -1325,6 +1361,29 @@ void OptiX8Backend::requireCameraScatterBuffersSized(const char *caller, size_t 
     }
 }
 
+void OptiX8Backend::requireWhiteReferenceBuffersSized(const char *caller, size_t launch_band_count) const {
+    if (current_camera_count == 0) {
+        return; // The kernels loop over zero cameras and never touch the white reference buffers
+    }
+    const size_t required_bytes = current_camera_count * current_primitive_count * launch_band_count * sizeof(float);
+    if (!d_white_reference_top_cam || !d_white_reference_bottom_cam || white_reference_buffer_bytes != required_bytes) {
+        helios_runtime_error(std::string("ERROR (OptiX8Backend::") + caller + "): The white reference buffers hold " + std::to_string(white_reference_buffer_bytes) + " bytes, but " +
+                             std::to_string(current_camera_count) + " camera(s) x " + std::to_string(current_primitive_count) + " primitives x " + std::to_string(launch_band_count) +
+                             " launched band(s) require " + std::to_string(required_bytes) + ". zeroRadiationBuffers() must be called for the current camera set before rays are launched.");
+    }
+}
+
+void OptiX8Backend::requireSpecularBufferSized(const char *caller, const RayTracingLaunchParams &launch_params) const {
+    if (launch_params.specular_reflection_enabled == 0 || current_source_count == 0 || current_camera_count == 0) {
+        return; // The kernels do not touch radiation_specular
+    }
+    const size_t required_bytes = current_source_count * current_camera_count * current_primitive_count * launch_params.num_bands_launch * sizeof(float);
+    if (!d_radiation_specular || radiation_specular_buffer_bytes != required_bytes) {
+        helios_runtime_error(std::string("ERROR (OptiX8Backend::") + caller + "): Specular reflection is enabled for this launch, but radiation_specular holds " + std::to_string(radiation_specular_buffer_bytes) + " bytes instead of the " +
+                             std::to_string(required_bytes) + " its sources, cameras, primitives and launched bands require. updateMaterials() must enable specular reflection, and zeroRadiationBuffers() be called, before rays are launched.");
+    }
+}
+
 void OptiX8Backend::uploadSourceFluxes(const std::vector<float> &fluxes) {
     freeCUdeviceptr(d_source_fluxes);
     if (!fluxes.empty()) {
@@ -1414,6 +1473,7 @@ void OptiX8Backend::freeMaterialBuffers() {
     freeCUdeviceptr(d_tau);
     freeCUdeviceptr(d_rho_cam);
     freeCUdeviceptr(d_tau_cam);
+    freeCUdeviceptr(d_white_reference_cam);
     freeCUdeviceptr(d_specular_exponent);
     freeCUdeviceptr(d_specular_scale);
     freeCUdeviceptr(d_glass_n);

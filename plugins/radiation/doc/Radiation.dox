@@ -914,7 +914,7 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
     \vec{n}_{spec} = \frac{\vec{n}_s - \vec{n}_{ray}}{|| \vec{n}_s + \vec{n}_{ray} ||}.
  \f]
 
- By default, \f$k_s\f$ is set to 1.0. The primitive data "specular_exponent" must be set in order to enable specular reflection (if it is not set, the value of primitive data "specular_scale" will be ignored).
+ \f$k_s\f$ is the value of the primitive data "specular_scale" for the primitive, or 1.0 for a primitive without it; a value of 0 turns specular reflection off for that primitive. The primitive data "specular_exponent" must be set in order to enable specular reflection (if it is not set, the value of primitive data "specular_scale" will be ignored).
 
  The figure below shows the effect of different specular exponents on the simulated camera image (\f$k_s = 1\f$ for all images).
 
@@ -954,6 +954,19 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  The crease angle, given in degrees to \ref RadiationModel::enableCameraFluxSmoothing() "enableCameraFluxSmoothing()", is the angle between adjacent facet normals above which a shared edge is treated as a hard edge and flux is not averaged across it. It applies to \ref helios::Polymesh "Polymesh" objects only: an imported mesh may contain an edge that is genuinely there, such as the edge of a cube, and averaging across it would bleed the lit face into the shadowed one. The curved object types are smooth by construction and are never creased - a tube of six radial divisions has sixty degrees between neighbouring facets, which is under-resolution rather than a crease, so applying a crease test to it would defeat the feature entirely.
 
  \note Vertex normals are neither required nor used. Smoothing interpolates a scalar flux, not a direction, so a mesh reporting \ref helios::NORMAL_SOURCE_NONE is smoothed just as one carrying authored normals is. This is unrelated to the \ref Visualizer smooth shading controlled by \ref Visualizer::enableSmoothShading(), which does interpolate normals and is a pure rendering concern with no measurement semantics.
+
+ \subsubsection RadCamWhiteBalance Radiation Camera White Balance
+
+ The \ref CameraProperties::white_balance setting controls whether the first three bands of a camera (taken as red, green and blue) are white balanced after \ref RadiationModel::runBand() renders them. With "off", pixel values are left as rendered (after exposure). With "auto" (the default), each of the three bands is scaled so that a spectrally flat surface comes out neutral grey under the light that illuminates the scene.
+
+ A real camera has to estimate that light from the image. The radiation model does not: while the direct and diffuse rays are traced, it also records, for every primitive, what the camera would see if that primitive were a perfectly white surface lit by the same light - light arriving straight from the radiation sources and from the sky, weighted by the source spectra and the camera's spectral responses. Summing this white reference over the pixels of the image gives the camera's view of the illuminating light, \f$W_R\f$, \f$W_G\f$ and \f$W_B\f$, and each band is scaled by \f$\max(W_R, W_G, W_B)/W_b\f$. The factors applied are recorded as `white_balance_factors` in the JSON metadata written with the camera image (see \ref RadCamMetadata).
+
+ Because the white reference is built from the light that actually reaches the surfaces in view, the balance
+ - neutralizes the colour of the light regardless of the scene's content: a view dominated by green canopy is not mistaken for a green cast, as it would be by estimates made from the image itself;
+ - weights each source by how much of the image it lights, not by its strength: a strong sun blocked by a structure over the imaged area has little influence, and a lamp lighting most of the view dominates;
+ - does not count light already coloured by reflection from other surfaces, such as green light scattered within a canopy, so that shade keeps its colour.
+
+ A band without a spectral response uses the band flux as it is, so a camera with no spectral responses is balanced to equalize the light in its three bands. If no surface in view is lit in one of the bands (for example, a camera that sees only sky), a warning is printed and the image is not balanced.
 
  \subsubsection RadCamCalibColor Radiation Camera Color Calibration
 

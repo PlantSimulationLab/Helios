@@ -129,6 +129,8 @@ rtBuffer<float, 1> primitive_solid_fraction;
 
 rtBuffer<float, 1> rho, tau;
 rtBuffer<float, 1> rho_cam, tau_cam;
+// Camera-weighted reflectivity of a spectrally flat, perfectly white surface [source * Nbands_global * Ncameras + band_global * Ncameras + camera]
+rtBuffer<float, 1> white_reference_cam;
 
 // Translucent cover (glass/plastic) material. Same layout as rho/tau:
 // [source * Nprimitives * Nbands_global + primitive * Nbands_global + band_global].
@@ -156,6 +158,9 @@ rtBuffer<float, 1> scatter_buff_top;
 rtBuffer<float, 1> scatter_buff_bottom;
 rtBuffer<float, 1> scatter_buff_top_cam;
 rtBuffer<float, 1> scatter_buff_bottom_cam;
+// Each camera's white reference [camera * Nprimitives * Nbands_launch + primitive * Nbands_launch + band], accumulated over all the launches of a runBand()
+rtBuffer<float, 1> white_reference_top_cam;
+rtBuffer<float, 1> white_reference_bottom_cam;
 rtBuffer<float, 1> radiation_specular; // Incident radiation for specular (per source, camera-weighted) [source * Ncameras * Nprimitives * Nbands + camera * Nprimitives * Nbands + primitive * Nbands + band]
 
 // Camera variables

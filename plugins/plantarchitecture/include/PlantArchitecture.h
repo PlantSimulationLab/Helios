@@ -801,6 +801,25 @@ private:
         //! Number of radial subdivisions around the petiole circumference (4 = square, 5 = pentagon, etc.)
         uint radial_subdivisions;
 
+        //! Dimensionless bending compliance of the petiole, which makes the petiole arch toward the ground under the weight of its leaflets as the leaf grows and the petiole ages
+        /**
+         * The petiole centerline (including the rachis of a compound leaf) is bent as a tapered cantilever clamped at its insertion. Each leaflet's weight, proportional to its mature area times the leaf's
+         * current growth fraction, acts at the point where it attaches, and every segment turns downward in its own vertical plane by an amount proportional to the bending moment it carries through the
+         * horizontal lever arms of the current bent shape and inversely proportional to the fourth power of its radius. The rotations accumulate from base to tip, so the petiole curves rather than pivoting,
+         * and no segment passes hanging straight down. Leaves stay attached and turn with the centerline where they attach.
+         *
+         * The value is normalized so that a straight, horizontal, untapered petiole whose full-grown leaf weight acts entirely at its tip bends by this many radians at its tip in the small-deflection limit;
+         * the result does not depend on the petiole's length. Zero, the default, gives a petiole that keeps the shape it was created with. See \ref PlantArch_petioledroop.
+         * \note A petiole whose centerline was set by PlantArchitecture::setPetioleNodePositions(), or that carries a leaf posed by PlantArchitecture::setPetioleLeafGeometry(), is never bent.
+         */
+        RandomParameter_float flexibility;
+        //! Timescale in days over which the petiole's bending compliance grows with age
+        /**
+         * When positive, the compliance is \ref flexibility multiplied by 1 + age / flexibility_aging, where age is the phytomer's age in days, so it grows linearly and without limit: a petiole goes on
+         * lowering after its leaf has stopped growing, bounded only by the geometry of hanging straight down. Zero, the default, disables ageing, so the petiole stops bending once its leaf is full-grown.
+         */
+        RandomParameter_float flexibility_aging;
+
         PetioleParameters &operator=(const PetioleParameters &a) {
             if (this != &a) {
                 this->petioles_per_internode = a.petioles_per_internode;
@@ -822,6 +841,12 @@ private:
                 this->color = a.color;
                 this->length_segments = a.length_segments;
                 this->radial_subdivisions = a.radial_subdivisions;
+                this->flexibility = a.flexibility;
+                if (a.flexibility.distribution != "constant")
+                    this->flexibility.resample();
+                this->flexibility_aging = a.flexibility_aging;
+                if (a.flexibility_aging.distribution != "constant")
+                    this->flexibility_aging.resample();
             }
             return *this;
         }
@@ -840,6 +865,8 @@ private:
         RandomParameter_float leaflet_offset;
         //! Scale multiplier applied successively to each leaflet along a compound petiole (<1 shrinks, >1 enlarges)
         RandomParameter_float leaflet_scale;
+        //! Relative size of the intercalary leaflets of an interruptedly pinnate compound leaf, as a fraction of the major leaflet just distal to them. Zero, the default, gives a simply pinnate leaf whose leaflets shrink monotonically from the tip
+        RandomParameter_float intercalary_leaflet_scale;
         //! Overall scaling factor applied to the leaf prototype to set its physical size
         RandomParameter_float prototype_scale;
         //! Prototype definition holding geometric and texture information used to instantiate individual leaves
@@ -865,6 +892,9 @@ private:
                 this->leaflet_scale = a.leaflet_scale;
                 if (a.leaflet_scale.distribution != "constant")
                     this->leaflet_scale.resample();
+                this->intercalary_leaflet_scale = a.intercalary_leaflet_scale;
+                if (a.intercalary_leaflet_scale.distribution != "constant")
+                    this->intercalary_leaflet_scale.resample();
                 this->prototype_scale = a.prototype_scale;
                 if (a.prototype_scale.distribution != "constant")
                     this->prototype_scale.resample();
@@ -1102,6 +1132,30 @@ struct ShootParameters {
     RandomParameter_float phyllochron_min;
     //! Maximum relative elongation rate (m · m⁻¹ · day⁻¹) of the shoot internode; actual rate may be reduced dynamically
     RandomParameter_float elongation_rate_max;
+    //! Maximum relative expansion rate of the leaves and petioles on the shoot; negative means expand at the internode elongation rate
+    /**
+     * Units are meters of leaf expansion per meter of fully-expanded leaf size per day (m · m⁻¹ · day⁻¹), the same
+     * form as \ref elongation_rate_max, so a value of 0.1 expands a leaf from nothing to full size in ten days
+     * regardless of how large that leaf is.
+     *
+     * Leaves and internodes need not grow on the same schedule: a measured tomato seedling finishes expanding its
+     * leaves well before its internodes stop elongating, and fitting a single rate to both makes one of the two
+     * wrong. Setting this parameter decouples them. The internode is unaffected and keeps growing at
+     * \ref elongation_rate_max.
+     *
+     * Any negative value -- the default, \ref leaf_expansion_rate_unset -- means the species does not distinguish
+     * the two, and leaves expand at the shoot's own \ref elongation_rate_max. This is the behavior of every shoot
+     * type that does not set the parameter, including every model in the plant library, so leaving it alone
+     * reproduces the historical single-rate growth exactly. Zero is a real rate meaning "leaves never expand", and
+     * is therefore distinct from the unset sentinel.
+     */
+    RandomParameter_float leaf_expansion_rate_max;
+    //! Sentinel value of \ref leaf_expansion_rate_max meaning "expand leaves at the internode elongation rate"
+    /**
+     * The comparison is against zero rather than against this exact value, so any negative rate is treated as
+     * unset. A rate is a non-negative quantity, so no negative value can be confused with one a user intended.
+     */
+    static constexpr float leaf_expansion_rate_unset = -1.f;
     //! Minimum probability that a bud will break and form a new shoot
     RandomParameter_float vegetative_bud_break_probability_min;
     //! Maximum probability that a bud will break and form a new shoot
@@ -1190,6 +1244,7 @@ struct ShootParameters {
         this->max_nodes_per_season = a.max_nodes_per_season;
         this->phyllochron_min = a.phyllochron_min;
         this->elongation_rate_max = a.elongation_rate_max;
+        this->leaf_expansion_rate_max = a.leaf_expansion_rate_max;
         this->girth_area_factor = a.girth_area_factor;
         this->vegetative_bud_break_probability_min = a.vegetative_bud_break_probability_min;
         this->vegetative_bud_break_probability_max = a.vegetative_bud_break_probability_max;
@@ -1381,12 +1436,35 @@ public:
      */
     [[nodiscard]] float getInternodeRadius() const;
 
+    //! Mean current length of the petioles borne by this phytomer
     /**
-     * \brief Retrieves the length of the petiole.
+     * The value is the petiole's length *right now*, not the mature length it is growing toward: a petiole part-way through its elongation is proportionally shorter, so the value rises as
+     * \ref setPetioleScaleFraction(uint, float) advances it toward \ref petiole_length_max. In this it differs from \ref getLeafArea(), which reports the area a leaf is expanding toward. A petiole elongates
+     * on its shoot's internode rate rather than on the leaf expansion rate, so it goes on lengthening after the blade it carries has reached full size.
      *
-     * \return Length of the petiole.
+     * The length is measured along the petiole's centerline (its arclength), not as the straight-line distance from its base to its tip. The two differ for a petiole that has been bent by
+     * \ref bendPetioleUnderLeafWeight(uint): bending is inextensible, so it shortens the base-to-tip chord while leaving the arclength unchanged, and a drooping petiole therefore reports the same length
+     * as a rigid one of the same age. A petiole whose centerline was prescribed with \ref PlantArchitecture::setPetioleNodePositions() reports the arclength of the path that was supplied.
+     *
+     * Petioles borne at the same node are parallel structures rather than segments in series, so their lengths are not physically additive and this reports their mean rather than their sum (contrast
+     * \ref getLeafArea(), which sums because areas do add). Every petiole on a phytomer is built from the same draw of the petiole length parameter, so the mean equals each petiole's individual length
+     * unless a caller has prescribed or rescaled them one at a time; use \ref getPetioleLength(uint) const to read one of them.
+     *
+     * A phytomer built from a shoot type with `petiole.petioles_per_internode = 0` -- the normal case for a leafless woody skeleton -- has no petiole, and so does one whose leaf has been shed by
+     * \ref removeLeaf(). Both report zero, which is a statement that no petiole exists rather than a stand-in for an unknown value.
+     *
+     * \return Mean current arclength of this phytomer's petioles (m), or zero if it has none.
      */
     [[nodiscard]] float getPetioleLength() const;
+
+    //! Current length of one petiole borne by this phytomer
+    /**
+     * As \ref getPetioleLength(), but for a single petiole rather than the mean over all of them. The value is the current arclength of that petiole's centerline, which bending does not change.
+     *
+     * \param[in] petiole_index Index of the petiole within this phytomer.
+     * \return Current arclength of the petiole (m).
+     */
+    [[nodiscard]] float getPetioleLength(uint petiole_index) const;
 
     /**
      * \brief Retrieves the radius of the internode based on the stem fraction.
@@ -1465,14 +1543,26 @@ public:
      */
     void setInternodeMaxLength(float internode_length_max_new);
 
+    //! Scale the fully-elongated maximum length of every petiole on this phytomer, as a fraction of its current fully-elongated length
+    /**
+     * The petiole counterpart of \ref scaleInternodeMaxLength(float). The petiole's present length is left where it is and only the
+     * length it is growing toward changes, so a phytomer creation function can give a leaf born on a young plant a shorter final
+     * petiole without moving the petiole that is already there.
+     * \param[in] scale_factor Fraction by which to scale the fully-elongated petiole length. Must be positive.
+     */
+    void scalePetioleMaxLength(float scale_factor);
+
     //! Set the maximum radius of the internode
     /**
      * \param[in] internode_radius_max_new Maximum radius of the internode
      */
     void setInternodeMaxRadius(float internode_radius_max_new);
 
-    //! Set the leaf scale as a fraction of its total fully-elongated scale factor. Value is uniformly applied for all leaves/leaflets in the petiole.
+    //! Set the leaf scale as a fraction of its total fully-elongated scale factor, carrying the petiole to the same fraction. Value is uniformly applied for all leaves/leaflets in the petiole.
     /**
+     * The petiole is moved to the same fraction of its own fully-elongated length, which is what makes this the call to use when a leaf and the petiole it sits on are being posed together -- restoring a
+     * saved plant, or copying one phytomer's state onto another. The growth model does not use it, because a petiole elongates on its shoot's internode rate rather than on the leaf's (see
+     * \ref setPetioleScaleFraction(uint, float)); use \ref setPetioleAndLeafScaleFraction() to advance the two independently.
      * \param petiole_index Index of the petiole to which the leaf belongs
      * \param[in] leaf_scale_factor_fraction Fraction of the total fully-elongated leaf scale factor (i.e., =1 for fully-elongated leaf)
      */
@@ -1483,6 +1573,32 @@ public:
      * \param[in] leaf_scale_factor_fraction Fraction of the total fully-elongated leaf scale factor (i.e., =1 for fully-elongated leaf)
      */
     void setLeafScaleFraction(float leaf_scale_factor_fraction);
+
+    //! Set the current petiole length as a fraction of its fully-elongated length, leaving the leaves it carries at the size they are.
+    /**
+     * A petiole is a stem segment rather than part of the blade, and it goes on extending after the blade it carries has finished expanding: measured tomato petioles are still lengthening at two weeks, by
+     * which time the blade has stopped. PlantArchitecture::advanceTime() therefore drives the petiole with the shoot's Shoot::elongation_rate_instantaneous -- the rate its internodes elongate at -- and the
+     * blade with Shoot::leaf_expansion_rate_instantaneous. A shoot type that leaves ShootParameters::leaf_expansion_rate_max unset has one rate for both, and the petiole and blade then advance together
+     * exactly as they did before the two were separated.
+     *
+     * The centerline, the radii and the undeformed rest shape are scaled about the petiole base, and every leaf is re-seated at the arclength fraction along the centerline where it already sat, so the
+     * leaves ride out along the petiole as it lengthens without changing size. The bend applied by \ref bendPetioleUnderLeafWeight() is recomputed for the new length.
+     *
+     * \param[in] petiole_index Index of the petiole within this phytomer.
+     * \param[in] petiole_scale_factor_fraction Fraction of the fully-elongated petiole length (i.e., =1 for a fully-elongated petiole)
+     */
+    void setPetioleScaleFraction(uint petiole_index, float petiole_scale_factor_fraction);
+
+    //! Set the petiole length and the leaf size of one petiole, each as a fraction of its own fully-elongated value.
+    /**
+     * The two fractions are applied in one pass so that the leaves are scaled, re-seated along the rescaled petiole and bent under their new weight once rather than twice. \ref setLeafScaleFraction(uint,
+     * float) and \ref setPetioleScaleFraction() are the special cases in which one of the two fractions is held where it is.
+     *
+     * \param[in] petiole_index Index of the petiole within this phytomer.
+     * \param[in] petiole_scale_factor_fraction Fraction of the fully-elongated petiole length (i.e., =1 for a fully-elongated petiole)
+     * \param[in] leaf_scale_factor_fraction Fraction of the total fully-elongated leaf scale factor (i.e., =1 for fully-elongated leaf)
+     */
+    void setPetioleAndLeafScaleFraction(uint petiole_index, float petiole_scale_factor_fraction, float leaf_scale_factor_fraction);
 
     //! Prescribe the base position, orientation and size of every leaf on one petiole from measured geometry.
     /**
@@ -1538,6 +1654,25 @@ public:
      * \param[in] scale_factor Factor by which to scale the leaf prototype. Values less than 0 are clamped to 0.
      */
     void scaleLeafPrototypeScale(float scale_factor);
+
+    //! Scale the size every leaf on this phytomer is expanding toward, leaving the blades where they are.
+    /**
+     * The leaf counterpart of \ref scaleInternodeMaxLength(float) and \ref scalePetioleMaxLength(float). The blade's
+     * present size is left untouched and only the size it is growing toward changes: the expansion fraction moves the
+     * other way, so a fully-expanded leaf given a larger target becomes a partly-expanded leaf of the same size and
+     * goes on growing on the next call to PlantArchitecture::advanceTime(). This is what hands a leaf built from
+     * measured geometry back to the growth model still the size it was measured. It differs from
+     * \ref scaleLeafPrototypeScale(float), which rescales the blade itself and leaves the fraction alone.
+     *
+     * A factor small enough to put the target below the leaf's present size is the one case in which the blade does
+     * move: the leaf is taken down to the new target, since no growth step can shrink a leaf that is already past it.
+     * The leaflets of a compound leaf are then re-seated along the petiole from \ref LeafParameters::leaflet_offset,
+     * which discards a placement prescribed by PlantArchitecture::setPetioleLeafGeometry(); raising the target, the
+     * case this function exists for, never re-seats anything.
+     *
+     * \param[in] scale_factor Factor by which to scale the mature leaf size. Must be positive.
+     */
+    void scaleLeafSizeMax(float scale_factor);
 
     //! Scale petiole geometry to match target length and radius
     /**
@@ -1685,13 +1820,14 @@ public:
     void deletePhytomer();
 
 private:
-    //! Pin this petiole's growth fraction at 1, which is what exempts it from the rescaling in PlantArchitecture::advanceTime().
+    //! Pin this petiole's leaf and petiole growth fractions at 1, which is what exempts it from the rescaling in PlantArchitecture::advanceTime().
     /**
      * A leaf's rendered size is leaf_size_max multiplied by current_leaf_scale_factor, so pinning the fraction on a petiole that is still expanding would leave the bookkeeping overstating every leaf on it while
      * the geometry stayed where it was. The fraction being replaced is therefore folded into leaf_size_max first, leaving the product - and so the rendered geometry - unchanged. See scaleLeafPrototypeScale() for
-     * what breaking that invariant cost when it was last broken.
+     * what breaking that invariant cost when it was last broken. The petiole's own fraction is pinned the same way, by folding it into \ref petiole_length_max so that the petiole's present length becomes the
+     * length it is considered fully elongated at; both fractions have to be pinned, since either one still below 1 would have advanceTime() go on rescaling the measured geometry.
      *
-     * Idempotent: a second call finds a fraction of 1 and folds nothing.
+     * Idempotent: a second call finds fractions of 1 and folds nothing.
      *
      * \param[in] petiole_index Index of the petiole within this phytomer.
      */
@@ -1775,9 +1911,27 @@ public:
     std::vector<std::vector<float>> peduncle_curvature; // actual sampled curvature for each peduncle - first index is petiole, second is bud
     std::vector<std::vector<float>> peduncle_roll; // actual sampled roll for each peduncle - first index is petiole, second is bud
     float internode_pitch, internode_phyllotactic_angle;
+    //! Azimuth of this phytomer around its shoot (radians): the phyllotactic angles of every phytomer up to and including this one, summed.
+    /**
+     * A phytomer carrying a petiole takes its direction by rotating the previous phytomer's actual petiole by its own
+     * internode_phyllotactic_angle, so its azimuth accumulates without this. A phytomer with no petiole has nothing to
+     * rotate from, and its ghost direction is built from this stored sum instead. Recomputing it as the phytomer's index
+     * times its own freshly drawn angle agreed with the sum only for a constant angle; with a spread it multiplied each
+     * draw's error by the index.
+     */
+    float internode_phyllotactic_azimuth = 0;
 
     std::vector<std::vector<float>> petiole_radii; // first index is petiole within internode, second index is segment within petiole tube
-    std::vector<float> petiole_length; // index is petiole within internode
+    //! Current arclength of each petiole's centerline. Index is petiole within internode.
+    std::vector<float> petiole_length;
+    //! Fully-elongated length of each petiole, which its current \ref petiole_length is a fraction of. Index is petiole within internode.
+    /**
+     * The petiole counterpart of \ref internode_length_max -- the length drawn from PhytomerParameters::PetioleParameters::length when the phytomer was built, which the petiole reaches once
+     * \ref current_petiole_scale_factor gets to 1. Recorded rather than read back from the parameter, which the Phytomer constructor resamples once the petiole has been built, so that a later reader would
+     * get some other phytomer's draw; PlantArchitecture::readPlantStructureXML() rebuilds a petiole's curvature against this length. A petiole whose centerline was prescribed, or whose scale was otherwise
+     * pinned, carries its own measured length here (see lockPetioleScale()).
+     */
+    std::vector<float> petiole_length_max; // index is petiole within internode
     std::vector<float> petiole_pitch; // index is petiole within internode
     std::vector<float> petiole_curvature; // index is petiole within internode
     std::vector<float> petiole_taper; // taper value for each petiole (tip_radius/base_radius ratio)
@@ -1815,6 +1969,24 @@ public:
      */
     void deformLeafUnderSelfWeight(uint petiole_index, uint leaf_index);
 
+    //! Bend one petiole, together with the leaves it carries, under the weight of its leaflets for the leaf's current size and the petiole's age
+    /**
+     * The petiole is bent as a tapered cantilever clamped at its insertion by bendPetioleCenterline() (see PhytomerParameters::PetioleParameters::flexibility). The bent shape is always computed from the
+     * undeformed rest shape in \ref petiole_rest_offsets rather than from the current shape, so repeated calls do not accumulate. The insertion is clamped, so the petiole keeps leaving the stem at its
+     * generated pitch and the droop appears beyond it as curvature along the length. Each leaf stays attached at its arclength along the centerline and is turned
+     * by the rotation that carries the centerline's previous tangent at that point onto its new one. Does nothing for a rigid petiole, for a petiole whose centerline was prescribed, for a petiole carrying a
+     * prescribed leaf, or when neither the load nor the compliance has changed since the last call.
+     * \param[in] petiole_index Index of the petiole within the internode.
+     */
+    void bendPetioleUnderLeafWeight(uint petiole_index);
+
+    //! Record the current centerline of one petiole as its undeformed rest shape
+    /**
+     * Called wherever a petiole's centerline is generated or replaced wholesale, so that \ref bendPetioleUnderLeafWeight() bends from the new shape. Also marks the petiole as needing to be bent again.
+     * \param[in] petiole_index Index of the petiole within the internode.
+     */
+    void recordPetioleRestShape(uint petiole_index);
+
     //! Apply the full rotation chain that orients one leaf on its petiole
     /**
      * Rolls, pitches and yaws the leaf, turns it to the azimuth of the petiole it hangs from, and applies the curvature-aware blade-up correction, then records the three angles in \ref leaf_rotation. Called
@@ -1835,6 +2007,23 @@ public:
      */
     void orientLeaf(uint objID_leaf, uint petiole_index, uint leaf_index, int leaves_per_petiole, float ind_from_tip, float compound_rotation, const helios::vec3 &petiole_tip_axis, float leaf_roll_angle, float leaf_pitch_angle, float leaf_yaw_angle,
                     bool prescribed = false);
+
+    //! Re-aim one leaf so that its blade faces a given direction, keeping \ref leaf_rotation in step with the geometry
+    /**
+     * Solves for the roll and pitch that carry this leaf's blade onto \a target_normal and applies the difference as a single rotation about the leaf's own base, so the leaf stays attached to its petiole and
+     * keeps the azimuth of the petiole it hangs from. The angles are written back to \ref leaf_rotation, which is what makes the new orientation survive a
+     * PlantArchitecture::writePlantStructureXML() / PlantArchitecture::readPlantStructureXML() round trip: the reader replays \ref orientLeaf() from those angles. Rotating the leaf object directly, as
+     * Context::setObjectAverageNormal() does, changes the geometry without changing the record and is silently lost on reload.
+     *
+     * The part of the orientation chain outside roll and pitch -- the petiole's own azimuth and elevation, the compound rotation, and the curvature-aware blade-up correction -- is recovered from the leaf's
+     * current transformation matrix rather than recomputed, because the blade-up term depends on the petiole length and leaf size at the moment the leaf was last oriented.
+     *
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf within the petiole.
+     * \param[in] target_normal Direction the blade should face, in world coordinates. Need not be normalized.
+     * \note The leaf must have geometry in the Context. A blade whose facet normals cancel, or a target the roll-pitch pair cannot reach, raises an error rather than leaving the leaf half-turned.
+     */
+    void setLeafNormal(uint petiole_index, uint leaf_index, const helios::vec3 &target_normal);
 
     //! Label a freshly built leaf object's blade primitives "leaf" and colour its petiolule, as the cached prototypes are.
     /**
@@ -1863,6 +2052,24 @@ public:
     //! Whether each leaf's pose was prescribed by setPetioleLeafGeometry() rather than generated. Indexed as <code>leaf_objIDs</code>. Recorded by PlantArchitecture::writePlantStructureXML() so that the pose is restored.
     std::vector<std::vector<bool>> leaf_pose_prescribed;
 
+    //! Where a leaf being steered toward a prescribed leaf angle distribution is headed, and how far along it is. Indexed as <code>leaf_objIDs</code>.
+    /**
+     * Only leaves that have been assigned a target carry one. A leaf reaches its target as it finishes
+     * expanding, so that it unfolds into the prescribed orientation rather than snapping to it on the
+     * timestep it emerges. See PlantArchitecture::enablePlantLeafAngleDistributionTracking().
+     */
+    struct LeafAngleSteering {
+        //! Whether this leaf has been given a target to steer toward
+        bool steered = false;
+        //! Direction the blade is to face once the leaf is fully expanded, in world coordinates
+        helios::vec3 target_normal;
+        //! Leaf scale fraction at the last steering step, so each step covers its share of the remaining turn
+        float scale_at_last_step = 0.f;
+    };
+
+    //! Steering state of each leaf, parallel to <code>leaf_objIDs</code>. Empty entries are leaves that are not being steered.
+    std::vector<std::vector<LeafAngleSteering>> leaf_angle_steering;
+
     //! Whether each petiole's centerline was prescribed by setPetioleNodePositions() rather than generated. Indexed by petiole within the internode. Recorded by PlantArchitecture::writePlantStructureXML().
     std::vector<bool> petiole_path_prescribed;
 
@@ -1875,6 +2082,22 @@ public:
      * consulting it every timestep would give one leaf a different stiffness at every step and make it flap rather than settle.
      */
     float leaf_flexibility = 0.f;
+
+    //! Bending compliance of this phytomer's petioles
+    /**
+     * Resolved once from PhytomerParameters::PetioleParameters::flexibility when the phytomer is created and held for its life, for the same reason as \ref leaf_flexibility.
+     */
+    float petiole_flexibility = 0.f;
+
+    //! Undeformed rest centerline of each petiole, as offsets of its nodes from the petiole base. Indexed as <code>petiole_vertices</code>.
+    /**
+     * Scaled with the petiole as its leaf grows and rotated with it by \ref rotatePetiole(); the base itself is not stored, so translation of the petiole by stem growth is carried automatically.
+     * \ref bendPetioleUnderLeafWeight() bends this shape, never the current one.
+     */
+    std::vector<std::vector<helios::vec3>> petiole_rest_offsets;
+
+    //! State each petiole was last bent for: compliance times leaf growth fraction, reference leaflet load, and leaflet count. Indexed by petiole within the internode; x < 0 marks a petiole that must be bent again.
+    std::vector<helios::vec3> petiole_bend_state;
 
     PhytomerParameters phytomer_parameters;
 
@@ -1891,7 +2114,14 @@ public:
     bool isdormant = false;
 
     float current_internode_scale_factor = 1;
-    std::vector<float> current_leaf_scale_factor; // index is petiole within internode
+    //! How far each petiole's leaves have expanded toward their fully-grown size, as a fraction. Index is petiole within internode.
+    std::vector<float> current_leaf_scale_factor;
+    //! How far each petiole has elongated toward \ref petiole_length_max, as a fraction. Index is petiole within internode.
+    /**
+     * Advances independently of \ref current_leaf_scale_factor, because a petiole elongates on its shoot's internode rate while the blade it carries expands on the leaf rate (see
+     * \ref setPetioleScaleFraction()). For a shoot type that does not distinguish the two rates -- the default for every species in the plant library -- the two fractions take the same value at every step.
+     */
+    std::vector<float> current_petiole_scale_factor; // index is petiole within internode
 
     float old_phytomer_volume = 0;
 
@@ -1906,6 +2136,7 @@ public:
 
     float internode_radius_initial;
     float internode_radius_max;
+    //! Fully-elongated length of this phytomer's internode, which its current length is a fraction of.
     float internode_length_max;
 
     std::vector<float> internode_curvature_perturbations; //!< Stochastic curvature perturbation values for each internode segment (for exact XML reconstruction)
@@ -2301,6 +2532,18 @@ struct Shoot {
 
     float phyllochron_instantaneous;
     float elongation_rate_instantaneous;
+    //! Rate at which this shoot's leaf blades are presently expanding, in the units of ShootParameters::leaf_expansion_rate_max.
+    /**
+     * Applies to the blades only. A petiole is a stem segment and elongates on elongation_rate_instantaneous, the
+     * rate this shoot's internodes elongate at, so it goes on extending after the blade it carries has stopped.
+     *
+     * Resolved once when the shoot is created: it is the shoot type's ShootParameters::leaf_expansion_rate_max
+     * where that is set, and otherwise elongation_rate_instantaneous, so a shoot type that does not distinguish
+     * the two expands its leaves at the rate its internodes and petioles elongate. Held alongside elongation_rate_instantaneous
+     * rather than read from the parameters each step so that the two rates can be modulated independently by a
+     * growth model, in the way phyllochron_instantaneous is modulated by the carbohydrate model.
+     */
+    float leaf_expansion_rate_instantaneous;
 
     std::vector<std::shared_ptr<Phytomer>> phytomers;
 
@@ -2376,6 +2619,57 @@ struct PlantInstance {
 
     //! Snapshot of shoot parameters that were active when this plant was created
     //! This prevents parameter contamination between different plant types
+    //! Prescribed leaf angle distribution this plant's leaves are steered toward as it grows, if any.
+    /**
+     * Set by PlantArchitecture::enablePlantLeafAngleDistributionTracking() and consulted once per growth
+     * sub-step. Unlike the one-shot PlantArchitecture::setPlantLeafAngleDistribution(), which re-aims every
+     * leaf on the plant, tracking steers only the leaves that are still expanding, so a mature leaf never
+     * moves and the plant does not jitter as it grows.
+     */
+    struct LeafAngleDistributionTracker {
+        //! Whether the inclination of new leaves is being steered toward a Beta distribution
+        bool track_elevation = false;
+        //! Whether the azimuth of new leaves is being steered toward an ellipsoidal distribution
+        bool track_azimuth = false;
+        //! First parameter of the target Beta distribution of leaf inclination
+        float Beta_mu_inclination = 1.f;
+        //! Second parameter of the target Beta distribution of leaf inclination
+        float Beta_nu_inclination = 1.f;
+        //! Eccentricity of the target ellipsoidal distribution of leaf azimuth
+        float eccentricity_azimuth = 0.f;
+        //! Rotation of the target azimuth ellipse (degrees)
+        float ellipse_rotation_azimuth_degrees = 0.f;
+        //! How strongly the population's shortfall in each angle bin outweighs keeping a leaf near the angle the model gave it (radians)
+        /**
+         * Zero leaves every leaf where the procedural model put it. Large values (a radian or more) pull the
+         * population onto the target as hard as it can be pulled, at the cost of the plant's own form.
+         */
+        float lambda = 0.f;
+        //! Leaf area accumulated in each angle bin, rebuilt every sub-step
+        std::vector<float> bin_weight;
+        //! Share of the total leaf area the target distribution puts in each bin
+        std::vector<float> bin_target_fraction;
+        //! Blade primitives of each leaf, remembered between sub-steps so the histogram does not re-filter them every time
+        /**
+         * Selecting a leaf's blade facets means a string comparison against the primitive data of every
+         * primitive in the leaf object, and the histogram visits every leaf on the plant on every sub-step.
+         * The membership only changes when a leaf's geometry is rebuilt, so it is cached and re-derived only
+         * when the cached entry no longer describes the object. Keyed by leaf object ID; the stored primitive
+         * count is what detects a rebuilt or pruned leaf.
+         */
+        std::map<uint, std::pair<size_t, std::vector<uint>>> blade_primitive_cache;
+
+        //! Shoot ID and node index of each phytomer created this sub-step, whose leaves are still to be assigned a target
+        std::vector<std::pair<int, uint>> pending_cohort;
+        //! Drawn from the Context generator once when tracking is enabled, so that steering does not consume draws from the stream the plant is built with
+        std::minstd_rand0 generator;
+    };
+
+    //! Leaf angle distribution this plant is being steered toward, if tracking is enabled
+    LeafAngleDistributionTracker leaf_angle_tracker;
+    //! Whether this plant's leaf angles are being steered as it grows
+    bool leaf_angle_tracking_enabled = false;
+
     std::map<std::string, ShootParameters> shoot_types_snapshot;
 
     // --- Per-plant Attraction Points --- //
@@ -3205,8 +3499,9 @@ public:
      * \brief Sets the leaf elevation angle distribution for a specific plant.
      *
      * This method modifies the elevation angles of leaves in the plant such that they follow a Beta distribution.
-     * The methodology does not simply randomly sample angles from the Beta distribution, but it uses the Hungarian algorithm to minimize the total amount of rotation applied for the whole plant.
-     * This makes the transformed plant look as similar as possible to the original plant while still following the specified distribution.
+     * The methodology does not randomly sample an angle for each leaf. The leaves are ordered by their current inclination and each is given the angle at its own position in the target distribution, so that a leaf held more steeply than another is still the steeper of the two afterwards and the total rotation applied is the least that realizes the distribution.
+     * Leaves are ordered by leaf area rather than by count, matching the way \ref getPlantLeafInclinationAngleDistribution() reports the distribution.
+     * Each leaf is re-aimed about its own base, so it keeps pointing out along its petiole, and the imposed angle is recorded on the phytomer so that it survives a \ref writePlantStructureXML() / \ref readPlantStructureXML() round trip.
      * The more leaves in the plant the more accurate the distribution will be, and the more the plant will look like the original.
      *
      * \param[in] plantID Identifier for the plant.
@@ -3219,8 +3514,10 @@ public:
      * \brief Sets the leaf elevation angle distribution for a list of plants.
      *
      * This method modifies the elevation angles of leaves in the plants such that they follow a Beta distribution.
-     * The methodology does not simply randomly sample angles from the Beta distribution, but it uses the Hungarian algorithm to minimize the total amount of rotation applied for the whole canopy.
-     * This makes the transformed plants look as similar as possible to the original plants while still following the specified distribution.
+     * The methodology does not randomly sample an angle for each leaf. The leaves of all the plants are pooled and ordered by their current inclination, and each is given the angle at its own position in the target distribution, so that a leaf held more steeply than another is still the steeper of the two afterwards and the total rotation applied is the least that realizes the distribution.
+     * Leaves are ordered by leaf area rather than by count, matching the way \ref getPlantLeafInclinationAngleDistribution() reports the distribution.
+     * Each leaf is re-aimed about its own base, so it keeps pointing out along its petiole, and the imposed angle is recorded on the phytomer so that it survives a \ref writePlantStructureXML() / \ref readPlantStructureXML() round trip.
+     * The distribution is realized over the canopy as a whole, so an individual plant within it need not follow the distribution on its own.
      * The more leaves in the canopy the more accurate the distribution will be, and the more the plants will look like the originals.
      *
      * \param[in] plantIDs List of plant IDs for which to set the elevation angle distribution.
@@ -3233,8 +3530,10 @@ public:
      * \brief Sets the azimuth angle distribution for plant leaves.
      *
      * This method modifies the azimuth angles of leaves in the plant such that they follow an ellipsoidal distribution.
-     * The methodology does not simply randomly sample angles from the ellipsoidal distribution, but it uses the Hungarian algorithm to minimize the total amount of rotation applied for the whole plant.
-     * This makes the transformed plant look as similar as possible to the original plant while still following the specified distribution.
+     * The methodology does not randomly sample an angle for each leaf. The leaves are ordered by their current azimuth and each is given the angle at its own position in the target distribution, which keeps their arrangement around the stem and turns the leaves as little as the distribution allows.
+     * Because azimuth is periodic, the ordering starts from the direction the ellipse is rotated to rather than from an arbitrary world axis.
+     * Leaves are ordered by leaf area rather than by count, matching the way \ref getPlantLeafAzimuthAngleDistribution() reports the distribution.
+     * Each leaf is re-aimed about its own base, so it keeps pointing out along its petiole, and the imposed angle is recorded on the phytomer so that it survives a \ref writePlantStructureXML() / \ref readPlantStructureXML() round trip.
      * The more leaves in the plant the more accurate the distribution will be, and the more the plant will look like the original.
      *
      * \param[in] plantID Identifier of the plant whose leaf azimuth angle distribution is being set.
@@ -3246,9 +3545,12 @@ public:
     /**
      * \brief Sets the azimuth angle distribution of plant leaves.
      *
-     * This method modifies the azimuth angles of leaves in the plants such that they follow a Beta distribution.
-     * The methodology does not simply randomly sample angles from the Beta distribution, but it uses the Hungarian algorithm to minimize the total amount of rotation applied for the whole canopy.
-     * This makes the transformed plants look as similar as possible to the original plants while still following the specified distribution.
+     * This method modifies the azimuth angles of leaves in the plants such that they follow an ellipsoidal distribution.
+     * The methodology does not randomly sample an angle for each leaf. The leaves of all the plants are pooled and ordered by their current azimuth, and each is given the angle at its own position in the target distribution, which keeps their arrangement around the stem and turns the leaves as little as the distribution allows.
+     * Because azimuth is periodic, the ordering starts from the direction the ellipse is rotated to rather than from an arbitrary world axis.
+     * Leaves are ordered by leaf area rather than by count, matching the way \ref getPlantLeafAzimuthAngleDistribution() reports the distribution.
+     * Each leaf is re-aimed about its own base, so it keeps pointing out along its petiole, and the imposed angle is recorded on the phytomer so that it survives a \ref writePlantStructureXML() / \ref readPlantStructureXML() round trip.
+     * The distribution is realized over the canopy as a whole, so an individual plant within it need not follow the distribution on its own.
      * The more leaves in the canopy the more accurate the distribution will be, and the more the plants will look like the originals.
      *
      * \param[in] plantIDs List of plant IDs to which the angle distribution will be applied.
@@ -3261,8 +3563,10 @@ public:
      * \brief Sets the leaf angle distribution (both elevation and azimuth) for a specific plant
      *
      * This method modifies the elevation angles of leaves in the plant such that they follow a Beta distribution, and the azimuth angles such that they follow an ellipsoidal distribution.
-     * The methodology does not simply randomly sample angles from the distribution, but it uses the Hungarian algorithm to minimize the total amount of rotation applied for the whole plant.
-     * This makes the transformed plant look as similar as possible to the original plant while still following the specified distribution.
+     * The methodology does not randomly sample angles for each leaf. The leaves are ordered by their current angle and each is given the angle at its own position in the target distribution, so that the leaf arrangement of the original plant is preserved and the leaves are moved as little as the distributions allow.
+     * The inclination and the azimuth are assigned independently in this way and then imposed together, so each leaf is re-aimed once.
+     * Leaves are ordered by leaf area rather than by count, matching the way \ref getPlantLeafInclinationAngleDistribution() and \ref getPlantLeafAzimuthAngleDistribution() report the distributions.
+     * Each leaf is re-aimed about its own base, so it keeps pointing out along its petiole, and the imposed angles are recorded on the phytomer so that they survive a \ref writePlantStructureXML() / \ref readPlantStructureXML() round trip.
      * The more leaves in the plant the more accurate the distribution will be, and the more the plant will look like the original.
      *
      * \param[in] plantID The unique identifier of the plant.
@@ -3277,8 +3581,11 @@ public:
      * \brief Sets the leaf angle distribution (both elevation and azimuth) for a list of specified plants
      *
      * This method modifies the elevation angles of leaves in the plants such that they follow a Beta distribution, and the azimuth angles such that they follow an ellipsoidal distribution.
-     * The methodology does not simply randomly sample angles from the distribution, but it uses the Hungarian algorithm to minimize the total amount of rotation applied for the whole canopy.
-     * This makes the transformed plants look as similar as possible to the original plants while still following the specified distribution.
+     * The methodology does not randomly sample angles for each leaf. The leaves of all the plants are pooled and ordered by their current angle, and each is given the angle at its own position in the target distribution, so that the leaf arrangement of the original plants is preserved and the leaves are moved as little as the distributions allow.
+     * The inclination and the azimuth are assigned independently in this way and then imposed together, so each leaf is re-aimed once.
+     * Leaves are ordered by leaf area rather than by count, matching the way \ref getPlantLeafInclinationAngleDistribution() and \ref getPlantLeafAzimuthAngleDistribution() report the distributions.
+     * Each leaf is re-aimed about its own base, so it keeps pointing out along its petiole, and the imposed angles are recorded on the phytomer so that they survive a \ref writePlantStructureXML() / \ref readPlantStructureXML() round trip.
+     * The distribution is realized over the canopy as a whole, so an individual plant within it need not follow the distribution on its own.
      * The more leaves in the canopy the more accurate the distribution will be, and the more the plants will look like the originals.
      *
      * \param[in] plantIDs Vector of plant IDs to which the leaf angle distribution is to be applied.
@@ -3288,6 +3595,74 @@ public:
      * \param[in] ellipse_rotation_degrees Rotation angle of the ellipse in degrees.
      */
     void setPlantLeafAngleDistribution(const std::vector<uint> &plantIDs, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity, float ellipse_rotation_degrees) const;
+
+    //! Steer a plant's leaf angles toward a prescribed distribution as it grows
+    /**
+     * Where \ref setPlantLeafAngleDistribution() re-aims every leaf on a finished plant, this follows the
+     * distribution through growth: each leaf is given a target as it emerges and turns onto it while it
+     * expands, so that a fully grown leaf never moves again. The plant therefore matches the distribution at
+     * every stage without the leaves shifting about from one timestep to the next.
+     *
+     * Targets are not drawn independently per leaf, which would reproduce the distribution while destroying
+     * the arrangement the model generated. Each emerging leaf is assigned the angle bin that minimizes
+     * <code>angular distance from the angle the model gave it</code> minus <code>lambda</code> times
+     * <code>how far that bin is below its share of the plant's leaf area</code>. The bins the population is
+     * short of therefore attract leaves, but only leaves whose own orientation is already close to them.
+     *
+     * \param[in] plantID Identifier for the plant.
+     * \param[in] Beta_mu_inclination Mean value parameter for the Beta distribution of inclination angles.
+     * \param[in] Beta_nu_inclination Shape parameter for the Beta distribution of inclination angles.
+     * \param[in] eccentricity Eccentricity value for the ellipse defining the azimuth distribution.
+     * \param[in] ellipse_rotation_degrees Rotation angle of the ellipse in degrees.
+     * \param[in] lambda_degrees How strongly to favour filling the distribution over keeping each leaf near the angle the model gave it. Zero leaves the plant unchanged; values of order 180 match the
+     * distribution as closely as the growing plant allows.
+     * \note Enabling tracking on a plant that is already being tracked replaces the target, so the target may be varied over the plant's life.
+     */
+    void enablePlantLeafAngleDistributionTracking(uint plantID, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity, float ellipse_rotation_degrees, float lambda_degrees);
+
+    //! Steer the leaf angles of several plants toward a prescribed distribution as they grow
+    /**
+     * \param[in] plantIDs List of plant IDs to steer.
+     * \param[in] Beta_mu_inclination Mean value parameter for the Beta distribution of inclination angles.
+     * \param[in] Beta_nu_inclination Shape parameter for the Beta distribution of inclination angles.
+     * \param[in] eccentricity Eccentricity value for the ellipse defining the azimuth distribution.
+     * \param[in] ellipse_rotation_degrees Rotation angle of the ellipse in degrees.
+     * \param[in] lambda_degrees How strongly to favour filling the distribution over keeping each leaf near the angle the model gave it.
+     */
+    void enablePlantLeafAngleDistributionTracking(const std::vector<uint> &plantIDs, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity, float ellipse_rotation_degrees, float lambda_degrees);
+
+    //! Steer a plant's leaf inclination angles toward a Beta distribution as it grows, leaving azimuth to the model
+    /**
+     * \param[in] plantID Identifier for the plant.
+     * \param[in] Beta_mu_inclination Mean value parameter for the Beta distribution of inclination angles.
+     * \param[in] Beta_nu_inclination Shape parameter for the Beta distribution of inclination angles.
+     * \param[in] lambda_degrees How strongly to favour filling the distribution over keeping each leaf near the angle the model gave it.
+     */
+    void enablePlantLeafElevationAngleDistributionTracking(uint plantID, float Beta_mu_inclination, float Beta_nu_inclination, float lambda_degrees);
+
+    //! Steer a plant's leaf azimuth angles toward an ellipsoidal distribution as it grows, leaving inclination to the model
+    /**
+     * \param[in] plantID Identifier for the plant.
+     * \param[in] eccentricity Eccentricity value for the ellipse defining the azimuth distribution.
+     * \param[in] ellipse_rotation_degrees Rotation angle of the ellipse in degrees.
+     * \param[in] lambda_degrees How strongly to favour filling the distribution over keeping each leaf near the angle the model gave it.
+     */
+    void enablePlantLeafAzimuthAngleDistributionTracking(uint plantID, float eccentricity, float ellipse_rotation_degrees, float lambda_degrees);
+
+    //! Stop steering a plant's leaf angles toward a prescribed distribution
+    /**
+     * Leaves already steered keep the orientation they have reached; leaves emerging afterward are left where
+     * the procedural model puts them.
+     * \param[in] plantID Identifier for the plant.
+     */
+    void disablePlantLeafAngleDistributionTracking(uint plantID);
+
+    //! Whether a plant's leaf angles are being steered toward a prescribed distribution
+    /**
+     * \param[in] plantID Identifier for the plant.
+     * \return True if PlantArchitecture::enablePlantLeafAngleDistributionTracking() is in effect for this plant.
+     */
+    [[nodiscard]] bool isPlantLeafAngleDistributionTrackingEnabled(uint plantID) const;
 
     /**
      * \brief Sets the maximum age of a plant, beyond which it stops growing.
@@ -4210,9 +4585,17 @@ protected:
 
     std::map<std::string, ShootParameters> shoot_types;
 
-    // Key is the prototype function pointer; value first index is the unique leaf prototype, second index is the leaflet along a compound leaf (if applicable)
-    // std::map<uint(*)(helios::Context* context_ptr, LeafPrototype* prototype_parameters, int compound_leaf_index),std::vector<std::vector<uint>> > unique_leaf_prototype_objIDs;
-    std::map<uint, std::vector<std::vector<uint>>> unique_leaf_prototype_objIDs;
+    //! Key of the cached leaf prototypes: the leaf prototype's unique identifier paired with the number of leaflets the cached set was built for
+    /**
+     * A blade's shape is built from its position along the compound leaf, which is measured from the leaflet count, so a set of blades built for one leaflet count is not usable - not even as a prefix - by a
+     * petiole carrying a different number of leaflets. The count therefore belongs in the key and not just the identifier, because two shoot types can legitimately share an identifier while carrying
+     * different numbers of leaflets (a one-leaflet cotyledon type whose leaf prototype was copied from a compound type), and a single shoot type whose leaves_per_petiole is a random parameter draws a
+     * different count on different phytomers.
+     */
+    using LeafPrototypeCacheKey = std::pair<uint, uint>;
+
+    // Value first index is the unique leaf prototype, second index is the leaflet along a compound leaf (if applicable)
+    std::map<LeafPrototypeCacheKey, std::vector<std::vector<uint>>> unique_leaf_prototype_objIDs;
 
     //! Undeformed blade geometry of each cached leaf prototype, parallel to \ref unique_leaf_prototype_objIDs
     /**
@@ -4225,7 +4608,7 @@ protected:
         uint subdivisions_x = 0;
         uint subdivisions_y = 0;
     };
-    std::map<uint, std::vector<std::vector<LeafRestGeometry>>> unique_leaf_prototype_rest_geometry;
+    std::map<LeafPrototypeCacheKey, std::vector<std::vector<LeafRestGeometry>>> unique_leaf_prototype_rest_geometry;
 
     //! Record the undeformed geometry of one leaf prototype, so leaves copied from it can be deflected from their rest shape
     /**
@@ -4233,11 +4616,25 @@ protected:
      * lattice the deflection understands, records an empty entry and its leaves stay rigid. Called both when a phytomer first builds its prototypes and when readPlantStructureXML() rebuilds them, so that a
      * reloaded plant droops like a grown one.
      * \param[in] prototype_params Leaf prototype parameters the prototype was built from.
+     * \param[in] leaves_per_petiole Number of leaflets the prototype set is being built for, which is part of the cache key.
      * \param[in] prototype_index Index of this prototype among the species' unique prototypes.
      * \param[in] objID_leaf Object ID of the prototype leaf.
      * \param[in] leaf_flexibility Resolved flexibility of the phytomer the prototype is being built for. Zero records an empty entry.
      */
-    void recordLeafPrototypeRestGeometry(const LeafPrototype &prototype_params, int prototype_index, uint objID_leaf, float leaf_flexibility);
+    void recordLeafPrototypeRestGeometry(const LeafPrototype &prototype_params, int leaves_per_petiole, int prototype_index, uint objID_leaf, float leaf_flexibility);
+
+    //! Look up one cached leaf blade prototype, to be copied for a leaf
+    /**
+     * Fails with an explicit error rather than indexing the cache out of range when the requested blade was never cached, which means the caller is asking for a leaflet count or a prototype index the set
+     * was not built for.
+     * \param[in] prototype_identifier Unique identifier of the leaf prototype the blade was built from.
+     * \param[in] leaves_per_petiole Number of leaflets the petiole carries, which selects the set of blades built for that count.
+     * \param[in] prototype_index Index of the wanted prototype among the species' unique prototypes.
+     * \param[in] leaf_index Position of the leaflet along the compound leaf.
+     * \param[in] calling_function Name of the calling function, quoted in the error message.
+     * \return Object ID of the cached prototype leaf, which the caller copies to make the leaf.
+     */
+    [[nodiscard]] uint getCachedLeafPrototypeObjID(uint prototype_identifier, uint leaves_per_petiole, uint prototype_index, uint leaf_index, const std::string &calling_function) const;
 
     // Key is the prototype function pointer; value index is the unique flower prototype
     std::map<uint (*)(helios::Context *context_ptr, uint subdivisions, bool flower_is_open), std::vector<uint>> unique_open_flower_prototype_objIDs;
@@ -4296,6 +4693,27 @@ protected:
      * \param[in] function_name Name of the calling function, used in the error message.
      */
     void validateShootID(uint plantID, uint shootID, const std::string &function_name) const;
+
+    //! Shared implementation of the leaf angle distribution tracking setters
+    /**
+     * \param[in] plantID Identifier for the plant.
+     * \param[in] Beta_mu_inclination Mean value parameter for the Beta distribution of inclination angles.
+     * \param[in] Beta_nu_inclination Shape parameter for the Beta distribution of inclination angles.
+     * \param[in] eccentricity Eccentricity value for the ellipse defining the azimuth distribution.
+     * \param[in] ellipse_rotation_degrees Rotation angle of the ellipse in degrees.
+     * \param[in] lambda_degrees How strongly to favour filling the distribution over keeping each leaf near the angle the model gave it.
+     * \param[in] track_elevation Whether to steer leaf inclination.
+     * \param[in] track_azimuth Whether to steer leaf azimuth.
+     */
+    //! Give every leaf that emerged this growth sub-step a target angle, and turn the expanding ones toward the targets they already have
+    /**
+     * Called once per plant per sub-step of PlantArchitecture::advanceTime(), after the sub-step's new
+     * phytomers have been created. Does nothing for a plant that is not being tracked.
+     * \param[in] plantID Identifier for the plant.
+     */
+    void updatePlantLeafAngleDistributionTracking(uint plantID);
+
+    void enablePlantLeafAngleDistributionTracking_private(uint plantID, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity, float ellipse_rotation_degrees, float lambda_degrees, bool track_elevation, bool track_azimuth);
 
     void setPlantLeafAngleDistribution_private(const std::vector<uint> &plantIDs, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity_azimuth, float ellipse_rotation_azimuth_degrees, bool set_elevation, bool set_azimuth) const;
 

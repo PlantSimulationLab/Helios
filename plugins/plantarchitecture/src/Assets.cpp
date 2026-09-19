@@ -189,6 +189,239 @@ std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &res
     return deformed;
 }
 
+std::vector<helios::vec3> bendPetioleCenterline(const std::vector<helios::vec3> &rest_offsets, const std::vector<float> &radii, const std::vector<float> &load_arclength_fractions, const std::vector<float> &load_weights,
+                                                float reference_load, float compliance, float *equilibrium_residual) {
+
+    const size_t node_count = rest_offsets.size();
+    if (node_count < 2) {
+        helios_runtime_error("ERROR (bendPetioleCenterline): A centerline needs at least 2 nodes, but " + std::to_string(node_count) + " were given.");
+    } else if (radii.size() != node_count) {
+        helios_runtime_error("ERROR (bendPetioleCenterline): " + std::to_string(radii.size()) + " radii were given for " + std::to_string(node_count) + " centerline nodes; there must be one radius per node.");
+    } else if (load_arclength_fractions.size() != load_weights.size()) {
+        helios_runtime_error("ERROR (bendPetioleCenterline): " + std::to_string(load_arclength_fractions.size()) + " load positions were given with " + std::to_string(load_weights.size()) +
+                             " load weights; every load needs both.");
+    } else if (!(compliance >= 0.f) || !std::isfinite(compliance)) {
+        helios_runtime_error("ERROR (bendPetioleCenterline): Compliance must be finite and non-negative, but " + std::to_string(compliance) + " was given.");
+    } else if (!std::isfinite(reference_load)) {
+        helios_runtime_error("ERROR (bendPetioleCenterline): Reference load must be finite, but " + std::to_string(reference_load) + " was given.");
+    }
+    for (size_t load = 0; load < load_weights.size(); load++) {
+        if (!(load_arclength_fractions.at(load) >= 0.f && load_arclength_fractions.at(load) <= 1.f)) {
+            helios_runtime_error("ERROR (bendPetioleCenterline): Load " + std::to_string(load) + " is at arclength fraction " + std::to_string(load_arclength_fractions.at(load)) + ", which is outside [0, 1].");
+        } else if (!(load_weights.at(load) >= 0.f) || !std::isfinite(load_weights.at(load))) {
+            helios_runtime_error("ERROR (bendPetioleCenterline): Load " + std::to_string(load) + " has weight " + std::to_string(load_weights.at(load)) + ", but weights must be finite and non-negative.");
+        }
+    }
+
+    if (equilibrium_residual != nullptr) {
+        *equilibrium_residual = 0.f;
+    }
+    if (compliance == 0.f || reference_load <= 0.f || load_weights.empty()) {
+        return rest_offsets;
+    }
+
+    const size_t segment_count = node_count - 1;
+
+    // ---- Rest geometry of each segment: length, horizontal heading and elevation ----
+
+    // Worked in double precision: the iteration below compares successive shapes to decide when it has converged, and single precision noise in the lever arms would otherwise set a floor on that test.
+    std::vector<double> segment_length(segment_count);
+    std::vector<double> node_arclength(node_count, 0.0);
+    std::vector<double> rest_elevation(segment_count);
+    std::vector<double> heading_x(segment_count), heading_y(segment_count);
+    std::vector<bool> has_heading(segment_count, false);
+    for (size_t j = 0; j < segment_count; j++) {
+        const double dx = double(rest_offsets.at(j + 1).x) - double(rest_offsets.at(j).x);
+        const double dy = double(rest_offsets.at(j + 1).y) - double(rest_offsets.at(j).y);
+        const double dz = double(rest_offsets.at(j + 1).z) - double(rest_offsets.at(j).z);
+        segment_length.at(j) = std::sqrt(dx * dx + dy * dy + dz * dz);
+        if (segment_length.at(j) <= 0.0) {
+            helios_runtime_error("ERROR (bendPetioleCenterline): Centerline nodes " + std::to_string(j) + " and " + std::to_string(j + 1) + " coincide, so the segment between them has no direction to bend.");
+        }
+        node_arclength.at(j + 1) = node_arclength.at(j) + segment_length.at(j);
+        const double horizontal = std::sqrt(dx * dx + dy * dy);
+        rest_elevation.at(j) = std::atan2(dz, horizontal);
+        if (horizontal > 1e-6 * segment_length.at(j)) {
+            heading_x.at(j) = dx / horizontal;
+            heading_y.at(j) = dy / horizontal;
+            has_heading.at(j) = true;
+        }
+    }
+    const double total_length = node_arclength.back();
+
+    // A segment standing exactly vertical has no heading of its own to bend toward; it bends toward the heading of the petiole as a whole, taken from its rest chord or failing that from the nearest segment
+    // that has one. A centerline that is vertical throughout has no horizontal lever arm anywhere, so its loads exert no moment and it keeps its rest shape.
+    double fallback_x = double(rest_offsets.back().x) - double(rest_offsets.front().x);
+    double fallback_y = double(rest_offsets.back().y) - double(rest_offsets.front().y);
+    double fallback_horizontal = std::sqrt(fallback_x * fallback_x + fallback_y * fallback_y);
+    if (fallback_horizontal <= 1e-6 * total_length) {
+        fallback_horizontal = 0.0;
+        for (size_t j = 0; j < segment_count; j++) {
+            if (has_heading.at(j)) {
+                fallback_x = heading_x.at(j);
+                fallback_y = heading_y.at(j);
+                fallback_horizontal = 1.0;
+                break;
+            }
+        }
+        if (fallback_horizontal == 0.0) {
+            return rest_offsets;
+        }
+    }
+    for (size_t j = 0; j < segment_count; j++) {
+        if (!has_heading.at(j)) {
+            heading_x.at(j) = fallback_x / fallback_horizontal;
+            heading_y.at(j) = fallback_y / fallback_horizontal;
+        }
+    }
+
+    // ---- Stiffness taper ----
+
+    // Bending stiffness goes with the fourth power of radius. The ratio is floored because the tube's taper parameter can take its tip radius to zero, which would make the last segment infinitely compliant; a
+    // real petiole tip carries the terminal leaflet's petiolule and is never that thin.
+    constexpr double minimum_radius_ratio = 0.5;
+    std::vector<double> segment_compliance_factor(segment_count, 1.0);
+    if (radii.front() > 0.f) {
+        for (size_t j = 0; j < segment_count; j++) {
+            const double ratio = std::max(minimum_radius_ratio, 0.5 * (double(radii.at(j)) + double(radii.at(j + 1))) / double(radii.front()));
+            segment_compliance_factor.at(j) = 1.0 / (ratio * ratio * ratio * ratio);
+        }
+    }
+
+    const double gain = 2.0 * double(compliance) / (double(reference_load) * total_length * total_length);
+
+    const size_t load_count = load_weights.size();
+    std::vector<double> load_arclength(load_count);
+    std::vector<size_t> load_segment(load_count);
+    for (size_t load = 0; load < load_count; load++) {
+        load_arclength.at(load) = double(load_arclength_fractions.at(load)) * total_length;
+        size_t segment = 0;
+        while (segment + 1 < segment_count && load_arclength.at(load) > node_arclength.at(segment + 1)) {
+            segment++;
+        }
+        load_segment.at(load) = segment;
+    }
+
+    // ---- Shape and moments ----
+
+    // Nodes and unit directions of the shape given by a set of per-segment rotations. Each segment keeps its heading and is lowered by the rotations of the segments BEFORE it - the curvature accumulated up to its
+    // own base, which for the first segment is nothing - and is stopped at hanging straight down.
+    //
+    // The first segment is therefore clamped: the petiole leaves the stem at the pitch it was generated with, however heavily it is loaded, and the bend appears beyond the insertion as curvature accumulating
+    // along the length. That is what a cantilever built in at its support does, and it is what real petioles do. Measured Pheno4D tomato petioles hold a base elevation of 33.7, 20.9, 19.8 and 12.0 degrees at
+    // leaf ages 3, 6, 9 and 12 days while their base-to-tip arch grows from 13 to 19 degrees: the outer petiole arches over while the insertion is roughly held. Rotating each segment through its own share as
+    // well - which the bending moment makes largest at the base, where the moment is - swung the insertion itself down instead, to 9.9, 8.3, 1.9 and 2.8 degrees over the same ages, and no refinement of the
+    // discretization recovered it (raising petiole.length_segments from 5 to 30 moved the base elevation only from 9.9 to 11.3 degrees).
+    const double half_pi = 0.5 * M_PI;
+    std::vector<double> elevation(segment_count);
+    std::vector<double> node_x(node_count), node_y(node_count), node_z(node_count);
+    std::vector<double> direction_x(segment_count), direction_y(segment_count), direction_z(segment_count);
+    auto buildShape = [&](const std::vector<double> &rotation) {
+        node_x.at(0) = rest_offsets.front().x;
+        node_y.at(0) = rest_offsets.front().y;
+        node_z.at(0) = rest_offsets.front().z;
+        double accumulated = 0.0;
+        for (size_t j = 0; j < segment_count; j++) {
+            elevation.at(j) = std::max(rest_elevation.at(j) - accumulated, -half_pi);
+            accumulated += rotation.at(j);
+            const double horizontal = std::cos(elevation.at(j));
+            direction_x.at(j) = horizontal * heading_x.at(j);
+            direction_y.at(j) = horizontal * heading_y.at(j);
+            direction_z.at(j) = std::sin(elevation.at(j));
+            node_x.at(j + 1) = node_x.at(j) + segment_length.at(j) * direction_x.at(j);
+            node_y.at(j + 1) = node_y.at(j) + segment_length.at(j) * direction_y.at(j);
+            node_z.at(j + 1) = node_z.at(j) + segment_length.at(j) * direction_z.at(j);
+        }
+    };
+
+    // Rotation of each segment called for by the moments of the shape last built. The moment at arclength s within segment j is the sum over loads beyond s of the load times the horizontal distance from s to
+    // the load along the segment's heading; that distance falls linearly along the segment, so its integral over the part of the segment short of the load is exact in closed form.
+    // horizontal_bound replaces every lever arm by the arclength to the load, which bounds the moment of any shape and gives the iteration's relaxation factor.
+    auto momentRotations = [&](std::vector<double> &rotation, bool horizontal_bound) {
+        for (size_t j = 0; j < segment_count; j++) {
+            double moment_integral = 0.0;
+            for (size_t load = 0; load < load_count; load++) {
+                if (load_arclength.at(load) <= node_arclength.at(j) || load_weights.at(load) == 0.f) {
+                    continue;
+                }
+                const double span = std::min(load_arclength.at(load), node_arclength.at(j + 1)) - node_arclength.at(j);
+                double contribution;
+                if (horizontal_bound) {
+                    contribution = span * (load_arclength.at(load) - node_arclength.at(j)) - 0.5 * span * span;
+                } else {
+                    const size_t k = load_segment.at(load);
+                    const double along_load_segment = load_arclength.at(load) - node_arclength.at(k);
+                    const double load_x = node_x.at(k) + along_load_segment * direction_x.at(k);
+                    const double load_y = node_y.at(k) + along_load_segment * direction_y.at(k);
+                    const double lever_at_node = (load_x - node_x.at(j)) * heading_x.at(j) + (load_y - node_y.at(j)) * heading_y.at(j);
+                    const double lever_decrease_rate = direction_x.at(j) * heading_x.at(j) + direction_y.at(j) * heading_y.at(j);
+                    contribution = span * lever_at_node - 0.5 * lever_decrease_rate * span * span;
+                }
+                moment_integral += double(load_weights.at(load)) * std::max(0.0, contribution);
+            }
+            rotation.at(j) = gain * segment_compliance_factor.at(j) * moment_integral;
+        }
+    };
+
+    // ---- Fixed-point iteration ----
+
+    // Bending shortens the lever arms, so the rotations a shape calls for fall as the shape bends further, and the balance is found by iterating from the rest shape. Plain iteration overshoots and oscillates
+    // once the bend is large, so each step moves only part of the way: with G bounding how strongly the rotations respond to the shape (the total rotation of the centerline laid out horizontally), a relaxation
+    // factor of 2/(2+G) makes every step contract. The iteration stops when the elevations stop changing, or after a fixed number of steps, which only an extreme compliance reaches and which then leaves a
+    // bounded, nearly vertical shape. The result depends only on the inputs, never on any earlier call.
+    std::vector<double> rotation(segment_count, 0.0);
+    std::vector<double> target(segment_count, 0.0);
+    momentRotations(target, true);
+    double response_bound = 0.0;
+    for (double value: target) {
+        response_bound += value;
+    }
+    const double relaxation = 2.0 / (2.0 + response_bound);
+
+    constexpr int maximum_iterations = 256;
+    constexpr double elevation_tolerance = 1e-9;
+    std::vector<double> previous_elevation(segment_count);
+    buildShape(rotation);
+    for (int iteration = 0; iteration < maximum_iterations; iteration++) {
+        momentRotations(target, false);
+        previous_elevation = elevation;
+        for (size_t j = 0; j < segment_count; j++) {
+            rotation.at(j) += relaxation * (target.at(j) - rotation.at(j));
+        }
+        buildShape(rotation);
+        double largest_change = 0.0;
+        for (size_t j = 0; j < segment_count; j++) {
+            largest_change = std::max(largest_change, std::fabs(elevation.at(j) - previous_elevation.at(j)));
+        }
+        if (largest_change < elevation_tolerance) {
+            break;
+        }
+    }
+
+    if (equilibrium_residual != nullptr) {
+        // Compare the returned shape's elevations with those its own moments call for, both stopped at vertical, so a segment legitimately held at hanging straight down does not count as unconverged.
+        momentRotations(target, false);
+        double accumulated_target = 0.0;
+        double accumulated_applied = 0.0;
+        double largest_residual = 0.0;
+        for (size_t j = 0; j < segment_count; j++) {
+            // The rotations are accumulated exclusively here for the same reason buildShape() accumulates them that way: a segment is placed by the curvature accumulated up to its own base.
+            const double applied = std::max(rest_elevation.at(j) - accumulated_applied, -half_pi);
+            const double called_for = std::max(rest_elevation.at(j) - accumulated_target, -half_pi);
+            largest_residual = std::max(largest_residual, std::fabs(applied - called_for));
+            accumulated_target += target.at(j);
+            accumulated_applied += rotation.at(j);
+        }
+        *equilibrium_residual = float(largest_residual);
+    }
+
+    std::vector<vec3> bent(node_count);
+    for (size_t node = 0; node < node_count; node++) {
+        bent.at(node) = make_vec3(float(node_x.at(node)), float(node_y.at(node)), float(node_z.at(node)));
+    }
+    return bent;
+}
+
 uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype_parameters, int compound_leaf_index) {
 
     // If OBJ model file is specified, load it and return the object ID
@@ -812,16 +1045,28 @@ uint GrapevineFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
 
 void GrapevinePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
 
-    // blind nodes
+    // Blind nodes: a grapevine does not fruit above the second node of a shoot, and the anlagen at nodes
+    // beyond roughly the tenth become tendrils rather than lateral shoots, so the buds that would carry
+    // them are killed here rather than being left for the growth model to break.
     if (shoot_node_index >= 2) {
         phytomer->setFloralBudState(BUD_DEAD);
     }
+    // Summer laterals arise at most nodes of a fruiting shoot and are most vigorous basally, dying out
+    // toward the tip. Keeping them below node 8 is what gives a vine the 27-35% of its leaf area that
+    // destructive defoliation finds on laterals (Navarrete 2015, VSP Pinot noir).
     if (phytomer->rank >= 1 && shoot_node_index >= 8) {
         phytomer->setVegetativeBudState(BUD_DEAD);
     }
+    // A lateral does not fruit, and does not itself bear further laterals: second-order branching is what
+    // would run the canopy away. This previously started at rank 2, which is the fruiting shoot itself, so
+    // every lateral bud on the vine was killed at creation and the model grew no laterals at all -- the
+    // canopy was missing the third of its leaf area they carry, and no bud-break probability could
+    // restore it because the buds were already dead when the probability was sampled.
     if (phytomer->rank >= 2) {
-        phytomer->setVegetativeBudState(BUD_DEAD);
         phytomer->setFloralBudState(BUD_DEAD);
+    }
+    if (phytomer->rank >= 3) {
+        phytomer->setVegetativeBudState(BUD_DEAD);
     }
 }
 

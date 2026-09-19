@@ -336,6 +336,7 @@ void OptiX6Backend::initialize() {
     addBuffer("tau", tau_RTbuffer, tau_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("rho_cam", rho_cam_RTbuffer, rho_cam_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("tau_cam", tau_cam_RTbuffer, tau_cam_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
+    addBuffer("white_reference_cam", white_reference_cam_RTbuffer, white_reference_cam_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("specular_exponent", specular_exponent_RTbuffer, specular_exponent_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("specular_scale", specular_scale_RTbuffer, specular_scale_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
 
@@ -364,6 +365,8 @@ void OptiX6Backend::initialize() {
     addBuffer("Rsky", Rsky_RTbuffer, Rsky_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("scatter_buff_top_cam", scatter_buff_top_cam_RTbuffer, scatter_buff_top_cam_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("scatter_buff_bottom_cam", scatter_buff_bottom_cam_RTbuffer, scatter_buff_bottom_cam_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
+    addBuffer("white_reference_top_cam", white_reference_top_cam_RTbuffer, white_reference_top_cam_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
+    addBuffer("white_reference_bottom_cam", white_reference_bottom_cam_RTbuffer, white_reference_bottom_cam_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
 
     // Source buffers
     addBuffer("source_positions", source_positions_RTbuffer, source_positions_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 1);
@@ -562,6 +565,7 @@ void OptiX6Backend::updateMaterials(const RayTracingMaterial &materials) {
     current_band_count = materials.num_bands;
     current_source_count = materials.num_sources;
     current_camera_count = materials.num_cameras;
+    specular_reflection_enabled = materials.specular_reflection_enabled;
 
     // Update Ncameras variable in backend's OptiX context
     RT_CHECK_ERROR(rtVariableSet1ui(Ncameras_RTvariable, materials.num_cameras));
@@ -652,6 +656,7 @@ void OptiX6Backend::launchDirectRays(const RayTracingLaunchParams &params) {
         // Specular reflection flag
         uint specular_enabled = params.specular_reflection_enabled ? 1 : 0;
         RT_CHECK_ERROR(rtVariableSet1ui(specular_reflection_enabled_RTvariable, specular_enabled));
+        requireSpecularBufferSized("launchDirectRays", params);
 
         // Launch this batch: dimension = (n, n, primitives_this_batch)
         RT_CHECK_ERROR(rtContextLaunch3D(OptiX_Context, RAYTYPE_DIRECT, n, n, prims_this_launch));
@@ -744,6 +749,7 @@ void OptiX6Backend::launchCameraRays(const RayTracingLaunchParams &params) {
 
     // Set common launch parameters
     launchParamsToVariables(params);
+    requireSpecularBufferSized("launchCameraRays", params);
 
     // Set camera-specific parameters
     RT_CHECK_ERROR(rtVariableSet3f(camera_position_RTvariable, params.camera_position.x, params.camera_position.y, params.camera_position.z));
@@ -841,6 +847,20 @@ void OptiX6Backend::getCameraResults(std::vector<float> &pixel_data, std::vector
     pixel_depths = getOptiXbufferData(camera_pixel_depth_RTbuffer);
 }
 
+void OptiX6Backend::getWhiteReferenceResults(std::vector<float> &white_reference_top, std::vector<float> &white_reference_bottom) {
+    if (!is_initialized) {
+        helios_runtime_error("ERROR (OptiX6Backend::getWhiteReferenceResults): Backend not initialized.");
+    }
+
+    white_reference_top.clear();
+    white_reference_bottom.clear();
+    if (current_camera_count == 0) {
+        return; // The buffers hold a one-element placeholder
+    }
+    white_reference_top = getOptiXbufferData(white_reference_top_cam_RTbuffer);
+    white_reference_bottom = getOptiXbufferData(white_reference_bottom_cam_RTbuffer);
+}
+
 void OptiX6Backend::zeroRadiationBuffers(size_t launch_band_count) {
     if (!is_initialized) {
         helios_runtime_error("ERROR (OptiX6Backend::zeroRadiationBuffers): Backend not initialized.");
@@ -875,18 +895,24 @@ void OptiX6Backend::zeroRadiationBuffers(size_t launch_band_count) {
 
     // Zero camera scatter buffers (use launch_band_count for per-launch sizing)
     // Camera scatter holds one [primitive][band] block per camera: [camera][primitive][band]
+    // The white reference has the same layout, but is zeroed only here: it accumulates over all the launches of a runBand().
     if (current_camera_count > 0) {
         size_t cam_scatter_size = current_camera_count * current_primitive_count * launch_band_count;
         if (cam_scatter_size > 0) {
             zeroBuffer1D(scatter_buff_top_cam_RTbuffer, cam_scatter_size);
             zeroBuffer1D(scatter_buff_bottom_cam_RTbuffer, cam_scatter_size);
+            zeroBuffer1D(white_reference_top_cam_RTbuffer, cam_scatter_size);
+            zeroBuffer1D(white_reference_bottom_cam_RTbuffer, cam_scatter_size);
         }
     }
 
-    // Zero specular buffer (use current_band_count for global accumulation)
+    // Zero specular buffer (use current_band_count for global accumulation). Without specular reflection nothing reads or writes it, so it is
+    // shrunk to a one-element placeholder instead of holding a value for every source, camera, primitive and band.
     size_t specular_size = current_source_count * current_camera_count * current_primitive_count * current_band_count;
-    if (specular_size > 0) {
+    if (specular_reflection_enabled && specular_size > 0) {
         zeroBuffer1D(radiation_specular_RTbuffer, specular_size);
+    } else {
+        zeroBuffer1D(radiation_specular_RTbuffer, 1);
     }
 
     // Zero sky energy buffer
@@ -1745,6 +1771,10 @@ void OptiX6Backend::materialsToBuffers(const RayTracingMaterial &materials) {
         initializeBuffer1Df(tau_cam_RTbuffer, materials.transmissivity_cam);
     }
 
+    if (!materials.white_reference_cam.empty()) {
+        initializeBuffer1Df(white_reference_cam_RTbuffer, materials.white_reference_cam);
+    }
+
     if (!materials.specular_exponent.empty()) {
         initializeBuffer1Df(specular_exponent_RTbuffer, materials.specular_exponent);
     }
@@ -1878,6 +1908,19 @@ void OptiX6Backend::skyModelToBuffers(const std::vector<helios::vec4> &sky_radia
 
     // Set solar disk angular size
     RT_CHECK_ERROR(rtVariableSet1f(solar_disk_cos_angle_RTvariable, solar_disk_cos_angle));
+}
+
+void OptiX6Backend::requireSpecularBufferSized(const char *caller, const RayTracingLaunchParams &params) {
+    if (params.specular_reflection_enabled == 0 || current_source_count == 0 || current_camera_count == 0) {
+        return; // The programs do not touch radiation_specular
+    }
+    const size_t required_size = current_source_count * current_camera_count * current_primitive_count * current_band_count;
+    RTsize allocated_size;
+    RT_CHECK_ERROR(rtBufferGetSize1D(radiation_specular_RTbuffer, &allocated_size));
+    if (allocated_size != required_size) {
+        helios_runtime_error(std::string("ERROR (OptiX6Backend::") + caller + "): Specular reflection is enabled for this launch, but radiation_specular holds " + std::to_string(allocated_size) + " values instead of the " +
+                             std::to_string(required_size) + " its sources, cameras, primitives and bands require. updateMaterials() must enable specular reflection, and zeroRadiationBuffers() be called, before rays are launched.");
+    }
 }
 
 void OptiX6Backend::launchParamsToVariables(const RayTracingLaunchParams &params) {

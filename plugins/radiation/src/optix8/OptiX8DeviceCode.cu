@@ -515,6 +515,24 @@ extern "C" __global__ void __intersection__bbox() {
 // Miss programs
 // ---------------------------------------------------------------------------
 
+//! Add light arriving at the face a ray was launched from to every camera's white reference
+/**
+ * The white reference is what each camera would record from a spectrally flat, perfectly white surface in place of the primitive: the arriving light weighted by white_reference_cam. Only light
+ * straight from a radiation source or the sky is added, so a camera's "auto" white balance neutralizes the light illuminating the scene and not light already coloured by other surfaces.
+ */
+static __forceinline__ __device__ void accumulateWhiteReference(const PerRayData *prd, uint32_t ind_origin, uint32_t b_global, float strength) {
+    if (params.Ncameras == 0 || !params.white_reference_cam || !params.white_reference_top_cam || strength <= 0.f) {
+        return;
+    }
+    const uint32_t Ncameras   = params.Ncameras;
+    const uint32_t cam_stride = params.Nprimitives * params.Nbands_launch;
+    float *face_white_reference = prd->face ? params.white_reference_top_cam : params.white_reference_bottom_cam;
+    for (uint32_t cam = 0; cam < Ncameras; cam++) {
+        const float white = params.white_reference_cam[(prd->source_ID * params.Nbands_global + b_global) * Ncameras + cam];
+        atomicFloatAdd(&face_white_reference[cam * cam_stride + ind_origin], strength * white);
+    }
+}
+
 extern "C" __global__ void __miss__direct() {
     PerRayData *prd = getPayloadPRD();
 
@@ -585,11 +603,12 @@ extern "C" __global__ void __miss__direct() {
                 }
             }
         }
+        accumulateWhiteReference(prd, ind_origin, b_global, (float)strength);
 
         // Accumulate incident radiation for specular for ALL cameras (per source, camera-weighted).
         // Direct rays are launched once (not per camera), so we must populate every camera's
         // slot in radiation_specular here so each camera's closest-hit can read its own data.
-        if (params.radiation_specular && params.source_fluxes_cam && strength > 0.0) {
+        if (params.specular_reflection_enabled > 0 && params.radiation_specular && params.source_fluxes_cam && strength > 0.0) {
             for (uint32_t cam = 0; cam < params.Ncameras; cam++) {
                 // source_fluxes_cam layout: [source][band][camera] (full 3D buffer uploaded in updateSources)
                 const uint32_t weight_idx = prd->source_ID * Nbands_launch * params.Ncameras
@@ -683,6 +702,7 @@ extern "C" __global__ void __miss__diffuse() {
                 }
             }
         }
+        accumulateWhiteReference(prd, ind_origin, b_global, strength);
     }
 }
 
@@ -1211,10 +1231,7 @@ extern "C" __global__ void __closesthit__camera() {
                     }
                     const float3 spec_dir = normalize(light_dir - ray_direction);
                     const float exponent  = params.specular_exponent[hit_position];
-                    float scale_coeff = 1.0f;
-                    if (params.specular_reflection_enabled == 2 && params.specular_scale) {
-                        scale_coeff = params.specular_scale[hit_position];
-                    }
+                    const float scale_coeff = params.specular_scale[hit_position]; // 1 for a primitive without "specular_scale" data
                     const float cos_spec = fmaxf(0.f, dot(spec_dir, normal));
                     strength_spec += spec * scale_coeff
                                    * powf(cos_spec, exponent) * (exponent + 2.f)

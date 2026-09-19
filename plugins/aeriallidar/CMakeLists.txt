@@ -8,6 +8,13 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
 
+# Automatically include visualizer plugin if not already in PLUGINS list
+if(NOT "visualizer" IN_LIST PLUGINS AND NOT TARGET visualizer)
+    message(STATUS "[AerialLiDAR] Automatically loading visualizer dependency")
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../visualizer" "${CMAKE_BINARY_DIR}/plugins/visualizer_auto")
+    target_link_libraries(visualizer PUBLIC helios)
+endif()
+
 find_package(CUDAToolkit REQUIRED)
 set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE})
 

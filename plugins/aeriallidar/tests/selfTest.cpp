@@ -311,6 +311,30 @@ DOCTEST_TEST_CASE("AerialLiDARcloud getHitBoundingBox") {
     DOCTEST_CHECK(boxmin.z <= boxmax.z);
 }
 
+DOCTEST_TEST_CASE("AerialLiDARcloud gridijk2index inverts gridindex2ijk on a grid with Nx != Ny") {
+    // Regression test. gridijk2index() used Ny as the row stride where gridindex2ijk() uses Nx, so the two were inverses only
+    // when Nx == Ny -- which is the only case the round-trip check in the dense vegetation test (a 2x2x2 grid) exercises.
+    AerialLiDARcloud lidar;
+    lidar.disableMessages();
+    lidar.loadXML("plugins/aeriallidar/xml/nonsquare_grid_test.xml");
+
+    const helios::int3 resolution = lidar.getGridResolution();
+    DOCTEST_REQUIRE(resolution.x == 4);
+    DOCTEST_REQUIRE(resolution.y == 8);
+    DOCTEST_REQUIRE(resolution.z == 3);
+
+    // Stepping one cell in j advances the index by one row of Nx cells
+    DOCTEST_CHECK(lidar.gridijk2index(make_int3(0, 1, 0)) == resolution.x);
+
+    int mismatches = 0;
+    for (int v = 0; v < resolution.x * resolution.y * resolution.z; v++) {
+        if (lidar.gridijk2index(lidar.gridindex2ijk(v)) != v) {
+            mismatches++;
+        }
+    }
+    DOCTEST_CHECK(mismatches == 0);
+}
+
 DOCTEST_TEST_CASE("AerialLiDARcloud getGridExtent") {
     AerialLiDARcloud lidar;
     vec3 extent = lidar.getGridExtent();

@@ -2234,6 +2234,59 @@ void RadiationModel::accumulateCameraFluxAtVertices(const std::vector<float> &fl
     }
 }
 
+void RadiationModel::sumCameraWhiteReference(RadiationCamera &camera, uint camera_index, const std::vector<std::string> &band_labels, const std::vector<float> &white_reference_top_cam,
+                                             const std::vector<float> &white_reference_bottom_cam) const {
+    const size_t Nprimitives = context_UUIDs.size();
+    const size_t Nbands_launch = band_labels.size();
+    const size_t camera_block_offset = camera_index * Nprimitives * Nbands_launch;
+    if (white_reference_top_cam.size() < camera_block_offset + Nprimitives * Nbands_launch || white_reference_bottom_cam.size() != white_reference_top_cam.size()) {
+        helios_runtime_error("ERROR (RadiationModel::sumCameraWhiteReference): The white reference buffers hold " + std::to_string(white_reference_top_cam.size()) + " values, too few for camera '" + camera.label + "' at position " +
+                             std::to_string(camera_index) + " with " + std::to_string(Nprimitives) + " primitives and " + std::to_string(Nbands_launch) + " launched band(s).");
+    }
+
+    // Number of pixels whose centre ray hit each primitive. Labels are UUID+1, with 0 for the sky; the bounding-box primitives of a periodic boundary are not surfaces and have positions past the last
+    // primitive.
+    std::vector<size_t> pixel_count(Nprimitives, 0);
+    for (uint label: camera.pixel_label_UUID) {
+        if (label == 0) {
+            continue;
+        }
+        const uint UUID = label - 1;
+        if (UUID >= geometry_data.primitive_positions.size()) {
+            helios_runtime_error("ERROR (RadiationModel::sumCameraWhiteReference): Camera '" + camera.label + "' has a pixel labelled with primitive UUID " + std::to_string(UUID) + ", which is not in the ray-tracing geometry.");
+        }
+        const uint position = geometry_data.primitive_positions.at(UUID);
+        if (position < Nprimitives) {
+            pixel_count.at(position)++;
+        }
+    }
+
+    std::vector<double> band_totals(Nbands_launch, 0.0);
+    for (size_t position = 0; position < Nprimitives; position++) {
+        if (pixel_count.at(position) == 0) {
+            continue;
+        }
+        const uint UUID = context_UUIDs.at(position);
+        const std::vector<helios::vec3> vertices = context->getPrimitiveVertices(UUID);
+        helios::vec3 centroid;
+        for (const auto &vertex: vertices) {
+            centroid += vertex;
+        }
+        centroid = centroid / float(vertices.size());
+        const bool camera_sees_top_face = context->getPrimitiveNormal(UUID) * (camera.position - centroid) > 0.f;
+        const std::vector<float> &face_white_reference = camera_sees_top_face ? white_reference_top_cam : white_reference_bottom_cam;
+        for (size_t b = 0; b < Nbands_launch; b++) {
+            band_totals.at(b) += double(pixel_count.at(position)) * face_white_reference.at(camera_block_offset + position * Nbands_launch + b);
+        }
+    }
+
+    for (size_t b = 0; b < Nbands_launch; b++) {
+        if (std::find(camera.band_labels.begin(), camera.band_labels.end(), band_labels.at(b)) != camera.band_labels.end()) {
+            camera.white_reference_band_totals[band_labels.at(b)] = band_totals.at(b);
+        }
+    }
+}
+
 void RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) {
 
     if (message_flag) {
@@ -2367,6 +2420,36 @@ void RadiationModel::updateRadiativeProperties() {
             }
             cam++;
         }
+    }
+
+    // Camera-weighted reflectivity of a spectrally flat, perfectly white surface, per [source][band][camera]: the value rho_cam below takes for a reflectivity spectrum of 1. It is sampled every
+    // nanometre, as reflectivity spectra typically are, because the camera-weighted integral is evaluated on the object spectrum's own sample points. Without both a source spectrum and a camera
+    // response, rho_cam of a white surface is 1.
+    if (Ncameras > 0) {
+        material_data.white_reference_cam.assign((size_t) Nsources * Nbands * Ncameras, 1.f);
+        for (uint s = 0; s < Nsources; s++) {
+            if (radiation_sources.at(s).source_spectrum.empty()) {
+                continue;
+            }
+            for (uint b = 0; b < Nbands; b++) {
+                for (uint cam = 0; cam < Ncameras; cam++) {
+                    const std::vector<helios::vec2> &camera_response = camera_response_unique.at(cam).at(b);
+                    if (camera_response.empty()) {
+                        continue;
+                    }
+                    std::vector<helios::vec2> white_spectrum;
+                    for (float wavelength = std::ceil(camera_response.front().x); wavelength <= camera_response.back().x; wavelength += 1.f) {
+                        white_spectrum.push_back(helios::make_vec2(wavelength, 1.f));
+                    }
+                    if (white_spectrum.size() < 2) {
+                        continue;
+                    }
+                    material_data.white_reference_cam.at(((size_t) s * Nbands + b) * Ncameras + cam) = integrateSpectrum(s, white_spectrum, camera_response);
+                }
+            }
+        }
+    } else {
+        material_data.white_reference_cam.clear();
     }
 
     // Spectral integration cache to avoid redundant computations
@@ -3150,12 +3233,12 @@ void RadiationModel::updateRadiativeProperties() {
         }
     }
 
-    // Specular reflection properties
-    material_data.specular_exponent.resize(Nprimitives, -1.f);
-    material_data.specular_scale.resize(Nprimitives, 0.f);
+    // Specular reflection properties. A primitive's specular reflection is multiplied by its own "specular_scale", or by 1 when it has none, so an explicit
+    // scale of 0 turns it off for that primitive.
+    material_data.specular_exponent.assign(Nprimitives, -1.f);
+    material_data.specular_scale.assign(Nprimitives, 1.f);
 
     bool specular_exponent_specified = false;
-    bool specular_scale_specified = false;
 
     for (size_t u = 0; u < Nprimitives; u++) {
         uint UUID = context_UUIDs.at(u);
@@ -3169,22 +3252,12 @@ void RadiationModel::updateRadiativeProperties() {
 
         if (context->doesPrimitiveDataExist(UUID, "specular_scale") && context->getPrimitiveDataType("specular_scale") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "specular_scale", material_data.specular_scale.at(u));
-            if (material_data.specular_scale.at(u) > 0.f) {
-                specular_scale_specified = true;
-            }
         }
     }
 
-    // Auto-enable specular reflection if specular properties are specified on any primitive
-    if (specular_exponent_specified) {
-        if (specular_scale_specified) {
-            specular_reflection_mode = 2; // Mode 2: use primitive specular_scale
-        } else {
-            specular_reflection_mode = 1; // Mode 1: use default 0.25 scale
-        }
-    } else {
-        specular_reflection_mode = 0; // Disabled
-    }
+    // Specular reflection is traced only if some primitive has a specular exponent
+    specular_reflection_mode = specular_exponent_specified ? 1 : 0;
+    material_data.specular_reflection_enabled = specular_exponent_specified;
 
     backend->updateMaterials(material_data);
 
@@ -4275,6 +4348,28 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     flux_top.resize(Nbands_launch * Nprimitives, 0);
     flux_bottom = flux_top;
 
+    // scatteringDepth is per band, but all bands in the dispatch share one scattering loop that runs to the deepest band's
+    // depth. When a band's depth is exhausted it is "retired": the outgoing energy it was about to launch is moved into these
+    // accumulators and zeroed in the outgoing buffers, so the band is still traced but carries no energy. The retired energy
+    // is credited back as to-be-scattered energy at the end, exactly as it would have been had the band been run alone.
+    //
+    // A band must NOT be retired by clearing its entry in band_launch_flag. That array defines the band -> launch slot
+    // mapping ([primitive * Nbands_launch + slot], slot = position among the set flags) that the host and every backend
+    // recompute independently, so changing it part way through the dispatch renumbers the slots of the remaining bands.
+    std::vector<float> retired_top(Nbands_launch * Nprimitives, 0.f);
+    std::vector<float> retired_bottom(Nbands_launch * Nprimitives, 0.f);
+    std::vector<char> band_retired(Nbands_launch, 0);
+    auto retireBand = [&](size_t launch_slot, std::vector<float> &outgoing_top, std::vector<float> &outgoing_bottom) {
+        for (size_t p = 0; p < Nprimitives; p++) {
+            const size_t ind = p * Nbands_launch + launch_slot;
+            retired_top.at(ind) += outgoing_top.at(ind);
+            retired_bottom.at(ind) += outgoing_bottom.at(ind);
+            outgoing_top.at(ind) = 0.f;
+            outgoing_bottom.at(ind) = 0.f;
+        }
+        band_retired.at(launch_slot) = 1;
+    };
+
     // Camera scatter accumulation vectors (declare early for use throughout ray tracing).
     // Laid out [camera][primitive][band]: the direct, diffuse and scattering launches run once per dispatch, not
     // once per camera, so they accumulate the scattered energy weighted by every camera's spectral response at
@@ -4300,6 +4395,14 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             accumulateCameraScatter(scatter_results, scatter_top_cam, scatter_bottom_cam);
             // Zero GPU camera scatter buffers to prevent double-counting on next iteration
             backend->zeroCameraScatterBuffers(Nbands_launch);
+        }
+
+        // Bands with no scattering keep their scattered direct energy rather than launching it. This has to happen before
+        // the faces of one-sided primitives are combined below, which duplicates the energy into both face buffers.
+        for (size_t b = 0; b < Nbands_launch; b++) {
+            if (scattering_depth.at(b) == 0) {
+                retireBand(b, flux_top, flux_bottom);
+            }
         }
 
         // For one-sided primitives, make scattered energy accessible from both faces
@@ -4531,26 +4634,23 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         uint rays_per_primitive = n * n;
 
         uint s;
-        // FIX: Use a copy of band_launch_flag for scattering so modifications don't affect primary launch indices
-        std::vector<char> scatter_band_flags = band_launch_flag;
-
         for (s = 0; s < scatteringDepth; s++) {
             if (message_flag) {
                 std::cout << "Performing scattering ray trace (iteration " << s + 1 << " of " << scatteringDepth << ")..." << std::flush;
             }
 
-            int b = -1;
-            int active_bands = 0;
-            for (uint b_global = 0; b_global < Nbands_global; b_global++) {
-
-                if (scatter_band_flags.at(b_global) == 0) {
-                    continue;
-                }
-                b++;
+            // Bands whose scatteringDepth is exhausted as of this iteration (retired below, once the outgoing energy is known)
+            std::vector<size_t> bands_to_retire;
+            for (size_t b = 0; b < Nbands_launch; b++) {
 
                 const std::string &bname = band_labels.at(b);
-                uint depth = radiation_bands.at(bname).scatteringDepth;
-                if (s + 1 > depth) {
+                if (s + 1 > scattering_depth.at(b)) {
+                    // Retired on every remaining iteration, not just the first: a band retired before the primary diffuse/emission
+                    // launch still receives the energy that launch scattered, which arrives in the outgoing buffers at s=0.
+                    bands_to_retire.push_back(b);
+                    if (band_retired.at(b) != 0) {
+                        continue; // already reported
+                    }
                     // Internal SIF excitation bands ("_SIF_exc_*") get piggy-backed onto user
                     // dispatches (e.g. PAR) that may have a higher scatteringDepth, so they hit
                     // this "skip" path on every scattering iteration. Suppress the per-band log
@@ -4561,16 +4661,16 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                     if (message_flag && !is_sif_excitation_band) {
                         std::cout << "Skipping band " << bname << " for scattering launch " << s + 1 << std::endl;
                     }
-                    scatter_band_flags.at(b_global) = 0; // FIX: Modify copy, not original
-                } else {
-                    active_bands++;
                 }
             }
 
             // Copy scatter buffers to radiation_out when needed
-            // For s=0 with emission+direct: primary diffuse uploaded emission+scatter via params, but we need to copy scatter to avoid double-counting emission on next iteration
+            // For s=0 with direct plus emission and/or diffuse: the primary diffuse/emission launch has already propagated the scattered direct
+            // energy (and any emission) held in radiation_out, and the scatter buffers now hold what that launch scattered - including the
+            // scattered sky radiation. That is the energy to launch next; re-launching radiation_out would count it twice and drop the rest.
+            // For s=0 with direct only: no primary launch ran, and radiation_out still holds the scattered direct energy to be launched.
             // For s>0: scatter from previous iteration needs to be copied for next iteration
-            if (s > 0 || (emissionenabled && rundirect)) {
+            if (s > 0 || ((emissionenabled || diffuseenabled) && rundirect)) {
                 backend->copyScatterToRadiation();
             }
             backend->zeroScatterBuffers();
@@ -4580,6 +4680,10 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             backend->getRadiationResults(scatter_results);
             std::vector<float> flux_top_scatter = scatter_results.radiation_out_top;
             std::vector<float> flux_bottom_scatter = scatter_results.radiation_out_bottom;
+
+            for (size_t b: bands_to_retire) {
+                retireBand(b, flux_top_scatter, flux_bottom_scatter);
+            }
 
             // Build launch parameters for scattering diffuse rays
             // Launch all primitives at once (backend handles batching if needed)
@@ -4591,7 +4695,8 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             params.current_band = 0;
             params.num_bands_global = Nbands_global;
             params.num_bands_launch = Nbands_launch;
-            std::vector<bool> band_flags(scatter_band_flags.begin(), scatter_band_flags.end()); // FIX: Use scatter copy
+            // Same flags as the primary launches for the whole dispatch - see the note on band retirement above
+            std::vector<bool> band_flags(band_launch_flag.begin(), band_launch_flag.end());
             params.band_launch_flag = band_flags;
             params.scattering_iteration = s;
             params.max_scatters = scatteringDepth;
@@ -4704,6 +4809,17 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 backend->updateSkyModel(prague_params, sky_for_backend, sun_dir, solar_radiances,
                                         has_sun_source ? 0.999989f : 0.0f, // solar_disk_cos_angle
                                         camera_diffuse_flux, band_emission_flag);
+            }
+
+            // Each camera's white reference: what the camera would record from a white surface in place of each primitive, lit by the light arriving there straight from a source or the sky.
+            // The backend accumulates it over all the direct and diffuse launches above, and each camera's "auto" white balance is computed from it (see sumCameraWhiteReference()).
+            std::vector<float> white_reference_top_cam;
+            std::vector<float> white_reference_bottom_cam;
+            backend->getWhiteReferenceResults(white_reference_top_cam, white_reference_bottom_cam);
+            if (white_reference_top_cam.size() != Ncameras * camera_scatter_stride || white_reference_bottom_cam.size() != Ncameras * camera_scatter_stride) {
+                helios_runtime_error("ERROR (RadiationModel::runBand): The ray-tracing backend returned " + std::to_string(white_reference_top_cam.size()) + " white reference values, but " + std::to_string(Ncameras) +
+                                     " camera(s), " + std::to_string(Nprimitives) + " primitives and " + std::to_string(Nbands_launch) + " launched band(s) require " + std::to_string(Ncameras * camera_scatter_stride) +
+                                     ". The backend's white reference buffers were not sized for the current camera set.");
             }
 
             uint cam = 0;
@@ -4892,6 +5008,8 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 data_label = "camera_" + camera_label + "_pixel_depth";
                 context->setGlobalData(data_label.c_str(), camera.second.pixel_depth);
 
+                sumCameraWhiteReference(camera.second, cam, band_labels, white_reference_top_cam, white_reference_bottom_cam);
+
                 cam++;
             }
         } else {
@@ -4917,9 +5035,15 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     }
 
     // Apply camera white balance based on each camera's white_balance setting
+    helios::WarningAggregator white_balance_warnings;
+    white_balance_warnings.setEnabled(message_flag);
     for (auto &camera: cameras) {
-        camera.second.applyCameraWhiteBalance(context);
+        const std::string white_balance_skipped = camera.second.applyCameraWhiteBalance();
+        if (!white_balance_skipped.empty()) {
+            white_balance_warnings.addWarning("camera_white_balance_not_applied", white_balance_skipped);
+        }
     }
+    white_balance_warnings.report(std::cerr);
 
     // deposit any energy that is left to make sure we satisfy conservation of energy
 
@@ -4932,6 +5056,10 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     // Extract scatter buffer data from backend results
     TBS_top = results.scatter_buff_top;
     TBS_bottom = results.scatter_buff_bottom;
+    for (size_t ind = 0; ind < retired_top.size(); ind++) {
+        TBS_top.at(ind) += retired_top.at(ind);
+        TBS_bottom.at(ind) += retired_bottom.at(ind);
+    }
 
     std::vector<uint> UUIDs_context_all = context->getAllUUIDs();
 
