@@ -3557,6 +3557,359 @@ DOCTEST_TEST_CASE("Nitrogen Model - Remobilization") {
     DOCTEST_CHECK(found_stress_factor);
 }
 
+namespace {
+
+    //! Leaf nitrogen (g N/m^2), area (m^2) and age (days) of every leaf on a plant, keyed by leaf object ID
+    struct LeafNitrogenState {
+        float N_area;
+        float area;
+        float age;
+    };
+
+    std::map<uint, LeafNitrogenState> leafNitrogenStates(Context &context, PlantArchitecture &plantarchitecture, uint plantID) {
+        std::map<uint, LeafNitrogenState> states;
+        for (uint objID: plantarchitecture.getPlantLeafObjectIDs(plantID)) {
+            if (!context.doesObjectExist(objID) || !context.doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
+                continue;
+            }
+            LeafNitrogenState state{};
+            context.getObjectData(objID, "leaf_nitrogen_gN_m2", state.N_area);
+            state.area = context.getObjectArea(objID);
+            if (context.doesObjectDataExist(objID, "age")) {
+                context.getObjectData(objID, "age", state.age);
+            }
+            states[objID] = state;
+        }
+        return states;
+    }
+
+} // namespace
+
+DOCTEST_TEST_CASE("Nitrogen Model - Limited Supply Goes to Expanding Leaves") {
+    // Newly acquired nitrogen is allocated to new leaves (Hikosaka 2005), which is why a mobile nutrient
+    // in short supply shows its deficiency on the OLDEST leaves first. A supply that cannot meet every
+    // leaf's demand must therefore leave the youngest leaves better supplied than the oldest -- not be
+    // handed out in whatever order the leaves happen to be stored in until it runs dry.
+
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.optionalOutputObjectData("age");
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    plantarchitecture.advanceTime(plantID, 20.0f); // a mix of mature and still-expanding leaves
+
+    NitrogenParameters N_params;
+    plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
+    plantarchitecture.initializePlantNitrogenPools(plantID, 0.0f);
+
+    // Supply about a fifth of one day's rate-limited leaf demand.
+    float leaf_area = 0;
+    for (float area: plantarchitecture.getPlantLeafAreas(plantID)) {
+        leaf_area += area;
+    }
+    DOCTEST_REQUIRE(leaf_area > 0.f);
+    const float daily_demand_gN = N_params.max_N_accumulation_rate * leaf_area;
+    plantarchitecture.addPlantNitrogen(plantID, 0.2f * daily_demand_gN / (1.f - N_params.root_allocation_fraction));
+
+    plantarchitecture.advanceTime(plantID, 1.0f);
+
+    std::vector<std::pair<float, float>> age_and_N;
+    for (const auto &[objID, state]: leafNitrogenStates(context, plantarchitecture, plantID)) {
+        age_and_N.emplace_back(state.age, state.N_area);
+    }
+    DOCTEST_REQUIRE(age_and_N.size() >= 8);
+    std::sort(age_and_N.begin(), age_and_N.end());
+
+    const size_t quartile = age_and_N.size() / 4;
+    float youngest_N = 0, oldest_N = 0;
+    for (size_t i = 0; i < quartile; i++) {
+        youngest_N += age_and_N[i].second / float(quartile);
+        oldest_N += age_and_N[age_and_N.size() - 1 - i].second / float(quartile);
+    }
+
+    DOCTEST_CHECK(youngest_N > oldest_N);
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Remobilization Feeds New Leaves Without a Finite Leaf Lifespan") {
+    // Under nitrogen limitation, mature leaves export nitrogen to expanding leaves during vegetative growth
+    // (Masclaux-Daubresse et al. 2010; Diaz et al. 2008). Remobilization therefore has to respond to the
+    // plant running short, not wait for leaves to reach a fixed fraction of a maximum lifespan -- a
+    // lifespan most library plants leave at its effectively-infinite default.
+    //
+    // With the available pool empty and no nitrogen added, uptake cannot supply anything, so a leaf that
+    // emerges after initialization can only gain nitrogen by remobilization from the older leaves.
+
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    plantarchitecture.advanceTime(plantID, 20.0f);
+
+    NitrogenParameters N_params;
+    plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
+    plantarchitecture.initializePlantNitrogenPools(plantID, N_params.target_leaf_N_area); // pool emptied, leaves at target
+    plantarchitecture.advanceTime(plantID, 0.1f);
+
+    const std::map<uint, LeafNitrogenState> before = leafNitrogenStates(context, plantarchitecture, plantID);
+    DOCTEST_REQUIRE(!before.empty());
+
+    plantarchitecture.advanceTime(plantID, 6.0f);
+
+    const std::map<uint, LeafNitrogenState> after = leafNitrogenStates(context, plantarchitecture, plantID);
+
+    bool new_leaf_supplied = false;
+    bool existing_leaf_drawn_down = false;
+    for (const auto &[objID, state]: after) {
+        if (before.find(objID) == before.end()) {
+            new_leaf_supplied = new_leaf_supplied || state.N_area > 0.05f;
+        } else if (state.N_area < before.at(objID).N_area - 0.01f) {
+            existing_leaf_drawn_down = true;
+        }
+    }
+
+    DOCTEST_CHECK(new_leaf_supplied);
+    DOCTEST_CHECK(existing_leaf_drawn_down);
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Remobilization Is Gradual") {
+    // Remobilization from a mature leaf is a first-order process in time: labelling studies in N-limited
+    // plants find mature leaves exporting 5-16 % of their nitrogen to young leaves over ten days (Diaz et al.
+    // 2008), and crop models use rates of a few percent per day. No leaf should be able to hand over most of
+    // its remobilizable nitrogen within a single day.
+
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    // A finite lifespan, long enough that leaves finish expanding before they are shed, so that fully
+    // expanded leaves old enough to donate exist under any source rule.
+    plantarchitecture.setPlantPhenologicalThresholds(plantID, 0, 40, 5, 5, 30, 1000, 30.f, false);
+    plantarchitecture.advanceTime(plantID, 25.0f);
+
+    NitrogenParameters N_params;
+    // Senescence would also draw down the oldest leaves; with no senescence phase none of them begins it before
+    // the 30-day lifespan, so only remobilization can take nitrogen from a leaf here.
+    N_params.leaf_senescence_duration_fraction = 0.f;
+    N_params.stress_senescence_advance_fraction = 0.f;
+    plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
+    plantarchitecture.initializePlantNitrogenPools(plantID, N_params.target_leaf_N_area); // pool emptied
+    // Raise the target well above what any leaf holds, so that demand far exceeds what the older leaves can
+    // supply. The rate of withdrawal is then limited by the leaves' own release, which is what this checks,
+    // rather than by how little the sinks happen to want.
+    N_params.target_leaf_N_area = 10.f;
+    plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
+    plantarchitecture.advanceTime(plantID, 0.1f);
+
+    const std::map<uint, LeafNitrogenState> before = leafNitrogenStates(context, plantarchitecture, plantID);
+    plantarchitecture.advanceTime(plantID, 1.0f);
+    const std::map<uint, LeafNitrogenState> after = leafNitrogenStates(context, plantarchitecture, plantID);
+
+    // Measured on the nitrogen each leaf holds (per area x area), not its nitrogen per area: an expanding leaf's
+    // nitrogen per area falls as it grows with nothing leaving it, and only remobilization lowers what it holds.
+    float largest_fraction_lost = 0;
+    size_t donors = 0;
+    for (const auto &[objID, state]: after) {
+        const auto previous = before.find(objID);
+        if (previous == before.end()) {
+            continue;
+        }
+        const float remobilizable_gN = (previous->second.N_area - N_params.minimum_leaf_N_area) * previous->second.area;
+        const float lost_gN = previous->second.N_area * previous->second.area - state.N_area * state.area;
+        if (remobilizable_gN > 0 && lost_gN > 1e-3f * remobilizable_gN) {
+            largest_fraction_lost = std::max(largest_fraction_lost, lost_gN / remobilizable_gN);
+            donors++;
+        }
+    }
+
+    DOCTEST_CHECK(donors > 0);
+    DOCTEST_CHECK(largest_fraction_lost <= 0.10f);
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Leaf Expansion Dilutes Nitrogen Rather Than Creating It") {
+    // Leaf nitrogen is tracked per unit area, but the nitrogen a leaf holds is a mass. When a leaf grows,
+    // the nitrogen it already holds is spread over more area -- its N per area falls unless it imports
+    // more, which is why expanding leaves are strong nitrogen sinks. With uptake and remobilization both
+    // switched off, nothing can enter or leave these leaves, so the nitrogen they hold must not change as
+    // they expand.
+
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    plantarchitecture.advanceTime(plantID, 3.0f); // young leaves, still expanding
+
+    NitrogenParameters N_params;
+    N_params.max_N_accumulation_rate = 0.f;
+    N_params.leaf_remobilization_rate = 0.f;
+    plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
+    plantarchitecture.initializePlantNitrogenPools(plantID, 1.0f); // pool emptied
+    plantarchitecture.advanceTime(plantID, 0.1f);
+
+    const std::map<uint, LeafNitrogenState> before = leafNitrogenStates(context, plantarchitecture, plantID);
+    DOCTEST_REQUIRE(!before.empty());
+    plantarchitecture.advanceTime(plantID, 4.0f);
+    const std::map<uint, LeafNitrogenState> after = leafNitrogenStates(context, plantarchitecture, plantID);
+
+    float nitrogen_before_gN = 0;
+    float nitrogen_after_gN = 0;
+    bool some_leaf_expanded = false;
+    for (const auto &[objID, state]: before) {
+        const auto later = after.find(objID);
+        if (later == after.end()) {
+            continue;
+        }
+        nitrogen_before_gN += state.N_area * state.area;
+        nitrogen_after_gN += later->second.N_area * later->second.area;
+        some_leaf_expanded = some_leaf_expanded || later->second.area > 1.05f * state.area;
+    }
+
+    DOCTEST_REQUIRE(some_leaf_expanded);
+    // Compared relative to the amount itself: these are milligrams, and doctest::Approx's default scale of 1
+    // would accept any difference smaller than about 0.01 g.
+    DOCTEST_CHECK(std::fabs(nitrogen_after_gN - nitrogen_before_gN) <= 0.01f * nitrogen_before_gN);
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Leaves Return Nitrogen Gradually as They Senesce") {
+    // A leaf nearing the end of its life senesces: over the last leaf_senescence_duration_fraction of its
+    // lifespan it returns leaf_remobilization_efficiency of its nitrogen above minimum_leaf_N_area to the plant,
+    // yellowing as it does, and is shed with what is left. With uptake and remobilization both switched off
+    // and nitrogen stress not moving the onset, senescence is the only thing that can change a mature leaf's
+    // nitrogen or put nitrogen into the empty available pool.
+
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.optionalOutputObjectData("age"); // the leaf ages below are read from object data
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    const float lifespan_days = 40.f;
+    plantarchitecture.setPlantPhenologicalThresholds(plantID, 0, 40, 5, 5, 30, 1000, lifespan_days, false);
+    plantarchitecture.advanceTime(plantID, 25.0f); // the oldest leaves are short of the 30-day senescence onset
+
+    NitrogenParameters N_params;
+    N_params.max_N_accumulation_rate = 0.f;
+    N_params.leaf_remobilization_rate = 0.f;
+    N_params.stress_senescence_advance_fraction = 0.f;
+    plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
+    plantarchitecture.initializePlantNitrogenPools(plantID, N_params.target_leaf_N_area);
+    plantarchitecture.advanceTime(plantID, 0.1f);
+    DOCTEST_CHECK(plantarchitecture.getPlantAvailableNitrogen(plantID) == 0.f);
+
+    const float onset_age = (1.f - N_params.leaf_senescence_duration_fraction) * lifespan_days;
+    const float end_N_area = N_params.minimum_leaf_N_area + (1.f - N_params.leaf_remobilization_efficiency) * (N_params.target_leaf_N_area - N_params.minimum_leaf_N_area);
+    const std::map<uint, LeafNitrogenState> before = leafNitrogenStates(context, plantarchitecture, plantID);
+
+    // Part way through: a senescing leaf is between its starting and final nitrogen, and a mature leaf
+    // short of the onset has not changed. Leaves still expanding are left out -- growth dilutes them.
+    plantarchitecture.advanceTime(plantID, 10.0f);
+    size_t senescing_leaves = 0;
+    size_t leaves_not_yet_senescing = 0;
+    for (const auto &[objID, state]: leafNitrogenStates(context, plantarchitecture, plantID)) {
+        const auto previous = before.find(objID);
+        if (previous == before.end() || std::fabs(state.area - previous->second.area) > 0.01f * previous->second.area) {
+            continue;
+        }
+        if (state.age > onset_age + 1.f && state.age < lifespan_days - 1.f) {
+            senescing_leaves++;
+            DOCTEST_CHECK(state.N_area < N_params.target_leaf_N_area - 0.01f);
+            DOCTEST_CHECK(state.N_area > end_N_area + 0.01f);
+        } else if (state.age < onset_age - 0.5f) {
+            leaves_not_yet_senescing++;
+            DOCTEST_CHECK(std::fabs(state.N_area - N_params.target_leaf_N_area) < 1e-4f);
+        }
+    }
+    DOCTEST_CHECK(senescing_leaves > 0);
+    DOCTEST_CHECK(leaves_not_yet_senescing > 0);
+
+    // Past the lifespan of the oldest leaves: everything the leaves lost is in the pool, except what the
+    // shed leaves took with them -- the unresorbed remainder, end_N_area over their area.
+    plantarchitecture.advanceTime(plantID, 7.0f);
+    const std::map<uint, LeafNitrogenState> after = leafNitrogenStates(context, plantarchitecture, plantID);
+    float lost_by_leaves_gN = 0;
+    float shed_with_leaves_gN = 0;
+    size_t shed_leaves = 0;
+    for (const auto &[objID, state]: before) {
+        const auto current = after.find(objID);
+        if (current == after.end()) {
+            shed_leaves++;
+            lost_by_leaves_gN += state.N_area * state.area;
+            shed_with_leaves_gN += end_N_area * state.area;
+        } else {
+            lost_by_leaves_gN += state.N_area * state.area - current->second.N_area * current->second.area;
+        }
+    }
+    const float expected_pool_gN = lost_by_leaves_gN - shed_with_leaves_gN;
+    DOCTEST_REQUIRE(shed_leaves > 0);
+    DOCTEST_REQUIRE(expected_pool_gN > 0.f);
+    // Relative to the amount itself: these are milligrams, and doctest::Approx's default scale of 1 would
+    // accept any difference smaller than about 0.01 g.
+    DOCTEST_CHECK(std::fabs(plantarchitecture.getPlantAvailableNitrogen(plantID) - expected_pool_gN) <= 0.01f * expected_pool_gN);
+
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPlantAvailableNitrogen(plantID + 1000)));
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Nitrogen Stress Brings Leaf Senescence Forward") {
+    // Two identical plants, one held at its target leaf nitrogen and one starved. Nitrogen stress advances the
+    // onset of senescence, so at an age where the well-supplied plant's mature leaves have not yet begun to
+    // senesce, the starved plant's have. Remobilization is off, so senescence is the only way a mature leaf can
+    // lose nitrogen.
+
+    const float lifespan_days = 40.f;
+    NitrogenParameters N_params;
+    N_params.target_leaf_N_area = 2.f;
+    N_params.minimum_leaf_N_area = 0.4f;
+    N_params.leaf_remobilization_rate = 0.f;
+    N_params.leaf_senescence_duration_fraction = 0.25f; // on schedule: onset at 30 days
+    N_params.stress_senescence_advance_fraction = 0.5f; // starved to 40 % of target: onset near 18 days
+
+    // Largest fraction of its nitrogen any mature leaf lost between two ages
+    const auto largestMatureLeafLoss = [&](bool starved) {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.enableNitrogenModel();
+        plantarchitecture.loadPlantModelFromLibrary("bean");
+        uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+        plantarchitecture.setPlantPhenologicalThresholds(plantID, 0, 40, 5, 5, 30, 1000, lifespan_days, false);
+        plantarchitecture.advanceTime(plantID, 20.0f);
+
+        NitrogenParameters plant_params = N_params;
+        plant_params.max_N_accumulation_rate = starved ? 0.f : 10.f; // the supplied plant refills every leaf each step
+        plantarchitecture.setPlantNitrogenParameters(plantID, plant_params);
+        plantarchitecture.initializePlantNitrogenPools(plantID, starved ? 0.8f : N_params.target_leaf_N_area);
+        if (!starved) {
+            plantarchitecture.addPlantNitrogen(plantID, 100.f);
+        }
+        plantarchitecture.advanceTime(plantID, 0.1f);
+        const std::map<uint, LeafNitrogenState> before = leafNitrogenStates(context, plantarchitecture, plantID);
+        plantarchitecture.advanceTime(plantID, 6.0f); // oldest leaves reach about 26 days
+
+        float largest_fraction_lost = 0;
+        for (const auto &[objID, state]: leafNitrogenStates(context, plantarchitecture, plantID)) {
+            const auto previous = before.find(objID);
+            if (previous == before.end() || std::fabs(state.area - previous->second.area) > 0.01f * previous->second.area || previous->second.N_area <= 0) {
+                continue;
+            }
+            largest_fraction_lost = std::max(largest_fraction_lost, 1.f - state.N_area / previous->second.N_area);
+        }
+        return largest_fraction_lost;
+    };
+
+    const float supplied_loss = largestMatureLeafLoss(false);
+    const float starved_loss = largestMatureLeafLoss(true);
+    DOCTEST_CHECK(supplied_loss < 1e-3f);
+    DOCTEST_CHECK(starved_loss > 0.02f);
+}
+
 DOCTEST_TEST_CASE("Nitrogen Model - Fruit Removal") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
@@ -3596,12 +3949,11 @@ DOCTEST_TEST_CASE("Nitrogen Model - Fruit Removal") {
 }
 
 DOCTEST_TEST_CASE("Nitrogen Model - Leaf-to-Fruit Translocation") {
-    // When the available nitrogen pool cannot cover fruit demand, removeFruitNitrogen draws the
-    // shortfall from leaves (old leaves first, then young leaves as fallback). To isolate
-    // translocation cleanly, we override remobilization_age_threshold to a value age_fraction
-    // never reaches, which disables the leaf-to-leaf remobilization pathway. With remobilization
-    // disabled and the available pool empty, the only mechanism that can reduce a leaf below the
-    // target N concentration is leaf-to-fruit translocation.
+    // When the available nitrogen pool cannot cover fruit demand, the shortfall is drawn from mature
+    // leaves. To isolate that from leaf-to-leaf remobilization, leaves are given no uptake demand
+    // (max_N_accumulation_rate = 0): remobilization only answers unmet demand, so with no leaf demand
+    // and the available pool empty, the only mechanism that can reduce a leaf below the target N
+    // concentration is leaf-to-fruit translocation.
 
     Context context;
     PlantArchitecture plantarchitecture(&context);
@@ -3611,9 +3963,9 @@ DOCTEST_TEST_CASE("Nitrogen Model - Leaf-to-Fruit Translocation") {
     plantarchitecture.loadPlantModelFromLibrary("tomato");
     uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
 
-    // Disable leaf-to-leaf remobilization by setting an unreachable age threshold (age_fraction <= 1).
-    NitrogenParameters N_params; // defaults: target=1.5, minimum=0.5, efficiency=0.7
-    N_params.remobilization_age_threshold = 2.0f;
+    // No leaf demand, so no leaf-to-leaf remobilization.
+    NitrogenParameters N_params; // defaults: target=1.5, minimum=0.5
+    N_params.max_N_accumulation_rate = 0.f;
     plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
 
     // Grow plant well past fruit-set so fruits exist when we initialize and snapshot.
@@ -3654,6 +4006,7 @@ DOCTEST_TEST_CASE("Nitrogen Model - Leaf-to-Fruit Translocation") {
         }
     }
     DOCTEST_CHECK(any_leaf_at_target_pre);
+    const std::map<uint, LeafNitrogenState> leaves_before_fruit_growth = leafNitrogenStates(context, plantarchitecture, plantID);
 
     // Advance through ongoing fruit growth. With remobilization disabled and the pool empty, the
     // only path that can drop a leaf below target is translocation to fruit.
@@ -3672,7 +4025,11 @@ DOCTEST_TEST_CASE("Nitrogen Model - Leaf-to-Fruit Translocation") {
             if (leaf_N_area > N_params.minimum_leaf_N_area && leaf_N_area < N_params.target_leaf_N_area - 0.01f) {
                 any_leaf_drained_below_target = true;
             }
-            if (leaf_N_area > 1e-4f) {
+            // The floor applies to what translocation takes, so it is checked on leaves that were fully expanded
+            // throughout: a leaf still growing has its nitrogen per area diluted, which can take it below the floor.
+            const auto before = leaves_before_fruit_growth.find(objID);
+            const bool fully_expanded = before != leaves_before_fruit_growth.end() && std::fabs(context.getObjectArea(objID) - before->second.area) <= 0.01f * before->second.area;
+            if (fully_expanded && leaf_N_area > 1e-4f) {
                 min_leaf_N_observed = std::min(min_leaf_N_observed, leaf_N_area);
                 any_leaf_with_N = true;
             }
@@ -3688,9 +4045,7 @@ DOCTEST_TEST_CASE("Nitrogen Model - Leaf-to-Fruit Translocation") {
         DOCTEST_CHECK(any_leaf_drained_below_target);
     }
 
-    // Per-leaf floor: with translocation only able to remove (current - minimum) * efficiency, a
-    // fully drained leaf bottoms out at minimum + (initial - minimum)(1 - efficiency) = 0.8 g N/m²
-    // for the defaults. Assert at least minimum_leaf_N_area as a slack lower bound.
+    // Per-leaf floor: release is first-order toward minimum_leaf_N_area, so no leaf can be drawn below it.
     if (any_leaf_with_N) {
         DOCTEST_CHECK(min_leaf_N_observed >= N_params.minimum_leaf_N_area - 1e-3f);
     }
@@ -3707,8 +4062,8 @@ DOCTEST_TEST_CASE("Nitrogen Model - Leaf-to-Fruit Translocation") {
 }
 
 DOCTEST_TEST_CASE("Nitrogen Model - No Translocation When Pool Adequate") {
-    // Negative control: with leaf-to-leaf remobilization disabled (unreachable threshold) AND a
-    // well-stocked available pool, no drainage pathway should be active. Pre-existing leaves at
+    // Negative control: with a well-stocked available pool the plant is never short of nitrogen, so
+    // neither remobilization nor translocation should draw on leaves. Pre-existing leaves at
     // target N must remain at target after fruiting (translocation never triggers because the pool
     // covers demand). New leaves grown later may have lower N because accumulation is rate-limited,
     // so we only check the pre-existing initialized leaves.
@@ -3722,7 +4077,6 @@ DOCTEST_TEST_CASE("Nitrogen Model - No Translocation When Pool Adequate") {
     uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
 
     NitrogenParameters N_params;
-    N_params.remobilization_age_threshold = 2.0f; // Disable leaf-to-leaf remobilization
     plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
 
     plantarchitecture.advanceTime(plantID, 30.0f);
@@ -3745,8 +4099,8 @@ DOCTEST_TEST_CASE("Nitrogen Model - No Translocation When Pool Adequate") {
 
     DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 40.0f));
 
-    // Pre-existing leaves at target should remain at (or very near) target. With remobilization
-    // disabled and the pool adequate to cover fruit demand, no drainage pathway is active.
+    // Pre-existing leaves at target should remain at (or very near) target: the pool covers every
+    // demand, so nothing is remobilized or translocated.
     int leaves_intact = 0;
     for (uint objID: leaves_at_target_pre) {
         if (!context.doesObjectExist(objID)) {
@@ -9118,37 +9472,44 @@ DOCTEST_TEST_CASE("Reading downstream inflorescence area at every node costs one
 
     const auto &root_shoot = plantarchitecture.getPlantShoot(plantID, shootIDs.front());
 
+    // No doctest assertion sits inside either timed loop: the read loop would otherwise carry one
+    // assertion per node against the refresh loop's one per repeat, and on some runners that
+    // bookkeeping alone outweighs the microsecond-scale refresh and pushes the ratio over the bound.
+    // Values are accumulated and checked once afterwards, which also keeps the calls from being
+    // optimized away. The repeat count keeps the baseline well above clock resolution.
+    constexpr int repeats = 200;
+
     // Cost of bringing the sums up to date once, which is what one growth step legitimately owes.
-    constexpr int repeats = 20;
+    // The returned total is soybean's stem-loading inflorescence area, which is zero: its pods are
+    // all lateral, and only an inflorescence borne on the stem's own axis counts toward girth (see
+    // Phytomer::inflorescenceLoadsStem()). What is being timed is the traversal, not the sum, and
+    // the traversal still visits every node and every child subtree either way -- the guard that
+    // there is real work to do is the fruiting-node count required above.
+    double refresh_total = 0.0;
     const auto t0 = std::chrono::high_resolution_clock::now();
     for (int r = 0; r < repeats; r++) {
-        // The returned total is soybean's stem-loading inflorescence area, which is zero: its pods are
-        // all lateral, and only an inflorescence borne on the stem's own axis counts toward girth (see
-        // Phytomer::inflorescenceLoadsStem()). What is being timed is the traversal, not the sum, and
-        // the traversal still visits every node and every child subtree either way -- the guard that
-        // there is real work to do is the fruiting-node count required above. The value is read only
-        // so the call cannot be optimized away.
-        const float total = root_shoot->refreshDownstreamInflorescenceArea();
-        DOCTEST_REQUIRE(std::isfinite(total));
+        refresh_total += root_shoot->refreshDownstreamInflorescenceArea();
     }
     const auto t1 = std::chrono::high_resolution_clock::now();
     const double refresh_time = std::chrono::duration<double, std::milli>(t1 - t0).count();
+    DOCTEST_REQUIRE(std::isfinite(refresh_total));
     DOCTEST_REQUIRE(refresh_time > 0.0);
 
     // Cost of the girth loop's actual access pattern: one refresh, then a read at every node.
+    double read_total = 0.0;
     const auto t2 = std::chrono::high_resolution_clock::now();
     for (int r = 0; r < repeats; r++) {
-        root_shoot->refreshDownstreamInflorescenceArea();
+        read_total += root_shoot->refreshDownstreamInflorescenceArea();
         for (uint sid: shootIDs) {
             const auto &shoot = plantarchitecture.getPlantShoot(plantID, sid);
             for (std::size_t node = 0; node < shoot->phytomers.size(); node++) {
-                const float area = shoot->sumDownstreamInflorescenceArea(node);
-                DOCTEST_REQUIRE(std::isfinite(area));
+                read_total += shoot->sumDownstreamInflorescenceArea(node);
             }
         }
     }
     const auto t3 = std::chrono::high_resolution_clock::now();
     const double refresh_and_read_time = std::chrono::duration<double, std::milli>(t3 - t2).count();
+    DOCTEST_REQUIRE(std::isfinite(read_total));
 
     const double overhead_ratio = refresh_and_read_time / refresh_time;
 
@@ -11582,6 +11943,100 @@ DOCTEST_TEST_CASE("PlantArchitecture setPetioleLeafGeometry places leaves and su
     }
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture a prescribed leaf keeps its measured base while it expands") {
+    // The existing "survives advanceTime" test holds a prescribed leaf at full size, where
+    // setPetioleAndLeafScaleFraction() returns early and never reaches the code that places leaves. A leaf
+    // initialised from measurement and then handed back to the growth model is the other case: it expands, so
+    // the placement loop DOES run, and it used to recompute every leaf base from LeafParameters::leaflet_offset
+    // and PetioleParameters::length -- throwing away the measured position on the first timestep. Fitting a
+    // tomato at an intermediate scan and growing it forward moved the fitted leaflets a median of 4.5 mm and up
+    // to 13.8 mm within a quarter of a day, which was the whole of that run's error against the scan.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    uint plantID, shootID;
+    buildLeafyPrescribedShoot(context, plantarchitecture, plantID, shootID);
+
+    const auto shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+    const auto phytomer = shoot->phytomers.at(1);
+    const vec3 internode_tip = shoot->shoot_internode_vertices.at(1).back();
+
+    plantarchitecture.setPetioleNodePositions(plantID, shootID, 1, 0, measuredPetiolePath(internode_tip), measuredPetioleRadii());
+
+    // Deliberately NOT where leaflet_offset would put them, so that a re-seated leaf is unmistakable.
+    const std::vector<vec3> leaf_bases = {internode_tip + make_vec3(0.040f, 0.018f, 0.017f), internode_tip + make_vec3(0.075f, 0.063f, -0.004f), internode_tip + make_vec3(0.058f, 0.030f, 0.010f)};
+    const std::vector<AxisRotation> leaf_rotations = {make_AxisRotation(0.10f, 0.25f, 0.30f), make_AxisRotation(0.f, 0.40f, 0.f), make_AxisRotation(-0.10f, 0.25f, -0.30f)};
+    const std::vector<float> leaf_sizes = {0.022f, 0.035f, 0.022f};
+    plantarchitecture.setPetioleLeafGeometry(plantID, shootID, 1, 0, leaf_bases, leaf_rotations, leaf_sizes);
+
+    // Raise the target so the leaf is half-expanded and has somewhere to grow, without moving the blade.
+    phytomer->scaleLeafSizeMax(2.f);
+    DOCTEST_REQUIRE(phytomer->current_leaf_scale_factor.at(0) == doctest::Approx(0.5f).epsilon(1e-4));
+    for (uint leaf = 0; leaf < 3; leaf++) {
+        DOCTEST_REQUIRE((phytomer->leaf_bases.at(0).at(leaf) - leaf_bases.at(leaf)).magnitude() < 1e-6f);
+    }
+
+    // Expand the blade with the petiole held where it is: the leaves must not move at all.
+    const float petiole_fraction = phytomer->current_petiole_scale_factor.at(0);
+    phytomer->setPetioleAndLeafScaleFraction(0, petiole_fraction, 0.75f);
+    for (uint leaf = 0; leaf < 3; leaf++) {
+        DOCTEST_CHECK((phytomer->leaf_bases.at(0).at(leaf) - leaf_bases.at(leaf)).magnitude() < 1e-5f);
+    }
+
+    // Now make the petiole genuinely elongate: raise its target so it is half-elongated, then grow it to full length,
+    // doubling it. A leaflet must stay attached the way a procedural one does -- at the same place along the rachis and
+    // the same distance off it -- however far the petiole grows. Measured leaflets are rarely exactly on the fitted
+    // centreline (a petiolule holds the blade off the rachis, and a scan often stops the rachis short of the terminal
+    // leaflet), so the bases here are off-axis on purpose. Carrying them by scaling about the petiole base multiplied
+    // that offset by the growth factor, and the leaflets drifted away from a growing petiole.
+    auto nearestOnPetiole = [](const std::vector<vec3> &line, const vec3 &point, float &fraction) {
+        float total = 0.f;
+        for (size_t i = 0; i + 1 < line.size(); i++) {
+            total += (line.at(i + 1) - line.at(i)).magnitude();
+        }
+        float best = 1e30f, along = 0.f;
+        fraction = 0.f;
+        for (size_t i = 0; i + 1 < line.size(); i++) {
+            const vec3 segment = line.at(i + 1) - line.at(i);
+            const float length = segment.magnitude();
+            float t = (length > 0.f) ? ((point - line.at(i)) * segment) / (length * length) : 0.f;
+            t = std::clamp(t, 0.f, 1.f);
+            const float distance = (point - (line.at(i) + segment * t)).magnitude();
+            if (distance < best) {
+                best = distance;
+                fraction = (along + t * length) / total;
+            }
+            along += length;
+        }
+        return best;
+    };
+
+    phytomer->scalePetioleMaxLength(2.f);
+    DOCTEST_REQUIRE(phytomer->current_petiole_scale_factor.at(0) == doctest::Approx(0.5f).epsilon(1e-4));
+    const float length_before = phytomer->getPetioleLength(0);
+
+    std::vector<float> gap_before(3), fraction_before(3);
+    float largest_gap = 0.f;
+    for (uint leaf = 0; leaf < 3; leaf++) {
+        gap_before.at(leaf) = nearestOnPetiole(phytomer->petiole_vertices.at(0), phytomer->leaf_bases.at(0).at(leaf), fraction_before.at(leaf));
+        largest_gap = std::max(largest_gap, gap_before.at(leaf));
+    }
+    // Without an off-axis leaflet this part would pass on any rule that moves on-axis points correctly.
+    DOCTEST_REQUIRE(largest_gap > 0.002f);
+
+    phytomer->setPetioleAndLeafScaleFraction(0, 1.f, phytomer->current_leaf_scale_factor.at(0));
+    DOCTEST_REQUIRE(phytomer->getPetioleLength(0) == doctest::Approx(2.f * length_before).epsilon(1e-3));
+
+    for (uint leaf = 0; leaf < 3; leaf++) {
+        float fraction_after = 0.f;
+        const float gap_after = nearestOnPetiole(phytomer->petiole_vertices.at(0), phytomer->leaf_bases.at(0).at(leaf), fraction_after);
+        DOCTEST_CHECK(gap_after == doctest::Approx(gap_before.at(leaf)).epsilon(1e-3));
+        DOCTEST_CHECK(fraction_after == doctest::Approx(fraction_before.at(leaf)).epsilon(1e-3));
+    }
+}
+
 DOCTEST_TEST_CASE("PlantArchitecture setPetioleLeafCount rebuilds a petiole with a different number of leaflets") {
     // A measured compound leaf has however many leaflets it has, which is rarely the shoot type's
     // leaves_per_petiole (a young tomato leaf has three or five, a mature one seven or more, and a
@@ -13732,6 +14187,94 @@ DOCTEST_TEST_CASE("PlantArchitecture leaf angle distribution tracking follows th
         DOCTEST_CHECK(best_margin > 0.02f);
     }
 
+    DOCTEST_SUBCASE("a curved blade is steered onto the facet distribution the public API reports") {
+        // The other subcases here build "bean" with rigid, effectively flat blades, for which a leaf's mean
+        // normal and each of its facet normals are the same direction. That makes them blind to the
+        // distinction this subcase exists to pin down: cowpea's blade is folded and curved by its prototype
+        // (midrib_fold_fraction, longitudinal_curvature, lateral_curvature), independently of flexibility, so
+        // its facets spread about 13 degrees either side of the direction the blade faces as a whole.
+        //
+        // getPlantLeafInclinationAngleDistribution() bins those facets, which is what a LiDAR-derived leaf
+        // angle distribution measures: plane fits to patches of leaf surface see a folded blade's steep edges
+        // and flat middle as separate observations. Steering that aims each blade's mean normal at the target
+        // therefore does not reproduce the target -- it reproduces the target convolved with the fold a
+        // second time, piling area into the steep bins and leaving the flattest bin unreachable. The tracker
+        // has to score itself in facet space for the reported distribution to converge on what was asked for.
+        const float cowpea_mu = 1.398f;
+        const float cowpea_nu = 1.574f;
+        const uint Nbins = 9;
+
+        Context context;
+        context.seedRandomGenerator(12345);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("cowpea");
+
+        std::vector<uint> plantIDs;
+        for (int plant = 0; plant < 4; plant++) {
+            const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0.5f * float(plant), 0.f, 0.f), 0);
+            plantarchitecture.enablePlantLeafElevationAngleDistributionTracking(plantID, cowpea_mu, cowpea_nu, 180.f);
+            plantarchitecture.advanceTime(plantID, 45.f);
+            plantIDs.push_back(plantID);
+        }
+
+        // Confirm the blades really are non-planar, so that a future change to the cowpea prototype which
+        // flattened them would announce itself here rather than silently making this subcase vacuous.
+        float facet_spread_sum = 0.f;
+        float facet_spread_area = 0.f;
+        for (const uint plantID: plantIDs) {
+            for (const uint objID: plantarchitecture.getPlantLeafObjectIDs(plantID)) {
+                if (!context.doesObjectExist(objID)) {
+                    continue;
+                }
+                const std::vector<uint> blade_UUIDs = context.filterPrimitivesByData(context.getObjectPrimitiveUUIDs(objID), "object_label", "leaf");
+                vec3 mean_normal = make_vec3(0, 0, 0);
+                float area = 0.f;
+                for (const uint UUID: blade_UUIDs) {
+                    mean_normal = mean_normal + context.getPrimitiveArea(UUID) * context.getPrimitiveNormal(UUID);
+                    area += context.getPrimitiveArea(UUID);
+                }
+                if (area <= 0.f || mean_normal.magnitude() < 1e-4f * area) {
+                    continue;
+                }
+                const float mean_inclination = acos_safe(std::fabs(mean_normal.normalize().z));
+                for (const uint UUID: blade_UUIDs) {
+                    const float offset = acos_safe(std::fabs(context.getPrimitiveNormal(UUID).z)) - mean_inclination;
+                    facet_spread_sum += context.getPrimitiveArea(UUID) * offset * offset;
+                }
+                facet_spread_area += area;
+            }
+        }
+        DOCTEST_REQUIRE(facet_spread_area > 0.f);
+        const float facet_spread_degrees = rad2deg(std::sqrt(facet_spread_sum / facet_spread_area));
+        DOCTEST_INFO("within-blade facet inclination spread = " << facet_spread_degrees << " deg");
+        DOCTEST_REQUIRE(facet_spread_degrees > 5.f);
+
+        const std::vector<float> histogram = plantarchitecture.getPlantLeafInclinationAngleDistribution(plantIDs, Nbins, true);
+        DOCTEST_REQUIRE(histogram.size() == Nbins);
+
+        float L1 = 0.f;
+        for (uint bin = 0; bin < Nbins; bin++) {
+            const float lower = 0.5f * PI_F * float(bin) / float(Nbins);
+            const float upper = 0.5f * PI_F * float(bin + 1) / float(Nbins);
+            L1 += std::fabs(histogram.at(bin) - (evaluate_Beta_distribution_CDF(upper, cowpea_mu, cowpea_nu) - evaluate_Beta_distribution_CDF(lower, cowpea_mu, cowpea_nu)));
+        }
+
+        DOCTEST_INFO("facet-space L1 distance to target = " << L1);
+        // Steering in mean-normal space leaves this at about 0.14 and cannot do better, because the aim point
+        // and the area it places are systematically offset from one another. Scoring in facet space brings it
+        // to about 0.09. The threshold sits between the two, well clear of both: it is a statement that the
+        // controller closes the loop on the quantity it is judged by, not a fit to one machine's numbers.
+        DOCTEST_CHECK(L1 < 0.115f);
+
+        // The flattest bin is the sharpest symptom. A blade folded by ~13 degrees puts almost no facet area
+        // near horizontal no matter where its mean normal points, so under mean-normal steering this bin
+        // stalls around 0.018 against a target of 0.048 and no value of lambda fills it. Facet-space scoring
+        // lets the controller discover that it has to overshoot flat to land area there.
+        DOCTEST_INFO("flattest bin = " << histogram.at(0));
+        DOCTEST_CHECK(histogram.at(0) > 0.022f);
+    }
+
     DOCTEST_SUBCASE("a leaf that has finished growing is never moved again") {
         Context context;
         PlantArchitecture plantarchitecture(&context);
@@ -14199,5 +14742,303 @@ DOCTEST_TEST_CASE("PlantArchitecture grapevine canopy leaf area is plausible for
             DOCTEST_CHECK_MESSAGE(leaf_area_per_vine > canopy.leaf_area_per_vine_min_m2, "Species '" << species_name << "' carries " << leaf_area_per_vine << " m^2 of leaf per vine (LAI " << leaf_area_index << "), below the " << canopy.leaf_area_per_vine_min_m2 << " m^2 a VSP canopy should reach.");
             DOCTEST_CHECK_MESSAGE(leaf_area_per_vine < canopy.leaf_area_per_vine_max_m2, "Species '" << species_name << "' carries " << leaf_area_per_vine << " m^2 of leaf per vine (LAI " << leaf_area_index << "), above the " << canopy.leaf_area_per_vine_max_m2 << " m^2 plausible for a VSP canopy (LAI ~1.0-1.5).");
         }
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture library plant models declare a leaf inclination distribution") {
+    // A library model may declare the leaf inclination distribution measured for its species, and plants
+    // built from it are steered toward that distribution as they grow without the caller asking. The tests
+    // below drive the feature through setPlantModelLeafInclinationDistribution() rather than relying on any
+    // species shipping a declared value, so they hold whether or not the library declares any.
+
+    // A planophile target, well away from where the model's own leaves naturally sit.
+    const float Beta_mu = 2.770f;
+    const float Beta_nu = 1.172f;
+
+    // Rigid leaves, so that a blade's orientation changes only when the steering changes it: a flexible leaf
+    // goes on bending under its own weight for as long as it lives, which would be measured here as though
+    // the steering had moved it. Same seed on every arm, so any difference between arms is the steering.
+    auto buildPlantArchitecture = [](Context &ctx, PlantArchitecture &pa) {
+        ctx.seedRandomGenerator(12345);
+        pa.disableMessages();
+        pa.loadPlantModelFromLibrary("bean");
+        std::map<std::string, ShootParameters> rigid = pa.getCurrentShootParameters();
+        for (auto &shoot_type: rigid) {
+            shoot_type.second.phytomer_parameters.leaf.prototype.flexibility = 0.f;
+        }
+        pa.updateCurrentShootParameters(rigid);
+    };
+
+    auto inclinationOf = [](const Context &ctx, uint objID) {
+        const vec3 normal = ctx.getObjectAverageNormal(objID);
+        return acos_safe(std::fabs(normal.z) / std::max(normal.magnitude(), 1e-9f));
+    };
+
+    // Largest gap between the plant's area-weighted inclination distribution and the requested Beta.
+    auto distanceToTarget = [&](PlantArchitecture &pa, const Context &ctx, uint plantID, float mu, float nu) {
+        std::vector<std::pair<float, float>> inclination_and_area;
+        float total_area = 0;
+        for (const uint objID: pa.getPlantLeafObjectIDs(plantID)) {
+            if (!ctx.doesObjectExist(objID)) {
+                continue;
+            }
+            float area = 0;
+            for (const uint UUID: ctx.getObjectPrimitiveUUIDs(objID)) {
+                area += ctx.getPrimitiveArea(UUID);
+            }
+            if (area <= 0.f) {
+                continue;
+            }
+            inclination_and_area.emplace_back(inclinationOf(ctx, objID), area);
+            total_area += area;
+        }
+        if (inclination_and_area.empty()) {
+            return 0.f;
+        }
+        std::sort(inclination_and_area.begin(), inclination_and_area.end());
+
+        float cumulative = 0;
+        float worst = 0;
+        for (const auto &entry: inclination_and_area) {
+            cumulative += entry.second;
+            const float empirical = cumulative / total_area;
+            const float analytic = evaluate_Beta_distribution_CDF(entry.first, mu, nu);
+            worst = std::max(worst, std::fabs(empirical - analytic));
+        }
+        return worst;
+    };
+
+    // Every leaf's inclination, in the order getPlantLeafObjectIDs() reports them.
+    auto leafInclinations = [&](PlantArchitecture &pa, const Context &ctx, uint plantID) {
+        std::vector<float> inclinations;
+        for (const uint objID: pa.getPlantLeafObjectIDs(plantID)) {
+            if (!ctx.doesObjectExist(objID)) {
+                continue;
+            }
+            inclinations.push_back(inclinationOf(ctx, objID));
+        }
+        return inclinations;
+    };
+
+    DOCTEST_SUBCASE("a model that declares no distribution builds exactly the plant it did before") {
+        // The single most important property of the feature: a species with no measured distribution must
+        // take no new code path at all. Checked as exact equality rather than a tolerance, because the claim
+        // is not "close enough" but "no code ran" -- in particular that the unset path consumed no draws
+        // from the Context random generator, which would silently grow a different plant.
+        Context reference_context;
+        PlantArchitecture reference_plantarchitecture(&reference_context);
+        buildPlantArchitecture(reference_context, reference_plantarchitecture);
+        DOCTEST_REQUIRE(!reference_plantarchitecture.doesPlantModelDeclareLeafInclinationDistribution("bean"));
+        const uint reference_plantID = reference_plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+        reference_plantarchitecture.advanceTime(reference_plantID, 30.f);
+
+        Context repeat_context;
+        PlantArchitecture repeat_plantarchitecture(&repeat_context);
+        buildPlantArchitecture(repeat_context, repeat_plantarchitecture);
+        const uint repeat_plantID = repeat_plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+        repeat_plantarchitecture.advanceTime(repeat_plantID, 30.f);
+
+        DOCTEST_CHECK(!reference_plantarchitecture.isPlantLeafAngleDistributionTrackingEnabled(reference_plantID));
+
+        const std::vector<float> reference_inclinations = leafInclinations(reference_plantarchitecture, reference_context, reference_plantID);
+        const std::vector<float> repeat_inclinations = leafInclinations(repeat_plantarchitecture, repeat_context, repeat_plantID);
+        DOCTEST_INFO("reference leaves=" << reference_inclinations.size() << " repeat leaves=" << repeat_inclinations.size());
+        DOCTEST_REQUIRE(!reference_inclinations.empty());
+        DOCTEST_REQUIRE(reference_inclinations.size() == repeat_inclinations.size());
+
+        for (size_t i = 0; i < reference_inclinations.size(); i++) {
+            DOCTEST_CHECK(reference_inclinations.at(i) == repeat_inclinations.at(i));
+        }
+        DOCTEST_CHECK(reference_plantarchitecture.sumPlantLeafArea(reference_plantID) == repeat_plantarchitecture.sumPlantLeafArea(repeat_plantID));
+    }
+
+    DOCTEST_SUBCASE("a declared distribution steers the plant and clearing it restores the original plant") {
+        Context declared_context;
+        PlantArchitecture declared_plantarchitecture(&declared_context);
+        buildPlantArchitecture(declared_context, declared_plantarchitecture);
+        declared_plantarchitecture.setPlantModelLeafInclinationDistribution("bean", Beta_mu, Beta_nu);
+        DOCTEST_CHECK(declared_plantarchitecture.doesPlantModelDeclareLeafInclinationDistribution("bean"));
+        const uint declared_plantID = declared_plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+        DOCTEST_CHECK(declared_plantarchitecture.isPlantLeafAngleDistributionTrackingEnabled(declared_plantID));
+        declared_plantarchitecture.advanceTime(declared_plantID, 36.f);
+
+        Context cleared_context;
+        PlantArchitecture cleared_plantarchitecture(&cleared_context);
+        buildPlantArchitecture(cleared_context, cleared_plantarchitecture);
+        const uint cleared_plantID = cleared_plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+        cleared_plantarchitecture.advanceTime(cleared_plantID, 36.f);
+
+        DOCTEST_REQUIRE(declared_plantarchitecture.getPlantLeafObjectIDs(declared_plantID).size() > 30);
+
+        // A comparison between two arms grown identically, never an absolute magnitude: the leaf count a
+        // seed produces is not the same on every platform, so a fixed threshold would be asserting on noise.
+        const float declared_distance = distanceToTarget(declared_plantarchitecture, declared_context, declared_plantID, Beta_mu, Beta_nu);
+        const float cleared_distance = distanceToTarget(cleared_plantarchitecture, cleared_context, cleared_plantID, Beta_mu, Beta_nu);
+        DOCTEST_INFO("distance to target: declared=" << declared_distance << " cleared=" << cleared_distance);
+        DOCTEST_CHECK(declared_distance < cleared_distance);
+    }
+
+    DOCTEST_SUBCASE("a plant built at an age is steered by the distribution its model declares") {
+        // Pins where the hook sits. buildPlantInstanceFromLibrary() grows a plant built at an age through
+        // advanceTime() before returning it, so steering switched on after that call would find every leaf
+        // already grown and have nothing left to act on. That misplacement leaves the subcase above passing
+        // and only this one failing.
+        Context declared_context;
+        PlantArchitecture declared_plantarchitecture(&declared_context);
+        buildPlantArchitecture(declared_context, declared_plantarchitecture);
+        declared_plantarchitecture.setPlantModelLeafInclinationDistribution("bean", Beta_mu, Beta_nu);
+        const uint declared_plantID = declared_plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 36.f);
+
+        Context cleared_context;
+        PlantArchitecture cleared_plantarchitecture(&cleared_context);
+        buildPlantArchitecture(cleared_context, cleared_plantarchitecture);
+        const uint cleared_plantID = cleared_plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 36.f);
+
+        DOCTEST_REQUIRE(declared_plantarchitecture.getPlantLeafObjectIDs(declared_plantID).size() > 30);
+
+        const float declared_distance = distanceToTarget(declared_plantarchitecture, declared_context, declared_plantID, Beta_mu, Beta_nu);
+        const float cleared_distance = distanceToTarget(cleared_plantarchitecture, cleared_context, cleared_plantID, Beta_mu, Beta_nu);
+        DOCTEST_INFO("distance to target when built at an age: declared=" << declared_distance << " cleared=" << cleared_distance);
+        DOCTEST_CHECK(declared_distance < cleared_distance);
+    }
+
+    DOCTEST_SUBCASE("an explicit call overrides the distribution the model declares") {
+        // The library value is a default, not a lock. Enabling tracking again replaces the target, and
+        // disabling it stops the steering altogether.
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        buildPlantArchitecture(context, plantarchitecture);
+        plantarchitecture.setPlantModelLeafInclinationDistribution("bean", Beta_mu, Beta_nu);
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+        DOCTEST_REQUIRE(plantarchitecture.isPlantLeafAngleDistributionTrackingEnabled(plantID));
+
+        plantarchitecture.disablePlantLeafAngleDistributionTracking(plantID);
+        DOCTEST_CHECK(!plantarchitecture.isPlantLeafAngleDistributionTrackingEnabled(plantID));
+
+        plantarchitecture.enablePlantLeafElevationAngleDistributionTracking(plantID, 1.101f, 1.930f, 180.f);
+        DOCTEST_CHECK(plantarchitecture.isPlantLeafAngleDistributionTrackingEnabled(plantID));
+    }
+
+    DOCTEST_SUBCASE("a declared distribution survives an XML round trip") {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        buildPlantArchitecture(context, plantarchitecture);
+        plantarchitecture.setPlantModelLeafInclinationDistribution("bean", Beta_mu, Beta_nu);
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+        plantarchitecture.advanceTime(plantID, 24.f);
+
+        const std::string filename = "./plantarchitecture_library_leaf_inclination_test.xml";
+        plantarchitecture.writePlantStructureXML(plantID, filename);
+
+        // Read into a library that declares nothing, so that tracking on the restored plant can only have
+        // come from the file rather than from the model being consulted again.
+        Context restored_context;
+        PlantArchitecture restored_plantarchitecture(&restored_context);
+        restored_context.seedRandomGenerator(12345);
+        restored_plantarchitecture.disableMessages();
+        restored_plantarchitecture.loadPlantModelFromLibrary("bean");
+        DOCTEST_REQUIRE(!restored_plantarchitecture.doesPlantModelDeclareLeafInclinationDistribution("bean"));
+        const std::vector<uint> restored_plantIDs = restored_plantarchitecture.readPlantStructureXML(filename, true);
+        DOCTEST_REQUIRE(restored_plantIDs.size() == 1);
+        DOCTEST_CHECK(restored_plantarchitecture.isPlantLeafAngleDistributionTrackingEnabled(restored_plantIDs.front()));
+
+        std::remove(filename.c_str());
+    }
+
+    DOCTEST_SUBCASE("a plant that declares no distribution writes no tag and reads back untracked") {
+        // A file written before the tag existed carries no such tag, and must still load.
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        buildPlantArchitecture(context, plantarchitecture);
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+        plantarchitecture.advanceTime(plantID, 18.f);
+
+        const std::string filename = "./plantarchitecture_library_leaf_inclination_absent_test.xml";
+        plantarchitecture.writePlantStructureXML(plantID, filename);
+
+        std::ifstream written_file(filename);
+        std::stringstream written_contents;
+        written_contents << written_file.rdbuf();
+        written_file.close();
+        DOCTEST_CHECK(written_contents.str().find("leaf_inclination_Beta_distribution") == std::string::npos);
+
+        Context restored_context;
+        PlantArchitecture restored_plantarchitecture(&restored_context);
+        restored_plantarchitecture.disableMessages();
+        restored_plantarchitecture.loadPlantModelFromLibrary("bean");
+        const std::vector<uint> restored_plantIDs = restored_plantarchitecture.readPlantStructureXML(filename, true);
+        DOCTEST_REQUIRE(restored_plantIDs.size() == 1);
+        DOCTEST_CHECK(!restored_plantarchitecture.isPlantLeafAngleDistributionTrackingEnabled(restored_plantIDs.front()));
+
+        std::remove(filename.c_str());
+    }
+
+    DOCTEST_SUBCASE("a duplicate of a plant built from a declaring model is steered too") {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        buildPlantArchitecture(context, plantarchitecture);
+        plantarchitecture.setPlantModelLeafInclinationDistribution("bean", Beta_mu, Beta_nu);
+        const uint source_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+        plantarchitecture.advanceTime(source_plantID, 20.f);
+
+        const uint copy_plantID = plantarchitecture.duplicatePlantInstance(source_plantID, make_vec3(1, 0, 0), make_AxisRotation(0, 0, 0), 0);
+        DOCTEST_CHECK(plantarchitecture.isPlantLeafAngleDistributionTrackingEnabled(copy_plantID));
+    }
+
+    DOCTEST_SUBCASE("the library distribution API rejects unknown models and half-filled distributions") {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("bean");
+
+        DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPlantModelLeafInclinationDistribution("not_a_plant_model")));
+        DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.doesPlantModelDeclareLeafInclinationDistribution("not_a_plant_model")));
+        DOCTEST_CHECK_THROWS(plantarchitecture.setPlantModelLeafInclinationDistribution("not_a_plant_model", 2.770f, 1.172f));
+
+        // One parameter without the other is a half-filled entry, and is always a mistake.
+        DOCTEST_CHECK_THROWS(plantarchitecture.setPlantModelLeafInclinationDistribution("bean", 2.770f, 0.f));
+        DOCTEST_CHECK_THROWS(plantarchitecture.setPlantModelLeafInclinationDistribution("bean", 0.f, 1.172f));
+        DOCTEST_CHECK_THROWS(plantarchitecture.setPlantModelLeafInclinationDistribution("bean", -1.f, 1.172f));
+
+        // Setting, reading back and clearing.
+        DOCTEST_CHECK(!plantarchitecture.doesPlantModelDeclareLeafInclinationDistribution("bean"));
+        DOCTEST_CHECK(plantarchitecture.getPlantModelLeafInclinationDistribution("bean") == make_vec2(0.f, 0.f));
+
+        plantarchitecture.setPlantModelLeafInclinationDistribution("bean", Beta_mu, Beta_nu);
+        DOCTEST_CHECK(plantarchitecture.doesPlantModelDeclareLeafInclinationDistribution("bean"));
+        DOCTEST_CHECK(plantarchitecture.getPlantModelLeafInclinationDistribution("bean") == make_vec2(Beta_mu, Beta_nu));
+
+        plantarchitecture.setPlantModelLeafInclinationDistribution("bean", 0.f, 0.f);
+        DOCTEST_CHECK(!plantarchitecture.doesPlantModelDeclareLeafInclinationDistribution("bean"));
+        DOCTEST_CHECK(plantarchitecture.getPlantModelLeafInclinationDistribution("bean") == make_vec2(0.f, 0.f));
+    }
+
+    DOCTEST_SUBCASE("cowpea ships the leaf inclination distribution measured for the species") {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+
+        // Declared by the library itself in registerPlantModel(), so it holds without the model being loaded
+        // and without any caller setting it.
+        DOCTEST_CHECK(plantarchitecture.doesPlantModelDeclareLeafInclinationDistribution("cowpea"));
+        const vec2 cowpea_distribution = plantarchitecture.getPlantModelLeafInclinationDistribution("cowpea");
+        DOCTEST_CHECK(cowpea_distribution.x == doctest::Approx(1.398f));
+        DOCTEST_CHECK(cowpea_distribution.y == doctest::Approx(1.574f));
+
+        // A plant built from the model picks the declared distribution up on its own.
+        plantarchitecture.loadPlantModelFromLibrary("cowpea");
+        const uint cowpea_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+        DOCTEST_CHECK(plantarchitecture.isPlantLeafAngleDistributionTrackingEnabled(cowpea_plantID));
+    }
+
+    DOCTEST_SUBCASE("easternredbud ships the leaf inclination distribution measured for the species") {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+
+        DOCTEST_CHECK(plantarchitecture.doesPlantModelDeclareLeafInclinationDistribution("easternredbud"));
+        const vec2 redbud_distribution = plantarchitecture.getPlantModelLeafInclinationDistribution("easternredbud");
+        DOCTEST_CHECK(redbud_distribution.x == doctest::Approx(1.00f));
+        DOCTEST_CHECK(redbud_distribution.y == doctest::Approx(2.20f));
     }
 }

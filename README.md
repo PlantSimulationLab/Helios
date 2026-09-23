@@ -15,3 +15,7 @@ In order to build and compile the core library, you will need to install a C/C++
 </div>
 
 ![Almond Reconstruction](doc/images/AlmondVarietyReconstruction.png)
+
+## License
+
+Helios is free software licensed under the [GNU Lesser General Public License, version 2.1](LICENSE) or (at your option) any later version (SPDX: `LGPL-2.1-or-later`), except where an individual file states otherwise. Third-party libraries bundled under `lib/` directories retain their own licenses, which are included alongside each library and summarized in [`doc/Helios_ThirdPartyLicenses.txt`](doc/Helios_ThirdPartyLicenses.txt).

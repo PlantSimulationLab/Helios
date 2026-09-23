@@ -3,14 +3,17 @@
  *
  * Copyright (C) 2016-2026 Brian Bailey
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, version 2
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include "Context.h"
@@ -348,30 +351,35 @@ void Context::copyPrimitiveData(uint sourceUUID, uint destinationUUID) {
     }
 #endif
 
-    const auto &dest_labels = primitives.at(destinationUUID)->primitive_data_types;
-    for (const auto &[label, type]: dest_labels) {
+    // Resolved once. Every assignment below used to look both primitives up again by UUID, so copying one
+    // primitive's data cost more than twenty hash lookups of the two pointers it already had. Plants are
+    // built by copying prototype primitives, so this runs once per primitive of every leaf in a canopy.
+    Primitive *source = primitives.at(sourceUUID);
+    Primitive *destination = primitives.at(destinationUUID);
+
+    for (const auto &[label, type]: destination->primitive_data_types) {
         decrementPrimitiveDataLabelCounter(label);
     }
 
-    primitives.at(destinationUUID)->primitive_data_types = primitives.at(sourceUUID)->primitive_data_types;
+    destination->primitive_data_types = source->primitive_data_types;
 
-    primitives.at(destinationUUID)->primitive_data_int = primitives.at(sourceUUID)->primitive_data_int;
-    primitives.at(destinationUUID)->primitive_data_uint = primitives.at(sourceUUID)->primitive_data_uint;
-    primitives.at(destinationUUID)->primitive_data_float = primitives.at(sourceUUID)->primitive_data_float;
-    primitives.at(destinationUUID)->primitive_data_double = primitives.at(sourceUUID)->primitive_data_double;
-    primitives.at(destinationUUID)->primitive_data_vec2 = primitives.at(sourceUUID)->primitive_data_vec2;
-    primitives.at(destinationUUID)->primitive_data_vec3 = primitives.at(sourceUUID)->primitive_data_vec3;
-    primitives.at(destinationUUID)->primitive_data_vec4 = primitives.at(sourceUUID)->primitive_data_vec4;
-    primitives.at(destinationUUID)->primitive_data_int2 = primitives.at(sourceUUID)->primitive_data_int2;
-    primitives.at(destinationUUID)->primitive_data_int3 = primitives.at(sourceUUID)->primitive_data_int3;
-    primitives.at(destinationUUID)->primitive_data_int4 = primitives.at(sourceUUID)->primitive_data_int4;
-    primitives.at(destinationUUID)->primitive_data_string = primitives.at(sourceUUID)->primitive_data_string;
+    destination->primitive_data_int = source->primitive_data_int;
+    destination->primitive_data_uint = source->primitive_data_uint;
+    destination->primitive_data_float = source->primitive_data_float;
+    destination->primitive_data_double = source->primitive_data_double;
+    destination->primitive_data_vec2 = source->primitive_data_vec2;
+    destination->primitive_data_vec3 = source->primitive_data_vec3;
+    destination->primitive_data_vec4 = source->primitive_data_vec4;
+    destination->primitive_data_int2 = source->primitive_data_int2;
+    destination->primitive_data_int3 = source->primitive_data_int3;
+    destination->primitive_data_int4 = source->primitive_data_int4;
+    destination->primitive_data_string = source->primitive_data_string;
 
-    for (const auto &[label, type]: primitives.at(destinationUUID)->primitive_data_types) {
+    for (const auto &[label, type]: destination->primitive_data_types) {
         incrementPrimitiveDataLabelCounter(label);
     }
 
-    primitives.at(destinationUUID)->dirty_flag = true;
+    destination->dirty_flag = true;
 }
 
 void Context::renamePrimitiveData(uint UUID, const char *old_label, const char *new_label) {

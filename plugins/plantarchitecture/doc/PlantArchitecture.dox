@@ -1624,6 +1624,41 @@ distribution is measured in the field and how \ref PlantArchitecture::getPlantLe
 reports it. A plant whose leaves differ greatly in size will therefore not have its leaf *count*
 distributed as requested.
 
+\subsection PlantArchLeafAngleFacets Blades Are Not Flat: Facets Versus Leaves
+
+A leaf prototype is generally not a flat plane. Folding about the midrib and longitudinal or lateral
+curvature all mean that a single blade presents a *range* of surface orientations rather than one, and
+that range can be wide: cowpea's blade spreads its facet inclinations about 13 degrees either side of
+the direction the leaf faces as a whole, before any flexibility-driven drooping is applied.
+
+This makes "the leaf inclination angle" two different quantities, and it matters which one is meant:
+
+- \ref PlantArchitecture::getPlantLeafInclinationAngleDistribution() bins **every blade facet** by its
+  own normal, weighted by that facet's area. This is the distribution of leaf *surface* orientation.
+- The direction a leaf faces *as a whole* is the area-weighted mean of its facet normals -- one
+  direction per leaf. This is what the steering in \ref
+  PlantArchitecture::enablePlantLeafElevationAngleDistributionTracking() aims, since a leaf can only be
+  turned as a unit.
+
+For a flat blade these are the same distribution. For a curved one they are not, and the facet
+distribution is the broader of the two.
+
+**Use the facet distribution to compare against measured data.** A leaf angle distribution derived from
+LiDAR -- which is how most measured distributions, including the `cowpea` parameters tabulated below,
+are obtained -- comes from fitting planes to patches of leaf surface. A folded blade contributes its
+steep edges and its flat middle as separate observations, exactly as the facet histogram counts them.
+The facet distribution is also the quantity that governs radiative transfer, since it is the true
+distribution of intercepting area. Tracking therefore scores itself in facet space: it aims each blade's
+mean normal, but judges the result by where the blade's facet area actually lands, so that the
+distribution \ref PlantArchitecture::getPlantLeafInclinationAngleDistribution() reports converges on the
+distribution that was requested.
+
+One consequence is worth anticipating. Because a folded blade places very little of its area near
+horizontal whatever direction it is turned to face, the flattest inclination bin cannot be filled to an
+arbitrary level on a species with strongly folded leaves. Steering will overshoot -- aiming blades past
+horizontal to push area into that bin -- but a residual shortfall in the first bin is a property of the
+blade geometry, not a failure of the steering, and is not removed by raising `lambda_degrees`.
+
 \subsection PlantArchLeafAngleStatic Imposing a Distribution on a Finished Plant
 
 \ref PlantArchitecture::setPlantLeafAngleDistribution() and its elevation-only and azimuth-only
@@ -1682,6 +1717,64 @@ not enabling it at all. Values around 180 degrees match the distribution as clos
 plant allows. Intermediate values interpolate, keeping more of the plant's own character at the cost
 of a looser match.
 
+\subsection PlantArchLeafAngleLibrary Distributions Declared by the Plant Library
+
+Both methods above ask the caller to supply the distribution. A plant model in the library may instead
+declare the leaf inclination distribution measured for its species, in which case plants built from it
+are steered toward that distribution as they grow without the caller asking for anything:
+
+```
+plantarchitecture.loadPlantModelFromLibrary("cowpea");
+// Steered toward the distribution the "cowpea" model declares.
+uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(origin, 45);
+```
+
+The models that currently declare a measured distribution are:
+
+<table>
+<tr><th>Plant model</th><th>Beta mu</th><th>Beta nu</th></tr>
+<tr><td><code>cowpea</code></td><td>1.398</td><td>1.574</td></tr>
+<tr><td><code>easternredbud</code></td><td>1.00</td><td>2.20</td></tr>
+</table>
+
+A model declares its distribution as two Beta parameters where it is registered, and the declaration is
+read back, replaced or cleared through \ref PlantArchitecture::getPlantModelLeafInclinationDistribution(),
+\ref PlantArchitecture::setPlantModelLeafInclinationDistribution() and
+\ref PlantArchitecture::doesPlantModelDeclareLeafInclinationDistribution(). Setting a model's
+distribution affects plants built afterward; plants that already exist are unchanged.
+
+The steering strength is deliberately not part of the declaration. A measured distribution is a
+statement about the angles a species' leaves take, not about how hard the model should pull toward
+them, so a species definition has no data for it; the internal default is the value described above as
+matching the distribution as closely as a growing plant allows. A caller wanting a different trade-off
+sets one per plant with \ref PlantArchitecture::enablePlantLeafElevationAngleDistributionTracking().
+
+A model that declares no distribution is not steered at all, and its plants are built exactly as they
+were before this facility existed -- in particular they consume no additional random draws, so the plant
+that grows is the same plant, leaf for leaf.
+
+Note that a declared distribution makes every plant of that species pay the cost described in
+\ref PlantArchLeafAngleTrackingCost by default, including in large canopies where leaf angle control was
+never asked for.
+
+\subsubsection PlantArchLeafAngleLibraryPrecedence Overriding a Declared Distribution
+
+The declaration is a default, not a lock, and the last call wins:
+
+- \ref PlantArchitecture::enablePlantLeafElevationAngleDistributionTracking() on a plant built from a
+  declaring model replaces the target, exactly as it would on any other tracked plant.
+- \ref PlantArchitecture::disablePlantLeafAngleDistributionTracking() stops the steering, and leaves
+  emerging afterward are left where the procedural model puts them.
+- \ref PlantArchitecture::setPlantModelLeafInclinationDistribution() with both parameters zero clears the
+  model's declaration, so plants built after that call are not steered.
+
+One interaction is worth stating explicitly, because the two mechanisms are independent by design:
+**the one-shot setters do not disturb tracking, and tracking does not re-aim existing leaves.** Calling
+\ref PlantArchitecture::setPlantLeafElevationAngleDistribution() on a plant built from a declaring model
+therefore re-aims the leaves it already carries to the requested distribution, while the leaves that
+emerge afterward continue to be steered toward the distribution the model declares. Disable tracking
+first if the intent was to replace the target rather than to re-aim the current leaves.
+
 \subsection PlantArchLeafAngleTrackingLimits What Tracking Can and Cannot Do
 
 Tracking acts only on leaves that have yet to finish expanding, which has consequences worth stating
@@ -1700,8 +1793,15 @@ plainly:
   it most just after a flush of new leaves.
 - **A leaf that never finishes expanding never arrives.** Growth cut short by the carbohydrate model,
   by `max_age`, or by dormancy leaves its leaves part-way.
-- **Tracking state is not written to XML.** A reloaded plant keeps the leaf angles it had, but is no
-  longer tracking; call the enabling method again to resume.
+- **Only the inclination distribution is written to XML.** A plant being steered toward a Beta
+  distribution of inclination is written with that distribution by
+  \ref PlantArchitecture::writePlantStructureXML() and resumes tracking it when read back, so a plant
+  restored from a file does not silently drift off the distribution as it grows. Three things do not
+  survive: azimuth tracking, which is not written at all, so a plant tracking both axes comes back
+  tracking inclination only; the steering strength, which is restored to the default rather than a value
+  the caller chose; and the distinction between a distribution declared by the library and one set by
+  hand, since the file records what the plant was being steered toward and not where it came from. A
+  file written before the tag existed simply restores a plant that is not tracking.
 
 \subsection PlantArchLeafAngleTrackingCost What Tracking Costs
 
@@ -1710,6 +1810,12 @@ assigns targets to the leaves that emerged that step, and turns the expanding le
 the targets they have. All three are proportional to the number of leaves, so the cost is proportional to leaf
 count and its share of runtime does not grow with canopy size.
 
+Almost all of that cost is reading the leaf geometry back out of the Context -- the per-facet areas and normals
+the histogram is built from. Because those facets must be visited anyway to find the direction each blade
+faces, binning them individually rather than collapsing each leaf to a single direction is essentially free,
+and the facet spread each leaf contributes is reduced to a small per-blade kernel at the same time so that
+choosing a target stays a short correlation rather than a second pass over the leaf.
+
 Measured from a seedling grown to 45 days, comparing `advanceTime()` with tracking enabled against the same
 plant grown without it, tracking adds roughly **50%** to growth time -- about a fifth of that for measuring
 the population each step and the rest for aiming leaves. That held from a single cowpea of about 200 leaves up
@@ -1717,8 +1823,10 @@ to a sixteen-plant canopy of about 4000.
 
 Two things are worth keeping in proportion. Growth is usually a small part of a simulation that also runs
 radiation or collision detection, so tracking is a much smaller share of a whole run than of `advanceTime()`
-alone. And the cost is only incurred while a plant is growing: a plant that has finished growing, or one
-built at an age rather than grown, pays nothing.
+alone. And the cost is only incurred while a plant is growing: a plant that has finished growing pays nothing.
+A plant built at an age is grown internally by \ref PlantArchitecture::buildPlantInstanceFromLibrary(),
+so it pays the cost of the growth it is built through, whether the steering was switched on by hand
+beforehand or declared by its library model (see \ref PlantArchLeafAngleLibrary).
 
 Tracking draws no random numbers from the Context generator, so switching it on does not change the
 sequence of random draws the plant is built from.

@@ -2,14 +2,17 @@
 
     Copyright (C) 2016-2026 Brian Bailey
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, version 2.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
+    This library is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    SPDX-License-Identifier: LGPL-2.1-or-later
 
 */
 
@@ -62,7 +65,7 @@ void PlantArchitecture::initializePlantModelRegistrations() {
 
     registerPlantModel("cheeseweed", [this]() { initializeCheeseweedShoots(); }, [this](const helios::vec3 &pos) { return buildCheeseweedPlant(pos); }, "weed");
 
-    registerPlantModel("cowpea", [this]() { initializeCowpeaShoots(); }, [this](const helios::vec3 &pos) { return buildCowpeaPlant(pos); });
+    registerPlantModel("cowpea", [this]() { initializeCowpeaShoots(); }, [this](const helios::vec3 &pos) { return buildCowpeaPlant(pos); }, "herbaceous", helios::make_vec2(1.398f, 1.574f));
 
     registerPlantModel("grapevine_VSP", [this]() { initializeGrapevineVSPShoots(); }, [this](const helios::vec3 &pos) { return buildGrapevineVSP(pos); });
 
@@ -78,7 +81,7 @@ void PlantArchitecture::initializePlantModelRegistrations() {
 
     registerPlantModel("puncturevine", [this]() { initializePuncturevineShoots(); }, [this](const helios::vec3 &pos) { return buildPuncturevinePlant(pos); }, "weed");
 
-    registerPlantModel("easternredbud", [this]() { initializeEasternRedbudShoots(); }, [this](const helios::vec3 &pos) { return buildEasternRedbudPlant(pos); }, "tree");
+    registerPlantModel("easternredbud", [this]() { initializeEasternRedbudShoots(); }, [this](const helios::vec3 &pos) { return buildEasternRedbudPlant(pos); }, "tree", helios::make_vec2(1.00f, 2.20f));
 
     registerPlantModel("rice", [this]() { initializeRiceShoots(); }, [this](const helios::vec3 &pos) { return buildRicePlant(pos); });
 
@@ -183,6 +186,21 @@ uint PlantArchitecture::buildPlantInstanceFromLibrary(const helios::vec3 &base_p
         if (!plant_primitives.empty()) {
             collision_detection_ptr->registerTree(plantID, plant_primitives);
         }
+    }
+
+    // Empirical leaf inclination distribution declared for this species by registerPlantModel(), if any.
+    //
+    // Applied here, before the growth below, rather than after it. advanceTime() is where a plant built at an
+    // age grows every leaf it has, so steering switched on afterward would find the plant already fully
+    // leaved and have nothing left to act on -- tracking only steers leaves that are still expanding. The
+    // feature would then be a no-op for buildPlantInstanceFromLibrary(position, age), which is how plants are
+    // usually built.
+    //
+    // A model that declares no distribution is absent from the map and takes no part in this, so it consumes
+    // no random draws and grows exactly as it did before the map existed.
+    auto leaf_inclination_it = plant_leaf_inclination_distribution_map.find(current_plant_model);
+    if (leaf_inclination_it != plant_leaf_inclination_distribution_map.end()) {
+        enablePlantLeafElevationAngleDistributionTracking(plantID, leaf_inclination_it->second.x, leaf_inclination_it->second.y, library_leaf_angle_lambda_degrees);
     }
 
     if (age > 0) {
@@ -297,10 +315,65 @@ void PlantArchitecture::initializeDefaultShoots(const std::string &plant_label) 
     init_it->second();
 }
 
-void PlantArchitecture::registerPlantModel(const std::string &name, std::function<void()> shoot_init, std::function<uint(const helios::vec3 &)> plant_build, const std::string &plant_type) {
+void PlantArchitecture::registerPlantModel(const std::string &name, std::function<void()> shoot_init, std::function<uint(const helios::vec3 &)> plant_build, const std::string &plant_type, const helios::vec2 &leaf_inclination_Beta) {
     shoot_initializers[name] = shoot_init;
     plant_builders[name] = plant_build;
     plant_type_map[name] = plant_type;
+
+    // A model either declares a measured leaf inclination distribution or it does not. Half of one is always a
+    // mistake -- a value typed into the wrong component, or a parameter left behind -- and silently storing it
+    // would either throw later from deep inside the build with a message pointing at the wrong place, or, for a
+    // zero mu, be rejected as a bad Beta distribution by a caller who never wrote one.
+    const bool declares_distribution = leaf_inclination_Beta.x > 0.f && leaf_inclination_Beta.y > 0.f;
+    const bool declares_nothing = leaf_inclination_Beta.x == 0.f && leaf_inclination_Beta.y == 0.f;
+    if (!declares_distribution && !declares_nothing) {
+        helios_runtime_error("ERROR (PlantArchitecture::registerPlantModel): Plant model '" + name + "' declares an incomplete leaf inclination distribution of (" + std::to_string(leaf_inclination_Beta.x) + ", " +
+                             std::to_string(leaf_inclination_Beta.y) + "). Both Beta parameters must be positive to declare a distribution, or both zero to declare none.");
+    }
+    if (declares_distribution) {
+        plant_leaf_inclination_distribution_map[name] = leaf_inclination_Beta;
+    }
+}
+
+helios::vec2 PlantArchitecture::getPlantModelLeafInclinationDistribution(const std::string &plant_model_name) const {
+    if (plant_builders.find(plant_model_name) == plant_builders.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantModelLeafInclinationDistribution): plant label of " + plant_model_name + " does not exist in the library.");
+    }
+
+    auto distribution_it = plant_leaf_inclination_distribution_map.find(plant_model_name);
+    if (distribution_it == plant_leaf_inclination_distribution_map.end()) {
+        return make_vec2(0.f, 0.f);
+    }
+    return distribution_it->second;
+}
+
+void PlantArchitecture::setPlantModelLeafInclinationDistribution(const std::string &plant_model_name, float Beta_mu_inclination, float Beta_nu_inclination) {
+    if (plant_builders.find(plant_model_name) == plant_builders.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPlantModelLeafInclinationDistribution): plant label of " + plant_model_name + " does not exist in the library.");
+    }
+
+    // Same all-or-nothing rule as registerPlantModel(): (0,0) clears the distribution, two positive values set
+    // one, and anything else is a half-filled entry.
+    const bool sets_distribution = Beta_mu_inclination > 0.f && Beta_nu_inclination > 0.f;
+    const bool clears_distribution = Beta_mu_inclination == 0.f && Beta_nu_inclination == 0.f;
+    if (!sets_distribution && !clears_distribution) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPlantModelLeafInclinationDistribution): Beta distribution parameters of (" + std::to_string(Beta_mu_inclination) + ", " + std::to_string(Beta_nu_inclination) +
+                             ") are not a valid leaf inclination distribution. Both parameters must be positive to set a distribution, or both zero to clear it.");
+    }
+
+    if (clears_distribution) {
+        plant_leaf_inclination_distribution_map.erase(plant_model_name);
+    } else {
+        plant_leaf_inclination_distribution_map[plant_model_name] = make_vec2(Beta_mu_inclination, Beta_nu_inclination);
+    }
+}
+
+bool PlantArchitecture::doesPlantModelDeclareLeafInclinationDistribution(const std::string &plant_model_name) const {
+    if (plant_builders.find(plant_model_name) == plant_builders.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::doesPlantModelDeclareLeafInclinationDistribution): plant label of " + plant_model_name + " does not exist in the library.");
+    }
+
+    return plant_leaf_inclination_distribution_map.find(plant_model_name) != plant_leaf_inclination_distribution_map.end();
 }
 
 void PlantArchitecture::initializeAlmondTreeShoots() {

@@ -2,20 +2,216 @@
 
     Copyright (C) 2016-2026 Brian Bailey
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, version 2.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
+    This library is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    SPDX-License-Identifier: LGPL-2.1-or-later
 
 */
 
 #include "LeafOptics.h"
 using namespace std;
 using namespace helios;
+
+// ----------------------------------------------------------------------------
+// Numerical building blocks of the PROSPECT plate model
+// ----------------------------------------------------------------------------
+//
+// References:
+//   Jacquemoud, S. & Baret, F. (1990) PROSPECT: A model of leaf optical properties spectra.
+//     Remote Sensing of Environment 34:75-91. ("J&B 1990" below)
+//   Feret, J.-B. et al. (2021) PROSPECT-PRO for estimating content of nitrogen-containing leaf
+//     proteins and other carbon-based constituents (preprint arXiv:2003.11961).
+//   NIST Digital Library of Mathematical Functions (DLMF), chapter 6 (exponential integral).
+
+namespace {
+
+    //! Exponential integral E1(x) for x > 0.
+    /**
+     * For x <= 1 the convergent power series of DLMF 6.6.2 is used,
+     *   E1(x) = -gamma - ln(x) - sum_{k>=1} (-x)^k / (k k!).
+     * For x > 1 the continued fraction of DLMF 6.9.1 (in its even-contracted form) is evaluated with the modified
+     * Lentz algorithm, which yields the scaled value exp(x) E1(x) directly:
+     *   exp(x) E1(x) = 1 / (x + 1 - 1^2 / (x + 3 - 2^2 / (x + 5 - 3^2 / (x + 7 - ...)))).
+     * Returning the scaled value for large x lets callers combine it with exp(-x) without overflow or underflow.
+     *
+     * \param[in] x Argument (must be > 0).
+     * \param[out] scaled_by_exp True if the returned value is exp(x) E1(x) (x > 1), false if it is E1(x) (x <= 1).
+     * \return E1(x) or exp(x) E1(x), as indicated by scaled_by_exp. Relative accuracy is ~1e-15.
+     */
+    double exponentialIntegralE1(double x, bool &scaled_by_exp) {
+        constexpr double euler_gamma = 0.57721566490153286060651209;
+        if (x <= 1.0) {
+            scaled_by_exp = false;
+            double series_sum = 0.0;
+            double power_over_factorial = 1.0; // (-x)^k / k!
+            for (int k = 1; k < 100; k++) {
+                power_over_factorial *= -x / static_cast<double>(k);
+                const double term = power_over_factorial / static_cast<double>(k);
+                series_sum += term;
+                if (std::abs(term) < 1e-17 * std::abs(series_sum)) {
+                    break;
+                }
+            }
+            return -euler_gamma - std::log(x) - series_sum;
+        }
+
+        scaled_by_exp = true;
+        constexpr double tiny = 1e-300;
+        double denominator_term = x + 1.0;
+        double lentz_c = 1.0 / tiny;
+        double lentz_d = 1.0 / denominator_term;
+        double fraction = lentz_d;
+        for (int i = 1; i < 10000; i++) {
+            const double numerator_term = -static_cast<double>(i) * static_cast<double>(i);
+            denominator_term += 2.0;
+            lentz_d = 1.0 / (numerator_term * lentz_d + denominator_term);
+            lentz_c = denominator_term + numerator_term / lentz_c;
+            const double delta = lentz_c * lentz_d;
+            fraction *= delta;
+            if (std::abs(delta - 1.0) < 1e-16) {
+                return fraction;
+            }
+        }
+        helios_runtime_error("ERROR (LeafOptics): continued fraction for the exponential integral E1(" + std::to_string(x) + ") failed to converge.");
+        return 0.0;
+    }
+
+    //! Transmission coefficient theta(k) of a compact elementary layer for isotropic (diffuse) light.
+    /**
+     * J&B 1990 Eq. (11): theta = (1 - k) exp(-k) + k^2 E1(k), where k is the absorption coefficient of the layer.
+     * theta(0) = 1 (no absorption). For large k, both terms are formed from exp(-k) times the scaled continued
+     * fraction so the result underflows smoothly to zero instead of producing NaN.
+     */
+    double elementaryLayerTransmission(double k) {
+        if (k <= 0.0) {
+            return 1.0;
+        }
+        bool scaled_by_exp = false;
+        const double e1_value = exponentialIntegralE1(k, scaled_by_exp);
+        if (!scaled_by_exp) {
+            return (1.0 - k) * std::exp(-k) + k * k * e1_value;
+        }
+        return std::exp(-k) * ((1.0 - k) + k * k * e1_value);
+    }
+
+    //! Gauss-Legendre quadrature rule on [-1, 1].
+    struct GaussLegendreRule {
+        std::vector<double> nodes;
+        std::vector<double> weights;
+    };
+
+    //! Compute Gauss-Legendre nodes and weights on [-1, 1] by Newton iteration on the Legendre three-term recurrence.
+    GaussLegendreRule makeGaussLegendreRule(int order) {
+        GaussLegendreRule rule;
+        rule.nodes.resize(order);
+        rule.weights.resize(order);
+        for (int i = 0; i < order; i++) {
+            // Initial guess for the i-th root, refined by Newton's method.
+            double x = std::cos(M_PI * (static_cast<double>(i) + 0.75) / (static_cast<double>(order) + 0.5));
+            double derivative = 1.0;
+            for (int iteration = 0; iteration < 100; iteration++) {
+                double p_current = 1.0;
+                double p_previous = 0.0;
+                for (int degree = 1; degree <= order; degree++) {
+                    const double p_older = p_previous;
+                    p_previous = p_current;
+                    p_current = ((2.0 * degree - 1.0) * x * p_previous - (degree - 1.0) * p_older) / static_cast<double>(degree);
+                }
+                derivative = static_cast<double>(order) * (x * p_current - p_previous) / (x * x - 1.0);
+                const double step = p_current / derivative;
+                x -= step;
+                if (std::abs(step) < 1e-15) {
+                    break;
+                }
+            }
+            rule.nodes.at(i) = x;
+            rule.weights.at(i) = 2.0 / ((1.0 - x * x) * derivative * derivative);
+        }
+        return rule;
+    }
+
+    //! Fresnel transmissivity of a planar dielectric interface for unpolarized light incident at angle theta from air.
+    double fresnelTransmissivity(double incidence_angle, double refractive_index) {
+        const double cos_incidence = std::cos(incidence_angle);
+        const double sin_incidence = std::sin(incidence_angle);
+        const double n_squared = refractive_index * refractive_index;
+        // n cos(theta_t), from Snell's law sin(theta_t) = sin(theta_i) / n
+        const double n_cos_transmitted = std::sqrt(n_squared - sin_incidence * sin_incidence);
+        const double r_perpendicular = (cos_incidence - n_cos_transmitted) / (cos_incidence + n_cos_transmitted);
+        const double r_parallel = (n_squared * cos_incidence - n_cos_transmitted) / (n_squared * cos_incidence + n_cos_transmitted);
+        return 1.0 - 0.5 * (r_perpendicular * r_perpendicular + r_parallel * r_parallel);
+    }
+
+    //! Average interface transmissivity t_av(alpha, n) (J&B 1990, Fig. 1 and Eqs. 1-2).
+    /**
+     * Fresnel transmissivity for unpolarized, isotropic light averaged over all incidence directions within a cone of
+     * half-angle alpha:
+     *   t_av(alpha, n) = [ integral_0^alpha t(theta) sin(theta) cos(theta) dtheta ] / [ sin^2(alpha) / 2 ].
+     * The integrand is smooth in theta for n >= 1, so a 32-point Gauss-Legendre rule gives machine precision.
+     */
+    double averageInterfaceTransmissivity(double alpha_degrees, double refractive_index) {
+        static const GaussLegendreRule rule = makeGaussLegendreRule(32);
+
+        if (refractive_index < 1.0) {
+            helios_runtime_error("ERROR (LeafOptics): refractive index " + std::to_string(refractive_index) + " is below 1; the interface transmissivity is only defined for light entering an optically denser medium.");
+        }
+        const double alpha = alpha_degrees * M_PI / 180.0;
+        const double half_alpha = 0.5 * alpha;
+        double integral = 0.0;
+        for (size_t i = 0; i < rule.nodes.size(); i++) {
+            const double theta = half_alpha * (rule.nodes[i] + 1.0);
+            integral += rule.weights[i] * half_alpha * fresnelTransmissivity(theta, refractive_index) * std::sin(theta) * std::cos(theta);
+        }
+        const double sin_alpha = std::sin(alpha);
+        return 2.0 * integral / (sin_alpha * sin_alpha);
+    }
+
+    //! Reflectance and transmittance of a stack of identical diffusing layers (Stokes 1862; J&B 1990 Eq. 9).
+    /**
+     * \param[in] layer_reflectance Reflectance rho of one layer for diffuse light.
+     * \param[in] layer_transmittance Transmittance tau of one layer for diffuse light.
+     * \param[in] number_of_layers Number of layers m (may be non-integer, m >= 0).
+     * \param[out] stack_reflectance Reflectance of the stack.
+     * \param[out] stack_transmittance Transmittance of the stack.
+     */
+    void stokesLayerStack(double layer_reflectance, double layer_transmittance, double number_of_layers, double &stack_reflectance, double &stack_transmittance) {
+        if (number_of_layers <= 0.0) {
+            // An empty stack neither reflects nor attenuates.
+            stack_reflectance = 0.0;
+            stack_transmittance = 1.0;
+            return;
+        }
+        const double layer_absorptance = 1.0 - layer_reflectance - layer_transmittance;
+        if (layer_absorptance <= 1e-10) {
+            // Non-absorbing limit of Eq. 9 (a, b -> 1): resistances add, so T_m = tau / (tau + m rho) and R_m = 1 - T_m.
+            stack_transmittance = layer_transmittance / (layer_transmittance + number_of_layers * layer_reflectance);
+            stack_reflectance = 1.0 - stack_transmittance;
+            return;
+        }
+        const double rho2 = layer_reflectance * layer_reflectance;
+        const double tau2 = layer_transmittance * layer_transmittance;
+        // delta^2 = (tau^2 - rho^2 - 1)^2 - 4 rho^2, written in factored form for accuracy.
+        const double delta = std::sqrt((1.0 + layer_reflectance + layer_transmittance) * (1.0 + layer_reflectance - layer_transmittance) * (1.0 - layer_reflectance + layer_transmittance) * layer_absorptance);
+        const double a = (1.0 + rho2 - tau2 + delta) / (2.0 * layer_reflectance);
+        const double b = (1.0 - rho2 + tau2 + delta) / (2.0 * layer_transmittance);
+        // Eq. 9 with numerator and denominator divided by b^m, so that strongly absorbing layers (b >> 1, possibly
+        // infinite when tau underflows to zero) give b^-m -> 0 instead of an overflow.
+        const double b_inverse_power = std::exp(-number_of_layers * std::log(b));
+        const double b_inverse_power2 = b_inverse_power * b_inverse_power;
+        const double denominator = a - b_inverse_power2 / a;
+        stack_reflectance = (1.0 - b_inverse_power2) / denominator;
+        stack_transmittance = (a - 1.0 / a) * b_inverse_power / denominator;
+    }
+
+} // namespace
 
 LeafOptics::LeafOptics(helios::Context *a_context) {
 
@@ -387,11 +583,7 @@ void LeafOptics::run(const LeafOpticsProperties &leafproperties, const std::stri
 
 
 void LeafOptics::PROSPECT(float numberlayers, float Chlorophyllcontent, float carotenoidcontent, float anthocyancontent, float brownpigments, float watermass, float drymass, float protein, float carbonconstituents,
-                          std::vector<float> &reflectivities_fit, std::vector<float> &transmissivities_fit)
-// Implementation of Prospect-PRO, port of public available matlab code
-{
-    double k;
-    double tau, ralf, r12, talf, t12, t21, r21, denom, Ta, Ra, t, r;
+                          std::vector<float> &reflectivities_fit, std::vector<float> &transmissivities_fit) {
 
     // PROSPECT() is a spectrum-computing entry point in its own right, so it must apply the
     // same input validation as getLeafSpectra(). Validating through a LeafOpticsProperties
@@ -415,67 +607,42 @@ void LeafOptics::PROSPECT(float numberlayers, float Chlorophyllcontent, float ca
     reflectivities_fit.reserve(nw);
     transmissivities_fit.reserve(nw);
 
-    // Loop over wavelength, might be a way to be vectorized at least partly
-    for (int i = 0; i < LeafOptics::nw; i++) {
-        // k: the mean absorption coefficient of each elementary layer.
-        k = (Chlorophyllcontent * absorption_chlorophyll.at(i) + carotenoidcontent * absorption_carotenoid.at(i) + anthocyancontent * absorption_anthocyanin.at(i) + brownpigments * absorption_brown.at(i) + watermass * absorption_water.at(i) +
-             drymass * absorption_drymass.at(i) + protein * absorption_protein.at(i) + carbonconstituents * absorption_carbonconstituents.at(i)) /
-            numberlayers;
+    for (uint iwave = 0; iwave < nw; iwave++) {
+        // Absorption coefficient of one elementary layer: total absorption of all constituents shared among the N
+        // layers (PROSPECT-PRO Eq. 3, k = sum_i K_i C_i / N). In PROSPECT-PRO mode the dry mass has already been
+        // replaced by its protein and carbon-based-constituent fractions (PROSPECT-PRO Eq. 5).
+        const double total_absorption = static_cast<double>(Chlorophyllcontent) * absorption_chlorophyll.at(iwave) + static_cast<double>(carotenoidcontent) * absorption_carotenoid.at(iwave) +
+                                        static_cast<double>(anthocyancontent) * absorption_anthocyanin.at(iwave) + static_cast<double>(brownpigments) * absorption_brown.at(iwave) + static_cast<double>(watermass) * absorption_water.at(iwave) +
+                                        static_cast<double>(drymass) * absorption_drymass.at(iwave) + static_cast<double>(protein) * absorption_protein.at(iwave) + static_cast<double>(carbonconstituents) * absorption_carbonconstituents.at(iwave);
+        const double layer_absorption = total_absorption / static_cast<double>(numberlayers);
+        const double theta = elementaryLayerTransmission(layer_absorption); // J&B 1990 Eq. 11
 
-        // diffuse transmittance through elementary layer, this integral needs more effort in C++
-        tau = transmittance(k);
-        // surface reflectance at radiated leaf side for near normal incident beam radiation,
-        ralf = R_spec_normal.at(i); // calculate 1-tav in surface function
-        // surface reflectance at radiated leaf side for diffuse radiation
-        r12 = R_spec_diffuse.at(i);
+        const double n = refractiveindex.at(iwave);
+        const double n2 = n * n;
+        const double t_alpha = 1.0 - static_cast<double>(R_spec_normal.at(iwave)); // t_av(40, n): incidence on a rough leaf
+        const double t_90 = 1.0 - static_cast<double>(R_spec_diffuse.at(iwave)); // t_av(90, n): isotropic incidence
 
+        // Plate model for a single compact layer (J&B 1990 Eqs. 1-2). The inner face of each interface has
+        // transmissivity t21 = t_av(90, n) / n^2 and reflectivity r21 = 1 - t21 (diffuse light leaving the plate).
+        const double theta2 = theta * theta;
+        const double plate_denominator = n2 * n2 - theta2 * (n2 - t_90) * (n2 - t_90);
+        const double rho_alpha = (1.0 - t_alpha) + t_90 * t_alpha * theta2 * (n2 - t_90) / plate_denominator;
+        const double tau_alpha = t_90 * t_alpha * theta * n2 / plate_denominator;
+        const double rho_90 = (1.0 - t_90) + t_90 * t_90 * theta2 * (n2 - t_90) / plate_denominator;
+        const double tau_90 = t_90 * t_90 * theta * n2 / plate_denominator;
 
-        talf = 1 - ralf; // tav90
-        t12 = 1 - r12; // tav
+        // The remaining N-1 layers are stacked with the Stokes solution (J&B 1990 Eq. 9) ...
+        double stack_reflectance = 0.0;
+        double stack_transmittance = 1.0;
+        stokesLayerStack(rho_90, tau_90, static_cast<double>(numberlayers) - 1.0, stack_reflectance, stack_transmittance);
 
-        // transmittance and reflectance for leaf internal diffuse light
-        t21 = t12 / (refractiveindex.at(i) * refractiveindex.at(i)); // tav/n^2
-        r21 = 1 - t21;
+        // ... and combined with the directly illuminated top layer (J&B 1990 Eqs. 7-8).
+        const double interreflection = 1.0 - rho_90 * stack_reflectance;
+        const double leaf_reflectance = rho_alpha + tau_alpha * tau_90 * stack_reflectance / interreflection;
+        const double leaf_transmittance = tau_alpha * stack_transmittance / interreflection;
 
-        // top or incident surface side
-
-        denom = 1 - r21 * r21 * tau * tau; // (euqation1 in RPOSPECT)
-        Ta = talf * tau * t21 / denom; // transmittance of top surface (euqation2 in RPOSPECT)  taua
-        Ra = ralf + r21 * tau * Ta; // reflectance of top surface  (euqation1 in RPOSPECT)   rhoa
-
-        // bottom surface side
-
-        t = t12 * tau * t21 / denom; //  (page 78 paragraph 1 in RPOSPECT)   tau90
-        r = r12 + r21 * tau * t; //  (page 78 paragraph 1 in RPOSPECT)    rho90
-
-        // reflectance and transmittance of numberlayers layers, Stokes' solution
-        double D, rq, tq, a, b, bNm1, bN2, a2, Rsub, Tsub;
-        D = sqrt((1. + r + t) * (1. + r - t) * (1. - r + t) * (1. - r - t));
-        rq = r * r;
-        tq = t * t;
-        a = (1. + rq - tq + D) / (2 * r);
-        b = (1. - rq + tq + D) / (2 * t);
-        bNm1 = std::pow(b, (numberlayers - 1));
-        bN2 = bNm1 * bNm1;
-        a2 = a * a;
-        denom = a2 * bN2 - 1.;
-        Rsub = a * (bN2 - 1.) / denom;
-        Tsub = bNm1 * (a2 - 1.) / denom;
-
-        // Case of zero absorption
-        // The boundary r+t == 1 must be included: there D collapses to zero and the
-        // analytic Stokes solution above is degenerate.
-
-        if ((r + t) >= 1.0) {
-            Tsub = t / (t + (1. - t) * (numberlayers - 1));
-            Rsub = 1 - Tsub;
-        }
-
-        // Reflectance and transmittance of the leaf: combine top layer with next numberlayers-1 layers
-
-        denom = 1 - Rsub * r;
-        transmissivities_fit.push_back(Ta * Tsub / denom); //(euqation8 in RPOSPEC
-        reflectivities_fit.push_back(Ra + Ta * Rsub * t / denom); //(euqation7 in RPOSPECT)
+        reflectivities_fit.push_back(static_cast<float>(leaf_reflectance));
+        transmissivities_fit.push_back(static_cast<float>(leaf_transmittance));
     }
 }
 
@@ -548,118 +715,20 @@ void LeafOptics::getLeafSpectra(const LeafOpticsProperties &leafproperties, std:
     }
 }
 
-void LeafOptics::surface(float degree, std::vector<float> &reflectivities)
-//! Mean fresnel reflectance over incidence angle 0...degree (°)  Sterns procedure
-//! Ported from Prospect-D calctav.m
-{
-
-    double rad2degree = 57.2958;
-    // tav is the transmissivity of a dielectric plane surface, averaged over all directions of incidence and over all polarizations.
-    double n2, np, nm, a, k, sinvalue, b1, b2, b, b3, a3, ts, tp1, tp2, tp3, tp4, tp5, tp, tav;
-    for (int i = 0; i < LeafOptics::nw; i++) {
-        double n = refractiveindex.at(i); // refractive index
-        n2 = n * n;
-        np = n2 + 1;
-        nm = n2 - 1;
-        a = (n + 1) * (n + 1) / 2;
-        k = -(n2 - 1) * (n2 - 1) / 4;
-        sinvalue = sin(degree / rad2degree);
-        if (degree < 90.0) {
-            b1 = sqrt((sinvalue * sinvalue - np / 2) * (sinvalue * sinvalue - np / 2) + k);
-        } else {
-            b1 = 0.0;
-        }
-        b2 = sinvalue * sinvalue - np / 2;
-        b = b1 - b2;
-        b3 = b * b * b;
-        a3 = a * a * a;
-        ts = (k * k / (6 * b3) + k / b - b / 2) - (k * k / (6 * a3) + k / a - a / 2);
-        tp1 = -2 * n2 * (b - a) / (np * np);
-        tp2 = -2 * n2 * np * log(b / a) / (nm * nm);
-        tp3 = n2 * (1 / b - 1 / a) / 2;
-        tp4 = 16 * n2 * n2 * (n2 * n2 + 1) * log((2 * np * b - nm * nm) / (2 * np * a - nm * nm)) / (np * np * np * nm * nm);
-        tp5 = 16 * n2 * n2 * n2 * (1 / (2 * np * b - nm * nm) - 1 / (2 * np * a - nm * nm)) / (np * np * np);
-        tp = tp1 + tp2 + tp3 + tp4 + tp5;
-        tav = (ts + tp) / (2 * sinvalue * sinvalue);
-        reflectivities.push_back(1.0 - tav);
+void LeafOptics::surface(float degree, std::vector<float> &reflectivities) {
+    // Surface reflectivity 1 - t_av(alpha, n) of the leaf-air interface for incidence within a cone of half-angle
+    // 'degree' (J&B 1990, Eq. 1 and Fig. 1).
+    if (degree <= 0.f || degree > 90.f) {
+        helios_runtime_error("ERROR (LeafOptics::surface): the incidence cone half-angle must be in (0, 90] degrees, but " + std::to_string(degree) + " was given.");
     }
-    return;
+    reflectivities.resize(nw);
+    for (uint iwave = 0; iwave < nw; iwave++) {
+        reflectivities.at(iwave) = static_cast<float>(1.0 - averageInterfaceTransmissivity(degree, refractiveindex.at(iwave)));
+    }
 }
 
 float LeafOptics::transmittance(double k) {
-    //! Implementation for diffuse transmittance through an elementary layer
-    //! Exponential integral: S13AAF routine from the NAG library
-    //! Ported from public available  Prospect-D Fortran code
-    double xx, yy;
-    float tau;
-    //! Zero (or negative) absorption means the elementary layer transmits everything.
-    //! The reference PROSPECT implementation initializes tau to 1 and only overwrites
-    //! it where k > 0. k is exactly zero whenever every constituent absorption term
-    //! vanishes, which is reachable in PROSPECT-PRO mode (the protein absorption
-    //! spectrum is identically zero over 400-1432 nm and drymass is forced to zero).
-    if (k <= 0.0)
-        return 1.0;
-
-    if (k < 4.0) {
-        xx = 0.5 * k - 1.0;
-        yy = (((((((((((((((-3.60311230482612224e-13L * xx + 3.46348526554087424e-12L) * xx - 2.99627399604128973e-11L) * xx + 2.57747807106988589e-10L) * xx - 2.09330568435488303e-9L) * xx + 1.59501329936987818e-8L) * xx - 1.13717900285428895e-7L) *
-                              xx +
-                      7.55292885309152956e-7L) *
-                             xx -
-                     4.64980751480619431e-6L) *
-                            xx +
-                    2.63830365675408129e-5L) *
-                           xx -
-                   1.37089870978830576e-4L) *
-                          xx +
-                  6.47686503728103400e-4L) *
-                         xx -
-                 2.76060141343627983e-3L) *
-                        xx +
-                1.05306034687449505e-2L) *
-                       xx -
-               3.57191348753631956e-2L) *
-                      xx +
-              1.07774527938978692e-1L) *
-                     xx -
-             2.96997075145080963e-1L;
-        yy = (yy * xx + 8.64664716763387311e-1L) * xx + 7.42047691268006429e-1L;
-        yy = yy - log(k);
-        tau = (1.0 - k) * exp(-k) + k * k * yy;
-        return tau;
-    }
-    if (k < 85.0) {
-        xx = 14.5 / (k + 3.25) - 1.0;
-        yy = (((((((((((((((-1.62806570868460749e-12L * xx - 8.95400579318284288e-13L) * xx - 4.08352702838151578e-12L) * xx - 1.45132988248537498e-11L) * xx - 8.35086918940757852e-11L) * xx - 2.13638678953766289e-10L) * xx -
-                       1.10302431467069770e-9L) *
-                              xx -
-                      3.67128915633455484e-9L) *
-                             xx -
-                     1.66980544304104726e-8L) *
-                            xx -
-                    6.11774386401295125e-8L) *
-                           xx -
-                   2.70306163610271497e-7L) *
-                          xx -
-                  1.05565006992891261e-6L) *
-                         xx -
-                 4.72090467203711484e-6L) *
-                        xx -
-                1.95076375089955937e-5L) *
-                       xx -
-               9.16450482931221453e-5L) *
-                      xx -
-              4.05892130452128677e-4L) *
-                     xx -
-             2.14213055000334718e-3L;
-        yy = ((yy * xx - 1.06374875116569657e-2L) * xx - 8.50699154984571871e-2L) * xx + 9.23755307807784058e-1L;
-        yy = exp(-k) * yy / k;
-        tau = (1.0 - k) * exp(-k) + k * k * yy;
-        return tau;
-    }
-    //! k >= 85: exp(-k) underflows to zero in double precision, so the layer is
-    //! fully absorbing to within machine precision.
-    return 0.0;
+    return static_cast<float>(elementaryLayerTransmission(k));
 }
 
 void LeafOptics::setProperties(const std::vector<uint> &UUIDs, const LeafOpticsProperties &leafproperties) {
@@ -848,38 +917,25 @@ void LeafOptics::createAdaptiveBins(const std::vector<float> &nitrogen_values) {
         return;
     }
 
-    // Sort nitrogen values for quantile calculation
-    std::vector<float> sorted_N = nitrogen_values;
-    std::sort(sorted_N.begin(), sorted_N.end());
+    // Bin centres are spaced evenly across the range the leaves currently span. Placing them at quantiles of
+    // the population concentrated them wherever many leaves shared a value -- in a growing canopy, every
+    // leaf that has just emerged sits at zero -- and left the rest of the range to one or two spectra, so
+    // leaves of quite different nitrogen rendered identically and the canopy showed hard colour steps.
+    const auto [lowest, highest] = std::minmax_element(nitrogen_values.begin(), nitrogen_values.end());
+    const float range_low = *lowest;
+    const float range_high = *highest;
 
-    uint count = sorted_N.size();
-    uint target_bins = nitrogen_params.num_bins;
-
-    // Adjust number of bins if fewer unique values than requested bins
-    if (count < target_bins) {
-        target_bins = count;
+    uint target_bins = std::max(1u, nitrogen_params.num_bins);
+    if (range_high - range_low < 0.001f) {
+        target_bins = 1; // every leaf holds the same nitrogen
     }
 
-    // Create quantile-based bin centers
     std::vector<float> bin_centers;
     for (uint i = 0; i < target_bins; i++) {
-        // Calculate index for quantile center
-        uint idx = (i * count / target_bins) + (count / (2 * target_bins));
-        if (idx >= count) {
-            idx = count - 1;
-        }
-        float center = sorted_N[idx];
-
-        // Only add if not a duplicate (within tolerance)
-        bool is_duplicate = false;
-        for (float existing: bin_centers) {
-            if (std::abs(center - existing) < 0.001f) {
-                is_duplicate = true;
-                break;
-            }
-        }
-        if (!is_duplicate) {
-            bin_centers.push_back(center);
+        if (target_bins == 1) {
+            bin_centers.push_back(0.5f * (range_low + range_high));
+        } else {
+            bin_centers.push_back(range_low + (range_high - range_low) * float(i) / float(target_bins - 1));
         }
     }
 
@@ -933,8 +989,15 @@ bool LeafOptics::shouldReassign(float current_N, uint current_bin) {
         return false;
     }
 
-    // Check relative threshold
-    float relative_change = (bin_center > 0.0f) ? (absolute_change / bin_center) : 0.0f;
+    // Check relative threshold. A bin centered at zero is the one a leaf is placed in when it
+    // emerges holding no nitrogen, and it has no scale to measure a relative change against: any
+    // movement away from it is an unbounded relative change. Treating that as no change at all
+    // would leave every leaf that ever emerged permanently in the zero bin, rendering at the
+    // minimum chlorophyll however much nitrogen it went on to accumulate.
+    if (bin_center <= 0.0f) {
+        return true;
+    }
+    float relative_change = absolute_change / bin_center;
     return relative_change > nitrogen_params.reassignment_threshold;
 }
 
@@ -948,6 +1011,51 @@ bool LeafOptics::isSignificantImprovement(float current_N, uint old_bin, uint ne
 
     // Require improvement of at least half the minimum change threshold (hysteresis)
     return (old_distance - new_distance) > nitrogen_params.min_reassignment_change * 0.5f;
+}
+
+bool LeafOptics::nitrogenOutsideBinRange(const std::vector<float> &nitrogen_values) {
+    if (nitrogen_bins.empty()) {
+        return true;
+    }
+
+    // Bin centers are evenly spaced in ascending order, so the first and last bound the range the
+    // bins can represent. A single bin has no spacing of its own, so the reassignment threshold
+    // supplies the scale instead.
+    const float range_low = nitrogen_bins.front().N_center;
+    const float range_high = nitrogen_bins.back().N_center;
+    float margin = nitrogen_params.min_reassignment_change;
+    if (nitrogen_bins.size() > 1) {
+        margin = 0.5f * (range_high - range_low) / float(nitrogen_bins.size() - 1);
+    }
+
+    for (float N_value: nitrogen_values) {
+        if (N_value < range_low - margin || N_value > range_high + margin) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void LeafOptics::assignObjectsToNearestBins(const std::map<uint, std::vector<uint>> &object_groups, const std::map<uint, float> &object_nitrogen) {
+    for (const auto &pair: object_groups) {
+        uint objID = pair.first;
+        const std::vector<uint> &obj_UUIDs = pair.second;
+        float N_area = object_nitrogen.at(objID);
+
+        uint best_bin = findNearestBin(N_area);
+        assignSpectrumToPrimitives(obj_UUIDs, best_bin);
+
+        ObjectAssignment assignment;
+        assignment.bin_index = best_bin;
+        assignment.N_at_assignment = N_area;
+        assignment.primitive_UUIDs = obj_UUIDs;
+        object_assignments[objID] = assignment;
+
+        for (uint UUID: obj_UUIDs) {
+            primitive_to_object[UUID] = objID;
+        }
+    }
 }
 
 void LeafOptics::assignSpectrumToPrimitives(const std::vector<uint> &UUIDs, uint bin_index) {
@@ -1039,26 +1147,7 @@ void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties_
         createAdaptiveBins(nitrogen_values);
 
         // Assign each object to nearest bin
-        for (const auto &pair: object_groups) {
-            uint objID = pair.first;
-            const std::vector<uint> &obj_UUIDs = pair.second;
-            float N_area = object_nitrogen[objID];
-
-            uint best_bin = findNearestBin(N_area);
-            assignSpectrumToPrimitives(obj_UUIDs, best_bin);
-
-            // Track assignment
-            ObjectAssignment assignment;
-            assignment.bin_index = best_bin;
-            assignment.N_at_assignment = N_area;
-            assignment.primitive_UUIDs = obj_UUIDs;
-            object_assignments[objID] = assignment;
-
-            // Track primitive to object mapping
-            for (uint UUID: obj_UUIDs) {
-                primitive_to_object[UUID] = objID;
-            }
-        }
+        assignObjectsToNearestBins(object_groups, object_nitrogen);
 
         nitrogen_mode_active = true;
 
@@ -1096,6 +1185,23 @@ void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties_
                 primitive_to_object.erase(UUID);
             }
             object_assignments.erase(objID);
+        }
+
+        if (nitrogenOutsideBinRange(nitrogen_values)) {
+            // Nitrogen has moved beyond what the existing bins can represent, which happens
+            // routinely over a simulated season. Snapping these leaves to the nearest bin would
+            // clamp them to an extreme bin and hold their spectrum fixed for the rest of the run,
+            // so the bins are rebuilt over the current distribution. Every object is reassigned
+            // because the bin labels are reused: an assignment left over from the previous bins
+            // would otherwise point a leaf at a different bin's spectrum.
+            createAdaptiveBins(nitrogen_values);
+            assignObjectsToNearestBins(object_groups, object_nitrogen);
+
+            if (message_flag) {
+                std::cout << "LeafOptics: Leaf nitrogen moved outside the established bin range. Rebuilt " << nitrogen_bins.size() << " spectrum bins and reassigned " << object_assignments.size() << " leaf objects." << std::endl;
+            }
+
+            return;
         }
 
         // Process current objects

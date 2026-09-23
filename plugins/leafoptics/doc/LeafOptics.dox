@@ -669,23 +669,22 @@ This method re-reads nitrogen from parent objects and reassigns primitives if th
 
 \subsection LONitrogenBinning Adaptive Binning Algorithm
 
-The adaptive binning algorithm selects bin centers using quantiles of the nitrogen distribution:
+The binning algorithm spaces `num_bins` bin centers evenly across the range of nitrogen the leaves currently span, and generates a PROSPECT spectrum for each. A single bin is used when every leaf holds the same nitrogen.
 
-1. Sort nitrogen values from all tracked objects
-2. Select bin centers at evenly spaced quantile positions
-3. Remove duplicate bin centers (occurs when many objects have similar nitrogen)
-4. Generate a PROSPECT spectrum for each unique bin
+The bins are spread evenly rather than placed at quantiles of the leaf population. A growing canopy holds many leaves at the same value -- every leaf that has just emerged sits at zero -- and quantile bins pile up on that value, leaving the rest of the range to one or two spectra, so that leaves of quite different nitrogen render identically and the canopy shows hard colour steps.
 
-This ensures bins are concentrated where data is dense, providing better spectral resolution in common nitrogen ranges while limiting the total number of unique spectra.
+Bins are created on the first \ref LeafOptics::run(const std::vector<uint> &, const LeafOpticsProperties_Nauto &) "run()" call, and on every later call the incoming nitrogen values are checked against the range the bins span. If any leaf lies beyond the outermost bin centers by more than half the mean bin spacing &mdash; which happens routinely as a canopy fills over a simulated season &mdash; the bins are rebuilt over the current distribution and every tracked object is reassigned. Without this, such leaves would be clamped to the outermost bin and hold that spectrum for the rest of the run, so a time series begun when all leaves shared their initial nitrogen would render with a single fixed spectrum throughout.
 
 \subsection LONitrogenStability Reassignment Stability (Hysteresis)
 
-To prevent oscillation at bin boundaries, reassignment requires both:
+To prevent oscillation at bin boundaries, a leaf is reassigned only when:
 
-1. **Relative change**: \f$|N_{current} - N_{bin}| / N_{bin} > reassignment\_threshold\f$
-2. **Absolute change**: \f$|N_{current} - N_{bin}| > min\_reassignment\_change\f$
+1. **Absolute change**: \f$|N_{current} - N_{bin}| > min\_reassignment\_change\f$ (default 0.05 g N/m\f$^2\f$)
+2. **Relative change** (off by default): \f$|N_{current} - N_{bin}| / N_{bin} > reassignment\_threshold\f$
 
 Additionally, moving to a new bin requires a significant improvement in fit (at least half of `min_reassignment_change` closer to the new bin center than the old). This hysteresis prevents frequent reassignments when nitrogen values hover near bin boundaries.
+
+The relative test is disabled by default because, with evenly spaced bins, it holds a leaf at high nitrogen several bins away from the one that represents it: at a 30 % threshold a leaf that filled from 2.2 to 2.5 g N/m\f$^2\f$ kept the 2.2 spectrum for the rest of a simulation. It governs drift *within* the established bin range only; nitrogen moving outside that range rebuilds the bins as described in \ref LONitrogenBinning.
 
 \subsection LONitrogenPFT Parameter Values by Plant Functional Type
 

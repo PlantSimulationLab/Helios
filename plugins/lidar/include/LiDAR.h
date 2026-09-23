@@ -2,14 +2,17 @@
 
     Copyright (C) 2016-2025 Brian Bailey
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, version 2.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
+    This library is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    SPDX-License-Identifier: LGPL-2.1-or-later
 
 */
 
@@ -609,6 +612,11 @@ struct ScanMetadata {
 
     //! Convert the (row,column) of hit point in a scan to a direction vector
     /**
+     * For a raster scan the grid samples inclusive endpoints: row 0 is at \ref thetaMin and row Ntheta-1 at
+     * \ref thetaMax, column 0 is at \ref phiMin and column Nphi-1 at \ref phiMax, so the azimuth increases with
+     * column across the sweep from \ref phiMin to \ref phiMax. For a spinning multibeam scan the zenith of each row is
+     * that channel's fixed angle and the azimuth step is periodic ((phiMax-phiMin)/Nphi, exclusive endpoint) so that no
+     * wrap column is duplicated. This is the same grid the synthetic scan generator emits.
      * \param[in] row  Index of hit point in the theta (zenithal) direction.
      * \param[in] column  Index of hit point in the phi (azimuthal) direction.
      * \return Spherical vector corresponding to the ray direction for the given hit point.
@@ -617,6 +625,10 @@ struct ScanMetadata {
 
     //! Convert the scan ray direction into (row,column) table index
     /**
+     * The inverse of \ref rc2direction(): a direction on the nominal scan grid maps back to the cell that produced it.
+     * The azimuth is unwrapped relative to \ref phiMin before binning, so a direction obtained from
+     * \ref LiDARcloud::getHitRaydir() (whose azimuth is normalized to [0,2pi)) is handled correctly even when the
+     * scan's sweep crosses 360 degrees. The returned indices are clamped to the scan's grid.
      * \param[in] direction  Spherical vector corresponding to the ray direction for the given hit point.
      * \return (row,column) table index for the given hit point
      */
@@ -1658,9 +1670,9 @@ public:
 
     //! Reject ray-direction validation for moving-platform scans
     /** Raises an error if any scan is a moving-platform scan, whose per-pulse origins make a single-origin direction
-        check meaningless. For static scans it performs no per-hit check: it used to compare hits located through a
-        per-scan (row, column) table that no loader ever populated, so it never examined a hit, and that table has
-        been removed. */
+        check meaningless. For static scans, every hit that carries "row" and "column" hit data has its recorded
+        direction compared against the direction \ref ScanMetadata::rc2direction() maps that cell to, and an error is
+        raised if the two disagree by substantially more than one grid cell. Hits without row/column data are skipped. */
     void validateRayDirections();
 
     //! Disable all print messages to the screen except for fatal error messages

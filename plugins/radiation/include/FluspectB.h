@@ -1,10 +1,16 @@
-/** \file "FluspectB.h" Fluspect-B leaf fluorescence model (Vilfan et al. 2016) for Helios RadiationModel SIF plugin.
+/** \file "FluspectB.h" Fluspect-B/CX leaf fluorescence model for the Helios RadiationModel SIF pipeline.
  *
- * This module ports the fluspect_B_CX.m routine from SCOPE v2.0
- * (https://github.com/Christiaanvandertol/SCOPE) to C++. Given leaf
- * biochemistry (PROSPECT-PRO + CX inputs) and Optipar specific-absorption
- * coefficients, it computes:
- *   (a) PROSPECT-PRO-CX leaf reflectance and transmittance over 400-2400 nm
+ * Implements the leaf radiative transfer and chlorophyll-fluorescence model described in
+ *   - Vilfan, N., van der Tol, C., Muller, O., Rascher, U., Verhoef, W. (2016) Fluspect-B: A model for leaf
+ *     fluorescence, reflectance and transmittance spectra. Remote Sensing of Environment 186:596-615;
+ *   - Vilfan, N., Van der Tol, C., Yang, P., Wyber, R., Malenovsky, Z., Robinson, S.A., Verhoef, W. (2018)
+ *     Extending Fluspect to simulate xanthophyll driven leaf reflectance dynamics. Remote Sensing of
+ *     Environment 211:345-356 (violaxanthin/zeaxanthin carotenoid absorption mixing);
+ *   - Jacquemoud, S., Baret, F. (1990) PROSPECT: A model of leaf optical properties spectra. Remote Sensing of
+ *     Environment 34:75-91 (plate model and N-layer Stokes solution),
+ * with the protein and carbon-based-constituent absorption terms of PROSPECT-PRO (Feret et al. 2021).
+ * Given leaf biochemistry and Optipar specific-absorption coefficients, it computes:
+ *   (a) leaf directional-hemispherical reflectance and transmittance over the Optipar grid (400-2400 nm)
  *   (b) Forward and backward fluorescence excitation-emission matrices
  *       M_f[wlf, wle] and M_b[wlf, wle] (units: dimensionless fluorescence
  *       efficiency per excitation-emission wavelength pair). The M matrices,
@@ -12,9 +18,22 @@
  *       quantum yield Phi_F, give the per-leaf fluorescence emission at each
  *       emission wavelength.
  *
- * Inputs and outputs closely follow the MATLAB reference; see SCOPE's
- * src/RTMs/fluspect_B_CX.m. Optipar specific-absorption coefficients are
- * loaded from plugins/radiation/spectral_data/fluspect_B_optipar.xml.
+ * Optipar specific-absorption coefficients are loaded from
+ * plugins/radiation/spectral_data/fluspect_B_optipar.xml.
+ *
+ * Copyright (C) 2016-2026 Brian Bailey
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #ifndef HELIOS_FLUSPECT_B_H
@@ -79,10 +98,11 @@ namespace helios {
 
         //! Forward fluorescence excitation-emission matrix. Indexed Mf[wlf_idx][wle_idx].
         //! Each entry is the fluorescence emission per unit excitation flux, integrated
-        //! over the leaf, emitted from the face receiving the excitation.
+        //! over the leaf, emitted from the face opposite the one receiving the excitation
+        //! (Vilfan et al. 2016: "forward" = detected from the leaf side turned away from the light).
         std::vector<std::vector<float>> Mf;
         //! Backward fluorescence excitation-emission matrix. Same shape as Mf. Emitted
-        //! from the face opposite the one receiving the excitation.
+        //! from the face receiving the excitation (toward the light source).
         std::vector<std::vector<float>> Mb;
     };
 
@@ -101,14 +121,13 @@ namespace helios {
 
     //! Compute Fluspect-B leaf optics + fluorescence matrices for a single leaf biochemistry.
     /**
-     * Implements the doubling-method algorithm from fluspect_B_CX.m (SCOPE v2.0). The
-     * excitation grid is 400-750 nm at `excitation_step_nm` spacing (default 5 nm to match
-     * SCOPE's int=5 internal resolution). The emission grid is 640-848 nm at 4 nm spacing
-     * (Fluspect native; corresponds to wlf = 640:4:850 with MATLAB's inclusive/exclusive
-     * endpoint convention yielding 848 as the last sample).
+     * Implements the doubling-method algorithm of Vilfan et al. (2016), Sec. 2.4 and Appendices
+     * A-C. The excitation grid is 400-750 nm at `excitation_step_nm` spacing (default 5 nm). The
+     * emission grid is 640-848 nm at 4 nm spacing. Each kernel column includes the excitation
+     * grid spacing as a quadrature weight, so kernel values scale with `excitation_step_nm`.
      *
-     * Numerical agreement with MATLAB fluspect_B_CX is to within ~1e-6 per Mf/Mb element
-     * given identical Optipar coefficients.
+     * Agreement with the reference kernels in plugins/radiation/tests/reference/ is to within
+     * ~1e-6 relative per Mf/Mb element given identical Optipar coefficients.
      *
      * \param[in] biochem Leaf biochemistry inputs.
      * \param[in] optipar Optipar coefficients loaded via loadFluspectOptipar.

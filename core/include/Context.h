@@ -3,14 +3,17 @@
  *
  * Copyright (C) 2016-2026 Brian Bailey
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, version 2
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #ifndef HELIOS_CONTEXT
@@ -3300,8 +3303,26 @@ namespace helios {
      */
     class Context {
         friend class Primitive; // Allow Primitive methods to access private material data
+        friend class CompoundObject; // Allow CompoundObject to apply bulk transforms to the primitives it owns
 
     private:
+
+        //! Add a translation to the transformation matrices of a set of primitives, bypassing the parent-object transform lock
+        /**
+         * Applies the shift directly to the translation column of each primitive's matrix, which is what
+         * left-multiplying by a translation matrix does for an affine transform, and does it with a single
+         * lookup per primitive.
+         *
+         * Intended for CompoundObject::translate(), which moves the primitives it owns. Primitive::translate()
+         * and Primitive::applyTransform() deliberately refuse to move a primitive that belongs to a compound
+         * object, so they cannot be used here; the object is the thing entitled to move them.
+         *
+         * \param[in] UUIDs Unique universal identifiers of the primitives to translate. UUIDs that do not exist are skipped.
+         * \param[in] shift Distance to translate by.
+         * @private
+         */
+        void translateObjectPrimitives_private(const std::vector<uint> &UUIDs, const vec3 &shift);
+
         //---------- PRIMITIVE/OBJECT HELIOS::VECTORS ----------------//
 
         //! Get a pointer to a Primitive element from the Context
