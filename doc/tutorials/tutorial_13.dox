@@ -25,7 +25,7 @@ This tutorial covers the following topics:
 2. Authoring per-leaf biochemistry (PROSPECT-D + Fluspect-B) from leaf nitrogen with the
    \ref LeafOptics plug-in's nitrogen-auto interface.
 3. Configuring the \ref PhotosynthesisModel to output per-leaf electron-transport ratio
-   (\f$J/J_{\max}\f$).
+   (the relative light saturation \f$J_a/J_e\f$).
 4. Setting up the \ref RadiationModel with a solar source, a PAR band, and the SIF emission bands.
 5. Adding a \ref SIFCameraProperties "SIF camera" — which auto-generates the internal excitation
    bands needed to drive Fluspect-B.
@@ -132,7 +132,9 @@ exactly once no matter how many leaves share a bin.
 \section tutorial13_photosynthesis 3. Configuring the photosynthesis model
 
 The van der Tol (2014) fluorescence quantum yield \f$\Phi_F\f$ is driven by the per-leaf
-electron-transport ratio \f$J/J_{\max}\f$. The \ref PhotosynthesisModel does not write this
+electron-transport ratio \f$J_a/J_e\f$: the electron transport used by carbon metabolism divided by its
+light-limited potential, which is 1 in the dark and falls as light saturates photosynthesis. The
+\ref PhotosynthesisModel does not write this
 field by default — we have to opt in via
 \ref PhotosynthesisModel::optionalOutputPrimitiveData() before running the model:
 
@@ -235,11 +237,13 @@ The SIF pipeline imposes a strict ordering on three calls:
 1. The PAR \ref RadiationModel::runBand() "runBand()" must run first, so each leaf has a valid
    \c radiation_flux_PAR for photosynthesis to read.
 2. \ref PhotosynthesisModel::run() runs second, populating
-   \c electron_transport_ratio per leaf. This field is what the van der Tol \f$\Phi_F\f$
-   formulation reads.
+   \c electron_transport_ratio per leaf: the relative light saturation \f$J_a/J_e\f$ that the
+   van der Tol \f$\Phi_F\f$ formulation reads. Every leaf that carries biochemistry must have it,
+   or the SIF \ref RadiationModel::runBand() "runBand()" throws.
 3. The SIF \ref RadiationModel::runBand() "runBand()" runs last. Internally it first ray-traces
-   all 35 auto-generated excitation bands (capturing per-leaf APAR), then computes per-leaf SIF
-   source flux from the cached Fluspect-B kernel × APAR × \f$\Phi_F\f$, then ray-traces the
+   all 35 auto-generated excitation bands (capturing the excitation flux incident on each leaf),
+   then computes per-leaf SIF source flux from the cached Fluspect-B kernel × incident excitation
+   × \f$\Phi_F\f$, then ray-traces the
    user-defined \c SIF_red and \c SIF_farred bands with the leaf as the emitting source.
 
 ~~~~~~{.cpp}
@@ -253,8 +257,8 @@ The SIF pipeline imposes a strict ordering on three calls:
 ~~~~~~
 
 The \ref RadiationModel::runBand() vector overload is called explicitly with both SIF bands so
-that the auto-generated excitation bands run only once for the dispatch — the per-leaf APAR
-buffer is shared between the two emission bands in this single call. Calling
+that the auto-generated excitation bands run only once for the dispatch — the per-leaf
+excitation-flux buffer is shared between the two emission bands in this single call. Calling
 \ref RadiationModel::runBand() once per band would also work, but would re-trace the
 excitation bands each time.
 
@@ -298,7 +302,7 @@ A few useful extensions of this tutorial:
   the per-pixel ratio \c SIF_farred / \c SIF_red — this is a standard metric for chlorophyll
   content and stress diagnosis.
 - <b>Stress-driven \f$\Phi_F\f$.</b> The van der Tol model is sensitive to leaf temperature and
-  \f$J/J_{\max}\f$. Coupling photosynthesis with the
+  \f$J_a/J_e\f$. Coupling photosynthesis with the
   \ref EnergyBalanceDoc "energy balance plug-in" (so leaf temperature is solved properly) and
   varying environmental drivers (CO\f$_2\f$, water stress) will drive \f$\Phi_F\f$ heterogeneity
   on top of the chlorophyll heterogeneity demonstrated here.
@@ -306,7 +310,7 @@ A few useful extensions of this tutorial:
   scene from a different angle to study viewing-angle effects on canopy SIF — the SIF source
   flux is shared, so the marginal cost is just one extra ray-trace dispatch per emission band.
 - <b>Coarser excitation grid.</b> For very large canopies, set \c excitation_bin_width_nm to 25
-  or 50 nm to reduce per-leaf APAR memory and excitation ray-trace cost. The
+  or 50 nm to reduce per-leaf excitation-flux memory and excitation ray-trace cost. The
   \ref SIFExcitationBands "excitation band table" shows the memory/accuracy tradeoff.
 
 For full details on the SIF physics — the Fluspect-B excitation–emission kernel, the van der

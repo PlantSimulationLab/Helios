@@ -1,5 +1,22 @@
 # Changelog
 
+# [1.3.89] 2026-XX-XX
+
+## Photosynthesis
+
+- The `electron_transport_ratio` output is now the relative light saturation Ja/Je used by the van der Tol et al. (2014) fluorescence model: the electron transport used by carboxylation, photorespiration and triose-phosphate export at the chloroplast CO2 partial pressure, divided by its light-limited potential. It is 1 in the dark and falls as light saturates photosynthesis. It was previously J/Jmax, which runs the opposite way (0 in the dark, near 1 in full sun), so SIF computed from it put leaves in maximal quenching at low light and relaxed quenching at high light.
+- The C4 model now writes `electron_transport_ratio` when it is requested with `optionalOutputPrimitiveData()`. Previously only the Farquhar model wrote it, so C4 leaves could not drive SIF.
+
+## Radiation
+
+- Fixed the SIF fluorescence yield not following the van der Tol et al. (2014) model it cites. Non-photochemical quenching used an unpublished piecewise-linear curve rising to 6 at full light saturation, and the maximum photochemical yield was fixed at 0.85; the yield now uses the paper's Eq. 19 with its unstressed parameter set (the SCOPE default) and the temperature-dependent maximum photochemical yield. Fluorescence yields at full light saturation roughly double.
+- Fixed SIF emission scaling with `SIFCameraProperties::excitation_bin_width_nm`. The Fluspect-B matrices were applied to band-integrated excitation flux without removing the excitation grid spacing they already contain, so emission was proportional to the bin width (10x too high at the default 10 nm). Emission also omitted the photon-to-energy conversion between excitation and emission wavelengths, over-stating it by roughly 30%. Absolute SIF values are much lower than in previous versions.
+- Fixed SIF emission depending on the reflectivity and transmissivity of leaves in the excitation bands when `SIFCameraProperties::excitation_scattering_depth` is 1 or more. The Fluspect-B matrices already contain leaf absorption and act on incident excitation, but were applied to the absorbed flux, so leaf absorptance was counted twice (halving SIF for a leaf with reflectivity 0.3 and transmissivity 0.2). The default depth of 0 was not affected.
+- `RadiationModel::runBand()` now throws when a SIF band is run and leaves carry `fluspect_spectrum` but not `electron_transport_ratio`. They were previously skipped with a warning that did not appear when messages were disabled, leaving them dark in the SIF image.
+- The SIF fluorescence yield of a leaf without `temperature` data is now evaluated at the radiation model's default temperature (300 K) rather than 298.15 K. A non-positive leaf temperature is now an error instead of being replaced by 298.15 K.
+- Fixed `RadiationModel::integrateSpectrum()` over a wavelength range integrating past the requested bounds. The whole spectral segment containing each bound was included, so a band was integrated over up to one extra grid interval at each end (for example, 400-450 nm integrated over 400-500 nm on a 100 nm grid), and a range extending beyond the tabulated spectrum returned 0. Bounds now clip the spectrum by linear interpolation. This changes source fluxes computed from source spectra and band-averaged reflectivity and transmissivity computed from spectra, most for coarsely tabulated spectra and narrow bands.
+- Corrected the SIF documentation, which described the Fluspect-B forward matrix as leaving the illuminated face; it leaves the face turned away from the excitation.
+
 # [1.3.88] 2026-09-23
 
 ## Core

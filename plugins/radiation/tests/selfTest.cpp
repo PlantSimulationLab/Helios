@@ -102,6 +102,17 @@ namespace helios {
                                                                                                    int image_id) {
             return helios::annotation::maskToAnnotations(label_masks, object_class_ID, camera_resolution, image_id);
         }
+
+        //! Forwarder to the SIF steady-state fluorescence yield model
+        static float calculateFluorescenceYield(float electron_transport_ratio, float T_leaf_K) {
+            return RadiationModel::calculateFluorescenceYield(electron_transport_ratio, T_leaf_K);
+        }
+
+        //! Per-leaf SIF source flux (W/m^2) that computeSIFEmission() assigned to a primitive face in an emission band
+        static float getSIFEmission(const RadiationModel &model, const std::string &emission_band, uint UUID, bool top_face) {
+            const auto &buffer = top_face ? model.sif_emission_buffer : model.sif_emission_buffer_bottom;
+            return buffer.at(emission_band).at(UUID);
+        }
     };
 } // namespace helios
 
@@ -2630,11 +2641,10 @@ GPU_TEST_CASE("RadiationModel Spectral Integration and Interpolation Tests") {
         float expected_integral = (0.1f + 0.5f) * 100.0f * 0.5f + (0.5f + 0.3f) * 100.0f * 0.5f + (0.3f + 0.2f) * 100.0f * 0.5f;
         DOCTEST_CHECK(std::abs(full_integral - expected_integral) < 1e-5f);
 
-        // Test partial spectrum integration (450-650 nm)
-        // The algorithm integrates over segments that overlap with bounds, but returns full spectrum integral
+        // Test partial spectrum integration (450-650 nm): the spectrum is interpolated linearly to the bounds
         float partial_integral = radiation.integrateSpectrum(test_spectrum, 450, 650);
-        // This actually returns the same as full integral due to implementation
-        DOCTEST_CHECK(std::abs(partial_integral - full_integral) < 1e-5f);
+        float expected_partial = (0.3f + 0.5f) * 50.0f * 0.5f + (0.5f + 0.3f) * 100.0f * 0.5f + (0.3f + 0.25f) * 50.0f * 0.5f;
+        DOCTEST_CHECK(partial_integral == doctest::Approx(expected_partial).epsilon(1e-5));
     }
 
     // Test 2: Source spectrum integration
@@ -2892,10 +2902,34 @@ GPU_TEST_CASE("RadiationModel Spectral Edge Cases and Error Handling") {
         float extended_integral = radiation.integrateSpectrum(limited_spectrum, 400, 800);
         float limited_integral = radiation.integrateSpectrum(limited_spectrum, 500, 600);
 
-        // Extended integration beyond bounds returns 0, limited returns actual integral
-        DOCTEST_CHECK(extended_integral == 0.0f);
-        DOCTEST_CHECK(limited_integral > 0.0f);
+        // Bounds extending beyond the tabulated spectrum integrate only the part of the spectrum that overlaps them
+        DOCTEST_CHECK(extended_integral == doctest::Approx(50.f).epsilon(1e-5));
+        DOCTEST_CHECK(limited_integral == doctest::Approx(50.f).epsilon(1e-5));
     }
+}
+
+GPU_TEST_CASE("RadiationModel::integrateSpectrum integrates exactly between the requested bounds") {
+    // Regression: the bounded integrators included the whole grid segment containing each bound, so a 5 nm band on a 1 nm spectrum was integrated
+    // over 6 nm. With y = x the trapezoid rule is exact, so the integral from w1 to w2 must be (w2^2 - w1^2) / 2.
+    Context context;
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    std::vector<helios::vec2> linear_spectrum;
+    for (int wavelength = 400; wavelength <= 800; wavelength++) {
+        linear_spectrum.push_back(make_vec2(float(wavelength), float(wavelength)));
+    }
+    auto exact_integral = [](float w1, float w2) { return 0.5f * (w2 * w2 - w1 * w1); };
+
+    DOCTEST_CHECK(radiation.integrateSpectrum(linear_spectrum, 400, 405) == doctest::Approx(exact_integral(400, 405)).epsilon(1e-5)); // bounds on grid points
+    DOCTEST_CHECK(radiation.integrateSpectrum(linear_spectrum, 400.5f, 402.5f) == doctest::Approx(exact_integral(400.5f, 402.5f)).epsilon(1e-5)); // between grid points
+    DOCTEST_CHECK(radiation.integrateSpectrum(linear_spectrum, 350, 405) == doctest::Approx(exact_integral(400, 405)).epsilon(1e-5)); // lower bound below the data
+
+    // Source-weighted average over a band: with a spectrally flat source, the band average of y = x is the band centre.
+    uint source_ID = radiation.addCollimatedRadiationSource();
+    radiation.setSourceSpectrum(source_ID, std::vector<helios::vec2>{make_vec2(300, 1.f), make_vec2(900, 1.f)});
+    DOCTEST_CHECK(radiation.integrateSpectrum(source_ID, linear_spectrum, 400, 405) == doctest::Approx(402.5f).epsilon(1e-6));
+    DOCTEST_CHECK(radiation.integrateSpectrum(source_ID, linear_spectrum, 400.5f, 402.5f) == doctest::Approx(401.5f).epsilon(1e-6));
 }
 
 GPU_TEST_CASE("RadiationModel Spectral Caching and Performance Validation") {
@@ -9621,6 +9655,37 @@ DOCTEST_TEST_CASE("SIF V&V Tier 1 (v2): Fluspect-B C++ port matches MATLAB refer
 }
 
 // ============================================================================
+// SIF: steady-state fluorescence yield follows van der Tol et al. (2014)
+// ============================================================================
+//
+// Reference values evaluated by hand from the published model: K_F = 0.05, K_D = max(0.03 T + 0.0773, 0.87), K_P = 4,
+// Phi_P0 = K_P / (K_F + K_D + K_P), Phi_P = Phi_P0 * r, x = 1 - r, K_N from Eq. 19 with the cotton (unstressed) fit
+// K_N0 = 2.48, alpha = 2.83, beta = 0.114 (SCOPE defaults), and Phi_F = K_F / (K_F + K_D + K_N) * (1 - Phi_P). r is the
+// relative light saturation Ja/Je written by the photosynthesis model as electron_transport_ratio.
+
+DOCTEST_TEST_CASE("SIF: fluorescence yield matches van der Tol et al. (2014) rate-coefficient model") {
+    struct YieldReference {
+        float ratio;
+        float T_C;
+        float Phi_F;
+    };
+    const std::vector<YieldReference> references = {
+            {1.0f, 25.f, 0.010163f}, // dark or very low light: x = 0, no NPQ, photochemistry at Phi_P0
+            {0.8f, 25.f, 0.015155f}, // x = 0.2: photochemical quenching relaxed, NPQ barely engaged
+            {0.5f, 25.f, 0.012133f},
+            {0.0f, 25.f, 0.014706f}, // x = 1: photochemistry closed, K_N = K_N0
+            {1.0f, 35.f, 0.009658f}, // K_D above its 26 C floor
+            {0.0f, 35.f, 0.013671f},
+    };
+    for (const auto &reference: references) {
+        DOCTEST_CAPTURE(reference.ratio);
+        DOCTEST_CAPTURE(reference.T_C);
+        const float Phi_F = RadiationModelTestHelper::calculateFluorescenceYield(reference.ratio, reference.T_C + 273.15f);
+        DOCTEST_CHECK(Phi_F == doctest::Approx(reference.Phi_F).epsilon(1e-4));
+    }
+}
+
+// ============================================================================
 // SIF test helpers
 // ============================================================================
 //
@@ -9752,6 +9817,141 @@ GPU_TEST_CASE("SIF V&V Tier 2 (v2): full pipeline with solar source + SIF camera
     }
     DOCTEST_CHECK(max_pixel_red > 0.f);
     DOCTEST_CHECK(max_pixel_farred > 0.f);
+}
+
+// ============================================================================
+// SIF regression: leaf emission follows the Fluspect-B / SCOPE definition
+// ============================================================================
+//
+// SCOPE's RTMf applies the Fluspect-B matrices to the excitation photon flux incident on the leaf, per nm of excitation, and
+// converts the fluorescence photons back to energy at the emission wavelength. These tests pin the three quantities that the
+// radiation plug-in has to get right for that: the excitation bin width must not change the answer, the leaf's own
+// reflectivity/transmissivity in the ray tracer must not change it (the matrices already contain leaf absorption), and the
+// result must equal the matrix product evaluated directly from the kernel.
+
+namespace {
+    struct SIFLeafEmissionSetup {
+        float excitation_bin_width_nm = 10.f;
+        uint excitation_scattering_depth = 0;
+        float leaf_reflectivity = 0.f; //!< flat leaf reflectivity spectrum in the ray tracer (0 = no spectrum assigned)
+        float leaf_transmissivity = 0.f;
+        std::string sun_spectrum_label = "solar_spectrum_direct_ASTMG173"; //!< empty = spectrally flat 1 W/m^2/nm over 300-900 nm
+    };
+
+    //! Top-face SIF source flux in a 740-760 nm band for a single horizontal leaf lit by an overhead sun.
+    float sifLeafEmission(const SIFLeafEmissionSetup &setup) {
+        Context ctx;
+        uint leaf = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        sif_stamp_biochem(ctx, {leaf}, "emission");
+        ctx.setPrimitiveData(leaf, "electron_transport_ratio", 1.f);
+        ctx.setPrimitiveData(leaf, "temperature", 298.15f);
+        if (setup.leaf_reflectivity > 0.f || setup.leaf_transmissivity > 0.f) {
+            ctx.setGlobalData("leaf_rho_flat", std::vector<vec2>{make_vec2(300, setup.leaf_reflectivity), make_vec2(900, setup.leaf_reflectivity)});
+            ctx.setGlobalData("leaf_tau_flat", std::vector<vec2>{make_vec2(300, setup.leaf_transmissivity), make_vec2(900, setup.leaf_transmissivity)});
+            ctx.setPrimitiveData(leaf, "reflectivity_spectrum", "leaf_rho_flat");
+            ctx.setPrimitiveData(leaf, "transmissivity_spectrum", "leaf_tau_flat");
+        }
+
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&ctx);
+        radiation.disableMessages();
+        radiation.addRadiationBand("SIF_farred", 740.f, 760.f);
+        uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        if (setup.sun_spectrum_label.empty()) {
+            radiation.setSourceSpectrum(sun, std::vector<vec2>{make_vec2(300, 1.f), make_vec2(900, 1.f)});
+        } else {
+            radiation.setSourceSpectrum(sun, setup.sun_spectrum_label);
+        }
+
+        SIFCameraProperties cam_props;
+        cam_props.camera_resolution = make_int2(4, 4);
+        cam_props.excitation_bin_width_nm = setup.excitation_bin_width_nm;
+        cam_props.excitation_scattering_depth = setup.excitation_scattering_depth;
+        radiation.addSIFCamera("sif_cam", {"SIF_farred"}, make_vec3(0, 0, 3), make_vec3(0, 0, 0), cam_props, 1);
+
+        radiation.updateGeometry();
+        radiation.runBand(std::vector<std::string>{"SIF_farred"});
+        return RadiationModelTestHelper::getSIFEmission(radiation, "SIF_farred", leaf, true);
+    }
+} // namespace
+
+GPU_TEST_CASE("SIF regression: leaf emission does not depend on the excitation bin width") {
+    // The kernel columns carry the excitation grid spacing as a quadrature weight, so applying them to band-integrated flux
+    // without dividing by the spacing made emission proportional to the bin width.
+    SIFLeafEmissionSetup fine;
+    fine.excitation_bin_width_nm = 10.f;
+    SIFLeafEmissionSetup coarse = fine;
+    coarse.excitation_bin_width_nm = 25.f;
+
+    const float emission_fine = sifLeafEmission(fine);
+    const float emission_coarse = sifLeafEmission(coarse);
+    DOCTEST_INFO("10 nm bins: " << emission_fine << "  25 nm bins: " << emission_coarse);
+    DOCTEST_REQUIRE(emission_fine > 0.f);
+    DOCTEST_CHECK(emission_coarse == doctest::Approx(emission_fine).epsilon(0.05));
+}
+
+GPU_TEST_CASE("SIF regression: leaf emission does not depend on the leaf's ray-tracer reflectivity and transmissivity") {
+    // Fluspect-B's matrices already include leaf absorption and act on incident flux. For an isolated leaf the incident flux is
+    // the same whatever reflectivity/transmissivity the ray tracer uses, so the emission must be too, at any scattering depth.
+    for (uint depth: {0u, 1u}) {
+        DOCTEST_CAPTURE(depth);
+        SIFLeafEmissionSetup black;
+        black.excitation_scattering_depth = depth;
+        SIFLeafEmissionSetup scattering_leaf = black;
+        scattering_leaf.leaf_reflectivity = 0.3f;
+        scattering_leaf.leaf_transmissivity = 0.2f;
+
+        const float emission_black = sifLeafEmission(black);
+        const float emission_scattering = sifLeafEmission(scattering_leaf);
+        DOCTEST_INFO("black leaf: " << emission_black << "  rho=0.3, tau=0.2 leaf: " << emission_scattering);
+        DOCTEST_REQUIRE(emission_black > 0.f);
+        DOCTEST_CHECK(emission_scattering == doctest::Approx(emission_black).epsilon(1e-3));
+    }
+}
+
+GPU_TEST_CASE("SIF regression: leaf emission equals the Fluspect-B matrix product on incident photon flux") {
+    // Spectrally flat sun of 1 W/m^2/nm, 10 nm excitation bins: every excitation band delivers 10 W/m^2 to the leaf. Following
+    // SCOPE's RTMf, the fluorescence energy spectrum is F(wlf) = Phi_F * sum_e Mf(wlf, wle) / step * E(wle) * step * wle / wlf,
+    // with the matrix interpolated to each band centre; the band source flux is its trapezoidal integral over 740-760 nm.
+    SIFLeafEmissionSetup setup;
+    setup.sun_spectrum_label.clear();
+    setup.excitation_bin_width_nm = 10.f;
+    const float emission = sifLeafEmission(setup);
+
+    FluspectOptipar optipar;
+    loadFluspectOptipar(helios::resolveFilePath("plugins/radiation/spectral_data/fluspect_B_optipar.xml").string(), optipar);
+    FluspectBiochemistry biochem; // sif_stamp_biochem defaults
+    biochem.Cab = 40.f;
+    biochem.Cca = 10.f;
+    biochem.Cw = 0.009f;
+    biochem.Cdm = 0.012f;
+    biochem.Cs = 0.f;
+    biochem.Cant = 1.f;
+    biochem.Cp = 0.f;
+    biochem.Cbc = 0.f;
+    biochem.N = 1.5f;
+    biochem.V2Z = 0.f;
+    biochem.fqe = 1.f;
+    const float step = 10.f;
+    const FluspectKernel kernel = computeFluspectKernel(biochem, optipar, step);
+    const float Phi_F = RadiationModelTestHelper::calculateFluorescenceYield(1.f, 298.15f);
+
+    std::vector<double> F(kernel.wlf.size(), 0.0);
+    for (int band = 0; band < 35; band++) {
+        const double band_center = 405.0 + 10.0 * band; // midway between kernel columns band and band + 1
+        const double incident = 10.0; // W/m^2 in the band
+        for (size_t i = 0; i < kernel.wlf.size(); i++) {
+            const double Mf_center = 0.5 * (kernel.Mf[i][band] + kernel.Mf[i][band + 1]);
+            F[i] += Phi_F * Mf_center / step * incident * band_center / kernel.wlf[i];
+        }
+    }
+    double expected = 0.0;
+    for (size_t i = 0; i + 1 < kernel.wlf.size(); i++) {
+        if (kernel.wlf[i] >= 740.f && kernel.wlf[i + 1] <= 760.f) {
+            expected += 0.5 * (F[i] + F[i + 1]) * (kernel.wlf[i + 1] - kernel.wlf[i]);
+        }
+    }
+    DOCTEST_REQUIRE(expected > 0.0);
+    DOCTEST_CHECK(emission == doctest::Approx(expected).epsilon(1e-3));
 }
 
 // ============================================================================
@@ -10023,50 +10223,86 @@ GPU_TEST_CASE("SIF warnings: no fluspect_spectrum on any primitive") {
     DOCTEST_CHECK(captured.find("fluspect_spectrum") != std::string::npos);
 }
 
-GPU_TEST_CASE("SIF warnings: leaves have biochemistry but lack electron_transport_ratio at runtime") {
-    // The electron_transport_ratio check happens at runBand() time (inside
-    // computeSIFEmission), not at addSIFCamera() setup time — because photosynthesis
-    // typically runs between camera setup and radiation dispatch. This test verifies
-    // the runtime warning fires and that no setup-time warning fires about missing etr.
+namespace {
+    //! Run a SIF band over a scene of leaves that all carry biochemistry; only the first `leaves_with_etr` leaves get electron_transport_ratio.
+    void runSIFBandWithPartialElectronTransportRatio(uint leaf_count, uint leaves_with_etr, bool messages) {
+        Context ctx;
+        std::vector<uint> leaves;
+        for (uint i = 0; i < leaf_count; i++) {
+            leaves.push_back(ctx.addPatch(make_vec3(2.f * float(i), 0, 0), make_vec2(1, 1)));
+        }
+        sif_stamp_biochem(ctx, leaves, "partial_etr");
+        for (uint i = 0; i < leaves_with_etr; i++) {
+            ctx.setPrimitiveData(leaves.at(i), "electron_transport_ratio", 0.5f);
+        }
+
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&ctx);
+        if (!messages) {
+            radiation.disableMessages();
+        }
+        radiation.addRadiationBand("SIF_red", 680.f, 700.f);
+        radiation.setScatteringDepth("SIF_red", 1);
+        uint sun = radiation.addCollimatedRadiationSource(make_vec3(1.f, 0.f, 1.f));
+        radiation.setSourceSpectrum(sun, "solar_spectrum_direct_ASTMG173");
+
+        SIFCameraProperties cam_props;
+        cam_props.camera_resolution = make_int2(4, 4);
+        cam_props.HFOV = 20.f;
+        cam_props.excitation_bin_width_nm = 50.f;
+        radiation.addSIFCamera("partial_etr", {"SIF_red"}, make_vec3(0, 0, 1), make_vec3(0, 0, 0), cam_props, 1);
+        radiation.updateGeometry();
+        radiation.runBand(std::vector<std::string>{"SIF_red"});
+    }
+} // namespace
+
+GPU_TEST_CASE("SIF: leaves with biochemistry but no electron_transport_ratio are an error at runtime") {
+    // A leaf with 'fluspect_spectrum' is one the user asked to fluoresce; without electron_transport_ratio its yield is unknown
+    // (e.g. photosynthesis was not run, or ran with the empirical model). This used to be a warning that vanished when messages
+    // were disabled, leaving the leaf silently dark. The check happens at runBand() time, not at addSIFCamera() time, because
+    // photosynthesis normally runs between camera setup and the radiation dispatch.
+    for (bool messages: {true, false}) {
+        DOCTEST_CAPTURE(messages);
+        for (uint leaves_with_etr: {0u, 1u}) {
+            DOCTEST_CAPTURE(leaves_with_etr);
+            std::string error_message;
+            {
+                capture_cout progress_cap;
+                capture_cerr warning_cap;
+                try {
+                    runSIFBandWithPartialElectronTransportRatio(2, leaves_with_etr, messages);
+                } catch (const std::runtime_error &error) {
+                    error_message = error.what();
+                }
+            }
+            DOCTEST_CHECK(error_message.find("electron_transport_ratio") != std::string::npos);
+        }
+    }
+}
+
+GPU_TEST_CASE("SIF: fluorescence yield uses the radiation model's default temperature when a leaf has none") {
+    // A leaf without 'temperature' data was evaluated at 298.15 K, while the rest of the radiation model (and the photosynthesis
+    // model) default to 300 K.
     Context ctx;
     uint leaf = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
-    sif_stamp_biochem(ctx, {leaf}, "warn_no_etr");
-    // No electron_transport_ratio is set on the leaf, ever.
+    sif_stamp_biochem(ctx, {leaf}, "no_temperature");
+    ctx.setPrimitiveData(leaf, "electron_transport_ratio", 1.f);
 
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&ctx);
-    radiation.addRadiationBand("SIF_red", 680.f, 700.f);
-    radiation.setScatteringDepth("SIF_red", 1);
-    uint sun = radiation.addCollimatedRadiationSource(make_vec3(1.f, 0.f, 1.f));
+    radiation.disableMessages();
+    radiation.addRadiationBand("SIF_farred", 740.f, 760.f);
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
     radiation.setSourceSpectrum(sun, "solar_spectrum_direct_ASTMG173");
-
     SIFCameraProperties cam_props;
     cam_props.camera_resolution = make_int2(4, 4);
-    cam_props.HFOV = 20.f;
     cam_props.excitation_bin_width_nm = 50.f;
+    radiation.addSIFCamera("no_temperature", {"SIF_farred"}, make_vec3(0, 0, 3), make_vec3(0, 0, 0), cam_props, 1);
+    radiation.updateGeometry();
+    radiation.runBand(std::vector<std::string>{"SIF_farred"});
 
-    // Setup-time: no warning about electron_transport_ratio should fire, because the
-    // absence is expected before photosynthesis has been run.
-    std::string setup_captured;
-    {
-        capture_cerr cap;
-        radiation.addSIFCamera("warn_no_etr", {"SIF_red"}, make_vec3(0, 0, 1), make_vec3(0, 0, 0), cam_props, 1);
-        setup_captured = cap.get_captured_output();
-    }
-    DOCTEST_CHECK(setup_captured.find("electron_transport_ratio") == std::string::npos);
-
-    // Runtime: computeSIFEmission warns about missing electron_transport_ratio.
-    // Messages stay enabled because the warning under test is gated on message_flag; that also
-    // turns on the ray-trace progress chatter, which is swallowed here rather than left on stdout.
-    std::string runtime_captured;
-    {
-        capture_cout progress_cap;
-        capture_cerr cap;
-        radiation.updateGeometry();
-        const std::vector<std::string> sif_bands = {"SIF_red"};
-        radiation.runBand(sif_bands);
-        runtime_captured = cap.get_captured_output();
-    }
-    DOCTEST_CHECK(runtime_captured.find("electron_transport_ratio") != std::string::npos);
+    float Phi_F = 0.f;
+    DOCTEST_REQUIRE(ctx.doesPrimitiveDataExist(leaf, "fluorescence_yield"));
+    ctx.getPrimitiveData(leaf, "fluorescence_yield", Phi_F);
+    DOCTEST_CHECK(Phi_F == doctest::Approx(RadiationModelTestHelper::calculateFluorescenceYield(1.f, 300.f)).epsilon(1e-5));
 }
 
 GPU_TEST_CASE("SIF warnings: camera bound to band with scattering depth 0") {

@@ -363,17 +363,95 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Optional Output Primitive Data") {
     DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 400.0f));
     DOCTEST_CHECK_NOTHROW(photomodel.run());
 
-    float Ci, Gamma, J_over_Jmax;
+    float Ci, Gamma, electron_transport_ratio;
     int limitation_state;
     DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "Ci", Ci));
     DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "limitation_state", limitation_state));
     DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "Gamma_CO2", Gamma));
-    DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "electron_transport_ratio", J_over_Jmax));
+    DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "electron_transport_ratio", electron_transport_ratio));
 
     DOCTEST_CHECK(Ci != 0.0f);
     DOCTEST_CHECK(Gamma != 0.0f);
-    DOCTEST_CHECK(J_over_Jmax >= 0.0f);
-    DOCTEST_CHECK(J_over_Jmax <= 1.0f);
+    DOCTEST_CHECK(electron_transport_ratio >= 0.0f);
+    DOCTEST_CHECK(electron_transport_ratio <= 1.0f);
+}
+
+namespace {
+    //! Run the photosynthesis model at a sequence of absorbed PAR fluxes (W/m^2) and return electron_transport_ratio at each.
+    std::vector<float> electronTransportRatioLightResponse(Context &context, PhotosynthesisModel &photomodel, uint UUID, const std::vector<float> &PAR_W_m2) {
+        std::vector<float> ratios;
+        for (float PAR: PAR_W_m2) {
+            context.setPrimitiveData(UUID, "radiation_flux_PAR", PAR);
+            photomodel.run();
+            float ratio = -1.f;
+            if (context.doesPrimitiveDataExist(UUID, "electron_transport_ratio")) {
+                context.getPrimitiveData(UUID, "electron_transport_ratio", ratio);
+            }
+            ratios.push_back(ratio);
+        }
+        return ratios;
+    }
+
+    //! Check the van der Tol et al. (2014) requirements on the relative light saturation 1 - x = Ja/Je: it is 1 in the dark, tends to 1 as PAR -> 0, and falls
+    //! monotonically as light saturates photosynthesis.
+    void checkRelativeLightSaturationResponse(const std::vector<float> &ratios) {
+        DOCTEST_REQUIRE(ratios.size() == 7);
+        DOCTEST_CHECK(ratios.at(0) == doctest::Approx(1.f).epsilon(1e-5)); // dark
+        DOCTEST_CHECK(ratios.at(1) > 0.9f); // very low light: photochemistry at full efficiency (x -> 0)
+        for (size_t i = 1; i + 1 < ratios.size(); i++) {
+            DOCTEST_CHECK(ratios.at(i + 1) < ratios.at(i));
+        }
+        DOCTEST_CHECK(ratios.back() < 0.5f); // strong light: electron transport well below its light-limited potential
+        DOCTEST_CHECK(ratios.back() >= 0.f);
+    }
+} // namespace
+
+DOCTEST_TEST_CASE("PhotosynthesisModel electron_transport_ratio is the relative light saturation Ja/Je (Farquhar)") {
+    // van der Tol et al. (2014) Eqs. 11-16 define the fluorescence feedback variable x = 1 - Ja/Je, where Ja is the electron transport implied by gross
+    // assimilation and Je the light-limited potential, and require x -> 0 as PAR -> 0. The ratio written to electron_transport_ratio is Ja/Je.
+    const std::vector<float> PAR_W_m2 = {0.f, 2.f, 20.f, 50.f, 100.f, 200.f, 400.f};
+
+    for (bool finite_gm: {false, true}) {
+        DOCTEST_CAPTURE(finite_gm);
+        Context context_test;
+        uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context_test.setPrimitiveData(UUID, "temperature", 298.15f);
+        context_test.setPrimitiveData(UUID, "air_CO2", 400.f);
+        context_test.setPrimitiveData(UUID, "moisture_conductance", 0.3f);
+
+        PhotosynthesisModel photomodel(&context_test);
+        photomodel.disableMessages();
+        FarquharModelCoefficients coeffs;
+        coeffs.setVcmax(65.f);
+        coeffs.setJmax(108.f);
+        coeffs.setRd(1.f);
+        coeffs.setQuantumEfficiency_alpha(0.3f);
+        coeffs.setLightResponseCurvature_theta(0.7f);
+        if (finite_gm) {
+            coeffs.setMesophyllConductance_gm(0.3f);
+        }
+        photomodel.setModelCoefficients(coeffs);
+        photomodel.optionalOutputPrimitiveData("electron_transport_ratio");
+
+        checkRelativeLightSaturationResponse(electronTransportRatioLightResponse(context_test, photomodel, UUID, PAR_W_m2));
+    }
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel electron_transport_ratio is the relative light saturation Ja/Je (C4)") {
+    const std::vector<float> PAR_W_m2 = {0.f, 2.f, 20.f, 50.f, 100.f, 200.f, 400.f};
+
+    Context context_test;
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context_test.setPrimitiveData(UUID, "temperature", 298.15f);
+    context_test.setPrimitiveData(UUID, "air_CO2", 400.f);
+    context_test.setPrimitiveData(UUID, "moisture_conductance", 0.3f);
+
+    PhotosynthesisModel photomodel(&context_test);
+    photomodel.disableMessages();
+    photomodel.setModelType_C4();
+    photomodel.optionalOutputPrimitiveData("electron_transport_ratio");
+
+    checkRelativeLightSaturationResponse(electronTransportRatioLightResponse(context_test, photomodel, UUID, PAR_W_m2));
 }
 
 DOCTEST_TEST_CASE("PhotosynthesisModel Print Default Value Report") {
