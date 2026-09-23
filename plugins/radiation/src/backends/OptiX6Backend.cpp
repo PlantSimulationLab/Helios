@@ -1831,7 +1831,6 @@ void OptiX6Backend::sourcesToBuffers(const std::vector<RayTracingSource> &source
     std::vector<helios::vec2> widths;
     std::vector<helios::vec3> rotations;
     std::vector<uint> types;
-    std::vector<float> fluxes;
     std::vector<float> fluxes_cam;
 
     for (const auto &source: sources) {
@@ -1840,10 +1839,7 @@ void OptiX6Backend::sourcesToBuffers(const std::vector<RayTracingSource> &source
         rotations.push_back(source.rotation);
         types.push_back(source.type);
 
-        // Flatten flux arrays
-        for (float flux: source.fluxes) {
-            fluxes.push_back(flux);
-        }
+        // Flatten camera-weighted flux array
         for (float flux: source.fluxes_cam) {
             fluxes_cam.push_back(flux);
         }
@@ -1853,7 +1849,9 @@ void OptiX6Backend::sourcesToBuffers(const std::vector<RayTracingSource> &source
     initializeBuffer1Dfloat2(source_widths_RTbuffer, widths);
     initializeBuffer1Dfloat3(source_rotations_RTbuffer, rotations);
     initializeBuffer1Dui(source_types_RTbuffer, types);
-    initializeBuffer1Df(source_fluxes_RTbuffer, fluxes);
+    // source_fluxes is indexed [source][launched band] and is uploaded for each launch by uploadSourceFluxes(). The per-source fluxes here
+    // are for every band in the model, so uploading them would hand the launched bands other bands' fluxes whenever the sources are
+    // updated after the launch's fluxes (as runBand() does to compute camera-weighted fluxes).
     initializeBuffer1Df(source_fluxes_cam_RTbuffer, fluxes_cam);
 }
 

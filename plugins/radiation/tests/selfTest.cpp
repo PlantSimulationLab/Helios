@@ -707,6 +707,39 @@ GPU_TEST_CASE("RadiationModel::runBand uses the same material properties on ever
     DOCTEST_CHECK(fabsf(flux_second - 800.f) / 800.f <= 0.01f);
 }
 
+GPU_TEST_CASE("RadiationModel::runBand applies each launched band's own source flux when a camera is registered") {
+    // With cameras, runBand() re-uploads the sources to compute camera-weighted source fluxes after it has uploaded the per-band source
+    // fluxes of the launched bands. That re-upload must not replace them with the fluxes of all bands in the model: when the launch is a
+    // subset of the bands, the launched bands would receive other bands' fluxes.
+    Context ctx;
+    uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&ctx);
+    radiation.disableMessages();
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceSpectrum(sun, std::vector<vec2>{make_vec2(300, 1.f), make_vec2(900, 1.f)});
+    // The camera band sorts first and is 20 nm wide (20 W/m^2); the launched bands are 10 nm wide (10 W/m^2)
+    radiation.addRadiationBand("A_camera", 680.f, 700.f);
+    radiation.addRadiationBand("B_400", 400.f, 410.f);
+    radiation.addRadiationBand("B_410", 410.f, 420.f);
+    for (const std::string band: {"A_camera", "B_400", "B_410"}) {
+        radiation.disableEmission(band);
+    }
+    CameraProperties cam_props;
+    cam_props.camera_resolution = make_int2(4, 4);
+    radiation.addRadiationCamera("camera", {"A_camera"}, make_vec3(0, 0, 3), make_vec3(0, 0, 0), cam_props, 1);
+    radiation.updateGeometry();
+
+    radiation.runBand(std::vector<std::string>{"B_400", "B_410"});
+
+    for (const std::string band: {"B_400", "B_410"}) {
+        DOCTEST_CAPTURE(band);
+        float flux = 0.f;
+        ctx.getPrimitiveData(patch, ("radiation_flux_" + band).c_str(), flux);
+        DOCTEST_CHECK(flux == doctest::Approx(10.f).epsilon(1e-3));
+    }
+}
+
 GPU_TEST_CASE("RadiationModel::runBand renders a camera band without wavelength bounds the same on repeat calls") {
     // Regression test. A band created without wavelength bounds, whose primitives carry reflectivity_spectrum and whose
     // only consumer is a camera with a spectral response, rendered on the first call (the camera sees the
