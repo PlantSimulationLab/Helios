@@ -3557,6 +3557,359 @@ DOCTEST_TEST_CASE("Nitrogen Model - Remobilization") {
     DOCTEST_CHECK(found_stress_factor);
 }
 
+namespace {
+
+    //! Leaf nitrogen (g N/m^2), area (m^2) and age (days) of every leaf on a plant, keyed by leaf object ID
+    struct LeafNitrogenState {
+        float N_area;
+        float area;
+        float age;
+    };
+
+    std::map<uint, LeafNitrogenState> leafNitrogenStates(Context &context, PlantArchitecture &plantarchitecture, uint plantID) {
+        std::map<uint, LeafNitrogenState> states;
+        for (uint objID: plantarchitecture.getPlantLeafObjectIDs(plantID)) {
+            if (!context.doesObjectExist(objID) || !context.doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
+                continue;
+            }
+            LeafNitrogenState state{};
+            context.getObjectData(objID, "leaf_nitrogen_gN_m2", state.N_area);
+            state.area = context.getObjectArea(objID);
+            if (context.doesObjectDataExist(objID, "age")) {
+                context.getObjectData(objID, "age", state.age);
+            }
+            states[objID] = state;
+        }
+        return states;
+    }
+
+} // namespace
+
+DOCTEST_TEST_CASE("Nitrogen Model - Limited Supply Goes to Expanding Leaves") {
+    // Newly acquired nitrogen is allocated to new leaves (Hikosaka 2005), which is why a mobile nutrient
+    // in short supply shows its deficiency on the OLDEST leaves first. A supply that cannot meet every
+    // leaf's demand must therefore leave the youngest leaves better supplied than the oldest -- not be
+    // handed out in whatever order the leaves happen to be stored in until it runs dry.
+
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.optionalOutputObjectData("age");
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    plantarchitecture.advanceTime(plantID, 20.0f); // a mix of mature and still-expanding leaves
+
+    NitrogenParameters N_params;
+    plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
+    plantarchitecture.initializePlantNitrogenPools(plantID, 0.0f);
+
+    // Supply about a fifth of one day's rate-limited leaf demand.
+    float leaf_area = 0;
+    for (float area: plantarchitecture.getPlantLeafAreas(plantID)) {
+        leaf_area += area;
+    }
+    DOCTEST_REQUIRE(leaf_area > 0.f);
+    const float daily_demand_gN = N_params.max_N_accumulation_rate * leaf_area;
+    plantarchitecture.addPlantNitrogen(plantID, 0.2f * daily_demand_gN / (1.f - N_params.root_allocation_fraction));
+
+    plantarchitecture.advanceTime(plantID, 1.0f);
+
+    std::vector<std::pair<float, float>> age_and_N;
+    for (const auto &[objID, state]: leafNitrogenStates(context, plantarchitecture, plantID)) {
+        age_and_N.emplace_back(state.age, state.N_area);
+    }
+    DOCTEST_REQUIRE(age_and_N.size() >= 8);
+    std::sort(age_and_N.begin(), age_and_N.end());
+
+    const size_t quartile = age_and_N.size() / 4;
+    float youngest_N = 0, oldest_N = 0;
+    for (size_t i = 0; i < quartile; i++) {
+        youngest_N += age_and_N[i].second / float(quartile);
+        oldest_N += age_and_N[age_and_N.size() - 1 - i].second / float(quartile);
+    }
+
+    DOCTEST_CHECK(youngest_N > oldest_N);
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Remobilization Feeds New Leaves Without a Finite Leaf Lifespan") {
+    // Under nitrogen limitation, mature leaves export nitrogen to expanding leaves during vegetative growth
+    // (Masclaux-Daubresse et al. 2010; Diaz et al. 2008). Remobilization therefore has to respond to the
+    // plant running short, not wait for leaves to reach a fixed fraction of a maximum lifespan -- a
+    // lifespan most library plants leave at its effectively-infinite default.
+    //
+    // With the available pool empty and no nitrogen added, uptake cannot supply anything, so a leaf that
+    // emerges after initialization can only gain nitrogen by remobilization from the older leaves.
+
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    plantarchitecture.advanceTime(plantID, 20.0f);
+
+    NitrogenParameters N_params;
+    plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
+    plantarchitecture.initializePlantNitrogenPools(plantID, N_params.target_leaf_N_area); // pool emptied, leaves at target
+    plantarchitecture.advanceTime(plantID, 0.1f);
+
+    const std::map<uint, LeafNitrogenState> before = leafNitrogenStates(context, plantarchitecture, plantID);
+    DOCTEST_REQUIRE(!before.empty());
+
+    plantarchitecture.advanceTime(plantID, 6.0f);
+
+    const std::map<uint, LeafNitrogenState> after = leafNitrogenStates(context, plantarchitecture, plantID);
+
+    bool new_leaf_supplied = false;
+    bool existing_leaf_drawn_down = false;
+    for (const auto &[objID, state]: after) {
+        if (before.find(objID) == before.end()) {
+            new_leaf_supplied = new_leaf_supplied || state.N_area > 0.05f;
+        } else if (state.N_area < before.at(objID).N_area - 0.01f) {
+            existing_leaf_drawn_down = true;
+        }
+    }
+
+    DOCTEST_CHECK(new_leaf_supplied);
+    DOCTEST_CHECK(existing_leaf_drawn_down);
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Remobilization Is Gradual") {
+    // Remobilization from a mature leaf is a first-order process in time: labelling studies in N-limited
+    // plants find mature leaves exporting 5-16 % of their nitrogen to young leaves over ten days (Diaz et al.
+    // 2008), and crop models use rates of a few percent per day. No leaf should be able to hand over most of
+    // its remobilizable nitrogen within a single day.
+
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    // A finite lifespan, long enough that leaves finish expanding before they are shed, so that fully
+    // expanded leaves old enough to donate exist under any source rule.
+    plantarchitecture.setPlantPhenologicalThresholds(plantID, 0, 40, 5, 5, 30, 1000, 30.f, false);
+    plantarchitecture.advanceTime(plantID, 25.0f);
+
+    NitrogenParameters N_params;
+    // Senescence would also draw down the oldest leaves; with no senescence phase none of them begins it before
+    // the 30-day lifespan, so only remobilization can take nitrogen from a leaf here.
+    N_params.leaf_senescence_duration_fraction = 0.f;
+    N_params.stress_senescence_advance_fraction = 0.f;
+    plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
+    plantarchitecture.initializePlantNitrogenPools(plantID, N_params.target_leaf_N_area); // pool emptied
+    // Raise the target well above what any leaf holds, so that demand far exceeds what the older leaves can
+    // supply. The rate of withdrawal is then limited by the leaves' own release, which is what this checks,
+    // rather than by how little the sinks happen to want.
+    N_params.target_leaf_N_area = 10.f;
+    plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
+    plantarchitecture.advanceTime(plantID, 0.1f);
+
+    const std::map<uint, LeafNitrogenState> before = leafNitrogenStates(context, plantarchitecture, plantID);
+    plantarchitecture.advanceTime(plantID, 1.0f);
+    const std::map<uint, LeafNitrogenState> after = leafNitrogenStates(context, plantarchitecture, plantID);
+
+    // Measured on the nitrogen each leaf holds (per area x area), not its nitrogen per area: an expanding leaf's
+    // nitrogen per area falls as it grows with nothing leaving it, and only remobilization lowers what it holds.
+    float largest_fraction_lost = 0;
+    size_t donors = 0;
+    for (const auto &[objID, state]: after) {
+        const auto previous = before.find(objID);
+        if (previous == before.end()) {
+            continue;
+        }
+        const float remobilizable_gN = (previous->second.N_area - N_params.minimum_leaf_N_area) * previous->second.area;
+        const float lost_gN = previous->second.N_area * previous->second.area - state.N_area * state.area;
+        if (remobilizable_gN > 0 && lost_gN > 1e-3f * remobilizable_gN) {
+            largest_fraction_lost = std::max(largest_fraction_lost, lost_gN / remobilizable_gN);
+            donors++;
+        }
+    }
+
+    DOCTEST_CHECK(donors > 0);
+    DOCTEST_CHECK(largest_fraction_lost <= 0.10f);
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Leaf Expansion Dilutes Nitrogen Rather Than Creating It") {
+    // Leaf nitrogen is tracked per unit area, but the nitrogen a leaf holds is a mass. When a leaf grows,
+    // the nitrogen it already holds is spread over more area -- its N per area falls unless it imports
+    // more, which is why expanding leaves are strong nitrogen sinks. With uptake and remobilization both
+    // switched off, nothing can enter or leave these leaves, so the nitrogen they hold must not change as
+    // they expand.
+
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    plantarchitecture.advanceTime(plantID, 3.0f); // young leaves, still expanding
+
+    NitrogenParameters N_params;
+    N_params.max_N_accumulation_rate = 0.f;
+    N_params.leaf_remobilization_rate = 0.f;
+    plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
+    plantarchitecture.initializePlantNitrogenPools(plantID, 1.0f); // pool emptied
+    plantarchitecture.advanceTime(plantID, 0.1f);
+
+    const std::map<uint, LeafNitrogenState> before = leafNitrogenStates(context, plantarchitecture, plantID);
+    DOCTEST_REQUIRE(!before.empty());
+    plantarchitecture.advanceTime(plantID, 4.0f);
+    const std::map<uint, LeafNitrogenState> after = leafNitrogenStates(context, plantarchitecture, plantID);
+
+    float nitrogen_before_gN = 0;
+    float nitrogen_after_gN = 0;
+    bool some_leaf_expanded = false;
+    for (const auto &[objID, state]: before) {
+        const auto later = after.find(objID);
+        if (later == after.end()) {
+            continue;
+        }
+        nitrogen_before_gN += state.N_area * state.area;
+        nitrogen_after_gN += later->second.N_area * later->second.area;
+        some_leaf_expanded = some_leaf_expanded || later->second.area > 1.05f * state.area;
+    }
+
+    DOCTEST_REQUIRE(some_leaf_expanded);
+    // Compared relative to the amount itself: these are milligrams, and doctest::Approx's default scale of 1
+    // would accept any difference smaller than about 0.01 g.
+    DOCTEST_CHECK(std::fabs(nitrogen_after_gN - nitrogen_before_gN) <= 0.01f * nitrogen_before_gN);
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Leaves Return Nitrogen Gradually as They Senesce") {
+    // A leaf nearing the end of its life senesces: over the last leaf_senescence_duration_fraction of its
+    // lifespan it returns leaf_remobilization_efficiency of its nitrogen above minimum_leaf_N_area to the plant,
+    // yellowing as it does, and is shed with what is left. With uptake and remobilization both switched off
+    // and nitrogen stress not moving the onset, senescence is the only thing that can change a mature leaf's
+    // nitrogen or put nitrogen into the empty available pool.
+
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.optionalOutputObjectData("age"); // the leaf ages below are read from object data
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    const float lifespan_days = 40.f;
+    plantarchitecture.setPlantPhenologicalThresholds(plantID, 0, 40, 5, 5, 30, 1000, lifespan_days, false);
+    plantarchitecture.advanceTime(plantID, 25.0f); // the oldest leaves are short of the 30-day senescence onset
+
+    NitrogenParameters N_params;
+    N_params.max_N_accumulation_rate = 0.f;
+    N_params.leaf_remobilization_rate = 0.f;
+    N_params.stress_senescence_advance_fraction = 0.f;
+    plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
+    plantarchitecture.initializePlantNitrogenPools(plantID, N_params.target_leaf_N_area);
+    plantarchitecture.advanceTime(plantID, 0.1f);
+    DOCTEST_CHECK(plantarchitecture.getPlantAvailableNitrogen(plantID) == 0.f);
+
+    const float onset_age = (1.f - N_params.leaf_senescence_duration_fraction) * lifespan_days;
+    const float end_N_area = N_params.minimum_leaf_N_area + (1.f - N_params.leaf_remobilization_efficiency) * (N_params.target_leaf_N_area - N_params.minimum_leaf_N_area);
+    const std::map<uint, LeafNitrogenState> before = leafNitrogenStates(context, plantarchitecture, plantID);
+
+    // Part way through: a senescing leaf is between its starting and final nitrogen, and a mature leaf
+    // short of the onset has not changed. Leaves still expanding are left out -- growth dilutes them.
+    plantarchitecture.advanceTime(plantID, 10.0f);
+    size_t senescing_leaves = 0;
+    size_t leaves_not_yet_senescing = 0;
+    for (const auto &[objID, state]: leafNitrogenStates(context, plantarchitecture, plantID)) {
+        const auto previous = before.find(objID);
+        if (previous == before.end() || std::fabs(state.area - previous->second.area) > 0.01f * previous->second.area) {
+            continue;
+        }
+        if (state.age > onset_age + 1.f && state.age < lifespan_days - 1.f) {
+            senescing_leaves++;
+            DOCTEST_CHECK(state.N_area < N_params.target_leaf_N_area - 0.01f);
+            DOCTEST_CHECK(state.N_area > end_N_area + 0.01f);
+        } else if (state.age < onset_age - 0.5f) {
+            leaves_not_yet_senescing++;
+            DOCTEST_CHECK(std::fabs(state.N_area - N_params.target_leaf_N_area) < 1e-4f);
+        }
+    }
+    DOCTEST_CHECK(senescing_leaves > 0);
+    DOCTEST_CHECK(leaves_not_yet_senescing > 0);
+
+    // Past the lifespan of the oldest leaves: everything the leaves lost is in the pool, except what the
+    // shed leaves took with them -- the unresorbed remainder, end_N_area over their area.
+    plantarchitecture.advanceTime(plantID, 7.0f);
+    const std::map<uint, LeafNitrogenState> after = leafNitrogenStates(context, plantarchitecture, plantID);
+    float lost_by_leaves_gN = 0;
+    float shed_with_leaves_gN = 0;
+    size_t shed_leaves = 0;
+    for (const auto &[objID, state]: before) {
+        const auto current = after.find(objID);
+        if (current == after.end()) {
+            shed_leaves++;
+            lost_by_leaves_gN += state.N_area * state.area;
+            shed_with_leaves_gN += end_N_area * state.area;
+        } else {
+            lost_by_leaves_gN += state.N_area * state.area - current->second.N_area * current->second.area;
+        }
+    }
+    const float expected_pool_gN = lost_by_leaves_gN - shed_with_leaves_gN;
+    DOCTEST_REQUIRE(shed_leaves > 0);
+    DOCTEST_REQUIRE(expected_pool_gN > 0.f);
+    // Relative to the amount itself: these are milligrams, and doctest::Approx's default scale of 1 would
+    // accept any difference smaller than about 0.01 g.
+    DOCTEST_CHECK(std::fabs(plantarchitecture.getPlantAvailableNitrogen(plantID) - expected_pool_gN) <= 0.01f * expected_pool_gN);
+
+    DOCTEST_CHECK_THROWS(plantarchitecture.getPlantAvailableNitrogen(plantID + 1000));
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Nitrogen Stress Brings Leaf Senescence Forward") {
+    // Two identical plants, one held at its target leaf nitrogen and one starved. Nitrogen stress advances the
+    // onset of senescence, so at an age where the well-supplied plant's mature leaves have not yet begun to
+    // senesce, the starved plant's have. Remobilization is off, so senescence is the only way a mature leaf can
+    // lose nitrogen.
+
+    const float lifespan_days = 40.f;
+    NitrogenParameters N_params;
+    N_params.target_leaf_N_area = 2.f;
+    N_params.minimum_leaf_N_area = 0.4f;
+    N_params.leaf_remobilization_rate = 0.f;
+    N_params.leaf_senescence_duration_fraction = 0.25f; // on schedule: onset at 30 days
+    N_params.stress_senescence_advance_fraction = 0.5f; // starved to 40 % of target: onset near 18 days
+
+    // Largest fraction of its nitrogen any mature leaf lost between two ages
+    const auto largestMatureLeafLoss = [&](bool starved) {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.enableNitrogenModel();
+        plantarchitecture.loadPlantModelFromLibrary("bean");
+        uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+        plantarchitecture.setPlantPhenologicalThresholds(plantID, 0, 40, 5, 5, 30, 1000, lifespan_days, false);
+        plantarchitecture.advanceTime(plantID, 20.0f);
+
+        NitrogenParameters plant_params = N_params;
+        plant_params.max_N_accumulation_rate = starved ? 0.f : 10.f; // the supplied plant refills every leaf each step
+        plantarchitecture.setPlantNitrogenParameters(plantID, plant_params);
+        plantarchitecture.initializePlantNitrogenPools(plantID, starved ? 0.8f : N_params.target_leaf_N_area);
+        if (!starved) {
+            plantarchitecture.addPlantNitrogen(plantID, 100.f);
+        }
+        plantarchitecture.advanceTime(plantID, 0.1f);
+        const std::map<uint, LeafNitrogenState> before = leafNitrogenStates(context, plantarchitecture, plantID);
+        plantarchitecture.advanceTime(plantID, 6.0f); // oldest leaves reach about 26 days
+
+        float largest_fraction_lost = 0;
+        for (const auto &[objID, state]: leafNitrogenStates(context, plantarchitecture, plantID)) {
+            const auto previous = before.find(objID);
+            if (previous == before.end() || std::fabs(state.area - previous->second.area) > 0.01f * previous->second.area || previous->second.N_area <= 0) {
+                continue;
+            }
+            largest_fraction_lost = std::max(largest_fraction_lost, 1.f - state.N_area / previous->second.N_area);
+        }
+        return largest_fraction_lost;
+    };
+
+    const float supplied_loss = largestMatureLeafLoss(false);
+    const float starved_loss = largestMatureLeafLoss(true);
+    DOCTEST_CHECK(supplied_loss < 1e-3f);
+    DOCTEST_CHECK(starved_loss > 0.02f);
+}
+
 DOCTEST_TEST_CASE("Nitrogen Model - Fruit Removal") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
@@ -3596,12 +3949,11 @@ DOCTEST_TEST_CASE("Nitrogen Model - Fruit Removal") {
 }
 
 DOCTEST_TEST_CASE("Nitrogen Model - Leaf-to-Fruit Translocation") {
-    // When the available nitrogen pool cannot cover fruit demand, removeFruitNitrogen draws the
-    // shortfall from leaves (old leaves first, then young leaves as fallback). To isolate
-    // translocation cleanly, we override remobilization_age_threshold to a value age_fraction
-    // never reaches, which disables the leaf-to-leaf remobilization pathway. With remobilization
-    // disabled and the available pool empty, the only mechanism that can reduce a leaf below the
-    // target N concentration is leaf-to-fruit translocation.
+    // When the available nitrogen pool cannot cover fruit demand, the shortfall is drawn from mature
+    // leaves. To isolate that from leaf-to-leaf remobilization, leaves are given no uptake demand
+    // (max_N_accumulation_rate = 0): remobilization only answers unmet demand, so with no leaf demand
+    // and the available pool empty, the only mechanism that can reduce a leaf below the target N
+    // concentration is leaf-to-fruit translocation.
 
     Context context;
     PlantArchitecture plantarchitecture(&context);
@@ -3611,9 +3963,9 @@ DOCTEST_TEST_CASE("Nitrogen Model - Leaf-to-Fruit Translocation") {
     plantarchitecture.loadPlantModelFromLibrary("tomato");
     uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
 
-    // Disable leaf-to-leaf remobilization by setting an unreachable age threshold (age_fraction <= 1).
-    NitrogenParameters N_params; // defaults: target=1.5, minimum=0.5, efficiency=0.7
-    N_params.remobilization_age_threshold = 2.0f;
+    // No leaf demand, so no leaf-to-leaf remobilization.
+    NitrogenParameters N_params; // defaults: target=1.5, minimum=0.5
+    N_params.max_N_accumulation_rate = 0.f;
     plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
 
     // Grow plant well past fruit-set so fruits exist when we initialize and snapshot.
@@ -3654,6 +4006,7 @@ DOCTEST_TEST_CASE("Nitrogen Model - Leaf-to-Fruit Translocation") {
         }
     }
     DOCTEST_CHECK(any_leaf_at_target_pre);
+    const std::map<uint, LeafNitrogenState> leaves_before_fruit_growth = leafNitrogenStates(context, plantarchitecture, plantID);
 
     // Advance through ongoing fruit growth. With remobilization disabled and the pool empty, the
     // only path that can drop a leaf below target is translocation to fruit.
@@ -3672,7 +4025,11 @@ DOCTEST_TEST_CASE("Nitrogen Model - Leaf-to-Fruit Translocation") {
             if (leaf_N_area > N_params.minimum_leaf_N_area && leaf_N_area < N_params.target_leaf_N_area - 0.01f) {
                 any_leaf_drained_below_target = true;
             }
-            if (leaf_N_area > 1e-4f) {
+            // The floor applies to what translocation takes, so it is checked on leaves that were fully expanded
+            // throughout: a leaf still growing has its nitrogen per area diluted, which can take it below the floor.
+            const auto before = leaves_before_fruit_growth.find(objID);
+            const bool fully_expanded = before != leaves_before_fruit_growth.end() && std::fabs(context.getObjectArea(objID) - before->second.area) <= 0.01f * before->second.area;
+            if (fully_expanded && leaf_N_area > 1e-4f) {
                 min_leaf_N_observed = std::min(min_leaf_N_observed, leaf_N_area);
                 any_leaf_with_N = true;
             }
@@ -3688,9 +4045,7 @@ DOCTEST_TEST_CASE("Nitrogen Model - Leaf-to-Fruit Translocation") {
         DOCTEST_CHECK(any_leaf_drained_below_target);
     }
 
-    // Per-leaf floor: with translocation only able to remove (current - minimum) * efficiency, a
-    // fully drained leaf bottoms out at minimum + (initial - minimum)(1 - efficiency) = 0.8 g N/m²
-    // for the defaults. Assert at least minimum_leaf_N_area as a slack lower bound.
+    // Per-leaf floor: release is first-order toward minimum_leaf_N_area, so no leaf can be drawn below it.
     if (any_leaf_with_N) {
         DOCTEST_CHECK(min_leaf_N_observed >= N_params.minimum_leaf_N_area - 1e-3f);
     }
@@ -3707,8 +4062,8 @@ DOCTEST_TEST_CASE("Nitrogen Model - Leaf-to-Fruit Translocation") {
 }
 
 DOCTEST_TEST_CASE("Nitrogen Model - No Translocation When Pool Adequate") {
-    // Negative control: with leaf-to-leaf remobilization disabled (unreachable threshold) AND a
-    // well-stocked available pool, no drainage pathway should be active. Pre-existing leaves at
+    // Negative control: with a well-stocked available pool the plant is never short of nitrogen, so
+    // neither remobilization nor translocation should draw on leaves. Pre-existing leaves at
     // target N must remain at target after fruiting (translocation never triggers because the pool
     // covers demand). New leaves grown later may have lower N because accumulation is rate-limited,
     // so we only check the pre-existing initialized leaves.
@@ -3722,7 +4077,6 @@ DOCTEST_TEST_CASE("Nitrogen Model - No Translocation When Pool Adequate") {
     uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
 
     NitrogenParameters N_params;
-    N_params.remobilization_age_threshold = 2.0f; // Disable leaf-to-leaf remobilization
     plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
 
     plantarchitecture.advanceTime(plantID, 30.0f);
@@ -3745,8 +4099,8 @@ DOCTEST_TEST_CASE("Nitrogen Model - No Translocation When Pool Adequate") {
 
     DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 40.0f));
 
-    // Pre-existing leaves at target should remain at (or very near) target. With remobilization
-    // disabled and the pool adequate to cover fruit demand, no drainage pathway is active.
+    // Pre-existing leaves at target should remain at (or very near) target: the pool covers every
+    // demand, so nothing is remobilized or translocated.
     int leaves_intact = 0;
     for (uint objID: leaves_at_target_pre) {
         if (!context.doesObjectExist(objID)) {

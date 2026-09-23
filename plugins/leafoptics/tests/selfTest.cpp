@@ -1137,8 +1137,8 @@ DOCTEST_TEST_CASE("LeafOpticsProperties_Nauto Default Constructor") {
 
     // Binning parameters
     DOCTEST_CHECK(params.num_bins == 20);
-    DOCTEST_CHECK(params.reassignment_threshold == doctest::Approx(0.30f).epsilon(err_tol));
-    DOCTEST_CHECK(params.min_reassignment_change == doctest::Approx(0.3f).epsilon(err_tol));
+    DOCTEST_CHECK(params.reassignment_threshold == doctest::Approx(0.0f).epsilon(err_tol));
+    DOCTEST_CHECK(params.min_reassignment_change == doctest::Approx(0.05f).epsilon(err_tol));
 }
 
 DOCTEST_TEST_CASE("Nitrogen Mode - First Call Creates Bins") {
@@ -1701,6 +1701,175 @@ DOCTEST_TEST_CASE("Nitrogen Mode - Verify Spectrum Physical Properties") {
     // Check wavelength range
     DOCTEST_CHECK(refl_data.front().x == doctest::Approx(400.0f).epsilon(0.01f));
     DOCTEST_CHECK(refl_data.back().x == doctest::Approx(2500.0f).epsilon(0.01f));
+}
+
+DOCTEST_TEST_CASE("Nitrogen Mode - Leaf Assigned to a Zero-Nitrogen Bin Can Be Reassigned") {
+    // A leaf emerges holding no nitrogen, so the first bin of a growing canopy sits at zero. Once
+    // that leaf fills it must move to a bin representing its own nitrogen; a bin it can never leave
+    // would hold it at the minimum chlorophyll for the rest of the simulation.
+
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+    leafoptics.optionalOutputPrimitiveData("chlorophyll");
+
+    // Nitrogen spanning zero to 3.0 g/m^2, so the bins already cover the range the leaf grows into
+    // and the change below is a reassignment among existing bins rather than a rebuild.
+    std::vector<uint> all_UUIDs;
+    std::vector<uint> objIDs;
+    for (int i = 0; i < 7; i++) {
+        uint objID = context_test.addTileObject(make_vec3(float(i) * 0.2f, 0, 0), make_vec2(0.1f, 0.1f), make_SphericalCoord(0, 0), make_int2(2, 2));
+        objIDs.push_back(objID);
+        context_test.setObjectData(objID, "leaf_nitrogen_gN_m2", float(i) * 0.5f); // 0.0 ... 3.0
+        std::vector<uint> obj_UUIDs = context_test.getObjectPrimitiveUUIDs(objID);
+        all_UUIDs.insert(all_UUIDs.end(), obj_UUIDs.begin(), obj_UUIDs.end());
+    }
+
+    LeafOpticsProperties_Nauto params;
+    params.num_bins = 7;
+
+    leafoptics.run(all_UUIDs, params);
+
+    // The leaf that emerged with no nitrogen fills to a value the existing bins already represent.
+    const float filled_N = 2.0f;
+    context_test.setObjectData(objIDs.front(), "leaf_nitrogen_gN_m2", filled_N);
+    leafoptics.run(all_UUIDs, params);
+
+    const float expected_Cab = filled_N * 100.f * params.f_photosynthetic * params.N_to_Cab_coefficient;
+    for (uint UUID: context_test.getObjectPrimitiveUUIDs(objIDs.front())) {
+        float Cab;
+        context_test.getPrimitiveData(UUID, "chlorophyll", Cab);
+        DOCTEST_CHECK(Cab == doctest::Approx(expected_Cab).epsilon(0.15f));
+    }
+}
+
+DOCTEST_TEST_CASE("Nitrogen Mode - Bins Cover the Nitrogen Range When Values Cluster") {
+    // A growing canopy holds many leaves at the same nitrogen -- every leaf that has just emerged is at
+    // zero -- and only a few spread across the rest of the range. Bins placed at quantiles of that
+    // population pile up on the repeated value and leave the rest of the range to one or two spectra,
+    // so leaves of quite different nitrogen render identically and the canopy shows hard colour steps.
+    // Every leaf must be within half a bin spacing of the bin it is given.
+
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+    leafoptics.optionalOutputPrimitiveData("chlorophyll");
+
+    std::vector<float> nitrogen(18, 0.0f); // newly emerged leaves
+    for (float N: {0.5f, 0.9f, 1.3f, 1.7f, 2.1f, 2.5f}) {
+        nitrogen.push_back(N);
+    }
+
+    std::vector<uint> all_UUIDs;
+    std::vector<std::pair<std::vector<uint>, float>> leaves;
+    for (size_t i = 0; i < nitrogen.size(); i++) {
+        uint objID = context_test.addTileObject(make_vec3(float(i) * 0.2f, 0, 0), make_vec2(0.1f, 0.1f), make_SphericalCoord(0, 0), make_int2(1, 1));
+        context_test.setObjectData(objID, "leaf_nitrogen_gN_m2", nitrogen[i]);
+        std::vector<uint> obj_UUIDs = context_test.getObjectPrimitiveUUIDs(objID);
+        leaves.emplace_back(obj_UUIDs, nitrogen[i]);
+        all_UUIDs.insert(all_UUIDs.end(), obj_UUIDs.begin(), obj_UUIDs.end());
+    }
+
+    LeafOpticsProperties_Nauto params;
+    params.num_bins = 6;
+    leafoptics.run(all_UUIDs, params);
+
+    // Six bins over 0-2.5 g/m^2 are 0.5 apart, so no leaf should be more than 0.25 g/m^2 -- 5 ug/cm^2 of
+    // chlorophyll at this conversion -- from its bin centre.
+    const float Cab_per_N = 100.f * params.f_photosynthetic * params.N_to_Cab_coefficient;
+    for (const auto &[UUIDs, N]: leaves) {
+        float Cab;
+        context_test.getPrimitiveData(UUIDs.front(), "chlorophyll", Cab);
+        const float expected_Cab = std::max(5.f, std::min(80.f, N * Cab_per_N));
+        DOCTEST_CHECK(std::fabs(Cab - expected_Cab) <= 0.25f * Cab_per_N + 0.5f);
+    }
+}
+
+DOCTEST_TEST_CASE("Nitrogen Mode - Leaf Moves to the Bin Nearest Its Nitrogen With Default Settings") {
+    // A leaf that fills from 2.2 to 2.5 g/m^2, with a bin at each, must end up in the 2.5 bin. With the
+    // default thresholds a 0.3 g/m^2 (14 %) change was below both the absolute and the relative
+    // reassignment threshold, so the leaf kept the 2.2 spectrum for the rest of the run: a canopy whose
+    // leaves all held the same nitrogen rendered in two shades.
+
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+    leafoptics.optionalOutputPrimitiveData("chlorophyll");
+
+    std::vector<uint> all_UUIDs;
+    std::vector<uint> filling_leaf_UUIDs;
+    uint filling_leaf = 0;
+    const std::vector<float> nitrogen = {0.1f, 0.4f, 0.7f, 1.0f, 1.3f, 1.6f, 1.9f, 2.2f, 2.5f};
+    for (size_t i = 0; i < nitrogen.size(); i++) {
+        uint objID = context_test.addTileObject(make_vec3(float(i) * 0.2f, 0, 0), make_vec2(0.1f, 0.1f), make_SphericalCoord(0, 0), make_int2(1, 1));
+        context_test.setObjectData(objID, "leaf_nitrogen_gN_m2", nitrogen[i]);
+        std::vector<uint> obj_UUIDs = context_test.getObjectPrimitiveUUIDs(objID);
+        all_UUIDs.insert(all_UUIDs.end(), obj_UUIDs.begin(), obj_UUIDs.end());
+        if (nitrogen[i] == 2.2f) {
+            filling_leaf = objID;
+            filling_leaf_UUIDs = obj_UUIDs;
+        }
+    }
+
+    LeafOpticsProperties_Nauto params; // default reassignment thresholds
+    params.num_bins = uint(nitrogen.size());
+    leafoptics.run(all_UUIDs, params);
+
+    context_test.setObjectData(filling_leaf, "leaf_nitrogen_gN_m2", 2.5f); // still inside the bin range
+    leafoptics.run(all_UUIDs, params);
+
+    const float expected_Cab = 2.5f * 100.f * params.f_photosynthetic * params.N_to_Cab_coefficient;
+    float Cab;
+    context_test.getPrimitiveData(filling_leaf_UUIDs.front(), "chlorophyll", Cab);
+    DOCTEST_CHECK(Cab == doctest::Approx(expected_Cab).epsilon(0.02f));
+}
+
+DOCTEST_TEST_CASE("Nitrogen Mode - Bins Track Nitrogen Beyond the Initial Range") {
+    // Bins are created from the nitrogen distribution present on the first run() call. A canopy
+    // simulated over a season leaves that range entirely as its leaves fill, and each leaf must
+    // still receive a spectrum representative of its own nitrogen rather than being pinned to the
+    // most extreme bin that happened to exist on the first call.
+
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+    leafoptics.optionalOutputPrimitiveData("chlorophyll");
+
+    std::vector<uint> all_UUIDs;
+    std::vector<std::vector<uint>> object_UUIDs;
+
+    for (int i = 0; i < 6; i++) {
+        uint objID = context_test.addTileObject(make_vec3(float(i) * 0.2f, 0, 0), make_vec2(0.1f, 0.1f), make_SphericalCoord(0, 0), make_int2(2, 2));
+        context_test.setObjectData(objID, "leaf_nitrogen_gN_m2", 0.5f + float(i) * 0.1f); // 0.5 ... 1.0 g N/m^2
+        std::vector<uint> obj_UUIDs = context_test.getObjectPrimitiveUUIDs(objID);
+        object_UUIDs.push_back(obj_UUIDs);
+        all_UUIDs.insert(all_UUIDs.end(), obj_UUIDs.begin(), obj_UUIDs.end());
+    }
+
+    LeafOpticsProperties_Nauto params;
+    params.num_bins = 6;
+
+    leafoptics.run(all_UUIDs, params);
+
+    // Every leaf now holds far more nitrogen than anything seen on the first call.
+    std::vector<float> grown_N;
+    for (int i = 0; i < 6; i++) {
+        grown_N.push_back(2.5f + float(i) * 0.1f); // 2.5 ... 3.0 g N/m^2
+        context_test.setObjectData(context_test.getPrimitiveParentObjectID(object_UUIDs[i].front()), "leaf_nitrogen_gN_m2", grown_N.back());
+    }
+
+    leafoptics.run(all_UUIDs, params);
+
+    // Cab = N_area*100*f_photosynthetic*N_to_Cab_coefficient, clamped to [5,80] ug/cm^2. With the
+    // bins spanning the new range, each leaf's chlorophyll must follow its own nitrogen.
+    for (int i = 0; i < 6; i++) {
+        const float expected_Cab = grown_N[i] * 100.f * params.f_photosynthetic * params.N_to_Cab_coefficient;
+        for (uint UUID: object_UUIDs[i]) {
+            float Cab;
+            context_test.getPrimitiveData(UUID, "chlorophyll", Cab);
+            DOCTEST_CHECK(Cab == doctest::Approx(expected_Cab).epsilon(0.05f));
+        }
+    }
 }
 
 DOCTEST_TEST_CASE("LeafOptics Zero Absorption - PROSPECT-PRO with no water") {

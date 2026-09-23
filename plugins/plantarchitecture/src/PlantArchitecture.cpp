@@ -8204,7 +8204,10 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
                 for (auto &phytomer: shoot->phytomers) {
                     if (phytomer->age > plant_instance.max_leaf_lifespan) {
-                        // delete old leaves that exceed maximum lifespan
+                        // delete old leaves that exceed maximum lifespan, resorbing their nitrogen first
+                        if (nitrogen_model_enabled && !phytomer->leaf_objIDs.empty()) {
+                            resorbLeafNitrogen(plant_instance, *shoot, *phytomer);
+                        }
                         phytomer->removeLeaf();
                     }
 
@@ -8584,9 +8587,10 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
         // **** nitrogen model operations **** //
         if (nitrogen_model_enabled) {
-            accumulateLeafNitrogen(dt_max_days); // Available pool → leaf pools (rate-limited)
-            remobilizeNitrogen(dt_max_days); // Old leaves → young leaves (age-based)
-            removeFruitNitrogen(); // Deduct N from available pool for fruit growth
+            senesceLeafNitrogen(dt_max_days); // Senescing leaves → available pool
+            accumulateLeafNitrogen(dt_max_days); // Available pool → expanding leaves, then mature leaves (rate-limited)
+            removeFruitNitrogen(); // Available pool → fruit growth; the remainder is recorded as unmet demand
+            remobilizeNitrogen(dt_max_days); // Mature leaves → unmet demand of expanding leaves and fruit (first-order)
             updateNitrogenStressFactor(); // Calculate and write stress factor to object data
         }
 

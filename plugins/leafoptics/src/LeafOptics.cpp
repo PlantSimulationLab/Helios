@@ -848,38 +848,25 @@ void LeafOptics::createAdaptiveBins(const std::vector<float> &nitrogen_values) {
         return;
     }
 
-    // Sort nitrogen values for quantile calculation
-    std::vector<float> sorted_N = nitrogen_values;
-    std::sort(sorted_N.begin(), sorted_N.end());
+    // Bin centres are spaced evenly across the range the leaves currently span. Placing them at quantiles of
+    // the population concentrated them wherever many leaves shared a value -- in a growing canopy, every
+    // leaf that has just emerged sits at zero -- and left the rest of the range to one or two spectra, so
+    // leaves of quite different nitrogen rendered identically and the canopy showed hard colour steps.
+    const auto [lowest, highest] = std::minmax_element(nitrogen_values.begin(), nitrogen_values.end());
+    const float range_low = *lowest;
+    const float range_high = *highest;
 
-    uint count = sorted_N.size();
-    uint target_bins = nitrogen_params.num_bins;
-
-    // Adjust number of bins if fewer unique values than requested bins
-    if (count < target_bins) {
-        target_bins = count;
+    uint target_bins = std::max(1u, nitrogen_params.num_bins);
+    if (range_high - range_low < 0.001f) {
+        target_bins = 1; // every leaf holds the same nitrogen
     }
 
-    // Create quantile-based bin centers
     std::vector<float> bin_centers;
     for (uint i = 0; i < target_bins; i++) {
-        // Calculate index for quantile center
-        uint idx = (i * count / target_bins) + (count / (2 * target_bins));
-        if (idx >= count) {
-            idx = count - 1;
-        }
-        float center = sorted_N[idx];
-
-        // Only add if not a duplicate (within tolerance)
-        bool is_duplicate = false;
-        for (float existing: bin_centers) {
-            if (std::abs(center - existing) < 0.001f) {
-                is_duplicate = true;
-                break;
-            }
-        }
-        if (!is_duplicate) {
-            bin_centers.push_back(center);
+        if (target_bins == 1) {
+            bin_centers.push_back(0.5f * (range_low + range_high));
+        } else {
+            bin_centers.push_back(range_low + (range_high - range_low) * float(i) / float(target_bins - 1));
         }
     }
 
@@ -933,8 +920,15 @@ bool LeafOptics::shouldReassign(float current_N, uint current_bin) {
         return false;
     }
 
-    // Check relative threshold
-    float relative_change = (bin_center > 0.0f) ? (absolute_change / bin_center) : 0.0f;
+    // Check relative threshold. A bin centered at zero is the one a leaf is placed in when it
+    // emerges holding no nitrogen, and it has no scale to measure a relative change against: any
+    // movement away from it is an unbounded relative change. Treating that as no change at all
+    // would leave every leaf that ever emerged permanently in the zero bin, rendering at the
+    // minimum chlorophyll however much nitrogen it went on to accumulate.
+    if (bin_center <= 0.0f) {
+        return true;
+    }
+    float relative_change = absolute_change / bin_center;
     return relative_change > nitrogen_params.reassignment_threshold;
 }
 
@@ -948,6 +942,51 @@ bool LeafOptics::isSignificantImprovement(float current_N, uint old_bin, uint ne
 
     // Require improvement of at least half the minimum change threshold (hysteresis)
     return (old_distance - new_distance) > nitrogen_params.min_reassignment_change * 0.5f;
+}
+
+bool LeafOptics::nitrogenOutsideBinRange(const std::vector<float> &nitrogen_values) {
+    if (nitrogen_bins.empty()) {
+        return true;
+    }
+
+    // Bin centers are built from ascending quantiles, so the first and last bound the range the
+    // bins can represent. A single bin has no spacing of its own, so the reassignment threshold
+    // supplies the scale instead.
+    const float range_low = nitrogen_bins.front().N_center;
+    const float range_high = nitrogen_bins.back().N_center;
+    float margin = nitrogen_params.min_reassignment_change;
+    if (nitrogen_bins.size() > 1) {
+        margin = 0.5f * (range_high - range_low) / float(nitrogen_bins.size() - 1);
+    }
+
+    for (float N_value: nitrogen_values) {
+        if (N_value < range_low - margin || N_value > range_high + margin) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void LeafOptics::assignObjectsToNearestBins(const std::map<uint, std::vector<uint>> &object_groups, const std::map<uint, float> &object_nitrogen) {
+    for (const auto &pair: object_groups) {
+        uint objID = pair.first;
+        const std::vector<uint> &obj_UUIDs = pair.second;
+        float N_area = object_nitrogen.at(objID);
+
+        uint best_bin = findNearestBin(N_area);
+        assignSpectrumToPrimitives(obj_UUIDs, best_bin);
+
+        ObjectAssignment assignment;
+        assignment.bin_index = best_bin;
+        assignment.N_at_assignment = N_area;
+        assignment.primitive_UUIDs = obj_UUIDs;
+        object_assignments[objID] = assignment;
+
+        for (uint UUID: obj_UUIDs) {
+            primitive_to_object[UUID] = objID;
+        }
+    }
 }
 
 void LeafOptics::assignSpectrumToPrimitives(const std::vector<uint> &UUIDs, uint bin_index) {
@@ -1039,26 +1078,7 @@ void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties_
         createAdaptiveBins(nitrogen_values);
 
         // Assign each object to nearest bin
-        for (const auto &pair: object_groups) {
-            uint objID = pair.first;
-            const std::vector<uint> &obj_UUIDs = pair.second;
-            float N_area = object_nitrogen[objID];
-
-            uint best_bin = findNearestBin(N_area);
-            assignSpectrumToPrimitives(obj_UUIDs, best_bin);
-
-            // Track assignment
-            ObjectAssignment assignment;
-            assignment.bin_index = best_bin;
-            assignment.N_at_assignment = N_area;
-            assignment.primitive_UUIDs = obj_UUIDs;
-            object_assignments[objID] = assignment;
-
-            // Track primitive to object mapping
-            for (uint UUID: obj_UUIDs) {
-                primitive_to_object[UUID] = objID;
-            }
-        }
+        assignObjectsToNearestBins(object_groups, object_nitrogen);
 
         nitrogen_mode_active = true;
 
@@ -1096,6 +1116,23 @@ void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties_
                 primitive_to_object.erase(UUID);
             }
             object_assignments.erase(objID);
+        }
+
+        if (nitrogenOutsideBinRange(nitrogen_values)) {
+            // Nitrogen has moved beyond what the existing bins can represent, which happens
+            // routinely over a simulated season. Snapping these leaves to the nearest bin would
+            // clamp them to an extreme bin and hold their spectrum fixed for the rest of the run,
+            // so the bins are rebuilt over the current distribution. Every object is reassigned
+            // because the bin labels are reused: an assignment left over from the previous bins
+            // would otherwise point a leaf at a different bin's spectrum.
+            createAdaptiveBins(nitrogen_values);
+            assignObjectsToNearestBins(object_groups, object_nitrogen);
+
+            if (message_flag) {
+                std::cout << "LeafOptics: Leaf nitrogen moved outside the established bin range. Rebuilt " << nitrogen_bins.size() << " spectrum bins and reassigned " << object_assignments.size() << " leaf objects." << std::endl;
+            }
+
+            return;
         }
 
         // Process current objects

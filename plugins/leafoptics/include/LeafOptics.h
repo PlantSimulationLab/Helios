@@ -107,17 +107,20 @@ struct LeafOpticsProperties_Nauto {
 
     // === Adaptive binning configuration ===
 
-    //! Target number of spectrum bins
-    /** Actual number may be fewer if leaf nitrogen values cluster tightly */
+    //! Number of spectrum bins
+    /** Bin centres are spaced evenly across the nitrogen range the leaves span; a single bin is used when every leaf holds the same nitrogen */
     uint num_bins = 20;
 
-    //! Relative nitrogen change threshold for reassignment
-    /** Leaf must change by this fraction from bin center to be considered for reassignment */
-    float reassignment_threshold = 0.30f;
+    //! Relative nitrogen change threshold for reassignment (0 disables it)
+    /** Leaf must change by this fraction of its bin centre to be considered for reassignment. Off by default: with bins evenly spaced a
+     * relative threshold holds leaves at high nitrogen several bins away from the one that represents them -- at 30 % a leaf that filled
+     * from 2.2 to 2.5 g/m2 kept the 2.2 spectrum for the rest of the run. */
+    float reassignment_threshold = 0.0f;
 
     //! Minimum absolute nitrogen change for reassignment (g/m2)
-    /** Prevents reassignment for small absolute changes even if relative change is large */
-    float min_reassignment_change = 0.3f;
+    /** Hysteresis: a leaf is reassigned only once it has moved this far from its bin centre, and its new bin must be closer by at least half of it, so a leaf
+     * hovering on a bin boundary does not flicker between two spectra */
+    float min_reassignment_change = 0.05f;
 };
 
 class LeafOptics {
@@ -340,6 +343,16 @@ private:
 
     //! Find the nearest bin index for a given nitrogen value
     uint findNearestBin(float N_value);
+
+    //! Check whether any nitrogen value lies outside the range spanned by the current bins
+    /**
+     * A value beyond the outermost bin centers by more than half the mean bin spacing cannot be
+     * represented by the existing bins, and would otherwise be clamped to an extreme bin.
+     */
+    bool nitrogenOutsideBinRange(const std::vector<float> &nitrogen_values);
+
+    //! Assign every object to its nearest bin and rebuild the object and primitive tracking maps
+    void assignObjectsToNearestBins(const std::map<uint, std::vector<uint>> &object_groups, const std::map<uint, float> &object_nitrogen);
 
     //! Check if an object should be reassigned based on nitrogen change
     bool shouldReassign(float current_N, uint current_bin);

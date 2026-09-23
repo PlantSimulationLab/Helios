@@ -407,10 +407,28 @@ struct NitrogenParameters {
     float max_N_accumulation_rate = 0.1f;
 
     // -- Remobilization Parameters -- //
-    //! fraction of leaf nitrogen that can be remobilized from old leaves (0.0-1.0)
+    //! first-order rate (1/day) at which a mature leaf releases its nitrogen above minimum_leaf_N_area while the plant cannot meet its growing organs' demand
+    /**
+     * Each day of shortfall a mature leaf can give up this fraction of its remobilizable nitrogen, oldest leaves first. Labelling studies in nitrogen-limited plants find mature leaves exporting
+     * 5-16 % of their nitrogen to young leaves over ten days (Diaz et al. 2008), and crop models use a few percent per day.
+     */
+    float leaf_remobilization_rate = 0.03f;
+    //! fraction of a leaf's nitrogen above minimum_leaf_N_area resorbed into the plant as it senesces, by the time it is shed at max_leaf_lifespan (0.0-1.0)
     float leaf_remobilization_efficiency = 0.70f;
-    //! fraction of leaf lifespan at which remobilization begins (0.0-1.0)
-    float remobilization_age_threshold = 0.70f;
+
+    // -- Leaf Senescence Parameters -- //
+    //! fraction of max_leaf_lifespan, at the end of a leaf's life, over which an unstressed leaf senesces (0.0-1.0)
+    /**
+     * A senescing leaf returns its resorbable nitrogen to the plant gradually, yellowing as it does, and is shed at max_leaf_lifespan. Has no effect while max_leaf_lifespan keeps its
+     * effectively infinite default.
+     */
+    float leaf_senescence_duration_fraction = 0.25f;
+    //! fraction of max_leaf_lifespan by which nitrogen stress brings the onset of leaf senescence forward, at full stress (0.0-1.0)
+    /**
+     * Scaled by (1 - nitrogen_stress_factor): a plant at its target leaf nitrogen senesces its leaves on schedule, and a nitrogen-starved plant starts senescing them earlier.
+     * The sum with leaf_senescence_duration_fraction must not exceed 1.
+     */
+    float stress_senescence_advance_fraction = 0.30f;
 
     // -- Fruit Nitrogen Parameters -- //
     //! nitrogen content per unit fruit area (g N/m²)
@@ -2475,6 +2493,12 @@ struct Shoot {
 
     //! Per-leaf nitrogen tracking - maps leaf objID to nitrogen content per unit area (g N/m²)
     std::map<uint, float> leaf_nitrogen_gN_m2;
+    //! Nitrogen (g N) each expanding leaf wanted this timestep but did not receive from uptake; filled by remobilization. Rebuilt every timestep.
+    std::map<uint, float> leaf_N_unmet_demand_gN;
+    //! Leaf area (m²) at which each leaf's nitrogen per area was last stated, so that growth dilutes it rather than creating nitrogen
+    std::map<uint, float> leaf_N_area_basis_m2;
+    //! Nitrogen per area (g N/m²) of each senescing leaf when its senescence began; a leaf is in this map once it has started senescing
+    std::map<uint, float> leaf_N_at_senescence_onset;
 
     float old_shoot_volume = 0;
 
@@ -2616,6 +2640,10 @@ struct PlantInstance {
     float available_nitrogen_pool_gN = 0;
     //! Cumulative nitrogen uptake tracking (g N)
     float cumulative_N_uptake_gN = 0;
+    //! Fruit nitrogen demand (g N) the available pool could not cover this timestep; filled by remobilization. Rebuilt every timestep.
+    float unmet_fruit_N_demand_gN = 0;
+    //! Plant nitrogen stress factor from the last nitrogen update (0 = no leaf nitrogen, 1 = at target)
+    float nitrogen_stress_factor = 1.f;
 
     //! Snapshot of shoot parameters that were active when this plant was created
     //! This prevents parameter contamination between different plant types
@@ -4348,6 +4376,14 @@ public:
      */
     void addPlantNitrogen(const std::vector<uint> &plantIDs, float amount_gN);
 
+    /**
+     * \brief Get the nitrogen currently in a plant's available pool, awaiting allocation to its organs
+     * \param[in] plantID Plant ID to query
+     * \return Nitrogen in the available pool (g N)
+     * \note Nitrogen enters the pool from addPlantNitrogen() (less the root allocation) and from leaves resorbed before they are shed, and leaves it as uptake by growing leaves and fruit.
+     */
+    [[nodiscard]] float getPlantAvailableNitrogen(uint plantID) const;
+
     // -- manual plant generation from input string -- //
 
     /**
@@ -4794,10 +4830,14 @@ protected:
 
     // --- Nitrogen Model --- //
 
+    //! Return nitrogen from senescing leaves to the plant's available pool, starting senescence in leaves that have reached its onset
+    void senesceLeafNitrogen(float dt);
     void accumulateLeafNitrogen(float dt);
     void remobilizeNitrogen(float dt);
     void updateNitrogenStressFactor();
     void removeFruitNitrogen();
+    //! Return what remains of the resorbable nitrogen of a phytomer's senescing leaves to the plant's available pool before the leaves are shed
+    void resorbLeafNitrogen(PlantInstance &plant, Shoot &shoot, const Phytomer &phytomer);
 
     bool nitrogen_model_enabled = false;
 
