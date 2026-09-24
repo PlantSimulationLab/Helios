@@ -8626,6 +8626,85 @@ DOCTEST_TEST_CASE("PlantArchitecture XML round-trip is stable across repeated sa
     std::remove(stage1_filename.c_str());
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture XML round-trip of a phytomer whose leaves were removed") {
+    // Phytomer::removeLeaf() -- called by pruneGroundCollisions() for a leaf that touches the ground, and by
+    // removeShootLeaves() -- deletes a phytomer's petioles along with its leaves, so writePlantStructureXML()
+    // writes that phytomer with no <petiole> node. readPlantStructureXML() rebuilt the phytomer from the shoot
+    // type with a full set of petioles, built them from petiole scalars that had never been read (and so were
+    // uninitialized), and left them in place. The reloaded plant carried petiole tubes the saved plant did not
+    // have, and the next file recorded them as petioles with no leaves, so every save/load cycle added more.
+    const std::string stage0_filename = "test_xml_roundtrip_leafless_stage0.xml";
+    const std::string stage1_filename = "test_xml_roundtrip_leafless_stage1.xml";
+
+    auto countPetioleNodes = [](const std::string &filename) {
+        std::ifstream file(filename);
+        std::string line;
+        int count = 0;
+        while (std::getline(file, line)) {
+            if (line.find("<petiole>") != std::string::npos) {
+                count++;
+            }
+        }
+        return count;
+    };
+
+    auto countNaNPetiolePrimitives = [](Context &context, const std::vector<uint> &objIDs) {
+        int count = 0;
+        for (uint UUID: context.getObjectPrimitiveUUIDs(objIDs)) {
+            for (const vec3 &vertex: context.getPrimitiveVertices(UUID)) {
+                if (std::isnan(vertex.x) || std::isnan(vertex.y) || std::isnan(vertex.z)) {
+                    count++;
+                    break;
+                }
+            }
+        }
+        return count;
+    };
+
+    // Cowpea's first shoot is the unifoliate node, which the trifoliate main stem grows from, so stripping it also
+    // checks that a child shoot can still be attached to a phytomer that has no petioles.
+    Context grown_context;
+    PlantArchitecture grown_plantarchitecture(&grown_context);
+    grown_plantarchitecture.disableMessages();
+    grown_plantarchitecture.loadPlantModelFromLibrary("cowpea");
+    const uint grown_plantID = grown_plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30.f);
+    const std::vector<uint> shootIDs = grown_plantarchitecture.getAllShootIDs(grown_plantID);
+    DOCTEST_REQUIRE(shootIDs.size() > 1);
+    grown_plantarchitecture.removeShootLeaves(grown_plantID, shootIDs.front());
+    DOCTEST_REQUIRE_NOTHROW(grown_plantarchitecture.writePlantStructureXML(grown_plantID, stage0_filename));
+
+    const size_t grown_petioles = grown_plantarchitecture.getPlantPetioleObjectIDs(grown_plantID).size();
+    const size_t grown_leaves = grown_plantarchitecture.getPlantLeafObjectIDs(grown_plantID).size();
+    DOCTEST_REQUIRE(grown_petioles > 0);
+
+    Context reload1_context;
+    PlantArchitecture reload1_plantarchitecture(&reload1_context);
+    reload1_plantarchitecture.disableMessages();
+    reload1_plantarchitecture.loadPlantModelFromLibrary("cowpea");
+    std::vector<uint> reload1_plantIDs;
+    DOCTEST_REQUIRE_NOTHROW(reload1_plantIDs = reload1_plantarchitecture.readPlantStructureXML(stage0_filename, true));
+    DOCTEST_REQUIRE(!reload1_plantIDs.empty());
+    DOCTEST_REQUIRE_NOTHROW(reload1_plantarchitecture.writePlantStructureXML(reload1_plantIDs.front(), stage1_filename));
+
+    const std::vector<uint> reload1_petiole_objIDs = reload1_plantarchitecture.getPlantPetioleObjectIDs(reload1_plantIDs.front());
+    DOCTEST_CHECK(reload1_petiole_objIDs.size() == grown_petioles);
+    DOCTEST_CHECK(reload1_plantarchitecture.getPlantLeafObjectIDs(reload1_plantIDs.front()).size() == grown_leaves);
+    DOCTEST_CHECK(countNaNPetiolePrimitives(reload1_context, reload1_petiole_objIDs) == 0);
+    DOCTEST_CHECK(countPetioleNodes(stage1_filename) == countPetioleNodes(stage0_filename));
+
+    Context reload2_context;
+    PlantArchitecture reload2_plantarchitecture(&reload2_context);
+    reload2_plantarchitecture.disableMessages();
+    reload2_plantarchitecture.loadPlantModelFromLibrary("cowpea");
+    std::vector<uint> reload2_plantIDs;
+    DOCTEST_REQUIRE_NOTHROW(reload2_plantIDs = reload2_plantarchitecture.readPlantStructureXML(stage1_filename, true));
+    DOCTEST_REQUIRE(!reload2_plantIDs.empty());
+    DOCTEST_CHECK(reload2_plantarchitecture.getPlantPetioleObjectIDs(reload2_plantIDs.front()).size() == grown_petioles);
+
+    std::remove(stage0_filename.c_str());
+    std::remove(stage1_filename.c_str());
+}
+
 DOCTEST_TEST_CASE("PlantArchitecture XML round-trip preserves leaf orientation") {
     // readPlantStructureXML() rebuilds each leaf by re-running the rotation chain the Phytomer constructor
     // uses, from the angles saved in the file. It used to carry its own copy of that chain, and the copy had
