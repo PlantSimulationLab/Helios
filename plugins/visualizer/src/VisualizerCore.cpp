@@ -1289,6 +1289,10 @@ std::vector<helios::RGBcolor> Visualizer::readOffscreenPixels() const {
     try {
         // Read pixels from the color attachment
         std::vector<unsigned char> pixel_data(data_size);
+        // pixel_data holds tightly packed rows. At the default pack alignment of 4, glReadPixels pads each GL_RGB row to a
+        // multiple of 4 bytes, so for a width that is not a multiple of 4 it writes past the end of the buffer and every
+        // row after the first is read skewed.
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
         glReadPixels(0, 0, static_cast<GLsizei>(Wframebuffer), static_cast<GLsizei>(Hframebuffer), GL_RGB, GL_UNSIGNED_BYTE, pixel_data.data());
 
         error = glGetError();
