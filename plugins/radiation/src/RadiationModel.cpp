@@ -468,16 +468,7 @@ const helios::FluspectKernel *RadiationModel::getOrComputeFluspectKernel(uint UU
     std::string biochem_label;
     context->getPrimitiveData(UUID, "fluspect_spectrum", biochem_label);
 
-    // Cache key: the global-data label + excitation step. No need to hash the
-    // underlying biochemistry floats — the label is the authoritative identity.
-    FluspectCacheKey key{biochem_label, fp_round5(excitation_step_nm)};
-    auto it = fluspect_cache.find(key);
-    if (it != fluspect_cache.end()) {
-        return &it->second;
-    }
-
-    // Cache miss — resolve the global-data biochemistry vector, build the struct,
-    // compute the Fluspect-B kernel.
+    // Resolve and validate the global-data biochemistry vector the label points at.
     if (!context->doesGlobalDataExist(biochem_label.c_str())) {
         helios_runtime_error("ERROR (RadiationModel::getOrComputeFluspectKernel): primitive " + std::to_string(UUID) +
                              " has fluspect_spectrum = '" + biochem_label + "' but that global data does not exist. "
@@ -494,6 +485,20 @@ const helios::FluspectKernel *RadiationModel::getOrComputeFluspectKernel(uint UU
         helios_runtime_error("ERROR (RadiationModel::getOrComputeFluspectKernel): global data '" + biochem_label +
                              "' has " + std::to_string(biochem_vec.size()) + " elements but must have exactly 11 "
                              "(Cab, Cca, Cw, Cdm, Cs, Cant, Cp, Cbc, N, V2Z, fqe).");
+    }
+
+    // Cache key: the global-data label + excitation step. A label is not a fixed identity -- the values behind it can be rewritten
+    // (LeafOptics::run() reuses its nitrogen-bin labels with new pigment values every time it rebuilds its bins) -- so a cached kernel is
+    // reused only while the biochemistry it was computed from is unchanged. fqe (the last field) does not enter the kernel, so a change to
+    // it alone does not force a recompute.
+    FluspectCacheKey key{biochem_label, fp_round5(excitation_step_nm)};
+    const std::vector<float> kernel_biochem(biochem_vec.begin(), biochem_vec.begin() + 10);
+    auto it = fluspect_cache.find(key);
+    if (it != fluspect_cache.end()) {
+        if (fluspect_cache_biochem.at(key) == kernel_biochem) {
+            return &it->second;
+        }
+        fluspect_cache.erase(it);
     }
 
     helios::FluspectBiochemistry biochem;
@@ -515,6 +520,7 @@ const helios::FluspectKernel *RadiationModel::getOrComputeFluspectKernel(uint UU
 
     ensureFluspectOptiparLoaded();
     helios::FluspectKernel kernel = helios::computeFluspectKernel(biochem, fluspect_optipar, excitation_step_nm);
+    fluspect_cache_biochem[key] = kernel_biochem;
     auto [inserted_it, _] = fluspect_cache.emplace(key, std::move(kernel));
     return &inserted_it->second;
 }
@@ -628,6 +634,9 @@ void RadiationModel::populateExcitationSet(ExcitationSet &exc, const std::vector
     // per emission band bound to this bin width is the yield-free band emission of each face; computeSIFEmission() scales it. The
     // internal radiation_flux_<band> primitive data is then cleared (internal bands shouldn't pollute the user namespace).
     exc.base_emission.clear();
+    exc.biochem_label_versions.clear();
+    exc.leaf_biochem_label.clear();
+    std::unordered_map<std::string, uint> biochem_label_index;
     const std::vector<uint> all_UUIDs = context->getAllUUIDs();
     const size_t n_bands = exc.band_labels.size();
     const size_t Nbands_launch = launch_band_labels.size();
@@ -676,6 +685,15 @@ void RadiationModel::populateExcitationSet(ExcitationSet &exc, const std::vector
         if (!context->doesPrimitiveDataExist(UUID, "fluspect_spectrum")) {
             continue;
         }
+        // Record the biochemistry the emission is computed from, so that a later change to it is detected (isExcitationEmissionCurrent)
+        std::string biochem_label;
+        context->getPrimitiveData(UUID, "fluspect_spectrum", biochem_label);
+        auto [label_it, new_label] = biochem_label_index.try_emplace(biochem_label, static_cast<uint>(exc.biochem_label_versions.size()));
+        if (new_label) {
+            exc.biochem_label_versions.emplace_back(biochem_label, context->getGlobalDataVersion(biochem_label.c_str()));
+        }
+        exc.leaf_biochem_label[UUID] = label_it->second;
+
         std::fill(incident_top.begin(), incident_top.end(), 0.f);
         std::fill(incident_bottom.begin(), incident_bottom.end(), 0.f);
         bool any_incident = false;
@@ -803,14 +821,29 @@ void RadiationModel::runExcitationBands() {
 }
 
 bool RadiationModel::isExcitationEmissionCurrent(const ExcitationSet &exc, const std::string &emission_band) const {
-    // The per-leaf emission is computed when the excitation bands are run, for the emission bands and leaves that existed then. An
-    // emission band bound later (a new SIF camera) or a leaf given biochemistry later has none, so the bands must be run again.
+    // The per-leaf emission is computed when the excitation bands are run, for the emission bands, leaves and leaf biochemistry that existed
+    // then. An emission band bound later (a new SIF camera), a leaf given biochemistry later, a leaf moved to another biochemistry label, or a
+    // label whose values were rewritten (LeafOptics::run() reuses its nitrogen-bin labels) makes it stale, so the bands must be run again.
     auto band_it = exc.base_emission.find(emission_band);
     if (band_it == exc.base_emission.end()) {
         return false;
     }
+    for (const auto &[biochem_label, version]: exc.biochem_label_versions) {
+        if (context->getGlobalDataVersion(biochem_label.c_str()) != version) {
+            return false;
+        }
+    }
+    std::string biochem_label;
     for (uint UUID: context->getAllUUIDs()) {
-        if (context->doesPrimitiveDataExist(UUID, "fluspect_spectrum") && band_it->second.find(UUID) == band_it->second.end()) {
+        if (!context->doesPrimitiveDataExist(UUID, "fluspect_spectrum")) {
+            continue;
+        }
+        auto leaf_it = exc.leaf_biochem_label.find(UUID);
+        if (leaf_it == exc.leaf_biochem_label.end() || band_it->second.find(UUID) == band_it->second.end()) {
+            return false;
+        }
+        context->getPrimitiveData(UUID, "fluspect_spectrum", biochem_label);
+        if (biochem_label != exc.biochem_label_versions.at(leaf_it->second).first) {
             return false;
         }
     }

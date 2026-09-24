@@ -10116,6 +10116,91 @@ GPU_TEST_CASE("SIF regression: per-face emission is the same when the excitation
     checkFaceEmission(sifLeafFaceEmission(setup), expectedFlatLightFaceEmission(1.0, 0.3, setup.emission_band_nm));
 }
 
+namespace {
+    //! Far-red SIF source flux of the top face of a single leaf lit from above, from a model that has only ever seen the given chlorophyll
+    float sifTopEmissionFreshModel(float Cab, float Cca) {
+        Context ctx;
+        uint leaf = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        sif_stamp_biochem(ctx, {leaf}, "fresh", Cab, Cca);
+        ctx.setPrimitiveData(leaf, "electron_transport_ratio", 1.f);
+        ctx.setPrimitiveData(leaf, "temperature", 298.15f);
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&ctx);
+        radiation.disableMessages();
+        radiation.addRadiationBand("SIF_farred", 740.f, 760.f);
+        uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        radiation.setSourceSpectrum(sun, std::vector<vec2>{make_vec2(300, 1.f), make_vec2(900, 1.f)});
+        SIFCameraProperties cam_props;
+        cam_props.camera_resolution = make_int2(4, 4);
+        radiation.addSIFCamera("cam", {"SIF_farred"}, make_vec3(0, 0, 3), make_vec3(0, 0, 0), cam_props, 1);
+        radiation.updateGeometry();
+        radiation.runBand("SIF_farred");
+        return RadiationModelTestHelper::getSIFEmission(radiation, "SIF_farred", leaf, true);
+    }
+} // namespace
+
+GPU_TEST_CASE("SIF follows leaf biochemistry that changes under an existing label") {
+    // A biochemistry label names global data that can be rewritten -- LeafOptics::run() in nitrogen-auto mode reuses its bin labels
+    // with new pigment values every time it rebuilds its bins. Neither the Fluspect-B kernel cache nor the per-leaf emission computed
+    // when the excitation bands were run may outlive the values they were computed from.
+    Context ctx;
+    uint leaf = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    sif_stamp_biochem(ctx, {leaf}, "reused", 10.f, 2.5f);
+    ctx.setPrimitiveData(leaf, "electron_transport_ratio", 1.f);
+    ctx.setPrimitiveData(leaf, "temperature", 298.15f);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&ctx);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SIF_farred", 740.f, 760.f);
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceSpectrum(sun, std::vector<vec2>{make_vec2(300, 1.f), make_vec2(900, 1.f)});
+    SIFCameraProperties cam_props;
+    cam_props.camera_resolution = make_int2(4, 4);
+    radiation.addSIFCamera("cam", {"SIF_farred"}, make_vec3(0, 0, 3), make_vec3(0, 0, 0), cam_props, 1);
+    radiation.updateGeometry();
+    radiation.runBand("SIF_farred");
+    const float emission_low_Cab = RadiationModelTestHelper::getSIFEmission(radiation, "SIF_farred", leaf, true);
+
+    sif_stamp_biochem(ctx, {leaf}, "reused", 60.f, 15.f);
+    radiation.runBand("SIF_farred");
+    const float emission_after_rewrite = RadiationModelTestHelper::getSIFEmission(radiation, "SIF_farred", leaf, true);
+
+    const float emission_high_Cab = sifTopEmissionFreshModel(60.f, 15.f);
+    DOCTEST_INFO("far-red SIF: Cab 10 " << emission_low_Cab << ", same label rewritten to Cab 60 " << emission_after_rewrite << ", fresh Cab 60 " << emission_high_Cab);
+    DOCTEST_REQUIRE(emission_high_Cab > 0.f);
+    DOCTEST_REQUIRE(std::fabs(emission_high_Cab - emission_low_Cab) > 0.1f * emission_high_Cab); // chlorophyll must matter here
+    DOCTEST_CHECK(emission_after_rewrite == doctest::Approx(emission_high_Cab).epsilon(1e-3));
+}
+
+GPU_TEST_CASE("SIF follows a leaf that is given a different biochemistry label") {
+    // Leaves are moved between biochemistry labels (e.g. LeafOptics nitrogen bins) between SIF dispatches; the emission computed when the
+    // excitation bands were run must not keep the leaf's old biochemistry.
+    Context ctx;
+    uint leaf = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    uint other_leaf = ctx.addPatch(make_vec3(5, 0, 0), make_vec2(1, 1));
+    sif_stamp_biochem(ctx, {other_leaf}, "high", 60.f, 15.f); // both labels exist before the first dispatch
+    sif_stamp_biochem(ctx, {leaf}, "low", 10.f, 2.5f);
+    ctx.setPrimitiveData(std::vector<uint>{leaf, other_leaf}, "electron_transport_ratio", 1.f);
+    ctx.setPrimitiveData(std::vector<uint>{leaf, other_leaf}, "temperature", 298.15f);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&ctx);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SIF_farred", 740.f, 760.f);
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceSpectrum(sun, std::vector<vec2>{make_vec2(300, 1.f), make_vec2(900, 1.f)});
+    SIFCameraProperties cam_props;
+    cam_props.camera_resolution = make_int2(4, 4);
+    radiation.addSIFCamera("cam", {"SIF_farred"}, make_vec3(0, 0, 3), make_vec3(0, 0, 0), cam_props, 1);
+    radiation.updateGeometry();
+    radiation.runBand("SIF_farred");
+
+    ctx.setPrimitiveData(leaf, "fluspect_spectrum", "fluspect_biochem_high");
+    radiation.runBand("SIF_farred");
+    const float emission_after_switch = RadiationModelTestHelper::getSIFEmission(radiation, "SIF_farred", leaf, true);
+
+    const float emission_high_Cab = sifTopEmissionFreshModel(60.f, 15.f);
+    DOCTEST_INFO("far-red SIF after switching to the Cab 60 label " << emission_after_switch << ", fresh Cab 60 " << emission_high_Cab);
+    DOCTEST_REQUIRE(emission_high_Cab > 0.f);
+    DOCTEST_CHECK(emission_after_switch == doctest::Approx(emission_high_Cab).epsilon(1e-3));
+}
+
 GPU_TEST_CASE("SIF: the top-face absorption buffer is allocated only for launches that include SIF excitation bands") {
     // Recording which face absorbed the radiation is needed only by the SIF excitation bands, so any other launch must leave the
     // backend's buffer at a placeholder instead of holding a value for every primitive and band.

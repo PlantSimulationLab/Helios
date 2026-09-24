@@ -2137,6 +2137,8 @@ protected:
     };
     //! Cached Fluspect-B kernels, reused across leaves with identical biochemistry.
     std::unordered_map<FluspectCacheKey, helios::FluspectKernel, FluspectCacheKeyHash> fluspect_cache;
+    //! Biochemistry (the first 10 Fluspect-B fields) each cached kernel was computed from; a kernel is reused only while its label still holds these values.
+    std::unordered_map<FluspectCacheKey, std::vector<float>, FluspectCacheKeyHash> fluspect_cache_biochem;
     //! Lazy-loaded Optipar coefficients (loaded on first SIF dispatch).
     helios::FluspectOptipar fluspect_optipar;
     bool fluspect_optipar_loaded = false;
@@ -2151,6 +2153,10 @@ protected:
         //! Band SIF emission of each leaf per unit fluorescence yield (W/m^2; x = top face, y = bottom face), computed from the incident excitation flux on each face when the bands were
         //! run. Outer key: emission band bound to this bin width. Inner key: primitive UUID of every leaf with 'fluspect_spectrum' data.
         std::map<std::string, std::unordered_map<uint, helios::vec2>> base_emission;
+        //! Biochemistry labels ('fluspect_spectrum' values) of the leaves when base_emission was computed, and the global-data version of each at that time
+        std::vector<std::pair<std::string, uint64_t>> biochem_label_versions;
+        //! Index into biochem_label_versions of each leaf's biochemistry label when base_emission was computed. Key: primitive UUID.
+        std::unordered_map<uint, uint> leaf_biochem_label;
         //! Whether the ray-trace for this set has already run in the current dispatch.
         bool populated = false;
     };
@@ -2199,7 +2205,7 @@ protected:
     //! have not yet been populated this dispatch, filling each set's base_emission.
     void runExcitationBands();
 
-    //! Whether an excitation set holds emission for an emission band and every leaf that currently has 'fluspect_spectrum' data.
+    //! Whether an excitation set holds emission for an emission band and every leaf that currently has 'fluspect_spectrum' data, computed from the leaf's current biochemistry label and values.
     [[nodiscard]] bool isExcitationEmissionCurrent(const ExcitationSet &exc, const std::string &emission_band) const;
 
     //! For each primitive with leaf biochemistry, scale its per-face emission from the excitation set by Φ_F × fqe and write it to
