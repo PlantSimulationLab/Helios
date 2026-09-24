@@ -2108,8 +2108,8 @@ protected:
     std::map<std::string, std::unordered_map<uint, float>> sif_emission_buffer;
 
     //! Per-primitive per-band SIF source emission on the bottom face (W/m²). Matches
-    //! sif_emission_buffer in layout; distinguished so two-sided leaves can emit an
-    //! asymmetric Mf (top) / Mb (bottom) split.
+    //! sif_emission_buffer in layout; distinguished so two-sided leaves can emit different
+    //! spectra from each face (Fluspect-B's backward matrix from the face that received the excitation).
     std::map<std::string, std::unordered_map<uint, float>> sif_emission_buffer_bottom;
 
     //! Set of user-defined emission band labels that should source their flux from
@@ -2141,15 +2141,16 @@ protected:
     helios::FluspectOptipar fluspect_optipar;
     bool fluspect_optipar_loaded = false;
 
-    //! Per-unique excitation bin-width: auto-generated band labels + per-primitive incident excitation flux buffer.
+    //! Per-unique excitation bin-width: auto-generated band labels + per-leaf fluorescence emission computed from them.
     struct ExcitationSet {
         float bin_width_nm;
         uint scattering_depth = 0; //!< Max requested by any bound SIF camera
         std::vector<std::string> band_labels; //!< Internal labels like "_SIF_exc_10_400_410"
         std::vector<float> band_min_nm; //!< wavelength_min of each band
         std::vector<float> band_max_nm; //!< wavelength_max of each band
-        //! Per-primitive per-band excitation flux incident on the leaf (W/m^2, both faces combined), recovered from the absorbed flux. Outer key: primitive UUID. Inner: band index.
-        std::unordered_map<uint, std::vector<float>> incident_flux_buffer;
+        //! Band SIF emission of each leaf per unit fluorescence yield (W/m^2; x = top face, y = bottom face), computed from the incident excitation flux on each face when the bands were
+        //! run. Outer key: emission band bound to this bin width. Inner key: primitive UUID of every leaf with 'fluspect_spectrum' data.
+        std::map<std::string, std::unordered_map<uint, helios::vec2>> base_emission;
         //! Whether the ray-trace for this set has already run in the current dispatch.
         bool populated = false;
     };
@@ -2183,17 +2184,26 @@ protected:
      */
     ExcitationSet &ensureExcitationSet(float bin_width_nm, uint scattering_depth = 0);
 
-    //! Fill ExcitationSet::incident_flux_buffer from each excitation band's radiation_flux_<band>
-    //! primitive data (absorbed flux divided by the primitive's absorptance in the band), then clear
-    //! the internal primitive data label (internal bands should not pollute user-visible primitive data).
-    void populateExcitationIncidentFlux(ExcitationSet &exc);
+    //! Fill ExcitationSet::base_emission at the end of the launch that ran the set's excitation bands, then clear their internal radiation_flux_<band> primitive data.
+    /**
+     * The excitation flux incident on each leaf is recovered from its radiation_flux_<band> primitive data (divided by the leaf's absorptance at scattering depth 1 or more), and split
+     * between the faces in proportion to the absorbed flux that arrived on each face.
+     * \param[inout] exc Excitation set whose bands were all part of the launch.
+     * \param[in] launch_band_labels Labels of the launched bands, in launch slot order.
+     * \param[in] radiation_in Absorbed flux read back from the ray tracer [primitive][launch slot].
+     * \param[in] radiation_in_top Absorbed flux that arrived on the top face [primitive][launch slot].
+     */
+    void populateExcitationSet(ExcitationSet &exc, const std::vector<std::string> &launch_band_labels, const std::vector<float> &radiation_in, const std::vector<float> &radiation_in_top);
 
     //! Run ray tracing for all auto-generated excitation bands in all excitation sets that
-    //! have not yet been populated this dispatch, and fill each set's incident_flux_buffer.
+    //! have not yet been populated this dispatch, filling each set's base_emission.
     void runExcitationBands();
 
-    //! For each primitive with leaf biochemistry, compute per-band SIF emission flux from
-    //! the Fluspect-B kernel × per-excitation-band incident flux × Φ_F and write to sif_emission_buffer.
+    //! Whether an excitation set holds emission for an emission band and every leaf that currently has 'fluspect_spectrum' data.
+    [[nodiscard]] bool isExcitationEmissionCurrent(const ExcitationSet &exc, const std::string &emission_band) const;
+
+    //! For each primitive with leaf biochemistry, scale its per-face emission from the excitation set by Φ_F × fqe and write it to
+    //! sif_emission_buffer / sif_emission_buffer_bottom. Re-runs the excitation bands if the set has no emission for this band or for a leaf.
     /**
      * \param[in] emission_band Target SIF emission band label. Must be in sif_emission_bands.
      */

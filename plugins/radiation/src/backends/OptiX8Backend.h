@@ -127,9 +127,11 @@ namespace helios {
                               const helios::int2 &resolution) override;
         void getWhiteReferenceResults(std::vector<float> &white_reference_top,
                                       std::vector<float> &white_reference_bottom) override;
+        void getRadiationInTopResults(std::vector<float> &radiation_in_top) override;
+        [[nodiscard]] size_t getRadiationInTopBufferSize() const override;
 
         // Buffer utilities
-        void zeroRadiationBuffers(size_t launch_band_count) override;
+        void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption) override;
         void zeroScatterBuffers() override;
         void zeroCameraPixelBuffers(const helios::int2 &resolution) override;
         void copyScatterToRadiation() override;
@@ -234,6 +236,7 @@ namespace helios {
 
         // ---- Radiation energy device buffers ----
         CUdeviceptr d_radiation_in           = 0;
+        CUdeviceptr d_radiation_in_top       = 0; //!< Absorbed radiation that arrived on the top face [prim][launch band]; allocated only while face absorption tracking is enabled
         CUdeviceptr d_radiation_out_top      = 0;
         CUdeviceptr d_radiation_out_bottom   = 0;
         CUdeviceptr d_smoothing_vertex_indices = 0;
@@ -299,6 +302,7 @@ namespace helios {
         size_t   camera_scatter_buffer_bytes = 0; //!< Bytes allocated to each of d_scatter_buff_top_cam/d_scatter_buff_bottom_cam by zeroCameraScatterBuffers()
         size_t   white_reference_buffer_bytes = 0; //!< Bytes allocated to each of d_white_reference_top_cam/d_white_reference_bottom_cam by zeroRadiationBuffers()
         size_t   radiation_specular_buffer_bytes = 0; //!< Bytes allocated to d_radiation_specular by zeroRadiationBuffers()
+        size_t   radiation_in_top_count = 0; //!< Elements allocated to d_radiation_in_top by zeroRadiationBuffers()
         bool     specular_reflection_enabled = false; //!< Set by updateMaterials(); d_radiation_specular is allocated only when true
         uint32_t current_camera_launch_id  = 0xFFFFFFFFu; //!< Camera ID from last launchCameraRays
 

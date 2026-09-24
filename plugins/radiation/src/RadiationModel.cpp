@@ -532,6 +532,8 @@ RadiationModel::ExcitationSet &RadiationModel::ensureExcitationSet(float bin_wid
             for (const auto &bname : it->second.band_labels) {
                 setScatteringDepth(bname, scattering_depth);
             }
+            // Emission computed at the shallower depth is stale
+            it->second.populated = false;
         }
         return it->second;
     }
@@ -583,24 +585,70 @@ RadiationModel::ExcitationSet &RadiationModel::ensureExcitationSet(float bin_wid
     return inserted_it->second;
 }
 
-void RadiationModel::populateExcitationIncidentFlux(ExcitationSet &exc) {
+namespace {
+    //! Trapezoidal integral over [wavelength_min, wavelength_max] of a spectrum tabulated on the wavelength grid, linearly interpolated within grid intervals
+    double integrateTabulatedSpectrum(const std::vector<float> &wavelengths, const std::vector<double> &spectrum, double wavelength_min, double wavelength_max) {
+        double total = 0.0;
+        for (size_t i = 0; i + 1 < wavelengths.size(); ++i) {
+            const double w0 = wavelengths[i];
+            const double w1 = wavelengths[i + 1];
+            if (w1 < wavelength_min) {
+                continue;
+            }
+            if (w0 > wavelength_max) {
+                break;
+            }
+            const double lo = std::max(w0, wavelength_min);
+            const double hi = std::min(w1, wavelength_max);
+            if (hi <= lo) {
+                continue;
+            }
+            const double spectrum_lo = spectrum[i] + (lo - w0) / (w1 - w0) * (spectrum[i + 1] - spectrum[i]);
+            const double spectrum_hi = spectrum[i] + (hi - w0) / (w1 - w0) * (spectrum[i + 1] - spectrum[i]);
+            total += 0.5 * (spectrum_lo + spectrum_hi) * (hi - lo);
+        }
+        return total;
+    }
+} // namespace
+
+void RadiationModel::populateExcitationSet(ExcitationSet &exc, const std::vector<std::string> &launch_band_labels, const std::vector<float> &radiation_in, const std::vector<float> &radiation_in_top) {
     // After the excitation bands have been ray-traced, radiation_flux_<band> holds each primitive's absorbed flux. The Fluspect-B
-    // matrices act on the excitation flux incident on the leaf (leaf absorption is already inside them), so the incident flux is
-    // recovered here:
+    // matrices act on the excitation flux incident on each face of the leaf (leaf absorption is already inside them), so the incident
+    // flux is recovered here:
     //  - Scattering depth 0: energy a primitive would scatter is retained in its radiation_flux (see runBand), so the reported
     //    flux already is the incident flux.
     //  - Scattering depth >= 1: the reported flux is absorbed, so it is divided by the absorptance 1 - rho - tau that the ray
     //    tracer applied to the primitive in that band. (Energy still unscattered after the last bounce is retained in full, so
     //    this slightly over-estimates the incident flux from that final scattering order.)
-    // The internal radiation_flux_<band> primitive data is then cleared (internal bands shouldn't pollute the user namespace).
-    exc.incident_flux_buffer.clear();
+    // The incident flux is split between the faces in proportion to the absorbed flux that arrived on each face (radiation_in_top
+    // versus radiation_in). Retained scattered energy is split the same way; that is exact because rho and tau are properties of the
+    // primitive, not of a face, so each face absorbs the same fraction of what arrives on it.
+    //
+    // Emission is linear in the fluorescence yield, which is not known until photosynthesis has run, so what is stored per leaf and
+    // per emission band bound to this bin width is the yield-free band emission of each face; computeSIFEmission() scales it. The
+    // internal radiation_flux_<band> primitive data is then cleared (internal bands shouldn't pollute the user namespace).
+    exc.base_emission.clear();
     const std::vector<uint> all_UUIDs = context->getAllUUIDs();
     const size_t n_bands = exc.band_labels.size();
+    const size_t Nbands_launch = launch_band_labels.size();
+
+    // Launch slot of each excitation band in the radiation_in buffers
+    std::vector<size_t> launch_slot(n_bands);
+    for (size_t b = 0; b < n_bands; ++b) {
+        auto slot_it = std::find(launch_band_labels.begin(), launch_band_labels.end(), exc.band_labels[b]);
+        if (slot_it == launch_band_labels.end()) {
+            helios_runtime_error("ERROR (RadiationModel::populateExcitationSet): Excitation band '" + exc.band_labels[b] + "' was not part of the launch. This is an internal inconsistency.");
+        }
+        launch_slot[b] = std::distance(launch_band_labels.begin(), slot_it);
+    }
 
     // material_data is laid out [source][primitive][band], with primitives in context_UUIDs order and bands in radiation_bands order.
     const size_t Nsources = radiation_sources.size();
     const size_t Nprimitives = context_UUIDs.size();
     const size_t Nbands = radiation_bands.size();
+    if (radiation_in.size() < Nprimitives * Nbands_launch || radiation_in_top.size() < Nprimitives * Nbands_launch) {
+        helios_runtime_error("ERROR (RadiationModel::populateExcitationSet): The absorbed radiation read back from the ray tracer does not cover every primitive and launched band. This is an internal inconsistency.");
+    }
     MaterialPropertyIndexer mat_idx(Nsources, Nprimitives, Nbands);
     std::vector<size_t> material_band_index(n_bands);
     for (size_t b = 0; b < n_bands; ++b) {
@@ -611,12 +659,26 @@ void RadiationModel::populateExcitationIncidentFlux(ExcitationSet &exc) {
         primitive_index.emplace(context_UUIDs[u], u);
     }
 
+    // Emission bands whose excitation resolution is this set's
+    std::vector<std::pair<std::string, helios::vec2>> emission_bands;
+    for (const auto &[band_label, bin_width]: sif_band_bin_width) {
+        if (std::abs(bin_width - exc.bin_width_nm) < 1e-5f) {
+            emission_bands.emplace_back(band_label, radiation_bands.at(band_label).wavebandBounds);
+            exc.base_emission[band_label];
+        }
+    }
+
+    const float step = exc.bin_width_nm;
+    std::vector<float> incident_top(n_bands);
+    std::vector<float> incident_bottom(n_bands);
     for (uint UUID: all_UUIDs) {
         // Only track primitives we care about: leaves with a fluspect_spectrum label.
         if (!context->doesPrimitiveDataExist(UUID, "fluspect_spectrum")) {
             continue;
         }
-        std::vector<float> row(n_bands, 0.f);
+        std::fill(incident_top.begin(), incident_top.end(), 0.f);
+        std::fill(incident_bottom.begin(), incident_bottom.end(), 0.f);
+        bool any_incident = false;
         for (size_t b = 0; b < n_bands; ++b) {
             const std::string prop = "radiation_flux_" + exc.band_labels[b];
             float absorbed = 0.f;
@@ -626,30 +688,88 @@ void RadiationModel::populateExcitationIncidentFlux(ExcitationSet &exc) {
             if (absorbed <= 0.f) {
                 continue;
             }
-            if (exc.scattering_depth == 0) {
-                row[b] = absorbed;
+            auto index_it = primitive_index.find(UUID);
+            if (index_it == primitive_index.end()) {
+                helios_runtime_error("ERROR (RadiationModel::populateExcitationSet): Primitive " + std::to_string(UUID) + " received SIF excitation flux but is not in the ray-traced geometry. This is an internal inconsistency.");
+            }
+            const size_t u = index_it->second;
+            float incident = absorbed;
+            if (exc.scattering_depth > 0) {
+                // Absorptance of this primitive in this band, weighted by each source's flux in the band (rho and tau are
+                // source-spectrum weighted, so they can differ slightly between sources).
+                float weighted_absorptance = 0.f;
+                float weight_sum = 0.f;
+                for (size_t source = 0; source < Nsources; ++source) {
+                    const size_t ind = mat_idx(source, u, material_band_index[b]);
+                    const float absorptance = 1.f - material_data.reflectivity[ind] - material_data.transmissivity[ind];
+                    const float weight = getSourceFlux(source, exc.band_labels[b]);
+                    weighted_absorptance += weight * absorptance;
+                    weight_sum += weight;
+                }
+                if (weight_sum <= 0.f || weighted_absorptance <= 0.f) {
+                    helios_runtime_error("ERROR (RadiationModel::populateExcitationSet): Leaf primitive " + std::to_string(UUID) + " absorbed SIF excitation flux in band '" + exc.band_labels[b] +
+                                         "', but its absorptance (1 - reflectivity - transmissivity) in that band is not positive, so the incident excitation flux that drives the Fluspect-B "
+                                         "fluorescence matrices cannot be recovered. Check the reflectivity_spectrum and transmissivity_spectrum assigned to leaves with 'fluspect_spectrum' data.");
+                }
+                incident = absorbed * weight_sum / weighted_absorptance;
+            }
+
+            const size_t launch_index = u * Nbands_launch + launch_slot[b];
+            const float absorbed_all_faces = radiation_in[launch_index];
+            if (absorbed_all_faces <= 0.f) {
+                helios_runtime_error("ERROR (RadiationModel::populateExcitationSet): Leaf primitive " + std::to_string(UUID) + " received SIF excitation flux in band '" + exc.band_labels[b] +
+                                     "' but absorbed none of it, so the face it arrived on cannot be determined. Its absorptance (1 - reflectivity - transmissivity) in that band must be positive; "
+                                     "check the reflectivity_spectrum and transmissivity_spectrum assigned to leaves with 'fluspect_spectrum' data.");
+            }
+            const float top_fraction = std::clamp(radiation_in_top[launch_index] / absorbed_all_faces, 0.f, 1.f);
+            incident_top[b] = incident * top_fraction;
+            incident_bottom[b] = incident * (1.f - top_fraction);
+            any_incident = true;
+        }
+
+        if (!any_incident || emission_bands.empty()) {
+            for (const auto &emission_band: emission_bands) {
+                exc.base_emission[emission_band.first][UUID] = helios::make_vec2(0.f, 0.f);
+            }
+            continue;
+        }
+
+        // Apply the Fluspect-B matrices to the incident excitation flux of each excitation band (as SCOPE's RTMf does), producing
+        // per-emission-wavelength spectra on the kernel's 4 nm wlf grid for each face. The backward matrix Mb gives the emission from
+        // the face that received the excitation and the forward matrix Mf the emission from the opposite face, so
+        // F_top = Mb * I_top + Mf * I_bottom and F_bottom = Mf * I_top + Mb * I_bottom.
+        //  - Each kernel column carries the excitation grid spacing as a quadrature weight (FluspectB.h), so dividing by the
+        //    spacing gives the emission per nm of excitation, which multiplies the band-integrated incident flux.
+        //  - The kernel is evaluated at the band centre by linear interpolation between the neighbouring wle columns. A final band
+        //    narrower than the bin width can have its centre beyond the last column; it uses the last column.
+        //  - The matrices convert photons to photons (fqe is a photon yield), so energy flux is scaled by lambda_e / lambda_f.
+        const helios::FluspectKernel *kernel = getOrComputeFluspectKernel(UUID, step);
+        const auto &wle = kernel->wle;
+        const auto &wlf = kernel->wlf;
+        std::vector<double> F_top(wlf.size(), 0.0);
+        std::vector<double> F_bottom(wlf.size(), 0.0);
+        for (size_t b = 0; b < n_bands; ++b) {
+            if (incident_top[b] == 0.f && incident_bottom[b] == 0.f) {
                 continue;
             }
-            // Absorptance of this primitive in this band, weighted by each source's flux in the band (rho and tau are
-            // source-spectrum weighted, so they can differ slightly between sources).
-            const size_t u = primitive_index.at(UUID);
-            float weighted_absorptance = 0.f;
-            float weight_sum = 0.f;
-            for (size_t source = 0; source < Nsources; ++source) {
-                const size_t ind = mat_idx(source, u, material_band_index[b]);
-                const float absorptance = 1.f - material_data.reflectivity[ind] - material_data.transmissivity[ind];
-                const float weight = getSourceFlux(source, exc.band_labels[b]);
-                weighted_absorptance += weight * absorptance;
-                weight_sum += weight;
+            const double band_center = 0.5 * (exc.band_min_nm[b] + exc.band_max_nm[b]);
+            const double column_position = std::clamp((band_center - wle.front()) / step, 0.0, double(wle.size() - 1));
+            const size_t j0 = std::min(static_cast<size_t>(column_position), wle.size() - 2);
+            const double w1 = column_position - double(j0);
+            const double w0 = 1.0 - w1;
+            for (size_t i = 0; i < wlf.size(); ++i) {
+                const double scale = band_center / (step * wlf[i]);
+                const double Mf = w0 * kernel->Mf[i][j0] + w1 * kernel->Mf[i][j0 + 1];
+                const double Mb = w0 * kernel->Mb[i][j0] + w1 * kernel->Mb[i][j0 + 1];
+                F_top[i] += scale * (Mb * incident_top[b] + Mf * incident_bottom[b]);
+                F_bottom[i] += scale * (Mf * incident_top[b] + Mb * incident_bottom[b]);
             }
-            if (weight_sum <= 0.f || weighted_absorptance <= 0.f) {
-                helios_runtime_error("ERROR (RadiationModel::populateExcitationIncidentFlux): Leaf primitive " + std::to_string(UUID) + " absorbed SIF excitation flux in band '" + exc.band_labels[b] +
-                                     "', but its absorptance (1 - reflectivity - transmissivity) in that band is not positive, so the incident excitation flux that drives the Fluspect-B "
-                                     "fluorescence matrices cannot be recovered. Check the reflectivity_spectrum and transmissivity_spectrum assigned to leaves with 'fluspect_spectrum' data.");
-            }
-            row[b] = absorbed * weight_sum / weighted_absorptance;
         }
-        exc.incident_flux_buffer.emplace(UUID, std::move(row));
+        for (const auto &[band_label, bounds]: emission_bands) {
+            const double emission_top = integrateTabulatedSpectrum(wlf, F_top, bounds.x, bounds.y);
+            const double emission_bottom = integrateTabulatedSpectrum(wlf, F_bottom, bounds.x, bounds.y);
+            exc.base_emission[band_label][UUID] = helios::make_vec2(static_cast<float>(emission_top), static_cast<float>(emission_bottom));
+        }
     }
     // Clear primitive data for internal excitation bands from ALL primitives.
     for (uint UUID: all_UUIDs) {
@@ -664,9 +784,8 @@ void RadiationModel::populateExcitationIncidentFlux(ExcitationSet &exc) {
 }
 
 void RadiationModel::runExcitationBands() {
-    // Run any excitation set that isn't already populated. All internal bands
-    // for a set are launched together via runBand(vector), then their per-leaf
-    // incident flux is stashed into incident_flux_buffer.
+    // Run any excitation set that isn't already populated. All internal bands for a set are launched together via runBand(vector),
+    // which fills the set's per-leaf emission at the end of the launch (populateExcitationSet).
     //
     // The per-band "scattering disabled" warning from runBand() is suppressed for
     // "_SIF_exc_*" labels. Users who want more accurate APAR under high leaf
@@ -677,22 +796,34 @@ void RadiationModel::runExcitationBands() {
             continue;
         }
         runBand(exc.band_labels);
-        populateExcitationIncidentFlux(exc);
+        if (!exc.populated) {
+            helios_runtime_error("ERROR (RadiationModel::runExcitationBands): The SIF excitation bands at " + std::to_string(exc.bin_width_nm) + " nm were run but their per-leaf emission was not computed. This is an internal inconsistency.");
+        }
     }
 }
 
-void RadiationModel::computeSIFEmission(const std::string &emission_band) {
-    // Populate sif_emission_buffer[emission_band] (top face) and
-    // sif_emission_buffer_bottom[emission_band] (bottom face) for every leaf
-    // primitive, integrating the Fluspect-B kernel against per-excitation-band
-    // incident flux and scaling by the van der Tol (2014) quantum yield.
+bool RadiationModel::isExcitationEmissionCurrent(const ExcitationSet &exc, const std::string &emission_band) const {
+    // The per-leaf emission is computed when the excitation bands are run, for the emission bands and leaves that existed then. An
+    // emission band bound later (a new SIF camera) or a leaf given biochemistry later has none, so the bands must be run again.
+    auto band_it = exc.base_emission.find(emission_band);
+    if (band_it == exc.base_emission.end()) {
+        return false;
+    }
+    for (uint UUID: context->getAllUUIDs()) {
+        if (context->doesPrimitiveDataExist(UUID, "fluspect_spectrum") && band_it->second.find(UUID) == band_it->second.end()) {
+            return false;
+        }
+    }
+    return true;
+}
 
-    auto band_it = radiation_bands.find(emission_band);
-    if (band_it == radiation_bands.end()) {
+void RadiationModel::computeSIFEmission(const std::string &emission_band) {
+    // Populate sif_emission_buffer[emission_band] (top face) and sif_emission_buffer_bottom[emission_band] (bottom face) for every leaf
+    // primitive, scaling the yield-free face emission computed from the excitation bands by the van der Tol (2014) quantum yield.
+
+    if (radiation_bands.find(emission_band) == radiation_bands.end()) {
         helios_runtime_error("ERROR (RadiationModel::computeSIFEmission): band '" + emission_band + "' does not exist.");
     }
-    const float em_min = band_it->second.wavebandBounds.x;
-    const float em_max = band_it->second.wavebandBounds.y;
 
     // Make sure excitation bands have been run this dispatch.
     runExcitationBands();
@@ -713,8 +844,8 @@ void RadiationModel::computeSIFEmission(const std::string &emission_band) {
     // Find the excitation set that matches this bin width. ensureExcitationSet
     // is called from addSIFCamera for every camera's bin width, so the set
     // must exist.
-    const ExcitationSet *matched = nullptr;
-    for (const auto &kv : excitation_sets) {
+    ExcitationSet *matched = nullptr;
+    for (auto &kv : excitation_sets) {
         if (std::abs(kv.second.bin_width_nm - step) < 1e-5f) {
             matched = &kv.second;
             break;
@@ -723,6 +854,14 @@ void RadiationModel::computeSIFEmission(const std::string &emission_band) {
     if (!matched) {
         helios_runtime_error("ERROR (RadiationModel::computeSIFEmission): no excitation set found for bin width " + std::to_string(step) + " nm (band '" + emission_band + "').");
     }
+    if (!isExcitationEmissionCurrent(*matched, emission_band)) {
+        matched->populated = false;
+        runExcitationBands();
+        if (!isExcitationEmissionCurrent(*matched, emission_band)) {
+            helios_runtime_error("ERROR (RadiationModel::computeSIFEmission): The SIF excitation bands were run again for band '" + emission_band + "', but it still has no per-leaf emission. This is an internal inconsistency.");
+        }
+    }
+    const auto &base_emission = matched->base_emission.at(emission_band);
 
     const std::vector<uint> all_UUIDs = context->getAllUUIDs();
     size_t n_applied = 0;
@@ -735,10 +874,8 @@ void RadiationModel::computeSIFEmission(const std::string &emission_band) {
             if (has_biochem) ++n_skipped_has_biochem_no_etr;
             continue;
         }
-        const helios::FluspectKernel *kernel = getOrComputeFluspectKernel(UUID, step);
-        if (!kernel) {
-            // getOrComputeFluspectKernel returns nullptr iff fluspect_spectrum is missing.
-            if (has_etr) ++n_skipped_no_biochem_has_etr;
+        if (!has_biochem) {
+            ++n_skipped_no_biochem_has_etr;
             continue;
         }
 
@@ -770,73 +907,9 @@ void RadiationModel::computeSIFEmission(const std::string &emission_band) {
         }
         const float phi_F_scaled = Phi_F * fqe;
 
-        // Apply the Fluspect-B matrices to the incident excitation flux of each excitation band (as SCOPE's RTMf does), producing
-        // per-emission-wavelength spectra on the kernel's 4 nm wlf grid: top = Mf, bottom = Mb.
-        //  - Each kernel column carries the excitation grid spacing as a quadrature weight (FluspectB.h), so dividing by the
-        //    spacing gives the emission per nm of excitation, which multiplies the band-integrated incident flux.
-        //  - The kernel is evaluated at the band centre by linear interpolation between the neighbouring wle columns. A final band
-        //    narrower than the bin width can have its centre beyond the last column; it uses the last column.
-        //  - The matrices convert photons to photons (fqe is a photon yield), so energy flux is scaled by lambda_e / lambda_f.
-        // The top face always emits Mf and the bottom face Mb. Fluspect's Mb belongs on the face that received the excitation,
-        // which this does not yet track (the ray tracer reports only the total absorbed flux of a primitive).
-        const auto &wle = kernel->wle;
-        const auto &wlf = kernel->wlf;
-
-        auto incident_it = matched->incident_flux_buffer.find(UUID);
-        if (incident_it == matched->incident_flux_buffer.end()) continue;
-        const std::vector<float> &incident_flux = incident_it->second;
-
-        std::vector<double> F_top(wlf.size(), 0.0);
-        std::vector<double> F_bot(wlf.size(), 0.0);
-        for (size_t b = 0; b < matched->band_labels.size(); ++b) {
-            const double incident = incident_flux[b];
-            if (incident == 0.0) continue;
-            const double band_center = 0.5 * (matched->band_min_nm[b] + matched->band_max_nm[b]);
-            const double column_position = std::clamp((band_center - wle.front()) / step, 0.0, double(wle.size() - 1));
-            const size_t j0 = std::min(static_cast<size_t>(column_position), wle.size() - 2);
-            const double w1 = column_position - double(j0);
-            const double w0 = 1.0 - w1;
-            for (size_t i = 0; i < wlf.size(); ++i) {
-                const double scale = incident / step * band_center / wlf[i];
-                F_top[i] += scale * (w0 * kernel->Mf[i][j0] + w1 * kernel->Mf[i][j0 + 1]);
-                F_bot[i] += scale * (w0 * kernel->Mb[i][j0] + w1 * kernel->Mb[i][j0 + 1]);
-            }
-        }
-
-        // Multiply by Phi_F × fqe (since we build the kernel with fqe=1 internally, the
-        // quantum-yield scaling and user fqe calibration both happen here).
-        for (size_t i = 0; i < wlf.size(); ++i) {
-            F_top[i] *= phi_F_scaled;
-            F_bot[i] *= phi_F_scaled;
-        }
-
-        // Integrate F_top/F_bot over [em_min, em_max] via trapezoid over the kernel's wlf grid.
-        auto integrate = [&](const std::vector<double> &F) -> double {
-            double total = 0.0;
-            for (size_t i = 0; i + 1 < wlf.size(); ++i) {
-                const float w0 = wlf[i];
-                const float w1 = wlf[i + 1];
-                if (w1 < em_min) continue;
-                if (w0 > em_max) break;
-                // Clip to band
-                const double lo = std::max<double>(w0, em_min);
-                const double hi = std::min<double>(w1, em_max);
-                if (hi <= lo) continue;
-                // Linear interp of F between w0 and w1 over [lo, hi]. Integrated trapezoid
-                // of a linear function equals average × width.
-                const double frac_lo = (lo - w0) / (w1 - w0);
-                const double frac_hi = (hi - w0) / (w1 - w0);
-                const double F_lo = F[i] + frac_lo * (F[i + 1] - F[i]);
-                const double F_hi = F[i] + frac_hi * (F[i + 1] - F[i]);
-                total += 0.5 * (F_lo + F_hi) * (hi - lo);
-            }
-            return total;
-        };
-
-        const double emit_top = integrate(F_top);
-        const double emit_bot = integrate(F_bot);
-        buf_top[UUID] = static_cast<float>(emit_top);
-        buf_bot[UUID] = static_cast<float>(emit_bot);
+        const helios::vec2 &face_emission = base_emission.at(UUID);
+        buf_top[UUID] = phi_F_scaled * face_emission.x;
+        buf_bot[UUID] = phi_F_scaled * face_emission.y;
         ++n_applied;
     }
 
@@ -3861,9 +3934,8 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     //   - Skip sets that are already populated (APAR is cached).
     //
     // Piggy-backed sets are added to the dispatch list here but NOT marked populated until
-    // populateExcitationIncidentFlux() runs post-dispatch (below).
+    // populateExcitationSet() runs post-dispatch (below).
     std::vector<std::string> effective_label = label;
-    std::vector<ExcitationSet *> piggybacked_sets;
     if (!excitation_sets.empty()) {
         bool label_has_sif_emission = false;
         bool label_has_excitation_band = false;
@@ -3878,7 +3950,6 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 for (const auto &eb : exc.band_labels) {
                     effective_label.push_back(eb);
                 }
-                piggybacked_sets.push_back(&exc);
             }
         }
     }
@@ -3896,6 +3967,16 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     // energy balance model) can identify which band governs thermal emission.
     for (const auto &band: radiation_bands) {
         context->setGlobalData(("emission_enabled_" + band.first).c_str(), (uint) (band.second.emissionFlag ? 1 : 0));
+    }
+
+    // Launches that include SIF excitation bands (run directly, or piggy-backed above) also record which face of each primitive absorbed
+    // the radiation, which Fluspect-B needs to assign its backward and forward emission to the right faces. Other launches skip it.
+    bool track_face_absorption = false;
+    for (const auto &b: band_labels) {
+        if (b.size() >= 9 && b.compare(0, 9, "_SIF_exc_") == 0) {
+            track_face_absorption = true;
+            break;
+        }
     }
 
     // Check to make sure some geometry was added to the context
@@ -4163,7 +4244,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     }
 
     // Zero radiation buffers via backend
-    backend->zeroRadiationBuffers(Nbands_launch);
+    backend->zeroRadiationBuffers(Nbands_launch, track_face_absorption);
 
     // Size and zero the camera-weighted scatter buffers for the current camera set before the first launch. Every direct and
     // diffuse launch accumulates one block per camera whether or not this band scatters, so buffers left at the size of an
@@ -4448,7 +4529,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 if (radiation_bands.at(band_labels.at(b)).emissionFlag) {
                     std::string prop = "emissivity_" + band_labels.at(b);
                     // SIF bands: per-primitive source flux comes from computeSIFEmission(), with
-                    // separate top/bottom buffers populated from Fluspect-B's Mf/Mb kernels.
+                    // separate top/bottom buffers (each face emits Fluspect-B's backward spectrum of its own excitation plus the forward spectrum of the other face's).
                     auto sif_band_it = sif_emission_buffer.find(band_labels.at(b));
                     auto sif_band_bot_it = sif_emission_buffer_bottom.find(band_labels.at(b));
                     const bool have_sif_band = (sif_band_it != sif_emission_buffer.end());
@@ -4458,7 +4539,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                         size_t ind = emission_indexer(u, b);
                         uint p = context_UUIDs.at(u);
                         float out_top;
-                        float sif_bottom_flux = 0.f;  // Mb-sourced bottom-face emission (if SIF)
+                        float sif_bottom_flux = 0.f;  // bottom-face emission (if SIF)
                         bool used_sif = false;
                         if (have_sif_band) {
                             auto sif_uuid_it = sif_band_it->second.find(p);
@@ -4508,8 +4589,8 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                         uint twosided_flag = context->getPrimitiveTwosidedFlag(p, 1);
                         if (twosided_flag != 0) { // If two-sided, emit from bottom face too
                             if (used_sif) {
-                                // SIF two-sided: use Mb-derived bottom flux rather than copying
-                                // the Mf-derived top flux. Physically distinct emission lobes.
+                                // SIF two-sided: use the bottom-face flux rather than copying
+                                // the top-face flux. Physically distinct emission lobes.
                                 flux_bottom.at(ind) += sif_bottom_flux;
                                 for (size_t cam = 0; cam < Ncameras; cam++) {
                                     scatter_bottom_cam[cam * camera_scatter_stride + ind] += sif_bottom_flux;
@@ -5055,6 +5136,10 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     backend->getRadiationResults(results);
 
     std::vector<float> radiation_flux_data = results.radiation_in;
+    std::vector<float> radiation_in_top;
+    if (track_face_absorption) {
+        backend->getRadiationInTopResults(radiation_in_top);
+    }
 
     // Extract scatter buffer data from backend results
     TBS_top = results.scatter_buff_top;
@@ -5089,12 +5174,18 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         }
     }
 
-    // Finalize any piggy-backed SIF excitation sets: now that radiation_flux_<_SIF_exc_*>
-    // primitive data has been populated, copy it into the ExcitationSet apar_buffer and
-    // clear the internal primitive data. A subsequent runBand() on SIF emission bands
-    // will then skip re-running excitation (populateExcitationIncidentFlux marks populated=true).
-    for (ExcitationSet *exc : piggybacked_sets) {
-        populateExcitationIncidentFlux(*exc);
+    // Finalize every SIF excitation set launched here (run directly by runExcitationBands(), or piggy-backed): now that
+    // radiation_flux_<_SIF_exc_*> primitive data has been populated, compute each leaf's emission from it and clear the internal
+    // primitive data. A subsequent runBand() on SIF emission bands will then skip re-running excitation (populateExcitationSet marks
+    // populated=true).
+    if (track_face_absorption) {
+        for (auto &kv: excitation_sets) {
+            ExcitationSet &exc = kv.second;
+            const bool launched = std::all_of(exc.band_labels.begin(), exc.band_labels.end(), [&](const std::string &b) { return std::find(band_labels.begin(), band_labels.end(), b) != band_labels.end(); });
+            if (launched) {
+                populateExcitationSet(exc, band_labels, radiation_flux_data, radiation_in_top);
+            }
+        }
     }
 }
 

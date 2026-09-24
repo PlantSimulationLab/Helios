@@ -127,6 +127,7 @@ struct OptiX8LaunchParams {
 
     // ---- Radiation energy buffers ----
     float*    radiation_in;           //!< [prim * Nbands_global + band]
+    float*    radiation_in_top;       //!< Absorbed radiation that arrived on the top face [prim * Nbands_launch + band]; null unless face absorption tracking is enabled
     float*    radiation_out_top;      //!< [prim * Nbands_global + band]
     float*    radiation_out_bottom;   //!< [prim * Nbands_global + band]
     int32_t*  smoothing_vertex_indices;  //!< Shared vertex index per facet corner, 4 per primitive; entry 4*prim negative if the primitive is not smoothed, entry 4*prim+3 negative for a triangle

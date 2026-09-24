@@ -195,6 +195,23 @@ namespace helios {
          */
         virtual void getWhiteReferenceResults(std::vector<float> &white_reference_top, std::vector<float> &white_reference_bottom) = 0;
 
+        /**
+         * @brief Get the absorbed radiation that arrived on the top face of each primitive
+         *
+         * @param[out] radiation_in_top Absorbed radiation per [primitive][launch band] that arrived on the side the primitive normal points to, accumulated by every direct and diffuse
+         * launch since zeroRadiationBuffers(). The absorbed radiation that arrived on the bottom face is radiation_in minus this.
+         *
+         * Only surface absorption is split by face (not glass covers or voxels). Throws if the last zeroRadiationBuffers() call did not enable face absorption tracking.
+         */
+        virtual void getRadiationInTopResults(std::vector<float> &radiation_in_top) = 0;
+
+        /**
+         * @brief Number of float elements currently allocated for the top-face absorbed radiation buffer
+         *
+         * @return Primitive count times launched band count while face absorption tracking is enabled, and at most 1 (a placeholder, or 0 if the backend holds no buffer) otherwise
+         */
+        [[nodiscard]] virtual size_t getRadiationInTopBufferSize() const = 0;
+
         // ========== Buffer Management Utilities ==========
 
         /**
@@ -207,8 +224,11 @@ namespace helios {
          *
          * The white reference buffers are sized [camera][primitive][launch band] and, unlike the camera scatter buffers, are zeroed only here, so they accumulate over all the launches
          * of a runBand() and are read once with getWhiteReferenceResults(). radiation_specular is allocated only when the last updateMaterials() call had specular reflection enabled.
+         *
+         * @param[in] track_face_absorption If true, every following direct and diffuse launch also accumulates the absorbed radiation that arrived on the top face of each primitive
+         * (read with getRadiationInTopResults()), in a buffer sized [primitive][launch band]. If false, that buffer is reduced to a placeholder and the launches skip the write.
          */
-        virtual void zeroRadiationBuffers(size_t launch_band_count) = 0;
+        virtual void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption) = 0;
 
         /**
          * @brief Zero scatter buffers (scatter_buff_top, scatter_buff_bottom)

@@ -262,6 +262,7 @@ void OptiX8Backend::shutdown() {
     };
 
     freePtr(d_radiation_in);
+    freePtr(d_radiation_in_top);
     freePtr(d_radiation_out_top);
     freePtr(d_radiation_out_bottom);
     freePtr(d_smoothing_vertex_indices);
@@ -1196,6 +1197,17 @@ void OptiX8Backend::getWhiteReferenceResults(std::vector<float> &white_reference
     white_reference_bottom = downloadFloat(d_white_reference_bottom_cam, count);
 }
 
+void OptiX8Backend::getRadiationInTopResults(std::vector<float> &radiation_in_top) {
+    if (!d_radiation_in_top || radiation_in_top_count == 0) {
+        helios_runtime_error("ERROR (OptiX8Backend::getRadiationInTopResults): Face absorption tracking was not enabled by the last zeroRadiationBuffers() call, so the absorbed radiation that arrived on the top face was not recorded.");
+    }
+    radiation_in_top = downloadFloat(d_radiation_in_top, radiation_in_top_count);
+}
+
+size_t OptiX8Backend::getRadiationInTopBufferSize() const {
+    return d_radiation_in_top ? radiation_in_top_count : 0;
+}
+
 void OptiX8Backend::getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels,
                                       std::vector<float> &pixel_depths, uint camera_id,
                                       const helios::int2 &resolution) {
@@ -1219,8 +1231,17 @@ void OptiX8Backend::getCameraResults(std::vector<float> &pixel_data, std::vector
 // Buffer management utilities
 // ---------------------------------------------------------------------------
 
-void OptiX8Backend::zeroRadiationBuffers(size_t launch_band_count) {
+void OptiX8Backend::zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption) {
     const size_t Nprims = current_primitive_count;
+
+    // Absorbed radiation that arrived on the top face: allocated only while tracking is enabled, and null otherwise so the kernels skip the write
+    radiation_in_top_count = track_face_absorption ? Nprims * launch_band_count : 0;
+    reallocDevice(d_radiation_in_top, radiation_in_top_count * sizeof(float));
+    if (radiation_in_top_count > 0) {
+        CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_radiation_in_top), 0, radiation_in_top_count * sizeof(float)));
+    }
+    h_params.radiation_in_top = reinterpret_cast<float *>(d_radiation_in_top);
+
     if (Nprims == 0 || launch_band_count == 0) return;
 
     if (launch_band_count > current_band_count) {

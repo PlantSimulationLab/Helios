@@ -570,6 +570,9 @@ extern "C" __global__ void __miss__direct() {
         const float absorption = (float)(strength * (1.0 - t_rho - t_tau));
 
         atomicFloatAdd(&params.radiation_in[ind_origin], absorption);
+        if (params.radiation_in_top && prd->face) {
+            atomicFloatAdd(&params.radiation_in_top[ind_origin], absorption);
+        }
 
         if (t_rho > 0.f || t_tau > 0.f) {
             if (prd->face) {
@@ -669,6 +672,9 @@ extern "C" __global__ void __miss__diffuse() {
         const float t_tau = params.tau[radprop_ind];
 
         atomicFloatAdd(&params.radiation_in[ind_origin], strength * (1.f - t_rho - t_tau));
+        if (params.radiation_in_top && prd->face) {
+            atomicFloatAdd(&params.radiation_in_top[ind_origin], strength * (1.f - t_rho - t_tau));
+        }
 
         if (t_rho > 0.f || t_tau > 0.f) {
             if (prd->face) { // top-face origin
@@ -1006,6 +1012,9 @@ extern "C" __global__ void __closesthit__diffuse() {
         const float t_tau = params.tau[radprop_ind];
 
         atomicFloatAdd(&params.radiation_in[ind_origin], (float)(strength * (1.0 - t_rho - t_tau)));
+        if (params.radiation_in_top && prd->face) {
+            atomicFloatAdd(&params.radiation_in_top[ind_origin], (float)(strength * (1.0 - t_rho - t_tau)));
+        }
 
         if (t_rho > 0.f || t_tau > 0.f) {
             if (prd->face) { // top-face origin

@@ -281,26 +281,32 @@ The excitation grid \f$\{\lambda_e\}\f$ spans 400–750 nm at the user-chosen
 each kernel column includes \f$\Delta\lambda_e\f$ as a quadrature weight.
 
 Following SCOPE's leaf-level treatment, the kernel acts on the excitation flux incident on the
-leaf (leaf absorption is already contained in it) and converts photons to photons, so the
-per-leaf fluorescence energy spectrum is
+leaf (leaf absorption is already contained in it) and converts photons to photons. Each face
+emits the backward spectrum of the excitation it received plus the forward spectrum of the
+excitation received by the opposite face, so the per-leaf fluorescence energy spectra of the
+top and bottom faces are
 
-\f[ F(\lambda_f) = \Phi_F\, f_{qe} \sum_{b} \frac{M(\lambda_b, \lambda_f)}{\Delta\lambda_e}\, E_b\,\frac{\lambda_b}{\lambda_f} \f]
+\f[ F_{\text{top}}(\lambda_f) = \Phi_F\, f_{qe} \sum_{b} \frac{M_b(\lambda_b, \lambda_f)\, E_{b,\text{top}} + M_f(\lambda_b, \lambda_f)\, E_{b,\text{bottom}}}{\Delta\lambda_e}\,\frac{\lambda_b}{\lambda_f} \f]
 
-where the sum runs over the excitation bands, \f$E_b\f$ is the excitation flux (W/m², both faces
-combined) incident on the leaf in band \f$b\f$, and \f$\lambda_b\f$ is the band centre, at which
-the kernel is interpolated linearly. \f$E_b\f$ is obtained by ray-tracing the auto-generated
-excitation bands: at \ref SIFCameraProperties::excitation_scattering_depth "excitation_scattering_depth"
-0 the flux the ray tracer reports on a leaf already equals the incident flux; at depth ≥ 1 the
-reported (absorbed) flux is divided by the leaf's absorptance \f$1-\rho-\tau\f$ in that band.
+\f[ F_{\text{bottom}}(\lambda_f) = \Phi_F\, f_{qe} \sum_{b} \frac{M_f(\lambda_b, \lambda_f)\, E_{b,\text{top}} + M_b(\lambda_b, \lambda_f)\, E_{b,\text{bottom}}}{\Delta\lambda_e}\,\frac{\lambda_b}{\lambda_f} \f]
+
+where the sums run over the excitation bands, \f$E_{b,\text{top}}\f$ and \f$E_{b,\text{bottom}}\f$ are
+the excitation fluxes (W/m²) incident on the top face (the side the surface normal points to) and
+the bottom face in band \f$b\f$, and \f$\lambda_b\f$ is the band centre, at which the kernel is
+interpolated linearly. For a leaf lit from above, the top face therefore emits the backward
+spectrum. The two spectra differ most in the red band near 685 nm, where the backward emission is
+about twice as strong (for a typical leaf) because red fluorescence is reabsorbed crossing the leaf.
+
+The incident fluxes are obtained by ray-tracing the auto-generated excitation bands. At
+\ref SIFCameraProperties::excitation_scattering_depth "excitation_scattering_depth" 0 the flux the
+ray tracer reports on a leaf already equals the incident flux; at depth ≥ 1 the reported
+(absorbed) flux is divided by the leaf's absorptance \f$1-\rho-\tau\f$ in that band. The ray
+tracer also records how much of the absorbed flux arrived on the top face, and the incident flux is
+split between the faces in the same proportion. (Only launches that include excitation bands
+record this, so it costs nothing for other bands.)
 \f$f_{qe}\f$ is the user-calibrated intrinsic fluorescence quantum efficiency from the 11th
 biochemistry field — the kernel itself is computed with \f$f_{qe}=1\f$ so that leaves sharing
 biochemistry but differing in \f$J_a/J_e\f$ can share a cached kernel.
-
-One such sum is computed per face, using \f$M_f\f$ for the top face and \f$M_b\f$ for the bottom
-face. \note In Fluspect-B, \f$M_b\f$ belongs on the face that received the excitation, so for a
-leaf lit on its top face the two spectra are swapped. The ray tracer currently reports only the
-total flux on a leaf, not which face received it, so this assignment is fixed. The two spectra
-differ most in the red band near 685 nm, where the backward emission is stronger.
 
 \subsection SIFPhysicsBandIntegration Per-Band Source Flux
 

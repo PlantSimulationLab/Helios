@@ -172,6 +172,7 @@ namespace helios {
         destroyBuffer(specular_exponent_buffer);
         destroyBuffer(specular_scale_buffer);
         destroyBuffer(radiation_in_buffer);
+        destroyBuffer(radiation_in_top_buffer);
         destroyBuffer(radiation_out_top_buffer);
         destroyBuffer(radiation_out_bottom_buffer);
         destroyBuffer(smoothing_vertex_indices_buffer);
@@ -1086,6 +1087,7 @@ namespace helios {
             uint specular_reflection_enabled; // 0=disabled, 1=enabled
             uint camera_count; // Number of cameras (trailing stride of rho_cam/tau_cam); 0 = no camera-weighted scatter
             uint camera_id; // Camera whose weighting the camera-scatter buffers accumulate
+            uint face_absorption_enabled; // 1 = accumulate the absorption that arrived on the top face into radiation_in_top
         } push_constants;
 
         // Compute 2D grid dimensions for stratified sampling (matches OptiX)
@@ -1124,6 +1126,7 @@ namespace helios {
         // direct and diffuse launches run once per dispatch rather than once per camera.
         push_constants.camera_count = static_cast<uint32_t>(camera_count);
         push_constants.camera_id = params.camera_id;
+        push_constants.face_absorption_enabled = face_absorption_enabled ? 1u : 0u;
 
         // 3D dispatch with 2D primitive tiling to avoid sub-batching
         // Tile primitives into Y dimension when count exceeds 65535 to use full Vulkan dispatch space
@@ -1171,7 +1174,7 @@ namespace helios {
 
             // Buffer memory barrier to ensure storage buffer writes are visible for readback
             // CRITICAL: Use buffer-specific barrier instead of global barrier for MoltenVK compatibility
-            VkBufferMemoryBarrier buffer_barriers[3];
+            VkBufferMemoryBarrier buffer_barriers[4];
 
             // Radiation_in buffer barrier
             buffer_barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -1206,8 +1209,19 @@ namespace helios {
             buffer_barriers[2].offset = 0;
             buffer_barriers[2].size = VK_WHOLE_SIZE;
 
+            // Radiation_in_top buffer barrier (top-face absorption, a placeholder unless face absorption tracking is enabled)
+            buffer_barriers[3].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+            buffer_barriers[3].pNext = nullptr;
+            buffer_barriers[3].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            buffer_barriers[3].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+            buffer_barriers[3].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            buffer_barriers[3].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            buffer_barriers[3].buffer = radiation_in_top_buffer.buffer;
+            buffer_barriers[3].offset = 0;
+            buffer_barriers[3].size = VK_WHOLE_SIZE;
+
             vkCmdPipelineBarrier(compute_command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, // No global memory barriers
-                                 3, buffer_barriers, // Buffer-specific barriers
+                                 4, buffer_barriers, // Buffer-specific barriers
                                  0, nullptr); // No image barriers
 
             vkEndCommandBuffer(compute_command_buffer);
@@ -1458,6 +1472,7 @@ namespace helios {
             uint32_t prims_per_tile; // Primitives per tile (65535 max)
             uint32_t camera_count; // Number of cameras (trailing stride of rho_cam/tau_cam); 0 = no camera-weighted scatter
             uint32_t camera_id; // Camera whose weighting the camera-scatter buffers accumulate
+            uint32_t face_absorption_enabled; // 1 = accumulate the absorption that arrived on the top face into radiation_in_top
         } push_constants;
 
         // Initialize invariant push constants
@@ -1468,6 +1483,7 @@ namespace helios {
         push_constants.source_count = source_count;
         push_constants.primitive_count = primitive_count;
         push_constants.launch_face = launch_face;
+        push_constants.face_absorption_enabled = face_absorption_enabled ? 1u : 0u;
         push_constants.launch_dim_x = launch_dim_x;
         push_constants.launch_dim_y = launch_dim_y;
 
@@ -1538,7 +1554,7 @@ namespace helios {
             vkCmdWriteTimestamp(compute_command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, timestamp_query_pool, 1);
 
             // Final buffer memory barriers to ensure storage buffer writes are visible
-            VkBufferMemoryBarrier buffer_barriers[4];
+            VkBufferMemoryBarrier buffer_barriers[5];
 
             // Radiation_in buffer barrier
             buffer_barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -1584,8 +1600,19 @@ namespace helios {
             buffer_barriers[3].offset = 0;
             buffer_barriers[3].size = VK_WHOLE_SIZE;
 
+            // Radiation_in_top buffer barrier (top-face absorption, a placeholder unless face absorption tracking is enabled)
+            buffer_barriers[4].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+            buffer_barriers[4].pNext = nullptr;
+            buffer_barriers[4].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            buffer_barriers[4].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+            buffer_barriers[4].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            buffer_barriers[4].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            buffer_barriers[4].buffer = radiation_in_top_buffer.buffer;
+            buffer_barriers[4].offset = 0;
+            buffer_barriers[4].size = VK_WHOLE_SIZE;
+
             vkCmdPipelineBarrier(compute_command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, // No global memory barriers
-                                 4, buffer_barriers, // Buffer-specific barriers
+                                 5, buffer_barriers, // Buffer-specific barriers
                                  0, nullptr); // No image barriers
 
             vkEndCommandBuffer(compute_command_buffer);
@@ -2114,6 +2141,25 @@ namespace helios {
         requireFiniteResults(white_reference_bottom, "white_reference_bottom", launch_band_count);
     }
 
+    void VulkanComputeBackend::getRadiationInTopResults(std::vector<float> &radiation_in_top) {
+        if (!face_absorption_enabled) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::getRadiationInTopResults): Face absorption tracking was not enabled by the last zeroRadiationBuffers() call, so the absorbed radiation that arrived on the top face was not recorded.");
+        }
+        const size_t radiation_in_top_size = primitive_count * launch_band_count;
+        if (radiation_in_top_buffer.size != radiation_in_top_size * sizeof(float)) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::getRadiationInTopResults): radiation_in_top holds " + std::to_string(radiation_in_top_buffer.size) + " bytes, but " + std::to_string(primitive_count) + " primitives and " +
+                                 std::to_string(launch_band_count) + " launched bands require " + std::to_string(radiation_in_top_size * sizeof(float)) + ". zeroRadiationBuffers() must be called before rays are launched.");
+        }
+        // Read back through the staging path, as getWhiteReferenceResults() does
+        radiation_in_top.resize(radiation_in_top_size);
+        downloadBufferData(radiation_in_top_buffer, radiation_in_top.data(), radiation_in_top_size * sizeof(float));
+        requireFiniteResults(radiation_in_top, "radiation_in_top", launch_band_count);
+    }
+
+    size_t VulkanComputeBackend::getRadiationInTopBufferSize() const {
+        return radiation_in_top_buffer.size / sizeof(float);
+    }
+
     void VulkanComputeBackend::getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels, std::vector<float> &pixel_depths, uint camera_id, const helios::int2 &resolution) {
         size_t total_pixels = size_t(resolution.x) * size_t(resolution.y);
         if (total_pixels == 0) {
@@ -2174,13 +2220,14 @@ namespace helios {
         }
     }
 
-    void VulkanComputeBackend::zeroRadiationBuffers(size_t launch_band_count_param) {
+    void VulkanComputeBackend::zeroRadiationBuffers(size_t launch_band_count_param, bool track_face_absorption) {
         // Store the launch band count for this runBand() call up front, even when there is no
         // geometry/bands to allocate buffers for. Other per-launch operations (notably
         // uploadSourceFluxes()) validate their input sizes against launch_band_count, so it must
         // always reflect the current launch — otherwise a launch over an empty scene would leave it
         // stale at 0 and reject a correctly-sized (Nsources * Nbands_launch) flux upload.
         launch_band_count = static_cast<uint32_t>(launch_band_count_param);
+        face_absorption_enabled = track_face_absorption && primitive_count > 0 && launch_band_count > 0;
 
         if (primitive_count == 0 || band_count == 0) {
             return; // No geometry or bands - nothing to allocate
@@ -2234,6 +2281,20 @@ namespace helios {
                 *white_reference_buffer = createBuffer(white_reference_bytes, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
             }
             zeroBuffer(*white_reference_buffer);
+        }
+
+        // Create or resize radiation_in_top [primitive * band], the absorption that arrived on the top face. Without face absorption tracking the
+        // shaders skip the write, and a one-element placeholder keeps the descriptor set complete.
+        const size_t radiation_in_top_bytes = face_absorption_enabled ? buffer_size * sizeof(float) : sizeof(float);
+        if (radiation_in_top_buffer.buffer == VK_NULL_HANDLE || radiation_in_top_buffer.size != radiation_in_top_bytes) {
+            if (radiation_in_top_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(radiation_in_top_buffer);
+            }
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            radiation_in_top_buffer = createBuffer(radiation_in_top_bytes, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+        }
+        if (face_absorption_enabled) {
+            zeroBuffer(radiation_in_top_buffer);
         }
 
         // Zero radiation buffers
@@ -2957,6 +3018,7 @@ namespace helios {
                 {12, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // vertex_radiation_out_bottom
                 {13, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // white_reference_top
                 {14, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // white_reference_bottom
+                {15, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // radiation_in_top
         };
 
         layout_info.bindingCount = static_cast<uint32_t>(result_bindings.size());
@@ -3078,6 +3140,8 @@ namespace helios {
         zeroBuffer(white_reference_top_buffer);
         white_reference_bottom_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
         zeroBuffer(white_reference_bottom_buffer);
+        radiation_in_top_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+        zeroBuffer(radiation_in_top_buffer);
 
         // ========== Create placeholder specular buffers ==========
         // MoltenVK requires these before pipeline creation (camera/direct shaders reference them)
@@ -4347,6 +4411,23 @@ namespace helios {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &white_reference_bottom_info;
+            descriptor_writes.push_back(write);
+        }
+
+        VkDescriptorBufferInfo radiation_in_top_info{};
+        radiation_in_top_info.buffer = radiation_in_top_buffer.buffer;
+        radiation_in_top_info.offset = 0;
+        radiation_in_top_info.range = VK_WHOLE_SIZE;
+
+        if (radiation_in_top_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_results;
+            write.dstBinding = 15;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &radiation_in_top_info;
             descriptor_writes.push_back(write);
         }
 

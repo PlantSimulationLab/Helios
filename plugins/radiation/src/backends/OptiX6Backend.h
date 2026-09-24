@@ -101,9 +101,11 @@ namespace helios {
         void getRadiationResults(RayTracingResults &results) override;
         void getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels, std::vector<float> &pixel_depths, uint camera_id, const helios::int2 &resolution) override;
         void getWhiteReferenceResults(std::vector<float> &white_reference_top, std::vector<float> &white_reference_bottom) override;
+        void getRadiationInTopResults(std::vector<float> &radiation_in_top) override;
+        [[nodiscard]] size_t getRadiationInTopBufferSize() const override;
 
         // Buffer utilities
-        void zeroRadiationBuffers(size_t launch_band_count) override;
+        void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption) override;
         void zeroScatterBuffers() override;
         void zeroCameraPixelBuffers(const helios::int2 &resolution) override;
         void copyScatterToRadiation() override;
@@ -258,6 +260,10 @@ namespace helios {
         // Buffers: Radiation Energy (10 buffers)
         RTbuffer radiation_in_RTbuffer;
         RTvariable radiation_in_RTvariable;
+        RTbuffer radiation_in_top_RTbuffer; //!< Absorbed radiation that arrived on the top face [primitive][launch band]; a one-element placeholder unless face absorption tracking is enabled
+        RTvariable radiation_in_top_RTvariable;
+        RTvariable face_absorption_enabled_RTvariable;
+        bool face_absorption_enabled = false; //!< Set by zeroRadiationBuffers()
         RTbuffer radiation_out_top_RTbuffer;
         RTvariable radiation_out_top_RTvariable;
         RTbuffer radiation_out_bottom_RTbuffer;

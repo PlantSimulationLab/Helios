@@ -308,6 +308,9 @@ RT_PROGRAM void closest_hit_diffuse() {
                 }
 #endif
                 atomicAdd(&radiation_in[ind_origin], contribution);
+                if (face_absorption_enabled && prd.face) {
+                    atomicAdd(&radiation_in_top[ind_origin], contribution);
+                }
 
                 if ((t_rho > 0 || t_tau > 0) && strength > 0) {
                     if (prd.face) { // reflection from top, transmission from bottom
@@ -897,6 +900,9 @@ RT_PROGRAM void miss_direct() {
 
         // absorption
         atomicAdd(&radiation_in[ind_origin], absorption);
+        if (face_absorption_enabled && prd.face) {
+            atomicAdd(&radiation_in_top[ind_origin], absorption);
+        }
 
         if (t_rho > 0 || t_tau > 0) {
             if (prd.face) { // reflection from top, transmission from bottom
@@ -1040,6 +1046,9 @@ RT_PROGRAM void miss_diffuse() {
 
                 //  absorption
                 atomicAdd(&radiation_in[ind_origin], strength * (1.f - t_rho - t_tau));
+                if (face_absorption_enabled && prd.face) {
+                    atomicAdd(&radiation_in_top[ind_origin], strength * (1.f - t_rho - t_tau));
+                }
 
                 if (t_rho > 0 || t_tau > 0) {
                     if (prd.face) { // reflection from top, transmission from bottom
