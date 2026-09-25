@@ -2,14 +2,17 @@
 
     Copyright (C) 2016-2026 Brian Bailey
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, version 2.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
+    This library is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    SPDX-License-Identifier: LGPL-2.1-or-later
 
 */
 
@@ -78,6 +81,26 @@ static float clampOffset(int count_per_axis, float offset) {
         }
     }
     return offset;
+}
+
+//! Point on a polyline nearest to a given point. A point beyond either end reports that end, so its offset from the
+//! returned point carries the overhang.
+static vec3 nearestPointOnPolyline(const std::vector<vec3> &line, const vec3 &point) {
+    vec3 nearest = line.front();
+    float best_distance = (point - nearest).magnitude();
+    for (size_t i = 0; i + 1 < line.size(); i++) {
+        const vec3 segment = line.at(i + 1) - line.at(i);
+        const float segment_length_squared = segment * segment;
+        float t = (segment_length_squared > 0.f) ? ((point - line.at(i)) * segment) / segment_length_squared : 0.f;
+        t = std::clamp(t, 0.f, 1.f);
+        const vec3 candidate = line.at(i) + t * segment;
+        const float distance = (point - candidate).magnitude();
+        if (distance < best_distance) {
+            best_distance = distance;
+            nearest = candidate;
+        }
+    }
+    return nearest;
 }
 
 //! Maximum size of one leaflet of a compound leaf, before the phytomer's own scale fraction is applied.
@@ -3590,9 +3613,35 @@ void Phytomer::setPetioleAndLeafScaleFraction(uint petiole_index, float petiole_
 
         float leaflet_offset_val = clampOffset(int(leaf_objIDs.at(petiole_index).size()), phytomer_parameters.leaf.leaflet_offset.val());
 
+        const bool pose_prescribed = petiole_index < leaf_pose_prescribed.size() && leaf < leaf_pose_prescribed.at(petiole_index).size() && leaf_pose_prescribed.at(petiole_index).at(leaf);
+
         context_ptr->translateObject(leaf_objIDs.at(petiole_index).at(leaf), -1 * leaf_bases.at(petiole_index).at(leaf));
         context_ptr->scaleObject(leaf_objIDs.at(petiole_index).at(leaf), delta_scale * make_vec3(1, 1, 1));
-        if (ind_from_tip == 0) {
+        if (pose_prescribed) {
+            // A leaf placed from measurement keeps the place it was given. The procedural placement below derives a base
+            // from leaflet_offset and the petiole PARAMETER length, neither of which describes a measured leaf, so applying
+            // it would discard the measurement the moment the blade starts expanding.
+            //
+            // What the procedural rule does get right is that it re-derives the leaf FROM the petiole, so a leaf cannot
+            // come away from it. The prescribed leaf is re-derived the same way: its nearest point on the centerline as it
+            // stood before this step is carried to the rescaled centerline, and the leaf keeps its offset from that point.
+            // The centerline was scaled about its base by petiole_delta_scale above, so carrying the nearest point by the
+            // same map lands it on the corresponding point exactly -- no arclength round trip, which would drift a
+            // fraction of a millimetre per step. The offset is NOT scaled: a measured leaflet is rarely exactly on the
+            // fitted centerline, held off it by a petiolule or lying past a rachis the scan stopped short, and scaling
+            // the whole base about the petiole base multiplied that gap by the growth factor until the leaflets hung in
+            // mid-air beside a petiole that had grown past them.
+            const vec3 petiole_base = petiole_vertices.at(petiole_index).front();
+            std::vector<vec3> previous_centerline = petiole_vertices.at(petiole_index);
+            for (vec3 &vertex: previous_centerline) {
+                vertex = petiole_base + (vertex - petiole_base) / petiole_delta_scale;
+            }
+            const vec3 previous_nearest = nearestPointOnPolyline(previous_centerline, leaf_bases.at(petiole_index).at(leaf));
+            const vec3 offset_from_centerline = leaf_bases.at(petiole_index).at(leaf) - previous_nearest;
+            const vec3 prescribed_base = petiole_base + (previous_nearest - petiole_base) * petiole_delta_scale + offset_from_centerline;
+            context_ptr->translateObject(leaf_objIDs.at(petiole_index).at(leaf), prescribed_base);
+            leaf_bases.at(petiole_index).at(leaf) = prescribed_base;
+        } else if (ind_from_tip == 0) {
             context_ptr->translateObject(leaf_objIDs.at(petiole_index).at(leaf), petiole_vertices.at(petiole_index).back());
             leaf_bases.at(petiole_index).at(leaf) = petiole_vertices.at(petiole_index).back();
         } else {
@@ -3723,10 +3772,14 @@ static bool minimalRotationBetween(const vec3 &v, const vec3 &u, vec3 &axis, flo
 // weighting them. A leaf object also carries its petiolule, a stalk whose facets point every which way and
 // which is a fraction of the blade's area but a comparable fraction of its primitive COUNT, so an unweighted
 // mean over the whole object sits about eight degrees off the blade on a bean. Phytomer::setLeafNormal() aims
-// this quantity and PlantArchitecture::getPlantLeafInclinationAngleDistribution() reports it, so the leaf
-// angle distribution code has to measure it too: steering toward one definition while scoring another leaves
-// every leaf landing a bin short of where it was aimed, and an angle bin that can never be filled goes on
-// attracting leaves forever.
+// this quantity, so the leaf angle distribution code has to measure it the same way when it decides how far
+// a leaf still has to turn.
+//
+// Note that this is NOT what PlantArchitecture::getPlantLeafInclinationAngleDistribution() reports: that bins
+// every blade facet separately, and a folded or curved blade spreads its facets over a range of inclinations
+// about the single direction returned here. The two coincide only for a planar blade. The tracker aims this
+// mean normal but scores itself over facets, via depositLeafFacets(), precisely so that steering and the
+// reported distribution are judged in the same space.
 //
 // Returns false for a leaf with no blade geometry, or one whose facet normals cancel.
 static bool leafBladeNormal(const helios::Context *context_ptr, uint objID_leaf, vec3 &normal, float &area) {
@@ -3763,7 +3816,7 @@ static bool leafBladeNormal(const helios::Context *context_ptr, uint objID_leaf,
     return true;
 }
 
-void Phytomer::setLeafNormal(uint petiole_index, uint leaf_index, const helios::vec3 &target_normal) {
+void Phytomer::setLeafNormal(uint petiole_index, uint leaf_index, const helios::vec3 &target_normal, const helios::vec3 *current_normal) {
     if (petiole_index >= leaf_objIDs.size()) {
         helios_runtime_error("ERROR (PlantArchitecture::Phytomer::setLeafNormal): Invalid petiole index " + std::to_string(petiole_index) + ".");
     } else if (leaf_index >= leaf_objIDs.at(petiole_index).size()) {
@@ -3797,7 +3850,13 @@ void Phytomer::setLeafNormal(uint petiole_index, uint leaf_index, const helios::
     // floor rejected any leaf much below full size, so aiming a young or small leaf failed outright.
     vec3 world_normal;
     float area_total = 0;
-    if (!leafBladeNormal(context_ptr, objID_leaf, world_normal, area_total)) {
+    if (current_normal != nullptr && current_normal->magnitude() > 1e-6f) {
+        // Supplied by a caller that has already measured this blade this step (the leaf angle distribution
+        // tracker does, through its cached blade list). Re-deriving it here means re-filtering the object's
+        // primitives by their "object_label" string, which is the single most expensive thing the tracker
+        // does per leaf.
+        world_normal = normalize(*current_normal);
+    } else if (!leafBladeNormal(context_ptr, objID_leaf, world_normal, area_total)) {
         helios_runtime_error("ERROR (PlantArchitecture::Phytomer::setLeafNormal): Leaf " + std::to_string(leaf_index) + " on petiole " + std::to_string(petiole_index) +
                              " has no single direction it faces; its facet normals cancel. It cannot be aimed at a target normal.");
     }
@@ -5930,7 +5989,8 @@ void PlantArchitecture::enablePlantLeafAngleDistributionTracking_private(uint pl
 // tracking. Blade membership only changes when a leaf's geometry is rebuilt, so the list is remembered and
 // re-derived only when the primitive count no longer matches -- which is what a rebuilt, pruned or replaced
 // leaf looks like from here.
-static bool leafBladeNormalCached(const helios::Context *context_ptr, uint objID_leaf, std::map<uint, std::pair<size_t, std::vector<uint>>> &cache, vec3 &normal, float &area) {
+static bool leafBladeNormalCached(const helios::Context *context_ptr, uint objID_leaf, std::map<uint, PlantInstance::LeafAngleDistributionTracker::BladeCacheEntry> &cache, vec3 &normal, float &area,
+                                  PlantInstance::LeafAngleDistributionTracker::BladeCacheEntry **entry_out = nullptr) {
     if (!context_ptr->doesObjectExist(objID_leaf)) {
         cache.erase(objID_leaf);
         return false;
@@ -5939,29 +5999,76 @@ static bool leafBladeNormalCached(const helios::Context *context_ptr, uint objID
     const std::vector<uint> object_UUIDs = context_ptr->getObjectPrimitiveUUIDs(objID_leaf);
 
     auto entry = cache.find(objID_leaf);
-    if (entry == cache.end() || entry->second.first != object_UUIDs.size()) {
-        std::vector<uint> blade_UUIDs = context_ptr->filterPrimitivesByData(object_UUIDs, "object_label", "leaf");
-        if (blade_UUIDs.empty()) {
-            blade_UUIDs = object_UUIDs;
+    if (entry == cache.end() || entry->second.primitive_count != object_UUIDs.size()) {
+        PlantInstance::LeafAngleDistributionTracker::BladeCacheEntry fresh;
+        fresh.primitive_count = object_UUIDs.size();
+        fresh.blade_UUIDs = context_ptr->filterPrimitivesByData(object_UUIDs, "object_label", "leaf");
+        if (fresh.blade_UUIDs.empty()) {
+            fresh.blade_UUIDs = object_UUIDs;
         }
-        entry = cache.insert_or_assign(objID_leaf, std::make_pair(object_UUIDs.size(), std::move(blade_UUIDs))).first;
+        entry = cache.insert_or_assign(objID_leaf, std::move(fresh)).first;
     }
+
+    // The per-facet areas and normals are read once here and the facet spread is rebuilt from them, rather
+    // than cached across sub-steps: a leaf that is still expanding changes shape every step, and a stale
+    // spread would describe the leaf as it was rather than as it is. The facets have to be visited anyway to
+    // form the mean normal, so recording the spread costs no additional Context calls.
+    PlantInstance::LeafAngleDistributionTracker::BladeCacheEntry &blade = entry->second;
+    const size_t facet_count = blade.blade_UUIDs.size();
+    blade.facet_inclination_offset.resize(facet_count);
+    blade.facet_area.resize(facet_count);
 
     normal = make_vec3(0, 0, 0);
     area = 0;
-    for (const uint UUID: entry->second.second) {
-        const float primitive_area = context_ptr->getPrimitiveArea(UUID);
+    for (size_t facet = 0; facet < facet_count; facet++) {
+        const float primitive_area = context_ptr->getPrimitiveArea(blade.blade_UUIDs.at(facet));
         if (!std::isfinite(primitive_area)) {
+            blade.facet_area.at(facet) = 0.f;
+            blade.facet_inclination_offset.at(facet) = 0.f;
             continue;
         }
-        normal = normal + primitive_area * context_ptr->getPrimitiveNormal(UUID);
+        const vec3 facet_normal = context_ptr->getPrimitiveNormal(blade.blade_UUIDs.at(facet));
+        normal = normal + primitive_area * facet_normal;
         area += primitive_area;
+        blade.facet_area.at(facet) = primitive_area;
+        // Stored as an absolute inclination for now and converted to an offset once the mean is known.
+        blade.facet_inclination_offset.at(facet) = acos_safe(std::fabs(facet_normal.z));
     }
 
     if (area <= 0.f || normal.magnitude() < 1e-4f * area) {
         return false;
     }
     normal = normal.normalize();
+
+    const float mean_inclination = acos_safe(std::fabs(normal.z));
+    for (float &offset: blade.facet_inclination_offset) {
+        offset -= mean_inclination;
+    }
+
+    // Reduce the spread to the kernel the target chooser scores with, here rather than there: this walk over
+    // the blade is already happening, whereas chooseLeafAngleTarget() runs once per candidate target and
+    // would rebuild the same kernel from the same facets every time.
+    const float bin_width = 0.5f * PI_F / float(leaf_angle_inclination_bin_count);
+    int lowest_offset = 0;
+    int highest_offset = 0;
+    for (const float offset: blade.facet_inclination_offset) {
+        const int offset_bin = int(std::floor(offset / bin_width + 0.5f));
+        lowest_offset = std::min(lowest_offset, offset_bin);
+        highest_offset = std::max(highest_offset, offset_bin);
+    }
+    blade.facet_bin_kernel_origin = -lowest_offset;
+    blade.facet_bin_kernel.assign(size_t(highest_offset - lowest_offset + 1), 0.f);
+    for (size_t facet = 0; facet < facet_count; facet++) {
+        const int offset_bin = int(std::floor(blade.facet_inclination_offset[facet] / bin_width + 0.5f));
+        blade.facet_bin_kernel[size_t(offset_bin + blade.facet_bin_kernel_origin)] += blade.facet_area[facet];
+    }
+    for (float &weight: blade.facet_bin_kernel) {
+        weight /= area;
+    }
+
+    if (entry_out != nullptr) {
+        *entry_out = &blade;
+    }
     return true;
 }
 
@@ -5988,6 +6095,52 @@ static int leafAngleBinIndex(const PlantInstance::LeafAngleDistributionTracker &
         return inclination_bin * leaf_angle_azimuth_bin_count + azimuth_bin;
     }
     return tracker.track_elevation ? inclination_bin : azimuth_bin;
+}
+
+// Add (or, with a negative sign, remove) a leaf's facet area to the running histogram, placed as though the
+// blade's mean normal sat at the given inclination.
+//
+// The distribution being matched is over blade facets, because that is what a LiDAR-derived leaf angle
+// distribution measures: it fits planes to patches of leaf surface, so a folded blade contributes its steep
+// edges and its flat middle as separate observations. Steering can only aim a blade as a whole, so what the
+// tracker must reason about is where a leaf's whole facet spread lands when its mean is aimed somewhere --
+// not where its mean lands. Depositing the spread rather than a point mass is what puts the controller's
+// feedback in the same space as the target and as
+// PlantArchitecture::getPlantLeafInclinationAngleDistribution().
+static void depositLeafFacets(PlantInstance::LeafAngleDistributionTracker &tracker, const PlantInstance::LeafAngleDistributionTracker::BladeCacheEntry &blade, float mean_inclination, float azimuth, float sign) {
+    const size_t facet_count = blade.facet_area.size();
+
+    // Elevation-only tracking is the common case and its bin index is pure arithmetic on the inclination, so
+    // the azimuth half of leafAngleBinIndex() -- an fmod and a pair of branches -- is skipped entirely. This
+    // loop runs over every facet of every leaf on every sub-step, so the saving is worth the special case.
+    if (tracker.track_elevation && !tracker.track_azimuth) {
+        const float bins_per_radian = float(leaf_angle_inclination_bin_count) / (0.5f * PI_F);
+        for (size_t facet = 0; facet < facet_count; facet++) {
+            // Folded back into [0,pi/2], exactly as the reporter folds a normal that tips past vertical or
+            // below horizontal, so that area is never lost off either end of the histogram.
+            float facet_inclination = mean_inclination + blade.facet_inclination_offset[facet];
+            if (facet_inclination < 0.f) {
+                facet_inclination = -facet_inclination;
+            }
+            if (facet_inclination > 0.5f * PI_F) {
+                facet_inclination = PI_F - facet_inclination;
+            }
+            const int bin = std::clamp(int(bins_per_radian * facet_inclination), 0, leaf_angle_inclination_bin_count - 1);
+            tracker.bin_weight[size_t(bin)] += sign * blade.facet_area[facet];
+        }
+        return;
+    }
+
+    for (size_t facet = 0; facet < facet_count; facet++) {
+        float facet_inclination = mean_inclination + blade.facet_inclination_offset[facet];
+        if (facet_inclination < 0.f) {
+            facet_inclination = -facet_inclination;
+        }
+        if (facet_inclination > 0.5f * PI_F) {
+            facet_inclination = PI_F - facet_inclination;
+        }
+        tracker.bin_weight[size_t(leafAngleBinIndex(tracker, facet_inclination, azimuth))] += sign * blade.facet_area[facet];
+    }
 }
 
 // A representative direction for a bin: its centre in whichever angles are being tracked, and the leaf's own
@@ -6018,22 +6171,96 @@ static vec3 leafAngleBinDirection(const PlantInstance::LeafAngleDistributionTrac
 // weights the deficit the further the population ends up from the target. Re-choosing closes the loop.
 //
 // Returns false when there is nothing to aim at.
-static bool chooseLeafAngleTarget(PlantInstance::LeafAngleDistributionTracker &tracker, float inclination, float azimuth, float total_weight, vec3 &target_normal) {
+static bool chooseLeafAngleTarget(PlantInstance::LeafAngleDistributionTracker &tracker, float inclination, float azimuth, float total_weight, vec3 &target_normal,
+                                  const PlantInstance::LeafAngleDistributionTracker::BladeCacheEntry *blade = nullptr) {
     if (tracker.lambda <= 0.f || tracker.bin_target_fraction.empty()) {
         return false;
     }
 
+    // How this leaf's own facet area is spread over inclination bins, relative to the bin its mean normal
+    // lands in. Aiming the blade at a bin does not put all of its area in that bin: a folded leaf straddles
+    // several, so the deficit the aim actually relieves is the spread-weighted average of the deficits of the
+    // bins it covers, not the deficit of the one bin it is pointed at. Scoring the single bin instead sends
+    // every leaf at whichever bin is emptiest while its area lands mostly elsewhere, and the emptiest bin
+    // stays empty however hard lambda pulls.
+    const std::vector<float> *facet_kernel = nullptr;
+    int kernel_origin = 0;
+    if (blade != nullptr && tracker.track_elevation && !blade->facet_bin_kernel.empty()) {
+        facet_kernel = &blade->facet_bin_kernel;
+        kernel_origin = blade->facet_bin_kernel_origin;
+    }
+
     const vec3 proposed_normal = sphere2cart(SphericalCoord(1.f, 0.5f * PI_F - inclination, azimuth));
+
+    // The bin directions are rebuilt once per call rather than once per bin-visit. Only the tracked angles
+    // vary from bin to bin, and an untracked angle takes the same value -- this leaf's own -- in every bin,
+    // so the whole set is the outer product of at most 18 inclinations and 24 azimuths. Evaluating
+    // leafAngleBinDirection() inside the loop instead cost a sin/cos pair for each of the 432 bins on every
+    // leaf on every sub-step, which the profile showed dominating the choice.
+    const size_t bin_count = tracker.bin_target_fraction.size();
+    const int inclination_steps = tracker.track_elevation ? leaf_angle_inclination_bin_count : 1;
+    const int azimuth_steps = tracker.track_azimuth ? leaf_angle_azimuth_bin_count : 1;
+
+    static thread_local std::vector<float> sin_inclination, cos_inclination, sin_azimuth, cos_azimuth;
+    sin_inclination.resize(inclination_steps);
+    cos_inclination.resize(inclination_steps);
+    sin_azimuth.resize(azimuth_steps);
+    cos_azimuth.resize(azimuth_steps);
+
+    for (int i = 0; i < inclination_steps; i++) {
+        // sphere2cart() takes an elevation, so the polar angle carried here is pi/2 minus the inclination.
+        const float bin_inclination = tracker.track_elevation ? 0.5f * PI_F * (float(i) + 0.5f) / float(leaf_angle_inclination_bin_count) : inclination;
+        const float elevation = 0.5f * PI_F - bin_inclination;
+        sin_inclination.at(i) = std::sin(elevation);
+        cos_inclination.at(i) = std::cos(elevation);
+    }
+    for (int j = 0; j < azimuth_steps; j++) {
+        const float bin_azimuth = tracker.track_azimuth ? deg2rad(tracker.ellipse_rotation_azimuth_degrees) + 2.f * PI_F * (float(j) + 0.5f) / float(leaf_angle_azimuth_bin_count) : azimuth;
+        sin_azimuth.at(j) = std::sin(bin_azimuth);
+        cos_azimuth.at(j) = std::cos(bin_azimuth);
+    }
 
     int best_bin = -1;
     float best_cost = 0.f;
-    for (size_t bin = 0; bin < tracker.bin_target_fraction.size(); bin++) {
-        const float target_weight = tracker.bin_target_fraction.at(bin) * std::max(total_weight, 1e-9f);
-        // Shortfall as a fraction of what this bin is owed, clamped so that a wildly overfull or empty bin
-        // cannot dominate the whole cost.
-        const float shortfall = std::clamp((target_weight - tracker.bin_weight.at(bin)) / std::max(target_weight, 1e-9f), -1.f, 1.f);
+    for (size_t bin = 0; bin < bin_count; bin++) {
+        // Shortfall as a fraction of what a bin is owed, clamped so that a wildly overfull or empty bin
+        // cannot dominate the whole cost. Averaged over the bins this leaf's facets would actually land in.
+        float shortfall = 0.f;
+        if (facet_kernel == nullptr) {
+            const float target_weight = tracker.bin_target_fraction.at(bin) * std::max(total_weight, 1e-9f);
+            shortfall = std::clamp((target_weight - tracker.bin_weight.at(bin)) / std::max(target_weight, 1e-9f), -1.f, 1.f);
+        } else {
+            const int aimed_inclination_bin = tracker.track_elevation ? (tracker.track_azimuth ? int(bin) / leaf_angle_azimuth_bin_count : int(bin)) : 0;
+            const int azimuth_offset = int(bin) - (tracker.track_azimuth && tracker.track_elevation ? aimed_inclination_bin * leaf_angle_azimuth_bin_count : 0);
+            for (size_t kernel_index = 0; kernel_index < facet_kernel->size(); kernel_index++) {
+                if ((*facet_kernel)[kernel_index] <= 0.f) {
+                    continue;
+                }
+                // Reflected at both ends, matching the fold that depositLeafFacets() applies when the area
+                // actually lands, so the score anticipates where the area goes rather than where it would go
+                // if inclination could run past vertical or below horizontal.
+                int landed_bin = aimed_inclination_bin + int(kernel_index) - kernel_origin;
+                if (landed_bin < 0) {
+                    landed_bin = -landed_bin - 1;
+                }
+                if (landed_bin >= leaf_angle_inclination_bin_count) {
+                    landed_bin = 2 * leaf_angle_inclination_bin_count - landed_bin - 1;
+                }
+                landed_bin = std::clamp(landed_bin, 0, leaf_angle_inclination_bin_count - 1);
 
-        const vec3 bin_direction = leafAngleBinDirection(tracker, int(bin), inclination, azimuth);
+                const size_t landed_index = size_t(tracker.track_azimuth && tracker.track_elevation ? landed_bin * leaf_angle_azimuth_bin_count + azimuth_offset : landed_bin);
+                const float target_weight = tracker.bin_target_fraction.at(landed_index) * std::max(total_weight, 1e-9f);
+                shortfall += (*facet_kernel)[kernel_index] * std::clamp((target_weight - tracker.bin_weight.at(landed_index)) / std::max(target_weight, 1e-9f), -1.f, 1.f);
+            }
+        }
+
+        const int inclination_index = tracker.track_elevation ? (tracker.track_azimuth ? int(bin) / leaf_angle_azimuth_bin_count : int(bin)) : 0;
+        const int azimuth_index = tracker.track_azimuth ? (tracker.track_elevation ? int(bin) % leaf_angle_azimuth_bin_count : int(bin)) : 0;
+        const float cos_elevation = cos_inclination.at(inclination_index);
+        const vec3 bin_direction = make_vec3(cos_elevation * sin_azimuth.at(azimuth_index), cos_elevation * cos_azimuth.at(azimuth_index), sin_inclination.at(inclination_index));
+
+        // Comparing bins by the cosine of the angle is monotonic in the angle itself, but the cost below
+        // mixes the angle with the shortfall, so the arccos has to stay.
         const float angular_distance = acos_safe(std::clamp(proposed_normal * bin_direction, -1.f, 1.f));
 
         // Angular distance spans [0,pi] and the shortfall is clamped to [-1,1], so lambda is measured on the
@@ -6089,9 +6316,10 @@ void PlantArchitecture::updatePlantLeafAngleDistributionTracking(uint plantID) {
 
     // Reads a leaf's blade direction as an inclination folded into [0,pi/2] and an azimuth, or reports that
     // the blade faces no single direction.
+    PlantInstance::LeafAngleDistributionTracker::BladeCacheEntry *blade_entry = nullptr;
     auto leafAngles = [&](uint objID, float &inclination, float &azimuth, float &area) {
         vec3 normal;
-        if (!leafBladeNormalCached(context_ptr, objID, tracker.blade_primitive_cache, normal, area)) {
+        if (!leafBladeNormalCached(context_ptr, objID, tracker.blade_primitive_cache, normal, area, &blade_entry)) {
             return false;
         }
         normal.z = std::fabs(normal.z);
@@ -6118,7 +6346,9 @@ void PlantArchitecture::updatePlantLeafAngleDistributionTracking(uint plantID) {
                     if (!leafAngles(phytomer->leaf_objIDs.at(petiole_index).at(leaf_index), inclination, azimuth, area)) {
                         continue;
                     }
-                    tracker.bin_weight.at(leafAngleBinIndex(tracker, inclination, azimuth)) += area;
+                    // Every facet of the blade, not the blade's mean direction: the histogram has to be in
+                    // the same space as the target it is scored against.
+                    depositLeafFacets(tracker, *blade_entry, inclination, azimuth, 1.f);
                     total_weight += area;
                 }
             }
@@ -6163,7 +6393,7 @@ void PlantArchitecture::updatePlantLeafAngleDistributionTracking(uint plantID) {
                 // With lambda at zero there is nothing to trade against staying put, so the leaf keeps the
                 // orientation the model gave it and is simply counted where it already is.
                 vec3 chosen_target;
-                if (!chooseLeafAngleTarget(tracker, inclination, azimuth, total_weight, chosen_target)) {
+                if (!chooseLeafAngleTarget(tracker, inclination, azimuth, total_weight, chosen_target, blade_entry)) {
                     steering.steered = false;
                     continue;
                 }
@@ -6177,12 +6407,12 @@ void PlantArchitecture::updatePlantLeafAngleDistributionTracking(uint plantID) {
                 // as well counted it twice and inflated the running total with it. Every bin's share of that
                 // total then shifted, so a single new leaf corrupted the shortfall of bins it had nothing to
                 // do with.
-                tracker.bin_weight.at(leafAngleBinIndex(tracker, inclination, azimuth)) -= area;
+                depositLeafFacets(tracker, *blade_entry, inclination, azimuth, -1.f);
                 {
                     vec3 folded = chosen_target;
                     folded.z = std::fabs(folded.z);
                     const SphericalCoord target_spherical = cart2sphere(folded);
-                    tracker.bin_weight.at(leafAngleBinIndex(tracker, target_spherical.zenith, target_spherical.azimuth)) += area;
+                    depositLeafFacets(tracker, *blade_entry, target_spherical.zenith, target_spherical.azimuth, 1.f);
                 }
 
                 steering.steered = true;
@@ -6224,9 +6454,14 @@ void PlantArchitecture::updatePlantLeafAngleDistributionTracking(uint plantID) {
 
                     vec3 current_normal;
                     float current_area = 0;
-                    if (!leafBladeNormalCached(context_ptr, phytomer->leaf_objIDs.at(petiole_index).at(leaf_index), tracker.blade_primitive_cache, current_normal, current_area)) {
+                    PlantInstance::LeafAngleDistributionTracker::BladeCacheEntry *current_blade = nullptr;
+                    if (!leafBladeNormalCached(context_ptr, phytomer->leaf_objIDs.at(petiole_index).at(leaf_index), tracker.blade_primitive_cache, current_normal, current_area, &current_blade)) {
                         continue;
                     }
+                    // The blade's true direction, before the fold below. setLeafNormal() turns the leaf from
+                    // where it actually faces, so it must be given the unfolded normal; the folded copy is
+                    // only for deciding which angle bin the leaf belongs to.
+                    const vec3 measured_normal = current_normal;
                     current_normal.z = std::fabs(current_normal.z);
 
                     // Re-choose where this leaf is headed, against the deficits as they stand now. A leaf is
@@ -6238,18 +6473,18 @@ void PlantArchitecture::updatePlantLeafAngleDistributionTracking(uint plantID) {
                     if (scale < 1.f) {
                         const SphericalCoord current_spherical = cart2sphere(current_normal);
                         vec3 rechosen_target;
-                        if (chooseLeafAngleTarget(tracker, current_spherical.zenith, current_spherical.azimuth, total_weight, rechosen_target)) {
+                        if (chooseLeafAngleTarget(tracker, current_spherical.zenith, current_spherical.azimuth, total_weight, rechosen_target, current_blade)) {
                             // Keep the running histogram consistent with where this leaf is now headed: take
                             // its area out of the bin it was aimed at and put it in the new one.
                             vec3 previous_folded = steering.target_normal;
                             previous_folded.z = std::fabs(previous_folded.z);
                             const SphericalCoord previous_spherical = cart2sphere(previous_folded);
-                            tracker.bin_weight.at(leafAngleBinIndex(tracker, previous_spherical.zenith, previous_spherical.azimuth)) -= current_area;
+                            depositLeafFacets(tracker, *current_blade, previous_spherical.zenith, previous_spherical.azimuth, -1.f);
 
                             vec3 new_folded = rechosen_target;
                             new_folded.z = std::fabs(new_folded.z);
                             const SphericalCoord new_spherical = cart2sphere(new_folded);
-                            tracker.bin_weight.at(leafAngleBinIndex(tracker, new_spherical.zenith, new_spherical.azimuth)) += current_area;
+                            depositLeafFacets(tracker, *current_blade, new_spherical.zenith, new_spherical.azimuth, 1.f);
 
                             steering.target_normal = rechosen_target;
                         }
@@ -6265,7 +6500,7 @@ void PlantArchitecture::updatePlantLeafAngleDistributionTracking(uint plantID) {
                         }
                     }
 
-                    phytomer->setLeafNormal(petiole_index, leaf_index, step_normal);
+                    phytomer->setLeafNormal(petiole_index, leaf_index, step_normal, &measured_normal);
                     steering.scale_at_last_step = scale;
 
                     // Once the leaf is fully grown it has arrived, and must never be moved again.
@@ -8204,7 +8439,10 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
                 for (auto &phytomer: shoot->phytomers) {
                     if (phytomer->age > plant_instance.max_leaf_lifespan) {
-                        // delete old leaves that exceed maximum lifespan
+                        // delete old leaves that exceed maximum lifespan, resorbing their nitrogen first
+                        if (nitrogen_model_enabled && !phytomer->leaf_objIDs.empty()) {
+                            resorbLeafNitrogen(plant_instance, *shoot, *phytomer);
+                        }
                         phytomer->removeLeaf();
                     }
 
@@ -8584,9 +8822,10 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
         // **** nitrogen model operations **** //
         if (nitrogen_model_enabled) {
-            accumulateLeafNitrogen(dt_max_days); // Available pool → leaf pools (rate-limited)
-            remobilizeNitrogen(dt_max_days); // Old leaves → young leaves (age-based)
-            removeFruitNitrogen(); // Deduct N from available pool for fruit growth
+            senesceLeafNitrogen(dt_max_days); // Senescing leaves → available pool
+            accumulateLeafNitrogen(dt_max_days); // Available pool → expanding leaves, then mature leaves (rate-limited)
+            removeFruitNitrogen(); // Available pool → fruit growth; the remainder is recorded as unmet demand
+            remobilizeNitrogen(dt_max_days); // Mature leaves → unmet demand of expanding leaves and fruit (first-order)
             updateNitrogenStressFactor(); // Calculate and write stress factor to object data
         }
 

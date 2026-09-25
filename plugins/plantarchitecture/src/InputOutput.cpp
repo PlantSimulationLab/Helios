@@ -2,14 +2,17 @@
 
 Copyright (C) 2016-2026 Brian Bailey
 
-This program is free software: you can redistribute it and/or modify
-        it under the terms of the GNU General Public License as published by
-the Free Software Foundation, version 2.
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful,
-        but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+SPDX-License-Identifier: LGPL-2.1-or-later
 
 */
 
@@ -513,6 +516,19 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
     // not derivable from the shoot structure, so without this tag a plant written and read back would
     // silently revert to the PlantInstance default of 999. Optional on read, so older files still load.
     output_xml << "\t\t<max_age> " << plant_instances.at(plantID).max_age << " </max_age>" << std::endl;
+
+    // Leaf inclination distribution this plant is being steered toward, if any. Like the thresholds and
+    // max_age above it is plant-scale configuration rather than geometry, and it is not recoverable from the
+    // shoot structure: the plant's species is not written to the file, so a plant built from a library model
+    // that declares a measured distribution would otherwise come back untracked and drift off the
+    // distribution as soon as it was grown any further.
+    //
+    // Written only when elevation tracking is actually in effect, so that a plant tracking azimuth only does
+    // not emit the placeholder (1,1) its tracker holds for the axis it is not steering.
+    if (plant_instances.at(plantID).leaf_angle_tracking_enabled && plant_instances.at(plantID).leaf_angle_tracker.track_elevation) {
+        output_xml << "\t\t<leaf_inclination_Beta_distribution> " << plant_instances.at(plantID).leaf_angle_tracker.Beta_mu_inclination << " " << plant_instances.at(plantID).leaf_angle_tracker.Beta_nu_inclination
+                   << " </leaf_inclination_Beta_distribution>" << std::endl;
+    }
 
     for (auto &shoot: plant_instances.at(plantID).shoot_tree) {
         // A pruned shoot keeps its slot in shoot_tree so that shoot IDs stay stable, but it has no
@@ -1119,6 +1135,16 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
         if (plant.child("max_age")) {
             node_string = "max_age";
             setPlantMaxAge(plantID, parse_xml_tag_float(plant.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML"));
+        }
+
+        // Leaf inclination distribution the plant was being steered toward when it was written. Optional
+        // exactly as max_age above, so a file written before the tag existed restores a plant that simply is
+        // not tracking. The steering strength is not written -- it is not part of the distribution -- so the
+        // plant resumes at the same default a library model would give it.
+        if (plant.child("leaf_inclination_Beta_distribution")) {
+            node_string = "leaf_inclination_Beta_distribution";
+            const vec2 leaf_inclination_Beta = parse_xml_tag_vec2(plant.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+            enablePlantLeafElevationAngleDistributionTracking(plantID, leaf_inclination_Beta.x, leaf_inclination_Beta.y, library_leaf_angle_lambda_degrees);
         }
 
         int current_shoot_ID;

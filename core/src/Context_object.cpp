@@ -3,14 +3,17 @@
  *
  * Copyright (C) 2016-2026 Brian Bailey
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, version 2
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include "Context.h"
@@ -2558,23 +2561,39 @@ std::string CompoundObject::getTextureFile() const {
     return texturefile;
 }
 
+// Left-multiplication by a translation matrix, without forming the matrix or running the general 4x4
+// product.
+//
+// makeTranslationMatrix() differs from the identity only in the translation column, so the product
+// T*M leaves every row but the translation column untouched and adds a multiple of M's bottom row to
+// each of the first three rows. For the affine matrices Helios builds -- every make*Matrix() writes a
+// bottom row of (0,0,0,1), and a product of such matrices keeps it -- that reduces to adding the shift
+// to the three translation entries. Running the full product instead costs 64 multiply-adds per
+// primitive to recompute twelve values that cannot have changed.
+//
+// The general path is kept for the case the bottom row is not affine, so this can never quietly
+// produce a different answer than the multiply it replaces.
+static inline void applyTranslationToMatrix(const helios::vec3 &shift, float (&M)[16]) {
+    if (M[12] == 0.f && M[13] == 0.f && M[14] == 0.f && M[15] == 1.f) {
+        M[3] += shift.x;
+        M[7] += shift.y;
+        M[11] += shift.z;
+        return;
+    }
+
+    float T[16];
+    helios::makeTranslationMatrix(shift, T);
+    helios::matmult(T, M, M);
+}
+
 void CompoundObject::translate(const helios::vec3 &shift) {
     if (shift == nullorigin) {
         return;
     }
 
-    float T[16], T_prim[16];
-    makeTranslationMatrix(shift, T);
+    applyTranslationToMatrix(shift, transform);
 
-    matmult(T, transform, transform);
-
-    for (uint UUID: UUIDs) {
-        if (context->doesPrimitiveExist(UUID)) {
-            context->getPrimitiveTransformationMatrix(UUID, T_prim);
-            matmult(T, T_prim, T_prim);
-            context->setPrimitiveTransformationMatrix(UUID, T_prim);
-        }
-    }
+    context->translateObjectPrimitives_private(UUIDs, shift);
 }
 
 void CompoundObject::rotate(float rotation_radians, const char *rotation_axis_xyz_string) {

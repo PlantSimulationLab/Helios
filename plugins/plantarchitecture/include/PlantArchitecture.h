@@ -2,14 +2,17 @@
 
     Copyright (C) 2016-2026 Brian Bailey
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, version 2.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
+    This library is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    SPDX-License-Identifier: LGPL-2.1-or-later
 
 */
 
@@ -407,10 +410,28 @@ struct NitrogenParameters {
     float max_N_accumulation_rate = 0.1f;
 
     // -- Remobilization Parameters -- //
-    //! fraction of leaf nitrogen that can be remobilized from old leaves (0.0-1.0)
+    //! first-order rate (1/day) at which a mature leaf releases its nitrogen above minimum_leaf_N_area while the plant cannot meet its growing organs' demand
+    /**
+     * Each day of shortfall a mature leaf can give up this fraction of its remobilizable nitrogen, oldest leaves first. Labelling studies in nitrogen-limited plants find mature leaves exporting
+     * 5-16 % of their nitrogen to young leaves over ten days (Diaz et al. 2008), and crop models use a few percent per day.
+     */
+    float leaf_remobilization_rate = 0.03f;
+    //! fraction of a leaf's nitrogen above minimum_leaf_N_area resorbed into the plant as it senesces, by the time it is shed at max_leaf_lifespan (0.0-1.0)
     float leaf_remobilization_efficiency = 0.70f;
-    //! fraction of leaf lifespan at which remobilization begins (0.0-1.0)
-    float remobilization_age_threshold = 0.70f;
+
+    // -- Leaf Senescence Parameters -- //
+    //! fraction of max_leaf_lifespan, at the end of a leaf's life, over which an unstressed leaf senesces (0.0-1.0)
+    /**
+     * A senescing leaf returns its resorbable nitrogen to the plant gradually, yellowing as it does, and is shed at max_leaf_lifespan. Has no effect while max_leaf_lifespan keeps its
+     * effectively infinite default.
+     */
+    float leaf_senescence_duration_fraction = 0.25f;
+    //! fraction of max_leaf_lifespan by which nitrogen stress brings the onset of leaf senescence forward, at full stress (0.0-1.0)
+    /**
+     * Scaled by (1 - nitrogen_stress_factor): a plant at its target leaf nitrogen senesces its leaves on schedule, and a nitrogen-starved plant starts senescing them earlier.
+     * The sum with leaf_senescence_duration_fraction must not exceed 1.
+     */
+    float stress_senescence_advance_fraction = 0.30f;
 
     // -- Fruit Nitrogen Parameters -- //
     //! nitrogen content per unit fruit area (g N/m²)
@@ -2023,7 +2044,7 @@ public:
      * \param[in] target_normal Direction the blade should face, in world coordinates. Need not be normalized.
      * \note The leaf must have geometry in the Context. A blade whose facet normals cancel, or a target the roll-pitch pair cannot reach, raises an error rather than leaving the leaf half-turned.
      */
-    void setLeafNormal(uint petiole_index, uint leaf_index, const helios::vec3 &target_normal);
+    void setLeafNormal(uint petiole_index, uint leaf_index, const helios::vec3 &target_normal, const helios::vec3 *current_normal = nullptr);
 
     //! Label a freshly built leaf object's blade primitives "leaf" and colour its petiolule, as the cached prototypes are.
     /**
@@ -2475,6 +2496,12 @@ struct Shoot {
 
     //! Per-leaf nitrogen tracking - maps leaf objID to nitrogen content per unit area (g N/m²)
     std::map<uint, float> leaf_nitrogen_gN_m2;
+    //! Nitrogen (g N) each expanding leaf wanted this timestep but did not receive from uptake; filled by remobilization. Rebuilt every timestep.
+    std::map<uint, float> leaf_N_unmet_demand_gN;
+    //! Leaf area (m²) at which each leaf's nitrogen per area was last stated, so that growth dilutes it rather than creating nitrogen
+    std::map<uint, float> leaf_N_area_basis_m2;
+    //! Nitrogen per area (g N/m²) of each senescing leaf when its senescence began; a leaf is in this map once it has started senescing
+    std::map<uint, float> leaf_N_at_senescence_onset;
 
     float old_shoot_volume = 0;
 
@@ -2616,6 +2643,10 @@ struct PlantInstance {
     float available_nitrogen_pool_gN = 0;
     //! Cumulative nitrogen uptake tracking (g N)
     float cumulative_N_uptake_gN = 0;
+    //! Fruit nitrogen demand (g N) the available pool could not cover this timestep; filled by remobilization. Rebuilt every timestep.
+    float unmet_fruit_N_demand_gN = 0;
+    //! Plant nitrogen stress factor from the last nitrogen update (0 = no leaf nitrogen, 1 = at target)
+    float nitrogen_stress_factor = 1.f;
 
     //! Snapshot of shoot parameters that were active when this plant was created
     //! This prevents parameter contamination between different plant types
@@ -2649,7 +2680,33 @@ struct PlantInstance {
         std::vector<float> bin_weight;
         //! Share of the total leaf area the target distribution puts in each bin
         std::vector<float> bin_target_fraction;
-        //! Blade primitives of each leaf, remembered between sub-steps so the histogram does not re-filter them every time
+        //! Blade facets of a leaf, remembered between sub-steps so the histogram does not re-derive them every time
+        struct BladeCacheEntry {
+            //! Number of primitives the leaf object had when this entry was built; a change means the leaf was rebuilt or pruned
+            size_t primitive_count = 0;
+            //! The leaf's blade primitives, excluding the petiolule
+            std::vector<uint> blade_UUIDs;
+            //! Signed offset of each blade facet's inclination from the blade's mean inclination (radians)
+            /**
+             * A blade is not flat: a folded, curved leaf spreads its facets over a range of inclinations
+             * about the direction it faces as a whole. Steering aims the blade's mean normal, but the
+             * distribution being matched is over facets, so the tracker has to know how a leaf's facet area
+             * will land about wherever its mean is aimed. Held as offsets from the mean rather than as
+             * absolute angles so the spread can be re-centred on a proposed target without touching geometry.
+             */
+            std::vector<float> facet_inclination_offset;
+            //! Area of each blade facet, in the same order as facet_inclination_offset
+            std::vector<float> facet_area;
+            //! Fraction of the blade's area landing in each inclination bin offset from the bin its mean normal occupies
+            /**
+             * The facet spread reduced to the form the target chooser needs: a normalized kernel over bin
+             * offsets, so scoring a candidate bin is a short correlation rather than a pass over every facet.
+             * Built alongside the facet arrays, since both come from the same walk over the blade.
+             */
+            std::vector<float> facet_bin_kernel;
+            //! Index within facet_bin_kernel corresponding to zero offset
+            int facet_bin_kernel_origin = 0;
+        };
         /**
          * Selecting a leaf's blade facets means a string comparison against the primitive data of every
          * primitive in the leaf object, and the histogram visits every leaf on the plant on every sub-step.
@@ -2657,7 +2714,7 @@ struct PlantInstance {
          * when the cached entry no longer describes the object. Keyed by leaf object ID; the stored primitive
          * count is what detects a rebuilt or pruned leaf.
          */
-        std::map<uint, std::pair<size_t, std::vector<uint>>> blade_primitive_cache;
+        std::map<uint, BladeCacheEntry> blade_primitive_cache;
 
         //! Shoot ID and node index of each phytomer created this sub-step, whose leaves are still to be assigned a target
         std::vector<std::pair<int, uint>> pending_cohort;
@@ -2789,6 +2846,35 @@ public:
 
     //! Get list of all available plant models in the library
     [[nodiscard]] std::vector<std::string> getAvailablePlantModels() const;
+
+    //! Get the empirical leaf inclination distribution a library plant model declares
+    /**
+     * A plant model may declare the leaf inclination distribution measured for its species. Plants built from
+     * such a model by \ref buildPlantInstanceFromLibrary() are steered toward that distribution as they grow,
+     * without the caller asking for it. See \ref PlantArchLeafAngleLibrary.
+     *
+     * \param[in] plant_model_name Name of the plant model to query. See \ref getAvailablePlantModels().
+     * \return Beta distribution parameters of leaf inclination (x=mu, y=nu), or (0,0) if the model declares no measured distribution.
+     */
+    [[nodiscard]] helios::vec2 getPlantModelLeafInclinationDistribution(const std::string &plant_model_name) const;
+
+    //! Set or replace the empirical leaf inclination distribution of a library plant model
+    /**
+     * Affects plants built after this call; plants that already exist are not changed. Pass (0,0) to clear the
+     * distribution, after which plants of this model are built with the leaf angles the model generates.
+     *
+     * \param[in] plant_model_name Name of the plant model. See \ref getAvailablePlantModels().
+     * \param[in] Beta_mu_inclination First parameter of the Beta distribution of leaf inclination. Must be positive, or zero together with Beta_nu_inclination.
+     * \param[in] Beta_nu_inclination Second parameter of the Beta distribution of leaf inclination. Must be positive, or zero together with Beta_mu_inclination.
+     */
+    void setPlantModelLeafInclinationDistribution(const std::string &plant_model_name, float Beta_mu_inclination, float Beta_nu_inclination);
+
+    //! Whether a library plant model declares an empirical leaf inclination distribution
+    /**
+     * \param[in] plant_model_name Name of the plant model to query. See \ref getAvailablePlantModels().
+     * \return True if the model declares a measured leaf inclination distribution.
+     */
+    [[nodiscard]] bool doesPlantModelDeclareLeafInclinationDistribution(const std::string &plant_model_name) const;
 
     //! Build a plant instance based on the model currently loaded from the library
     /**
@@ -4348,6 +4434,14 @@ public:
      */
     void addPlantNitrogen(const std::vector<uint> &plantIDs, float amount_gN);
 
+    /**
+     * \brief Get the nitrogen currently in a plant's available pool, awaiting allocation to its organs
+     * \param[in] plantID Plant ID to query
+     * \return Nitrogen in the available pool (g N)
+     * \note Nitrogen enters the pool from addPlantNitrogen() (less the root allocation) and from leaves resorbed before they are shed, and leaves it as uptake by growing leaves and fruit.
+     */
+    [[nodiscard]] float getPlantAvailableNitrogen(uint plantID) const;
+
     // -- manual plant generation from input string -- //
 
     /**
@@ -4578,6 +4672,28 @@ protected:
     std::map<std::string, std::function<void()>> shoot_initializers;
     std::map<std::string, std::function<uint(const helios::vec3 &)>> plant_builders;
     std::map<std::string, std::string> plant_type_map;
+    //! Empirical leaf inclination Beta distribution declared by each library plant model, keyed by model name
+    /**
+     * Populated by \ref registerPlantModel(). The x-component is the Beta distribution parameter mu and the
+     * y-component is nu, in the parameterization of \ref helios::sample_Beta_distribution().
+     *
+     * A model absent from this map declares no measured distribution, and its plants are built exactly as they
+     * were before this map existed. Absence is the "unset" representation deliberately: a numeric sentinel
+     * stored against every model would switch leaf angle distribution tracking on for species that have no
+     * distribution to track, which is observable through \ref isPlantLeafAngleDistributionTrackingEnabled(),
+     * \ref duplicatePlantInstance() and \ref writePlantStructureXML().
+     */
+    std::map<std::string, helios::vec2> plant_leaf_inclination_distribution_map;
+    //! Steering strength used for the leaf inclination distribution a library plant model declares (degrees)
+    /**
+     * Deliberately not a library parameter. A species' measured leaf angle distribution is a statement about
+     * the angles its leaves take, not about how hard the model should pull toward them, so it is not something
+     * a species definition has data for. This is the value the tracking documentation gives as matching the
+     * distribution as closely as a growing plant allows, which is what a plant carrying a measured
+     * distribution should do. A caller wanting a different trade-off overrides it per plant with
+     * \ref enablePlantLeafElevationAngleDistributionTracking().
+     */
+    static constexpr float library_leaf_angle_lambda_degrees = 180.f;
 
     std::map<uint, PlantInstance> plant_instances;
 
@@ -4663,8 +4779,13 @@ protected:
      * \param[in] shoot_init Function that initializes the model's shoot definitions.
      * \param[in] plant_build Function that builds a plant instance at the given base position and returns its plant ID.
      * \param[in] plant_type [optional] Category label written as "plant_type" object data when enabled (e.g. "tree", "weed"). Defaults to "herbaceous" when omitted.
+     * \param[in] leaf_inclination_Beta [optional] Empirical leaf inclination distribution measured for this species, as Beta distribution parameters (x=mu, y=nu). Plants built from this model by
+     * \ref buildPlantInstanceFromLibrary() are steered toward it as they grow. The default of (0,0) means the model declares no measured distribution and its plants keep the leaf angles the model
+     * generates.
+     * \note Either both components are positive, or both are zero. A model that gives one without the other is a half-filled entry and throws.
      */
-    void registerPlantModel(const std::string &name, std::function<void()> shoot_init, std::function<uint(const helios::vec3 &)> plant_build, const std::string &plant_type = "herbaceous");
+    void registerPlantModel(const std::string &name, std::function<void()> shoot_init, std::function<uint(const helios::vec3 &)> plant_build, const std::string &plant_type = "herbaceous",
+                            const helios::vec2 &leaf_inclination_Beta = helios::make_vec2(0.f, 0.f));
 
     //! Initialize all plant model registrations
     void initializePlantModelRegistrations();
@@ -4794,10 +4915,14 @@ protected:
 
     // --- Nitrogen Model --- //
 
+    //! Return nitrogen from senescing leaves to the plant's available pool, starting senescence in leaves that have reached its onset
+    void senesceLeafNitrogen(float dt);
     void accumulateLeafNitrogen(float dt);
     void remobilizeNitrogen(float dt);
     void updateNitrogenStressFactor();
     void removeFruitNitrogen();
+    //! Return what remains of the resorbable nitrogen of a phytomer's senescing leaves to the plant's available pool before the leaves are shed
+    void resorbLeafNitrogen(PlantInstance &plant, Shoot &shoot, const Phytomer &phytomer);
 
     bool nitrogen_model_enabled = false;
 

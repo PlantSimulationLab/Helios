@@ -2,14 +2,17 @@
 
     Copyright (C) 2016-2025 Brian Bailey
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, version 2.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
+    This library is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    SPDX-License-Identifier: LGPL-2.1-or-later
 
 */
 
@@ -394,16 +397,26 @@ helios::SphericalCoord ScanMetadata::rc2direction(uint row, uint column) const {
         return cart2sphere(risleyBodyDirection(*this, column));
     }
 
+    // Zenith and azimuth step. A raster scan samples inclusive endpoints, so the Ntheta (Nphi) samples span
+    // [thetaMin,thetaMax] ([phiMin,phiMax]) and the step divides by (N-1); this is the convention the synthetic-scan
+    // ray generator uses and the one documented for the rectangular scan pattern. A continuously-spinning multibeam
+    // scan samples a periodic azimuth with no duplicated wrap column, so its azimuth step divides by Nphi (exclusive
+    // endpoint). The (N-1) denominators are guarded so a single-row/column scan samples once at the minimum angle
+    // instead of dividing by zero.
+    const bool spinning_multibeam = (scanPattern == SCAN_PATTERN_SPINNING_MULTIBEAM);
+
     float zenith;
-    if (scanPattern == SCAN_PATTERN_SPINNING_MULTIBEAM) {
+    if (spinning_multibeam) {
         // Each row is a laser channel fired at its own fixed (generally non-uniform) zenith angle.
         uint clamped_row = (row < beamZenithAngles.size()) ? row : uint(beamZenithAngles.size()) - 1;
         zenith = beamZenithAngles.at(clamped_row);
     } else {
-        zenith = thetaMin + (thetaMax - thetaMin) / float(Ntheta) * float(row);
+        const float dtheta = (Ntheta > 1) ? (thetaMax - thetaMin) / float(Ntheta - 1) : 0.f;
+        zenith = thetaMin + dtheta * float(row);
     }
     float elevation = 0.5f * M_PI - zenith;
-    float phi = phiMin - (phiMax - phiMin) / float(Nphi) * float(column);
+    const float dphi = spinning_multibeam ? (phiMax - phiMin) / float(Nphi) : ((Nphi > 1) ? (phiMax - phiMin) / float(Nphi - 1) : 0.f);
+    float phi = phiMin + dphi * float(column);
     return make_SphericalCoord(1, elevation, phi);
 };
 
@@ -434,9 +447,24 @@ helios::int2 ScanMetadata::direction2rc(const SphericalCoord &direction) const {
         }
         row = nearest;
     } else {
-        row = std::round((theta - thetaMin) / (thetaMax - thetaMin) * float(Ntheta));
+        row = (Ntheta > 1) ? int(std::round((theta - thetaMin) / (thetaMax - thetaMin) * float(Ntheta - 1))) : 0;
     }
-    int column = std::round(fabs(phi - phiMin) / (phiMax - phiMin) * float(Nphi));
+
+    // Azimuth is measured from phiMin in the direction of the sweep. The direction handed in is normally derived with
+    // cart2sphere() (see LiDARcloud::getHitRaydir), whose azimuth is normalized to [0,2pi), so a scan whose sweep
+    // crosses 360 degrees yields azimuths numerically BELOW phiMin. Unwrap the offset into [0,2pi) rather than taking
+    // its absolute value: fabs() would fold the sweep back on itself, mapping directions past the wrap onto the wrong
+    // column (and, for a sweep of more than half a turn, collapsing several columns onto one).
+    const float two_pi = 2.f * float(M_PI);
+    float delta_phi = std::fmod(phi - phiMin, two_pi);
+    if (delta_phi < 0.f) {
+        delta_phi += two_pi;
+    }
+    const float phi_span = phiMax - phiMin;
+    // A sweep of a full turn or more (a multi-revolution spinning scan) cannot be disambiguated from the wrapped
+    // azimuth alone, so the unwrapped offset is used directly; within a sub-turn sweep the unwrapping above is exact.
+    const float column_divisor = (scanPattern == SCAN_PATTERN_SPINNING_MULTIBEAM) ? float(Nphi) : float((Nphi > 1) ? Nphi - 1 : 1);
+    int column = int(std::round(delta_phi / phi_span * column_divisor));
 
     if (row <= -1) {
         row = 0;
@@ -654,9 +682,47 @@ void LiDARcloud::validateRayDirections() {
         helios_runtime_error("ERROR (LiDARcloud::validateRayDirections): ray-direction validation is not supported for moving-platform scans (see addScanMoving), because the per-pulse origins make a single-origin direction check meaningless.");
     }
 
-    // For static scans there is nothing to check. The per-hit comparison this performed walked a per-scan
-    // (row, column) -> hit table that no loader ever wrote, so it never examined a hit; that table is gone, and the
-    // call keeps its behaviour (see the declaration).
+    // Check every hit whose scan-grid cell is known (carried as "row"/"column" hit data, as written by a loader whose
+    // ASCII_format declares those columns) against the direction the nominal grid predicts for that cell. A synthetic
+    // scan records the beam direction rather than a grid cell, so its hits are skipped.
+    // This is the consistency check between ScanMetadata::rc2direction() and the directions actually recorded; a
+    // mismatch means the two have drifted apart and the (row,column) mapping can no longer be trusted.
+    for (uint r = 0; r < getHitCount(); r++) {
+
+        if (!doesHitDataExist(r, "row") || !doesHitDataExist(r, "column")) {
+            continue;
+        }
+
+        const uint scanID = getHitScanID(r);
+        const double row = getHitData(r, "row");
+        const double column = getHitData(r, "column");
+        if (!std::isfinite(row) || !std::isfinite(column)) {
+            continue;
+        }
+
+        const SphericalCoord nominal = scans.at(scanID).rc2direction(uint(std::lround(row)), uint(std::lround(column)));
+        const SphericalCoord actual = getHitRaydir(r);
+
+        // Compare the unit direction vectors rather than the angles, so the comparison is free of the 2pi azimuth
+        // branch cut and of the azimuth's degeneracy at the poles.
+        const vec3 v_nominal = sphere2cart(nominal);
+        const vec3 v_actual = sphere2cart(make_SphericalCoord(1.f, actual.elevation, actual.azimuth));
+        const float angular_error = std::acos(std::max(-1.f, std::min(1.f, v_nominal * v_actual)));
+
+        // The synthetic raster sweep drifts the azimuth by one column step across each zenith column, so a hit may sit
+        // up to a full cell away from its nominal cell center. Flag only departures well beyond that.
+        const uint Nphi_scan = scans.at(scanID).Nphi;
+        const uint Ntheta_scan = scans.at(scanID).Ntheta;
+        const float cell_phi = (Nphi_scan > 1) ? (scans.at(scanID).phiMax - scans.at(scanID).phiMin) / float(Nphi_scan - 1) : 0.f;
+        const float cell_theta = (Ntheta_scan > 1) ? (scans.at(scanID).thetaMax - scans.at(scanID).thetaMin) / float(Ntheta_scan - 1) : 0.f;
+        const float tolerance = 2.f * std::max(std::fabs(cell_phi), std::fabs(cell_theta)) + 1e-4f;
+
+        if (angular_error > tolerance) {
+            helios_runtime_error("ERROR (LiDARcloud::validateRayDirections): hit #" + std::to_string(r) + " of scan #" + std::to_string(scanID) + " has a recorded direction that is " + std::to_string(angular_error) +
+                                 " radians from the direction its scan-grid cell (row=" + std::to_string(int(std::lround(row))) + ", column=" + std::to_string(int(std::lround(column))) +
+                                 ") maps to. The recorded directions and the (row,column) grid mapping disagree; check that the scan's Ntheta/Nphi and angular ranges match the data.");
+        }
+    }
 }
 
 uint LiDARcloud::getScanCount() const {
@@ -4734,9 +4800,9 @@ size_t LiDARcloud::gapfillMisses_timestamp(uint scanID, const bool gapfill_grid_
             // a scan of millions of pulses drifts by whole pulses. Baselines of many pulses divide that error by their
             // length, but a baseline can only be counted in pulses once the period is known well enough that the count
             // rounds correctly -- so the estimate is refined over baselines of increasing length, each stage reliable
-            // because the previous one made it so. The directions cannot be used for this: direction2rc() scales rows
-            // and columns by N/(N-1) whenever the declared ranges are inclusive, a systematic bias that a fit of time on
-            // direction-derived ordinals would inherit.
+            // because the previous one made it so. The directions are not used for this: the measured raster below is
+            // deliberately independent of the declared Ntheta x Nphi grid, so that an instrument whose true grid differs
+            // from the declared one is still reconstructed from its own timing.
             std::vector<double> sorted_t(scan_timestamp.begin(), scan_timestamp.begin() + std::ptrdiff_t(Nreal));
             std::sort(sorted_t.begin(), sorted_t.end());
             sorted_t.erase(std::unique(sorted_t.begin(), sorted_t.end()), sorted_t.end());
@@ -6748,6 +6814,23 @@ void LiDARcloud::cropBeamsToGridAngleRange(uint source) {
 
 // ========== SHARED METHODS FOR GPU AND CD IMPLEMENTATIONS ==========
 
+// WHAT THIS IS FOR, because it is easily misread: the triangulation exists to
+// measure ORIENTATION, not area. G(theta) is the mean projection coefficient --
+// how much of an element's area faces the beam -- and the mesh supplies it because
+// a triangle has a NORMAL. The areas below are only WEIGHTS, so a big surface
+// counts for more than a small one when averaging those normals; they are not a
+// measurement of how much surface is present, and LAD never sums them.
+//
+// The practical consequence: an INCOMPLETE mesh is still a usable orientation
+// estimator. A terrestrial scan only ever triangulates the scanner-facing side of
+// anything, so this function's own OUTPUT is an average over roughly half of a
+// convex element -- for a cylinder, about 2x what a whole-surface convention would
+// give. That does NOT make the mesh useless for such a convention: a direction is
+// not an area, and the hidden half of a cylinder is redundant by symmetry (every
+// cylinder-surface normal is perpendicular to the axis, so the axis is the
+// smallest eigenvector of the normals' scatter, recoverable from the visible half
+// alone). Take the normals and convert analytically rather than rescaling this
+// number.
 void LiDARcloud::computeGtheta(uint Ncells, uint Nscans, std::vector<float> &Gtheta, std::vector<float> &Gtheta_bar) {
 
     // Initialize output vectors
@@ -9304,10 +9387,10 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         // Guard the (N-1) denominator so a single-row/column scan (N==1) samples once at the minimum angle
         // instead of dividing by zero and producing NaN ray directions.
         // A continuously-spinning multibeam scan samples a periodic azimuth: the columns are uniformly spaced with no
-        // duplicated wrap column, so dphi = (phimax-phimin)/Nphi (exclusive endpoint). This matches the periodic
-        // convention already used by ScanMetadata::rc2direction()/direction2rc(). A raster scan samples inclusive
+        // duplicated wrap column, so dphi = (phimax-phimin)/Nphi (exclusive endpoint). A raster scan samples inclusive
         // endpoints (dphi = (phimax-phimin)/(Nphi-1)); dphi is the column-to-column azimuth step and also sets the
-        // continuous-azimuth drift applied within each column below.
+        // continuous-azimuth drift applied within each column below. ScanMetadata::rc2direction()/direction2rc() branch
+        // on the scan pattern the same way, so the nominal (row,column) grid mapping matches the directions emitted here.
         const float dphi = spinning_multibeam ? (phimax - phimin) / float(Nphi) : ((Nphi > 1) ? (phimax - phimin) / float(Nphi - 1) : 0.f);
         const float dtheta = (Ntheta > 1) ? (thetamax - thetamin) / float(Ntheta - 1) : 0.f;
 

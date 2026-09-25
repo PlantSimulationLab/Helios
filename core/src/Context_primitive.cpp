@@ -3,14 +3,17 @@
  *
  * Copyright (C) 2016-2026 Brian Bailey
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, version 2
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include "Context.h"
@@ -298,6 +301,34 @@ void Context::translatePrimitive(const std::vector<uint> &UUIDs, const vec3 &shi
 
     for (uint UUID: UUIDs) {
         getPrimitivePointer_private(UUID)->applyTransform(T);
+    }
+}
+
+// Bulk translation of the primitives belonging to a compound object.
+//
+// One hash lookup per primitive, and the shift is added straight to the translation column rather than
+// going through a general 4x4 product. Going through the public accessors instead cost three lookups per
+// primitive -- doesPrimitiveExist(), then a get and a set of the matrix -- plus a copy of the matrix out
+// and back and 64 multiply-adds to recompute twelve entries that a translation cannot change.
+void Context::translateObjectPrimitives_private(const std::vector<uint> &UUIDs, const vec3 &shift) {
+    for (uint UUID: UUIDs) {
+        const auto primitive = primitives.find(UUID);
+        if (primitive == primitives.end()) {
+            continue;
+        }
+
+        float(&M)[16] = primitive->second->transform;
+        if (M[12] == 0.f && M[13] == 0.f && M[14] == 0.f && M[15] == 1.f) {
+            M[3] += shift.x;
+            M[7] += shift.y;
+            M[11] += shift.z;
+        } else {
+            // Not an affine matrix, so fall back on the product it is standing in for.
+            float T[16];
+            makeTranslationMatrix(shift, T);
+            matmult(T, M, M);
+        }
+        primitive->second->dirty_flag = true;
     }
 }
 
@@ -646,15 +677,26 @@ uint Context::copyPrimitive(uint UUID) {
         primitives[currentUUID] = patch_new;
     } else if (type == PRIMITIVE_TYPE_TRIANGLE) {
         Triangle *p = getTrianglePointer_private(UUID);
-        const std::vector<vec3> &vertices = p->getVertices();
         const std::vector<vec2> &uv = p->getTextureUV();
+
+        // The source's transformation matrix is copied over verbatim below, so the vertices the
+        // constructor is given only have to be something it can build a matrix from -- that matrix is
+        // discarded. Passing the real vertices meant calling Triangle::getVertices(), which allocates a
+        // three-element vector and derives the vertices from the very matrix that is about to be copied,
+        // and then makeTransformationMatrix() rebuilt a matrix from them. These are the vertices of the
+        // generic triangle Triangle::makeTransformationMatrix() maps from, so the matrix it builds here
+        // is the identity.
+        static const vec3 placeholder_vertex0 = make_vec3(0, 0, 0);
+        static const vec3 placeholder_vertex1 = make_vec3(0, 1, 0);
+        static const vec3 placeholder_vertex2 = make_vec3(1, 1, 0);
+
         Triangle *tri_new;
         if (!p->hasTexture()) {
-            tri_new = (new Triangle(vertices.at(0), vertices.at(1), vertices.at(2), p->getColorRGBA(), parentID, currentUUID));
+            tri_new = (new Triangle(placeholder_vertex0, placeholder_vertex1, placeholder_vertex2, p->getColorRGBA(), parentID, currentUUID));
         } else {
             const std::string &texture_file = p->getTextureFile();
             float solid_fraction = p->getSolidFraction();
-            tri_new = (new Triangle(vertices.at(0), vertices.at(1), vertices.at(2), texture_file.c_str(), uv, solid_fraction, parentID, currentUUID));
+            tri_new = (new Triangle(placeholder_vertex0, placeholder_vertex1, placeholder_vertex2, texture_file.c_str(), uv, solid_fraction, parentID, currentUUID));
             // Color will be preserved by copying the material below
         }
         float transform[16];
