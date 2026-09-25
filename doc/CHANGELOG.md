@@ -1,5 +1,11 @@
 # Changelog
 
+# [1.3.89] 2026-XX-XX
+
+## Radiation
+
+- Fixed the OptiX 8 backend reading the transparency mask of a textured triangle upside down. A triangle's texture coordinate v was flipped before the mask lookup, which flips it again, so the cut-out was mirrored top to bottom relative to the texture image, to textured patches, to the OptiX 6 and Vulkan backends, and to plug-ins that rasterize or ray-cast the same geometry. Rays stopped on the transparent part of such a triangle and passed through its opaque part: shadows and camera images of triangle-meshed textured leaves, such as those PlantArchitecture builds, were mirrored and did not line up with label maps or LiDAR hits at leaf edges.
+
 # [1.3.88] 2026-09-23
 
 ## Core
