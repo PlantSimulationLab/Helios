@@ -1684,17 +1684,24 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 // appendPhytomerToShoot() path, which honors the parameters passed by the caller.
                 shoot_parameters.phytomer_parameters.internode.length_segments = internode_length_segments;
 
-                shoot_parameters.phytomer_parameters.petiole.length = petiole_length;
-                shoot_parameters.phytomer_parameters.petiole.radius = petiole_radius;
-                shoot_parameters.phytomer_parameters.petiole.pitch = petiole_pitch;
-                shoot_parameters.phytomer_parameters.petiole.curvature = petiole_curvature;
+                // The petiole scalars are only set when the phytomer has a <petiole> node. A phytomer whose leaves
+                // were removed (Phytomer::removeLeaf(), e.g. by pruneGroundCollisions()) is written without one, and
+                // these were then left uninitialized and used to build the phytomer's petioles.
+                if (!petiole_lengths.empty()) {
+                    shoot_parameters.phytomer_parameters.petiole.length = petiole_length;
+                    shoot_parameters.phytomer_parameters.petiole.radius = petiole_radius;
+                    shoot_parameters.phytomer_parameters.petiole.pitch = petiole_pitch;
+                    shoot_parameters.phytomer_parameters.petiole.curvature = petiole_curvature;
+                }
 
                 shoot_parameters.phytomer_parameters.leaf.prototype_scale = 1.f; // leaf_scale.front().at(tip_ind);
                 shoot_parameters.phytomer_parameters.leaf.pitch = 0;
                 shoot_parameters.phytomer_parameters.leaf.yaw = 0;
                 shoot_parameters.phytomer_parameters.leaf.roll = 0;
-                shoot_parameters.phytomer_parameters.leaf.leaflet_scale = leaflet_scale;
-                shoot_parameters.phytomer_parameters.leaf.leaflet_offset = leaflet_offset;
+                if (!petiole_lengths.empty()) {
+                    shoot_parameters.phytomer_parameters.leaf.leaflet_scale = leaflet_scale;
+                    shoot_parameters.phytomer_parameters.leaf.leaflet_offset = leaflet_offset;
+                }
 
                 if (base_shoot) {
 
@@ -2273,6 +2280,14 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                             }
                         }
                     }
+                }
+
+                // A phytomer written without any <petiole> had its leaves and petioles removed in the saved plant, but it
+                // was just rebuilt from the shoot type with a full set of them. Remove them again so the reloaded phytomer
+                // matches the saved one; otherwise the rebuilt petioles were drawn in the Context and written to the next
+                // file as petioles carrying no leaves, adding petioles on every save/load cycle.
+                if (petiole_lengths.empty() && !phytomer_ptr->petiole_length.empty()) {
+                    phytomer_ptr->removeLeaf();
                 }
 
                 // Delete and recreate leaves with correct petiole/internode axes
