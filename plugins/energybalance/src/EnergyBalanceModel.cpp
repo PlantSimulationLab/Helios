@@ -694,11 +694,20 @@ void EnergyBalanceModel::evaluateCanopyAirspace(const std::vector<uint> &UUIDs) 
         g_layer.at(j) = rho_air_mol_m3 * eddy_diffusivity / separation;
     }
 
-    // Conductance between the bottom layer and the soil surface. The soil has its own roughness sublayer, so this uses the ground boundary-layer conductance of Kustas and Norman (1999) evaluated at the wind speed near the soil surface rather
-    // than the within-canopy turbulent diffusivity.
+    // Wind speed near the soil surface, which sets the soil boundary-layer conductance. The conductance itself is taken from the soil surface energy balance on each iteration, so that the heat the soil releases is exactly the heat the
+    // bottom layer receives.
     bool soil_node_present = !canopy_airspace_ground_UUIDs.empty();
     float wind_speed_soil = wind_speed_canopy_top * std::exp(-attenuation_coefficient);
-    float g_soil = 0.166f + 0.5f * wind_speed_soil;
+
+    // The ground primitives represent the soil surface beneath the whole canopy footprint, so soil fluxes enter the network per unit area of soil. This keeps the soil flux density independent of how far the ground geometry extends
+    // beyond the canopy.
+    float soil_area = 0.f;
+    if (soil_node_present) {
+        soil_area = context->sumPrimitiveSurfaceArea(canopy_airspace_ground_UUIDs);
+        if (soil_area <= 0.f) {
+            helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): The ground primitives given to enableCanopyAirspaceModel() have zero total surface area, so they cannot exchange heat or water vapor with the canopy airspace.");
+        }
+    }
 
     // Water vapor diffuses more readily than heat, so conductances to moisture are larger by the ratio of diffusivities.
     constexpr float moisture_conductance_ratio = 1.08f;
@@ -745,6 +754,42 @@ void EnergyBalanceModel::evaluateCanopyAirspace(const std::vector<uint> &UUIDs) 
     // Tridiagonal system coefficients: sub-diagonal, diagonal, super-diagonal, and right-hand side.
     std::vector<float> sub(Nlayers), diag(Nlayers), super(Nlayers), rhs(Nlayers);
 
+    // Total conductance to water vapor of a surface, and the vapor mole fraction at its evaporating surface. Water vapor leaves through the stomata (or soil pores) and the boundary layer in series, and 'boundarylayer_conductance_out' is the
+    // conductance summed over both faces of a two-sided primitive whereas vapor leaves through the stomata-bearing faces only. These are the same expressions the surface energy balance uses to compute the latent flux, so that the water
+    // weighted into the airspace matches the water the surface actually released.
+    auto evaluateMoistureSource = [&](uint UUID, float g_bl, float T_surface, float &g_M, float &x_surface) {
+        float gS;
+        if (context->doesPrimitiveDataExist(UUID, "moisture_conductance") && context->getPrimitiveDataType("moisture_conductance") == helios::HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(UUID, "moisture_conductance", gS);
+        } else {
+            gS = gS_default;
+        }
+
+        float stomatal_sidedness = 0.f;
+        uint twosided_flag = context->getPrimitiveTwosidedFlag(UUID, 1);
+        if (twosided_flag != 0) {
+            if (context->doesPrimitiveDataExist(UUID, "stomatal_sidedness") && context->getPrimitiveDataType("stomatal_sidedness") == helios::HELIOS_TYPE_FLOAT) {
+                context->getPrimitiveData(UUID, "stomatal_sidedness", stomatal_sidedness);
+            } else if (context->doesPrimitiveDataExist(UUID, "evaporating_faces") && context->getPrimitiveDataType("evaporating_faces") == helios::HELIOS_TYPE_UINT) {
+                uint evaporating_faces;
+                context->getPrimitiveData(UUID, "evaporating_faces", evaporating_faces);
+                stomatal_sidedness = (evaporating_faces == 2) ? 0.5f : 0.f;
+            }
+        }
+
+        g_M = 0.f;
+        if (g_bl != 0.f && gS != 0.f) {
+            g_M = moisture_conductance_ratio * g_bl * gS * (stomatal_sidedness / (moisture_conductance_ratio * g_bl + gS * stomatal_sidedness) + (1.f - stomatal_sidedness) / (moisture_conductance_ratio * g_bl + gS * (1.f - stomatal_sidedness)));
+        }
+
+        // The evaporating surface is at the relative humidity 'surface_humidity' (saturated by default) at the surface temperature.
+        float surface_humidity = surface_humidity_default;
+        if (context->doesPrimitiveDataExist(UUID, "surface_humidity") && context->getPrimitiveDataType("surface_humidity") == helios::HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(UUID, "surface_humidity", surface_humidity);
+        }
+        x_surface = surface_humidity * esat_Pa(T_surface) / Patm;
+    };
+
     uint iteration = 0;
     bool converged = false;
     while (iteration < canopy_airspace_max_iterations && !converged) {
@@ -755,12 +800,18 @@ void EnergyBalanceModel::evaluateCanopyAirspace(const std::vector<uint> &UUIDs) 
         // 1) Update leaf temperatures given the current airspace state.
         evaluateSurfaceEnergyBalance(UUIDs, 0.f);
 
-        // The airspace solution weights each leaf by its boundary-layer conductance, so verify once that the surface energy balance produced it rather than testing every primitive on every iteration.
+        // The airspace solution weights each leaf and soil primitive by its boundary-layer conductance, so verify once that the surface energy balance produced it rather than testing every primitive on every iteration.
         if (iteration == 0) {
             for (uint UUID: canopy_airspace_UUIDs) {
                 if (!context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_out")) {
                     helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): Primitive data 'boundarylayer_conductance_out' was not produced by the surface energy balance for primitive UUID " + std::to_string(UUID) +
                                          ", so leaf contributions to the canopy airspace cannot be weighted. Check that this primitive is included in the set of UUIDs passed to run().");
+                }
+            }
+            for (uint UUID: canopy_airspace_ground_UUIDs) {
+                if (!context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_out")) {
+                    helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): Primitive data 'boundarylayer_conductance_out' was not produced by the surface energy balance for ground primitive UUID " + std::to_string(UUID) +
+                                         ", so soil exchange with the canopy airspace cannot be weighted. Check that this primitive is included in the set of UUIDs passed to run().");
                 }
             }
         }
@@ -789,59 +840,43 @@ void EnergyBalanceModel::evaluateCanopyAirspace(const std::vector<uint> &UUIDs) 
 
             // Water vapor leaves the substomatal airspace through the stomata and the boundary layer in series, so the moisture source is weighted by the total conductance to moisture rather than by the boundary-layer conductance alone. A leaf
             // with closed stomata contributes no moisture to the canopy airspace.
-            float gS;
-            if (context->doesPrimitiveDataExist(UUID, "moisture_conductance") && context->getPrimitiveDataType("moisture_conductance") == helios::HELIOS_TYPE_FLOAT) {
-                context->getPrimitiveData(UUID, "moisture_conductance", gS);
-            } else {
-                gS = gS_default;
-            }
-
-            // 'boundarylayer_conductance_out' is the conductance summed over both faces of a two-sided primitive, whereas water vapor leaves through the stomata-bearing faces only. The sidedness partition below is the same expression the
-            // surface energy balance uses to compute the latent flux, so that the moisture weighted into the airspace matches the water the leaf actually transpired.
-            float stomatal_sidedness = 0.f;
-            uint twosided_flag = context->getPrimitiveTwosidedFlag(UUID, 1);
-            if (twosided_flag != 0) {
-                if (context->doesPrimitiveDataExist(UUID, "stomatal_sidedness") && context->getPrimitiveDataType("stomatal_sidedness") == helios::HELIOS_TYPE_FLOAT) {
-                    context->getPrimitiveData(UUID, "stomatal_sidedness", stomatal_sidedness);
-                } else if (context->doesPrimitiveDataExist(UUID, "evaporating_faces") && context->getPrimitiveDataType("evaporating_faces") == helios::HELIOS_TYPE_UINT) {
-                    uint evaporating_faces;
-                    context->getPrimitiveData(UUID, "evaporating_faces", evaporating_faces);
-                    stomatal_sidedness = (evaporating_faces == 2) ? 0.5f : 0.f;
-                }
-            }
-
-            float g_M = 0.f;
-            if (g_bl != 0.f && gS != 0.f) {
-                g_M = moisture_conductance_ratio * g_bl * gS * (stomatal_sidedness / (moisture_conductance_ratio * g_bl + gS * stomatal_sidedness) + (1.f - stomatal_sidedness) / (moisture_conductance_ratio * g_bl + gS * (1.f - stomatal_sidedness)));
-            }
+            float g_M, x_surface;
+            evaluateMoistureSource(UUID, g_bl, T_leaf, g_M, x_surface);
             float moisture_weight = g_M * area_fraction;
 
-            // The substomatal airspace is assumed saturated at the leaf surface temperature.
             sum_gA_moisture.at(layer) += moisture_weight;
-            sum_gA_e.at(layer) += moisture_weight * esat_Pa(T_leaf) / Patm;
+            sum_gA_e.at(layer) += moisture_weight * x_surface;
         }
 
-        // 3) Soil surface temperature, area-weighted over the ground primitives.
-        float T_soil = air_temperature_reference;
+        // 3) Reduce the soil surface onto the bottom layer in the same way, using the conductances the soil surface energy balance itself used, so that the heat and water vapor the soil releases are exactly what the bottom layer receives.
+        // Each ground primitive is weighted by its fraction of the soil area, giving conductances per unit ground area.
+        float g_soil = 0.f;
+        float g_soil_T = 0.f;
+        float g_soil_moisture = 0.f;
+        float g_soil_x = 0.f;
         if (soil_node_present) {
-            float soil_area_weighted_sum;
-            context->calculatePrimitiveDataAreaWeightedSum(canopy_airspace_ground_UUIDs, "temperature", soil_area_weighted_sum);
-            float soil_area = context->sumPrimitiveSurfaceArea(canopy_airspace_ground_UUIDs);
-            if (soil_area <= 0.f) {
-                helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): The ground primitives given to enableCanopyAirspaceModel() have zero total surface area, so the soil node temperature cannot be determined.");
-            }
-            T_soil = soil_area_weighted_sum / soil_area;
-            // A missing 'temperature' label produces an area-weighted sum of zero rather than an error, which would drive the bottom layer toward absolute zero.
-            if (T_soil < 100.f) {
-                helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): The area-weighted soil surface temperature evaluated to " + std::to_string(T_soil) +
-                                     " K, which is not physical. Check that primitive data 'temperature' is set in Kelvin for every ground primitive given to enableCanopyAirspaceModel().");
+            for (uint UUID: canopy_airspace_ground_UUIDs) {
+                float T_soil;
+                context->getPrimitiveData(UUID, "temperature", T_soil);
+
+                float g_bl;
+                context->getPrimitiveData(UUID, "boundarylayer_conductance_out", g_bl);
+
+                float area_fraction = context->getPrimitiveArea(UUID) / soil_area;
+                g_soil += g_bl * area_fraction;
+                g_soil_T += g_bl * area_fraction * T_soil;
+
+                float g_M, x_surface;
+                evaluateMoistureSource(UUID, g_bl, T_soil, g_M, x_surface);
+                g_soil_moisture += g_M * area_fraction;
+                g_soil_x += g_M * area_fraction * x_surface;
             }
         }
 
         // 4) Solve the tridiagonal system for layer air temperature. Layer 0 is the bottom layer, exchanging with the soil below; layer (Nlayers-1) is the top layer, exchanging with the reference air above.
         for (uint j = 0; j < Nlayers; j++) {
             // g_layer[j] is the conductance across the boundary between layer j and layer j+1, so the link below layer j is g_layer[j-1].
-            float g_below = (j == 0) ? (soil_node_present ? g_soil : 0.f) : g_layer.at(j - 1);
+            float g_below = (j == 0) ? g_soil : g_layer.at(j - 1);
             float g_above = (j == Nlayers - 1) ? g_a : g_layer.at(j);
 
             sub.at(j) = (j == 0) ? 0.f : -g_layer.at(j - 1);
@@ -849,8 +884,8 @@ void EnergyBalanceModel::evaluateCanopyAirspace(const std::vector<uint> &UUIDs) 
             diag.at(j) = sum_gA.at(j) + g_below + g_above;
             rhs.at(j) = sum_gA_T.at(j);
 
-            if (j == 0 && soil_node_present) {
-                rhs.at(j) += g_soil * T_soil;
+            if (j == 0) {
+                rhs.at(j) += g_soil_T;
             }
             if (j == Nlayers - 1) {
                 rhs.at(j) += g_a * air_temperature_reference;
@@ -858,18 +893,21 @@ void EnergyBalanceModel::evaluateCanopyAirspace(const std::vector<uint> &UUIDs) 
         }
         solveTridiagonal(sub, diag, super, rhs, T_ac);
 
-        // 5) Solve the tridiagonal system for layer moisture mole fraction. Evaporation from the soil surface is assumed to be zero, so the bottom layer has no moisture exchange with the soil.
-        // Turbulent transport moves heat and water vapor with the same eddies, so the layer-to-layer and layer-to-reference conductances are the same for both. The ratio of vapor to heat diffusivity applies only to the molecular leaf
-        // boundary layer, and is already carried in the leaf weighting above.
+        // 5) Solve the tridiagonal system for layer moisture mole fraction. The bottom layer exchanges water vapor with the soil, which evaporates according to the moisture conductance of the ground primitives (zero by default).
+        // Turbulent transport moves heat and water vapor with the same eddies, so the layer-to-layer and layer-to-reference conductances are the same for both. The ratio of vapor to heat diffusivity applies only to the molecular surface
+        // boundary layers, and is already carried in the leaf and soil weighting above.
         for (uint j = 0; j < Nlayers; j++) {
             float g_above = (j == Nlayers - 1) ? g_a : g_layer.at(j);
-            float g_below = (j == 0) ? 0.f : g_layer.at(j - 1);
+            float g_below = (j == 0) ? g_soil_moisture : g_layer.at(j - 1);
 
             sub.at(j) = (j == 0) ? 0.f : -g_layer.at(j - 1);
             super.at(j) = (j == Nlayers - 1) ? 0.f : -g_layer.at(j);
             diag.at(j) = sum_gA_moisture.at(j) + g_below + g_above;
             rhs.at(j) = sum_gA_e.at(j);
 
+            if (j == 0) {
+                rhs.at(j) += g_soil_x;
+            }
             if (j == Nlayers - 1) {
                 rhs.at(j) += g_a * moisture_reference;
             }
@@ -1072,6 +1110,12 @@ float EnergyBalanceModel::calculateAerodynamicResistance(float wind_speed_refere
     return ln_momentum * ln_heat / (von_Karman_constant * von_Karman_constant * wind_speed_reference_m_s);
 }
 
+float EnergyBalanceModel::calculateGroundBoundaryLayerConductance(float wind_speed_m_s) {
+    // Eq. A17 of Kustas and Norman (1999), in m/s, converted to a molar conductance with the molar density of air at standard temperature and pressure (41.56 mol/m^3), matching the "Ground" model of the boundary-layer conductance
+    // plug-in.
+    return (0.004f + 0.012f * wind_speed_m_s) * 41.56f;
+}
+
 void EnergyBalanceModel::updateCanopyWindProfile(float wind_speed_canopy_top_m_s) {
 
     // Exponential within-canopy wind profile of Cionco (1972), with an attenuation coefficient of one half of the leaf area index.
@@ -1180,6 +1224,7 @@ void EnergyBalanceModel::printDefaultValueReport(const std::vector<uint> &UUIDs)
     size_t assumed_default_Ta = 0;
     size_t assumed_default_rh = 0;
     size_t assumed_default_gH = 0;
+    size_t assumed_default_gH_ground = 0;
     size_t assumed_default_gs = 0;
     size_t assumed_default_Qother = 0;
     size_t assumed_default_heatcapacity = 0;
@@ -1190,6 +1235,11 @@ void EnergyBalanceModel::printDefaultValueReport(const std::vector<uint> &UUIDs)
     size_t Ne_2 = 0;
 
     size_t Nprimitives = UUIDs.size();
+
+    std::unordered_set<uint> canopy_airspace_ground_set;
+    if (canopy_airspace_enabled) {
+        canopy_airspace_ground_set.insert(canopy_airspace_ground_UUIDs.begin(), canopy_airspace_ground_UUIDs.end());
+    }
 
     for (uint UUID: UUIDs) {
 
@@ -1215,7 +1265,11 @@ void EnergyBalanceModel::printDefaultValueReport(const std::vector<uint> &UUIDs)
 
         // boundary-layer conductance to heat
         if (!context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance") || context->getPrimitiveDataType("boundarylayer_conductance") != HELIOS_TYPE_FLOAT) {
-            assumed_default_gH++;
+            if (canopy_airspace_ground_set.count(UUID) > 0) {
+                assumed_default_gH_ground++;
+            } else {
+                assumed_default_gH++;
+            }
         }
 
         // wind speed
@@ -1297,6 +1351,13 @@ void EnergyBalanceModel::printDefaultValueReport(const std::vector<uint> &UUIDs)
                  "boundarylayer_conductance"
                  " primitive data did not exist"
               << std::endl;
+    if (canopy_airspace_enabled && !canopy_airspace_ground_UUIDs.empty()) {
+        std::cout << "boundary-layer conductance (canopy airspace ground): " << assumed_default_gH_ground << " of " << Nprimitives
+                  << " calculated boundary-layer conductance from the Kustas and Norman (1999) bare-soil relation because "
+                     "boundarylayer_conductance"
+                     " primitive data did not exist"
+                  << std::endl;
+    }
     if (assumed_default_gH > 0) {
         std::cout << "  - wind speed: " << assumed_default_U << " of " << assumed_default_gH << " using Polhausen equation used default value of " << wind_speed_default
                   << " because "
@@ -1336,7 +1397,7 @@ static inline float evaluateEnergyBalance_CPU(float T, float R, float Qother, fl
     float QH = cp_air_mol * gH * (T - Ta);
 
     // Latent heat flux
-    float es = 611.0f * expf(17.502f * (T - 273.f) / (T - 273.f + 240.97f));
+    float es = esat_Pa(T);
     // A zero boundary-layer conductance (gH) or zero stomatal conductance (gS) means there is no vapor
     // pathway, so gM is zero. Guarding both cases also avoids a 0/0 in the series-conductance expression
     // when gH == 0 and the stomatal sidedness makes one of the denominators vanish.
@@ -1441,6 +1502,12 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_CPU(const std::vector<uint
     bool calculated_blconductance_used = false;
     bool primitive_length_used = false;
 
+    // Ground primitives of the canopy airspace model receive a bare-soil boundary-layer conductance by default (see below).
+    std::unordered_set<uint> canopy_airspace_ground_set;
+    if (canopy_airspace_enabled) {
+        canopy_airspace_ground_set.insert(canopy_airspace_ground_UUIDs.begin(), canopy_airspace_ground_UUIDs.end());
+    }
+
     // Data preparation loop - same as CUDA version
     for (uint u = 0; u < Nprimitives; u++) {
         size_t p = UUIDs.at(u);
@@ -1535,23 +1602,29 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_CPU(const std::vector<uint
                 warnings.addWarning("missing_wind_speed", "Primitive data 'wind_speed' not set, using default (" + std::to_string(wind_speed_default) + " m/s)");
             }
 
-            // Characteristic size of primitive
-            float L;
-            if (context->doesPrimitiveDataExist(p, "object_length") && context->getPrimitiveDataType("object_length") == helios::HELIOS_TYPE_FLOAT) {
-                context->getPrimitiveData(p, "object_length", L);
-                if (L == 0) {
+            if (canopy_airspace_ground_set.count(UUIDs.at(u)) > 0) {
+                // The flat-plate relation below scales with the size of the primitive, which is arbitrary for a tiled soil surface. Ground primitives beneath the canopy airspace instead use the bare-soil conductance of Kustas and Norman
+                // (1999), evaluated at the within-canopy wind speed near the soil that the airspace model writes to 'wind_speed'.
+                gH[u] = calculateGroundBoundaryLayerConductance(U);
+            } else {
+                // Characteristic size of primitive
+                float L;
+                if (context->doesPrimitiveDataExist(p, "object_length") && context->getPrimitiveDataType("object_length") == helios::HELIOS_TYPE_FLOAT) {
+                    context->getPrimitiveData(p, "object_length", L);
+                    if (L == 0) {
+                        L = sqrt(context->getPrimitiveArea(p));
+                        primitive_length_used = true;
+                    }
+                } else if (context->getPrimitiveParentObjectID(p) > 0) {
+                    uint objID = context->getPrimitiveParentObjectID(p);
+                    L = sqrt(context->getObjectArea(objID));
+                } else {
                     L = sqrt(context->getPrimitiveArea(p));
                     primitive_length_used = true;
                 }
-            } else if (context->getPrimitiveParentObjectID(p) > 0) {
-                uint objID = context->getPrimitiveParentObjectID(p);
-                L = sqrt(context->getObjectArea(objID));
-            } else {
-                L = sqrt(context->getPrimitiveArea(p));
-                primitive_length_used = true;
-            }
 
-            gH[u] = 0.135f * sqrt(U / L) * float(Nsides[u]);
+                gH[u] = 0.135f * sqrt(U / L) * float(Nsides[u]);
+            }
             calculated_blconductance_used = true;
         }
 

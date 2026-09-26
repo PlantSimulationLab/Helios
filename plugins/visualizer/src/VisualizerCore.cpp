@@ -283,11 +283,11 @@ void read_png_file(const char *filename, std::vector<unsigned char> &texture, ui
     }
 }
 
-Visualizer::Visualizer(uint Wdisplay) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray(), colormap_lines() {
+Visualizer::Visualizer(uint Wdisplay) : colormap_current() {
     initialize(Wdisplay, uint(std::round(Wdisplay * 0.8)), 16, true, false);
 }
 
-Visualizer::Visualizer(uint Wdisplay, uint Hdisplay) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray(), colormap_lines() {
+Visualizer::Visualizer(uint Wdisplay, uint Hdisplay) : colormap_current() {
     initialize(Wdisplay, Hdisplay, 16, true, false);
 }
 
@@ -555,12 +555,12 @@ std::vector<Visualizer::SegmentationMask> Visualizer::readSegmentationMaskFile(c
     return masks;
 }
 
-Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray(), colormap_lines() {
+Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples) : colormap_current() {
     initialize(Wdisplay, Hdisplay, aliasing_samples, true, false);
 }
 
 Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples, bool window_decorations, bool headless) :
-    colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray(), colormap_lines() {
+    colormap_current() {
     initialize(Wdisplay, Hdisplay, aliasing_samples, window_decorations, headless);
 }
 
@@ -1920,66 +1920,11 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     backgroundColor = make_RGBcolor(0.4, 0.4, 0.4);
 
-    // colormaps
-
-    // HOT
-    std::vector<RGBcolor> ctable_c{{0.f, 0.f, 0.f}, {0.5f, 0.f, 0.5f}, {1.f, 0.f, 0.f}, {1.f, 0.5f, 0.f}, {1.f, 1.f, 0.f}};
-
-    std::vector<float> clocs_c{0.f, 0.25f, 0.5f, 0.75f, 1.f};
-
-    colormap_hot.set(ctable_c, clocs_c, 100, 0, 1);
-
-    // COOL
-    ctable_c = {RGB::cyan, RGB::magenta};
-
-    clocs_c = {0.f, 1.f};
-
-    colormap_cool.set(ctable_c, clocs_c, 100, 0, 1);
-
-    // LAVA
-    ctable_c = {{0.f, 0.05f, 0.05f}, {0.f, 0.6f, 0.6f}, {1.f, 1.f, 1.f}, {1.f, 0.f, 0.f}, {0.5f, 0.f, 0.f}};
-
-    clocs_c = {0.f, 0.4f, 0.5f, 0.6f, 1.f};
-
-    colormap_lava.set(ctable_c, clocs_c, 100, 0, 1);
-
-    // RAINBOW
-    ctable_c = {RGB::navy, RGB::cyan, RGB::yellow, make_RGBcolor(0.75f, 0.f, 0.f)};
-
-    clocs_c = {0, 0.3f, 0.7f, 1.f};
-
-    colormap_rainbow.set(ctable_c, clocs_c, 100, 0, 1);
-
-    // PARULA
-    ctable_c = {RGB::navy, make_RGBcolor(0, 0.6, 0.6), RGB::goldenrod, RGB::yellow};
-
-    clocs_c = {0, 0.4f, 0.7f, 1.f};
-
-    colormap_parula.set(ctable_c, clocs_c, 100, 0, 1);
-
-    // GRAY
-    ctable_c = {RGB::black, RGB::white};
-
-    clocs_c = {0.f, 1.f};
-
-    colormap_gray.set(ctable_c, clocs_c, 100, 0, 1);
-
-    // LINES (MATLAB-style distinct colors)
-    ctable_c = {
-            {0.f, 0.4470f, 0.7410f}, // blue
-            {0.8500f, 0.3250f, 0.0980f}, // orange
-            {0.9290f, 0.6940f, 0.1250f}, // yellow
-            {0.4940f, 0.1840f, 0.5560f}, // purple
-            {0.4660f, 0.6740f, 0.1880f}, // green
-            {0.3010f, 0.7450f, 0.9330f}, // cyan
-            {0.6350f, 0.0780f, 0.1840f} // dark red
-    };
-
-    clocs_c = {0.f, 1.f / 6.f, 2.f / 6.f, 3.f / 6.f, 4.f / 6.f, 5.f / 6.f, 1.f};
-
-    colormap_lines.set(ctable_c, clocs_c, 100, 0, 1);
-
-    colormap_current = colormap_hot;
+    // Default colormap is "hot"
+    std::vector<RGBcolor> colormap_colors;
+    std::vector<float> colormap_positions;
+    Context::getColormapControlPoints("hot", colormap_colors, colormap_positions);
+    colormap_current.set(colormap_colors, colormap_positions, 100, 0, 1);
 
     if (!headless) {
         glfwSetMouseButtonCallback((GLFWwindow *) window, mouseCallback);
@@ -3143,25 +3088,36 @@ void Visualizer::setColorbarFontColor(RGBcolor fontcolor) {
 }
 
 void Visualizer::setColormap(Ctable colormap_name) {
+    // The colormaps themselves are defined once in the Context, so they are identical to those used by Context::colorPrimitiveByDataPseudocolor()
+    std::string context_colormap_name;
     if (colormap_name == COLORMAP_HOT) {
-        colormap_current = colormap_hot;
+        context_colormap_name = "hot";
     } else if (colormap_name == COLORMAP_COOL) {
-        colormap_current = colormap_cool;
+        context_colormap_name = "cool";
     } else if (colormap_name == COLORMAP_LAVA) {
-        colormap_current = colormap_lava;
+        context_colormap_name = "lava";
     } else if (colormap_name == COLORMAP_RAINBOW) {
-        colormap_current = colormap_rainbow;
+        context_colormap_name = "rainbow";
     } else if (colormap_name == COLORMAP_PARULA) {
-        colormap_current = colormap_parula;
+        context_colormap_name = "parula";
     } else if (colormap_name == COLORMAP_GRAY) {
-        colormap_current = colormap_gray;
+        context_colormap_name = "gray";
     } else if (colormap_name == COLORMAP_LINES) {
-        colormap_current = colormap_lines;
+        context_colormap_name = "lines";
+    } else if (colormap_name == COLORMAP_ALGAE) {
+        context_colormap_name = "algae";
+    } else if (colormap_name == COLORMAP_GREEN) {
+        context_colormap_name = "green";
     } else if (colormap_name == COLORMAP_CUSTOM) {
         helios_runtime_error("ERROR (Visualizer::setColormap): Setting a custom colormap requires calling setColormap with additional arguments defining the colormap.");
     } else {
         helios_runtime_error("ERROR (Visualizer::setColormap): Invalid colormap.");
     }
+
+    std::vector<RGBcolor> colors;
+    std::vector<float> positions;
+    Context::getColormapControlPoints(context_colormap_name, colors, positions);
+    colormap_current.set(colors, positions, 100, 0, 1);
     // Every data-colored primitive already on display takes its color from the colormap.
     primitiveColorsNeedUpdate = true;
 }

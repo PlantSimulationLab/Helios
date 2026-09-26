@@ -53,6 +53,7 @@ layout(push_constant) uniform PushConstants {
     uint specular_reflection_enabled;  // 0=disabled, 1=enabled
     uint camera_count;                 // Number of cameras; 0 = skip camera-weighted scatter
     uint camera_id;                    // Camera whose weighting the camera-scatter buffers accumulate
+    uint face_absorption_enabled;      // 1 = also accumulate the absorption that arrived on the top face into radiation_in_top
 } pc;
 
 // ========== Descriptor Set 0: Geometry ==========
@@ -197,6 +198,12 @@ layout(set = 1, binding = 13) readonly buffer GlassKLBuffer {
 layout(set = 2, binding = 0) buffer RadiationInBuffer {
     float radiation_in[]; // [primitive * band_count + band]
 } rad_in_buf;
+
+// Absorption that arrived on the top face (the side the normal points to), same layout as radiation_in. Written only when
+// pc.face_absorption_enabled is set; otherwise it is a one-element placeholder.
+layout(set = 2, binding = 15) buffer RadiationInTopBuffer {
+    float radiation_in_top[]; // [primitive * band_count + band]
+} rad_in_top_buf;
 
 layout(set = 2, binding = 1) buffer RadiationOutTopBuffer {
     float radiation_out_top[];
@@ -751,6 +758,14 @@ void main() {
                     float subgroup_sum = subgroupAdd(energy);
                     if (subgroupElect()) {
                         atomicAdd(rad_in_buf.radiation_in[rad_idx], subgroup_sum);
+                    }
+                    // The face can differ between invocations (e.g. rays toward an extended source), so the top-face share gets
+                    // its own reduction. The condition is a push constant, so every invocation reaches the subgroupAdd.
+                    if (pc.face_absorption_enabled != 0u) {
+                        float top_sum = subgroupAdd(is_top_face ? energy : 0.0);
+                        if (subgroupElect() && top_sum != 0.0) {
+                            atomicAdd(rad_in_top_buf.radiation_in_top[rad_idx], top_sum);
+                        }
                     }
 
                     // Scatter: reflected and transmitted energy from direct illumination

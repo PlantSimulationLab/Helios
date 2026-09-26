@@ -1288,6 +1288,44 @@ HitDataType LiDARcloud::getHitDataType(const char *label) const {
     return hit_data_columns[it->second].type;
 }
 
+void LiDARcloud::deleteHitData(const char *label) {
+    const std::string key(label);
+    auto it = hit_data_label_index.find(key);
+    if (it == hit_data_label_index.end()) {
+        helios_runtime_error("ERROR (LiDARcloud::deleteHitData): no hit data column exists for label ``" + key + "''.");
+    }
+
+    // Synthesized misses report some labels from their scan-grid cell rather than from a column (see virtualMissData).
+    // Those they merely annotate are switched off with the column; those that define them cannot go while they exist.
+    const bool defines_misses = (key == "is_miss" || key == "row" || key == "column" || key == "nRaysHit");
+    const bool is_origin = (key == "origin_x" || key == "origin_y" || key == "origin_z");
+    for (uint s = 0; s < uint(virtual_misses.size()); s++) {
+        VirtualMissSet &vm = virtual_misses[s];
+        if (!vm.active) {
+            continue;
+        }
+        if (defines_misses || (is_origin && vm.moving)) {
+            helios_runtime_error("ERROR (LiDARcloud::deleteHitData): cannot remove hit data ``" + key + "'': scan " + std::to_string(s) +
+                                 " has misses synthesized by gapfillMisses(), which are defined by this label. Remove it before gap-filling, or not at all.");
+        }
+    }
+    for (VirtualMissSet &vm: virtual_misses) {
+        if (key == "timestamp") {
+            vm.emit_timestamp = false;
+        } else if (key == "gapfillMisses_code") {
+            vm.add_flags = false;
+        }
+    }
+
+    const size_t slot = it->second;
+    hit_data_columns.erase(hit_data_columns.begin() + std::ptrdiff_t(slot));
+    hit_data_labels.erase(hit_data_labels.begin() + std::ptrdiff_t(slot));
+    hit_data_label_index.clear();
+    for (size_t s = 0; s < hit_data_labels.size(); s++) {
+        hit_data_label_index[hit_data_labels[s]] = s;
+    }
+}
+
 //! Append one hit's scalar data as a new row across all columns. The hit has already been pushed onto
 //! `hits`, so its index is hits.size()-1 and every existing column is currently one element short.
 void LiDARcloud::appendHitData(const std::map<std::string, double> &data) {
@@ -4499,6 +4537,249 @@ helios::SphericalCoord LiDARcloud::getScanGridDirection(uint scanID, int row, in
     return helios::SphericalCoord(1.f, 0.5f * float(M_PI) - float(vm.grid_model.zenith(row)), float(vm.grid_model.azimuth(row, column)));
 }
 
+helios::int2 LiDARcloud::getNominalScanGridCell(uint scanID, const helios::vec3 &point) const {
+    if (scanID >= scans.size()) {
+        helios_runtime_error("ERROR (LiDARcloud::getNominalScanGridCell): Invalid scanID " + std::to_string(scanID) + ". Only " + std::to_string(scans.size()) + " scans exist.");
+    }
+    const ScanMetadata &scan = scans.at(scanID);
+    if (scan.isMoving) {
+        helios_runtime_error("ERROR (LiDARcloud::getNominalScanGridCell): scan " + std::to_string(scanID) +
+                             " is a moving-platform scan. A moving scan's beam direction depends on the platform pose at each pulse's time, so its scan-grid cell cannot be recovered from a return's position; its pulses are identified by "
+                             "their timestamps.");
+    }
+    if (scan.scanPattern == SCAN_PATTERN_SPINNING_MULTIBEAM || scan.scanPattern == SCAN_PATTERN_RISLEY_PRISM) {
+        helios_runtime_error("ERROR (LiDARcloud::getNominalScanGridCell): scan " + std::to_string(scanID) + " is not a raster scan (spinning multibeam or Risley prism pattern), so it has no uniform zenith x azimuth grid to map a return onto.");
+    }
+
+    double row = 0.0, column = 0.0, zenith = 0.0;
+    nominalScanGridPosition(scanID, point, row, column, zenith);
+    return helios::make_int2(int(std::llround(row)), int(std::llround(column)));
+}
+
+void LiDARcloud::nominalScanGridPosition(uint scanID, const helios::vec3 &point, double &row, double &column, double &zenith) const {
+    const ScanMetadata &scan = scans.at(scanID);
+    // Undo the synthetic scanner's static orientation (see syntheticScan): it applied the azimuth offset about +z, then roll
+    // about the body's lateral axis, then pitch about its forward axis -- axes fixed in the world -- so the inverse applies
+    // the negated rotations in the reverse order.
+    helios::vec3 direction = point - scan.origin;
+    direction.normalize();
+    const float heading = scan.phiMin - scan.scanTilt_azimuth;
+    const helios::vec3 pivot = helios::make_vec3(0, 0, 0);
+    const helios::vec3 forward_axis = helios::make_vec3(sinf(heading), cosf(heading), 0.f);
+    const helios::vec3 lateral_axis = helios::make_vec3(cosf(heading), -sinf(heading), 0.f);
+    if (scan.scanTilt_roll != 0.f || scan.scanTilt_pitch != 0.f) {
+        direction = rotatePointAboutLine(direction, pivot, forward_axis, -scan.scanTilt_pitch);
+        direction = rotatePointAboutLine(direction, pivot, lateral_axis, -scan.scanTilt_roll);
+    }
+    if (scan.scanTilt_azimuth != 0.f) {
+        direction = rotatePointAboutLine(direction, pivot, helios::make_vec3(0.f, 0.f, 1.f), -scan.scanTilt_azimuth);
+    }
+    const helios::SphericalCoord sc = cart2sphere(direction);
+    zenith = double(sc.zenith);
+
+    // Row: the zenith on the inclusive-endpoint grid rc2direction uses.
+    const double dtheta = (scan.Ntheta > 1) ? (double(scan.thetaMax) - double(scan.thetaMin)) / double(scan.Ntheta - 1) : 0.0;
+    row = (dtheta != 0.0) ? (double(sc.zenith) - double(scan.thetaMin)) / dtheta : 0.0;
+    const double nearest_row = std::round(row);
+
+    // Column: the azimuth from phiMin, less the head's rotation during the column's sweep (dphi/Ntheta per row, as the
+    // synthetic scanner fires it). Without that correction the later rows of each column would round into the next one.
+    const double two_pi = 2.0 * M_PI;
+    const double phi_span = double(scan.phiMax) - double(scan.phiMin);
+    const double dphi = (scan.Nphi > 1) ? phi_span / double(scan.Nphi - 1) : 0.0;
+    double delta_phi = std::fmod(double(sc.azimuth) - double(scan.phiMin) - nearest_row * dphi / double(std::max(1u, scan.Ntheta)), two_pi);
+    if (delta_phi < 0.0) {
+        delta_phi += two_pi;
+    }
+    // cart2sphere's azimuth is only known modulo a turn. Within a sweep of less than a turn, split the ambiguity in the
+    // middle of the unscanned sector, so a direction just before phiMin maps to column -1 rather than past the end; a
+    // full turn has no unscanned sector, and half a column before phiMin is column 0.
+    if (std::fabs(phi_span) < two_pi - std::fabs(dphi)) {
+        if (delta_phi > 0.5 * (std::fabs(phi_span) + two_pi)) {
+            delta_phi -= two_pi;
+        }
+    } else if (delta_phi > two_pi - 0.5 * std::fabs(dphi)) {
+        delta_phi -= two_pi;
+    }
+    column = (dphi != 0.0) ? delta_phi / dphi : 0.0;
+}
+
+void LiDARcloud::assignDirectionScanGridCells(uint scanID, const std::vector<helios::vec3> &scan_xyz, size_t Nreal, std::vector<helios::int2> &cells) const {
+    const ScanMetadata &scan = scans.at(scanID);
+    const std::string scan_label = "scan " + std::to_string(scanID);
+    const std::string declared = "declared " + std::to_string(scan.Ntheta) + " x " + std::to_string(scan.Nphi) + " raster (zenith " + std::to_string(double(scan.thetaMin) * 180.0 / M_PI) + " to " +
+                                 std::to_string(double(scan.thetaMax) * 180.0 / M_PI) + " degrees, azimuth " + std::to_string(double(scan.phiMin) * 180.0 / M_PI) + " to " + std::to_string(double(scan.phiMax) * 180.0 / M_PI) + " degrees)";
+
+    std::vector<double> row_fraction(Nreal), column_fraction(Nreal), zenith(Nreal);
+    cells.assign(Nreal, helios::make_int2(-1, -1));
+    size_t outside = 0;
+    for (size_t local = 0; local < Nreal; local++) {
+        double row = 0.0, column = 0.0;
+        nominalScanGridPosition(scanID, scan_xyz[local], row, column, zenith[local]);
+        const long long nearest_row = std::llround(row), nearest_column = std::llround(column);
+        row_fraction[local] = row - double(nearest_row);
+        column_fraction[local] = column - double(nearest_column);
+        if (nearest_row < 0 || nearest_row >= (long long) scan.Ntheta || nearest_column < 0 || nearest_column >= (long long) scan.Nphi) {
+            outside++;
+            continue; // outside the declared raster: carries no cell, and the gap-fill core ignores it
+        }
+        cells[local] = helios::make_int2(int(nearest_row), int(nearest_column));
+    }
+
+    // The checks below judge the declared raster by how the returns fall on it, which takes enough returns to be
+    // meaningful. A scan with fewer (a small segmented tree, say) is gap-filled on the declared raster as it stands.
+    const size_t min_returns_to_verify = 200;
+    if (Nreal < min_returns_to_verify) {
+        if (printmessages) {
+            std::cout << "Scan " << scanID << " has only " << Nreal << " returns, too few to verify that its " << declared << " matches the scanner; its misses are placed on it as declared." << std::endl;
+        }
+        return;
+    }
+
+    // ---- Check 1: the returns sit at the centres of their cells ----
+    // On a raster that matches the scanner every return lies close to the centre of its cell. A wrong step (size or
+    // angular range) accumulates across the scan and spreads the offsets evenly over +/-0.5 cell; a wrong tilt or
+    // azimuth offset shifts them smoothly with direction; a step twice the scanner's puts every other row's returns at the
+    // cell edges. Each puts about half of the returns more than a quarter cell off centre, against almost none on a sound
+    // raster, so a quarter of them is the threshold: well clear of both, and of a few displaced returns.
+    auto off_centre_fraction = [](const std::vector<double> &offsets) -> double {
+        size_t off_centre = 0;
+        for (double offset: offsets) {
+            if (std::fabs(offset) > 0.25) {
+                off_centre++;
+            }
+        }
+        return double(off_centre) / double(offsets.size());
+    };
+    const double max_off_centre_fraction = 0.25;
+    const double row_off_centre = (scan.Ntheta > 1) ? off_centre_fraction(row_fraction) : 0.0;
+    const double column_off_centre = (scan.Nphi > 1) ? off_centre_fraction(column_fraction) : 0.0;
+    if (row_off_centre > max_off_centre_fraction || column_off_centre > max_off_centre_fraction) {
+        std::string finding;
+        if (row_off_centre > max_off_centre_fraction) {
+            // Which zenith step the returns do fall on: the step whose phase they share most coherently. A sub-multiple of
+            // the true step is as coherent as the step itself, so the largest near-best step is reported.
+            const size_t sample_count = std::min<size_t>(Nreal, 2000);
+            const double declared_step = std::fabs(double(scan.thetaMax) - double(scan.thetaMin)) / double(scan.Ntheta - 1);
+            const size_t candidate_count = std::min<size_t>(40000, 16 * size_t(scan.Ntheta) + 64);
+            std::vector<double> coherence(candidate_count), candidate_step(candidate_count);
+            double best = 0.0;
+            for (size_t c = 0; c < candidate_count; c++) {
+                candidate_step[c] = declared_step * std::pow(16.0, double(c) / double(candidate_count - 1)) / 4.0; // declared/4 .. declared*4
+                double sum_cos = 0.0, sum_sin = 0.0;
+                for (size_t k = 0; k < sample_count; k++) {
+                    const double phase = 2.0 * M_PI * (zenith[k * Nreal / sample_count] - double(scan.thetaMin)) / candidate_step[c];
+                    sum_cos += std::cos(phase);
+                    sum_sin += std::sin(phase);
+                }
+                coherence[c] = std::sqrt(sum_cos * sum_cos + sum_sin * sum_sin) / double(sample_count);
+                best = std::max(best, coherence[c]);
+            }
+            finding = std::to_string(long(std::lround(100.0 * row_off_centre))) + "% of the returns lie more than a quarter of a row from the centre of their cell, where a raster matching the scanner puts almost every return within a small fraction of a row of it";
+            if (best >= 0.7) {
+                size_t chosen = 0;
+                for (size_t c = 0; c < candidate_count; c++) {
+                    if (coherence[c] >= 0.9 * best) {
+                        chosen = c; // the largest near-best step
+                    }
+                }
+                const double implied_rows = std::fabs(double(scan.thetaMax) - double(scan.thetaMin)) / candidate_step[chosen] + 1.0;
+                finding += ". The returns' zeniths fall on a uniform step of " + std::to_string(candidate_step[chosen] * 180.0 / M_PI) + " degrees, against the declared " + std::to_string(declared_step * 180.0 / M_PI) +
+                           " degrees; over the declared zenith range that is about " + std::to_string(long(std::lround(implied_rows))) + " rows rather than " + std::to_string(scan.Ntheta);
+            } else {
+                finding += ". The returns' zeniths fall on no uniform step, which points to a scan tilt or origin that does not match the scanner rather than a wrong size";
+            }
+        }
+        if (column_off_centre > max_off_centre_fraction) {
+            finding += std::string(finding.empty() ? "" : "; and ") + std::to_string(long(std::lround(100.0 * column_off_centre))) +
+                       "% of the returns lie more than a quarter of a column from the centre of their cell (check the declared azimuth range, its number of columns, the scan's azimuth offset, and its number of rows, which sets how far the head turns during each column)";
+        }
+        helios_runtime_error("ERROR (LiDARcloud::gapfillMisses): the returns of " + scan_label + " do not lie on its " + declared + ": " + finding +
+                             ". Its returns carry neither timestamps nor row/column indices, so their cells, and the directions of the misses synthesized for the empty cells, come from this raster, and on it they would land in the "
+                             "wrong cells. Correct the scan's size, angular ranges, tilt and origin to the instrument's.");
+    }
+
+    // ---- Check 2: no rows or columns left systematically empty ----
+    // A raster k times finer than the scanner's still puts every return near a cell centre, but only every k-th row (or
+    // column) can hold one. Within each column the occupied rows are then spaced by multiples of k, which a sound raster
+    // never produces: its surfaces occupy adjacent cells, and random thinning of the cloud makes the commonest spacing 1.
+    auto check_spacing = [&](bool along_rows) {
+        std::vector<std::pair<int, int>> occupied; // (line, position along it)
+        occupied.reserve(Nreal);
+        for (const helios::int2 &cell: cells) {
+            if (cell.x >= 0) {
+                occupied.emplace_back(along_rows ? cell.y : cell.x, along_rows ? cell.x : cell.y);
+            }
+        }
+        std::sort(occupied.begin(), occupied.end());
+        occupied.erase(std::unique(occupied.begin(), occupied.end()), occupied.end());
+        std::map<int, size_t> spacing_count;
+        size_t spacings = 0;
+        for (size_t i = 1; i < occupied.size(); i++) {
+            if (occupied[i].first == occupied[i - 1].first) {
+                spacing_count[occupied[i].second - occupied[i - 1].second]++;
+                spacings++;
+            }
+        }
+        if (spacings < 100) {
+            return;
+        }
+        int commonest = 1;
+        size_t commonest_count = 0;
+        for (const auto &entry: spacing_count) {
+            if (entry.second > commonest_count) {
+                commonest = entry.first;
+                commonest_count = entry.second;
+            }
+        }
+        if (commonest < 2) {
+            return;
+        }
+        size_t multiples = 0;
+        for (const auto &entry: spacing_count) {
+            if (entry.first % commonest == 0) {
+                multiples += entry.second;
+            }
+        }
+        if (double(multiples) < 0.95 * double(spacings)) {
+            return;
+        }
+        const uint declared_count = along_rows ? scan.Ntheta : scan.Nphi;
+        const std::string axis = along_rows ? "row" : "column";
+        helios_runtime_error("ERROR (LiDARcloud::gapfillMisses): the " + declared + " of " + scan_label + " is finer than the scanner's: " + std::to_string(size_t(std::lround(100.0 * double(multiples) / double(spacings)))) + "% of the spacings between occupied " +
+                             axis + "s are multiples of " + std::to_string(commonest) + ", so only one " + axis + " in every " + std::to_string(commonest) + " holds returns. The instrument's raster has about " +
+                             std::to_string((declared_count - 1) / uint(commonest) + 1) + " " + axis + "s over the declared range rather than " + std::to_string(declared_count) +
+                             ". Its returns carry neither timestamps nor row/column indices, so on this raster a miss would be synthesized in every " + axis + " the scanner never fired. Correct the scan's size to the instrument's.");
+    };
+    if (scan.Ntheta > 1) {
+        check_spacing(true);
+    }
+    if (scan.Nphi > 1) {
+        check_spacing(false);
+    }
+
+    // ---- Check 3: the returns lie within the raster ----
+    // A return outside the declared raster was fired at a cell the raster does not have, so the declared extent or its
+    // offset is not the scanner's, and the misses around those returns would never be synthesized.
+    const double max_outside_fraction = 0.05;
+    if (double(outside) > max_outside_fraction * double(Nreal)) {
+        double row_min = std::numeric_limits<double>::infinity(), row_max = -row_min, column_min = row_min, column_max = -row_min;
+        for (size_t local = 0; local < Nreal; local++) {
+            double row = 0.0, column = 0.0, z = 0.0;
+            nominalScanGridPosition(scanID, scan_xyz[local], row, column, z);
+            row_min = std::min(row_min, row);
+            row_max = std::max(row_max, row);
+            column_min = std::min(column_min, column);
+            column_max = std::max(column_max, column);
+        }
+        helios_runtime_error("ERROR (LiDARcloud::gapfillMisses): " + std::to_string(outside) + " of the " + std::to_string(Nreal) + " returns of " + scan_label + " (" + std::to_string(size_t(std::lround(100.0 * double(outside) / double(Nreal)))) +
+                             "%) lie outside its " + declared + ": the returns span rows " + std::to_string(long(std::lround(row_min))) + " to " + std::to_string(long(std::lround(row_max))) + " and columns " +
+                             std::to_string(long(std::lround(column_min))) + " to " + std::to_string(long(std::lround(column_max))) + ", against 0 to " + std::to_string(scan.Ntheta - 1) + " and 0 to " + std::to_string(scan.Nphi - 1) +
+                             ". Its returns carry neither timestamps nor row/column indices, so their cells come from this raster, and no misses would be synthesized around the returns that fall outside it. Correct the scan's angular "
+                             "ranges, tilt and origin to the instrument's.");
+    }
+}
+
 size_t LiDARcloud::getVirtualMissCount() const {
     return size_t(Nvirtual);
 }
@@ -4603,8 +4884,8 @@ std::vector<helios::vec3> LiDARcloud::gapfillMissesInner(uint scanID, const bool
     // Auto-detect which reconstruction path to use based on the data available on this scan's returns.
     // The row/column path reconstructs miss directions from the native scan-grid indices and is robust to
     // scanner tilt, angular noise, and azimuth sweep; the timestamp path reconstructs the grid from per-hit
-    // timestamps. When both are available we prefer row/column. When neither is available we fail fast, since
-    // there is no way to reconstruct miss directions. The scan's stored returns are located through the per-scan
+    // timestamps. When both are available we prefer row/column. When neither is available, a static raster scan's
+    // cells are found from its returns' directions on the declared raster; any other scan fails fast. The scan's stored returns are located through the per-scan
     // index and their data read from the columns, so this costs O(hits in the scan), not O(hits in the cloud).
     ensureScanIndex();
     const size_t scan_hit_count = scanRealHitCount(scanID);
@@ -4624,8 +4905,7 @@ std::vector<helios::vec3> LiDARcloud::gapfillMissesInner(uint scanID, const bool
     }
 
     // A scan with no returns at all (e.g. rays that all missed empty geometry) has nothing to reconstruct;
-    // return gracefully. The fail-fast below applies only when returns exist but carry neither timestamp nor
-    // row/column indices, which is a genuine data-format problem.
+    // return gracefully.
     if (scan_hit_count == 0) {
         if (printmessages) {
             std::cout << "Gap filling complete misses in scan " << scanID << "...scan has no hits. Skipping gap fill." << std::endl;
@@ -4649,12 +4929,161 @@ std::vector<helios::vec3> LiDARcloud::gapfillMissesInner(uint scanID, const bool
         std::vector<helios::vec3> filled;
         filled_count = gapfillMisses_timestamp(scanID, gapfill_grid_only, add_flags, collect_positions, filled);
         return filled;
-    } else {
-        helios_runtime_error("ERROR (LiDARcloud::gapfillMisses): scan " + std::to_string(scanID) +
-                             " has neither 'timestamp' nor 'row'/'column' hit data; cannot reconstruct miss directions. "
-                             "Provide either per-hit timestamps or scan row/column indices.");
-        return {}; // unreachable; silences compiler warning
     }
+
+    // Neither a pulse clock nor scan-grid indices: a static raster scan's cells still follow from each return's direction
+    // on the declared raster, which is all the row/column core needs. This is how a scan whose timestamps were unusable
+    // (rounded on export, and removed with deleteHitData) is gap-filled. A moving scan has no such route: the platform
+    // pose each miss was fired from is known only from the clock.
+    const ScanMetadata &scan = scans.at(scanID);
+    if (scan.isMoving) {
+        helios_runtime_error("ERROR (LiDARcloud::gapfillMisses): scan " + std::to_string(scanID) +
+                             " is a moving-platform scan whose returns carry no 'timestamp' hit data. Its misses are fired from the platform pose at each pulse's time, so they cannot be reconstructed without per-pulse timestamps.");
+    }
+    if (scan.scanPattern == SCAN_PATTERN_SPINNING_MULTIBEAM || scan.scanPattern == SCAN_PATTERN_RISLEY_PRISM) {
+        helios_runtime_error("ERROR (LiDARcloud::gapfillMisses): scan " + std::to_string(scanID) +
+                             " has neither 'timestamp' nor 'row'/'column' hit data, and is not a raster scan (spinning multibeam or Risley prism pattern), so its returns' scan-grid cells cannot be found from their directions. Provide "
+                             "either per-hit timestamps or scan row/column indices.");
+    }
+    if (printmessages) {
+        std::cout << "Gap filling complete misses in scan " << scanID << ": its returns carry neither timestamps nor row/column indices, so each is placed on the declared " << scan.Ntheta << " x " << scan.Nphi
+                  << " raster by its direction..." << std::endl;
+    }
+    std::vector<helios::vec3> scan_xyz;
+    getScanHitXYZColumn(scanID, scan_xyz);
+    std::vector<helios::int2> cells;
+    assignDirectionScanGridCells(scanID, scan_xyz, scan_hit_count, cells);
+    // Resolve both slots before taking references: creating the second column can reallocate the column vector.
+    const size_t slot_row = getOrCreateHitDataColumn("row");
+    const size_t slot_col = getOrCreateHitDataColumn("column");
+    HitDataColumn &crow = hit_data_columns[slot_row];
+    HitDataColumn &ccol = hit_data_columns[slot_col];
+    size_t assigned = 0;
+    for (size_t local = 0; local < scan_hit_count; local++) {
+        const helios::int2 cell = cells[local];
+        if (cell.x < 0) {
+            continue; // outside the declared raster: carries no cell, and the core ignores it
+        }
+        const uint r = scanRealHitIndex(scanID, local);
+        crow.set(r, double(cell.x));
+        crow.setPresent(r);
+        ccol.set(r, double(cell.y));
+        ccol.setPresent(r);
+        assigned++;
+    }
+    if (assigned < 2) {
+        helios_runtime_error("ERROR (LiDARcloud::gapfillMisses): fewer than two returns of scan " + std::to_string(scanID) + " point into its declared " + std::to_string(scan.Ntheta) + " x " + std::to_string(scan.Nphi) +
+                             " raster. The returns carry neither timestamps nor row/column indices, so their cells are found from their directions; check the scan's declared size, zenith and azimuth ranges, tilt and origin.");
+    }
+    return gapfillMisses_rowcolumn(scanID, add_flags, collect_positions, filled_count, false, gapfill_grid_only);
+}
+
+double LiDARcloud::pulseCollinearityTolerance(uint scanID) const {
+    // A quarter of the finer raster step: well above the float precision of a return's direction, well below the
+    // angle between neighbouring pulses. The steps follow rc2direction's conventions.
+    const ScanMetadata &scan = scans.at(scanID);
+    const bool spinning = (scan.scanPattern == SCAN_PATTERN_SPINNING_MULTIBEAM);
+    const double dtheta = (scan.Ntheta > 1) ? std::fabs(double(scan.thetaMax) - double(scan.thetaMin)) / double(scan.Ntheta - 1) : 0.0;
+    const double phi_span = std::fabs(double(scan.phiMax) - double(scan.phiMin));
+    const double dphi = spinning ? phi_span / double(std::max(1u, scan.Nphi)) : ((scan.Nphi > 1) ? phi_span / double(scan.Nphi - 1) : 0.0);
+    double raster_step = 0.0;
+    for (double step: {dtheta, dphi}) {
+        if (step > 0.0 && (raster_step == 0.0 || step < raster_step)) {
+            raster_step = step;
+        }
+    }
+    if (raster_step == 0.0) {
+        raster_step = 4.0e-3; // no raster to speak of (a single pulse direction per column): a 1 mrad tolerance
+    }
+    return 0.25 * raster_step;
+}
+
+double LiDARcloud::sharedTimestampSpread(uint scanID, double timestamp, const std::vector<helios::vec3> &scan_xyz, const uint *members, size_t member_count) const {
+    if (member_count < 2) {
+        return 0.0;
+    }
+    // Every return of the group was fired (if it is one pulse) from the same place at the same time.
+    const ScanMetadata &scan = scans.at(scanID);
+    helios::vec3 emission_origin = getScanOrigin(scanID);
+    if (scan.isMoving) {
+        helios::vec3 pos;
+        helios::vec4 quat;
+        scan.poseAt(timestamp, pos, quat);
+        emission_origin = pos + quat_rotate(quat, scan.lever_arm);
+    }
+    helios::vec3 reference = scan_xyz[members[0]] - emission_origin;
+    reference.normalize();
+    double spread = 0.0;
+    for (size_t i = 1; i < member_count; i++) {
+        helios::vec3 direction = scan_xyz[members[i]] - emission_origin;
+        direction.normalize();
+        spread = std::max(spread, std::atan2(double(cross(reference, direction).magnitude()), double(reference * direction)));
+    }
+    return spread;
+}
+
+std::string LiDARcloud::roundedTimestampRemedy(uint scanID) const {
+    if (scans.at(scanID).isMoving) {
+        return " A moving scan's misses are placed from the platform pose at their pulse's time, and its beams are grouped by it, so it cannot be processed without per-pulse timestamps: re-export them at full (64-bit) precision.";
+    }
+    const bool has_target_index = getHitDataColumnIndex("target_index") >= 0;
+    std::string remedy = " The exact fix is to re-export the scan with its GPS time at full (64-bit) precision and the scanner's original return numbers. To process this data as it is, call deleteHitData(\"timestamp\")";
+    if (has_target_index) {
+        remedy += " and deleteHitData(\"target_index\")";
+    }
+    remedy += " and gap-fill again: gapfillMisses() then places the misses by each return's direction on the scan's declared raster, and calculateLeafArea() inverts each return as its own pulse.";
+    if (has_target_index) {
+        remedy += " target_index must be removed too: with each return its own beam, the other returns of its pulse would otherwise be counted a second time as returns removed from it.";
+    }
+    return remedy;
+}
+
+void LiDARcloud::checkTimestampsIdentifyPulses(uint scanID, const std::vector<double> &scan_timestamp, const std::vector<helios::vec3> &scan_xyz) const {
+    const ScanMetadata &scan = scans.at(scanID);
+    const size_t Nreal = scanRealHitCount(scanID); // the column readers also report any virtual misses of an earlier gap-fill
+    const double tolerance = pulseCollinearityTolerance(scanID);
+
+    std::vector<uint> order(Nreal);
+    for (size_t i = 0; i < Nreal; i++) {
+        order[i] = uint(i);
+    }
+    std::stable_sort(order.begin(), order.end(), [&](uint a, uint b) { return scan_timestamp[a] < scan_timestamp[b]; });
+
+    size_t shared_groups = 0, mixed_groups = 0;
+    double largest_angle = 0.0;
+    double resolution = std::numeric_limits<double>::infinity();
+    for (size_t start = 0; start < Nreal;) {
+        const double t = scan_timestamp[order[start]];
+        size_t end = start + 1;
+        while (end < Nreal && scan_timestamp[order[end]] == t) {
+            end++;
+        }
+        if (end < Nreal) {
+            resolution = std::min(resolution, scan_timestamp[order[end]] - t);
+        }
+        if (end - start >= 2) {
+            shared_groups++;
+            const double group_angle = sharedTimestampSpread(scanID, t, scan_xyz, order.data() + start, end - start);
+            if (group_angle > tolerance) {
+                mixed_groups++;
+                largest_angle = std::max(largest_angle, group_angle);
+            }
+        }
+        start = end;
+    }
+    if (mixed_groups == 0 || double(mixed_groups) <= 0.01 * double(shared_groups)) {
+        return;
+    }
+
+    const double span = scan_timestamp[order[Nreal - 1]] - scan_timestamp[order[0]];
+    const double cells = double(scan.Ntheta) * double(scan.Nphi);
+    const std::string clock = scan.isMoving ? "the scan's declared pulse period is " + std::to_string(scan.pulse_period) + " s"
+                                            : "the scan's declared " + std::to_string(scan.Ntheta) + " x " + std::to_string(scan.Nphi) + " raster over its " + std::to_string(span) + " s implies about " + std::to_string(span / cells) + " s per pulse";
+    helios_runtime_error("ERROR (LiDARcloud::gapfillMisses): the timestamps of scan " + std::to_string(scanID) + " do not identify its pulses: " + std::to_string(mixed_groups) + " of the " + std::to_string(shared_groups) +
+                         " timestamps shared by several returns are shared by returns pointing in different directions (up to " + std::to_string(largest_angle * 180.0 / M_PI) + " degrees apart, against a raster step of " +
+                         std::to_string(4.0 * tolerance * 180.0 / M_PI) + " degrees), which the returns of one pulse cannot do. The timestamps appear to have been rounded more coarsely than the scanner fires (a 32-bit float " +
+                         "round-trip, for example): their resolution is " + std::to_string(resolution) + " s (the smallest spacing between distinct timestamps), while " + clock +
+                         ". A pulse clock recovered from them would be the rounding step, and misses synthesized on it would land in the wrong cells." + roundedTimestampRemedy(scanID));
 }
 
 size_t LiDARcloud::gapfillMisses_timestamp(uint scanID, const bool gapfill_grid_only, const bool add_flags, const bool collect_positions, std::vector<helios::vec3> &xyz_filled) {
@@ -4692,6 +5121,11 @@ size_t LiDARcloud::gapfillMisses_timestamp(uint scanID, const bool gapfill_grid_
             helios_runtime_error("ERROR (LiDARcloud::gapfillMisses): Hit " + std::to_string(scanRealHitIndex(scanID, local)) + " is missing required 'timestamp' data. Cannot perform gap filling.");
         }
     }
+    std::vector<helios::vec3> scan_xyz;
+    getScanHitXYZColumn(scanID, scan_xyz);
+    // Before any clock is built from the timestamps -- including the declared one, which rounded times that happen to
+    // fall on multiples of its period would reproduce -- make sure a timestamp names one pulse.
+    checkTimestampsIdentifyPulses(scanID, scan_timestamp, scan_xyz);
 
     double t0 = scan.t0, period = scan.pulse_period, line_period = 0.0;
     bool declared_clock = scan.isMoving; // a moving scan's clock is authoritative: its trajectory is parameterized by it
@@ -4719,8 +5153,6 @@ size_t LiDARcloud::gapfillMisses_timestamp(uint scanID, const bool gapfill_grid_
     };
     // Does a cell assignment describe a raster? The zenith of the returns, measured about the fitted head axis,
     // must be linear in the row to within the same tolerance the core applies (see gapfillMisses_rowcolumn).
-    std::vector<helios::vec3> scan_xyz;
-    getScanHitXYZColumn(scanID, scan_xyz);
     const helios::vec3 origin = getScanOrigin(scanID);
     auto raster_residual = [&](double &row_step) -> double {
         std::vector<int> icol, irow;
@@ -5197,6 +5629,7 @@ void LiDARcloud::gatherFirstReturnsForTriangulation(uint s, bool skip_non_first_
     ensureScanIndex();
     const size_t Nreal_s = scanRealHitCount(s);
     const int slot_tindex = getHitDataColumnIndex("target_index");
+    const int min_tindex = (skip_non_first_returns && slot_tindex >= 0) ? scanTargetIndexBase(s) : 0;
     const helios::vec3 scan_origin = getScanOrigin(s);
     pts.clear();
     hit_indices.clear();
@@ -5206,7 +5639,7 @@ void LiDARcloud::gatherFirstReturnsForTriangulation(uint s, bool skip_non_first_
         if (hit.gridcell < 0) {
             continue;
         }
-        if (skip_non_first_returns && slot_tindex >= 0 && hit_data_columns[size_t(slot_tindex)].isPresent(r) && hit_data_columns[size_t(slot_tindex)].get(r) != 0.0) {
+        if (skip_non_first_returns && slot_tindex >= 0 && hit_data_columns[size_t(slot_tindex)].isPresent(r) && hit_data_columns[size_t(slot_tindex)].get(r) != double(min_tindex)) {
             continue; // Skip non-first returns
         }
         const helios::SphericalCoord direction = cart2sphere(hit.position - scan_origin);
@@ -5243,6 +5676,7 @@ bool LiDARcloud::triangulateScanSecondPass(uint s, float Lmax, float max_aspect_
     const size_t Nreal_s = scanRealHitCount(s);
     const int slot_field = use_scalar_filter ? getHitDataColumnIndex(scalar_field) : -1;
     const int slot_tindex = getHitDataColumnIndex("target_index");
+    const int min_tindex = (!use_scalar_filter && use_adaptive_threshold && slot_tindex >= 0) ? scanTargetIndexBase(s) : 0;
     const helios::vec3 scan_origin = getScanOrigin(s);
     bool warned_unset_cell = false;
     for (size_t local = 0; local < Nreal_s; local++) {
@@ -5285,8 +5719,8 @@ bool LiDARcloud::triangulateScanSecondPass(uint s, float Lmax, float max_aspect_
                 }
             } else if (use_adaptive_threshold) {
                 // Auto-filter first returns for multi-return data
-                if (slot_tindex >= 0 && hit_data_columns[size_t(slot_tindex)].isPresent(r) && hit_data_columns[size_t(slot_tindex)].get(r) != 0.0) {
-                    continue; // Skip non-first returns
+                if (slot_tindex >= 0 && hit_data_columns[size_t(slot_tindex)].isPresent(r) && hit_data_columns[size_t(slot_tindex)].get(r) != double(min_tindex)) {
+                    continue; // Skip non-first returns (target_index may count from 0 or 1; see scanTargetIndexBase)
                 }
             }
 
@@ -7346,6 +7780,31 @@ LiDARcloud::CroppedReturnStats LiDARcloud::getCroppedReturnStats() const {
     return cropped_return_stats;
 }
 
+int LiDARcloud::scanTargetIndexBase(uint scanID) const {
+    // Whether target_index counts from 0 or 1, decided over this scan's real returns: any zero means 0-based, else
+    // 1-based (every LAS/LAZ export). Misses are left out, since a miss's index is not a return number (syntheticScan
+    // gives its misses 99).
+    const int slot_tindex = getHitDataColumnIndex("target_index");
+    if (slot_tindex < 0) {
+        return 0;
+    }
+    ensureScanIndex();
+    const HitDataColumn &tindex = hit_data_columns[size_t(slot_tindex)];
+    const int slot_is_miss = getHitDataColumnIndex("is_miss");
+    const size_t Nreal = scanRealHitCount(scanID);
+    for (size_t local = 0; local < Nreal; local++) {
+        const uint r = scanRealHitIndex(scanID, local);
+        if (!tindex.isPresent(r) || tindex.get(r) != 0.0) {
+            continue;
+        }
+        const bool miss = (slot_is_miss >= 0 && hit_data_columns[size_t(slot_is_miss)].isPresent(r)) ? hit_data_columns[size_t(slot_is_miss)].get(r) != 0.0 : isHitMiss(r);
+        if (!miss) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 void LiDARcloud::inferHiddenReturns(uint scanID, const BeamGrouping &beams, std::vector<float> &beam_extra_after, std::vector<uint8_t> &standin_local) {
 
     const size_t Nhits_local = getScanHitCount(scanID);
@@ -7376,15 +7835,7 @@ void LiDARcloud::inferHiddenReturns(uint scanID, const BeamGrouping &beams, std:
         return isHitMiss(scanRealHitIndex(scanID, local)); // legacy data without the flag: isHitMiss() applies its distance rule
     };
 
-    // Whether target_index counts from 0 or 1, decided over this scan's real returns (the same rule lastHitFilter and
-    // gapfillMisses apply): any zero means 0-based, else 1-based.
-    int min_tindex = 1;
-    for (uint l = 0; l < Nreal; l++) {
-        if (!std::isnan(target_index[l]) && !is_miss_local(l) && std::lround(target_index[l]) == 0) {
-            min_tindex = 0;
-            break;
-        }
-    }
+    const int min_tindex = scanTargetIndexBase(scanID);
 
     std::vector<uint> miss_locals;
     for (uint k = 0; k < beams.Nbeams; k++) {
@@ -8577,27 +9028,147 @@ LiDARcloud::BeamGrouping LiDARcloud::groupHitsByTimestamp(uint scanID) const {
     // assumption about the data, not a property the format enforces: a cloud whose timestamps were
     // rounded on export, or synthesized by a tool that stamped a whole sweep with one time, silently
     // merges unrelated returns into a single enormous beam and the transmittance it implies is
-    // meaningless. Where the returns carry target_count -- the number of returns the scanner recorded
-    // for that pulse -- the group size must match it. Fail loudly rather than invert nonsense.
-    if (getHitDataColumnIndex("target_count") >= 0) {
-        std::vector<int32_t> target_count;
+    // meaningless. The returns of one pulse lie along one beam, so real returns sharing a time must point the
+    // same way from where the scan fired (the check gapfillMisses applies before trusting a clock). Where the returns
+    // carry target_count -- the number of returns the scanner recorded for that pulse -- the number of real returns
+    // in the group must not exceed it, and where they carry target_index no two of them can be the same return of
+    // the pulse. Fail loudly rather than invert nonsense, and say which data is wrong: directions that disagree
+    // condemn the timestamps, while collinear groups with contradictory counts or indices condemn those columns.
+    //
+    // Each beam is judged on its own real returns. A miss may legitimately share its pulse's time (syntheticScan
+    // records a pulse's miss alongside its returns and counts it in target_count), and a gap-filled miss carries a
+    // reconstructed time but no per-pulse columns, so misses neither count toward the group nor supply its declared
+    // count. Which member of a beam happens to sort first says nothing about the others.
+    const bool has_target_count = getHitDataColumnIndex("target_count") >= 0;
+    const bool has_target_index = getHitDataColumnIndex("target_index") >= 0;
+    std::vector<int32_t> target_count, target_index;
+    if (has_target_count) {
         getScanHitDataColumn(scanID, "target_count", target_count, int32_t(-1)); // -1: this return declares no count
-        if (target_count[result.beam_members[0]] >= 0) {
-            for (uint k = 0; k < result.Nbeams; k++) {
-                const uint start = result.beam_offsets[k];
-                const uint size = result.beam_offsets[k + 1] - start;
-                const uint first = result.beam_members[start];
-                if (target_count[first] < 0) {
-                    continue; // mixed data: only validate the returns that declare a count
-                }
-                const uint declared = (uint) target_count[first];
-                if (declared > 0 && size > declared) {
-                    helios_runtime_error("ERROR (LiDARcloud::groupHitsByTimestamp): " + std::to_string(size) + " returns share timestamp " + std::to_string(timestamps[first]) + ", but the pulse declares target_count = " + std::to_string(declared) +
-                                         ". Returns are grouped into beams by shared timestamp, so this means separate pulses carry the same time -- typically because the timestamps were rounded or truncated on "
-                                         "export, or were synthesized per-sweep rather than per-pulse. The leaf-area inversion would treat these as one beam and report a meaningless transmittance for it.");
+    }
+    if (has_target_index) {
+        getScanHitDataColumn(scanID, "target_index", target_index, int32_t(-1)); // -1: this return carries no index
+    }
+    const double absent = std::numeric_limits<double>::quiet_NaN();
+    std::vector<double> is_miss;
+    getScanHitDataColumn(scanID, "is_miss", is_miss, absent);
+    const size_t Nreal = scanRealHitCount(scanID);
+    auto is_miss_local = [&](uint local) -> bool {
+        if (local >= Nreal) {
+            return true; // a virtualized gap-filled miss
+        }
+        if (!std::isnan(is_miss[local])) {
+            return is_miss[local] != 0.0;
+        }
+        return isHitMiss(scanRealHitIndex(scanID, local)); // legacy data without the flag
+    };
+
+    const double tolerance = pulseCollinearityTolerance(scanID);
+    std::vector<helios::vec3> scan_xyz; // read only if some beam has several real returns
+    size_t shared_beams = 0, mixed_beams = 0, count_beams = 0, index_beams = 0, numbering_beams = 0;
+    double largest_angle = 0.0;
+    double resolution = std::numeric_limits<double>::infinity();
+    std::string first_count_offense, first_index_offense;
+    std::vector<uint> real_members;
+    std::vector<int32_t> beam_indices;
+    for (uint k = 0; k < result.Nbeams; k++) {
+        if (k + 1 < result.Nbeams) {
+            resolution = std::min(resolution, timestamps[result.beam_members[result.beam_offsets[k + 1]]] - timestamps[result.beam_members[result.beam_offsets[k]]]);
+        }
+        int32_t declared = -1;
+        real_members.clear();
+        beam_indices.clear();
+        for (uint m = result.beam_offsets[k]; m < result.beam_offsets[k + 1]; m++) {
+            const uint local = result.beam_members[m];
+            if (is_miss_local(local)) {
+                continue;
+            }
+            real_members.push_back(local);
+            if (has_target_count) {
+                declared = std::max(declared, target_count[local]);
+            }
+            if (has_target_index && target_index[local] >= 0) {
+                beam_indices.push_back(target_index[local]);
+            }
+        }
+        if (real_members.size() < 2) {
+            continue; // a lone return (or a beam of misses) cannot contradict itself
+        }
+        shared_beams++;
+        const double t = timestamps[real_members[0]];
+
+        if (scan_xyz.empty()) {
+            getScanHitXYZColumn(scanID, scan_xyz);
+        }
+        const double spread = sharedTimestampSpread(scanID, t, scan_xyz, real_members.data(), real_members.size());
+        if (spread > tolerance) {
+            mixed_beams++;
+            largest_angle = std::max(largest_angle, spread);
+        }
+
+        const size_t numbering_offenses_before = count_beams + index_beams;
+        if (declared > 0 && real_members.size() > size_t(declared)) {
+            if (count_beams == 0) {
+                first_count_offense = std::to_string(real_members.size()) + " returns share timestamp " + std::to_string(t) + ", but the pulse declares target_count = " + std::to_string(declared);
+            }
+            count_beams++;
+        }
+        if (beam_indices.size() > 1) {
+            std::sort(beam_indices.begin(), beam_indices.end());
+            for (size_t i = 0; i + 1 < beam_indices.size(); i++) {
+                if (beam_indices[i] == beam_indices[i + 1]) {
+                    if (index_beams == 0) {
+                        const size_t repeats = size_t(std::upper_bound(beam_indices.begin(), beam_indices.end(), beam_indices[i]) - std::lower_bound(beam_indices.begin(), beam_indices.end(), beam_indices[i]));
+                        first_index_offense = std::to_string(real_members.size()) + " returns share timestamp " + std::to_string(t) + ", and target_index " + std::to_string(beam_indices[i]) + " appears " + std::to_string(repeats) +
+                                              " times among them (one pulse has only one return of each index)";
+                    }
+                    index_beams++;
+                    break;
                 }
             }
         }
+        if (count_beams + index_beams > numbering_offenses_before) {
+            numbering_beams++;
+        }
+    }
+
+    const std::string scan_label = "scan " + std::to_string(scanID);
+    // The same 1% allowance as gapfillMisses, so that a few returns displaced by noise cannot condemn a scan's clock.
+    if (mixed_beams > 0 && double(mixed_beams) > 0.01 * double(shared_beams)) {
+        std::string corroboration;
+        if (count_beams > 0) {
+            corroboration += " " + std::to_string(count_beams) + " of these beams also hold more returns than their pulse's target_count (for example, " + first_count_offense + ").";
+        }
+        if (index_beams > 0) {
+            corroboration += " " + std::to_string(index_beams) + " of these beams also repeat a target_index (for example, " + first_index_offense + ").";
+        }
+        helios_runtime_error("ERROR (LiDARcloud::groupHitsByTimestamp): the timestamps of " + scan_label + " do not identify its pulses: in " + std::to_string(mixed_beams) + " of the " + std::to_string(shared_beams) +
+                             " beams in which several returns share a timestamp, those returns point in different directions (up to " + std::to_string(largest_angle * 180.0 / M_PI) + " degrees apart, against a raster step of " +
+                             std::to_string(4.0 * tolerance * 180.0 / M_PI) + " degrees), which the returns of one pulse cannot do." + corroboration +
+                             " Returns are grouped into beams by shared timestamp, so the leaf-area inversion would treat several pulses as one beam and report a meaningless transmittance for it. The timestamps appear to have been "
+                             "rounded or truncated on export (e.g. stored as 32-bit floats), or synthesized per sweep rather than per pulse: their resolution is " +
+                             std::to_string(resolution) + " s (the smallest spacing between distinct timestamps)." + roundedTimestampRemedy(scanID));
+    }
+    if (count_beams > 0 || index_beams > 0) {
+        std::string detail;
+        if (count_beams > 0) {
+            detail += " In " + std::to_string(count_beams) + " of them more returns share a timestamp than their pulse's target_count declares (for example, " + first_count_offense + ").";
+        }
+        if (index_beams > 0) {
+            detail += " In " + std::to_string(index_beams) + " of them a target_index repeats (for example, " + first_index_offense + ").";
+        }
+        std::string drop;
+        if (index_beams > 0) {
+            drop = "deleteHitData(\"target_index\")";
+        }
+        if (count_beams > 0) {
+            drop += std::string(drop.empty() ? "" : " and ") + "deleteHitData(\"target_count\")";
+        }
+        helios_runtime_error("ERROR (LiDARcloud::groupHitsByTimestamp): in " + scan_label + ", " + std::to_string(numbering_beams) + " of " + std::to_string(result.Nbeams) +
+                             " beams (returns grouped by shared timestamp) contradict their per-pulse return numbering." + detail +
+                             " The returns of each such beam lie along one direction, so the timestamps do identify pulses; it is the return numbering that does not describe them (a return number rewritten on export, for "
+                             "example every return exported as return 1). The exact fix is to re-export the scan with the scanner's original return numbers. To process this data as it is, call " +
+                             drop + " and keep 'timestamp': returns stay grouped into pulses by their timestamp, and the inversion places each return of a pulse by its range, which does not depend on its return number. Returns removed "
+                             "from a pulse (by cropping or filtering) can then no longer be accounted for.");
     }
 
     return result;

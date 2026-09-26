@@ -1796,6 +1796,13 @@ namespace helios {
 
         void recomputeCrossSections();
 
+        //! Fold the object transformation matrix into the stored nodes, radii and ring vertices, and reset the matrix to identity
+        /**
+         * The node-editing methods take world coordinates and write the rebuilt ring vertices directly to the primitives, so they must operate on world-frame storage. Called at the start of each of them, so that
+         * a tube that has been rotated, translated or scaled does not have its old transformation applied again on top of the edited world-frame values.
+         */
+        void bakeTransform();
+
         friend class CompoundObject;
         friend class Context;
     };
@@ -8231,7 +8238,7 @@ namespace helios {
         /**
          * \param[in] UUIDs Primitives to apply psudocolor mapping
          * \param[in] primitive_data Label of primitive data for mapping
-         * \param[in] colormap Label of a Helios colormap (e.g., "hot", "cool", "rainbow", "lava")
+         * \param[in] colormap Label of a Helios colormap (see \ref Context::generateColormap(const std::string &, uint) for valid names)
          * \param[in] Ncolors Number of discrete colors in color mapping
          */
         void colorPrimitiveByDataPseudocolor(const std::vector<uint> &UUIDs, const std::string &primitive_data, const std::string &colormap, uint Ncolors);
@@ -8240,7 +8247,7 @@ namespace helios {
         /**
          * \param[in] UUIDs Primitives to apply psudocolor mapping
          * \param[in] primitive_data Label of primitive data for mapping
-         * \param[in] colormap Label of a Helios colormap (e.g., "hot", "cool", "rainbow", "lava")
+         * \param[in] colormap Label of a Helios colormap (see \ref Context::generateColormap(const std::string &, uint) for valid names)
          * \param[in] Ncolors Number of discrete colors in color mapping
          * \param[in] data_min Minimum data value to clip colormap
          * \param[in] data_max Maximum data value to clip colormap
@@ -9004,23 +9011,38 @@ namespace helios {
          */
         std::vector<std::string> generateTexturesFromColormap(const std::string &texturefile, const std::vector<RGBcolor> &colormap_data);
 
+        //! Get the names of all predefined Helios colormaps
+        /**
+         * \return Colormap names accepted by \ref Context::generateColormap(const std::string &, uint) and \ref Context::getColormapControlPoints(): "hot", "cool", "lava", "rainbow", "parula", "gray", "green", "lines", and "algae".
+         */
+        [[nodiscard]] static std::vector<std::string> getColormapNames();
+
+        //! Get the control points that define a predefined Helios colormap
+        /**
+         * A colormap is defined by a set of colors placed at normalized positions between 0 and 1, with colors linearly interpolated between them. These control points are the single definition of each named colormap, and are also used by the visualizer plugin.
+         * \param[in] colormap Name of the colormap (see \ref Context::getColormapNames()).
+         * \param[out] colors Colors of the control points.
+         * \param[out] positions Normalized positions of the control points, in increasing order from 0 to 1.
+         */
+        static void getColormapControlPoints(const std::string &colormap, std::vector<RGBcolor> &colors, std::vector<float> &positions);
+
         //! Generates a colormap with a specified number of colors based on the selected colormap type
         /**
-         * \param[in] colormap The name of the colormap to generate (e.g., "hot", "cool", "lava", etc.).
-         * \param[in] Ncolors The desired number of colors in the output colormap.
+         * \param[in] colormap The name of the colormap to generate (see \ref Context::getColormapNames() for valid names).
+         * \param[in] Ncolors The desired number of colors in the output colormap. Must be at least 2.
          * \return A vector of RGBcolor objects representing the generated colormap.
          */
-        std::vector<RGBcolor> generateColormap(const std::string &colormap, uint Ncolors);
+        static std::vector<RGBcolor> generateColormap(const std::string &colormap, uint Ncolors);
 
         //! Generates a colormap of interpolated colors based on input color table and fractions.
         /**
          * \param[in] ctable A vector of RGB colors defining the input color points for interpolation.
          * \param[in] cfrac A vector of fractional values corresponding to each color in the color table, must match the size of ctable.
-         * \param[in] Ncolors Desired number of output colors in the generated colormap. Must be greater than 0.
+         * \param[in] Ncolors Desired number of output colors in the generated colormap. Must be at least 2.
          * \return A vector of RGB colors representing the generated colormap.
-         * \note The input vectors ctable and cfrac must have the same size, and neither can be empty. If the requested Ncolors exceeds the internal limit, it will be truncated to 9999, with a warning issued.
+         * \note The input vectors ctable and cfrac must have the same size, and neither can be empty.
          */
-        std::vector<RGBcolor> generateColormap(const std::vector<helios::RGBcolor> &ctable, const std::vector<float> &cfrac, uint Ncolors);
+        static std::vector<RGBcolor> generateColormap(const std::vector<helios::RGBcolor> &ctable, const std::vector<float> &cfrac, uint Ncolors);
 
         // ---------- Template method implementations for data type consistency ---------- //
 

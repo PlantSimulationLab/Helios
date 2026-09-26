@@ -354,6 +354,9 @@ void OptiX6Backend::initialize() {
 
     // Radiation energy buffers
     addBuffer("radiation_in", radiation_in_RTbuffer, radiation_in_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
+    addBuffer("radiation_in_top", radiation_in_top_RTbuffer, radiation_in_top_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
+    RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "face_absorption_enabled", &face_absorption_enabled_RTvariable));
+    RT_CHECK_ERROR(rtVariableSet1ui(face_absorption_enabled_RTvariable, 0));
     addBuffer("radiation_out_top", radiation_out_top_RTbuffer, radiation_out_top_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("radiation_out_bottom", radiation_out_bottom_RTbuffer, radiation_out_bottom_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("smoothing_vertex_indices", smoothing_vertex_indices_RTbuffer, smoothing_vertex_indices_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_INT, 1);
@@ -864,7 +867,23 @@ void OptiX6Backend::getWhiteReferenceResults(std::vector<float> &white_reference
     white_reference_bottom = getOptiXbufferData(white_reference_bottom_cam_RTbuffer);
 }
 
-void OptiX6Backend::zeroRadiationBuffers(size_t launch_band_count) {
+void OptiX6Backend::getRadiationInTopResults(std::vector<float> &radiation_in_top) {
+    if (!is_initialized) {
+        helios_runtime_error("ERROR (OptiX6Backend::getRadiationInTopResults): Backend not initialized.");
+    }
+    if (!face_absorption_enabled) {
+        helios_runtime_error("ERROR (OptiX6Backend::getRadiationInTopResults): Face absorption tracking was not enabled by the last zeroRadiationBuffers() call, so the absorbed radiation that arrived on the top face was not recorded.");
+    }
+    radiation_in_top = getOptiXbufferData(radiation_in_top_RTbuffer);
+}
+
+size_t OptiX6Backend::getRadiationInTopBufferSize() const {
+    RTsize allocated_size = 0;
+    RT_CHECK_ERROR(rtBufferGetSize1D(radiation_in_top_RTbuffer, &allocated_size));
+    return allocated_size;
+}
+
+void OptiX6Backend::zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption) {
     if (!is_initialized) {
         helios_runtime_error("ERROR (OptiX6Backend::zeroRadiationBuffers): Backend not initialized.");
     }
@@ -922,6 +941,13 @@ void OptiX6Backend::zeroRadiationBuffers(size_t launch_band_count) {
     if (current_band_count > 0) {
         zeroBuffer1D(Rsky_RTbuffer, current_band_count);
     }
+
+    // Absorbed radiation that arrived on the top face [primitive][launch band]. Without face absorption tracking the programs skip the write, so it is shrunk to a
+    // one-element placeholder.
+    const size_t radiation_in_top_size = current_primitive_count * launch_band_count;
+    face_absorption_enabled = track_face_absorption && radiation_in_top_size > 0;
+    zeroBuffer1D(radiation_in_top_RTbuffer, face_absorption_enabled ? radiation_in_top_size : 1);
+    RT_CHECK_ERROR(rtVariableSet1ui(face_absorption_enabled_RTvariable, face_absorption_enabled ? 1 : 0));
 }
 
 void OptiX6Backend::zeroScatterBuffers() {
@@ -1831,7 +1857,6 @@ void OptiX6Backend::sourcesToBuffers(const std::vector<RayTracingSource> &source
     std::vector<helios::vec2> widths;
     std::vector<helios::vec3> rotations;
     std::vector<uint> types;
-    std::vector<float> fluxes;
     std::vector<float> fluxes_cam;
 
     for (const auto &source: sources) {
@@ -1840,10 +1865,7 @@ void OptiX6Backend::sourcesToBuffers(const std::vector<RayTracingSource> &source
         rotations.push_back(source.rotation);
         types.push_back(source.type);
 
-        // Flatten flux arrays
-        for (float flux: source.fluxes) {
-            fluxes.push_back(flux);
-        }
+        // Flatten camera-weighted flux array
         for (float flux: source.fluxes_cam) {
             fluxes_cam.push_back(flux);
         }
@@ -1853,7 +1875,9 @@ void OptiX6Backend::sourcesToBuffers(const std::vector<RayTracingSource> &source
     initializeBuffer1Dfloat2(source_widths_RTbuffer, widths);
     initializeBuffer1Dfloat3(source_rotations_RTbuffer, rotations);
     initializeBuffer1Dui(source_types_RTbuffer, types);
-    initializeBuffer1Df(source_fluxes_RTbuffer, fluxes);
+    // source_fluxes is indexed [source][launched band] and is uploaded for each launch by uploadSourceFluxes(). The per-source fluxes here
+    // are for every band in the model, so uploading them would hand the launched bands other bands' fluxes whenever the sources are
+    // updated after the launch's fluxes (as runBand() does to compute camera-weighted fluxes).
     initializeBuffer1Df(source_fluxes_cam_RTbuffer, fluxes_cam);
 }
 

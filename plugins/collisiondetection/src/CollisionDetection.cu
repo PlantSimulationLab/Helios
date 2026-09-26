@@ -156,9 +156,11 @@ __device__ __forceinline__ bool rayTriangleIntersect(const float3 &ray_origin, c
     // Begin calculating determinant - also used to calculate u parameter
     float3 h = make_float3(ray_direction.y * edge2.z - ray_direction.z * edge2.y, ray_direction.z * edge2.x - ray_direction.x * edge2.z, ray_direction.x * edge2.y - ray_direction.y * edge2.x);
 
-    // If determinant is near zero, ray lies in plane of triangle
+    // If determinant is near zero, ray lies in plane of triangle. The determinant scales with the triangle's area, so it is compared against the normal's
+    // length: the test is then on the cosine between ray and normal alone, and a millimetre-scale triangle is not mistaken for a parallel one.
     float a = edge1.x * h.x + edge1.y * h.y + edge1.z * h.z;
-    if (a > -EPSILON && a < EPSILON) {
+    const float3 triangle_normal = cross(edge1, edge2);
+    if (a * a <= EPSILON * EPSILON * dot(triangle_normal, triangle_normal)) {
         return false; // This ray is parallel to this triangle.
     }
 
@@ -251,7 +253,10 @@ __device__ __forceinline__ bool rayTriangleIntersectCPU(const float3 &origin, co
     float q = g * i - e * k, s = e * j - f * i;
 
     float denom = a * m + b * q + c * s;
-    if (fabsf(denom) < EPSILON) {
+    // Compared against the triangle normal's length (s is its x-component) so the parallel test depends on the ray's angle, not the triangle's size.
+    const float normal_y = i * b - a * j;
+    const float normal_z = a * f - e * b;
+    if (denom * denom <= EPSILON * EPSILON * (s * s + normal_y * normal_y + normal_z * normal_z)) {
         return false; // Ray is parallel to triangle
     }
 

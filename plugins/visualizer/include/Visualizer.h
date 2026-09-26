@@ -523,7 +523,11 @@ public:
         //! Custom colormap
         COLORMAP_CUSTOM = 6,
         //! "Lines" colormap with distinct colors
-        COLORMAP_LINES = 7
+        COLORMAP_LINES = 7,
+        //! "Algae" colormap from cmocean (light to dark green)
+        COLORMAP_ALGAE = 8,
+        //! "Green" colormap (black to green)
+        COLORMAP_GREEN = 9
     };
 
     //! Set camera position
@@ -1197,7 +1201,7 @@ public:
     //! Set the colormap used in Colorbar/visualization based on pre-defined colormaps
     /**
      * \param[in] colormap_name Name of a colormap.
-     * \note Valid colormaps are "COLORMAP_HOT", "COLORMAP_COOL", "COLORMAP_LAVA", "COLORMAP_RAINBOW", "COLORMAP_PARULA", "COLORMAP_GRAY", "COLORMAP_LINES".
+     * \note Valid colormaps are "COLORMAP_HOT", "COLORMAP_COOL", "COLORMAP_LAVA", "COLORMAP_RAINBOW", "COLORMAP_PARULA", "COLORMAP_GRAY", "COLORMAP_LINES", "COLORMAP_ALGAE", "COLORMAP_GREEN". The colormaps are defined by \ref helios::Context::getColormapControlPoints(), and so are identical to those of \ref helios::Context::colorPrimitiveByDataPseudocolor().
      */
     void setColormap(Ctable colormap_name);
 
@@ -2329,27 +2333,6 @@ private:
 
     //! Current colormap used in visualization
     Colormap colormap_current;
-
-    //! "hot" colormap used in visualization
-    Colormap colormap_hot;
-
-    //! "cool" colormap used in visualization
-    Colormap colormap_cool;
-
-    //! "lava" colormap used in visualization
-    Colormap colormap_lava;
-
-    //! "rainbow" colormap used in visualization
-    Colormap colormap_rainbow;
-
-    //! "parula" colormap used in visualization
-    Colormap colormap_parula;
-
-    //! "gray" colormap used in visualization
-    Colormap colormap_gray;
-
-    //! "lines" colormap used in visualization
-    Colormap colormap_lines;
 
     bool message_flag;
 

@@ -2598,7 +2598,13 @@ bool CollisionDetection::rayPrimitiveIntersection(const vec3 &origin, const vec3
                 float q = g * i - e * k, s = e * j - f * i;
 
                 float denom = a * m + b * q + c * s;
-                if (std::abs(denom) < 1e-8f) {
+                // The determinant is direction · ((v0-v1) × (v0-v2)), so it scales with the triangle's area; test it against the normal's length so the
+                // parallel check depends only on the ray's angle to the triangle, not on the triangle's size. s is the normal's x-component.
+                const float normal_y = i * b - a * j;
+                const float normal_z = a * f - e * b;
+                const float normal_magnitude_squared = s * s + normal_y * normal_y + normal_z * normal_z;
+                constexpr float parallel_cosine = 1e-5f;
+                if (denom * denom <= parallel_cosine * parallel_cosine * normal_magnitude_squared) {
                     return false; // Ray is parallel to triangle
                 }
 

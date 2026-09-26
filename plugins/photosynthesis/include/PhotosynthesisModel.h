@@ -912,7 +912,7 @@ public:
     //! Add optional output primitive data values to the Context
     /**
      * \param[in] label Name of primitive data. Available labels for the Farquhar model: "Ci" (intercellular CO2), "limitation_state" (0=Rubisco-limited, 1=electron transport-limited), "Gamma_CO2" (CO2 compensation point), "electron_transport_ratio"
-     * (J/Jmax ratio, useful for fluorescence calculations). Additional labels for the C4 model: "Ci", "limitation_state" (1=enzyme-limited, 2=electron-transport-limited), "Cm" (mesophyll cytosolic CO2), "Vp" (PEP carboxylation rate).
+     * (relative light saturation Ja/Je of van der Tol et al. 2014: electron transport used by carbon metabolism divided by its light-limited potential; 1 in the dark and falling as light saturates photosynthesis; drives the RadiationModel SIF fluorescence yield). Additional labels for the C4 model: "Ci", "limitation_state" (1=enzyme-limited, 2=electron-transport-limited), "Cm" (mesophyll cytosolic CO2), "Vp" (PEP carboxylation rate), "electron_transport_ratio".
      */
     void optionalOutputPrimitiveData(const char *label);
 
@@ -978,9 +978,9 @@ private:
 
     float evaluateEmpiricalModel(const EmpiricalModelCoefficients &params, float i_PAR, float TL, float CO2, float gM);
 
-    float evaluateFarquharModel(const FarquharModelCoefficients &params, float i_PAR, float TL, float CO2, float gM, float &Ci, float &Gamma, int &limitation_state, int &TPU_flag, float &J_over_Jmax, helios::WarningAggregator &warnings);
+    float evaluateFarquharModel(const FarquharModelCoefficients &params, float i_PAR, float TL, float CO2, float gM, float &Ci, float &Gamma, int &limitation_state, int &TPU_flag, float &electron_transport_ratio, helios::WarningAggregator &warnings);
 
-    float evaluateC4Model(const C4ModelCoefficients &params, float i_PAR, float TL, float CO2, float gM, float &Ci, float &Cm, float &Vp, int &limitation_state, helios::WarningAggregator &warnings);
+    float evaluateC4Model(const C4ModelCoefficients &params, float i_PAR, float TL, float CO2, float gM, float &Ci, float &Cm, float &Vp, int &limitation_state, float &electron_transport_ratio, helios::WarningAggregator &warnings);
 
     float evaluateCi_Empirical(const EmpiricalModelCoefficients &params, float Ci, float CO2, float fL, float fT, float Rd, float gM) const;
 

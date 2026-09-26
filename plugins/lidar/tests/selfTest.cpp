@@ -2267,6 +2267,21 @@ DOCTEST_TEST_CASE("LiDAR TreeQSM Colormap Loading Test") {
     Context context_colormap3;
     std::string invalid_colormap = "invalid_colormap_name";
     DOCTEST_CHECK_THROWS(lidar.loadTreeQSMColormap(&context_colormap3, "plugins/lidar/data/cylinder_tree_QSM_test.txt", radial_subdivisions, invalid_colormap));
+
+    // The error for an invalid colormap name lists every colormap the Context actually provides
+    std::string error_message;
+    {
+        capture_cerr cerr_buffer;
+        capture_cout cout_buffer;
+        try {
+            lidar.loadTreeQSMColormap(&context_colormap3, "plugins/lidar/data/cylinder_tree_QSM_test.txt", radial_subdivisions, invalid_colormap);
+        } catch (const std::runtime_error &e) {
+            error_message = e.what();
+        }
+    }
+    for (const std::string &name: Context::getColormapNames()) {
+        DOCTEST_CHECK_MESSAGE(error_message.find(name) != std::string::npos, "Error message does not list colormap '" << name << "': " << error_message);
+    }
 }
 
 DOCTEST_TEST_CASE("LiDAR Collision Detection Integration Test") {
@@ -8230,6 +8245,547 @@ DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Timestamp and Row/Column Paths Synthe
     }
 }
 
+DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Timestamp Path Rejects Timestamps Rounded Coarser Than the Pulse Clock") {
+    // Timestamps rounded on export (a float32 round-trip, say) step more coarsely than the scanner fires, so several
+    // pulses share one time. The pulse clock recovered from them is the rounding step, and every cell assignment made
+    // on it is wrong. The returns sharing a time point in different directions, which a single pulse's returns cannot,
+    // so the gap-fill must refuse rather than synthesize misses on a clock that does not exist.
+    GenerativeGrid g{30, 48, 0.05, 0.95 * M_PI, 0.0, 1.5 * M_PI, 1.0e-3, 0.0};
+    const double gps_epoch = 1.7e9, gps_period = 1.0e-4;
+    const int k = 11; // 2^-11 s = 4.9 pulse periods
+    auto build = [&](LiDARcloud &lidar, bool rounded) {
+        lidar.disableMessages();
+        ScanMetadata scan(make_vec3(0, 0, 0), g.Ntheta, g.theta_min, g.theta_max, g.Nphi, g.phi_min, g.phi_max, 0.0f, 0.0f, 0.0f, 0.0f, {});
+        lidar.addScan(scan);
+        for (int col = 0; col < g.Nphi; col++) {
+            for (int row = 0; row < g.Ntheta; row++) {
+                if ((row * 7 + col * 3) % 11 == 0) {
+                    continue;
+                }
+                SphericalCoord dir = g.direction(row, col);
+                vec3 xyz = helios::sphere2cart(make_SphericalCoord(10.f, dir.elevation, dir.azimuth));
+                double t = gps_epoch + gps_period * double(col * g.Ntheta + row);
+                if (rounded) {
+                    t = std::ldexp(std::round(std::ldexp(t, k)), -k);
+                }
+                std::map<std::string, double> data;
+                data["timestamp"] = t;
+                lidar.addHitPoint(0, xyz, dir, make_RGBcolor(1, 0, 0), data);
+            }
+        }
+    };
+    LiDARcloud exact, rounded;
+    build(exact, false);
+    build(rounded, true);
+    const size_t Nreturns = exact.getHitCount();
+    const size_t filled_exact = exact.gapfillMissesCount(0, false, false);
+    DOCTEST_CHECK(filled_exact == size_t(g.Ntheta * g.Nphi) - Nreturns);
+
+    std::string message;
+    try {
+        static_cast<void>(rounded.gapfillMissesCount(0, false, false));
+    } catch (const std::runtime_error &e) {
+        message = e.what();
+    }
+    DOCTEST_CHECK(message.find("resolution") != std::string::npos);
+    DOCTEST_CHECK(message.find("deleteHitData(\"timestamp\")") != std::string::npos);
+    DOCTEST_CHECK(rounded.getVirtualMissCount() == 0);
+}
+
+DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Moving Scan Rejects Rounded Timestamps") {
+    // A moving scan's misses are placed from the platform pose at their pulse's time, so a moving scan cannot be
+    // gap-filled without a pulse clock at all: rounded timestamps are an error with no row/column way around it.
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    const uint Ntheta = 8, Nphi = 60;
+    const float H = 6.0f, v = 3.0f;
+    ScanMetadata scan(make_vec3(0, 0, H), Ntheta, 0.93f * float(M_PI), float(M_PI), Nphi, 0.0f, 2.0f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, std::vector<std::string>());
+    const float pulseRate = float(Ntheta * Nphi);
+    const double t_total = double(Ntheta * Nphi) / double(pulseRate);
+    std::vector<double> traj_t;
+    std::vector<vec3> traj_pos, traj_rpy;
+    for (int s = 0; s < 20; s++) {
+        const double tk = t_total * double(s) / 19.0;
+        traj_t.push_back(tk);
+        traj_pos.push_back(make_vec3(float(v * tk), 0.f, H));
+        traj_rpy.push_back(make_vec3(0, 0, 0));
+    }
+    lidar.addScanMoving(scan, traj_t, traj_pos, traj_rpy, make_vec3(0, 0, 0), make_vec3(0, 0, 0), pulseRate, 0.0);
+    lidar.syntheticScan(&context, false, false);
+    DOCTEST_REQUIRE(lidar.getHitCount() > 20);
+    for (uint i = 0; i < lidar.getHitCount(); i++) {
+        lidar.setHitData(i, "timestamp", std::ldexp(std::round(std::ldexp(lidar.getHitData(i, "timestamp"), 6)), -6)); // 1/64 s = 7.5 pulses
+    }
+    std::string message;
+    try {
+        static_cast<void>(lidar.gapfillMissesCount(0, false, false));
+    } catch (const std::runtime_error &e) {
+        message = e.what();
+    }
+    DOCTEST_CHECK(message.find("resolution") != std::string::npos);
+    DOCTEST_CHECK(message.find("moving") != std::string::npos);
+}
+
+DOCTEST_TEST_CASE("LiDAR getNominalScanGridCell Inverts the Synthetic Scanner's Raster") {
+    // The cell each synthetic pulse was fired at is recorded in its timestamp (ordinal = column*Ntheta + row, t0 = 0,
+    // period = 1 for a static scan). The helper must recover it from the return's position alone, through the scan's
+    // tilt, azimuth offset and the head's continuous rotation during each column.
+    Context context;
+    context.addTile(make_vec3(0, 0, 0), make_vec2(30, 30), make_SphericalCoord(0, 0), make_int2(3, 3));
+    const uint Ntheta = 40, Nphi = 60;
+    ScanMetadata scan(make_vec3(0, 0, 2), Ntheta, 0.6f * float(M_PI), 0.95f * float(M_PI), Nphi, 0.0f, 1.5f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, {}, 0.03f, -0.02f, 0.4f);
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    lidar.addScan(scan);
+    lidar.syntheticScan(&context, false, false);
+    DOCTEST_REQUIRE(lidar.getHitCount() > Ntheta * Nphi / 2);
+    size_t wrong = 0;
+    for (uint i = 0; i < lidar.getHitCount(); i++) {
+        const long long ordinal = std::llround(lidar.getHitData(i, "timestamp"));
+        const int2 cell = lidar.getNominalScanGridCell(0, lidar.getHitXYZ(i));
+        if (cell.x != int(ordinal % Ntheta) || cell.y != int(ordinal / Ntheta)) {
+            wrong++;
+        }
+    }
+    DOCTEST_CHECK(wrong == 0);
+
+    // A point outside the declared raster maps to a cell outside it rather than being clamped onto its edge.
+    const int2 above = lidar.getNominalScanGridCell(0, make_vec3(0, 0, 10));
+    DOCTEST_CHECK(above.x < 0);
+
+    DOCTEST_CHECK_THROWS(static_cast<void>(lidar.getNominalScanGridCell(1, make_vec3(1, 0, 0))));
+}
+
+DOCTEST_TEST_CASE("LiDAR getNominalScanGridCell Rejects Moving Scans") {
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 6), 8, 0.93f * float(M_PI), float(M_PI), 60, 0.0f, 2.0f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, std::vector<std::string>());
+    std::vector<double> traj_t = {0.0, 1.0};
+    std::vector<vec3> traj_pos = {make_vec3(0, 0, 6), make_vec3(3, 0, 6)}, traj_rpy = {make_vec3(0, 0, 0), make_vec3(0, 0, 0)};
+    lidar.addScanMoving(scan, traj_t, traj_pos, traj_rpy, make_vec3(0, 0, 0), make_vec3(0, 0, 0), 480.f, 0.0);
+    DOCTEST_CHECK_THROWS(static_cast<void>(lidar.getNominalScanGridCell(0, make_vec3(1, 0, 0))));
+}
+
+DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Rounded Timestamps Gap-Fill Correctly Through getNominalScanGridCell") {
+    // The workaround the rounded-timestamp error points to: give the returns their row/column cells from
+    // getNominalScanGridCell() and gap-fill through the row/column path. The misses must land exactly where the same
+    // scan's misses land when its timestamps are exact.
+    Context context;
+    context.addTile(make_vec3(0, 0, 0), make_vec2(30, 30), make_SphericalCoord(0, 0), make_int2(3, 3));
+    context.addTile(make_vec3(1, 1, 1.2f), make_vec2(1.5f, 1.f), make_SphericalCoord(0, 0), make_int2(2, 2));
+    const uint Ntheta = 40, Nphi = 60;
+    ScanMetadata scan(make_vec3(0, 0, 2), Ntheta, 0.45f * float(M_PI), 0.95f * float(M_PI), Nphi, 0.0f, 1.5f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, {}, 0.03f, -0.02f, 0.4f);
+    LiDARcloud exact;
+    exact.disableMessages();
+    exact.addScan(scan);
+    exact.syntheticScan(&context, false, false);
+    const uint Nreturns = exact.getHitCount();
+    DOCTEST_REQUIRE(Nreturns < Ntheta * Nphi); // the raster has empty (sky) cells to fill
+
+    LiDARcloud rounded;
+    rounded.disableMessages();
+    rounded.addScan(scan);
+    for (uint i = 0; i < Nreturns; i++) {
+        const vec3 xyz = exact.getHitXYZ(i);
+        const int2 cell = exact.getNominalScanGridCell(0, xyz);
+        std::map<std::string, double> data;
+        data["timestamp"] = 8.0 * std::round(exact.getHitData(i, "timestamp") / 8.0); // 8 pulses share each time
+        data["row"] = cell.x;
+        data["column"] = cell.y;
+        rounded.addHitPoint(0, xyz, exact.getHitRaydir(i), data);
+    }
+
+    const size_t filled_exact = exact.gapfillMissesCount(0, false, false);
+    const size_t filled_rounded = rounded.gapfillMissesCount(0, false, false);
+    DOCTEST_CHECK(filled_exact == size_t(Ntheta * Nphi) - Nreturns);
+    DOCTEST_CHECK(filled_rounded == filled_exact);
+
+    auto miss_directions = [](LiDARcloud &lidar) {
+        std::map<std::pair<int, int>, vec3> by_cell;
+        std::vector<int32_t> row, col, is_miss;
+        std::vector<vec3> xyz;
+        lidar.getHitDataColumn("row", row, int32_t(-1));
+        lidar.getHitDataColumn("column", col, int32_t(-1));
+        lidar.getHitDataColumn("is_miss", is_miss, int32_t(-1));
+        lidar.getHitXYZColumn(xyz);
+        const vec3 origin = lidar.getScanOrigin(0);
+        for (size_t i = 0; i < xyz.size(); i++) {
+            if (is_miss[i] == 1) {
+                by_cell[{row[i], col[i]}] = xyz[i] - origin;
+            }
+        }
+        return by_cell;
+    };
+    const auto misses_exact = miss_directions(exact);
+    const auto misses_rounded = miss_directions(rounded);
+    DOCTEST_REQUIRE(misses_exact.size() == filled_exact);
+    DOCTEST_REQUIRE(misses_rounded.size() == filled_rounded);
+    const double half_step = 0.5 * std::min(0.5 * M_PI / double(Ntheta - 1), 1.5 * M_PI / double(Nphi - 1));
+    size_t unmatched = 0;
+    double max_error = 0.0;
+    for (const auto &entry: misses_exact) {
+        auto it = misses_rounded.find(entry.first);
+        if (it == misses_rounded.end()) {
+            unmatched++;
+            continue;
+        }
+        max_error = std::max(max_error, angularError(cart2sphere(entry.second), cart2sphere(it->second)));
+    }
+    DOCTEST_CHECK(unmatched == 0);
+    DOCTEST_CHECK(max_error < half_step);
+}
+
+DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Static Scan Without Timestamps or Row/Column Gap-Fills From Directions") {
+    // A static raster scan whose returns carry neither a pulse clock nor scan-grid indices -- the state a scan with
+    // unusable timestamps is left in once they are removed -- used to be rejected outright. Each return's cell follows
+    // from its direction on the declared raster, through the scan's tilt and azimuth offset, so its misses must land
+    // exactly where the same scan's misses land when its returns carry exact per-pulse timestamps.
+    Context context;
+    context.addTile(make_vec3(0, 0, 0), make_vec2(30, 30), make_SphericalCoord(0, 0), make_int2(3, 3));
+    context.addTile(make_vec3(1, 1, 1.2f), make_vec2(1.5f, 1.f), make_SphericalCoord(0, 0), make_int2(2, 2));
+    const uint Ntheta = 40, Nphi = 60;
+    ScanMetadata scan(make_vec3(0, 0, 2), Ntheta, 0.45f * float(M_PI), 0.95f * float(M_PI), Nphi, 0.0f, 1.5f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, {}, 0.03f, -0.02f, 0.4f);
+    LiDARcloud exact;
+    exact.disableMessages();
+    exact.addScan(scan);
+    exact.syntheticScan(&context, false, false);
+    const uint Nreturns = exact.getHitCount();
+    DOCTEST_REQUIRE(Nreturns < Ntheta * Nphi); // the raster has empty (sky) cells to fill
+
+    LiDARcloud bare;
+    bare.disableMessages();
+    bare.addScan(scan);
+    for (uint i = 0; i < Nreturns; i++) {
+        bare.addHitPoint(0, exact.getHitXYZ(i), exact.getHitRaydir(i));
+    }
+
+    const size_t filled_exact = exact.gapfillMissesCount(0, false, false);
+    size_t filled_bare = 0;
+    DOCTEST_CHECK_NOTHROW(filled_bare = bare.gapfillMissesCount(0, false, false));
+    DOCTEST_CHECK(filled_exact == size_t(Ntheta * Nphi) - Nreturns);
+    DOCTEST_CHECK(filled_bare == filled_exact);
+
+    auto miss_directions = [](LiDARcloud &lidar) {
+        std::map<std::pair<int, int>, vec3> by_cell;
+        std::vector<int32_t> row, col, is_miss;
+        std::vector<vec3> xyz;
+        lidar.getHitDataColumn("row", row, int32_t(-1));
+        lidar.getHitDataColumn("column", col, int32_t(-1));
+        lidar.getHitDataColumn("is_miss", is_miss, int32_t(-1));
+        lidar.getHitXYZColumn(xyz);
+        const vec3 origin = lidar.getScanOrigin(0);
+        for (size_t i = 0; i < xyz.size(); i++) {
+            if (is_miss[i] == 1) {
+                by_cell[{row[i], col[i]}] = xyz[i] - origin;
+            }
+        }
+        return by_cell;
+    };
+    const auto misses_exact = miss_directions(exact);
+    const auto misses_bare = miss_directions(bare);
+    DOCTEST_REQUIRE(misses_exact.size() == filled_exact);
+    DOCTEST_REQUIRE(misses_bare.size() == filled_bare);
+    const double half_step = 0.5 * std::min(0.5 * M_PI / double(Ntheta - 1), 1.5 * M_PI / double(Nphi - 1));
+    size_t unmatched = 0;
+    double max_error = 0.0;
+    for (const auto &entry: misses_exact) {
+        auto it = misses_bare.find(entry.first);
+        if (it == misses_bare.end()) {
+            unmatched++;
+            continue;
+        }
+        max_error = std::max(max_error, angularError(cart2sphere(entry.second), cart2sphere(it->second)));
+    }
+    DOCTEST_CHECK(unmatched == 0);
+    DOCTEST_CHECK(max_error < half_step);
+
+    // The misses carry no timestamp, so the returns carry none either and each hit is its own beam.
+    DOCTEST_CHECK(bare.getHitDataColumnIndex("timestamp") < 0);
+}
+
+DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Direction Path Rejects a Declared Raster That Is Not the Scanner's") {
+    // Without timestamps or row/column indices, gapfillMisses() takes every return's cell, and every miss's direction,
+    // from the declared raster. Each way the declaration can be wrong must be caught from how the returns fall on it,
+    // and a raster that matches the scanner must pass even with beam-pointing noise.
+    Context context;
+    context.addTile(make_vec3(0, 0, 0), make_vec2(30, 30), make_SphericalCoord(0, 0), make_int2(3, 3));
+    context.addTile(make_vec3(1, 1, 1.2f), make_vec2(1.5f, 1.f), make_SphericalCoord(0, 0), make_int2(2, 2));
+    const uint Ntheta = 40, Nphi = 60;
+    const float thetaMin = 0.45f * float(M_PI), thetaMax = 0.95f * float(M_PI), phiMax = 1.5f * float(M_PI);
+    const float dtheta = (thetaMax - thetaMin) / float(Ntheta - 1);
+
+    // Fire `fired`, then gap-fill its bare returns declared as `declared`; returns the error message (empty if none).
+    auto gapfill_as = [&](ScanMetadata fired, ScanMetadata declared, size_t &returns) -> std::string {
+        LiDARcloud scanner;
+        scanner.disableMessages();
+        scanner.addScan(fired);
+        scanner.syntheticScan(&context, false, false);
+        returns = scanner.getHitCount();
+        LiDARcloud bare;
+        bare.disableMessages();
+        bare.addScan(declared);
+        for (uint i = 0; i < scanner.getHitCount(); i++) {
+            bare.addHitPoint(0, scanner.getHitXYZ(i), scanner.getHitRaydir(i));
+        }
+        std::string message;
+        try {
+            static_cast<void>(bare.gapfillMissesCount(0, false, false));
+        } catch (const std::runtime_error &e) {
+            message = e.what();
+        }
+        return message;
+    };
+    const ScanMetadata fired(make_vec3(0, 0, 2), Ntheta, thetaMin, thetaMax, Nphi, 0.0f, phiMax, 0.0f, 0.0f, 0.0f, 0.0f, {}, 0.03f, -0.02f, 0.4f);
+    size_t returns = 0;
+
+    // A matching raster passes, with beam-pointing noise of a tenth of a row step.
+    {
+        const ScanMetadata noisy(make_vec3(0, 0, 2), Ntheta, thetaMin, thetaMax, Nphi, 0.0f, phiMax, 0.0f, 0.0f, 0.0f, 0.1f * dtheta, {}, 0.03f, -0.02f, 0.4f);
+        const std::string message = gapfill_as(noisy, noisy, returns);
+        DOCTEST_REQUIRE(returns >= 200); // enough returns for the checks to run
+        DOCTEST_CHECK(message.empty());
+    }
+    // A step twice the scanner's (half the rows over the same range) leaves the returns off their cell centres, and the
+    // error names the scanner's raster.
+    {
+        const ScanMetadata coarse(make_vec3(0, 0, 2), Ntheta / 2, thetaMin, thetaMax, Nphi, 0.0f, phiMax, 0.0f, 0.0f, 0.0f, 0.0f, {}, 0.03f, -0.02f, 0.4f);
+        const std::string message = gapfill_as(fired, coarse, returns);
+        DOCTEST_CHECK(message.find("do not lie on its") != std::string::npos);
+        DOCTEST_CHECK(message.find("about 40 rows rather than 20") != std::string::npos);
+    }
+    // A step half the scanner's keeps every return on a cell centre, but only every other row holds any.
+    {
+        const ScanMetadata fine(make_vec3(0, 0, 2), 2 * Ntheta - 1, thetaMin, thetaMax, Nphi, 0.0f, phiMax, 0.0f, 0.0f, 0.0f, 0.0f, {}, 0.03f, -0.02f, 0.4f);
+        const std::string message = gapfill_as(fired, fine, returns);
+        DOCTEST_CHECK(message.find("finer than the scanner's") != std::string::npos);
+        DOCTEST_CHECK(message.find("multiples of 2") != std::string::npos);
+        DOCTEST_CHECK(message.find("about 40 rows") != std::string::npos);
+    }
+    // A tilt the declaration leaves out shifts the returns off their cells by an amount that varies with azimuth.
+    {
+        const ScanMetadata tilted(make_vec3(0, 0, 2), Ntheta, thetaMin, thetaMax, Nphi, 0.0f, phiMax, 0.0f, 0.0f, 0.0f, 0.0f, {}, 0.08f, 0.f, 0.4f);
+        const ScanMetadata level(make_vec3(0, 0, 2), Ntheta, thetaMin, thetaMax, Nphi, 0.0f, phiMax, 0.0f, 0.0f, 0.0f, 0.0f, {}, 0.f, 0.f, 0.4f);
+        const std::string message = gapfill_as(tilted, level, returns);
+        DOCTEST_CHECK(message.find("do not lie on its") != std::string::npos);
+    }
+    // An azimuth range declared ten columns past the scanner's, at the same step and size, puts every return exactly on a
+    // cell centre but ten columns earlier, so the returns of the first ten columns fall outside it. (A whole-row shift of
+    // the zenith range is not as clean: it also moves each column's head-rotation correction, which the check above sees.)
+    {
+        const float dphi = phiMax / float(Nphi - 1);
+        ScanMetadata level(make_vec3(0, 0, 2), Ntheta, thetaMin, thetaMax, Nphi, 0.0f, phiMax, 0.0f, 0.0f, 0.0f, 0.0f, {}, 0.f, 0.f, 0.4f);
+        ScanMetadata shifted(make_vec3(0, 0, 2), Ntheta, thetaMin, thetaMax, Nphi, 10.f * dphi, phiMax + 10.f * dphi, 0.0f, 0.0f, 0.0f, 0.0f, {}, 0.f, 0.f, 0.4f);
+        const std::string message = gapfill_as(level, shifted, returns);
+        DOCTEST_CHECK(message.find("lie outside its") != std::string::npos);
+        DOCTEST_CHECK(message.find("against 0 to 39 and 0 to 59") != std::string::npos);
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Scans That Cannot Be Placed by Direction Still Require a Clock") {
+    // A moving scan's misses are fired from the platform pose at their pulse's time, and a spinning multibeam scan has no
+    // uniform raster to bin directions onto, so neither can be gap-filled from bare returns.
+    {
+        LiDARcloud lidar;
+        lidar.disableMessages();
+        ScanMetadata scan(make_vec3(0, 0, 6), 8, 0.93f * float(M_PI), float(M_PI), 60, 0.0f, 2.0f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, std::vector<std::string>());
+        std::vector<double> traj_t = {0.0, 1.0};
+        std::vector<vec3> traj_pos = {make_vec3(0, 0, 6), make_vec3(3, 0, 6)}, traj_rpy = {make_vec3(0, 0, 0), make_vec3(0, 0, 0)};
+        lidar.addScanMoving(scan, traj_t, traj_pos, traj_rpy, make_vec3(0, 0, 0), make_vec3(0, 0, 0), 480.f, 0.0);
+        for (int i = 0; i < 4; i++) {
+            const vec3 xyz = make_vec3(0.2f * float(i), 0.1f, 0.f);
+            lidar.addHitPoint(0, xyz, cart2sphere(xyz - make_vec3(0, 0, 6)));
+        }
+        std::string message;
+        try {
+            static_cast<void>(lidar.gapfillMissesCount(0, false, false));
+        } catch (const std::runtime_error &e) {
+            message = e.what();
+        }
+        DOCTEST_CHECK(message.find("moving") != std::string::npos);
+        DOCTEST_CHECK(message.find("timestamp") != std::string::npos);
+    }
+    {
+        LiDARcloud lidar;
+        lidar.disableMessages();
+        ScanMetadata scan(make_vec3(0, 0, 2), std::vector<float>{1.6f, 1.8f, 2.0f}, 90, 0.0f, 2.0f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, std::vector<std::string>());
+        lidar.addScan(scan);
+        DOCTEST_REQUIRE(lidar.getScanPattern(0) == SCAN_PATTERN_SPINNING_MULTIBEAM);
+        for (int i = 0; i < 4; i++) {
+            const vec3 xyz = make_vec3(3.f, 0.2f * float(i), 0.f);
+            lidar.addHitPoint(0, xyz, cart2sphere(xyz - make_vec3(0, 0, 2)));
+        }
+        std::string message;
+        try {
+            static_cast<void>(lidar.gapfillMissesCount(0, false, false));
+        } catch (const std::runtime_error &e) {
+            message = e.what();
+        }
+        DOCTEST_CHECK(message.find("not a raster scan") != std::string::npos);
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR Beam Grouping - Rejects Rounded Timestamps on Returns Without Per-Pulse Columns") {
+    // Regression: the inversion's shared-timestamp guard ran only when the returns carried target_count or target_index,
+    // so a single-return import whose timestamps were rounded (8 pulses to a timestamp here) was inverted with every
+    // rounding step's pulses merged into one beam, without error. Returns that share a timestamp but point in different
+    // directions cannot be one pulse. With the per-pulse columns present, the same rounding must name them too.
+    Context context;
+    context.addTile(make_vec3(0, 0, 0), make_vec2(30, 30), make_SphericalCoord(0, 0), make_int2(3, 3));
+    const uint Ntheta = 40, Nphi = 60;
+    ScanMetadata scan(make_vec3(0, 0, 2), Ntheta, 0.6f * float(M_PI), 0.95f * float(M_PI), Nphi, 0.0f, 1.5f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, {});
+    LiDARcloud exact;
+    exact.disableMessages();
+    exact.addScan(scan);
+    exact.syntheticScan(&context, false, false);
+    const uint Nreturns = exact.getHitCount();
+    DOCTEST_REQUIRE(Nreturns > Ntheta * Nphi / 2);
+
+    for (bool per_pulse_columns: {false, true}) {
+        LiDARcloud rounded;
+        rounded.disableMessages();
+        rounded.addScan(scan);
+        for (uint i = 0; i < Nreturns; i++) {
+            std::map<std::string, double> data;
+            data["timestamp"] = 8.0 * std::round(exact.getHitData(i, "timestamp") / 8.0);
+            if (per_pulse_columns) {
+                data["target_index"] = 1; // exported as "return 1 of 1", as a rewritten LAS return number is
+                data["target_count"] = 1;
+            }
+            rounded.addHitPoint(0, exact.getHitXYZ(i), exact.getHitRaydir(i), data);
+        }
+        {
+            // The inversion needs misses; a recorded one on its own timestamp contradicts nothing.
+            const vec3 miss = make_vec3(0.f, 0.f, 20000.f);
+            std::map<std::string, double> data;
+            data["timestamp"] = 1.0e6;
+            data["is_miss"] = 1.0;
+            rounded.addHitPoint(0, miss, cart2sphere(miss), data);
+        }
+        rounded.addGridCell(make_vec3(3, 3, 0), make_vec3(4, 4, 1), 0.f);
+        rounded.calculateHitGridCell();
+
+        std::string message;
+        try {
+            rounded.calculateLeafArea(&context, 0.5f, 1, 0.05f);
+        } catch (const std::runtime_error &e) {
+            message = e.what();
+        }
+        DOCTEST_CHECK_FALSE(message.empty());
+        DOCTEST_CHECK(message.find("do not identify its pulses") != std::string::npos);
+        DOCTEST_CHECK(message.find("resolution is 8") != std::string::npos);
+        DOCTEST_CHECK(message.find("deleteHitData(\"timestamp\")") != std::string::npos);
+        DOCTEST_CHECK((message.find("deleteHitData(\"target_index\")") != std::string::npos) == per_pulse_columns);
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR deleteHitData Removes a Column Everywhere") {
+    Context context;
+    context.addTile(make_vec3(0, 0, 0), make_vec2(30, 30), make_SphericalCoord(0, 0), make_int2(3, 3));
+    const uint Ntheta = 20, Nphi = 30;
+    ScanMetadata scan(make_vec3(0, 0, 2), Ntheta, 0.45f * float(M_PI), 0.95f * float(M_PI), Nphi, 0.0f, 1.5f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, {});
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    lidar.addScan(scan);
+    lidar.syntheticScan(&context, false, false);
+    const uint Nreturns = lidar.getHitCount();
+    DOCTEST_REQUIRE(Nreturns > 2);
+    std::vector<float> distance_before;
+    lidar.getHitDataColumn("distance", distance_before);
+
+    DOCTEST_CHECK_THROWS(lidar.deleteHitData("no_such_label"));
+
+    // Misses report a reconstructed timestamp and gapfillMisses_code; removing either column removes it from them too.
+    DOCTEST_REQUIRE(lidar.gapfillMissesCount(0, false, true) > 0);
+    DOCTEST_REQUIRE(lidar.getHitCount() > Nreturns);
+    DOCTEST_REQUIRE(lidar.doesHitDataExist(lidar.getHitCount() - 1, "timestamp"));
+    lidar.deleteHitData("timestamp");
+    lidar.deleteHitData("gapfillMisses_code");
+    DOCTEST_CHECK(lidar.getHitDataColumnIndex("timestamp") < 0);
+    DOCTEST_CHECK(lidar.getHitDataColumnIndex("gapfillMisses_code") < 0);
+    DOCTEST_CHECK_FALSE(lidar.doesHitDataExist(0, "timestamp"));
+    DOCTEST_CHECK_FALSE(lidar.doesHitDataExist(lidar.getHitCount() - 1, "timestamp"));
+    DOCTEST_CHECK_FALSE(lidar.doesHitDataExist(lidar.getHitCount() - 1, "gapfillMisses_code"));
+    std::vector<double> timestamp;
+    lidar.getHitDataColumn("timestamp", timestamp, -1.0);
+    DOCTEST_CHECK(std::all_of(timestamp.begin(), timestamp.end(), [](double t) { return t == -1.0; }));
+
+    // Every other column keeps its values.
+    std::vector<float> distance_after;
+    lidar.getHitDataColumn("distance", distance_after);
+    DOCTEST_REQUIRE(distance_after.size() >= distance_before.size());
+    DOCTEST_CHECK(std::equal(distance_before.begin(), distance_before.end(), distance_after.begin()));
+    DOCTEST_CHECK(lidar.isHitMiss(lidar.getHitCount() - 1));
+
+    // The labels that define the synthesized misses cannot be removed while they exist.
+    DOCTEST_CHECK_THROWS(lidar.deleteHitData("row"));
+    DOCTEST_CHECK_THROWS(lidar.deleteHitData("is_miss"));
+    DOCTEST_CHECK(lidar.getHitDataColumnIndex("row") >= 0);
+}
+
+DOCTEST_TEST_CASE("LiDAR Leaf Area - A Scan With Rounded Timestamps Inverts Like the Exact Scan Once They Are Removed") {
+    // The way through for a static scan whose timestamps were rounded upstream and cannot be repaired: gap-filling and
+    // the inversion both refuse the timestamps and say to remove them; with them removed, gap-fill places the misses by
+    // direction and each return is its own beam. For single-return data that is exactly what the per-pulse timestamps
+    // described, so the leaf area density must match the exact-timestamp scan's.
+    Context context;
+    context.seedRandomGenerator(7);
+    context.addTile(make_vec3(0, 0, 0), make_vec2(30, 30), make_SphericalCoord(0, 0), make_int2(3, 3));
+    const vec3 voxel_center = make_vec3(1.5f, 1.5f, 0.9f), voxel_size = make_vec3(1.6f, 1.6f, 1.6f);
+    for (int i = 0; i < 300; i++) {
+        const vec3 position = voxel_center + make_vec3((context.randu() - 0.5f) * voxel_size.x, (context.randu() - 0.5f) * voxel_size.y, (context.randu() - 0.5f) * voxel_size.z);
+        context.addPatch(position, make_vec2(0.08f, 0.08f), make_SphericalCoord(0.5f * float(M_PI) * context.randu(), 2.f * float(M_PI) * context.randu()));
+    }
+    const uint Ntheta = 80, Nphi = 120;
+    ScanMetadata scan(make_vec3(0, 0, 2), Ntheta, 0.45f * float(M_PI), 0.95f * float(M_PI), Nphi, 0.0f, 1.5f * float(M_PI), 0.0f, 0.0f, 0.0f, 0.0f, {}, 0.03f, -0.02f, 0.4f);
+
+    LiDARcloud exact;
+    exact.disableMessages();
+    exact.addScan(scan);
+    exact.syntheticScan(&context, false, false);
+    const uint Nreturns = exact.getHitCount();
+
+    LiDARcloud rounded;
+    rounded.disableMessages();
+    rounded.addScan(scan);
+    for (uint i = 0; i < Nreturns; i++) {
+        std::map<std::string, double> data;
+        data["timestamp"] = 8.0 * std::round(exact.getHitData(i, "timestamp") / 8.0);
+        rounded.addHitPoint(0, exact.getHitXYZ(i), exact.getHitRaydir(i), data);
+    }
+
+    // (A) exact per-pulse timestamps
+    exact.addGridCell(voxel_center, voxel_size, 0.f);
+    exact.gapfillMisses(0, false, false);
+    exact.calculateHitGridCell();
+    exact.calculateLeafArea(&context, 0.5f, 1, 0.05f);
+    const float lad_exact = exact.getCellLeafAreaDensity(0);
+
+    // (B) rounded timestamps: refused, with the remedy named
+    std::string message;
+    try {
+        static_cast<void>(rounded.gapfillMissesCount(0, false, false));
+    } catch (const std::runtime_error &e) {
+        message = e.what();
+    }
+    DOCTEST_CHECK(message.find("deleteHitData(\"timestamp\")") != std::string::npos);
+    DOCTEST_CHECK(rounded.getVirtualMissCount() == 0);
+
+    // ... and processed once they are removed
+    rounded.deleteHitData("timestamp");
+    rounded.addGridCell(voxel_center, voxel_size, 0.f);
+    DOCTEST_CHECK_NOTHROW(rounded.gapfillMisses(0, false, false));
+    DOCTEST_CHECK(rounded.getHitCount() == exact.getHitCount());
+    rounded.calculateHitGridCell();
+    DOCTEST_CHECK_NOTHROW(rounded.calculateLeafArea(&context, 0.5f, 1, 0.05f));
+    const float lad_rounded = rounded.getCellLeafAreaDensity(0);
+
+    DOCTEST_REQUIRE(lad_exact > 0.1f);
+    DOCTEST_CHECK(rounded.getCellBeamCount(0) == exact.getCellBeamCount(0));
+    DOCTEST_CHECK(std::fabs(lad_rounded - lad_exact) < 1.0e-3f * lad_exact);
+}
+
 DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Timestamp Path Recovers the Pulse Clock on a Large Scan") {
     // REGRESSION: the pulse period was estimated from the spacing of consecutive members of the bounded direction
     // sample, which on a scan larger than the sample limit are hundreds of pulses apart, so the "period" came out
@@ -9312,6 +9868,211 @@ DOCTEST_TEST_CASE("LiDAR Beam Grouping - Rejects Pulses Sharing a Timestamp") {
     DOCTEST_CHECK(message.find("target_count") != std::string::npos);
 }
 
+DOCTEST_TEST_CASE("LiDAR Beam Grouping - Rejects Shared Timestamps When a Miss Sorts First") {
+    // Regression: the shared-timestamp check used to look only at the first member of the whole scan in timestamp
+    // order. A miss carrying no target_count there -- the usual case after gapfillMisses(), whose synthesized misses
+    // carry reconstructed times but no per-pulse counts -- switched the check off for every beam of the scan.
+    Context context;
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 0), 8, 0.05, 0.95 * M_PI, 8, 0.0, 2.0 * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, {});
+    lidar.addScan(scan);
+    lidar.addGridCell(make_vec3(0, 0, 5), make_vec3(2, 2, 2), 0.f);
+
+    // A miss that sorts before every return and declares no count, as a gap-filled miss does.
+    {
+        vec3 miss = make_vec3(0.f, 0.f, 20000.f);
+        std::map<std::string, double> data;
+        data["timestamp"] = 50.0;
+        data["is_miss"] = 1.0;
+        lidar.addHitPoint(0, miss, cart2sphere(miss), data);
+    }
+    // Five returns stamped with one time, each declaring a single-return pulse.
+    for (int i = 0; i < 5; i++) {
+        vec3 xyz = make_vec3(0.1f * float(i), 0.f, 5.f);
+        std::map<std::string, double> data;
+        data["timestamp"] = 100.0;
+        data["target_index"] = 0;
+        data["target_count"] = 1;
+        data["is_miss"] = 0.0;
+        lidar.addHitPoint(0, xyz, cart2sphere(xyz), data);
+    }
+    lidar.calculateHitGridCell();
+
+    std::string message;
+    try {
+        lidar.calculateLeafArea(&context, 0.5f, 1, 0.05f);
+    } catch (const std::runtime_error &e) {
+        message = e.what();
+    }
+    DOCTEST_CHECK(message.find("share timestamp") != std::string::npos);
+    DOCTEST_CHECK(message.find("target_count") != std::string::npos);
+    DOCTEST_CHECK(message.find("scan 0") != std::string::npos);
+    DOCTEST_CHECK(message.find("1 of 2 beams") != std::string::npos);
+}
+
+DOCTEST_TEST_CASE("LiDAR Beam Grouping - Rejects Shared Timestamps After Gap-Filling") {
+    // The same guard reached through the workflow that hid it: a timestamped scan gap-filled with gapfillMisses(), whose
+    // first pulse (cell 0,0) is empty so a synthesized miss without a target_count sorts first. Three returns of one
+    // pulse direction each declare a single-return pulse, so their shared timestamp cannot be one pulse.
+    Context context;
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    GenerativeGrid g{12, 16, 0.3, 1.2, 0.0, 0.8, 0.0, 0.0};
+    ScanMetadata scan(make_vec3(0, 0, 0), g.Ntheta, g.theta_min, g.theta_max, g.Nphi, g.phi_min, g.phi_max, 0.0f, 0.0f, 0.0f, 0.0f, {});
+    lidar.addScan(scan);
+    const float range = 5.f;
+    for (int col = 0; col < g.Nphi; col++) {
+        for (int row = 0; row < g.Ntheta; row++) {
+            if ((row == 0 && col == 0) || (row + 2 * col) % 7 == 0) {
+                continue; // empty cells, gap-filled below; cell (0,0) holds the scan's earliest pulse
+            }
+            const SphericalCoord dir = g.direction(row, col);
+            const int returns = (row == 5 && col == 6) ? 3 : 1;
+            for (int k = 0; k < returns; k++) {
+                vec3 xyz = sphere2cart(make_SphericalCoord(range + 0.2f * float(k), dir.elevation, dir.azimuth));
+                std::map<std::string, double> data;
+                data["timestamp"] = double(col * g.Ntheta + row);
+                data["target_index"] = 0;
+                data["target_count"] = 1;
+                lidar.addHitPoint(0, xyz, dir, data);
+            }
+        }
+    }
+    const SphericalCoord mid = g.direction(6, 8);
+    lidar.addGridCell(sphere2cart(make_SphericalCoord(range, mid.elevation, mid.azimuth)), make_vec3(4, 4, 4), 0.f);
+    lidar.calculateHitGridCell();
+    DOCTEST_REQUIRE(lidar.gapfillMissesCount(0, false, false) > 0);
+    DOCTEST_REQUIRE(lidar.isHitMiss(lidar.getHitCount() - 1));
+
+    std::string message;
+    try {
+        lidar.calculateLeafArea(&context, 0.5f, 1, 0.05f);
+    } catch (const std::runtime_error &e) {
+        message = e.what();
+    }
+    DOCTEST_CHECK(message.find("share timestamp") != std::string::npos);
+}
+
+DOCTEST_TEST_CASE("LiDAR Beam Grouping - Rejects a Repeated target_index Within a Timestamp") {
+    // Two returns of one pulse cannot both be its return #1. The declared count (3) is large enough to hold the group,
+    // so only the repeated index reveals that the timestamp is shared by different pulses.
+    Context context;
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 0), 8, 0.05, 0.95 * M_PI, 8, 0.0, 2.0 * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, {});
+    lidar.addScan(scan);
+    lidar.addGridCell(make_vec3(0, 0, 5), make_vec3(2, 2, 2), 0.f);
+    for (int i = 0; i < 2; i++) {
+        vec3 xyz = make_vec3(0.1f * float(i), 0.f, 5.f);
+        std::map<std::string, double> data;
+        data["timestamp"] = 100.0;
+        data["target_index"] = 1; // 1-based, as every LAS export is
+        data["target_count"] = 3;
+        data["is_miss"] = 0.0;
+        lidar.addHitPoint(0, xyz, cart2sphere(xyz), data);
+    }
+    {
+        vec3 miss = make_vec3(0.f, 0.f, 20000.f);
+        std::map<std::string, double> data;
+        data["timestamp"] = 200.0;
+        data["is_miss"] = 1.0;
+        lidar.addHitPoint(0, miss, cart2sphere(miss), data);
+    }
+    lidar.calculateHitGridCell();
+
+    std::string message;
+    try {
+        lidar.calculateLeafArea(&context, 0.5f, 1, 0.05f);
+    } catch (const std::runtime_error &e) {
+        message = e.what();
+    }
+    DOCTEST_CHECK(message.find("share timestamp") != std::string::npos);
+    DOCTEST_CHECK(message.find("target_index 1 appears 2 times") != std::string::npos);
+
+    // The two returns lie along one beam, so the timestamps are sound and the return numbers are not: the message says to
+    // drop target_index and keep timestamp, and the scan inverts once that is done.
+    DOCTEST_CHECK(message.find("deleteHitData(\"target_index\") and keep 'timestamp'") != std::string::npos);
+    DOCTEST_CHECK(message.find("deleteHitData(\"timestamp\")") == std::string::npos);
+    lidar.deleteHitData("target_index");
+    DOCTEST_CHECK_NOTHROW(lidar.calculateLeafArea(&context, 0.5f, 1, 0.05f));
+}
+
+DOCTEST_TEST_CASE("LiDAR Beam Grouping - Accepts Valid Multi-Return Pulses and Cropped Pulses") {
+    // What the guard must NOT reject: (a) a pulse whose returns and a same-time miss share one timestamp, with the
+    // miss counted in target_count as syntheticScan records it; (b) a segmented tree that kept only "return 1 of 3"
+    // of its pulses, the case inferHiddenReturns() exists for; (c) a gap-filled miss sorting before every return.
+    Context context;
+    LiDARcloud lidar;
+    lidar.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 0), 8, 0.05, 0.95 * M_PI, 8, 0.0, 2.0 * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, {});
+    lidar.addScan(scan);
+    lidar.addGridCell(make_vec3(0, 0, 5), make_vec3(2, 2, 2), 0.f);
+    auto add = [&](const vec3 &xyz, double t, int tindex, int tcount, bool miss) {
+        std::map<std::string, double> data;
+        data["timestamp"] = t;
+        if (tindex >= 0) {
+            data["target_index"] = tindex;
+            data["target_count"] = tcount;
+        }
+        data["is_miss"] = miss ? 1.0 : 0.0;
+        lidar.addHitPoint(0, xyz, cart2sphere(xyz), data);
+    };
+    add(make_vec3(0.f, 0.f, 20000.f), 1.0, -1, -1, true); // gap-filled style miss, sorts first, no count
+    // (a) two returns plus the pulse's own miss, all at t = 10, target_count 3 counting the miss.
+    add(make_vec3(0.f, 0.f, 4.8f), 10.0, 0, 3, false);
+    add(make_vec3(0.f, 0.f, 5.2f), 10.0, 1, 3, false);
+    add(make_vec3(0.f, 0.f, 20000.f), 10.0, 99, 3, true);
+    // (b) cropped pulses: only the first of three returns survived, one per timestamp.
+    for (int i = 0; i < 4; i++) {
+        add(make_vec3(0.1f * float(i + 1), 0.f, 5.f), 20.0 + double(i), 0, 3, false);
+    }
+    lidar.calculateHitGridCell();
+    DOCTEST_CHECK_NOTHROW(lidar.calculateLeafArea(&context, 0.5f, 1, 0.05f));
+}
+
+DOCTEST_TEST_CASE("LiDAR Triangulation Keeps First Returns Whether target_index Is 0- or 1-Based") {
+    // Every LAS/LAZ export numbers returns from 1. The triangulation's first-return filter must decide the base the
+    // way the other per-pulse filters do, not assume 0 -- which dropped every return of a 1-based scan.
+    Context context;
+    context.addTile(make_vec3(0, 0, 0), make_vec2(2, 2), make_SphericalCoord(0, 0), make_int2(8, 8));
+    context.addTile(make_vec3(0.3f, 0.2f, 0.4f), make_vec2(0.8f, 0.6f), make_SphericalCoord(0, 0), make_int2(4, 4));
+    ScanMetadata scan(make_vec3(0, 0, 3), 60, 0.75f * float(M_PI), 0.99f * float(M_PI), 90, 0.0f, 1.9f * float(M_PI), 0.0f, 0.01f, 0.0f, 0.0f, {});
+    auto setup = [&](LiDARcloud &lidar) {
+        lidar.disableMessages();
+        lidar.addScan(scan);
+        lidar.setScanDetectionThreshold(0, 0.f);
+        lidar.addGrid(make_vec3(0, 0, 0.3f), make_vec3(2.2f, 2.2f, 1.f), make_int3(1, 1, 1), 0);
+    };
+    LiDARcloud zero_based, one_based;
+    setup(zero_based);
+    setup(one_based);
+    zero_based.syntheticScan(&context, 20, 0.05f, false, false);
+
+    size_t later_returns = 0;
+    for (uint i = 0; i < zero_based.getHitCount(); i++) {
+        std::map<std::string, double> data;
+        for (const char *label: {"timestamp", "target_index", "target_count", "is_miss"}) {
+            data[label] = zero_based.getHitData(i, label);
+        }
+        if (data["target_index"] > 0) {
+            later_returns++;
+        }
+        data["target_index"] += 1.0;
+        one_based.addHitPoint(0, zero_based.getHitXYZ(i), zero_based.getHitRaydir(i), data);
+    }
+    DOCTEST_REQUIRE(later_returns > 0); // the scan really is multi-return
+    zero_based.calculateHitGridCell();
+    one_based.calculateHitGridCell();
+
+    zero_based.triangulateHitPoints(0.5f, 5.f);
+    one_based.triangulateHitPoints(0.5f, 5.f);
+    const uint triangles_zero = zero_based.getTriangleCount();
+    const uint triangles_one = one_based.getTriangleCount();
+    DOCTEST_CHECK(triangles_zero > 0);
+    DOCTEST_CHECK(triangles_one == triangles_zero);
+}
+
 DOCTEST_TEST_CASE("LiDAR Path Length Binning Matches Exact Accumulation") {
     // Per-voxel beam path lengths are binned once a voxel accumulates more than a threshold, which is
     // what bounds the inversion's memory regardless of how many beams cross a voxel. The inversion
@@ -9665,28 +10426,30 @@ DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Top-Down Sweep Terminates") {
 
 DOCTEST_TEST_CASE("LiDAR Miss Gapfilling - Dispatcher Selection") {
     // gapfillMisses() auto-detects the available data: row/column is preferred when present, timestamp is the fallback,
-    // and a scan whose returns carry neither raises a clear error.
+    // and a static raster scan whose returns carry neither is placed on its declared raster by direction.
 
-    // (a) returns with neither timestamp nor row/column -> error
+    // (a) returns with neither timestamp nor row/column -> each is given the cell its direction falls in
     {
         LiDARcloud lidar;
         lidar.disableMessages();
         ScanMetadata scan(make_vec3(0, 0, 0), 10, 0.05, 0.95 * M_PI, 18, 0.0, 2.0 * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, {});
         lidar.addScan(scan);
-        // add a single bare return (no timestamp, no row/column data)
-        SphericalCoord dir = make_SphericalCoord(1.f, 0.4f, 0.3f);
-        lidar.addHitPoint(0, helios::sphere2cart(make_SphericalCoord(10.f, dir.elevation, dir.azimuth)), dir);
-
-        bool threw = false;
-        std::string msg;
-        try {
-            std::vector<vec3> filled = lidar.gapfillMisses(0);
-        } catch (const std::runtime_error &e) {
-            threw = true;
-            msg = e.what();
+        // bare returns (no timestamp, no row/column data) along three cells' directions, fired as the synthetic scanner
+        // fires them: the head turns dphi/Ntheta per row during each column's sweep
+        const float dphi = 2.f * float(M_PI) / 17.f;
+        for (int k = 0; k < 3; k++) {
+            SphericalCoord dir = scan.rc2direction(3 + k, 5 + 2 * k);
+            dir.azimuth += float(3 + k) * dphi / 10.f;
+            lidar.addHitPoint(0, helios::sphere2cart(make_SphericalCoord(10.f, dir.elevation, dir.azimuth)), dir);
         }
-        DOCTEST_CHECK(threw);
-        DOCTEST_CHECK(msg.find("neither 'timestamp' nor 'row'/'column'") != std::string::npos);
+
+        std::vector<vec3> filled;
+        DOCTEST_CHECK_NOTHROW(filled = lidar.gapfillMisses(0));
+        DOCTEST_CHECK(filled.size() == size_t(10 * 18 - 3));
+        for (int k = 0; k < 3; k++) {
+            DOCTEST_CHECK(lidar.getHitData(uint(k), "row") == doctest::Approx(3 + k));
+            DOCTEST_CHECK(lidar.getHitData(uint(k), "column") == doctest::Approx(5 + 2 * k));
+        }
     }
 
     // (b) returns with row/column -> row/column path runs (adds the row/column-specific flag codes)

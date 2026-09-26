@@ -1212,13 +1212,9 @@ uint Context::copyObject(uint ObjID) {
     } else if (type == OBJECT_TYPE_TUBE) {
         Tube *o = getTubeObjectPointer_private(ObjID);
 
-        const std::vector<vec3> &nodes = o->getNodes();
-        const std::vector<float> &radius = o->getNodeRadii();
-        const std::vector<RGBcolor> &colors = o->getNodeColors();
-        const std::vector<std::vector<vec3>> &triangle_vertices = o->getTriangleVertices();
-        uint subdiv = o->getSubdivisionCount();
-
-        auto *tube_new = (new Tube(currentObjectID, UUIDs_copy, nodes, radius, colors, triangle_vertices, subdiv, texturefile.c_str(), this));
+        // Copy the nodes and radii from the source object's local-frame storage, as for the ring vertices. getNodes() and getNodeRadii() have the source transform applied, and the transformation matrix is
+        // assigned to the new object further below, so going through them would apply the transform twice.
+        auto *tube_new = (new Tube(currentObjectID, UUIDs_copy, o->nodes, o->radius, o->colors, o->triangle_vertices, o->subdiv, texturefile.c_str(), this));
 
         objects[currentObjectID] = tube_new;
     } else if (type == OBJECT_TYPE_BOX) {
@@ -1265,11 +1261,9 @@ uint Context::copyObject(uint ObjID) {
     } else if (type == OBJECT_TYPE_CONE) {
         Cone *o = getConeObjectPointer_private(ObjID);
 
-        const std::vector<vec3> &nodes = o->getNodeCoordinates();
-        const std::vector<float> &radius = o->getNodeRadii();
-        uint subdiv = o->getSubdivisionCount();
-
-        auto *cone_new = (new Cone(currentObjectID, UUIDs_copy, nodes.at(0), nodes.at(1), radius.at(0), radius.at(1), subdiv, texturefile.c_str(), this));
+        // Copy the nodes and radii from the source object's local-frame storage. getNodeCoordinates() and getNodeRadii() have the source transform applied, and the transformation matrix is assigned to the new
+        // object further below, so going through them would apply the transform twice.
+        auto *cone_new = (new Cone(currentObjectID, UUIDs_copy, o->nodes.at(0), o->nodes.at(1), o->radii.at(0), o->radii.at(1), o->subdiv, texturefile.c_str(), this));
 
         objects[currentObjectID] = cone_new;
     }
@@ -2905,7 +2899,11 @@ void Context::colorPrimitiveByDataPseudocolor(const std::vector<uint> &UUIDs, co
     for (auto &[UUID, pdata]: pcolor_data) {
         std::string texturefile = getPrimitiveTextureFile(UUID);
 
-        int cmap_ind = std::round((pdata - data_min) / (data_max - data_min) * float(Ncolors - 1));
+        // A zero-width data range maps every value to the first color, rather than dividing by zero
+        int cmap_ind = 0;
+        if (data_max != data_min) {
+            cmap_ind = std::round((pdata - data_min) / (data_max - data_min) * float(Ncolors - 1));
+        }
 
         if (cmap_ind < 0) {
             cmap_ind = 0;
@@ -2931,10 +2929,9 @@ void Context::colorPrimitiveByDataPseudocolor(const std::vector<uint> &UUIDs, co
 }
 
 std::vector<RGBcolor> Context::generateColormap(const std::vector<helios::RGBcolor> &ctable, const std::vector<float> &cfrac, uint Ncolors) {
-    if (Ncolors > 9999) {
-        std::cerr << "WARNING (Context::generateColormap): Truncating number of color map textures to maximum value of 9999." << std::endl;
+    if (Ncolors < 2) {
+        helios_runtime_error("ERROR (Context::generateColormap): A colormap must have at least 2 colors, but " + std::to_string(Ncolors) + " were requested.");
     }
-
     if (ctable.size() != cfrac.size()) {
         helios_runtime_error("ERROR (Context::generateColormap): The length of arguments 'ctable' and 'cfrac' must match.");
     }
@@ -2970,91 +2967,69 @@ std::vector<RGBcolor> Context::generateColormap(const std::vector<helios::RGBcol
     return color_table;
 }
 
-std::vector<RGBcolor> Context::generateColormap(const std::string &colormap, uint Ncolors) {
-    std::vector<RGBcolor> ctable_c;
-    std::vector<float> clocs_c;
+//! Colors and normalized positions of the control points that define a named colormap
+struct ColormapControlPoints {
+    std::vector<RGBcolor> colors;
+    std::vector<float> positions;
+};
 
-    if (colormap == "hot") {
-        ctable_c.resize(5);
-        ctable_c.at(0) = make_RGBcolor(0.f, 0.f, 0.f);
-        ctable_c.at(1) = make_RGBcolor(0.5f, 0.f, 0.5f);
-        ctable_c.at(2) = make_RGBcolor(1.f, 0.f, 0.f);
-        ctable_c.at(3) = make_RGBcolor(1.f, 0.5f, 0.f);
-        ctable_c.at(4) = make_RGBcolor(1.f, 1.f, 0.f);
+//! Control points of every named colormap, in the order reported by Context::getColormapNames()
+/**
+ * This is the single definition of the named Helios colormaps. The visualizer plugin builds its colormaps from these control points as well, so a colormap added or changed here takes effect everywhere.
+ */
+static const std::vector<std::pair<std::string, ColormapControlPoints>> &namedColormaps() {
+    static const std::vector<std::pair<std::string, ColormapControlPoints>> colormaps{
+            {"hot", {{{0.f, 0.f, 0.f}, {0.5f, 0.f, 0.5f}, {1.f, 0.f, 0.f}, {1.f, 0.5f, 0.f}, {1.f, 1.f, 0.f}}, {0.f, 0.25f, 0.5f, 0.75f, 1.f}}},
+            {"cool", {{RGB::cyan, RGB::magenta}, {0.f, 1.f}}},
+            {"lava", {{{0.f, 0.05f, 0.05f}, {0.f, 0.6f, 0.6f}, {1.f, 1.f, 1.f}, {1.f, 0.f, 0.f}, {0.5f, 0.f, 0.f}}, {0.f, 0.4f, 0.5f, 0.6f, 1.f}}},
+            {"rainbow", {{RGB::navy, RGB::cyan, RGB::yellow, {0.75f, 0.f, 0.f}}, {0.f, 0.3f, 0.7f, 1.f}}},
+            {"parula", {{RGB::navy, {0.f, 0.6f, 0.6f}, RGB::goldenrod, RGB::yellow}, {0.f, 0.4f, 0.7f, 1.f}}},
+            {"gray", {{RGB::black, RGB::white}, {0.f, 1.f}}},
+            {"green", {{RGB::black, RGB::green}, {0.f, 1.f}}},
+            // MATLAB-style distinct colors: blue, orange, yellow, purple, green, cyan, dark red
+            {"lines",
+             {{{0.f, 0.4470f, 0.7410f}, {0.8500f, 0.3250f, 0.0980f}, {0.9290f, 0.6940f, 0.1250f}, {0.4940f, 0.1840f, 0.5560f}, {0.4660f, 0.6740f, 0.1880f}, {0.3010f, 0.7450f, 0.9330f}, {0.6350f, 0.0780f, 0.1840f}},
+              {0.f, 1.f / 6.f, 2.f / 6.f, 3.f / 6.f, 4.f / 6.f, 5.f / 6.f, 1.f}}},
+            // cmocean 'algae' (Thyng et al. 2016), sampled at 17 evenly spaced points of the 256-entry cmocean table
+            {"algae",
+             {{{0.8429f, 0.9769f, 0.8146f}, {0.7646f, 0.9200f, 0.7239f}, {0.6855f, 0.8664f, 0.6373f}, {0.6044f, 0.8156f, 0.5552f}, {0.5193f, 0.7675f, 0.4784f}, {0.4263f, 0.7218f, 0.4087f},
+               {0.3169f, 0.6781f, 0.3515f}, {0.1834f, 0.6333f, 0.3219f}, {0.0721f, 0.5813f, 0.3137f}, {0.0265f, 0.5256f, 0.3025f}, {0.0485f, 0.4692f, 0.2847f}, {0.0774f, 0.4130f, 0.2608f},
+               {0.0950f, 0.3575f, 0.2317f}, {0.1016f, 0.3030f, 0.1985f}, {0.0986f, 0.2491f, 0.1617f}, {0.0874f, 0.1957f, 0.1219f}, {0.0689f, 0.1421f, 0.0790f}},
+              {0.f, 0.0625f, 0.125f, 0.1875f, 0.25f, 0.3125f, 0.375f, 0.4375f, 0.5f, 0.5625f, 0.625f, 0.6875f, 0.75f, 0.8125f, 0.875f, 0.9375f, 1.f}}}};
+    return colormaps;
+}
 
-        clocs_c.resize(5);
-        clocs_c.at(0) = 0.f;
-        clocs_c.at(1) = 0.25f;
-        clocs_c.at(2) = 0.5f;
-        clocs_c.at(3) = 0.75f;
-        clocs_c.at(4) = 1.f;
-    } else if (colormap == "cool") {
-        ctable_c.resize(2);
-        ctable_c.at(0) = RGB::cyan;
-        ctable_c.at(1) = RGB::magenta;
+std::vector<std::string> Context::getColormapNames() {
+    std::vector<std::string> names;
+    names.reserve(namedColormaps().size());
+    for (const auto &[name, control_points]: namedColormaps()) {
+        names.push_back(name);
+    }
+    return names;
+}
 
-        clocs_c.resize(2);
-        clocs_c.at(0) = 0.f;
-        clocs_c.at(1) = 1.f;
-    } else if (colormap == "lava") {
-        ctable_c.resize(5);
-        ctable_c.at(0) = make_RGBcolor(0.f, 0.05f, 0.05f);
-        ctable_c.at(1) = make_RGBcolor(0.f, 0.6f, 0.6f);
-        ctable_c.at(2) = make_RGBcolor(1.f, 1.f, 1.f);
-        ctable_c.at(3) = make_RGBcolor(1.f, 0.f, 0.f);
-        ctable_c.at(4) = make_RGBcolor(0.5f, 0.f, 0.f);
-
-        clocs_c.resize(5);
-        clocs_c.at(0) = 0.f;
-        clocs_c.at(1) = 0.4f;
-        clocs_c.at(2) = 0.5f;
-        clocs_c.at(3) = 0.6f;
-        clocs_c.at(4) = 1.f;
-    } else if (colormap == "rainbow") {
-        ctable_c.resize(4);
-        ctable_c.at(0) = RGB::navy;
-        ctable_c.at(1) = RGB::cyan;
-        ctable_c.at(2) = RGB::yellow;
-        ctable_c.at(3) = make_RGBcolor(0.75f, 0.f, 0.f);
-
-        clocs_c.resize(4);
-        clocs_c.at(0) = 0.f;
-        clocs_c.at(1) = 0.3f;
-        clocs_c.at(2) = 0.7f;
-        clocs_c.at(3) = 1.f;
-    } else if (colormap == "parula") {
-        ctable_c.resize(4);
-        ctable_c.at(0) = RGB::navy;
-        ctable_c.at(1) = make_RGBcolor(0, 0.6, 0.6);
-        ctable_c.at(2) = RGB::goldenrod;
-        ctable_c.at(3) = RGB::yellow;
-
-        clocs_c.resize(4);
-        clocs_c.at(0) = 0.f;
-        clocs_c.at(1) = 0.4f;
-        clocs_c.at(2) = 0.7f;
-        clocs_c.at(3) = 1.f;
-    } else if (colormap == "gray") {
-        ctable_c.resize(2);
-        ctable_c.at(0) = RGB::black;
-        ctable_c.at(1) = RGB::white;
-
-        clocs_c.resize(2);
-        clocs_c.at(0) = 0.f;
-        clocs_c.at(1) = 1.f;
-    } else if (colormap == "green") {
-        ctable_c.resize(2);
-        ctable_c.at(0) = RGB::black;
-        ctable_c.at(1) = RGB::green;
-
-        clocs_c.resize(2);
-        clocs_c.at(0) = 0.f;
-        clocs_c.at(1) = 1.f;
-    } else {
-        helios_runtime_error("ERROR (Context::generateColormapTextures): Unknown colormap " + colormap + ".");
+void Context::getColormapControlPoints(const std::string &colormap, std::vector<RGBcolor> &colors, std::vector<float> &positions) {
+    for (const auto &[name, control_points]: namedColormaps()) {
+        if (name == colormap) {
+            colors = control_points.colors;
+            positions = control_points.positions;
+            return;
+        }
     }
 
-    return generateColormap(ctable_c, clocs_c, Ncolors);
+    std::string valid_names;
+    for (const std::string &name: getColormapNames()) {
+        valid_names += (valid_names.empty() ? "" : ", ") + name;
+    }
+    helios_runtime_error("ERROR (Context::getColormapControlPoints): Unknown colormap '" + colormap + "'. Valid colormaps are: " + valid_names + ".");
+}
+
+std::vector<RGBcolor> Context::generateColormap(const std::string &colormap, uint Ncolors) {
+    std::vector<RGBcolor> colors;
+    std::vector<float> positions;
+    getColormapControlPoints(colormap, colors, positions);
+
+    return generateColormap(colors, positions, Ncolors);
 }
 
 std::vector<std::string> Context::generateTexturesFromColormap(const std::string &texturefile, const std::vector<RGBcolor> &colormap_data) {

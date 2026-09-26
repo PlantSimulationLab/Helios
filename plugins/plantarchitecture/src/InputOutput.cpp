@@ -607,6 +607,73 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
         }
 
         uint phytomer_index = 0;
+
+        // Writes the floral buds a petiole subtends, as <floral_bud> nodes.
+        auto writeFloralBuds = [&](const std::shared_ptr<Phytomer> &phytomer, uint petiole) {
+            if (petiole >= phytomer->floral_buds.size()) {
+                return;
+            }
+            for (uint bud = 0; bud < phytomer->floral_buds.at(petiole).size(); bud++) {
+                const FloralBud &fbud = phytomer->floral_buds.at(petiole).at(bud);
+
+                output_xml << "\t\t\t\t\t\t<floral_bud>" << std::endl;
+
+                // Write bud state and indices
+                output_xml << "\t\t\t\t\t\t\t<bud_state>" << static_cast<int>(fbud.state) << "</bud_state>" << std::endl;
+                output_xml << "\t\t\t\t\t\t\t<parent_index>" << fbud.parent_index << "</parent_index>" << std::endl;
+                output_xml << "\t\t\t\t\t\t\t<bud_index>" << fbud.bud_index << "</bud_index>" << std::endl;
+                output_xml << "\t\t\t\t\t\t\t<is_terminal>" << (fbud.isterminal ? 1 : 0) << "</is_terminal>" << std::endl;
+
+                // Write fruit scale factor
+                output_xml << "\t\t\t\t\t\t\t<current_fruit_scale_factor>" << fbud.current_fruit_scale_factor << "</current_fruit_scale_factor>" << std::endl;
+
+                // Write peduncle parameters
+                // Note: Write the STORED VALUES that were actually used for this peduncle geometry
+                output_xml << "\t\t\t\t\t\t\t<peduncle>" << std::endl;
+                if (petiole < phytomer->peduncle_length.size() && bud < phytomer->peduncle_length.at(petiole).size()) {
+                    output_xml << "\t\t\t\t\t\t\t\t<length>" << phytomer->peduncle_length.at(petiole).at(bud) << "</length>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t\t\t<radius>" << phytomer->peduncle_radius.at(petiole).at(bud) << "</radius>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t\t\t<pitch>" << phytomer->peduncle_pitch.at(petiole).at(bud) << "</pitch>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t\t\t<curvature>" << phytomer->peduncle_curvature.at(petiole).at(bud) << "</curvature>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t\t\t<roll>" << phytomer->peduncle_roll.at(petiole).at(bud) << "</roll>" << std::endl;
+                } else {
+                    // Fallback to parameter values if stored values not available
+                    output_xml << "\t\t\t\t\t\t\t\t<length>" << phytomer->phytomer_parameters.peduncle.length.val() << "</length>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t\t\t<radius>" << phytomer->phytomer_parameters.peduncle.radius.val() << "</radius>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t\t\t<pitch>" << phytomer->phytomer_parameters.peduncle.pitch.val() << "</pitch>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t\t\t<curvature>" << phytomer->phytomer_parameters.peduncle.curvature.val() << "</curvature>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t\t\t<roll>" << phytomer->phytomer_parameters.peduncle.roll.val() << "</roll>" << std::endl;
+                }
+
+                output_xml << "\t\t\t\t\t\t\t</peduncle>" << std::endl;
+
+                // Write inflorescence parameters
+                output_xml << "\t\t\t\t\t\t\t<inflorescence>" << std::endl;
+                output_xml << "\t\t\t\t\t\t\t\t<flower_offset>" << phytomer->phytomer_parameters.inflorescence.flower_offset.val() << "</flower_offset>" << std::endl;
+
+                // Write individual flower/fruit positions and rotations
+                for (uint i = 0; i < fbud.inflorescence_bases.size(); i++) {
+                    output_xml << "\t\t\t\t\t\t\t\t<flower>" << std::endl;
+                    // inflorescence_base is now auto-computed during XML reading - not saved to XML
+                    // Save pitch, yaw, roll, and azimuth for this flower/fruit
+                    if (i < fbud.inflorescence_rotation.size()) {
+                        output_xml << "\t\t\t\t\t\t\t\t\t<flower_pitch>" << rad2deg(fbud.inflorescence_rotation.at(i).pitch) << "</flower_pitch>" << std::endl;
+                        output_xml << "\t\t\t\t\t\t\t\t\t<flower_yaw>" << rad2deg(fbud.inflorescence_rotation.at(i).yaw) << "</flower_yaw>" << std::endl;
+                        output_xml << "\t\t\t\t\t\t\t\t\t<flower_roll>" << rad2deg(fbud.inflorescence_rotation.at(i).roll) << "</flower_roll>" << std::endl;
+                        output_xml << "\t\t\t\t\t\t\t\t\t<flower_azimuth>" << rad2deg(fbud.inflorescence_rotation.at(i).azimuth) << "</flower_azimuth>" << std::endl;
+                    }
+                    // Save individual base scale for this flower/fruit
+                    if (i < fbud.inflorescence_base_scales.size()) {
+                        output_xml << "\t\t\t\t\t\t\t\t\t<flower_base_scale>" << fbud.inflorescence_base_scales.at(i) << "</flower_base_scale>" << std::endl;
+                    }
+                    output_xml << "\t\t\t\t\t\t\t\t</flower>" << std::endl;
+                }
+
+                output_xml << "\t\t\t\t\t\t\t</inflorescence>" << std::endl;
+                output_xml << "\t\t\t\t\t\t</floral_bud>" << std::endl;
+            }
+        };
+
         for (auto &phytomer: shoot->phytomers) {
 
             output_xml << "\t\t\t<phytomer>" << std::endl;
@@ -614,6 +681,9 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
             // follows its age (LeafPrototype::flexibility_aging), so a reloaded plant whose phytomers all
             // started again from age zero gave its oldest leaves the stiffness of newly emerged ones.
             output_xml << "\t\t\t\t<phytomer_age>" << phytomer->age << "</phytomer_age>" << std::endl;
+            // The leaf compliance is drawn from LeafPrototype::flexibility when the phytomer is created, so it cannot be
+            // re-derived on reading without replaying the plant's random stream exactly.
+            output_xml << "\t\t\t\t<leaf_flexibility>" << phytomer->leaf_flexibility << "</leaf_flexibility>" << std::endl;
             output_xml << "\t\t\t\t<internode>" << std::endl;
             output_xml << "\t\t\t\t\t<internode_length>" << phytomer->getInternodeLength() << "</internode_length>" << std::endl;
             output_xml << "\t\t\t\t\t<internode_radius>" << phytomer->getInternodeRadius() << "</internode_radius>" << std::endl;
@@ -766,71 +836,45 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                     output_xml << "\t\t\t\t\t\t</leaf>" << std::endl;
                 }
 
-                // Write floral buds
-                if (petiole < phytomer->floral_buds.size()) {
-                    for (uint bud = 0; bud < phytomer->floral_buds.at(petiole).size(); bud++) {
-                        const FloralBud &fbud = phytomer->floral_buds.at(petiole).at(bud);
-
-                        output_xml << "\t\t\t\t\t\t<floral_bud>" << std::endl;
-
-                        // Write bud state and indices
-                        output_xml << "\t\t\t\t\t\t\t<bud_state>" << static_cast<int>(fbud.state) << "</bud_state>" << std::endl;
-                        output_xml << "\t\t\t\t\t\t\t<parent_index>" << fbud.parent_index << "</parent_index>" << std::endl;
-                        output_xml << "\t\t\t\t\t\t\t<bud_index>" << fbud.bud_index << "</bud_index>" << std::endl;
-                        output_xml << "\t\t\t\t\t\t\t<is_terminal>" << (fbud.isterminal ? 1 : 0) << "</is_terminal>" << std::endl;
-
-                        // Write fruit scale factor
-                        output_xml << "\t\t\t\t\t\t\t<current_fruit_scale_factor>" << fbud.current_fruit_scale_factor << "</current_fruit_scale_factor>" << std::endl;
-
-                        // Write peduncle parameters
-                        // Note: Write the STORED VALUES that were actually used for this peduncle geometry
-                        output_xml << "\t\t\t\t\t\t\t<peduncle>" << std::endl;
-                        if (petiole < phytomer->peduncle_length.size() && bud < phytomer->peduncle_length.at(petiole).size()) {
-                            output_xml << "\t\t\t\t\t\t\t\t<length>" << phytomer->peduncle_length.at(petiole).at(bud) << "</length>" << std::endl;
-                            output_xml << "\t\t\t\t\t\t\t\t<radius>" << phytomer->peduncle_radius.at(petiole).at(bud) << "</radius>" << std::endl;
-                            output_xml << "\t\t\t\t\t\t\t\t<pitch>" << phytomer->peduncle_pitch.at(petiole).at(bud) << "</pitch>" << std::endl;
-                            output_xml << "\t\t\t\t\t\t\t\t<curvature>" << phytomer->peduncle_curvature.at(petiole).at(bud) << "</curvature>" << std::endl;
-                            output_xml << "\t\t\t\t\t\t\t\t<roll>" << phytomer->peduncle_roll.at(petiole).at(bud) << "</roll>" << std::endl;
-                        } else {
-                            // Fallback to parameter values if stored values not available
-                            output_xml << "\t\t\t\t\t\t\t\t<length>" << phytomer->phytomer_parameters.peduncle.length.val() << "</length>" << std::endl;
-                            output_xml << "\t\t\t\t\t\t\t\t<radius>" << phytomer->phytomer_parameters.peduncle.radius.val() << "</radius>" << std::endl;
-                            output_xml << "\t\t\t\t\t\t\t\t<pitch>" << phytomer->phytomer_parameters.peduncle.pitch.val() << "</pitch>" << std::endl;
-                            output_xml << "\t\t\t\t\t\t\t\t<curvature>" << phytomer->phytomer_parameters.peduncle.curvature.val() << "</curvature>" << std::endl;
-                            output_xml << "\t\t\t\t\t\t\t\t<roll>" << phytomer->phytomer_parameters.peduncle.roll.val() << "</roll>" << std::endl;
-                        }
-
-                        output_xml << "\t\t\t\t\t\t\t</peduncle>" << std::endl;
-
-                        // Write inflorescence parameters
-                        output_xml << "\t\t\t\t\t\t\t<inflorescence>" << std::endl;
-                        output_xml << "\t\t\t\t\t\t\t\t<flower_offset>" << phytomer->phytomer_parameters.inflorescence.flower_offset.val() << "</flower_offset>" << std::endl;
-
-                        // Write individual flower/fruit positions and rotations
-                        for (uint i = 0; i < fbud.inflorescence_bases.size(); i++) {
-                            output_xml << "\t\t\t\t\t\t\t\t<flower>" << std::endl;
-                            // inflorescence_base is now auto-computed during XML reading - not saved to XML
-                            // Save pitch, yaw, roll, and azimuth for this flower/fruit
-                            if (i < fbud.inflorescence_rotation.size()) {
-                                output_xml << "\t\t\t\t\t\t\t\t\t<flower_pitch>" << rad2deg(fbud.inflorescence_rotation.at(i).pitch) << "</flower_pitch>" << std::endl;
-                                output_xml << "\t\t\t\t\t\t\t\t\t<flower_yaw>" << rad2deg(fbud.inflorescence_rotation.at(i).yaw) << "</flower_yaw>" << std::endl;
-                                output_xml << "\t\t\t\t\t\t\t\t\t<flower_roll>" << rad2deg(fbud.inflorescence_rotation.at(i).roll) << "</flower_roll>" << std::endl;
-                                output_xml << "\t\t\t\t\t\t\t\t\t<flower_azimuth>" << rad2deg(fbud.inflorescence_rotation.at(i).azimuth) << "</flower_azimuth>" << std::endl;
-                            }
-                            // Save individual base scale for this flower/fruit
-                            if (i < fbud.inflorescence_base_scales.size()) {
-                                output_xml << "\t\t\t\t\t\t\t\t\t<flower_base_scale>" << fbud.inflorescence_base_scales.at(i) << "</flower_base_scale>" << std::endl;
-                            }
-                            output_xml << "\t\t\t\t\t\t\t\t</flower>" << std::endl;
-                        }
-
-                        output_xml << "\t\t\t\t\t\t\t</inflorescence>" << std::endl;
-                        output_xml << "\t\t\t\t\t\t</floral_bud>" << std::endl;
-                    }
-                }
+                writeFloralBuds(phytomer, petiole);
 
                 output_xml << "\t\t\t\t\t</petiole>" << std::endl;
             }
+
+            // Phytomer::removeLeaf() takes a phytomer's petioles with its leaves, but keeps each petiole's centerline - which still orients
+            // the next phytomer, child shoots and peduncles at this node - and its floral buds, so a pod on a node whose leaf was shed or
+            // clipped at the ground stays on the plant. With no <petiole> to hold them, both are written in one <shed_petiole> node per
+            // petiole index; the centerline as offsets from its base, since the base is re-derived from the internode tip on reading.
+            if (phytomer->petiole_length.empty() && !phytomer->petiole_vertices.empty()) {
+                for (uint petiole = 0; petiole < phytomer->petiole_vertices.size(); petiole++) {
+                    output_xml << "\t\t\t\t\t<shed_petiole>" << std::endl;
+                    const std::vector<vec3> &centerline = phytomer->petiole_vertices.at(petiole);
+                    if (!centerline.empty()) {
+                        output_xml << "\t\t\t\t\t\t<centerline_offsets>";
+                        for (size_t node = 0; node < centerline.size(); node++) {
+                            const vec3 offset = centerline.at(node) - centerline.front();
+                            output_xml << offset.x << " " << offset.y << " " << offset.z;
+                            if (node + 1 < centerline.size()) {
+                                output_xml << ";";
+                            }
+                        }
+                        output_xml << "</centerline_offsets>" << std::endl;
+                    }
+                    writeFloralBuds(phytomer, petiole);
+                    output_xml << "\t\t\t\t\t</shed_petiole>" << std::endl;
+                }
+            }
+
+            // floral_buds can hold entries past those of the phytomer's petioles: Shoot::addTerminalFloralBud() appends each terminal
+            // bud as an entry of its own, and a phytomer with no petioles holds its axillary buds in an entry borne on the internode.
+            // Neither has a petiole to be written under.
+            const uint petiole_entry_count = static_cast<uint>(phytomer->petiole_length.empty() ? phytomer->petiole_vertices.size() : phytomer->petiole_length.size());
+            for (uint entry = petiole_entry_count; entry < phytomer->floral_buds.size(); entry++) {
+                output_xml << "\t\t\t\t\t<internode_floral_buds>" << std::endl;
+                writeFloralBuds(phytomer, entry);
+                output_xml << "\t\t\t\t\t</internode_floral_buds>" << std::endl;
+            }
+
             output_xml << "\t\t\t\t</internode>" << std::endl;
             output_xml << "\t\t\t</phytomer>" << std::endl;
 
@@ -1239,6 +1283,12 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     phytomer_age = parse_xml_tag_float(phytomer.child("phytomer_age"), "phytomer_age", "PlantArchitecture::readPlantStructureXML");
                 }
 
+                // Optional: files written before this tag existed keep the compliance drawn when the phytomer is rebuilt.
+                float leaf_flexibility = -1.f;
+                if (phytomer.child("leaf_flexibility")) {
+                    leaf_flexibility = parse_xml_tag_float(phytomer.child("leaf_flexibility"), "leaf_flexibility", "PlantArchitecture::readPlantStructureXML");
+                }
+
                 pugi::xml_node internode = phytomer.child("internode");
 
                 // internode length
@@ -1354,6 +1404,122 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     float peduncle_curvature = 0;
                 };
                 std::vector<std::vector<FloralBudData>> floral_bud_data; // first index is petiole within internode; second index is bud within petiole
+                auto readFloralBud = [](const pugi::xml_node &floral_bud) -> FloralBudData {
+                    FloralBudData fbud_data;
+                    std::string bud_node_string;
+
+                    // Read bud state
+                    bud_node_string = "bud_state";
+                    fbud_data.bud_state = parse_xml_tag_int(floral_bud.child(bud_node_string.c_str()), bud_node_string, "PlantArchitecture::readPlantStructureXML");
+
+                    // Read parent index
+                    bud_node_string = "parent_index";
+                    fbud_data.parent_index = parse_xml_tag_int(floral_bud.child(bud_node_string.c_str()), bud_node_string, "PlantArchitecture::readPlantStructureXML");
+
+                    // Read bud index
+                    bud_node_string = "bud_index";
+                    fbud_data.bud_index = parse_xml_tag_int(floral_bud.child(bud_node_string.c_str()), bud_node_string, "PlantArchitecture::readPlantStructureXML");
+
+                    // Read is_terminal
+                    bud_node_string = "is_terminal";
+                    int is_terminal = parse_xml_tag_int(floral_bud.child(bud_node_string.c_str()), bud_node_string, "PlantArchitecture::readPlantStructureXML");
+                    fbud_data.is_terminal = (is_terminal != 0);
+
+                    // Read current fruit scale factor
+                    bud_node_string = "current_fruit_scale_factor";
+                    fbud_data.current_fruit_scale_factor = parse_xml_tag_float(floral_bud.child(bud_node_string.c_str()), bud_node_string, "PlantArchitecture::readPlantStructureXML");
+
+                    // Read peduncle parameters (if present)
+                    pugi::xml_node peduncle = floral_bud.child("peduncle");
+                    if (peduncle) {
+                        bud_node_string = "length";
+                        if (peduncle.child(bud_node_string.c_str())) {
+                            fbud_data.peduncle_length = parse_xml_tag_float(peduncle.child(bud_node_string.c_str()), bud_node_string, "PlantArchitecture::readPlantStructureXML");
+                        }
+                        bud_node_string = "radius";
+                        if (peduncle.child(bud_node_string.c_str())) {
+                            fbud_data.peduncle_radius = parse_xml_tag_float(peduncle.child(bud_node_string.c_str()), bud_node_string, "PlantArchitecture::readPlantStructureXML");
+                        }
+                        bud_node_string = "pitch";
+                        if (peduncle.child(bud_node_string.c_str())) {
+                            fbud_data.peduncle_pitch = parse_xml_tag_float(peduncle.child(bud_node_string.c_str()), bud_node_string, "PlantArchitecture::readPlantStructureXML");
+                        }
+                        bud_node_string = "roll";
+                        if (peduncle.child(bud_node_string.c_str())) {
+                            fbud_data.peduncle_roll = parse_xml_tag_float(peduncle.child(bud_node_string.c_str()), bud_node_string, "PlantArchitecture::readPlantStructureXML");
+                        }
+                        bud_node_string = "curvature";
+                        if (peduncle.child(bud_node_string.c_str())) {
+                            fbud_data.peduncle_curvature = parse_xml_tag_float(peduncle.child(bud_node_string.c_str()), bud_node_string, "PlantArchitecture::readPlantStructureXML");
+                        }
+                    }
+
+                    // Read inflorescence parameters and flower positions (if present)
+                    pugi::xml_node inflorescence = floral_bud.child("inflorescence");
+                    if (inflorescence) {
+                        // Read inflorescence parameters
+                        bud_node_string = "flower_offset";
+                        if (inflorescence.child(bud_node_string.c_str())) {
+                            fbud_data.flower_offset = parse_xml_tag_float(inflorescence.child(bud_node_string.c_str()), bud_node_string, "PlantArchitecture::readPlantStructureXML");
+                        }
+
+                        // Read individual flower/fruit data (base position and rotations)
+                        for (pugi::xml_node flower = inflorescence.child("flower"); flower; flower = flower.next_sibling("flower")) {
+                            // inflorescence_base (optional for backward compatibility - value is ignored, auto-calculated)
+                            pugi::xml_node base_node = flower.child("inflorescence_base");
+                            if (base_node) {
+                                vec3 base = parse_xml_tag_vec3(base_node, "inflorescence_base", "PlantArchitecture::readPlantStructureXML");
+                                fbud_data.inflorescence_bases_saved.push_back(base);
+                            }
+
+                            // Read pitch, yaw, roll, and azimuth
+                            AxisRotation rotation;
+                            pugi::xml_node pitch_node = flower.child("flower_pitch");
+                            pugi::xml_node yaw_node = flower.child("flower_yaw");
+                            pugi::xml_node roll_node = flower.child("flower_roll");
+                            pugi::xml_node azimuth_node = flower.child("flower_azimuth");
+
+                            if (pitch_node) {
+                                rotation.pitch = parse_xml_tag_float(pitch_node, "flower_pitch", "PlantArchitecture::readPlantStructureXML");
+                            } else {
+                                rotation.pitch = 0;
+                            }
+
+                            if (yaw_node) {
+                                rotation.yaw = parse_xml_tag_float(yaw_node, "flower_yaw", "PlantArchitecture::readPlantStructureXML");
+                            } else {
+                                rotation.yaw = 0;
+                            }
+
+                            if (roll_node) {
+                                rotation.roll = parse_xml_tag_float(roll_node, "flower_roll", "PlantArchitecture::readPlantStructureXML");
+                            } else {
+                                rotation.roll = 0;
+                            }
+
+                            if (azimuth_node) {
+                                rotation.azimuth = parse_xml_tag_float(azimuth_node, "flower_azimuth", "PlantArchitecture::readPlantStructureXML");
+                            } else {
+                                rotation.azimuth = 0;
+                            }
+
+                            fbud_data.flower_rotations.push_back(rotation);
+
+                            // Read individual base scale for this flower/fruit
+                            pugi::xml_node scale_node = flower.child("flower_base_scale");
+                            if (scale_node) {
+                                float base_scale = parse_xml_tag_float(scale_node, "flower_base_scale", "PlantArchitecture::readPlantStructureXML");
+                                fbud_data.flower_base_scales.push_back(base_scale);
+                            } else {
+                                // For backward compatibility with old XML files, use -1 to indicate not set
+                                fbud_data.flower_base_scales.push_back(-1.0f);
+                            }
+                        }
+                    }
+
+                    return fbud_data;
+                };
+
                 for (pugi::xml_node petiole = internode.child("petiole"); petiole; petiole = petiole.next_sibling("petiole")) {
 
                     // petiole length
@@ -1551,121 +1717,56 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
 
                     // Read floral buds (if present)
                     for (pugi::xml_node floral_bud = petiole.child("floral_bud"); floral_bud; floral_bud = floral_bud.next_sibling("floral_bud")) {
-
-                        FloralBudData fbud_data;
-
-                        // Read bud state
-                        node_string = "bud_state";
-                        fbud_data.bud_state = parse_xml_tag_int(floral_bud.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
-
-                        // Read parent index
-                        node_string = "parent_index";
-                        fbud_data.parent_index = parse_xml_tag_int(floral_bud.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
-
-                        // Read bud index
-                        node_string = "bud_index";
-                        fbud_data.bud_index = parse_xml_tag_int(floral_bud.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
-
-                        // Read is_terminal
-                        node_string = "is_terminal";
-                        int is_terminal = parse_xml_tag_int(floral_bud.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
-                        fbud_data.is_terminal = (is_terminal != 0);
-
-                        // Read current fruit scale factor
-                        node_string = "current_fruit_scale_factor";
-                        fbud_data.current_fruit_scale_factor = parse_xml_tag_float(floral_bud.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
-
-                        // Read peduncle parameters (if present)
-                        pugi::xml_node peduncle = floral_bud.child("peduncle");
-                        if (peduncle) {
-                            node_string = "length";
-                            if (peduncle.child(node_string.c_str())) {
-                                fbud_data.peduncle_length = parse_xml_tag_float(peduncle.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
-                            }
-                            node_string = "radius";
-                            if (peduncle.child(node_string.c_str())) {
-                                fbud_data.peduncle_radius = parse_xml_tag_float(peduncle.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
-                            }
-                            node_string = "pitch";
-                            if (peduncle.child(node_string.c_str())) {
-                                fbud_data.peduncle_pitch = parse_xml_tag_float(peduncle.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
-                            }
-                            node_string = "roll";
-                            if (peduncle.child(node_string.c_str())) {
-                                fbud_data.peduncle_roll = parse_xml_tag_float(peduncle.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
-                            }
-                            node_string = "curvature";
-                            if (peduncle.child(node_string.c_str())) {
-                                fbud_data.peduncle_curvature = parse_xml_tag_float(peduncle.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
-                            }
-                        }
-
-                        // Read inflorescence parameters and flower positions (if present)
-                        pugi::xml_node inflorescence = floral_bud.child("inflorescence");
-                        if (inflorescence) {
-                            // Read inflorescence parameters
-                            node_string = "flower_offset";
-                            if (inflorescence.child(node_string.c_str())) {
-                                fbud_data.flower_offset = parse_xml_tag_float(inflorescence.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
-                            }
-
-                            // Read individual flower/fruit data (base position and rotations)
-                            for (pugi::xml_node flower = inflorescence.child("flower"); flower; flower = flower.next_sibling("flower")) {
-                                // inflorescence_base (optional for backward compatibility - value is ignored, auto-calculated)
-                                pugi::xml_node base_node = flower.child("inflorescence_base");
-                                if (base_node) {
-                                    vec3 base = parse_xml_tag_vec3(base_node, "inflorescence_base", "PlantArchitecture::readPlantStructureXML");
-                                    fbud_data.inflorescence_bases_saved.push_back(base);
-                                }
-
-                                // Read pitch, yaw, roll, and azimuth
-                                AxisRotation rotation;
-                                pugi::xml_node pitch_node = flower.child("flower_pitch");
-                                pugi::xml_node yaw_node = flower.child("flower_yaw");
-                                pugi::xml_node roll_node = flower.child("flower_roll");
-                                pugi::xml_node azimuth_node = flower.child("flower_azimuth");
-
-                                if (pitch_node) {
-                                    rotation.pitch = parse_xml_tag_float(pitch_node, "flower_pitch", "PlantArchitecture::readPlantStructureXML");
-                                } else {
-                                    rotation.pitch = 0;
-                                }
-
-                                if (yaw_node) {
-                                    rotation.yaw = parse_xml_tag_float(yaw_node, "flower_yaw", "PlantArchitecture::readPlantStructureXML");
-                                } else {
-                                    rotation.yaw = 0;
-                                }
-
-                                if (roll_node) {
-                                    rotation.roll = parse_xml_tag_float(roll_node, "flower_roll", "PlantArchitecture::readPlantStructureXML");
-                                } else {
-                                    rotation.roll = 0;
-                                }
-
-                                if (azimuth_node) {
-                                    rotation.azimuth = parse_xml_tag_float(azimuth_node, "flower_azimuth", "PlantArchitecture::readPlantStructureXML");
-                                } else {
-                                    rotation.azimuth = 0;
-                                }
-
-                                fbud_data.flower_rotations.push_back(rotation);
-
-                                // Read individual base scale for this flower/fruit
-                                pugi::xml_node scale_node = flower.child("flower_base_scale");
-                                if (scale_node) {
-                                    float base_scale = parse_xml_tag_float(scale_node, "flower_base_scale", "PlantArchitecture::readPlantStructureXML");
-                                    fbud_data.flower_base_scales.push_back(base_scale);
-                                } else {
-                                    // For backward compatibility with old XML files, use -1 to indicate not set
-                                    fbud_data.flower_base_scales.push_back(-1.0f);
-                                }
-                            }
-                        }
-
-                        floral_bud_data.back().push_back(fbud_data);
+                        floral_bud_data.back().push_back(readFloralBud(floral_bud));
                     }
                 } // petioles
+
+                // A phytomer whose leaves were removed (Phytomer::removeLeaf()) has no petioles left, but keeps each petiole's centerline and the
+                // floral buds - and any fruit - its petioles subtended. writePlantStructureXML() records both in one <shed_petiole> node per
+                // petiole index, the centerline as offsets from its base.
+                std::vector<std::vector<vec3>> shed_petiole_centerline_offsets;
+                for (pugi::xml_node shed_petiole = internode.child("shed_petiole"); shed_petiole; shed_petiole = shed_petiole.next_sibling("shed_petiole")) {
+                    if (!petiole_lengths.empty()) {
+                        helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A phytomer of shoot " + std::to_string(shootID) + " in '" + filename +
+                                             "' has both <petiole> and <shed_petiole> nodes. <shed_petiole> is only written for a phytomer whose leaves and petioles were all removed, so the file is inconsistent.");
+                    }
+                    std::vector<vec3> centerline_offsets;
+                    if (shed_petiole.child("centerline_offsets")) {
+                        std::string offsets_string = shed_petiole.child("centerline_offsets").child_value();
+                        std::replace(offsets_string.begin(), offsets_string.end(), ';', ' ');
+                        std::istringstream offsets_stream(offsets_string);
+                        vec3 offset;
+                        while (offsets_stream >> offset.x) {
+                            if (!(offsets_stream >> offset.y >> offset.z)) {
+                                helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): <centerline_offsets> of a <shed_petiole> of shoot " + std::to_string(shootID) + " in '" + filename +
+                                                     "' is not a list of x y z triples separated by ';'.");
+                            }
+                            centerline_offsets.push_back(offset);
+                        }
+                        if (!offsets_stream.eof()) {
+                            helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): <centerline_offsets> of a <shed_petiole> of shoot " + std::to_string(shootID) + " in '" + filename + "' contains a value that is not a number.");
+                        }
+                    }
+                    shed_petiole_centerline_offsets.push_back(centerline_offsets);
+                    floral_bud_data.emplace_back();
+                    for (pugi::xml_node floral_bud = shed_petiole.child("floral_bud"); floral_bud; floral_bud = floral_bud.next_sibling("floral_bud")) {
+                        floral_bud_data.back().push_back(readFloralBud(floral_bud));
+                    }
+                }
+
+                // Floral buds with no petiole - the shoot's terminal buds, and the axillary buds of a phytomer that has no petioles - follow
+                // the entries of the petioles, one <internode_floral_buds> node per entry.
+                const size_t petiole_floral_bud_entries = floral_bud_data.size();
+                size_t terminal_floral_bud_count = 0;
+                for (pugi::xml_node internode_buds = internode.child("internode_floral_buds"); internode_buds; internode_buds = internode_buds.next_sibling("internode_floral_buds")) {
+                    floral_bud_data.emplace_back();
+                    for (pugi::xml_node floral_bud = internode_buds.child("floral_bud"); floral_bud; floral_bud = floral_bud.next_sibling("floral_bud")) {
+                        floral_bud_data.back().push_back(readFloralBud(floral_bud));
+                        if (floral_bud_data.back().back().is_terminal) {
+                            terminal_floral_bud_count++;
+                        }
+                    }
+                }
 
                 if (shoot_types.find(shoot_type_label) == shoot_types.end()) {
                     helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): Shoot type " + shoot_type_label + " not found in shoot types.");
@@ -1684,17 +1785,24 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 // appendPhytomerToShoot() path, which honors the parameters passed by the caller.
                 shoot_parameters.phytomer_parameters.internode.length_segments = internode_length_segments;
 
-                shoot_parameters.phytomer_parameters.petiole.length = petiole_length;
-                shoot_parameters.phytomer_parameters.petiole.radius = petiole_radius;
-                shoot_parameters.phytomer_parameters.petiole.pitch = petiole_pitch;
-                shoot_parameters.phytomer_parameters.petiole.curvature = petiole_curvature;
+                // The petiole scalars are only set when the phytomer has a <petiole> node. A phytomer whose leaves
+                // were removed (Phytomer::removeLeaf(), e.g. by pruneGroundCollisions()) is written without one, and
+                // these were then left uninitialized and used to build the phytomer's petioles.
+                if (!petiole_lengths.empty()) {
+                    shoot_parameters.phytomer_parameters.petiole.length = petiole_length;
+                    shoot_parameters.phytomer_parameters.petiole.radius = petiole_radius;
+                    shoot_parameters.phytomer_parameters.petiole.pitch = petiole_pitch;
+                    shoot_parameters.phytomer_parameters.petiole.curvature = petiole_curvature;
+                }
 
                 shoot_parameters.phytomer_parameters.leaf.prototype_scale = 1.f; // leaf_scale.front().at(tip_ind);
                 shoot_parameters.phytomer_parameters.leaf.pitch = 0;
                 shoot_parameters.phytomer_parameters.leaf.yaw = 0;
                 shoot_parameters.phytomer_parameters.leaf.roll = 0;
-                shoot_parameters.phytomer_parameters.leaf.leaflet_scale = leaflet_scale;
-                shoot_parameters.phytomer_parameters.leaf.leaflet_offset = leaflet_offset;
+                if (!petiole_lengths.empty()) {
+                    shoot_parameters.phytomer_parameters.leaf.leaflet_scale = leaflet_scale;
+                    shoot_parameters.phytomer_parameters.leaf.leaflet_offset = leaflet_offset;
+                }
 
                 if (base_shoot) {
 
@@ -1801,6 +1909,9 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     phytomer_ptr->current_internode_scale_factor = fmin(1.f, internode_length / internode_length_max);
                 }
                 phytomer_ptr->age = phytomer_age;
+                if (leaf_flexibility >= 0.f) {
+                    phytomer_ptr->leaf_flexibility = leaf_flexibility;
+                }
 
                 // The perturbations were parsed above and used to rebuild this phytomer's internode
                 // vertices, but were never stored on the phytomer itself. writePlantStructureXML()
@@ -1941,23 +2052,34 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 for (int i = 1; i <= internode_length_segments; i++) {
                     // Apply gravitropic curvature + SAVED perturbations
                     if (phytomer_index_in_shoot > 0 && !curvature_perturbations.empty()) {
-                        // Compute curvature factor (lines 1633-1636 in PlantArchitecture.cpp)
+                        // This must stay in lockstep with the equivalent block in Phytomer::appendPhytomer() in
+                        // PlantArchitecture.cpp, including the asymmetry of the inclination factor about horizontal.
                         float current_curvature_fact = 0.5f - internode_axis.z / 2.0f;
                         if (internode_axis.z < 0) {
                             current_curvature_fact *= 2.0f;
                         }
+                        float gravitropic_angle = shoot_ptr->gravitropic_curvature * current_curvature_fact * dr_max;
 
-                        // Get gravitropic curvature from shoot
-                        float gravitropic_curvature = shoot_ptr->gravitropic_curvature;
+                        // The bending axis shrinks to zero length as the shoot approaches vertical, so it must be normalized
+                        // before it is used to construct the orthogonal transverse axis.
+                        helios::vec3 bending_axis_normalized = shoot_bending_axis;
+                        if (bending_axis_normalized.magnitude() > 1e-4f) {
+                            bending_axis_normalized.normalize();
 
-                        // Apply curvature with SAVED perturbation (matches line 1646-1647)
-                        float curvature_angle = deg2rad(gravitropic_curvature * current_curvature_fact * dr_max + curvature_perturbations[i - 1]);
-                        internode_axis = rotatePointAboutLine(internode_axis, nullorigin, shoot_bending_axis, curvature_angle);
+                            float bending_angle = deg2rad(gravitropic_angle + curvature_perturbations[i - 1]);
+                            internode_axis = rotatePointAboutLine(internode_axis, nullorigin, bending_axis_normalized, bending_angle);
 
-                        // Apply yaw perturbation if available (matches line 1651-1652)
-                        if (!yaw_perturbations.empty() && (i - 1) < yaw_perturbations.size()) {
-                            float yaw_angle = deg2rad(yaw_perturbations[i - 1]);
-                            internode_axis = rotatePointAboutLine(internode_axis, nullorigin, make_vec3(0, 0, 1), yaw_angle);
+                            // Apply the orthogonal saved noise component about the transverse axis of the shoot frame
+                            if (!yaw_perturbations.empty() && (i - 1) < yaw_perturbations.size()) {
+                                helios::vec3 transverse_axis = cross(internode_axis, bending_axis_normalized);
+                                if (transverse_axis.magnitude() > 1e-4f) {
+                                    transverse_axis.normalize();
+                                    float transverse_angle = deg2rad(yaw_perturbations[i - 1]);
+                                    internode_axis = rotatePointAboutLine(internode_axis, nullorigin, transverse_axis, transverse_angle);
+                                }
+                            }
+
+                            internode_axis.normalize();
                         }
                     }
 
@@ -2275,6 +2397,32 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     }
                 }
 
+                // A phytomer written without any <petiole> had its leaves and petioles removed in the saved plant, but it
+                // was just rebuilt from the shoot type with a full set of them. Remove them again so the reloaded phytomer
+                // matches the saved one; otherwise the rebuilt petioles were drawn in the Context and written to the next
+                // file as petioles carrying no leaves, adding petioles on every save/load cycle.
+                if (petiole_lengths.empty() && !phytomer_ptr->petiole_length.empty()) {
+                    phytomer_ptr->removeLeaf();
+                }
+
+                // removeLeaf() keeps the petiole centerlines, and they still orient the next phytomer, child shoots and peduncles at this
+                // node. The ones just rebuilt came from a fresh draw of the shoot type's petiole parameters, so put back the saved ones.
+                if (shed_petiole_centerline_offsets.size() > phytomer_ptr->petiole_vertices.size()) {
+                    helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A phytomer of shoot " + std::to_string(shootID) + " in '" + filename + "' has " + std::to_string(shed_petiole_centerline_offsets.size()) +
+                                         " <shed_petiole> nodes, but its shoot type builds " + std::to_string(phytomer_ptr->petiole_vertices.size()) + " petioles per phytomer. The file does not match the shoot type it names.");
+                }
+                for (size_t p = 0; p < shed_petiole_centerline_offsets.size(); p++) {
+                    if (shed_petiole_centerline_offsets.at(p).empty()) {
+                        continue;
+                    }
+                    const vec3 petiole_base = shoot_ptr->shoot_internode_vertices[phytomer_index_in_shoot].back();
+                    std::vector<vec3> &centerline = phytomer_ptr->petiole_vertices.at(p);
+                    centerline.clear();
+                    for (const vec3 &offset: shed_petiole_centerline_offsets.at(p)) {
+                        centerline.push_back(petiole_base + offset);
+                    }
+                }
+
                 // Delete and recreate leaves with correct petiole/internode axes
                 // This is necessary because leaves were created with wrong axes before petiole geometry was restored
 
@@ -2421,10 +2569,10 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         for (int prototype = 0; prototype < phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes; prototype++) {
                             for (int leaf = 0; leaf < leaves_per_petiole; leaf++) {
                                 float ind_from_tip = float(leaf) - float(leaves_per_petiole - 1) / 2.f;
-                                uint objID_leaf = phytomer_ptr->phytomer_parameters.leaf.prototype.prototype_function(context_ptr, &phytomer_ptr->phytomer_parameters.leaf.prototype, ind_from_tip);
+                                uint objID_leaf = phytomer_ptr->buildLeafPrototype(leaves_per_petiole, ind_from_tip);
                                 if (phytomer_ptr->phytomer_parameters.leaf.prototype.prototype_function == GenericLeafPrototype) {
-                                    // A petiolule loaded from an OBJ arrives already labelled by its own group in the file. Labelling the whole object "leaf" would overwrite that, and the filter below - which gives the
-                                    // petiolule the petiole's colour, and which downstream code uses to give it the petiole's optical properties rather than the blade's - would then match nothing.
+                                    // A petiolule arrives already labelled "petiolule". Labelling the whole object "leaf" would overwrite that, and the filter below - which gives the
+                                    // petiolule the petiole's material, and which downstream code uses to give it the petiole's optical properties rather than the blade's - would then match nothing.
                                     const std::vector<uint> object_UUIDs = context_ptr->getObjectPrimitiveUUIDs(objID_leaf);
                                     const std::vector<uint> labelled_UUIDs = context_ptr->filterPrimitivesByData(object_UUIDs, "object_label", "petiolule");
                                     const std::set<uint> keep_label(labelled_UUIDs.begin(), labelled_UUIDs.end());
@@ -2445,8 +2593,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                 this->recordLeafPrototypeRestGeometry(phytomer_ptr->phytomer_parameters.leaf.prototype, leaves_per_petiole, prototype, objID_leaf, phytomer_ptr->leaf_flexibility);
                                 std::string leaf_material_name = plant_instances.at(plantID).plant_name + "_" + shoot_type_label + "_leaf";
                                 renameAutoMaterial(context_ptr, objID_leaf, leaf_material_name);
-                                std::vector<uint> petiolule_UUIDs = context_ptr->filterPrimitivesByData(context_ptr->getObjectPrimitiveUUIDs(objID_leaf), "object_label", "petiolule");
-                                context_ptr->setPrimitiveColor(petiolule_UUIDs, phytomer_ptr->phytomer_parameters.petiole.color);
+                                phytomer_ptr->assignPetioluleMaterial(objID_leaf);
                                 context_ptr->hideObject(objID_leaf);
                             }
                         }
@@ -2516,7 +2663,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         } else {
                             // Built from the prototype function: either the species caches no prototypes, or the saved leaf was itself built that way (a <leaf_prototype> of -1, as written for a leaf
                             // rebuilt by setPetioleLeafCount() or setPetioleLeafGeometry(), whose leaflet count may exceed the cache). Such a leaf has no cached rest shape, so its prototype index stays -1.
-                            objID_leaf = phytomer_ptr->phytomer_parameters.leaf.prototype.prototype_function(context_ptr, &phytomer_ptr->phytomer_parameters.leaf.prototype, ind_from_tip);
+                            objID_leaf = phytomer_ptr->buildLeafPrototype(leaves_per_petiole, ind_from_tip);
                             if (phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes > 0) {
                                 phytomer_ptr->labelLeafPrototype(objID_leaf);
                                 renameAutoMaterial(context_ptr, objID_leaf, plant_instances.at(plantID).plant_name + "_" + shoot_type_label + "_leaf");
@@ -2625,6 +2772,11 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                             context_ptr->setPrimitiveData(UUIDs, pair.first.c_str(), pair.second);
                         }
                         for (const auto &pair: saved_leaf_data_string[petiole][leaf]) {
+                            // The saved data was read from a single blade primitive, and the rebuilt leaf is already labelled primitive by primitive: writing the blade's
+                            // label onto every primitive would turn its petiolule into blade.
+                            if (pair.first == "object_label") {
+                                continue;
+                            }
                             context_ptr->setPrimitiveData(UUIDs, pair.first.c_str(), pair.second);
                         }
                     }
@@ -2636,9 +2788,25 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     // that the saved plant does not have. Leaving them in place made the next write emit buds
                     // that were never in the original file.
                     phytomer_ptr->floral_buds.clear();
-                } else if (floral_bud_data.size() <= phytomer_ptr->petiole_length.size()) {
+                } else if (petiole_floral_bud_entries > phytomer_ptr->petiole_vertices.size()) {
+                    helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A phytomer of shoot " + std::to_string(shootID) + " in '" + filename + "' has floral buds on " + std::to_string(petiole_floral_bud_entries) +
+                                         " petioles, but its shoot type builds " + std::to_string(phytomer_ptr->petiole_vertices.size()) + " petioles per phytomer. The file does not match the shoot type it names.");
+                } else {
+                    // Checked against petiole_vertices rather than petiole_length: Phytomer::removeLeaf() clears the petiole
+                    // scalars of a phytomer whose leaves were removed but keeps its petiole centerlines, and the axillary
+                    // floral buds such a phytomer still carries are attached at the base of those centerlines.
                     // Ensure the floral_buds vector is properly sized
                     phytomer_ptr->floral_buds.resize(floral_bud_data.size());
+                    // Peduncle storage is indexed like floral_buds, and was only sized for the petioles when the phytomer was built.
+                    if (phytomer_ptr->peduncle_length.size() < floral_bud_data.size()) {
+                        phytomer_ptr->peduncle_vertices.resize(floral_bud_data.size());
+                        phytomer_ptr->peduncle_radii.resize(floral_bud_data.size());
+                        phytomer_ptr->peduncle_length.resize(floral_bud_data.size());
+                        phytomer_ptr->peduncle_radius.resize(floral_bud_data.size());
+                        phytomer_ptr->peduncle_pitch.resize(floral_bud_data.size());
+                        phytomer_ptr->peduncle_curvature.resize(floral_bud_data.size());
+                        phytomer_ptr->peduncle_roll.resize(floral_bud_data.size());
+                    }
 
                     for (size_t petiole = 0; petiole < floral_bud_data.size(); petiole++) {
                         phytomer_ptr->floral_buds.at(petiole).resize(floral_bud_data.at(petiole).size());
@@ -2661,21 +2829,18 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                             // Auto-calculate floral bud base_position and base_rotation from parent geometry
                             // Position: terminal buds attach at internode tip, axillary buds at petiole base
                             // Rotation: computed from bud_index and number of buds (matches growth algorithm)
-                            if (fbud.isterminal) {
-                                // Terminal buds attach at the tip of this phytomer's internode
+                            if (fbud.isterminal || petiole >= petiole_floral_bud_entries) {
+                                // Terminal buds, and the axillary buds of a phytomer with no petioles, attach at the tip of this phytomer's internode
                                 fbud.base_position = phytomer_ptr->parent_shoot_ptr->shoot_internode_vertices.at(phytomer_index_in_shoot).back();
                             } else {
-                                // Axillary buds attach at the base of the parent petiole
-                                if (petiole < phytomer_ptr->petiole_vertices.size()) {
-                                    fbud.base_position = phytomer_ptr->petiole_vertices.at(petiole).front();
-                                } else {
-                                    helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): Floral bud parent_index " + std::to_string(fbud.parent_index) + " exceeds number of petioles.");
-                                }
+                                // Axillary buds attach at the base of the parent petiole (petiole_floral_bud_entries was checked against petiole_vertices above)
+                                fbud.base_position = phytomer_ptr->petiole_vertices.at(petiole).front();
                             }
 
                             // Auto-calculate base_rotation from bud configuration
                             // Rotation depends on bud_index and total number of buds per petiole/shoot
-                            uint Nbuds = floral_bud_data.at(petiole).size();
+                            // Shoot::addTerminalFloralBud() spaces a shoot's terminal buds by how many it made, and holds each in an entry of its own.
+                            const uint Nbuds = fbud.isterminal ? static_cast<uint>(terminal_floral_bud_count) : static_cast<uint>(floral_bud_data.at(petiole).size());
                             if (fbud.isterminal) {
                                 // Terminal bud rotation formula (from PlantArchitecture.cpp:1243-1249)
                                 float pitch_adjustment = (Nbuds > 1) ? deg2rad(30.f) : 0.f;

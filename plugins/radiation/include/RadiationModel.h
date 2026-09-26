@@ -140,16 +140,16 @@ struct CameraProperties {
 struct SIFCameraProperties : public CameraProperties {
 
     //! Excitation wavelength bin width in nm. Helios auto-creates internal radiation
-    //! bands spanning 400-750 nm at this resolution to compute per-leaf APAR across the
-    //! excitation range. Smaller values give more accurate fluorescence at the cost of
+    //! bands spanning 400-750 nm at this resolution to compute the per-leaf incident excitation
+    //! flux across the excitation range. Smaller values give more accurate fluorescence at the cost of
     //! more band launches and more memory. Must be > 0.
     float excitation_bin_width_nm = 10.f;
 
-    //! Scattering depth used for the auto-generated excitation bands that drive APAR.
-    //! At the default of 0, every ray that hits a leaf is treated as fully absorbed
-    //! regardless of leaf reflectivity/transmissivity — fast, but over-estimates APAR
-    //! (especially in the NIR excitation range where leaf rho+tau is large). Set to
-    //! >=1 to include inter-leaf scattering in the APAR calculation; each additional
+    //! Scattering depth used for the auto-generated excitation bands that drive SIF.
+    //! At the default of 0, only excitation arriving directly from the sources is counted —
+    //! fast, but leaves inside a canopy miss the excitation scattered to them by other leaves
+    //! (most in the far-red end of the range, where leaf rho+tau is large). Set to
+    //! >=1 to include inter-leaf scattering in the excitation flux; each additional
     //! scattering iteration roughly doubles the excitation-dispatch cost but captures
     //! the contribution of reflected and transmitted light from neighboring leaves.
     uint excitation_scattering_depth = 0;
@@ -1260,14 +1260,14 @@ public:
      * for each resolution.
      *
      * The excitation-band scattering depth is controlled by
-     * `camera_properties.excitation_scattering_depth` (default 0). At depth 0, every ray
-     * that hits a leaf is treated as fully absorbed regardless of reflectivity and
-     * transmissivity — fast, but over-estimates APAR in the NIR excitation range where
-     * leaf rho+tau is large. Set >=1 to include inter-leaf scattering in APAR. When
+     * `camera_properties.excitation_scattering_depth` (default 0). At depth 0, only
+     * excitation arriving directly from the sources is counted — fast, but leaves inside a
+     * canopy miss excitation scattered by other leaves, most where leaf rho+tau is large.
+     * Set >=1 to include inter-leaf scattering in the excitation flux. When
      * multiple SIF cameras share an excitation bin width, the highest requested
      * scattering depth applies to the shared excitation bands.
      *
-     * \note Memory footprint: per-leaf APAR storage scales as
+     * \note Memory footprint: per-leaf excitation-flux storage scales as
      * `O(N_leaves * N_excitation_bands)`, where `N_excitation_bands = ceil(350 / bin_width_nm)`.
      * For 1 M primitives at 10 nm bin width, this is ~140 MB of float storage plus the
      * corresponding per-band GPU ray-trace buffers. Choose a coarser bin width for very
@@ -2108,8 +2108,8 @@ protected:
     std::map<std::string, std::unordered_map<uint, float>> sif_emission_buffer;
 
     //! Per-primitive per-band SIF source emission on the bottom face (W/m²). Matches
-    //! sif_emission_buffer in layout; distinguished so two-sided leaves can emit an
-    //! asymmetric Mf (top) / Mb (bottom) split.
+    //! sif_emission_buffer in layout; distinguished so two-sided leaves can emit different
+    //! spectra from each face (Fluspect-B's backward matrix from the face that received the excitation).
     std::map<std::string, std::unordered_map<uint, float>> sif_emission_buffer_bottom;
 
     //! Set of user-defined emission band labels that should source their flux from
@@ -2137,32 +2137,40 @@ protected:
     };
     //! Cached Fluspect-B kernels, reused across leaves with identical biochemistry.
     std::unordered_map<FluspectCacheKey, helios::FluspectKernel, FluspectCacheKeyHash> fluspect_cache;
+    //! Biochemistry (the first 10 Fluspect-B fields) each cached kernel was computed from; a kernel is reused only while its label still holds these values.
+    std::unordered_map<FluspectCacheKey, std::vector<float>, FluspectCacheKeyHash> fluspect_cache_biochem;
     //! Lazy-loaded Optipar coefficients (loaded on first SIF dispatch).
     helios::FluspectOptipar fluspect_optipar;
     bool fluspect_optipar_loaded = false;
 
-    //! Per-unique excitation bin-width: auto-generated band labels + per-primitive APAR buffer.
+    //! Per-unique excitation bin-width: auto-generated band labels + per-leaf fluorescence emission computed from them.
     struct ExcitationSet {
         float bin_width_nm;
         uint scattering_depth = 0; //!< Max requested by any bound SIF camera
         std::vector<std::string> band_labels; //!< Internal labels like "_SIF_exc_10_400_410"
         std::vector<float> band_min_nm; //!< wavelength_min of each band
         std::vector<float> band_max_nm; //!< wavelength_max of each band
-        //! Per-primitive per-band APAR (W/m²). Outer key: primitive UUID. Inner: band index.
-        std::unordered_map<uint, std::vector<float>> apar_buffer;
+        //! Band SIF emission of each leaf per unit fluorescence yield (W/m^2; x = top face, y = bottom face), computed from the incident excitation flux on each face when the bands were
+        //! run. Outer key: emission band bound to this bin width. Inner key: primitive UUID of every leaf with 'fluspect_spectrum' data.
+        std::map<std::string, std::unordered_map<uint, helios::vec2>> base_emission;
+        //! Biochemistry labels ('fluspect_spectrum' values) of the leaves when base_emission was computed, and the global-data version of each at that time
+        std::vector<std::pair<std::string, uint64_t>> biochem_label_versions;
+        //! Index into biochem_label_versions of each leaf's biochemistry label when base_emission was computed. Key: primitive UUID.
+        std::unordered_map<uint, uint> leaf_biochem_label;
         //! Whether the ray-trace for this set has already run in the current dispatch.
         bool populated = false;
     };
     //! Keyed by rounded bin width (to 5 decimals). Created on demand by addSIFCamera.
     std::map<float, ExcitationSet> excitation_sets;
 
-    //! Fluorescence quantum yield Φ_F from van der Tol et al. (2014) rate-coefficient model.
+    //! Steady-state fluorescence quantum yield from the van der Tol et al. (2014) rate-coefficient model.
     /**
-     * \param[in] J_over_Jmax Electron-transport-ratio (J/Jmax), expected in [0,1].
+     * \param[in] electron_transport_ratio Relative light saturation Ja/Je written by the photosynthesis model, where Ja is the electron transport used by
+     * carbon metabolism and Je its light-limited potential. Expected in [0,1]; 1 in the dark.
      * \param[in] T_leaf_K Leaf temperature in Kelvin.
-     * \return Φ_F = kF / (kF + kD + kP + kN).
+     * \return Phi_F = K_F / (K_F + K_D + K_N) * (1 - Phi_P), with Phi_P = Phi_P0 * Ja/Je and K_N from Eq. 19 of the paper (unstressed parameter set).
      */
-    static float calculateFluorescenceYield(float J_over_Jmax, float T_leaf_K);
+    static float calculateFluorescenceYield(float electron_transport_ratio, float T_leaf_K);
 
     //! Ensure Optipar coefficients are loaded (idempotent).
     void ensureFluspectOptiparLoaded();
@@ -2182,17 +2190,26 @@ protected:
      */
     ExcitationSet &ensureExcitationSet(float bin_width_nm, uint scattering_depth = 0);
 
-    //! Fill ExcitationSet::apar_buffer from each excitation band's radiation_flux_<band>
-    //! primitive data, then clear the internal primitive data label (internal bands should
-    //! not pollute user-visible primitive data).
-    void populateExcitationAPAR(ExcitationSet &exc);
+    //! Fill ExcitationSet::base_emission at the end of the launch that ran the set's excitation bands, then clear their internal radiation_flux_<band> primitive data.
+    /**
+     * The excitation flux incident on each leaf is recovered from its radiation_flux_<band> primitive data (divided by the leaf's absorptance at scattering depth 1 or more), and split
+     * between the faces in proportion to the absorbed flux that arrived on each face.
+     * \param[inout] exc Excitation set whose bands were all part of the launch.
+     * \param[in] launch_band_labels Labels of the launched bands, in launch slot order.
+     * \param[in] radiation_in Absorbed flux read back from the ray tracer [primitive][launch slot].
+     * \param[in] radiation_in_top Absorbed flux that arrived on the top face [primitive][launch slot].
+     */
+    void populateExcitationSet(ExcitationSet &exc, const std::vector<std::string> &launch_band_labels, const std::vector<float> &radiation_in, const std::vector<float> &radiation_in_top);
 
     //! Run ray tracing for all auto-generated excitation bands in all excitation sets that
-    //! have not yet been populated this dispatch, and fill each set's apar_buffer.
+    //! have not yet been populated this dispatch, filling each set's base_emission.
     void runExcitationBands();
 
-    //! For each primitive with leaf biochemistry, compute per-band SIF emission flux from
-    //! the Fluspect-B kernel × per-excitation-band APAR × Φ_F and write to sif_emission_buffer.
+    //! Whether an excitation set holds emission for an emission band and every leaf that currently has 'fluspect_spectrum' data, computed from the leaf's current biochemistry label and values.
+    [[nodiscard]] bool isExcitationEmissionCurrent(const ExcitationSet &exc, const std::string &emission_band) const;
+
+    //! For each primitive with leaf biochemistry, scale its per-face emission from the excitation set by Φ_F × fqe and write it to
+    //! sif_emission_buffer / sif_emission_buffer_bottom. Re-runs the excitation bands if the set has no emission for this band or for a leaf.
     /**
      * \param[in] emission_band Target SIF emission band label. Must be in sif_emission_bands.
      */

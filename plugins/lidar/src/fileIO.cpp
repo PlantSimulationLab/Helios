@@ -1958,11 +1958,7 @@ std::vector<uint> LiDARcloud::loadTreeQSM_impl(helios::Context *context, const s
     std::vector<helios::RGBcolor> colormap;
     if (use_colormap) {
         uint num_colors = std::max(static_cast<uint>(branches.size()), 10u); // At least 10 colors for variety
-        try {
-            colormap = context->generateColormap(colormap_or_texture, num_colors);
-        } catch (const std::exception &e) {
-            helios_runtime_error("ERROR (LiDARcloud::loadTreeQSM): Invalid colormap name '" + colormap_or_texture + "'. Valid options are: hot, cool, rainbow, lava, parula, gray, green");
-        }
+        colormap = Context::generateColormap(colormap_or_texture, num_colors);
     }
 
     // Create tube objects for each branch

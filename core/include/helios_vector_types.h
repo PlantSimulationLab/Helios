@@ -1749,65 +1749,14 @@ namespace helios {
      * \param[in] year Year in YYYY format
      * \ingroup vectors
      */
-    inline Date Julian2Calendar(int JulianDay, int year) {
-
-        int month = -1;
-
-        int skips_leap[] = {0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335};
-        int skips_nonleap[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
-        const int *skips = nullptr;
-
-        if (JulianDay < 1 || JulianDay > 366) {
-            throw(std::runtime_error("ERROR (Julian2Calendar): Julian day of " + std::to_string(JulianDay) + " is out of range (should be >0 and <367)."));
-        }
-
-        if ((year - 2000) % 4 == 0) { // leap year
-            skips = skips_leap;
-        } else { // non-leap year
-            skips = skips_nonleap;
-        }
-
-        for (int i = 1; i <= 12; i++) {
-            if (i == 12) {
-                month = 12;
-            } else if (JulianDay > skips[i - 1] && JulianDay <= skips[i]) {
-                month = i;
-                break;
-            }
-        }
-        assert(month > 0 && month < 13);
-
-        int day = JulianDay - skips[month - 1];
-
-        assert(day > 0 && day < 32);
-
-        return {day, month, year};
-    }
+    Date Julian2Calendar(int JulianDay, int year);
 
     //! Convert a calendar Date vector to Julian day.
     /**
      * \param[in] date Date vector
      * \ingroup vectors
      */
-    inline int Calendar2Julian(Date date) {
-
-        int skips_leap[] = {0, 31, 60, 91, 121, 152, 182, 214, 244, 274, 305, 335};
-        int skips_nonleap[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
-        int *skips = nullptr;
-
-        if ((date.year - 2000) % 4 == 0) { // leap year
-            skips = skips_leap;
-        } else { // non-leap year
-            skips = skips_nonleap;
-        }
-
-        int JD = skips[date.month - 1] + date.day;
-        if (JD <= 0 || JD > 366) {
-            throw("ERROR (Calendar2Julian): Julian day of " + std::to_string(JD) + " is out of range (should be >0 and <=366).");
-        }
-
-        return JD;
-    }
+    int Calendar2Julian(Date date);
 
     //! Make a Date vector
     /**

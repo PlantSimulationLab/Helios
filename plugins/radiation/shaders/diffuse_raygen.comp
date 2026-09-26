@@ -52,6 +52,7 @@ layout(push_constant) uniform PushConstants {
     uint prims_per_tile;   // Primitives per tile (65535 max)
     uint camera_count;     // Number of cameras; 0 = skip camera-weighted scatter
     uint camera_id;        // Camera whose weighting the camera-scatter buffers accumulate
+    uint face_absorption_enabled; // 1 = also accumulate the absorption that arrived on the top face into radiation_in_top
 } pc;
 
 // ========== Descriptor Set 0: Geometry ==========
@@ -185,6 +186,12 @@ layout(set = 1, binding = 13) readonly buffer GlassKLBuffer {
 layout(set = 2, binding = 0) buffer RadiationInBuffer {
     float radiation_in[]; // [primitive * band_count + band]
 } rad_in_buf;
+
+// Absorption that arrived on the top face (the side the normal points to), same layout as radiation_in. Written only when
+// pc.face_absorption_enabled is set; otherwise it is a one-element placeholder.
+layout(set = 2, binding = 15) buffer RadiationInTopBuffer {
+    float radiation_in_top[]; // [primitive * band_count + band]
+} rad_in_top_buf;
 
 layout(set = 2, binding = 1) readonly buffer RadiationOutTopBuffer {
     float radiation_out_top[]; // Energy emitted from top face
@@ -698,6 +705,9 @@ void main() {
                 if (subgroupElect()) {
                     if (absorption_sum != 0.0)
                         atomicAdd(rad_in_buf.radiation_in[global_idx], absorption_sum);
+                    // Every ray of this launch leaves from face pc.launch_face, so all of it arrived on that face
+                    if (pc.face_absorption_enabled != 0u && pc.launch_face == 1u && absorption_sum != 0.0)
+                        atomicAdd(rad_in_top_buf.radiation_in_top[global_idx], absorption_sum);
                     if (scatter_top_sum != 0.0)
                         atomicAdd(scatter_top_buf.scatter_top[global_idx], scatter_top_sum);
                     if (scatter_bottom_sum != 0.0)

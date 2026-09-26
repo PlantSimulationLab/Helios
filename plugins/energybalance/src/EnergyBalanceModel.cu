@@ -44,7 +44,8 @@ __device__ float evaluateEnergyBalance(float T, float R, float Qother, float eps
     float QH = cp_air_mol * gH * (T - Ta); // (see Campbell and Norman Eq. 6.8)
 
     // Latent heat flux
-    float es = 611.0f * expf(17.502f * (T - 273.f) / (T - 273.f + 240.97f));
+    // Same expression as esat_Pa(), which is host-only. The latent flux reported after the solve uses esat_Pa(), so the two must agree for the reported fluxes to close the energy balance.
+    float es = 611.0f * expf(17.502f * (T - 273.15f) / (T - 273.15f + 240.97f));
     // A zero boundary-layer conductance (gH) or zero stomatal conductance (gS) means there is no vapor
     // pathway, so gM is zero. Guarding both cases also avoids a 0/0 in the series-conductance expression
     // when gH == 0 and the stomatal sidedness makes one of the denominators vanish.
@@ -254,6 +255,12 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_GPU(const std::vector<uint
     bool calculated_blconductance_used = false;
     bool primitive_length_used = false;
 
+    // Ground primitives of the canopy airspace model receive a bare-soil boundary-layer conductance by default (see below).
+    std::unordered_set<uint> canopy_airspace_ground_set;
+    if (canopy_airspace_enabled) {
+        canopy_airspace_ground_set.insert(canopy_airspace_ground_UUIDs.begin(), canopy_airspace_ground_UUIDs.end());
+    }
+
     for (uint u = 0; u < Nprimitives; u++) {
         size_t p = UUIDs.at(u);
 
@@ -347,23 +354,29 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_GPU(const std::vector<uint
                 warnings.addWarning("missing_wind_speed", "Primitive data 'wind_speed' not set, using default (" + std::to_string(wind_speed_default) + " m/s)");
             }
 
-            // Characteristic size of primitive
-            float L;
-            if (context->doesPrimitiveDataExist(p, "object_length") && context->getPrimitiveDataType("object_length") == helios::HELIOS_TYPE_FLOAT) {
-                context->getPrimitiveData(p, "object_length", L);
-                if (L == 0) {
+            if (canopy_airspace_ground_set.count(UUIDs.at(u)) > 0) {
+                // The flat-plate relation below scales with the size of the primitive, which is arbitrary for a tiled soil surface. Ground primitives beneath the canopy airspace instead use the bare-soil conductance of Kustas and Norman
+                // (1999), evaluated at the within-canopy wind speed near the soil that the airspace model writes to 'wind_speed'.
+                gH[u] = calculateGroundBoundaryLayerConductance(U);
+            } else {
+                // Characteristic size of primitive
+                float L;
+                if (context->doesPrimitiveDataExist(p, "object_length") && context->getPrimitiveDataType("object_length") == helios::HELIOS_TYPE_FLOAT) {
+                    context->getPrimitiveData(p, "object_length", L);
+                    if (L == 0) {
+                        L = sqrt(context->getPrimitiveArea(p));
+                        primitive_length_used = true;
+                    }
+                } else if (context->getPrimitiveParentObjectID(p) > 0) {
+                    uint objID = context->getPrimitiveParentObjectID(p);
+                    L = sqrt(context->getObjectArea(objID));
+                } else {
                     L = sqrt(context->getPrimitiveArea(p));
                     primitive_length_used = true;
                 }
-            } else if (context->getPrimitiveParentObjectID(p) > 0) {
-                uint objID = context->getPrimitiveParentObjectID(p);
-                L = sqrt(context->getObjectArea(objID));
-            } else {
-                L = sqrt(context->getPrimitiveArea(p));
-                primitive_length_used = true;
-            }
 
-            gH[u] = 0.135f * sqrt(U / L) * float(Nsides[u]);
+                gH[u] = 0.135f * sqrt(U / L) * float(Nsides[u]);
+            }
 
             calculated_blconductance_used = true;
         }

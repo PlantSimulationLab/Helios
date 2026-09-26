@@ -104,9 +104,11 @@ namespace helios {
         void getRadiationResults(RayTracingResults &results) override;
         void getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels, std::vector<float> &pixel_depths, uint camera_id, const helios::int2 &resolution) override;
         void getWhiteReferenceResults(std::vector<float> &white_reference_top, std::vector<float> &white_reference_bottom) override;
+        void getRadiationInTopResults(std::vector<float> &radiation_in_top) override;
+        [[nodiscard]] size_t getRadiationInTopBufferSize() const override;
 
         // ========== Buffer Management Utilities ==========
-        void zeroRadiationBuffers(size_t launch_band_count) override;
+        void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption) override;
         void zeroScatterBuffers() override;
         void zeroCameraPixelBuffers(const helios::int2 &resolution) override;
         void copyScatterToRadiation() override;
@@ -250,6 +252,7 @@ namespace helios {
 
         // Result buffers (Set 2)
         Buffer radiation_in_buffer;
+        Buffer radiation_in_top_buffer; //!< Absorbed radiation that arrived on the top face [primitive × launch band]; a one-element placeholder unless face absorption tracking is enabled
         Buffer radiation_out_top_buffer;
         Buffer radiation_out_bottom_buffer;
         Buffer smoothing_vertex_indices_buffer;
@@ -329,6 +332,7 @@ namespace helios {
 
         // Per-launch band tracking (for radiation I/O buffers)
         uint32_t launch_band_count = 0; // Current runBand() band count (set by zeroRadiationBuffers)
+        bool face_absorption_enabled = false; //!< Set by zeroRadiationBuffers(): launches accumulate the top-face absorption into radiation_in_top
         std::vector<uint32_t> launch_to_global_band; // Maps launch band index → global band index
 
         //! Raise an error unless the camera-weighted scatter buffers are sized for the current camera set

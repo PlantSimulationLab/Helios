@@ -151,6 +151,9 @@ rtDeclareVariable(unsigned int, scattering_iteration, , ); // Current scattering
 
 // Output buffers
 rtBuffer<float, 1> radiation_in;
+// Absorbed radiation that arrived on the top face [primitive * Nbands_launch + band], written only when face_absorption_enabled is set (a one-element placeholder otherwise)
+rtBuffer<float, 1> radiation_in_top;
+rtDeclareVariable(unsigned int, face_absorption_enabled, , );
 rtBuffer<float, 1> radiation_in_camera;
 rtBuffer<float, 1> radiation_out_top;
 rtBuffer<float, 1> radiation_out_bottom;

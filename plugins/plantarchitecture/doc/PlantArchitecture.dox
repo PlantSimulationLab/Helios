@@ -95,6 +95,7 @@ A number of plant models are available in the plant architecture library, which 
 | Plant Type/Species                       | Variety/Variation                  | Plant type string argument | %Shoot types                                       |
 |------------------------------------------|------------------------------------|----------------------------|----------------------------------------------------|
 | Almond Tree (*Prunus dulcis*)            | Nonpareil                          | "almond"                   | trunk, scaffold, proleptic                         |
+| Almond Tree (*Prunus dulcis*)            | Independence                       | "almond_independence"      | trunk, scaffold, proleptic                         |
 | Apple Tree (*Malus pumila*)              | Fuji                               | "apple"                    | trunk, proleptic                                   |
 | Bindweed (*Convolvulus arvensis*)        | generic                            | "bindweed"                 | base, offshoots, children                          |
 | Butter Lettuce (*Lactuca sativa*)        | generic                            | "butterlettuce"            | mainstem                                           |
@@ -300,6 +301,20 @@ Annual plants generally start as seedlings and emerge from the ground at time = 
 
 Each time \ref PlantArchitecture::advanceTime() is called, the geometry is updated in the Context, which incurs substantial computational cost. Therefore, it is recommended to advance time over the largest increment possible. For example, if growing over 1 year it would not be efficient to call \ref PlantArchitecture::advanceTime() 365 times with a timestep of 1 day, but rather with a single call with timestep of 365 days.
 
+When the carbohydrate model is not enabled, perennial plants that cycle through winter dormancy are shaped by two processes applied once per season, at the dormancy boundary: branch mortality, which governs how long shoots survive, and growth priority, which lets a few shoots become limbs while their siblings stay twigs. Neither requires per-species parameters, and both are disabled when the carbohydrate model is active, which prunes branches on carbon starvation instead.
+
+Both processes need to know where the crown is shaded. Each plant carries a coarse voxel grid into which every leaf deposits "shadow", following the shadow-propagation model of Palubicki et al. (2009), <i>Self-organizing tree models for image synthesis</i>, ACM Transactions on Graphics 28(3). This is a cheap surrogate for light interception: shadow is scattered additively into a sparse array, and no ray tracing, visibility queries or radiative transfer are performed. The grid is captured at the season's peak canopy, so that when dormancy empties the canopy it still records what each branch stood in while in leaf. The local light exposure at any point can be queried with \ref PlantArchitecture::getShadowLightExposureAtPoint().
+
+Three deliberate deviations from the published model adapt it to mature, trained orchard crowns rather than the free-growing trees it was developed for. First, light exposure attenuates exponentially with accumulated shadow rather than linearly: the linear form saturates to exactly zero once a few dozen leaves are overhead, which on a dense mature crown makes the whole interior indistinguishable. Second, a leaf's shadow falls off with horizontal offset, not only with vertical distance, so a leaf does not shade a point far off to the side as strongly as the point directly beneath it. Third, exposure also accounts for how deep a point sits beneath the crown surface in any direction, which supplies the diffuse side-light component; without it a low branch on the outside of the crown is penalized as heavily as one buried in the middle, which prunes away the lower canopy of a vase-shaped crown.
+
+At each dormancy boundary, fine distal branches that spent the season too deeply shaded to pay for themselves are shed. A branch must survive at least one full season in leaf before it can be shed, and branches below a light-exposure threshold are then shed stochastically, with probability rising as exposure falls to zero, so that a marginal cohort thins over several seasons rather than disappearing at once. Shading alone cannot thin the lower crown, because removing a branch removes the foliage whose shadow justified removing it, so fine branches low in the crown and near its axis are also shed with a probability that falls to zero at half the crown height and is waived toward the outside of the crown, keeping the lit outer shell of the lower canopy.
+
+Shedding removes a branch only after it has been built and has supported the wood below it, so it thins the branching tail while leaving the structural wood and its girth intact. Suppressing bud break instead would compound along the parent chain -- a branch only reaches high branching order if every one of its ancestors also broke bud -- and so would remove branches before they ever carry leaves and starve the remaining wood of the downstream leaf area that drives girth.
+
+Growth priority is applied among the survivors. The laterals of each parent are ranked by the light their tips receive; the best-lit fraction is promoted, gaining node budget, internode length and bud-break probability over successive seasons, while the rest are demoted. Because a promoted lateral breaks more of its buds and carries a larger subtree, it tends to win again the following season, which is how a few branches thicken into limbs.
+
+Structural wood -- the trunk and scaffolds -- is exempt from both processes. It is identified by shoot type: every shoot type other than "proleptic" and "sylleptic" is treated as structural. A plant model whose fine shoots use other shoot type names is therefore neither shed nor reprioritized.
+
 \subsection PlantArchPheno Growth Phenology
 
 As the plant grows over time, it will transition to different phenological stages such as breaking dormancy, flowering, fruit set, etc. Each model has a default set of values that controls how long it takes to transition to these phenological states. Each state is described in the table below.
@@ -320,6 +335,7 @@ The phenological cycle starts when the plant enters dormancy, and thus a period 
 Plant type string argument | time_to_dormancy_break | time_to_flower_initiation | time_to_flower_opening | time_to_fruit_set | time_to_fruit_maturity | time_to_senescence | Age at time = 0 | Maximum age         |
 | ------| ------ | ------ | ------ | ------ | ------ | ------ | ------ |---------------------|
 "almond" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 1825 days (5 years) |
+"almond_independence" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 3000 days (8.2 years) |
 "apple" | 165 | -1 | 3 | 7 | 30 | 200 | 3 years | 1460 days (4 years) |
 "bean" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "bindweed" | 0 | -1 | 14 | -1 | -1 | \f$\infty\f$ | 0 | 50 days             |
@@ -648,7 +664,8 @@ The built-in function for procedural leaf generation generates leaf geometries b
 | unique_prototypes | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | 0 | Number of unique leaf prototypes to generate. If = 0, every leaf will be unique. Increasing this value gives more variability across the plant, but it will take longer to initially generate the plant model. |
 | leaf_offset | \htmlonly<span style="font-family: Courier, monospace; color: green;">helios::vec3</span>\endhtmlonly | (0,0,0) | Offset/translation applied to the leaf prototype. |
 | petiole_roll | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Creates a roll of the leaf near its base to more smoothly meet the petiole. |
-| build_petiolule | \htmlonly<span style="font-family: Courier, monospace; color: green;">bool</span>\endhtmlonly | false | Flag to build a petiolule (small petiole at leaflet base) connecting the leaf to the petiole. |
+| build_petiolule | \htmlonly<span style="font-family: Courier, monospace; color: green;">bool</span>\endhtmlonly | false | Flag to build a petiolule (small stalk at the leaflet base) connecting the leaflet to the rachis. It is a cylinder along the leaflet's midrib that ends where the blade begins, followed by a short join that flattens and tapers onto the blade base. Its radius is taken from the petiole where the leaflet attaches, so the stalk continues the petiole without a step. Its primitives are labelled "petiolule", are drawn with the petiole's material, and are not counted in leaf area. |
+| petiolule_length | \htmlonly<span style="font-family: Courier, monospace; color: green;">std::map&lt;int,float&gt;</span>\endhtmlonly | {0: 0.05} | Petiolule length as a fraction of the leaflet's blade length, keyed by compound-leaf index like leaf_texture_file (0 is the terminal leaflet). A single entry applies to all leaflets. |
 | --- **building leaf from OBJ model** --- ||||
 | OBJ_model_file | \htmlonly<span style="font-family: Courier, monospace; color: green;">std::string</span>\endhtmlonly | empty | Path to the OBJ file containing the leaf model. |
 | --- **building leaf from custom prototype function** --- ||||
@@ -787,7 +804,7 @@ Parameters defining the geometry and growth of the shoot are given in the \ref S
 | base_roll | RandomParameter_float | 0 | degrees | Roll angle of the shoot, which effectively specifies the angle of the first petiole relative to the parent shoot. |
 | base_yaw | RandomParameter_float | 0 | degrees | Yaw angle of the shoot relative to the parent shoot. |
 | gravitropic_curvature | RandomParameter_float | 0 | degrees/meter | Curvature angle of the shoot per unit length of shoot. If curvature is positive, shoot curves upward toward vertical. If negative, curvature is downward. |
-| tortuosity | RandomParameter_float | 0 | degrees/(meters)^0.5 | Factor determining the amount of random "wiggle" in internode growth along the shoot. |
+| tortuosity | RandomParameter_float | 0 | degrees/meter | Standard deviation of the random curvature that produces "wiggle" along the shoot. |
 | --- **Growth Parameters** --- |||||
 | phyllochron_min | RandomParameter_float | 1.0 | days/leaf | Minimum time between the emergence of successive phytomers along the shoot (minimum time or maximum growth rate). The actual phyllochron can be increased dynamically if the carbohydrate model is enabled. |
 | elongation_rate_max | RandomParameter_float | 0.2 | meter/meter/day | Maximum relative rate of elongation of the internode of the shoot. Units are meters of elongation per meter of maximum internode length per day. The actual elongation rate can be reduced dynamically if the carbohydrate model is enabled. |
@@ -855,13 +872,15 @@ Special Cases: If \htmlonly<span style="font-family: Courier, monospace; color: 
 The tendency of shoots to grow toward vertical is given by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">gravitropic_curvature</span>\endhtmlonly. This parameter is the curvature angle of the shoot per unit length of shoot. If curvature is positive, the shoot curves upward toward vertical. If negative, the shoot curves downward. Once the shoot has reached vertical, it will continue to grow vertically. For example, a shoot that emerges from the bud growing horizontally with \htmlonly<span style="font-family: Courier, monospace; color: blue;">gravitropic_curvature</span>\endhtmlonly = 90 degrees/meter will curve upward such that it will be growing upward after the first meter of growth.
 \subsubsection ShootParam_tortuosity tortuosity
 
-Random "wiggle" can be added to shoot growth using the \htmlonly<span style="font-family: Courier, monospace; color: blue;">tortuosity</span>\endhtmlonly parameter. Each time a phytomer is added to the shoot, some constant amount of differential curvature is added according to the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">gravitropic_curvature</span>\endhtmlonly. To introduce random variation, an additional amount of noise is added to the curvature based on a <a href="https://en.wikipedia.org/wiki/Langevin_equation">Langevin</a>-like equation (Brownian motion):
+Random "wiggle" can be added to shoot growth using the \htmlonly<span style="font-family: Courier, monospace; color: blue;">tortuosity</span>\endhtmlonly parameter. In addition to the deterministic curvature given by \htmlonly<span style="font-family: Courier, monospace; color: blue;">gravitropic_curvature</span>\endhtmlonly, the shoot is bent by a random curvature \f$\kappa\f$ (degrees/meter) that evolves along the shoot as an <a href="https://en.wikipedia.org/wiki/Ornstein%E2%80%93Uhlenbeck_process">Ornstein-Uhlenbeck</a> process in arc length \f$s\f$:
 
 \f[
-    d\theta = -\frac{1}{2}\left(\theta\right)dL + T\xi(dL)
+    d\kappa = -\frac{\kappa}{\lambda}\,ds + T\sqrt{\frac{2}{\lambda}}\,dW(s)
 \f]
 
-where \f$d\theta\f$ is the change in curvature angle of the current phytomer internode relative to the previous internode, \f$\theta\f$ is the integrated curvature angle relative to the base of the shoot, \f$dL\f$ is the internode length, \f$T\f$ is the tortuosity, and \f$\xi (dL)\f$ is a Gaussian process with variance of \f$dL\f$.
+where \f$T\f$ is the tortuosity, \f$\lambda\f$ is the persistence length given by \htmlonly<span style="font-family: Courier, monospace; color: blue;">tortuosity_persistence_length</span>\endhtmlonly (default 0.5 m), and \f$dW\f$ is a Wiener process. The random curvature has a standard deviation of \f$T\f$ and stays correlated over a length of about \f$\lambda\f$. Each internode segment of length \f$ds\f$ is turned by \f$\kappa\,ds\f$, with independent components in the plane of gravitropic bending and perpendicular to it, so the shape of the shoot does not depend on how finely its internodes are subdivided. Values used in the plant library range from about 10 degrees/meter for trunks to about 200 degrees/meter for very sinuous shoots.
+
+Before version 1.3.89 the tortuosity was an angle applied to each internode segment. An old value converts to the current units as tortuosity × <tt>internode.length_segments</tt> / <tt>internode_length_max</tt>.
 
 \subsection ShootParametersGrowth Growth Parameters of the Shoot
 
@@ -888,6 +907,8 @@ Petioles are governed by \htmlonly<span style="font-family: Courier, monospace; 
 \subsubsection ShootParam_girth_area_factor girth_area_factor
 
 When the shoot is created, the internode radius is set to the value of the phytomer parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">internode.radius_initial</span>\endhtmlonly. The girth of the internode will increase over time based on the amount of leaf area downstream of the internode. The girth of the internode is determined by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">girth_area_factor</span>\endhtmlonly, which is the cross-sectional area of the internode (girth) in cm^2 per m^2 of downstream leaf area. The girth will only increase and does not decrease if leaves are lost. Set this factor to 0 to prevent girth scaling. On a herbaceous plant that bears a terminal inflorescence at the apex of its stem, such as a sorghum panicle or a maize tassel, the area of that inflorescence is counted alongside the leaf area, since the stem has to carry it. A lateral flower cluster, and any inflorescence on a woody stem, does not contribute to girth.
+
+Downstream leaf area is cumulative: it counts the leaf area of every phytomer ever produced above the internode, and is not reduced when leaves drop or branches are shed. This is the pipe model with disused pipes retained (Shinozaki et al., 1964, Japanese Journal of Ecology 14:97-105; Lehnebach et al., 2018, Annals of Botany 121:773): the pipes serving shed leaves and branches remain in the stem as wood, so old basal wood is thicker than its current canopy alone would require, and a limb tapers as the square root of the leaf area it has supported. Because the total grows every season, perennial species need a much smaller factor than a model driven by the current canopy would.
 
 \subsubsection PlantArchBuild_custom Modifying Parameters of a Plant from the Library
 
@@ -944,7 +965,7 @@ plantarchitecture.updateCurrentShootParameters( "mainstem", modified );
 plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 0 );
 ~~~~~~
 
-Committing a shoot type stores the values it was given: the shoot-level random parameters are not re-drawn, so reading a shoot type and writing it straight back without editing anything leaves the model unchanged. This is not true of the phytomer parameters nested inside it, which are deliberately re-randomized each time a phytomer is created so that phytomers on the same shoot vary.
+Committing a shoot type stores the values it was given: no random parameter is re-drawn, at the shoot level or in the phytomer parameters nested inside it, so reading a shoot type and writing it straight back without editing anything leaves the model unchanged and consumes no random draws. The phytomer parameters are instead re-drawn each time a phytomer is created (see \ref PhytomerParameters::resample()), so that phytomers on the same shoot vary.
 
 Note that the map overload of \ref PlantArchitecture::updateCurrentShootParameters() replaces all shoot types at once, so a caller round-tripping the whole map must inherit separately for each entry, matching each rebuilt structure against the original of the same label.
 
@@ -1399,6 +1420,8 @@ Points worth knowing:
   \ref PlantArchitecture::getPlantLeafCount(). Internodes always contribute one entry per phytomer.
 - <b>Compound leaves report one entry per leaflet</b>, since each leaflet is its own object. A species that
   sizes its lateral leaflets differently from its terminal one will show that as spread.
+- <b>Leaf area is blade area.</b> A leaflet's petiolule belongs to its leaf object but is excluded from every
+  leaf-area result; \ref PlantArchitecture::getLeafBladeArea() gives the same quantity for a single leaf object.
 
 \section PlantArchConventions Coordinate Frames and Internal Storage Conventions
 
@@ -1497,7 +1520,7 @@ Lengths and positions are in metres and angles at the API boundary are in degree
 \ref AxisRotation, whose `pitch`, `yaw` and `roll` are in **radians**; use \ref helios::deg2rad() when
 constructing one from degrees. \ref ShootParameters::girth_area_factor is in cm<sup>2</sup> of branch
 cross-sectional area per m<sup>2</sup> of downstream leaf area. \ref ShootParameters::tortuosity is in
-degrees per square root of a metre, and \ref ShootParameters::gravitropic_curvature in degrees per metre.
+degrees per metre, and \ref ShootParameters::gravitropic_curvature in degrees per metre.
 
 \section PlantArchPruning Shoot Pruning and Hierarchical Management
 

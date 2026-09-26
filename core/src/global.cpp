@@ -254,18 +254,55 @@ float helios::calculateTriangleArea(const vec3 &v0, const vec3 &v1, const vec3 &
     return 0.5f * cross(edge1, edge2).magnitude();
 }
 
-int helios::Date::JulianDay() const {
-    int skips_leap[] = {0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335};
-    int skips_nonleap[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
-    int *skips;
+namespace {
 
-    if (isLeapYear()) { // leap year
-        skips = skips_leap;
-    } else { // non-leap year
-        skips = skips_nonleap;
+    // Number of days in the year preceding the first day of each month
+    constexpr int days_before_month_nonleap[12] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
+    constexpr int days_before_month_leap[12] = {0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335};
+
+    bool isGregorianLeapYear(int year) {
+        return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
     }
 
-    return skips[month - 1] + day;
+} // namespace
+
+helios::Date helios::Julian2Calendar(int JulianDay, int year) {
+    const bool leap = isGregorianLeapYear(year);
+    const int days_in_year = leap ? 366 : 365;
+    if (JulianDay < 1 || JulianDay > days_in_year) {
+        helios_runtime_error("ERROR (Julian2Calendar): Julian day of " + std::to_string(JulianDay) + " is out of range for year " + std::to_string(year) + " (should be between 1 and " + std::to_string(days_in_year) + ").");
+    }
+
+    const int *days_before_month = leap ? days_before_month_leap : days_before_month_nonleap;
+
+    int month = 12;
+    for (int m = 1; m < 12; m++) {
+        if (JulianDay <= days_before_month[m]) {
+            month = m;
+            break;
+        }
+    }
+
+    return {JulianDay - days_before_month[month - 1], month, year};
+}
+
+int helios::Calendar2Julian(Date date) {
+    if (date.month < 1 || date.month > 12) {
+        helios_runtime_error("ERROR (Calendar2Julian): Month of year is out of range (month of " + std::to_string(date.month) + " was given).");
+    }
+
+    const int *days_before_month = date.isLeapYear() ? days_before_month_leap : days_before_month_nonleap;
+
+    const int JD = days_before_month[date.month - 1] + date.day;
+    if (JD <= 0 || JD > 366) {
+        helios_runtime_error("ERROR (Calendar2Julian): Julian day of " + std::to_string(JD) + " is out of range (should be >0 and <=366).");
+    }
+
+    return JD;
+}
+
+int helios::Date::JulianDay() const {
+    return Calendar2Julian(*this);
 }
 
 void helios::Date::incrementDay() {
@@ -295,15 +332,7 @@ void helios::Date::incrementDay() {
 }
 
 bool helios::Date::isLeapYear() const {
-    if (year % 400 == 0) {
-        return true; // Divisible by 400: leap year
-    } else if (year % 100 == 0) {
-        return false; // Divisible by 100 but not 400: not a leap year
-    } else if (year % 4 == 0) {
-        return true; // Divisible by 4 but not 100: leap year
-    } else {
-        return false; // Not divisible by 4: not a leap year
-    }
+    return isGregorianLeapYear(year);
 }
 
 // Engine backing the free-function randu().
@@ -1505,7 +1534,7 @@ int helios::JulianDay(const Date &date) {
     int daysInMonth[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
     // Correct leap year calculation
-    if (bool isLeapYear = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)) {
+    if (isGregorianLeapYear(year)) {
         daysInMonth[2] = 29;
     }
 

@@ -234,7 +234,7 @@ namespace helios {
         uint max_scatters = 0; //!< Maximum number of scattering events
 
         // Face selection (for diffuse rays)
-        uint launch_face = 0; //!< Face to launch from: 0=top, 1=bottom
+        uint launch_face = 0; //!< Face to launch from: 1 = top (the side the normal points to), 0 = bottom
 
         // Camera-specific parameters
         uint camera_id = 0; //!< Camera ID

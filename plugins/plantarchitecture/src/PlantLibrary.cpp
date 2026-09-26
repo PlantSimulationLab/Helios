@@ -21,6 +21,94 @@
 
 using namespace helios;
 
+//! Smooth one-dimensional wander that cannot drift: a sum of sinusoids of given amplitude, wavelength and phase.
+/**
+ * Used to vary the path of trained wood. Trained wood is held in place -- a trunk by its stake, a cane by the wire it is tied to -- so it departs from its trained line by a bounded amount and keeps returning to it.
+ * A random walk does neither, since its excursion grows with the length of the path. A sum of sinusoids never strays further than the sum of its amplitudes however long the path is, which states the constraint
+ * directly, and the wavelengths set how quickly it is allowed to turn.
+ */
+struct BoundedWander {
+
+    //! Add a sinusoidal component.
+    /**
+     * \param[in] amplitude Largest departure this component contributes, in meters.
+     * \param[in] wavelength Distance along the path over which this component repeats, in meters.
+     * \param[in] phase Phase of this component at the start of the path, in radians.
+     */
+    void addComponent(float amplitude, float wavelength, float phase) {
+        amplitudes.push_back(amplitude);
+        wavelengths.push_back(wavelength);
+        phases.push_back(phase);
+    }
+
+    //! Departure from the trained line at a given distance along the path.
+    /**
+     * \param[in] distance Distance along the path, in meters.
+     * \return Departure in meters, whose magnitude never exceeds the sum of the component amplitudes.
+     */
+    [[nodiscard]] float evaluate(float distance) const {
+        float departure = 0.f;
+        for (size_t component = 0; component < amplitudes.size(); component++) {
+            departure += amplitudes.at(component) * std::sin(2.f * PI_F * distance / wavelengths.at(component) + phases.at(component));
+        }
+        return departure;
+    }
+
+private:
+    std::vector<float> amplitudes;
+    std::vector<float> wavelengths;
+    std::vector<float> phases;
+};
+
+//! Node path of an almond trunk: a lean plus a slow bounded sway, as seen in orchard trunks.
+/**
+ * A trunk is built node by node from this path rather than extruded from a single base rotation, which could only ever give a
+ * straight, uniformly tilted tube. Measured on the Phytograph QSMs of the 16 Nickels block-1 almonds, from the base to the
+ * scaffold fork, trunks lean 1.3-15 degrees (median about 6) and bow away from their base-to-fork chord by 3-15% of its length
+ * (median about 6%). The lean is drawn directly; the bow comes from a BoundedWander in each horizontal direction, which keeps
+ * the departure bounded however tall the trunk.
+ *
+ * \param[in] context_ptr Context whose random generator is used.
+ * \param[in] base_position Position of the base of the trunk.
+ * \param[in] trunk_nodes Number of trunk internodes.
+ * \param[in] internode_length Vertical spacing of the trunk nodes (m).
+ * \param[in] radius Radius assigned to every node (m); girth growth thickens the trunk from here.
+ * \param[out] node_positions trunk_nodes + 1 node positions, base first.
+ * \param[out] node_radii One radius per node.
+ */
+static void almondTrunkPath(helios::Context *context_ptr, const vec3 &base_position, uint trunk_nodes, float internode_length, float radius, std::vector<vec3> &node_positions, std::vector<float> &node_radii) {
+    const float trunk_height = float(trunk_nodes) * internode_length;
+
+    const float lean = deg2rad(context_ptr->randu(1.5f, 11.f));
+    const float lean_azimuth = context_ptr->randu(0.f, 2.f * PI_F);
+
+    // A slow bend of about half a cycle over the trunk, and a slight kink on top of it. The sway's net displacement between
+    // base and top is removed, so it bows the trunk without tilting it: left in, a slow sway adds to the lean, and the
+    // model's lean distribution grew a tail well past the 15 degrees of the most-leaning reference trunk.
+    BoundedWander sway_x;
+    BoundedWander sway_y;
+    for (BoundedWander *sway: {&sway_x, &sway_y}) {
+        sway->addComponent(context_ptr->randu(0.01f, 0.075f), trunk_height * context_ptr->randu(1.5f, 3.f), context_ptr->randu(0.f, 2.f * PI_F));
+        sway->addComponent(context_ptr->randu(0.002f, 0.008f), context_ptr->randu(0.3f, 0.6f), context_ptr->randu(0.f, 2.f * PI_F));
+    }
+
+    node_positions.clear();
+    node_radii.clear();
+    node_positions.reserve(trunk_nodes + 1);
+    node_radii.reserve(trunk_nodes + 1);
+    for (uint node = 0; node <= trunk_nodes; node++) {
+        const float height = float(node) * internode_length;
+        const float lean_offset = std::tan(lean) * height;
+        const float along = height / trunk_height;
+        const float bow_x = sway_x.evaluate(height) - sway_x.evaluate(0.f) - along * (sway_x.evaluate(trunk_height) - sway_x.evaluate(0.f));
+        const float bow_y = sway_y.evaluate(height) - sway_y.evaluate(0.f) - along * (sway_y.evaluate(trunk_height) - sway_y.evaluate(0.f));
+        const float offset_x = lean_offset * std::cos(lean_azimuth) + bow_x;
+        const float offset_y = lean_offset * std::sin(lean_azimuth) + bow_y;
+        node_positions.push_back(base_position + make_vec3(offset_x, offset_y, height));
+        node_radii.push_back(radius);
+    }
+}
+
 float PlantArchitecture::getParameterValue(const std::map<std::string, float> &build_parameters, const std::string &parameter_name, float default_value, float min_value, float max_value, const std::string &parameter_description) const {
 
     // Check if parameter is specified in the map
@@ -46,6 +134,8 @@ void PlantArchitecture::initializePlantModelRegistrations() {
     registerPlantModel("almond", [this]() { initializeAlmondTreeShoots(); }, [this](const helios::vec3 &pos) { return buildAlmondTree(pos); }, "tree");
 
     registerPlantModel("almond_aldrich", [this]() { initializeAlmondTreeAldrichShoots(); }, [this](const helios::vec3 &pos) { return buildAlmondTreeAldrich(pos); }, "tree");
+
+    registerPlantModel("almond_independence", [this]() { initializeAlmondTreeIndependenceShoots(); }, [this](const helios::vec3 &pos) { return buildAlmondTreeIndependence(pos); }, "tree");
 
     registerPlantModel("almond_wood_colony", [this]() { initializeAlmondTreeWoodColonyShoots(); }, [this](const helios::vec3 &pos) { return buildAlmondTreeWoodColony(pos); }, "tree");
 
@@ -393,7 +483,18 @@ void PlantArchitecture::initializeAlmondTreeShoots() {
 
     PhytomerParameters phytomer_parameters_almond(context_ptr->getRandomGenerator());
 
-    phytomer_parameters_almond.internode.pitch = 3;
+    // Node-scale roughness: the small, discrete kink applied at each phytomer base. This is the fine-texture scale, distinct from
+    // the larger-scale wander produced by the tortuosity random walk along the internode.
+    //
+    // The distribution is symmetric about zero rather than about a positive value. The kink direction is already scattered around
+    // the stem by the phyllotactic angle, so a signed magnitude lets successive kinks partially cancel: this yields the same net
+    // wander as a positive-mean distribution of twice the width, but spends roughly half the total bending to get there, leaving
+    // the directed gravitropic response rather than accumulated node kinks to set the overall branch trajectory. A constant pitch
+    // traces a near-perfect helix (the kinks cancel almost exactly) and reads as a smooth systematic bend, not as texture.
+    //
+    // Note this is a phenomenological roughness term. A negative pitch has no specific botanical reading on its own; the
+    // mechanistic direction of nodal deflection is carried by the phyllotactic rotation of the axis it is applied about.
+    phytomer_parameters_almond.internode.pitch.uniformDistribution(-7, 7);
     phytomer_parameters_almond.internode.phyllotactic_angle.uniformDistribution(120, 160);
     phytomer_parameters_almond.internode.radius_initial = 0.002;
     phytomer_parameters_almond.internode.length_segments = 1;
@@ -439,12 +540,16 @@ void PlantArchitecture::initializeAlmondTreeShoots() {
     shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle = 0;
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.005;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
-    shoot_parameters_trunk.max_nodes = 20;
-    shoot_parameters_trunk.girth_area_factor = 10.f;
+    // The trunk node count is derived in buildAlmondTree() as trunk_height / 0.03, and trunk_height is
+    // accepted over 0.1-3.0 m. The cap must therefore cover the whole of that range, otherwise any
+    // trunk_height above 0.6 m throws out of addBaseStemShoot(). The trunk apical meristem is killed
+    // immediately after the plant is built, so this only sizes the guard; it does not permit extra growth.
+    shoot_parameters_trunk.max_nodes = 101;
+    shoot_parameters_trunk.girth_area_factor = 3.7f;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
-    shoot_parameters_trunk.tortuosity = 1;
-    shoot_parameters_trunk.internode_length_max = 0.04;
+    shoot_parameters_trunk.tortuosity = 10;
+    shoot_parameters_trunk.internode_length_max = 0.05;
     shoot_parameters_trunk.internode_length_decay_rate = 0;
     shoot_parameters_trunk.defineChildShootTypes({"scaffold"}, {1});
 
@@ -455,22 +560,49 @@ void PlantArchitecture::initializeAlmondTreeShoots() {
     shoot_parameters_proleptic.phytomer_parameters.internode.radial_subdivisions = 5;
     shoot_parameters_proleptic.phytomer_parameters.phytomer_creation_function = AlmondPhytomerCreationFunction;
     shoot_parameters_proleptic.phytomer_parameters.phytomer_callback_function = AlmondPhytomerCallbackFunction;
-    shoot_parameters_proleptic.max_nodes = 60;
-    shoot_parameters_proleptic.max_nodes_per_season = 20;
+    // Calibrated against a Phytograph QSM reconstruction of a seven-year-old leaf-off almond (see
+    // projects/QSMCalibration). Capping the lifetime node count well below the old value of 60 stops a
+    // proleptic shoot from extending indefinitely across seasons; the reference tree carries its wood as
+    // many short branches rather than a few long ones, and the uncapped shoot produced branches roughly
+    // 1.5x too long.
+    shoot_parameters_proleptic.max_nodes.uniformDistribution(20, 55);
+    shoot_parameters_proleptic.max_nodes_per_season = 15;
     shoot_parameters_proleptic.phyllochron_min = 1;
     shoot_parameters_proleptic.elongation_rate_max = 0.3;
-    shoot_parameters_proleptic.girth_area_factor = 6.f;
-    shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.1;
-    shoot_parameters_proleptic.vegetative_bud_break_probability_max = 0.5;
+    shoot_parameters_proleptic.girth_area_factor = 4.5f;
+    shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.05;
+    // Scaled by 0.85 when the whole-plant leaf-area-index and shadow-grid bud-break terms were removed from the model: at
+    // almond's canopy density those two had been multiplying every bud-break probability by roughly this much. Matched on
+    // Nonpareil, 0.85 on the proleptic and scaffold maxima restores total woody length with crown shape unchanged.
+    shoot_parameters_proleptic.vegetative_bud_break_probability_max = 0.31;
+    // The decay is linear in nodes from the tip: p = max(p_min, p_max - decay * nodes_from_tip). At the
+    // old rate of 0.15 the probability fell from 0.5 to the 0.1 floor within three nodes, so effectively
+    // the whole shoot broke buds at the minimum and the tree ramified at about half the observed rate.
+    // Spreading the decay over roughly eight nodes brings forks per metre into line with the QSM tree.
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.15;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
-    shoot_parameters_proleptic.gravitropic_curvature = 250;
-    shoot_parameters_proleptic.tortuosity = 3.5;
-    shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution(25, 30);
+    // Sets how fast a lateral reorients toward vertical, in degrees per metre of arc. At the old value of
+    // 250 a branch that emerged near-horizontal was back to near-vertical within 10-25 cm, so laterals in
+    // the lower crown ran upward rather than outward: they piled on woody length and branch count without
+    // contributing any crown width, which read as a narrow-based, flare-topped (cone/mushroom) canopy.
+    //
+    // Measured against the QSM reference, order-2 branches emerge at a sensible angle in both trees
+    // (71 deg from vertical in the model, 64 deg in the reference) but the model then turned 24 deg along
+    // its length against the reference's 7 deg. Halving the response brings crown radius from 1.8 to 2.0 m
+    // (reference 2.5 m) and the upper/lower crown-radius ratio from 1.24 to 1.06 (reference 1.14).
+    //
+    // Note this is the proleptic value only. The scaffold and sylleptic types are copy-constructed from
+    // these parameters but both assign their own gravitropic_curvature below, so neither inherits it.
+    // Gravitropic curvatures raised 20% across all shoot types from renders, which showed branches needing a little more upward
+    // curvature throughout the crown.
+    shoot_parameters_proleptic.gravitropic_curvature = 180;
+    shoot_parameters_proleptic.tortuosity = 37.5;
+    shoot_parameters_proleptic.tortuosity_persistence_length = 0.3;
+    shoot_parameters_proleptic.insertion_angle_tip = 45;
     shoot_parameters_proleptic.insertion_angle_decay_rate = 15;
-    shoot_parameters_proleptic.internode_length_max = 0.03;
+    shoot_parameters_proleptic.internode_length_max = 0.04;
     shoot_parameters_proleptic.internode_length_min = 0.002;
-    shoot_parameters_proleptic.internode_length_decay_rate = 0.002;
+    shoot_parameters_proleptic.internode_length_decay_rate = 0.004;
     shoot_parameters_proleptic.fruit_set_probability = 0.4;
     shoot_parameters_proleptic.flower_bud_break_probability = 0.3;
     shoot_parameters_proleptic.max_terminal_floral_buds = 3;
@@ -490,21 +622,57 @@ void PlantArchitecture::initializeAlmondTreeShoots() {
     shoot_parameters_sylleptic.phyllochron_min = 1;
     shoot_parameters_sylleptic.vegetative_bud_break_probability_min = 0.0;
     shoot_parameters_sylleptic.vegetative_bud_break_probability_max = 0.7;
-    shoot_parameters_sylleptic.gravitropic_curvature = 600;
+    shoot_parameters_sylleptic.gravitropic_curvature = 720;
     shoot_parameters_sylleptic.internode_length_max = 0.02;
+    shoot_parameters_sylleptic.tortuosity = 75;
     shoot_parameters_sylleptic.flowers_require_dormancy = true;
     shoot_parameters_sylleptic.growth_requires_dormancy = true;
     shoot_parameters_sylleptic.defineChildShootTypes({"proleptic"}, {1.0});
+    // Sylleptic shoots are copied from the proleptic parameters above, so they would otherwise inherit the
+    // QSM-calibrated node cap and bud-break decay. Those were validated for proleptic shoots only, so the
+    // previous values are restored here rather than being changed as an invisible side effect of the
+    // calibration. (The almond model gives sylleptic a child-type probability of zero, so this is a
+    // correctness measure and does not alter the generated tree.)
+    shoot_parameters_sylleptic.max_nodes = 60;
+    shoot_parameters_sylleptic.vegetative_bud_break_probability_decay_rate = 0.15;
 
     // Main scaffolds
     ShootParameters shoot_parameters_scaffold = shoot_parameters_proleptic;
     //    shoot_parameters_scaffold.phytomer_parameters.internode.color = RGB::blue;
     shoot_parameters_scaffold.phytomer_parameters.internode.radial_subdivisions = 10;
-    shoot_parameters_scaffold.max_nodes = 40;
-    shoot_parameters_scaffold.gravitropic_curvature = 150;
-    // shoot_parameters_scaffold.internode_length_max = 0.02;
-    shoot_parameters_scaffold.tortuosity = 1.;
+    shoot_parameters_scaffold.max_nodes = 105;
+    shoot_parameters_scaffold.gravitropic_curvature = 276;
+    // shoot_parameters_scaffold.internode_length_max = 0.04;
+    shoot_parameters_scaffold.tortuosity = 10;
+    shoot_parameters_scaffold.tortuosity_persistence_length = 2.5;
     shoot_parameters_scaffold.defineChildShootTypes({"proleptic"}, {1.0});
+    // Likewise for the scaffolds: the calibration applies to proleptic shoots. The scaffolds already pin
+    // their own max_nodes above, so only the bud-break decay needs restoring.
+    // Positive: acrotonic, with bud-break vigour rising toward the apex. Acrotony is "the increase in vigor
+    // (length, diameter, number of leaves) of vegetative branches from the bottom to the top position of the
+    // parent growth unit" and is the pattern that governs tree development, whereas basitony -- stronger growth
+    // at the base, which a negative rate encodes -- characterises shrubs (Costes et al., Front. Plant Sci.
+    // 5:666, 2014; Wilson, Am. J. Bot. 87:601, 2000). The previous -0.01 concentrated scaffold recruitment at
+    // the trunk junction, which is where the long structural branches that distorted the crown were emerging.
+    shoot_parameters_scaffold.vegetative_bud_break_probability_decay_rate = 0.02;
+    shoot_parameters_scaffold.vegetative_bud_break_probability_max = 0.72;
+    shoot_parameters_scaffold.vegetative_bud_break_probability_min = 0.10;
+    // Girth is area = girth_area_factor * downstream_leaf_area, and downstream leaf area partitions exactly
+    // across a fork, so with a single factor the pipe model conserves cross-sectional area through a
+    // junction. Inheriting the proleptic value of 6 while the trunk uses 10 broke that at the one junction
+    // where it matters most: measured at the trunk/scaffold fork, the summed scaffold area came to exactly
+    // 0.600 of the trunk's -- the 6/10 parameter ratio -- discarding 40% of the cross-section, while every
+    // other junction in the tree conserved area to within the reference's own scatter.
+    //
+    // The QSM reference slightly more than conserves at its head (summed scaffold area / trunk area = 1.39).
+    //
+    // Refit after the per-phytomer 365/age decay was removed from incrementPhytomerInternodeGirth(): girth is now
+    // proportional to CUMULATIVE downstream leaf area, so the factor is much smaller than the 30 used before. Against
+    // tree_13 at 2555 days this gives trunk base diameter 1.03x, largest limb 1.00x and woody volume 1.02x the reference,
+    // and limb taper now follows sqrt(downstream leaf area) instead of stepping up by wood age. Trimmed from 4.5 when the
+    // leaf-area-index and shadow-grid bud-break terms were removed, since the canopy then carries about 15% more leaf area.
+    // See projects/QSMCalibration.
+    shoot_parameters_scaffold.girth_area_factor = 3.7f;
 
     defineShootType("trunk", shoot_parameters_trunk);
     defineShootType("scaffold", shoot_parameters_scaffold);
@@ -520,9 +688,16 @@ uint PlantArchitecture::buildAlmondTree(const helios::vec3 &base_position) {
     }
 
     // Get training system parameters (with defaults matching original hard-coded values)
-    auto trunk_height = getParameterValue(current_build_parameters, "trunk_height", 0.6f, 0.1f, 3.f, "total trunk height in meters");
+    // Left at 0.6 m deliberately. The QSM reference tree carries its structural limbs from about 0.9-1.0 m,
+    // and raising this to match does fix that one measurement -- but it wrecks the crown silhouette, taking
+    // the upper/lower crown radius ratio from about 1.1 (the reference value) to 1.9, i.e. a cone. The real
+    // tree is wide by 1 m of height because its limbs spread hard straight off the trunk, whereas these
+    // scaffolds emerge at 40 degrees and curve upward, so they need vertical distance to spread. Raising the
+    // trunk simply empties the lower crown. Reproducing the real architecture needs the scaffold geometry
+    // changed, not the trunk raised. See projects/QSMCalibration.
+    auto trunk_height = getParameterValue(current_build_parameters, "trunk_height", 0.78f, 0.1f, 3.f, "total trunk height in meters");
     auto num_scaffolds = uint(getParameterValue(current_build_parameters, "num_scaffolds", 4.f, 2.f, 8.f, "number of scaffold branches"));
-    auto scaffold_angle = getParameterValue(current_build_parameters, "scaffold_angle", 40.f, 20.f, 70.f, "scaffold branch angle in degrees");
+    auto scaffold_angle = getParameterValue(current_build_parameters, "scaffold_angle", 52.f, 20.f, 70.f, "scaffold branch angle in degrees");
 
     // Calculate trunk nodes based on desired height and internode length
     float trunk_internode_length = 0.03f; // Default internode length for almond
@@ -539,7 +714,11 @@ uint PlantArchitecture::buildAlmondTree(const helios::vec3 &base_position) {
 
     //    enableEpicormicChildShoots(plantID,"sylleptic",0.001);
 
-    uint uID_trunk = addBaseStemShoot(plantID, trunk_nodes, make_AxisRotation(context_ptr->randu(0.f, 0.05f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), 0.f * M_PI), trunk_radius, trunk_internode_length, 1.f, 1.f, 0, "trunk");
+    // The trunk is built node by node so it can lean and bow like an orchard trunk; see almondTrunkPath().
+    std::vector<vec3> trunk_node_positions;
+    std::vector<float> trunk_node_radii;
+    almondTrunkPath(context_ptr, base_position, trunk_nodes, trunk_internode_length, trunk_radius, trunk_node_positions, trunk_node_radii);
+    uint uID_trunk = addShootFromNodePositions(plantID, -1, 0, trunk_node_positions, trunk_node_radii, "trunk");
     appendPhytomerToShoot(plantID, uID_trunk, shoot_types.at("trunk").phytomer_parameters, 0.01, 0.01, 1, 1);
 
     plant_instances.at(plantID).shoot_tree.at(uID_trunk)->meristem_is_alive = false;
@@ -560,12 +739,16 @@ uint PlantArchitecture::buildAlmondTree(const helios::vec3 &base_position) {
         uint scaffold_nodes = context_ptr->randu(int(scaffold_nodes_min), int(scaffold_nodes_max));
         uint uID_shoot = addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - i - 1, scaffold_nodes, make_AxisRotation(pitch, (float(i) + context_ptr->randu(-0.2f, 0.2f)) / float(num_scaffolds) * 2 * M_PI, 0), scaffold_radius,
                                        scaffold_length, 1.f, 1.f, 0.5, "scaffold", 0);
+        // The bud at a scaffold's base sits in the trunk/scaffold crotch. Left alone it grows into a long limb straight out of
+        // the junction: on Nonpareil it carries the largest subtree on the scaffold, 1.4 m of wood on average against 0.2-0.7 m
+        // for the laterals just above it. Orchard training clears the crotch, so the bud is killed here.
+        plant_instances.at(plantID).shoot_tree.at(uID_shoot)->phytomers.front()->setVegetativeBudState(BUD_DEAD);
     }
 
     makePlantDormant(plantID);
 
     setPlantPhenologicalThresholds(plantID, 90, -1, 3, 7, 20, 275);
-    plant_instances.at(plantID).max_age = 1825;
+    plant_instances.at(plantID).max_age = 3000;
 
     return plantID;
 }
@@ -633,11 +816,30 @@ void PlantArchitecture::initializeAlmondTreeAldrichShoots() {
     shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle = 0;
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.005;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
-    shoot_parameters_trunk.max_nodes = 20;
-    shoot_parameters_trunk.girth_area_factor = 8.f;
+    // The trunk is built with a fixed node count in buildAlmondTreeAldrich(), and addBaseStemShoot() throws
+    // if that count exceeds this cap. Sized to cover the whole plausible trunk-height range rather than
+    // just the current value, as for the almond model. The trunk apical meristem is killed immediately
+    // after the plant is built, so this only sizes the guard and does not permit extra growth.
+    shoot_parameters_trunk.max_nodes = 101;
+    // Girth is area = girth_area_factor * downstream_leaf_area, and downstream leaf area partitions exactly
+    // across a fork, so a single factor conserves cross-sectional area through a junction. The trunk and
+    // scaffold must carry the SAME value or the junction discards area. 14 brings the modelled trunk to
+    // 0.22 m against the reference's 0.24 m.
+    // Raised alongside the reduced bud break: girth is driven by downstream leaf area, so thinning the
+    // branching removes the leaf area that drives it and the wood thins with it unless the factor rises.
+    // 55. The structural wood was measurably too thin -- trunk 0.68x and largest limb 0.73-0.79x of the
+    // references -- which is visible directly in renders. This brings the trunk to 0.23 m against their
+    // 0.24 m and the largest limb to 0.14 m against 0.13 m.
+    //
+    // Refit when the per-phytomer 365/age decay was removed from incrementPhytomerInternodeGirth(). Girth is now proportional
+    // to cumulative downstream leaf area, which runs well above the old decayed value, so the factor is far smaller; the
+    // history above is in the old units. With the acrotonic scaffold decay and 230 curvature this puts trunk base diameter at
+    // 0.241 m and the largest limb at 0.140 m against tree_3's 0.244 m and 0.141 m. The scaffold carries the same value so the
+    // trunk/scaffold fork still conserves area.
+    shoot_parameters_trunk.girth_area_factor = 5.8f;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
-    shoot_parameters_trunk.tortuosity = .5;
+    shoot_parameters_trunk.tortuosity = 10;
     shoot_parameters_trunk.internode_length_max = 0.05;
     shoot_parameters_trunk.internode_length_decay_rate = 0;
     shoot_parameters_trunk.defineChildShootTypes({"scaffold"}, {1});
@@ -649,22 +851,122 @@ void PlantArchitecture::initializeAlmondTreeAldrichShoots() {
     shoot_parameters_proleptic.phytomer_parameters.internode.radial_subdivisions = 5;
     shoot_parameters_proleptic.phytomer_parameters.phytomer_creation_function = AlmondPhytomerCreationFunction;
     shoot_parameters_proleptic.phytomer_parameters.phytomer_callback_function = AlmondPhytomerCallbackFunction;
-    shoot_parameters_proleptic.max_nodes = 25;
+    // Calibrated against five Phytograph QSM reconstructions of seven-year-old Aldrich almonds (Nickels Block 1,
+    // 2022-01-24 survey; variety mean height 6.61 m, crown radius 2.20 m, woody volume 151 L). The stock
+    // values produced a tree roughly half the reference height and an eighth of its volume.
+    // EXPERIMENTAL (25 is the committed value): raised to extend the interior branching chain.
+    // Interior shoots stop at mid-crown because they run out of nodes, not because they are shed or
+    // shaded: 76-89% of mid-crown interior shoots sit at their lifetime node cap, and since the
+    // bud-break decay concentrates recruitment within about two nodes of the apex, a capped shoot has
+    // no high-probability buds left and recruits below replacement (0.77-0.99 children against the 1.0
+    // a lineage needs). The chain then halves every few generations, leaving 0.4 m of wood in the top
+    // interior against the references' 13.9-21.1 m.
+    // Drawn per shoot rather than fixed. A constant node ceiling gives every proleptic shoot the same
+    // length budget, so the model cannot produce the short-spur population that dominates a real almond:
+    // measured against three Aldrich references, 20-54% of their shoots are under 0.3 m in every height
+    // band, against 3-18% here, and their median shoot is 0.28-0.67 m against this model's 0.48-1.20 m.
+    // That deficit is what makes the upper canopy read as lacking fine detail, and what makes the few long
+    // low branches conspicuous -- the references have equally long low branches (up to 6.5-9.3 m), but
+    // surround them with spurs. Other species in this library already sample max_nodes per shoot.
+    shoot_parameters_proleptic.max_nodes.uniformDistribution(20, 55);
     shoot_parameters_proleptic.max_nodes_per_season = 15;
     shoot_parameters_proleptic.phyllochron_min = 1;
     shoot_parameters_proleptic.elongation_rate_max = 0.3;
-    shoot_parameters_proleptic.girth_area_factor = 8.f;
-    shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.1;
-    shoot_parameters_proleptic.vegetative_bud_break_probability_max = 0.5;
+    // Branch cross-section per unit downstream leaf area. At 24 every branch came out the same middling
+    // thickness -- 98% of them between 1 and 3 cm, with nothing below 1 cm -- which renders as an
+    // undifferentiated tangle with only the scaffolds standing out. 16 restores a spread (30% below 1 cm)
+    // and scores best on the objective across a 24/16/12/10/8 scan.
+    //
+    // Do not push this lower to chase the QSM's branch-diameter distribution. That distribution is clipped
+    // by the reconstruction, not by the tree: only 0.5% of reference cylinders fall below the 3.5 mm
+    // detection radius the harness prunes at, and its 5th percentile is 3.8 mm. Matching its apparent 57-62%
+    // "thin" fraction requires driving half the model's wood below detectability -- pruned cylinders fall
+    // from 13738 to 7535 at a factor of 8 -- which improves the statistic by hiding branches rather than by
+    // making the architecture right.
+    //
+    // The numbers above are in the units of the old girth law, refit when the per-phytomer 365/age decay was removed from
+    // incrementPhytomerInternodeGirth(). The warning stands in the new units: going from 12 to 7 cuts woody volume only from
+    // 257 L to 211 L (reference 165 L) while detected order-4 branches fall from 69 to 33 (reference 119), so the remaining
+    // volume excess is not worth chasing with this factor.
+    shoot_parameters_proleptic.girth_area_factor = 12.f;
+    // Reduced to thin the branching. Total woody length was 2.3x the reference before this change, with
+    // only 32% of it in orders 1-2 against the references' 49%.
+    shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.05;
+    // Trimmed to 0.32 to offset the scaffold bud-break increase below, which would otherwise push total
+    // woody length well past the reference.
+    // Lowered from 0.38. At 0.38 the tree carried 981 branches over 733 m of wood against the references'
+    // 509-545 branches and 404-455 m -- roughly 80% too much wood, which reads as a solid mass rather than a
+    // crown with gaps in it. At 0.22 the branch count (562), total wood length (408 m) and order-2 count
+    // (174.5 against a reference 176) all land on the references, and the objective improves from 10.3 to 6.6.
+    // Raised from 0.22 to compensate the low-crown shedding term (see branch_shedding_low_crown_probability
+    // in PlantArchitecture.cpp), which removes interior wood from the lower crown. Pruning without
+    // compensation subtracts wood rather than redistributing it -- total woody length fell to 267 m against
+    // the references' 404 m -- so the generative side has to be raised alongside it. Paired with a shed
+    // probability of 0.35 this gives the reference's vertical profile at the reference's total wood.
+    // EXPERIMENTAL (0.28 is the committed value): cut to pay for the raised node cap above. Longer
+    // shoots carry more buds, so without this the tree reaches 854 branches and 824 m of wood against
+    // the references' ~509 and ~404 m. At 0.15 the upper-crown density lands on the references
+    // (10/34/63 branches within 0.5/1.0/1.5 m of the top, against 13/33/62 and 11/34/70) at 524
+    // branches -- redistribution rather than inflation.
+    // EXPERIMENTAL (0.15 is the committed value): raised to pay for the spur gradient above. Turning basal
+    // children into spurs removes most of their wood, halving total woody length to 199 m against the
+    // references' 404-455; more shoots offsets each being shorter.
+    // Scaled by 0.85 when the whole-plant leaf-area-index and shadow-grid bud-break terms were removed from the model: at
+    // almond's canopy density those two had been multiplying every bud-break probability by roughly this much. Matched on
+    // Nonpareil, 0.85 on the proleptic and scaffold maxima restores total woody length with crown shape unchanged.
+    // Aldrich needed a further cut (0.24 -> 0.21) to bring total woody length back to its previous fit.
+    shoot_parameters_proleptic.vegetative_bud_break_probability_max = 0.21;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.15;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
-    shoot_parameters_proleptic.gravitropic_curvature = 450;
-    shoot_parameters_proleptic.tortuosity = 2.5;
-    shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution(5, 30);
+    // Reduced from 450: at that value the crown was strongly top-heavy (upper/lower crown radius ratio
+    // 1.75 against the reference's 0.98). Aldrich is widest low and tapers upward.
+    // Reduced from 280. The model was relying on the gravitropic response to hold the crown upright, which
+    // bent every branch to the same attitude regardless of how it emerged -- measured length-weighted
+    // cylinder zenith was ~38 deg at EVERY order against the references' 44-56 deg -- and produced the long
+    // curved "whippy" strands that distinguish the generated crowns from the real ones. The habit is set by
+    // the insertion angle instead, which is what the references show: branches leave at a wide angle and
+    // then run comparatively straight.
+    // 150 rather than 90: the weaker value was paired with a 60 deg insertion angle and, on its own, lets
+    // the crown spread. The straightness argument for reducing it from 280 still holds -- see the notes in
+    // doc/calibration/almond_variety_calibration.md -- but it cannot be pushed this low until the branching
+    // density defect is fixed, since the model currently needs long branches to fill its crown.
+    // 190 rather than 150. The reduction from the stock 450 was to stop the model relying on the
+    // gravitropic response to hold the crown upright, which bent every branch to the same attitude and read
+    // as long curved strands; but taken too far the branches run dead straight and the crown becomes
+    // inverse-conical, since nothing curves the wood back in as it extends. Paired with the tortuosity
+    // below and with the scaffold values, this sits between the two failure modes.
+    // EXPERIMENTAL (270 is the committed value): reduced for crown shape. A weaker upward response lets
+    // laterals run outward instead of turning up, which both widens the crown and lowers its widest point --
+    // the two geometric defects that have persisted longest. Scanned 270/220/180/150/120/90: the objective
+    // turns at 150 (5.55 against 6.29 at 220 and 7.95 at 270), crown flare reaches 1.23 (best recorded) and
+    // crown radius 0.90 of reference against 0.83 at 270. Below 150 the crown keeps widening but the
+    // objective degrades again, so this is an interior optimum rather than a floor.
+    // Gravitropic curvatures raised 20% across all shoot types from renders, which showed branches needing a little more upward
+    // curvature throughout the crown.
+    shoot_parameters_proleptic.gravitropic_curvature = 180;
+    // 1.5 rather than 2.6. Tortuosity is a NOISE parameter, so raising it widens the run-to-run spread as
+    // well as the wander: at 2.6 the ensemble coefficient of variation on total woody length was 19.4%,
+    // which showed up as some trees coming out sparse and others as a dense tangle. Lowering it, with the
+    // scaffold changes above, brings that to 7.8%.
+    shoot_parameters_proleptic.tortuosity = 37.5;
+    shoot_parameters_proleptic.tortuosity_persistence_length = 0.3;
+    // Widened from 5-30 deg: the references carry their laterals at a median branching angle of 57-66 deg,
+    // and the narrow distribution contributed to the clustered, near-axial branching habit.
+    // Held at 45 deg. Measured against the references the insertion angle is already correct at this value
+    // (branch_angle_order1 62 deg model against 57 deg reference), and widening it further to 60 deg flared
+    // the crown badly without improving the metric it was meant to serve.
+    shoot_parameters_proleptic.insertion_angle_tip = 45;
     shoot_parameters_proleptic.insertion_angle_decay_rate = 5;
-    shoot_parameters_proleptic.internode_length_max = 0.025;
+    shoot_parameters_proleptic.internode_length_max = 0.04;
     shoot_parameters_proleptic.internode_length_min = 0.002;
-    shoot_parameters_proleptic.internode_length_decay_rate = 0.002;
+    // EXPERIMENTAL (0.002 is the committed value). Internode length falls with a child's distance below its
+    // parent's apex, so distal children are long and basal ones are spurs -- the gradient a real almond has.
+    // At 0.002 the decay needed 19 nodes to reach the floor, but a parent only has that many nodes after
+    // several seasons, by which time its apex has moved far above; measured, only 1% of shoots were born
+    // anywhere near the floor. At 0.004 the floor is reached in ~10 nodes, which is inside the range parents
+    // actually occupy when bearing children, and the short-shoot fraction rises from 8-29% to 25-67% across
+    // height bands against reference values of 27-54%.
+    shoot_parameters_proleptic.internode_length_decay_rate = 0.004;
     shoot_parameters_proleptic.fruit_set_probability = 0.4;
     shoot_parameters_proleptic.flower_bud_break_probability = 0.3;
     shoot_parameters_proleptic.max_terminal_floral_buds = 3;
@@ -683,9 +985,13 @@ void PlantArchitecture::initializeAlmondTreeAldrichShoots() {
     shoot_parameters_sylleptic.insertion_angle_decay_rate = 0;
     shoot_parameters_sylleptic.phyllochron_min = 1;
     shoot_parameters_sylleptic.vegetative_bud_break_probability_min = 0.0;
-    shoot_parameters_proleptic.vegetative_bud_break_probability_max = 0.6;
-    shoot_parameters_sylleptic.gravitropic_curvature = 600;
+    // NOTE: this line assigned to shoot_parameters_PROLEPTIC while sitting in the middle of the sylleptic
+    // block, silently overwriting the proleptic value set above. Almost certainly a copy-paste slip. It is
+    // corrected to sylleptic here; the proleptic value is set in the proleptic block.
+    shoot_parameters_sylleptic.vegetative_bud_break_probability_max = 0.6;
+    shoot_parameters_sylleptic.gravitropic_curvature = 720;
     shoot_parameters_sylleptic.internode_length_max = 0.02;
+    shoot_parameters_sylleptic.tortuosity = 75;
     shoot_parameters_sylleptic.flowers_require_dormancy = true;
     shoot_parameters_sylleptic.growth_requires_dormancy = true;
     shoot_parameters_sylleptic.defineChildShootTypes({"proleptic"}, {1.0});
@@ -694,11 +1000,80 @@ void PlantArchitecture::initializeAlmondTreeAldrichShoots() {
     ShootParameters shoot_parameters_scaffold = shoot_parameters_proleptic;
     //    shoot_parameters_scaffold.phytomer_parameters.internode.color = RGB::blue;
     shoot_parameters_scaffold.phytomer_parameters.internode.radial_subdivisions = 10;
-    shoot_parameters_scaffold.max_nodes = 20;
-    shoot_parameters_scaffold.gravitropic_curvature = 200;
-    shoot_parameters_scaffold.internode_length_max = 0.02;
-    shoot_parameters_scaffold.tortuosity = 0.5;
+    // Extended from 20 nodes x 0.02 m (0.4 m) to 45 x 0.04 m (1.8 m). The references are characterised by
+    // heavy limbs that stay thick and identifiable for 2-3 m above the head; at the old values a scaffold
+    // handed off to proleptic children within half a metre, so the tree had no visible structural skeleton
+    // and read as a uniform bush. Measured length of wood at or above 4 cm diameter: references 23-24 m
+    // reaching to 3 m, model 12 m reaching to 2 m before this change.
+    // 90 nodes x 0.04 m gives scaffolds about 5.4 m long, reaching 87-92% of tree height. At the previous
+    // 45 they ran 2.7 m and stopped at 43% -- the tree looked reasonable below that point and turned into a
+    // bush above it, because the whole upper crown was then built from fine proleptic wood. The reference
+    // scaffolds run 6.1 m to 91% of height (tree 3) and 3.6 m to 55% (tree 7).
+    //
+    // Paired with the reduced proleptic max_nodes below: lengthening the scaffolds alone simply made the
+    // tree taller (8.8 m against a 6.5 m reference), because the scaffolds extended past the crown instead
+    // of running up through it.
+    // EXPERIMENTAL (90 is the committed value): raised for crown height. The scaffolds are the tree's
+    // vertical carriers, so lengthening them lifts the laterals they already bear rather than creating
+    // new ones -- height rises while total wood FALLS (volume 1.70 -> 1.63 of reference). Gravitropic
+    // curvature was tried first and does not buy height at all: at 330 it gained nothing, and at 400 it
+    // reached the target only by narrowing the crown to 0.78 of the reference radius.
+    shoot_parameters_scaffold.max_nodes = 105;
+    // Reduced from 200. The scaffolds are launched at 40-65 deg from vertical in buildAlmondTreeAldrich(),
+    // but at 200 deg/m the gravitropic response bent them back to a measured base zenith of 41 deg against
+    // the references' 64 deg, which read as a narrow steep broom instead of an open vase. At 60 deg/m the
+    // limbs hold the angle they emerge at (measured 59 deg, branching angle 55 deg against 57 deg).
+    // Raised with the proleptic value. Acting on the scaffolds matters more than acting on the proleptic
+    // shoots for crown shape: curvature and wander applied to the proleptic shoots alone barely moved the
+    // upper/lower crown radius ratio (1.845 -> 1.849), while applying them to the scaffolds as well brought
+    // it to 1.735 and the objective from 16.6 to 13.5. The scaffolds carry the crown's outline.
+    // 45, well below the proleptic value. The references' scaffolds radiate outward essentially straight,
+    // forming a cone; a strong gravitropic response instead curves them upward and loses that structure.
+    // 170. The scaffolds are now 90 nodes (about 5.4 m) rather than 45, and at that length a weak
+    // gravitropic response lets them run essentially straight out of the crown: measured scaffold tip
+    // distance from the trunk axis was 2.56 m against the references' 1.43-1.88 m, giving a cone-shaped
+    // tree with an empty middle. The references' scaffolds reach only about a third of the horizontal
+    // distance a straight branch of their length and emergence angle would, so they emerge wide and then
+    // curve strongly upward. A short scaffold can afford to be straight; a long one cannot.
+    // Raised to 230 to match the Nonpareil set, where renders showed the scaffolds wanting slightly more upward curvature.
+    shoot_parameters_scaffold.gravitropic_curvature = 276;
+    shoot_parameters_scaffold.internode_length_max = 0.04;
+    // 1.6. Gravitropism is a deterministic force, so a strong curvature with weak tortuosity bends every
+    // scaffold along the same uniform arc, which reads as an unnaturally smooth sweeping curve over a 5.4 m
+    // limb. Tortuosity is the only term breaking that regularity. The proleptic shoots run a
+    // curvature-to-tortuosity ratio near 180; the scaffolds were at 425, more than twice as smooth per unit
+    // of bend. Raising tortuosity rather than lowering curvature keeps the inward curve that the scaffold
+    // tip distance requires.
+    // Raised from 0.4 from renders, once the 20% stronger gravitropic response left the Aldrich scaffolds looking too smooth.
+    shoot_parameters_scaffold.tortuosity = 12.5;
+    // Correlation length of the tortuosity random walk, and the reason the wiggle reads as flailing rather
+    // than as natural jitter. The walk is an Ornstein-Uhlenbeck process that mean-reverts over this
+    // distance, so it is the RATIO of shoot length to persistence length that sets the character: at the
+    // 0.5 m default a 5.4 m scaffold wanders through eleven independent excursions and loses its trajectory
+    // entirely. At 2.5 m it makes about two, which reads as a limb holding its general path with some
+    // wiggle. This model never set the parameter at all and was inheriting the default; the almond model
+    // sets it explicitly, and this one now does too.
+    shoot_parameters_scaffold.tortuosity_persistence_length = 2.5;
     shoot_parameters_scaffold.defineChildShootTypes({"proleptic"}, {1.0});
+    // Match the trunk, so cross-sectional area is conserved through the trunk/scaffold junction. Inheriting
+    // the proleptic value instead makes the junction discard area in proportion to the two factors' ratio.
+    // Raised from the inherited proleptic value so the scaffolds themselves carry laterals. Without this
+    // the lower crown is bare scaffold wood, since almost everything else is borne higher up.
+    shoot_parameters_scaffold.vegetative_bud_break_probability_max = 0.72;
+    // A scaffold in the references bears laterals along its whole length, not just near its base: the QSM
+    // origin counts on order-1 axes run 27/45/32/48/19 across the 0-1,1-2,...,4-5 m height bands. The default
+    // decay rate of -0.5 per node drives the break probability to its floor within two nodes (about 8 cm) of
+    // the scaffold base, which leaves the lower crown empty and forces all the remaining branch mass to arrive
+    // through proleptic-on-proleptic cascades, piling it into a narrow band in the middle of the crown. Decaying
+    // roughly a hundred times more slowly spreads the laterals over the full scaffold.
+    //
+    // Later made acrotonic (+0.02), as in the Nonpareil set: bud-break vigour rising toward the apex is the pattern that
+    // governs tree development, whereas basitony characterises shrubs (Costes et al., Front. Plant Sci. 5:666, 2014; Wilson,
+    // Am. J. Bot. 87:601, 2000). The basitonic -0.01 concentrated scaffold recruitment at the trunk junction, which in
+    // Nonpareil renders is where long structural branches emerged and distorted the crown.
+    shoot_parameters_scaffold.vegetative_bud_break_probability_decay_rate = 0.02;
+    shoot_parameters_scaffold.vegetative_bud_break_probability_min = 0.10;
+    shoot_parameters_scaffold.girth_area_factor = 5.8f;
 
     defineShootType("trunk", shoot_parameters_trunk);
     defineShootType("scaffold", shoot_parameters_scaffold);
@@ -717,7 +1092,14 @@ uint PlantArchitecture::buildAlmondTreeAldrich(const helios::vec3 &base_position
 
     //    enableEpicormicChildShoots(plantID,"sylleptic",0.001);
 
-    uint uID_trunk = addBaseStemShoot(plantID, 19, make_AxisRotation(context_ptr->randu(0.f, 0.05f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), 0.f * M_PI), 0.015, 0.03, 1.f, 1.f, 0, "trunk");
+    // 26 nodes x 0.03 m puts the head at about 0.78 m, matching the mean height of the major scaffolds in
+    // the Aldrich QSM references. At the previous 19 nodes the head sat at 0.57 m and the whole crown rode
+    // correspondingly low.
+    // The trunk is built node by node so it can lean and bow like an orchard trunk; see almondTrunkPath().
+    std::vector<vec3> trunk_node_positions;
+    std::vector<float> trunk_node_radii;
+    almondTrunkPath(context_ptr, base_position, 26, 0.03f, 0.015f, trunk_node_positions, trunk_node_radii);
+    uint uID_trunk = addShootFromNodePositions(plantID, -1, 0, trunk_node_positions, trunk_node_radii, "trunk");
     appendPhytomerToShoot(plantID, uID_trunk, shoot_types.at("trunk").phytomer_parameters, 0.01, 0.01, 1, 1);
 
     plant_instances.at(plantID).shoot_tree.at(uID_trunk)->meristem_is_alive = false;
@@ -732,15 +1114,355 @@ uint PlantArchitecture::buildAlmondTreeAldrich(const helios::vec3 &base_position
     uint Nscaffolds = 4; // context_ptr->randu(4,5);
 
     for (int i = 0; i < Nscaffolds; i++) {
-        float pitch = context_ptr->randu(deg2rad(5), deg2rad(35));
+        // Emergence angle from vertical. The references carry their scaffolds at a median base zenith of
+        // 64 deg; at the previous 5-35 deg the limbs rose almost vertically out of the head, which read as
+        // a narrow steep broom rather than an open vase and left the crown too dense near the axis.
+        // Emergence angle from vertical. Narrowed from 40-65 deg: the wider range carried the scaffolds --
+        // and everything borne on them -- too far out, giving a crown radius of 2.76 m against the
+        // references' 2.43 m. At 30-50 deg the radius lands at 2.53 m and the crown's widest point drops
+        // from 0.83 to 0.80 of tree height.
+        //
+        // The range still sits inside what the references show: their major scaffolds emerge between 35 and
+        // 77 deg with a median near 50, so this samples the lower half of the observed spread rather than
+        // anything the trees do not do.
+        // Emergence angle from vertical, narrowed from the original 40-65 deg. The references' major
+        // scaffolds emerge between 35 and 77 deg with a median near 50, so this samples the lower part of
+        // the observed spread; matching their mean carried the scaffolds, and everything borne on them, too
+        // far out.
+        //
+        // Note that narrowing this range does NOT reduce the run-to-run variation in crown width: tightening
+        // it from 20 deg wide to 7 deg leaves the ensemble coefficient of variation on crown radius at
+        // 9-12% throughout. That variability comes from which buds break on the scaffolds and how far the
+        // resulting laterals run, not from where the scaffolds point.
+        // Emergence angle from vertical, measured on the references as 55-58 deg mean with a standard
+        // deviation near 15. The narrower range used previously was compensating for scaffolds that ran
+        // almost straight; with the gravitropic response restored they emerge wide and curve back in, which
+        // is what the references do.
+        // Emergence angle from vertical, paired with the scaffold gravitropic curvature below. The references
+        // show a scaffold leaving at a wide angle, making a fairly quick upward bend, and then running
+        // comparatively straight. The model cannot switch its gravitropic response off partway along a
+        // shoot, but it does not need to: the response is already self-limiting, since its magnitude scales
+        // with (1 - cos(zenith))/2 and so falls to zero as the shoot approaches vertical. What it cannot do
+        // is bend sharply and then stop, so a weaker response paired with a smaller emergence angle is the
+        // closest this formulation gets to the reference behaviour.
+        //
+        // The range is set from the QSM order-1 axes filtered to a base radius of 3 cm or more, which
+        // isolates the three or four true scaffolds of a headed tree: zenith mean 49-57 deg with a standard
+        // deviation of 11-14 deg. Filtering matters. All order-1 axes taken together give 41-45 branches per
+        // tree with a mean of 62 deg and a standard deviation of 26-28 deg, because the reconstruction
+        // labels many ordinary upper laterals as order 1; calibrating to that unfiltered spread produces
+        // scaffolds that occasionally emerge near-horizontal and throw the crown badly out of shape.
+        float pitch = context_ptr->randu(deg2rad(46), deg2rad(58));
         uint uID_shoot = addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - i - 1, context_ptr->randu(7, 9), make_AxisRotation(pitch, (float(i) + context_ptr->randu(-0.2f, 0.2f)) / float(Nscaffolds) * 2 * M_PI, 0), 0.007, 0.06,
                                        1.f, 1.f, 0.5, "scaffold", 0);
+        // The bud at a scaffold's base sits in the trunk/scaffold crotch. Left alone it grows into a long limb straight out of
+        // the junction: on Nonpareil it carries the largest subtree on the scaffold, 1.4 m of wood on average against 0.2-0.7 m
+        // for the laterals just above it. Orchard training clears the crotch, so the bud is killed here.
+        plant_instances.at(plantID).shoot_tree.at(uID_shoot)->phytomers.front()->setVegetativeBudState(BUD_DEAD);
     }
 
     makePlantDormant(plantID);
 
     setPlantPhenologicalThresholds(plantID, 90, -1, 3, 7, 20, 275);
-    plant_instances.at(plantID).max_age = 1825;
+    // Seven-year QSM references are the calibration target for this variety, and growth stops entirely at
+    // max_age, so a 5-year cap left the modelled tree at roughly a third of the reference height. Matches
+    // the value used by the almond (Nonpareil) model.
+    plant_instances.at(plantID).max_age = 3000;
+
+    return plantID;
+}
+
+void PlantArchitecture::initializeAlmondTreeIndependenceShoots() {
+
+    // Independence almond, fit against the four Independence Phytograph QSM reconstructions (trees 34-37 of the Nickels block-1
+    // scan). Starts from the calibrated Nonpareil set; see projects/QSMCalibration for the fit.
+
+
+    // ---- Leaf Prototype ---- //
+
+    LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
+    leaf_prototype.leaf_texture_file[0] = "AlmondLeaf.png";
+    leaf_prototype.leaf_aspect_ratio = 0.33f;
+    leaf_prototype.midrib_fold_fraction = 0.1f;
+    leaf_prototype.longitudinal_curvature = 0.05;
+    leaf_prototype.lateral_curvature = 0.1f;
+    leaf_prototype.subdivisions = 1;
+    leaf_prototype.unique_prototypes = 1;
+
+    // ---- Phytomer Parameters ---- //
+
+    PhytomerParameters phytomer_parameters_almond(context_ptr->getRandomGenerator());
+
+    // Node-scale roughness: the small, discrete kink applied at each phytomer base. This is the fine-texture scale, distinct from
+    // the larger-scale wander produced by the tortuosity random walk along the internode.
+    //
+    // The distribution is symmetric about zero rather than about a positive value. The kink direction is already scattered around
+    // the stem by the phyllotactic angle, so a signed magnitude lets successive kinks partially cancel: this yields the same net
+    // wander as a positive-mean distribution of twice the width, but spends roughly half the total bending to get there, leaving
+    // the directed gravitropic response rather than accumulated node kinks to set the overall branch trajectory. A constant pitch
+    // traces a near-perfect helix (the kinks cancel almost exactly) and reads as a smooth systematic bend, not as texture.
+    //
+    // Note this is a phenomenological roughness term. A negative pitch has no specific botanical reading on its own; the
+    // mechanistic direction of nodal deflection is carried by the phyllotactic rotation of the axis it is applied about.
+    phytomer_parameters_almond.internode.pitch.uniformDistribution(-7, 7);
+    phytomer_parameters_almond.internode.phyllotactic_angle.uniformDistribution(120, 160);
+    phytomer_parameters_almond.internode.radius_initial = 0.002;
+    phytomer_parameters_almond.internode.length_segments = 1;
+    phytomer_parameters_almond.internode.image_texture = "AlmondBark.jpg";
+    phytomer_parameters_almond.internode.max_floral_buds_per_petiole = 1; //
+
+    phytomer_parameters_almond.petiole.petioles_per_internode = 1;
+    phytomer_parameters_almond.petiole.pitch.uniformDistribution(-145, -90);
+    phytomer_parameters_almond.petiole.taper = 0.1;
+    phytomer_parameters_almond.petiole.curvature = 0;
+    phytomer_parameters_almond.petiole.length = 0.04;
+    phytomer_parameters_almond.petiole.radius = 0.0005;
+    phytomer_parameters_almond.petiole.length_segments = 1;
+    phytomer_parameters_almond.petiole.radial_subdivisions = 3;
+    phytomer_parameters_almond.petiole.color = make_RGBcolor(0.61, 0.5, 0.24);
+
+    phytomer_parameters_almond.leaf.leaves_per_petiole = 1;
+    phytomer_parameters_almond.leaf.roll.uniformDistribution(-10, 10);
+    phytomer_parameters_almond.leaf.prototype_scale = 0.12;
+    phytomer_parameters_almond.leaf.prototype = leaf_prototype;
+
+    phytomer_parameters_almond.peduncle.length = 0.002;
+    phytomer_parameters_almond.peduncle.radius = 0.0005;
+    phytomer_parameters_almond.peduncle.pitch = 80;
+    phytomer_parameters_almond.peduncle.roll = 90;
+    phytomer_parameters_almond.peduncle.length_segments = 1;
+    phytomer_parameters_almond.petiole.radial_subdivisions = 3;
+
+    phytomer_parameters_almond.inflorescence.flowers_per_peduncle = 1;
+    phytomer_parameters_almond.inflorescence.pitch = 0;
+    phytomer_parameters_almond.inflorescence.roll = 0;
+    phytomer_parameters_almond.inflorescence.flower_prototype_scale = 0.04;
+    phytomer_parameters_almond.inflorescence.flower_prototype_function = AlmondFlowerPrototype;
+    phytomer_parameters_almond.inflorescence.fruit_prototype_scale = 0.04;
+    phytomer_parameters_almond.inflorescence.fruit_prototype_function = AlmondFruitPrototype;
+
+    // ---- Shoot Parameters ---- //
+
+    // Trunk
+    ShootParameters shoot_parameters_trunk(context_ptr->getRandomGenerator());
+    shoot_parameters_trunk.phytomer_parameters = phytomer_parameters_almond;
+    shoot_parameters_trunk.phytomer_parameters.internode.pitch = 0;
+    shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle = 0;
+    shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.005;
+    shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
+    // The trunk node count is derived in buildAlmondTree() as trunk_height / 0.03, and trunk_height is
+    // accepted over 0.1-3.0 m. The cap must therefore cover the whole of that range, otherwise any
+    // trunk_height above 0.6 m throws out of addBaseStemShoot(). The trunk apical meristem is killed
+    // immediately after the plant is built, so this only sizes the guard; it does not permit extra growth.
+    shoot_parameters_trunk.max_nodes = 101;
+    // Raised from the Nonpareil 4.5 to recover the trunk diameter and woody volume lost with the thinner branching.
+    shoot_parameters_trunk.girth_area_factor = 5.7f;
+    shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
+    shoot_parameters_trunk.vegetative_bud_break_time = 0;
+    shoot_parameters_trunk.tortuosity = 10;
+    shoot_parameters_trunk.internode_length_max = 0.05;
+    shoot_parameters_trunk.internode_length_decay_rate = 0;
+    shoot_parameters_trunk.defineChildShootTypes({"scaffold"}, {1});
+
+    // Proleptic shoots
+    ShootParameters shoot_parameters_proleptic(context_ptr->getRandomGenerator());
+    shoot_parameters_proleptic.phytomer_parameters = phytomer_parameters_almond;
+    shoot_parameters_proleptic.phytomer_parameters.internode.color = make_RGBcolor(0.3, 0.2, 0.2);
+    shoot_parameters_proleptic.phytomer_parameters.internode.radial_subdivisions = 5;
+    shoot_parameters_proleptic.phytomer_parameters.phytomer_creation_function = AlmondPhytomerCreationFunction;
+    shoot_parameters_proleptic.phytomer_parameters.phytomer_callback_function = AlmondPhytomerCallbackFunction;
+    // Calibrated against a Phytograph QSM reconstruction of a seven-year-old leaf-off almond (see
+    // projects/QSMCalibration). Capping the lifetime node count well below the old value of 60 stops a
+    // proleptic shoot from extending indefinitely across seasons; the reference tree carries its wood as
+    // many short branches rather than a few long ones, and the uncapped shoot produced branches roughly
+    // 1.5x too long.
+    shoot_parameters_proleptic.max_nodes.uniformDistribution(20, 55);
+    shoot_parameters_proleptic.max_nodes_per_season = 15;
+    shoot_parameters_proleptic.phyllochron_min = 1;
+    shoot_parameters_proleptic.elongation_rate_max = 0.3;
+    shoot_parameters_proleptic.girth_area_factor = 4.5f;
+    shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.05;
+    // Scaled by 0.85 when the whole-plant leaf-area-index and shadow-grid bud-break terms were removed from the model: at
+    // almond's canopy density those two had been multiplying every bud-break probability by roughly this much. Matched on
+    // Nonpareil, 0.85 on the proleptic and scaffold maxima restores total woody length with crown shape unchanged.
+    shoot_parameters_proleptic.vegetative_bud_break_probability_max = 0.31;
+    // The decay is linear in nodes from the tip: p = max(p_min, p_max - decay * nodes_from_tip). At the
+    // old rate of 0.15 the probability fell from 0.5 to the 0.1 floor within three nodes, so effectively
+    // the whole shoot broke buds at the minimum and the tree ramified at about half the observed rate.
+    // Spreading the decay over roughly eight nodes brings forks per metre into line with the QSM tree.
+    shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.15;
+    shoot_parameters_proleptic.vegetative_bud_break_time = 0;
+    // Sets how fast a lateral reorients toward vertical, in degrees per metre of arc. At the old value of
+    // 250 a branch that emerged near-horizontal was back to near-vertical within 10-25 cm, so laterals in
+    // the lower crown ran upward rather than outward: they piled on woody length and branch count without
+    // contributing any crown width, which read as a narrow-based, flare-topped (cone/mushroom) canopy.
+    //
+    // Measured against the QSM reference, order-2 branches emerge at a sensible angle in both trees
+    // (71 deg from vertical in the model, 64 deg in the reference) but the model then turned 24 deg along
+    // its length against the reference's 7 deg. Halving the response brings crown radius from 1.8 to 2.0 m
+    // (reference 2.5 m) and the upper/lower crown-radius ratio from 1.24 to 1.06 (reference 1.14).
+    //
+    // Note this is the proleptic value only. The scaffold and sylleptic types are copy-constructed from
+    // these parameters but both assign their own gravitropic_curvature below, so neither inherits it.
+    // Gravitropic curvatures raised 20% across all shoot types from renders, which showed branches needing a little more upward
+    // curvature throughout the crown.
+    shoot_parameters_proleptic.gravitropic_curvature = 180;
+    shoot_parameters_proleptic.tortuosity = 37.5;
+    shoot_parameters_proleptic.tortuosity_persistence_length = 0.3;
+    shoot_parameters_proleptic.insertion_angle_tip = 45;
+    shoot_parameters_proleptic.insertion_angle_decay_rate = 15;
+    shoot_parameters_proleptic.internode_length_max = 0.04;
+    shoot_parameters_proleptic.internode_length_min = 0.002;
+    shoot_parameters_proleptic.internode_length_decay_rate = 0.004;
+    shoot_parameters_proleptic.fruit_set_probability = 0.4;
+    shoot_parameters_proleptic.flower_bud_break_probability = 0.3;
+    shoot_parameters_proleptic.max_terminal_floral_buds = 3;
+    shoot_parameters_proleptic.flowers_require_dormancy = true;
+    shoot_parameters_proleptic.growth_requires_dormancy = true;
+    shoot_parameters_proleptic.determinate_shoot_growth = false;
+    shoot_parameters_proleptic.defineChildShootTypes({"proleptic", "sylleptic"}, {1.0, 0.});
+
+    // Sylleptic shoots
+    ShootParameters shoot_parameters_sylleptic = shoot_parameters_proleptic;
+    //    shoot_parameters_sylleptic.phytomer_parameters.internode.color = RGB::red;
+    shoot_parameters_sylleptic.phytomer_parameters.internode.image_texture = "";
+    shoot_parameters_sylleptic.phytomer_parameters.leaf.prototype_scale = 0.14;
+    shoot_parameters_sylleptic.phytomer_parameters.leaf.pitch.uniformDistribution(-45, -20);
+    shoot_parameters_sylleptic.insertion_angle_tip = 0;
+    shoot_parameters_sylleptic.insertion_angle_decay_rate = 0;
+    shoot_parameters_sylleptic.phyllochron_min = 1;
+    shoot_parameters_sylleptic.vegetative_bud_break_probability_min = 0.0;
+    shoot_parameters_sylleptic.vegetative_bud_break_probability_max = 0.7;
+    shoot_parameters_sylleptic.gravitropic_curvature = 720;
+    shoot_parameters_sylleptic.internode_length_max = 0.02;
+    shoot_parameters_sylleptic.tortuosity = 75;
+    shoot_parameters_sylleptic.flowers_require_dormancy = true;
+    shoot_parameters_sylleptic.growth_requires_dormancy = true;
+    shoot_parameters_sylleptic.defineChildShootTypes({"proleptic"}, {1.0});
+    // Sylleptic shoots are copied from the proleptic parameters above, so they would otherwise inherit the
+    // QSM-calibrated node cap and bud-break decay. Those were validated for proleptic shoots only, so the
+    // previous values are restored here rather than being changed as an invisible side effect of the
+    // calibration. (The almond model gives sylleptic a child-type probability of zero, so this is a
+    // correctness measure and does not alter the generated tree.)
+    shoot_parameters_sylleptic.max_nodes = 60;
+    shoot_parameters_sylleptic.vegetative_bud_break_probability_decay_rate = 0.15;
+
+    // Main scaffolds
+    ShootParameters shoot_parameters_scaffold = shoot_parameters_proleptic;
+    //    shoot_parameters_scaffold.phytomer_parameters.internode.color = RGB::blue;
+    shoot_parameters_scaffold.phytomer_parameters.internode.radial_subdivisions = 10;
+    // Shortened from the Nonpareil 105 from renders, where Independence read as too tall. The scaffolds finish exactly at this
+    // cap, so it sets their length directly.
+    shoot_parameters_scaffold.max_nodes = 90;
+    shoot_parameters_scaffold.gravitropic_curvature = 276;
+    // shoot_parameters_scaffold.internode_length_max = 0.04;
+    shoot_parameters_scaffold.tortuosity = 10;
+    shoot_parameters_scaffold.tortuosity_persistence_length = 2.5;
+    shoot_parameters_scaffold.defineChildShootTypes({"proleptic"}, {1.0});
+    // Likewise for the scaffolds: the calibration applies to proleptic shoots. The scaffolds already pin
+    // their own max_nodes above, so only the bud-break decay needs restoring.
+    // Positive: acrotonic, with bud-break vigour rising toward the apex. Acrotony is "the increase in vigor
+    // (length, diameter, number of leaves) of vegetative branches from the bottom to the top position of the
+    // parent growth unit" and is the pattern that governs tree development, whereas basitony -- stronger growth
+    // at the base, which a negative rate encodes -- characterises shrubs (Costes et al., Front. Plant Sci.
+    // 5:666, 2014; Wilson, Am. J. Bot. 87:601, 2000). The previous -0.01 concentrated scaffold recruitment at
+    // the trunk junction, which is where the long structural branches that distorted the crown were emerging.
+    shoot_parameters_scaffold.vegetative_bud_break_probability_decay_rate = 0.02;
+    // Independence carries about a fifth fewer branches than Nonpareil in the QSMs (659 against 812 per tree) inside a
+    // similar envelope. Lowering scaffold recruitment brings order-1 and order-2 counts to the four-tree means (38 and 197)
+    // and takes the crown from a vase (upper/lower radius 1.46) to the references' 0.67-0.99.
+    shoot_parameters_scaffold.vegetative_bud_break_probability_max = 0.55;
+    shoot_parameters_scaffold.vegetative_bud_break_probability_min = 0.10;
+    // Girth is area = girth_area_factor * downstream_leaf_area, and downstream leaf area partitions exactly
+    // across a fork, so with a single factor the pipe model conserves cross-sectional area through a
+    // junction. Inheriting the proleptic value of 6 while the trunk uses 10 broke that at the one junction
+    // where it matters most: measured at the trunk/scaffold fork, the summed scaffold area came to exactly
+    // 0.600 of the trunk's -- the 6/10 parameter ratio -- discarding 40% of the cross-section, while every
+    // other junction in the tree conserved area to within the reference's own scatter.
+    //
+    // The QSM reference slightly more than conserves at its head (summed scaffold area / trunk area = 1.39).
+    //
+    // Refit after the per-phytomer 365/age decay was removed from incrementPhytomerInternodeGirth(): girth is now
+    // proportional to CUMULATIVE downstream leaf area, so the factor is much smaller than the 30 used before. Against
+    // tree_13 at 2555 days this gives trunk base diameter 1.04x, largest limb 0.96x and woody volume 0.98x the reference,
+    // and limb taper now follows sqrt(downstream leaf area) instead of stepping up by wood age. See projects/QSMCalibration.
+    shoot_parameters_scaffold.girth_area_factor = 5.7f;
+
+    defineShootType("trunk", shoot_parameters_trunk);
+    defineShootType("scaffold", shoot_parameters_scaffold);
+    defineShootType("proleptic", shoot_parameters_proleptic);
+    defineShootType("sylleptic", shoot_parameters_sylleptic);
+}
+
+uint PlantArchitecture::buildAlmondTreeIndependence(const helios::vec3 &base_position) {
+
+    if (shoot_types.empty()) {
+        // automatically initialize Independence almond tree shoots
+        initializeAlmondTreeIndependenceShoots();
+    }
+
+    // Get training system parameters (with defaults matching original hard-coded values)
+    // Left at 0.6 m deliberately. The QSM reference tree carries its structural limbs from about 0.9-1.0 m,
+    // and raising this to match does fix that one measurement -- but it wrecks the crown silhouette, taking
+    // the upper/lower crown radius ratio from about 1.1 (the reference value) to 1.9, i.e. a cone. The real
+    // tree is wide by 1 m of height because its limbs spread hard straight off the trunk, whereas these
+    // scaffolds emerge at 40 degrees and curve upward, so they need vertical distance to spread. Raising the
+    // trunk simply empties the lower crown. Reproducing the real architecture needs the scaffold geometry
+    // changed, not the trunk raised. See projects/QSMCalibration.
+    auto trunk_height = getParameterValue(current_build_parameters, "trunk_height", 0.78f, 0.1f, 3.f, "total trunk height in meters");
+    auto num_scaffolds = uint(getParameterValue(current_build_parameters, "num_scaffolds", 4.f, 2.f, 8.f, "number of scaffold branches"));
+    auto scaffold_angle = getParameterValue(current_build_parameters, "scaffold_angle", 52.f, 20.f, 70.f, "scaffold branch angle in degrees");
+
+    // Calculate trunk nodes based on desired height and internode length
+    float trunk_internode_length = 0.03f; // Default internode length for almond
+    uint trunk_nodes = uint(trunk_height / trunk_internode_length);
+    if (trunk_nodes < 1)
+        trunk_nodes = 1;
+
+    // Fixed training parameters (not user-customizable)
+    float trunk_radius = 0.015f;
+    float scaffold_radius = 0.007f;
+    float scaffold_length = 0.06f;
+
+    uint plantID = addPlantInstance(base_position, 0);
+
+    //    enableEpicormicChildShoots(plantID,"sylleptic",0.001);
+
+    // The trunk is built node by node so it can lean and bow like an orchard trunk; see almondTrunkPath().
+    std::vector<vec3> trunk_node_positions;
+    std::vector<float> trunk_node_radii;
+    almondTrunkPath(context_ptr, base_position, trunk_nodes, trunk_internode_length, trunk_radius, trunk_node_positions, trunk_node_radii);
+    uint uID_trunk = addShootFromNodePositions(plantID, -1, 0, trunk_node_positions, trunk_node_radii, "trunk");
+    appendPhytomerToShoot(plantID, uID_trunk, shoot_types.at("trunk").phytomer_parameters, 0.01, 0.01, 1, 1);
+
+    plant_instances.at(plantID).shoot_tree.at(uID_trunk)->meristem_is_alive = false;
+
+    auto phytomers = plant_instances.at(plantID).shoot_tree.at(uID_trunk)->phytomers;
+    for (const auto &phytomer: phytomers) {
+        phytomer->removeLeaf();
+        phytomer->setVegetativeBudState(BUD_DEAD);
+        phytomer->setFloralBudState(BUD_DEAD);
+    }
+
+    // Hard-coded scaffold node range (not user-customizable)
+    uint scaffold_nodes_min = 5;
+    uint scaffold_nodes_max = 5;
+
+    for (int i = 0; i < num_scaffolds; i++) {
+        float pitch = deg2rad(scaffold_angle) + context_ptr->randu(-0.1f, 0.1f); // Small randomness around specified angle
+        uint scaffold_nodes = context_ptr->randu(int(scaffold_nodes_min), int(scaffold_nodes_max));
+        uint uID_shoot = addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - i - 1, scaffold_nodes, make_AxisRotation(pitch, (float(i) + context_ptr->randu(-0.2f, 0.2f)) / float(num_scaffolds) * 2 * M_PI, 0), scaffold_radius,
+                                       scaffold_length, 1.f, 1.f, 0.5, "scaffold", 0);
+        // The bud at a scaffold's base sits in the trunk/scaffold crotch. Left alone it grows into a long limb straight out of
+        // the junction: on Nonpareil it carries the largest subtree on the scaffold, 1.4 m of wood on average against 0.2-0.7 m
+        // for the laterals just above it. Orchard training clears the crotch, so the bud is killed here.
+        plant_instances.at(plantID).shoot_tree.at(uID_shoot)->phytomers.front()->setVegetativeBudState(BUD_DEAD);
+    }
+
+    makePlantDormant(plantID);
+
+    setPlantPhenologicalThresholds(plantID, 90, -1, 3, 7, 20, 275);
+    plant_instances.at(plantID).max_age = 3000;
 
     return plantID;
 }
@@ -810,10 +1532,12 @@ void PlantArchitecture::initializeAlmondTreeWoodColonyShoots() {
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.005;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
     shoot_parameters_trunk.max_nodes = 15;
-    shoot_parameters_trunk.girth_area_factor = 10.f;
+    // Rescaled when the per-phytomer 365/age decay was removed from incrementPhytomerInternodeGirth(), to keep base diameters at
+    // max_age where they were: girth is now proportional to cumulative downstream leaf area, which runs well above the old value.
+    shoot_parameters_trunk.girth_area_factor = 2.3f;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
-    shoot_parameters_trunk.tortuosity = 1;
+    shoot_parameters_trunk.tortuosity = 30.8;
     shoot_parameters_trunk.internode_length_max = 0.0325;
     shoot_parameters_trunk.internode_length_decay_rate = 0;
     shoot_parameters_trunk.defineChildShootTypes({"scaffold"}, {1});
@@ -829,13 +1553,13 @@ void PlantArchitecture::initializeAlmondTreeWoodColonyShoots() {
     shoot_parameters_proleptic.max_nodes_per_season = 15;
     shoot_parameters_proleptic.phyllochron_min = 1;
     shoot_parameters_proleptic.elongation_rate_max = 0.3;
-    shoot_parameters_proleptic.girth_area_factor = 8.f;
+    shoot_parameters_proleptic.girth_area_factor = 5.9f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.1;
     shoot_parameters_proleptic.vegetative_bud_break_probability_max = 0.5;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.15;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
     shoot_parameters_proleptic.gravitropic_curvature = 150;
-    shoot_parameters_proleptic.tortuosity = 3;
+    shoot_parameters_proleptic.tortuosity = 150;
     shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution(30, 75);
     shoot_parameters_proleptic.insertion_angle_decay_rate = 17.5;
     shoot_parameters_proleptic.internode_length_max = 0.02;
@@ -868,12 +1592,14 @@ void PlantArchitecture::initializeAlmondTreeWoodColonyShoots() {
 
     // Main scaffolds
     ShootParameters shoot_parameters_scaffold = shoot_parameters_proleptic;
+    // Scaffolds are older wood than proleptic shoots, so they need their own factor to hold their base diameter.
+    shoot_parameters_scaffold.girth_area_factor = 1.95f;
     //    shoot_parameters_scaffold.phytomer_parameters.internode.color = RGB::blue;
     shoot_parameters_scaffold.phytomer_parameters.internode.radial_subdivisions = 10;
     shoot_parameters_scaffold.max_nodes = 15;
     shoot_parameters_scaffold.gravitropic_curvature = 100;
     shoot_parameters_scaffold.internode_length_max = 0.02;
-    shoot_parameters_scaffold.tortuosity = 1.;
+    shoot_parameters_scaffold.tortuosity = 50;
     shoot_parameters_scaffold.defineChildShootTypes({"proleptic"}, {1.0});
 
     defineShootType("trunk", shoot_parameters_trunk);
@@ -893,7 +1619,11 @@ uint PlantArchitecture::buildAlmondTreeWoodColony(const helios::vec3 &base_posit
 
     //    enableEpicormicChildShoots(plantID,"sylleptic",0.001);
 
-    uint uID_trunk = addBaseStemShoot(plantID, 14, make_AxisRotation(context_ptr->randu(0.f, 0.05f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), 0.f * M_PI), 0.015, 0.03, 1.f, 1.f, 0, "trunk");
+    // The trunk is built node by node so it can lean and bow like an orchard trunk; see almondTrunkPath().
+    std::vector<vec3> trunk_node_positions;
+    std::vector<float> trunk_node_radii;
+    almondTrunkPath(context_ptr, base_position, 14, 0.03f, 0.015f, trunk_node_positions, trunk_node_radii);
+    uint uID_trunk = addShootFromNodePositions(plantID, -1, 0, trunk_node_positions, trunk_node_radii, "trunk");
     appendPhytomerToShoot(plantID, uID_trunk, shoot_types.at("trunk").phytomer_parameters, 0.01, 0.01, 1, 1);
 
     plant_instances.at(plantID).shoot_tree.at(uID_trunk)->meristem_is_alive = false;
@@ -983,10 +1713,12 @@ void PlantArchitecture::initializeAppleTreeShoots() {
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.01;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
     shoot_parameters_trunk.max_nodes = 20;
-    shoot_parameters_trunk.girth_area_factor = 5.f;
+    // Rescaled when the per-phytomer 365/age decay was removed from incrementPhytomerInternodeGirth(), to keep base diameters at
+    // max_age where they were: girth is now proportional to cumulative downstream leaf area, which runs well above the old value.
+    shoot_parameters_trunk.girth_area_factor = 1.4f;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
-    shoot_parameters_trunk.tortuosity = 1;
+    shoot_parameters_trunk.tortuosity = 20;
     shoot_parameters_trunk.internode_length_max = 0.05;
     shoot_parameters_trunk.internode_length_decay_rate = 0;
     shoot_parameters_trunk.defineChildShootTypes({"proleptic"}, {1});
@@ -1000,12 +1732,12 @@ void PlantArchitecture::initializeAppleTreeShoots() {
     shoot_parameters_proleptic.max_nodes_per_season = 20;
     shoot_parameters_proleptic.phyllochron_min = 2.0;
     shoot_parameters_proleptic.elongation_rate_max = 0.15;
-    shoot_parameters_proleptic.girth_area_factor = 7.f;
+    shoot_parameters_proleptic.girth_area_factor = 4.8f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.1;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.4;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
     shoot_parameters_proleptic.gravitropic_curvature.uniformDistribution(450, 500);
-    shoot_parameters_proleptic.tortuosity = 3;
+    shoot_parameters_proleptic.tortuosity = 75;
     shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution(30, 40);
     shoot_parameters_proleptic.insertion_angle_decay_rate = 20;
     shoot_parameters_proleptic.internode_length_max = 0.04;
@@ -1141,10 +1873,12 @@ void PlantArchitecture::initializeAppleFruitingWallShoots() {
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.01;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
     shoot_parameters_trunk.max_nodes = 30;
-    shoot_parameters_trunk.girth_area_factor = 5.f;
+    // Rescaled when the per-phytomer 365/age decay was removed from incrementPhytomerInternodeGirth(), to keep base diameters at
+    // max_age where they were: girth is now proportional to cumulative downstream leaf area, which runs well above the old value.
+    shoot_parameters_trunk.girth_area_factor = 3.9f;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
-    shoot_parameters_trunk.tortuosity = 0.5;
+    shoot_parameters_trunk.tortuosity = 10;
     shoot_parameters_trunk.internode_length_max = 0.05;
     shoot_parameters_trunk.internode_length_decay_rate = 0;
     shoot_parameters_trunk.defineChildShootTypes({"lateral"}, {1});
@@ -1158,12 +1892,12 @@ void PlantArchitecture::initializeAppleFruitingWallShoots() {
     shoot_parameters_proleptic.max_nodes_per_season = 20;
     shoot_parameters_proleptic.phyllochron_min = 2.0;
     shoot_parameters_proleptic.elongation_rate_max = 0.15;
-    shoot_parameters_proleptic.girth_area_factor = 7.f;
+    shoot_parameters_proleptic.girth_area_factor = 6.8f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.1;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.4;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
     shoot_parameters_proleptic.gravitropic_curvature.uniformDistribution(550, 700);
-    shoot_parameters_proleptic.tortuosity = 3;
+    shoot_parameters_proleptic.tortuosity = 75;
     shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution(70, 110);
     shoot_parameters_proleptic.insertion_angle_decay_rate = 20;
     shoot_parameters_proleptic.internode_length_max = 0.04;
@@ -1179,6 +1913,8 @@ void PlantArchitecture::initializeAppleFruitingWallShoots() {
 
     // lateral shoots
     ShootParameters shoot_parameters_lateral = shoot_parameters_proleptic;
+    // Laterals are older wood than proleptic shoots, so they need their own factor to hold their base diameter.
+    shoot_parameters_lateral.girth_area_factor = 5.5f;
     shoot_parameters_lateral.gravitropic_curvature = 0;
     shoot_parameters_lateral.phytomer_parameters.internode.phyllotactic_angle = 360;
 
@@ -1469,6 +2205,8 @@ void PlantArchitecture::initializeBeanShoots() {
     leaf_prototype_trifoliate.subdivisions = 6;
     leaf_prototype_trifoliate.unique_prototypes = 5;
     leaf_prototype_trifoliate.build_petiolule = true;
+    // Petiolule length as a fraction of blade length: about 2 mm, within the 1.5-2.5 mm given by Flora of Pakistan for Phaseolus vulgaris. Its radius follows the petiole.
+    leaf_prototype_trifoliate.petiolule_length = {{0, 0.02f}};
 
     LeafPrototype leaf_prototype_unifoliate = leaf_prototype_trifoliate;
     leaf_prototype_unifoliate.leaf_texture_file.clear();
@@ -1681,7 +2419,7 @@ void PlantArchitecture::initializeBougainvilleaShoots() {
     shoot_parameters.base_roll = 90;
     shoot_parameters.base_yaw.uniformDistribution(-20, 20);
     shoot_parameters.gravitropic_curvature = 500;
-    shoot_parameters.tortuosity = 3;
+    shoot_parameters.tortuosity = 75;
 
     shoot_parameters.phyllochron_min = 2.75;
     shoot_parameters.elongation_rate_max = 0.1;
@@ -1806,7 +2544,7 @@ void PlantArchitecture::initializeCapsicumShoots() {
     shoot_parameters.base_roll = 90;
     shoot_parameters.base_yaw.uniformDistribution(-20, 20);
     shoot_parameters.gravitropic_curvature = 300;
-    shoot_parameters.tortuosity = 3;
+    shoot_parameters.tortuosity = 75;
 
     shoot_parameters.phyllochron_min = 3;
     shoot_parameters.elongation_rate_max = 0.1;
@@ -1942,6 +2680,8 @@ void PlantArchitecture::initializeCowpeaShoots() {
     leaf_prototype_trifoliate.subdivisions = 6;
     leaf_prototype_trifoliate.unique_prototypes = 5;
     leaf_prototype_trifoliate.build_petiolule = true;
+    // Petiolule length as a fraction of blade length: about 3.5 mm, within the 2-5 mm given by Flora of China for Vigna unguiculata. Its radius follows the petiole.
+    leaf_prototype_trifoliate.petiolule_length = {{0, 0.038f}};
 
     LeafPrototype leaf_prototype_unifoliate = leaf_prototype_trifoliate;
     leaf_prototype_unifoliate.leaf_texture_file.clear();
@@ -2168,7 +2908,7 @@ void PlantArchitecture::initializeGrapevineVSPShoots() {
     // TEMPORARY DIAGNOSTIC -- revert before committing. Zeroed so the shoots show the frame they
     // emerge in, with nothing bending them afterwards. Real values: gravitropic_curvature 400, tortuosity 15.
     shoot_parameters_main.gravitropic_curvature = 300;
-    shoot_parameters_main.tortuosity = 12;
+    shoot_parameters_main.tortuosity = 226;
     // 5.3 cm is the internode length measured on VSP shoots (Kliewer & Dokoozlian 2005, Table 3,
     // "Vertical" row), which also reports 24 nodes on an unhedged 130 cm shoot.
     shoot_parameters_main.internode_length_max.uniformDistribution(0.048, 0.058);
@@ -2183,12 +2923,13 @@ void PlantArchitecture::initializeGrapevineVSPShoots() {
     shoot_parameters_main.determinate_shoot_growth = false;
     shoot_parameters_main.max_terminal_floral_buds = 0;
     shoot_parameters_main.flower_bud_break_probability = 0.5;
-    shoot_parameters_main.max_nodes = 17;
-    // Commercial VSP is hedged at the top wire, roughly 1 m above the cordon, so a shoot does not run to
-    // the 24 nodes it would reach unhedged. There is no hedging operation in the model, so the cap stands
-    // in for one. The count also has to leave room for the summer laterals, which carry a further third
-    // of the vine's leaf area on top of what the primary axis bears.
-    shoot_parameters_main.max_nodes = 17;
+    // Commercial VSP is hedged about 15 cm above the top wire, so a shoot does not run to the 24 nodes it
+    // would reach unhedged. There is no hedging operation in the model, so the cap stands in for one: with
+    // 20 nodes the mean shoot tip sits about 0.8 m above the cordon and the tallest shoots reach 1.8-2.0 m,
+    // matching the ~0.9-1.0 m canopy and ~1.9 m hedged height of commercial VSP. The count also has to
+    // leave room for the summer laterals, which carry a further third of the vine's leaf area on top of
+    // what the primary axis bears.
+    shoot_parameters_main.max_nodes = 20;
     // Roll spins the shoot about its own axis, which sets the azimuth its two-ranked leaf plane faces.
     // Grapevine phyllotaxy is near 180 degrees, so each shoot carries its leaves in one flat plane; with
     // a single fixed roll every shoot on the vine presented that plane the same way and the leaves lined
@@ -2282,45 +3023,6 @@ void PlantArchitecture::initializeGrapevineVSPShoots() {
     defineShootType("grapevine_shoot_mirrored", shoot_parameters_main_mirrored);
     defineShootType("grapevine_lateral", shoot_parameters_lateral);
 }
-
-//! Smooth one-dimensional wander that cannot drift: a sum of sinusoids of given amplitude, wavelength and phase.
-/**
- * Used to vary the path of trained wood. Trained wood is held in place -- a trunk by its stake, a cane by the wire it is tied to -- so it departs from its trained line by a bounded amount and keeps returning to it.
- * A random walk does neither, since its excursion grows with the length of the path. A sum of sinusoids never strays further than the sum of its amplitudes however long the path is, which states the constraint
- * directly, and the wavelengths set how quickly it is allowed to turn.
- */
-struct BoundedWander {
-
-    //! Add a sinusoidal component.
-    /**
-     * \param[in] amplitude Largest departure this component contributes, in meters.
-     * \param[in] wavelength Distance along the path over which this component repeats, in meters.
-     * \param[in] phase Phase of this component at the start of the path, in radians.
-     */
-    void addComponent(float amplitude, float wavelength, float phase) {
-        amplitudes.push_back(amplitude);
-        wavelengths.push_back(wavelength);
-        phases.push_back(phase);
-    }
-
-    //! Departure from the trained line at a given distance along the path.
-    /**
-     * \param[in] distance Distance along the path, in meters.
-     * \return Departure in meters, whose magnitude never exceeds the sum of the component amplitudes.
-     */
-    [[nodiscard]] float evaluate(float distance) const {
-        float departure = 0.f;
-        for (size_t component = 0; component < amplitudes.size(); component++) {
-            departure += amplitudes.at(component) * std::sin(2.f * PI_F * distance / wavelengths.at(component) + phases.at(component));
-        }
-        return departure;
-    }
-
-private:
-    std::vector<float> amplitudes;
-    std::vector<float> wavelengths;
-    std::vector<float> phases;
-};
 
 uint PlantArchitecture::buildGrapevineVSP(const helios::vec3 &base_position) {
 
@@ -2698,7 +3400,7 @@ void PlantArchitecture::initializeGrapevineWyeShoots() {
     shoot_parameters_main.elongation_rate_max = 0.15;
     shoot_parameters_main.girth_area_factor = 0.8f;
     shoot_parameters_main.gravitropic_curvature.uniformDistribution(0, 100);
-    shoot_parameters_main.tortuosity = 10;
+    shoot_parameters_main.tortuosity = 143;
     shoot_parameters_main.internode_length_max.uniformDistribution(0.06, 0.08);
     shoot_parameters_main.internode_length_decay_rate = 0;
     shoot_parameters_main.insertion_angle_tip = 45;
@@ -2722,7 +3424,7 @@ void PlantArchitecture::initializeGrapevineWyeShoots() {
     shoot_parameters_cordon.insertion_angle_tip.uniformDistribution(60, 120);
     shoot_parameters_cordon.girth_area_factor = 3.5f;
     shoot_parameters_cordon.max_nodes = 8;
-    shoot_parameters_cordon.tortuosity = 1;
+    shoot_parameters_cordon.tortuosity = 14.3;
     shoot_parameters_cordon.gravitropic_curvature = 0;
     shoot_parameters_cordon.vegetative_bud_break_probability_min = 0.9;
     shoot_parameters_cordon.base_yaw = 0;
@@ -2739,7 +3441,7 @@ void PlantArchitecture::initializeGrapevineWyeShoots() {
     shoot_parameters_trunk.insertion_angle_tip = 90;
     shoot_parameters_trunk.girth_area_factor = 0;
     shoot_parameters_trunk.max_nodes = 18;
-    shoot_parameters_trunk.tortuosity = 2;
+    shoot_parameters_trunk.tortuosity = 28.6;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.defineChildShootTypes({"grapevine_shoot"}, {1.f});
 
@@ -2913,7 +3615,7 @@ void PlantArchitecture::initializeGroundCherryWeedShoots() {
     shoot_parameters.base_roll = 90;
     shoot_parameters.base_yaw.uniformDistribution(-20, 20);
     shoot_parameters.gravitropic_curvature = 700;
-    shoot_parameters.tortuosity = 3;
+    shoot_parameters.tortuosity = 200;
 
     shoot_parameters.phyllochron_min = 1;
     shoot_parameters.elongation_rate_max = 0.1;
@@ -3046,7 +3748,7 @@ void PlantArchitecture::initializeMaizeShoots() {
     shoot_parameters_mainstem.girth_area_factor = 6.f;
     shoot_parameters_mainstem.gravitropic_curvature.uniformDistribution(-250, 0);
     shoot_parameters_mainstem.internode_length_max = 0.1;
-    shoot_parameters_mainstem.tortuosity = 0.5f;
+    shoot_parameters_mainstem.tortuosity = 10;
     shoot_parameters_mainstem.internode_length_decay_rate = 0;
     shoot_parameters_mainstem.flowers_require_dormancy = false;
     shoot_parameters_mainstem.growth_requires_dormancy = false;
@@ -3141,10 +3843,12 @@ void PlantArchitecture::initializeOliveTreeShoots() {
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.015;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 20;
     shoot_parameters_trunk.max_nodes = 20;
-    shoot_parameters_trunk.girth_area_factor = 3.f;
+    // Rescaled when the per-phytomer 365/age decay was removed from incrementPhytomerInternodeGirth(), to keep base diameters at
+    // max_age where they were: girth is now proportional to cumulative downstream leaf area, which runs well above the old value.
+    shoot_parameters_trunk.girth_area_factor = 0.66f;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
-    shoot_parameters_trunk.tortuosity = 1;
+    shoot_parameters_trunk.tortuosity = 20;
     shoot_parameters_trunk.internode_length_max = 0.05;
     shoot_parameters_trunk.internode_length_decay_rate = 0;
     shoot_parameters_trunk.defineChildShootTypes({"scaffold"}, {1});
@@ -3158,12 +3862,12 @@ void PlantArchitecture::initializeOliveTreeShoots() {
     shoot_parameters_proleptic.max_nodes_per_season.uniformDistribution(8, 12);
     shoot_parameters_proleptic.phyllochron_min = 2.0;
     shoot_parameters_proleptic.elongation_rate_max = 0.25;
-    shoot_parameters_proleptic.girth_area_factor = 5.f;
+    shoot_parameters_proleptic.girth_area_factor = 3.4f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.025;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 1.0;
     shoot_parameters_proleptic.vegetative_bud_break_time = 30;
     shoot_parameters_proleptic.gravitropic_curvature.uniformDistribution(550, 650);
-    shoot_parameters_proleptic.tortuosity = 5;
+    shoot_parameters_proleptic.tortuosity = 100;
     shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution(35, 40);
     shoot_parameters_proleptic.insertion_angle_decay_rate = 2;
     shoot_parameters_proleptic.internode_length_max = 0.05;
@@ -3179,12 +3883,14 @@ void PlantArchitecture::initializeOliveTreeShoots() {
 
     // Main scaffolds
     ShootParameters shoot_parameters_scaffold = shoot_parameters_proleptic;
+    // Scaffolds are older wood than proleptic shoots, so they need their own factor to hold their base diameter.
+    shoot_parameters_scaffold.girth_area_factor = 1.1f;
     shoot_parameters_scaffold.phytomer_parameters.internode.radial_subdivisions = 10;
     shoot_parameters_scaffold.max_nodes = 30;
     shoot_parameters_scaffold.max_nodes_per_season = 10;
     shoot_parameters_scaffold.gravitropic_curvature = 700;
     shoot_parameters_scaffold.internode_length_max = 0.04;
-    shoot_parameters_scaffold.tortuosity = 3;
+    shoot_parameters_scaffold.tortuosity = 75;
     shoot_parameters_scaffold.defineChildShootTypes({"proleptic"}, {1.0});
 
     defineShootType("trunk", shoot_parameters_trunk);
@@ -3300,10 +4006,12 @@ void PlantArchitecture::initializePistachioTreeShoots() {
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.015;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 20;
     shoot_parameters_trunk.max_nodes = 20;
-    shoot_parameters_trunk.girth_area_factor = 5.f;
+    // Rescaled when the per-phytomer 365/age decay was removed from incrementPhytomerInternodeGirth(), to keep base diameters at
+    // max_age where they were: girth is now proportional to cumulative downstream leaf area, which runs well above the old value.
+    shoot_parameters_trunk.girth_area_factor = 1.4f;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
-    shoot_parameters_trunk.tortuosity = 0.75;
+    shoot_parameters_trunk.tortuosity = 15;
     shoot_parameters_trunk.internode_length_max = 0.05;
     shoot_parameters_trunk.internode_length_decay_rate = 0;
     shoot_parameters_trunk.defineChildShootTypes({"proleptic"}, {1});
@@ -3318,12 +4026,12 @@ void PlantArchitecture::initializePistachioTreeShoots() {
     shoot_parameters_proleptic.max_nodes_per_season.uniformDistribution(8, 10);
     shoot_parameters_proleptic.phyllochron_min = 2.0;
     shoot_parameters_proleptic.elongation_rate_max = 0.25;
-    shoot_parameters_proleptic.girth_area_factor = 7.f;
+    shoot_parameters_proleptic.girth_area_factor = 4.8f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.1;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.7;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
     shoot_parameters_proleptic.gravitropic_curvature = 350;
-    shoot_parameters_proleptic.tortuosity = 2;
+    shoot_parameters_proleptic.tortuosity = 33.3;
     shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution(45, 55);
     shoot_parameters_proleptic.insertion_angle_decay_rate = 10;
     shoot_parameters_proleptic.internode_length_max = 0.06;
@@ -3595,9 +4303,11 @@ void PlantArchitecture::initializeEasternRedbudShoots() {
     shoot_parameters_main.vegetative_bud_break_time = 2;
     shoot_parameters_main.phyllochron_min = 2;
     shoot_parameters_main.elongation_rate_max = 0.1;
-    shoot_parameters_main.girth_area_factor = 4.f;
+    // Rescaled when the per-phytomer 365/age decay was removed from incrementPhytomerInternodeGirth(), to keep base diameters at
+    // max_age where they were: girth is now proportional to cumulative downstream leaf area, which runs well above the old value.
+    shoot_parameters_main.girth_area_factor = 3.0f;
     shoot_parameters_main.gravitropic_curvature = 300;
-    shoot_parameters_main.tortuosity = 5;
+    shoot_parameters_main.tortuosity = 125;
     shoot_parameters_main.internode_length_max = 0.04;
     shoot_parameters_main.internode_length_decay_rate = 0.005;
     shoot_parameters_main.internode_length_min = 0.01;
@@ -3614,13 +4324,15 @@ void PlantArchitecture::initializeEasternRedbudShoots() {
     shoot_parameters_main.base_roll = 90;
 
     ShootParameters shoot_parameters_trunk = shoot_parameters_main;
+    // The trunk is older wood than the shoots, so it needs its own factor to hold its base diameter.
+    shoot_parameters_trunk.girth_area_factor = 1.13f;
     shoot_parameters_trunk.phytomer_parameters.internode.pitch = 0;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 15;
     shoot_parameters_trunk.phytomer_parameters.internode.max_floral_buds_per_petiole = 0;
     shoot_parameters_trunk.insertion_angle_tip = 60;
     shoot_parameters_trunk.max_nodes = 75;
     shoot_parameters_trunk.max_nodes_per_season = 10;
-    shoot_parameters_trunk.tortuosity = 1.5;
+    shoot_parameters_trunk.tortuosity = 37.5;
     shoot_parameters_trunk.defineChildShootTypes({"eastern_redbud_shoot"}, {1.f});
 
     defineShootType("eastern_redbud_trunk", shoot_parameters_trunk);
@@ -3966,6 +4678,8 @@ void PlantArchitecture::initializeSoybeanShoots() {
     leaf_prototype.subdivisions = 8;
     leaf_prototype.unique_prototypes = 5;
     leaf_prototype.build_petiolule = true;
+    // Petiolule length as a fraction of blade length: about 3 mm, within the 1.5-4 mm given by Flora of China for Glycine max. Its radius follows the petiole.
+    leaf_prototype.petiolule_length = {{0, 0.025f}};
 
     PhytomerParameters phytomer_parameters_trifoliate(context_ptr->getRandomGenerator());
 
@@ -4301,8 +5015,10 @@ void PlantArchitecture::initializeTomatoShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "TomatoLeaf_centered.png";
-    leaf_prototype.leaf_aspect_ratio = 0.5f;
+    // The blade-only texture drops the stalk painted onto TomatoLeaf_centered.png, keeping 0.9031 of its width, so the aspect ratio here and the leaflet scale
+    // below are divided and multiplied by that fraction to leave the blade the same size. The stalk is built as geometry instead.
+    leaf_prototype.leaf_texture_file[0] = "TomatoLeaf_blade.png";
+    leaf_prototype.leaf_aspect_ratio = 0.5f / 0.9031f;
     leaf_prototype.midrib_fold_fraction = 0.1f;
     leaf_prototype.longitudinal_curvature.uniformDistribution(-0.45, -0.2f);
     leaf_prototype.lateral_curvature = -0.3f;
@@ -4310,6 +5026,10 @@ void PlantArchitecture::initializeTomatoShoots() {
     leaf_prototype.wave_amplitude = 0.08f;
     leaf_prototype.subdivisions = 6;
     leaf_prototype.unique_prototypes = 5;
+    leaf_prototype.build_petiolule = true;
+    // Petiolule length as a fraction of blade length: about 9-14 mm on the terminal leaflet and 3-10 mm on the laterals, within the 5-15 mm (terminal) and
+    // 3-20 mm (lateral) given by Flora of North America for Solanum lycopersicum. Its radius follows the petiole.
+    leaf_prototype.petiolule_length = {{0, 0.085f}};
 
     // ---- Phytomer Parameters ---- //
 
@@ -4325,7 +5045,8 @@ void PlantArchitecture::initializeTomatoShoots() {
     phytomer_parameters.petiole.pitch.uniformDistribution(45, 60);
     phytomer_parameters.petiole.radius = 0.002;
     phytomer_parameters.petiole.length = 0.2;
-    phytomer_parameters.petiole.taper = 0.25;
+    // The rachis thins to 30% of its base radius at the tip, so the leaflet stalks, which take the rachis radius where they attach, are about 1.2-2.3 mm thick.
+    phytomer_parameters.petiole.taper = 0.7;
     phytomer_parameters.petiole.curvature.uniformDistribution(-150, -50);
     phytomer_parameters.petiole.color = make_RGBcolor(0.3, 0.37, 0.0657);
     phytomer_parameters.petiole.length_segments = 5;
@@ -4336,7 +5057,7 @@ void PlantArchitecture::initializeTomatoShoots() {
     phytomer_parameters.leaf.roll = 0;
     phytomer_parameters.leaf.leaflet_offset = 0.15;
     phytomer_parameters.leaf.leaflet_scale = 0.7;
-    phytomer_parameters.leaf.prototype_scale.uniformDistribution(0.12, 0.18);
+    phytomer_parameters.leaf.prototype_scale.uniformDistribution(0.12f * 0.9031f, 0.18f * 0.9031f);
     phytomer_parameters.leaf.prototype = leaf_prototype;
 
     phytomer_parameters.peduncle.length = 0.18;
@@ -4373,7 +5094,7 @@ void PlantArchitecture::initializeTomatoShoots() {
     shoot_parameters.base_roll = 90;
     shoot_parameters.base_yaw.uniformDistribution(-20, 20);
     shoot_parameters.gravitropic_curvature = 150;
-    shoot_parameters.tortuosity = 3;
+    shoot_parameters.tortuosity = 75;
 
     shoot_parameters.phyllochron_min = 2;
     shoot_parameters.elongation_rate_max = 0.1;
@@ -4418,8 +5139,9 @@ void PlantArchitecture::initializeCherryTomatoShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "CherryTomatoLeaf.png";
-    leaf_prototype.leaf_aspect_ratio = 0.6f;
+    // See initializeTomatoShoots(): the blade-only texture keeps 0.9031 of the original's width, so the aspect ratio and leaflet scale are compensated for it.
+    leaf_prototype.leaf_texture_file[0] = "TomatoLeaf_blade.png";
+    leaf_prototype.leaf_aspect_ratio = 0.6f / 0.9031f;
     leaf_prototype.midrib_fold_fraction = 0.1f;
     leaf_prototype.longitudinal_curvature.uniformDistribution(-0.3, -0.15f);
     leaf_prototype.lateral_curvature = -0.8f;
@@ -4427,6 +5149,10 @@ void PlantArchitecture::initializeCherryTomatoShoots() {
     leaf_prototype.wave_amplitude = 0.08f;
     leaf_prototype.subdivisions = 7;
     leaf_prototype.unique_prototypes = 5;
+    leaf_prototype.build_petiolule = true;
+    // Petiolule length as a fraction of blade length: about 8-11 mm on the terminal leaflet and 5-10 mm on the laterals, within the ranges Flora of North America
+    // gives for Solanum lycopersicum (see initializeTomatoShoots()). Its radius follows the petiole.
+    leaf_prototype.petiolule_length = {{0, 0.07f}};
 
     // ---- Phytomer Parameters ---- //
 
@@ -4443,7 +5169,8 @@ void PlantArchitecture::initializeCherryTomatoShoots() {
     phytomer_parameters.petiole.pitch.uniformDistribution(45, 60);
     phytomer_parameters.petiole.radius = 0.0025;
     phytomer_parameters.petiole.length = 0.25;
-    phytomer_parameters.petiole.taper = 0.25;
+    // The rachis thins to 30% of its base radius at the tip; see initializeTomatoShoots().
+    phytomer_parameters.petiole.taper = 0.7;
     phytomer_parameters.petiole.curvature.uniformDistribution(-250, 0);
     phytomer_parameters.petiole.color = make_RGBcolor(0.32, 0.37, 0.12);
     phytomer_parameters.petiole.length_segments = 5;
@@ -4454,7 +5181,7 @@ void PlantArchitecture::initializeCherryTomatoShoots() {
     phytomer_parameters.leaf.roll.uniformDistribution(-20, 20);
     phytomer_parameters.leaf.leaflet_offset = 0.22;
     phytomer_parameters.leaf.leaflet_scale = 0.9;
-    phytomer_parameters.leaf.prototype_scale.uniformDistribution(0.12, 0.17);
+    phytomer_parameters.leaf.prototype_scale.uniformDistribution(0.12f * 0.9031f, 0.17f * 0.9031f);
     phytomer_parameters.leaf.prototype = leaf_prototype;
 
     phytomer_parameters.peduncle.length = 0.2;
@@ -4492,7 +5219,7 @@ void PlantArchitecture::initializeCherryTomatoShoots() {
     shoot_parameters.base_roll = 90;
     shoot_parameters.base_yaw.uniformDistribution(-20, 20);
     shoot_parameters.gravitropic_curvature = 800;
-    shoot_parameters.tortuosity = 1.5;
+    shoot_parameters.tortuosity = 37.5;
 
     shoot_parameters.phyllochron_min = 4;
     shoot_parameters.elongation_rate_max = 0.1;
@@ -4598,10 +5325,12 @@ void PlantArchitecture::initializeWalnutTreeShoots() {
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.01;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
     shoot_parameters_trunk.max_nodes = 20;
-    shoot_parameters_trunk.girth_area_factor = 5.f;
+    // Rescaled when the per-phytomer 365/age decay was removed from incrementPhytomerInternodeGirth(), to keep base diameters at
+    // max_age where they were: girth is now proportional to cumulative downstream leaf area, which runs well above the old value.
+    shoot_parameters_trunk.girth_area_factor = 1.4f;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
-    shoot_parameters_trunk.tortuosity = 1;
+    shoot_parameters_trunk.tortuosity = 20;
     shoot_parameters_trunk.internode_length_max = 0.05;
     shoot_parameters_trunk.internode_length_decay_rate = 0;
     shoot_parameters_trunk.defineChildShootTypes({"scaffold"}, {1});
@@ -4616,12 +5345,12 @@ void PlantArchitecture::initializeWalnutTreeShoots() {
     shoot_parameters_proleptic.max_nodes_per_season = 12;
     shoot_parameters_proleptic.phyllochron_min = 2.;
     shoot_parameters_proleptic.elongation_rate_max = 0.15;
-    shoot_parameters_proleptic.girth_area_factor = 9.f;
+    shoot_parameters_proleptic.girth_area_factor = 6.7f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.05;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.7;
     shoot_parameters_proleptic.vegetative_bud_break_time = 3;
     shoot_parameters_proleptic.gravitropic_curvature = 300;
-    shoot_parameters_proleptic.tortuosity = 4;
+    shoot_parameters_proleptic.tortuosity = 50;
     shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution(20, 25);
     shoot_parameters_proleptic.insertion_angle_decay_rate = 15;
     shoot_parameters_proleptic.internode_length_max = 0.08;
@@ -4637,11 +5366,13 @@ void PlantArchitecture::initializeWalnutTreeShoots() {
 
     // Main scaffolds
     ShootParameters shoot_parameters_scaffold = shoot_parameters_proleptic;
+    // Scaffolds are older wood than proleptic shoots, so they need their own factor to hold their base diameter.
+    shoot_parameters_scaffold.girth_area_factor = 2.6f;
     shoot_parameters_scaffold.phytomer_parameters.internode.radial_subdivisions = 10;
     shoot_parameters_scaffold.max_nodes = 30;
     shoot_parameters_scaffold.gravitropic_curvature = 300;
     shoot_parameters_scaffold.internode_length_max = 0.06;
-    shoot_parameters_scaffold.tortuosity = 4;
+    shoot_parameters_scaffold.tortuosity = 66.7;
     shoot_parameters_scaffold.defineChildShootTypes({"proleptic"}, {1.0});
 
     defineShootType("trunk", shoot_parameters_trunk);

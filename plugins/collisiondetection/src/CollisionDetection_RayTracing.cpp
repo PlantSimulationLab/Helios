@@ -1809,7 +1809,8 @@ void CollisionDetection::ensurePrimitiveCacheCurrent() {
 
 bool CollisionDetection::triangleIntersect(const vec3 &origin, const vec3 &direction, const vec3 &v0, const vec3 &v1, const vec3 &v2, float &distance) const {
     // Möller-Trumbore triangle intersection algorithm (optimized - no vec3 temporaries)
-    // Note: Using 1e-5f to match LiDAR CUDA kernel tolerance for edge-case rays
+    // Note: Using 1e-5f to match LiDAR CUDA kernel tolerance for edge-case rays. Every use is dimensionless (a cosine or a barycentric coordinate) except
+    // the minimum hit distance, where it is 10 micrometres.
     const float EPSILON = 1e-5f;
 
     // Compute triangle edges directly as components (avoid vec3 constructors)
@@ -1824,7 +1825,15 @@ bool CollisionDetection::triangleIntersect(const vec3 &origin, const vec3 &direc
     // Dot product: a = edge1 · h
     float a = edge1_x * h_x + edge1_y * h_y + edge1_z * h_z;
 
-    if (a > -EPSILON && a < EPSILON) {
+    // The determinant equals -direction · (edge1 × edge2), so it scales with the triangle's area as well as with the ray's obliquity. Testing it against a
+    // fixed tolerance rejected every triangle under a few millimetres as "parallel" whatever the ray's angle. Normalizing by the triangle normal's length
+    // makes this a test of the angle alone: the ray is parallel when the cosine between it and the normal is below EPSILON. Compared squared to avoid a
+    // square root in the innermost loop; a degenerate triangle has a zero normal and is rejected here too.
+    const float normal_x = edge1_y * edge2_z - edge1_z * edge2_y;
+    const float normal_y = edge1_z * edge2_x - edge1_x * edge2_z;
+    const float normal_z = edge1_x * edge2_y - edge1_y * edge2_x;
+    const float normal_magnitude_squared = normal_x * normal_x + normal_y * normal_y + normal_z * normal_z;
+    if (a * a <= EPSILON * EPSILON * normal_magnitude_squared) {
         return false; // Ray is parallel to triangle
     }
 

@@ -137,7 +137,7 @@ namespace helios {
      *         should treat as no fluorescence). Callers that want a quantum-yield-agnostic
      *         kernel can pass `fqe = 1` and multiply by their own Phi_F externally — this
      *         is how RadiationModel uses the kernel so that leaves sharing biochemistry
-     *         but differing in J/Jmax can share a cached kernel.
+     *         but differing in electron_transport_ratio can share a cached kernel.
      */
     FluspectKernel computeFluspectKernel(const FluspectBiochemistry &biochem,
                                          const FluspectOptipar &optipar,

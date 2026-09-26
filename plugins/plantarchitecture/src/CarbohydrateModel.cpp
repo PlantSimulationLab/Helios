@@ -36,7 +36,7 @@ float Phytomer::calculatePhytomerConstructionCosts() const {
     for (const auto &petiole: leaf_objIDs) {
         for (uint leaf_objID: petiole) {
             if (context_ptr->doesObjectExist(leaf_objID)) {
-                float obj_area = context_ptr->getObjectArea(leaf_objID);
+                float obj_area = plantarchitecture_ptr->getLeafBladeArea(leaf_objID);
                 float scale_factor = current_leaf_scale_factor.at(p);
                 float scaled_area = obj_area / powi(scale_factor, 2);
                 leaf_area += scaled_area;

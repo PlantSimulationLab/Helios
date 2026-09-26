@@ -137,7 +137,12 @@ public:
      * When enabled, \ref run() iterates the surface energy balance and the airspace solution to convergence, since leaf temperature and the airspace state are mutually dependent. Because the model solves for a steady state, it is not
      * compatible with the dynamic (non-steady-state) forms of \ref run() that take a timestep argument.
      *
-     * This routine sets primitive data 'air_temperature', 'air_humidity', and 'wind_speed' for all primitives in \p canopy_UUIDs, and adds 'boundarylayer_conductance_out' to the optional outputs because the airspace solution requires it.
+     * This routine sets primitive data 'air_temperature', 'air_humidity', and 'wind_speed' for all primitives in \p canopy_UUIDs and \p ground_UUIDs, and adds 'boundarylayer_conductance_out' to the optional outputs because the airspace solution requires it.
+     *
+     * The soil exchanges sensible heat and water vapor with the lowest airspace layer through the same boundary-layer and moisture conductances its own surface energy balance uses, so that the heat and water released by the soil are exactly
+     * what the airspace receives. Ground primitives without 'boundarylayer_conductance' primitive data use the bare-soil conductance of Kustas and Norman (1999) rather than the flat-plate relation used for other primitives; a value
+     * set by the user or by the boundary-layer conductance plug-in takes precedence. Soil evaporation is governed by the 'moisture_conductance' and 'surface_humidity' primitive data of the ground primitives. Soil fluxes are averaged
+     * over the area of the ground primitives, which are taken to represent the soil surface beneath the whole canopy footprint.
      *
      * The above-canopy boundary condition is read from global data 'air_temperature_reference', 'air_humidity_reference', and 'wind_speed_reference' if present, and otherwise falls back to this model's default values.
      *
@@ -228,6 +233,14 @@ private:
      * \return Aerodynamic resistance between the canopy top and the reference height in s/m.
      */
     [[nodiscard]] float calculateAerodynamicResistance(float wind_speed_reference_m_s) const;
+
+    //! Calculate the boundary-layer conductance to heat of a bare soil surface following Kustas and Norman (1999)
+    /**
+     * Used by default for ground primitives of the canopy airspace model that have no 'boundarylayer_conductance' primitive data. This is the same expression as the "Ground" model of the boundary-layer conductance plug-in.
+     * \param[in] wind_speed_m_s Wind speed near the soil surface in m/s.
+     * \return Boundary-layer conductance to heat in mol/m^2-s.
+     */
+    [[nodiscard]] static float calculateGroundBoundaryLayerConductance(float wind_speed_m_s);
 
     //! Flag indicating whether the canopy airspace model is enabled
     bool canopy_airspace_enabled = false;

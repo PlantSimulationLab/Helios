@@ -1134,6 +1134,187 @@ DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Soil Node") {
     DOCTEST_CHECK(U_ground < 1.f);
 }
 
+// Result of a single-layer canopy airspace solution over a soil surface, reduced to fluxes per unit ground area so that
+// the energy and water leaving the surfaces can be compared with what the network transports to the reference height.
+struct SoilCouplingResult {
+    float canopy_air_temperature_K;
+    float soil_temperature_K;
+    float soil_wind_speed_m_s;
+    float soil_conductance_out;
+    float soil_conductance_in;
+    float surface_sensible_flux_W_m2;    // leaves plus soil, as computed by the surface energy balance
+    float surface_latent_flux_W_m2;      // leaves plus soil, as computed by the surface energy balance
+    float atmospheric_sensible_flux_W_m2; // transported from the canopy air to the reference height
+    float atmospheric_latent_flux_W_m2;   // transported from the canopy air to the reference height
+};
+
+// Builds a 1.2 m2 canopy (LAI 2, so 0.6 m2 of ground) over a square soil surface of side ground_extent_factor times the
+// canopy footprint, tiled into ground_subdivisions x ground_subdivisions patches, and solves the canopy airspace model.
+static SoilCouplingResult runSoilCouplingScene(uint ground_subdivisions, float ground_extent_factor, float soil_moisture_conductance, float soil_boundarylayer_conductance) {
+    Context context;
+    const float Tref = 300.f;
+    const float RHref = 0.4f;
+    const float canopy_height = 2.f;
+    const float LAI = 2.f;
+
+    std::vector<uint> leaves = buildTestCanopy(context, 40, 3, canopy_height, 0.1f);
+    const float ground_area = context.sumPrimitiveSurfaceArea(leaves) / LAI;
+    const float ground_side = ground_extent_factor * std::sqrt(ground_area);
+    const float tile_side = ground_side / float(ground_subdivisions);
+
+    std::vector<uint> ground;
+    for (uint i = 0; i < ground_subdivisions; i++) {
+        for (uint j = 0; j < ground_subdivisions; j++) {
+            ground.push_back(context.addPatch(make_vec3(tile_side * (float(i) + 0.5f), tile_side * (float(j) + 0.5f), 0), make_vec2(tile_side, tile_side)));
+        }
+    }
+
+    context.setPrimitiveData(leaves, "radiation_flux_SW", 300.f);
+    context.setPrimitiveData(leaves, "radiation_flux_LW", float(2.f * 5.67e-8 * pow(Tref, 4)));
+    context.setPrimitiveData(leaves, "moisture_conductance", 0.2f);
+    context.setPrimitiveData(ground, "radiation_flux_SW", 400.f);
+    context.setPrimitiveData(ground, "radiation_flux_LW", float(5.67e-8 * pow(Tref, 4)));
+    context.setPrimitiveData(ground, "twosided_flag", uint(0));
+    context.setPrimitiveData(ground, "moisture_conductance", soil_moisture_conductance);
+    if (soil_boundarylayer_conductance > 0.f) {
+        context.setPrimitiveData(ground, "boundarylayer_conductance", soil_boundarylayer_conductance);
+    }
+    context.setGlobalData("air_temperature_reference", Tref);
+    context.setGlobalData("air_humidity_reference", RHref);
+    context.setGlobalData("wind_speed_reference", 2.f);
+
+    std::vector<uint> all_UUIDs = leaves;
+    all_UUIDs.insert(all_UUIDs.end(), ground.begin(), ground.end());
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+    model.addRadiationBand("LW");
+    model.enableCanopyAirspaceModel(leaves, ground, canopy_height, 4.f, LAI, 1);
+    model.setCanopyAirspaceConvergence(1e-4f, 500);
+    model.run(all_UUIDs);
+
+    SoilCouplingResult result{};
+    float canopy_air_humidity;
+    float aerodynamic_resistance;
+    context.getGlobalData("canopy_air_temperature", result.canopy_air_temperature_K);
+    context.getGlobalData("canopy_air_humidity", canopy_air_humidity);
+    context.getGlobalData("aerodynamic_resistance", aerodynamic_resistance);
+
+    // The canopy air exchanges with the reference air through the aerodynamic conductance.
+    const float Patm = 101000.f;
+    const float g_a = Patm / (R * Tref) / aerodynamic_resistance;
+    const float x_canopy_air = canopy_air_humidity * esat_Pa(result.canopy_air_temperature_K) / Patm;
+    const float x_reference = RHref * esat_Pa(Tref) / Patm;
+    result.atmospheric_sensible_flux_W_m2 = cp_air_mol * g_a * (result.canopy_air_temperature_K - Tref);
+    result.atmospheric_latent_flux_W_m2 = lambda_mol * g_a * (x_canopy_air - x_reference);
+
+    // Leaf fluxes are converted to a ground-area basis through the leaf area index; soil fluxes are area-averaged over
+    // the soil, since the soil surface underlies the whole canopy footprint.
+    const float soil_area = context.sumPrimitiveSurfaceArea(ground);
+    float leaf_H, leaf_LE, soil_H, soil_LE, soil_T;
+    context.calculatePrimitiveDataAreaWeightedSum(leaves, "sensible_flux", leaf_H);
+    context.calculatePrimitiveDataAreaWeightedSum(leaves, "latent_flux", leaf_LE);
+    context.calculatePrimitiveDataAreaWeightedSum(ground, "sensible_flux", soil_H);
+    context.calculatePrimitiveDataAreaWeightedSum(ground, "latent_flux", soil_LE);
+    context.calculatePrimitiveDataAreaWeightedSum(ground, "temperature", soil_T);
+    result.surface_sensible_flux_W_m2 = leaf_H / ground_area + soil_H / soil_area;
+    result.surface_latent_flux_W_m2 = leaf_LE / ground_area + soil_LE / soil_area;
+    result.soil_temperature_K = soil_T / soil_area;
+
+    context.getPrimitiveData(ground.front(), "wind_speed", result.soil_wind_speed_m_s);
+    context.getPrimitiveData(ground.front(), "boundarylayer_conductance_out", result.soil_conductance_out);
+    result.soil_conductance_in = -1.f;
+    if (context.doesPrimitiveDataExist(ground.front(), "boundarylayer_conductance")) {
+        context.getPrimitiveData(ground.front(), "boundarylayer_conductance", result.soil_conductance_in);
+    }
+    return result;
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Soil Exchange Conserves Energy") {
+    // The heat and water vapor the soil surface energy balance releases must be exactly what the airspace network
+    // receives, so that everything leaving the surfaces is carried to the reference height. A single large ground tile
+    // over an evaporating soil exercises both the soil conductance and the soil moisture pathway.
+    SoilCouplingResult result = runSoilCouplingScene(1, 1.f, 0.2f, 0.f);
+
+    DOCTEST_CHECK(result.surface_latent_flux_W_m2 > 100.f);
+    DOCTEST_CHECK(std::fabs(result.surface_sensible_flux_W_m2 - result.atmospheric_sensible_flux_W_m2) < 1.f);
+    DOCTEST_CHECK(std::fabs(result.surface_latent_flux_W_m2 - result.atmospheric_latent_flux_W_m2) < 1.f);
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Soil Independent Of Ground Tiling") {
+    // Subdividing the ground into more primitives of the same total area describes the same soil surface, so it must
+    // not change the soil temperature or the canopy air temperature.
+    SoilCouplingResult coarse = runSoilCouplingScene(1, 1.f, 0.f, 0.f);
+    SoilCouplingResult fine = runSoilCouplingScene(10, 1.f, 0.f, 0.f);
+
+    DOCTEST_CHECK(std::fabs(coarse.soil_temperature_K - fine.soil_temperature_K) < 0.05f);
+    DOCTEST_CHECK(std::fabs(coarse.canopy_air_temperature_K - fine.canopy_air_temperature_K) < 0.01f);
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Soil Uses Kustas-Norman Conductance By Default") {
+    // Without a user-supplied value, ground primitives of the airspace model use the bare-soil conductance of Kustas and
+    // Norman (1999) at the within-canopy wind speed near the soil, the same expression as the "Ground" model of the
+    // boundary-layer conductance plug-in.
+    SoilCouplingResult result = runSoilCouplingScene(1, 1.f, 0.f, 0.f);
+
+    float expected_conductance = (0.004f + 0.012f * result.soil_wind_speed_m_s) * 41.56f;
+    DOCTEST_CHECK(result.soil_wind_speed_m_s > 0.f);
+    DOCTEST_CHECK(result.soil_conductance_out == doctest::Approx(expected_conductance).epsilon(1e-5));
+    // The default must not be written into the user-facing input data.
+    DOCTEST_CHECK(result.soil_conductance_in == -1.f);
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Soil Respects User Conductance") {
+    // A boundary-layer conductance set on the ground primitives (e.g., by the boundary-layer conductance plug-in) must be
+    // used unchanged, and the airspace network must exchange heat with the soil through that same conductance.
+    const float user_conductance = 1.f;
+    SoilCouplingResult result = runSoilCouplingScene(1, 1.f, 0.2f, user_conductance);
+
+    DOCTEST_CHECK(result.soil_conductance_in == user_conductance);
+    DOCTEST_CHECK(result.soil_conductance_out == user_conductance);
+    DOCTEST_CHECK(std::fabs(result.surface_sensible_flux_W_m2 - result.atmospheric_sensible_flux_W_m2) < 1.f);
+    DOCTEST_CHECK(std::fabs(result.surface_latent_flux_W_m2 - result.atmospheric_latent_flux_W_m2) < 1.f);
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Soil Exchange Is Per Unit Ground Area") {
+    // The soil underlies the whole canopy footprint, so a uniform ground surface extending beyond the footprint must
+    // supply the same flux density to the canopy air as one that matches it, not a flux scaled by its excess area.
+    SoilCouplingResult matched = runSoilCouplingScene(2, 1.f, 0.2f, 0.f);
+    SoilCouplingResult oversized = runSoilCouplingScene(4, 2.f, 0.2f, 0.f);
+
+    DOCTEST_CHECK(std::fabs(matched.canopy_air_temperature_K - oversized.canopy_air_temperature_K) < 0.01f);
+    DOCTEST_CHECK(std::fabs(matched.soil_temperature_K - oversized.soil_temperature_K) < 0.05f);
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Surface Energy Balance Closes With Reported Fluxes") {
+    // The solved surface temperature must zero the energy balance formed from the fluxes written to the Context, so the
+    // latent heat flux used inside the solver must be the same one reported afterward.
+    Context context;
+    uint UUID = context.addPatch(make_vec3(0, 0, 1), make_vec2(0.1f, 0.1f));
+    context.setPrimitiveData(UUID, "radiation_flux_SW", 600.f);
+    context.setPrimitiveData(UUID, "radiation_flux_LW", float(2.f * 5.67e-8 * pow(300.f, 4)));
+    context.setPrimitiveData(UUID, "air_temperature", 303.f);
+    context.setPrimitiveData(UUID, "air_humidity", 0.3f);
+    context.setPrimitiveData(UUID, "wind_speed", 1.f);
+    context.setPrimitiveData(UUID, "moisture_conductance", 0.5f);
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+    model.addRadiationBand("LW");
+    model.optionalOutputPrimitiveData("net_radiation_flux");
+    DOCTEST_CHECK_NOTHROW(model.run(std::vector<uint>{UUID}));
+
+    float net_radiation, sensible, latent;
+    context.getPrimitiveData(UUID, "net_radiation_flux", net_radiation);
+    context.getPrimitiveData(UUID, "sensible_flux", sensible);
+    context.getPrimitiveData(UUID, "latent_flux", latent);
+
+    DOCTEST_CHECK(latent > 100.f);
+    DOCTEST_CHECK(std::fabs(net_radiation - sensible - latent) < 0.5f);
+}
+
 DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Requires Primitives In Run Set") {
     // Every primitive exchanging with the airspace must also have its surface energy balance solved, otherwise it
     // would be driven by an air state that nothing recomputes.
@@ -1294,31 +1475,6 @@ DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Mutually Exclusive With Ai
     DOCTEST_CHECK_NOTHROW(model_c.enableCanopyAirspaceModel(UUIDs, {}, 2.f, 4.f, 2.f, 1));
     DOCTEST_CHECK_NOTHROW(model_c.disableCanopyAirspaceModel());
     DOCTEST_CHECK_NOTHROW(model_c.enableAirEnergyBalance(2.f, 4.f));
-}
-
-DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Rejects Missing Soil Temperature") {
-    // A ground primitive without 'temperature' data yields an area-weighted sum of zero, which would drag the
-    // bottom canopy layer toward absolute zero. That must be an error, not a silently wrong profile.
-    Context context;
-    float Tref = 300.f;
-    float canopy_height = 2.f;
-
-    std::vector<uint> UUIDs = buildTestCanopy(context, 4, 3, canopy_height, 0.1f);
-    context.setPrimitiveData(UUIDs, "radiation_flux_SW", 300.f);
-    context.setPrimitiveData(UUIDs, "radiation_flux_LW", float(2.f * 5.67e-8 * pow(Tref, 4)));
-    context.setGlobalData("air_temperature_reference", Tref);
-    context.setGlobalData("air_humidity_reference", 0.5f);
-    context.setGlobalData("wind_speed_reference", 1.f);
-
-    // Ground primitive deliberately left without 'temperature' primitive data.
-    uint UUID_ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(1.f, 1.f));
-
-    EnergyBalanceModel model(&context);
-    model.disableMessages();
-    model.addRadiationBand("SW");
-    model.addRadiationBand("LW");
-    DOCTEST_CHECK_NOTHROW(model.enableCanopyAirspaceModel(UUIDs, {UUID_ground}, canopy_height, 4.f, 3.f, 2));
-    DOCTEST_CHECK_THROWS(model.run());
 }
 
 DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Eddy Diffusivity Decay") {

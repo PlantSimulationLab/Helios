@@ -3532,6 +3532,46 @@ DOCTEST_TEST_CASE("CollisionDetection Generic Ray Casting - Basic Functionality"
     DOCTEST_CHECK(limited_result.hit == false);
 }
 
+DOCTEST_TEST_CASE("CollisionDetection Ray Casting hits millimetre-scale triangles head-on") {
+    // The ray-triangle test rejected a ray as parallel to the triangle by comparing the Moller-Trumbore determinant against a fixed
+    // tolerance. The determinant scales with the triangle's area, so every triangle smaller than a few millimetres failed that test
+    // whatever the ray's angle, and was invisible to every ray cast against it. Leaflet stalks and thin stem facets in synthetic LiDAR
+    // scans disappeared this way. Each triangle here is hit dead-centre along its normal, the least parallel a ray can possibly be.
+    for (const float edge_length: {0.0005f, 0.001f, 0.002f, 0.01f}) {
+        Context context;
+        CollisionDetection collision(&context);
+        collision.disableMessages();
+
+        const uint triangle_UUID = context.addTriangle(make_vec3(0, 0, 0), make_vec3(edge_length, 0, 0), make_vec3(0, 0, edge_length));
+        const vec3 centroid = make_vec3(edge_length / 3.f, 0, edge_length / 3.f);
+        const vec3 origin = centroid + make_vec3(0, -0.3f, 0);
+        const vec3 direction = make_vec3(0, 1, 0);
+
+        DOCTEST_INFO("triangle edge length " << edge_length << " m");
+
+        const CollisionDetection::HitResult single = collision.castRay(origin, direction);
+        DOCTEST_CHECK(single.hit);
+        DOCTEST_CHECK(single.primitive_UUID == triangle_UUID);
+
+        std::vector<CollisionDetection::RayQuery> queries = {CollisionDetection::RayQuery(origin, direction, -1.f)};
+        const std::vector<CollisionDetection::HitResult> batch = collision.castRays(queries);
+        DOCTEST_REQUIRE(batch.size() == 1);
+        DOCTEST_CHECK(batch.front().hit);
+
+        constexpr uint miss_UUID = 0xFFFFFFFFu;
+        float soa_distance = -1.f;
+        vec3 soa_normal;
+        uint soa_UUID = miss_UUID;
+        collision.castRaysSoA(&origin, &direction, 1, -1.f, &soa_distance, &soa_normal, &soa_UUID);
+        DOCTEST_CHECK(soa_UUID == triangle_UUID);
+        DOCTEST_CHECK(std::fabs(soa_distance - 0.3f) < 1e-4f);
+
+        // A ray lying in the triangle's plane is still rejected as parallel, at every size.
+        const CollisionDetection::HitResult grazing = collision.castRay(make_vec3(-0.3f, 0, edge_length / 3.f), make_vec3(1, 0, 0));
+        DOCTEST_CHECK(!grazing.hit);
+    }
+}
+
 DOCTEST_TEST_CASE("CollisionDetection Generic Ray Casting - CollisionDetection::RayQuery Structure") {
     Context context;
     CollisionDetection collision(&context);

@@ -995,7 +995,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
             gM = 1.08f * gH * gM * (stomatal_sidedness / (1.08f * gH + gM * stomatal_sidedness) + (1.f - stomatal_sidedness) / (1.08f * gH + gM * (1.f - stomatal_sidedness)));
         }
 
-        float A, Ci, Gamma, J_over_Jmax = 0.f;
+        float A, Ci, Gamma, electron_transport_ratio = 0.f;
         int limitation_state, TPU_flag = 0;
         float Cm_c4 = 0.f, Vp_c4 = 0.f; // C4-specific outputs (unused for other models)
 
@@ -1019,7 +1019,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
                 A = variables[4];
                 limitation_state = (int) variables[5];
                 Gamma = variables[6];
-                J_over_Jmax = variables[8];
+                electron_transport_ratio = variables[8];
 
                 // Store in previous_Ci for consistency
                 previous_Ci[UUID] = Ci;
@@ -1035,7 +1035,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
                 }
 
                 FarquharModelCoefficients coeffs = getCoefficientsForPrimitive_Farquhar(UUID);
-                A = evaluateFarquharModel(coeffs, i_PAR, TL, CO2, gM, Ci, Gamma, limitation_state, TPU_flag, J_over_Jmax, warnings);
+                A = evaluateFarquharModel(coeffs, i_PAR, TL, CO2, gM, Ci, Gamma, limitation_state, TPU_flag, electron_transport_ratio, warnings);
 
                 // Store computed Ci for next timestep (temporal continuity)
                 previous_Ci[UUID] = Ci;
@@ -1049,24 +1049,26 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
                 // Manual Cm path — skip both stomatal iteration and the Cm = Ci - A/gm fixed point.
                 // A is computed directly at the supplied Cm; Ci is back-computed from Cm + A/gm.
                 const float Cm_in = manual_Cm.at(UUID);
-                std::vector<float> variables{CO2, i_PAR, TL, gM, 0.f, 0.f, 0.f, 0.f};
+                std::vector<float> variables{CO2, i_PAR, TL, gM, 0.f, 0.f, 0.f, 0.f, 0.f};
                 evaluateCm_C4(Cm_in, variables, c4coeffs);
                 A = variables[4];
                 limitation_state = static_cast<int>(variables[5]);
                 Cm_c4 = variables[6];
                 Vp_c4 = variables[7];
+                electron_transport_ratio = variables[8];
                 const float gm_eval = respondToTemperature(&c4coeffs.gmTempResponse, TL);
                 Ci = (std::isfinite(gm_eval) && gm_eval > 0.f) ? (Cm_in + A / gm_eval) : Cm_in;
                 previous_Ci[UUID] = Ci;
             } else if (manual_Ci.find(UUID) != manual_Ci.end()) {
                 // Manual Ci path — bypass stomatal iteration, evaluate A via Cm = Ci - A/gm fixed point
                 Ci = manual_Ci.at(UUID);
-                std::vector<float> variables{CO2, i_PAR, TL, gM, 0.f, 0.f, 0.f, 0.f};
+                std::vector<float> variables{CO2, i_PAR, TL, gM, 0.f, 0.f, 0.f, 0.f, 0.f};
                 evaluateCi_C4(Ci, variables, &c4coeffs);
                 A = variables[4];
                 limitation_state = static_cast<int>(variables[5]);
                 Cm_c4 = variables[6];
                 Vp_c4 = variables[7];
+                electron_transport_ratio = variables[8];
                 previous_Ci[UUID] = Ci;
             } else {
                 if (previous_Ci.find(UUID) != previous_Ci.end()) {
@@ -1075,7 +1077,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
                     Ci = CO2 * 0.4f; // C4 typically has lower Ci/Ca (~0.3-0.4) than C3
                 }
                 Cm_c4 = Ci;
-                A = evaluateC4Model(c4coeffs, i_PAR, TL, CO2, gM, Ci, Cm_c4, Vp_c4, limitation_state, warnings);
+                A = evaluateC4Model(c4coeffs, i_PAR, TL, CO2, gM, Ci, Cm_c4, Vp_c4, limitation_state, electron_transport_ratio, warnings);
                 previous_Ci[UUID] = Ci;
             }
             Gamma = 0.f; // not defined the same way for C4 — leave zero
@@ -1099,8 +1101,8 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
                 context->setPrimitiveData(UUID, "limitation_state", limitation_state);
             } else if (data == "Gamma_CO2" && model == "farquhar") {
                 context->setPrimitiveData(UUID, "Gamma_CO2", Gamma);
-            } else if (data == "electron_transport_ratio" && model == "farquhar") {
-                context->setPrimitiveData(UUID, "electron_transport_ratio", J_over_Jmax);
+            } else if (data == "electron_transport_ratio" && (model == "farquhar" || model == "c4")) {
+                context->setPrimitiveData(UUID, "electron_transport_ratio", electron_transport_ratio);
             } else if (data == "Cm" && model == "c4") {
                 context->setPrimitiveData(UUID, "Cm", Cm_c4);
             } else if (data == "Vp" && model == "c4") {
@@ -1304,10 +1306,6 @@ float PhotosynthesisModel::evaluateCi_Farquhar(float Ci, std::vector<float> &var
     double J = (-b - sqrt(pow(b, 2.000f) - 4.f * a * c)) * 0.5f * ia;
     // J = Jmax * alpha * Q / (alpha * Q + Jmax);
 
-    // Store J/Jmax ratio for fluorescence calculations
-    float J_over_Jmax = (Jmax > 0.f) ? static_cast<float>(J / Jmax) : 0.f;
-    variables[8] = J_over_Jmax;
-
     float A;
     float limitation_state;
 
@@ -1396,6 +1394,22 @@ float PhotosynthesisModel::evaluateCi_Farquhar(float Ci, std::vector<float> &var
         }
     }
 
+    //--- Relative light saturation for the fluorescence model --- //
+
+    // van der Tol et al. (2014) Eqs. 11-16: Ja is the electron transport consumed by carboxylation plus photorespiration at the chloroplast CO2 partial
+    // pressure Cc, Je = alpha*Q is its light-limited potential, and x = 1 - Ja/Je measures how far feedback from carbon metabolism has closed PSII.
+    // Ja is J itself when electron transport limits, the electron requirement of Rubisco-limited carboxylation, Vcmax*(4Cc+8Gamma*)/(Cc+Kco), when Rubisco
+    // limits, and that of triose-phosphate export, 3*TPU*(4Cc+8Gamma*)/(Cc-Gamma*), when TPU limits (only possible while net carbon gain is positive).
+    const float Cc = gm_infinite ? Ci : std::max(Ci - A / gm, 0.f);
+    const float electron_requirement = 4.f * Cc + 8.f * Gamma_star;
+    float Ja = std::min(static_cast<float>(J), Vcmax * electron_requirement / (Cc + Kco));
+    if (TPUflag == 1 && Cc > Gamma_star) {
+        Ja = std::min(Ja, 3.f * TPU * electron_requirement / (Cc - Gamma_star));
+    }
+    const float Je = alpha * Q;
+    // In the dark all PSII reaction centres are open (x = 0), so the ratio is 1.
+    variables[8] = (Je > 0.f) ? helios::clamp(Ja / Je, 0.f, 1.f) : 1.f;
+
     //--- Calculate error and update --- //
 
     float resid = 0.75f * gM * (CO2 - Ci) - A;
@@ -1415,7 +1429,7 @@ namespace {
     //! Formulae follow the von Caemmerer (2021) spreadsheet (C4__model_setaria__11-06-2021.xlsm).
     //! Note: the quadratic coefficients include the g_bs·K terms that are dropped in the paper's
     //! Eqs. 22-24 text; we keep them because the spreadsheet does and they are numerically relevant.
-    void computeC4RatesFromCm(float Cm, const C4ModelCoefficients &p, float Vpmax, float Vcmax, float Jmax, float Rd, float Kc, float Ko, float Kp, float gamma_star, float Om, float I_incident, float &Ac_out, float &Aj_out, float &Vp_out) {
+    void computeC4RatesFromCm(float Cm, const C4ModelCoefficients &p, float Vpmax, float Vcmax, float Jmax, float Rd, float Kc, float Ko, float Kp, float gamma_star, float Om, float I_incident, float &Ac_out, float &Aj_out, float &Vp_out, float &J_out, float &J_light_limited_out) {
 
         const float Rm = p.Rm_frac * Rd;
 
@@ -1431,6 +1445,8 @@ namespace {
         const float sum_IJ = I2 + Jmax;
         const float radicand_J = std::max(sum_IJ * sum_IJ - 4.f * theta * I2 * Jmax, 0.f);
         const float J = (sum_IJ - std::sqrt(radicand_J)) / (2.f * theta);
+        J_out = J;
+        J_light_limited_out = I2; // initial slope of the hyperbola: J -> I2 as light -> 0
 
         // ATP / linear-electron-transport ratio (vC2021 Eq. 31 generalized by Woodford et al. 2025):
         //     z = (H_J · (1 − f_cyc) + H_Jcyc · f_cyc) / (h · (1 − f_cyc))
@@ -1464,6 +1480,23 @@ namespace {
         const float c_j = term_mesJ * term_bunJ - gbs * gamma_star * Om * (Jb * z / 3.f + 7.f * Rd / 3.f);
         const float disc_j = std::max(b_j * b_j - 4.f * a_j * c_j, 0.f);
         Aj_out = (-b_j - std::sqrt(disc_j)) / (2.f * a_j);
+    }
+
+    //! Relative light saturation 1 - x = Ja/Je of van der Tol et al. (2014) for the C4 model.
+    /**
+     * Je is the light-limited potential of whole-chain electron transport (the initial slope of the J hyperbola) and Ja the electron transport that
+     * gross assimilation actually uses. When electron transport limits, Ja = J. When the enzymes limit, Ja is scaled down by (A + Rd) / (Aj + Rd), which
+     * assumes the electron requirement per gross CO2 fixed is the one at the electron-transport-limited operating point.
+     */
+    float c4RelativeLightSaturation(float A, float Aj, float Rd, float J, float J_light_limited) {
+        if (J_light_limited <= 0.f) {
+            return 1.f; // dark: all PSII reaction centres open
+        }
+        float Ja = J;
+        if (A < Aj) {
+            Ja = (Aj + Rd > 0.f) ? J * (A + Rd) / (Aj + Rd) : 0.f;
+        }
+        return helios::clamp(Ja / J_light_limited, 0.f, 1.f);
     }
 } // namespace
 
@@ -1502,9 +1535,9 @@ float PhotosynthesisModel::evaluateCi_C4(float Ci, std::vector<float> &variables
         helios::helios_runtime_error("ERROR (PhotosynthesisModel::evaluateCi_C4): Mesophyll conductance g_m must be positive and finite (got " + std::to_string(gm) + "). Check C4ModelCoefficients::setMesophyllConductance_gm().");
     }
 
-    float Ac = 0.f, Aj = 0.f, Vp = 0.f, A = 0.f;
+    float Ac = 0.f, Aj = 0.f, Vp = 0.f, A = 0.f, J = 0.f, J_light_limited = 0.f;
     for (int iter = 0; iter < 50; ++iter) {
-        computeC4RatesFromCm(Cm, p, Vpmax, Vcmax, Jmax, Rd, Kc, Ko, Kp, gamma_star, Om, I_incident, Ac, Aj, Vp);
+        computeC4RatesFromCm(Cm, p, Vpmax, Vcmax, Jmax, Rd, Kc, Ko, Kp, gamma_star, Om, I_incident, Ac, Aj, Vp, J, J_light_limited);
         A = std::min(Ac, Aj);
         const float Cm_target = Ci - A / gm;
         if (std::fabs(Cm_target - Cm) < 1.0e-5f) {
@@ -1514,7 +1547,7 @@ float PhotosynthesisModel::evaluateCi_C4(float Ci, std::vector<float> &variables
         Cm = 0.5f * Cm + 0.5f * Cm_target; // damped update
     }
     // Final re-evaluation at the converged C_m
-    computeC4RatesFromCm(Cm, p, Vpmax, Vcmax, Jmax, Rd, Kc, Ko, Kp, gamma_star, Om, I_incident, Ac, Aj, Vp);
+    computeC4RatesFromCm(Cm, p, Vpmax, Vcmax, Jmax, Rd, Kc, Ko, Kp, gamma_star, Om, I_incident, Ac, Aj, Vp, J, J_light_limited);
     A = std::min(Ac, Aj);
 
     // Limitation state: 1 = Rubisco/PEPC enzyme-limited, 2 = electron transport-limited
@@ -1524,6 +1557,7 @@ float PhotosynthesisModel::evaluateCi_C4(float Ci, std::vector<float> &variables
     variables[5] = static_cast<float>(limitation);
     variables[6] = Cm;
     variables[7] = Vp;
+    variables[8] = c4RelativeLightSaturation(A, Aj, Rd, J, J_light_limited);
 
     // Outer residual: stomatal-conductance balance (used by fzero when Ci is not manually overridden)
     return 0.75f * gM * (CO2 - Ci) - A;
@@ -1548,8 +1582,8 @@ float PhotosynthesisModel::evaluateCm_C4(float Cm, std::vector<float> &variables
     const float gamma_star = params.gamma_star_25 * std::exp(params.dH_gamma_star * invDiffRT);
     const float Om = params.Om_25 * std::exp(params.dH_Om * invDiffRT);
 
-    float Ac = 0.f, Aj = 0.f, Vp = 0.f;
-    computeC4RatesFromCm(Cm, params, Vpmax, Vcmax, Jmax, Rd, Kc, Ko, Kp, gamma_star, Om, I_incident, Ac, Aj, Vp);
+    float Ac = 0.f, Aj = 0.f, Vp = 0.f, J = 0.f, J_light_limited = 0.f;
+    computeC4RatesFromCm(Cm, params, Vpmax, Vcmax, Jmax, Rd, Kc, Ko, Kp, gamma_star, Om, I_incident, Ac, Aj, Vp, J, J_light_limited);
     const float A = std::min(Ac, Aj);
     const int limitation = (Ac < Aj) ? 1 : 2;
 
@@ -1557,15 +1591,16 @@ float PhotosynthesisModel::evaluateCm_C4(float Cm, std::vector<float> &variables
     variables[5] = static_cast<float>(limitation);
     variables[6] = Cm;
     variables[7] = Vp;
+    variables[8] = c4RelativeLightSaturation(A, Aj, Rd, J, J_light_limited);
     return A;
 }
 
 
-float PhotosynthesisModel::evaluateC4Model(const C4ModelCoefficients &params, float i_PAR, float TL, float CO2, float gM, float &Ci, float &Cm, float &Vp, int &limitation_state, helios::WarningAggregator &warnings) {
+float PhotosynthesisModel::evaluateC4Model(const C4ModelCoefficients &params, float i_PAR, float TL, float CO2, float gM, float &Ci, float &Cm, float &Vp, int &limitation_state, float &electron_transport_ratio, helios::WarningAggregator &warnings) {
 
     float A = 0.f;
-    // variables layout: [CO2, I_abs, TL, gM, A_out, limitation_out, Cm_out, Vp_out]
-    std::vector<float> variables{CO2, i_PAR, TL, gM, A, static_cast<float>(limitation_state), Cm, Vp};
+    // variables layout: [CO2, I_abs, TL, gM, A_out, limitation_out, Cm_out, Vp_out, electron_transport_ratio_out]
+    std::vector<float> variables{CO2, i_PAR, TL, gM, A, static_cast<float>(limitation_state), Cm, Vp, 0.f};
 
     std::vector<float> initial_guesses;
     if (Ci > 0 && std::isfinite(Ci)) {
@@ -1596,6 +1631,7 @@ float PhotosynthesisModel::evaluateC4Model(const C4ModelCoefficients &params, fl
     limitation_state = static_cast<int>(variables[5]);
     Cm = variables[6];
     Vp = variables[7];
+    electron_transport_ratio = variables[8];
 
     return A;
 }
@@ -1619,7 +1655,7 @@ float PhotosynthesisModel::respondToTemperature(const PhotosyntheticTemperatureR
 }
 
 
-float PhotosynthesisModel::evaluateFarquharModel(const FarquharModelCoefficients &params, float i_PAR, float TL, float CO2, float gM, float &Ci, float &Gamma, int &limitation_state, int &TPU_flag, float &J_over_Jmax,
+float PhotosynthesisModel::evaluateFarquharModel(const FarquharModelCoefficients &params, float i_PAR, float TL, float CO2, float gM, float &Ci, float &Gamma, int &limitation_state, int &TPU_flag, float &electron_transport_ratio,
                                                  helios::WarningAggregator &warnings) {
 
     float A = 0;
@@ -1664,7 +1700,7 @@ float PhotosynthesisModel::evaluateFarquharModel(const FarquharModelCoefficients
     A = variables[4];
     limitation_state = (int) variables[5];
     Gamma = variables[6];
-    J_over_Jmax = variables[8];
+    electron_transport_ratio = variables[8];
 
     return A;
 }

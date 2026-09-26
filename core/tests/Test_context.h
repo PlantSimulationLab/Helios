@@ -2687,6 +2687,93 @@ TEST_CASE("Pseudocolor Visualization") {
         DOCTEST_CHECK_NOTHROW(ctx.colorPrimitiveByDataPseudocolor(patches, "value", "hot", 10));
         DOCTEST_CHECK_NOTHROW(ctx.colorPrimitiveByDataPseudocolor(patches, "value", "rainbow", 5, 0.f, 4.f));
     }
+    SUBCASE("generateColormap algae") {
+        Context ctx;
+        std::vector<RGBcolor> colormap = ctx.generateColormap("algae", 100);
+        DOCTEST_REQUIRE(colormap.size() == 100);
+
+        // Endpoints are the first and last entries of the cmocean 'algae' table
+        DOCTEST_CHECK(colormap.front().r == doctest::Approx(0.8429f).epsilon(1e-4));
+        DOCTEST_CHECK(colormap.front().g == doctest::Approx(0.9769f).epsilon(1e-4));
+        DOCTEST_CHECK(colormap.front().b == doctest::Approx(0.8146f).epsilon(1e-4));
+        DOCTEST_CHECK(colormap.back().r == doctest::Approx(0.0689f).epsilon(1e-4));
+        DOCTEST_CHECK(colormap.back().g == doctest::Approx(0.1421f).epsilon(1e-4));
+        DOCTEST_CHECK(colormap.back().b == doctest::Approx(0.0790f).epsilon(1e-4));
+
+        // 'algae' is a sequential map that darkens monotonically from low to high values
+        for (size_t i = 1; i < colormap.size(); i++) {
+            float luminance_prev = 0.2126f * colormap.at(i - 1).r + 0.7152f * colormap.at(i - 1).g + 0.0722f * colormap.at(i - 1).b;
+            float luminance = 0.2126f * colormap.at(i).r + 0.7152f * colormap.at(i).g + 0.0722f * colormap.at(i).b;
+            DOCTEST_CHECK(luminance < luminance_prev);
+        }
+    }
+    SUBCASE("colorPrimitiveByDataPseudocolor with constant data") {
+        // All values equal gives a zero-width data range, which maps every primitive to the first color
+        Context ctx;
+        std::vector<uint> patches;
+        for (int i = 0; i < 3; i++) {
+            uint p = ctx.addPatch();
+            ctx.setPrimitiveData(p, "value", 2.f);
+            patches.push_back(p);
+        }
+        ctx.colorPrimitiveByDataPseudocolor(patches, "value", "rainbow", 10);
+        RGBcolor first_color = Context::generateColormap("rainbow", 10).front();
+        for (uint p: patches) {
+            DOCTEST_CHECK(ctx.getPrimitiveColor(p) == first_color);
+        }
+    }
+    SUBCASE("getColormapNames and getColormapControlPoints") {
+        std::vector<std::string> names = Context::getColormapNames();
+        DOCTEST_CHECK(names == std::vector<std::string>{"hot", "cool", "lava", "rainbow", "parula", "gray", "green", "lines", "algae"});
+        for (const std::string &name: names) {
+            DOCTEST_CAPTURE(name);
+            std::vector<RGBcolor> colors;
+            std::vector<float> positions;
+            Context::getColormapControlPoints(name, colors, positions);
+            DOCTEST_REQUIRE(colors.size() >= 2);
+            DOCTEST_CHECK(colors.size() == positions.size());
+            DOCTEST_CHECK(positions.front() == 0.f);
+            DOCTEST_CHECK(positions.back() == 1.f);
+            DOCTEST_CHECK(std::is_sorted(positions.begin(), positions.end()));
+            DOCTEST_CHECK(Context::generateColormap(name, 50).size() == 50);
+        }
+    }
+    SUBCASE("generateColormap unknown name") {
+        std::string error_message;
+        {
+            capture_cerr cerr_buffer;
+            try {
+                static_cast<void>(Context::generateColormap("not_a_colormap", 10));
+            } catch (const std::runtime_error &e) {
+                error_message = e.what();
+            }
+        }
+        DOCTEST_CHECK(error_message.find("not_a_colormap") != std::string::npos);
+        for (const std::string &name: Context::getColormapNames()) {
+            DOCTEST_CHECK(error_message.find(name) != std::string::npos);
+        }
+    }
+    SUBCASE("generateColormap requires at least two colors") {
+        // A single-color table has no spacing between entries, so there is no color to assign it
+        Context ctx;
+        capture_cerr cerr_buffer;
+        DOCTEST_CHECK_THROWS_AS(static_cast<void>(ctx.generateColormap("hot", 1)), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(static_cast<void>(ctx.generateColormap("hot", 0)), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(static_cast<void>(ctx.generateColormap(std::vector<RGBcolor>{RGB::black, RGB::white}, std::vector<float>{0.f, 1.f}, 1)), std::runtime_error);
+    }
+    SUBCASE("generateColormap large tables") {
+        // Tables of more than 9999 colors are returned in full, without a warning claiming they were truncated
+        Context ctx;
+        std::vector<RGBcolor> colormap;
+        std::string warning_output;
+        {
+            capture_cerr cerr_buffer;
+            colormap = ctx.generateColormap("hot", 10000);
+            warning_output = cerr_buffer.get_captured_output();
+        }
+        DOCTEST_CHECK(colormap.size() == 10000);
+        DOCTEST_CHECK(warning_output.empty());
+    }
 }
 
 TEST_CASE("Date and Time Extensions") {
@@ -5983,6 +6070,193 @@ TEST_CASE("Tube and Cone objects survive an XML round trip after being transform
 
         std::filesystem::remove(filename);
     }
+}
+
+//! Mean position of every vertex of every primitive belonging to a compound object, i.e. where the object is actually drawn
+inline vec3 meanObjectPrimitiveVertex(const Context &ctx, uint ObjID) {
+    vec3 vertex_sum = make_vec3(0, 0, 0);
+    size_t vertex_count = 0;
+    for (uint UUID: ctx.getObjectPrimitiveUUIDs(ObjID)) {
+        for (const vec3 &vertex: ctx.getPrimitiveVertices(UUID)) {
+            vertex_sum = vertex_sum + vertex;
+            vertex_count++;
+        }
+    }
+    DOCTEST_REQUIRE(vertex_count > 0);
+    return vertex_sum / float(vertex_count);
+}
+
+TEST_CASE("Tube edits after a transformation keep the node list and geometry in the world frame") {
+
+    // A tube stores its nodes in its own local frame, and getTubeObjectNodes() applies the object transformation to them. The node-editing methods (setTubeNodes, setTubeRadii, appendTubeSegment, ...) take
+    // world coordinates, so on a tube that has been rotated, translated or scaled they must not leave the old transformation in place to be applied on top of the new world-frame values.
+
+    SUBCASE("setTubeNodes after rotateObject reports the nodes that were set") {
+        Context ctx;
+        const uint objID = ctx.addTubeObject(8, {make_vec3(0, 0, 0), make_vec3(0, 0, 1)}, {0.1f, 0.1f});
+        ctx.rotateObject(objID, 0.5f * PI_F, "x");
+
+        const std::vector<vec3> new_nodes = {make_vec3(1, 0, 0), make_vec3(1, 0, 1)};
+        ctx.setTubeNodes(objID, new_nodes);
+
+        const std::vector<vec3> reported_nodes = ctx.getTubeObjectNodes(objID);
+        DOCTEST_REQUIRE(reported_nodes.size() == new_nodes.size());
+        for (size_t n = 0; n < new_nodes.size(); n++) {
+            DOCTEST_INFO("node " << n << ": reported " << reported_nodes.at(n) << ", set " << new_nodes.at(n));
+            DOCTEST_CHECK((reported_nodes.at(n) - new_nodes.at(n)).magnitude() < 1e-5f);
+        }
+        DOCTEST_CHECK((meanObjectPrimitiveVertex(ctx, objID) - make_vec3(1, 0, 0.5f)).magnitude() < 1e-4f);
+    }
+
+    SUBCASE("setTubeRadii after rotateObject leaves the tube where it was rotated to") {
+        Context ctx;
+        const uint objID = ctx.addTubeObject(8, {make_vec3(0, 0, 0), make_vec3(0, 0, 1)}, {0.1f, 0.1f});
+        ctx.rotateObject(objID, 0.5f * PI_F, "x");
+        const vec3 rotated_center = meanObjectPrimitiveVertex(ctx, objID);
+        const std::vector<vec3> rotated_nodes = ctx.getTubeObjectNodes(objID);
+
+        ctx.setTubeRadii(objID, {0.05f, 0.05f});
+
+        const vec3 center_after = meanObjectPrimitiveVertex(ctx, objID);
+        DOCTEST_INFO("drawn center before setTubeRadii " << rotated_center << ", after " << center_after);
+        DOCTEST_CHECK((center_after - rotated_center).magnitude() < 1e-4f);
+
+        const std::vector<vec3> nodes_after = ctx.getTubeObjectNodes(objID);
+        const std::vector<float> radii_after = ctx.getTubeObjectNodeRadii(objID);
+        DOCTEST_REQUIRE(nodes_after.size() == rotated_nodes.size());
+        for (size_t n = 0; n < nodes_after.size(); n++) {
+            DOCTEST_CHECK((nodes_after.at(n) - rotated_nodes.at(n)).magnitude() < 1e-5f);
+            DOCTEST_CHECK(std::fabs(radii_after.at(n) - 0.05f) < 1e-5f);
+        }
+    }
+
+    SUBCASE("appendTubeSegment after translateObject appends at the given position") {
+        Context ctx;
+        const uint objID = ctx.addTubeObject(8, {make_vec3(0, 0, 0), make_vec3(0, 0, 1)}, {0.1f, 0.1f});
+        ctx.translateObject(objID, make_vec3(5, 0, 0));
+
+        ctx.appendTubeSegment(objID, make_vec3(5, 0, 2), 0.1f, RGB::green);
+
+        const std::vector<vec3> reported_nodes = ctx.getTubeObjectNodes(objID);
+        DOCTEST_REQUIRE(reported_nodes.size() == 3);
+        DOCTEST_INFO("reported nodes " << reported_nodes.at(0) << " " << reported_nodes.at(1) << " " << reported_nodes.at(2));
+        DOCTEST_CHECK((reported_nodes.at(0) - make_vec3(5, 0, 0)).magnitude() < 1e-5f);
+        DOCTEST_CHECK((reported_nodes.at(1) - make_vec3(5, 0, 1)).magnitude() < 1e-5f);
+        DOCTEST_CHECK((reported_nodes.at(2) - make_vec3(5, 0, 2)).magnitude() < 1e-5f);
+        DOCTEST_CHECK((meanObjectPrimitiveVertex(ctx, objID) - make_vec3(5, 0, 1)).magnitude() < 1e-4f);
+    }
+
+    SUBCASE("setTubeNodes after scaleObject reports the radii the tube is drawn with") {
+        Context ctx;
+        const uint objID = ctx.addTubeObject(8, {make_vec3(0, 0, 0), make_vec3(0, 0, 1)}, {0.1f, 0.1f});
+        ctx.scaleObject(objID, make_vec3(2, 2, 2));
+
+        ctx.setTubeNodes(objID, {make_vec3(0, 0, 0), make_vec3(0, 0, 3)});
+
+        const std::vector<vec3> reported_nodes = ctx.getTubeObjectNodes(objID);
+        const std::vector<float> reported_radii = ctx.getTubeObjectNodeRadii(objID);
+        DOCTEST_REQUIRE(reported_nodes.size() == 2);
+        DOCTEST_CHECK((reported_nodes.at(1) - make_vec3(0, 0, 3)).magnitude() < 1e-5f);
+        // The scaling doubled the drawn radius to 0.2, and moving the nodes does not change it.
+        for (float radius: reported_radii) {
+            DOCTEST_CHECK(std::fabs(radius - 0.2f) < 1e-5f);
+        }
+        vec3 lower_corner, upper_corner;
+        ctx.getObjectBoundingBox(objID, lower_corner, upper_corner);
+        DOCTEST_CHECK(std::fabs(upper_corner.x - 0.2f) < 1e-4f);
+        DOCTEST_CHECK(std::fabs(upper_corner.z - 3.f) < 1e-4f);
+    }
+
+    SUBCASE("copyObject of a rotated tube reports the same nodes as the original") {
+        Context ctx;
+        const uint objID = ctx.addTubeObject(8, {make_vec3(0, 0, 0), make_vec3(0, 0, 1)}, {0.1f, 0.1f});
+        ctx.rotateObject(objID, 0.5f * PI_F, "x");
+
+        const uint copy_objID = ctx.copyObject(objID);
+
+        const std::vector<vec3> original_nodes = ctx.getTubeObjectNodes(objID);
+        const std::vector<vec3> copied_nodes = ctx.getTubeObjectNodes(copy_objID);
+        DOCTEST_REQUIRE(copied_nodes.size() == original_nodes.size());
+        for (size_t n = 0; n < original_nodes.size(); n++) {
+            DOCTEST_INFO("node " << n << ": original " << original_nodes.at(n) << ", copy " << copied_nodes.at(n));
+            DOCTEST_CHECK((copied_nodes.at(n) - original_nodes.at(n)).magnitude() < 1e-5f);
+        }
+        DOCTEST_CHECK((meanObjectPrimitiveVertex(ctx, copy_objID) - meanObjectPrimitiveVertex(ctx, objID)).magnitude() < 1e-4f);
+    }
+
+    SUBCASE("A tube rotated and then edited survives an XML round trip") {
+        const std::string filename = "test_tube_edited_after_rotation.xml";
+        std::vector<vec3> written_nodes;
+        {
+            Context ctx;
+            const uint objID = ctx.addTubeObject(8, {make_vec3(0, 0, 0), make_vec3(0, 0, 1)}, {0.1f, 0.1f});
+            ctx.rotateObject(objID, 0.5f * PI_F, "x");
+            ctx.setTubeNodes(objID, {make_vec3(1, 0, 0), make_vec3(1, 0, 1)});
+            written_nodes = {make_vec3(1, 0, 0), make_vec3(1, 0, 1)};
+            ctx.writeXML(filename.c_str(), true);
+        }
+
+        Context ctx;
+        ctx.loadXML(filename.c_str(), true);
+        std::vector<uint> tube_objIDs;
+        for (uint objID: ctx.getAllObjectIDs()) {
+            if (ctx.getObjectType(objID) == OBJECT_TYPE_TUBE) {
+                tube_objIDs.push_back(objID);
+            }
+        }
+        DOCTEST_REQUIRE(tube_objIDs.size() == 1);
+        const std::vector<vec3> loaded_nodes = ctx.getTubeObjectNodes(tube_objIDs.front());
+        DOCTEST_REQUIRE(loaded_nodes.size() == written_nodes.size());
+        for (size_t n = 0; n < loaded_nodes.size(); n++) {
+            DOCTEST_INFO("node " << n << ": loaded " << loaded_nodes.at(n) << ", written " << written_nodes.at(n));
+            DOCTEST_CHECK((loaded_nodes.at(n) - written_nodes.at(n)).magnitude() < 1e-4f);
+        }
+        DOCTEST_CHECK((meanObjectPrimitiveVertex(ctx, tube_objIDs.front()) - make_vec3(1, 0, 0.5f)).magnitude() < 1e-4f);
+
+        std::filesystem::remove(filename);
+    }
+}
+
+TEST_CASE("copyObject of a transformed cone reports the same geometry as the original") {
+
+    // A cone stores its nodes and radii in its own local frame, and the getters apply the object transformation to them. copyObject() assigns the source transformation to the copy, so the copy must be built
+    // from the local-frame values, not from the getters, or the transformation is applied twice.
+    Context ctx;
+    const uint objID = ctx.addConeObject(12, make_vec3(0, 0, 0), make_vec3(0, 0, 1), 0.2f, 0.1f);
+    ctx.rotateObject(objID, 0.5f * PI_F, "x");
+    ctx.translateObject(objID, make_vec3(2, 0, 0));
+    ctx.scaleObject(objID, make_vec3(2, 2, 2));
+
+    const uint copy_objID = ctx.copyObject(objID);
+
+    const std::vector<vec3> original_nodes = ctx.getConeObjectNodes(objID);
+    const std::vector<vec3> copied_nodes = ctx.getConeObjectNodes(copy_objID);
+    const std::vector<float> original_radii = ctx.getConeObjectNodeRadii(objID);
+    const std::vector<float> copied_radii = ctx.getConeObjectNodeRadii(copy_objID);
+    DOCTEST_REQUIRE(copied_nodes.size() == 2);
+    DOCTEST_REQUIRE(copied_radii.size() == 2);
+    for (size_t n = 0; n < 2; n++) {
+        DOCTEST_INFO("node " << n << ": original " << original_nodes.at(n) << " r=" << original_radii.at(n) << ", copy " << copied_nodes.at(n) << " r=" << copied_radii.at(n));
+        DOCTEST_CHECK((copied_nodes.at(n) - original_nodes.at(n)).magnitude() < 1e-5f);
+        DOCTEST_CHECK(std::fabs(copied_radii.at(n) - original_radii.at(n)) < 1e-5f);
+    }
+    DOCTEST_CHECK(std::fabs(ctx.getConeObjectVolume(copy_objID) - ctx.getConeObjectVolume(objID)) < 1e-5f);
+
+    // The analytic vertex normals are evaluated from the node coordinates, so a doubly-transformed copy would also be shaded with normals that do not match its surface.
+    const std::vector<uint> original_UUIDs = ctx.getObjectPrimitiveUUIDs(objID);
+    const std::vector<uint> copied_UUIDs = ctx.getObjectPrimitiveUUIDs(copy_objID);
+    DOCTEST_REQUIRE(copied_UUIDs.size() == original_UUIDs.size());
+    float largest_normal_difference = 0.f;
+    for (size_t p = 0; p < original_UUIDs.size(); p++) {
+        const std::vector<vec3> original_normals = ctx.getObjectPrimitiveVertexNormals(objID, original_UUIDs.at(p));
+        const std::vector<vec3> copied_normals = ctx.getObjectPrimitiveVertexNormals(copy_objID, copied_UUIDs.at(p));
+        DOCTEST_REQUIRE(copied_normals.size() == original_normals.size());
+        for (size_t v = 0; v < original_normals.size(); v++) {
+            largest_normal_difference = std::max(largest_normal_difference, (copied_normals.at(v) - original_normals.at(v)).magnitude());
+        }
+    }
+    DOCTEST_INFO("largest vertex normal difference between the copy and the original: " << largest_normal_difference);
+    DOCTEST_CHECK(largest_normal_difference < 1e-4f);
 }
 
 //! Collect the distinct shared vertices of a compound object and verify that every corner mapped to the same index really is the same point

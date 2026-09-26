@@ -3347,6 +3347,8 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
     }
     node_radius = std::max((float) 1e-5, node_radius);
 
+    bakeTransform();
+
     uint radial_subdivisions = subdiv;
 
     vec3 axial_vector;
@@ -3503,6 +3505,8 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
     }
     node_radius = std::max((float) 1e-5, node_radius);
 
+    bakeTransform();
+
     uint radial_subdivisions = subdiv;
 
     vec3 axial_vector;
@@ -3654,6 +3658,8 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
 }
 
 void Tube::scaleTubeGirth(float S) {
+    bakeTransform();
+
     for (int segment = 0; segment < triangle_vertices.size(); segment++) {
         for (vec3 &vertex: triangle_vertices.at(segment)) {
             vec3 axis = vertex - nodes.at(segment);
@@ -3674,6 +3680,8 @@ void Tube::setTubeRadii(const std::vector<float> &node_radii) {
         helios_runtime_error("ERROR (Tube::setTubeRadii): Number of radii in input vector must match number of tube nodes.");
     }
 
+    bakeTransform();
+
     radius = node_radii;
 
     for (int segment = 0; segment < triangle_vertices.size(); segment++) {
@@ -3689,6 +3697,8 @@ void Tube::setTubeRadii(const std::vector<float> &node_radii) {
 }
 
 void Tube::scaleTubeLength(float S) {
+    bakeTransform();
+
     for (int segment = 0; segment < triangle_vertices.size() - 1; segment++) {
         vec3 central_axis = (nodes.at(segment + 1) - nodes.at(segment));
         float current_length = central_axis.magnitude();
@@ -3711,6 +3721,8 @@ void Tube::setTubeNodes(const std::vector<helios::vec3> &node_xyz) {
     if (node_xyz.size() != nodes.size()) {
         helios_runtime_error("ERROR (Tube::setTubeNodes): Number of nodes in input vector must match number of tube nodes.");
     }
+
+    bakeTransform();
 
     nodes = node_xyz;
 
@@ -3762,6 +3774,30 @@ void Tube::pruneTubeNodes(uint node_index) {
     for (uint uuid : uuids_to_delete) {
         context->deletePrimitive(uuid);
     }
+}
+
+void Tube::bakeTransform() {
+    float identity[16];
+    makeIdentityMatrix(identity);
+    if (std::equal(std::begin(transform), std::end(transform), std::begin(identity))) {
+        return;
+    }
+
+    // The getters apply the transformation, so their results are the world-frame values the primitives are currently drawn with.
+    const std::vector<vec3> nodes_world = getNodes();
+    const std::vector<float> radius_world = getNodeRadii();
+
+    for (std::vector<vec3> &ring: triangle_vertices) {
+        for (vec3 &vertex: ring) {
+            vec3 vertex_world;
+            vecmult(transform, vertex, vertex_world);
+            vertex = vertex_world;
+        }
+    }
+    nodes = nodes_world;
+    radius = radius_world;
+
+    setTransformationMatrix(identity);
 }
 
 void Tube::recomputeCrossSections() {

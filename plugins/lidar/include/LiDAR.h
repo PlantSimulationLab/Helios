@@ -1596,6 +1596,14 @@ private:
         Accumulates into \ref cropped_return_stats. */
     void inferHiddenReturns(uint scanID, const BeamGrouping &beams, std::vector<float> &beam_extra_after, std::vector<uint8_t> &standin_local);
 
+    //! Whether a scan's target_index values count from 0 or from 1
+    /** Decided over the scan's real (non-miss) returns: 0 if any of them has target_index 0, otherwise 1 (every LAS/LAZ
+        export numbers returns from 1). Used wherever "the first return of a pulse" or "return k of n" is needed, so the
+        rule cannot differ between callers.
+        \param[in] scanID Scan to examine
+        \return 0 or 1; 0 when no hit carries target_index */
+    [[nodiscard]] int scanTargetIndexBase(uint scanID) const;
+
     //! Helper method for loading TreeQSM cylinder files with different coloring strategies
     /**
      * \param[in] context Pointer to the Helios context where tube objects will be added.
@@ -1619,6 +1627,56 @@ private:
      * \return Number of missing points added to the scan
      */
     size_t gapfillMisses_timestamp(uint scanID, const bool gapfill_grid_only, const bool add_flags, const bool collect_positions, std::vector<helios::vec3> &xyz_filled);
+
+    //! Verify that a scan's timestamps identify its pulses before a pulse clock is built from them
+    /** The returns of one pulse share its time and lie along one beam, so returns that share an exact timestamp but
+        point in different directions from the emission origin (the scan origin, or a moving platform's pose at that time)
+        belong to different pulses: the timestamps were rounded more coarsely than the pulse clock, and any clock recovered
+        from them is the rounding step. Raises an error naming the timestamp resolution when more than 1% of the
+        shared-timestamp groups mix directions by more than a quarter of the raster step.
+     * \param[in] scanID Scan being gap-filled
+     * \param[in] scan_timestamp Timestamp of each of the scan's real returns, in local order
+     * \param[in] scan_xyz Position of each of the scan's real returns, in local order
+     */
+    void checkTimestampsIdentifyPulses(uint scanID, const std::vector<double> &scan_timestamp, const std::vector<helios::vec3> &scan_xyz) const;
+
+    //! Angle (rad) within which the returns of one pulse of a scan lie along one beam: a quarter of the scan's finer raster step
+    [[nodiscard]] double pulseCollinearityTolerance(uint scanID) const;
+
+    //! Largest angle (rad) between the first of a group of returns sharing one timestamp and any other, seen from where the scan fired at that time
+    /**
+     * \param[in] scanID Scan the returns belong to
+     * \param[in] timestamp Timestamp the returns share (locates a moving platform's emission origin)
+     * \param[in] scan_xyz Position of each of the scan's hits, in local order
+     * \param[in] members Local positions of the group's returns in \p scan_xyz
+     * \param[in] member_count Number of entries in \p members
+     */
+    [[nodiscard]] double sharedTimestampSpread(uint scanID, double timestamp, const std::vector<helios::vec3> &scan_xyz, const uint *members, size_t member_count) const;
+
+    //! A point's fractional position on a static scan's declared raster (the unrounded form of \ref getNominalScanGridCell)
+    /**
+     * \param[in] scanID Static raster scan
+     * \param[in] point (x,y,z) of the return
+     * \param[out] row Fractional row; the cell is the nearest integer
+     * \param[out] column Fractional column, after the head's rotation during the nearest row's sweep is removed
+     * \param[out] zenith Zenith (rad) of the point's direction in the scanner's frame
+     */
+    void nominalScanGridPosition(uint scanID, const helios::vec3 &point, double &row, double &column, double &zenith) const;
+
+    //! Give a static scan's returns their cells on the declared raster by direction, after checking the raster describes them
+    /** Used by \ref gapfillMisses() for a scan whose returns carry neither timestamps nor row/column indices. Raises an error
+        when the returns show the declared raster is not the scanner's: more than a quarter of them lie over a quarter cell
+        from their cell centres (a wrong step, tilt or offset), only every k-th row or column holds returns (a raster k times too fine), or more than 5% of them
+        fall outside it. A scan with fewer than 200 returns is not checked.
+     * \param[in] scanID Static raster scan
+     * \param[in] scan_xyz Position of each of the scan's hits, in local order
+     * \param[in] Nreal Number of the scan's stored hits (the first Nreal entries of \p scan_xyz)
+     * \param[out] cells Cell (row, column) of each stored hit; (-1,-1) for one outside the declared raster
+     */
+    void assignDirectionScanGridCells(uint scanID, const std::vector<helios::vec3> &scan_xyz, size_t Nreal, std::vector<helios::int2> &cells) const;
+
+    //! How to proceed with a scan whose timestamps do not identify its pulses, appended to the errors that detect it
+    [[nodiscard]] std::string roundedTimestampRemedy(uint scanID) const;
 
     //! Row/column-based implementation of gap filling (see \ref gapfillMisses).
     /**
@@ -2376,6 +2434,20 @@ public:
      * \note Throws if no column exists for the label (see \ref getHitDataColumnIndex()).
      */
     [[nodiscard]] HitDataType getHitDataType(const char *label) const;
+
+    //! Remove a per-hit scalar-data column from every hit in the cloud
+    /** Use this to discard hit data that is wrong and that later processing would otherwise trust -- for example
+        timestamps rounded more coarsely than the scanner fires, which can then no longer group returns into pulses, or a
+        target_index rewritten on export. Every other column keeps its values.
+
+        Misses synthesized by \ref gapfillMisses() report some labels themselves. Removing "timestamp" or
+        "gapfillMisses_code" also removes it from those misses. The labels they need to exist ("is_miss", "row",
+        "column", "nRaysHit", and "origin_x"/"origin_y"/"origin_z" on a moving scan) cannot be removed while any scan
+        has synthesized misses.
+     * \param[in] label Label of the data value.
+     * \note Throws if no column exists for the label.
+     */
+    void deleteHitData(const char *label);
 
     //! Distance (m) at which a "miss" point is placed along its beam direction.
     /** A fired pulse that returns nothing (transmitted to the sky) is represented as a
@@ -3394,6 +3466,24 @@ public:
      * \return Unit direction of that cell's beam
      */
     [[nodiscard]] helios::SphericalCoord getScanGridDirection(uint scanID, int row, int column) const;
+
+    //! Scan-grid cell (row, column) a point lies in, from the scan's declared raster
+    /** The inverse of the raster the synthetic scanner fires (see \ref syntheticScan()): the point's direction from the
+        scan origin is taken back through the scan's azimuth offset and tilt (\ref getScanAzimuthOffset(),
+        \ref getScanTiltRoll(), \ref getScanTiltPitch()) into the scanner's frame, the row is its zenith on the uniform
+        [thetaMin, thetaMax] grid, and the column its azimuth from phiMin on the uniform [phiMin, phiMax] grid after the
+        head's continuous rotation during each column (dphi/Ntheta per row) is removed. Unlike
+        \ref ScanMetadata::direction2rc(), the cell is not clamped: a point outside the declared raster maps to a row or
+        column outside [0, Ntheta) or [0, Nphi), which \ref gapfillMisses() ignores.
+
+        Use it to give returns `row`/`column` hit data when their timestamps cannot identify their pulses (rounded on
+        export, say), so that \ref gapfillMisses() places the misses through its row/column path. The cells are only as
+        good as the declared raster: the scan's angular ranges, size, tilt and azimuth offset must describe the instrument.
+     * \param[in] scanID Scan index; must be a static raster scan (not a moving, spinning multibeam or Risley scan)
+     * \param[in] point (x,y,z) of the return
+     * \return Cell as (row, column): x is the row (zenith index), y the column (azimuth index)
+     */
+    [[nodiscard]] helios::int2 getNominalScanGridCell(uint scanID, const helios::vec3 &point) const;
 
     //! Number of gap-filled misses currently held in virtualized form
     /** Misses synthesized by the row/column gap-filling path are stored implicitly as a per-cell

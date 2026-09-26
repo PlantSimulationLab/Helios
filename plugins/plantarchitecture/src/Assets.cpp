@@ -589,37 +589,91 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
     }
 
     if (prototype_parameters->build_petiolule) {
-        // loadOBJ() returns nothing, and creates no object, if every face of the asset was rejected as degenerate. Reading the parent of the first primitive would then be a read past the end.
-        std::vector<uint> UUIDs_petiolule = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/PetiolulePrototype.obj").string().c_str(), make_vec3(0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
-        context_ptr->translatePrimitive(UUIDs, make_vec3(0.07, 0, 0.005));
-        for (vec3 &mesh_vertex: mesh_vertices) {
-            mesh_vertex = mesh_vertex + make_vec3(0.07, 0, 0.005);
+        // The petiolule length is looked up by compound-leaf index the same way as the texture, so the terminal leaflet can carry a longer stalk than the laterals.
+        float petiolule_length = 0.f;
+        if (prototype_parameters->petiolule_length.empty()) {
+            helios_runtime_error("ERROR (PlantArchitecture): Leaf prototype builds a petiolule but LeafPrototype::petiolule_length is empty.");
+        } else if (prototype_parameters->petiolule_length.size() == 1) {
+            petiolule_length = prototype_parameters->petiolule_length.begin()->second;
+        } else if (prototype_parameters->petiolule_length.find(compound_leaf_index) == prototype_parameters->petiolule_length.end()) {
+            helios_runtime_error("ERROR (PlantArchitecture): LeafPrototype::petiolule_length has no entry for compound leaf index " + std::to_string(compound_leaf_index) +
+                                 ". With more than one entry, every leaflet index needs its own; give a single entry to use one length for all leaflets.");
+        } else {
+            petiolule_length = prototype_parameters->petiolule_length.at(compound_leaf_index);
+        }
+        // Set by Phytomer::buildLeafPrototype() from the petiole radius where this leaflet attaches, so that the stalk continues the petiole without a step.
+        const float petiolule_radius = prototype_parameters->petiolule_radius_fraction;
+        if (petiolule_length <= 0.f || petiolule_radius <= 0.f) {
+            helios_runtime_error("ERROR (PlantArchitecture): A petiolule needs a positive length and radius (got length " + std::to_string(petiolule_length) + ", radius " + std::to_string(petiolule_radius) +
+                                 "). The length is LeafPrototype::petiolule_length; the radius is taken from the petiole, so the petiole must have a positive radius.");
         }
 
-        // loadOBJ() worked out the petiolule's own vertex-facet connectivity and grouped it into a polymesh object of its own. Carry that face set into the leaf's before releasing the primitives, so the
-        // combined object describes both surfaces; simply detaching them would delete the object and throw the connectivity away.
-        const uint petiolule_ObjID = UUIDs_petiolule.empty() ? 0 : context_ptr->getPrimitiveParentObjectID(UUIDs_petiolule.front());
-        if (petiolule_ObjID != 0 && context_ptr->doesObjectExist(petiolule_ObjID)) {
-            const std::vector<vec3> petiolule_vertices = context_ptr->getPolymeshObjectVertices(petiolule_ObjID);
-            const std::vector<int3> petiolule_faces = context_ptr->getPolymeshObjectFaces(petiolule_ObjID);
-            const int petiolule_vertex_offset = scast<int>(mesh_vertices.size());
+        // The blade starts where the cylindrical part of the stalk ends.
+        const vec3 blade_shift = make_vec3(petiolule_length, 0, 0);
+        context_ptr->translatePrimitive(UUIDs, blade_shift);
+        for (vec3 &mesh_vertex: mesh_vertices) {
+            mesh_vertex = mesh_vertex + blade_shift;
+        }
 
-            for (const vec3 &petiolule_vertex: petiolule_vertices) {
-                mesh_vertices.push_back(petiolule_vertex);
-                // The texture coordinate array has to stay parallel to the vertices. The petiolule is drawn in a flat color rather than from a texture, so it has no coordinates to carry over and none that
-                // could ever be sampled; the entry is a placeholder keeping the arrays aligned, not a coordinate anyone should read.
+        // The stalk is a cylinder along the midrib axis from the leaflet base to the blade base, followed by a join under the blade base. A cylinder simply
+        // stopping against a blade of zero thickness leaves a visible step, so over the join the stalk's cross-section flattens onto the blade plane: its
+        // thickness falls to zero with zero slope at both ends, so it leaves the cylinder and meets the blade tangentially, while its width narrows to a
+        // rounded tip on the midrib. Built directly into the leaf's face set, as rings of vertices, so that the combined object describes both surfaces.
+        constexpr int petiolule_radial_subdivisions = 8;
+        constexpr int petiolule_join_rings = 6;
+        constexpr float petiolule_join_length_in_radii = 4.f;
+        const float join_length = petiolule_join_length_in_radii * petiolule_radius;
+
+        std::vector<float> ring_x = {0.f, petiolule_length};
+        std::vector<float> ring_half_width = {petiolule_radius, petiolule_radius};
+        std::vector<float> ring_half_thickness = {petiolule_radius, petiolule_radius};
+        for (int ring = 1; ring < petiolule_join_rings; ring++) {
+            const float t = float(ring) / float(petiolule_join_rings);
+            ring_x.push_back(petiolule_length + t * join_length);
+            ring_half_width.push_back(petiolule_radius * std::sqrt(1.f - t * t));
+            ring_half_thickness.push_back(petiolule_radius * 0.5f * (1.f + cosf(float(M_PI) * t)));
+        }
+
+        const int first_ring_vertex = scast<int>(mesh_vertices.size());
+        for (size_t ring = 0; ring < ring_x.size(); ring++) {
+            for (int k = 0; k < petiolule_radial_subdivisions; k++) {
+                const float theta = 2.f * float(M_PI) * float(k) / float(petiolule_radial_subdivisions);
+                mesh_vertices.push_back(prototype_parameters->leaf_offset + make_vec3(ring_x.at(ring), ring_half_width.at(ring) * cosf(theta), ring_half_thickness.at(ring) * sinf(theta)));
+                // The texture coordinate array has to stay parallel to the vertices. The petiolule is drawn in a flat colour rather than from a texture, so the entry
+                // only keeps the arrays aligned and is never sampled.
                 mesh_vertex_uv.push_back(make_vec2(0, 0));
             }
-            for (size_t petiolule_face = 0; petiolule_face < petiolule_faces.size(); petiolule_face++) {
-                const int3 &face = petiolule_faces.at(petiolule_face);
-                mesh_faces.push_back(make_int3(face.x + petiolule_vertex_offset, face.y + petiolule_vertex_offset, face.z + petiolule_vertex_offset));
-                mesh_face_UUIDs.push_back(context_ptr->getPolymeshObjectPrimitiveUUIDForFace(petiolule_ObjID, petiolule_face));
+        }
+        // The join closes to a single point on the midrib rather than a ring of coincident vertices, which would give zero-area facets.
+        const int tip_vertex = scast<int>(mesh_vertices.size());
+        mesh_vertices.push_back(prototype_parameters->leaf_offset + make_vec3(petiolule_length + join_length, 0, 0));
+        mesh_vertex_uv.push_back(make_vec2(0, 0));
+
+        std::vector<uint> UUIDs_petiolule;
+        auto addPetioluleFacet = [&](int i0, int i1, int i2) {
+            const uint UUID = context_ptr->addTriangle(mesh_vertices.at(i0), mesh_vertices.at(i1), mesh_vertices.at(i2));
+            UUIDs_petiolule.push_back(UUID);
+            mesh_faces.push_back(make_int3(i0, i1, i2));
+            mesh_face_UUIDs.push_back(UUID);
+        };
+        // Wound so the facet normals point away from the stalk's axis.
+        for (size_t ring = 0; ring + 1 < ring_x.size(); ring++) {
+            for (int k = 0; k < petiolule_radial_subdivisions; k++) {
+                const int k_next = (k + 1) % petiolule_radial_subdivisions;
+                const int near_k = first_ring_vertex + int(ring) * petiolule_radial_subdivisions + k;
+                const int near_next = first_ring_vertex + int(ring) * petiolule_radial_subdivisions + k_next;
+                const int far_k = near_k + petiolule_radial_subdivisions;
+                const int far_next = near_next + petiolule_radial_subdivisions;
+                addPetioluleFacet(near_k, near_next, far_next);
+                addPetioluleFacet(near_k, far_next, far_k);
             }
         }
-
-        // The petiolule's primitives already have a parent, and addPolymeshObject() below skips anything that does. Without this the leaf copied to every phytomer would carry no petiolule, and the
-        // prototype's own would be left behind at the origin at prototype scale as geometry no plant owns.
-        context_ptr->setPrimitiveParentObjectID(UUIDs_petiolule, 0);
+        const int last_ring_start = first_ring_vertex + int(ring_x.size() - 1) * petiolule_radial_subdivisions;
+        for (int k = 0; k < petiolule_radial_subdivisions; k++) {
+            addPetioluleFacet(last_ring_start + k, last_ring_start + (k + 1) % petiolule_radial_subdivisions, tip_vertex);
+        }
+        // labelLeafPrototype() keeps this label when it labels the rest of the leaf "leaf", and gives these primitives the petiole's material.
+        context_ptr->setPrimitiveData(UUIDs_petiolule, "object_label", "petiolule");
 
         UUIDs.insert(UUIDs.end(), UUIDs_petiolule.begin(), UUIDs_petiolule.end());
     }
@@ -636,7 +690,7 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
 
     const uint objID = context_ptr->addPolymeshObject(UUIDs);
 
-    // The face set covers every primitive of the object: the blade from the lattice above, and the petiolule from the connectivity loadOBJ() retained. It is attached only when that is actually true, because
+    // The face set covers every primitive of the object: the blade from the lattice above, and the petiolule from its rings. It is attached only when that is actually true, because
     // getFaceIndexForPrimitive() raises for a member the table omits, and writeOBJ() calls it for every primitive of any object reporting a non-zero face count.
     if (!mesh_faces.empty() && mesh_face_UUIDs.size() == context_ptr->getObjectPrimitiveUUIDs(objID).size()) {
         context_ptr->setPolymeshObjectTopology(objID, mesh_vertices, mesh_faces, mesh_face_UUIDs, {}, mesh_vertex_uv, helios::NORMAL_SOURCE_NONE);

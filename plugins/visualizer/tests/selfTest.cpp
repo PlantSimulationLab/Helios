@@ -1095,6 +1095,54 @@ TEST_CASE("Visualizer::setColormap") {
     DOCTEST_CHECK_THROWS_AS(visualizer.setColormap(std::vector<RGBcolor>{RGB::red}, std::vector<float>{0.f, 1.f}), std::runtime_error);
 }
 
+TEST_CASE("Visualizer::setColormap matches Context colormaps") {
+    // Every predefined visualizer colormap is built from the Context's definition, and every Context colormap is available in the visualizer
+    Visualizer visualizer(1000, 800, 16, true, true);
+    const std::vector<std::pair<Visualizer::Ctable, std::string>> colormaps{{Visualizer::COLORMAP_HOT, "hot"},   {Visualizer::COLORMAP_COOL, "cool"},   {Visualizer::COLORMAP_LAVA, "lava"},
+                                                                            {Visualizer::COLORMAP_RAINBOW, "rainbow"}, {Visualizer::COLORMAP_PARULA, "parula"}, {Visualizer::COLORMAP_GRAY, "gray"},
+                                                                            {Visualizer::COLORMAP_LINES, "lines"},  {Visualizer::COLORMAP_ALGAE, "algae"},  {Visualizer::COLORMAP_GREEN, "green"}};
+    DOCTEST_CHECK(colormaps.size() == Context::getColormapNames().size());
+
+    for (const auto &colormap: colormaps) {
+        const std::string &name = colormap.second;
+        DOCTEST_CAPTURE(name);
+        visualizer.setColormap(colormap.first);
+        Colormap visualizer_colormap = visualizer.getCurrentColormap();
+        std::vector<RGBcolor> context_colormap = Context::generateColormap(name, 100);
+        for (int i = 0; i < 100; i++) {
+            RGBcolor color = visualizer_colormap.query(float(i) / 99.f);
+            DOCTEST_CHECK(color.r == doctest::Approx(context_colormap.at(i).r).epsilon(1e-5));
+            DOCTEST_CHECK(color.g == doctest::Approx(context_colormap.at(i).g).epsilon(1e-5));
+            DOCTEST_CHECK(color.b == doctest::Approx(context_colormap.at(i).b).epsilon(1e-5));
+        }
+    }
+}
+
+TEST_CASE("Visualizer::setColormap algae") {
+    Visualizer visualizer(1000, 800, 16, true, true);
+    visualizer.setColormap(Visualizer::COLORMAP_ALGAE);
+    Colormap colormap = visualizer.getCurrentColormap();
+
+    // Endpoints are the first and last entries of the cmocean 'algae' table
+    RGBcolor low = colormap.query(0.f);
+    RGBcolor high = colormap.query(1.f);
+    DOCTEST_CHECK(low.r == doctest::Approx(0.8429f).epsilon(1e-4));
+    DOCTEST_CHECK(low.g == doctest::Approx(0.9769f).epsilon(1e-4));
+    DOCTEST_CHECK(low.b == doctest::Approx(0.8146f).epsilon(1e-4));
+    DOCTEST_CHECK(high.r == doctest::Approx(0.0689f).epsilon(1e-4));
+    DOCTEST_CHECK(high.g == doctest::Approx(0.1421f).epsilon(1e-4));
+    DOCTEST_CHECK(high.b == doctest::Approx(0.0790f).epsilon(1e-4));
+
+    // 'algae' is a sequential map that darkens monotonically from low to high values
+    float previous_luminance = 1.f;
+    for (int i = 0; i <= 20; i++) {
+        RGBcolor color = colormap.query(float(i) / 20.f);
+        float luminance = 0.2126f * color.r + 0.7152f * color.g + 0.0722f * color.b;
+        DOCTEST_CHECK(luminance < previous_luminance);
+        previous_luminance = luminance;
+    }
+}
+
 TEST_CASE("Visualizer::PNG texture integration via primitives") {
     Visualizer visualizer(1000, 800, 16, true, true);
     const char *png_filename = "plugins/visualizer/textures/AlmondLeaf.png";

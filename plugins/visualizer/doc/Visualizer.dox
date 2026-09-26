@@ -693,7 +693,7 @@
 
   \subsubsection ColoringPseudo Coloring by pseudocolor map
 
-  Primitives can be colored by mapping associated data values to a color table.  Given some range of data values, each value is normalized by this range and used to look up an associated color in the color table.  The available predefined color tables are shown below.  There is also the capability of defining custom color tables.
+  Primitives can be colored by mapping associated data values to a color table.  Given some range of data values, each value is normalized by this range and used to look up an associated color in the color table.  The available predefined color tables are shown below. They are defined in the Context (see \ref helios::Context::getColormapNames()), so each is identical to the colormap of the same name used by \ref helios::Context::colorPrimitiveByDataPseudocolor(). There is also the capability of defining custom color tables.
 
  <table>
    <tr>
@@ -723,6 +723,18 @@
    <tr>
       <td>\ref Visualizer::COLORMAP_GRAY</td>
       <td>\image html colormap_gray.png
+   </tr>
+   <tr>
+      <td>\ref Visualizer::COLORMAP_ALGAE</td>
+      <td>\image html colormap_algae.png
+   </tr>
+   <tr>
+      <td>\ref Visualizer::COLORMAP_GREEN</td>
+      <td>\image html colormap_green.png
+   </tr>
+   <tr>
+      <td>\ref Visualizer::COLORMAP_LINES</td>
+      <td>\image html colormap_lines.png
    </tr>
    <tr>
       <td>\ref Visualizer::COLORMAP_CUSTOM</td>

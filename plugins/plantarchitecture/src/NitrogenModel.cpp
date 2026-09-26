@@ -135,7 +135,7 @@ void PlantArchitecture::initializePlantNitrogenPools(uint plantID, float initial
                     }
 
                     // Get current leaf area
-                    float leaf_area = context_ptr->getObjectArea(leaf_objID);
+                    float leaf_area = getLeafBladeArea(leaf_objID);
 
                     // Initialize leaf N content per area (g N/m²)
                     shoot->leaf_nitrogen_gN_m2[leaf_objID] = initial_leaf_N_area;
@@ -262,7 +262,7 @@ void PlantArchitecture::accumulateLeafNitrogen(float dt) {
                         // Every leaf is tracked, including a new one and one that receives nothing this step.
                         float &leaf_N_area = shoot->leaf_nitrogen_gN_m2[leaf_objID];
 
-                        const float leaf_area = context_ptr->getObjectArea(leaf_objID);
+                        const float leaf_area = getLeafBladeArea(leaf_objID);
                         if (leaf_area <= 0) {
                             continue; // no area to hold nitrogen (prevents division by zero)
                         }
@@ -328,7 +328,7 @@ void PlantArchitecture::remobilizeNitrogen(float dt) {
                 if (unmet_gN <= 0 || !context_ptr->doesObjectExist(leaf_objID)) {
                     continue;
                 }
-                const float leaf_area = context_ptr->getObjectArea(leaf_objID);
+                const float leaf_area = getLeafBladeArea(leaf_objID);
                 if (leaf_area <= 0) {
                     continue;
                 }
@@ -367,7 +367,7 @@ void PlantArchitecture::remobilizeNitrogen(float dt) {
                         if (leaf_N == shoot->leaf_nitrogen_gN_m2.end() || !context_ptr->doesObjectExist(leaf_objID)) {
                             continue;
                         }
-                        const float leaf_area = context_ptr->getObjectArea(leaf_objID);
+                        const float leaf_area = getLeafBladeArea(leaf_objID);
                         const float available_gN = release_fraction * std::max(0.0f, leaf_N->second - N_params.minimum_leaf_N_area) * leaf_area;
                         if (leaf_area > 0 && available_gN > 0) {
                             sources.push_back({shoot.get(), leaf_objID, leaf_area, phytomer->age, available_gN});
@@ -428,7 +428,7 @@ void PlantArchitecture::updateNitrogenStressFactor() {
                         }
 
                         float leaf_N_area = shoot->leaf_nitrogen_gN_m2.at(leaf_objID); // g N/m²
-                        float leaf_area = context_ptr->getObjectArea(leaf_objID); // m²
+                        float leaf_area = getLeafBladeArea(leaf_objID); // m²
 
                         // Write leaf nitrogen per area to object data for visualization
                         context_ptr->setObjectData(leaf_objID, "leaf_nitrogen_gN_m2", leaf_N_area);

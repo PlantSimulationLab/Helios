@@ -28,12 +28,19 @@ using namespace helios;
 
 //! Outline, fill and label colors for image annotation overlays
 /**
- * The same seven colors as the visualizer's COLORMAP_LINES, written out as discrete entries rather than sampled from that Colormap. Colormap resamples its anchors into 100 interpolated entries, so all
- * but a few queries would return a blend of two adjacent anchors and lose the mutual distinctness that a categorical palette exists to provide. Bounding boxes index this palette by class ID, so that
+ * The seven control-point colors of the Context's "lines" colormap, used as discrete entries rather than sampled from a Colormap. Colormap resamples its control points into 100 interpolated entries, so all
+ * but a few queries would return a blend of two adjacent control points and lose the mutual distinctness that a categorical palette exists to provide. Bounding boxes index this palette by class ID, so that
  * every box of a class is drawn alike, while segmentation masks index it per annotation, so that two touching objects of the same class stay distinguishable.
  */
-static const std::vector<helios::RGBcolor> annotation_palette_colors{{0.000f, 0.447f, 0.741f}, {0.850f, 0.325f, 0.098f}, {0.929f, 0.694f, 0.125f}, {0.494f, 0.184f, 0.556f},
-                                                                     {0.466f, 0.674f, 0.188f}, {0.301f, 0.745f, 0.933f}, {0.635f, 0.078f, 0.184f}};
+static const std::vector<helios::RGBcolor> &annotationPaletteColors() {
+    static const std::vector<helios::RGBcolor> palette_colors = [] {
+        std::vector<helios::RGBcolor> colors;
+        std::vector<float> positions;
+        Context::getColormapControlPoints("lines", colors, positions);
+        return colors;
+    }();
+    return palette_colors;
+}
 
 //! One horizontal run of filled pixels within a segmentation mask, in image pixel coordinates
 struct MaskFillSpan {
@@ -1150,7 +1157,7 @@ std::vector<size_t> Visualizer::addBoundingBoxOverlay(const std::vector<Bounding
         y_bottom = clamp(y_bottom, image_extent.y, image_extent.w);
         y_top = clamp(y_top, image_extent.y, image_extent.w);
 
-        const RGBcolor box_color = annotation_palette_colors.at(box.class_ID % annotation_palette_colors.size());
+        const RGBcolor box_color = annotationPaletteColors().at(box.class_ID % annotationPaletteColors().size());
 
         // The outline is drawn as four lines because there is no unfilled-rectangle primitive, following addColorbarByCenter(), which draws its border the same way. The line width is scaled by the DPI
         // ratio because the line geometry shader expresses width against the framebuffer, so an unscaled width would draw at half size on a high-DPI display.
@@ -1219,7 +1226,7 @@ std::vector<size_t> Visualizer::addSegmentationMaskOverlay(const std::vector<Seg
         const SegmentationMask &mask = masks.at(mask_index);
 
         // Colored by position in the file rather than by class ID, so that two touching objects of the same class do not merge into one indistinguishable blob.
-        const RGBcolor mask_color = annotation_palette_colors.at(mask_index % annotation_palette_colors.size());
+        const RGBcolor mask_color = annotationPaletteColors().at(mask_index % annotationPaletteColors().size());
 
         const std::string label = mask.class_name.empty() ? std::to_string(mask.class_ID) : mask.class_name;
 

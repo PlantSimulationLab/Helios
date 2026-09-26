@@ -138,18 +138,20 @@ public:
         sampled = false;
     }
 
-    //! Get the value of the parameter, sampling from its distribution if it has not already been sampled
-    /**
-     * \return Current value of the parameter.
+    //! Value of the parameter, sampling it on first use.
+    /** Const because reading a parameter is not a mutation of the model: the sample is a lazily filled cache,
+     * so the cache fields are mutable and resample() is const. This lets code that legitimately holds a
+     * ShootParameters by const reference -- Shoot::sampleVegetativeBudBreak(), for one -- read its own
+     * parameters instead of reaching through the plant instance for the shared per-type snapshot.
      */
-    float val() {
+    float val() const {
         if (!sampled) {
             constval = resample();
         }
         return constval;
     }
 
-    float resample() {
+    float resample() const {
         sampled = true;
         if (distribution != "constant") {
             if (generator == nullptr) {
@@ -173,8 +175,9 @@ public:
     std::vector<float> distribution_parameters;
 
 private:
-    bool sampled;
-    float constval;
+    //! Lazily filled sample cache. Mutable so that val() can be const -- see the note there.
+    mutable bool sampled;
+    mutable float constval;
 
 
     std::minstd_rand0 *generator;
@@ -616,7 +619,7 @@ public:
      * An explicitly-set \ref LeafPrototype::flexibility always wins, so code that has already migrated is unaffected by a stale buckle value left beside it.
      * \return Flexibility to build the leaf with.
      */
-    [[nodiscard]] float resolveFlexibility();
+    [[nodiscard]] float resolveFlexibility() const;
 
     //! Amount to shift the leaf
     helios::vec3 leaf_offset;
@@ -628,7 +631,22 @@ public:
     uint unique_prototypes = 1;
 
     //! Add a petiolule to the base of the leaflet
+    /**
+     * The petiolule is the stalk joining a leaflet to the rachis of a compound leaf. It is built along the leaflet's midrib axis as a cylinder of length
+     * \ref LeafPrototype::petiolule_length, and the blade starts where that cylinder ends. Beyond it the stalk flattens and tapers onto the underside of the
+     * blade base, so that it meets the blade plane smoothly rather than ending abruptly against it. Its radius is not a parameter: it is taken from the petiole
+     * at the point the leaflet attaches, so the stalk continues the petiole without a step. Its primitives are labelled "petiolule" rather than "leaf" and
+     * drawn with the petiole's material; they belong to the leaf object but are not counted in its leaf area.
+     */
     bool build_petiolule = false;
+
+    //! Length of the petiolule as a fraction of the leaflet's blade length, keyed by compound-leaf index
+    /**
+     * Keyed the same way as \ref LeafPrototype::leaf_texture_file, so index 0 is the terminal leaflet, and negative and positive indices are the lateral leaflets
+     * on either side, counted from the tip. A single entry applies to every leaflet. Because the petiolule is part of the leaflet prototype it grows with the
+     * leaflet, so a fully expanded leaflet of blade length L has a stalk of length L times this value. Only used if \ref LeafPrototype::build_petiolule is true.
+     */
+    std::map<int, float> petiolule_length = {{0, 0.05f}};
 
     uint unique_prototype_identifier = 0;
 
@@ -656,6 +674,8 @@ public:
         this->unique_prototypes = a.unique_prototypes;
         this->unique_prototype_identifier = a.unique_prototype_identifier;
         this->build_petiolule = a.build_petiolule;
+        this->petiolule_length = a.petiolule_length;
+        this->petiolule_radius_fraction = a.petiolule_radius_fraction;
         this->prototype_function = a.prototype_function;
         this->generator = a.generator;
     }
@@ -666,54 +686,28 @@ public:
             this->leaf_texture_file = a.leaf_texture_file;
             this->OBJ_model_file = a.OBJ_model_file;
             this->leaf_aspect_ratio = a.leaf_aspect_ratio;
-            if (a.leaf_aspect_ratio.distribution != "constant")
-                this->leaf_aspect_ratio.resample();
             this->midrib_fold_fraction = a.midrib_fold_fraction;
-            if (a.midrib_fold_fraction.distribution != "constant")
-                this->midrib_fold_fraction.resample();
             this->longitudinal_curvature = a.longitudinal_curvature;
             this->longitudinal_curvature_exponent = a.longitudinal_curvature_exponent;
-            if (a.longitudinal_curvature_exponent.distribution != "constant")
-                this->longitudinal_curvature_exponent.resample();
-            if (a.longitudinal_curvature.distribution != "constant")
-                this->longitudinal_curvature.resample();
             this->lateral_curvature = a.lateral_curvature;
-            if (a.lateral_curvature.distribution != "constant")
-                this->lateral_curvature.resample();
             this->petiole_roll = a.petiole_roll;
-            if (a.petiole_roll.distribution != "constant")
-                this->petiole_roll.resample();
             this->wave_period = a.wave_period;
-            if (a.wave_period.distribution != "constant")
-                this->wave_period.resample();
             this->wave_amplitude = a.wave_amplitude;
-            if (a.wave_amplitude.distribution != "constant")
-                this->wave_amplitude.resample();
             this->flexibility = a.flexibility;
-            if (a.flexibility.distribution != "constant")
-                this->flexibility.resample();
             this->flexibility_taper = a.flexibility_taper;
-            if (a.flexibility_taper.distribution != "constant")
-                this->flexibility_taper.resample();
             this->flexibility_aging = a.flexibility_aging;
-            if (a.flexibility_aging.distribution != "constant")
-                this->flexibility_aging.resample();
             this->flexibility_aging_max = a.flexibility_aging_max;
-            if (a.flexibility_aging_max.distribution != "constant")
-                this->flexibility_aging_max.resample();
             HELIOS_PUSH_IGNORE_DEPRECATED
             this->leaf_buckle_length = a.leaf_buckle_length;
-            if (a.leaf_buckle_length.distribution != "constant")
-                this->leaf_buckle_length.resample();
             this->leaf_buckle_angle = a.leaf_buckle_angle;
-            if (a.leaf_buckle_angle.distribution != "constant")
-                this->leaf_buckle_angle.resample();
             HELIOS_POP_IGNORE_DEPRECATED
             this->leaf_offset = a.leaf_offset;
             this->subdivisions = a.subdivisions;
             this->unique_prototypes = a.unique_prototypes;
             this->unique_prototype_identifier = a.unique_prototype_identifier;
             this->build_petiolule = a.build_petiolule;
+            this->petiolule_length = a.petiolule_length;
+            this->petiolule_radius_fraction = a.petiolule_radius_fraction;
             this->prototype_function = a.prototype_function;
             this->generator = a.generator;
             if (this->generator != nullptr) {
@@ -750,6 +744,17 @@ public:
 
 private:
     std::minstd_rand0 *generator{};
+
+    //! Petiolule radius as a fraction of the leaflet's blade length
+    /**
+     * Not a user parameter. Phytomer::buildLeafPrototype() sets it from the petiole's radius at the leaflet's attachment point just before the prototype is
+     * built, so that the stalk continues the petiole without a step.
+     */
+    float petiolule_radius_fraction = 0.f;
+
+    friend struct Phytomer;
+    friend class PlantArchitectureTestHelper;
+    friend uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype_parameters, int compound_leaf_index);
 };
 
 struct PhytomerParameters {
@@ -778,20 +783,10 @@ private:
         InternodeParameters &operator=(const InternodeParameters &a) {
             if (this != &a) {
                 this->pitch = a.pitch;
-                if (a.pitch.distribution != "constant")
-                    this->pitch.resample();
                 this->phyllotactic_angle = a.phyllotactic_angle;
-                if (a.phyllotactic_angle.distribution != "constant")
-                    this->phyllotactic_angle.resample();
                 this->radius_initial = a.radius_initial;
-                if (a.radius_initial.distribution != "constant")
-                    this->radius_initial.resample();
                 this->max_vegetative_buds_per_petiole = a.max_vegetative_buds_per_petiole;
-                if (a.max_vegetative_buds_per_petiole.distribution != "constant")
-                    this->max_vegetative_buds_per_petiole.resample();
                 this->max_floral_buds_per_petiole = a.max_floral_buds_per_petiole;
-                if (a.max_floral_buds_per_petiole.distribution != "constant")
-                    this->max_floral_buds_per_petiole.resample();
                 this->color = a.color;
                 this->image_texture = a.image_texture;
                 this->length_segments = a.length_segments;
@@ -845,29 +840,15 @@ private:
             if (this != &a) {
                 this->petioles_per_internode = a.petioles_per_internode;
                 this->pitch = a.pitch;
-                if (a.pitch.distribution != "constant")
-                    this->pitch.resample();
                 this->radius = a.radius;
-                if (a.radius.distribution != "constant")
-                    this->radius.resample();
                 this->length = a.length;
-                if (a.length.distribution != "constant")
-                    this->length.resample();
                 this->curvature = a.curvature;
-                if (a.curvature.distribution != "constant")
-                    this->curvature.resample();
                 this->taper = a.taper;
-                if (a.taper.distribution != "constant")
-                    this->taper.resample();
                 this->color = a.color;
                 this->length_segments = a.length_segments;
                 this->radial_subdivisions = a.radial_subdivisions;
                 this->flexibility = a.flexibility;
-                if (a.flexibility.distribution != "constant")
-                    this->flexibility.resample();
                 this->flexibility_aging = a.flexibility_aging;
-                if (a.flexibility_aging.distribution != "constant")
-                    this->flexibility_aging.resample();
             }
             return *this;
         }
@@ -896,29 +877,13 @@ private:
         LeafParameters &operator=(const LeafParameters &a) {
             if (this != &a) {
                 this->leaves_per_petiole = a.leaves_per_petiole;
-                if (a.leaves_per_petiole.distribution != "constant")
-                    this->leaves_per_petiole.resample();
                 this->pitch = a.pitch;
-                if (a.pitch.distribution != "constant")
-                    this->pitch.resample();
                 this->yaw = a.yaw;
-                if (a.yaw.distribution != "constant")
-                    this->yaw.resample();
                 this->roll = a.roll;
-                if (a.roll.distribution != "constant")
-                    this->roll.resample();
                 this->leaflet_offset = a.leaflet_offset;
-                if (a.leaflet_offset.distribution != "constant")
-                    this->leaflet_offset.resample();
                 this->leaflet_scale = a.leaflet_scale;
-                if (a.leaflet_scale.distribution != "constant")
-                    this->leaflet_scale.resample();
                 this->intercalary_leaflet_scale = a.intercalary_leaflet_scale;
-                if (a.intercalary_leaflet_scale.distribution != "constant")
-                    this->intercalary_leaflet_scale.resample();
                 this->prototype_scale = a.prototype_scale;
-                if (a.prototype_scale.distribution != "constant")
-                    this->prototype_scale.resample();
                 this->prototype.duplicate(a.prototype);
             }
             return *this;
@@ -946,20 +911,10 @@ private:
         PeduncleParameters &operator=(const PeduncleParameters &a) {
             if (this != &a) {
                 this->length = a.length;
-                if (a.length.distribution != "constant")
-                    this->length.resample();
                 this->radius = a.radius;
-                if (a.radius.distribution != "constant")
-                    this->radius.resample();
                 this->pitch = a.pitch;
-                if (a.pitch.distribution != "constant")
-                    this->pitch.resample();
                 this->roll = a.roll;
-                if (a.roll.distribution != "constant")
-                    this->roll.resample();
                 this->curvature = a.curvature;
-                if (a.curvature.distribution != "constant")
-                    this->curvature.resample();
                 this->color = a.color;
                 this->length_segments = a.length_segments;
                 this->radial_subdivisions = a.radial_subdivisions;
@@ -1007,23 +962,15 @@ private:
         InflorescenceParameters &operator=(const InflorescenceParameters &a) {
             if (this != &a) {
                 this->flowers_per_peduncle = a.flowers_per_peduncle;
-                this->flowers_per_peduncle.resample();
                 this->flower_offset = a.flower_offset;
-                this->flower_offset.resample();
                 this->pitch = a.pitch;
-                this->pitch.resample();
                 this->roll = a.roll;
-                this->roll.resample();
                 this->flower_prototype_scale = a.flower_prototype_scale;
-                this->flower_prototype_scale.resample();
                 this->flower_prototype_function = a.flower_prototype_function;
                 this->inflorescence_maturity_period = a.inflorescence_maturity_period;
-                this->inflorescence_maturity_period.resample();
                 this->fruit_prototype_scale = a.fruit_prototype_scale;
-                this->fruit_prototype_scale.resample();
                 this->fruit_prototype_function = a.fruit_prototype_function;
                 this->fruit_gravity_factor_fraction = a.fruit_gravity_factor_fraction;
-                this->fruit_gravity_factor_fraction.resample();
                 this->unique_prototypes = a.unique_prototypes;
             }
             return *this;
@@ -1100,6 +1047,13 @@ public:
     //! Constructor - sets random number generator
     explicit PhytomerParameters(std::minstd_rand0 *generator);
 
+    //! Draw a new value for every random parameter that varies from one phytomer to the next
+    /**
+     * The Phytomer constructor calls this on its own copy of the parameters, which is where per-phytomer variation comes from. Assignment and copying never resample, so copying a PhytomerParameters or a
+     * ShootParameters consumes no random draws. Parameters with a constant distribution are skipped and consume no draws either.
+     */
+    void resample();
+
     friend class PlantArchitecture;
     friend struct Phytomer;
     friend struct Shoot;
@@ -1127,6 +1081,10 @@ struct ShootParameters {
     //! Maximum number of nodes/phytomers that a shoot can produce in a single season (≤ max_nodes)
     RandomParameter_int max_nodes_per_season;
     //! Cross-sectional area of internode in cm² branch area per m² downstream leaf area; set 0 to disable girth scaling
+    /** Downstream leaf area is cumulative -- every leaf ever produced above the internode, not reduced when leaves drop or
+     * branches are shed -- so this is the pipe model with disused pipes retained. See the girth_area_factor section of the
+     * plugin documentation.
+     */
     RandomParameter_float girth_area_factor;
     //! Angle (deg) at which child shoots emerge from this parent shoot at the tip of the parent shoot
     RandomParameter_float insertion_angle_tip;
@@ -1144,8 +1102,22 @@ struct ShootParameters {
     RandomParameter_float base_yaw;
     //! Gravitropic curvature (deg/m); positive values curve the shoot upward toward vertical
     RandomParameter_float gravitropic_curvature;
-    //! Standard deviation (deg · m⁻⁰·⁵) controlling random wiggle (tortuosity) along the shoot
+    //! Standard deviation (deg/m) of the random curvature that produces wiggle (tortuosity) along the shoot
+    /**
+     * The shoot is turned by this random curvature times the arc length of each internode segment, so the amount of wiggle does
+     * not depend on how many segments an internode is divided into. Values from versions before 1.3.89, which were an angle per
+     * internode segment, convert as tortuosity * internode.length_segments / internode_length_max.
+     */
     RandomParameter_float tortuosity;
+    //! Persistence length (m) over which the random tortuosity perturbation of the shoot curvature decorrelates
+    /**
+     * Sets the arc-length scale of the Ornstein-Uhlenbeck process applied to the shoot curvature. Larger values give long, smooth
+     * meanders; smaller values give rapid, fine-scale wiggle. The noise is applied to curvature (not to the direction), which is
+     * what keeps the resulting trajectory smooth: direction noise integrates only once and converges to a nowhere-differentiable
+     * Brownian path, whereas curvature noise integrates twice and yields finite curvature everywhere. Values <= 0 fall back to
+     * a default of 0.5 m.
+     */
+    RandomParameter_float tortuosity_persistence_length;
     //! Minimum time (days) between the emergence of successive phytomers along the shoot
 
     // --- Growth Parameters --- //
@@ -1184,6 +1156,7 @@ struct ShootParameters {
 
     //! Decay rate (1/node) of the vegetative bud-break probability along the shoot; sign determines direction
     RandomParameter_float vegetative_bud_break_probability_decay_rate;
+
     //! FLAG: description not found in specification table – please advise
     RandomParameter_int max_terminal_floral_buds;
     //! Probability that a phytomer will flower
@@ -1249,6 +1222,23 @@ struct ShootParameters {
      */
     void inheritCustomFunctionsFrom(const ShootParameters &source);
 
+    //! Assignment operator
+    /** This used to call resample() on every non-constant shoot-level random parameter after copying it.
+     * Assignment is not a modelling event and must not advance the random stream: every shoot type shares the one Context
+     * generator, and defineShootType() assigns into the shoot_types map, so re-defining a shoot type with
+     * the values it already held displaced every subsequent draw and produced a materially different plant.
+     * Measured on identical parameters, zero / one / two no-op parameter overrides gave calibration
+     * objectives of 6.714 / 7.215 / 6.388 -- a spread as large as the effects being measured.
+     *
+     * Resampling on copy was also wrong on its own terms. A ShootParameters holds the DISTRIBUTION for a
+     * shoot type; the per-shoot draw belongs where a shoot is actually created, which is where the Shoot
+     * constructor already samples it.
+     *
+     * The nested PhytomerParameters sub-structures and LeafPrototype are different: their assignment
+     * operators do resample, because the Phytomer constructor relies on that assignment to re-randomize
+     * per-phytomer parameters. LeafPrototype::operator= also calls sampleIdentifier(), which is not
+     * distribution sampling but the assignment of a fresh prototype identity for the leaf-prototype cache.
+     */
     ShootParameters &operator=(const ShootParameters &a) {
         // Shoot-level parameters are copied by value and are NOT resampled here. Per-shoot variation
         // is produced by the explicit resample() calls in the growth engine at the points where a new
@@ -1273,6 +1263,7 @@ struct ShootParameters {
         this->fruit_set_probability = a.fruit_set_probability;
         this->gravitropic_curvature = a.gravitropic_curvature;
         this->tortuosity = a.tortuosity;
+        this->tortuosity_persistence_length = a.tortuosity_persistence_length;
         this->vegetative_bud_break_probability_min = a.vegetative_bud_break_probability_min;
         this->vegetative_bud_break_probability_decay_rate = a.vegetative_bud_break_probability_decay_rate;
         this->max_terminal_floral_buds = a.max_terminal_floral_buds;
@@ -1433,6 +1424,17 @@ public:
      * \return The axis vector of the specified peduncle as a helios::vec3.
      */
     [[nodiscard]] helios::vec3 getPeduncleAxisVector(float stem_fraction, uint petiole_index, uint bud_index) const;
+
+    /**
+     * \brief Locates a floral bud of this phytomer within Phytomer::floral_buds.
+     *
+     * Peduncle geometry and parameters are stored at this location, which is not the bud's (parent_index, bud_index): terminal floral
+     * buds are appended to floral_buds after the phytomer's per-petiole entries, one entry per bud, with a parent_index of 0.
+     *
+     * \param[in] fbud Floral bud held in this phytomer's floral_buds.
+     * \return The index of the entry of floral_buds holding the bud (x), and the bud's position within that entry (y).
+     */
+    [[nodiscard]] helios::uint2 getFloralBudStorageIndex(const FloralBud &fbud) const;
 
     /**
      * \brief Computes the normalized vector direction along the axis at a given fraction of the stem.
@@ -1924,13 +1926,13 @@ public:
     //! Coordinates of internode tube segments. Index is tube segment within internode
     std::vector<std::vector<helios::vec3>> petiole_vertices; // first index is petiole within internode, second index is tube segment within petiole tube
     std::vector<std::vector<helios::vec3>> leaf_bases; // first index is petiole within internode, second index is leaf within petiole
-    std::vector<std::vector<std::vector<helios::vec3>>> peduncle_vertices; // first index is petiole within internode, second index is floral bud within petiole, third index is tube segment within peduncle
-    std::vector<std::vector<std::vector<float>>> peduncle_radii; // first index is petiole within internode, second index is floral bud within petiole, third index is tube segment within peduncle
-    std::vector<std::vector<float>> peduncle_length; // actual sampled length for each peduncle - first index is petiole, second is bud
-    std::vector<std::vector<float>> peduncle_radius; // actual sampled radius for each peduncle - first index is petiole, second is bud
-    std::vector<std::vector<float>> peduncle_pitch; // actual sampled pitch for each peduncle - first index is petiole, second is bud
-    std::vector<std::vector<float>> peduncle_curvature; // actual sampled curvature for each peduncle - first index is petiole, second is bud
-    std::vector<std::vector<float>> peduncle_roll; // actual sampled roll for each peduncle - first index is petiole, second is bud
+    std::vector<std::vector<std::vector<helios::vec3>>> peduncle_vertices; // first and second index as for floral_buds (see getFloralBudStorageIndex()), third index is tube segment within peduncle
+    std::vector<std::vector<std::vector<float>>> peduncle_radii; // first and second index as for floral_buds (see getFloralBudStorageIndex()), third index is tube segment within peduncle
+    std::vector<std::vector<float>> peduncle_length; // actual sampled length for each peduncle - indexed as for floral_buds (see getFloralBudStorageIndex())
+    std::vector<std::vector<float>> peduncle_radius; // actual sampled radius for each peduncle - indexed as for floral_buds (see getFloralBudStorageIndex())
+    std::vector<std::vector<float>> peduncle_pitch; // actual sampled pitch for each peduncle - indexed as for floral_buds (see getFloralBudStorageIndex())
+    std::vector<std::vector<float>> peduncle_curvature; // actual sampled curvature for each peduncle - indexed as for floral_buds (see getFloralBudStorageIndex())
+    std::vector<std::vector<float>> peduncle_roll; // actual sampled roll for each peduncle - indexed as for floral_buds (see getFloralBudStorageIndex())
     float internode_pitch, internode_phyllotactic_angle;
     //! Azimuth of this phytomer around its shoot (radians): the phyllotactic angles of every phytomer up to and including this one, summed.
     /**
@@ -2045,6 +2047,25 @@ public:
      * \note The leaf must have geometry in the Context. A blade whose facet normals cancel, or a target the roll-pitch pair cannot reach, raises an error rather than leaving the leaf half-turned.
      */
     void setLeafNormal(uint petiole_index, uint leaf_index, const helios::vec3 &target_normal, const helios::vec3 *current_normal = nullptr);
+
+    //! Build one leaflet from this phytomer's leaf prototype
+    /**
+     * Calls the prototype function, first setting the petiolule radius from the petiole: the mature petiole radius where the leaflet attaches, divided by the
+     * leaflet's mature size, both at the distribution means of the shoot type's definition. Petiole girth and leaflet size grow in proportion, so the stalk
+     * then continues the petiole without a step at every age; only per-leaf random draws of size can put the two slightly apart.
+     * \param[in] leaves_per_petiole Number of leaflets on the petiole.
+     * \param[in] ind_from_tip Leaflet position counted from the tip (0 is the terminal leaflet).
+     * \return Object ID of the new leaflet.
+     */
+    uint buildLeafPrototype(int leaves_per_petiole, float ind_from_tip);
+
+    //! Draw a leaf object's petiolule with the petiole's material
+    /**
+     * The material of this phytomer's petiole is shared, so the stalk matches the petiole exactly and follows any edit to its material. If the phytomer has no
+     * petiole geometry, a material of the name the petiole's would have is created in the petiole colour. A leaf without a petiolule is left unchanged.
+     * \param[in] objID_leaf Leaf object whose petiolule primitives are assigned the material.
+     */
+    void assignPetioluleMaterial(uint objID_leaf);
 
     //! Label a freshly built leaf object's blade primitives "leaf" and colour its petiolule, as the cached prototypes are.
     /**
@@ -2471,6 +2492,14 @@ struct Shoot {
     helios::vec3 last_parent_internode_axis = helios::make_vec3(1e30f, 1e30f, 1e30f);
     float last_parent_node_radius = -1.f;
 
+    //! Horizontal heading the shoot set out on, used as the target of the azimuthal restoring force.
+    /** The tortuosity noise is applied to the shoot's direction with no memory of where it was going, so the
+     * azimuth performs an unanchored random walk and long shoots wander far off their original bearing. This
+     * records the initial horizontal heading so the walk can be pulled back towards it. Zero until the shoot
+     * has a well-defined horizontal direction.
+     */
+    helios::vec3 initial_heading_horizontal = helios::make_vec3(0, 0, 0);
+
     const int ID;
     const int parent_shoot_ID;
     const uint plantID;
@@ -2524,9 +2553,16 @@ struct Shoot {
     float phyllochron_min = 3.f;
     float elongation_max = 0.25;
 
+    //! Ornstein-Uhlenbeck tortuosity curvature state (deg/m) applied about the shoot bending axis
     float curvature_perturbation = 0;
+    //! Ornstein-Uhlenbeck tortuosity curvature state (deg/m) applied about the axis perpendicular to both the shoot axis and the bending axis
+    /**
+     * Retains its historical name for XML schema compatibility. It is no longer a rotation about the global vertical: together with
+     * curvature_perturbation it forms the two orthogonal components of an isotropic curvature perturbation in the shoot frame.
+     */
     float yaw_perturbation = 0;
 
+    //! Graviceptive gain beta (deg/m) -- rate of curvature production per unit inclination from vertical
     float gravitropic_curvature = 0;
 
     //! Target length of internodes grown at the apex; see PlantArchitecture::setShootInternodeLengthMax().
@@ -2571,6 +2607,25 @@ struct Shoot {
      * growth model, in the way phyllochron_instantaneous is modulated by the carbohydrate model.
      */
     float leaf_expansion_rate_instantaneous;
+
+    //! Growth-priority multiplier awarded by PlantArchitecture::updateGrowthPriority().
+    /** Sibling laterals do not grow alike in a real tree: a few well-lit ones become dominant, keep extending
+     * for years and thicken into structural limbs, while the rest stay short twigs. This factor scales the
+     * shoot's node ceiling and internode length so that the model can express that divergence. 1 is the
+     * undifferentiated default, so a plant that never calls updateGrowthPriority() behaves exactly as before.
+     */
+    float growth_priority = 1.f;
+
+    //! Shoot-type baseline that growth_priority scales, captured the first time the shoot is promoted.
+    /** The promoted parameters must be derived from this fixed baseline rather than from their own current
+     * values. Re-multiplying the live values each season compounds without bound -- capping growth_priority
+     * alone does not stop it, because the parameters are what actually grow.
+     */
+    bool growth_priority_baseline_set = false;
+    uint growth_priority_base_max_nodes = 0;
+    uint growth_priority_base_max_nodes_per_season = 0;
+    float growth_priority_base_internode_length_max = 0.f;
+    float growth_priority_base_bud_break_max = 0.f;
 
     std::vector<std::shared_ptr<Phytomer>> phytomers;
 
@@ -2624,6 +2679,53 @@ struct PlantInstance {
     //! Once a plant is static at max_age its geometry no longer changes, so it only needs to be
     //! pushed to the Context once rather than rebuilt every subsequent timestep.
     bool mature_geometry_synced = false;
+
+    //! Running maximum whole-plant leaf area reached during the current season (m^2), used to decide which sweep's grid to
+    //! keep as season_peak_shadow_grid. Reset to zero at dormancy onset.
+    float season_peak_leaf_area = 0.f;
+
+    //! Sparse shadow-propagation voxel grid, keyed by integer voxel coordinate, used by shade-based branch shedding. Each leaf
+    //! deposits shadow into a pyramid of voxels below it, so branches deep inside the crown see a high accumulated shadow
+    //! value while branches on the crown surface do not. Rebuilt once per advanceTime() sweep.
+    /**
+     * Implements the shadow-propagation model of Palubicki et al. (2009) "Self-organizing tree models for image synthesis",
+     * ACM Transactions on Graphics 28(3), as a cheap surrogate for light interception: no ray tracing or visibility queries
+     * are performed. A leaf in voxel (I,J,K) adds a*b^(-q) to every voxel (I+-p, J-q, K+-p) for q in [0,q_max], p in [0,q].
+     */
+    std::unordered_map<long long, float> shadow_grid;
+
+    //! Shadow grid captured at the seasonal peak of canopy density, for dormancy-requiring shoots.
+    /**
+     * Such shoots sample all of a season's buds at once when dormancy breaks, at which point the current canopy is empty and
+     * the live shadow_grid would be empty too. They therefore read this snapshot of the densest canopy state reached during
+     * the season just completed.
+     */
+    std::unordered_map<long long, float> season_peak_shadow_grid;
+
+    //! Depth (in voxels) of each occupied voxel beneath the crown surface, keyed the same way as shadow_grid.
+    /**
+     * The vertical shadow pyramid alone measures how much canopy sits ABOVE a point, so it penalizes a low branch on the
+     * outside of the crown just as heavily as one buried in the middle, even though the outer branch has open sky beside it.
+     * This companion field measures how far a point is from the crown's outer surface in any direction, which is the quantity
+     * that actually distinguishes "interior" from "exterior". A value of 0 means the voxel is on the crown surface.
+     *
+     * Computed by a breadth-first flood inward from the surface voxels, so the cost is linear in the number of occupied
+     * voxels and no hull fitting or distance transform over empty space is required.
+     */
+    std::unordered_map<long long, int> crown_depth_grid;
+
+    //! Crown-depth field captured alongside season_peak_shadow_grid.
+    std::unordered_map<long long, int> season_peak_crown_depth_grid;
+
+    //! Edge length (m) of the shadow grid voxels for this plant. Zero until the grid has been built at least once.
+    float shadow_grid_voxel_size = 0.f;
+
+    //! Number of leaves the shadow grid was last built from. Rebuilding is skipped while the leaf count is unchanged, since the
+    //! grid only feeds branch shedding and growth priority and does not need to track sub-timestep leaf expansion exactly.
+    size_t shadow_grid_leaf_count = SIZE_MAX;
+
+    //! Voxel size of season_peak_shadow_grid, which may differ from the live grid as the plant grows.
+    float season_peak_shadow_grid_voxel_size = 0.f;
 
     CarbohydrateParameters carb_parameters;
 
@@ -3903,6 +4005,35 @@ public:
     [[nodiscard]] bool isShootPruned(uint plantID, uint shootID) const;
 
     /**
+     * \brief Whether a shoot is structural wood -- the trunk or a scaffold -- rather than fine distal growth.
+     *
+     * Determined by shoot type: every type other than "proleptic" and "sylleptic" is treated as structural. Branching
+     * order does not work here, because the order-0 axis runs the whole length of the trunk, so every lateral borne on it
+     * is order 1 however small; on a grown almond that is over a hundred twigs against a handful of real scaffolds.
+     *
+     * \note A species whose fine shoots use other type names has all of its wood treated as structural, and so is never
+     * shed or reprioritised.
+     *
+     * \param[in] plantID ID of the plant.
+     * \param[in] shootID ID of the shoot within the plant.
+     * \return True if the shoot is structural wood and must not be shed or reprioritised.
+     */
+    [[nodiscard]] bool isStructuralShoot(uint plantID, uint shootID) const;
+
+    /**
+     * \brief Rank sibling shoots by light exposure and promote the best-lit few to a higher growth priority.
+     *
+     * Applies apical dominance among siblings: within each parent shoot, the laterals are ranked by the light
+     * their tips receive and the leading fraction is promoted while the shaded remainder is suppressed,
+     * changing both their node ceiling and their internode length. Promotion is cumulative across seasons, so
+     * a branch that leads repeatedly compounds into a structural limb while its siblings remain twigs.
+     * Structural shoots are excluded -- see isStructuralShoot().
+     *
+     * \param[in] plantID ID of the plant to update.
+     */
+    void updateGrowthPriority(uint plantID);
+
+    /**
      * \brief Retrieves the IDs of all shoots belonging to a specific plant.
      *
      * Shoot IDs are sequential indices (0-based) into the plant's shoot tree, in the order the shoots were created.
@@ -4050,10 +4181,31 @@ public:
 
     //! Sum the one-sided leaf area of all leaves in the plant
     /**
+     * Blade area only: a leaflet's petiolule (see \ref LeafPrototype::build_petiolule) belongs to the leaf object but is not counted.
      * \param[in] plantID ID of the plant instance.
      * \return Total one-sided leaf area of all leaves in the plant.
      */
     [[nodiscard]] float sumPlantLeafArea(uint plantID) const;
+
+    //! Get the one-sided blade area of a leaf object
+    /**
+     * A leaf object can carry a petiolule, the stalk joining a leaflet to its rachis (see \ref LeafPrototype::build_petiolule), whose primitives are
+     * labelled "petiolule" rather than "leaf". This reports the area of the object without them, which is what every leaf-area quantity of the plugin means.
+     * \param[in] leaf_objID Object ID of the leaf.
+     * \return One-sided blade area of the leaf (m^2).
+     */
+    [[nodiscard]] float getLeafBladeArea(uint leaf_objID) const;
+
+    //! Get the local light exposure at a point from a plant's shadow-propagation grid
+    /** Exposure runs from 0 (fully shaded) to 1 (unshaded), and is the quantity that drives shade-based branch shedding at the season
+        boundary: branches deep in the crown interior see a low exposure while branches on the crown surface
+        do not. Returns 1 when the plant has no canopy yet, or when the shadow grid is disabled because the carbon model is
+        active. Intended for inspection and testing.
+        \param[in] plantID Identifier of the plant.
+        \param[in] position Query position in world coordinates.
+        \return Local light exposure in [0,1].
+    */
+    [[nodiscard]] float getShadowLightExposureAtPoint(uint plantID, const helios::vec3 &position) const;
 
     //! Calculate the height of the last internode on the base stem/shoot
     /**
@@ -4143,7 +4295,7 @@ public:
      * \ref getPlantLeafCount().
      *
      * \param[in] plantID ID of the plant instance.
-     * \return One-sided surface area (m^2) of each leaf on the plant.
+     * \return One-sided blade area (m^2) of each leaf on the plant, excluding any petiolule (see \ref getLeafBladeArea()).
      */
     [[nodiscard]] std::vector<float> getPlantLeafAreas(uint plantID) const;
 
@@ -4864,6 +5016,36 @@ protected:
     void incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry);
     void incrementPhytomerInternodeGirth_carb(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry);
 
+    //! Rebuild the shadow-propagation voxel grid for a plant from its current leaf positions
+    /** Each leaf stamps a downward-widening pyramid of shadow into the grid, following Palubicki et al. (2009). This is a
+        cheap surrogate for light interception -- an additive scatter into a sparse array, with no ray tracing, visibility
+        queries or radiative solve. The voxel size is derived from the plant's current crown extent so that the grid
+        resolution tracks the plant as it grows.
+        \param[in] plantID Identifier of the plant.
+    */
+    void updateShadowGrid(uint plantID);
+
+    //! Local light exposure Q at a point, from a plant's shadow grid
+    /** Combines two signals: the vertical shadow accumulated from the canopy above the point, and how deep the point sits
+        beneath the crown surface. The first alone treats a low outer branch the same as a buried interior one; the second
+        supplies the lateral (diffuse side light) component that distinguishes them.
+        \param[in] grid Shadow grid to query.
+        \param[in] depth_grid Companion crown-depth field, giving each occupied voxel's depth beneath the crown surface.
+        \param[in] voxel_size Edge length (m) of the grid voxels.
+        \param[in] position Query position in world coordinates.
+        \return Light exposure in [0, C]; the unshaded value C when the grid is empty.
+    */
+    [[nodiscard]] float shadowGridLightExposure(const std::unordered_map<long long, float> &grid, const std::unordered_map<long long, int> &depth_grid, float voxel_size, const helios::vec3 &position) const;
+
+    //! Shed branches that are too shaded to pay for themselves
+    /** Self-pruning. Parameter-based growth has no branch mortality of its own, so without this every twig
+        ever produced survives indefinitely and the branching hierarchy carries far too fat a tail. Evaluated
+        at the dormancy boundary, when a branch has completed a full season in leaf and the peak shadow grid
+        still records the canopy it stood in. Structural wood is never shed -- see \ref isStructuralShoot().
+        \param[in] plantID ID of the plant to prune.
+    */
+    void shedShadedBranches(uint plantID);
+
     void pruneGroundCollisions(uint plantID);
 
     void pruneSolidBoundaryCollisions();
@@ -5036,6 +5218,10 @@ protected:
     void initializeAlmondTreeAldrichShoots();
 
     uint buildAlmondTreeAldrich(const helios::vec3 &base_position);
+
+    void initializeAlmondTreeIndependenceShoots();
+
+    uint buildAlmondTreeIndependence(const helios::vec3 &base_position);
 
     void initializeAlmondTreeWoodColonyShoots();
 

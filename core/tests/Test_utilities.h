@@ -629,6 +629,39 @@ TEST_CASE("Date and Time Logic") {
             DOCTEST_CHECK(d3.month == 2);
             DOCTEST_CHECK(d3.year == 2020);
         }
+        SUBCASE("incrementDay walks every day of the year") {
+            for (int year: {2024, 2023}) {
+                Date d(1, 1, year);
+                const int days_in_year = d.isLeapYear() ? 366 : 365;
+                for (int jd = 1; jd < days_in_year; jd++) {
+                    DOCTEST_INFO("year " << year << ", Julian day " << jd);
+                    DOCTEST_CHECK(Calendar2Julian(d) == d.JulianDay());
+                    DOCTEST_CHECK(d.JulianDay() == jd);
+                    const Date expected = Julian2Calendar(jd + 1, year);
+                    d.incrementDay();
+                    DOCTEST_CHECK(d == expected);
+                }
+                DOCTEST_CHECK(d == Date(31, 12, year));
+                d.incrementDay();
+                DOCTEST_CHECK(d == Date(1, 1, year + 1));
+            }
+
+            DOCTEST_CHECK(Calendar2Julian(Date(1, 8, 2024)) == 214);
+            DOCTEST_CHECK(Calendar2Julian(Date(1, 8, 2023)) == 213);
+        }
+        SUBCASE("Calendar2Julian and Julian2Calendar century leap years") {
+            DOCTEST_CHECK(Calendar2Julian(Date(1, 3, 2100)) == 60);
+            DOCTEST_CHECK(Julian2Calendar(60, 2100) == Date(1, 3, 2100));
+            DOCTEST_CHECK(Calendar2Julian(Date(1, 3, 2000)) == 61);
+            DOCTEST_CHECK(Julian2Calendar(61, 2000) == Date(1, 3, 2000));
+        }
+        SUBCASE("Calendar2Julian and Julian2Calendar invalid input") {
+            Date bad_month(1, 1, 2024);
+            bad_month.month = 13;
+            DOCTEST_CHECK_THROWS_AS(static_cast<void>(Calendar2Julian(bad_month)), std::runtime_error);
+            DOCTEST_CHECK_THROWS_AS(static_cast<void>(Julian2Calendar(366, 2023)), std::runtime_error);
+            DOCTEST_CHECK_NOTHROW(static_cast<void>(Julian2Calendar(366, 2024)));
+        }
         SUBCASE("isLeapYear") {
             Date d1(1, 1, 2020);
             DOCTEST_CHECK(d1.isLeapYear());
