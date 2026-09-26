@@ -1,5 +1,11 @@
 # Changelog
 
+# [1.3.89] 2026-XX-XX
+
+## Plant Architecture
+
+- Fixed plant growth with leaf angle distribution tracking aborting with `std::length_error` ("cannot create std::vector larger than max_size()") when a leaf blade held a facet of zero area. Such a facet, which a bent or folded leaf mesh can come to hold, has no defined normal; its NaN inclination overflowed the tracker's bin range. Cowpea tracks a leaf angle distribution by default, so `PlantArchitecture::advanceTime()` could fail on an ordinary cowpea canopy (1 in 300 scenes in one study). Zero-area facets are now left out wherever leaf facets are area-weighted or binned, which also keeps them from turning a leaf's mean normal into NaN in `PlantArchitecture::getPlantLeafInclinations()` and from undefined bin indices in `PlantArchitecture::getPlantLeafInclinationAngleDistribution()` and `PlantArchitecture::getPlantLeafAzimuthAngleDistribution()`.
+
 # [1.3.88] 2026-09-23
 
 ## Core

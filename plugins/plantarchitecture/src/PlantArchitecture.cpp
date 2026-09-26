@@ -3766,6 +3766,19 @@ static bool minimalRotationBetween(const vec3 &v, const vec3 &u, vec3 &axis, flo
     return true;
 }
 
+//! A facet's area and normal, if it has both. A facet whose vertices are collinear -- a sliver a bent or folded leaf mesh
+//! can come to hold -- has zero area and no defined normal (getPrimitiveNormal() returns NaN). It carries no leaf area,
+//! so leaving it out changes no area-weighted quantity, whereas using it turns every area-weighted sum it touches into
+//! NaN (0 * NaN) and every angle bin computed from it into an undefined float-to-integer conversion.
+static bool facetAreaAndNormal(const helios::Context *context_ptr, uint UUID, float &area, vec3 &normal) {
+    area = context_ptr->getPrimitiveArea(UUID);
+    if (!std::isfinite(area) || area <= 0.f) {
+        return false;
+    }
+    normal = context_ptr->getPrimitiveNormal(UUID);
+    return std::isfinite(normal.x) && std::isfinite(normal.y) && std::isfinite(normal.z);
+}
+
 // The direction a leaf's blade faces: the area-weighted mean normal over the primitives labelled "leaf".
 //
 // Deliberately not Context::getObjectAverageNormal(), which averages every primitive in the object without
@@ -3796,11 +3809,12 @@ static bool leafBladeNormal(const helios::Context *context_ptr, uint objID_leaf,
     normal = make_vec3(0, 0, 0);
     area = 0;
     for (const uint UUID: blade_UUIDs) {
-        const float primitive_area = context_ptr->getPrimitiveArea(UUID);
-        if (!std::isfinite(primitive_area)) {
+        float primitive_area;
+        vec3 facet_normal;
+        if (!facetAreaAndNormal(context_ptr, UUID, primitive_area, facet_normal)) {
             continue;
         }
-        normal = normal + primitive_area * context_ptr->getPrimitiveNormal(UUID);
+        normal = normal + primitive_area * facet_normal;
         area += primitive_area;
     }
 
@@ -6021,13 +6035,14 @@ static bool leafBladeNormalCached(const helios::Context *context_ptr, uint objID
     normal = make_vec3(0, 0, 0);
     area = 0;
     for (size_t facet = 0; facet < facet_count; facet++) {
-        const float primitive_area = context_ptr->getPrimitiveArea(blade.blade_UUIDs.at(facet));
-        if (!std::isfinite(primitive_area)) {
+        float primitive_area;
+        vec3 facet_normal;
+        if (!facetAreaAndNormal(context_ptr, blade.blade_UUIDs.at(facet), primitive_area, facet_normal)) {
+            // No area to contribute, and an offset of zero keeps it inside the kernel's bin range.
             blade.facet_area.at(facet) = 0.f;
             blade.facet_inclination_offset.at(facet) = 0.f;
             continue;
         }
-        const vec3 facet_normal = context_ptr->getPrimitiveNormal(blade.blade_UUIDs.at(facet));
         normal = normal + primitive_area * facet_normal;
         area += primitive_area;
         blade.facet_area.at(facet) = primitive_area;
@@ -6637,16 +6652,17 @@ std::vector<float> PlantArchitecture::getPlantLeafInclinationAngleDistribution(u
     std::vector<float> leaf_inclination_angles(Nbins, 0.f);
     const float dtheta = 0.5f * PI_F / float(Nbins);
     for (const uint UUID: leaf_UUIDs) {
-        const vec3 normal = context_ptr->getPrimitiveNormal(UUID);
+        float area;
+        vec3 normal;
+        if (!facetAreaAndNormal(context_ptr, UUID, area, normal)) {
+            continue;
+        }
         const float theta = acos_safe(fabs(normal.z));
-        const float area = context_ptr->getPrimitiveArea(UUID);
         uint bin = static_cast<uint>(std::floor(theta / dtheta));
         if (bin >= Nbins) {
             bin = Nbins - 1; // Ensure bin index is within range
         }
-        if (!std::isnan(area)) {
-            leaf_inclination_angles.at(bin) += area;
-        }
+        leaf_inclination_angles.at(bin) += area;
     }
 
     if (normalize) {
@@ -6692,16 +6708,17 @@ std::vector<float> PlantArchitecture::getPlantLeafAzimuthAngleDistribution(uint 
     std::vector<float> leaf_azimuth_angles(Nbins, 0.f);
     const float dtheta = 2.f * PI_F / static_cast<float>(Nbins);
     for (const uint UUID: leaf_UUIDs) {
-        const vec3 normal = context_ptr->getPrimitiveNormal(UUID);
+        float area;
+        vec3 normal;
+        if (!facetAreaAndNormal(context_ptr, UUID, area, normal)) {
+            continue;
+        }
         const float phi = cart2sphere(normal).azimuth;
-        const float area = context_ptr->getPrimitiveArea(UUID);
         uint bin = static_cast<uint>(std::floor(phi / dtheta));
         if (bin >= Nbins) {
             bin = Nbins - 1; // Ensure bin index is within range
         }
-        if (!std::isnan(area)) {
-            leaf_azimuth_angles.at(bin) += area;
-        }
+        leaf_azimuth_angles.at(bin) += area;
     }
 
     if (normalize) {
@@ -6834,8 +6851,12 @@ std::vector<float> PlantArchitecture::getPlantLeafInclinations(uint plantID) con
                     vec3 normal = make_vec3(0, 0, 0);
                     float area_total = 0;
                     for (const uint UUID: context_ptr->getObjectPrimitiveUUIDs(leaf_objID)) {
-                        const float area = context_ptr->getPrimitiveArea(UUID);
-                        normal = normal + area * context_ptr->getPrimitiveNormal(UUID);
+                        float area;
+                        vec3 facet_normal;
+                        if (!facetAreaAndNormal(context_ptr, UUID, area, facet_normal)) {
+                            continue;
+                        }
+                        normal = normal + area * facet_normal;
                         area_total += area;
                     }
                     if (area_total == 0.f) {

@@ -14373,6 +14373,63 @@ DOCTEST_TEST_CASE("PlantArchitecture leaf angle distribution tracking follows th
     }
 }
 
+//! A leaf blade of two triangles plus one sliver whose vertices are collinear: zero area, and so no defined normal. A
+//! scanned leaf mesh can come to hold such a facet once it has been bent and folded during growth.
+static uint LeafPrototypeWithZeroAreaFacet(Context *context_ptr, LeafPrototype *, int) {
+    std::vector<uint> UUIDs;
+    UUIDs.push_back(context_ptr->addTriangle(make_vec3(0, -0.5f, 0), make_vec3(1, -0.5f, 0), make_vec3(1, 0.5f, 0)));
+    UUIDs.push_back(context_ptr->addTriangle(make_vec3(0, -0.5f, 0), make_vec3(1, 0.5f, 0), make_vec3(0, 0.5f, 0)));
+    UUIDs.push_back(context_ptr->addTriangle(make_vec3(0.2f, 0, 0), make_vec3(0.5f, 0, 0), make_vec3(0.8f, 0, 0)));
+    context_ptr->setPrimitiveData(UUIDs, "object_label", "leaf");
+    return context_ptr->addPolymeshObject(UUIDs);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture leaf angle tracking tolerates a zero-area blade facet") {
+    // Tracking reads every blade facet's area and normal to place the blade's inclination spread into bins. A facet of
+    // zero area has a finite area but a NaN normal; its NaN inclination offset was converted to an int (undefined, in
+    // practice INT_MIN), the bin range overflowed, and growing the plant threw std::length_error ("cannot create
+    // std::vector larger than max_size()"). It stopped a cowpea twin scene from building at all. A zero-area facet
+    // carries no leaf area, so it has nothing to contribute to the distribution and must simply be left out.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    std::map<std::string, ShootParameters> shoots = plantarchitecture.getCurrentShootParameters();
+    for (auto &shoot_type: shoots) {
+        shoot_type.second.phytomer_parameters.leaf.prototype.prototype_function = LeafPrototypeWithZeroAreaFacet;
+        shoot_type.second.phytomer_parameters.leaf.prototype.flexibility = 0.f; // keep the sliver collinear
+    }
+    plantarchitecture.updateCurrentShootParameters(shoots);
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    plantarchitecture.enablePlantLeafElevationAngleDistributionTracking(plantID, 1.398f, 1.574f, 180.f);
+
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 20.f));
+
+    // The plant grew leaves, the degenerate facet really is in them (rotation can nudge a sliver off exact
+    // collinearity, but some leaves keep one with no defined normal), and the reported distribution is still a
+    // distribution.
+    const std::vector<uint> leaves = plantarchitecture.getPlantLeafObjectIDs(plantID);
+    DOCTEST_REQUIRE(!leaves.empty());
+    size_t facets_without_normal = 0;
+    for (const uint objID: leaves) {
+        for (const uint UUID: context.getObjectPrimitiveUUIDs(objID)) {
+            const vec3 n = context.getPrimitiveNormal(UUID);
+            facets_without_normal += !(std::isfinite(n.x) && std::isfinite(n.y) && std::isfinite(n.z));
+        }
+    }
+    DOCTEST_CHECK(facets_without_normal > 0);
+    const std::vector<float> inclination = plantarchitecture.getPlantLeafInclinationAngleDistribution(plantID, 18);
+    float total = 0.f;
+    bool all_finite = true;
+    for (const float fraction: inclination) {
+        all_finite = all_finite && std::isfinite(fraction);
+        total += fraction;
+    }
+    DOCTEST_CHECK(all_finite);
+    DOCTEST_CHECK(total == doctest::Approx(1.f).epsilon(1e-3));
+}
+
 DOCTEST_TEST_CASE("PlantArchitecture leaf angle distributions count only blade facets") {
     // The leaf angle distribution is a distribution over the leaf SURFACE, so it is accumulated facet by
     // facet: a curved blade genuinely spans a range of inclinations and that spread is the quantity being
