@@ -6,6 +6,10 @@
 
 - Fixed plant growth with leaf angle distribution tracking aborting with `std::length_error` ("cannot create std::vector larger than max_size()") when a leaf blade held a facet of zero area. Such a facet, which a bent or folded leaf mesh can come to hold, has no defined normal; its NaN inclination overflowed the tracker's bin range. Cowpea tracks a leaf angle distribution by default, so `PlantArchitecture::advanceTime()` could fail on an ordinary cowpea canopy (1 in 300 scenes in one study). Zero-area facets are now left out wherever leaf facets are area-weighted or binned, which also keeps them from turning a leaf's mean normal into NaN in `PlantArchitecture::getPlantLeafInclinations()` and from undefined bin indices in `PlantArchitecture::getPlantLeafInclinationAngleDistribution()` and `PlantArchitecture::getPlantLeafAzimuthAngleDistribution()`.
 
+## Radiation
+
+- Fixed the OptiX 8 backend reading the transparency mask of a textured triangle upside down. A triangle's texture coordinate v was flipped before the mask lookup, which flips it again, so the cut-out was mirrored top to bottom relative to the texture image, to textured patches, to the OptiX 6 and Vulkan backends, and to plug-ins that rasterize or ray-cast the same geometry. Rays stopped on the transparent part of such a triangle and passed through its opaque part: shadows and camera images of triangle-meshed textured leaves, such as those PlantArchitecture builds, were mirrored and did not line up with label maps or LiDAR hits at leaf edges.
+
 # [1.3.88] 2026-09-23
 
 ## Core

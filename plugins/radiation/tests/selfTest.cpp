@@ -1710,6 +1710,49 @@ GPU_TEST_CASE("RadiationModel Texture Mapping") {
     DOCTEST_CHECK(fabsf(F0 - 1.f) <= error_threshold);
 }
 
+GPU_TEST_CASE("RadiationModel texture mask orientation is the same on triangles and patches") {
+    // A transparency mask is read with texture coordinate v = 1 at the image's top row (the Context convention, shared
+    // by the patch path, the rasterizing plug-ins and CollisionDetection). A textured triangle that read it the other
+    // way up would mirror its cut-out and cast its shadow where the image says it is transparent. The disk masks the
+    // other tests use are symmetric top to bottom and cannot see this, so mask_top_half.png is opaque only in the top
+    // half of the image, i.e. where v > 0.5.
+    Context context;
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    const uint source = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.addRadiationBand("SW");
+    radiation.setDirectRayCount("SW", 1000);
+    radiation.disableEmission("SW");
+    radiation.setScatteringDepth("SW", 0);
+    radiation.disableMessages();
+    radiation.setSourceFlux(source, "SW", 1.f);
+
+    // Occluders at z = 1 whose texture coordinates equal their (x, y) position within a unit square: a triangle over
+    // the lower-left half of [0,1]^2, and a patch over [2,3] x [0,1] (default coordinates, v = 1 along its top edge).
+    context.addTriangle(make_vec3(0, 0, 1), make_vec3(1, 0, 1), make_vec3(0, 1, 1), "plugins/radiation/mask_top_half.png", make_vec2(0, 0), make_vec2(1, 0), make_vec2(0, 1));
+    context.addPatch(make_vec3(2.5, 0.5, 1), make_vec2(1, 1), make_SphericalCoord(0, 0), "plugins/radiation/mask_top_half.png");
+
+    // Receivers at z = 0 under each occluder's opaque half (v 0.65-0.75) and its transparent half (v 0.20-0.30).
+    const vec2 receiver_size = make_vec2(0.1f, 0.1f);
+    const uint triangle_under_opaque = context.addPatch(make_vec3(0.1, 0.7, 0), receiver_size);
+    const uint triangle_under_clear = context.addPatch(make_vec3(0.1, 0.25, 0), receiver_size);
+    const uint patch_under_opaque = context.addPatch(make_vec3(2.5, 0.7, 0), receiver_size);
+    const uint patch_under_clear = context.addPatch(make_vec3(2.5, 0.25, 0), receiver_size);
+
+    radiation.updateGeometry();
+    radiation.runBand("SW");
+
+    float flux_triangle_opaque, flux_triangle_clear, flux_patch_opaque, flux_patch_clear;
+    context.getPrimitiveData(triangle_under_opaque, "radiation_flux_SW", flux_triangle_opaque);
+    context.getPrimitiveData(triangle_under_clear, "radiation_flux_SW", flux_triangle_clear);
+    context.getPrimitiveData(patch_under_opaque, "radiation_flux_SW", flux_patch_opaque);
+    context.getPrimitiveData(patch_under_clear, "radiation_flux_SW", flux_patch_clear);
+
+    DOCTEST_CHECK(flux_patch_opaque < 0.02f);
+    DOCTEST_CHECK(flux_patch_clear > 0.98f);
+    DOCTEST_CHECK(flux_triangle_opaque < 0.02f);
+    DOCTEST_CHECK(flux_triangle_clear > 0.98f);
+}
+
 GPU_TEST_CASE("RadiationModel Homogeneous Canopy of Patches") {
     float error_threshold = 0.005;
     float sigma = 5.6703744E-8;

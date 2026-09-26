@@ -472,7 +472,7 @@ extern "C" __global__ void __intersection__patch() {
                 float2 uv = make_float2(uv0.x + beta * (uv1.x - uv0.x) + gamma * (uv2.x - uv0.x),
                                         uv0.y + beta * (uv1.y - uv0.y) + gamma * (uv2.y - uv0.y));
                 uv_u = uv.x;
-                uv_v = 1.f - uv.y; // Y-flip to match OptiX 6 convention
+                uv_v = uv.y; // sampleMask() applies the image-row flip; flipping here too mirrored triangle masks
             } else {
                 // Parametric UV: use barycentric coordinates directly
                 uv_u = beta + gamma; // along u-axis (v1 is at u=1)
@@ -1376,7 +1376,7 @@ extern "C" __global__ void __raygen__direct() {
                                 uv0.x + beta * (uv1.x - uv0.x) + gamma * (uv2.x - uv0.x),
                                 uv0.y + beta * (uv1.y - uv0.y) + gamma * (uv2.y - uv0.y));
                             uv_u = uv.x;
-                            uv_v = 1.f - uv.y; // Y-flip (matches intersection convention)
+                            uv_v = uv.y; // sampleMask() applies the image-row flip (matches the intersection program)
                         } else {
                             uv_u = sp.y;  // = beta + gamma
                             uv_v = sp.x;  // = gamma
@@ -1650,7 +1650,7 @@ extern "C" __global__ void __raygen__diffuse() {
                                 uv0.x + beta * (uv1.x - uv0.x) + gamma * (uv2.x - uv0.x),
                                 uv0.y + beta * (uv1.y - uv0.y) + gamma * (uv2.y - uv0.y));
                             uv_u = uv.x;
-                            uv_v = 1.f - uv.y;
+                            uv_v = uv.y; // sampleMask() applies the image-row flip
                         } else {
                             uv_u = sp.y;
                             uv_v = sp.x;

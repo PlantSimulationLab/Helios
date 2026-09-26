@@ -691,6 +691,7 @@ endif(HAVE_VULKAN)
 # ========== End Vulkan Backend Configuration ==========
 
 file( COPY include/disk.png DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/)
+file( COPY include/mask_top_half.png DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/)
 file( COPY spectral_data DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/ )
 file( COPY camera_light_models DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/ )
 file( COPY camera_library DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/ )
