@@ -3508,6 +3508,38 @@ vec3 worldToLocal(const vec3 &world_point, const vec3 &xform_position, float qw,
     return result;
 }
 
+// Inverse of worldToLocal: transform a point in a link's local frame into world space.
+vec3 localToWorld(const vec3 &local_point, const USDLink &link) {
+    const vec3 &v = local_point;
+    vec3 u(link.qx, link.qy, link.qz);
+    vec3 uv;
+    uv.x = u.y * v.z - u.z * v.y;
+    uv.y = u.z * v.x - u.x * v.z;
+    uv.z = u.x * v.y - u.y * v.x;
+    vec3 uuv;
+    uuv.x = u.y * uv.z - u.z * uv.y;
+    uuv.y = u.z * uv.x - u.x * uv.z;
+    uuv.z = u.x * uv.y - u.y * uv.x;
+    vec3 result;
+    result.x = v.x + 2.f * (link.qw * uv.x + uuv.x);
+    result.y = v.y + 2.f * (link.qw * uv.y + uuv.y);
+    result.z = v.z + 2.f * (link.qw * uv.z + uuv.z);
+    return result + link.position;
+}
+
+// Joint anchor on the parent link at the point where the child actually starts. A child does not always begin at
+// the parent's tip: a lateral shoot branches off at a node, and segments shorter than min_segment_length are dropped.
+vec3 parentAnchorAt(const vec3 &world_point, const USDLink &parent) {
+    return worldToLocal(world_point, parent.position, parent.qw, parent.qx, parent.qy, parent.qz);
+}
+
+// Joint anchor on a leaf/fruit/flower link at the parent's tip. Organ links are positioned at their mesh centroid, so
+// the anchor has to be expressed relative to it rather than placed at the organ's origin.
+vec3 organAnchorAtParentTip(const USDLink &parent, const USDLink &organ) {
+    vec3 tip = localToWorld(make_vec3(0, 0, parent.half_length), parent);
+    return worldToLocal(tip, organ.position, organ.qw, organ.qx, organ.qy, organ.qz);
+}
+
 // Build a visual mesh for a tube segment by extracting the primitives belonging to
 // that segment from the tube compound object. For a tube with N nodes and R radial
 // subdivisions, segment i (between node i and node i+1) has 2*R triangles.
@@ -3798,7 +3830,7 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                 } else {
                     joint.name = "J_" + data.links[parent_idx].name + "_to_" + link.name;
                     joint.parent_link_index = parent_idx;
-                    joint.local_pos_parent = vec3(0, 0, data.links[parent_idx].half_length);
+                    joint.local_pos_parent = parentAnchorAt(start, data.links[parent_idx]);
                     joint.local_pos_child = vec3(0, 0, -half_len);
 
                     float avg_radius = (data.links[parent_idx].radius + seg_radius) / 2.f;
@@ -3904,7 +3936,7 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                     joint.name = "J_" + data.links[parent_idx].name + "_to_" + link.name;
                     joint.parent_link_index = parent_idx;
                     joint.child_link_index = this_link_idx;
-                    joint.local_pos_parent = vec3(0, 0, data.links[parent_idx].half_length);
+                    joint.local_pos_parent = parentAnchorAt(start, data.links[parent_idx]);
                     joint.local_pos_child = vec3(0, 0, -half_len);
                     float avg_radius = (data.links[parent_idx].radius + seg_radius) / 2.f;
                     joint.stiffness = computeJointStiffness(params.elastic_modulus, avg_radius, length);
@@ -3970,7 +4002,7 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                         joint.parent_link_index = parent_idx;
                         joint.child_link_index = this_link_idx;
                         joint.local_pos_parent = vec3(0, 0, data.links[parent_idx].half_length);
-                        joint.local_pos_child = vec3(0, 0, 0);
+                        joint.local_pos_child = organAnchorAtParentTip(data.links[parent_idx], data.links[this_link_idx]);
                         joint.stiffness = params.organ_spring_stiffness;
                         joint.damping = params.organ_spring_damping;
                         joint.is_fixed = false;
@@ -4059,7 +4091,7 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                             joint.name = "J_" + data.links[parent_idx].name + "_to_" + link.name;
                             joint.parent_link_index = parent_idx;
                             joint.child_link_index = this_link_idx;
-                            joint.local_pos_parent = vec3(0, 0, data.links[parent_idx].half_length);
+                            joint.local_pos_parent = parentAnchorAt(start, data.links[parent_idx]);
                             joint.local_pos_child = vec3(0, 0, -half_len);
                             float avg_radius = (data.links[parent_idx].radius + seg_radius) / 2.f;
                             joint.stiffness = computeJointStiffness(params.elastic_modulus, avg_radius, length);
@@ -4101,7 +4133,7 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                         uint organ_objID = fbud.inflorescence_objIDs[inf_idx];
 
                         USDLink link;
-                        link.name = "S" + std::to_string(shoot->ID) + "_P" + std::to_string(phytomer_idx) + "_" + organ_label + std::to_string(inf_idx);
+                        link.name = "S" + std::to_string(shoot->ID) + "_P" + std::to_string(phytomer_idx) + "_Ped" + std::to_string(petiole_idx) + "_B" + std::to_string(bud_idx) + "_" + organ_label + std::to_string(inf_idx);
                         link.link_type = USD_LINK_MESH;
                         link.qw = 1; link.qx = 0; link.qy = 0; link.qz = 0;
                         link.radius = 0;
@@ -4120,7 +4152,7 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                         joint.parent_link_index = organ_attach;
                         joint.child_link_index = this_link_idx;
                         joint.local_pos_parent = vec3(0, 0, data.links[organ_attach].half_length);
-                        joint.local_pos_child = vec3(0, 0, 0);
+                        joint.local_pos_child = organAnchorAtParentTip(data.links[organ_attach], data.links[this_link_idx]);
                         joint.stiffness = params.organ_spring_stiffness;
                         joint.damping = params.organ_spring_damping;
                         joint.is_fixed = false;

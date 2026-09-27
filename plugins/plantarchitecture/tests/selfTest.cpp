@@ -5111,6 +5111,161 @@ DOCTEST_TEST_CASE("USD export organs") {
     std::remove(filename.c_str());
 }
 
+DOCTEST_TEST_CASE("USD export joint anchors coincide") {
+    // Each joint's anchor on body0 (localPos0) and on body1 (localPos1) must map to the same world point.
+    // Otherwise PhysX pulls the bodies together when the simulation starts and the plant jumps out of its rest pose.
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 500);
+
+    std::string filename = "test_usd_joint_anchors.usda";
+    plantarchitecture.writePlantStructureUSD(plantID, filename);
+
+    std::ifstream file(filename);
+    DOCTEST_REQUIRE(file.is_open());
+
+    auto parse_tuple = [](const std::string &line) {
+        std::vector<float> values;
+        std::string inside = line.substr(line.find('(') + 1, line.find(')') - line.find('(') - 1);
+        std::stringstream ss(inside);
+        std::string item;
+        while (std::getline(ss, item, ',')) {
+            values.push_back(std::stof(item));
+        }
+        return values;
+    };
+    auto quoted_name = [](const std::string &line) {
+        size_t first = line.find('"');
+        return line.substr(first + 1, line.find('"', first + 1) - first - 1);
+    };
+    auto link_name = [](const std::string &line) {
+        size_t start = line.find("/Links/") + 7;
+        return line.substr(start, line.find('>') - start);
+    };
+    // Rotate v by unit quaternion (w, x, y, z)
+    auto rotate = [](const std::vector<float> &q, const vec3 &v) {
+        vec3 u(q[1], q[2], q[3]);
+        vec3 uv = cross(u, v);
+        vec3 uuv = cross(u, uv);
+        return v + 2.f * (q[0] * uv + uuv);
+    };
+
+    struct Pose {
+        vec3 position;
+        std::vector<float> orient;
+    };
+    struct JointAnchors {
+        std::string name, body0, body1;
+        vec3 pos0, pos1;
+    };
+    std::map<std::string, Pose> poses;
+    std::vector<JointAnchors> joints;
+
+    std::string line, current_xform;
+    bool in_joint = false;
+    JointAnchors joint;
+    while (std::getline(file, line)) {
+        if (line.find("def Xform \"") != std::string::npos) {
+            current_xform = quoted_name(line);
+        } else if (line.find("float3 xformOp:translate = ") != std::string::npos) {
+            std::vector<float> t = parse_tuple(line);
+            poses[current_xform].position = make_vec3(t[0], t[1], t[2]);
+        } else if (line.find("quatf xformOp:orient = ") != std::string::npos) {
+            poses[current_xform].orient = parse_tuple(line);
+        } else if (line.find("def PhysicsSphericalJoint \"") != std::string::npos) {
+            in_joint = true;
+            joint = JointAnchors();
+            joint.name = quoted_name(line);
+        } else if (in_joint && line.find("rel physics:body0") != std::string::npos) {
+            joint.body0 = link_name(line);
+        } else if (in_joint && line.find("rel physics:body1") != std::string::npos) {
+            joint.body1 = link_name(line);
+        } else if (in_joint && line.find("physics:localPos0") != std::string::npos) {
+            std::vector<float> p = parse_tuple(line);
+            joint.pos0 = make_vec3(p[0], p[1], p[2]);
+        } else if (in_joint && line.find("physics:localPos1") != std::string::npos) {
+            std::vector<float> p = parse_tuple(line);
+            joint.pos1 = make_vec3(p[0], p[1], p[2]);
+            joints.push_back(joint);
+            in_joint = false;
+        }
+    }
+    file.close();
+    std::remove(filename.c_str());
+
+    DOCTEST_REQUIRE(!joints.empty());
+
+    int leaf_joints = 0;
+    int fruit_joints = 0;
+    int misaligned = 0;
+    for (const auto &j : joints) {
+        DOCTEST_REQUIRE(poses.count(j.body0) == 1);
+        DOCTEST_REQUIRE(poses.count(j.body1) == 1);
+        const Pose &p0 = poses[j.body0];
+        const Pose &p1 = poses[j.body1];
+        vec3 anchor0 = p0.position + rotate(p0.orient, j.pos0);
+        vec3 anchor1 = p1.position + rotate(p1.orient, j.pos1);
+        if ((anchor0 - anchor1).magnitude() > 1e-3f) {
+            misaligned++;
+        }
+        if (j.body1.find("_Leaf") != std::string::npos) {
+            leaf_joints++;
+        } else if (j.body1.find("_Fruit") != std::string::npos) {
+            fruit_joints++;
+        }
+    }
+
+    DOCTEST_CHECK(misaligned == 0);
+    // Make sure the organ joints are actually covered
+    DOCTEST_CHECK(leaf_joints > 0);
+    DOCTEST_CHECK(fruit_joints > 0);
+}
+
+DOCTEST_TEST_CASE("USD export link names are unique") {
+    // A phytomer can carry more than one fruiting bud. Their fruit links must still get distinct names, or the
+    // .usda file fails to load with a "Duplicate prim" error. This seed grows such a phytomer on the apple model.
+    Context context;
+    context.seedRandomGenerator(9);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 560);
+
+    std::string filename = "test_usd_unique_names.usda";
+    plantarchitecture.writePlantStructureUSD(plantID, filename);
+
+    std::ifstream file(filename);
+    DOCTEST_REQUIRE(file.is_open());
+
+    std::set<std::string> names;
+    std::vector<std::string> duplicates;
+    int fruit_links = 0;
+    std::string line;
+    while (std::getline(file, line)) {
+        size_t pos = line.find("def Xform \"");
+        if (pos == std::string::npos) {
+            continue;
+        }
+        size_t start = pos + 11;
+        std::string name = line.substr(start, line.find('"', start) - start);
+        if (!names.insert(name).second) {
+            duplicates.push_back(name);
+        }
+        if (name.find("Fruit") != std::string::npos) {
+            fruit_links++;
+        }
+    }
+    file.close();
+    std::remove(filename.c_str());
+
+    DOCTEST_CHECK(fruit_links > 0);
+    DOCTEST_CHECK(duplicates.empty());
+}
+
 DOCTEST_TEST_CASE("USD export minimum segment filtering") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
