@@ -117,6 +117,14 @@ namespace helios {
         static size_t getRadiationInTopBufferSize(const RadiationModel &model) {
             return model.backend->getRadiationInTopBufferSize();
         }
+        //! Host-side material arrays last handed to the backend, laid out [source slot][primitive][band]
+        static const RayTracingMaterial &getMaterialData(RadiationModel &model) {
+            return model.getMaterialData();
+        }
+        //! Per-source data last handed to the backend, including the camera weights of the source fluxes (fluxes_cam, [launched band][camera])
+        static const std::vector<RayTracingSource> &getSourceData(RadiationModel &model) {
+            return model.getSourceData();
+        }
     };
 } // namespace helios
 
@@ -6090,6 +6098,389 @@ GPU_TEST_CASE("RadiationModel - camera radiance matches Stefan-Boltzmann and is 
     }
 }
 
+GPU_TEST_CASE("RadiationModel - emission band with wavelength bounds emits only the in-band Planck fraction") {
+    // An emission band without wavelength bounds emits the full sigma*T^4, while a band with bounds emits sigma*T^4 times the fraction of the Planck spectrum inside the bounds. The same isolated
+    // blackbody patch is rendered in both bands by one camera, so the ratio of the two images on any pixel covering the patch is the analytic in-band fraction (about 0.40 for 8-14 um at 350 K).
+
+    Context context;
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+    const float temperature = 350.f;
+    context.setPrimitiveData(patch, "temperature", temperature);
+    context.setPrimitiveData(patch, "emissivity_TH", 1.f);
+    context.setPrimitiveData(patch, "emissivity_TH_window", 1.f);
+
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiationmodel.disableMessages();
+
+    radiationmodel.addRadiationBand("TH");
+    radiationmodel.addRadiationBand("TH_window", 8000.f, 14000.f);
+    for (const std::string &band: std::vector<std::string>{"TH", "TH_window"}) {
+        radiationmodel.enableEmission(band);
+        radiationmodel.setScatteringDepth(band, 1);
+        radiationmodel.setDiffuseRayCount(band, 100);
+    }
+
+    CameraProperties camera_props;
+    camera_props.camera_resolution = make_int2(32, 32);
+    camera_props.HFOV = 30.f;
+    camera_props.lens_diameter = 0.f;
+    camera_props.exposure = "manual";
+
+    radiationmodel.addRadiationCamera("thermal_cam", {"TH", "TH_window"}, make_vec3(0, 0, 10), make_vec3(0, 0, 0), camera_props, 1);
+    radiationmodel.updateGeometry();
+    radiationmodel.runBand(std::vector<std::string>{"TH", "TH_window"});
+
+    std::vector<float> broadband_pixels = radiationmodel.getCameraPixelData("thermal_cam", "TH");
+    std::vector<float> window_pixels = radiationmodel.getCameraPixelData("thermal_cam", "TH_window");
+    DOCTEST_REQUIRE(broadband_pixels.size() == window_pixels.size());
+
+    size_t brightest_pixel = std::distance(broadband_pixels.begin(), std::max_element(broadband_pixels.begin(), broadband_pixels.end()));
+    DOCTEST_REQUIRE(broadband_pixels.at(brightest_pixel) > 0.f);
+
+    const float sigma = 5.670374419e-8f;
+    const float expected_broadband_radiance = sigma * powf(temperature, 4) / float(M_PI);
+    const float expected_fraction = blackbodyBandFraction(8000.f, 14000.f, temperature);
+    const float window_fraction = window_pixels.at(brightest_pixel) / broadband_pixels.at(brightest_pixel);
+
+    DOCTEST_INFO("broadband radiance " << broadband_pixels.at(brightest_pixel) << " (expected " << expected_broadband_radiance << "), in-band fraction " << window_fraction << " (expected " << expected_fraction << ")");
+    DOCTEST_CHECK(std::fabs(broadband_pixels.at(brightest_pixel) / expected_broadband_radiance - 1.f) < 0.05f);
+    DOCTEST_CHECK(std::fabs(window_fraction / expected_fraction - 1.f) < 0.01f);
+}
+
+GPU_TEST_CASE("RadiationModel - emission band starting at zero wavelength emits only its in-band Planck fraction") {
+    // Regression test: a band's bounds count as set when either is non-zero. A band from 0 nm was taken to have no bounds (both had to be non-zero), so it emitted the full sigma*T^4 instead of the fraction of the Planck
+    // spectrum below its upper bound (about 14% below 7 um at 350 K).
+    Context context;
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+    const float temperature = 350.f;
+    context.setPrimitiveData(patch, "temperature", temperature);
+    context.setPrimitiveData(patch, "emissivity_TH", 1.f);
+    context.setPrimitiveData(patch, "emissivity_below_7um", 1.f);
+
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiationmodel.disableMessages();
+    radiationmodel.addRadiationBand("TH");
+    radiationmodel.addRadiationBand("below_7um", 0.f, 7000.f);
+    for (const std::string &band: std::vector<std::string>{"TH", "below_7um"}) {
+        radiationmodel.enableEmission(band);
+        radiationmodel.setScatteringDepth(band, 1);
+        radiationmodel.setDiffuseRayCount(band, 100);
+    }
+
+    CameraProperties camera_props;
+    camera_props.camera_resolution = make_int2(32, 32);
+    camera_props.HFOV = 30.f;
+    camera_props.lens_diameter = 0.f;
+    camera_props.exposure = "manual";
+
+    radiationmodel.addRadiationCamera("thermal_cam", {"TH", "below_7um"}, make_vec3(0, 0, 10), make_vec3(0, 0, 0), camera_props, 1);
+    radiationmodel.updateGeometry();
+    radiationmodel.runBand(std::vector<std::string>{"TH", "below_7um"});
+
+    std::vector<float> broadband_pixels = radiationmodel.getCameraPixelData("thermal_cam", "TH");
+    std::vector<float> band_pixels = radiationmodel.getCameraPixelData("thermal_cam", "below_7um");
+    size_t brightest_pixel = std::distance(broadband_pixels.begin(), std::max_element(broadband_pixels.begin(), broadband_pixels.end()));
+    DOCTEST_REQUIRE(broadband_pixels.at(brightest_pixel) > 0.f);
+
+    // The fraction of the Planck spectrum below 1 nm is zero at float precision
+    const float expected_fraction = blackbodyBandFraction(1.f, 7000.f, temperature);
+    const float band_fraction = band_pixels.at(brightest_pixel) / broadband_pixels.at(brightest_pixel);
+    DOCTEST_INFO("in-band fraction " << band_fraction << " (expected " << expected_fraction << ")");
+    DOCTEST_CHECK(std::fabs(band_fraction / expected_fraction - 1.f) < 0.01f);
+}
+
+GPU_TEST_CASE("RadiationModel - reflectivity and transmissivity spectra are integrated over a band starting at zero wavelength") {
+    // Regression test: a band's bounds count as set when either is non-zero. The spectrum integration took a band from 0 nm to have no bounds and silently gave the primitive the default reflectivity and
+    // transmissivity instead of its spectra. With a flat source spectrum over 300-800 nm the band receives 400 W/m^2, of which 1 - 0.3 - 0.2 is absorbed.
+    Context context;
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setGlobalData("flat_reflectivity_03", std::vector<vec2>{make_vec2(300, 0.3f), make_vec2(800, 0.3f)});
+    context.setGlobalData("flat_transmissivity_02", std::vector<vec2>{make_vec2(300, 0.2f), make_vec2(800, 0.2f)});
+    context.setPrimitiveData(patch, "reflectivity_spectrum", "flat_reflectivity_03");
+    context.setPrimitiveData(patch, "transmissivity_spectrum", "flat_transmissivity_02");
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("below_700", 0.f, 700.f);
+    radiation.disableEmission("below_700");
+    radiation.setScatteringDepth("below_700", 1);
+    radiation.setDirectRayCount("below_700", 10000);
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceSpectrum(sun, std::vector<vec2>{make_vec2(300, 1.f), make_vec2(800, 1.f)});
+    radiation.updateGeometry();
+    radiation.runBand("below_700");
+
+    float absorbed_flux;
+    context.getPrimitiveData(patch, "radiation_flux_below_700", absorbed_flux);
+    DOCTEST_INFO("absorbed flux " << absorbed_flux << " W/m^2 (expected 200)");
+    DOCTEST_CHECK(std::fabs(absorbed_flux - 200.f) / 200.f < 0.01f);
+
+    // Negative bounds are rejected, and bounds given when copying a band are validated like those of a new band
+    DOCTEST_CHECK_THROWS_AS(radiation.addRadiationBand("negative", -10.f, 700.f), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(radiation.copyRadiationBand("below_700", "negative_copy", -10.f, 700.f), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(radiation.copyRadiationBand("below_700", "narrow_copy", 500.f, 500.5f), std::runtime_error);
+    DOCTEST_CHECK_NOTHROW(radiation.copyRadiationBand("below_700", "unbounded_copy", 0.f, 0.f));
+}
+
+GPU_TEST_CASE("RadiationModel - camera sensor atmosphere") {
+    // Two identical cameras see the same uniformly lit patch in one runBand() call, one of them through a sensor atmosphere, so every pixel of the second must equal L_path + T*pixel + L_adj of the first. The
+    // atmosphere spectra are synthetic, with band integrals known analytically: a flat path radiance of 0.01 W/m^2/sr/nm, adjacency radiance of 0.002, and upward transmittance falling linearly with wavelength.
+    Context context;
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(200, 200));
+    context.setPrimitiveData(patch, "reflectivity_VIS", 0.3f);
+    context.setPrimitiveData(patch, "reflectivity_NIR", 0.3f);
+
+    std::vector<vec2> path_radiance, adjacency_radiance, upward_direct, upward_diffuse, spherical_albedo, global_irradiance;
+    for (float wavelength = 300.f; wavelength <= 2600.f; wavelength += 10.f) {
+        path_radiance.push_back(make_vec2(wavelength, 0.01f));
+        adjacency_radiance.push_back(make_vec2(wavelength, 0.002f));
+        upward_direct.push_back(make_vec2(wavelength, 0.9f - 0.0002f * (wavelength - 300.f)));
+        upward_diffuse.push_back(make_vec2(wavelength, 0.05f));
+        spherical_albedo.push_back(make_vec2(wavelength, 0.1f));
+        global_irradiance.push_back(make_vec2(wavelength, 1.f));
+    }
+    context.setGlobalData("atm_path_radiance", path_radiance);
+    context.setGlobalData("atm_adjacency_radiance", adjacency_radiance);
+    context.setGlobalData("atm_upward_direct_transmittance", upward_direct);
+    context.setGlobalData("atm_upward_diffuse_transmittance", upward_diffuse);
+    context.setGlobalData("atm_spherical_albedo", spherical_albedo);
+    context.setGlobalData("atm_global_irradiance", global_irradiance);
+    context.setGlobalData("atm_direction_to_sensor", make_vec3(0, 0, 1));
+    // Triangular response peaking at 800 nm: it integrates to 100 nm and, being symmetric, averages the linear transmittance to its value at 800 nm
+    context.setGlobalData("nir_response", std::vector<vec2>{make_vec2(700, 0), make_vec2(800, 1), make_vec2(900, 0)});
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("VIS", 400.f, 700.f);
+    radiation.addRadiationBand("NIR", 700.f, 900.f);
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    for (const std::string &band: std::vector<std::string>{"VIS", "NIR"}) {
+        radiation.disableEmission(band);
+        radiation.setScatteringDepth(band, 1);
+        radiation.setSourceFlux(sun, band, 500.f);
+    }
+
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = make_int2(8, 8);
+    camera_properties.HFOV = 10.f;
+    camera_properties.lens_diameter = 0.f;
+    camera_properties.exposure = "manual";
+    camera_properties.white_balance = "off";
+    for (const char *camera: {"plain", "satellite"}) {
+        radiation.addRadiationCamera(camera, {"VIS", "NIR"}, make_vec3(0, 0, 10), make_vec3(0, 0, 0), camera_properties, 1);
+        radiation.setCameraSpectralResponse(camera, "NIR", "nir_response");
+    }
+
+    SUBCASE("pixels are converted to radiance above the atmosphere") {
+        radiation.enableCameraAtmosphere("satellite", "atm");
+        radiation.updateGeometry();
+        radiation.runBand(std::vector<std::string>{"VIS", "NIR"});
+
+        struct Expected {
+            std::string band;
+            float path_radiance;
+            float adjacency_radiance;
+            float transmittance;
+        };
+        for (const Expected &expected: {Expected{"VIS", 3.f, 0.6f, 0.85f}, Expected{"NIR", 1.f, 0.2f, 0.8f}}) {
+            std::vector<float> plain = radiation.getCameraPixelData("plain", expected.band);
+            std::vector<float> satellite = radiation.getCameraPixelData("satellite", expected.band);
+            DOCTEST_REQUIRE(plain.size() == satellite.size());
+            DOCTEST_REQUIRE(plain.at(0) > 0.f);
+            for (size_t p = 0; p < plain.size(); p++) {
+                const float predicted = expected.path_radiance + expected.transmittance * plain.at(p) + expected.adjacency_radiance;
+                DOCTEST_INFO("band " << expected.band << " pixel " << p << ": plain " << plain.at(p) << ", satellite " << satellite.at(p) << ", predicted " << predicted);
+                DOCTEST_CHECK(std::fabs(satellite.at(p) / predicted - 1.f) < 1e-3f);
+            }
+        }
+    }
+
+    SUBCASE("disabling restores the plain image") {
+        radiation.enableCameraAtmosphere("satellite", "atm");
+        radiation.disableCameraAtmosphere("satellite");
+        radiation.updateGeometry();
+        radiation.runBand(std::vector<std::string>{"VIS", "NIR"});
+        DOCTEST_CHECK(radiation.getCameraPixelData("satellite", "VIS") == radiation.getCameraPixelData("plain", "VIS"));
+    }
+
+    SUBCASE("misconfiguration throws") {
+        DOCTEST_CHECK_THROWS_AS(radiation.enableCameraAtmosphere("no_such_camera", "atm"), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(radiation.enableCameraAtmosphere("satellite", ""), std::runtime_error);
+
+        // Message of the error runBand() raises, so that each case is checked to fail for its own reason
+        auto run_band_error = [&]() -> std::string {
+            try {
+                radiation.runBand(std::vector<std::string>{"VIS", "NIR"});
+            } catch (const std::runtime_error &error) {
+                return error.what();
+            }
+            return "";
+        };
+
+        // Spectra that were never computed
+        radiation.enableCameraAtmosphere("satellite", "missing");
+        radiation.updateGeometry();
+        DOCTEST_CHECK(run_band_error().find("'missing_direction_to_sensor' for camera 'satellite' does not exist") != std::string::npos);
+        // With a direction but no spectra
+        context.setGlobalData("missing_direction_to_sensor", make_vec3(0, 0, 1));
+        DOCTEST_CHECK(run_band_error().find("'missing_path_radiance' for camera 'satellite' does not exist") != std::string::npos);
+
+        // Spectra computed for a sensor 10 degrees off the camera's viewing direction
+        context.setGlobalData("atm_direction_to_sensor", make_vec3(sinf(deg2rad(10.f)), 0, cosf(deg2rad(10.f))));
+        radiation.enableCameraAtmosphere("satellite", "atm");
+        DOCTEST_CHECK(run_band_error().find("degrees away from the viewing direction") != std::string::npos);
+        context.setGlobalData("atm_direction_to_sensor", make_vec3(0, 0, 1));
+
+        // An emission band needs the thermal atmosphere, which was not computed (the emissivity keeps the patch's optical properties summing to one)
+        context.setPrimitiveData(patch, "emissivity_VIS", 0.7f);
+        radiation.enableEmission("VIS");
+        DOCTEST_CHECK(run_band_error().find("calculateSensorThermalAtmosphere") != std::string::npos);
+        radiation.disableEmission("VIS");
+
+        // A camera high enough to see past the edge of the 200 m patch has sky pixels
+        radiation.disableCameraAtmosphere("satellite");
+        radiation.addRadiationCamera("high", {"VIS"}, make_vec3(0, 0, 5000), make_vec3(0, 0, 0), camera_properties, 1);
+        radiation.enableCameraAtmosphere("high", "atm");
+        radiation.updateGeometry();
+        DOCTEST_CHECK(run_band_error().find("see the sky") != std::string::npos);
+    }
+}
+
+GPU_TEST_CASE("RadiationModel - camera thermal sensor atmosphere") {
+    // An isolated blackbody patch is seen in thermal bands by identical cameras, one through a synthetic thermal atmosphere whose transmittance steps from 0.9 to 0.3 at 10.7 um (over 2 nm) and whose upwelling radiance
+    // is 0.001 W/m^2/sr/nm. Each satellite pixel must be the patch's Planck spectrum, at the brightness temperature of the plain pixel, transmitted wavelength by wavelength and integrated over the band with the camera's
+    // spectral response, plus the upwelling radiance integrated with the same response.
+    Context context;
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(200, 200));
+    const float temperature = 300.f;
+    context.setPrimitiveData(patch, "temperature", temperature);
+
+    const float edge_nm = 10700.f;
+    auto synthetic_transmittance = [&](float wavelength) { return wavelength <= edge_nm - 1.f ? 0.9f : (wavelength >= edge_nm + 1.f ? 0.3f : 0.6f - 0.3f * (wavelength - edge_nm)); };
+    std::vector<vec2> transmittance, upwelling;
+    for (float wavelength = 7000.f; wavelength <= 14000.f; wavelength += 100.f) {
+        if (wavelength == edge_nm) {
+            transmittance.push_back(make_vec2(edge_nm - 1.f, synthetic_transmittance(edge_nm - 1.f)));
+            transmittance.push_back(make_vec2(edge_nm + 1.f, synthetic_transmittance(edge_nm + 1.f)));
+        } else {
+            transmittance.push_back(make_vec2(wavelength, synthetic_transmittance(wavelength)));
+        }
+        upwelling.push_back(make_vec2(wavelength, 0.001f));
+    }
+    context.setGlobalData("atm_thermal_transmittance", transmittance);
+    context.setGlobalData("atm_thermal_upwelling_radiance", upwelling);
+    context.setGlobalData("atm_direction_to_sensor", make_vec3(0, 0, 1));
+    // Spectral response rising linearly from 0 at 10.5 um to 1 at 11.5 um
+    context.setGlobalData("ramp_response", std::vector<vec2>{make_vec2(10500.f, 0.f), make_vec2(11500.f, 1.f)});
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("TIR", 10500.f, 11500.f);
+    radiation.addRadiationBand("LWIR", 7500.f, 13500.f);
+    for (const std::string &band: std::vector<std::string>{"TIR", "LWIR"}) {
+        radiation.enableEmission(band);
+        radiation.setScatteringDepth(band, 1);
+        radiation.setDiffuseRayCount(band, 100);
+    }
+
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = make_int2(8, 8);
+    camera_properties.HFOV = 10.f;
+    camera_properties.lens_diameter = 0.f;
+    camera_properties.exposure = "manual";
+    camera_properties.white_balance = "off";
+    for (const char *camera: {"plain", "satellite", "satellite_response"}) {
+        radiation.addRadiationCamera(camera, {"TIR", "LWIR"}, make_vec3(0, 0, 10), make_vec3(0, 0, 0), camera_properties, 1);
+    }
+    radiation.setCameraSpectralResponse("satellite_response", "TIR", "ramp_response");
+
+    // Brightness temperature whose in-band blackbody radiance equals a pixel's radiance
+    auto brightness_temperature = [](float radiance, float wavelength_min, float wavelength_max) {
+        double low = 150.0, high = 400.0;
+        for (int iteration = 0; iteration < 60; iteration++) {
+            const double middle = 0.5 * (low + high);
+            const double band_radiance = 5.670374419e-8 * std::pow(middle, 4) * blackbodyBandFraction(wavelength_min, wavelength_max, float(middle)) / M_PI;
+            (band_radiance < radiance ? low : high) = middle;
+        }
+        return float(0.5 * (low + high));
+    };
+    // Integral over the band, on a 0.5 nm grid, of the Planck spectrum times the transmittance and the response, and of the upwelling radiance times the response
+    auto expected_radiance = [&](float brightness, float wavelength_min, float wavelength_max, bool ramp) {
+        const float step = 0.5f;
+        double transmitted = 0.0, upwelling_integral = 0.0;
+        for (float wavelength = wavelength_min; wavelength < wavelength_max - 1e-3f; wavelength += step) {
+            const float middle = wavelength + 0.5f * step;
+            const double response = ramp ? (middle - 10500.f) / 1000.f : 1.0;
+            transmitted += synthetic_transmittance(middle) * blackbodySpectralRadiance(middle, brightness) * response * step;
+            upwelling_integral += 0.001 * response * step;
+        }
+        return float(transmitted + upwelling_integral);
+    };
+
+    SUBCASE("pixels are converted to radiance above the atmosphere") {
+        radiation.enableCameraAtmosphere("satellite", "atm");
+        radiation.enableCameraAtmosphere("satellite_response", "atm");
+        radiation.updateGeometry();
+        radiation.runBand(std::vector<std::string>{"TIR", "LWIR"});
+
+        struct Expected {
+            std::string camera;
+            std::string band;
+            float wavelength_min;
+            float wavelength_max;
+            bool ramp;
+        };
+        for (const Expected &expected: {Expected{"satellite", "TIR", 10500.f, 11500.f, false}, Expected{"satellite", "LWIR", 7500.f, 13500.f, false}, Expected{"satellite_response", "TIR", 10500.f, 11500.f, true}}) {
+            std::vector<float> plain = radiation.getCameraPixelData("plain", expected.band);
+            std::vector<float> satellite = radiation.getCameraPixelData(expected.camera, expected.band);
+            DOCTEST_REQUIRE(plain.size() == satellite.size());
+            DOCTEST_REQUIRE(plain.at(0) > 0.f);
+            for (size_t p = 0; p < plain.size(); p++) {
+                const float brightness = brightness_temperature(plain.at(p), expected.wavelength_min, expected.wavelength_max);
+                const float predicted = expected_radiance(brightness, expected.wavelength_min, expected.wavelength_max, expected.ramp);
+                DOCTEST_INFO("camera " << expected.camera << " band " << expected.band << " pixel " << p << ": plain " << plain.at(p) << " (" << brightness << " K), satellite " << satellite.at(p) << ", predicted " << predicted);
+                DOCTEST_CHECK(std::fabs(satellite.at(p) / predicted - 1.f) < 1e-3f);
+            }
+        }
+        // Most of the 10.5-11.5 um band lies beyond the edge, so its Planck-weighted transmittance is near 0.3*0.8 + 0.9*0.2; the value at the band center alone (0.3) would be far lower
+        const float plain_pixel = radiation.getCameraPixelData("plain", "TIR").at(0);
+        const float satellite_pixel = radiation.getCameraPixelData("satellite", "TIR").at(0);
+        DOCTEST_CHECK((satellite_pixel - 1.f) / plain_pixel > 0.4f);
+    }
+
+    SUBCASE("misconfiguration throws") {
+        auto run_band_error = [&](const std::vector<std::string> &bands) -> std::string {
+            try {
+                radiation.runBand(bands);
+            } catch (const std::runtime_error &error) {
+                return error.what();
+            }
+            return "";
+        };
+
+        radiation.enableCameraAtmosphere("satellite", "missing");
+        radiation.updateGeometry();
+        DOCTEST_CHECK(run_band_error({"TIR"}).find("'missing_direction_to_sensor' for camera 'satellite' does not exist") != std::string::npos);
+        context.setGlobalData("missing_direction_to_sensor", make_vec3(0, 0, 1));
+        DOCTEST_CHECK(run_band_error({"TIR"}).find("'missing_thermal_transmittance' for emission band 'TIR'") != std::string::npos);
+
+        // A band reaching beyond the wavelength range of the thermal atmosphere
+        radiation.disableCameraAtmosphere("satellite");
+        radiation.addRadiationBand("TIR_broad", 6000.f, 14000.f);
+        radiation.addRadiationBand("LW");
+        radiation.addRadiationBand("TIR_dark", 8000.f, 9000.f);
+        radiation.addRadiationCamera("broad", {"TIR_broad", "LW", "TIR_dark"}, make_vec3(0, 0, 10), make_vec3(0, 0, 0), camera_properties, 1);
+        radiation.enableCameraAtmosphere("broad", "atm");
+        // A response that is zero over the band
+        radiation.setCameraSpectralResponse("broad", "TIR_dark", "ramp_response");
+        radiation.updateGeometry();
+        DOCTEST_CHECK(run_band_error({"TIR_broad"}).find("outside the 7000.000000-14000.000000 nm covered by the thermal sensor atmosphere") != std::string::npos);
+        // A broadband emission band has no wavelength bounds
+        DOCTEST_CHECK(run_band_error({"LW"}).find("has no wavelength bounds") != std::string::npos);
+        DOCTEST_CHECK(run_band_error({"TIR_dark"}).find("is zero over the band") != std::string::npos);
+    }
+}
+
 GPU_TEST_CASE("RadiationModel - camera pixel data is discarded when resolution changes") {
     // Regression test: updateCameraParameters() overwrote camera.resolution without resizing
     // or clearing pixel_data, so a render -> change-resolution -> write sequence left pixel
@@ -11187,6 +11578,745 @@ GPU_TEST_CASE("RadiationModel Glass Cover Mixed Bands Treated As Opaque") {
     DOCTEST_CHECK(flux_LW < 5.0f);
 }
 
+// Hemispherical (cosine-weighted) averages of the glass transmittance, reflectance and absorptance, i.e. the fractions of
+// isotropic diffuse radiation arriving on one face of a sheet that the sheet transmits, reflects and absorbs: the integral
+// of (tau, rho, alpha)(theta) * 2 sin(theta) cos(theta) dtheta.
+static helios::vec3 glass_hemispherical_tau_rho_alpha_ref(float n, float KL) {
+    const int steps = 2000;
+    const double dtheta = 0.5 * M_PI / steps;
+    double tau = 0, rho = 0, alpha = 0;
+    for (int i = 0; i < steps; i++) {
+        const double theta = (i + 0.5) * dtheta;
+        const double weight = 2.0 * std::sin(theta) * std::cos(theta) * dtheta;
+        const helios::vec3 tra = glass_tau_rho_alpha_ref(float(std::cos(theta)), n, KL);
+        tau += tra.x * weight;
+        rho += tra.y * weight;
+        alpha += tra.z * weight;
+    }
+    return helios::make_vec3(float(tau), float(rho), float(alpha));
+}
+
+static float glass_hemispherical_alpha_ref(float n, float KL) {
+    return glass_hemispherical_tau_rho_alpha_ref(n, KL).z;
+}
+
+// A glass pane's own absorbed flux must be alpha(theta) of the beam striking it. A lossless pane absorbs nothing.
+GPU_TEST_CASE("RadiationModel Glass Cover Lossless Pane Absorbs Nothing") {
+    Context context;
+    uint cover = context.addPatch(make_vec3(0, 0, 1), make_vec2(4, 4));
+    context.setPrimitiveData(cover, "glass_n_SW", 1.5f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceFlux(sun, "SW", 1000.0f);
+    radiation.setDirectRayCount("SW", 10000);
+    radiation.setScatteringDepth("SW", 1);
+
+    radiation.updateGeometry();
+    radiation.runBand("SW");
+
+    float flux_cover;
+    context.getPrimitiveData(cover, "radiation_flux_SW", flux_cover);
+    DOCTEST_INFO("lossless pane absorbed " << flux_cover << " W/m^2 of a 1000 W/m^2 beam");
+    DOCTEST_CHECK(flux_cover < 0.5f);
+}
+
+// The pane's absorbed flux is a property of the pane and the beam striking it, so it must not depend on how many
+// surfaces lie in its shadow. The receivers below still get the transmitted beam.
+GPU_TEST_CASE("RadiationModel Glass Cover Pane Absorption Is Independent Of Receivers Below") {
+    Context context;
+    uint cover = context.addPatch(make_vec3(0, 0, 1), make_vec2(4, 4));
+    uint receiver_1 = context.addPatch(make_vec3(-1, 0, 0), make_vec2(1.8, 1.8));
+    uint receiver_2 = context.addPatch(make_vec3(1, 0, 0), make_vec2(1.8, 1.8));
+    for (uint receiver: {receiver_1, receiver_2}) {
+        context.setPrimitiveData(receiver, "twosided_flag", uint(0));
+        context.setPrimitiveData(receiver, "reflectivity_SW", 0.0f);
+    }
+    context.setPrimitiveData(cover, "glass_n_SW", 1.5f);
+    context.setPrimitiveData(cover, "glass_KL_SW", 0.05f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceFlux(sun, "SW", 1000.0f);
+    radiation.setDirectRayCount("SW", 10000);
+    radiation.setScatteringDepth("SW", 1);
+
+    radiation.updateGeometry();
+    radiation.runBand("SW");
+
+    float flux_cover, flux_receiver_1, flux_receiver_2;
+    context.getPrimitiveData(cover, "radiation_flux_SW", flux_cover);
+    context.getPrimitiveData(receiver_1, "radiation_flux_SW", flux_receiver_1);
+    context.getPrimitiveData(receiver_2, "radiation_flux_SW", flux_receiver_2);
+
+    const helios::vec3 tra = glass_tau_rho_alpha_ref(1.0f, 1.5f, 0.05f);
+    const float expected_cover = 1000.0f * tra.z; // ~48.7
+    const float expected_receiver = 1000.0f * tra.x;
+    DOCTEST_INFO("pane absorbed " << flux_cover << ", expected " << expected_cover);
+    DOCTEST_CHECK(flux_cover > 0.99f * expected_cover);
+    DOCTEST_CHECK(flux_cover < 1.01f * expected_cover);
+    DOCTEST_CHECK(flux_receiver_1 > 0.98f * expected_receiver);
+    DOCTEST_CHECK(flux_receiver_1 < 1.02f * expected_receiver);
+    DOCTEST_CHECK(flux_receiver_2 > 0.98f * expected_receiver);
+    DOCTEST_CHECK(flux_receiver_2 < 1.02f * expected_receiver);
+}
+
+// Oblique beam on an absorbing pane: the pane absorbs alpha(theta) of the beam flux on its plane, source_flux*cos(theta).
+GPU_TEST_CASE("RadiationModel Glass Cover Oblique Pane Absorption") {
+    const float theta = 60.0f * float(M_PI) / 180.f;
+    Context context;
+    uint cover = context.addPatch(make_vec3(0, 0, 1), make_vec2(4, 4));
+    context.setPrimitiveData(cover, "glass_n_SW", 1.5f);
+    context.setPrimitiveData(cover, "glass_KL_SW", 0.1f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(std::sin(theta), 0.f, std::cos(theta)));
+    radiation.setSourceFlux(sun, "SW", 1000.0f);
+    radiation.setDirectRayCount("SW", 10000);
+    radiation.setScatteringDepth("SW", 1);
+
+    radiation.updateGeometry();
+    radiation.runBand("SW");
+
+    float flux_cover;
+    context.getPrimitiveData(cover, "radiation_flux_SW", flux_cover);
+
+    const float expected = 1000.0f * std::cos(theta) * glass_tau_rho_alpha_ref(std::cos(theta), 1.5f, 0.1f).z; // ~56.9
+    DOCTEST_INFO("pane absorbed " << flux_cover << ", expected " << expected);
+    DOCTEST_CHECK(flux_cover > 0.99f * expected);
+    DOCTEST_CHECK(flux_cover < 1.01f * expected);
+}
+
+// Isotropic sky radiation on an absorbing pane over a black ground: the pane absorbs the hemispherical average of
+// alpha(theta) of the sky flux on its upper face, and nothing on its lower face (the ground below neither emits nor
+// reflects).
+GPU_TEST_CASE("RadiationModel Glass Cover Pane Absorbs Diffuse Sky") {
+    Context context;
+    uint cover = context.addPatch(make_vec3(0, 0, 0.05f), make_vec2(1, 1));
+    uint ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(50, 50));
+    context.setPrimitiveData(ground, "reflectivity_SW", 0.0f);
+    context.setPrimitiveData(cover, "glass_n_SW", 1.5f);
+    context.setPrimitiveData(cover, "glass_KL_SW", 0.05f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    radiation.setDiffuseRadiationFlux("SW", 100.0f);
+    radiation.setDiffuseRayCount("SW", 20000);
+    radiation.setScatteringDepth("SW", 1);
+
+    radiation.updateGeometry();
+    radiation.runBand("SW");
+
+    float flux_cover;
+    context.getPrimitiveData(cover, "radiation_flux_SW", flux_cover);
+
+    const float expected = 100.0f * glass_hemispherical_alpha_ref(1.5f, 0.05f); // ~5.5
+    DOCTEST_INFO("pane absorbed " << flux_cover << ", expected " << expected);
+    DOCTEST_CHECK(flux_cover > 0.96f * expected);
+    DOCTEST_CHECK(flux_cover < 1.04f * expected);
+}
+
+// Radiation emitted by a surface below the pane: the pane absorbs the hemispherical average of alpha(theta) of what
+// arrives on its lower face. This exercises the path where the pane's own ray hits another surface.
+GPU_TEST_CASE("RadiationModel Glass Cover Pane Absorbs Emission From Below") {
+    Context context;
+    uint cover = context.addPatch(make_vec3(0, 0, 0.05f), make_vec2(1, 1));
+    uint emitter = context.addPatch(make_vec3(0, 0, 0), make_vec2(50, 50));
+    context.setPrimitiveData(emitter, "temperature", 300.f);
+    context.setPrimitiveData(emitter, "emissivity_LW", 1.f);
+    context.setPrimitiveData(cover, "temperature", 0.f); // the pane itself emits nothing
+    context.setPrimitiveData(cover, "glass_n_LW", 1.5f);
+    context.setPrimitiveData(cover, "glass_KL_LW", 0.05f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("LW");
+    radiation.setDiffuseRayCount("LW", 20000);
+    radiation.setScatteringDepth("LW", 1);
+
+    radiation.updateGeometry();
+    radiation.runBand("LW");
+
+    float flux_cover;
+    context.getPrimitiveData(cover, "radiation_flux_LW", flux_cover);
+
+    const float sigma = 5.670374419e-8f;
+    const float expected = sigma * powf(300.f, 4) * glass_hemispherical_alpha_ref(1.5f, 0.05f); // ~25
+    DOCTEST_INFO("pane absorbed " << flux_cover << ", expected " << expected);
+    DOCTEST_CHECK(flux_cover > 0.96f * expected);
+    DOCTEST_CHECK(flux_cover < 1.04f * expected);
+}
+
+// A camera looking at the sunlit face of a pane, with nothing behind it and a black sky, sees only the pane's
+// reflection: rho(theta) of the beam flux on the pane, divided by pi.
+GPU_TEST_CASE("RadiationModel Glass Cover Camera Sees Pane Reflection") {
+    const float theta = 30.0f * float(M_PI) / 180.f;
+    Context context;
+    uint cover = context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4));
+    context.setPrimitiveData(cover, "glass_n_SW", 1.5f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(std::sin(theta), 0.f, std::cos(theta)));
+    radiation.setSourceFlux(sun, "SW", 1000.0f);
+    radiation.setDirectRayCount("SW", 1000);
+    radiation.setScatteringDepth("SW", 1);
+
+    CameraProperties cam_props;
+    cam_props.camera_resolution = make_int2(9, 9);
+    cam_props.HFOV = 20;
+    cam_props.focal_plane_distance = 3;
+    cam_props.lens_diameter = 0.f;
+    cam_props.exposure = "manual";
+    cam_props.white_balance = "off";
+    radiation.addRadiationCamera("cam", {"SW"}, make_vec3(0, 0, 3), make_vec3(0, 0, 0), cam_props, 1);
+
+    radiation.updateGeometry();
+    radiation.runBand("SW");
+
+    const std::vector<float> pixels = radiation.getCameraPixelData("cam", "SW");
+    DOCTEST_REQUIRE(pixels.size() == 81);
+    const float center_pixel = pixels.at(40);
+
+    const float expected = glass_tau_rho_alpha_ref(std::cos(theta), 1.5f, 0.f).y * 1000.0f * std::cos(theta) / float(M_PI); // ~21.9
+    DOCTEST_INFO("centre pixel " << center_pixel << ", expected " << expected);
+    DOCTEST_CHECK(center_pixel > 0.99f * expected);
+    DOCTEST_CHECK(center_pixel < 1.01f * expected);
+}
+
+// Camera see-through tests. A blackbody target (emissivity 1, 300 K) is viewed through glass panes in an emission band.
+// The panes are held at 0 K so they emit nothing, the sky is black, and the camera looks at the panes' unlit faces, so the
+// panes contribute no radiance of their own: each pixel is exactly the target's radiance sigma*T^4/pi times the
+// transmittance of the panes in front of it. The pixels read are away from index 0..(number of primitives - 1).
+static float glass_camera_target_radiance() {
+    const float sigma = 5.670374419e-8f;
+    return sigma * powf(300.f, 4) / float(M_PI); // ~146.2 W/m^2/sr
+}
+
+static CameraProperties glass_camera_properties(float HFOV) {
+    CameraProperties cam_props;
+    cam_props.camera_resolution = make_int2(9, 9);
+    cam_props.HFOV = HFOV;
+    cam_props.lens_diameter = 0.f;
+    cam_props.exposure = "manual";
+    cam_props.white_balance = "off";
+    return cam_props;
+}
+
+static void setupGlassCameraBand(RadiationModel &radiation, const std::string &band) {
+    radiation.addRadiationBand(band);
+    radiation.setDiffuseRayCount(band, 100);
+    radiation.setScatteringDepth(band, 1);
+}
+
+// Render the centre pixel of a 9x9 camera at camera_position looking at the origin, through panes that are glass in `band`.
+static float renderGlassCameraCentrePixel(const std::vector<helios::vec3> &pane_centres, const helios::vec2 &pane_size, float KL, const helios::vec3 &camera_position, float HFOV) {
+    Context context;
+    uint target = context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4));
+    context.setPrimitiveData(target, "temperature", 300.f);
+    for (const helios::vec3 &centre: pane_centres) {
+        uint pane = context.addPatch(centre, pane_size);
+        context.setPrimitiveData(pane, "temperature", 0.f);
+        context.setPrimitiveData(pane, "glass_n_LW", 1.5f);
+        if (KL > 0.f) {
+            context.setPrimitiveData(pane, "glass_KL_LW", KL);
+        }
+    }
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    setupGlassCameraBand(radiation, "LW");
+    radiation.addRadiationCamera("cam", {"LW"}, camera_position, make_vec3(0, 0, 0), glass_camera_properties(HFOV), 1);
+    radiation.updateGeometry();
+    radiation.runBand("LW");
+
+    const std::vector<float> pixels = radiation.getCameraPixelData("cam", "LW");
+    DOCTEST_REQUIRE(pixels.size() == 81);
+    return pixels.at(40);
+}
+
+GPU_TEST_CASE("RadiationModel Glass Cover Camera Sees Through Pane At Normal Incidence") {
+    const float centre_pixel = renderGlassCameraCentrePixel({make_vec3(0, 0, 1)}, make_vec2(4, 4), 0.f, make_vec3(0, 0, 3), 20.f);
+    const float expected = glass_tau_rho_alpha_ref(1.0f, 1.5f, 0.f).x * glass_camera_target_radiance(); // ~134.9
+    DOCTEST_INFO("centre pixel " << centre_pixel << ", expected " << expected);
+    DOCTEST_CHECK(centre_pixel > 0.99f * expected);
+    DOCTEST_CHECK(centre_pixel < 1.01f * expected);
+}
+
+GPU_TEST_CASE("RadiationModel Glass Cover Camera Sees Through Pane At Oblique Incidence") {
+    // The camera views the origin 70 degrees from vertical, so the centre ray crosses the horizontal pane at 70 degrees.
+    const float view_angle = 70.f * float(M_PI) / 180.f;
+    const helios::vec3 camera_position = 6.f * make_vec3(std::sin(view_angle), 0.f, std::cos(view_angle));
+    const float centre_pixel = renderGlassCameraCentrePixel({make_vec3(2.9f, 0, 1)}, make_vec2(4, 4), 0.f, camera_position, 10.f);
+    const float expected = glass_tau_rho_alpha_ref(std::cos(view_angle), 1.5f, 0.f).x * glass_camera_target_radiance(); // ~106.5
+    DOCTEST_INFO("centre pixel " << centre_pixel << ", expected " << expected);
+    DOCTEST_CHECK(centre_pixel > 0.985f * expected);
+    DOCTEST_CHECK(centre_pixel < 1.015f * expected);
+}
+
+GPU_TEST_CASE("RadiationModel Glass Cover Camera Sees Through Two Panes") {
+    const float centre_pixel = renderGlassCameraCentrePixel({make_vec3(0, 0, 1), make_vec3(0, 0, 2)}, make_vec2(4, 4), 0.f, make_vec3(0, 0, 3.5f), 20.f);
+    const float tau0 = glass_tau_rho_alpha_ref(1.0f, 1.5f, 0.f).x;
+    const float expected = tau0 * tau0 * glass_camera_target_radiance(); // ~124.6
+    DOCTEST_INFO("centre pixel " << centre_pixel << ", expected " << expected);
+    DOCTEST_CHECK(centre_pixel > 0.99f * expected);
+    DOCTEST_CHECK(centre_pixel < 1.01f * expected);
+}
+
+GPU_TEST_CASE("RadiationModel Glass Cover Camera Sees Through Absorbing Pane") {
+    const float centre_pixel = renderGlassCameraCentrePixel({make_vec3(0, 0, 1)}, make_vec2(4, 4), 0.1f, make_vec3(0, 0, 3), 20.f);
+    const float expected = glass_tau_rho_alpha_ref(1.0f, 1.5f, 0.1f).x * glass_camera_target_radiance(); // ~122.1
+    DOCTEST_INFO("centre pixel " << centre_pixel << ", expected " << expected);
+    DOCTEST_CHECK(centre_pixel > 0.99f * expected);
+    DOCTEST_CHECK(centre_pixel < 1.01f * expected);
+}
+
+GPU_TEST_CASE("RadiationModel Glass Cover Camera Mixed Bands Treated As Opaque") {
+    // The pane is glass in band LWa only. Launched alone, LWa sees through it; launched together with LWb, in which the pane
+    // is opaque, the pane blocks the camera ray in both bands, as it blocks direct and diffuse rays.
+    auto render = [](const std::vector<std::string> &bands) {
+        Context context;
+        uint target = context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4));
+        context.setPrimitiveData(target, "temperature", 300.f);
+        uint pane = context.addPatch(make_vec3(0, 0, 1), make_vec2(4, 4));
+        context.setPrimitiveData(pane, "temperature", 0.f);
+        context.setPrimitiveData(pane, "glass_n_LWa", 1.5f);
+
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+        radiation.disableMessages();
+        for (const std::string &band: bands) {
+            setupGlassCameraBand(radiation, band);
+        }
+        radiation.addRadiationCamera("cam", bands, make_vec3(0, 0, 3), make_vec3(0, 0, 0), glass_camera_properties(20.f), 1);
+        radiation.updateGeometry();
+        radiation.runBand(bands);
+
+        std::vector<float> centre_pixels;
+        for (const std::string &band: bands) {
+            const std::vector<float> pixels = radiation.getCameraPixelData("cam", band);
+            DOCTEST_REQUIRE(pixels.size() == 81);
+            centre_pixels.push_back(pixels.at(40));
+        }
+        return centre_pixels;
+    };
+
+    const std::vector<float> glass_only = render({"LWa"});
+    const float expected = glass_tau_rho_alpha_ref(1.0f, 1.5f, 0.f).x * glass_camera_target_radiance();
+    DOCTEST_INFO("LWa alone: centre pixel " << glass_only.at(0) << ", expected " << expected);
+    DOCTEST_CHECK(glass_only.at(0) > 0.99f * expected);
+    DOCTEST_CHECK(glass_only.at(0) < 1.01f * expected);
+
+    const std::vector<float> mixed = render({"LWa", "LWb"});
+    DOCTEST_INFO("LWa and LWb together: centre pixels " << mixed.at(0) << ", " << mixed.at(1));
+    DOCTEST_CHECK(mixed.at(0) < 0.5f);
+    DOCTEST_CHECK(mixed.at(1) < 0.5f);
+}
+
+GPU_TEST_CASE("RadiationModel Glass Cover Camera Pixel Labels See Through Pane") {
+    // Pixel labels and depth are those of the first surface behind the glass. A pixel that sees only glass and sky is sky.
+    Context context;
+    uint target = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(target, "temperature", 300.f);
+    uint pane = context.addPatch(make_vec3(0, 0, 1), make_vec2(6, 6));
+    context.setPrimitiveData(pane, "temperature", 0.f);
+    context.setPrimitiveData(pane, "glass_n_LW", 1.5f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    setupGlassCameraBand(radiation, "LW");
+    radiation.addRadiationCamera("cam", {"LW"}, make_vec3(0, 0, 3), make_vec3(0, 0, 0), glass_camera_properties(60.f), 1);
+    radiation.updateGeometry();
+    radiation.runBand("LW");
+
+    std::vector<uint> pixel_UUIDs;
+    context.getGlobalData("camera_cam_pixel_UUID", pixel_UUIDs);
+    std::vector<float> pixel_depths;
+    context.getGlobalData("camera_cam_pixel_depth", pixel_depths);
+    DOCTEST_REQUIRE(pixel_UUIDs.size() == 81);
+    DOCTEST_REQUIRE(pixel_depths.size() == 81);
+
+    // Centre pixel: the target, 3 m in front of the camera.
+    DOCTEST_CHECK(pixel_UUIDs.at(40) == target + 1);
+    DOCTEST_CHECK(pixel_depths.at(40) > 2.999f);
+    DOCTEST_CHECK(pixel_depths.at(40) < 3.001f);
+
+    // Corner pixel: through the pane, past the target, to the sky.
+    DOCTEST_CHECK(pixel_UUIDs.at(80) == 0);
+    DOCTEST_CHECK(pixel_depths.at(80) <= 0.f);
+}
+
+GPU_TEST_CASE("RadiationModel Glass Cover Camera Sees Source Through Pane") {
+    // A sphere source seen through a pane: the camera ray misses all geometry after the pane, and the source radiance is
+    // attenuated by the pane's transmittance. The pane's lit face points away from the camera, so it adds nothing itself.
+    auto render = [](bool with_pane) {
+        Context context;
+        context.addPatch(make_vec3(0, 0, -1), make_vec2(1, 1)); // out of view, so the scene is never empty
+        if (with_pane) {
+            uint pane = context.addPatch(make_vec3(0, 0, 5), make_vec2(10, 10));
+            context.setPrimitiveData(pane, "glass_n_SW", 1.5f);
+        }
+
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+        radiation.disableMessages();
+        radiation.addRadiationBand("SW");
+        radiation.disableEmission("SW");
+        uint source = radiation.addSphereRadiationSource(make_vec3(0, 0, 20), 3.f);
+        radiation.setSourceFlux(source, "SW", 1000.0f);
+        radiation.setDirectRayCount("SW", 100);
+        radiation.setScatteringDepth("SW", 1);
+        radiation.addRadiationCamera("cam", {"SW"}, make_vec3(0, 0, 0), make_vec3(0, 0, 1), glass_camera_properties(5.f), 1);
+        radiation.updateGeometry();
+        radiation.runBand("SW");
+
+        const std::vector<float> pixels = radiation.getCameraPixelData("cam", "SW");
+        DOCTEST_REQUIRE(pixels.size() == 81);
+        return pixels.at(40);
+    };
+
+    const float without_pane = render(false);
+    const float with_pane = render(true);
+    DOCTEST_REQUIRE(without_pane > 0.f);
+    const float expected_ratio = glass_tau_rho_alpha_ref(1.0f, 1.5f, 0.f).x;
+    DOCTEST_INFO("centre pixel " << with_pane << " with the pane, " << without_pane << " without, ratio " << with_pane / without_pane << ", expected " << expected_ratio);
+    DOCTEST_CHECK(with_pane / without_pane > 0.99f * expected_ratio);
+    DOCTEST_CHECK(with_pane / without_pane < 1.01f * expected_ratio);
+}
+
+// A pixel whose centre ray hits nothing is sky: label 0 and depth -1, which writeNormDepthImage() maps to the maximum depth.
+GPU_TEST_CASE("RadiationModel camera pixel depth of a sky pixel is -1") {
+    Context context;
+    uint target = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("LW");
+    radiation.setDiffuseRayCount("LW", 100);
+    radiation.setScatteringDepth("LW", 1);
+    radiation.addRadiationCamera("cam", {"LW"}, make_vec3(0, 0, 3), make_vec3(0, 0, 0), glass_camera_properties(60.f), 1);
+    radiation.updateGeometry();
+    radiation.runBand("LW");
+
+    std::vector<uint> pixel_UUIDs;
+    context.getGlobalData("camera_cam_pixel_UUID", pixel_UUIDs);
+    std::vector<float> pixel_depths;
+    context.getGlobalData("camera_cam_pixel_depth", pixel_depths);
+    DOCTEST_REQUIRE(pixel_UUIDs.size() == 81);
+    DOCTEST_REQUIRE(pixel_depths.size() == 81);
+
+    DOCTEST_CHECK(pixel_UUIDs.at(40) == target + 1);
+    DOCTEST_CHECK(pixel_depths.at(40) > 2.999f);
+    DOCTEST_CHECK(pixel_depths.at(40) < 3.001f);
+
+    DOCTEST_CHECK(pixel_UUIDs.at(80) == 0);
+    DOCTEST_CHECK(pixel_depths.at(80) == -1.f);
+}
+
+// Camera rays are not launched from a primitive, so no primitive is excluded from what they can hit, whatever its UUID.
+// Here the target's UUID equals the index of the pixel that looks at it.
+GPU_TEST_CASE("RadiationModel camera sees a primitive whose UUID equals the pixel index") {
+    Context context;
+    for (int i = 0; i < 40; i++) {
+        context.addPatch(make_vec3(100.f + float(i), 0, -50), make_vec2(0.1f, 0.1f)); // out of view
+    }
+    uint target = context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4));
+    DOCTEST_REQUIRE(target == 40); // the centre pixel of a 9x9 image
+    context.setPrimitiveData(target, "temperature", 300.f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    setupGlassCameraBand(radiation, "LW");
+    radiation.addRadiationCamera("cam", {"LW"}, make_vec3(0, 0, 3), make_vec3(0, 0, 0), glass_camera_properties(20.f), 1);
+    radiation.updateGeometry();
+    radiation.runBand("LW");
+
+    const std::vector<float> pixels = radiation.getCameraPixelData("cam", "LW");
+    std::vector<uint> pixel_UUIDs;
+    context.getGlobalData("camera_cam_pixel_UUID", pixel_UUIDs);
+    DOCTEST_REQUIRE(pixels.size() == 81);
+    DOCTEST_REQUIRE(pixel_UUIDs.size() == 81);
+
+    const float expected = glass_camera_target_radiance();
+    DOCTEST_INFO("centre pixel " << pixels.at(40) << ", expected " << expected << "; label " << pixel_UUIDs.at(40));
+    DOCTEST_CHECK(pixels.at(40) > 0.99f * expected);
+    DOCTEST_CHECK(pixels.at(40) < 1.01f * expected);
+    DOCTEST_CHECK(pixel_UUIDs.at(40) == target + 1);
+}
+
+// A radiation source between the camera and a surface is seen with the same radiance as a source against the empty sky.
+GPU_TEST_CASE("RadiationModel camera sees a source in front of a surface at its full radiance") {
+    auto render = [](bool with_surface_behind) {
+        Context context;
+        if (with_surface_behind) {
+            context.addPatch(make_vec3(0, 0, 40), make_vec2(100, 100)); // black (reflectivity 0) and behind the source
+        } else {
+            context.addPatch(make_vec3(0, 0, -1), make_vec2(1, 1)); // out of view, so the scene is never empty
+        }
+
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+        radiation.disableMessages();
+        radiation.addRadiationBand("SW");
+        radiation.disableEmission("SW");
+        uint source = radiation.addSphereRadiationSource(make_vec3(0, 0, 20), 3.f);
+        radiation.setSourceFlux(source, "SW", 1000.0f);
+        radiation.setDirectRayCount("SW", 100);
+        radiation.setScatteringDepth("SW", 1);
+        radiation.addRadiationCamera("cam", {"SW"}, make_vec3(0, 0, 0), make_vec3(0, 0, 1), glass_camera_properties(5.f), 1);
+        radiation.updateGeometry();
+        radiation.runBand("SW");
+
+        const std::vector<float> pixels = radiation.getCameraPixelData("cam", "SW");
+        DOCTEST_REQUIRE(pixels.size() == 81);
+        return pixels.at(40);
+    };
+
+    const float expected = 1000.f / (4.f * float(M_PI) * 3.f * 3.f) / float(M_PI); // (flux / area) / pi
+    const float against_sky = render(false);
+    const float against_surface = render(true);
+    DOCTEST_INFO("centre pixel " << against_surface << " with a surface behind the source, " << against_sky << " against the sky, expected " << expected);
+    DOCTEST_CHECK(against_sky > 0.99f * expected);
+    DOCTEST_CHECK(against_sky < 1.01f * expected);
+    DOCTEST_CHECK(against_surface > 0.99f * expected);
+    DOCTEST_CHECK(against_surface < 1.01f * expected);
+}
+
+// The depth of a pixel whose ray wraps through a periodic boundary is the full distance travelled to the surface it hits.
+GPU_TEST_CASE("RadiationModel camera pixel depth through a periodic boundary") {
+    Context context;
+    uint ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(10, 10));
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("LW");
+    radiation.setDiffuseRayCount("LW", 100);
+    radiation.setScatteringDepth("LW", 1);
+    radiation.enforcePeriodicBoundary("x");
+    // The centre ray leaves the domain through x = 5 at z = 0.5, re-enters at x = -5 and hits the ground at x = 0 (x = 10 unwrapped).
+    radiation.addRadiationCamera("cam", {"LW"}, make_vec3(0, 0, 1), make_vec3(10, 0, 0), glass_camera_properties(2.f), 1);
+    radiation.updateGeometry();
+    radiation.runBand("LW");
+
+    std::vector<uint> pixel_UUIDs;
+    context.getGlobalData("camera_cam_pixel_UUID", pixel_UUIDs);
+    std::vector<float> pixel_depths;
+    context.getGlobalData("camera_cam_pixel_depth", pixel_depths);
+    DOCTEST_REQUIRE(pixel_UUIDs.size() == 81);
+    DOCTEST_REQUIRE(pixel_depths.size() == 81);
+
+    const float expected = std::sqrt(10.f * 10.f + 1.f); // the centre ray is along the view direction
+    DOCTEST_INFO("centre pixel depth " << pixel_depths.at(40) << ", expected " << expected);
+    DOCTEST_CHECK(pixel_UUIDs.at(40) == ground + 1);
+    DOCTEST_CHECK(pixel_depths.at(40) > expected - 1e-3f);
+    DOCTEST_CHECK(pixel_depths.at(40) < expected + 1e-3f);
+}
+
+// A constant reflectivity_<band> and a reflectivity spectrum that is flat at the same value describe the same surface, so a
+// camera must render them the same, also when the source spectrum and the camera response are not flat.
+GPU_TEST_CASE("RadiationModel camera renders a constant reflectivity like the equal flat reflectivity spectrum") {
+    Context context;
+    std::vector<helios::vec2> flat_half, source_ramp, camera_tent;
+    for (int wavelength = 400; wavelength <= 800; wavelength++) {
+        flat_half.push_back(make_vec2(float(wavelength), 0.5f));
+        source_ramp.push_back(make_vec2(float(wavelength), (float(wavelength) - 300.f) / 100.f));
+        camera_tent.push_back(make_vec2(float(wavelength), std::fmax(0.f, 1.f - std::fabs(float(wavelength) - 600.f) / 50.f)));
+    }
+    context.setGlobalData("flat_half_reflectivity", flat_half);
+    context.setGlobalData("tent_camera_response", camera_tent);
+
+    uint spectral_patch = context.addPatch(make_vec3(-1, 0, 0), make_vec2(1.8f, 1.8f));
+    uint constant_patch = context.addPatch(make_vec3(1, 0, 0), make_vec2(1.8f, 1.8f));
+    context.setPrimitiveData(spectral_patch, "reflectivity_spectrum", "flat_half_reflectivity");
+    context.setPrimitiveData(constant_patch, "reflectivity_red", 0.5f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("red", 550, 650);
+    radiation.disableEmission("red");
+    radiation.setDirectRayCount("red", 100);
+    radiation.setScatteringDepth("red", 1);
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceSpectrum(sun, source_ramp);
+    CameraProperties cam_props = glass_camera_properties(70.f);
+    const int resolution = 64;
+    cam_props.camera_resolution = make_int2(resolution, resolution);
+    radiation.addRadiationCamera("cam", {"red"}, make_vec3(0, 0, 3), make_vec3(0, 0, 0), cam_props, 1);
+    radiation.setCameraSpectralResponse("cam", "red", "tent_camera_response");
+    radiation.updateGeometry();
+    radiation.runBand("red");
+
+    const std::vector<float> pixels = radiation.getCameraPixelData("cam", "red");
+    std::vector<uint> pixel_UUIDs;
+    context.getGlobalData("camera_cam_pixel_UUID", pixel_UUIDs);
+    DOCTEST_REQUIRE(pixels.size() == size_t(resolution * resolution));
+    DOCTEST_REQUIRE(pixel_UUIDs.size() == pixels.size());
+
+    // Average over interior pixels only (the pixel and its four neighbours see the same patch): the camera sample within a
+    // pixel is jittered, so a pixel on a patch edge can partly see the gap or the sky beside it.
+    double spectral_sum = 0, constant_sum = 0;
+    int spectral_count = 0, constant_count = 0;
+    for (int j = 1; j < resolution - 1; j++) {
+        for (int i = 1; i < resolution - 1; i++) {
+            const uint label = pixel_UUIDs.at(j * resolution + i);
+            if (pixel_UUIDs.at(j * resolution + i - 1) != label || pixel_UUIDs.at(j * resolution + i + 1) != label || pixel_UUIDs.at((j - 1) * resolution + i) != label ||
+                pixel_UUIDs.at((j + 1) * resolution + i) != label) {
+                continue;
+            }
+            if (label == spectral_patch + 1) {
+                spectral_sum += pixels.at(j * resolution + i);
+                spectral_count++;
+            } else if (label == constant_patch + 1) {
+                constant_sum += pixels.at(j * resolution + i);
+                constant_count++;
+            }
+        }
+    }
+    DOCTEST_REQUIRE(spectral_count > 0);
+    DOCTEST_REQUIRE(constant_count > 0);
+    const double spectral_mean = spectral_sum / spectral_count;
+    const double constant_mean = constant_sum / constant_count;
+    DOCTEST_INFO("mean pixel " << spectral_mean << " on the flat-spectrum patch, " << constant_mean << " on the constant-reflectivity patch");
+    DOCTEST_CHECK(spectral_mean > 0.0);
+    DOCTEST_CHECK(constant_mean > 0.99 * spectral_mean);
+    DOCTEST_CHECK(constant_mean < 1.01 * spectral_mean);
+}
+
+// In an emission band, a surface given only an emissivity reflects 1 - emissivity of the radiation reaching it, and a camera
+// sees that reflection. Here a surface at 0 K (so it emits nothing) reflects a longwave sky.
+GPU_TEST_CASE("RadiationModel camera sees the reflection of a surface given only an emissivity") {
+    Context context;
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4));
+    context.setPrimitiveData(patch, "temperature", 0.f);
+    context.setPrimitiveData(patch, "emissivity_LW", 0.5f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("LW");
+    radiation.setDiffuseRadiationFlux("LW", 400.f);
+    radiation.setDiffuseRayCount("LW", 1000);
+    radiation.setScatteringDepth("LW", 1);
+    radiation.addRadiationCamera("cam", {"LW"}, make_vec3(0, 0, 3), make_vec3(0, 0, 0), glass_camera_properties(20.f), 1);
+    radiation.updateGeometry();
+    radiation.runBand("LW");
+
+    const std::vector<float> pixels = radiation.getCameraPixelData("cam", "LW");
+    DOCTEST_REQUIRE(pixels.size() == 81);
+    const float expected = 0.5f * 400.f / float(M_PI); // reflected flux / pi
+    DOCTEST_INFO("centre pixel " << pixels.at(40) << ", expected " << expected);
+    DOCTEST_CHECK(pixels.at(40) > 0.99f * expected);
+    DOCTEST_CHECK(pixels.at(40) < 1.01f * expected);
+}
+
+// A direct ray toward a sphere source that passes a glass pane is not blocked by an object beyond the source.
+GPU_TEST_CASE("RadiationModel Glass Cover Does Not Let An Object Beyond A Sphere Source Block It") {
+    auto render = [](bool with_object_beyond_source) {
+        Context context;
+        uint receiver = context.addPatch(make_vec3(0, 0, 0), make_vec2(0.2f, 0.2f));
+        context.setPrimitiveData(receiver, "twosided_flag", uint(0));
+        uint pane = context.addPatch(make_vec3(0, 0, 5), make_vec2(20, 20));
+        context.setPrimitiveData(pane, "glass_n_SW", 1.5f);
+        if (with_object_beyond_source) {
+            context.addPatch(make_vec3(0, 0, 12), make_vec2(20, 20)); // 2 m beyond the far side of the source
+        }
+
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+        radiation.disableMessages();
+        radiation.addRadiationBand("SW");
+        radiation.disableEmission("SW");
+        uint source = radiation.addSphereRadiationSource(make_vec3(0, 0, 10), 0.5f);
+        radiation.setSourceFlux(source, "SW", 1000.0f);
+        radiation.setDirectRayCount("SW", 1000);
+        radiation.setScatteringDepth("SW", 1);
+        radiation.updateGeometry();
+        radiation.runBand("SW");
+
+        float flux_receiver;
+        context.getPrimitiveData(receiver, "radiation_flux_SW", flux_receiver);
+        return flux_receiver;
+    };
+
+    const float without_object = render(false);
+    const float with_object = render(true);
+    DOCTEST_INFO("receiver absorbed " << with_object << " with an object beyond the source, " << without_object << " without");
+    DOCTEST_REQUIRE(without_object > 0.f);
+    DOCTEST_CHECK(with_object > 0.98f * without_object);
+    DOCTEST_CHECK(with_object < 1.02f * without_object);
+}
+
+// Radiation emitted by one surface and reaching another through a glass pane is attenuated by the pane's transmittance,
+// as radiation from the sky is.
+GPU_TEST_CASE("RadiationModel Glass Cover Attenuates Emission From Another Surface") {
+    Context context;
+    uint emitter = context.addPatch(make_vec3(0, 0, 0), make_vec2(100, 100));
+    uint pane = context.addPatch(make_vec3(0, 0, 0.05f), make_vec2(100, 100));
+    uint receiver = context.addPatch(make_vec3(0, 0, 0.1f), make_vec2(0.2f, 0.2f));
+    context.setPrimitiveData(emitter, "temperature", 300.f);
+    context.setPrimitiveData(pane, "temperature", 0.f);
+    context.setPrimitiveData(receiver, "temperature", 0.f);
+    context.setPrimitiveData(pane, "glass_n_LW", 1.5f);
+    context.setPrimitiveData(pane, "glass_KL_LW", 0.5f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("LW");
+    radiation.setDiffuseRayCount("LW", 20000);
+    radiation.setScatteringDepth("LW", 1);
+    radiation.updateGeometry();
+    radiation.runBand("LW");
+
+    float flux_receiver;
+    context.getPrimitiveData(receiver, "radiation_flux_LW", flux_receiver);
+
+    const float sigma = 5.670374419e-8f;
+    const float expected = sigma * powf(300.f, 4) * glass_hemispherical_tau_rho_alpha_ref(1.5f, 0.5f).x; // the receiver's lower face sees the emitter through the pane
+    DOCTEST_INFO("receiver absorbed " << flux_receiver << ", expected " << expected);
+    DOCTEST_CHECK(flux_receiver > 0.98f * expected);
+    DOCTEST_CHECK(flux_receiver < 1.02f * expected);
+}
+
+// Radiation reflected by a glass pane reaches the surfaces that see the pane. Here a pane with a high refractive index
+// reflects the emission of the surface below it back down onto a receiver between the two.
+GPU_TEST_CASE("RadiationModel Glass Cover Reflection Reaches Other Surfaces") {
+    Context context;
+    uint emitter = context.addPatch(make_vec3(0, 0, 0), make_vec2(100, 100));
+    uint pane = context.addPatch(make_vec3(0, 0, 1), make_vec2(100, 100));
+    uint receiver = context.addPatch(make_vec3(0, 0, 0.5f), make_vec2(0.2f, 0.2f));
+    context.setPrimitiveData(emitter, "temperature", 300.f);
+    context.setPrimitiveData(pane, "temperature", 0.f);
+    context.setPrimitiveData(receiver, "temperature", 0.f);
+    context.setPrimitiveData(pane, "glass_n_LW", 4.f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("LW");
+    radiation.setDiffuseRayCount("LW", 20000);
+    radiation.setScatteringDepth("LW", 2);
+    radiation.updateGeometry();
+    radiation.runBand("LW");
+
+    float flux_receiver;
+    context.getPrimitiveData(receiver, "radiation_flux_LW", flux_receiver);
+
+    // Lower face: the emitter. Upper face: the pane's diffuse reflection of the emitter's radiation.
+    const float sigma = 5.670374419e-8f;
+    const float emission = sigma * powf(300.f, 4);
+    const float expected = emission * (1.f + glass_hemispherical_tau_rho_alpha_ref(4.f, 0.f).y);
+    DOCTEST_INFO("receiver absorbed " << flux_receiver << ", expected " << expected << " (" << emission << " from the emitter)");
+    DOCTEST_CHECK(flux_receiver > 0.98f * expected);
+    DOCTEST_CHECK(flux_receiver < 1.02f * expected);
+}
+
 // Launches are split into batches of primitives so that no single GPU command buffer exceeds the
 // host platform's execution watchdog (macOS/Metal aborts long command buffers with
 // VK_ERROR_DEVICE_LOST). Batching must be numerically transparent: every primitive has to be
@@ -11741,6 +12871,680 @@ GPU_TEST_CASE("Backend Invariant - Per-Source Radiative Properties") {
 
     // This is the assertion that failed before the fix: both sources deposited the same flux.
     DOCTEST_CHECK(absorbed_long / absorbed_short == doctest::Approx((1.f - rho_long) / (1.f - rho_short)).epsilon(0.03));
+}
+
+// ================================================================================================
+// Spectral weighting of reflectivity/transmissivity
+//
+// A primitive's rho/tau in a band is its spectrum weighted by the spectrum of the radiation that
+// reaches it. A source contributes nothing outside its tabulated range, a rho/tau spectrum is zero
+// outside its own range, and the integration is clipped to the band. Direct rays use their source's
+// weighting; diffuse, scattered and emitted rays use one extra slot weighted by the band's combined
+// incident spectrum (every source's band flux plus the sky diffuse flux).
+// ================================================================================================
+
+//! A single horizontal patch whose reflectivity (and optionally transmissivity) follows the named spectra.
+static uint addSpectralPatch(Context &context, const std::string &rho_label, const std::string &tau_label = "") {
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(patch, "reflectivity_spectrum", rho_label);
+    if (!tau_label.empty()) {
+        context.setPrimitiveData(patch, "transmissivity_spectrum", tau_label);
+    }
+    return patch;
+}
+
+//! Runs a band and returns the exception text it threw, or an empty string if it ran.
+static std::string runBandError(RadiationModel &model, const std::string &band) {
+    std::string error_message;
+    {
+        capture_cerr cerr_capture;
+        try {
+            model.runBand(band);
+        } catch (const std::runtime_error &error) {
+            error_message = error.what();
+        }
+    }
+    return error_message;
+}
+
+GPU_TEST_CASE("Spectral weighting - a source contributes nothing outside its tabulated range") {
+    // The source is tabulated only from 500 to 600 nm, with nonzero edge values, inside a 400-700 nm
+    // band. Within 500-600 nm the surface reflects 0.5, and 0.1 well outside it, so the source sees
+    // rho = 0.5 exactly. Holding the source's edge values flat across the whole band instead weights
+    // the 0.1 wings as heavily as the core and gave rho = 0.25.
+    const std::vector<vec2> source_spectrum = {make_vec2(500, 1.f), make_vec2(600, 1.f)};
+    const std::vector<vec2> surface_rho = {make_vec2(400, 0.1f), make_vec2(490, 0.1f), make_vec2(500, 0.5f), make_vec2(600, 0.5f), make_vec2(610, 0.1f), make_vec2(700, 0.1f)};
+
+    Context context;
+    context.setGlobalData("sw_narrow_source", source_spectrum);
+    context.setGlobalData("sw_step_rho", surface_rho);
+    uint patch = addSpectralPatch(context, "sw_step_rho");
+    context.setPrimitiveData(patch, "twosided_flag", uint(0));
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    model.optionalOutputPrimitiveData("reflectivity");
+    uint source = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    model.setSourceSpectrum(source, "sw_narrow_source");
+    model.addRadiationBand("VIS", 400.f, 700.f);
+    model.disableEmission("VIS");
+    model.setScatteringDepth("VIS", 1); // with depth 0 a surface's properties are ignored and it absorbs everything
+    model.setDirectRayCount("VIS", 1000);
+    model.setDiffuseRadiationFlux("VIS", 0.f);
+    model.updateGeometry();
+    model.runBand("VIS");
+
+    float rho = 0.f;
+    context.getPrimitiveData(patch, "reflectivity_0_VIS", rho);
+    DOCTEST_CHECK(std::abs(rho - 0.5f) < 1e-3f);
+
+    // The source's band flux is its integral over 500-600 nm, 100 W/m^2; a patch with no transmission absorbs (1 - rho) of it.
+    const float band_flux = model.getSourceFlux(source, "VIS");
+    DOCTEST_CHECK(std::abs(band_flux - 100.f) < 1e-3f);
+    float absorbed = 0.f;
+    context.getPrimitiveData(patch, "radiation_flux_VIS", absorbed);
+    DOCTEST_CHECK(std::abs(absorbed - 50.f) < 0.5f);
+
+    // The public source-weighted integral must agree with the value applied to the scene.
+    DOCTEST_CHECK(std::abs(model.integrateSpectrum(source, surface_rho, 400.f, 700.f) - 0.5f) < 1e-3f);
+}
+
+GPU_TEST_CASE("Spectral weighting - a reflectivity spectrum is zero outside its tabulated range") {
+    // A flat source over the whole 400-700 nm band and a surface tabulated only from 500 to 700 nm,
+    // where it reflects 0.5. Outside its range the spectrum contributes nothing, the same as with no
+    // source spectrum at all, so rho = 0.5 * 200 / 300.
+    const std::vector<vec2> flat_source = {make_vec2(400, 1.f), make_vec2(700, 1.f)};
+    const std::vector<vec2> partial_rho = {make_vec2(500, 0.5f), make_vec2(700, 0.5f)};
+    const float expected_rho = 0.5f * 200.f / 300.f;
+
+    for (bool with_source_spectrum: {true, false}) {
+        DOCTEST_CAPTURE(with_source_spectrum);
+        Context context;
+        context.setGlobalData("sw_flat_source", flat_source);
+        context.setGlobalData("sw_partial_rho", partial_rho);
+        uint patch = addSpectralPatch(context, "sw_partial_rho");
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        model.optionalOutputPrimitiveData("reflectivity");
+        uint source = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        if (with_source_spectrum) {
+            model.setSourceSpectrum(source, "sw_flat_source");
+        }
+        model.addRadiationBand("VIS", 400.f, 700.f);
+        model.disableEmission("VIS");
+        model.setScatteringDepth("VIS", 0);
+        model.setDirectRayCount("VIS", 100);
+        model.setSourceFlux(source, "VIS", 1000.f);
+        model.setDiffuseRadiationFlux("VIS", 0.f);
+        model.updateGeometry();
+        model.runBand("VIS");
+
+        float rho = 0.f;
+        context.getPrimitiveData(patch, "reflectivity_0_VIS", rho);
+        DOCTEST_CHECK(std::abs(rho - expected_rho) < 1e-3f);
+    }
+}
+
+GPU_TEST_CASE("Spectral weighting - a reflectivity spectrum that does not overlap the band is an error") {
+    // The surface is tabulated only from 800 to 900 nm, so its reflectivity in a 400-700 nm band is
+    // undefined. Averaging the whole spectrum, or reporting 0, would both be invented values.
+    const std::vector<vec2> flat_source = {make_vec2(400, 1.f), make_vec2(700, 1.f)};
+    const std::vector<vec2> nir_rho = {make_vec2(800, 0.4f), make_vec2(900, 0.6f)};
+
+    for (bool with_source_spectrum: {true, false}) {
+        DOCTEST_CAPTURE(with_source_spectrum);
+        Context context;
+        context.setGlobalData("sw_flat_source", flat_source);
+        context.setGlobalData("sw_nir_rho", nir_rho);
+        addSpectralPatch(context, "sw_nir_rho");
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        uint source = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        if (with_source_spectrum) {
+            model.setSourceSpectrum(source, "sw_flat_source");
+        }
+        model.addRadiationBand("VIS", 400.f, 700.f);
+        model.disableEmission("VIS");
+        model.setScatteringDepth("VIS", 0);
+        model.setDirectRayCount("VIS", 100);
+        model.setSourceFlux(source, "VIS", 1000.f);
+        model.setDiffuseRadiationFlux("VIS", 0.f);
+        model.updateGeometry();
+
+        const std::string error_message = runBandError(model, "VIS");
+        DOCTEST_CHECK(error_message.find("sw_nir_rho") != std::string::npos);
+        DOCTEST_CHECK(error_message.find("VIS") != std::string::npos);
+    }
+
+    // A constant band value set on the primitive replaces the spectrum, so the same spectrum is not an error there.
+    {
+        Context context;
+        context.setGlobalData("sw_nir_rho", nir_rho);
+        uint patch = addSpectralPatch(context, "sw_nir_rho");
+        context.setPrimitiveData(patch, "reflectivity_VIS", 0.3f);
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        uint source = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        model.addRadiationBand("VIS", 400.f, 700.f);
+        model.disableEmission("VIS");
+        model.setScatteringDepth("VIS", 0);
+        model.setDirectRayCount("VIS", 100);
+        model.setSourceFlux(source, "VIS", 1000.f);
+        model.setDiffuseRadiationFlux("VIS", 0.f);
+        model.updateGeometry();
+        DOCTEST_CHECK(runBandError(model, "VIS").empty());
+    }
+}
+
+GPU_TEST_CASE("Spectral weighting - a band value of 0 overrides a surface spectrum") {
+    // Primitive data "reflectivity_<band>" replaces the surface's spectrum in that band, as the error for a spectrum that does not cover a
+    // band advises. A value of 0, the default, used to be ignored, so the spectrum was still used: its weighted value in a band it covers,
+    // and the error again in a band it does not.
+    Context context;
+    context.setGlobalData("sw_vis_rho", std::vector<vec2>{make_vec2(400, 0.3f), make_vec2(700, 0.3f)});
+    uint patch = addSpectralPatch(context, "sw_vis_rho");
+    context.setPrimitiveData(patch, "reflectivity_VIS", 0.f);
+    context.setPrimitiveData(patch, "reflectivity_FAR", 0.f);
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    model.optionalOutputPrimitiveData("reflectivity");
+    uint source = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    for (const std::string &band: std::vector<std::string>{"VIS", "FAR"}) {
+        model.addRadiationBand(band, band == "VIS" ? 400.f : 800.f, band == "VIS" ? 700.f : 900.f);
+        model.disableEmission(band);
+        model.setScatteringDepth(band, 1);
+        model.setDirectRayCount(band, 100);
+        model.setDiffuseRayCount(band, 100);
+        model.setSourceFlux(source, band, 1000.f);
+        model.setDiffuseRadiationFlux(band, 0.f);
+    }
+    model.updateGeometry();
+
+    DOCTEST_CHECK(runBandError(model, "VIS").empty());
+    float rho = -1.f;
+    context.getPrimitiveData(patch, "reflectivity_0_VIS", rho);
+    DOCTEST_CHECK(rho == 0.f);
+    DOCTEST_CHECK(runBandError(model, "FAR").empty());
+}
+
+GPU_TEST_CASE("Spectral weighting - flux in a band where the spectrum has no energy is an error") {
+    // Source 1's spectrum lies entirely outside the 400-700 nm band, but its band flux was set by hand.
+    // The rho/tau its direct rays would use is a ratio of two zero integrals; it used to be taken as 0,
+    // so every surface silently absorbed all of that source's radiation.
+    const std::vector<vec2> flat_source = {make_vec2(400, 1.f), make_vec2(700, 1.f)};
+    const std::vector<vec2> nir_source = {make_vec2(800, 1.f), make_vec2(900, 1.f)};
+    const std::vector<vec2> surface_rho = {make_vec2(400, 0.3f), make_vec2(900, 0.3f)};
+
+    auto build = [&](Context &context) {
+        context.setGlobalData("sw_flat_source", flat_source);
+        context.setGlobalData("sw_nir_source", nir_source);
+        context.setGlobalData("sw_gray_rho", surface_rho);
+        addSpectralPatch(context, "sw_gray_rho");
+    };
+    auto configure = [&](RadiationModel &model, uint &visible, uint &nir) {
+        model.disableMessages();
+        visible = model.addSphereRadiationSource(make_vec3(0, 0, 5), 0.1f);
+        nir = model.addSphereRadiationSource(make_vec3(0, 0, 6), 0.1f);
+        model.setSourceSpectrum(visible, "sw_flat_source");
+        model.setSourceSpectrum(nir, "sw_nir_source");
+        model.addRadiationBand("VIS", 400.f, 700.f);
+        model.disableEmission("VIS");
+        model.setScatteringDepth("VIS", 1);
+        model.setDirectRayCount("VIS", 100);
+        model.setDiffuseRayCount("VIS", 100);
+        model.setSourceFlux(visible, "VIS", 1000.f);
+        model.setDiffuseRadiationFlux("VIS", 0.f);
+    };
+
+    DOCTEST_SUBCASE("manually set flux is rejected") {
+        Context context;
+        build(context);
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        uint visible = 0, nir = 0;
+        configure(model, visible, nir);
+        model.setSourceFlux(nir, "VIS", 500.f);
+        model.updateGeometry();
+        const std::string error_message = runBandError(model, "VIS");
+        DOCTEST_CHECK(error_message.find("VIS") != std::string::npos);
+        DOCTEST_CHECK(error_message.find("source " + std::to_string(nir)) != std::string::npos);
+        DOCTEST_CHECK(error_message.find("800") != std::string::npos);
+    }
+
+    DOCTEST_SUBCASE("the same source with no flux in the band runs") {
+        for (bool explicit_zero: {true, false}) {
+            DOCTEST_CAPTURE(explicit_zero);
+            Context context;
+            build(context);
+            RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+            uint visible = 0, nir = 0;
+            configure(model, visible, nir);
+            if (explicit_zero) {
+                model.setSourceFlux(nir, "VIS", 0.f);
+            }
+            model.updateGeometry();
+            DOCTEST_CHECK(runBandError(model, "VIS").empty());
+        }
+    }
+
+    DOCTEST_SUBCASE("a sky diffuse spectrum with no energy in the band but a manual diffuse flux is rejected") {
+        Context context;
+        build(context);
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        uint visible = 0, nir = 0;
+        configure(model, visible, nir);
+        model.setDiffuseSpectrum("sw_nir_source");
+        model.setDiffuseRadiationFlux("VIS", 200.f);
+        model.updateGeometry();
+        const std::string error_message = runBandError(model, "VIS");
+        DOCTEST_CHECK(error_message.find("VIS") != std::string::npos);
+        DOCTEST_CHECK(error_message.find("diffuse") != std::string::npos);
+    }
+}
+
+GPU_TEST_CASE("RadiationModel - emission band without scattering accepts consistent properties with several sources") {
+    // With scattering off, an emitting surface's reflectivity and transmissivity are switched off in every material slot. Doing
+    // that for the first slot used to overwrite the surface's emissivity with 1, so the next slot's unchanged eps + rho + tau
+    // no longer summed to 1 and runBand() rejected a consistent surface whenever there was more than one slot.
+    Context context;
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(patch, "emissivity_LW", 0.9f);
+    context.setPrimitiveData(patch, "reflectivity_LW", 0.1f);
+    context.setPrimitiveData(patch, "temperature", 300.f);
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    uint first = model.addSphereRadiationSource(make_vec3(0, 0, 5), 0.1f);
+    uint second = model.addSphereRadiationSource(make_vec3(0, 0, 6), 0.1f);
+    model.addRadiationBand("LW");
+    model.setScatteringDepth("LW", 0);
+    model.setDiffuseRayCount("LW", 100);
+    model.setSourceFlux(first, "LW", 0.f);
+    model.setSourceFlux(second, "LW", 0.f);
+    model.setDiffuseRadiationFlux("LW", 0.f);
+    model.updateGeometry();
+    DOCTEST_CHECK(runBandError(model, "LW").empty());
+}
+
+namespace {
+    // Red (600-700 nm) and far-red (700-760 nm) sources in one 600-760 nm band, and a leaf that
+    // reflects and transmits 0.05 in the red and 0.45 in the far red. Both source spectra are tabulated
+    // over the whole band, zero outside their own part of it, so the result does not depend on how a
+    // source is treated beyond its tabulated range. Every product of leaf and source spectrum is linear
+    // between grid points, so the weighted values are exact: rho = tau = 5.425/100.5 under the red
+    // source and 0.45 under the far-red one.
+    const std::vector<vec2> sw_red_spectrum = {make_vec2(600, 1.f), make_vec2(700, 1.f), make_vec2(701, 0.f), make_vec2(760, 0.f)};
+    const std::vector<vec2> sw_farred_spectrum = {make_vec2(600, 0.f), make_vec2(700, 0.f), make_vec2(701, 1.f), make_vec2(760, 1.f)};
+    const std::vector<vec2> sw_leaf_rho_tau = {make_vec2(600, 0.05f), make_vec2(699, 0.05f), make_vec2(700, 0.45f), make_vec2(760, 0.45f)};
+    const float sw_leaf_rho_red = 5.425f / 100.5f;
+    const float sw_leaf_rho_farred = 0.45f;
+
+    void setRedFarRedGlobals(Context &context) {
+        context.setGlobalData("sw_red", sw_red_spectrum);
+        context.setGlobalData("sw_farred", sw_farred_spectrum);
+        context.setGlobalData("sw_leaf", sw_leaf_rho_tau);
+    }
+
+    //! Adds two collimated sources straight overhead with the red spectrum on the first index when red_first.
+    void addRedFarRedSources(RadiationModel &model, bool red_first, uint &red, uint &farred) {
+        uint first = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        uint second = 0;
+        std::string warning;
+        {
+            capture_cerr cerr_capture;
+            second = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+            warning = cerr_capture.get_captured_output();
+        }
+        DOCTEST_CHECK(warning.find("Multiple sun sources") != std::string::npos);
+        red = red_first ? first : second;
+        farred = red_first ? second : first;
+        model.setSourceSpectrum(red, "sw_red");
+        model.setSourceSpectrum(farred, "sw_farred");
+    }
+
+    //! Diffuse/scatter slot value (index Nsources) for primitive 0 of a single-primitive, single-band scene.
+    void readDiffuseSlot(RadiationModel &model, float &rho, float &tau) {
+        const RayTracingMaterial &material = RadiationModelTestHelper::getMaterialData(model);
+        const size_t slots = material.num_sources + 1;
+        DOCTEST_REQUIRE(material.num_primitives == 1);
+        DOCTEST_REQUIRE(material.num_bands == 1);
+        DOCTEST_REQUIRE(material.reflectivity.size() == slots);
+        DOCTEST_REQUIRE(material.transmissivity.size() == slots);
+        rho = material.reflectivity.at(material.num_sources);
+        tau = material.transmissivity.at(material.num_sources);
+    }
+} // namespace
+
+GPU_TEST_CASE("Spectral weighting - scattered radiation from several sources uses their combined spectrum") {
+    // A gray, half-transmitting panel A is lit from overhead by the red and the far-red source with
+    // equal flux. Leaf B hangs just below it, inside its shadow, so everything B receives is A's
+    // transmitted radiation, carried by the scattering pass. B's absorptance is 1 - rho - tau with its
+    // diffuse-slot properties, which weight the leaf by the combined incident spectrum:
+    // rho = tau = (rho_red + rho_farred) / 2. A gray B with exactly those constant properties must
+    // absorb the same flux, whichever source has index 0. The diffuse pass used to take source 0's
+    // properties, so B absorbed 1.8x or 0.2x as much as the gray panel depending on source order.
+    const float combined_rho = 0.5f * (sw_leaf_rho_red + sw_leaf_rho_farred);
+
+    auto absorbed_by_b = [&](bool red_first, bool leaf_b) {
+        Context context;
+        setRedFarRedGlobals(context);
+        uint panel = context.addPatch(make_vec3(0, 0, 1.f), make_vec2(1, 1));
+        context.setPrimitiveData(panel, "reflectivity_R", 0.f);
+        context.setPrimitiveData(panel, "transmissivity_R", 0.5f);
+        uint receiver = context.addPatch(make_vec3(0, 0, 0.9f), make_vec2(0.8f, 0.8f));
+        if (leaf_b) {
+            context.setPrimitiveData(receiver, "reflectivity_spectrum", "sw_leaf");
+            context.setPrimitiveData(receiver, "transmissivity_spectrum", "sw_leaf");
+        } else {
+            context.setPrimitiveData(receiver, "reflectivity_R", combined_rho);
+            context.setPrimitiveData(receiver, "transmissivity_R", combined_rho);
+        }
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        uint red = 0, farred = 0;
+        addRedFarRedSources(model, red_first, red, farred);
+        model.addRadiationBand("R", 600.f, 760.f);
+        model.disableEmission("R");
+        model.setScatteringDepth("R", 2); // the last iteration deposits leftover scatter where it lands, so B's own scatter needs a second one
+        model.setDirectRayCount("R", 1000);
+        model.setDiffuseRayCount("R", 100000);
+        model.setDiffuseRadiationFlux("R", 0.f);
+        model.setSourceFlux(red, "R", 500.f);
+        model.setSourceFlux(farred, "R", 500.f);
+        model.updateGeometry();
+        model.runBand("R");
+
+        float absorbed = 0.f;
+        context.getPrimitiveData(receiver, "radiation_flux_R", absorbed);
+        return absorbed;
+    };
+
+    const float gray = absorbed_by_b(true, false);
+    DOCTEST_REQUIRE(gray > 10.f); // B must actually receive A's scatter, or the comparison below proves nothing
+    const float leaf_red_first = absorbed_by_b(true, true);
+    const float leaf_farred_first = absorbed_by_b(false, true);
+    DOCTEST_CHECK(std::abs(leaf_red_first / gray - 1.f) < 0.05f);
+    DOCTEST_CHECK(std::abs(leaf_farred_first / gray - 1.f) < 0.05f);
+}
+
+GPU_TEST_CASE("Spectral weighting - the diffuse slot weights each source and the sky by its band flux") {
+    auto build = [](Context &context) {
+        setRedFarRedGlobals(context);
+        uint leaf = addSpectralPatch(context, "sw_leaf", "sw_leaf");
+        return leaf;
+    };
+    auto configure = [](RadiationModel &model) {
+        model.disableMessages();
+        model.addRadiationBand("R", 600.f, 760.f);
+        model.disableEmission("R");
+        model.setScatteringDepth("R", 1);
+        model.setDirectRayCount("R", 100);
+        model.setDiffuseRayCount("R", 10000);
+    };
+
+    DOCTEST_SUBCASE("two sources, and the slot follows a change in their flux ratio") {
+        Context context;
+        build(context);
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        configure(model);
+        uint red = 0, farred = 0;
+        addRedFarRedSources(model, true, red, farred);
+        model.setDiffuseRadiationFlux("R", 0.f);
+        model.setSourceFlux(red, "R", 500.f);
+        model.setSourceFlux(farred, "R", 500.f);
+        model.updateGeometry();
+        model.runBand("R");
+
+        float rho = 0.f, tau = 0.f;
+        readDiffuseSlot(model, rho, tau);
+        const float equal_mix = 0.5f * (sw_leaf_rho_red + sw_leaf_rho_farred);
+        DOCTEST_CHECK(std::abs(rho - equal_mix) < 1e-4f);
+        DOCTEST_CHECK(std::abs(tau - equal_mix) < 1e-4f);
+
+        // Tripling the far-red flux alone changes no material input, but it changes the incident spectrum.
+        model.setSourceFlux(farred, "R", 1500.f);
+        model.runBand("R");
+        readDiffuseSlot(model, rho, tau);
+        const float farred_heavy = (500.f * sw_leaf_rho_red + 1500.f * sw_leaf_rho_farred) / 2000.f;
+        DOCTEST_CHECK(std::abs(rho - farred_heavy) < 1e-4f);
+        DOCTEST_CHECK(std::abs(tau - farred_heavy) < 1e-4f);
+    }
+
+    DOCTEST_SUBCASE("sky diffuse radiation with its own spectrum") {
+        // Source 0 is red but off; the only radiation is far-red sky. A two-sided leaf in the open sky
+        // absorbs the diffuse flux on each face, 2 * flux * (1 - rho - tau) with far-red properties:
+        // 2 * 1000 * (1 - 2 * 0.45) = 200. Weighted by source 0's red spectrum it absorbed about 1780.
+        Context context;
+        uint leaf = build(context);
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        configure(model);
+        uint red = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        model.setSourceSpectrum(red, "sw_red");
+        model.setSourceFlux(red, "R", 0.f);
+        model.setDiffuseSpectrum("sw_farred");
+        model.setDiffuseRadiationFlux("R", 1000.f);
+        model.updateGeometry();
+        model.runBand("R");
+
+        float rho = 0.f, tau = 0.f;
+        readDiffuseSlot(model, rho, tau);
+        DOCTEST_CHECK(std::abs(rho - sw_leaf_rho_farred) < 1e-4f);
+        DOCTEST_CHECK(std::abs(tau - sw_leaf_rho_farred) < 1e-4f);
+
+        float absorbed = 0.f;
+        context.getPrimitiveData(leaf, "radiation_flux_R", absorbed);
+        const float expected = 2.f * 1000.f * (1.f - 2.f * sw_leaf_rho_farred);
+        DOCTEST_CHECK(std::abs(absorbed - expected) < 0.03f * expected);
+    }
+
+    DOCTEST_SUBCASE("no incident radiation in the band gives the flat band average") {
+        // An emission-only band: nothing to weight by, so the slot holds the unweighted band average.
+        Context context;
+        build(context);
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        configure(model);
+        model.setDiffuseRadiationFlux("R", 0.f);
+        model.updateGeometry();
+        model.runBand("R");
+
+        float rho = 0.f, tau = 0.f;
+        readDiffuseSlot(model, rho, tau);
+        const float flat_average = (4.95f + 0.25f + 0.45f * 60.f) / 160.f;
+        DOCTEST_CHECK(std::abs(rho - flat_average) < 1e-4f);
+        DOCTEST_CHECK(std::abs(tau - flat_average) < 1e-4f);
+    }
+}
+
+GPU_TEST_CASE("Spectral weighting - camera-weighted values of spectral and spectrally flat radiation share one scale") {
+    // A sun with a spectrum and sky radiation without one, seen by a camera whose response is 0.1 from 500 to 700 nm, on a surface that
+    // reflects 0.5 everywhere. The sun's camera-weighted reflectivity is 0.5 * 0.1 = 0.05 and its white reference 0.1: a spectrum keeps the
+    // magnitude of the camera response. Flat sky radiation must be on the same scale in the same band, or mixing the two in the diffuse slot
+    // (and in one image) weights them inconsistently. It used to be normalized by the response instead, giving 0.5 and 1, so the diffuse
+    // slot held 0.8 * 0.05 + 0.2 * 0.5 = 0.14 and a white reference of 0.28, and sky light looked ten times too bright.
+    const std::vector<vec2> gray_rho = {make_vec2(400, 0.5f), make_vec2(800, 0.5f)};
+    const std::vector<vec2> flat_sun = {make_vec2(400, 1.f), make_vec2(800, 1.f)};
+    const std::vector<vec2> response = {make_vec2(500, 0.1f), make_vec2(700, 0.1f)};
+
+    auto camera_diffuse_slot = [&](bool sun_has_spectrum, float &rho_cam, float &white_reference) {
+        Context context;
+        context.setGlobalData("sw_gray_rho", gray_rho);
+        context.setGlobalData("sw_flat_sun", flat_sun);
+        context.setGlobalData("sw_response", response);
+        addSpectralPatch(context, "sw_gray_rho");
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        uint sun = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        if (sun_has_spectrum) {
+            model.setSourceSpectrum(sun, "sw_flat_sun");
+        }
+        model.addRadiationBand("R", 400.f, 800.f);
+        model.disableEmission("R");
+        model.setScatteringDepth("R", 1);
+        model.setDirectRayCount("R", 100);
+        model.setDiffuseRayCount("R", 100);
+        model.setSourceFlux(sun, "R", 800.f);
+        model.setDiffuseRadiationFlux("R", 200.f);
+
+        CameraProperties camera_properties;
+        camera_properties.camera_resolution = make_int2(4, 4);
+        camera_properties.HFOV = 20;
+        model.addRadiationCamera("cam", {"R"}, make_vec3(0, 0, 2), make_vec3(0, 0, 0), camera_properties, 1);
+        model.setCameraSpectralResponse("cam", "R", "sw_response");
+        model.updateGeometry();
+        model.runBand("R");
+
+        // One primitive, one band, one camera: [slot][primitive][band][camera] indexes by slot alone
+        const RayTracingMaterial &material = RadiationModelTestHelper::getMaterialData(model);
+        DOCTEST_REQUIRE(material.reflectivity_cam.size() == material.num_sources + 1);
+        DOCTEST_REQUIRE(material.white_reference_cam.size() == material.num_sources + 1);
+        rho_cam = material.reflectivity_cam.at(material.num_sources);
+        white_reference = material.white_reference_cam.at(material.num_sources);
+    };
+
+    float rho_cam = 0.f, white_reference = 0.f;
+    camera_diffuse_slot(true, rho_cam, white_reference);
+    DOCTEST_CHECK(std::abs(rho_cam - 0.05f) < 1e-5f);
+    DOCTEST_CHECK(std::abs(white_reference - 0.1f) < 1e-5f);
+
+    // With no spectrum anywhere in the band, the camera-weighted values keep their response-normalized scale, as before.
+    camera_diffuse_slot(false, rho_cam, white_reference);
+    DOCTEST_CHECK(std::abs(rho_cam - 0.5f) < 1e-5f);
+    DOCTEST_CHECK(std::abs(white_reference - 1.f) < 1e-5f);
+}
+
+GPU_TEST_CASE("Spectral weighting - the camera weight of a source's specular reflection is its white reference") {
+    // Specularly reflected source radiation is weighted by the camera response the way a spectrally white surface's reflection is, so a
+    // source's camera weight must equal its white reference. With a camera responding 0.5 from 400 to 550 nm inside a 400-700 nm band lit by a
+    // flat source, both are 0.5; the weight was being normalized over the whole band instead, giving 0.25.
+    Context context;
+    context.setGlobalData("sw_flat_source", std::vector<vec2>{make_vec2(400, 1.f), make_vec2(700, 1.f)});
+    context.setGlobalData("sw_blue_response", std::vector<vec2>{make_vec2(400, 0.5f), make_vec2(550, 0.5f)});
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(patch, "reflectivity_VIS", 0.2f);
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    uint source = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    model.setSourceSpectrum(source, "sw_flat_source");
+    model.addRadiationBand("VIS", 400.f, 700.f);
+    model.disableEmission("VIS");
+    model.setScatteringDepth("VIS", 1);
+    model.setDirectRayCount("VIS", 100);
+    model.setDiffuseRayCount("VIS", 100);
+    model.setDiffuseRadiationFlux("VIS", 0.f);
+
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = make_int2(4, 4);
+    camera_properties.HFOV = 20;
+    model.addRadiationCamera("cam", {"VIS"}, make_vec3(0, 0, 2), make_vec3(0, 0, 0), camera_properties, 1);
+    model.setCameraSpectralResponse("cam", "VIS", "sw_blue_response");
+    model.updateGeometry();
+    model.runBand("VIS");
+
+    const RayTracingMaterial &material = RadiationModelTestHelper::getMaterialData(model);
+    const std::vector<RayTracingSource> &sources = RadiationModelTestHelper::getSourceData(model);
+    DOCTEST_REQUIRE(sources.size() == 1);
+    DOCTEST_REQUIRE(sources.front().fluxes_cam.size() == 1);
+    DOCTEST_CHECK(std::abs(material.white_reference_cam.at(0) - 0.5f) < 1e-5f);
+    DOCTEST_CHECK(std::abs(sources.front().fluxes_cam.front() - material.white_reference_cam.at(0)) < 1e-5f);
+}
+
+GPU_TEST_CASE("Spectral weighting - the camera weight of a source the camera cannot see is zero, not an error") {
+    // Without band bounds the camera sees wherever the source and the response overlap. Here the source is tabulated to 780 nm but emits
+    // nothing above 700 nm, where the camera responds, so the camera sees none of it. Weighting its flux by the camera response failed with
+    // "nothing to weight by".
+    Context context;
+    context.setGlobalData("sw_visible_led", std::vector<vec2>{make_vec2(380, 1.f), make_vec2(690, 1.f), make_vec2(700, 0.f), make_vec2(780, 0.f)});
+    context.setGlobalData("sw_nir_response", std::vector<vec2>{make_vec2(700, 1.f), make_vec2(1000, 1.f)});
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    uint source = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    model.setSourceSpectrum(source, "sw_visible_led");
+    model.addRadiationBand("NIRcam");
+    model.disableEmission("NIRcam");
+    model.setScatteringDepth("NIRcam", 0);
+    model.setDirectRayCount("NIRcam", 100);
+    model.setSourceFlux(source, "NIRcam", 100.f);
+    model.setDiffuseRadiationFlux("NIRcam", 0.f);
+
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = make_int2(4, 4);
+    camera_properties.HFOV = 20;
+    model.addRadiationCamera("cam", {"NIRcam"}, make_vec3(0, 0, 2), make_vec3(0, 0, 0), camera_properties, 1);
+    model.setCameraSpectralResponse("cam", "NIRcam", "sw_nir_response");
+    model.updateGeometry();
+
+    DOCTEST_CHECK(runBandError(model, "NIRcam").empty());
+    const std::vector<RayTracingSource> &sources = RadiationModelTestHelper::getSourceData(model);
+    DOCTEST_REQUIRE(sources.size() == 1);
+    DOCTEST_REQUIRE(sources.front().fluxes_cam.size() == 1);
+    DOCTEST_CHECK(sources.front().fluxes_cam.front() == 0.f);
+}
+
+GPU_TEST_CASE("Spectral weighting - a band whose surface spectra cannot be weighted stops only that band") {
+    // The surface spectrum covers 400-700 nm, so it has no value in an 800-900 nm band. That is an error when the 800-900 nm band is run,
+    // but it used to stop every band, including the 400-700 nm one where the spectrum is fine.
+    Context context;
+    context.setGlobalData("sw_vis_rho", std::vector<vec2>{make_vec2(400, 0.3f), make_vec2(700, 0.3f)});
+    addSpectralPatch(context, "sw_vis_rho");
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    uint source = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    for (const std::string &band: std::vector<std::string>{"VIS", "FAR"}) {
+        model.addRadiationBand(band, band == "VIS" ? 400.f : 800.f, band == "VIS" ? 700.f : 900.f);
+        model.disableEmission(band);
+        model.setScatteringDepth(band, 1);
+        model.setDirectRayCount(band, 100);
+        model.setDiffuseRayCount(band, 100);
+        model.setSourceFlux(source, band, 1000.f);
+        model.setDiffuseRadiationFlux(band, 0.f);
+    }
+    model.updateGeometry();
+
+    DOCTEST_CHECK(runBandError(model, "VIS").empty());
+    const std::string error_message = runBandError(model, "FAR");
+    DOCTEST_CHECK(error_message.find("sw_vis_rho") != std::string::npos);
+    DOCTEST_CHECK(error_message.find("FAR") != std::string::npos);
+}
+
+GPU_TEST_CASE("Spectral weighting - SIF excitation bins beyond a leaf spectrum are not an error") {
+    // A SIF camera tiles 400-750 nm with excitation bands; with 50 nm bins the first is 400-450 nm, entirely below a leaf spectrum that starts
+    // at 450 nm. Those internal bins take the spectrum as zero, like the uncovered part of any band. Treating them as an unweighted band
+    // stopped every SIF dispatch with an error naming an internal band the user never created.
+    Context context;
+    context.setGlobalData("sw_leaf_from_450", std::vector<vec2>{make_vec2(450, 0.1f), make_vec2(800, 0.1f)});
+    uint leaf = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(leaf, "twosided_flag", uint(0));
+    context.setPrimitiveData(leaf, "reflectivity_spectrum", "sw_leaf_from_450");
+    sif_stamp_biochem(context, {leaf}, "sw_bins");
+    context.setPrimitiveData(leaf, "electron_transport_ratio", 0.5f);
+    context.setPrimitiveData(leaf, "temperature", 298.15f);
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    model.addRadiationBand("SIF_red", 680.f, 700.f);
+    model.setDirectRayCount("SIF_red", 100);
+    model.setDiffuseRayCount("SIF_red", 100);
+    model.setScatteringDepth("SIF_red", 1);
+    uint sun = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    model.setSourceSpectrum(sun, "solar_spectrum_direct_ASTMG173");
+
+    SIFCameraProperties camera_properties;
+    camera_properties.camera_resolution = make_int2(4, 4);
+    camera_properties.HFOV = 20.f;
+    camera_properties.excitation_bin_width_nm = 50.f;
+    model.addSIFCamera("sif_cam", {"SIF_red"}, make_vec3(0, 0, 2), make_vec3(0, 0, 0), camera_properties, 1);
+    model.updateGeometry();
+
+    DOCTEST_CHECK(runBandError(model, "SIF_red").empty());
 }
 
 // A camera integrates scattered radiance against its own spectral response, which is a different

@@ -440,6 +440,8 @@ uint PlantArchitecture::generatePlantFromString(const std::string &generation_st
 }
 
 uint PlantArchitecture::generatePlantFromString(const std::string &generation_string, const std::map<std::string, PhytomerParameters> &phytomer_parameters) {
+    rejectStructuralOperationInCallback("generatePlantFromString");
+    StructuralOperationScope structural_operation_scope(this);
 
     // check that first characters are 'Internode'
     if (generation_string.front() != '{') {
@@ -636,6 +638,7 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                     output_xml << "\t\t\t\t\t\t\t\t<pitch>" << phytomer->peduncle_pitch.at(petiole).at(bud) << "</pitch>" << std::endl;
                     output_xml << "\t\t\t\t\t\t\t\t<curvature>" << phytomer->peduncle_curvature.at(petiole).at(bud) << "</curvature>" << std::endl;
                     output_xml << "\t\t\t\t\t\t\t\t<roll>" << phytomer->peduncle_roll.at(petiole).at(bud) << "</roll>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t\t\t<yaw>" << phytomer->peduncle_yaw.at(petiole).at(bud) << "</yaw>" << std::endl;
                 } else {
                     // Fallback to parameter values if stored values not available
                     output_xml << "\t\t\t\t\t\t\t\t<length>" << phytomer->phytomer_parameters.peduncle.length.val() << "</length>" << std::endl;
@@ -643,6 +646,7 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                     output_xml << "\t\t\t\t\t\t\t\t<pitch>" << phytomer->phytomer_parameters.peduncle.pitch.val() << "</pitch>" << std::endl;
                     output_xml << "\t\t\t\t\t\t\t\t<curvature>" << phytomer->phytomer_parameters.peduncle.curvature.val() << "</curvature>" << std::endl;
                     output_xml << "\t\t\t\t\t\t\t\t<roll>" << phytomer->phytomer_parameters.peduncle.roll.val() << "</roll>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t\t\t<yaw>" << phytomer->phytomer_parameters.peduncle.yaw.val() << "</yaw>" << std::endl;
                 }
 
                 output_xml << "\t\t\t\t\t\t\t</peduncle>" << std::endl;
@@ -692,6 +696,9 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
 
             // Additional parameters for reconstruction from parameters
             output_xml << "\t\t\t\t\t<internode_length_max>" << phytomer->internode_length_max << "</internode_length_max>" << std::endl;
+            // The arc length each segment was curved over when the internode was built. It cannot be recovered from
+            // internode_length_max, which a phytomer creation function may have rescaled since.
+            output_xml << "\t\t\t\t\t<internode_curvature_step>" << phytomer->internode_curvature_arc_length_step << "</internode_curvature_step>" << std::endl;
 
             // Length segments should match perturbation count
             uint length_segments = phytomer->internode_curvature_perturbations.size();
@@ -730,6 +737,17 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                         output_xml << ";";
                 }
                 output_xml << "</yaw_perturbations>" << std::endl;
+            }
+
+            // Save the azimuthal restoring angles (semicolon-delimited)
+            if (!phytomer->internode_azimuthal_restoring_angles.empty()) {
+                output_xml << "\t\t\t\t\t<azimuthal_restoring_angles>";
+                for (size_t i = 0; i < phytomer->internode_azimuthal_restoring_angles.size(); i++) {
+                    output_xml << phytomer->internode_azimuthal_restoring_angles[i];
+                    if (i < phytomer->internode_azimuthal_restoring_angles.size() - 1)
+                        output_xml << ";";
+                }
+                output_xml << "</azimuthal_restoring_angles>" << std::endl;
             }
 
             // Note: internode_vertices and internode_radii are no longer written to XML
@@ -1073,6 +1091,8 @@ void PlantArchitecture::writeQSMCylinderFile(uint plantID, const std::string &fi
 }
 
 std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &filename, bool quiet) {
+    rejectStructuralOperationInCallback("readPlantStructureXML");
+    StructuralOperationScope structural_operation_scope(this);
 
     if (!quiet) {
         std::cout << "Loading plant architecture XML file: " << filename << "..." << std::flush;
@@ -1274,6 +1294,9 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
             vec3 base_rot = parse_xml_tag_vec3(shoot.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
             AxisRotation base_rotation(deg2rad(base_rot.x), deg2rad(base_rot.y), deg2rad(base_rot.z));
 
+            // Whether the horizontal heading this shoot set out on has been re-derived yet (see the internode reconstruction below)
+            bool shoot_initial_heading_restored = false;
+
             uint phytomer_index_in_file = 0; // position of the <phytomer> node within this shoot
             for (pugi::xml_node phytomer = shoot.child("phytomer"); phytomer; phytomer = phytomer.next_sibling("phytomer"), phytomer_index_in_file++) {
 
@@ -1315,6 +1338,18 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     internode_length_max = parse_xml_tag_float(internode.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
                 }
 
+                // internode_curvature_step. Absent from files written before it was saved; the step is then taken from the
+                // maximum internode length further below, as it was for those files.
+                float internode_curvature_step = -1.f;
+                node_string = "internode_curvature_step";
+                if (internode.child(node_string.c_str())) {
+                    internode_curvature_step = parse_xml_tag_float(internode.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+                    if (internode_curvature_step < 0.f) {
+                        helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): <internode_curvature_step> in '" + filename + "' is " + std::to_string(internode_curvature_step) +
+                                             ", but it must not be negative. It is the arc length in meters that each segment of the internode was curved over, or zero for an internode that no curvature was applied to.");
+                    }
+                }
+
                 // internode_length_segments
                 uint internode_length_segments = 1; // default
                 node_string = "internode_length_segments";
@@ -1346,10 +1381,25 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     }
                 }
 
+                // azimuthal_restoring_angles (semicolon-delimited). Absent from files written before they were saved; the
+                // angles are then recomputed further below.
+                std::vector<float> azimuthal_restoring_angles;
+                node_string = "azimuthal_restoring_angles";
+                const bool azimuthal_restoring_angles_saved = internode.child(node_string.c_str());
+                if (azimuthal_restoring_angles_saved) {
+                    std::string restoring_str = internode.child_value(node_string.c_str());
+                    std::istringstream restoring_stream(restoring_str);
+                    std::string angle_str;
+                    while (std::getline(restoring_stream, angle_str, ';')) {
+                        azimuthal_restoring_angles.push_back(std::stof(angle_str));
+                    }
+                }
+
                 // Note: <internode_vertices> and <internode_radii> are neither written nor read. Internode
                 // geometry is reconstructed from the saved parameters (length, radius, pitch,
                 // phyllotactic_angle, length_max, length_segments) plus the saved stochastic state
-                // (curvature_perturbations, yaw_perturbations) further below.
+                // (curvature_perturbations, yaw_perturbations, azimuthal_restoring_angles) and the arc length the
+                // curvature was applied over (internode_curvature_step) further below.
 
                 float petiole_length;
                 float petiole_radius;
@@ -1401,6 +1451,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     float peduncle_radius = -1;
                     float peduncle_pitch = 0;
                     float peduncle_roll = 0;
+                    float peduncle_yaw = 0;
                     float peduncle_curvature = 0;
                 };
                 std::vector<std::vector<FloralBudData>> floral_bud_data; // first index is petiole within internode; second index is bud within petiole
@@ -1447,6 +1498,11 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         bud_node_string = "roll";
                         if (peduncle.child(bud_node_string.c_str())) {
                             fbud_data.peduncle_roll = parse_xml_tag_float(peduncle.child(bud_node_string.c_str()), bud_node_string, "PlantArchitecture::readPlantStructureXML");
+                        }
+                        // Absent from files written before the peduncle had a yaw, which built every peduncle in the leaf axil.
+                        bud_node_string = "yaw";
+                        if (peduncle.child(bud_node_string.c_str())) {
+                            fbud_data.peduncle_yaw = parse_xml_tag_float(peduncle.child(bud_node_string.c_str()), bud_node_string, "PlantArchitecture::readPlantStructureXML");
                         }
                         bud_node_string = "curvature";
                         if (peduncle.child(bud_node_string.c_str())) {
@@ -2045,20 +2101,79 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 reconstructed_radii[0] = internode_radius;
 
                 float dr = internode_length / float(internode_length_segments);
-                float dr_max = internode_length_max / float(internode_length_segments);
+
+                // Arc length each segment is curved over, which is zero for an internode that was built without curvature. This
+                // must be the step the internode was built with: Phytomer::scaleInternodeMaxLength() changes internode_length_max
+                // after the internode has been built, so the two are not interchangeable.
+                float curvature_step = internode_curvature_step;
+                if (internode_curvature_step < 0.f) {
+                    // A file written before the step was saved. The internode was curved if its shoot bends under gravity or it
+                    // recorded any tortuosity, and the saved maximum length is the only record of the step it was built with. A
+                    // prescribed internode is never curved.
+                    const bool has_tortuosity = std::any_of(curvature_perturbations.begin(), curvature_perturbations.end(), [](float perturbation) { return perturbation != 0.f; }) ||
+                                                std::any_of(yaw_perturbations.begin(), yaw_perturbations.end(), [](float perturbation) { return perturbation != 0.f; });
+                    curvature_step = (!phytomer_prebuilt && phytomer_index_in_shoot > 0 && (shoot_ptr->gravitropic_curvature != 0.f || has_tortuosity)) ? internode_length_max / float(internode_length_segments) : 0.f;
+                }
+                if (curvature_step > 0.f && curvature_perturbations.size() < internode_length_segments) {
+                    helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A phytomer on shoot " + std::to_string(shootID) + " in '" + filename + "' has " + std::to_string(internode_length_segments) +
+                                         " internode segments but " + std::to_string(curvature_perturbations.size()) + " values in <curvature_perturbations>. A curved internode needs one value for each segment.");
+                }
+                if (curvature_step > 0.f && azimuthal_restoring_angles_saved && azimuthal_restoring_angles.size() < internode_length_segments) {
+                    helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A phytomer on shoot " + std::to_string(shootID) + " in '" + filename + "' has " + std::to_string(internode_length_segments) +
+                                         " internode segments but " + std::to_string(azimuthal_restoring_angles.size()) + " values in <azimuthal_restoring_angles>. A curved internode needs one value for each segment.");
+                }
+                phytomer_ptr->internode_curvature_arc_length_step = curvature_step;
+                // The angles applied to each segment are collected in the reconstruction loop below
+                phytomer_ptr->internode_azimuthal_restoring_angles.assign(internode_length_segments, 0.f);
+
+                // Re-derive the horizontal heading the shoot set out on, which the azimuthal restoring force below pulls back
+                // toward. As in the Phytomer constructor, it is the heading of the first phytomer of the shoot whose axis is not
+                // vertical before any curvature is applied. The shoot was rebuilt above with freshly drawn angles, so the heading
+                // recorded then is not the grown one.
+                if (!phytomer_prebuilt && !shoot_initial_heading_restored) {
+                    helios::vec3 heading = make_vec3(internode_axis_initial.x, internode_axis_initial.y, 0.f);
+                    if (heading.magnitude() > 1e-4f) {
+                        shoot_ptr->initial_heading_horizontal = heading.normalize();
+                        shoot_initial_heading_restored = true;
+                    } else {
+                        shoot_ptr->initial_heading_horizontal = make_vec3(0, 0, 0);
+                    }
+                }
 
                 helios::vec3 internode_axis = internode_axis_initial;
 
                 for (int i = 1; i <= internode_length_segments; i++) {
                     // Apply gravitropic curvature + SAVED perturbations
-                    if (phytomer_index_in_shoot > 0 && !curvature_perturbations.empty()) {
-                        // This must stay in lockstep with the equivalent block in Phytomer::appendPhytomer() in
+                    if (curvature_step > 0.f) {
+                        // This must stay in lockstep with the equivalent block in the Phytomer constructor in
                         // PlantArchitecture.cpp, including the asymmetry of the inclination factor about horizontal.
                         float current_curvature_fact = 0.5f - internode_axis.z / 2.0f;
                         if (internode_axis.z < 0) {
                             current_curvature_fact *= 2.0f;
                         }
-                        float gravitropic_angle = shoot_ptr->gravitropic_curvature * current_curvature_fact * dr_max;
+                        float gravitropic_angle = shoot_ptr->gravitropic_curvature * current_curvature_fact * curvature_step;
+
+                        // Azimuthal restoring force. The saved angle is replayed. A file written before it was saved has it
+                        // recomputed from the heading before this segment is bent, as the Phytomer constructor does; that is
+                        // exact unless the heading lies nearly opposite the initial one, where rounding decides which way it turns.
+                        float azimuthal_restoring_angle = 0.f;
+                        if (azimuthal_restoring_angles_saved) {
+                            azimuthal_restoring_angle = azimuthal_restoring_angles[i - 1];
+                        } else if (shoot_ptr->initial_heading_horizontal.magnitude() > 1e-6f) {
+                            helios::vec3 current_heading = make_vec3(internode_axis.x, internode_axis.y, 0.f);
+                            if (current_heading.magnitude() > 1e-4f) {
+                                current_heading.normalize();
+                                float persistence_length = shoot_ptr->shoot_parameters.tortuosity_persistence_length.val();
+                                if (persistence_length <= 0.f) {
+                                    persistence_length = 0.5f;
+                                }
+                                const helios::vec3 &target = shoot_ptr->initial_heading_horizontal;
+                                float deviation = std::acos(std::clamp(current_heading * target, -1.f, 1.f)) * 180.f / float(M_PI);
+                                float sense = (current_heading.x * target.y - current_heading.y * target.x) >= 0.f ? 1.f : -1.f;
+                                azimuthal_restoring_angle = sense * deviation * std::min(1.f, curvature_step / persistence_length);
+                            }
+                        }
+                        phytomer_ptr->internode_azimuthal_restoring_angles[i - 1] = azimuthal_restoring_angle;
 
                         // The bending axis shrinks to zero length as the shoot approaches vertical, so it must be normalized
                         // before it is used to construct the orthogonal transverse axis.
@@ -2077,6 +2192,11 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                     float transverse_angle = deg2rad(yaw_perturbations[i - 1]);
                                     internode_axis = rotatePointAboutLine(internode_axis, nullorigin, transverse_axis, transverse_angle);
                                 }
+                            }
+
+                            // Apply the azimuthal correction about the vertical axis
+                            if (std::fabs(azimuthal_restoring_angle) > 1e-6f) {
+                                internode_axis = rotatePointAboutLine(internode_axis, nullorigin, make_vec3(0, 0, 1), deg2rad(azimuthal_restoring_angle));
                             }
 
                             internode_axis.normalize();
@@ -2212,7 +2332,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 };
 
                 // Lambda to recompute peduncle orientation vectors from parent context
-                auto recomputePeduncleOrientationVectors = [this, plantID](std::shared_ptr<Phytomer> phytomer_ptr, uint petiole_index, uint phytomer_index_in_shoot, float peduncle_pitch_rad, float peduncle_roll_rad, const AxisRotation &base_rotation,
+                auto recomputePeduncleOrientationVectors = [this, plantID](std::shared_ptr<Phytomer> phytomer_ptr, uint petiole_index, uint phytomer_index_in_shoot, float peduncle_pitch_rad, float peduncle_roll_rad, float peduncle_yaw_rad, const AxisRotation &base_rotation,
                                                                            vec3 &out_peduncle_axis_initial, vec3 &out_peduncle_rotation_axis) -> void {
                     // Step 1: Get parent internode axis at tip (fraction=1.0)
                     vec3 peduncle_axis = phytomer_ptr->getAxisVector(1.f, phytomer_ptr->getInternodeNodePositions());
@@ -2267,6 +2387,12 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
 
                     peduncle_axis = rotatePointAboutLine(peduncle_axis, nullorigin, internode_axis, azimuthal_rotation);
                     inflorescence_bending_axis_actual = rotatePointAboutLine(inflorescence_bending_axis_actual, nullorigin, internode_axis, azimuthal_rotation);
+
+                    // Step 4b: Turn the peduncle about the internode away from the leaf, as Phytomer::updateInflorescence() does
+                    if (peduncle_yaw_rad != 0.f) {
+                        peduncle_axis = rotatePointAboutLine(peduncle_axis, nullorigin, internode_axis, peduncle_yaw_rad);
+                        inflorescence_bending_axis_actual = rotatePointAboutLine(inflorescence_bending_axis_actual, nullorigin, internode_axis, peduncle_yaw_rad);
+                    }
 
                     // Step 5: Return computed vectors
                     out_peduncle_axis_initial = peduncle_axis;
@@ -2806,6 +2932,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         phytomer_ptr->peduncle_pitch.resize(floral_bud_data.size());
                         phytomer_ptr->peduncle_curvature.resize(floral_bud_data.size());
                         phytomer_ptr->peduncle_roll.resize(floral_bud_data.size());
+                        phytomer_ptr->peduncle_yaw.resize(floral_bud_data.size());
                     }
 
                     for (size_t petiole = 0; petiole < floral_bud_data.size(); petiole++) {
@@ -2872,6 +2999,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                 if (fbud_data.peduncle_roll != 0) {
                                     phytomer_ptr->phytomer_parameters.peduncle.roll = fbud_data.peduncle_roll;
                                 }
+                                phytomer_ptr->phytomer_parameters.peduncle.yaw = fbud_data.peduncle_yaw;
                                 if (fbud_data.peduncle_curvature != 0) {
                                     phytomer_ptr->phytomer_parameters.peduncle.curvature = fbud_data.peduncle_curvature;
                                 }
@@ -2920,7 +3048,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                         vec3 peduncle_axis_computed;
                                         vec3 peduncle_rotation_axis_computed;
 
-                                        recomputePeduncleOrientationVectors(phytomer_ptr, fbud.parent_index, phytomer_index_in_shoot, deg2rad(fbud_data.peduncle_pitch), deg2rad(fbud_data.peduncle_roll), fbud.base_rotation, peduncle_axis_computed,
+                                        recomputePeduncleOrientationVectors(phytomer_ptr, fbud.parent_index, phytomer_index_in_shoot, deg2rad(fbud_data.peduncle_pitch), deg2rad(fbud_data.peduncle_roll), deg2rad(fbud_data.peduncle_yaw), fbud.base_rotation, peduncle_axis_computed,
                                                                             peduncle_rotation_axis_computed);
 
                                         // Use computed value for reconstruction
@@ -2978,12 +3106,14 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                                 phytomer_ptr->peduncle_pitch.at(petiole).resize(bud + 1);
                                                 phytomer_ptr->peduncle_curvature.at(petiole).resize(bud + 1);
                                                 phytomer_ptr->peduncle_roll.at(petiole).resize(bud + 1);
+                                                phytomer_ptr->peduncle_yaw.at(petiole).resize(bud + 1);
                                             }
                                             phytomer_ptr->peduncle_length.at(petiole).at(bud) = fbud_data.peduncle_length;
                                             phytomer_ptr->peduncle_radius.at(petiole).at(bud) = fbud_data.peduncle_radius;
                                             phytomer_ptr->peduncle_pitch.at(petiole).at(bud) = fbud_data.peduncle_pitch;
                                             phytomer_ptr->peduncle_curvature.at(petiole).at(bud) = fbud_data.peduncle_curvature;
                                             phytomer_ptr->peduncle_roll.at(petiole).at(bud) = fbud_data.peduncle_roll;
+                                            phytomer_ptr->peduncle_yaw.at(petiole).at(bud) = fbud_data.peduncle_yaw;
                                         }
 
                                         // Rebuild Context geometry with COMPUTED vertices/radii
@@ -3106,7 +3236,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                         vec3 peduncle_axis_computed;
                                         vec3 peduncle_rotation_axis_computed;
 
-                                        recomputePeduncleOrientationVectors(phytomer_ptr, fbud.parent_index, phytomer_index_in_shoot, deg2rad(fbud_data.peduncle_pitch), deg2rad(fbud_data.peduncle_roll), fbud.base_rotation, peduncle_axis_computed,
+                                        recomputePeduncleOrientationVectors(phytomer_ptr, fbud.parent_index, phytomer_index_in_shoot, deg2rad(fbud_data.peduncle_pitch), deg2rad(fbud_data.peduncle_roll), deg2rad(fbud_data.peduncle_yaw), fbud.base_rotation, peduncle_axis_computed,
                                                                             peduncle_rotation_axis_computed);
 
                                         // Use computed value for reconstruction
@@ -3164,12 +3294,14 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                                 phytomer_ptr->peduncle_pitch.at(petiole).resize(bud + 1);
                                                 phytomer_ptr->peduncle_curvature.at(petiole).resize(bud + 1);
                                                 phytomer_ptr->peduncle_roll.at(petiole).resize(bud + 1);
+                                                phytomer_ptr->peduncle_yaw.at(petiole).resize(bud + 1);
                                             }
                                             phytomer_ptr->peduncle_length.at(petiole).at(bud) = fbud_data.peduncle_length;
                                             phytomer_ptr->peduncle_radius.at(petiole).at(bud) = fbud_data.peduncle_radius;
                                             phytomer_ptr->peduncle_pitch.at(petiole).at(bud) = fbud_data.peduncle_pitch;
                                             phytomer_ptr->peduncle_curvature.at(petiole).at(bud) = fbud_data.peduncle_curvature;
                                             phytomer_ptr->peduncle_roll.at(petiole).at(bud) = fbud_data.peduncle_roll;
+                                            phytomer_ptr->peduncle_yaw.at(petiole).at(bud) = fbud_data.peduncle_yaw;
                                         }
 
                                         // Rebuild Context geometry with COMPUTED vertices/radii
@@ -3338,8 +3470,9 @@ struct USDJoint {
     int child_link_index;
     vec3 local_pos_parent;   // Joint anchor in parent local frame
     vec3 local_pos_child;    // Joint anchor in child local frame
-    float stiffness;
-    float damping;
+    float stiffness;         // N*m/rad
+    float damping;           // N*m*s/rad
+    float armature = 0;      // kg*m^2, artificial inertia added at the joint
     bool is_fixed;           // true for world anchor joint
     // Orientation of joint frame in child body's local space.
     // Encodes relative rotation so that zero joint angle reproduces the rest pose.
@@ -3371,8 +3504,18 @@ float computeJointStiffness(float E, float radius, float segment_length) {
     return E * I / segment_length;
 }
 
-float computeJointDamping(float stiffness, float rotational_inertia, float damping_ratio) {
-    return damping_ratio * 2.f * std::sqrt(stiffness * rotational_inertia);
+// Stiffness-proportional damping. Sizing the damping from the inertia of the single link below the joint leaves it
+// orders of magnitude too small next to the mass the joint actually carries, so oscillations never decay.
+float computeJointDamping(float stiffness, float damping_time_constant) {
+    return damping_time_constant * stiffness;
+}
+
+// Artificial inertia that caps the joint's own natural frequency, sqrt(stiffness/armature), at stability_ratio times
+// the physics step rate. Beam stiffness on a short, light segment is otherwise far too stiff for the solver to
+// integrate. The armature is small next to the inertia of the limb beyond the joint, so limb-scale motion is unaffected.
+float computeJointArmature(float stiffness, float stability_ratio, float physics_steps_per_second) {
+    float max_natural_frequency = stability_ratio * physics_steps_per_second;
+    return stiffness / (max_natural_frequency * max_natural_frequency);
 }
 
 void axisToQuaternion(const vec3 &axis_dir, float &qw, float &qx, float &qy, float &qz) {
@@ -3663,6 +3806,16 @@ std::string sanitizePrimName(const std::string &name) {
 
 ArticulationData buildArticulationData(const PlantInstance &plant, const USDExportParameters &params, Context *context_ptr) {
 
+    if (params.damping_time_constant < 0.f) {
+        helios_runtime_error("ERROR (PlantArchitecture USD export): USDExportParameters::damping_time_constant must be non-negative, but " + std::to_string(params.damping_time_constant) + " was given.");
+    }
+    if (params.armature_stability_ratio <= 0.f) {
+        helios_runtime_error("ERROR (PlantArchitecture USD export): USDExportParameters::armature_stability_ratio must be positive, but " + std::to_string(params.armature_stability_ratio) + " was given.");
+    }
+    if (params.physics_steps_per_second <= 0.f) {
+        helios_runtime_error("ERROR (PlantArchitecture USD export): USDExportParameters::physics_steps_per_second must be positive, but " + std::to_string(params.physics_steps_per_second) + " was given.");
+    }
+
     ArticulationData data;
 
     std::map<std::pair<int, int>, int> last_internode_link_index;
@@ -3803,8 +3956,8 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
 
                     float avg_radius = (data.links[parent_idx].radius + seg_radius) / 2.f;
                     joint.stiffness = computeJointStiffness(params.elastic_modulus, avg_radius, length);
-                    float child_Izz = link.inertia_diagonal.x;
-                    joint.damping = computeJointDamping(joint.stiffness, child_Izz, params.damping_ratio);
+                    joint.damping = computeJointDamping(joint.stiffness, params.damping_time_constant);
+                    joint.armature = computeJointArmature(joint.stiffness, params.armature_stability_ratio, params.physics_steps_per_second);
                     joint.is_fixed = false;
                     computeJointLocalRot1(data.links[parent_idx], data.links[this_link_idx], joint);
                 }
@@ -3908,8 +4061,8 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                     joint.local_pos_child = vec3(0, 0, -half_len);
                     float avg_radius = (data.links[parent_idx].radius + seg_radius) / 2.f;
                     joint.stiffness = computeJointStiffness(params.elastic_modulus, avg_radius, length);
-                    float child_Izz = link.inertia_diagonal.x;
-                    joint.damping = computeJointDamping(joint.stiffness, child_Izz, params.damping_ratio);
+                    joint.damping = computeJointDamping(joint.stiffness, params.damping_time_constant);
+                    joint.armature = computeJointArmature(joint.stiffness, params.armature_stability_ratio, params.physics_steps_per_second);
                     joint.is_fixed = false;
                     computeJointLocalRot1(data.links[parent_idx], data.links[this_link_idx], joint);
                     data.joints.push_back(joint);
@@ -3973,6 +4126,7 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                         joint.local_pos_child = vec3(0, 0, 0);
                         joint.stiffness = params.organ_spring_stiffness;
                         joint.damping = params.organ_spring_damping;
+                        joint.armature = computeJointArmature(joint.stiffness, params.armature_stability_ratio, params.physics_steps_per_second);
                         joint.is_fixed = false;
                         computeJointLocalRot1(data.links[parent_idx], data.links[this_link_idx], joint);
                         data.joints.push_back(joint);
@@ -4063,8 +4217,8 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                             joint.local_pos_child = vec3(0, 0, -half_len);
                             float avg_radius = (data.links[parent_idx].radius + seg_radius) / 2.f;
                             joint.stiffness = computeJointStiffness(params.elastic_modulus, avg_radius, length);
-                            float child_Izz = link.inertia_diagonal.x;
-                            joint.damping = computeJointDamping(joint.stiffness, child_Izz, params.damping_ratio);
+                            joint.damping = computeJointDamping(joint.stiffness, params.damping_time_constant);
+                            joint.armature = computeJointArmature(joint.stiffness, params.armature_stability_ratio, params.physics_steps_per_second);
                             joint.is_fixed = false;
                             computeJointLocalRot1(data.links[parent_idx], data.links[this_link_idx], joint);
                             data.joints.push_back(joint);
@@ -4123,6 +4277,7 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                         joint.local_pos_child = vec3(0, 0, 0);
                         joint.stiffness = params.organ_spring_stiffness;
                         joint.damping = params.organ_spring_damping;
+                        joint.armature = computeJointArmature(joint.stiffness, params.armature_stability_ratio, params.physics_steps_per_second);
                         joint.is_fixed = false;
                         computeJointLocalRot1(data.links[organ_attach], data.links[this_link_idx], joint);
                         data.joints.push_back(joint);
@@ -4580,9 +4735,13 @@ void writeFixedJoint(std::ofstream &out, const USDJoint &joint, const std::vecto
     out << indent << "}\n";
 }
 
-void writeSphericalJoint(std::ofstream &out, const USDJoint &joint, const std::vector<USDLink> &links, const std::string &plant_prim, const std::string &indent) {
-    out << indent << "def PhysicsSphericalJoint \"" << joint.name << "\" (\n";
-    out << indent << "    prepend apiSchemas = [\"PhysicsLimitAPI:cone\", \"PhysicsDriveAPI:angular\"]\n";
+// Segment and organ joints are generic (D6) joints: translation locked, a spring-damper drive on each rotation axis.
+// A PhysicsSphericalJoint cannot carry the springs, since "angular" drives and "cone" limit instances are not defined
+// for it and PhysX ignores them.
+void writeSprungJoint(std::ofstream &out, const USDJoint &joint, const std::vector<USDLink> &links, const std::string &plant_prim, const std::string &indent) {
+    out << indent << "def PhysicsJoint \"" << joint.name << "\" (\n";
+    out << indent << "    prepend apiSchemas = [\"PhysxJointAPI\", \"PhysicsLimitAPI:transX\", \"PhysicsLimitAPI:transY\", \"PhysicsLimitAPI:transZ\", \"PhysicsLimitAPI:rotX\", \"PhysicsLimitAPI:rotY\", \"PhysicsDriveAPI:rotX\", "
+           "\"PhysicsDriveAPI:rotY\", \"PhysicsDriveAPI:rotZ\"]\n";
     out << indent << ")\n";
     out << indent << "{\n";
 
@@ -4596,19 +4755,35 @@ void writeSphericalJoint(std::ofstream &out, const USDJoint &joint, const std::v
     out << inner << "quatf physics:localRot1 = (" << joint.local_rot1_w << ", " << joint.local_rot1_x << ", " << joint.local_rot1_y << ", " << joint.local_rot1_z << ")\n";
     out << inner << "bool physics:collisionEnabled = false\n";
 
-    out << "\n";
-
-    // Cone limit: constrain swing range
-    out << inner << "float limit:cone:physics:yAngle = 60\n";
-    out << inner << "float limit:cone:physics:zAngle = 60\n";
+    // Thin segments have stiffness, damping and armature values far below what fixed 6-decimal output can represent
+    out << std::defaultfloat << std::setprecision(9);
+    out << inner << "float physxJoint:armature = " << joint.armature << "\n";
 
     out << "\n";
 
-    // Angular drive: spring-damper to restore rest pose
-    out << inner << "uniform token drive:angular:physics:type = \"force\"\n";
-    out << inner << "float drive:angular:physics:stiffness = " << joint.stiffness << "\n";
-    out << inner << "float drive:angular:physics:damping = " << joint.damping << "\n";
-    out << inner << "float drive:angular:physics:targetPosition = 0\n";
+    // Lock translation: a limit with low > high locks the axis
+    for (const char *axis: {"transX", "transY", "transZ"}) {
+        out << inner << "float limit:" << axis << ":physics:low = 1\n";
+        out << inner << "float limit:" << axis << ":physics:high = -1\n";
+    }
+    // Limit bending. The joint frame is the parent link's frame, whose Z axis runs along the segment, so X and Y are
+    // the bending axes. Twist about Z is left unlimited.
+    for (const char *axis: {"rotX", "rotY"}) {
+        out << inner << "float limit:" << axis << ":physics:low = -60\n";
+        out << inner << "float limit:" << axis << ":physics:high = 60\n";
+    }
+
+    out << "\n";
+
+    // Spring-damper drives restoring the rest pose. USD angular drives are per degree.
+    const float rad_per_deg = PI_F / 180.f;
+    for (const char *axis: {"rotX", "rotY", "rotZ"}) {
+        out << inner << "uniform token drive:" << axis << ":physics:type = \"force\"\n";
+        out << inner << "float drive:" << axis << ":physics:stiffness = " << joint.stiffness * rad_per_deg << "\n";
+        out << inner << "float drive:" << axis << ":physics:damping = " << joint.damping * rad_per_deg << "\n";
+        out << inner << "float drive:" << axis << ":physics:targetPosition = 0\n";
+    }
+    out << std::fixed << std::setprecision(6);
 
     out << indent << "}\n";
 }
@@ -4677,7 +4852,7 @@ void PlantArchitecture::writePlantStructureUSD(uint plantID, const std::string &
         if (joint.is_fixed) {
             writeFixedJoint(out, joint, artic.links, plant_prim, "        ");
         } else {
-            writeSphericalJoint(out, joint, artic.links, plant_prim, "        ");
+            writeSprungJoint(out, joint, artic.links, plant_prim, "        ");
         }
         out << "\n";
     }

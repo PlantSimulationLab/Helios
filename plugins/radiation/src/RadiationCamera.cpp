@@ -110,6 +110,23 @@ void RadiationModel::setCameraSpectralResponse(const std::string &camera_label, 
     radiativepropertiesneedupdate = true;
 }
 
+void RadiationModel::enableCameraAtmosphere(const std::string &camera_label, const std::string &atmosphere_label) {
+    if (cameras.find(camera_label) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::enableCameraAtmosphere): Camera '" + camera_label + "' does not exist.");
+    }
+    if (atmosphere_label.empty()) {
+        helios_runtime_error("ERROR (RadiationModel::enableCameraAtmosphere): The atmosphere label for camera '" + camera_label + "' is empty. Pass the label given to SolarPosition::calculateSensorAtmosphereSpectra().");
+    }
+    cameras.at(camera_label).atmosphere_label = atmosphere_label;
+}
+
+void RadiationModel::disableCameraAtmosphere(const std::string &camera_label) {
+    if (cameras.find(camera_label) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::disableCameraAtmosphere): Camera '" + camera_label + "' does not exist.");
+    }
+    cameras.at(camera_label).atmosphere_label.clear();
+}
+
 void RadiationModel::setCameraSpectralResponseFromLibrary(const std::string &camera_label, const std::string &camera_library_name) {
 
     if (cameras.find(camera_label) == cameras.end()) {

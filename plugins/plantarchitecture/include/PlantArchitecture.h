@@ -899,6 +899,8 @@ private:
         RandomParameter_float pitch;
         //! Rotation angle in degrees of the peduncle about its own axis
         RandomParameter_float roll;
+        //! Angle in degrees by which the peduncle is turned about its parent internode axis, away from the side of the node its leaf is on. At 0 the peduncle leaves the node from the leaf axil; at 180 it is on the opposite side of the node from the leaf.
+        RandomParameter_float yaw;
         //! Curvature in degrees per meter along the peduncle (positive bends upward, negative downward)
         RandomParameter_float curvature;
         //! Diffuse RGB color applied to the peduncle mesh
@@ -914,6 +916,7 @@ private:
                 this->radius = a.radius;
                 this->pitch = a.pitch;
                 this->roll = a.roll;
+                this->yaw = a.yaw;
                 this->curvature = a.curvature;
                 this->color = a.color;
                 this->length_segments = a.length_segments;
@@ -1030,6 +1033,7 @@ public:
      * \param[in] shoot_max_nodes Maximum number of phytomers in the shoot
      * \param[in] plant_age Age of the plant in days
      * \note This is a function pointer, so it is not carried by a ShootParameters reconstructed from values alone. See \ref ShootParameters::inheritCustomFunctionsFrom().
+     * \note The function may read the plant, set bud states and meristem flags, change parameters and scale factors, and remove leaves (Phytomer::removeLeaf()). It may call PlantArchitecture::pruneBranch(), which is deferred and takes effect at the end of the current time step, or before the build call that created the phytomer returns. Operations that add or delete plant structure are skipped with a warning or raise an error. A bud set to active while the plant is dormant, including on the time step dormancy ends, is overwritten when the plant breaks dormancy; see \ref PlantArchCallbackEdits.
      */
     void (*phytomer_creation_function)(std::shared_ptr<Phytomer> phytomer_ptr, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) = nullptr;
 
@@ -1037,6 +1041,7 @@ public:
     /**
      * \param[in] phytomer_ptr Pointer to the phytomer to which the function will be applied
      * \note This is a function pointer, so it is not carried by a ShootParameters reconstructed from values alone. See \ref ShootParameters::inheritCustomFunctionsFrom().
+     * \note The function may read the plant, set bud states and meristem flags, change parameters and scale factors, and remove leaves (Phytomer::removeLeaf()). It may call PlantArchitecture::pruneBranch(), which is deferred and takes effect at the end of the current time step, or before the build call that created the phytomer returns. Operations that add or delete plant structure are skipped with a warning or raise an error. A bud set to active while the plant is dormant, including on the time step dormancy ends, is overwritten when the plant breaks dormancy; see \ref PlantArchCallbackEdits.
      */
     void (*phytomer_callback_function)(std::shared_ptr<Phytomer> phytomer_ptr) = nullptr;
 
@@ -1839,6 +1844,7 @@ public:
      * This method handles the cleanup and deletion of all parts associated with
      * the phytomer, including internode, leaves, inflorescence structures, and
      * any child or subsequent phytomers within the shoot.
+     * \note Not available inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one does nothing, and is reported once, as an aggregated warning, at the end of the enclosing call. See \ref PlantArchCallbackEdits.
      */
     void deletePhytomer();
 
@@ -1933,6 +1939,7 @@ public:
     std::vector<std::vector<float>> peduncle_pitch; // actual sampled pitch for each peduncle - indexed as for floral_buds (see getFloralBudStorageIndex())
     std::vector<std::vector<float>> peduncle_curvature; // actual sampled curvature for each peduncle - indexed as for floral_buds (see getFloralBudStorageIndex())
     std::vector<std::vector<float>> peduncle_roll; // actual sampled roll for each peduncle - indexed as for floral_buds (see getFloralBudStorageIndex())
+    std::vector<std::vector<float>> peduncle_yaw; // actual sampled yaw for each peduncle - indexed as for floral_buds (see getFloralBudStorageIndex())
     float internode_pitch, internode_phyllotactic_angle;
     //! Azimuth of this phytomer around its shoot (radians): the phyllotactic angles of every phytomer up to and including this one, summed.
     /**
@@ -2183,6 +2190,16 @@ public:
 
     std::vector<float> internode_curvature_perturbations; //!< Stochastic curvature perturbation values for each internode segment (for exact XML reconstruction)
     std::vector<float> internode_yaw_perturbations; //!< Stochastic yaw perturbation values for each internode segment (for exact XML reconstruction)
+    //! Angle in degrees that each internode segment was turned about the vertical back toward the heading its shoot set out on (for exact XML reconstruction)
+    /**
+     * The angle is saved rather than recomputed on reading because it is ill-conditioned: on a nearly vertical shoot the heading can lie almost opposite the initial heading, where the direction of the turn is decided by rounding.
+     */
+    std::vector<float> internode_azimuthal_restoring_angles;
+    //! Arc length in meters that each segment of this internode was curved over when it was built, or zero if no curvature was applied to it.
+    /**
+     * This is the maximum internode length the phytomer was created with divided by its number of segments. It is kept separately because \ref internode_length_max can be rescaled after the internode has been built (see \ref scaleInternodeMaxLength()), and readPlantStructureXML() needs the original value to replay the curvature.
+     */
+    float internode_curvature_arc_length_step = 0;
 
     bool build_context_geometry_petiole = true;
     bool build_context_geometry_peduncle = true;
@@ -2279,6 +2296,7 @@ struct Shoot {
      * \param[in] internode_length_scale_factor_fraction Fraction to scale the internode length.
      * \param[in] leaf_scale_factor_fraction Fraction to scale the leaf size.
      * \param[in] radius_taper Degree of tapering applied to reduce the internode radius along the shoot.
+     * \note Not available inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one does nothing, and is reported once, as an aggregated warning, at the end of the enclosing call. See \ref PlantArchCallbackEdits.
      */
     void buildShootPhytomers(float internode_radius, float internode_length, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper);
 
@@ -2289,6 +2307,7 @@ struct Shoot {
      * \param[in] internode_length_scale_factor_fraction Fraction of the total fully-elongated internode length
      * \param[in] leaf_scale_factor_fraction Fraction of the total fully-elongated leaf scale factor (i.e., =1 for fully-elongated leaf)
      * \return Number of phytomers in the shoot after the new phytomer is appended
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
     int appendPhytomer(float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const PhytomerParameters &phytomer_parameters);
 
@@ -2300,6 +2319,7 @@ struct Shoot {
      * \param[in] prescribed_internode Endpoints and radii of the internode to build.
      * \param[in] phytomer_parameters Parameters of the phytomer to be added.
      * \return Number of phytomers in the shoot after the new phytomer is appended
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
     int appendPhytomerFromNodePositions(const PrescribedInternode &prescribed_internode, const PhytomerParameters &phytomer_parameters);
 
@@ -2309,6 +2329,7 @@ struct Shoot {
      * axes beforehand and initializing buds, leaf area and object data afterwards is identical for both.
      * \param[in] prescribed_internode Endpoints and radii to build the internode from, or null to generate it.
      * \return Number of phytomers in the shoot after the new phytomer is appended
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
     int appendPhytomerInternal(float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const PhytomerParameters &phytomer_parameters,
                                const PrescribedInternode *prescribed_internode);
@@ -2727,6 +2748,15 @@ struct PlantInstance {
     //! Voxel size of season_peak_shadow_grid, which may differ from the live grid as the plant grows.
     float season_peak_shadow_grid_voxel_size = 0.f;
 
+    //! Position (m) of each leaf of the season's peak canopy, captured alongside season_peak_shadow_grid for branch shedding.
+    std::vector<helios::vec3> season_peak_leaf_positions;
+
+    //! One-sided area (m^2) of each leaf in season_peak_leaf_positions.
+    std::vector<float> season_peak_leaf_areas;
+
+    //! ID of the shoot bearing each leaf in season_peak_leaf_positions.
+    std::vector<uint> season_peak_leaf_shootIDs;
+
     CarbohydrateParameters carb_parameters;
 
     //! maintenance respiration rate of stem (mol C respired/mol C in pool/day)
@@ -2858,8 +2888,12 @@ struct USDExportParameters {
     float elastic_modulus = 5e9f;
     //! Density (kg/m^3) for mass calculation from capsule volume
     float wood_density = 800.f;
-    //! Damping ratio for joint drives (dimensionless). Damping = ratio * 2 * sqrt(K*I)
-    float damping_ratio = 0.1f;
+    //! Damping time constant (s) for the joints between stem, petiole and peduncle segments. Damping = time constant * K
+    float damping_time_constant = 0.02f;
+    //! Cap on each joint's own natural frequency, as a multiple of the physics step rate, enforced by adding joint armature. Lower is more stable; simulations collapsed at 64.
+    float armature_stability_ratio = 8.f;
+    //! Physics step rate (Hz) the simulation is expected to run at, used to size the joint armature
+    float physics_steps_per_second = 60.f;
     //! Static friction coefficient for collision material
     float static_friction = 0.5f;
     //! Dynamic friction coefficient for collision material
@@ -2943,6 +2977,7 @@ public:
     //! Load an existing plant model from the library
     /**
      * \param[in] plant_label User-defined label for the plant model to be loaded.
+     * \note Not available inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one does nothing, and is reported once, as an aggregated warning, at the end of the enclosing call. See \ref PlantArchCallbackEdits.
      */
     void loadPlantModelFromLibrary(const std::string &plant_label);
 
@@ -2985,6 +3020,7 @@ public:
      * \param[in] build_parameters [optional] Map of parameter names to values for overriding default training system parameters (e.g., trunk height, scaffold count, trellis dimensions). Parameter names are species-specific and documented in the
      * plant library documentation.
      * \return ID of the plant instance.
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
     uint buildPlantInstanceFromLibrary(const helios::vec3 &base_position, float age, const std::map<std::string, float> &build_parameters = {});
 
@@ -2998,6 +3034,7 @@ public:
      * \param[in] build_parameters [optional] Map of parameter names to values for overriding default training system parameters (e.g., trunk height, scaffold count, trellis dimensions). Parameter names are species-specific and documented in the
      * plant library documentation.
      * \return Vector of plant instance IDs.
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
     std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, float age, float germination_rate = 1.f,
                                                   const std::map<std::string, float> &build_parameters = {});
@@ -3011,6 +3048,7 @@ public:
      * \param[in] build_parameters [optional] Map of parameter names to values for overriding default training system parameters (e.g., trunk height, scaffold count, trellis dimensions). Parameter names are species-specific and documented in the
      * plant library documentation.
      * \return Vector of plant instance IDs.
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
     std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &canopy_extent_xy, uint plant_count, float age, const std::map<std::string, float> &build_parameters = {});
 
@@ -3071,6 +3109,7 @@ public:
     /**
      * \param[in] params Updated parameters structure for the shoot type.
      * \note This replaces the full set of shoot types, so any shoot type not present in \a params is removed. Shoot-level random parameters are not resampled.
+     * \note Not available inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one does nothing, and is reported once, as an aggregated warning, at the end of the enclosing call. See \ref PlantArchCallbackEdits.
      */
     void updateCurrentShootParameters(const std::map<std::string, ShootParameters> &params);
 
@@ -3098,6 +3137,7 @@ public:
      * \param[in] base_rotation Rotation of the new plant copy.
      * \param[in] current_age Age of the new plant copy in days.
      * \return ID of the new plant instance.
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
     uint duplicatePlantInstance(uint plantID, const helios::vec3 &base_position, const AxisRotation &base_rotation, float current_age);
 
@@ -3105,12 +3145,14 @@ public:
     /**
      * \param[in] plantID ID of the plant instance to be deleted.
      * \note When all plant instances have been deleted, hidden prototype objects are also cleaned up from the Context.
+     * \note Not available inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one does nothing, and is reported once, as an aggregated warning, at the end of the enclosing call. See \ref PlantArchCallbackEdits.
      */
     void deletePlantInstance(uint plantID);
 
     //! Delete multiple existing plant instances
     /**
      * \param[in] plantIDs IDs of the plant instances to be deleted.
+     * \note Not available inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one does nothing, and is reported once, as an aggregated warning, at the end of the enclosing call. See \ref PlantArchCallbackEdits.
      */
     void deletePlantInstance(const std::vector<uint> &plantIDs);
 
@@ -3154,6 +3196,7 @@ public:
     //! Advance plant growth by a specified time interval for all plants
     /**
      * \param[in] time_step_days Time interval in days.
+     * \note Not available inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one does nothing, and is reported once, as an aggregated warning, at the end of the enclosing call. See \ref PlantArchCallbackEdits.
      */
     void advanceTime(float time_step_days);
 
@@ -3161,6 +3204,7 @@ public:
     /**
      * \param[in] time_step_years Number of years to advance.
      * \param[in] time_step_days Number of days to advance (added to number of years).
+     * \note Not available inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one does nothing, and is reported once, as an aggregated warning, at the end of the enclosing call. See \ref PlantArchCallbackEdits.
      */
     void advanceTime(int time_step_years, float time_step_days);
 
@@ -3168,6 +3212,7 @@ public:
     /**
      * \param[in] plantID ID of the plant instance.
      * \param[in] time_step_days Time interval in days.
+     * \note Not available inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one does nothing, and is reported once, as an aggregated warning, at the end of the enclosing call. See \ref PlantArchCallbackEdits.
      */
     void advanceTime(uint plantID, float time_step_days);
 
@@ -3175,6 +3220,7 @@ public:
     /**
      * \param[in] plantIDs IDs of the plant instances.
      * \param[in] time_step_days Time interval in days.
+     * \note Not available inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one does nothing, and is reported once, as an aggregated warning, at the end of the enclosing call. See \ref PlantArchCallbackEdits.
      */
     void advanceTime(const std::vector<uint> &plantIDs, float time_step_days);
 
@@ -3230,6 +3276,7 @@ public:
      * \param[in] radius_taper Tapering factor of the internode radius along the shoot (0=constant radius, 1=linear taper to zero radius).
      * \param[in] shoot_type_label Label of the shoot type to be used for the base stem shoot. This requires that the shoot type has already been defined using the defineShootType() method.
      * \return ID of the new shoot to be used to reference it later.
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
     uint addBaseStemShoot(uint plantID, uint current_node_number, const AxisRotation &base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction,
                           float radius_taper, const std::string &shoot_type_label);
@@ -3252,6 +3299,7 @@ public:
      * \param[in] radius_taper Tapering factor of the internode radius along the shoot (0=constant radius, 1=linear taper to zero radius).
      * \param[in] shoot_type_label Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the defineShootType() method.
      * \return ID of the new shoot to be used to reference it later.
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
     uint appendShoot(uint plantID, int parent_shoot_ID, uint current_node_number, const AxisRotation &base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction,
                      float radius_taper, const std::string &shoot_type_label);
@@ -3271,6 +3319,7 @@ public:
      * \param[in] shoot_type_label Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the defineShootType() method.
      * \param[in] petiole_index [optional] Index of the petiole within the internode to which the new shoot will be attached (when there are multiple petioles per internode)
      * \return ID of the newly generated shoot.
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
     uint addChildShoot(uint plantID, int parent_shoot_ID, uint parent_node_index, uint current_node_number, const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction,
                        float leaf_scale_factor_fraction, float radius_taper, const std::string &shoot_type_label, uint petiole_index = 0);
@@ -3307,6 +3356,7 @@ public:
      * calling Phytomer::setInternodeLengthScaleFraction() on one of them directly overrides that and rescales the internode away from its measured length.
      * \note This form builds the measured geometry and grows the shoot afterwards with the same shoot type, so any parameter set to make the measured section buildable -- a node cap raised to fit it, curvature zeroed
      * so the measured path is not fought -- also governs the shoot's future growth. Where those two roles call for different values, use the overload taking a separate growth shoot type.
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
     uint addShootFromNodePositions(uint plantID, int parent_shoot_ID, uint parent_node_index, const std::vector<helios::vec3> &internode_node_positions, const std::vector<float> &internode_radii, const std::string &shoot_type_label,
                                    uint petiole_index = 0);
@@ -3335,6 +3385,7 @@ public:
      * \note A measured branch longer than the growth type's ShootParameters::max_nodes is accepted rather than rejected -- its length is a property of the plant, not a caller error -- and simply stops extending.
      * \note ShootParameters::girth_area_factor is taken from the build type, not the growth type. A reconstruction sets it near zero precisely to preserve the measured radii, and because the pipe model only ever
      * increases a radius, taking it from the growth type instead would silently thicken measured wood. See \ref ShootGrowthState.
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
     uint addShootFromNodePositions(uint plantID, int parent_shoot_ID, uint parent_node_index, const std::vector<helios::vec3> &internode_node_positions, const std::vector<float> &internode_radii, const std::string &shoot_type_label,
                                    const std::string &growth_shoot_type_label, uint petiole_index = 0);
@@ -3353,6 +3404,7 @@ public:
      * \param[in] radius_taper Tapering factor of the internode radius along the shoot (0=constant radius, 1=linear taper to zero radius).
      * \param[in] shoot_type_label Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the defineShootType() method.
      * \return ID of the newly generated shoot.
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
     uint addEpicormicShoot(uint plantID, int parent_shoot_ID, float parent_position_fraction, uint current_node_number, float zenith_perturbation_degrees, float internode_radius, float internode_length_max,
                            float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper, const std::string &shoot_type_label);
@@ -3367,6 +3419,7 @@ public:
      * \param[in] internode_length_scale_factor_fraction Scaling factor of the maximum internode length to determine the actual initial internode length at the time of creation (=1 applies no scaling).
      * \param[in] leaf_scale_factor_fraction Scaling factor of the leaf/petiole to determine the actual initial leaf size at the time of creation (=1 applies no scaling).
      * \return ID of generated phytomer
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
     int appendPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_parameters, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction);
 
@@ -3932,6 +3985,14 @@ public:
      * Pruning is idempotent -- calling this on a shoot that has already been pruned away does
      * nothing. This is what allows a whole branch system to be pruned by looping over shoot IDs,
      * since removing a shoot also empties its descendants.
+     *
+     * Called from inside a phytomer callback (PhytomerParameters::phytomer_creation_function or
+     * PhytomerParameters::phytomer_callback_function), the arguments are checked immediately but the
+     * cut is deferred: it is applied at the end of the current time step of advanceTime(), or before
+     * the build call that ran the callback returns. Until then the shoot still looks uncut, including
+     * to the callbacks of the remaining phytomers in that time step. Deferred cuts are applied in the
+     * order they were requested; a cut whose shoot or node has already been removed by an earlier one
+     * is already satisfied and does nothing. See \ref PlantArchCallbackEdits.
      *
      * \param[in] plantID Unique identifier of the plant to prune.
      * \param[in] shootID Identifier of the shoot to prune from within the plant.
@@ -4610,6 +4671,7 @@ public:
      * \param[in] generation_string Input string describing the plant generation rules and structure.
      * \param[in] phytomer_parameters Parameters that define the characteristics of a single phytomer.
      * \return The total number of phytomers generated in the plant architecture.
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
     uint generatePlantFromString(const std::string &generation_string, const PhytomerParameters &phytomer_parameters);
 
@@ -4620,6 +4682,7 @@ public:
      * \param[in] phytomer_parameters A map containing parameter configurations for each type of phytomer.
      * \return A unique identifier for the generated plant.
      * \note The input string must begin with '{', and valid phytomer parameters must be provided.
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
     uint generatePlantFromString(const std::string &generation_string, const std::map<std::string, PhytomerParameters> &phytomer_parameters);
 
@@ -4659,6 +4722,18 @@ public:
      * capsule collision shape, connected by D6 joints with rotational spring/damper drives derived
      * from beam bending stiffness (E*I/L). Leaves, fruits, and flowers are represented as mass
      * bodies attached by spring links at their base positions.
+     *
+     * Every joint locks translation, limits bending to +/-60 degrees about the two axes perpendicular to the parent
+     * segment, and carries the same spring on all three rotation axes. Segment joints are damped in proportion to
+     * their stiffness (USDExportParameters::damping_time_constant).
+     *
+     * Beam stiffness on a short, light segment is far stiffer than a physics solver can integrate at a typical step
+     * rate, and a plant exported with the physical values alone collapses as soon as the simulation starts. Each joint
+     * is therefore given armature, an artificial inertia, sized so that the joint's own natural frequency does not
+     * exceed USDExportParameters::armature_stability_ratio times USDExportParameters::physics_steps_per_second. The
+     * armature adds no weight, so deflection under gravity is unchanged, and it is small next to the inertia of the
+     * limb beyond the joint. If the simulation runs at a coarser step than physics_steps_per_second, set that
+     * parameter to match or the plant may be unstable.
      *
      * \param[in] plantID ID of the plant instance to export.
      * \param[in] filename Path to the output file (should have .usda extension).
@@ -4719,6 +4794,7 @@ public:
      * \note The phenological threshold tags written by writePlantStructureXML() are optional on read,
      * so files written before those tags existed still load. When they are absent, the restored plant
      * keeps the default thresholds, which schedule no phenology.
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
     std::vector<uint> readPlantStructureXML(const std::string &filename, bool quiet = false);
 
@@ -4800,6 +4876,82 @@ private:
      * \param[in] params Phytomer parameters containing inflorescence configuration
      */
     void ensureInflorescencePrototypesInitialized(const PhytomerParameters &params, const std::string &plant_name);
+
+    // --- Structural edits requested from inside phytomer callbacks --- //
+
+    //! A pruneBranch() call made from inside a phytomer callback, held until no loop over the plant structure is active
+    struct DeferredPrune {
+        uint plantID;
+        uint shootID;
+        uint node_index;
+    };
+
+    //! Marks the duration of one phytomer callback invocation (creation or per-time-step)
+    /**
+     * Exception-safe: the depth is restored even if the callback throws.
+     */
+    class PhytomerCallbackScope {
+    public:
+        explicit PhytomerCallbackScope(PlantArchitecture *plantarchitecture_ptr);
+        ~PhytomerCallbackScope();
+        PhytomerCallbackScope(const PhytomerCallbackScope &) = delete;
+        PhytomerCallbackScope &operator=(const PhytomerCallbackScope &) = delete;
+
+    private:
+        PlantArchitecture *plantarchitecture_ptr;
+    };
+
+    //! Marks the duration of a public operation during which phytomer callbacks can run
+    /**
+     * Scopes nest. When the outermost one ends normally, the pruneBranch() calls deferred during the operation are applied and the
+     * warnings collected for operations skipped inside callbacks are reported. When it ends because an exception is propagating, both
+     * are discarded instead, since the operation has already failed. Either way, nothing deferred outlives the public call.
+     */
+    class StructuralOperationScope {
+    public:
+        explicit StructuralOperationScope(PlantArchitecture *plantarchitecture_ptr);
+        ~StructuralOperationScope() noexcept(false);
+        StructuralOperationScope(const StructuralOperationScope &) = delete;
+        StructuralOperationScope &operator=(const StructuralOperationScope &) = delete;
+
+    private:
+        PlantArchitecture *plantarchitecture_ptr;
+        int uncaught_exceptions_at_entry;
+    };
+
+    //! True while a phytomer creation or per-time-step callback is running
+    [[nodiscard]] bool isInsidePhytomerCallback() const;
+
+    //! Record that a void structural operation was skipped because it was called from inside a phytomer callback
+    /**
+     * \param[in] operation Name of the skipped operation, e.g. "deletePlantInstance"
+     * \return True if the caller is inside a phytomer callback and must return without doing anything.
+     */
+    bool skipStructuralOperationInCallback(const std::string &operation);
+
+    //! Raise an error if a structural operation that returns a value is called from inside a phytomer callback
+    /**
+     * \param[in] operation Name of the rejected operation, e.g. "addChildShoot"
+     */
+    void rejectStructuralOperationInCallback(const std::string &operation) const;
+
+    //! Apply a validated cut: the removal performed by pruneBranch()
+    void applyPruneBranch(uint plantID, uint shootID, uint node_index);
+
+    //! Apply, in call order, every pruneBranch() call deferred from inside a phytomer callback
+    void flushDeferredPrunes();
+
+    //! Number of phytomer callbacks currently running (nested invocations count separately)
+    int phytomer_callback_depth = 0;
+
+    //! Number of nested public operations during which phytomer callbacks can run
+    int structural_operation_depth = 0;
+
+    //! pruneBranch() calls made from inside phytomer callbacks, waiting to be applied
+    std::vector<DeferredPrune> deferred_prunes;
+
+    //! Warnings for structural operations skipped inside phytomer callbacks, reported once per public call
+    helios::WarningAggregator callback_warnings;
 
 protected:
     helios::Context *context_ptr;
@@ -5037,11 +5189,18 @@ protected:
     */
     [[nodiscard]] float shadowGridLightExposure(const std::unordered_map<long long, float> &grid, const std::unordered_map<long long, int> &depth_grid, float voxel_size, const helios::vec3 &position) const;
 
+    //! Record the position, area and bearing shoot of every leaf on a plant, as the canopy branch shedding will judge
+    /** Called when the plant's leaf area reaches a new maximum for the season, so that what is kept is the season's peak canopy.
+        \param[in] plantID Identifier of the plant.
+    */
+    void captureSeasonPeakLeaves(uint plantID);
+
     //! Shed branches that are too shaded to pay for themselves
     /** Self-pruning. Parameter-based growth has no branch mortality of its own, so without this every twig
         ever produced survives indefinitely and the branching hierarchy carries far too fat a tail. Evaluated
-        at the dormancy boundary, when a branch has completed a full season in leaf and the peak shadow grid
-        still records the canopy it stood in. Structural wood is never shed -- see \ref isStructuralShoot().
+        at the dormancy boundary, when a branch has completed a full season in leaf, on the leaves of the season's
+        peak canopy. A branch is judged by the mean light reaching all the foliage it supports, relative to the mean
+        over the whole plant. Structural wood is never shed -- see \ref isStructuralShoot().
         \param[in] plantID ID of the plant to prune.
     */
     void shedShadedBranches(uint plantID);

@@ -147,9 +147,10 @@ layout(set = 1, binding = 6) readonly buffer TransmissivityBuffer {
     float transmissivity[];
 } transmissivity_buf;
 
-// Camera-weighted material properties, indexed [source][primitive][band_global][camera]. The diffuse
-// and scattering passes carry no source of their own, so they read source 0 exactly as OptiX does
-// (its diffuse/scatter ray generation sets source_ID = 0).
+// Camera-weighted material properties, indexed [slot][primitive][band_global][camera]. The diffuse
+// and scattering passes carry no source of their own, so they read the diffuse/scatter slot at index
+// source_count, weighted by the band's combined incident spectrum, exactly as OptiX does (its
+// diffuse/scatter ray generation sets source_ID = Nsources).
 layout(set = 1, binding = 14) readonly buffer ReflectivityCamBuffer {
     float reflectivity_cam[];
 } reflectivity_cam_buf;
@@ -418,6 +419,9 @@ void main() {
     ivec2 subdivisions = obj_subdivisions_buf.subdivisions[prim_idx];
     uint twosided = twosided_buf.twosided_flags[prim_idx];
 
+    // A translucent cover books what reaches it with its angular glass properties, not rho/tau.
+    bool origin_is_cover = glass_cover_all_bands(prim_idx, pc.band_count, pc.material_band_count);
+
     // Skip if launching from bottom face and twosided_flag = 0 (single-sided, top only)
     if (pc.launch_face == 0 && twosided == 0) {
         return;
@@ -535,8 +539,12 @@ void main() {
             // Per-band translucent-cover transmittance accumulated as the ray passes through glass
             // covers (e.g. a greenhouse roof) on its way to the sky. Starts at 1 (no attenuation).
             float cover_tau[GLASS_MAX_BANDS];
+            // Per-band radiance leaving the covers the ray passes (their reflection and emission), each attenuated by
+            // the covers in front of it. It reaches this primitive like the radiance of the surface the ray ends on.
+            float cover_radiance[GLASS_MAX_BANDS];
             for (uint cb = 0; cb < pc.band_count && cb < uint(GLASS_MAX_BANDS); ++cb) {
                 cover_tau[cb] = 1.0;
+                cover_radiance[cb] = 0.0;
             }
 
             // Trace ray through BVH with periodic-boundary wrap and translucent-cover pass-through.
@@ -571,40 +579,23 @@ void main() {
 
                 if (hit_prim_idx == 0xFFFFFFFF) break; // miss — reached the sky
 
-                // Is this hit a translucent cover for ALL launched bands? If not, it's a normal surface.
-                bool all_glass = (hit_prim_idx != prim_idx);
-                for (uint band = 0; band < pc.band_count && band < uint(GLASS_MAX_BANDS); ++band) {
-                    uint gb = band_map_buf.map[band];
-                    if (is_glass_buf.is_glass[hit_prim_idx * pc.material_band_count + gb] == 0u) {
-                        all_glass = false;
-                        break;
-                    }
-                }
+                // A primitive that is not a translucent cover for all launched bands is a normal surface.
+                if (hit_prim_idx == prim_idx || !glass_cover_all_bands(hit_prim_idx, pc.band_count, pc.material_band_count)) break; // real surface hit — handled by the band loop below
 
-                if (!all_glass) break; // real surface hit — handled by the band loop below
-
-                // Glass pass-through: accumulate per-band tau and deposit the cover's own rho/alpha.
-                // (Divergent control flow here — use per-thread atomics, not subgroup reductions.)
+                // Glass pass-through: receive the cover's own outgoing radiance from the face the ray hits, then
+                // accumulate its per-band transmittance. What the cover itself absorbs and reflects is booked by the
+                // cover's own rays, not here: this ray was launched by the surface behind the cover, so its strength is
+                // normalized to that surface's area and angle.
                 uint cov_nbase = hit_prim_idx * 3;
                 vec3 cov_normal = vec3(normals_buf.normals[cov_nbase], normals_buf.normals[cov_nbase + 1], normals_buf.normals[cov_nbase + 2]);
                 float cov_cos = abs(dot(ray_direction, normalize(cov_normal)));
                 bool cov_top = dot(cov_normal, ray_direction) < 0.0;
 
                 for (uint band = 0; band < pc.band_count && band < uint(GLASS_MAX_BANDS); ++band) {
-                    uint gb = band_map_buf.map[band];
-                    uint gmi = hit_prim_idx * pc.material_band_count + gb;
-                    vec3 tra = glass_tau_rho_alpha(cov_cos, glass_n_buf.glass_n[gmi], glass_KL_buf.glass_KL[gmi]);
-
-                    // Cover rho/alpha bookkeeping uses the isotropic sky flux as the incident-irradiance
-                    // approximation (matches the OptiX backend); the transmittance accumulation is exact.
-                    float incoming = diffuse_flux_buf.diffuse_flux[band] * strength * cover_tau[band];
                     uint cov_rad_idx = index_prim_band(hit_prim_idx, band, pc.band_count);
-                    if (incoming > 0.0) {
-                        atomicAdd(rad_in_buf.radiation_in[cov_rad_idx], incoming * tra.z);
-                        if (cov_top) atomicAdd(scatter_top_buf.scatter_top[cov_rad_idx], incoming * tra.y);
-                        else         atomicAdd(scatter_bottom_buf.scatter_bottom[cov_rad_idx], incoming * tra.y);
-                    }
-                    cover_tau[band] *= tra.x;
+                    float cover_out = cov_top ? rad_out_top_buf.radiation_out_top[cov_rad_idx] : rad_out_bottom_buf.radiation_out_bottom[cov_rad_idx];
+                    cover_radiance[band] += cover_out * cover_tau[band];
+                    cover_tau[band] *= glass_cover_tau_rho_alpha(hit_prim_idx, band, pc.material_band_count, cov_cos).x;
                 }
 
                 trace_origin = trace_origin + ray_direction * (closest_t + 1e-4);
@@ -625,9 +616,20 @@ void main() {
             for (uint band = 0; band < pc.band_count; ++band) {
                 uint global_b = band_map_buf.map[band];
                 uint global_idx = index_prim_band(prim_idx, band, pc.band_count);
-                uint mat_idx = prim_idx * pc.material_band_count + global_b;
+                uint mat_idx = (pc.source_count * pc.primitive_count + prim_idx) * pc.material_band_count + global_b; // diffuse/scatter slot
                 float rho = reflectivity_buf.reflectivity[mat_idx];
                 float tau = transmissivity_buf.transmissivity[mat_idx];
+                float absorption_factor = 1.0 - rho - tau;
+
+                // A translucent cover absorbs alpha(theta) and reflects rho(theta) back out of the launch face. The
+                // transmitted tau(theta) continues through undeviated and is delivered to the surfaces behind the
+                // cover by their own rays passing through it, so it is not scattered here.
+                if (origin_is_cover) {
+                    vec3 cover_tra = glass_cover_tau_rho_alpha(prim_idx, band, pc.material_band_count, abs(dot(ray_direction, normalize(normal))));
+                    rho = cover_tra.y;
+                    tau = 0.0;
+                    absorption_factor = cover_tra.z;
+                }
 
                 // Compute energy contributions unconditionally (zero for inactive path).
                 // subgroupAdd must be called by all active threads in the subgroup at the same
@@ -653,8 +655,10 @@ void main() {
                         incoming = rad_out_bottom_buf.radiation_out_bottom[hit_rad_idx];
                     }
 
-                    float hit_energy = incoming * strength;
-                    absorption_val = hit_energy * (1.0 - rho - tau);
+                    // Attenuated by any translucent covers the ray passed on its way to the surface.
+                    float hit_cover_tau = (band < uint(GLASS_MAX_BANDS)) ? cover_tau[band] : 1.0;
+                    float hit_energy = incoming * strength * hit_cover_tau;
+                    absorption_val = hit_energy * absorption_factor;
 
                     float reflect_energy = hit_energy * rho;
                     float transmit_energy = hit_energy * tau;
@@ -682,7 +686,7 @@ void main() {
                         float band_cover_tau = (band < uint(GLASS_MAX_BANDS)) ? cover_tau[band] : 1.0;
                         float sky_energy = fd * diffuse_flux * strength * band_cover_tau;
 
-                        absorption_val = sky_energy * (1.0 - rho - tau);
+                        absorption_val = sky_energy * absorption_factor;
 
                         float sky_reflect  = sky_energy * rho;
                         float sky_transmit = sky_energy * tau;
@@ -696,6 +700,18 @@ void main() {
                             scatter_top_val    = sky_transmit;
                         }
                     }
+                }
+
+                // Radiance leaving the covers the ray passed, received like that of a surface.
+                float cover_energy = (band < uint(GLASS_MAX_BANDS)) ? cover_radiance[band] * strength : 0.0;
+                absorption_val += cover_energy * absorption_factor;
+                camera_energy += cover_energy;
+                if (pc.launch_face == 1) {
+                    scatter_top_val    += cover_energy * rho;
+                    scatter_bottom_val += cover_energy * tau;
+                } else {
+                    scatter_bottom_val += cover_energy * rho;
+                    scatter_top_val    += cover_energy * tau;
                 }
 
                 // Subgroup reductions called uniformly by all threads (inactive paths contribute 0)
@@ -722,8 +738,15 @@ void main() {
                 uint cam_scatter_stride = pc.primitive_count * pc.band_count;
                 for (uint cam = 0u; cam < pc.camera_count; cam++) {
                     uint cam_mat_idx = mat_idx * pc.camera_count + cam;
-                    float reflect_energy_cam  = camera_energy * reflectivity_cam_buf.reflectivity_cam[cam_mat_idx];
-                    float transmit_energy_cam = camera_energy * transmissivity_cam_buf.transmissivity_cam[cam_mat_idx];
+                    float rho_cam = reflectivity_cam_buf.reflectivity_cam[cam_mat_idx];
+                    float tau_cam = transmissivity_cam_buf.transmissivity_cam[cam_mat_idx];
+                    if (origin_is_cover) {
+                        // A cover's reflectance is spectrally flat within a band: each camera weights it by its white reference.
+                        rho_cam = rho * white_reference_cam_buf.white_reference_cam[(pc.source_count * pc.material_band_count + global_b) * pc.camera_count + cam]; // diffuse/scatter slot
+                        tau_cam = 0.0;
+                    }
+                    float reflect_energy_cam  = camera_energy * rho_cam;
+                    float transmit_energy_cam = camera_energy * tau_cam;
                     float scatter_top_cam_val    = (pc.launch_face == 1) ? reflect_energy_cam : transmit_energy_cam;
                     float scatter_bottom_cam_val = (pc.launch_face == 1) ? transmit_energy_cam : reflect_energy_cam;
                     float scatter_top_cam_sum = subgroupAdd(scatter_top_cam_val);
@@ -738,9 +761,9 @@ void main() {
                 }
 
                 // White reference: sky light arriving at the launch face, weighted by each camera's response to a white
-                // surface. Diffuse rays carry source 0, as the camera-weighted reflectivity above does.
+                // surface. Diffuse rays use the diffuse/scatter slot, as the camera-weighted reflectivity above does.
                 for (uint cam = 0u; cam < pc.camera_count; cam++) {
-                    float white = white_reference_cam_buf.white_reference_cam[global_b * pc.camera_count + cam];
+                    float white = white_reference_cam_buf.white_reference_cam[(pc.source_count * pc.material_band_count + global_b) * pc.camera_count + cam];
                     float white_reference_sum = subgroupAdd(white_reference_energy * white);
                     uint white_global_idx = cam * cam_scatter_stride + global_idx;
                     if (subgroupElect() && white_reference_sum != 0.0) {

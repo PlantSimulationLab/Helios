@@ -431,6 +431,53 @@ public:
         this->RootHydraulicCapacitance = HydraulicCapacitance(osmotic_potential_at_full_turgor, relative_water_content_at_turgor_loss, cell_wall_elasticity_exponent);
     }
 
+    //! Get the leaf hydraulic conductance parameters
+    /**
+     * \return Leaf hydraulic conductance parameters.
+     */
+    [[nodiscard]] HydraulicConductance getLeafHydraulicConductance() const {
+        return LeafHydraulicConductance;
+    }
+
+    //! Get the stem hydraulic conductance parameters
+    /**
+     * \return Stem hydraulic conductance parameters.
+     */
+    [[nodiscard]] HydraulicConductance getStemHydraulicConductance() const {
+        return StemHydraulicConductance;
+    }
+
+    //! Get the root hydraulic conductance parameters
+    /**
+     * \return Root hydraulic conductance parameters.
+     */
+    [[nodiscard]] HydraulicConductance getRootHydraulicConductance() const {
+        return RootHydraulicConductance;
+    }
+
+    //! Get the leaf hydraulic capacitance parameters
+    /**
+     * \return Leaf hydraulic capacitance parameters.
+     */
+    [[nodiscard]] HydraulicCapacitance getLeafHydraulicCapacitance() const {
+        return LeafHydraulicCapacitance;
+    }
+
+    //! Get the stem hydraulic capacitance parameters
+    /**
+     * \return Stem hydraulic capacitance parameters.
+     */
+    [[nodiscard]] HydraulicCapacitance getStemHydraulicCapacitance() const {
+        return StemHydraulicCapacitance;
+    }
+
+    //! Get the root hydraulic capacitance parameters
+    /**
+     * \return Root hydraulic capacitance parameters.
+     */
+    [[nodiscard]] HydraulicCapacitance getRootHydraulicCapacitance() const {
+        return RootHydraulicCapacitance;
+    }
 
 private:
     HydraulicConductance LeafHydraulicConductance;

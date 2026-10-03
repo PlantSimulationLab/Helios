@@ -429,7 +429,7 @@ RT_PROGRAM void diffuse_raygen() {
                 prd.strength = 0.5f / float(dimx);
                 prd.origin_UUID = UUID;
                 prd.face = 0;
-                prd.source_ID = 0;
+                prd.source_ID = Nsources; // diffuse/scatter material slot, weighted by the band's combined incident spectrum
                 prd.hit_periodic_boundary = false;
 
                 ray_origin = sp;
@@ -450,7 +450,7 @@ RT_PROGRAM void diffuse_raygen() {
                 prd.strength = 1.f / float(dimx);
 
                 prd.origin_UUID = UUID;
-                prd.source_ID = 0;
+                prd.source_ID = Nsources; // diffuse/scatter material slot, weighted by the band's combined incident spectrum
                 prd.hit_periodic_boundary = false;
                 initCoverTransmittance(prd); // translucent-cover attenuation starts at 1 (no covers crossed)
 
@@ -464,14 +464,25 @@ RT_PROGRAM void diffuse_raygen() {
 
                     prd.face = 1;
 
-                    for (int wrap = 0; wrap < 10; ++wrap) {
+                    // Trace segment by segment: re-trace after wrapping through a periodic boundary and after passing a
+                    // translucent cover.
+                    prd.hit_cover = false;
+                    int wraps = 0;
+                    for (int segment = 0; segment < MAX_RAY_SEGMENTS; ++segment) {
                         rtTrace(top_object, ray, prd);
 
-                        if (!prd.hit_periodic_boundary)
+                        if (prd.hit_periodic_boundary) {
+                            if (++wraps >= MAX_PERIODIC_WRAPS) {
+                                break;
+                            }
+                            ray.origin = prd.periodic_hit;
+                            prd.hit_periodic_boundary = false;
+                        } else if (prd.hit_cover) {
+                            ray.origin = prd.cover_exit;
+                            prd.hit_cover = false;
+                        } else {
                             break; // real hit or miss → done
-
-                        ray.origin = prd.periodic_hit;
-                        prd.hit_periodic_boundary = false;
+                        }
                     }
 
                     // ---- "bottom" surface launch -------
@@ -482,14 +493,25 @@ RT_PROGRAM void diffuse_raygen() {
 
                     prd.face = 0;
 
-                    for (int wrap = 0; wrap < 10; ++wrap) {
+                    // Trace segment by segment: re-trace after wrapping through a periodic boundary and after passing a
+                    // translucent cover.
+                    prd.hit_cover = false;
+                    int wraps = 0;
+                    for (int segment = 0; segment < MAX_RAY_SEGMENTS; ++segment) {
                         rtTrace(top_object, ray, prd);
 
-                        if (!prd.hit_periodic_boundary)
+                        if (prd.hit_periodic_boundary) {
+                            if (++wraps >= MAX_PERIODIC_WRAPS) {
+                                break;
+                            }
+                            ray.origin = prd.periodic_hit;
+                            prd.hit_periodic_boundary = false;
+                        } else if (prd.hit_cover) {
+                            ray.origin = prd.cover_exit;
+                            prd.hit_cover = false;
+                        } else {
                             break; // real hit or miss → done
-
-                        ray.origin = prd.periodic_hit;
-                        prd.hit_periodic_boundary = false;
+                        }
                     }
                 }
                 // else: Skip ray trace for bottom face of one-sided primitives
@@ -580,17 +602,29 @@ RT_PROGRAM void camera_raygen() {
     prd.face = 1;
     prd.source_ID = 0;
     prd.hit_periodic_boundary = false;
+    prd.hit_cover = false;
+    initCoverTransmittance(prd); // camera throughput: no translucent covers crossed yet
 
     ray = optix::make_Ray(ray_origin, ray_direction, camera_ray_type, 1e-5, RT_DEFAULT_MAX);
 
-    for (int wrap = 0; wrap < 10; ++wrap) {
+    // Trace segment by segment: the ray is re-launched after wrapping through a periodic boundary and after
+    // passing a translucent cover, whose closest-hit has already added the cover's own radiance.
+    int wraps = 0;
+    for (int segment = 0; segment < MAX_RAY_SEGMENTS; ++segment) {
+        prd.hit_periodic_boundary = false;
+        prd.hit_cover = false;
         rtTrace(top_object, ray, prd);
 
-        if (!prd.hit_periodic_boundary)
+        if (prd.hit_periodic_boundary) {
+            if (++wraps >= MAX_PERIODIC_WRAPS) {
+                break;
+            }
+            ray.origin = prd.periodic_hit;
+        } else if (prd.hit_cover) {
+            ray.origin = prd.cover_exit;
+        } else {
             break; // real hit or miss → done
-
-        ray.origin = prd.periodic_hit;
-        prd.hit_periodic_boundary = false;
+        }
     }
 }
 
@@ -645,22 +679,34 @@ RT_PROGRAM void pixel_label_raygen() {
 
     optix::Ray ray;
 
-    prd.strength = 0.f;
+    prd.strength = 0.f; // distance travelled before any translucent covers passed
 
     prd.origin_UUID = origin_ID;
     prd.face = 1;
     prd.source_ID = 0;
     prd.hit_periodic_boundary = false;
+    prd.hit_cover = false;
+    initCoverTransmittance(prd);
 
     ray = optix::make_Ray(ray_origin, ray_direction, pixel_label_ray_type, 1e-5, RT_DEFAULT_MAX);
 
-    for (int wrap = 0; wrap < 10; ++wrap) {
+    // Trace segment by segment, as camera_raygen does, so the label is that of the first surface behind any
+    // translucent covers.
+    int wraps = 0;
+    for (int segment = 0; segment < MAX_RAY_SEGMENTS; ++segment) {
+        prd.hit_periodic_boundary = false;
+        prd.hit_cover = false;
         rtTrace(top_object, ray, prd);
 
-        if (!prd.hit_periodic_boundary)
+        if (prd.hit_periodic_boundary) {
+            if (++wraps >= MAX_PERIODIC_WRAPS) {
+                break;
+            }
+            ray.origin = prd.periodic_hit;
+        } else if (prd.hit_cover) {
+            ray.origin = prd.cover_exit;
+        } else {
             break; // real hit or miss → done
-
-        ray.origin = prd.periodic_hit;
-        prd.hit_periodic_boundary = false;
+        }
     }
 }

@@ -105,7 +105,7 @@ A number of plant models are available in the plant architecture library, which 
 | Cowpea (*Vigna unguiculata*)             | upright growth habit (determinate) | "cowpea"                   | unifoliate, trifoliate                             |
 | Eastern Redbud (*Cercis canadensis*)     | generic                            | "easternredbud"            | eastern_redubud_trunk, eastern_redbud_shoot        |
 | Grapevine (*Vitis vinifera*)             | VSP trellis                        | "grapevine_VSP"            | grapevine_trunk, grapevine_cane, grapevine_shoot   |
-| Grapevine (*Vitis vinifera*)             | Wye trellis (quadrilateral)        | "grapevine_Wye"            | grapevine_trunk, grapevine_cordon, grapevine_shoot |
+| Grapevine (*Vitis vinifera*)             | Wye trellis (quadrilateral)        | "grapevine_Wye"            | grapevine_trunk, grapevine_cordon, grapevine_shoot, grapevine_shoot_mirrored, grapevine_lateral |
 | Ground Cherry (*Physalis philadelphica*) | generic                            | "groundcherryweed"         | mainstem                                           |
 | Maize (*Zea mays*)                       | generic                            | "maize"                    | mainstem                                           |
 | Olive Tree (*Olea europaea*)             | generic                            | "olive"                    | trunk, scaffold, proleptic                         |
@@ -228,14 +228,14 @@ The VSP grapevine model uses vine spacing to automatically calculate appropriate
 
 <b>Grapevine Wye (grapevine_Wye)</b>
 
-The Wye grapevine model parameters control the trellis system geometry.
+The Wye grapevine model is a quadrilateral-cordon vine on a Wye (open gable) trellis. The row runs along the y-axis, as it does for the VSP model. The trunk divides at its head into two arms, one to each side of the row, and each arm carries two cordons running in opposite directions along a cordon wire, giving four cordons per vine. Gable wires step up and outward from each cordon wire and carry the shoots into the two curtains of a divided canopy. The build parameters describe the trellis, and the trunk, arms and cordons are laid out to fit it.
 
 | Parameter | Default | Valid Range | Units | Description |
 |-----------|---------|-------------|-------|-------------|
-| trunk_height | 0.165 | 0.05-1.0 | m | Total trunk height |
-| cordon_spacing | 0.6 | 0.2-2.0 | m | Spacing between cordon rows (fruiting wires) |
-| vine_spacing | 1.8 | 0.5-5.0 | m | Plant-to-plant spacing along row |
-| catch_wire_height | 2.1 | 0.5-4.0 | m | Absolute height of catch wires |
+| trunk_height | 1.4 | 0.5-2.0 | m | Height of the two cordon wires. The head of the trunk, where the arms leave it, sits about half of cordon_spacing below them. |
+| cordon_spacing | 0.6 | 0.2-2.0 | m | Distance across the row between the two cordon wires |
+| vine_spacing | 1.8 | 0.5-5.0 | m | Plant-to-plant spacing along the row (each cordon spans half this distance, with one shoot position about every 8 cm) |
+| catch_wire_height | trunk_height + 0.6 | 0.5-4.0 | m | Height of the top gable wires. Must be greater than trunk_height. |
 
 <b>Tree Species (almond, apple, walnut, pistachio)</b>
 
@@ -247,7 +247,9 @@ Tree species use a simplified height-based training system. The code automatical
 | num_scaffolds | 4 | 2-8 | - | Number of scaffold branches |
 | scaffold_angle | 40-50* | 20-70 | deg | Scaffold branch angle from vertical |
 
-*Default values: almond/apple: 0.6m trunk, 40° scaffolds; walnut: 0.8m trunk, 50° scaffolds; pistachio: 1.0m trunk, 50° scaffolds
+*Default values: almond/apple: 0.6m trunk, 40° scaffolds; walnut: 0.8m trunk, 50° scaffolds; pistachio: 1.0m trunk, 57° scaffolds
+
+The pistachio model also trains the young tree as California orchards do (UC ANR pistachio establishment guidelines): each scaffold is tipped at 0.45 m during its first growing season and regrows from the buds below the cut, and in the first winter the secondaries on each scaffold are thinned to three and headed to 0.30 m, regrowing from below those cuts the next season. After that the tree grows without further pruning. The training runs from the model's phytomer callback (see \ref PlantArchCallbackEdits) and is always applied.
 
 \subsubsection PlantArchBuildParamsValidation Parameter Validation
 
@@ -279,10 +281,10 @@ plantarchitecture.buildPlantInstanceFromLibrary( position, 5000, params );  // 5
 <b>Example 3: Grapevine Wye with Modified Trellis</b>
 ~~~~~~
 std::map<std::string, float> params = {
-    {"trunk_height", 0.2},          // 20 cm trunk height
-    {"cordon_spacing", 0.8},        // 80 cm between cordon rows
-    {"vine_spacing", 2.2},          // 2.2 m between plants
-    {"catch_wire_height", 2.5}      // 2.5 m catch wire height
+    {"trunk_height", 1.2},          // cordon wires 1.2 m above the ground
+    {"cordon_spacing", 0.8},        // 80 cm between the two cordon wires
+    {"vine_spacing", 2.2},          // 2.2 m between plants (cordons auto-sized to span 1.1 m each)
+    {"catch_wire_height", 2.0}      // top gable wires 2.0 m above the ground
 };
 plantarchitecture.buildPlantInstanceFromLibrary( position, age, params );
 ~~~~~~
@@ -344,9 +346,10 @@ Plant type string argument | time_to_dormancy_break | time_to_flower_initiation 
 "cowpea" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "easternredbud" | 165 | -1 | 3 | 7 | 30 | 200 | 2 years | 1460 days (4 years) |
 "grapevine_VSP" | 165 | -1 | -1 | 45 | 45 | 200 | 3 years | 365 days (1 year)   |
+"grapevine_Wye" | 165 | -1 | -1 | 45 | 45 | 200 | 3 years | 365 days (1 year)   |
 "maize" | 0 | -1 | -1 | 4 | 58 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "olive" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 1825 days (5 years) |
-"pistachio" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 1460 days (4 years) |
+"pistachio" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 1825 days (5 years) |
 "puncturevine" | 0 | -1 | 14 | -1 | -1 | \f$\infty\f$ | 0 | 45 days             |
 "rice" | 0 | -1 | -1 | 4 | 10 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "sorghum" | 0 | -1 | -1 | 4 | 35 | \f$\infty\f$ | 0 | 365 days (1 year)   |
@@ -590,6 +593,7 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | radius | RandomParameter_float | meters | Radius of the peduncle. Ignored for a terminal inflorescence on a herbaceous stem (a grass panicle or tassel), whose peduncle is sized from the radius of the culm tip it attaches to so that the two tubes meet without a step; used as given for a lateral peduncle or one on a woody stem. |
 | pitch | RandomParameter_float | degrees | Angle of the peduncle axis with respect to its parent internode axis. |
 | roll | RandomParameter_float | degrees | Rotation angle of the peduncle about it's own axis. |
+| yaw | RandomParameter_float | degrees | Angle by which the peduncle is turned about its parent internode axis, away from the side of the node its leaf is on. At 0 (the default) the peduncle leaves the node from the leaf axil; at 180 it is on the opposite side of the node from the leaf, as a grapevine cluster is. |
 | curvature | RandomParameter_float | degrees/meter | Curvature angle of the peduncle per unit length of peduncle. If curvature is positive, peduncle curves upward toward vertical. If negative, curvature is downward. |
 | color | helios::RGBcolor | - | Diffuse color of the peduncle tube. |
 | length_segments | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of longitudinal segment subdivisions of the inflorescence supporting structure. |
@@ -1613,6 +1617,40 @@ for (uint shootID : plantarchitecture.getAllShootIDs(plantID)) {
 
 Pruning is idempotent: calling \ref PlantArchitecture::pruneBranch() again on a shoot that has already been pruned away does nothing. This matters when pruning a whole branch system, because removing a shoot also empties its descendants and a loop over shoot IDs will reach those descendants again later.
 
+\subsection PlantArchCallbackEdits Structural Edits from Phytomer Callbacks
+
+A plant model can attach two functions to the \ref PhytomerParameters of a shoot type -- \ref PhytomerParameters::phytomer_creation_function, called once when each phytomer is created (both while building a plant and while growing it), and \ref PhytomerParameters::phytomer_callback_function, called for every phytomer on every time step of \ref PlantArchitecture::advanceTime(). Both run while the plug-in is part-way through walking the plant: the per-step callback runs inside the loop over a shoot's phytomers, and the creation function runs while a phytomer is still being appended. Anything that adds or removes phytomers, shoots, or plants at that moment would invalidate the loop, so a callback is limited in what it can change.
+
+<b>What a callback may do.</b> A callback reaches the model through <tt>phytomer->parent_shoot_ptr->plantarchitecture_ptr</tt>, and can use <tt>phytomer->plantID</tt>, <tt>phytomer->parent_shoot_ID</tt> (the shoot the phytomer is on) and <tt>phytomer->shoot_index.x</tt> (its node index). It may read any state of the plant; set vegetative and floral bud states; set meristem and dormancy flags; change parameters and scale factors; and remove leaves with Phytomer::removeLeaf(). These take effect immediately.
+
+<b>Pruning from a callback is deferred.</b> \ref PlantArchitecture::pruneBranch() may be called from either callback. Its arguments are checked immediately, so an invalid plant, shoot or node raises an error at the call site, but the cut itself is queued and applied once nothing is iterating the plant structure:
+
+- during \ref PlantArchitecture::advanceTime(), at the end of the current time step of the plant being grown;
+- during a build call that creates phytomers (for example \ref PlantArchitecture::buildPlantInstanceFromLibrary() or \ref PlantArchitecture::addChildShoot()), before that call returns.
+
+Until then the shoot still looks uncut, including to the callbacks of the phytomers that are visited later in the same time step. Queued cuts are applied in the order they were requested. A cut whose shoot was already removed by an earlier cut, or whose node an earlier cut lower down the same shoot already took off, is already satisfied and does nothing. No queued cut outlives the public call that ran the callback; if that call ends in an error, the cuts it queued are discarded along with it. \ref PlantArchitecture::pruneBranch() called outside a callback is applied immediately, exactly as before.
+
+~~~~~~
+// Head back any shoot of this type once it has reached 12 nodes
+void MyPhytomerCallback(std::shared_ptr<Phytomer> phytomer) {
+    PlantArchitecture *plantarchitecture = phytomer->parent_shoot_ptr->plantarchitecture_ptr;
+    if (phytomer->shoot_index.x == 11) {
+        plantarchitecture->pruneBranch(phytomer->plantID, phytomer->parent_shoot_ID, 8);
+    }
+}
+~~~~~~
+
+<b>Operations that do nothing inside a callback.</b> The following return nothing, so a call made from a callback is skipped. Each skipped call is recorded, and one aggregated warning per operation is printed at the end of the enclosing \ref PlantArchitecture::advanceTime() or build call (unless messages have been disabled with \ref PlantArchitecture::disableMessages()):
+
+- \ref PlantArchitecture::advanceTime() (all overloads) -- growth cannot be re-entered while it is running.
+- \ref PlantArchitecture::deletePlantInstance() (both overloads).
+- \ref PlantArchitecture::loadPlantModelFromLibrary() and the overload of \ref PlantArchitecture::updateCurrentShootParameters() taking a map, which replace every shoot type while a library build may still be reading them.
+- Phytomer::deletePhytomer() and Shoot::buildShootPhytomers() -- use \ref PlantArchitecture::pruneBranch() to remove phytomers.
+
+<b>Operations that raise an error inside a callback.</b> The following return the ID of the structure they create, and there is no meaningful ID to return for a call that is not carried out, so a call made from a callback raises an error instead: \ref PlantArchitecture::appendPhytomerToShoot(), \ref PlantArchitecture::addBaseStemShoot(), \ref PlantArchitecture::appendShoot(), \ref PlantArchitecture::addChildShoot(), \ref PlantArchitecture::addShootFromNodePositions(), \ref PlantArchitecture::addEpicormicShoot(), \ref PlantArchitecture::duplicatePlantInstance(), \ref PlantArchitecture::buildPlantInstanceFromLibrary(), \ref PlantArchitecture::buildPlantCanopyFromLibrary(), \ref PlantArchitecture::generatePlantFromString(), and \ref PlantArchitecture::readPlantStructureXML(). To add structure in response to something a callback observed, record it in the callback and make the call between calls to \ref PlantArchitecture::advanceTime(). To release growth below a cut from a callback, set the state of the buds there to active instead of adding shoots, subject to the timing rule below.
+
+<b>Setting buds active: timing.</b> A bud set to active grows into a shoot at the next opportunity, but only if its state survives until then. When a plant breaks dormancy, every vegetative bud that is not dead is drawn again, active or dead, from the shoot type's bud-break probabilities, so a bud set to active while the plant is dormant is overwritten by that draw. The per-step callback of a phytomer also runs before its shoot breaks dormancy in the same time step, so this includes the step on which dormancy ends. Set buds active only once the phytomer's shoot is out of dormancy (<tt>!phytomer->parent_shoot_ptr->isdormant</tt>), which is from the time step after that shoot breaks dormancy. Use the shoot's flag rather than <tt>phytomer->isdormant</tt>: a shoot's tip phytomer is also marked dormant when the shoot reaches its node cap for the season, while the plant is still growing. Nor is \ref PlantArchitecture::isPlantDormant() a safe test on the time step dormancy ends, since shoots break dormancy one at a time within that step. A rule that acts in winter, such as a heading cut, therefore has to record what it did and release the buds below the cut in a later callback, once the plant is growing again. Buds set active during the growing season grow within that season.
+
 \section PlantArchCarbohydrate Carbohydrate Model
 
 The PlantArchitecture plugin includes an optional carbohydrate model that simulates carbon allocation and its effects on plant growth dynamics. This model tracks photosynthate accumulation, maintenance and growth respiration, carbon transfer between shoots, and dynamically adjusts growth rates based on carbon availability. For detailed information on using the carbohydrate model, see the \subpage CarbohydrateModelDoc.
@@ -1758,6 +1796,7 @@ The models that currently declare a measured distribution are:
 <tr><th>Plant model</th><th>Beta mu</th><th>Beta nu</th></tr>
 <tr><td><code>cowpea</code></td><td>1.398</td><td>1.574</td></tr>
 <tr><td><code>easternredbud</code></td><td>1.00</td><td>2.20</td></tr>
+<tr><td><code>pistachio</code></td><td>1.32</td><td>1.85</td></tr>
 </table>
 
 A model declares its distribution as two Beta parameters where it is registered, and the declaration is

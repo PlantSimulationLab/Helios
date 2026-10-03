@@ -167,17 +167,20 @@ namespace helios {
     /**
      * @brief Material properties for ray tracing
      *
-     * Indexing: materials are indexed as [source * Nprims * Nbands + prim * Nbands + band]
-     * (i.e. MaterialPropertyIndexer(Nsources, Nprims, Nbands)(source, prim, band); band is the
-     * fastest-varying dimension).
-     * For camera materials: CameraMaterialIndexer(Nsources, Nprims, Nbands, Ncameras).
+     * Indexing: materials are indexed as [slot * Nprims * Nbands + prim * Nbands + band]
+     * (i.e. MaterialPropertyIndexer(Nsources + 1, Nprims, Nbands)(slot, prim, band); band is the
+     * fastest-varying dimension). There are Nsources + 1 slots: slot s < Nsources holds the properties
+     * weighted by source s's spectrum, read by that source's direct rays, and slot Nsources holds the
+     * properties weighted by the band's combined incident spectrum, read by diffuse, scattered and
+     * emitted rays.
+     * For camera materials: CameraMaterialIndexer(Nsources + 1, Nprims, Nbands, Ncameras).
      */
     struct RayTracingMaterial {
-        std::vector<float> reflectivity; //!< Reflectivity per [source][primitive][band]
-        std::vector<float> transmissivity; //!< Transmissivity per [source][primitive][band]
+        std::vector<float> reflectivity; //!< Reflectivity per [slot][primitive][band]
+        std::vector<float> transmissivity; //!< Transmissivity per [slot][primitive][band]
         std::vector<float> reflectivity_cam; //!< Camera-weighted reflectivity
         std::vector<float> transmissivity_cam; //!< Camera-weighted transmissivity
-        //! Camera-weighted reflectivity of a spectrally flat, perfectly white surface, per [source][band][camera] (band is the global band index)
+        //! Camera-weighted reflectivity of a spectrally flat, perfectly white surface, per [slot][band][camera] (band is the global band index)
         /**
          * This is the value reflectivity_cam takes for a reflectivity spectrum equal to 1 at every wavelength. The direct and diffuse launches weight the light arriving at each primitive by it to
          * accumulate the white reference that a camera's "auto" white balance is computed from.
@@ -188,15 +191,15 @@ namespace helios {
         //! Whether any primitive has a specular exponent. The incident radiation that camera specular reflection reads (radiation_specular) is allocated only when it does.
         bool specular_reflection_enabled = false;
 
-        // Translucent cover (glass/plastic) material. When is_glass != 0 for a [source][primitive][band]
+        // Translucent cover (glass/plastic) material. When is_glass != 0 for a [slot][primitive][band]
         // entry, the angular transmittance/reflectance is computed on-device from glass_n and glass_KL
         // via the Fresnel+Bouguer model, overriding reflectivity/transmissivity for that entry.
-        std::vector<float> glass_n; //!< Refractive index per [source][primitive][band] (0 = not glass)
-        std::vector<float> glass_KL; //!< Absorption product K*L per [source][primitive][band] (0 = lossless)
-        std::vector<char> is_glass; //!< Glass-material flag per [source][primitive][band] (0 = off, 1 = on)
+        std::vector<float> glass_n; //!< Refractive index per [slot][primitive][band] (0 = not glass)
+        std::vector<float> glass_KL; //!< Absorption product K*L per [slot][primitive][band] (0 = lossless)
+        std::vector<char> is_glass; //!< Glass-material flag per [slot][primitive][band] (0 = off, 1 = on)
 
         size_t num_bands = 0; //!< Number of spectral bands
-        size_t num_sources = 0; //!< Number of radiation sources
+        size_t num_sources = 0; //!< Number of radiation sources (the material arrays have one more slot than this)
         size_t num_primitives = 0; //!< Number of primitives
         size_t num_cameras = 0; //!< Number of cameras
     };

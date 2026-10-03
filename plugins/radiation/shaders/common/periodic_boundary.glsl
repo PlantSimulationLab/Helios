@@ -90,13 +90,14 @@ float intersect_bbox_face(vec3 ray_origin, vec3 ray_dir, uint face_idx) {
  * - Hit at +x boundary → wrap to -x (subtract width_x - eps)
  * - Same for Y boundaries
  *
- * Returns true if a periodic boundary was hit (caller should re-trace from wrapped_origin).
+ * Returns true if a periodic boundary was hit (caller should re-trace from wrapped_origin), and sets boundary_t to the
+ * distance along the ray to the boundary.
  */
 bool check_periodic_boundary(
     vec3 ray_origin, vec3 ray_dir, float bvh_closest_t,
     uint periodic_flag_x, uint periodic_flag_y, uint bbox_count,
     float domain_xmin, float domain_xmax, float domain_ymin, float domain_ymax,
-    out vec3 wrapped_origin
+    out vec3 wrapped_origin, out float boundary_t
 ) {
     float bbox_t = bvh_closest_t; // Only consider bbox hits closer than real geometry
     int closest_face = -1;
@@ -112,6 +113,7 @@ bool check_periodic_boundary(
     if (closest_face < 0) return false; // No bbox hit closer than real geometry
 
     // Compute hit position on bbox face
+    boundary_t = bbox_t;
     vec3 hit_pos = ray_origin + ray_dir * bbox_t;
 
     // Compute wrapped position (matches OptiX rayHit.cu:41-65)
@@ -131,6 +133,18 @@ bool check_periodic_boundary(
     }
 
     return true;
+}
+
+// As above, for callers that do not need the distance to the boundary.
+bool check_periodic_boundary(
+    vec3 ray_origin, vec3 ray_dir, float bvh_closest_t,
+    uint periodic_flag_x, uint periodic_flag_y, uint bbox_count,
+    float domain_xmin, float domain_xmax, float domain_ymin, float domain_ymax,
+    out vec3 wrapped_origin
+) {
+    float boundary_t;
+    return check_periodic_boundary(ray_origin, ray_dir, bvh_closest_t, periodic_flag_x, periodic_flag_y, bbox_count, domain_xmin, domain_xmax, domain_ymin, domain_ymax,
+                                   wrapped_origin, boundary_t);
 }
 
 #endif // PERIODIC_BOUNDARY_GLSL

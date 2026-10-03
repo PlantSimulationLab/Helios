@@ -209,21 +209,32 @@ float PragueSkyModelInterface::computeIntegratedSkyRadiance(const vec3 &view_dir
 
 // Convert turbidity to visibility
 float PragueSkyModelInterface::turbidityToVisibility(float turbidity) {
-    // Koschmieder formula: V = 3.912 / (β × (λ/500)^α)
-    // For 500 nm and typical conditions: V ≈ 3.9 / turbidity
-    // where turbidity is Ångström AOD at 500 nm
+    // The turbidity is Ångström's beta (aerosol optical depth at 1 um); the other SolarPosition models use an Ångström exponent of 1.3, which gives the aerosol optical depth at 550 nm
+    const float angstrom_alpha = 1.3f;
+    // The Prague sky model's viewing distances of 27.6, 59.4 and 131.8 km are its continental polluted, average and clean atmospheres (Wilkie et al. 2021, Fig. 4), whose OPAC aerosol optical depths at 550 nm
+    // are 0.327, 0.151 and 0.064 (Hess et al. 1998, Tables 3-4)
+    const float anchor_visibility_km[3] = {27.6f, 59.4f, 131.8f};
+    const float anchor_aod550[3] = {0.327f, 0.151f, 0.064f};
+    // Viewing distances covered by the Prague dataset
+    const float min_visibility_km = 20.0f;
+    const float max_visibility_km = 131.8f;
 
-    if (turbidity <= 0.0f) {
-        // Very clear conditions - return maximum visibility
-        return 131.8f;
+    if (turbidity < 0.0f) {
+        helios_runtime_error("ERROR (PragueSkyModelInterface::turbidityToVisibility): Turbidity must be non-negative, but " + std::to_string(turbidity) + " was given.");
+    }
+    const float aod550 = turbidity * std::pow(0.55f, -angstrom_alpha);
+    if (aod550 <= anchor_aod550[2]) {
+        // Cleaner than the cleanest atmosphere of the dataset
+        return max_visibility_km;
     }
 
-    float visibility_km = 3.9f / turbidity;
+    // Interpolate log(visibility) linearly in log(aerosol optical depth) between the anchors; above the most polluted anchor the last segment is extrapolated
+    const int segment = aod550 > anchor_aod550[1] ? 0 : 1;
+    const float slope = std::log(anchor_visibility_km[segment + 1] / anchor_visibility_km[segment]) / std::log(anchor_aod550[segment + 1] / anchor_aod550[segment]);
+    const float visibility_km = anchor_visibility_km[segment] * std::pow(aod550 / anchor_aod550[segment], slope);
 
-    // Clamp to Prague dataset range [20, 131.8 km]
-    visibility_km = std::max(20.0f, std::min(131.8f, visibility_km));
-
-    return visibility_km;
+    // Hazier than the haziest atmosphere of the dataset
+    return std::max(min_visibility_km, visibility_km);
 }
 
 // Get available data ranges

@@ -36,13 +36,22 @@ rtDeclareVariable(float, surface_u, attribute surface_u, );
 rtDeclareVariable(float, surface_v, attribute surface_v, );
 // Note: Nprimitives is declared in RayTracing.cuh (for bbox position calculation)
 
+//! Whether the primitive with this UUID launched the current ray, which must not intersect it again
+/**
+ * Only direct and diffuse rays are launched from a primitive. Camera and pixel-label rays carry the pixel index in
+ * prd.origin_UUID, which is not a primitive UUID, so no primitive is excluded for them.
+ */
+static __device__ __inline__ bool isRayOrigin(uint primitive_UUID) {
+    return (ray.ray_type == direct_ray_type || ray.ray_type == diffuse_ray_type) && prd.origin_UUID == primitive_UUID;
+}
+
 //----------------- Rectangle Primitive ----------------------//
 
 /** OptiX ray-rectangle intersection program. */
 
 RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in geometric object.*/) {
 
-    if (prd.origin_UUID == patch_UUID[objID]) { // the ray should not intersect the primitive from which it was launched
+    if (isRayOrigin(patch_UUID[objID])) { // the ray should not intersect the primitive from which it was launched
         return;
     }
     // FIX: Convert UUID to position for twosided_flag access
@@ -149,7 +158,7 @@ RT_PROGRAM void rectangle_bounds(int objID, float result[6]) {
 
 RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geometric object.*/) {
 
-    if (prd.origin_UUID == triangle_UUID[objID]) { // the ray should not intersect the primitive from which it was launched
+    if (isRayOrigin(triangle_UUID[objID])) { // the ray should not intersect the primitive from which it was launched
         return;
     }
     // FIX: Convert UUID to position for twosided_flag access
@@ -251,7 +260,7 @@ RT_PROGRAM void triangle_bounds(int objID, float result[6]) {
 
 RT_PROGRAM void disk_intersect(int objID /**< [in] index of primitive in geometric object.*/) {
 
-    if (prd.origin_UUID == disk_UUID[objID]) { // the ray should not intersect the primitive from which it was launched
+    if (isRayOrigin(disk_UUID[objID])) { // the ray should not intersect the primitive from which it was launched
         return;
     }
     // FIX: Convert UUID to position for twosided_flag access
@@ -298,7 +307,7 @@ RT_PROGRAM void disk_bounds(int objID, float result[6]) {
 
 RT_PROGRAM void voxel_intersect(int objID /**< [in] index of primitive in geometric object.*/) {
 
-    if (prd.origin_UUID == voxel_UUID[objID]) { // the ray should not intersect the primitive from which it was launched
+    if (isRayOrigin(voxel_UUID[objID])) { // the ray should not intersect the primitive from which it was launched
         return;
     }
     // FIX: Convert UUID to position for twosided_flag access
@@ -399,7 +408,7 @@ RT_PROGRAM void voxel_bounds(int objID, float result[6]) {
 
 RT_PROGRAM void bbox_intersect(int objID /**< [in] index of primitive in geometric object.*/) {
 
-    if (prd.origin_UUID == bbox_UUID[objID]) { // the ray should not intersect the primitive from which it was launched
+    if (isRayOrigin(bbox_UUID[objID])) { // the ray should not intersect the primitive from which it was launched
         return;
     }
     // Bbox position is deterministic: Nprimitives + objID
@@ -465,7 +474,7 @@ RT_PROGRAM void bbox_bounds(int objID, float result[6]) {
 
 RT_PROGRAM void tile_intersect(int objID /**< [in] index of primitive in geometric object.*/) {
 
-    if (prd.origin_UUID == tile_UUID[objID]) { // the ray should not intersect the primitive from which it was launched
+    if (isRayOrigin(tile_UUID[objID])) { // the ray should not intersect the primitive from which it was launched
         return;
     }
     // FIX: Convert UUID to position for twosided_flag access

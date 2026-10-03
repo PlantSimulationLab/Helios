@@ -182,8 +182,8 @@ namespace helios {
         RTprogram miss_direct;
         RTprogram miss_diffuse;
         RTprogram miss_camera;
+        RTprogram miss_pixel_label;
         RTprogram any_hit_direct;
-        RTprogram any_hit_diffuse;
 
         // Buffers: Geometry/Topology (17 buffers)
         RTbuffer patch_vertices_RTbuffer;

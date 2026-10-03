@@ -107,35 +107,134 @@
 
  Direct beam irradiance is computed from the product of these transmittances, while diffuse irradiance uses a two-layer scattering scheme that accounts for aerosol forward scattering and backscattering from the atmosphere-ground system. The model partitions the total radiative flux into direct and diffuse components suitable for agricultural, solar energy, and climate applications.
 
- \subsection SpectralIrradianceTheory Spectral Solar Irradiance (SSolar-GOA Model)
+ \subsection SpectralIrradianceTheory Spectral Solar Irradiance (Model Based on SSolar-GOA)
 
- For applications requiring high spectral resolution (e.g., photosynthesis, remote sensing), the plugin implements the SSolar-GOA spectral radiative transfer model from <a href="https://gmd.copernicus.org/articles/15/1689/2022/">Cachorro et al. (2022)</a>. This model computes bottom-of-atmosphere spectral irradiance from 300-2600 nm at 1 nm resolution.
+ For applications requiring high spectral resolution (e.g., photosynthesis, remote sensing), \ref SolarPosition::calculateDirectSolarSpectrum(), \ref SolarPosition::calculateDiffuseSolarSpectrum() and \ref SolarPosition::calculateGlobalSolarSpectrum() compute the direct normal, diffuse horizontal and global horizontal spectral irradiance at the ground from 300 to 2600 nm at 1 nm resolution. The model follows the structure of SSolar-GOA (<a href="https://doi.org/10.5194/gmd-15-1689-2022">Cachorro et al. 2022</a>): the atmosphere is a single homogeneous layer of molecules and aerosol whose scattering transmittance is given by an analytical two-stream solution, gas absorption multiplies it, and multiple reflection between the ground and the atmosphere is included through the atmosphere's spherical albedo. It was implemented from the published equations, with the corrections and changes of data described below; equation numbers refer to Cachorro et al. (2022).
 
- The SSolar-GOA model uses the Wehrli (1985) extraterrestrial solar spectrum corrected for Earth-Sun distance, then applies atmospheric transmittances for:
+ <b>Extraterrestrial spectrum and geometry.</b> The extraterrestrial spectrum is the 1985 Wehrli standard spectrum (Wehrli, C., 1985, <em>Extraterrestrial Solar Spectrum</em>, Publication no. 615, Physikalisch-Meteorologisches Observatorium and World Radiation Center, Davos), as distributed by the <a href="https://www.nlr.gov/grid/solar-resource/spectra-wehrli">National Laboratory of the Rockies</a>. The unmodified file is included (<code>plugins/solarposition/assets/ssolar_goa/wehrli85.txt</code>, with the laboratory's data notice) and averaged over 1 nm bins centered on 300-2600 nm when it is loaded, each of its bins taken to extend halfway to its neighbours' centers. It is scaled for the Earth-Sun distance with the Fourier series of Spencer (1971, <em>Search</em> 2(5):172). The relative optical air mass is that of <a href="https://doi.org/10.1364/AO.28.004735">Kasten and Young (1989)</a>,
 
- - <b>Rayleigh scattering</b>: Molecular scattering using Bates (1984) optical depth formula
- - <b>Aerosol extinction</b>: Ångström turbidity law with Ambartsumian solution for scattering
- - <b>Water vapor absorption</b>: Empirical model for bands at 940, 1130, 1380, and 1870 nm
- - <b>Ozone absorption</b>: UV Hartley band (200-310 nm) and visible Chappuis band (400-700 nm)
- - <b>Oxygen absorption</b>: Primarily the A-band at 760 nm
+ \f[
+ m = \frac{1}{\sin h + 0.50572\,(h + 6.07995)^{-1.6364}},
+ \f]
 
- The model also accounts for surface-atmosphere multiple reflections based on surface albedo and atmospheric spherical albedo.
+ with the solar elevation \f$h\f$ in degrees, in place of the plane-parallel air mass \f$m = 1/\cos\theta_s\f$ used in the equations of Cachorro et al. (p. 1693), which diverges as the sun approaches the horizon; Cachorro et al. note that more accurate expressions, among them that of Kasten and Young, are needed above 70 degrees. The same air mass is used for scattering and for gas absorption.
 
- <b>Parameter Derivation:</b> The implementation uses the same atmospheric inputs as the REST-2 model (pressure, temperature, humidity, turbidity). Additional parameters are derived automatically: precipitable water (Viswanadham 1981), ozone column (van Heuklon 1979), Ångström alpha (1.3), surface albedo (0.2), aerosol single scattering albedo (0.90), and asymmetry parameter (0.85).
+ <b>Optical depths.</b> The Rayleigh optical depth is Eq. 7, which Cachorro et al. attribute to Gueymard (1995), scaled by the ratio of the surface pressure to 101325 Pa:
+
+ \f[
+ \tau_R = \frac{P/P_0}{117.2594\lambda^4 - 1.3215\lambda^2 + 0.00032 - 0.000076\lambda^{-2}},
+ \f]
+
+ with \f$\lambda\f$ in \f$\mu\f$m. The aerosol optical depth follows the Ångström law (Eq. 8), \f$\tau_a = \beta\lambda^{-\alpha}\f$, with the turbidity set by \ref SolarPosition::setAtmosphericConditions() as \f$\beta\f$ and \f$\alpha = 1.3\f$. The aerosol single-scattering albedo \f$\omega_a = 0.893\f$ and asymmetry parameter \f$g_a = 0.634\f$ are those of the 6S continental aerosol at 550 nm (6S User Guide, Version 3, Part 2, Table 3, p. 120) and are applied at all wavelengths. Versions before 1.3.90 used 0.90 and 0.85, values of undocumented origin that are not given in Cachorro et al. (2022).
+
+ <b>Scattering transmittance.</b> With \f$\tau_t = \tau_R + \tau_a\f$, the layer's single-scattering albedo is Eq. 16, \f$\omega = (\tau_R + \omega_a\tau_a)/\tau_t\f$. Its asymmetry parameter is \f$g = \omega_a\tau_a g_a/(\tau_R + \omega_a\tau_a)\f$ (Rayleigh scattering has \f$g = 0\f$): the phase function of a mixture is the average of its components' phase functions weighted by their scattering coefficients, and \f$g\f$ is its first moment (defined in the 6S User Guide, Part 2, p. 117). The printed Eq. 16, \f$g_a\tau_a/\tau_t\f$, weights by extinction instead and omits \f$\omega_a\f$. The total (direct plus diffuse) transmittance of the layer over a black ground is Eq. 14,
+
+ \f[
+ T = \frac{(1 - r_0^2)\,e^{-k\tau_t m}}{1 - r_0^2\,e^{-2k\tau_t m}}, \qquad r_0 = \frac{k - 1 + \omega}{k + 1 - \omega}, \qquad k = \sqrt{(1 - \omega)(1 - \omega g)}.
+ \f]
+
+ The printed Eq. 15 has no square root in \f$k\f$, which makes \f$r_0\f$ negative for any forward-scattering layer. With the square root, \f$r_0 = (1 - s)/(1 + s)\f$ with \f$s = \sqrt{(1-\omega)/(1-\omega g)}\f$, the reflectance of a semi-infinite layer in the two-stream approximation with the hemispheric closure (the ratio \f$\zeta_-/\zeta_+\f$ of Eq. 72 of <a href="https://doi.org/10.1088/0067-0049/215/1/4">Heng et al. 2014</a>). The direct transmittance is \f$e^{-\tau_t m}\f$ (Eqs. 3-5).
+
+ <b>Spherical albedo.</b> Multiple reflection between the ground (albedo \f$\rho\f$, set with \ref SolarPosition::setGroundAlbedo()) and the atmosphere multiplies the global irradiance by \f$1/(1 - \rho S)\f$ (Eq. 17, after Lenoble 1998), where \f$S\f$ is the atmosphere's spherical albedo; it does not affect the direct beam. For a purely Rayleigh atmosphere, \f$S\f$ is the closed form of 6S subroutine CSALBR (6S User Guide, Part 2, p. 96),
+
+ \f[
+ S_R = \frac{3\tau_R - 4E_3(\tau_R) + 6E_4(\tau_R)}{4 + 3\tau_R},
+ \f]
+
+ where \f$E_n\f$ are exponential integrals. It equals \f$1 - 2\int_0^1 \mu\,T(\mu)\,d\mu\f$ for the Rayleigh transmittance \f$T(\mu) = [(2/3 + \mu) + (2/3 - \mu)e^{-\tau_R/\mu}]/(4/3 + \tau_R)\f$ of 6S subroutine SCATRA (p. 135). The printed Eq. 19, \f$\tau_R(1 - e^{-2\tau_R})/(2 + \tau_R)\f$, grows as \f$\tau_R^2\f$ for a thin layer instead of as \f$\tau_R\f$ and is about a tenth of this value at 550 nm. Eq. 18 adds a separate aerosol albedo to \f$S_R\f$, which, compared with 6S, overstates the albedo of the mixture at short wavelengths and high aerosol load because the aerosol shields part of the Rayleigh layer. The model instead adds the change in the two-stream reflectance of the whole layer caused by the aerosol:
+
+ \f[
+ S = S_R + R(\tau_t, \omega, g) - R(\tau_R, 1, 0), \qquad R = \frac{\zeta_-\zeta_+(1 - \mathcal{T}^2)}{\zeta_+^2 - \zeta_-^2\mathcal{T}^2}, \qquad \zeta_\pm = \frac{1 \pm s}{2}, \qquad \mathcal{T} = 2E_3\!\left(\tau\sqrt{(1-\omega)(1-\omega g)}\right),
+ \f]
+
+ where \f$R\f$ is the reflectance of a layer under diffuse illumination in the two-stream approximation (Eq. 1 of <a href="https://doi.org/10.3847/1538-4365/aa8907">Heng and Kitzmann 2017</a>, with the transmission function for diffuse illumination of their Sect. 2), which tends to \f$(1-g)\tau/(1 + (1-g)\tau)\f$ for \f$\omega = 1\f$. This combination is not a published formula. It reproduces \f$S_R\f$ exactly without aerosol, and it was chosen over Eq. 18 by comparison with 6S (see the validation below).
+
+ <b>Gas absorption.</b> Absorption by water vapor, ozone and the uniformly mixed gases (oxygen, carbon dioxide, methane, nitrous oxide and carbon monoxide) is interpolated from gas transmittance tables computed with 6S at 1 nm spacing (<code>plugins/solarposition/utilities/generate_atmosphere_lut.py</code>), as functions of the water vapor path (the precipitable water times \f$m\f$), the ozone path (the ozone column times \f$m\f$) and \f$m\f$ times the ratio of the surface pressure to 1013.25 hPa, respectively. As in SSolar-GOA, the gas transmittance along the solar path multiplies both the direct and the diffuse irradiance. The tables extend to a pressure-weighted air mass of 37.99 (the air mass at the horizon is 37.92), a water vapor path of 320 g/cm² and an ozone path of 25 atm-cm. A longer path raises an error; with the sun close to the horizon this happens for precipitable water above about 8.4 cm, an ozone column above about 660 DU, or a surface pressure above about 1015 hPa. Below the smallest path of each table (for the uniformly mixed gases a pressure-weighted air mass of 0.4986, reached only for surface pressures below about 505 hPa), the transmittance is interpolated linearly toward one at zero path. SSolar-GOA instead uses band-model parameterizations for water vapor (Pierluissi et al. 1989, with coefficients from LOWTRAN7) and oxygen (Pierluissi and Maragoudakis 1986) and measured cross sections for ozone, and neglects the other gases.
+
+ The irradiances are then
+
+ \f[
+ E_{dir} = E_0\,T_{gas}\,e^{-\tau_t m}, \qquad E_{glb} = \frac{\cos\theta_s\,E_0\,T_{gas}\,T}{1 - \rho S}, \qquad E_{dif} = E_{glb} - \cos\theta_s\,E_{dir},
+ \f]
+
+ where \f$E_0\f$ is the extraterrestrial irradiance corrected for the Earth-Sun distance, \f$T_{gas}\f$ the product of the gas transmittances and \f$\theta_s\f$ the solar zenith angle. Cloud calibration, if enabled, is then applied (see \ref SolarFluxCloudsSpectral).
+
+ <b>Parameter derivation.</b> The inputs are those of the REST-2 model (pressure, temperature, humidity, turbidity). The precipitable water is derived from the temperature and humidity through the dew point (a relation attributed in an earlier implementation to Viswanadham 1981), and the ozone column comes from a satellite climatology unless set by the user (see \ref OzoneColumn). The ground albedo is 0.2 unless set with \ref SolarPosition::setGroundAlbedo().
+
+ <b>Validation against 6S.</b> The model was compared with 6S (6SV1.1, <a href="https://doi.org/10.1109/36.581987">Vermote et al. 1997</a>) for the continental aerosol at sea level, with the same water vapor (1.18 cm) and ozone (318 DU) columns, at 14 wavelengths from 350 to 2200 nm, solar zenith angles of 0, 30, 60 and 75 degrees, aerosol optical depths at 550 nm from 0 to 1 and ground albedos of 0, 0.2 and 0.8 (<code>plugins/solarposition/utilities/compare_spectral_with_6s.py</code>). Irradiances were compared as transmittances, so the difference between the two codes' extraterrestrial spectra does not enter. The table gives the range of the relative differences from 6S for 400-2200 nm (excluding 1040 nm) and solar zenith angles up to 60 degrees; the 350 nm, 1040 nm and 75 degree cases are described below it.
+
+ <table>
+ <tr><th>Aerosol optical depth at 550 nm</th><th>0</th><th>0.05</th><th>0.2</th><th>0.5</th><th>1</th></tr>
+ <tr><td>Direct normal</td><td>-0.05 to +0.7%</td><td>-0.9 to +0.6%</td><td>-5.5 to +2.6%</td><td>-14 to +7%</td><td>-27 to +14%</td></tr>
+ <tr><td>Global horizontal, ground albedo 0.2</td><td>-0.05 to +0.3%</td><td>-0.3 to +0.5%</td><td>-1.2 to +2.0%</td><td>-2.2 to +5.3%</td><td>-5.5 to +11%</td></tr>
+ <tr><td>Global horizontal, ground albedo 0.8</td><td>-0.2 to +0.1%</td><td>-1.2 to +0.5%</td><td>-1.6 to +2.0%</td><td>-1.7 to +5.3%</td><td>-4.1 to +12%</td></tr>
+ <tr><td>Diffuse horizontal, ground albedo 0.2</td><td>-1.1 to +2.0%</td><td>-16 to +1.7%</td><td>-17 to +4.3%</td><td>-15 to +6.6%</td><td>-13 to +12%</td></tr>
+ <tr><td>Spherical albedo (absolute), all wavelengths</td><td>-0.007 to 0</td><td>-0.019 to +0.001</td><td>-0.013 to +0.002</td><td>-0.001 to +0.009</td><td>+0.007 to +0.019</td></tr>
+ </table>
+
+ Without aerosol the model agrees with 6S to within 0.7% for the direct and global irradiance. With aerosol, most of the difference comes from the aerosol model rather than the equations: the continental aerosol's optical properties vary with wavelength (from 0.4 to 0.86 \f$\mu\f$m its extinction corresponds to an Ångström exponent of about 1.16, and its single-scattering albedo falls to 0.75 at 1.54 \f$\mu\f$m; 6S User Guide, Part 2, Table 3), whereas the model uses \f$\alpha = 1.3\f$ and the 550 nm values of \f$\omega_a\f$ and \f$g_a\f$ at all wavelengths. This is why the direct normal irradiance differs by up to 27% at an aerosol optical depth of 1, and why, for a ground albedo of 0.2, the diffuse irradiance in the near infrared (1240-2200 nm) is 9-17% lower than 6S at aerosol optical depths of 0.05-0.2 and solar zenith angles of 0 and 30 degrees (0.3-12% lower at 60 degrees); from 400 to 870 nm, at solar zenith angles up to 60 degrees, the diffuse irradiance agrees to within 8.6% at those aerosol loads. With 6S's own aerosol optical depth, single-scattering albedo and asymmetry parameter at each wavelength, the spherical albedo of the model differs from that of 6S by at most 0.017 (350-2130 nm, aerosol optical depths 0.05-1), which changes the global irradiance by at most 1.9% for a ground albedo of 0.8 and 0.4% for a ground albedo of 0.2. For comparison, the additive form of Eq. 18 (with the same two-stream aerosol reflectance) overstates the spherical albedo by up to 0.23 in the same comparison, which raises the global irradiance by up to 34% at 350 nm for a ground albedo of 0.8 and an aerosol optical depth of 1, by 7.7% at 450 nm and an aerosol optical depth of 0.5, and by up to 5.2% for a ground albedo of 0.2. The error grows with the ground albedo, since it enters through \f$1/(1 - \rho S)\f$.
+
+ The differences are larger at a solar zenith angle of 75 degrees, where the two-stream solution is least accurate: from 400 to 2200 nm (excluding 1040 nm) the diffuse irradiance differs from 6S by -4.9% to +14% at aerosol optical depths up to 0.2, and the global irradiance by -5.4% to +6.9% (ground albedo 0.2); at an aerosol optical depth of 0.5 the global irradiance differs by -17% to +15% and the diffuse irradiance by -17% to +18% at the wavelengths tested by the self-test (400, 450, 550, 670, 870, 1240 and 1640 nm). At 350 nm without aerosol, the direct irradiance is higher than that of 6S by up to 5.1% at a solar zenith angle of 75 degrees (partly because the Kasten-Young air mass there, 3.81, is smaller than the plane-parallel air mass of 6S, 3.86), whereas the global irradiance is lower by up to 4.1% (ground albedo 0.2); at an aerosol optical depth of 0.2 the global and diffuse irradiance at 350 nm are lower by up to 15%. At 1040 nm without aerosol, the model's diffuse irradiance is 25-31% higher than that of 6S (ground albedo 0.2). 6S computes its atmospheric functions at 20 wavelengths and interpolates them in wavelength as power laws (6S User Guide, Part 2, pp. 97 and 105), and without aerosol and gas absorption its diffuse transmittance divided by the Rayleigh optical depth (overhead sun, black ground) is 0.50 at 860 and 1240 nm but 0.36 at 1040 nm, a dip of about 28% where Rayleigh scattering should vary smoothly; the difference therefore reflects 6S's interpolation rather than the model. A self-test compares the model with 6S values generated by <code>plugins/solarposition/utilities/generate_ssolar_reference.py</code>.
 
  <b>Output Format:</b> Results are stored in Context global data as vectors of (wavelength, irradiance) pairs (\ref helios::vec2) with user-defined labels. Three spectral components are computed: global irradiance on horizontal surface, direct irradiance normal to sun direction, and diffuse irradiance on horizontal surface (all in W/m²/nm).
 
+ \subsection SensorAtmosphereTheory Atmosphere Between the Scene and a Satellite Sensor
+
+ To simulate imagery from a sensor above the atmosphere (e.g., a satellite), the radiance leaving the scene must be converted to the radiance reaching the sensor. The atmosphere attenuates the scene radiance and adds light of its own. Following the formulation of the 6S radiative transfer code (<a href="https://doi.org/10.1109/36.581987">Vermote et al. 1997</a>), the radiance at the sensor is
+
+ \f$L_{sensor} = L_{path} + T_{dir}^{\uparrow} L_{surface} + T_{dif}^{\uparrow} \rho_g E_g / \pi\f$,
+
+ where \f$L_{path}\f$ is the path radiance scattered into the sensor by the atmosphere without reaching the ground, \f$T_{dir}^{\uparrow}\f$ and \f$T_{dif}^{\uparrow}\f$ are the direct and diffuse transmittances from the ground to the sensor, and the last term (the adjacency effect) is light reflected by the surrounding ground of albedo \f$\rho_g\f$, lit by the global irradiance \f$E_g\f$, and scattered into the sensor's line of sight. The global irradiance includes multiple reflection between the ground and the atmosphere through the atmosphere's spherical albedo \f$S\f$: \f$E_g = \mu_s E_0 T_g^{\downarrow} T^{\downarrow} / (1 - \rho_g S)\f$.
+
+ Path radiance comes from multiple scattering by molecules and aerosol, which single-scattering approximations do not capture. The scattering quantities (path reflectance, total transmittance, optical depth and spherical albedo) are therefore taken from a look-up table computed with the vector version of 6S (release 6SV1.1; see <a href="https://doi.org/10.1364/AO.45.006762">Kotchenova et al. 2006</a> for its validation) for its continental aerosol model. They were computed without gas absorption at 16 wavelengths from 300 to 2600 nm and are interpolated log-log in wavelength between them. The table spans surface pressures from 701.2 to 1013 hPa, aerosol optical depths at 550 nm from 0 to 1.2, solar zenith angles up to 70 degrees, view zenith angles up to 60 degrees and all relative azimuths. Transmittance by water vapor, ozone and the uniformly mixed gases (oxygen, carbon dioxide, methane, nitrous oxide and carbon monoxide), also from 6S, is tabulated separately at 1 nm spacing as a function of the water vapor path, the ozone path and the air mass times the ratio of the surface pressure to 1013.25 hPa, respectively. Radiance scattered by the atmosphere is attenuated by the absorption of half of the water vapor path, an approximation for water vapor concentrated near the ground that agrees with 6S in the comparison below.
+
+ The top-of-atmosphere reflectance of a uniform Lambertian surface was compared with direct 6S calculations for 9984 cases: surface pressures of 1013 and 845 hPa (sea level and 1.5 km), solar zenith angles of 15, 35, 55 and 68 degrees, view zenith angles of 0, 25, 45 and 58 degrees, relative azimuths of 0, 45, 110 and 165 degrees (a single azimuth at nadir), aerosol optical depths at 550 nm of 0.03, 0.15, 0.4 and 0.9, surface reflectances of 0.05 and 0.3, 12 wavelengths from 470 to 2250 nm, and one water vapor column (1.18 cm), ozone column and date. The mean absolute difference was 0.0009 and the maximum 0.011, at the largest aerosol optical depth (0.9) with the sun at 68 degrees and the sensor at 58 degrees. Excluding the absorption bands at 940, 1375 and 1900 nm, the maximum difference was 0.0054 for aerosol optical depths up to 0.4. The comparison can be repeated with <code>plugins/solarposition/utilities/compare_with_6s.py</code>.
+
+ Limitations: a single (continental) aerosol type; the sensor is above the atmosphere; the adjacency effect assumes surroundings of uniform albedo; and clear sky.
+
+ \subsection SensorThermalAtmosphereTheory Thermal Infrared Atmosphere Between the Scene and a Satellite Sensor
+
+ In a thermal infrared band the atmosphere absorbs part of the radiance leaving the scene and emits radiance of its own, so the spectral radiance at a sensor above the atmosphere is \f$L_{sensor} = \tau L_{surface} + L^{\uparrow}\f$, where \f$\tau\f$ is the atmospheric transmittance along the view path and \f$L^{\uparrow}\f$ the radiance emitted by the atmosphere along it. The atmosphere also emits the sky radiance that the scene reflects; it is described by \f$L^{\downarrow}\f$, the downwelling irradiance at the ground divided by \f$\pi\f$, so that a Lambertian surface of emissivity \f$\varepsilon\f$ reflects \f$(1-\varepsilon)L^{\downarrow}\f$.
+
+ <b>Look-up table.</b> The three quantities are interpolated from a look-up table (<code>plugins/solarposition/assets/thermal_atmosphere_lut/</code>) computed with the radiative transfer tool uvspec of libRadtran 2.0.6 (<a href="https://doi.org/10.5194/gmd-9-1647-2016">Emde et al. 2016</a>) using the REPTRAN molecular absorption parameterization at its finest resolution, 1 cm⁻¹ (<a href="https://doi.org/10.1016/j.jqsrt.2014.06.024">Gasteiger et al. 2014</a>), and the DISORT solver, for a clear sky without aerosol and a plane-parallel atmosphere. REPTRAN includes absorption by water vapor, carbon dioxide, ozone, nitrous oxide, carbon monoxide, methane, oxygen, nitrogen and nitrogen dioxide, from HITRAN 2004 line data with the MT_CKD 1.0 continuum. The 1 cm⁻¹ results are averaged over 5 cm⁻¹ bins from 650 to 1820 cm⁻¹ (5.49-15.38 \f$\mu\f$m) and stored at the bin centers, 5502-15326 nm, with radiances per nm. \f$\tau\f$ and \f$L^{\uparrow}\f$ are separated by computing each atmosphere over a black surface at two temperatures: without scattering the radiance at the top of the atmosphere is \f$\tau B(T_s) + L^{\uparrow}\f$, so the difference of the two radiances gives \f$\tau\f$. The table was generated with <code>plugins/solarposition/utilities/generate_thermal_atmosphere_lut.py</code>.
+
+ <b>Atmospheric profiles.</b> The temperature and humidity profiles are not known from the surface conditions alone, so the table assumes climatological ones: the tropical, midlatitude summer, U.S. Standard, midlatitude winter and subarctic winter atmospheres of <a href="https://www.osti.gov/biblio/6862535">Anderson et al. (1986, AFGL-TR-86-0110)</a>, whose surface air temperatures are 299.7, 294.2, 288.2, 272.2 and 257.2 K. For a given surface air temperature the temperature, water vapor and ozone profiles are interpolated linearly between the two atmospheres whose temperatures at the surface bracket it; below the coldest and above the warmest atmosphere, that atmosphere is shifted by the temperature difference (in full up to 10 km, tapering to zero at 15 km). The profile is cut at the surface pressure, its water vapor and ozone are scaled to the given columns, and carbon dioxide (425.62 ppm), methane (1935.94 ppb) and nitrous oxide (338.85 ppb) are set to the 2025 global annual means of the <a href="https://gml.noaa.gov/ccgg/trends/">NOAA Global Monitoring Laboratory</a>, in place of the 1986 amounts of Anderson et al. (carbon dioxide 330 ppm). This is a simplification made for this model. Operational products instead use measured or reanalysis profiles; for example, the Landsat Collection 2 surface temperature product uses reanalysis profiles at 42 pressure levels (<a href="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/files/LSDS-1747_Landsat8-9_Calibration-Validation_Algorithm-Description-Document_v5.pdf">Landsat 8-9 Calibration and Validation Algorithm Description Document, LSDS-1747</a>).
+
+ The table's axes are the column water vapor (0.1-7.5 g/cm², interpolated in its logarithm), the position of the surface air temperature in the climatology (at sea level, 246.2-321.7 K; the range is lower at higher elevations, e.g. 242.4-304.6 K at 701.2 hPa), the surface pressure (701.2-1013 hPa, about 0-3 km, extrapolated linearly up to 1050 hPa), and the secant of the view zenith angle (0-60 degrees). The ozone column (150-450 DU) is applied as a correction: most ozone lies above the water vapor, so the radiance at the top of the atmosphere for an ozone column other than 300 DU is \f$R(\tau B + L^{\uparrow}) + D\f$, with the transmittance ratio \f$R\f$ and the emission term \f$D\f$ tabulated against the climate, surface pressure, ozone column and view angle (computed at 1 g/cm² of water vapor; in a test at sea level, a correction computed at 1.44 g/cm² reproduced the effect of changing the ozone column from 300 to 200 or 450 DU at 0.2 and 5 g/cm² to within 0.05 K in brightness temperature). \f$L^{\downarrow}\f$ is tabulated with the ozone column as an axis. Ozone affects not only its 9.6 \f$\mu\f$m band but also 650-815 cm⁻¹, 1100-1200 cm⁻¹ and parts of 1695-1820 cm⁻¹. The table is 6.0 MB.
+
+ <b>Accuracy.</b> The comparisons below are for brightness temperatures at the top of the atmosphere integrated over the bands in the table at the end of this section (boxcar in wavelength), over a black surface at the air temperature.
+ <ul>
+ <li><i>Radiative transfer.</i> For seven atmospheres (the five climatological ones at their own water vapor columns, a dry atmosphere over a 2 km surface, and a humid one with 6 g/cm² at 305 K), at nadir and at 60 degrees, uvspec with REPTRAN agrees with the line-by-line model LBLRTM 12.17 (<a href="https://doi.org/10.1016/j.jqsrt.2004.05.058">Clough et al. 2005</a>; AER line file 3.8.1, MT_CKD 4.3 continuum) given the same profiles. The mean absolute difference is 0.16-0.24 K in the window bands between 8 and 13.5 \f$\mu\f$m (largest 0.75 K, in the most humid atmospheres, where REPTRAN transmits less than LBLRTM), 0.29-0.34 K in the water vapor bands, 0.37-0.44 K in the carbon dioxide bands (MODIS 33 and 36, ABI 16; largest 0.78 K) and 0.40-0.43 K in the ozone bands (MODIS 30, ABI 12; largest 0.96 K). The differences in the water vapor and ozone bands are larger at 60 degrees than at nadir, where LBLRTM's spherical geometry and uvspec's plane-parallel geometry differ most. The comparison can be repeated with <code>plugins/solarposition/utilities/compare_thermal_with_lblrtm.py</code>.</li>
+ <li><i>Interpolation.</i> For 94 random states between the table's nodes (air temperature 250-305 K, water vapor 0.1-7.5 g/cm², surface pressure 701-1013 hPa, ozone 150-450 DU, view zenith 0-60 degrees), the table as used by \ref SolarPosition::calculateSensorThermalAtmosphere() differs from direct uvspec calculations by 0.03-0.09 K root-mean-square in the window bands between 8 and 13.5 \f$\mu\f$m (largest 0.47 K), at most 0.10 K root-mean-square in the carbon dioxide bands, 0.13-0.25 K in the water vapor bands (largest 0.51 K) and 0.12-0.17 K in the ozone bands (largest 0.80 K). \f$L^{\downarrow}\f$ integrated over a band differs by at most 2.6% root-mean-square (largest 6.2%, in the window bands, where the sky radiance is smallest). The comparison can be repeated with <code>plugins/solarposition/utilities/compare_thermal_with_uvspec.py</code>.</li>
+ <li><i>Profile assumption.</i> The largest source of error for a real scene is usually the difference between its atmosphere and the assumed profile. For the subarctic summer atmosphere of Anderson et al., which is not one of the table's base atmospheres (287.2 K, 2.12 g/cm² of water vapor), the table's profile at the same surface air temperature and water vapor and ozone columns gives brightness temperatures 0.2-0.5 K lower in the window bands between 8 and 12.5 \f$\mu\f$m (0.7 K for a 7.5-13.5 \f$\mu\f$m band), 1.4-2.4 K lower in the ozone bands and in MODIS 33 and ABI 16, and 3.8-6.9 K lower in the bands that sense the upper troposphere and stratosphere (ABI 8 and 10, MODIS 27 and 36) (<code>compare_thermal_with_uvspec.py --held-out</code>). Sounding bands therefore reflect the assumed climatological profile rather than the actual one.</li>
+ <li><i>Earlier model.</i> Before the table, this model used the generalized atmospheric functions of <a href="https://doi.org/10.1029/2003JD003480">Jiménez-Muñoz and Sobrino (2003)</a> (corrected in <a href="https://doi.org/10.1029/2004JD004804">2004</a>), fitted to MODTRAN 3.5 simulations of about 60 radiosoundings for effective wavelengths of 10-12 \f$\mu\f$m, which depend on the water vapor column only. Applying those functions to invert the radiance given by the table (nadir, surface at the air temperature, relative humidity 0.2-0.9) retrieves the surface temperature to within 1.3 K for ASTER band 14, MODIS bands 31 and 32, Landsat 8/9 TIRS bands 10 and 11 and Landsat TM/ETM+ band 6 when the water vapor is at most 1.5 g/cm² and the air temperature at most 290 K, which is within the accuracy the authors report for their functions (root-mean-square errors below 1.5 K for TM band 6 and below 2 K for AVHRR channel 4 and ATSR-2 channel 2). For ASTER band 13 the difference is 2.1-3.3 K under the same conditions. For warmer and more humid air the differences grow, to several kelvin and beyond 20 K for MODIS 32 and TIRS 11 at 5-6 g/cm² and 310 K, because the functions cannot represent the air temperature (<code>compare_thermal_with_jms.py</code>).</li>
+ </ul>
+
+ Limitations: clear sky without aerosol; the sensor is above the atmosphere; the atmosphere is plane-parallel; the profiles are climatological (see above); and bands at 3.5-5 \f$\mu\f$m, where reflected sunlight is significant, are not covered.
+
+ <b>Satellite thermal bands.</b> Any band within 5502-15326 nm can be used. The table below lists thermal bands of NASA, USGS and NOAA sensors and their limits as published by the instrument teams, which define them in different ways; where a spectral response function is available it can be set as the camera's spectral response (see RadiationModel::setCameraSpectralResponse()).
+ <table>
+ <tr><th>Sensor</th><th>Band</th><th>Limits (\f$\mu\f$m)</th><th>As published</th><th>Source</th></tr>
+ <tr><td>ECOSTRESS</td><td>1-5</td><td>8.11-8.47, 8.63-8.94, 9.00-9.40, 10.29-10.70, 11.78-12.40</td><td>Measured band centers 8.29, 8.78, 9.20, 10.49 and 12.09 \f$\mu\f$m and full widths at half maximum 0.354, 0.310, 0.396, 0.410 and 0.611 \f$\mu\f$m. The L1 calibration ATBD gives different centers (e.g., 9.060 \f$\mu\f$m for band 3). Only bands 2, 4 and 5 were acquired from 15 May 2019 to 17 May 2023.</td><td><a href="https://ecostress.jpl.nasa.gov/mission">ECOSTRESS mission</a>; <a href="https://lpdaac.usgs.gov/documents/222/ECO1B_Calibration_ATBD_V1.pdf">L1 ATBD</a></td></tr>
+ <tr><td>ASTER</td><td>10-14</td><td>8.125-8.475, 8.475-8.825, 8.925-9.275, 10.25-10.95, 10.95-11.65</td><td>Band limits (definition not stated)</td><td><a href="https://asterweb.jpl.nasa.gov/characteristics.asp">ASTER characteristics</a></td></tr>
+ <tr><td>MODIS</td><td>27-36</td><td>6.535-6.895, 7.175-7.475, 8.400-8.700, 9.580-9.880, 10.780-11.280, 11.770-12.270, 13.185-13.485, 13.485-13.785, 13.785-14.085, 14.085-14.385</td><td>Specified bandwidths</td><td><a href="https://modis.gsfc.nasa.gov/about/specifications.php">MODIS specifications</a></td></tr>
+ <tr><td>Landsat 4/5 TM, 7 ETM+</td><td>6</td><td>10.40-12.50</td><td>Band limits (definition not stated)</td><td><a href="https://www.usgs.gov/faqs/what-are-best-landsat-spectral-bands-use-my-research">USGS</a></td></tr>
+ <tr><td>Landsat 8/9 TIRS</td><td>10, 11</td><td>10.60-11.19, 11.50-12.51</td><td>Band limits (definition not stated)</td><td><a href="https://www.usgs.gov/faqs/what-are-best-landsat-spectral-bands-use-my-research">USGS</a></td></tr>
+ <tr><td>VIIRS</td><td>M14, M15, M16, I5</td><td>8.4-8.7, 10.26-11.26, 11.54-12.49, 10.5-12.4</td><td>Band ranges</td><td><a href="https://rammb.cira.colostate.edu/projects/npp/viirs_bands_and_bandwidths.pdf">CIRA</a></td></tr>
+ <tr><td>GOES-R ABI</td><td>8-16</td><td>5.77-6.6, 6.75-7.15, 7.24-7.44, 8.3-8.7, 9.42-9.8, 10.1-10.6, 10.8-11.6, 11.8-12.8, 13.0-13.6</td><td>Band ranges</td><td><a href="https://rammb.cira.colostate.edu/research/goes-r/goes-r_abi_bands_and_bandwidths.asp">CIRA</a></td></tr>
+ <tr><td>Uncooled microbolometer cameras</td><td></td><td>7.5-13.5 or 8-14</td><td>Varies with the camera; e.g., the FLIR Boson is listed as 7.5-13.5 \f$\mu\f$m in one datasheet and as nominally 8-14 \f$\mu\f$m in its engineering datasheet</td><td><a href="https://www.termokamery-flir.cz/wp-content/uploads/FLIR-Boson-Datasheet-EN.pdf">FLIR Boson datasheet</a>; <a href="https://groupgets-files.s3.amazonaws.com/boson/documents/Boson%20datasheet,%20102-2013-40,%20Rev%20340.pdf">engineering datasheet</a></td></tr>
+ </table>
+ Spectral response functions: <a href="https://asterweb.jpl.nasa.gov/content/01_mission/03_instrument/archive/tir.txt">ASTER TIR</a>, <a href="https://mcst.gsfc.nasa.gov/calibration/parameters">MODIS</a>, <a href="https://landsat.usgs.gov/spectral-characteristics-viewer">Landsat</a>, <a href="https://ncc.nesdis.noaa.gov/VIIRS/VIIRSSpectralResponseFunctions.php">VIIRS</a> and <a href="https://ncc.nesdis.noaa.gov/GOESR/ABI.php">GOES-R ABI</a>. The MODIS bands at 3.66-4.549 \f$\mu\f$m (20-25), VIIRS M12, M13 and I4, and ABI band 7 lie outside the table.
+
  \subsection LWTheory Ambient Longwave Flux
 
- The longwave radiation flux emanating from the clear-sky is modeled following <a href="https://rmets.onlinelibrary.wiley.com/doi/full/10.1002/qj.49712253306">Prata (1996)</a>.
-
- The model surmounts to calculating the effective emissivity of the sky as a function of precipitable water in the atmosphere
+ The broadband longwave radiation flux emitted by a clear sky (\ref SolarPosition::getAmbientLongwaveFlux()) is modeled following <a href="https://rmets.onlinelibrary.wiley.com/doi/full/10.1002/qj.49712253306">Prata (1996)</a>, which gives the effective emissivity of the sky as a function of the precipitable water in the atmosphere:
 
  <center>
    \f$\epsilon_s = 1-(1+u)\mathrm{exp}\left(-\left(1.2+3u\right)^{0.5}\right)\f$,
  </center>
 
- where \f$u\f$ is the wator vapor path length (cm of precipitable water) which can be estimated following <a href="https://journals.ametsoc.org/doi/abs/10.1175/1520-0450(1981)020%3C0003%3ATRBTPW%3E2.0.CO%3B2">Viswanadham (1981)</a> for example.
+ where \f$u\f$ is the precipitable water in cm. This implementation estimates it from the air temperature \f$T_a\f$ (K) and relative humidity \f$h\f$ set with \ref SolarPosition::setAtmosphericConditions() as \f$u = 0.465\,e_0/T_a\f$, with the vapor pressure \f$e_0 = 611\,h\,\mathrm{exp}\left(17.502\,(T_a-273)/(T_a-273+240.9)\right)\f$ in Pa. (The precipitable water used by the spectral solar models and the thermal atmosphere look-up table is instead derived from the dew point; see \ref SolarPosition::calculateSensorThermalAtmosphere().)
 
  The downwelling longwave radiation flux on a horizontal surface is given by
 
@@ -144,7 +243,9 @@
  </center>
 
  where \f$\sigma=5.67\times10^{-8}\f$ W/m<sup>2</sup>-K<sup>4</sup>, and \f$T_a\f$ is the air temperature in Kelvin measured near the ground (say 2 m height).
- 
+
+ This flux covers all longwave wavelengths. It is not the right diffuse flux for an emission band with wavelength bounds, which should receive only the sky radiation within the band: \ref SolarPosition::getThermalSkyFlux() computes that from the thermal atmosphere look-up table (see \ref SensorThermalAtmosphereTheory), for bands within 5502-15326 nm. The table cannot replace the broadband flux, since much of the sky's longwave emission lies outside that range (e.g., the water vapor rotation band beyond 15 \f$\mu\f$m).
+
  \section SolarLib Using the SolarPosition Plug-in
 
  \subsection SolarPos Getting the Direction of the Sun
@@ -222,22 +323,17 @@
 
  \subsubsection TurbidityDefinition Understanding the Turbidity Parameter
 
- The turbidity parameter used in the SolarPosition plugin is <b>Ångström's aerosol turbidity coefficient (β)</b>, which represents the <b>aerosol optical depth (AOD) at 500 nm reference wavelength</b>. This parameter quantifies the amount of aerosols (dust, pollution, haze) in the atmosphere that scatter and absorb solar radiation.
+ The turbidity parameter used in the SolarPosition plugin is <b>Ångström's aerosol turbidity coefficient (β)</b>, the <b>aerosol optical depth at 1 \f$\mu\f$m</b>. It quantifies the amount of aerosols (dust, pollution, haze) in the atmosphere that scatter and absorb solar radiation.
 
- <b>Important:</b> This turbidity definition is NOT the same as "Linke turbidity" (T<sub>L</sub>), which is commonly used in some other solar radiation models. Linke turbidity typically ranges from 2-6, while Ångström turbidity (AOD) typically ranges from 0.02-0.4. The two are related but use different scales.
+ <b>Important:</b> This turbidity definition is NOT the same as "Linke turbidity" (T<sub>L</sub>), which is commonly used in some other solar radiation models and uses a different scale.
 
- The turbidity value is used in the Ångström turbidity formula:
+ The aerosol optical depth at wavelength λ follows the Ångström turbidity formula:
  \f[
- \tau_{aerosol}(\lambda) = \beta \left(\frac{\lambda_{ref}}{\lambda}\right)^{\alpha}
+ \tau_{aerosol}(\lambda) = \beta \lambda^{-\alpha}
  \f]
- where β is the turbidity parameter (AOD at 500 nm), λ is wavelength, λ<sub>ref</sub> = 500 nm, and α is the Ångström exponent (typically ~1.3).
+ where λ is in \f$\mu\f$m and α is the Ångström exponent, taken as 1.3 by the REST-2 and SSolar-GOA models and the sensor atmosphere model. The aerosol optical depth at 550 nm is therefore about 2.18β, and that at 500 nm about 2.46β; an aerosol optical depth measured at 500 nm (e.g., by a sun photometer) corresponds to β ≈ 0.41 times that value. The default turbidity is 0.02.
 
- <b>Guidance for selecting turbidity values:</b>
- - 0.02: Very clear sky (remote/clean atmosphere) - <b>default value</b>
- - 0.03-0.05: Clear sky (typical for rural areas)
- - 0.1: Light haze or light pollution
- - 0.2-0.3: Hazy conditions (urban/polluted atmosphere)
- - >0.4: Very hazy or heavily polluted atmosphere
+ The Prague sky model (\ref SolarPosition::updatePragueSkyModel()) is parameterized by ground-level visibility rather than aerosol optical depth. The aerosol optical depth at 550 nm is converted to visibility by log-log interpolation through the model's continental polluted, average and clean atmospheres, whose visibilities are 27.6, 59.4 and 131.8 km (<a href="https://doi.org/10.1145/3450626.3459758">Wilkie et al. 2021</a>, Fig. 4) and whose OPAC aerosol optical depths at 550 nm are 0.327, 0.151 and 0.064 (Hess et al. 1998). The visibility is limited to the model's range of 20-131.8 km, so air cleaner than an aerosol optical depth at 550 nm of 0.064 (turbidity about 0.029, which includes the default of 0.02) is represented by the cleanest Prague atmosphere, and air hazier than about 0.45 (turbidity about 0.21) by the haziest. The visibility used is stored in Context global data as <code>prague_sky_visibility_km</code>.
 
  Higher turbidity values result in:
  - Reduced direct solar radiation
@@ -250,9 +346,19 @@
  <tr><th>Parameter</th><th>Description</th><th>Validation</th><th>Example Value</th></tr>
  <tr><td>pressure_Pa</td><td>Atmospheric pressure in Pascals (near the ground)</td><td>Must be > 0</td><td>101,325 Pa (1 atm)</td></tr>
  <tr><td>temperature_K</td><td>Air temperature in Kelvin (near the ground)</td><td>Must be > 0</td><td>300 K (27°C)</td></tr>
- <tr><td>humidity_rel</td><td>Air relative humidity (near the ground)</td><td>Must be 0-1</td><td>0.6 (60%)</td></tr>
- <tr><td>turbidity</td><td>Ångström's aerosol turbidity coefficient (β), which represents the aerosol optical depth (AOD) at 500 nm reference wavelength. <b>Note:</b> This is NOT Linke turbidity, which uses a different scale (typically 2-6). Typical values: 0.02 (very clear sky), 0.05 (clear sky), 0.1 (light haze), 0.2-0.3 (hazy), >0.4 (very hazy/polluted). Higher values indicate more aerosols in the atmosphere, which reduces direct solar flux and increases diffuse fraction.</td><td>Must be ≥ 0</td><td>0.02 (default clear sky)</td></tr>
+ <tr><td>humidity_rel</td><td>Air relative humidity (near the ground)</td><td>Must be 0-1</td><td>0.5 (50%)</td></tr>
+ <tr><td>turbidity</td><td>Ångström's aerosol turbidity coefficient (β), the aerosol optical depth at 1 \f$\mu\f$m (see \ref TurbidityDefinition). <b>Note:</b> This is NOT Linke turbidity, which uses a different scale. Higher values indicate more aerosols in the atmosphere, which reduces direct solar flux and increases diffuse fraction.</td><td>Must be ≥ 0</td><td>0.02 (default)</td></tr>
  </table>
+
+ \subsubsection OzoneColumn Total Column Ozone
+
+ The REST-2 and SSolar-GOA models and the sensor atmosphere model (\ref SolarPosition::calculateSensorAtmosphereSpectra()) need the total column ozone, which absorbs in the ultraviolet and in the Chappuis band in the visible. It can be set, in Dobson units, with \ref SolarPosition::setOzoneColumn() (stored in Context global data as <code>atmosphere_ozone_DU</code>). Otherwise it is taken from a monthly zonal-mean climatology: the monthly mean total ozone of the NASA SBUV Merged Ozone Data Set (version 8.7; described for version 8.6 by <a href="https://doi.org/10.1002/2014JD021889">Frith et al. 2014</a>) in 36 latitude bands 5 degrees wide, averaged over 2005-2024. The value at the current date and latitude is interpolated linearly in latitude between the centers of the bands and in the day of the year between the middles of the months. It can be retrieved with \ref SolarPosition::getOzoneColumn().
+
+ The climatology ranges from about 180 DU (the Antarctic ozone hole, 75-80 degrees south in October) to about 420 DU (the Arctic in spring). It has no data where the sun is too low for the satellite measurements, in high-latitude winter months, nor poleward of 80 degrees; for those dates and latitudes, requesting the ozone column raises an error, and it must be set with \ref SolarPosition::setOzoneColumn(). Next to a latitude band or month without data, the value of the band or month containing the latitude or date is used rather than interpolating toward the missing one.
+
+ ~~~~~~
+  sun.setOzoneColumn( 310.f ); //e.g., from a local measurement
+ ~~~~~~
 
  \subsection SolarFlux Getting the Solar Flux
 
@@ -393,9 +499,15 @@
 
  \subsection SpectralFlux Getting Spectral Solar Irradiance
 
- For applications requiring wavelength-resolved irradiance (e.g., photosynthesis models with wavelength-dependent quantum yield, remote sensing, hyperspectral image simulation), the \ref SolarPosition::calculateGlobalSolarSpectrum() "calculateGlobalSolarSpectrum()", \ref SolarPosition::calculateDirectSolarSpectrum() "calculateDirectSolarSpectrum()" and \ref SolarPosition::calculateDiffuseSolarSpectrum() "calculateDiffuseSolarSpectrum()" methods compute high-resolution spectral irradiance using the SSolar-GOA model.
+ For applications requiring wavelength-resolved irradiance (e.g., photosynthesis models with wavelength-dependent quantum yield, remote sensing, hyperspectral image simulation), the \ref SolarPosition::calculateGlobalSolarSpectrum() "calculateGlobalSolarSpectrum()", \ref SolarPosition::calculateDirectSolarSpectrum() "calculateDirectSolarSpectrum()" and \ref SolarPosition::calculateDiffuseSolarSpectrum() "calculateDiffuseSolarSpectrum()" methods compute high-resolution spectral irradiance with the model described in \ref SpectralIrradianceTheory.
 
  This method uses the same atmospheric conditions set via \ref SolarPosition::setAtmosphericConditions(), automatically deriving additional parameters (water vapor, ozone column) as needed. Results are stored in Context global data for use by other plugins (e.g., radiation plugin for ray tracing with spectral sources).
+
+ The spectral model also depends on the albedo of the ground surrounding the scene. Light reflected by the ground is partly scattered back down by the atmosphere, which raises the global and diffuse irradiance, most strongly at blue and ultraviolet wavelengths where atmospheric scattering is strongest; without cloud calibration the direct beam is unaffected. The ground albedo defaults to 0.2 and can be set with \ref SolarPosition::setGroundAlbedo() (stored in Context global data as <code>atmosphere_ground_albedo</code>):
+
+ ~~~~~~
+  sun.setGroundAlbedo( 0.8f ); //e.g., fresh snow
+ ~~~~~~
 
  Example code for calculating spectral irradiance:
 
@@ -445,8 +557,53 @@
 
  Each method accepts an optional resolution parameter (default 1 nm) allowing wavelength downsampling. For example, resolution_nm=10.0 produces 231 wavelengths instead of the native 2301.
 
+ \subsection SensorAtmosphere Simulating Satellite Imagery
+
+ \ref SolarPosition::calculateSensorAtmosphereSpectra() computes the spectra needed to convert radiance leaving the scene into radiance at a sensor above the atmosphere (see \ref SensorAtmosphereTheory). Given the direction from the scene toward the sensor, it stores in Context global data the path radiance, the adjacency radiance, the upward direct and diffuse transmittances and the atmospheric spherical albedo, together with the direct, diffuse and global solar irradiance at the ground computed with the same atmosphere. To keep the illumination of the scene consistent with the atmosphere between it and the sensor, use these irradiance spectra, rather than those of \ref SolarPosition::calculateDirectSolarSpectrum() and \ref SolarPosition::calculateDiffuseSolarSpectrum(), for the scene's radiation sources.
+
+ ~~~~~~
+  SolarPosition sun( 0, 36.93f, 3.33f, &context );
+  sun.setAtmosphericConditions( 101325.f, 298.f, 0.5f, 0.1f ); //pressure, temperature, humidity, turbidity
+  sun.setGroundAlbedo( 0.15f ); //albedo of the ground surrounding the scene
+
+  //Sensor at nadir
+  sun.calculateSensorAtmosphereSpectra( "satellite", make_vec3(0,0,1) );
+
+  std::vector<helios::vec2> path_radiance; //W/m^2/sr/nm
+  context.getGlobalData( "satellite_path_radiance", path_radiance );
+ ~~~~~~
+
+ The turbidity set with \ref SolarPosition::setAtmosphericConditions() (the Ångström coefficient β, see \ref TurbidityDefinition) is converted to an aerosol optical depth at 550 nm using an Ångström exponent of 1.3. Conditions outside the range of the look-up table (solar zenith above 70 degrees, view zenith above 60 degrees, aerosol optical depth at 550 nm above 1.2, surface pressure below 701.2 hPa or above 1050 hPa, or a water vapor path, the column water vapor times \f$1/\mu_s + 1/\mu_v\f$, above 35 g/cm²) and a sun below the horizon raise an error; pressures between 1013 and 1050 hPa are extrapolated linearly. The model assumes clear sky, so it cannot be used together with cloud calibration.
+
+ \subsection SensorThermalAtmosphere Simulating Satellite Thermal Imagery
+
+ \ref SolarPosition::calculateSensorThermalAtmosphere() computes the thermal infrared transmittance and upwelling and downwelling atmospheric radiance for a sensor viewing the scene from the given direction (see \ref SensorThermalAtmosphereTheory). They are stored in Context global data as spectra from 5502 to 15326 nm, and are applied to emission bands of a radiation camera by RadiationModel::enableCameraAtmosphere(). The atmospheric profile is built from the air temperature, humidity and pressure set with \ref SolarPosition::setAtmosphericConditions() and the ozone column (\ref OzoneColumn); the column water vapor derived from the temperature and humidity is stored with the suffix "_thermal_water_vapor_cm". The model does not depend on the sun's position, so night-time imagery can be simulated.
+
+ ~~~~~~
+  sun.setAtmosphericConditions( 101325.f, 298.f, 0.5f, 0.1f );
+  sun.calculateSensorThermalAtmosphere( "satellite", make_vec3(0,0,1) ); //sensor at nadir
+
+  std::vector<helios::vec2> transmittance; //(wavelength in nm, transmittance)
+  context.getGlobalData( "satellite_thermal_transmittance", transmittance );
+ ~~~~~~
+
+ The sky longwave radiance that the scene reflects in a thermal band should come from the same atmosphere. \ref SolarPosition::getThermalSkyFlux() gives the clear-sky longwave irradiance on a horizontal surface within a band, the band-specific counterpart of the broadband \ref SolarPosition::getAmbientLongwaveFlux(); it is the diffuse flux to give an emission band with the same wavelength bounds:
+
+ ~~~~~~
+  radiation.addRadiationBand( "TIR", 10600, 11190 ); //e.g., Landsat 8 TIRS band 10
+  radiation.setDiffuseRadiationFlux( "TIR", sun.getThermalSkyFlux( 10600, 11190 ) );
+ ~~~~~~
+
  \subsection LWFlux Getting the Sky Longwave Flux
 
- The downwelling longwave radiation flux from the sky can be calculated using the \ref SolarPosition::getAmbientLongwaveFlux() function. This function uses the air temperature and humidity set via \ref SolarPosition::setAtmosphericConditions(), in the same way as the \ref SolarPosition::getSolarFlux() function described above. The value returned by the function is the clear-sky downwelling longwave radiation flux on a horizontal surface in W/m<sup>2</sup>.
+ The downwelling longwave radiation flux from the sky can be calculated using the \ref SolarPosition::getAmbientLongwaveFlux() function. This function uses the air temperature and humidity set via \ref SolarPosition::setAtmosphericConditions(), in the same way as the \ref SolarPosition::getSolarFlux() function described above. The value returned by the function is the clear-sky downwelling longwave radiation flux on a horizontal surface in W/m<sup>2</sup>, integrated over all longwave wavelengths (see \ref LWTheory). It is the diffuse flux to give an emission band without wavelength bounds. For an emission band with wavelength bounds, use \ref SolarPosition::getThermalSkyFlux() instead, which gives the clear-sky irradiance within the band (see \ref SensorThermalAtmosphere):
+
+ ~~~~~~
+  radiation.addRadiationBand( "LW" ); //broadband
+  radiation.setDiffuseRadiationFlux( "LW", sun.getAmbientLongwaveFlux() );
+
+  radiation.addRadiationBand( "TIR", 10600, 11190 ); //e.g., Landsat 8 TIRS band 10
+  radiation.setDiffuseRadiationFlux( "TIR", sun.getThermalSkyFlux( 10600, 11190 ) );
+ ~~~~~~
 
 */

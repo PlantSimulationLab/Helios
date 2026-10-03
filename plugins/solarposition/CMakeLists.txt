@@ -19,5 +19,14 @@ endif()
 # Copy SSolar-GOA spectral data files to build directory
 file( COPY assets/ssolar_goa DESTINATION ${CMAKE_BINARY_DIR}/plugins/solarposition/ )
 
+# Copy the 6S atmospheric look-up table used by the sensor atmosphere model to build directory
+file( COPY assets/atmosphere_lut DESTINATION ${CMAKE_BINARY_DIR}/plugins/solarposition/ )
+
+# Copy the libRadtran thermal infrared atmospheric look-up table used by the thermal sensor atmosphere model to build directory
+file( COPY assets/thermal_atmosphere_lut DESTINATION ${CMAKE_BINARY_DIR}/plugins/solarposition/ )
+
+# Copy the total column ozone climatology to build directory
+file( COPY assets/ozone_climatology DESTINATION ${CMAKE_BINARY_DIR}/plugins/solarposition/ )
+
 # Copy Prague Sky Model data files to build directory
 file( COPY lib/prague_sky_model DESTINATION ${CMAKE_BINARY_DIR}/plugins/solarposition/lib/ )

@@ -1033,6 +1033,66 @@ TEST_CASE("fzero") {
     }
 }
 
+TEST_CASE("blackbodyBandFraction") {
+    // Reference fractions below lambda*T from Simpson quadrature of Planck's law (they agree with standard blackbody function tables)
+    const float temperature = 300.f;
+    SUBCASE("fraction below wavelength matches quadrature") {
+        // A lower bound far below the Planck peak contributes nothing, so the band fraction is the fraction below the upper bound
+        const float lower_bound_nm = 100.f;
+        DOCTEST_CHECK(std::fabs(blackbodyBandFraction(lower_bound_nm, 1000.f * 1000.f / temperature, temperature) - 0.0003208f) < 1e-6f);
+        DOCTEST_CHECK(std::fabs(blackbodyBandFraction(lower_bound_nm, 2897.8f * 1000.f / temperature, temperature) - 0.2500609f) < 1e-5f);
+        DOCTEST_CHECK(std::fabs(blackbodyBandFraction(lower_bound_nm, 5000.f * 1000.f / temperature, temperature) - 0.6337259f) < 1e-5f);
+        DOCTEST_CHECK(std::fabs(blackbodyBandFraction(lower_bound_nm, 10000.f * 1000.f / temperature, temperature) - 0.9141570f) < 1e-5f);
+        DOCTEST_CHECK(std::fabs(blackbodyBandFraction(lower_bound_nm, 50000.f * 1000.f / temperature, temperature) - 0.9989039f) < 1e-5f);
+    }
+    SUBCASE("thermal and visible bands") {
+        DOCTEST_CHECK(std::fabs(blackbodyBandFraction(8000.f, 14000.f, temperature) - 0.3757423f) < 1e-5f);
+        DOCTEST_CHECK(blackbodyBandFraction(400.f, 700.f, temperature) < 1e-20f);
+    }
+    SUBCASE("adjacent bands sum to the combined band") {
+        const float split_fraction = blackbodyBandFraction(3000.f, 9000.f, temperature) + blackbodyBandFraction(9000.f, 50000.f, temperature);
+        DOCTEST_CHECK(std::fabs(split_fraction - blackbodyBandFraction(3000.f, 50000.f, temperature)) < 1e-6f);
+    }
+    SUBCASE("full spectrum approaches unity") {
+        DOCTEST_CHECK(std::fabs(blackbodyBandFraction(100.f, 1e8f, temperature) - 1.f) < 1e-5f);
+    }
+    SUBCASE("a zero lower bound gives the fraction below the upper bound") {
+        DOCTEST_CHECK(std::fabs(blackbodyBandFraction(0.f, 10000.f * 1000.f / temperature, temperature) - 0.9141570f) < 1e-5f);
+    }
+    SUBCASE("invalid arguments throw") {
+        float fraction;
+        capture_cerr cerr_buffer;
+        DOCTEST_CHECK_THROWS(fraction = blackbodyBandFraction(8000.f, 14000.f, 0.f));
+        DOCTEST_CHECK_THROWS(fraction = blackbodyBandFraction(14000.f, 8000.f, temperature));
+        DOCTEST_CHECK_THROWS(fraction = blackbodyBandFraction(-1.f, 8000.f, temperature));
+    }
+}
+
+TEST_CASE("blackbodySpectralRadiance") {
+    const float temperature = 300.f;
+    SUBCASE("values of Planck's law") {
+        // 2hc^2/lambda^5/(exp(hc/(lambda k T)) - 1), evaluated in double precision
+        DOCTEST_CHECK(std::fabs(blackbodySpectralRadiance(10000.f, temperature) / 9.9240333e-03f - 1.f) < 1e-5f);
+        DOCTEST_CHECK(std::fabs(blackbodySpectralRadiance(4000.f, temperature) / 7.2197643e-04f - 1.f) < 1e-5f);
+    }
+    SUBCASE("band integral agrees with blackbodyBandFraction") {
+        double band_radiance = 0.0;
+        for (int i = 0; i < 6000; i++) {
+            const float wavelength_nm = 8000.f + float(i);
+            band_radiance += 0.5 * (blackbodySpectralRadiance(wavelength_nm, temperature) + blackbodySpectralRadiance(wavelength_nm + 1.f, temperature));
+        }
+        const double stefan_boltzmann = 5.670374419e-8;
+        const double expected = stefan_boltzmann * std::pow(temperature, 4) * blackbodyBandFraction(8000.f, 14000.f, temperature) / M_PI;
+        DOCTEST_CHECK(std::fabs(band_radiance / expected - 1.0) < 1e-5);
+    }
+    SUBCASE("invalid arguments throw") {
+        float radiance;
+        capture_cerr cerr_buffer;
+        DOCTEST_CHECK_THROWS(radiance = blackbodySpectralRadiance(10000.f, 0.f));
+        DOCTEST_CHECK_THROWS(radiance = blackbodySpectralRadiance(0.f, temperature));
+    }
+}
+
 TEST_CASE("linspace - Linearly Spaced Values") {
     SUBCASE("linspace float basic functionality") {
         std::vector<float> result = linspace(0.f, 10.f, 11);

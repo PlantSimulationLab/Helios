@@ -200,7 +200,8 @@ struct PerRayData {
     // unsigned char periodic_depth;
     //! Numerical identifier for radiation source corresponding to each ray
     /**
-     * \note The data type limits to a maximum of 256 radiation sources
+     * Diffuse, scattered and emitted rays carry Nsources, the index of the diffuse/scatter material slot.
+     * \note The data type limits to a maximum of 255 radiation sources
      */
     unsigned char source_ID;
     //! Flag to determine if ray hit a periodic boundary
@@ -208,15 +209,27 @@ struct PerRayData {
     optix::float3 periodic_hit;
     //! Per-launch-band transmittance accumulated as the ray passes through translucent covers
     //! (glass/plastic). Initialised to 1 in the raygen programs; multiplied by the Fresnel+Bouguer
-    //! tau(theta) in the any-hit programs; consumed (applied to the deposited flux) in the miss
-    //! programs. Indexed by launch-band b.
+    //! tau(theta) in the any-hit program (direct) or the closest-hit programs (diffuse, camera);
+    //! applied to what the ray delivers past the covers. Indexed by launch-band b.
     float cover_transmittance[HELIOS_MAX_RADIATION_BANDS];
+    //! Flag set when a diffuse/camera/pixel-label ray hit a translucent cover and continues past it from cover_exit
+    bool hit_cover;
+    //! World-space point just beyond the cover where the ray continues
+    optix::float3 cover_exit;
 };
+
+//! Diffuse, camera and pixel-label rays continue past a translucent cover from this distance (m) beyond it.
+#define COVER_EXIT_OFFSET 1e-4f
+//! Maximum number of segments a diffuse, camera or pixel-label ray is traced in: each translucent cover passed
+//! and each periodic-boundary wrap starts a new segment. A ray that runs out stops without further contribution.
+#define MAX_RAY_SEGMENTS 32
+//! Maximum number of periodic-boundary wraps of a diffuse, camera or pixel-label ray.
+#define MAX_PERIODIC_WRAPS 10
 
 static __device__ void init_state(PerRayData *prd);
 
 //! Reset the per-band translucent-cover transmittance accumulator to 1 (no covers crossed yet).
-//! Called in the raygen programs before each direct/diffuse-sky ray is traced.
+//! Called in the raygen programs before each ray is traced.
 static __device__ __inline__ void initCoverTransmittance(PerRayData &p) {
     for (int i = 0; i < HELIOS_MAX_RADIATION_BANDS; i++) {
         p.cover_transmittance[i] = 1.f;

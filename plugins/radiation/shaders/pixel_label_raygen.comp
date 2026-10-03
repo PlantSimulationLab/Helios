@@ -46,8 +46,8 @@ layout(push_constant) uniform PushConstants {
     uint primitive_count;          // 4 bytes, offset 76
     vec3 sun_direction;            // 12 bytes, offset 80 (unused)
     float solar_disk_cos_angle;    // 4 bytes, offset 92 (unused)
-    uint periodic_flag_x;          // 4 bytes, offset 96
-    uint periodic_flag_y;          // 4 bytes, offset 100
+    uint periodic_flags;           // 4 bytes, offset 96 (bit 0: periodic in x, bit 1: periodic in y)
+    uint material_band_count;      // 4 bytes, offset 100 (global band count, for the material buffers)
     uint bbox_count;               // 4 bytes, offset 104
     float domain_xmin;             // 4 bytes, offset 108
     float domain_xmax;             // 4 bytes, offset 112
@@ -76,6 +76,14 @@ layout(set = 0, binding = 15) readonly buffer UVDataBuffer { vec2 uv_data[]; } u
 layout(set = 0, binding = 16) readonly buffer UVIDsBuffer { int uv_ids[]; } uv_ids_buf;
 layout(set = 0, binding = 17) readonly buffer BboxVerticesBuffer { float vertices[]; } bbox_verts_buf;
 
+// ========== Descriptor Set 1: Materials ==========
+// Translucent cover (glass/plastic) material, read to pass camera rays through covers. Same
+// [prim * material_band_count + global_band] indexing as the direct/diffuse shaders (source-0 slice).
+layout(set = 1, binding = 10) readonly buffer BandMapBuffer { uint map[]; } band_map_buf; // launch band -> global band
+layout(set = 1, binding = 11) readonly buffer IsGlassBuffer { uint is_glass[]; } is_glass_buf;
+layout(set = 1, binding = 12) readonly buffer GlassNBuffer { float glass_n[]; } glass_n_buf;
+layout(set = 1, binding = 13) readonly buffer GlassKLBuffer { float glass_KL[]; } glass_KL_buf;
+
 // ========== Descriptor Set 2: Result Buffers ==========
 layout(set = 2, binding = 6) buffer CameraPixelLabelBuffer { uint camera_pixel_label[]; };
 layout(set = 2, binding = 7) buffer CameraPixelDepthBuffer { float camera_pixel_depth[]; };
@@ -85,6 +93,7 @@ layout(set = 2, binding = 7) buffer CameraPixelDepthBuffer { float camera_pixel_
 #include "common/transforms.glsl"
 #include "common/bvh_traversal.glsl"
 #include "common/periodic_boundary.glsl"
+#include "common/glass_cover.glsl"
 
 #ifndef PI
 const float PI = 3.14159265359;
@@ -138,22 +147,39 @@ void main() {
     uint hit_prim = UINT_MAX;
     float closest_t;
 
-    for (int wrap = 0; wrap < 10; ++wrap) {
+    // Trace segment by segment: the ray is re-traced after wrapping through a periodic boundary and after passing a
+    // translucent cover, so the label and depth are those of the first surface behind any covers.
+    int wraps = 0;
+    for (int segment = 0; segment < MAX_RAY_SEGMENTS; ++segment) {
         hit_prim = traverse_cwbvh(ray_origin, ray_dir, 1e-5, UINT_MAX, closest_t);
 
-        if (pc.bbox_count == 0) break; // No periodic boundaries
+        if (pc.bbox_count != 0) {
+            vec3 wrapped_origin;
+            float boundary_t;
+            bool hit_periodic = check_periodic_boundary(
+                ray_origin, ray_dir, closest_t,
+                pc.periodic_flags & 1u, (pc.periodic_flags >> 1) & 1u, pc.bbox_count,
+                pc.domain_xmin, pc.domain_xmax, pc.domain_ymin, pc.domain_ymax,
+                wrapped_origin, boundary_t);
 
-        vec3 wrapped_origin;
-        bool hit_periodic = check_periodic_boundary(
-            ray_origin, ray_dir, closest_t,
-            pc.periodic_flag_x, pc.periodic_flag_y, pc.bbox_count,
-            pc.domain_xmin, pc.domain_xmax, pc.domain_ymin, pc.domain_ymax,
-            wrapped_origin);
+            if (hit_periodic) {
+                accumulated_depth += boundary_t; // the distance travelled to the boundary
+                ray_origin = wrapped_origin;
+                hit_prim = UINT_MAX; // Reset for next iteration
+                if (++wraps >= MAX_PERIODIC_WRAPS) break;
+                continue;
+            }
+        }
 
-        if (!hit_periodic) break; // Real hit or miss
-        accumulated_depth += closest_t;
-        ray_origin = wrapped_origin;
-        hit_prim = UINT_MAX; // Reset for next iteration
+        if (hit_prim != UINT_MAX && glass_cover_all_bands(hit_prim, pc.band_count, pc.material_band_count)) {
+            // A translucent cover: continue, undeviated, to what lies behind it.
+            accumulated_depth += closest_t + COVER_EXIT_OFFSET;
+            ray_origin = ray_origin + ray_dir * (closest_t + COVER_EXIT_OFFSET);
+            hit_prim = UINT_MAX; // Reset for next iteration
+            continue;
+        }
+
+        break; // Real hit or miss
     }
 
     // ========== Store Results ==========

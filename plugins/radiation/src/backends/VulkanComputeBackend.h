@@ -344,6 +344,14 @@ namespace helios {
          */
         void requireCameraScatterBuffersSized(const char *caller) const;
 
+        //! Upload the launch band -> global band map of a camera or pixel-label launch
+        /**
+         * The camera and pixel-label shaders read the map to tell which primitives are translucent covers (glass in every launched band) that the ray passes through.
+         * \param[in] params Parameters of the launch about to be made; band_launch_flag must flag exactly the bands of the current runBand() launch
+         * \param[in] caller Name of the calling method, for the error message
+         */
+        void uploadCameraBandMap(const RayTracingLaunchParams &params, const char *caller);
+
         //! Raise an error unless the white reference buffers are sized for the current camera set
         /**
          * The direct and diffuse shaders write one [primitive][band] block per camera. RadiationModel::runBand() sizes the buffers with zeroRadiationBuffers() before its first launch.

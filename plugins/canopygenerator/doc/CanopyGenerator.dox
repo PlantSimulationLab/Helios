@@ -1,5 +1,7 @@
 /*! \page "CanopyGeneratorDoc" Canopy Generator Plugin Documentation
 
+ \attention <b>New users: consider the Plant Architecture plug-in for generating plant models.</b> The \ref PlantArchitectureDoc "Plant Architecture plug-in" is the recommended way to generate plant geometry in Helios. It provides a library of ready-to-use, biologically-based models for many crop and tree species (including grapevine, strawberry, walnut, sorghum, and many others), and supports plant growth over time, phenology, pruning, and physiological coupling. The Canopy Generator plug-in remains useful for idealized canopies (e.g., \ref CGenHomogeneous "spatially homogeneous canopies" and canopies of \ref CGenSphere "spherical" or \ref CGenCone "conical" crowns), but new projects requiring realistic plant geometries should generally use the Plant Architecture plug-in.
+
  \image html SplitTrellisVineyard.png
 
  \tableofcontents

@@ -694,14 +694,15 @@ namespace helios {
             return; // No geometry uploaded yet
         }
 
-        // Material buffers are indexed as [source * Nbands * Nprims + band * Nprims + prim]
+        // Material buffers are indexed [slot][primitive][band_global]: one slot per source, then the diffuse/scatter slot at index Nsources.
         // Use materials.num_sources for validation (source_count may not be set yet if updateSources hasn't been called)
-        size_t expected_size = materials.num_sources * band_count * primitive_count;
+        const size_t material_slot_count = materials.num_sources + 1;
+        size_t expected_size = material_slot_count * band_count * primitive_count;
 
         // Upload reflectivity buffer
         if (!materials.reflectivity.empty()) {
             if (materials.reflectivity.size() != expected_size) {
-                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): reflectivity size mismatch. Expected " + std::to_string(expected_size) + " entries (Nsources * Nprims * Nbands), got " +
+                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): reflectivity size mismatch. Expected " + std::to_string(expected_size) + " entries ((Nsources + 1) * Nprims * Nbands), got " +
                                      std::to_string(materials.reflectivity.size()));
             }
 
@@ -715,7 +716,7 @@ namespace helios {
         // Upload transmissivity buffer
         if (!materials.transmissivity.empty()) {
             if (materials.transmissivity.size() != expected_size) {
-                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): transmissivity size mismatch. Expected " + std::to_string(expected_size) + " entries (Nsources * Nprims * Nbands), got " +
+                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): transmissivity size mismatch. Expected " + std::to_string(expected_size) + " entries ((Nsources + 1) * Nprims * Nbands), got " +
                                      std::to_string(materials.transmissivity.size()));
             }
 
@@ -726,7 +727,7 @@ namespace helios {
             uploadBufferData(transmissivity_buffer, materials.transmissivity.data(), materials.transmissivity.size() * sizeof(float));
         }
 
-        // Camera-weighted reflectivity/transmissivity, indexed [source][primitive][band_global][camera].
+        // Camera-weighted reflectivity/transmissivity, indexed [slot][primitive][band_global][camera].
         // These differ from rho/tau only when a source carries a spectrum AND a camera declares a
         // non-uniform spectral response; without them the camera image is built from band-weighted
         // scatter, which is a different integral over wavelength (measured 60-75% error on a scene
@@ -734,8 +735,8 @@ namespace helios {
         const size_t expected_cam_size = expected_size * materials.num_cameras;
         if (!materials.reflectivity_cam.empty()) {
             if (materials.reflectivity_cam.size() != expected_cam_size) {
-                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): reflectivity_cam size mismatch. Expected " + std::to_string(expected_cam_size) +
-                                     " entries (Nsources * Nprims * Nbands * Ncameras), got " + std::to_string(materials.reflectivity_cam.size()));
+                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): reflectivity_cam size mismatch. Expected " + std::to_string(expected_cam_size) + " entries ((Nsources + 1) * Nprims * Nbands * Ncameras), got " +
+                                     std::to_string(materials.reflectivity_cam.size()));
             }
             if (reflectivity_cam_buffer.buffer != VK_NULL_HANDLE) {
                 destroyBuffer(reflectivity_cam_buffer);
@@ -745,8 +746,8 @@ namespace helios {
         }
         if (!materials.transmissivity_cam.empty()) {
             if (materials.transmissivity_cam.size() != expected_cam_size) {
-                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): transmissivity_cam size mismatch. Expected " + std::to_string(expected_cam_size) +
-                                     " entries (Nsources * Nprims * Nbands * Ncameras), got " + std::to_string(materials.transmissivity_cam.size()));
+                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): transmissivity_cam size mismatch. Expected " + std::to_string(expected_cam_size) + " entries ((Nsources + 1) * Nprims * Nbands * Ncameras), got " +
+                                     std::to_string(materials.transmissivity_cam.size()));
             }
             if (transmissivity_cam_buffer.buffer != VK_NULL_HANDLE) {
                 destroyBuffer(transmissivity_cam_buffer);
@@ -755,13 +756,13 @@ namespace helios {
             uploadBufferData(transmissivity_cam_buffer, materials.transmissivity_cam.data(), materials.transmissivity_cam.size() * sizeof(float));
         }
 
-        // Camera-weighted reflectivity of a spectrally flat, perfectly white surface, indexed [source][band_global][camera]. The direct and diffuse shaders weight the light arriving at each
+        // Camera-weighted reflectivity of a spectrally flat, perfectly white surface, indexed [slot][band_global][camera]. The direct and diffuse shaders weight the light arriving at each
         // primitive by it to accumulate each camera's white reference.
         if (!materials.white_reference_cam.empty()) {
-            const size_t expected_white_reference_size = materials.num_sources * band_count * materials.num_cameras;
+            const size_t expected_white_reference_size = material_slot_count * band_count * materials.num_cameras;
             if (materials.white_reference_cam.size() != expected_white_reference_size) {
-                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): white_reference_cam size mismatch. Expected " + std::to_string(expected_white_reference_size) +
-                                     " entries (Nsources * Nbands * Ncameras), got " + std::to_string(materials.white_reference_cam.size()));
+                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): white_reference_cam size mismatch. Expected " + std::to_string(expected_white_reference_size) + " entries ((Nsources + 1) * Nbands * Ncameras), got " +
+                                     std::to_string(materials.white_reference_cam.size()));
             }
             if (white_reference_cam_buffer.buffer != VK_NULL_HANDLE) {
                 destroyBuffer(white_reference_cam_buffer);
@@ -801,7 +802,7 @@ namespace helios {
         // flag (char on host) is widened to uint for GPU access, matching the twosided_flags pattern.
         if (!materials.is_glass.empty()) {
             if (materials.is_glass.size() != expected_size) {
-                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): is_glass size mismatch. Expected " + std::to_string(expected_size) + " entries (Nsources * Nprims * Nbands), got " +
+                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): is_glass size mismatch. Expected " + std::to_string(expected_size) + " entries ((Nsources + 1) * Nprims * Nbands), got " +
                                      std::to_string(materials.is_glass.size()));
             }
             // Fail fast if the band count exceeds the per-thread cover-transmittance accumulator size
@@ -1679,6 +1680,8 @@ namespace helios {
             zeroBuffer(camera_radiation_buffer);
         }
 
+        uploadCameraBandMap(params, "launchCameraRays");
+
         // Update descriptor sets if buffers changed
         if (descriptors_dirty) {
             updateDescriptorSets();
@@ -1722,8 +1725,8 @@ namespace helios {
             uint32_t primitive_count; // 4 bytes
             helios::vec3 sun_direction; // 12 bytes
             float solar_disk_cos_angle; // 4 bytes
-            uint32_t periodic_flag_x; // 4 bytes
-            uint32_t periodic_flag_y; // 4 bytes
+            uint32_t periodic_flags; // 4 bytes (bit 0: periodic in x, bit 1: periodic in y)
+            uint32_t material_band_count; // 4 bytes (global band count, for the material buffers)
             uint32_t bbox_count; // 4 bytes
             float domain_xmin; // 4 bytes
             float domain_xmax; // 4 bytes
@@ -1731,6 +1734,7 @@ namespace helios {
             float domain_ymax; // 4 bytes
             uint32_t specular_reflection_enabled; // 4 bytes
         } push_constants{}; // Total: 128 bytes
+        static_assert(sizeof(PushConstants) == 128, "camera push constants must match camera_raygen.comp and fit the 128-byte push-constant range");
 
         push_constants.camera_position = params.camera_position;
         push_constants.viewplane_length = params.camera_viewplane_length;
@@ -1752,8 +1756,8 @@ namespace helios {
         push_constants.primitive_count = primitive_count;
         push_constants.sun_direction = cached_sun_direction;
         push_constants.solar_disk_cos_angle = cached_solar_disk_cos_angle;
-        push_constants.periodic_flag_x = static_cast<uint32_t>(periodic_flag_x);
-        push_constants.periodic_flag_y = static_cast<uint32_t>(periodic_flag_y);
+        push_constants.periodic_flags = (periodic_flag_x != 0.f ? 1u : 0u) | (periodic_flag_y != 0.f ? 2u : 0u);
+        push_constants.material_band_count = static_cast<uint32_t>(band_count);
         push_constants.bbox_count = bbox_count;
         push_constants.domain_xmin = domain_bounds[0];
         push_constants.domain_xmax = domain_bounds[1];
@@ -1815,6 +1819,8 @@ namespace helios {
             return; // No geometry
         }
 
+        uploadCameraBandMap(params, "launchPixelLabelRays");
+
         // Update descriptor sets if buffers changed
         if (descriptors_dirty) {
             updateDescriptorSets();
@@ -1858,8 +1864,8 @@ namespace helios {
             uint32_t primitive_count;
             helios::vec3 sun_direction;
             float solar_disk_cos_angle;
-            uint32_t periodic_flag_x;
-            uint32_t periodic_flag_y;
+            uint32_t periodic_flags; // bit 0: periodic in x, bit 1: periodic in y
+            uint32_t material_band_count; // global band count, for the material buffers
             uint32_t bbox_count;
             float domain_xmin;
             float domain_xmax;
@@ -1867,6 +1873,7 @@ namespace helios {
             float domain_ymax;
             uint32_t padding;
         } push_constants{};
+        static_assert(sizeof(PushConstants) == 128, "pixel-label push constants must match pixel_label_raygen.comp and fit the 128-byte push-constant range");
 
         push_constants.camera_position = params.camera_position;
         push_constants.viewplane_length = params.camera_viewplane_length;
@@ -1888,8 +1895,8 @@ namespace helios {
         push_constants.primitive_count = primitive_count;
         push_constants.sun_direction = cached_sun_direction;
         push_constants.solar_disk_cos_angle = cached_solar_disk_cos_angle;
-        push_constants.periodic_flag_x = static_cast<uint32_t>(periodic_flag_x);
-        push_constants.periodic_flag_y = static_cast<uint32_t>(periodic_flag_y);
+        push_constants.periodic_flags = (periodic_flag_x != 0.f ? 1u : 0u) | (periodic_flag_y != 0.f ? 2u : 0u);
+        push_constants.material_band_count = static_cast<uint32_t>(band_count);
         push_constants.bbox_count = bbox_count;
         push_constants.domain_xmin = domain_bounds[0];
         push_constants.domain_xmax = domain_bounds[1];
@@ -2515,6 +2522,20 @@ namespace helios {
                                  " camera(s) x " + std::to_string(primitive_count) + " primitives x " + std::to_string(launch_band_count) + " launched band(s) require " + std::to_string(required_bytes) +
                                  ". zeroCameraScatterBuffers() must be called for the current camera set before rays are launched.");
         }
+    }
+
+    void VulkanComputeBackend::uploadCameraBandMap(const RayTracingLaunchParams &params, const char *caller) {
+        launch_to_global_band.clear();
+        for (uint32_t g = 0; g < band_count && g < params.band_launch_flag.size(); g++) {
+            if (params.band_launch_flag[g]) {
+                launch_to_global_band.push_back(g);
+            }
+        }
+        if (launch_to_global_band.empty() || launch_to_global_band.size() != launch_band_count) {
+            helios_runtime_error(std::string("ERROR (VulkanComputeBackend::") + caller + "): The launch parameters flag " + std::to_string(launch_to_global_band.size()) + " launched band(s), but the current runBand() launch has " +
+                                 std::to_string(launch_band_count) + ". The launched bands are needed to tell which primitives are translucent covers (glass) that the ray passes through.");
+        }
+        uploadBufferData(band_map_buffer, launch_to_global_band.data(), launch_to_global_band.size() * sizeof(uint32_t));
     }
 
     void VulkanComputeBackend::requireWhiteReferenceBuffersSized(const char *caller) const {

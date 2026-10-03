@@ -109,14 +109,15 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, hit_ptx_path.c_str(), "miss_direct", &miss_direct));
     RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, hit_ptx_path.c_str(), "miss_diffuse", &miss_diffuse));
     RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, hit_ptx_path.c_str(), "miss_camera", &miss_camera));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, hit_ptx_path.c_str(), "miss_pixel_label", &miss_pixel_label));
     // Translucent cover (glass/plastic) any-hit programs: let direct/diffuse rays pass through covers.
     RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, hit_ptx_path.c_str(), "any_hit_direct", &any_hit_direct));
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, hit_ptx_path.c_str(), "any_hit_diffuse", &any_hit_diffuse));
 
     /* Set miss programs */
     RT_CHECK_ERROR(rtContextSetMissProgram(OptiX_Context, RAYTYPE_DIRECT, miss_direct));
     RT_CHECK_ERROR(rtContextSetMissProgram(OptiX_Context, RAYTYPE_DIFFUSE, miss_diffuse));
     RT_CHECK_ERROR(rtContextSetMissProgram(OptiX_Context, RAYTYPE_CAMERA, miss_camera));
+    RT_CHECK_ERROR(rtContextSetMissProgram(OptiX_Context, RAYTYPE_PIXEL_LABEL, miss_pixel_label)); // sky pixels get depth -1
 
     /* Load intersection programs from PTX */
     std::string intersect_ptx_path = helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx").string();
@@ -186,7 +187,6 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(patch_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label));
     // Translucent-cover pass-through (glass/plastic) for direct/diffuse rays only.
     RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(patch_material, RAYTYPE_DIRECT, any_hit_direct));
-    RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(patch_material, RAYTYPE_DIFFUSE, any_hit_diffuse));
 
     // Triangle material
     RT_CHECK_ERROR(rtMaterialCreate(OptiX_Context, &triangle_material));
@@ -195,7 +195,6 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(triangle_material, RAYTYPE_CAMERA, closest_hit_camera));
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(triangle_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label));
     RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(triangle_material, RAYTYPE_DIRECT, any_hit_direct));
-    RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(triangle_material, RAYTYPE_DIFFUSE, any_hit_diffuse));
 
     // Disk material
     RT_CHECK_ERROR(rtMaterialCreate(OptiX_Context, &disk_material));
@@ -204,7 +203,6 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(disk_material, RAYTYPE_CAMERA, closest_hit_camera));
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(disk_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label));
     RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(disk_material, RAYTYPE_DIRECT, any_hit_direct));
-    RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(disk_material, RAYTYPE_DIFFUSE, any_hit_diffuse));
 
     // Tile material
     RT_CHECK_ERROR(rtMaterialCreate(OptiX_Context, &tile_material));
@@ -213,7 +211,6 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(tile_material, RAYTYPE_CAMERA, closest_hit_camera));
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(tile_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label));
     RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(tile_material, RAYTYPE_DIRECT, any_hit_direct));
-    RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(tile_material, RAYTYPE_DIFFUSE, any_hit_diffuse));
 
     // Voxel material
     RT_CHECK_ERROR(rtMaterialCreate(OptiX_Context, &voxel_material));
@@ -751,6 +748,10 @@ void OptiX6Backend::launchCameraRays(const RayTracingLaunchParams &params) {
     if (!is_initialized) {
         helios_runtime_error("ERROR (OptiX6Backend::launchCameraRays): Backend not initialized.");
     }
+    if (params.band_launch_flag.empty()) {
+        helios_runtime_error("ERROR (OptiX6Backend::launchCameraRays): The launch parameters do not say which bands are launched. "
+                             "They are needed to tell which primitives are translucent covers (glass) that the ray passes through.");
+    }
 
 
     // Set common launch parameters
@@ -803,6 +804,10 @@ void OptiX6Backend::launchCameraRays(const RayTracingLaunchParams &params) {
 void OptiX6Backend::launchPixelLabelRays(const RayTracingLaunchParams &params) {
     if (!is_initialized) {
         helios_runtime_error("ERROR (OptiX6Backend::launchPixelLabelRays): Backend not initialized.");
+    }
+    if (params.band_launch_flag.empty()) {
+        helios_runtime_error("ERROR (OptiX6Backend::launchPixelLabelRays): The launch parameters do not say which bands are launched. "
+                             "They are needed to tell which primitives are translucent covers (glass) that the ray passes through.");
     }
 
     // Set launch parameters

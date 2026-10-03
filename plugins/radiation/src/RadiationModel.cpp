@@ -335,6 +335,8 @@ void RadiationModel::addRadiationBand(const std::string &label, float wavelength
     if (radiation_bands.find(label) != radiation_bands.end()) {
         std::cerr << "WARNING (RadiationModel::addRadiationBand): Radiation band " << label << " has already been added. Skipping this call to addRadiationBand()." << std::endl;
         return;
+    } else if (wavelength1 < 0.f) {
+        helios_runtime_error("ERROR (RadiationModel::addRadiationBand): The lower wavelength bound of band " + label + " must not be negative, but " + std::to_string(wavelength1) + " nm was given.");
     } else if (wavelength1 > wavelength2) {
         helios_runtime_error("ERROR (RadiationModel::addRadiationBand): The upper wavelength bound for a band must be greater than the lower bound.");
     } else if (wavelength2 - wavelength1 < 1) {
@@ -375,6 +377,15 @@ void RadiationModel::copyRadiationBand(const std::string &old_label, const std::
 
     if (!doesBandExist(old_label)) {
         helios_runtime_error("ERROR (RadiationModel::copyRadiationBand): Cannot copy band " + old_label + " because it does not exist.");
+    }
+
+    // (0,0) copies a band without wavelength bounds; any other bounds are validated as in addRadiationBand()
+    if (wavelength_min != 0.f || wavelength_max != 0.f) {
+        if (wavelength_min < 0.f) {
+            helios_runtime_error("ERROR (RadiationModel::copyRadiationBand): The lower wavelength bound of band " + new_label + " must not be negative, but " + std::to_string(wavelength_min) + " nm was given.");
+        } else if (wavelength_max - wavelength_min < 1.f) {
+            helios_runtime_error("ERROR (RadiationModel::copyRadiationBand): The waveband range of band " + new_label + " must be at least 1 nm, with the upper bound greater than the lower bound.");
+        }
     }
 
     RadiationBand band = radiation_bands.at(old_label);
@@ -651,14 +662,15 @@ void RadiationModel::populateExcitationSet(ExcitationSet &exc, const std::vector
         launch_slot[b] = std::distance(launch_band_labels.begin(), slot_it);
     }
 
-    // material_data is laid out [source][primitive][band], with primitives in context_UUIDs order and bands in radiation_bands order.
+    // material_data is laid out [slot][primitive][band], with primitives in context_UUIDs order and bands in radiation_bands order. Slots 0..Nsources-1
+    // hold each source's properties; the diffuse/scatter slot after them is not used here.
     const size_t Nsources = radiation_sources.size();
     const size_t Nprimitives = context_UUIDs.size();
     const size_t Nbands = radiation_bands.size();
     if (radiation_in.size() < Nprimitives * Nbands_launch || radiation_in_top.size() < Nprimitives * Nbands_launch) {
         helios_runtime_error("ERROR (RadiationModel::populateExcitationSet): The absorbed radiation read back from the ray tracer does not cover every primitive and launched band. This is an internal inconsistency.");
     }
-    MaterialPropertyIndexer mat_idx(Nsources, Nprimitives, Nbands);
+    MaterialPropertyIndexer mat_idx(Nsources + 1, Nprimitives, Nbands);
     std::vector<size_t> material_band_index(n_bands);
     for (size_t b = 0; b < n_bands; ++b) {
         material_band_index[b] = std::distance(radiation_bands.begin(), radiation_bands.find(exc.band_labels[b]));
@@ -1108,8 +1120,8 @@ uint RadiationModel::addCollimatedRadiationSource(const vec3 &direction) {
     }
 
     uint Nsources = radiation_sources.size() + 1;
-    if (Nsources > 256) {
-        helios_runtime_error("ERROR (RadiationModel::addCollimatedRadiationSource): A maximum of 256 radiation sources are allowed.");
+    if (Nsources > 255) { // source IDs are stored in 8 bits, and index Nsources is the diffuse/scatter material slot
+        helios_runtime_error("ERROR (RadiationModel::addCollimatedRadiationSource): A maximum of 255 radiation sources are allowed.");
     }
 
     bool warn_multiple_suns = false;
@@ -1143,8 +1155,8 @@ uint RadiationModel::addSphereRadiationSource(const vec3 &position, float radius
     }
 
     uint Nsources = radiation_sources.size() + 1;
-    if (Nsources > 256) {
-        helios_runtime_error("ERROR (RadiationModel::addSphereRadiationSource): A maximum of 256 radiation sources are allowed.");
+    if (Nsources > 255) { // source IDs are stored in 8 bits, and index Nsources is the diffuse/scatter material slot
+        helios_runtime_error("ERROR (RadiationModel::addSphereRadiationSource): A maximum of 255 radiation sources are allowed.");
     }
 
     RadiationSource sphere_source(position, 2.f * fabsf(radius));
@@ -1178,8 +1190,8 @@ uint RadiationModel::addSunSphereRadiationSource(const SphericalCoord &sun_direc
 uint RadiationModel::addSunSphereRadiationSource(const vec3 &sun_direction) {
 
     uint Nsources = radiation_sources.size() + 1;
-    if (Nsources > 256) {
-        helios_runtime_error("ERROR (RadiationModel::addSunSphereRadiationSource): A maximum of 256 radiation sources are allowed.");
+    if (Nsources > 255) { // source IDs are stored in 8 bits, and index Nsources is the diffuse/scatter material slot
+        helios_runtime_error("ERROR (RadiationModel::addSunSphereRadiationSource): A maximum of 255 radiation sources are allowed.");
     }
 
     bool warn_multiple_suns = false;
@@ -1213,8 +1225,8 @@ uint RadiationModel::addRectangleRadiationSource(const vec3 &position, const vec
     }
 
     uint Nsources = radiation_sources.size() + 1;
-    if (Nsources > 256) {
-        helios_runtime_error("ERROR (RadiationModel::addRectangleRadiationSource): A maximum of 256 radiation sources are allowed.");
+    if (Nsources > 255) { // source IDs are stored in 8 bits, and index Nsources is the diffuse/scatter material slot
+        helios_runtime_error("ERROR (RadiationModel::addRectangleRadiationSource): A maximum of 255 radiation sources are allowed.");
     }
 
     RadiationSource rectangle_source(position, size, rotation_rad);
@@ -1244,8 +1256,8 @@ uint RadiationModel::addDiskRadiationSource(const vec3 &position, float radius, 
     }
 
     uint Nsources = radiation_sources.size() + 1;
-    if (Nsources > 256) {
-        helios_runtime_error("ERROR (RadiationModel::addDiskRadiationSource): A maximum of 256 radiation sources are allowed.");
+    if (Nsources > 255) { // source IDs are stored in 8 bits, and index Nsources is the diffuse/scatter material slot
+        helios_runtime_error("ERROR (RadiationModel::addDiskRadiationSource): A maximum of 255 radiation sources are allowed.");
     }
 
     RadiationSource disk_source(position, radius, rotation_rad);
@@ -1347,7 +1359,7 @@ float RadiationModel::getSourceFlux(uint source_ID, const std::string &label) co
 
     if (!source.source_spectrum.empty() && source.source_fluxes.at(label) < 0.f) { // source spectrum was specified (and not overridden by setting source flux manually)
         vec2 wavebounds = radiation_bands.at(label).wavebandBounds;
-        if (wavebounds == make_vec2(0, 0)) {
+        if (!radiation_bands.at(label).hasWavebandBounds()) {
             wavebounds = make_vec2(source.source_spectrum.front().x, source.source_spectrum.back().x);
         }
         return integrateSpectrum(source.source_spectrum, wavebounds.x, wavebounds.y) * source.source_flux_scaling_factor;
@@ -1461,7 +1473,7 @@ float RadiationModel::getDiffuseFlux(const std::string &band_label) const {
     const std::vector<vec2> &spectrum = band.diffuse_spectrum;
     if (!spectrum.empty()) {
         vec2 wavebounds = band.wavebandBounds;
-        if (wavebounds == make_vec2(0, 0)) {
+        if (!band.hasWavebandBounds()) {
             wavebounds = make_vec2(spectrum.front().x, spectrum.back().x);
         }
         return integrateSpectrum(spectrum, wavebounds.x, wavebounds.y);
@@ -1615,6 +1627,82 @@ namespace {
         }
         return integral;
     }
+
+    //! Integrals over a wavelength interval of an object spectrum weighted by a weighting spectrum and a camera response
+    struct WeightedSpectrumIntegral {
+        //! Integral of object x weight x camera
+        float weighted = 0.f;
+        //! Integral of the weight alone
+        float weight = 0.f;
+    };
+
+    //! Integrate object(λ)·weight(λ)·camera(λ) and weight(λ) over [wavelength1, wavelength2]
+    /**
+     * Each spectrum is linear between its tabulated points and zero outside its tabulated range; an empty spectrum stands for a
+     * value of 1 at every wavelength. The product is integrated on the union of the three grids, so the weight integral is exact
+     * and equal to integrateSpectrum(weight, wavelength1, wavelength2), and a narrow weight spectrum is resolved even when the
+     * object spectrum is coarse.
+     */
+    WeightedSpectrumIntegral integrateWeightedSpectrum(const std::vector<helios::vec2> &object, const std::vector<helios::vec2> &weight, const std::vector<helios::vec2> &camera, float wavelength1, float wavelength2) {
+        WeightedSpectrumIntegral result;
+        result.weight = weight.empty() ? wavelength2 - wavelength1 : integrateSpectrumBetweenBounds(weight, wavelength1, wavelength2, [](float, float value) { return value; });
+
+        const std::vector<const std::vector<helios::vec2> *> spectra = {&object, &weight, &camera};
+        float lower = wavelength1;
+        float upper = wavelength2;
+        for (const auto *spectrum: spectra) {
+            if (!spectrum->empty()) {
+                lower = std::max(lower, spectrum->front().x);
+                upper = std::min(upper, spectrum->back().x);
+            }
+        }
+        if (upper <= lower) {
+            return result; // the spectra do not overlap within the bounds, so the product is zero everywhere
+        }
+
+        std::vector<float> grid = {lower, upper};
+        for (const auto *spectrum: spectra) {
+            for (const helios::vec2 &point: *spectrum) {
+                if (point.x > lower && point.x < upper) {
+                    grid.push_back(point.x);
+                }
+            }
+        }
+        std::sort(grid.begin(), grid.end());
+        grid.erase(std::unique(grid.begin(), grid.end()), grid.end());
+
+        std::vector<helios::vec2> weight_times_camera;
+        weight_times_camera.reserve(grid.size());
+        for (float wavelength: grid) {
+            const float weight_value = weight.empty() ? 1.f : helios::interp1(weight, wavelength);
+            const float camera_value = camera.empty() ? 1.f : helios::interp1(camera, wavelength);
+            weight_times_camera.push_back(helios::make_vec2(wavelength, weight_value * camera_value));
+        }
+        result.weighted = integrateSpectrumBetweenBounds(weight_times_camera, lower, upper, [&](float wavelength, float weight_camera_value) { return (object.empty() ? 1.f : helios::interp1(object, wavelength)) * weight_camera_value; });
+        return result;
+    }
+
+    //! Format a wavelength for an error message without trailing zeros, e.g. "800" or "512.5"
+    std::string wavelengthString(float wavelength) {
+        std::ostringstream stream;
+        stream << wavelength;
+        return stream.str();
+    }
+
+    //! Format a wavelength interval for an error message, e.g. "800 to 900 nm"
+    std::string wavelengthRangeString(float wavelength1, float wavelength2) {
+        return wavelengthString(wavelength1) + " to " + wavelengthString(wavelength2) + " nm";
+    }
+
+    //! Whether a band is one of the internal SIF excitation bands that ensureExcitationSet() creates
+    bool isSIFExcitationBand(const std::string &band_label) {
+        return band_label.compare(0, 9, "_SIF_exc_") == 0;
+    }
+
+    //! Format a spectrum's tabulated range for an error message, e.g. "800 to 900 nm"
+    std::string spectrumRangeString(const std::vector<helios::vec2> &spectrum) {
+        return wavelengthRangeString(spectrum.front().x, spectrum.back().x);
+    }
 } // namespace
 
 float RadiationModel::integrateSpectrum(uint source_ID, const std::vector<helios::vec2> &object_spectrum, float wavelength1, float wavelength2) const {
@@ -1628,11 +1716,16 @@ float RadiationModel::integrateSpectrum(uint source_ID, const std::vector<helios
     }
 
     const std::vector<helios::vec2> &source_spectrum = radiation_sources.at(source_ID).source_spectrum;
+    if (source_spectrum.size() < 2) {
+        helios_runtime_error("ERROR (RadiationModel::integrateSpectrum): Source " + std::to_string(source_ID) + " has no spectrum. Set one with setSourceSpectrum() before weighting a spectrum by it.");
+    }
 
-    const float E = integrateSpectrumBetweenBounds(object_spectrum, wavelength1, wavelength2, [&](float wavelength, float object_value) { return object_value * interp1(source_spectrum, wavelength); });
-    const float Etot = integrateSpectrumBetweenBounds(object_spectrum, wavelength1, wavelength2, [&](float wavelength, float) { return interp1(source_spectrum, wavelength); });
-
-    return E / Etot;
+    const WeightedSpectrumIntegral integral = integrateWeightedSpectrum(object_spectrum, source_spectrum, {}, wavelength1, wavelength2);
+    if (integral.weight <= 0.f) {
+        helios_runtime_error("ERROR (RadiationModel::integrateSpectrum): The spectrum of source " + std::to_string(source_ID) + " (tabulated " + spectrumRangeString(source_spectrum) + ") has no energy from " +
+                             wavelengthRangeString(wavelength1, wavelength2) + ", so there is nothing to weight by.");
+    }
+    return integral.weighted / integral.weight;
 }
 
 float RadiationModel::integrateSpectrum(const std::vector<helios::vec2> &object_spectrum, float wavelength1, float wavelength2) const {
@@ -1659,70 +1752,40 @@ float RadiationModel::integrateSpectrum(uint source_ID, const std::vector<helios
         helios_runtime_error("ERROR (RadiationModel::integrateSpectrum): Radiation spectrum was not set for source ID. Make sure to set its spectrum using setSourceSpectrum() function.");
     } else if (object_spectrum.size() < 2) {
         helios_runtime_error("ERROR (RadiationModel::integrateSpectrum): Radiation spectrum must have at least 2 wavelengths.");
+    } else if (camera_spectrum.size() < 2) {
+        helios_runtime_error("ERROR (RadiationModel::integrateSpectrum): Camera spectral response must have at least 2 wavelengths.");
     }
 
-    std::vector<helios::vec2> source_spectrum = radiation_sources.at(source_ID).source_spectrum;
-
-    float E = 0;
-    float Etot = 0;
-    for (auto i = 1; i < object_spectrum.size(); i++) {
-
-        if (object_spectrum.at(i).x <= source_spectrum.front().x || object_spectrum.at(i).x <= camera_spectrum.front().x) {
-            continue;
-        }
-        if (object_spectrum.at(i).x > source_spectrum.back().x || object_spectrum.at(i).x > camera_spectrum.back().x) {
-            break;
-        }
-        float x1 = object_spectrum.at(i).x;
-        float Eobject1 = object_spectrum.at(i).y;
-        float Esource1 = interp1(source_spectrum, x1);
-        float Ecamera1 = interp1(camera_spectrum, x1);
-
-
-        float x0 = object_spectrum.at(i - 1).x;
-        float Eobject0 = object_spectrum.at(i - 1).y;
-        float Esource0 = interp1(source_spectrum, x0);
-        float Ecamera0 = interp1(camera_spectrum, x0);
-
-        E += 0.5f * ((Eobject1 * Esource1 * Ecamera1) + (Eobject0 * Ecamera0 * Esource0)) * (x1 - x0);
-        Etot += 0.5f * (Esource1 + Esource0) * (x1 - x0);
+    const std::vector<helios::vec2> &source_spectrum = radiation_sources.at(source_ID).source_spectrum;
+    if (source_spectrum.size() < 2) {
+        helios_runtime_error("ERROR (RadiationModel::integrateSpectrum): Source " + std::to_string(source_ID) + " has no spectrum. Set one with setSourceSpectrum() before weighting a spectrum by it.");
     }
 
-
-    return E / Etot;
+    // Integrate over the wavelengths where both the source and the camera are tabulated
+    const float wavelength1 = std::max(source_spectrum.front().x, camera_spectrum.front().x);
+    const float wavelength2 = std::min(source_spectrum.back().x, camera_spectrum.back().x);
+    const WeightedSpectrumIntegral integral = wavelength2 > wavelength1 ? integrateWeightedSpectrum(object_spectrum, source_spectrum, camera_spectrum, wavelength1, wavelength2) : WeightedSpectrumIntegral{};
+    if (integral.weight <= 0.f) {
+        helios_runtime_error("ERROR (RadiationModel::integrateSpectrum): The spectrum of source " + std::to_string(source_ID) + " (tabulated " + spectrumRangeString(source_spectrum) +
+                             ") has no energy where the camera spectral response is tabulated (" + spectrumRangeString(camera_spectrum) + "), so there is nothing to weight by.");
+    }
+    return integral.weighted / integral.weight;
 }
 
 float RadiationModel::integrateSpectrum(const std::vector<helios::vec2> &object_spectrum, const std::vector<helios::vec2> &camera_spectrum) const {
 
     if (object_spectrum.size() < 2) {
         helios_runtime_error("ERROR (RadiationModel::integrateSpectrum): Radiation spectrum must have at least 2 wavelengths.");
+    } else if (camera_spectrum.size() < 2) {
+        helios_runtime_error("ERROR (RadiationModel::integrateSpectrum): Camera spectral response must have at least 2 wavelengths.");
     }
 
-    float E = 0;
-    float Etot = 0;
-    for (auto i = 1; i < object_spectrum.size(); i++) {
-
-        if (object_spectrum.at(i).x <= camera_spectrum.front().x) {
-            continue;
-        }
-        if (object_spectrum.at(i).x > camera_spectrum.back().x) {
-            break;
-        }
-
-        float x1 = object_spectrum.at(i).x;
-        float Eobject1 = object_spectrum.at(i).y;
-        float Ecamera1 = interp1(camera_spectrum, x1);
-
-
-        float x0 = object_spectrum.at(i - 1).x;
-        float Eobject0 = object_spectrum.at(i - 1).y;
-        float Ecamera0 = interp1(camera_spectrum, x0);
-
-        E += 0.5f * ((Eobject1 * Ecamera1) + (Eobject0 * Ecamera0)) * (x1 - x0);
-        Etot += 0.5f * (Ecamera1 + Ecamera0) * (x1 - x0);
+    // The camera response is the weight: a camera-response-weighted average of the object spectrum
+    const WeightedSpectrumIntegral integral = integrateWeightedSpectrum(object_spectrum, camera_spectrum, {}, camera_spectrum.front().x, camera_spectrum.back().x);
+    if (integral.weight <= 0.f) {
+        helios_runtime_error("ERROR (RadiationModel::integrateSpectrum): The camera spectral response (tabulated " + spectrumRangeString(camera_spectrum) + ") is zero everywhere, so there is nothing to weight by.");
     }
-
-    return E / Etot;
+    return integral.weighted / integral.weight;
 }
 
 float RadiationModel::integrateSourceSpectrum(uint source_ID, float wavelength1, float wavelength2) const {
@@ -2456,6 +2519,7 @@ void RadiationModel::updateRadiativeProperties() {
     for (auto &band: radiation_bands) {
         scattering_iterations_needed[band.first] = false;
     }
+    spectral_weighting_errors.clear();
 
     float eps;
 
@@ -2465,13 +2529,18 @@ void RadiationModel::updateRadiativeProperties() {
         band_labels.push_back(band.first);
     }
 
-    // Allocate flat arrays directly in material_data to avoid nested vector overhead and redundant copies
+    // Allocate flat arrays directly in material_data to avoid nested vector overhead and redundant copies. There is one
+    // material slot per radiation source, read by that source's direct rays, plus one diffuse/scatter slot at index Nsources,
+    // read by diffuse, scattered and emitted rays (see the diffuse-slot weights below).
     material_data.num_primitives = Nprimitives;
     material_data.num_bands = Nbands;
     material_data.num_sources = Nsources;
     material_data.num_cameras = Ncameras;
 
-    size_t mat_size = (size_t)Nsources * Nprimitives * Nbands;
+    const uint Nslots = Nsources + 1;
+    const uint diffuse_slot = Nsources;
+
+    size_t mat_size = (size_t) Nslots * Nprimitives * Nbands;
     material_data.reflectivity.assign(mat_size, rho_default);
     material_data.transmissivity.assign(mat_size, tau_default);
 
@@ -2481,7 +2550,7 @@ void RadiationModel::updateRadiativeProperties() {
     material_data.is_glass.assign(mat_size, 0);
 
     if (Ncameras > 0) {
-        size_t cam_size = (size_t)Nsources * Nprimitives * Nbands * Ncameras;
+        size_t cam_size = (size_t) Nslots * Nprimitives * Nbands * Ncameras;
         material_data.reflectivity_cam.assign(cam_size, rho_default);
         material_data.transmissivity_cam.assign(cam_size, tau_default);
     } else {
@@ -2489,8 +2558,8 @@ void RadiationModel::updateRadiativeProperties() {
         material_data.transmissivity_cam.clear();
     }
 
-    MaterialPropertyIndexer mat_idx(Nsources, Nprimitives, Nbands);
-    CameraMaterialIndexer cam_idx(Nsources, Nprimitives, Nbands, Ncameras);
+    MaterialPropertyIndexer mat_idx(Nslots, Nprimitives, Nbands);
+    CameraMaterialIndexer cam_idx(Nslots, Nprimitives, Nbands, Ncameras);
 
     // Cache all unique camera spectral responses for all cameras and bands
     std::vector<std::vector<std::vector<helios::vec2>>> camera_response_unique;
@@ -2531,30 +2600,176 @@ void RadiationModel::updateRadiativeProperties() {
         }
     }
 
-    // Camera-weighted reflectivity of a spectrally flat, perfectly white surface, per [source][band][camera]: the value rho_cam below takes for a reflectivity spectrum of 1. It is sampled every
-    // nanometre, as reflectivity spectra typically are, because the camera-weighted integral is evaluated on the object spectrum's own sample points. Without both a source spectrum and a camera
-    // response, rho_cam of a white surface is 1.
-    if (Ncameras > 0) {
-        material_data.white_reference_cam.assign((size_t) Nsources * Nbands * Ncameras, 1.f);
-        for (uint s = 0; s < Nsources; s++) {
-            if (radiation_sources.at(s).source_spectrum.empty()) {
-                continue;
+    // A camera-weighted value is normalized by the integral of the camera response (see cameraWeightedValue below), so a response must have some
+    // sensitivity somewhere.
+    for (uint cam = 0; cam < Ncameras; cam++) {
+        for (uint b = 0; b < Nbands; b++) {
+            const std::vector<helios::vec2> &response = camera_response_unique.at(cam).at(b);
+            if (!response.empty() && (response.size() < 2 || integrateSpectrum(response) <= 0.f)) {
+                helios_runtime_error("ERROR (RadiationModel::updateRadiativeProperties): The spectral response of camera #" + std::to_string(cam) + " in band '" + band_labels.at(b) +
+                                     "' is zero everywhere (or has fewer than 2 wavelengths), so the camera cannot see anything in that band. Check the response data set with setCameraSpectralResponse().");
             }
-            for (uint b = 0; b < Nbands; b++) {
-                for (uint cam = 0; cam < Ncameras; cam++) {
-                    const std::vector<helios::vec2> &camera_response = camera_response_unique.at(cam).at(b);
-                    if (camera_response.empty()) {
-                        continue;
-                    }
-                    std::vector<helios::vec2> white_spectrum;
-                    for (float wavelength = std::ceil(camera_response.front().x); wavelength <= camera_response.back().x; wavelength += 1.f) {
-                        white_spectrum.push_back(helios::make_vec2(wavelength, 1.f));
-                    }
-                    if (white_spectrum.size() < 2) {
-                        continue;
-                    }
-                    material_data.white_reference_cam.at(((size_t) s * Nbands + b) * Ncameras + cam) = integrateSpectrum(s, white_spectrum, camera_response);
+        }
+    }
+
+    // Spectral weighting of reflectivity and transmissivity spectra. The radiation arriving in a band comes from "weighting contributors": each
+    // radiation source, then the sky diffuse radiation, then a spectrally flat weighting that stands in when a band receives no source or sky
+    // radiation at all (e.g. an emission-only band). A contributor's spectrum is its source spectrum or the band's diffuse spectrum; one without a
+    // spectrum is spectrally flat. Every spectrum is zero outside its tabulated range.
+    //
+    // Direct rays use their own source's weighting. Diffuse, scattered and emitted rays use the diffuse slot, weighted by the band's combined
+    // incident spectrum W(λ) = Σ_c F_c Ŝ_c(λ), where F_c is contributor c's band flux and Ŝ_c its spectrum normalized to integrate to 1 over the
+    // band. Since ∫ρW / ∫W = Σ_c F_c ρ_c / Σ_c F_c, with ρ_c the value weighted by contributor c alone, the diffuse slot is the flux-weighted mean of
+    // the per-contributor values. This is uniform over the scene: a shaded surface gets the same diffuse-slot value as a sunlit one.
+    const uint sky_contributor = Nsources;
+    const uint flat_contributor = Nsources + 1;
+    const uint Ncontributors = Nsources + 2;
+    const std::vector<helios::vec2> flat_weighting;
+    auto contributorSpectrum = [&](uint contributor, uint b) -> const std::vector<helios::vec2> & {
+        if (contributor < Nsources) {
+            return radiation_sources.at(contributor).source_spectrum;
+        } else if (contributor == sky_contributor && !radiation_bands.at(band_labels.at(b)).emissionFlag) {
+            // In an emitting (thermal) band the diffuse spectrum does not describe the sky radiation (see getDiffuseFlux()), so it is flat there
+            return radiation_bands.at(band_labels.at(b)).diffuse_spectrum;
+        }
+        return flat_weighting;
+    };
+    // Contributors with the same spectrum (e.g. every source without one) share their integrals through the cache below
+    auto contributorSpectrumID = [&](uint contributor, uint b) -> std::string {
+        if (contributorSpectrum(contributor, b).empty()) {
+            return "flat";
+        }
+        return contributor < Nsources ? "source" + std::to_string(contributor) : "sky";
+    };
+
+    std::vector<helios::vec2> band_bounds(Nbands);
+    std::vector<bool> band_has_bounds(Nbands);
+    // Whether the contributor's spectrum has any energy within the band. Only bands with wavelength bounds are integrated, and a flat weighting always has energy.
+    std::vector<std::vector<bool>> contributor_has_band_energy(Nbands, std::vector<bool>(Ncontributors, true));
+    // A contributor with flux in a band where its spectrum has no energy leaves nothing to weight a spectrum by. This is raised when a primitive's
+    // properties in that band are weighted by spectra; with only constant properties, the contributor's spectrum is never used.
+    std::vector<std::string> band_weighting_error(Nbands);
+    // Weight of each contributor in a band's diffuse slot: its band flux, normalized so the weights sum to 1
+    std::vector<std::vector<float>> diffuse_slot_weight(Nbands, std::vector<float>(Ncontributors, 0.f));
+    // Whether any contributor with flux in the band has a spectrum. Camera-weighted values of spectrally flat contributors are then normalized
+    // the same way as those of contributors with a spectrum (see cameraWeightedValue), so the two can be mixed in one image and one diffuse slot.
+    std::vector<bool> band_has_spectral_flux(Nbands, false);
+    for (uint b = 0; b < Nbands; b++) {
+        const std::string &band = band_labels.at(b);
+        band_bounds.at(b) = radiation_bands.at(band).wavebandBounds;
+        band_has_bounds.at(b) = radiation_bands.at(band).hasWavebandBounds();
+        const std::string band_description = "band '" + band + "'" + (band_has_bounds.at(b) ? " (" + wavelengthRangeString(band_bounds.at(b).x, band_bounds.at(b).y) + ")" : "");
+
+        std::vector<float> band_flux(flat_contributor);
+        for (uint c = 0; c < flat_contributor; c++) {
+            band_flux.at(c) = c < Nsources ? getSourceFlux(c, band) : getDiffuseFlux(band);
+        }
+
+        if (band_has_bounds.at(b)) {
+            for (uint c = 0; c < flat_contributor; c++) {
+                const std::vector<helios::vec2> &spectrum = contributorSpectrum(c, b);
+                if (spectrum.empty() || integrateSpectrum(spectrum, band_bounds.at(b).x, band_bounds.at(b).y) > 0.f) {
+                    continue;
                 }
+                contributor_has_band_energy.at(b).at(c) = false;
+                if (band_flux.at(c) > 0.f && band_weighting_error.at(b).empty()) {
+                    if (c < Nsources) {
+                        band_weighting_error.at(b) = "ERROR (RadiationModel::updateRadiativeProperties): Radiation source " + std::to_string(c) + " has a flux of " + std::to_string(band_flux.at(c)) + " W/m^2 in " + band_description +
+                                                     ", but its spectrum (tabulated " + spectrumRangeString(spectrum) + ") has no energy in that band, so surface reflectivity and transmissivity spectra cannot be weighted by it. " +
+                                                     (isSIFExcitationBand(band) ? "This is an internal SIF excitation band, whose source fluxes are taken from the source spectra when the SIF camera is added; the source's spectrum was changed "
+                                                                                  "afterwards. Set the source spectrum before adding the SIF camera."
+                                                                                : "Either set the source's flux in this band to 0 using setSourceFlux(), or give the source a spectrum that covers the band.");
+                    } else {
+                        band_weighting_error.at(b) =
+                                "ERROR (RadiationModel::updateRadiativeProperties): The diffuse radiation flux in " + band_description + " is " + std::to_string(band_flux.at(c)) + " W/m^2, but the diffuse spectrum (tabulated " +
+                                spectrumRangeString(spectrum) +
+                                ") has no energy in that band, so surface reflectivity and transmissivity spectra cannot be weighted by it. Either set the band's diffuse flux to 0 using setDiffuseRadiationFlux(), or set a diffuse "
+                                "spectrum that covers the band using setDiffuseSpectrum().";
+                    }
+                }
+            }
+        }
+
+        float total_flux = 0.f;
+        for (uint c = 0; c < flat_contributor; c++) {
+            if (band_flux.at(c) > 0.f) {
+                total_flux += band_flux.at(c);
+                if (!contributorSpectrum(c, b).empty()) {
+                    band_has_spectral_flux.at(b) = true;
+                }
+            }
+        }
+        if (total_flux > 0.f) {
+            for (uint c = 0; c < flat_contributor; c++) {
+                if (band_flux.at(c) > 0.f) {
+                    diffuse_slot_weight.at(b).at(c) = band_flux.at(c) / total_flux;
+                }
+            }
+        } else {
+            // No source or sky radiation in the band: its diffuse slot carries only emission, and ρ/τ are the unweighted band averages
+            diffuse_slot_weight.at(b).at(flat_contributor) = 1.f;
+        }
+    }
+
+    // Flux-weighted mean of per-contributor values for a band's diffuse slot
+    auto diffuseSlotValue = [&](uint b, const std::function<float(uint)> &contributor_value) -> float {
+        float value = 0.f;
+        for (uint c = 0; c < Ncontributors; c++) {
+            if (diffuse_slot_weight.at(b).at(c) > 0.f) {
+                value += diffuse_slot_weight.at(b).at(c) * contributor_value(c);
+            }
+        }
+        return value;
+    };
+
+    // Weighted value of a reflectivity/transmissivity spectrum in a band with wavelength bounds, for one contributor: ∫ρ·W / ∫W over the band,
+    // with W the contributor's spectrum (1 for a spectrally flat one). Only used for contributors with energy in the band, so ∫W > 0.
+    auto bandWeightedValue = [&](const std::vector<helios::vec2> &object_spectrum, uint b, uint contributor) -> float {
+        const WeightedSpectrumIntegral integral = integrateWeightedSpectrum(object_spectrum, contributorSpectrum(contributor, b), {}, band_bounds.at(b).x, band_bounds.at(b).y);
+        return integral.weighted / integral.weight;
+    };
+
+    // Camera-weighted value of a reflectivity/transmissivity spectrum for one contributor and camera. A contributor with a spectrum W gives
+    // ∫ρ·W·C / ∫W over the wavelengths where both W and the camera response C are tabulated, which keeps the magnitude of the response. A
+    // spectrally flat contributor is taken as a unit spectrum over the response, ∫ρ·C / ∫dλ, when the band has any flux with a spectrum, so
+    // that it is on the same scale; in a band where no flux has a spectrum it gives the camera-weighted average ∫ρ·C / ∫C, whose white
+    // reference is 1. An empty object spectrum stands for a spectrally flat, perfectly white surface, whose value is the white reference.
+    auto cameraWeightedValue = [&](const std::vector<helios::vec2> &object_spectrum, uint b, uint contributor, uint cam) -> float {
+        const std::vector<helios::vec2> &response = camera_response_unique.at(cam).at(b);
+        const std::vector<helios::vec2> &weighting = contributorSpectrum(contributor, b);
+        if (weighting.empty()) {
+            const WeightedSpectrumIntegral integral =
+                    band_has_spectral_flux.at(b) ? integrateWeightedSpectrum(object_spectrum, {}, response, response.front().x, response.back().x) : integrateWeightedSpectrum(object_spectrum, response, {}, response.front().x, response.back().x);
+            return integral.weighted / integral.weight; // responses with fewer than 2 points or all zeros are rejected above, so integral.weight > 0
+        }
+        const float wavelength1 = std::max(weighting.front().x, response.front().x);
+        const float wavelength2 = std::min(weighting.back().x, response.back().x);
+        const WeightedSpectrumIntegral integral = wavelength2 > wavelength1 ? integrateWeightedSpectrum(object_spectrum, weighting, response, wavelength1, wavelength2) : WeightedSpectrumIntegral{};
+        if (integral.weight <= 0.f) {
+            // The camera responds to none of this contributor's radiation, so every camera-weighted quantity it produces, including the
+            // white reference, is genuinely zero.
+            return 0.f;
+        }
+        return integral.weighted / integral.weight;
+    };
+
+    // Camera-weighted reflectivity of a spectrally flat, perfectly white surface, per [slot][band][camera]: the value rho_cam below takes for a
+    // reflectivity spectrum of 1. Without a camera response it is 1.
+    if (Ncameras > 0) {
+        material_data.white_reference_cam.assign((size_t) Nslots * Nbands * Ncameras, 1.f);
+        std::vector<float> contributor_white_reference(Ncontributors);
+        for (uint b = 0; b < Nbands; b++) {
+            for (uint cam = 0; cam < Ncameras; cam++) {
+                if (camera_response_unique.at(cam).at(b).empty()) {
+                    continue;
+                }
+                for (uint c = 0; c < Ncontributors; c++) {
+                    contributor_white_reference.at(c) = cameraWeightedValue({}, b, c, cam);
+                }
+                for (uint s = 0; s < Nsources; s++) {
+                    material_data.white_reference_cam.at(((size_t) s * Nbands + b) * Ncameras + cam) = contributor_white_reference.at(s);
+                }
+                material_data.white_reference_cam.at(((size_t) diffuse_slot * Nbands + b) * Ncameras + cam) = diffuseSlotValue(b, [&](uint c) { return contributor_white_reference.at(c); });
             }
         }
     } else {
@@ -2564,141 +2779,31 @@ void RadiationModel::updateRadiativeProperties() {
     // Spectral integration cache to avoid redundant computations
     std::unordered_map<std::string, float> spectral_integration_cache;
 
+    // Look up a spectral integral in the cache, computing and storing it on a miss (thread-safe)
+    auto cachedSpectralValue = [&](const std::string &cache_key, const std::function<float()> &compute) -> float {
+        bool found = false;
+        float result = 0.f;
 #ifdef USE_OPENMP
-    // Temporary cache for this thread group (will be merged later)
-    std::unordered_map<std::string, float> temp_spectral_cache;
+#pragma omp critical(radiation_spectral_cache)
 #endif
-
-    // Helper function to create cache keys for spectral integrations
-    auto createCacheKey = [](const std::string &spectrum_label, uint source_id, uint band_id, uint camera_id, const std::string &type) -> std::string {
-        return spectrum_label + "_" + std::to_string(source_id) + "_" + std::to_string(band_id) + "_" + std::to_string(camera_id) + "_" + type;
-    };
-
-    // Helper function to get from cache (thread-safe)
-    auto getCachedValue = [&](const std::string &cache_key, bool &found) -> float {
-        float result = 0.0f;
-        found = false;
-
-#ifdef USE_OPENMP
-#pragma omp critical
         {
-#endif
-            // Check shared cache
             auto cache_it = spectral_integration_cache.find(cache_key);
             if (cache_it != spectral_integration_cache.end()) {
                 found = true;
                 result = cache_it->second;
             }
-#ifdef USE_OPENMP
         }
-#endif
-        return result;
-    };
-
-    // Helper function to store in cache (thread-safe)
-    auto setCachedValue = [&](const std::string &cache_key, float value) {
-#ifdef USE_OPENMP
-#pragma omp critical
-        {
-#endif
-            spectral_integration_cache[cache_key] = value;
-#ifdef USE_OPENMP
-        }
-#endif
-    };
-
-    // Helper function for cached interpolation (thread-safe)
-    auto cachedInterp1 = [&](const std::vector<helios::vec2> &spectrum, float wavelength, const std::string &spectrum_id) -> float {
-        // Create cache key for this specific interpolation
-        std::string cache_key = "interp_" + spectrum_id + "_" + std::to_string(wavelength);
-
-        bool found = false;
-        float cached_result = getCachedValue(cache_key, found);
         if (found) {
-            return cached_result;
+            return result;
         }
-
-        // Perform interpolation and cache result
-        float result = interp1(spectrum, wavelength);
-        setCachedValue(cache_key, result);
+        result = compute();
+#ifdef USE_OPENMP
+#pragma omp critical(radiation_spectral_cache)
+#endif
+        {
+            spectral_integration_cache[cache_key] = result;
+        }
         return result;
-    };
-
-    // Cached version of integrateSpectrum with source spectrum
-    auto cachedIntegrateSpectrumWithSource = [&](uint source_ID, const std::vector<helios::vec2> &object_spectrum, float wavelength1, float wavelength2, const std::string &object_spectrum_id) -> float {
-        if (source_ID >= radiation_sources.size() || object_spectrum.size() < 2 || wavelength1 >= wavelength2) {
-            return 0.0f; // Handle edge cases gracefully
-        }
-
-        std::vector<helios::vec2> source_spectrum = radiation_sources.at(source_ID).source_spectrum;
-        std::string source_id = "source_" + std::to_string(source_ID);
-
-        int istart = 0;
-        int iend = (int) object_spectrum.size() - 1;
-        for (auto i = 0; i < object_spectrum.size() - 1; i++) {
-            if (object_spectrum.at(i).x <= wavelength1 && object_spectrum.at(i + 1).x > wavelength1) {
-                istart = i;
-            }
-            if (object_spectrum.at(i).x <= wavelength2 && object_spectrum.at(i + 1).x > wavelength2) {
-                iend = i + 1;
-                break;
-            }
-        }
-
-        float E = 0;
-        float Etot = 0;
-        for (auto i = istart; i < iend; i++) {
-            float x0 = object_spectrum.at(i).x;
-            float Esource0 = cachedInterp1(source_spectrum, x0, source_id);
-            float Eobject0 = object_spectrum.at(i).y;
-
-            float x1 = object_spectrum.at(i + 1).x;
-            float Eobject1 = object_spectrum.at(i + 1).y;
-            float Esource1 = cachedInterp1(source_spectrum, x1, source_id);
-
-            E += 0.5f * (Eobject0 * Esource0 + Eobject1 * Esource1) * (x1 - x0);
-            Etot += 0.5f * (Esource1 + Esource0) * (x1 - x0);
-        }
-
-        return (Etot != 0.0f) ? E / Etot : 0.0f;
-    };
-
-    // Cached version of integrateSpectrum with source and camera spectra
-    auto cachedIntegrateSpectrumWithSourceAndCamera = [&](uint source_ID, const std::vector<helios::vec2> &object_spectrum, const std::vector<helios::vec2> &camera_spectrum, uint camera_index, uint band_index,
-                                                          const std::string &object_spectrum_id) -> float {
-        if (source_ID >= radiation_sources.size() || object_spectrum.size() < 2) {
-            return 0.0f;
-        }
-
-        std::vector<helios::vec2> source_spectrum = radiation_sources.at(source_ID).source_spectrum;
-        std::string source_id = "source_" + std::to_string(source_ID);
-        std::string camera_id = "camera_" + std::to_string(camera_index) + "_band_" + std::to_string(band_index); // Include band for unique cache key per band
-
-        float E = 0;
-        float Etot = 0;
-        for (auto i = 1; i < object_spectrum.size(); i++) {
-            if (object_spectrum.at(i).x <= source_spectrum.front().x || object_spectrum.at(i).x <= camera_spectrum.front().x) {
-                continue;
-            }
-            if (object_spectrum.at(i).x > source_spectrum.back().x || object_spectrum.at(i).x > camera_spectrum.back().x) {
-                break;
-            }
-
-            float x1 = object_spectrum.at(i).x;
-            float Eobject1 = object_spectrum.at(i).y;
-            float Esource1 = cachedInterp1(source_spectrum, x1, source_id);
-            float Ecamera1 = cachedInterp1(camera_spectrum, x1, camera_id);
-
-            float x0 = object_spectrum.at(i - 1).x;
-            float Eobject0 = object_spectrum.at(i - 1).y;
-            float Esource0 = cachedInterp1(source_spectrum, x0, source_id);
-            float Ecamera0 = cachedInterp1(camera_spectrum, x0, camera_id);
-
-            E += 0.5f * ((Eobject1 * Esource1 * Ecamera1) + (Eobject0 * Ecamera0 * Esource0)) * (x1 - x0);
-            Etot += 0.5f * (Esource1 + Esource0) * (x1 - x0);
-        }
-
-        return (Etot != 0.0f) ? E / Etot : 0.0f;
     };
 
     // Apply spectral interpolation based on primitive data values
@@ -2844,242 +2949,110 @@ void RadiationModel::updateRadiativeProperties() {
         }
     }
 
-    // second, calculate unique values of rho and tau for all sources and bands
+    // second, calculate unique values of rho and tau for every band and weighting contributor: rho_unique[label][band][contributor] and
+    // rho_cam_unique[label][band][contributor][camera]. The entry after the last contributor holds the band's diffuse-slot value.
+    const uint unique_diffuse_index = Ncontributors;
     std::map<std::string, std::vector<std::vector<float>>> rho_unique;
     std::map<std::string, std::vector<std::vector<float>>> tau_unique;
 
     std::map<std::string, std::vector<std::vector<std::vector<float>>>> rho_cam_unique;
     std::map<std::string, std::vector<std::vector<std::vector<float>>>> tau_cam_unique;
 
-    std::vector<std::vector<float>> empty;
-    empty.resize(Nbands);
-    for (uint b = 0; b < Nbands; b++) {
-        empty.at(b).resize(Nsources, 0);
-    }
-    std::vector<std::vector<std::vector<float>>> empty_cam;
-    if (Ncameras > 0) {
-        empty_cam.resize(Nbands);
+    // A spectrum that does not overlap a band at all has no defined value in it: [label][band], raised only if a primitive uses the spectrum there
+    std::map<std::string, std::vector<std::string>> rho_band_error;
+    std::map<std::string, std::vector<std::string>> tau_band_error;
+
+    auto computeUniqueValues = [&](const std::string &spectrum_label, const std::vector<helios::vec2> &spectrum, const std::string &property, float default_value, bool camera_average_without_bounds, std::vector<std::vector<float>> &values,
+                                   std::vector<std::vector<std::vector<float>>> &cam_values, std::vector<std::string> &band_errors) {
+        values.assign(Nbands, std::vector<float>(Ncontributors + 1, default_value));
+        if (Ncameras > 0) {
+            cam_values.assign(Nbands, std::vector<std::vector<float>>(Ncontributors + 1, std::vector<float>(Ncameras, default_value)));
+        }
+        band_errors.assign(Nbands, "");
+        if (spectrum.empty()) {
+            return; // the referenced global data does not exist; this was warned about above and the default value is used
+        }
+
         for (uint b = 0; b < Nbands; b++) {
-            empty_cam.at(b).resize(Nsources);
-            for (uint s = 0; s < Nsources; s++) {
-                empty_cam.at(b).at(s).resize(Ncameras, 0);
+            const std::string &band = band_labels.at(b);
+
+            // The internal SIF excitation bands tile a fixed wavelength range in narrow bins, so bins beyond the end of a surface spectrum are
+            // expected; like the part of any band a spectrum does not cover, they take the spectrum as zero rather than being an error.
+            if (band_has_bounds.at(b) && !isSIFExcitationBand(band) && (spectrum.back().x <= band_bounds.at(b).x || spectrum.front().x >= band_bounds.at(b).y)) {
+                band_errors.at(b) = "ERROR (RadiationModel::updateRadiativeProperties): The " + property + " spectrum '" + spectrum_label + "' is tabulated from " + spectrumRangeString(spectrum) + ", which does not overlap band '" + band + "' (" +
+                                    wavelengthRangeString(band_bounds.at(b).x, band_bounds.at(b).y) + "), so its " + property +
+                                    " in that band is undefined. Either extend the spectrum to cover the band, or set a constant value for the band with primitive data \"" + property + "_" + band + "\".";
+                continue;
+            }
+
+            for (uint c = 0; c < Ncontributors; c++) {
+                if (!contributor_has_band_energy.at(b).at(c)) {
+                    // Nothing to weight by. A contributor with flux here is rejected (band_weighting_error), so this one has no flux in the band: its
+                    // direct rays carry no energy and it has no weight in the diffuse slot. The value is never used, so it is not computed.
+                    continue;
+                }
+                const std::string contributor_id = contributorSpectrumID(c, b);
+
+                float &value = values.at(b).at(c);
+                if (band_has_bounds.at(b)) {
+                    value = cachedSpectralValue(spectrum_label + "|" + std::to_string(b) + "|" + contributor_id, [&]() { return bandWeightedValue(spectrum, b, c); });
+                }
+                // Without wavelength bounds a spectrum cannot be integrated over the band, so the default stands unless the cameras give a value below
+
+                if (Ncameras > 0) {
+                    float camera_sum = 0.f;
+                    for (uint cam = 0; cam < Ncameras; cam++) {
+                        if (camera_response_unique.at(cam).at(b).empty()) {
+                            cam_values.at(b).at(c).at(cam) = value;
+                        } else {
+                            const float camera_value = cachedSpectralValue(spectrum_label + "|" + std::to_string(b) + "|" + contributor_id + "|cam" + std::to_string(cam), [&]() { return cameraWeightedValue(spectrum, b, c, cam); });
+                            cam_values.at(b).at(c).at(cam) = camera_value;
+                            camera_sum += camera_value;
+                        }
+                    }
+
+                    // Without wavelength bounds, the camera-weighted value averaged over the cameras stands in for the band value. This lets regular
+                    // scattering work when only a reflectivity spectrum and camera responses are given.
+                    if (camera_average_without_bounds && !band_has_bounds.at(b) && value == default_value && camera_sum > 0.f) {
+                        value = camera_sum / float(Ncameras);
+                    }
+                }
+            }
+
+            values.at(b).at(unique_diffuse_index) = diffuseSlotValue(b, [&](uint c) { return values.at(b).at(c); });
+            for (uint cam = 0; cam < Ncameras; cam++) {
+                cam_values.at(b).at(unique_diffuse_index).at(cam) = diffuseSlotValue(b, [&](uint c) { return cam_values.at(b).at(c).at(cam); });
             }
         }
-    }
+    };
 
-    // Convert maps to vectors for OpenMP indexing
+    // Convert maps to vectors for OpenMP indexing, and create every map entry before the parallel loops so the maps are not modified inside them
     std::vector<std::pair<std::string, std::vector<helios::vec2>>> spectra_rho_vector(surface_spectra_rho.begin(), surface_spectra_rho.end());
-
-    // Pre-initialize all map entries before parallel processing to avoid race conditions
     for (const auto &spectrum: spectra_rho_vector) {
-        rho_unique[spectrum.first] = empty;
-        if (Ncameras > 0) {
-            rho_cam_unique[spectrum.first] = empty_cam;
-        }
+        rho_unique[spectrum.first];
+        rho_cam_unique[spectrum.first];
+        rho_band_error[spectrum.first];
     }
-
-    // Process reflectivity spectra with OpenMP parallelization
 #ifdef USE_OPENMP
 #pragma omp parallel for schedule(dynamic)
 #endif
     for (int spectrum_idx = 0; spectrum_idx < (int) spectra_rho_vector.size(); spectrum_idx++) {
         const auto &spectrum = spectra_rho_vector[spectrum_idx];
-
-        for (uint b = 0; b < Nbands; b++) {
-            std::string band = band_labels.at(b);
-
-            for (uint s = 0; s < Nsources; s++) {
-
-                // integrate with caching
-                auto band_it = radiation_bands.find(band);
-                if (band_it != radiation_bands.end() && band_it->second.wavebandBounds.x != 0 && band_it->second.wavebandBounds.y != 0 && !spectrum.second.empty()) {
-                    if (!radiation_sources.at(s).source_spectrum.empty()) {
-                        std::string cache_key = createCacheKey(spectrum.first, s, b, 0, "rho_source");
-                        bool found;
-                        float cached_result = getCachedValue(cache_key, found);
-                        if (found) {
-                            rho_unique[spectrum.first][b][s] = cached_result;
-                        } else {
-                            float result = cachedIntegrateSpectrumWithSource(s, spectrum.second, band_it->second.wavebandBounds.x, band_it->second.wavebandBounds.y, spectrum.first);
-                            setCachedValue(cache_key, result);
-                            rho_unique[spectrum.first][b][s] = result;
-                        }
-                    } else {
-                        // source spectrum not provided, assume source intensity is constant over the band
-                        std::string cache_key = createCacheKey(spectrum.first, s, b, 0, "rho_no_source");
-                        bool found;
-                        float cached_result = getCachedValue(cache_key, found);
-                        if (found) {
-                            rho_unique[spectrum.first][b][s] = cached_result;
-                        } else {
-                            float result = integrateSpectrum(spectrum.second, band_it->second.wavebandBounds.x, band_it->second.wavebandBounds.y) / (band_it->second.wavebandBounds.y - band_it->second.wavebandBounds.x);
-                            setCachedValue(cache_key, result);
-                            rho_unique[spectrum.first][b][s] = result;
-                        }
-                    }
-                } else {
-                    // No wavelength bounds, can't integrate spectrum without camera response
-                    // Set to default for now, will use camera average if available
-                    rho_unique[spectrum.first][b][s] = rho_default;
-                }
-
-                // cameras
-                if (Ncameras > 0) {
-                    uint cam = 0;
-                    float rho_cam_sum_for_averaging = 0.f;
-                    for (const auto &camera: cameras) {
-
-                        if (camera_response_unique.at(cam).at(b).empty()) {
-                            rho_cam_unique[spectrum.first][b][s][cam] = rho_unique[spectrum.first][b][s];
-                        } else {
-
-                            // integrate with caching
-                            if (!spectrum.second.empty()) {
-                                if (!radiation_sources.at(s).source_spectrum.empty()) {
-                                    std::string cache_key = createCacheKey(spectrum.first, s, b, cam, "rho_cam_source");
-                                    bool found;
-                                    float cached_result = getCachedValue(cache_key, found);
-                                    if (found) {
-                                        rho_cam_unique.at(spectrum.first).at(b).at(s).at(cam) = cached_result;
-                                        rho_cam_sum_for_averaging += cached_result;
-                                    } else {
-                                        float result = cachedIntegrateSpectrumWithSourceAndCamera(s, spectrum.second, camera_response_unique.at(cam).at(b), cam, b, spectrum.first);
-                                        setCachedValue(cache_key, result);
-                                        rho_cam_unique.at(spectrum.first).at(b).at(s).at(cam) = result;
-                                        rho_cam_sum_for_averaging += result;
-                                    }
-                                } else {
-                                    std::string cache_key = createCacheKey(spectrum.first, s, b, cam, "rho_cam_no_source");
-                                    bool found;
-                                    float cached_result = getCachedValue(cache_key, found);
-                                    if (found) {
-                                        rho_cam_unique.at(spectrum.first).at(b).at(s).at(cam) = cached_result;
-                                        rho_cam_sum_for_averaging += cached_result;
-                                    } else {
-                                        float result = integrateSpectrum(spectrum.second, camera_response_unique.at(cam).at(b));
-                                        setCachedValue(cache_key, result);
-                                        rho_cam_unique.at(spectrum.first).at(b).at(s).at(cam) = result;
-                                        rho_cam_sum_for_averaging += result;
-                                    }
-                                }
-                            } else {
-                                rho_cam_unique.at(spectrum.first).at(b).at(s).at(cam) = rho_default;
-                            }
-                        }
-
-                        cam++;
-                    }
-
-                    // CRITICAL FIX: If wavelength bounds weren't set but camera integration produced values,
-                    // use camera average as the base reflectivity. This allows regular scatter to work
-                    // when only reflectivity_spectrum + camera response are provided.
-                    if (rho_unique[spectrum.first][b][s] == rho_default && rho_cam_sum_for_averaging > 0 && cam > 0) {
-                        rho_unique[spectrum.first][b][s] = rho_cam_sum_for_averaging / float(cam);
-                    }
-                }
-            }
-        }
+        computeUniqueValues(spectrum.first, spectrum.second, "reflectivity", rho_default, true, rho_unique.at(spectrum.first), rho_cam_unique.at(spectrum.first), rho_band_error.at(spectrum.first));
     }
 
-    // Convert tau spectra to vector for OpenMP indexing
     std::vector<std::pair<std::string, std::vector<helios::vec2>>> spectra_tau_vector(surface_spectra_tau.begin(), surface_spectra_tau.end());
-
-    // Pre-initialize all map entries before parallel processing to avoid race conditions
     for (const auto &spectrum: spectra_tau_vector) {
-        tau_unique[spectrum.first] = empty;
-        if (Ncameras > 0) {
-            tau_cam_unique[spectrum.first] = empty_cam;
-        }
+        tau_unique[spectrum.first];
+        tau_cam_unique[spectrum.first];
+        tau_band_error[spectrum.first];
     }
-
-    // Process transmissivity spectra with OpenMP parallelization
 #ifdef USE_OPENMP
 #pragma omp parallel for schedule(dynamic)
 #endif
     for (int spectrum_idx = 0; spectrum_idx < (int) spectra_tau_vector.size(); spectrum_idx++) {
         const auto &spectrum = spectra_tau_vector[spectrum_idx];
-
-        for (uint b = 0; b < Nbands; b++) {
-            std::string band = band_labels.at(b);
-
-            for (uint s = 0; s < Nsources; s++) {
-
-                // integrate with caching
-                auto band_it = radiation_bands.find(band);
-                if (band_it != radiation_bands.end() && band_it->second.wavebandBounds.x != 0 && band_it->second.wavebandBounds.y != 0 && !spectrum.second.empty()) {
-                    if (!radiation_sources.at(s).source_spectrum.empty()) {
-                        std::string cache_key = createCacheKey(spectrum.first, s, b, 0, "tau_source");
-                        bool found;
-                        float cached_result = getCachedValue(cache_key, found);
-                        if (found) {
-                            tau_unique[spectrum.first][b][s] = cached_result;
-                        } else {
-                            float result = cachedIntegrateSpectrumWithSource(s, spectrum.second, band_it->second.wavebandBounds.x, band_it->second.wavebandBounds.y, spectrum.first);
-                            setCachedValue(cache_key, result);
-                            tau_unique[spectrum.first][b][s] = result;
-                        }
-                    } else {
-                        std::string cache_key = createCacheKey(spectrum.first, s, b, 0, "tau_no_source");
-                        bool found;
-                        float cached_result = getCachedValue(cache_key, found);
-                        if (found) {
-                            tau_unique[spectrum.first][b][s] = cached_result;
-                        } else {
-                            float result = integrateSpectrum(spectrum.second, band_it->second.wavebandBounds.x, band_it->second.wavebandBounds.y) / (band_it->second.wavebandBounds.y - band_it->second.wavebandBounds.x);
-                            setCachedValue(cache_key, result);
-                            tau_unique[spectrum.first][b][s] = result;
-                        }
-                    }
-                } else {
-                    tau_unique[spectrum.first][b][s] = tau_default;
-                }
-
-                // cameras
-                if (Ncameras > 0) {
-                    uint cam = 0;
-                    for (const auto &camera: cameras) {
-
-                        if (camera_response_unique.at(cam).at(b).empty()) {
-
-                            tau_cam_unique[spectrum.first][b][s][cam] = tau_unique[spectrum.first][b][s];
-
-                        } else {
-
-                            // integrate with caching
-                            if (!spectrum.second.empty()) {
-                                if (!radiation_sources.at(s).source_spectrum.empty()) {
-                                    std::string cache_key = createCacheKey(spectrum.first, s, b, cam, "tau_cam_source");
-                                    bool found;
-                                    float cached_result = getCachedValue(cache_key, found);
-                                    if (found) {
-                                        tau_cam_unique.at(spectrum.first).at(b).at(s).at(cam) = cached_result;
-                                    } else {
-                                        float result = cachedIntegrateSpectrumWithSourceAndCamera(s, spectrum.second, camera_response_unique.at(cam).at(b), cam, b, spectrum.first);
-                                        setCachedValue(cache_key, result);
-                                        tau_cam_unique.at(spectrum.first).at(b).at(s).at(cam) = result;
-                                    }
-                                } else {
-                                    std::string cache_key = createCacheKey(spectrum.first, s, b, cam, "tau_cam_no_source");
-                                    bool found;
-                                    float cached_result = getCachedValue(cache_key, found);
-                                    if (found) {
-                                        tau_cam_unique.at(spectrum.first).at(b).at(s).at(cam) = cached_result;
-                                    } else {
-                                        float result = integrateSpectrum(spectrum.second, camera_response_unique.at(cam).at(b));
-                                        setCachedValue(cache_key, result);
-                                        tau_cam_unique.at(spectrum.first).at(b).at(s).at(cam) = result;
-                                    }
-                                }
-                            } else {
-                                tau_cam_unique.at(spectrum.first).at(b).at(s).at(cam) = tau_default;
-                            }
-                        }
-
-                        cam++;
-                    }
-                }
-            }
-        }
+        computeUniqueValues(spectrum.first, spectrum.second, "transmissivity", tau_default, false, tau_unique.at(spectrum.first), tau_cam_unique.at(spectrum.first), tau_band_error.at(spectrum.first));
     }
 
     for (size_t u = 0; u < Nprimitives; u++) {
@@ -3109,31 +3082,37 @@ void RadiationModel::updateRadiativeProperties() {
                 prop = "reflectivity_" + band;
 
                 float rho_s = rho_default;
-                if (context->doesPrimitiveDataExist(UUID, prop.c_str())) {
+                const bool has_band_rho = context->doesPrimitiveDataExist(UUID, prop.c_str());
+                if (has_band_rho) {
                     context->getPrimitiveData(UUID, prop.c_str(), rho_s);
                 }
 
-                for (uint s = 0; s < Nsources; s++) {
-                    float &rho_val = material_data.reflectivity[mat_idx(s, u, b)];
+                // A value set for the band (whatever its value, including 0), or a missing spectrum, applies to every slot; otherwise the spectrum's weighted values are used
+                const bool use_constant_rho = has_band_rho || spectrum_label.empty() || !context->doesGlobalDataExist(spectrum_label.c_str()) || rho_unique.find(spectrum_label) == rho_unique.end();
+                if (!use_constant_rho) {
+                    // Recorded rather than raised here: runBand() raises it only if this band is run
+                    const std::string &error = !rho_band_error.at(spectrum_label).at(b).empty() ? rho_band_error.at(spectrum_label).at(b) : band_weighting_error.at(b);
+                    if (!error.empty()) {
+                        spectral_weighting_errors.emplace(band, error);
+                    }
+                }
 
-                    // if reflectivity was manually set, or a spectrum was given and the global data exists
-                    if (rho_s != rho_default || spectrum_label.empty() || !context->doesGlobalDataExist(spectrum_label.c_str()) || rho_unique.find(spectrum_label) == rho_unique.end()) {
+                for (uint slot = 0; slot < Nslots; slot++) {
+                    float &rho_val = material_data.reflectivity[mat_idx(slot, u, b)];
+                    const uint unique_index = slot == diffuse_slot ? unique_diffuse_index : slot;
 
+                    if (use_constant_rho) {
                         rho_val = rho_s;
 
-                        // cameras
+                        // cameras: a constant reflectivity is flat across the band, so each camera sees it weighted by its
+                        // response to a white surface, as it would a reflectivity spectrum flat at the same value
                         for (uint cam = 0; cam < Ncameras; cam++) {
-                            material_data.reflectivity_cam[cam_idx(s, u, b, cam)] = rho_s;
+                            material_data.reflectivity_cam[cam_idx(slot, u, b, cam)] = rho_s * material_data.white_reference_cam.at(((size_t) slot * Nbands + b) * Ncameras + cam);
                         }
-
-                        // use spectrum
                     } else {
-
-                        rho_val = rho_unique.at(spectrum_label).at(b).at(s);
-
-                        // cameras
+                        rho_val = rho_unique.at(spectrum_label).at(b).at(unique_index);
                         for (uint cam = 0; cam < Ncameras; cam++) {
-                            material_data.reflectivity_cam[cam_idx(s, u, b, cam)] = rho_cam_unique.at(spectrum_label).at(b).at(s).at(cam);
+                            material_data.reflectivity_cam[cam_idx(slot, u, b, cam)] = rho_cam_unique.at(spectrum_label).at(b).at(unique_index).at(cam);
                         }
                     }
 
@@ -3148,9 +3127,11 @@ void RadiationModel::updateRadiativeProperties() {
                     if (rho_val != 0) {
                         scattering_iterations_needed.at(band) = true;
                     }
-                    for (auto &odata: output_prim_data) {
-                        if (odata == "reflectivity") {
-                            context->setPrimitiveData(UUID, ("reflectivity_" + std::to_string(s) + "_" + band).c_str(), rho_val);
+                    if (slot < Nsources) {
+                        for (auto &odata: output_prim_data) {
+                            if (odata == "reflectivity") {
+                                context->setPrimitiveData(UUID, ("reflectivity_" + std::to_string(slot) + "_" + band).c_str(), rho_val);
+                            }
                         }
                     }
                 }
@@ -3174,30 +3155,35 @@ void RadiationModel::updateRadiativeProperties() {
                 prop = "transmissivity_" + band;
 
                 float tau_s = tau_default;
-                if (context->doesPrimitiveDataExist(UUID, prop.c_str())) {
+                const bool has_band_tau = context->doesPrimitiveDataExist(UUID, prop.c_str());
+                if (has_band_tau) {
                     context->getPrimitiveData(UUID, prop.c_str(), tau_s);
                 }
 
-                for (uint s = 0; s < Nsources; s++) {
-                    float &tau_val = material_data.transmissivity[mat_idx(s, u, b)];
+                const bool use_constant_tau = has_band_tau || spectrum_label.empty() || !context->doesGlobalDataExist(spectrum_label.c_str()) || tau_unique.find(spectrum_label) == tau_unique.end();
+                if (!use_constant_tau) {
+                    // Recorded rather than raised here: runBand() raises it only if this band is run
+                    const std::string &error = !tau_band_error.at(spectrum_label).at(b).empty() ? tau_band_error.at(spectrum_label).at(b) : band_weighting_error.at(b);
+                    if (!error.empty()) {
+                        spectral_weighting_errors.emplace(band, error);
+                    }
+                }
 
-                    // if transmissivity was manually set, or a spectrum was given and the global data exists
-                    if (tau_s != tau_default || spectrum_label.empty() || !context->doesGlobalDataExist(spectrum_label.c_str()) || tau_unique.find(spectrum_label) == tau_unique.end()) {
+                for (uint slot = 0; slot < Nslots; slot++) {
+                    float &tau_val = material_data.transmissivity[mat_idx(slot, u, b)];
+                    const uint unique_index = slot == diffuse_slot ? unique_diffuse_index : slot;
 
+                    if (use_constant_tau) {
                         tau_val = tau_s;
 
-                        // cameras
+                        // cameras: a constant transmissivity is flat across the band (see reflectivity above)
                         for (uint cam = 0; cam < Ncameras; cam++) {
-                            material_data.transmissivity_cam[cam_idx(s, u, b, cam)] = tau_s;
+                            material_data.transmissivity_cam[cam_idx(slot, u, b, cam)] = tau_s * material_data.white_reference_cam.at(((size_t) slot * Nbands + b) * Ncameras + cam);
                         }
-
                     } else {
-
-                        tau_val = tau_unique.at(spectrum_label).at(b).at(s);
-
-                        // cameras
+                        tau_val = tau_unique.at(spectrum_label).at(b).at(unique_index);
                         for (uint cam = 0; cam < Ncameras; cam++) {
-                            material_data.transmissivity_cam[cam_idx(s, u, b, cam)] = tau_cam_unique.at(spectrum_label).at(b).at(s).at(cam);
+                            material_data.transmissivity_cam[cam_idx(slot, u, b, cam)] = tau_cam_unique.at(spectrum_label).at(b).at(unique_index).at(cam);
                         }
                     }
 
@@ -3212,9 +3198,11 @@ void RadiationModel::updateRadiativeProperties() {
                     if (tau_val != 0) {
                         scattering_iterations_needed.at(band) = true;
                     }
-                    for (auto &odata: output_prim_data) {
-                        if (odata == "transmissivity") {
-                            context->setPrimitiveData(UUID, ("transmissivity_" + std::to_string(s) + "_" + band).c_str(), tau_val);
+                    if (slot < Nsources) {
+                        for (auto &odata: output_prim_data) {
+                            if (odata == "transmissivity") {
+                                context->setPrimitiveData(UUID, ("transmissivity_" + std::to_string(slot) + "_" + band).c_str(), tau_val);
+                            }
                         }
                     }
                 }
@@ -3260,10 +3248,10 @@ void RadiationModel::updateRadiativeProperties() {
                                                                             ". The glass (Fresnel+Bouguer) model takes precedence; the constant value is ignored.");
                 }
 
-                for (uint s = 0; s < Nsources; s++) {
-                    material_data.is_glass[mat_idx(s, u, b)] = 1;
-                    material_data.glass_n[mat_idx(s, u, b)] = n_s;
-                    material_data.glass_KL[mat_idx(s, u, b)] = KL_s;
+                for (uint slot = 0; slot < Nslots; slot++) {
+                    material_data.is_glass[mat_idx(slot, u, b)] = 1;
+                    material_data.glass_n[mat_idx(slot, u, b)] = n_s;
+                    material_data.glass_KL[mat_idx(slot, u, b)] = KL_s;
                 }
 
                 // Glass requires the scattering machinery to be active so the diffuse-sky / reflected
@@ -3300,13 +3288,13 @@ void RadiationModel::updateRadiativeProperties() {
 
                 const bool is_sif_band = sif_emission_bands.count(band) > 0;
 
-                for (uint s = 0; s < Nsources; s++) {
-                    float &rho_val = material_data.reflectivity[mat_idx(s, u, b)];
-                    float &tau_val = material_data.transmissivity[mat_idx(s, u, b)];
+                for (uint slot = 0; slot < Nslots; slot++) {
+                    float &rho_val = material_data.reflectivity[mat_idx(slot, u, b)];
+                    float &tau_val = material_data.transmissivity[mat_idx(slot, u, b)];
 
                     // Glass primitives compute angle-dependent rho/tau on-device via the Fresnel+Bouguer
                     // model, so the constant ε+ρ+τ=1 conservation constraint does not apply here.
-                    if (material_data.is_glass[mat_idx(s, u, b)] != 0) {
+                    if (material_data.is_glass[mat_idx(slot, u, b)] != 0) {
                         continue;
                     }
 
@@ -3324,11 +3312,15 @@ void RadiationModel::updateRadiativeProperties() {
                     } else if (radiation_bands.at(band).emissionFlag) { // emission enabled
                         if (eps != 1.f && rho_val == 0 && tau_val == 0) {
                             rho_val = 1.f - eps;
+                            // cameras see this reflectivity too, weighted by their response to a white surface as a constant reflectivity is
+                            for (uint cam = 0; cam < Ncameras; cam++) {
+                                material_data.reflectivity_cam[cam_idx(slot, u, b, cam)] = rho_val * material_data.white_reference_cam.at(((size_t) slot * Nbands + b) * Ncameras + cam);
+                            }
                         } else if (eps + tau_val + rho_val != 1.f && eps > 0.f) {
                             helios_runtime_error("ERROR (RadiationModel): emissivity, transmissivity, and reflectivity must sum to 1 to ensure energy conservation. Band " + band + ", Primitive #" + std::to_string(UUID) + ": eps=" +
                                                  std::to_string(eps) + ", tau=" + std::to_string(tau_val) + ", rho=" + std::to_string(rho_val) + ". It is also possible that you forgot to disable emission for this band.");
                         } else if (radiation_bands.at(band).scatteringDepth == 0 && eps != 1.f) {
-                            eps = 1.f;
+                            // Without scattering the surface is treated as black in this band. eps itself is left alone: every slot is checked against the primitive's emissivity.
                             rho_val = 0.f;
                             tau_val = 0.f;
                         }
@@ -3378,6 +3370,221 @@ void RadiationModel::updateRadiativeProperties() {
 
     // Report aggregated warnings
     warnings.report(std::cerr);
+}
+
+void RadiationModel::applyCameraAtmosphere(RadiationCamera &camera, const std::vector<std::string> &launched_band_labels) {
+    // The direction from which the atmosphere spectra were computed must match the camera's viewing direction to within this angle
+    const float max_direction_mismatch_deg = 1.f;
+
+    const std::string &atmosphere = camera.atmosphere_label;
+    const std::string calculate_hint = " Call SolarPosition::calculateSensorAtmosphereSpectra(\"" + atmosphere + "\", ...) before runBand().";
+    auto load_atmosphere_spectrum = [&](const std::string &suffix) {
+        const std::string label = atmosphere + suffix;
+        if (!context->doesGlobalDataExist(label.c_str()) || context->getGlobalDataType(label.c_str()) != helios::HELIOS_TYPE_VEC2) {
+            helios_runtime_error("ERROR (RadiationModel::runBand): The sensor atmosphere spectrum '" + label + "' for camera '" + camera.label + "' does not exist." + calculate_hint);
+        }
+        return loadSpectralData(label);
+    };
+    const std::string direction_label = atmosphere + "_direction_to_sensor";
+    if (!context->doesGlobalDataExist(direction_label.c_str()) || context->getGlobalDataType(direction_label.c_str()) != helios::HELIOS_TYPE_VEC3) {
+        helios_runtime_error("ERROR (RadiationModel::runBand): The sensor direction '" + direction_label + "' for camera '" + camera.label + "' does not exist. Call SolarPosition::calculateSensorAtmosphereSpectra(\"" + atmosphere +
+                             "\", ...) for reflective bands or SolarPosition::calculateSensorThermalAtmosphere(\"" + atmosphere + "\", ...) for emission bands before runBand().");
+    }
+    helios::vec3 direction_to_sensor;
+    context->getGlobalData(direction_label.c_str(), direction_to_sensor);
+    helios::vec3 camera_direction = camera.position - camera.lookat;
+    camera_direction.normalize();
+    const float direction_mismatch_deg = helios::rad2deg(helios::acos_safe(camera_direction * direction_to_sensor));
+    if (direction_mismatch_deg > max_direction_mismatch_deg) {
+        helios_runtime_error("ERROR (RadiationModel::runBand): The sensor atmosphere '" + atmosphere + "' was computed for a direction " + std::to_string(direction_mismatch_deg) + " degrees away from the viewing direction of camera '" +
+                             camera.label + "'. Recompute it with SolarPosition::calculateSensorAtmosphereSpectra() or SolarPosition::calculateSensorThermalAtmosphere() using the direction from the camera's look-at point toward its position.");
+    }
+
+    // Radiance from the sky has no surface below it for the atmosphere model to act on
+    const size_t sky_pixels = std::count_if(camera.pixel_depth.begin(), camera.pixel_depth.end(), [](float depth) { return depth < 0.f; });
+    if (sky_pixels > 0) {
+        helios_runtime_error("ERROR (RadiationModel::runBand): " + std::to_string(sky_pixels) + " pixels of camera '" + camera.label +
+                             "' see the sky, but a sensor atmosphere is enabled for it. The scene must fill the camera's field of view.");
+    }
+
+    for (const std::string &band: launched_band_labels) {
+        // runBand() fills pixel data for every launched band, including bands the camera does not use
+        if (std::find(camera.band_labels.begin(), camera.band_labels.end(), band) == camera.band_labels.end() || camera.pixel_data.find(band) == camera.pixel_data.end()) {
+            continue;
+        }
+        if (radiation_bands.at(band).emissionFlag) {
+            applyCameraThermalAtmosphere(camera, band);
+            continue;
+        }
+
+        const std::vector<helios::vec2> path_radiance = load_atmosphere_spectrum("_path_radiance");
+        const std::vector<helios::vec2> adjacency_radiance = load_atmosphere_spectrum("_adjacency_radiance");
+        const std::vector<helios::vec2> upward_direct_transmittance = load_atmosphere_spectrum("_upward_direct_transmittance");
+        const std::vector<helios::vec2> global_irradiance = load_atmosphere_spectrum("_global_irradiance");
+        const float atmosphere_min_wavelength = path_radiance.front().x;
+        const float atmosphere_max_wavelength = path_radiance.back().x;
+
+        // Camera spectral response, zero outside its tabulated range; a band without a response spectrum has a uniform response of one
+        const std::vector<helios::vec2> response = loadCameraBandResponse(camera, band);
+        auto response_at = [&](float wavelength) {
+            if (response.empty()) {
+                return 1.f;
+            }
+            if (wavelength < response.front().x || wavelength > response.back().x) {
+                return 0.f;
+            }
+            return interp1(response, wavelength);
+        };
+
+        helios::vec2 bounds = radiation_bands.at(band).wavebandBounds;
+        if (!radiation_bands.at(band).hasWavebandBounds()) {
+            if (response.empty()) {
+                helios_runtime_error("ERROR (RadiationModel::runBand): Band '" + band + "' of camera '" + camera.label + "' has neither wavelength bounds nor a spectral response, so the sensor atmosphere cannot be integrated over it.");
+            }
+            bounds = helios::make_vec2(response.front().x, response.back().x);
+        }
+        if (bounds.x < atmosphere_min_wavelength || bounds.y > atmosphere_max_wavelength) {
+            helios_runtime_error("ERROR (RadiationModel::runBand): Band '" + band + "' of camera '" + camera.label + "' spans " + std::to_string(bounds.x) + "-" + std::to_string(bounds.y) + " nm, outside the " +
+                                 std::to_string(atmosphere_min_wavelength) + "-" + std::to_string(atmosphere_max_wavelength) + " nm covered by the sensor atmosphere spectra.");
+        }
+
+        // Band radiances are integrals of spectral radiance times the (unnormalized) spectral response, as camera pixel values are
+        const float band_path_radiance = integrateSpectrumBetweenBounds(path_radiance, bounds.x, bounds.y, [&](float wavelength, float value) { return value * response_at(wavelength); });
+        const float band_adjacency_radiance = integrateSpectrumBetweenBounds(adjacency_radiance, bounds.x, bounds.y, [&](float wavelength, float value) { return value * response_at(wavelength); });
+        const float irradiance_weight = integrateSpectrumBetweenBounds(global_irradiance, bounds.x, bounds.y, [&](float wavelength, float value) { return value * response_at(wavelength); });
+        if (irradiance_weight <= 0.f) {
+            helios_runtime_error("ERROR (RadiationModel::runBand): The spectral response of band '" + band + "' of camera '" + camera.label + "' is zero over the band, so the sensor atmosphere cannot be applied.");
+        }
+        const float band_direct_transmittance =
+                integrateSpectrumBetweenBounds(global_irradiance, bounds.x, bounds.y, [&](float wavelength, float value) { return value * response_at(wavelength) * interp1(upward_direct_transmittance, wavelength); }) / irradiance_weight;
+
+        std::vector<float> &pixels = camera.pixel_data.at(band);
+        for (float &pixel: pixels) {
+            pixel = band_path_radiance + band_direct_transmittance * pixel + band_adjacency_radiance;
+        }
+        const std::string data_label = "camera_" + camera.label + "_" + band;
+        context->setGlobalData(data_label.c_str(), pixels);
+    }
+}
+
+std::vector<helios::vec2> RadiationModel::loadCameraBandResponse(const RadiationCamera &camera, const std::string &band) {
+    auto response_it = camera.band_spectral_response.find(band);
+    if (response_it != camera.band_spectral_response.end() && !response_it->second.empty() && response_it->second != "uniform" && context->doesGlobalDataExist(response_it->second.c_str()) &&
+        context->getGlobalDataType(response_it->second.c_str()) == helios::HELIOS_TYPE_VEC2) {
+        return loadSpectralData(response_it->second);
+    }
+    return {};
+}
+
+void RadiationModel::applyCameraThermalAtmosphere(RadiationCamera &camera, const std::string &band) {
+    // Brightness temperatures over which band radiance is tabulated for converting pixels to temperature
+    const float min_brightness_temperature = 150.f;
+    const float max_brightness_temperature = 400.f;
+    const float brightness_temperature_step = 0.25f;
+    const float stefan_boltzmann = 5.670374419e-8f;
+    // Largest wavelength step of the integration grid, fine enough for the Planck spectrum to be integrated by the trapezoidal rule to better than 1e-4
+    const float max_integration_step_nm = 10.f;
+
+    const std::string &atmosphere = camera.atmosphere_label;
+    auto load_thermal_spectrum = [&](const std::string &suffix) {
+        const std::string label = atmosphere + suffix;
+        if (!context->doesGlobalDataExist(label.c_str()) || context->getGlobalDataType(label.c_str()) != helios::HELIOS_TYPE_VEC2) {
+            helios_runtime_error("ERROR (RadiationModel::runBand): The thermal sensor atmosphere '" + label + "' for emission band '" + band + "' of camera '" + camera.label + "' does not exist. Call SolarPosition::calculateSensorThermalAtmosphere(\"" +
+                                 atmosphere + "\", ...) before runBand().");
+        }
+        return loadSpectralData(label);
+    };
+    const std::vector<helios::vec2> transmittance = load_thermal_spectrum("_thermal_transmittance");
+    const std::vector<helios::vec2> upwelling_radiance = load_thermal_spectrum("_thermal_upwelling_radiance");
+
+    const helios::vec2 bounds = radiation_bands.at(band).wavebandBounds;
+    if (!radiation_bands.at(band).hasWavebandBounds()) {
+        helios_runtime_error("ERROR (RadiationModel::runBand): Emission band '" + band + "' of camera '" + camera.label + "' has no wavelength bounds, so its pixels are broadband radiance to which the thermal sensor atmosphere cannot be applied.");
+    }
+    if (bounds.x < transmittance.front().x || bounds.y > transmittance.back().x) {
+        helios_runtime_error("ERROR (RadiationModel::runBand): Emission band '" + band + "' of camera '" + camera.label + "' spans " + std::to_string(bounds.x) + "-" + std::to_string(bounds.y) + " nm, outside the " +
+                             std::to_string(transmittance.front().x) + "-" + std::to_string(transmittance.back().x) + " nm covered by the thermal sensor atmosphere.");
+    }
+
+    // Camera spectral response, zero outside its tabulated range; a band without a response spectrum has a uniform response of one
+    const std::vector<helios::vec2> response = loadCameraBandResponse(camera, band);
+    auto response_at = [&](float wavelength) {
+        if (response.empty()) {
+            return 1.f;
+        }
+        if (wavelength < response.front().x || wavelength > response.back().x) {
+            return 0.f;
+        }
+        return interp1(response, wavelength);
+    };
+
+    // Integration grid: the band bounds and every tabulated wavelength of the atmosphere and the response within them, with steps subdivided to at most max_integration_step_nm
+    std::vector<float> nodes = {bounds.x, bounds.y};
+    for (const std::vector<helios::vec2> *spectrum: {&transmittance, &upwelling_radiance, &response}) {
+        for (const helios::vec2 &point: *spectrum) {
+            if (point.x > bounds.x && point.x < bounds.y) {
+                nodes.push_back(point.x);
+            }
+        }
+    }
+    std::sort(nodes.begin(), nodes.end());
+    nodes.erase(std::unique(nodes.begin(), nodes.end()), nodes.end());
+    std::vector<float> grid_wavelengths;
+    for (size_t i = 0; i + 1 < nodes.size(); i++) {
+        const int Nsteps = std::max(1, int(std::ceil((nodes.at(i + 1) - nodes.at(i)) / max_integration_step_nm)));
+        for (int k = 0; k < Nsteps; k++) {
+            grid_wavelengths.push_back(nodes.at(i) + (nodes.at(i + 1) - nodes.at(i)) * float(k) / float(Nsteps));
+        }
+    }
+    grid_wavelengths.push_back(nodes.back());
+    // Trapezoidal weight of each grid point times the spectral response there
+    std::vector<float> grid_weights(grid_wavelengths.size(), 0.f);
+    std::vector<float> grid_transmittance(grid_wavelengths.size());
+    float band_upwelling_radiance = 0.f;
+    float response_integral = 0.f;
+    for (size_t i = 0; i < grid_wavelengths.size(); i++) {
+        const float step_below = i == 0 ? 0.f : grid_wavelengths.at(i) - grid_wavelengths.at(i - 1);
+        const float step_above = i + 1 == grid_wavelengths.size() ? 0.f : grid_wavelengths.at(i + 1) - grid_wavelengths.at(i);
+        grid_weights.at(i) = 0.5f * (step_below + step_above) * response_at(grid_wavelengths.at(i));
+        grid_transmittance.at(i) = interp1(transmittance, grid_wavelengths.at(i));
+        band_upwelling_radiance += grid_weights.at(i) * interp1(upwelling_radiance, grid_wavelengths.at(i));
+        response_integral += grid_weights.at(i);
+    }
+    if (!(response_integral > 0.f)) {
+        helios_runtime_error("ERROR (RadiationModel::runBand): The spectral response of emission band '" + band + "' of camera '" + camera.label + "' is zero over the band, so the thermal sensor atmosphere cannot be applied.");
+    }
+
+    // Pixels hold the band's in-band radiance, the emission of a blackbody at the pixel's brightness temperature with no spectral response (RadiationModel emits sigma*T^4 times the in-band blackbody fraction). Tabulate
+    // that radiance against temperature, together with the radiance the sensor receives from the same blackbody through the atmosphere, weighted by the spectral response like the upwelling radiance.
+    std::vector<float> table_band_radiance;
+    std::vector<float> table_transmitted_radiance;
+    for (float temperature = min_brightness_temperature; temperature <= max_brightness_temperature + 1e-3f; temperature += brightness_temperature_step) {
+        const float band_fraction = blackbodyBandFraction(bounds.x, bounds.y, temperature);
+        if (!(band_fraction > 0.f)) {
+            helios_runtime_error("ERROR (RadiationModel::runBand): Emission band '" + band + "' of camera '" + camera.label + "' holds no blackbody emission at " + std::to_string(temperature) +
+                                 " K, so the thermal sensor atmosphere cannot be applied to it.");
+        }
+        float transmitted_radiance = 0.f;
+        for (size_t i = 0; i < grid_wavelengths.size(); i++) {
+            transmitted_radiance += grid_weights.at(i) * grid_transmittance.at(i) * blackbodySpectralRadiance(grid_wavelengths.at(i), temperature);
+        }
+        table_band_radiance.push_back(stefan_boltzmann * powf(temperature, 4) * band_fraction / float(M_PI));
+        table_transmitted_radiance.push_back(transmitted_radiance);
+    }
+
+    std::vector<float> &pixels = camera.pixel_data.at(band);
+    for (float &pixel: pixels) {
+        if (pixel < table_band_radiance.front() || pixel > table_band_radiance.back()) {
+            helios_runtime_error("ERROR (RadiationModel::runBand): A pixel of emission band '" + band + "' of camera '" + camera.label + "' has radiance " + std::to_string(pixel) + " W/m^2/sr, outside the range of brightness temperatures (" +
+                                 std::to_string(min_brightness_temperature) + "-" + std::to_string(max_brightness_temperature) + " K) supported by the thermal sensor atmosphere.");
+        }
+        const size_t upper = std::distance(table_band_radiance.begin(), std::lower_bound(table_band_radiance.begin(), table_band_radiance.end(), pixel));
+        const size_t lower = upper == 0 ? 0 : upper - 1;
+        const float weight = upper == lower ? 0.f : (pixel - table_band_radiance[lower]) / (table_band_radiance[upper] - table_band_radiance[lower]);
+        pixel = table_transmitted_radiance[lower] + weight * (table_transmitted_radiance[upper] - table_transmitted_radiance[lower]) + band_upwelling_radiance;
+    }
+    const std::string data_label = "camera_" + camera.label + "_" + band;
+    context->setGlobalData(data_label.c_str(), pixels);
 }
 
 std::vector<float> RadiationModel::updateAtmosphericSkyModel(const std::vector<std::string> &band_labels, const RadiationCamera &camera) {
@@ -3536,7 +3743,7 @@ std::vector<float> RadiationModel::updateAtmosphericSkyModel(const std::vector<s
         if (spectral_response_label == "uniform") {
             helios::vec2 wavelength_range = band.wavebandBounds;
 
-            if (wavelength_range.x <= 0.f || wavelength_range.y <= 0.f) {
+            if (!band.hasWavebandBounds()) {
                 bool bounds_inferred = false;
 
                 if (band_label == "red" || band_label == "R") {
@@ -3653,7 +3860,7 @@ void RadiationModel::updatePragueParametersForGeneralDiffuse(const std::vector<s
             // Use waveband bounds if no detailed spectrum
             float lambda_min = band.wavebandBounds.x;
             float lambda_max = band.wavebandBounds.y;
-            if (lambda_min > 0 && lambda_max > lambda_min) {
+            if (band.hasWavebandBounds()) {
                 band_spectrum = {{lambda_min, 1.0f}, {lambda_max, 1.0f}};
             }
         }
@@ -4130,6 +4337,14 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     // precedence (a per-band value overrides a spectrum), and it uploads the result to the backend itself.
     updateRadiativeProperties();
 
+    // Surface spectra that could not be weighted in a band are an error only if that band is being run
+    for (const std::string &band: band_labels) {
+        auto error_it = spectral_weighting_errors.find(band);
+        if (error_it != spectral_weighting_errors.end()) {
+            helios_runtime_error(error_it->second);
+        }
+    }
+
     // Upload sources to backend (always use new path)
     buildSourceData();
     backend->updateSources(source_data);
@@ -4364,53 +4579,25 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         // Note: positions, widths, rotations, types are uploaded once in buildSourceData()
         // Only fluxes need per-launch update because they depend on which bands are being run
 
-        // Compute camera response weighting factors for specular reflection (if cameras exist)
-        // Factor = ∫(source_spectrum × camera_response) / ∫(source_spectrum)
-        // This must be done before ray tracing so the weights are available during miss_direct()
+        // Camera response weighting factors for specular reflection (if cameras exist). A specularly reflected source is seen as a spectrally
+        // white reflector would see it, so each source's factor is its white reference, computed in updateRadiativeProperties() with the same
+        // integral and normalization as its camera-weighted reflectivity: ∫(source_spectrum × camera_response) / ∫(source_spectrum) over the
+        // wavelengths where both are tabulated, or 1 without a camera response. This must be done before ray tracing so the weights are
+        // available during miss_direct().
         if (Ncameras > 0) {
             std::vector<float> source_fluxes_cam;
             source_fluxes_cam.resize(Nsources * Nbands_launch * Ncameras, 1.0f);
 
+            std::vector<size_t> global_band_index(Nbands_launch);
+            for (uint b = 0; b < Nbands_launch; b++) {
+                global_band_index.at(b) = std::distance(radiation_bands.begin(), radiation_bands.find(band_labels.at(b)));
+            }
+
             for (uint s = 0; s < Nsources; s++) {
-                const RadiationSource &source = radiation_sources.at(s);
-
-                uint cam = 0;
-                for (const auto &camera: cameras) {
+                for (uint cam = 0; cam < Ncameras; cam++) {
                     for (uint b = 0; b < Nbands_launch; b++) {
-                        std::string band_label = band_labels.at(b);
-
-                        // Default weighting factor (no camera response)
-                        float weight = 1.0f;
-
-                        // Check if camera has spectral response for this band
-                        if (camera.second.band_spectral_response.find(band_label) != camera.second.band_spectral_response.end()) {
-                            std::string response_label = camera.second.band_spectral_response.at(band_label);
-
-                            if (!response_label.empty() && response_label != "uniform" && context->doesGlobalDataExist(response_label.c_str()) && context->getGlobalDataType(response_label.c_str()) == helios::HELIOS_TYPE_VEC2 &&
-                                source.source_spectrum.size() > 0) {
-
-                                // Load camera spectral response
-                                std::vector<helios::vec2> camera_response;
-                                context->getGlobalData(response_label.c_str(), camera_response);
-
-                                // Get band wavelength range
-                                helios::vec2 wavelength_range = radiation_bands.at(band_label).wavebandBounds;
-
-                                // If no wavelength bounds, use overlapping range of source and camera
-                                if (wavelength_range.x == 0 && wavelength_range.y == 0) {
-                                    wavelength_range.x = fmax(source.source_spectrum.front().x, camera_response.front().x);
-                                    wavelength_range.y = fmin(source.source_spectrum.back().x, camera_response.back().x);
-                                }
-
-                                // Integrate source_spectrum × camera_response over band
-                                // Note: integrateSpectrum already returns ratio: ∫(source × camera) / ∫(source)
-                                weight = integrateSpectrum(s, camera_response, wavelength_range.x, wavelength_range.y);
-                            }
-                        }
-
-                        source_fluxes_cam[s * Nbands_launch * Ncameras + b * Ncameras + cam] = weight;
+                        source_fluxes_cam[s * Nbands_launch * Ncameras + b * Ncameras + cam] = material_data.white_reference_cam.at(((size_t) s * Nbands_global + global_band_index.at(b)) * Ncameras + cam);
                     }
-                    cam++;
                 }
             }
 
@@ -4567,6 +4754,9 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                     auto sif_band_bot_it = sif_emission_buffer_bottom.find(band_labels.at(b));
                     const bool have_sif_band = (sif_band_it != sif_emission_buffer.end());
                     const bool have_sif_band_bot = (sif_band_bot_it != sif_emission_buffer_bottom.end());
+                    // A band with wavelength bounds emits only the in-band portion of the Planck spectrum; a band without bounds (both zero) emits the full sigma*T^4. A band may start at 0 nm.
+                    const helios::vec2 emission_wavebounds = radiation_bands.at(band_labels.at(b)).wavebandBounds;
+                    const bool emission_band_has_bounds = radiation_bands.at(band_labels.at(b)).hasWavebandBounds();
                     for (size_t u = 0; u < Nprimitives; u++) {
                         // Use BufferIndexer: [primitive][band]
                         size_t ind = emission_indexer(u, b);
@@ -4611,6 +4801,9 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                                     temperature = temperature_default;
                                 }
                                 out_top = sigma * eps * pow(temperature, 4);
+                                if (emission_band_has_bounds && temperature > 0.f) {
+                                    out_top *= blackbodyBandFraction(emission_wavebounds.x, emission_wavebounds.y, temperature);
+                                }
                             }
                         }
                         flux_top.at(ind) += out_top;
@@ -5085,6 +5278,12 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                                                                                     1, // No antialiasing for pixel labeling
                                                                                     tile.resolution, tile.offset);
 
+                    // The launched bands decide which primitives are translucent covers that the pixel-label ray
+                    // passes through, exactly as for the camera rays above.
+                    params.num_bands_launch = Nbands_launch;
+                    params.num_bands_global = Nbands_global;
+                    params.band_launch_flag = std::vector<bool>(band_launch_flag.begin(), band_launch_flag.end());
+
                     // Progress message
                     if (message_flag) {
                         if (pixel_tiles.size() == 1) {
@@ -5143,6 +5342,13 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                     context->setGlobalData(data_label.c_str(), camera.second.pixel_data.at(band_labels.at(b)));
                 }
             }
+        }
+    }
+
+    // Convert camera images to radiance at a sensor above the atmosphere, before exposure rescales them
+    for (auto &camera: cameras) {
+        if (!camera.second.atmosphere_label.empty()) {
+            applyCameraAtmosphere(camera.second, band_labels);
         }
     }
 

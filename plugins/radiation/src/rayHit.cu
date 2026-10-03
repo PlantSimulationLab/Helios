@@ -127,6 +127,98 @@ static __device__ __inline__ float coverNormalFaceCos(uint hit_position, const f
     return fminf(1.f, fabsf(dot(ray_dir, normal)));
 }
 
+//! Whether a primitive is a translucent cover for the rays of this launch. A single ray carries every
+//! launched band, so a primitive that is glass in some launched bands but opaque in others cannot be both
+//! transmitted and blocked; it is a cover only if it is glass in ALL launched bands, and is otherwise a
+//! normal opaque primitive for the whole ray. Glass properties do not depend on the material slot, so the
+//! slot-0 slice of the material buffers is read. Mirrors coverInAllLaunchedBands() in
+//! optix8/OptiX8DeviceCode.cu.
+static __device__ __inline__ bool coverInAllLaunchedBands(uint position) {
+    if (glass_enabled == 0u) {
+        return false;
+    }
+    MaterialPropertyIndexer mat_indexer(Nsources + 1, Nprimitives, Nbands_global); // one slot per source plus the diffuse/scatter slot
+    bool any_band_launched = false;
+    for (int b_global = 0; b_global < Nbands_global; b_global++) {
+        if (band_launch_flag[b_global] == 0) {
+            continue;
+        }
+        any_band_launched = true;
+        if (is_glass[mat_indexer(0, position, b_global)] == 0.f) {
+            return false;
+        }
+    }
+    return any_band_launched;
+}
+
+//! Angular (tau, rho, alpha) of a cover primitive in one band, for a ray at |cos(theta)| to its normal.
+static __device__ __inline__ float3 coverTauRhoAlpha(uint position, int b_global, float cos_theta) {
+    MaterialPropertyIndexer mat_indexer(Nsources + 1, Nprimitives, Nbands_global); // one slot per source plus the diffuse/scatter slot
+    size_t mat_ind = mat_indexer(0, position, b_global);
+    return glass_tau_rho_alpha(cos_theta, glass_n[mat_ind], glass_KL[mat_ind]);
+}
+
+//! Book the radiation arriving at the face of a cover primitive that launched the ray. The cover absorbs
+//! alpha(theta) of it and reflects rho(theta) back out of the same face, into both the scattered-energy
+//! buffers and every camera's camera-weighted scatter. The transmitted part tau(theta) continues through
+//! the cover undeviated; it is delivered to the surfaces behind the cover by their own rays passing through
+//! it, so it is not scattered here. A cover's reflectance is spectrally flat within a band, so each camera
+//! weights it by that camera's white reference. Mirrors depositOnCoverOrigin() in optix8/OptiX8DeviceCode.cu.
+static __device__ __inline__ void depositOnCoverOrigin(uint origin_position, size_t ind_origin, int b_global, float cos_theta, float strength) {
+    if (strength <= 0) {
+        return;
+    }
+    float3 tra = coverTauRhoAlpha(origin_position, b_global, cos_theta);
+
+    atomicAdd(&radiation_in[ind_origin], strength * tra.z);
+    if (face_absorption_enabled && prd.face) {
+        atomicAdd(&radiation_in_top[ind_origin], strength * tra.z);
+    }
+
+    if (prd.face) {
+        atomicFloatAdd(&scatter_buff_top[ind_origin], strength * tra.y);
+    } else {
+        atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * tra.y);
+    }
+
+    if (Ncameras > 0) {
+        size_t cam_scatter_stride = (size_t) Nprimitives * Nbands_launch;
+        for (unsigned int cam = 0; cam < Ncameras; cam++) {
+            float white = white_reference_cam[((size_t) prd.source_ID * Nbands_global + b_global) * Ncameras + cam];
+            size_t ind_cam = cam * cam_scatter_stride + ind_origin;
+            if (prd.face) {
+                atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * tra.y * white);
+            } else {
+                atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * tra.y * white);
+            }
+        }
+    }
+}
+
+//! Continue a diffuse, camera or pixel-label ray past the translucent cover it hit. What lies behind the cover is
+//! seen attenuated by its transmittance: the ray's throughput (prd.cover_transmittance) is multiplied by tau(theta)
+//! in every launched band, and the raygen program re-traces from just beyond the cover. The ray is not
+//! refracted. Mirrors continuePastCover() in optix8/OptiX8DeviceCode.cu.
+static __device__ __inline__ void continuePastCover(uint hit_position) {
+    bool face_unused;
+    float cos_theta = coverNormalFaceCos(hit_position, ray.direction, face_unused);
+
+    int b = -1;
+    for (int b_global = 0; b_global < Nbands_global; b_global++) {
+        if (band_launch_flag[b_global] == 0) {
+            continue;
+        }
+        b++;
+        if (b >= HELIOS_MAX_RADIATION_BANDS) {
+            break; // host guarantees this never trips
+        }
+        prd.cover_transmittance[b] *= coverTauRhoAlpha(hit_position, b_global, cos_theta).x;
+    }
+
+    prd.hit_cover = true;
+    prd.cover_exit = ray.origin + (t_hit + COVER_EXIT_OFFSET) * ray.direction;
+}
+
 RT_PROGRAM void closest_hit_direct() {
 
     uint hit_position = primitive_positions[UUID];
@@ -177,8 +269,8 @@ RT_PROGRAM void closest_hit_diffuse() {
 
     // Create indexers for buffer access
     RadiationBufferIndexer rad_indexer(Nprimitives, Nbands_launch);
-    MaterialPropertyIndexer mat_indexer(Nsources, Nprimitives, Nbands_global);
-    CameraMaterialIndexer cam_mat_indexer(Nsources, Nprimitives, Nbands_global, Ncameras);
+    MaterialPropertyIndexer mat_indexer(Nsources + 1, Nprimitives, Nbands_global); // one slot per source plus the diffuse/scatter slot
+    CameraMaterialIndexer cam_mat_indexer(Nsources + 1, Nprimitives, Nbands_global, Ncameras);
 
     if ((periodic_flag.x == 1 || periodic_flag.y == 1) && primitive_type[hit_position] == 5) { // periodic boundary condition
 
@@ -251,6 +343,11 @@ RT_PROGRAM void closest_hit_diffuse() {
 
         bool face = dot(normal, ray.direction) < 0;
 
+        // A translucent cover books what reaches it with its angular glass properties, not rho/tau.
+        bool origin_face_unused;
+        const bool origin_is_cover = coverInAllLaunchedBands(origin_position);
+        const float origin_cos = origin_is_cover ? coverNormalFaceCos(origin_position, ray.direction, origin_face_unused) : 1.f;
+
         int b = -1;
         for (int b_global = 0; b_global < Nbands_global; b_global++) {
 
@@ -272,7 +369,15 @@ RT_PROGRAM void closest_hit_diffuse() {
                 strength = radiation_out_bottom[ind_hit] * prd.strength;
             }
 
+            // Attenuated by any translucent covers the ray passed on its way to the surface.
+            strength *= (b < HELIOS_MAX_RADIATION_BANDS) ? prd.cover_transmittance[b] : 1.f;
+
             if (strength == 0) {
+                continue;
+            }
+
+            if (origin_is_cover) {
+                depositOnCoverOrigin(origin_position, ind_origin, b_global, origin_cos, strength);
                 continue;
             }
 
@@ -354,6 +459,12 @@ RT_PROGRAM void closest_hit_diffuse() {
             //   prd_transmit.strength = prd.strength*(1.f-exp(-beta*0.5*prd.area));
             //   rtTrace( top_object, ray_transmit, prd_transmit);
             // }
+        }
+
+        // A translucent cover: its own outgoing radiance (reflection and emission) was received above like that of any
+        // surface; continue past it to what lies behind, attenuated by its transmittance.
+        if (coverInAllLaunchedBands(hit_position)) {
+            continuePastCover(hit_position);
         }
     }
 }
@@ -581,10 +692,6 @@ RT_PROGRAM void closest_hit_camera() {
                 strength = radiation_out_bottom[ind_hit] * prd.strength;
             }
 
-            if (source_radiance > 0.0f) {
-                strength += source_radiance * prd.strength;
-            }
-
             // specular reflection
             // Only compute specular on iteration 0 to prevent accumulation across scattering iterations.
             // radiation_specular contains per-source, camera-weighted incident radiation
@@ -634,8 +741,16 @@ RT_PROGRAM void closest_hit_camera() {
             // Use BufferIndexer: [pixel][band]
             size_t ind_camera = rad_indexer(pixel_index, b);
 
+            // Attenuated by any translucent covers the ray passed in front of this surface.
+            float cover_tau = (b < HELIOS_MAX_RADIATION_BANDS) ? prd.cover_transmittance[b] : 1.f;
+
             atomicAdd(&radiation_in_camera[ind_camera],
-                      (strength + strength_spec) / M_PI); // note: pi factor is to convert from flux to intensity assuming surface is Lambertian. We don't multiply by the solid angle by convention to avoid very small numbers.
+                      cover_tau * ((strength + strength_spec) / M_PI + source_radiance * prd.strength)); // note: pi factor is to convert from flux to intensity assuming surface is Lambertian. We don't multiply by the solid angle by convention to avoid very small numbers. The source radiance is already a radiance, so it is not divided by pi.
+        }
+
+        // A translucent cover adds its own outgoing radiance (above) and lets the ray continue to what lies behind it.
+        if (coverInAllLaunchedBands(hit_position)) {
+            continuePastCover(hit_position);
         }
     }
 }
@@ -649,6 +764,7 @@ RT_PROGRAM void closest_hit_pixel_label() {
     if ((periodic_flag.x == 1 || periodic_flag.y == 1) && primitive_type[hit_position] == 5) { // periodic boundary condition
 
         prd.hit_periodic_boundary = true;
+        prd.strength += t_hit; // the distance travelled to the boundary counts toward the depth
 
         float3 ray_origin = ray.origin + t_hit * ray.direction;
 
@@ -674,6 +790,14 @@ RT_PROGRAM void closest_hit_pixel_label() {
     } else {
 
         // Note: UUID corresponds to the object that the ray hit (i.e., where energy is coming from), and UUID_origin is the object the ray originated from (i.e., where the energy is being received)
+        // Label the first surface behind any translucent covers: pass through the cover, carrying the distance
+        // travelled so far in prd.strength.
+        if (coverInAllLaunchedBands(hit_position)) {
+            prd.strength += t_hit + COVER_EXIT_OFFSET;
+            continuePastCover(hit_position);
+            return;
+        }
+
         // Note: We are reserving a value of 0 for the sky, so we will store UUID+1
         camera_pixel_label[origin_UUID] = UUID + 1;
 
@@ -686,12 +810,13 @@ RT_PROGRAM void closest_hit_pixel_label() {
 // ---------------------------------------------------------------------------
 // Translucent cover (glass/plastic) any-hit programs
 // ---------------------------------------------------------------------------
-// A glass cover is not an occluder: the ray passes through it (rtIgnoreIntersection) attenuated by the
-// Fresnel+Bouguer tau(theta), which accumulates per band in prd.cover_transmittance and is applied to
-// the deposited flux in the miss programs. The cover's own reflected/absorbed energy is deposited here.
-// Mirrors coverAnyHitBody() in optix8/OptiX8DeviceCode.cu. Direct rays use the per-source flux; diffuse
-// rays use the (isotropic) sky flux for the cover's rho/alpha bookkeeping — the transmittance
-// accumulation itself is exact and flux-independent.
+// A glass cover is not an occluder for direct rays: the ray passes through it (rtIgnoreIntersection)
+// attenuated by the Fresnel+Bouguer tau(theta), which accumulates per band in prd.cover_transmittance and is
+// applied to the deposited flux in the miss program. Diffuse rays also need the radiance of the surface they
+// end on, attenuated only by the covers in front of it, so they pass covers in closest_hit_diffuse instead. What the cover itself absorbs and reflects is booked by the
+// cover's own rays (depositOnCoverOrigin), not here: this ray was launched by the surface behind the
+// cover, so its strength is normalized to that surface's area and angle. Mirrors coverAnyHitBody() in
+// optix8/OptiX8DeviceCode.cu.
 
 RT_PROGRAM void any_hit_direct() {
 
@@ -709,26 +834,9 @@ RT_PROGRAM void any_hit_direct() {
         return;
     }
 
-    MaterialPropertyIndexer mat_indexer(Nsources, Nprimitives, Nbands_global);
-    RadiationBufferIndexer rad_indexer(Nprimitives, Nbands_launch);
-    SourceFluxIndexer source_flux_indexer(Nsources, Nbands_launch);
-
-    // Pass-through only if this primitive is glass in EVERY launched band. A single ray carries all
-    // launched bands, so a primitive that is glass in some launched bands but opaque in others cannot be
-    // both transmitted and blocked — treat it as a normal (opaque) occluder for the whole ray (accept
-    // the hit). This matches the OptiX 8 and Vulkan backends.
-    {
-        int b_check = -1;
-        for (int b_global = 0; b_global < Nbands_global; b_global++) {
-            if (band_launch_flag[b_global] == 0) {
-                continue;
-            }
-            b_check++;
-            size_t mat_ind = mat_indexer(prd.source_ID, hit_position, b_global);
-            if (is_glass[mat_ind] == 0.f) {
-                return; // opaque in this launched band → block the ray
-            }
-        }
+    // A primitive that is not glass in every launched band is a normal (opaque) occluder: accept the hit.
+    if (!coverInAllLaunchedBands(hit_position)) {
+        return;
     }
 
     bool face_top;
@@ -744,98 +852,10 @@ RT_PROGRAM void any_hit_direct() {
             break; // host guarantees this never trips
         }
 
-        size_t mat_ind = mat_indexer(prd.source_ID, hit_position, b_global);
-        float3 tra = glass_tau_rho_alpha(cos_theta, glass_n[mat_ind], glass_KL[mat_ind]); // (tau, rho, alpha)
-
-        size_t flux_idx = source_flux_indexer(prd.source_ID, b);
-        double ext_flux = source_fluxes[flux_idx];
-        double incoming = prd.strength * ext_flux * (double) prd.cover_transmittance[b];
-
-        size_t cov_ind = rad_indexer(hit_position, b);
-        if (incoming > 0.0) {
-            atomicFloatAdd(&radiation_in[cov_ind], (float) (incoming * (double) tra.z)); // absorbed
-            // Reflection leaves from the hit face; transmission continues out the far face.
-            if (face_top) {
-                atomicFloatAdd(&scatter_buff_top[cov_ind], (float) (incoming * (double) tra.y));
-            } else {
-                atomicFloatAdd(&scatter_buff_bottom[cov_ind], (float) (incoming * (double) tra.y));
-            }
-        }
-
-        prd.cover_transmittance[b] *= tra.x; // attenuate the through-beam for this band
+        prd.cover_transmittance[b] *= coverTauRhoAlpha(hit_position, b_global, cos_theta).x; // attenuate the through-beam for this band
     }
 
     // All launched bands are glass: pass the (attenuated) ray through toward the source.
-    rtIgnoreIntersection();
-}
-
-RT_PROGRAM void any_hit_diffuse() {
-
-    if (glass_enabled == 0u) {
-        return;
-    }
-
-    uint hit_position = primitive_positions[UUID];
-    if (hit_position == UINT_MAX) {
-        return;
-    }
-    if (UUID == prd.origin_UUID) {
-        rtIgnoreIntersection();
-        return;
-    }
-
-    MaterialPropertyIndexer mat_indexer(Nsources, Nprimitives, Nbands_global);
-    RadiationBufferIndexer rad_indexer(Nprimitives, Nbands_launch);
-
-    // Pass-through only if glass in EVERY launched band; otherwise treat as opaque (accept → block).
-    // Matches the OptiX 8 and Vulkan backends.
-    {
-        int b_check = -1;
-        for (int b_global = 0; b_global < Nbands_global; b_global++) {
-            if (band_launch_flag[b_global] == 0) {
-                continue;
-            }
-            b_check++;
-            size_t mat_ind = mat_indexer(prd.source_ID, hit_position, b_global);
-            if (is_glass[mat_ind] == 0.f) {
-                return; // opaque in this launched band → block the ray
-            }
-        }
-    }
-
-    bool face_top;
-    float cos_theta = coverNormalFaceCos(hit_position, ray.direction, face_top);
-
-    int b = -1;
-    for (int b_global = 0; b_global < Nbands_global; b_global++) {
-        if (band_launch_flag[b_global] == 0) {
-            continue;
-        }
-        b++;
-        if (b >= HELIOS_MAX_RADIATION_BANDS) {
-            break;
-        }
-
-        size_t mat_ind = mat_indexer(prd.source_ID, hit_position, b_global);
-        float3 tra = glass_tau_rho_alpha(cos_theta, glass_n[mat_ind], glass_KL[mat_ind]);
-
-        double ext_flux = diffuse_flux[b];
-        double incoming = prd.strength * ext_flux * (double) prd.cover_transmittance[b];
-
-        size_t cov_ind = rad_indexer(hit_position, b);
-        if (incoming > 0.0) {
-            atomicFloatAdd(&radiation_in[cov_ind], (float) (incoming * (double) tra.z));
-            if (face_top) {
-                atomicFloatAdd(&scatter_buff_top[cov_ind], (float) (incoming * (double) tra.y));
-            } else {
-                atomicFloatAdd(&scatter_buff_bottom[cov_ind], (float) (incoming * (double) tra.y));
-            }
-        }
-
-        prd.cover_transmittance[b] *= tra.x;
-    }
-
-    // All launched bands are glass: pass the (attenuated) ray through toward the sky.
     rtIgnoreIntersection();
 }
 
@@ -868,11 +888,16 @@ RT_PROGRAM void miss_direct() {
 
     // Create indexers
     RadiationBufferIndexer rad_indexer(Nprimitives, Nbands_launch);
-    MaterialPropertyIndexer mat_indexer(Nsources, Nprimitives, Nbands_global);
+    MaterialPropertyIndexer mat_indexer(Nsources + 1, Nprimitives, Nbands_global); // one slot per source plus the diffuse/scatter slot
     SourceFluxIndexer source_flux_indexer(Nsources, Nbands_launch);
-    CameraMaterialIndexer cam_mat_indexer(Nsources, Nprimitives, Nbands_global, Ncameras);
+    CameraMaterialIndexer cam_mat_indexer(Nsources + 1, Nprimitives, Nbands_global, Ncameras);
     SourceCameraFluxIndexer source_cam_flux_indexer(Nsources, Nbands_launch, Ncameras);
     SpecularRadiationIndexer spec_indexer(Nsources, Ncameras, Nprimitives, Nbands_launch);
+
+    // A translucent cover books what reaches it with its angular glass properties, not rho/tau.
+    bool origin_face_unused;
+    const bool origin_is_cover = coverInAllLaunchedBands(origin_position);
+    const float origin_cos = origin_is_cover ? coverNormalFaceCos(origin_position, ray.direction, origin_face_unused) : 1.f;
 
     int b = -1;
     for (int b_global = 0; b_global < Nbands_global; b_global++) {
@@ -896,44 +921,51 @@ RT_PROGRAM void miss_direct() {
         // Attenuation from any translucent covers (glass/plastic) the ray passed through, per band.
         float cover_tau = (b < HELIOS_MAX_RADIATION_BANDS) ? prd.cover_transmittance[b] : 1.f;
         double strength = prd.strength * source_flux * cover_tau;
-        float absorption = strength * (1.f - t_rho - t_tau);
 
-        // absorption
-        atomicAdd(&radiation_in[ind_origin], absorption);
-        if (face_absorption_enabled && prd.face) {
-            atomicAdd(&radiation_in_top[ind_origin], absorption);
-        }
+        if (origin_is_cover) {
+            depositOnCoverOrigin(origin_position, ind_origin, b_global, origin_cos, strength);
+        } else {
+            float absorption = strength * (1.f - t_rho - t_tau);
 
-        if (t_rho > 0 || t_tau > 0) {
-            if (prd.face) { // reflection from top, transmission from bottom
-                atomicFloatAdd(&scatter_buff_top[ind_origin], strength * t_rho); // reflection
-                atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * t_tau); // transmission
-            } else { // reflection from bottom, transmission from top
-                atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * t_rho); // reflection
-                atomicFloatAdd(&scatter_buff_top[ind_origin], strength * t_tau); // transmission
+            // absorption
+            atomicAdd(&radiation_in[ind_origin], absorption);
+            if (face_absorption_enabled && prd.face) {
+                atomicAdd(&radiation_in_top[ind_origin], absorption);
             }
-        }
-        if (Ncameras > 0) {
-            // Camera-weighted scatter, accumulated once per camera into that camera's [primitive][band]
-            // block. This launch runs once per dispatch, not once per camera, so camera_ID is not
-            // meaningful here; weighting by a single camera handed every other camera that camera's image.
-            size_t cam_scatter_stride = (size_t) Nprimitives * Nbands_launch;
-            for (unsigned int cam = 0; cam < Ncameras; cam++) {
-                // Use BufferIndexer: [source][primitive][band][camera]
-                size_t indc = cam_mat_indexer(prd.source_ID, origin_position, b_global, cam);
-                float t_rho_cam = rho_cam[indc];
-                float t_tau_cam = tau_cam[indc];
-                size_t ind_cam = cam * cam_scatter_stride + ind_origin;
-                if ((t_rho_cam > 0 || t_tau_cam > 0) && strength > 0) {
-                    if (prd.face) { // reflection from top, transmission from bottom
-                        atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_rho_cam); // reflection
-                        atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_tau_cam); // transmission
-                    } else { // reflection from bottom, transmission from top
-                        atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_rho_cam); // reflection
-                        atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_tau_cam); // transmission
+
+            if (t_rho > 0 || t_tau > 0) {
+                if (prd.face) { // reflection from top, transmission from bottom
+                    atomicFloatAdd(&scatter_buff_top[ind_origin], strength * t_rho); // reflection
+                    atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * t_tau); // transmission
+                } else { // reflection from bottom, transmission from top
+                    atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * t_rho); // reflection
+                    atomicFloatAdd(&scatter_buff_top[ind_origin], strength * t_tau); // transmission
+                }
+            }
+            if (Ncameras > 0) {
+                // Camera-weighted scatter, accumulated once per camera into that camera's [primitive][band]
+                // block. This launch runs once per dispatch, not once per camera, so camera_ID is not
+                // meaningful here; weighting by a single camera handed every other camera that camera's image.
+                size_t cam_scatter_stride = (size_t) Nprimitives * Nbands_launch;
+                for (unsigned int cam = 0; cam < Ncameras; cam++) {
+                    // Use BufferIndexer: [source][primitive][band][camera]
+                    size_t indc = cam_mat_indexer(prd.source_ID, origin_position, b_global, cam);
+                    float t_rho_cam = rho_cam[indc];
+                    float t_tau_cam = tau_cam[indc];
+                    size_t ind_cam = cam * cam_scatter_stride + ind_origin;
+                    if ((t_rho_cam > 0 || t_tau_cam > 0) && strength > 0) {
+                        if (prd.face) { // reflection from top, transmission from bottom
+                            atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_rho_cam); // reflection
+                            atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_tau_cam); // transmission
+                        } else { // reflection from bottom, transmission from top
+                            atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_rho_cam); // reflection
+                            atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_tau_cam); // transmission
+                        }
                     }
                 }
             }
+        }
+        if (Ncameras > 0) {
             accumulateWhiteReference(ind_origin, b_global, strength);
             // Accumulate incident radiation for specular for ALL cameras (per source, camera-weighted).
             // Direct rays are launched once (not per camera), so we must populate every camera's slot
@@ -1000,8 +1032,13 @@ RT_PROGRAM void miss_diffuse() {
 
     // Create indexers
     RadiationBufferIndexer rad_indexer(Nprimitives, Nbands_launch);
-    MaterialPropertyIndexer mat_indexer(Nsources, Nprimitives, Nbands_global);
-    CameraMaterialIndexer cam_mat_indexer(Nsources, Nprimitives, Nbands_global, Ncameras);
+    MaterialPropertyIndexer mat_indexer(Nsources + 1, Nprimitives, Nbands_global); // one slot per source plus the diffuse/scatter slot
+    CameraMaterialIndexer cam_mat_indexer(Nsources + 1, Nprimitives, Nbands_global, Ncameras);
+
+    // A translucent cover books what reaches it with its angular glass properties, not rho/tau.
+    bool origin_face_unused;
+    const bool origin_is_cover = coverInAllLaunchedBands(origin_position);
+    const float origin_cos = origin_is_cover ? coverNormalFaceCos(origin_position, ray.direction, origin_face_unused) : 1.f;
 
     int b = -1;
     for (size_t b_global = 0; b_global < Nbands_global; b_global++) {
@@ -1044,42 +1081,48 @@ RT_PROGRAM void miss_diffuse() {
 
                 float strength = fd * diffuse_flux[b] * prd.strength * cover_tau;
 
-                //  absorption
-                atomicAdd(&radiation_in[ind_origin], strength * (1.f - t_rho - t_tau));
-                if (face_absorption_enabled && prd.face) {
-                    atomicAdd(&radiation_in_top[ind_origin], strength * (1.f - t_rho - t_tau));
-                }
-
-                if (t_rho > 0 || t_tau > 0) {
-                    if (prd.face) { // reflection from top, transmission from bottom
-                        atomicFloatAdd(&scatter_buff_top[ind_origin], strength * t_rho); // reflection
-                        atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * t_tau); // transmission
-                    } else { // reflection from bottom, transmission from top
-                        atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * t_rho); // reflection
-                        atomicFloatAdd(&scatter_buff_top[ind_origin], strength * t_tau); // transmission
+                if (origin_is_cover) {
+                    depositOnCoverOrigin(origin_position, ind_origin, b_global, origin_cos, strength);
+                } else {
+                    //  absorption
+                    atomicAdd(&radiation_in[ind_origin], strength * (1.f - t_rho - t_tau));
+                    if (face_absorption_enabled && prd.face) {
+                        atomicAdd(&radiation_in_top[ind_origin], strength * (1.f - t_rho - t_tau));
                     }
-                }
-                if (Ncameras > 0) {
-                    // Camera-weighted scatter, accumulated once per camera into that camera's [primitive][band]
-                    // block. This launch runs once per dispatch, not once per camera, so camera_ID is not
-                    // meaningful here; weighting by a single camera handed every other camera that camera's image.
-                    size_t cam_scatter_stride = (size_t) Nprimitives * Nbands_launch;
-                    for (unsigned int cam = 0; cam < Ncameras; cam++) {
-                        // Use BufferIndexer: [source][primitive][band][camera]
-                        size_t indc = cam_mat_indexer(prd.source_ID, origin_position, b_global, cam);
-                        float t_rho_cam = rho_cam[indc];
-                        float t_tau_cam = tau_cam[indc];
-                        size_t ind_cam = cam * cam_scatter_stride + ind_origin;
-                        if ((t_rho_cam > 0 || t_tau_cam > 0) && prd.strength > 0) {
-                            if (prd.face) { // reflection from top, transmission from bottom
-                                atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_rho_cam); // reflection
-                                atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_tau_cam); // transmission
-                            } else { // reflection from bottom, transmission from top
-                                atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_rho_cam); // reflection
-                                atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_tau_cam); // transmission
+
+                    if (t_rho > 0 || t_tau > 0) {
+                        if (prd.face) { // reflection from top, transmission from bottom
+                            atomicFloatAdd(&scatter_buff_top[ind_origin], strength * t_rho); // reflection
+                            atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * t_tau); // transmission
+                        } else { // reflection from bottom, transmission from top
+                            atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * t_rho); // reflection
+                            atomicFloatAdd(&scatter_buff_top[ind_origin], strength * t_tau); // transmission
+                        }
+                    }
+                    if (Ncameras > 0) {
+                        // Camera-weighted scatter, accumulated once per camera into that camera's [primitive][band]
+                        // block. This launch runs once per dispatch, not once per camera, so camera_ID is not
+                        // meaningful here; weighting by a single camera handed every other camera that camera's image.
+                        size_t cam_scatter_stride = (size_t) Nprimitives * Nbands_launch;
+                        for (unsigned int cam = 0; cam < Ncameras; cam++) {
+                            // Use BufferIndexer: [source][primitive][band][camera]
+                            size_t indc = cam_mat_indexer(prd.source_ID, origin_position, b_global, cam);
+                            float t_rho_cam = rho_cam[indc];
+                            float t_tau_cam = tau_cam[indc];
+                            size_t ind_cam = cam * cam_scatter_stride + ind_origin;
+                            if ((t_rho_cam > 0 || t_tau_cam > 0) && prd.strength > 0) {
+                                if (prd.face) { // reflection from top, transmission from bottom
+                                    atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_rho_cam); // reflection
+                                    atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_tau_cam); // transmission
+                                } else { // reflection from bottom, transmission from top
+                                    atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_rho_cam); // reflection
+                                    atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_tau_cam); // transmission
+                                }
                             }
                         }
                     }
+                }
+                if (Ncameras > 0) {
                     accumulateWhiteReference(ind_origin, b_global, strength);
                     // Note: Don't accumulate diffuse sky radiation to radiation_specular
                     // Specular should only reflect DIRECT source radiation (accumulated in miss_direct)
@@ -1166,7 +1209,9 @@ RT_PROGRAM void miss_camera() {
             // Monte Carlo averaging: prd.strength = 1/N_rays
             // Use BufferIndexer: [pixel][band]
             size_t ind_camera = rad_indexer(pixel_index, b);
-            atomicAdd(&radiation_in_camera[ind_camera], radiance * prd.strength);
+            // Seen through any translucent covers the ray passed, attenuated by their transmittance.
+            float cover_tau = (b < HELIOS_MAX_RADIATION_BANDS) ? prd.cover_transmittance[b] : 1.f;
+            atomicAdd(&radiation_in_camera[ind_camera], radiance * prd.strength * cover_tau);
         }
     }
 }

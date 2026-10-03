@@ -598,6 +598,10 @@ void ProjectBuilder::updateSpectra() {
                 context->setPrimitiveData(primitive_pair.second, reflectivity_band.c_str(), reflectivity);
             }
         } else {
+            // A constant band value overrides a spectrum in the radiation model, so remove any left over from constant mode
+            for (const std::string &band: bandlabels) {
+                context->clearPrimitiveData(primitive_pair.second, ("reflectivity_" + band).c_str());
+            }
             std::string reflectivity_spectrum = primitive_spectra[primitive_pair.first][0];
             if (!reflectivity_spectrum.empty()) {
                 context->setPrimitiveData(primitive_UUIDs[primitive_pair.first], "reflectivity_spectrum", reflectivity_spectrum);
@@ -612,6 +616,10 @@ void ProjectBuilder::updateSpectra() {
                 context->setPrimitiveData(primitive_pair.second, transmissivity_band.c_str(), transmissivity);
             }
         } else {
+            // A constant band value overrides a spectrum in the radiation model, so remove any left over from constant mode
+            for (const std::string &band: bandlabels) {
+                context->clearPrimitiveData(primitive_pair.second, ("transmissivity_" + band).c_str());
+            }
             std::string transmissivity_spectrum = primitive_spectra[primitive_pair.first][1];
             if (!transmissivity_spectrum.empty()) {
                 context->setPrimitiveData(primitive_UUIDs[primitive_pair.first], "transmissivity_spectrum", transmissivity_spectrum);
@@ -660,6 +668,10 @@ void ProjectBuilder::updateSpectra() {
                 context->setPrimitiveData(UUID, reflectivity_band.c_str(), reflectivity);
             }
         } else {
+            // A constant band value overrides a spectrum in the radiation model, so remove any left over from constant mode
+            for (const std::string &band: bandlabels) {
+                context->clearPrimitiveData(UUID, ("reflectivity_" + band).c_str());
+            }
             std::string reflectivity_spectrum = primitive_spectra_dict[curr_data_group][curr_prim_type][0];
             if (!reflectivity_spectrum.empty()) {
                 context->setPrimitiveData(UUID, "reflectivity_spectrum", reflectivity_spectrum);
@@ -674,6 +686,10 @@ void ProjectBuilder::updateSpectra() {
                 context->setPrimitiveData(UUID, transmissivity_band.c_str(), transmissivity);
             }
         } else {
+            // A constant band value overrides a spectrum in the radiation model, so remove any left over from constant mode
+            for (const std::string &band: bandlabels) {
+                context->clearPrimitiveData(UUID, ("transmissivity_" + band).c_str());
+            }
             std::string transmissivity_spectrum = primitive_spectra_dict[curr_data_group][curr_prim_type][1];
             if (!transmissivity_spectrum.empty()) {
                 context->setPrimitiveData(UUID, "transmissivity_spectrum", transmissivity_spectrum);

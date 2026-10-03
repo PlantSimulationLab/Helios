@@ -367,7 +367,7 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
 
  2\. Specifying reflectivity and transmissivity based on spectral data
 
- Spectral reflectivity or transmissivity data can be associated with a primitive, such that the radiative properties for a given band can be calculated automatically. At a minimum, two things must be set in order for this to happen: a) the radiation band must have been created with a defined wavelength range (see above and method \ref RadiationModel::addRadiationBand( const std::string&, float, float) "RadiationModel::addRadiationBand()"); b) primitive data with label "reflectivity_spectrum" and/or "transmissivity_spectrum" must be set for the primitive, and the value (a string) must reference a valid spectral dataset that has been loaded into the Context.
+ Spectral reflectivity or transmissivity data can be associated with a primitive, such that the radiative properties for a given band can be calculated automatically. At a minimum, two things must be set in order for this to happen: a) the radiation band must have been created with a defined wavelength range (see above and method \ref RadiationModel::addRadiationBand( const std::string&, float, float) "RadiationModel::addRadiationBand()"); b) primitive data with label "reflectivity_spectrum" and/or "transmissivity_spectrum" must be set for the primitive, and the value (a string) must reference a valid spectral dataset that has been loaded into the Context. If primitive data "reflectivity_[band]" or "transmissivity_[band]" is also set for the primitive, that value (including 0) is used in that band instead of the spectrum.
 
  Below is a code example for specifying the reflectivity and transmissivity for a primitive based on spectral data. In this case, the model will assume the source spectral distribution is constant over all wave bands, and thus total reflectivity/transmissivity is just the integral of the spectral reflectivity/transmissivity. If there was a radiative source with a specified spectral distribution, the total reflectivity/transmissivity would be calculated by integrating the product of the reflectivity/transmissivity and source spectral intensity (example given for reflectivity only):
 
@@ -398,6 +398,14 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  ~~~~~~
 
  Note that in the above example, we did not add a radiative source or set its spectral distribution.
+
+ <b>Wavelength ranges.</b> The integrals above run over the band's wavelength range, \f$\lambda_{min}\f$ to \f$\lambda_{max}\f$. A source spectrum contributes nothing outside the wavelengths at which it is tabulated, the same convention used to compute the source's band flux (see \ref SourceDist), and a reflectivity or transmissivity spectrum is likewise zero outside its tabulated range. For example, a source tabulated from 500 to 600 nm in a 400-700 nm band weights only the 500-600 nm part of the band. A reflectivity or transmissivity spectrum that does not overlap the band at all has no defined value in it, and an error is thrown when that band is run; set a constant value for that band with primitive data "reflectivity_[band]" or "transmissivity_[band]" instead. Likewise, if a source has a flux in a band (e.g., set with \ref RadiationModel::setSourceFlux()) but its spectrum has no energy in that band, there is nothing to weight a spectrum by and an error is thrown when that band is run. A source with no flux in the band is not an error.
+
+ <b>Several sources, and diffuse and scattered radiation.</b> Each radiation source has its own spectrum, so the same surface can have a different reflectivity and transmissivity for each source. Radiation coming directly from a source uses the properties weighted by that source's spectrum. Diffuse (sky) radiation, scattered radiation and emitted radiation are not tracked by source, so they use properties weighted by the band's combined incident spectrum:
+
+ \f[ \rho_{diffuse} = \dfrac{\sum_c F_c\,\rho_c}{\sum_c F_c} \f]
+
+ where \f$c\f$ runs over every source with a flux in the band and the band's diffuse radiation, \f$F_c\f$ is its band flux, and \f$\rho_c\f$ is the reflectivity weighted by its spectrum alone (the diffuse radiation is weighted by the spectrum set with \ref RadiationModel::setDiffuseSpectrum(), except in emission-enabled bands, where that spectrum does not apply; a source or diffuse flux without a spectrum is spectrally flat over the band). This is the same as weighting by \f$W_\lambda = \sum_c F_c \hat{I}_{c,\lambda}\f$, where \f$\hat{I}_{c,\lambda}\f$ is each spectrum normalized to integrate to 1 over the band. It is an approximation that is uniform over the scene: a shaded leaf that sees mostly scattered light gets the same properties for that light as a sunlit one. If a band receives no source or diffuse radiation at all (e.g., an emission-only longwave band), the unweighted band average \f$\int\rho_\lambda d\lambda / (\lambda_{max}-\lambda_{min})\f$ is used. The weighting is recomputed on every call to \ref RadiationModel::runBand(), so changes to source or diffuse fluxes are picked up.
 
  \subsection RadGlass Translucent Cover Materials (Glass/Plastic)
 
@@ -442,16 +450,41 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  reflected/absorbed bookkeeping is active; the unscattered transmission itself is independent of the
  scattering depth.
 
+ <b>Energy absorbed and reflected by the cover:</b> the cover absorbs \f$\alpha(\theta)\f$ of the radiation
+ striking it (from sources, the sky, or other surfaces), evaluated at the angle at which that radiation
+ arrives, and reflects \f$\rho(\theta)\f$ of it diffusely back out of the face it arrived on. The cover's
+ radiation_flux_[band] output is the absorbed part, so a lossless cover (glass_KL_[band] = 0) absorbs nothing.
+ The transmitted part \f$\tau(\theta)\f$ is not re-emitted by the cover; it is received, attenuated, by the
+ surfaces behind it. A surface that sees a cover receives the cover's own reflection and emission from the face it
+ sees, as from any surface, together with what lies behind the cover, attenuated by \f$\tau(\theta)\f$.
+
+ <b>Cameras and pixel labels:</b> radiation cameras see through a cover. A camera ray that hits a cover adds
+ the cover's own outgoing radiance, exactly as for any other surface (its diffuse reflection of the light
+ reaching it, and its emission in an emission band), then continues undeviated to whatever lies behind it.
+ Everything seen beyond the cover, including other surfaces, the sky and radiation sources, is attenuated by
+ the cover's \f$\tau(\theta)\f$ at the angle at which the camera ray crosses it, so an object behind a pane of
+ glass appears darker by \f$\tau\f$ and several panes attenuate multiplicatively. The pixel labels and depths
+ written to the global data "camera_[camera_label]_pixel_UUID" and "camera_[camera_label]_pixel_depth" also
+ pass through covers: they record the first surface behind the covers that is not itself a cover, and a pixel
+ that sees only covers and the sky is labelled as sky. A camera ray is traced through at most 32 segments (each
+ cover crossed and each periodic-boundary wrap starts a new one); what lies beyond is not seen. As for direct
+ and diffuse rays, a primitive that is glass in some but not all of the bands launched together in one
+ runBand() call is opaque to the camera in every band. The camera model makes these approximations:
+ <ul>
+ <li>The camera ray is not refracted, so there is no lateral offset of the scene seen through a pane.</li>
+ <li>A cover does not mirror its surroundings: its reflection is shaded as diffuse, from the light it receives.
+ A cover shows a specular highlight of a radiation source only if it is given specular_exponent, as for any
+ other primitive (see \ref RadCamSpecular).</li>
+ </ul>
+
  <b>Limitations (current version):</b>
  <ul>
  <li>The transmitted ray is <i>not</i> refracted (no Snell bending of the through-beam); only its
  magnitude is attenuated by \f$\tau(\theta)\f$.</li>
  <li>There is no separate forward-scattered diffuse (haze) lobe; transmitted energy is either
  unscattered (the \f$\tau(\theta)\f$ component) or, for the reflected fraction, deposited as diffuse.</li>
- <li>For anisotropic diffuse-sky radiation, the cover's own reflected/absorbed bookkeeping uses the
- isotropic sky flux as an approximation; the transmittance delivered to surfaces below is exact.</li>
- <li>Scattered (plant-to-plant) radiation that strikes the cover from below escapes attenuated but is
- not re-injected with directional memory.</li>
+ <li>The emissivity of a cover in an emission band is emissivity_[band] (default 1) and is not tied to its
+ absorptance.</li>
  <li>A primitive is treated as a translucent cover (beam pass-through) only if it is glass
  (glass_n_[band]) in <i>every</i> band launched together in a single run. A single ray carries all
  launched bands, so a primitive that is glass in some launched bands but opaque in others cannot be both
@@ -463,7 +496,15 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
 
  \subsection RadEmission Radiative Emission
 
- By default, radiation emission calculations are performed for each band.  Each primitive emits radiation with a flux of \f$\varepsilon \sigma T^4\f$, where \f$\varepsilon\f$ is the primitive's emissivity, \f$\sigma=5.67\times 10^{-8}\,W/m^2/K^4\f$ is the Steffan Boltzmann constant, and \f$T\f$ is the primitive's surface temperature in Kelvin.  By default, it is assumed that \f$\varepsilon=1\f$, unless primitive data exists that defines the emissivity.  By default, it is also assumed that \f$T=300K\f$, unless the primitive data 'temperature' exists in the Context whose value defines the temperature.
+ By default, radiation emission calculations are performed for each band.  Each primitive emits radiation with a flux of \f$\varepsilon \sigma T^4\f$, where \f$\varepsilon\f$ is the primitive's emissivity, \f$\sigma=5.67\times 10^{-8}\,W/m^2/K^4\f$ is the Stefan-Boltzmann constant, and \f$T\f$ is the primitive's surface temperature in Kelvin.  By default, it is assumed that \f$\varepsilon=1\f$, unless primitive data exists that defines the emissivity.  By default, it is also assumed that \f$T=300K\f$, unless the primitive data 'temperature' exists in the Context whose value defines the temperature.
+
+ The emitted flux depends on whether the band has wavelength bounds:
+ <ul>
+ <li>A band added without wavelength bounds (e.g., <code>addRadiationBand("LW")</code>) is treated as broadband longwave and emits the full \f$\varepsilon \sigma T^4\f$. This is the usual setup for the longwave band used in the energy balance.</li>
+ <li>A band added with wavelength bounds \f$\lambda_1\f$ to \f$\lambda_2\f$ (e.g., <code>addRadiationBand("thermal", 8000, 14000)</code>) emits only the portion of the Planck spectrum inside the bounds, \f$\varepsilon \sigma T^4 F_{\lambda_1-\lambda_2}(T)\f$, where \f$F_{\lambda_1-\lambda_2}(T)\f$ is the blackbody band fraction computed by \ref helios::blackbodyBandFraction(). A thermal camera band with bounds therefore records in-band radiance. For a surface at 300 K, the 8-14 \f$\mu\f$m band holds about 38\% of \f$\sigma T^4\f$. The emissivity is taken as constant (gray) within the band.</li>
+ </ul>
+
+ Any diffuse (sky) flux set for a bounded emission band with \ref RadiationModel::setDiffuseRadiationFlux() should also be the in-band value, not the broadband longwave flux.
 
  Emission can be disabled for the band by calling the \ref RadiationModel::disableEmission() "disableEmission()" function.  For example, for the photosynthetically active (PAR) band, terrestrial objects do not emit radiation (i.e., \f$\varepsilon\approx 0\f$) and thus rather than setting a zero emissivity for this band for all primitives, it is desirable to simply disable radiation emission for this band:
 
@@ -590,7 +631,7 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  radiationmodel.setSourceSpectrumIntegral(SourceID, 300, 400, 700 ); //set the integral of solar flux spectrum from 400-700nm to 300 W/m^2
  ~~~~~~
 
- Now that the source spectrum is set, it is no longer necessary to call \ref RadiationModel::setSourceFlux(), because it will be automatically calculated by integrating the source spectrum. If \ref RadiationModel::setSourceFlux() is called for a band, it will override any source spectra.
+ Now that the source spectrum is set, it is no longer necessary to call \ref RadiationModel::setSourceFlux(), because it will be automatically calculated by integrating the source spectrum. If \ref RadiationModel::setSourceFlux() is called for a band, it will override any source spectra. The spectrum is still used to weight surface reflectivity and transmissivity spectra (see \ref RadProps).
 
  \subsubsection AmbSource Adding Diffuse/Ambient Sources
 
@@ -606,11 +647,11 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  radiationmodel.setDiffuseSpectrum("solar_spectrum_ASTMG173"); //set diffuse spectrum for all bands
  ~~~~~~
 
- This applies the spectrum to all existing radiation bands. For each band, the diffuse flux is computed by integrating the spectrum over the band's wavelength range. If \ref RadiationModel::setDiffuseRadiationFlux() is called for a band, it will override the spectrum-based flux.
+ This applies the spectrum to all existing radiation bands. For each band, the diffuse flux is computed by integrating the spectrum over the band's wavelength range. If \ref RadiationModel::setDiffuseRadiationFlux() is called for a band, it will override the spectrum-based flux. The diffuse spectrum also contributes, in proportion to the diffuse flux, to the spectrum that weights surface reflectivity and transmissivity spectra for diffuse and scattered radiation (see \ref RadProps).
 
  \note For emission-enabled bands (thermal/longwave bands), spectra are not relevant since these bands use thermal emission rather than incoming solar radiation. For such bands, \ref RadiationModel::getDiffuseFlux() returns 0 unless a manual flux is set via \ref RadiationModel::setDiffuseRadiationFlux().
 
- The default is to use 100 diffuse rays per primitive, which can be set to a user-defined value using the following command:
+ The default is to use 1000 diffuse rays per primitive, which can be set to a user-defined value using the following command:
 
  ~~~~~~{.cpp}
  radiationmodel.setDiffuseRayCount("PAR",200); //set the number of rays
@@ -955,6 +996,53 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
 
  \note Vertex normals are neither required nor used. Smoothing interpolates a scalar flux, not a direction, so a mesh reporting \ref helios::NORMAL_SOURCE_NONE is smoothed just as one carrying authored normals is. This is unrelated to the \ref Visualizer smooth shading controlled by \ref Visualizer::enableSmoothShading(), which does interpolate normals and is a pure rendering concern with no measurement semantics.
 
+ \subsubsection RadCamAtmosphere Simulating Satellite Imagery
+
+ A camera normally records the radiance leaving the scene. A sensor above the atmosphere, such as a satellite, instead records that radiance attenuated by the atmosphere, plus light scattered into its view by the atmosphere itself (path radiance) and by the surrounding ground (the adjacency effect). \ref RadiationModel::enableCameraAtmosphere() converts a camera's images to the radiance at such a sensor, using spectra computed by \ref SolarPosition::calculateSensorAtmosphereSpectra() in the solar position plug-in (see its documentation for the model and its accuracy). After each camera ray trace, the radiance of every pixel in a band becomes \f$L_{path} + T_{dir}^{\uparrow} L_{pixel} + L_{adj}\f$, with the path and adjacency radiances integrated over the band with the camera's spectral response and the transmittance averaged over the band, weighted by the global irradiance and the spectral response.
+
+ The scene should be illuminated with the direct and diffuse irradiance spectra computed together with the atmosphere spectra, so that the light reaching the scene and the light leaving it pass through the same atmosphere:
+
+ ~~~~~~
+  SolarPosition sun( 0, 36.93f, 3.33f, &context );
+  sun.setAtmosphericConditions( 101325.f, 298.f, 0.5f, 0.1f );
+  sun.setGroundAlbedo( 0.15f );
+
+  vec3 camera_position = make_vec3(0, 0, 50);
+  vec3 camera_lookat = make_vec3(0, 0, 0);
+  sun.calculateSensorAtmosphereSpectra( "satellite_atmosphere", camera_position - camera_lookat );
+
+  RadiationModel radiation(&context);
+  radiation.addRadiationBand( "red", 620, 670 );
+  radiation.disableEmission( "red" );
+  uint sun_source = radiation.addCollimatedRadiationSource( sun.getSunDirectionVector() );
+  radiation.setSourceSpectrum( sun_source, "satellite_atmosphere_direct_irradiance" );
+  radiation.setDiffuseSpectrum( "satellite_atmosphere_diffuse_irradiance" );
+
+  CameraProperties camera_properties;
+  camera_properties.HFOV = 5.f; //narrow field of view
+  camera_properties.exposure = "manual"; //keep pixel values in radiance units
+  camera_properties.white_balance = "off";
+  radiation.addRadiationCamera( "satellite", {"red"}, camera_position, camera_lookat, camera_properties, 1 );
+  radiation.enableCameraAtmosphere( "satellite", "satellite_atmosphere" );
+
+  radiation.updateGeometry();
+  radiation.runBand( "red" );
+ ~~~~~~
+
+ The camera does not need to be placed at orbital altitude: the atmosphere is applied analytically, so only its viewing direction matters. A camera a short distance above the scene with a narrow field of view avoids numerical precision problems, and its image can be averaged to the footprint of the satellite pixels being simulated. The atmosphere spectra describe the camera's central viewing direction, so the field of view should be narrow. The following requirements are checked, and violating any of them raises an error:
+ <ul>
+ <li>The atmosphere spectra must have been computed for the direction from the camera's look-at point toward its position (to within 1 degree).</li>
+ <li>Every pixel must see the scene; sky pixels have no surface for the atmosphere to act on.</li>
+ <li>A reflective band must lie within the wavelength range of the atmosphere spectra (300-2600 nm when they are computed at the default 1 nm resolution).</li>
+ <li>A thermal band must have wavelength bounds within 5502-15326 nm (the range of the thermal atmosphere spectra), its spectral response must not be zero over the band, and each pixel's brightness temperature must lie within 150-400 K.</li>
+ </ul>
+
+ Emission (thermal) bands are converted using the thermal atmosphere computed by \ref SolarPosition::calculateSensorThermalAtmosphere() under the same label (see \ref SensorThermalAtmosphereTheory in the solar position plug-in, which lists the satellite bands it covers). A thermal band must have wavelength bounds within the range of the thermal atmosphere spectra, 5502-15326 nm, which covers every thermal band from about 5.5 to 15.3 \f$\mu\f$m (e.g., GOES ABI bands 8-16, MODIS bands 27-36, ASTER bands 10-14, Landsat TM/ETM+ band 6 and TIRS bands 10 and 11, and 7.5-13.5 \f$\mu\f$m or 8-14 \f$\mu\f$m microbolometer cameras) but not the 3.5-5 \f$\mu\f$m bands, where reflected sunlight is significant. Because an emission band with wavelength bounds emits only the in-band part of the Planck spectrum (see \ref RadEmission), the pixels are in-band radiances. Each pixel's radiance is converted to a brightness temperature; the Planck spectrum at that temperature is multiplied by the atmospheric transmittance wavelength by wavelength and integrated over the band with the camera's spectral response, and the upwelling atmospheric radiance, integrated with the same response, is added. Without a spectral response this gives \f$\bar{\tau} L_{pixel} + L^{\uparrow}\f$, where \f$\bar{\tau}\f$ is the transmittance averaged over the band weighted by the Planck spectrum at the pixel's brightness temperature. With a spectral response (\ref RadiationModel::setCameraSpectralResponse()) the result is the radiance weighted by the response, as for reflective bands; the conversion assumes that the radiance leaving each pixel has the spectral shape of a blackbody, which holds for the emitted radiance of a surface whose emissivity does not vary within the band.
+
+ The emissivity of many surfaces varies with wavelength in the thermal infrared: quartz and other silicate minerals have strong absorption features (reststrahlen bands) within the 8-14 \f$\mu\f$m window, so soils and rocks emit less at some of its wavelengths than at others (<a href="https://doi.org/10.1016/0034-4257(92)90092-X">Salisbury and D'Aria 1992</a>). Each thermal band therefore needs its own emissivity, set as primitive data <code>emissivity_<band label></code>. It can be computed from a measured directional hemispherical reflectance spectrum \f$R(\lambda)\f$, such as those of the <a href="https://speclib.jpl.nasa.gov">ECOSTRESS spectral library</a>, as \f$1 - R\f$ (Kirchhoff's law, which Salisbury and D'Aria use to predict emissivity from their reflectance measurements) averaged over the band, weighted by the band's spectral response if it is known. The sky longwave radiance reflected by the scene is whatever diffuse flux the band is given (\ref RadiationModel::setDiffuseRadiationFlux()), which must be the in-band value; \ref SolarPosition::getThermalSkyFlux() computes it from the same atmosphere, e.g. <code>radiation.setDiffuseRadiationFlux( "TIR", sun.getThermalSkyFlux( 10600, 11190 ) )</code>.
+
+ Any exposure setting other than <code>"manual"</code>, and any white balance other than <code>"off"</code>, rescales the images after the atmosphere is applied, so use <code>exposure = "manual"</code> and <code>white_balance = "off"</code> when radiance values are needed.
+
  \subsubsection RadCamWhiteBalance Radiation Camera White Balance
 
  The \ref CameraProperties::white_balance setting controls whether the first three bands of a camera (taken as red, green and blue) are white balanced after \ref RadiationModel::runBand() renders them. With "off", pixel values are left as rendered (after exposure). With "auto" (the default), each of the three bands is scaled so that a spectrally flat surface comes out neutral grey under the light that illuminates the scene.
@@ -971,6 +1059,8 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  \subsubsection RadCamCalibColor Radiation Camera Color Calibration
 
  By default, it is assumed that the spectral sensitivity is 100\% across all wavelengths. This is not the case for any real camera, as sensitivity of the sensor usually varies greatly with wavelength as shown in the image below. We need to set the spectral response of each camera channel. This can be done using the \ref RadiationModel::setCameraSpectralResponse() method. Three arguments must be provided: 1) the label for the camera to be set (first argument to the camera adder method), 2) the label for the camera channel (e.g., "red", "PAR", etc.), and 3) the label for global data in the Context containing spectral response data. The 3rd point is similar to how spectral data is specified for sources and radiative properties - a vector of wavelength and intensity values.
+
+ With a spectral response \f$C_\lambda\f$, a surface's camera-weighted reflectivity for radiation with spectrum \f$I_\lambda\f$ is \f$\int \rho_\lambda I_\lambda C_\lambda d\lambda / \int I_\lambda d\lambda\f$, over the wavelengths where both \f$I\f$ and \f$C\f$ are tabulated (the band's wavelength bounds are not applied here), so it keeps the magnitude of the response. Radiation without a spectrum (a source flux set without a source spectrum, or a diffuse flux without a diffuse spectrum) is treated as a spectrum of 1 across the response when any radiation in the band has a spectrum, so that all of it is on one scale. In a band where no radiation has a spectrum, the camera-weighted reflectivity is instead the response-weighted average \f$\int \rho_\lambda C_\lambda d\lambda / \int C_\lambda d\lambda\f$, and a white surface gives 1. Specularly reflected source radiation is weighted as a white surface would be. Diffuse and scattered radiation use the flux-weighted combination described in \ref RadProps. A response that is zero everywhere is an error.
 
  \image html CameraSpectralResponse.png
 
@@ -1194,6 +1284,14 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  ~~~~~~{.cpp}
  radiationmodel.runBand("PAR"); //run the model for the 'PAR' band
  ~~~~~~
+
+ Multiple bands can also be run together in a single call by passing a vector of band labels, which is generally faster than running each band separately:
+
+ ~~~~~~{.cpp}
+ radiationmodel.runBand({"PAR","NIR"}); //run the 'PAR' and 'NIR' bands together
+ ~~~~~~
+
+ \note Bands run together share a single ray launch, so the direct and diffuse ray counts used are the largest values set for any of the bands in the call (see \ref RadiationModel::setDirectRayCount() "setDirectRayCount()" and \ref RadiationModel::setDiffuseRayCount() "setDiffuseRayCount()"). For example, if the 'PAR' band is set to 100 direct rays per primitive and the 'NIR' band is set to 1000, both bands are traced with 1000 rays per primitive. To use a different ray count for each band, run the bands in separate calls to \ref RadiationModel::runBand() "runBand()".
 
  The context geometry is built within the radiation model automatically, so \ref RadiationModel::updateGeometry() "updateGeometry()" does not have to be called before the first run. It is also rebuilt automatically when primitives have been <b>added to</b> or <b>deleted from</b> the Context since the last build, which is detected by comparing the number of primitives in the Context against the number present when the geometry was last built.
 

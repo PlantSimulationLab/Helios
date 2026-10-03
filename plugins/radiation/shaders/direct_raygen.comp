@@ -426,6 +426,9 @@ void main() {
     ivec2 subdivisions = obj_subdivisions_buf.subdivisions[prim_idx];
     uint twosided = twosided_buf.twosided_flags[prim_idx];
 
+    // A translucent cover books what reaches it with its angular glass properties, not rho/tau.
+    bool origin_is_cover = glass_cover_all_bands(prim_idx, pc.band_count, pc.material_band_count);
+
     // Get transform matrix (16 floats per primitive)
     float transform_mat[16];
     for (uint i = 0; i < 16; ++i) {
@@ -678,47 +681,28 @@ void main() {
 
                     if (occluder == 0xFFFFFFFF) break; // miss — reached the source
 
-                    // For a sphere source, a hit beyond the source does not block.
+                    // For a sphere source, a hit beyond the source does not block. occlusion_t is measured from
+                    // trace_origin, which is past any translucent covers already crossed.
                     if (source_type != 0) {
-                        float dist_to_source = length(source_pos - ray_origin);
+                        float dist_to_source = length(source_pos - trace_origin);
                         if (occlusion_t >= dist_to_source) break; // hit is past the source — unblocked
                     }
 
-                    // Is this occluder a translucent cover for ALL launched bands? If so, pass through.
-                    bool all_glass = (occluder != prim_idx);
-                    for (uint band = 0; band < pc.band_count && band < uint(GLASS_MAX_BANDS); ++band) {
-                        uint gb = band_map_buf.map[band];
-                        if (is_glass_buf.is_glass[occluder * pc.material_band_count + gb] == 0u) {
-                            all_glass = false;
-                            break;
-                        }
+                    // A primitive that is not a translucent cover for all launched bands is an opaque blocker.
+                    if (occluder == prim_idx || !glass_cover_all_bands(occluder, pc.band_count, pc.material_band_count)) {
+                        is_occluded = true;
+                        break;
                     }
 
-                    if (!all_glass) { is_occluded = true; break; } // opaque blocker
-
-                    // Glass pass-through: accumulate per-band tau and deposit the cover's own rho/alpha.
+                    // Glass pass-through: accumulate the per-band transmittance. What the cover itself absorbs and
+                    // reflects is booked by the cover's own rays, not here: this ray was launched by the surface
+                    // behind the cover, so its strength is normalized to that surface's area and angle.
                     uint cov_nbase = occluder * 3;
                     vec3 cov_normal = vec3(normals_buf.normals[cov_nbase], normals_buf.normals[cov_nbase + 1], normals_buf.normals[cov_nbase + 2]);
                     float cov_cos = abs(dot(ray_dir, normalize(cov_normal)));
-                    bool cov_top = dot(cov_normal, ray_dir) < 0.0;
 
                     for (uint band = 0; band < pc.band_count && band < uint(GLASS_MAX_BANDS); ++band) {
-                        uint gb = band_map_buf.map[band];
-                        uint gmi = occluder * pc.material_band_count + gb;
-                        vec3 tra = glass_tau_rho_alpha(cov_cos, glass_n_buf.glass_n[gmi], glass_KL_buf.glass_KL[gmi]);
-
-                        uint sflux_idx = src_idx * pc.band_count + band;
-                        float incoming = source_fluxes_buf.fluxes[sflux_idx] * strength * cover_tau[band];
-                        uint cov_rad_idx = index_prim_band(occluder, band, pc.band_count);
-                        // NOTE: this pass-through loop runs under divergent control flow (rays cross
-                        // different numbers of covers), so subgroup reductions are unsafe here — use
-                        // per-thread atomics directly.
-                        if (incoming > 0.0) {
-                            atomicAdd(rad_in_buf.radiation_in[cov_rad_idx], incoming * tra.z);
-                            if (cov_top) atomicAdd(scatter_top_buf.scatter_top[cov_rad_idx], incoming * tra.y);
-                            else         atomicAdd(scatter_bottom_buf.scatter_bottom[cov_rad_idx], incoming * tra.y);
-                        }
-                        cover_tau[band] *= tra.x;
+                        cover_tau[band] *= glass_cover_tau_rho_alpha(occluder, band, pc.material_band_count, cov_cos).x;
                     }
 
                     // Advance just past the cover hit and continue toward the source.
@@ -749,6 +733,16 @@ void main() {
 
                     // Calculate absorbed energy (matches CUDA rayHit.cu line 202)
                     float absorption_factor = 1.0 - rho - tau;
+
+                    // A translucent cover absorbs alpha(theta) and reflects rho(theta) back out of the lit face. The
+                    // transmitted tau(theta) continues through undeviated and is delivered to the surfaces behind the
+                    // cover by their own rays passing through it, so it is not scattered here.
+                    if (origin_is_cover) {
+                        vec3 cover_tra = glass_cover_tau_rho_alpha(prim_idx, band, pc.material_band_count, abs(dot(ray_dir, normalize(normal))));
+                        rho = cover_tra.y;
+                        tau = 0.0;
+                        absorption_factor = cover_tra.z;
+                    }
                     float energy = flux * strength * absorption_factor;
 
                     // Accumulate to radiation_in buffer with subgroup reduction
@@ -794,6 +788,11 @@ void main() {
                         uint cam_mat_idx = ((src_idx * pc.primitive_count + prim_idx) * pc.material_band_count + global_b) * pc.camera_count + cam;
                         float rho_cam = reflectivity_cam_buf.reflectivity_cam[cam_mat_idx];
                         float tau_cam = transmissivity_cam_buf.transmissivity_cam[cam_mat_idx];
+                        if (origin_is_cover) {
+                            // A cover's reflectance is spectrally flat within a band: each camera weights it by its white reference.
+                            rho_cam = rho * white_reference_cam_buf.white_reference_cam[(src_idx * pc.material_band_count + global_b) * pc.camera_count + cam];
+                            tau_cam = 0.0;
+                        }
                         float scatter_rho_cam_sum = subgroupAdd(flux * strength * rho_cam);
                         float scatter_tau_cam_sum = subgroupAdd(flux * strength * tau_cam);
                         uint cam_rad_idx = cam * cam_scatter_stride + rad_idx;

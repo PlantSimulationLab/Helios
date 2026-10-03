@@ -272,6 +272,9 @@ struct RadiationCamera {
     std::vector<uint> pixel_label_UUID;
     std::vector<float> pixel_depth;
 
+    //! Label prefix of the sensor atmosphere spectra applied to this camera's images (empty if no atmosphere is applied). See RadiationModel::enableCameraAtmosphere().
+    std::string atmosphere_label;
+
     //! Exposure gain that was actually applied to pixel data (1.0 if manual/no exposure)
     float applied_exposure_gain = 1.0f;
 
@@ -598,8 +601,17 @@ struct RadiationBand {
     //! Flag that determines if emission calculations are performed for wave band
     bool emissionFlag;
 
-    //! Waveband range of band
+    //! Waveband range of band, (0,0) if the band was added without wavelength bounds
     helios::vec2 wavebandBounds;
+
+    //! Whether the band was added with wavelength bounds
+    /**
+     * A band added without bounds stores (0,0). A band with bounds may start at 0 nm, so the bounds are set when either one is non-zero.
+     * \return True if the band has wavelength bounds.
+     */
+    [[nodiscard]] bool hasWavebandBounds() const {
+        return wavebandBounds.x != 0.f || wavebandBounds.y != 0.f;
+    }
 };
 
 //! Possible types of radiation sources
@@ -755,6 +767,7 @@ public:
      * \param[in] label Label used to reference the band
      * \param[in] N Number of rays
      * \note Default is 100 rays/primitive.
+     * \note When multiple bands are run together in a single call to \ref RadiationModel::runBand(const std::vector<std::string> &labels) "runBand()", they share one ray launch, which uses the largest direct ray count among those bands. To use a different direct ray count for each band, run the bands in separate calls to \ref RadiationModel::runBand(const std::string &label) "runBand()".
      */
     void setDirectRayCount(const std::string &label, size_t N);
 
@@ -763,6 +776,7 @@ public:
      * \param[in] label Label used to reference the band
      * \param[in] N Number of rays
      * \note Default is 1000 rays/primitive.
+     * \note When multiple bands are run together in a single call to \ref RadiationModel::runBand(const std::vector<std::string> &labels) "runBand()", they share one ray launch, which uses the largest diffuse ray count among those bands. This count is also used for the scattering iterations. To use a different diffuse ray count for each band, run the bands in separate calls to \ref RadiationModel::runBand(const std::string &label) "runBand()".
      */
     void setDiffuseRayCount(const std::string &label, size_t N);
 
@@ -841,8 +855,8 @@ public:
     //! Add a spectral radiation band to the model with explicit specification of the spectral wave band
     /**
      * \param[in] label Label used to reference the band
-     * \param[in] wavelength_min Lower bounding wavelength for wave band
-     * \param[in] wavelength_max Upper bounding wavelength for wave band
+     * \param[in] wavelength_min Lower bounding wavelength for wave band in nm (must be >= 0; a band may start at 0 nm)
+     * \param[in] wavelength_max Upper bounding wavelength for wave band in nm (must exceed wavelength_min by at least 1 nm)
      */
     void addRadiationBand(const std::string &label, float wavelength_min, float wavelength_max);
 
@@ -857,8 +871,8 @@ public:
     /**
      * \param[in] old_label Label of old radiation band to be copied
      * \param[in] new_label Label of new radiation band to be created
-     * \param[in] wavelength_min Lower bounding wavelength for wave band
-     * \param[in] wavelength_max Upper bounding wavelength for wave band
+     * \param[in] wavelength_min Lower bounding wavelength for wave band in nm (must be >= 0)
+     * \param[in] wavelength_max Upper bounding wavelength for wave band in nm (must exceed wavelength_min by at least 1 nm). Passing 0 for both bounds creates a band without wavelength bounds.
      */
     void copyRadiationBand(const std::string &old_label, const std::string &new_label, float wavelength_min, float wavelength_max);
 
@@ -1086,30 +1100,36 @@ public:
      */
     float integrateSpectrum(const std::vector<helios::vec2> &object_spectrum) const;
 
-    //! Integrate the product of a radiation source spectral distribution with specified spectral data between two wavelength bounds
+    //! Average spectral data between two wavelength bounds, weighted by a radiation source's spectral distribution
     /**
-     * \param[in] source_ID Identifier of a radiation source.
+     * Computes \f$\int S_\lambda f_\lambda d\lambda / \int S_\lambda d\lambda\f$ from wavelength_min to wavelength_max, where \f$S\f$ is the source spectrum and \f$f\f$ the spectral data. Both
+     * spectra are zero outside the wavelengths at which they are tabulated, so the source weights only the part of the interval its spectrum covers.
+     * \param[in] source_ID Identifier of a radiation source. The source must have a spectrum (see setSourceSpectrum()).
      * \param[in] object_spectrum Vector containing spectral data. Each index of "spectrum" gives the wavelength (.x) and spectral intensity/reflectivity (.y).
      * \param[in] wavelength_min Wavelength for lower bounds of integration
      * \param[in] wavelength_max Wavelength for upper bounds of integration
-     * \return Integral of product of source energy spectrum and spectral data from minimum to maximum wavelength
+     * \return Source-weighted average of the spectral data. An error is thrown if the source spectrum has no energy between the bounds.
      */
     float integrateSpectrum(uint source_ID, const std::vector<helios::vec2> &object_spectrum, float wavelength_min, float wavelength_max) const;
 
-    //! Integrate the product of a radiation source spectral distribution, surface spectral data, and camera spectral response across all wavelengths
+    //! Integrate the product of a radiation source spectral distribution, surface spectral data, and camera spectral response, normalized by the source spectrum
     /**
-     * \param[in] source_ID Identifier of a radiation source.
+     * Computes \f$\int S_\lambda f_\lambda C_\lambda d\lambda / \int S_\lambda d\lambda\f$ over the wavelengths at which both the source spectrum \f$S\f$ and the camera response \f$C\f$
+     * are tabulated. The surface spectral data \f$f\f$ is zero outside the wavelengths at which it is tabulated.
+     * \param[in] source_ID Identifier of a radiation source. The source must have a spectrum (see setSourceSpectrum()).
      * \param[in] object_spectrum Vector containing surface spectral data. Each index of "spectrum" gives the wavelength (.x) and spectral intensity/reflectivity (.y).
      * \param[in] camera_spectrum Vector containing camera spectral response data. Each index of "spectrum" gives the wavelength (.x) and spectral intensity/reflectivity (.y).
-     * \return Integral of product of a radiation source spectral distribution, surface spectral data, and camera spectral response across all wavelengths
+     * \return Camera-weighted integral normalized by the source integral. An error is thrown if the source spectrum has no energy where the camera response is tabulated.
      */
     float integrateSpectrum(uint source_ID, const std::vector<helios::vec2> &object_spectrum, const std::vector<helios::vec2> &camera_spectrum) const;
 
-    //! Integrate the product of surface spectral data and camera spectral response across all wavelengths
+    //! Average surface spectral data weighted by a camera spectral response
     /**
+     * Computes \f$\int f_\lambda C_\lambda d\lambda / \int C_\lambda d\lambda\f$ over the wavelengths at which the camera response \f$C\f$ is tabulated. The surface spectral data \f$f\f$ is
+     * zero outside the wavelengths at which it is tabulated.
      * \param[in] object_spectrum Vector containing surface spectral data. Each index of "spectrum" gives the wavelength (.x) and spectral intensity/reflectivity (.y).
      * \param[in] camera_spectrum Vector containing camera spectral response data. Each index of "spectrum" gives the wavelength (.x) and spectral intensity/reflectivity (.y).
-     * \return Integral of product of a radiation source spectral distribution, surface spectral data, and camera spectral response across all wavelengths
+     * \return Camera-response-weighted average of the surface spectral data. An error is thrown if the camera response is zero everywhere.
      */
     float integrateSpectrum(const std::vector<helios::vec2> &object_spectrum, const std::vector<helios::vec2> &camera_spectrum) const;
 
@@ -1314,6 +1334,33 @@ public:
      * \note If global data in the standard camera spectral library is referenced, the library will be automatically loaded.
      */
     void setCameraSpectralResponse(const std::string &camera_label, const std::string &band_label, const std::string &global_data);
+
+    //! Convert a camera's images to the radiance reaching a sensor above the atmosphere (e.g., a satellite)
+    /**
+     * After each camera ray trace, the radiance of every pixel in a band is replaced by \f$L_{path} + T_{dir}^{\uparrow} L_{pixel} + L_{adj}\f$, where the path radiance \f$L_{path}\f$, adjacency radiance \f$L_{adj}\f$ and upward direct
+     * transmittance \f$T_{dir}^{\uparrow}\f$ are computed by SolarPosition::calculateSensorAtmosphereSpectra() and integrated over the band with the camera's spectral response. The transmittance is averaged over the band
+     * weighted by the global irradiance and the spectral response.
+     * \param[in] camera_label Label of the camera.
+     * \param[in] atmosphere_label Label prefix passed to SolarPosition::calculateSensorAtmosphereSpectra() (reflective bands) and SolarPosition::calculateSensorThermalAtmosphere() (emission bands). The results must exist in
+     * Context global data before the next runBand() call, and must have been computed for the direction from the camera's look-at point toward its position (to within 1 degree).
+     * \note The scene should be illuminated with the "_direct_irradiance" and "_diffuse_irradiance" spectra computed by SolarPosition::calculateSensorAtmosphereSpectra(), so that the illumination and the view path share
+     * one atmosphere.
+     * \note Emission (thermal) bands are converted using the thermal atmosphere computed by SolarPosition::calculateSensorThermalAtmosphere() under the same label. They must have wavelength bounds within the range of the
+     * thermal atmosphere spectra (5502-15326 nm). Each pixel's radiance gives a brightness temperature (150-400 K), and the pixel becomes the radiance of a blackbody at that temperature transmitted through the atmosphere and
+     * integrated over the band with the camera's spectral response, plus the upwelling radiance integrated with the same response. Without a spectral response this is \f$\bar{\tau} L_{pixel} + L^{\uparrow}\f$, with
+     * \f$\bar{\tau}\f$ the transmittance averaged over the band weighted by the Planck spectrum at the brightness temperature.
+     * \note The spectra describe the camera's central viewing direction, so the camera should have a narrow field of view. Every pixel must see the scene (no sky), and reflective bands must lie within the wavelength range
+     * of the atmosphere spectra (300-2600 nm at the default 1 nm resolution).
+     * \note Use manual exposure (CameraProperties::exposure = "manual") and no white balance (CameraProperties::white_balance = "off") to obtain radiance values; any other setting rescales the images after the atmosphere is
+     * applied.
+     */
+    void enableCameraAtmosphere(const std::string &camera_label, const std::string &atmosphere_label);
+
+    //! Stop applying a sensor atmosphere to a camera's images
+    /**
+     * \param[in] camera_label Label of the camera.
+     */
+    void disableCameraAtmosphere(const std::string &camera_label);
 
     //! Set the camera spectral response based on a camera available in the standard camera spectral library (radiation/spectral_data/camera_spectral_library.xml).
     /**
@@ -1595,6 +1642,7 @@ public:
      * \param[in] labels Label used to reference the band (e.g., "PAR")
      * \note Before running the band simulation, you must add at least one radiative band to the simulation (see \ref RadiationModel::addRadiationBand()). Context geometry (see \ref RadiationModel::updateGeometry()) and
      * radiative properties (see RadiationModel::updateRadiativeProperties()) are updated automatically as needed.
+     * \note All bands in the call are traced by a shared ray launch, so the direct and diffuse ray counts used are the largest values set for any of the bands (see \ref RadiationModel::setDirectRayCount() and \ref RadiationModel::setDiffuseRayCount()). Bands with lower ray counts receive more rays than requested. To use a different ray count for each band, run the bands in separate calls.
      */
     void runBand(const std::vector<std::string> &labels);
 
@@ -2252,7 +2300,7 @@ protected:
 
     // --- Constants and Defaults --- //
 
-    //! Steffan Boltzmann Constant
+    //! Stefan-Boltzmann Constant
     float sigma = 5.6703744E-8;
 
     //! Default primitive reflectivity
@@ -2319,6 +2367,30 @@ protected:
      * \return Vector of base sky radiance values (W/m²/sr) for each band, to be used for camera rendering
      */
     std::vector<float> updateAtmosphericSkyModel(const std::vector<std::string> &band_labels, const RadiationCamera &camera);
+
+    //! Apply the sensor atmosphere enabled with enableCameraAtmosphere() to the pixel data of the bands just traced for a camera
+    /**
+     * \param[in,out] camera Camera whose pixel data is converted.
+     * \param[in] launched_band_labels Bands traced in the current runBand() call.
+     */
+    void applyCameraAtmosphere(RadiationCamera &camera, const std::vector<std::string> &launched_band_labels);
+
+    //! Apply the thermal sensor atmosphere to the pixel data of one emission band of a camera
+    /**
+     * Each pixel's in-band radiance is converted to a brightness temperature; the radiance of a blackbody at that temperature is transmitted through the atmosphere wavelength by wavelength and integrated over the band with
+     * the camera's spectral response, and the upwelling radiance integrated with the same response is added.
+     * \param[in,out] camera Camera whose pixel data is converted.
+     * \param[in] band Label of the emission band.
+     */
+    void applyCameraThermalAtmosphere(RadiationCamera &camera, const std::string &band);
+
+    //! Spectral response of a camera band, or an empty vector if the band has no response spectrum (a uniform response of one)
+    /**
+     * \param[in] camera Camera.
+     * \param[in] band Label of the band.
+     * \return Response spectrum as (wavelength in nm, response) pairs.
+     */
+    [[nodiscard]] std::vector<helios::vec2> loadCameraBandResponse(const RadiationCamera &camera, const std::string &band);
 
     //! Update Prague sky model angular parameters for general diffuse radiation
     /**
@@ -2406,6 +2478,12 @@ protected:
 
     //! Backend-agnostic material data (built from Context, uploaded to backend)
     helios::RayTracingMaterial material_data;
+
+    //! Per band label, the first reason the last updateRadiativeProperties() could not weight a primitive's reflectivity/transmissivity spectrum in that band
+    /**
+     * Raised by runBand() only when the band is run, so a problem in a band that is not being run does not stop the others.
+     */
+    std::map<std::string, std::string> spectral_weighting_errors;
 
     //! Backend-agnostic source data (built from radiation_sources, uploaded to backend)
     std::vector<helios::RayTracingSource> source_data;

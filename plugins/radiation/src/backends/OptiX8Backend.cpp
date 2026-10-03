@@ -1046,6 +1046,10 @@ void OptiX8Backend::launchCameraRays(const RayTracingLaunchParams &launch_params
         helios_runtime_error("ERROR (OptiX8Backend::launchCameraRays): No acceleration structure. "
                              "Add geometry to the Context, then call updateGeometry() after modifying Context geometry.");
     }
+    if (launch_params.band_launch_flag.empty()) {
+        helios_runtime_error("ERROR (OptiX8Backend::launchCameraRays): The launch parameters do not say which bands are launched. "
+                             "They are needed to tell which primitives are translucent covers (glass) that the ray passes through.");
+    }
 
     applyLaunchParams(launch_params);
     requireSpecularBufferSized("launchCameraRays", launch_params);
@@ -1113,6 +1117,10 @@ void OptiX8Backend::launchPixelLabelRays(const RayTracingLaunchParams &launch_pa
     if (gas_handle == 0) {
         helios_runtime_error("ERROR (OptiX8Backend::launchPixelLabelRays): No acceleration structure. "
                              "Add geometry to the Context, then call updateGeometry() after modifying Context geometry.");
+    }
+    if (launch_params.band_launch_flag.empty()) {
+        helios_runtime_error("ERROR (OptiX8Backend::launchPixelLabelRays): The launch parameters do not say which bands are launched. "
+                             "They are needed to tell which primitives are translucent covers (glass) that the ray passes through.");
     }
 
     applyLaunchParams(launch_params);
@@ -1604,7 +1612,9 @@ void OptiX8Backend::buildGAS(uint32_t Nprimitives) {
 
     if (Nprimitives == 0 || !d_aabbs) return;
 
-    const unsigned int build_flags[]       = {OPTIX_GEOMETRY_FLAG_NONE};
+    // The direct-ray any-hit program multiplies the ray's transmittance by that of each translucent cover it passes, which
+    // is only right if it runs once per intersection. Without this flag OptiX may call it more than once.
+    const unsigned int build_flags[]       = {OPTIX_GEOMETRY_FLAG_REQUIRE_SINGLE_ANYHIT_CALL};
     OptixBuildInputCustomPrimitiveArray ca = {};
     ca.aabbBuffers    = &d_aabbs;
     ca.numPrimitives  = Nprimitives;

@@ -116,10 +116,12 @@ namespace helios {
         /**
          * \brief Convert Helios turbidity (AOD) to Prague visibility (km)
          *
-         * Uses Koschmieder formula: V ≈ 3.9 / turbidity
-         * Clamps result to Prague dataset range [20, 131.8 km]
+         * The turbidity is converted to the aerosol optical depth at 550 nm with an Ångström exponent of 1.3, which is converted to visibility by log-log interpolation through the Prague model's continental
+         * polluted, average and clean atmospheres (viewing distances 27.6, 59.4 and 131.8 km; Wilkie et al. 2021, Fig. 4), whose OPAC aerosol optical depths at 550 nm are 0.327, 0.151 and 0.064 (Hess et al. 1998).
+         * Hazier air is extrapolated from the two most polluted atmospheres. The result is limited to the dataset's range of 20-131.8 km: an aerosol optical depth at 550 nm below 0.064 gives 131.8 km, and above
+         * about 0.45 gives 20 km.
          *
-         * \param[in] turbidity Ångström aerosol optical depth at 500 nm
+         * \param[in] turbidity Ångström's aerosol turbidity coefficient (β), the aerosol optical depth at 1 um (must be >= 0)
          * \return Visibility in kilometers
          */
         static float turbidityToVisibility(float turbidity);

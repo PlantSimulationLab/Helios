@@ -73,6 +73,8 @@ uint AlmondFruitPrototype(helios::Context *context_ptr, uint subdivisions);
 uint AlmondFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open = false);
 void AlmondPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);
 void AlmondPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer);
+//! Phytomer callback for an almond model that defines a "spur" shoot type: grows spurs from the lateral buds that did not grow a long shoot.
+void AlmondSpurPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer);
 
 uint AppleFruitPrototype(helios::Context *context_ptr, uint subdivisions);
 uint AppleFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open = false);
@@ -106,7 +108,7 @@ void CowpeaPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint sho
 uint GrapevineFruitPrototype(helios::Context *context_ptr, uint subdivisions);
 // uint GrapevineFlowerPrototype( helios::Context* context_ptr, uint subdivisions, bool flower_is_open=false );
 void GrapevinePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);
-// void GrapevinePhytomerCallbackFunction( std::shared_ptr<Phytomer> phytomer );
+void GrapevinePhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer);
 
 uint MaizeTasselPrototype(helios::Context *context_ptr, uint subdivisions);
 uint MaizeEarPrototype(helios::Context *context_ptr, uint subdivisions);

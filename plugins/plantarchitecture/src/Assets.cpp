@@ -730,6 +730,32 @@ uint AlmondFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool
     return objID;
 }
 
+//! Grow spurs from the lateral buds of a limb that did not grow a long shoot.
+/** In almond and pistachio most lateral vegetative buds grow short shoots carrying a rosette of leaves, and these clothe the older wood
+    and carry most of the tree's foliage. The bud-break probabilities decide which buds grow long shoots when a shoot leaves dormancy; a
+    bud that lost that draw is dead, and here a fraction of those grow a shoot of type "spur" instead, so that the number of spurs can be
+    set without changing the number of long shoots. A bud is considered once: its shoot type is set to "spur" whether or not it grows
+    one, which is what marks it as considered. Buds of the current season's nodes are still dormant and are left for next spring's draw. */
+static void growSpursFromUnbrokenBuds(const std::shared_ptr<Phytomer> &phytomer, float spur_fraction) {
+    const Shoot &shoot = *phytomer->parent_shoot_ptr;
+    if (spur_fraction <= 0.f || shoot.isdormant || shoot.shoot_type_label == "spur" || phytomer->shoot_index.x == 0) {
+        return;
+    }
+    for (auto &petiole: phytomer->axillary_vegetative_buds) {
+        for (auto &vbud: petiole) {
+            if (vbud.state == BUD_DEAD && vbud.shoot_ID == uint(-1) && vbud.shoot_type_label != "spur") {
+                vbud.shoot_type_label = "spur";
+                if (shoot.context_ptr->randu() < spur_fraction) {
+                    Phytomer::setVegetativeBudState(BUD_ACTIVE, vbud);
+                }
+            }
+        }
+    }
+}
+
+//! Fraction of the lateral vegetative buds left unbroken on an almond limb's year-old wood that grow a spur (see growSpursFromUnbrokenBuds()).
+static constexpr float almond_spur_fraction = 0.2f;
+
 void AlmondPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
 
     if (phytomer->internode_length_max < 0.01) { // spurs
@@ -737,7 +763,10 @@ void AlmondPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint sho
         phytomer->setVegetativeBudState(BUD_DEAD);
         phytomer->scaleLeafPrototypeScale(0.8);
         phytomer->setFloralBudState(BUD_DEAD);
-        phytomer->parent_shoot_ptr->growth_state.max_nodes_per_season_growth_cap = 7;
+        // A shoot of type "spur" sets its own number of leaves per season.
+        if (phytomer->parent_shoot_ptr->shoot_type_label != "spur") {
+            phytomer->parent_shoot_ptr->growth_state.max_nodes_per_season_growth_cap = 7;
+        }
     }
 
     // blind nodes
@@ -748,6 +777,10 @@ void AlmondPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint sho
 }
 
 void AlmondPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
+}
+
+void AlmondSpurPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
+    growSpursFromUnbrokenBuds(phytomer, almond_spur_fraction);
 }
 
 uint AppleFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
@@ -1102,10 +1135,12 @@ uint GrapevineFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
 
 void GrapevinePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
 
-    // Blind nodes: a grapevine does not fruit above the second node of a shoot, and the anlagen at nodes
-    // beyond roughly the tenth become tendrils rather than lateral shoots, so the buds that would carry
-    // them are killed here rather than being left for the growth model to break.
-    if (shoot_node_index >= 2) {
+    // A grapevine shoot bears its clusters opposite the leaves at the third to sixth nodes from its base; the two basal
+    // nodes carry none, and above the sixth the same positions bear tendrils. A shoot carries one to three clusters, and
+    // with three, two sit on adjacent nodes, the next node has none and the following node has the third (Hellman,
+    // Grapevine Structure and Function). The candidate nodes are therefore the third, fourth and sixth.
+    const bool is_cluster_node = shoot_node_index == 2 || shoot_node_index == 3 || shoot_node_index == 5;
+    if (!is_cluster_node) {
         phytomer->setFloralBudState(BUD_DEAD);
     }
     // Summer laterals arise at most nodes of a fruiting shoot and are most vigorous basally, dying out
@@ -1114,31 +1149,53 @@ void GrapevinePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint 
     if (phytomer->rank >= 1 && shoot_node_index >= 8) {
         phytomer->setVegetativeBudState(BUD_DEAD);
     }
-    // A lateral does not fruit, and does not itself bear further laterals: second-order branching is what
-    // would run the canopy away. This previously started at rank 2, which is the fruiting shoot itself, so
-    // every lateral bud on the vine was killed at creation and the model grew no laterals at all -- the
-    // canopy was missing the third of its leaf area they carry, and no bud-break probability could
-    // restore it because the buds were already dead when the probability was sampled.
-    if (phytomer->rank >= 2) {
-        phytomer->setFloralBudState(BUD_DEAD);
+    // A lateral does not fruit. A lateral is recognised by what bears it, a fruiting shoot or another lateral, rather than
+    // by its rank: the fruiting shoots of a cane-trained vine grow from canes that themselves come off the trunk, so they are
+    // of rank 2, and a test on rank killed every floral bud on the vine.
+    const Shoot &shoot = *phytomer->parent_shoot_ptr;
+    if (shoot.parent_shoot_ID >= 0) {
+        const std::string &bearer_type = shoot.plantarchitecture_ptr->getPlantShoot(shoot.plantID, uint(shoot.parent_shoot_ID))->shoot_type_label;
+        if (bearer_type == "grapevine_shoot" || bearer_type == "grapevine_shoot_mirrored" || bearer_type == "grapevine_lateral") {
+            phytomer->setFloralBudState(BUD_DEAD);
+        }
     }
-    if (phytomer->rank >= 3) {
+    // Nor does a lateral itself bear further laterals: second-order branching is what would run the canopy away. As above, a
+    // lateral is recognised by its type rather than its rank, which differs between training systems: the fruiting shoots of a
+    // Wye vine grow from cordons borne on arms off the trunk, a rank deeper than those of a VSP vine.
+    if (shoot.shoot_type_label == "grapevine_lateral") {
         phytomer->setVegetativeBudState(BUD_DEAD);
     }
 }
 
-// void GrapevinePhytomerCallbackFunction( std::shared_ptr<Phytomer> phytomer ){
+// ---- Grapevine fruit-zone leaf removal ---- //
 //
-//     if( phytomer->isdormant ){
-//         if( phytomer->shoot_index.x >= phytomer->shoot_index.y-1  ){
-//             phytomer->setVegetativeBudState( BUD_DORMANT ); //first vegetative buds always break
-//         }
-//         if( phytomer->shoot_index.x <= phytomer->shoot_index.y-4  ){
-//             phytomer->setFloralBudState( BUD_DORMANT ); //first vegetative buds always break
-//         }
-//     }
-//
-// }
+// Leaves around the clusters are pulled by hand or machine at about fruit set, to open the fruit zone to light and air. The leaves of
+// the basal nodes of each fruiting shoot, up to and including the node of the highest cluster, are removed.
+
+//! Number of basal nodes of a fruiting shoot whose leaves are pulled. Clusters are borne up to the sixth node (see GrapevinePhytomerCreationFunction()).
+static constexpr uint grapevine_leaf_pulling_nodes = 6;
+//! Age (days) of a fruiting shoot at which its fruit-zone leaves are pulled. Fruit set of the library vines is 45 days after a shoot's buds become active.
+static constexpr float grapevine_leaf_pulling_shoot_age = 45.f;
+
+void GrapevinePhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
+
+    const Shoot &shoot = *phytomer->parent_shoot_ptr;
+    if (shoot.shoot_type_label != "grapevine_shoot" && shoot.shoot_type_label != "grapevine_shoot_mirrored") {
+        return;
+    }
+    // A lateral borne on a fruiting shoot keeps its leaves. Where laterals have no shoot type of their own they carry the label of the shoot that bears them.
+    if (shoot.parent_shoot_ID >= 0) {
+        const std::string &bearer_type = shoot.plantarchitecture_ptr->getPlantShoot(shoot.plantID, uint(shoot.parent_shoot_ID))->shoot_type_label;
+        if (bearer_type == "grapevine_shoot" || bearer_type == "grapevine_shoot_mirrored") {
+            return;
+        }
+    }
+
+    // The whole fruit zone is pulled in one pass, timed from the age of the shoot rather than of each leaf.
+    if (uint(phytomer->shoot_index.x) < grapevine_leaf_pulling_nodes && phytomer->hasLeaf() && shoot.phytomers.front()->age >= grapevine_leaf_pulling_shoot_age) {
+        phytomer->removeLeaf();
+    }
+}
 
 uint MaizeTasselPrototype(helios::Context *context_ptr, uint subdivisions) {
 
@@ -1291,13 +1348,157 @@ void PistachioPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint 
         phytomer->setVegetativeBudState(BUD_DEAD);
         phytomer->setFloralBudState(BUD_DEAD);
     }
+
+    // A lateral that breaks well below its parent's tip gets short internodes and is a spur: a few leaves a season, and no branching.
+    if (phytomer->internode_length_max < 0.01) {
+        phytomer->setInternodeMaxRadius(0.005);
+        phytomer->setVegetativeBudState(BUD_DEAD);
+        phytomer->parent_shoot_ptr->growth_state.max_nodes_per_season_growth_cap = 6;
+    }
+}
+
+// ---- Pistachio orchard training ---- //
+//
+// California pistachio is trained in its first seasons after the scion is headed (UC ANR, Sample Costs to Establish and Produce
+// Pistachios, San Joaquin Valley South, 2020): the primary scaffolds are tipped during their first growing season to make them branch,
+// and in the following dormant season the secondaries are thinned to 2-3 per primary and headed to 11-13 in; after that the tree is left
+// to grow. The values below reproduce the trees of the QSM calibration in projects/QSMcalibration.
+
+//! Length (m) at which a scaffold is tipped in its first growing season.
+static constexpr float pistachio_scaffold_tip_length = 0.45f;
+//! Length (m) to which the secondaries are headed in the first winter.
+static constexpr float pistachio_secondary_head_length = 0.30f;
+//! Secondaries kept on each scaffold in the first winter.
+static constexpr size_t pistachio_secondaries_per_scaffold = 3;
+//! Nodes below a cut on which one bud each is made to break.
+static constexpr uint pistachio_buds_released_per_cut = 2;
+//! Nodes below a scaffold's tipping cut on which one bud each is made to break. More than the secondaries kept, so that the first-winter
+//! thinning has a choice: the scaffold's other buds do not break until the following spring.
+static constexpr uint pistachio_buds_released_at_tipping = 5;
+//! Fraction of the lateral vegetative buds left unbroken on a limb's year-old wood that grow a spur (see growSpursFromUnbrokenBuds()).
+static constexpr float pistachio_spur_fraction = 0.f;
+//! Number of nodes to keep so that a shoot is cut back to about `length` metres (the first node whose far end reaches that length is kept).
+static uint pistachioNodesToKeep(const Shoot &shoot, float length) {
+    float arc = 0;
+    bool first_vertex = true;
+    helios::vec3 previous;
+    for (uint node = 0; node < shoot.shoot_internode_vertices.size(); node++) {
+        for (const helios::vec3 &vertex: shoot.shoot_internode_vertices.at(node)) {
+            if (!first_vertex) {
+                arc += (vertex - previous).magnitude();
+            }
+            previous = vertex;
+            first_vertex = false;
+        }
+        if (arc >= length) {
+            return node + 1;
+        }
+    }
+    return uint(shoot.shoot_internode_vertices.size());
+}
+
+//! Cut a shoot back to about `length` metres, ending its growth. Returns the number of nodes kept.
+/** The cut is deferred to the end of the time step (see PlantArchCallbackEdits), but the tip is stopped at once: removing phytomers only
+    ends a shoot's growth when the removed tip already has its geometry, so a young tip could otherwise survive the cut and regrow. */
+static uint pistachioCutToLength(Shoot &shoot, float length) {
+    uint keep = pistachioNodesToKeep(shoot, length);
+    if (keep < shoot.phytomers.size()) {
+        shoot.plantarchitecture_ptr->pruneBranch(shoot.plantID, uint(shoot.ID), keep);
+        shoot.meristem_is_alive = false;
+    }
+    return keep;
+}
+
+//! Make one vegetative bud on each of the top `node_count` nodes below `keep` break, standing in for the release from apical dominance a cut causes.
+/** The bud-break probabilities cannot tell a cut from a natural shoot tip, so without this a headed shoot usually regrows from a single bud
+    or none. Only valid while the shoot is growing: a bud set active in dormancy is drawn again when dormancy breaks. Node 0 is skipped
+    (a blind node), and so are buds that have already grown a shoot. */
+static void pistachioReleaseBudsBelow(Shoot &shoot, uint keep, uint node_count) {
+    uint released = 0;
+    for (int node = int(keep) - 1; node >= 1 && released < node_count; node--) {
+        const std::shared_ptr<Phytomer> &phytomer = shoot.phytomers.at(node);
+        bool released_here = false;
+        for (auto &petiole: phytomer->axillary_vegetative_buds) {
+            for (auto &vbud: petiole) {
+                if (!released_here && vbud.shoot_ID == uint(-1)) {
+                    // A bud already passed over for a spur (see growSpursFromUnbrokenBuds()) is growing a limb after all.
+                    vbud.shoot_type_label = "proleptic";
+                    Phytomer::setVegetativeBudState(BUD_ACTIVE, vbud);
+                    released_here = true;
+                }
+            }
+        }
+        released++;
+    }
 }
 
 void PistachioPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
 
+    growSpursFromUnbrokenBuds(phytomer, pistachio_spur_fraction);
+
     if (phytomer->isdormant) {
         if (phytomer->shoot_index.x <= phytomer->shoot_index.y - 4) {
             phytomer->setFloralBudState(BUD_DORMANT);
+        }
+    }
+
+    // The training rules act once per shoot per time step, from its tip phytomer. Seasons are read from the shoot's own dormancy flag, not
+    // the phytomer's: a tip phytomer is also marked dormant when its shoot reaches its node cap for the season, while the plant grows on.
+    Shoot &shoot = *phytomer->parent_shoot_ptr;
+    if (shoot.phytomers.empty() || phytomer != shoot.phytomers.back()) {
+        return;
+    }
+    PlantArchitecture *plantarchitecture = shoot.plantarchitecture_ptr;
+
+    const bool is_scaffold = shoot.shoot_type_label == "scaffold";
+    const bool is_secondary = shoot.shoot_type_label != "spur" && shoot.parent_shoot_ID >= 0 && plantarchitecture->getPlantShoot(shoot.plantID, uint(shoot.parent_shoot_ID))->shoot_type_label == "scaffold";
+
+    // Regrowth below a training cut: a scaffold tipped in its first season, or a secondary headed in its first winter, regrows that
+    // growing season from the buds just below the cut. The release waits until the cut has been applied (cuts from a callback take
+    // effect at the end of the time step), because a new shoot's internode length is set by its distance below the parent's tip at the
+    // moment it grows: released while the cut tip is still there, the buds would count as lying below it and start as short stubs. It
+    // also waits for the shoot to be out of dormancy, since the dormancy-break draw overwrites any bud set earlier. It stops by itself
+    // once those buds have grown shoots. (Scaffolds are in their first dormancy cycle from planting, secondaries from their first winter.)
+    if ((is_scaffold || is_secondary) && !shoot.meristem_is_alive && !shoot.isdormant && shoot.dormancy_cycles == 1) {
+        const uint buds_released = is_scaffold ? pistachio_buds_released_at_tipping : pistachio_buds_released_per_cut;
+        pistachioReleaseBudsBelow(shoot, uint(shoot.phytomers.size()), buds_released);
+
+        // The shoots that grow from those buds are released from apical dominance, so they grow as leaders of the fork rather than as
+        // laterals: each gets the full internode length of its shoot type. Without this only the top one did (a new shoot's internode
+        // length shrinks with its distance below the parent's tip), and the one a node lower grew as a short stub, leaving each scaffold
+        // with a single limb and the crown with gaps between them. The shoot's first internode, already built, keeps its length.
+        for (uint childID: plantarchitecture->getChildShootIDs(shoot.plantID, uint(shoot.ID))) {
+            const std::shared_ptr<Shoot> &child = plantarchitecture->getPlantShoot(shoot.plantID, childID);
+            if (child->dormancy_cycles == 0 && child->parent_node_index + buds_released >= shoot.phytomers.size()) {
+                child->internode_length_max_shoot_initial = child->shoot_parameters.internode_length_max.val();
+            }
+        }
+    }
+
+    if (is_scaffold) {
+        // Tip each scaffold once, in the season it reaches the tipping length. Tipping removes the growing tip even when the node reaching
+        // the tipping length is the tip itself and nothing is cut off.
+        if (shoot.meristem_is_alive && !shoot.isdormant && shoot.calculateShootLength() >= pistachio_scaffold_tip_length) {
+            static_cast<void>(pistachioCutToLength(shoot, pistachio_scaffold_tip_length));
+            shoot.meristem_is_alive = false;
+        }
+
+        // First winter after the scaffolds grew (the builder's own dormancy at planting is the first cycle): thin the secondaries to the
+        // longest few and head them. Run on every day of that winter, but a no-op once the cuts have been applied.
+        if (shoot.isdormant && shoot.dormancy_cycles == 2) {
+            std::vector<std::pair<float, uint>> secondaries;
+            for (uint childID: plantarchitecture->getChildShootIDs(shoot.plantID, uint(shoot.ID))) {
+                secondaries.emplace_back(plantarchitecture->getPlantShoot(shoot.plantID, childID)->calculateShootLength(), childID);
+            }
+            std::sort(secondaries.begin(), secondaries.end(), [](const auto &a, const auto &b) { return a.first > b.first; });
+            for (size_t i = 0; i < secondaries.size(); i++) {
+                const std::shared_ptr<Shoot> &secondary = plantarchitecture->getPlantShoot(shoot.plantID, secondaries.at(i).second);
+                if (i >= pistachio_secondaries_per_scaffold) {
+                    plantarchitecture->pruneBranch(shoot.plantID, secondaries.at(i).second, 0);
+                } else {
+                    static_cast<void>(pistachioCutToLength(*secondary, pistachio_secondary_head_length));
+                }
+            }
         }
     }
 }

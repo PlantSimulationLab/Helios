@@ -52,13 +52,16 @@ struct PerRayData {
     uint   origin_UUID;        //!< UUID of origin primitive (0 = launched from source/camera)
     bool   face;               //!< Top face = true, bottom face = false
     uint   seed;               //!< LCG random seed
-    unsigned char source_ID;   //!< Source index (max 255 sources)
+    unsigned char source_ID;   //!< Source index, or Nsources (the diffuse/scatter material slot) for diffuse rays (max 255 sources)
     bool   hit_periodic_boundary;
     float3 periodic_hit;       //!< World-space hit on the periodic wall
     //! Per-launch-band transmittance accumulated as the ray passes through translucent covers
     //! (glass/plastic). Initialised to 1 in the raygen programs; multiplied by the Fresnel+Bouguer
-    //! tau(theta) in the any-hit programs; consumed in the miss programs. Indexed by launch-band b.
+    //! tau(theta) in the any-hit program (direct) or the closest-hit programs (diffuse, camera);
+    //! applied to what the ray delivers past the covers. Indexed by launch-band b.
     float  cover_transmittance[HELIOS_MAX_RADIATION_BANDS];
+    bool   hit_cover;          //!< Diffuse/camera/pixel-label ray hit a translucent cover and continues past it from cover_exit
+    float3 cover_exit;         //!< World-space point just beyond the cover where the ray continues
 };
 
 // ---------------------------------------------------------------------------

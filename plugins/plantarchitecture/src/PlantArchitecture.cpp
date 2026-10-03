@@ -390,6 +390,7 @@ PhytomerParameters::PhytomerParameters(std::minstd_rand0 *generator) {
     peduncle.radius.initialize(0.001, generator);
     peduncle.pitch.initialize(0, generator);
     peduncle.roll.initialize(0, generator);
+    peduncle.yaw.initialize(0, generator);
     peduncle.curvature.initialize(0, generator);
     petiole.color = RGB::forestgreen;
     peduncle.length_segments = 3;
@@ -465,6 +466,7 @@ void PhytomerParameters::resample() {
     resampleIfDistributed(peduncle.radius);
     resampleIfDistributed(peduncle.pitch);
     resampleIfDistributed(peduncle.roll);
+    resampleIfDistributed(peduncle.yaw);
     resampleIfDistributed(peduncle.curvature);
 
     //--- inflorescence ---//
@@ -564,6 +566,8 @@ void ShootParameters::inheritCustomFunctionsFrom(const ShootParameters &source) 
 
 std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, const float age, const float germination_rate,
                                                                  const std::map<std::string, float> &build_parameters) {
+    rejectStructuralOperationInCallback("buildPlantCanopyFromLibrary");
+    StructuralOperationScope structural_operation_scope(this);
     if (plant_count_xy.x <= 0 || plant_count_xy.y <= 0) {
         helios_runtime_error("ERROR (PlantArchitecture::buildPlantCanopyFromLibrary): Plant count must be greater than zero.");
     }
@@ -593,6 +597,8 @@ std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::v
 }
 
 std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &canopy_extent_xy, const uint plant_count, const float age, const std::map<std::string, float> &build_parameters) {
+    rejectStructuralOperationInCallback("buildPlantCanopyFromLibrary");
+    StructuralOperationScope structural_operation_scope(this);
     std::vector<uint> plantIDs;
     plantIDs.reserve(plant_count);
     for (int i = 0; i < plant_count; i++) {
@@ -806,8 +812,8 @@ bool Phytomer::inflorescenceLoadsStem() const {
     // that the stem would then keep forever: on a QSM-reconstructed redbud, which is cauliflorous and flowers on old wood, the bloom was 99% of the trunk's supported area for about two weeks and left the
     // trunk 87% thicker for good.
     //
-    // Both halves of the condition are needed. peduncleShouldMatchCulm() alone is a shoot-apex test that does not know which bud is terminal, and isterminal alone is not enough either: almond, apple, olive,
-    // pistachio and walnut all set a non-zero max_terminal_floral_buds, so gating on it by itself would still load a woody trunk.
+    // Both halves of the condition are needed. peduncleShouldMatchCulm() alone is a shoot-apex test that does not know which bud is terminal, and isterminal alone is not enough either: almond, apple
+    // and walnut all set a non-zero max_terminal_floral_buds, so gating on it by itself would still load a woody trunk.
     if (!peduncleShouldMatchCulm()) {
         return false;
     }
@@ -1397,6 +1403,10 @@ int Shoot::appendPhytomerFromNodePositions(const PrescribedInternode &prescribed
 
 int Shoot::appendPhytomerInternal(float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const PhytomerParameters &phytomer_parameters,
                                   const PrescribedInternode *prescribed_internode) {
+    plantarchitecture_ptr->rejectStructuralOperationInCallback("Shoot::appendPhytomer");
+    // Shoot::appendPhytomer() is public and runs the creation callback itself, so it needs its own scope for a cut that callback defers
+    // to be applied before it returns. Scopes nest, so inside advanceTime() or a build call this changes nothing.
+    PlantArchitecture::StructuralOperationScope structural_operation_scope(plantarchitecture_ptr);
     auto shoot_tree_ptr = &plantarchitecture_ptr->plant_instances.at(plantID).shoot_tree;
 
     // Determine the parent internode and petiole axes for rotation of the new phytomer
@@ -1577,6 +1587,7 @@ int Shoot::appendPhytomerInternal(float internode_radius, float internode_length
     }
 
     if (phytomer_parameters.phytomer_creation_function != nullptr) {
+        PlantArchitecture::PhytomerCallbackScope callback_scope(plantarchitecture_ptr);
         phytomer_parameters.phytomer_creation_function(phytomer, current_node_number, this->parent_node_index, shoot_parameters.max_nodes.val(), plantarchitecture_ptr->plant_instances.at(plantID).current_age);
     }
 
@@ -2128,6 +2139,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     peduncle_pitch.resize(phytomer_parameters.petiole.petioles_per_internode);
     peduncle_curvature.resize(phytomer_parameters.petiole.petioles_per_internode);
     peduncle_roll.resize(phytomer_parameters.petiole.petioles_per_internode);
+    peduncle_yaw.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_pitch.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_curvature.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_taper.resize(phytomer_parameters.petiole.petioles_per_internode);
@@ -2307,6 +2319,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     // Resize perturbation vectors to capture stochastic state for XML reconstruction
     internode_curvature_perturbations.resize(Ndiv_internode_length);
     internode_yaw_perturbations.resize(Ndiv_internode_length);
+    internode_azimuthal_restoring_angles.resize(Ndiv_internode_length);
 
     // A prescribed internode has both of its endpoints given, so there is nothing to integrate forward:
     // the axis is read from the endpoints and the segment nodes are placed by interpolating between them.
@@ -2357,6 +2370,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             // with respect to arc length, so that the resulting shape is independent of the internode discretization. Note that
             // dr_internode_max is already the length of one SEGMENT, not of the whole internode.
             float ds = dr_internode_max;
+            internode_curvature_arc_length_step = ds;
 
             // --- Gravitropic response --- //
             // The gravitropic term is a closed loop on DIRECTION: the inclination factor is recomputed from the current shoot axis
@@ -2431,6 +2445,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
 
             internode_curvature_perturbations[inode_segment - 1] = curvature_perturbation_angle;
             internode_yaw_perturbations[inode_segment - 1] = yaw_perturbation_angle;
+            internode_azimuthal_restoring_angles[inode_segment - 1] = azimuthal_restoring_angle;
 
             // Rotate the shoot axis by the gravitropic deflection plus the in-plane noise component, about the bending axis.
             // The bending axis is the cross product of the shoot axis with the vertical, so its length falls to zero as the shoot
@@ -3177,6 +3192,12 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
     // Rotate the bending axis by the same azimuthal angle to keep it perpendicular to the peduncle
     inflorescence_bending_axis_actual = rotatePointAboutLine(inflorescence_bending_axis_actual, nullorigin, internode_axis, azimuthal_rotation);
 
+    // Turn the peduncle about the internode away from the side of the node the leaf is on. It is read here and resampled once at the end of this function, like the roll.
+    const float peduncle_yaw = phytomer_parameters.peduncle.yaw.val();
+    if (peduncle_yaw != 0.f) {
+        peduncle_axis = rotatePointAboutLine(peduncle_axis, nullorigin, internode_axis, deg2rad(peduncle_yaw));
+        inflorescence_bending_axis_actual = rotatePointAboutLine(inflorescence_bending_axis_actual, nullorigin, internode_axis, deg2rad(peduncle_yaw));
+    }
 
     float theta_base = fabs(cart2sphere(peduncle_axis).zenith);
 
@@ -3223,6 +3244,7 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
         this->peduncle_pitch.resize(petiole_idx + 1);
         this->peduncle_curvature.resize(petiole_idx + 1);
         this->peduncle_roll.resize(petiole_idx + 1);
+        this->peduncle_yaw.resize(petiole_idx + 1);
     }
     if (this->peduncle_length.at(petiole_idx).size() <= bud_idx) {
         this->peduncle_length.at(petiole_idx).resize(bud_idx + 1);
@@ -3230,12 +3252,14 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
         this->peduncle_pitch.at(petiole_idx).resize(bud_idx + 1);
         this->peduncle_curvature.at(petiole_idx).resize(bud_idx + 1);
         this->peduncle_roll.at(petiole_idx).resize(bud_idx + 1);
+        this->peduncle_yaw.at(petiole_idx).resize(bud_idx + 1);
     }
     this->peduncle_length.at(petiole_idx).at(bud_idx) = peduncle_length;
     this->peduncle_radius.at(petiole_idx).at(bud_idx) = phytomer_parameters.peduncle.radius.val();
     this->peduncle_pitch.at(petiole_idx).at(bud_idx) = phytomer_parameters.peduncle.pitch.val();
     this->peduncle_curvature.at(petiole_idx).at(bud_idx) = peduncle_curvature;
     this->peduncle_roll.at(petiole_idx).at(bud_idx) = peduncle_roll;
+    this->peduncle_yaw.at(petiole_idx).at(bud_idx) = peduncle_yaw;
 
     for (int i = 1; i <= phytomer_parameters.peduncle.length_segments; i++) {
         if (peduncle_curvature != 0.f) {
@@ -3319,6 +3343,7 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
     phytomer_parameters.peduncle.length.resample();
     phytomer_parameters.peduncle.radius.resample();
     phytomer_parameters.peduncle.pitch.resample();
+    phytomer_parameters.peduncle.yaw.resample();
 
     // Create unique inflorescence prototypes for each shoot type so we can simply copy them for each leaf
     plantarchitecture_ptr->ensureInflorescencePrototypesInitialized(phytomer_parameters, plantarchitecture_ptr->plant_instances.at(plantID).plant_name);
@@ -5179,6 +5204,10 @@ void Phytomer::removeLeaf() {
 }
 
 void Phytomer::deletePhytomer() {
+    if (parent_shoot_ptr->plantarchitecture_ptr->skipStructuralOperationInCallback("Phytomer::deletePhytomer")) {
+        return;
+    }
+
     // Everything needed after the resize below has to be read out of *this* first: resizing
     // parent_shoot_ptr->phytomers destroys the shared_ptr that owns this Phytomer, so from that
     // point on *this* is a dangling pointer and any member read through it is a use-after-free.
@@ -5312,6 +5341,9 @@ Shoot::Shoot(uint plant_ID, int shoot_ID, int parent_shoot_ID, uint parent_node,
 }
 
 void Shoot::buildShootPhytomers(float internode_radius, float internode_length, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper) {
+    if (plantarchitecture_ptr->skipStructuralOperationInCallback("Shoot::buildShootPhytomers")) {
+        return;
+    }
     for (int i = 0; i < current_node_number; i++) {
         // loop over phytomers to build up the shoot
 
@@ -5481,6 +5513,8 @@ uint Shoot::sampleEpicormicShoot(float dt, std::vector<float> &epicormic_positio
 
 uint PlantArchitecture::addBaseStemShoot(uint plantID, uint current_node_number, const AxisRotation &base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction,
                                          float radius_taper, const std::string &shoot_type_label) {
+    rejectStructuralOperationInCallback("addBaseStemShoot");
+    StructuralOperationScope structural_operation_scope(this);
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::addBaseStemShoot): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     } else if (plant_instances.at(plantID).shoot_types_snapshot.find(shoot_type_label) == plant_instances.at(plantID).shoot_types_snapshot.end()) {
@@ -5511,6 +5545,8 @@ uint PlantArchitecture::addBaseStemShoot(uint plantID, uint current_node_number,
 
 uint PlantArchitecture::appendShoot(uint plantID, int parent_shoot_ID, uint current_node_number, const AxisRotation &base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction,
                                     float leaf_scale_factor_fraction, float radius_taper, const std::string &shoot_type_label) {
+    rejectStructuralOperationInCallback("appendShoot");
+    StructuralOperationScope structural_operation_scope(this);
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::appendShoot): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     } else if (plant_instances.at(plantID).shoot_types_snapshot.find(shoot_type_label) == plant_instances.at(plantID).shoot_types_snapshot.end()) {
@@ -5567,6 +5603,8 @@ uint PlantArchitecture::appendShoot(uint plantID, int parent_shoot_ID, uint curr
 
 uint PlantArchitecture::addChildShoot(uint plantID, int parent_shoot_ID, uint parent_node_index, uint current_node_number, const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max,
                                       float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper, const std::string &shoot_type_label, uint petiole_index) {
+    rejectStructuralOperationInCallback("addChildShoot");
+    StructuralOperationScope structural_operation_scope(this);
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::addChildShoot): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     } else if (plant_instances.at(plantID).shoot_types_snapshot.find(shoot_type_label) == plant_instances.at(plantID).shoot_types_snapshot.end()) {
@@ -5619,6 +5657,8 @@ uint PlantArchitecture::addShootFromNodePositions(uint plantID, int parent_shoot
 
 uint PlantArchitecture::addShootFromNodePositions(uint plantID, int parent_shoot_ID, uint parent_node_index, const std::vector<helios::vec3> &internode_node_positions, const std::vector<float> &internode_radii,
                                                   const std::string &shoot_type_label, const std::string &growth_shoot_type_label, uint petiole_index) {
+    rejectStructuralOperationInCallback("addShootFromNodePositions");
+    StructuralOperationScope structural_operation_scope(this);
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::addShootFromNodePositions): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     } else if (plant_instances.at(plantID).shoot_types_snapshot.find(shoot_type_label) == plant_instances.at(plantID).shoot_types_snapshot.end()) {
@@ -5753,6 +5793,8 @@ uint PlantArchitecture::addShootFromNodePositions(uint plantID, int parent_shoot
 
 uint PlantArchitecture::addEpicormicShoot(uint plantID, int parent_shoot_ID, float parent_position_fraction, uint current_node_number, float zenith_perturbation_degrees, float internode_radius, float internode_length_max,
                                           float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper, const std::string &shoot_type_label) {
+    rejectStructuralOperationInCallback("addEpicormicShoot");
+    StructuralOperationScope structural_operation_scope(this);
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::addEpicormicShoot): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     } else if (plant_instances.at(plantID).shoot_types_snapshot.find(shoot_type_label) == plant_instances.at(plantID).shoot_types_snapshot.end()) {
@@ -5793,6 +5835,8 @@ void PlantArchitecture::validateShootTypes(ShootParameters &shoot_parameters, co
 
 int PlantArchitecture::appendPhytomerToShoot(uint plantID, uint shootID, const PhytomerParameters &phytomer_parameters, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction,
                                              float leaf_scale_factor_fraction) {
+    rejectStructuralOperationInCallback("appendPhytomerToShoot");
+    StructuralOperationScope structural_operation_scope(this);
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::appendPhytomerToShoot): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
@@ -6902,7 +6946,8 @@ namespace {
     //! Rate at which a leaf's shadow falls off with horizontal offset within the pyramid, per voxel of offset.
     constexpr float shadow_horizontal_falloff = 1.2f;
 
-    //! Light exposure below which a fine branch becomes a candidate for shedding.
+    //! Light reaching the foliage a fine branch supports, as a fraction of the mean over the whole plant, below which the branch
+    //! becomes a candidate for shedding.
     /** Self-pruning: a real tree abscises shaded, unproductive branches continuously, and the model previously had no
         branch mortality at all in parameter-based growth mode -- every twig ever produced survived indefinitely. That
         left the branching hierarchy with far too fat a tail (measured against a Phytograph QSM reference almond: 272 branches
@@ -6912,8 +6957,22 @@ namespace {
         parent chain -- a branch only reaches high order if every ancestor also broke bud -- so it removes branches
         before they ever photosynthesise and starves the girth of the wood that remains. Shedding removes them only
         after they have built and supported the structure below them.
+
+        A branch is judged by the leaf-area-weighted mean light over every leaf it supports -- its own, and those of all the
+        shoots it carries -- and by that mean relative to the whole plant's. Judging the light at the branch's tip instead assumed
+        its foliage sits there: on a limb clothed in short leafy shoots, with its own laterals grown past its end, the tip is only
+        a point inside the crown, and the limb was shed together with a well-lit crown it carried. Judging against a fixed light
+        level instead made the rule a function of how much foliage the species carries: a crown with three times the leaf area
+        is darker throughout, and the same threshold then sheds most of it. Relative to its own plant, a branch is shed when it
+        is doing worse than its neighbours, whatever the leaf size, leaf count or shoot types of the species.
     */
-    constexpr float branch_shedding_light_threshold = 0.65f;
+    constexpr float branch_shedding_relative_light_threshold = 0.85f;
+    //! Share of the plant's leaf area carried by a branch at which its probability of being shed has fallen by a factor of e.
+    constexpr float branch_shedding_foliage_share_scale = 0.02f;
+    //! Edge length (m) of the voxels of the leaf area density field the light for branch shedding is computed in.
+    constexpr float branch_shedding_voxel_size = 0.25f;
+    //! Fraction of leaf area projected toward a beam, for the attenuation of light through foliage (spherical leaf angle distribution).
+    constexpr float branch_shedding_projection_G = 0.5f;
     //! Per-season probability of shedding a branch at zero light exposure, falling linearly to zero at the threshold.
     constexpr float branch_shedding_probability_max = 0.95f;
 
@@ -6933,7 +6992,7 @@ namespace {
 
         Set to 0 to disable.
     */
-    constexpr float branch_shedding_low_crown_probability = 0.35f;
+    constexpr float branch_shedding_low_crown_probability = 0.f;
     //! Height, as a fraction of crown height, above which the low-crown term does not act at all.
     constexpr float branch_shedding_low_crown_span = 0.5f;
     //! Radial position, as a fraction of crown radius, beyond which the low-crown term does not act at all.
@@ -7274,19 +7333,141 @@ float PlantArchitecture::getShadowLightExposureAtPoint(uint plantID, const helio
     return shadowGridLightExposure(plant_instance.shadow_grid, plant_instance.crown_depth_grid, plant_instance.shadow_grid_voxel_size, position);
 }
 
+void PlantArchitecture::captureSeasonPeakLeaves(uint plantID) {
+
+    PlantInstance &plant_instance = plant_instances.at(plantID);
+    plant_instance.season_peak_leaf_positions.clear();
+    plant_instance.season_peak_leaf_areas.clear();
+    plant_instance.season_peak_leaf_shootIDs.clear();
+
+    for (const auto &shoot: plant_instance.shoot_tree) {
+        for (const auto &phytomer: shoot->phytomers) {
+            for (size_t petiole = 0; petiole < phytomer->leaf_objIDs.size() && petiole < phytomer->leaf_bases.size(); petiole++) {
+                for (size_t leaf = 0; leaf < phytomer->leaf_objIDs.at(petiole).size() && leaf < phytomer->leaf_bases.at(petiole).size(); leaf++) {
+                    const uint leaf_objID = phytomer->leaf_objIDs.at(petiole).at(leaf);
+                    if (!context_ptr->doesObjectExist(leaf_objID)) {
+                        continue;
+                    }
+                    plant_instance.season_peak_leaf_positions.push_back(phytomer->leaf_bases.at(petiole).at(leaf));
+                    plant_instance.season_peak_leaf_areas.push_back(context_ptr->getObjectArea(leaf_objID));
+                    plant_instance.season_peak_leaf_shootIDs.push_back(uint(shoot->ID));
+                }
+            }
+        }
+    }
+}
+
 void PlantArchitecture::shedShadedBranches(uint plantID) {
 
     PlantInstance &plant_instance = plant_instances.at(plantID);
     auto &shoot_tree = plant_instance.shoot_tree;
 
-    // The shadow grid built at this season's peak canopy. Once dormancy has emptied the canopy the live grid is
-    // empty, so the peak grid is the only record of what each branch actually experienced while in leaf.
-    const std::unordered_map<long long, float> &grid = plant_instance.season_peak_shadow_grid;
-    const std::unordered_map<long long, int> &depth_grid = plant_instance.season_peak_crown_depth_grid;
-    const float voxel_size = plant_instance.season_peak_shadow_grid_voxel_size;
+    // The leaves of this season's peak canopy: the record of what each branch carried, and stood in, while in leaf.
+    const std::vector<vec3> &leaf_positions = plant_instance.season_peak_leaf_positions;
+    const std::vector<float> &leaf_areas = plant_instance.season_peak_leaf_areas;
+    const std::vector<uint> &leaf_shootIDs = plant_instance.season_peak_leaf_shootIDs;
 
-    if (grid.empty() || voxel_size <= 0.f) {
+    if (leaf_positions.empty()) {
         return;
+    }
+
+    // ---- Light field ---- //
+    // Leaf area density on a regular grid over the crown, and from it the light reaching each voxel that holds foliage: light from a
+    // uniformly bright sky, attenuated through the foliage along each direction by Beer's law. Being built from leaf area per unit
+    // volume, the field does not depend on the voxel size, on whether a leaf is simple or compound, or on how large its leaves are.
+    const float voxel = branch_shedding_voxel_size;
+    vec3 crown_min = leaf_positions.front();
+    vec3 crown_max = leaf_positions.front();
+    for (const vec3 &position: leaf_positions) {
+        crown_min = make_vec3(std::min(crown_min.x, position.x), std::min(crown_min.y, position.y), std::min(crown_min.z, position.z));
+        crown_max = make_vec3(std::max(crown_max.x, position.x), std::max(crown_max.y, position.y), std::max(crown_max.z, position.z));
+    }
+    const int3 grid_size = make_int3(int((crown_max.x - crown_min.x) / voxel) + 1, int((crown_max.y - crown_min.y) / voxel) + 1, int((crown_max.z - crown_min.z) / voxel) + 1);
+    auto voxel_index = [&](int i, int j, int k) { return (size_t(k) * size_t(grid_size.y) + size_t(j)) * size_t(grid_size.x) + size_t(i); };
+    auto voxel_of = [&](const vec3 &position) {
+        return make_int3(std::clamp(int((position.x - crown_min.x) / voxel), 0, grid_size.x - 1), std::clamp(int((position.y - crown_min.y) / voxel), 0, grid_size.y - 1), std::clamp(int((position.z - crown_min.z) / voxel), 0, grid_size.z - 1));
+    };
+
+    std::vector<float> leaf_area_density(size_t(grid_size.x) * size_t(grid_size.y) * size_t(grid_size.z), 0.f);
+    for (size_t leaf = 0; leaf < leaf_positions.size(); leaf++) {
+        const int3 cell = voxel_of(leaf_positions.at(leaf));
+        leaf_area_density.at(voxel_index(cell.x, cell.y, cell.z)) += leaf_areas.at(leaf) / (voxel * voxel * voxel);
+    }
+
+    // Sky directions: three rings of zenith angle, weighted as a uniformly bright sky lights a horizontal surface.
+    std::vector<vec3> sky_directions;
+    std::vector<float> sky_weights;
+    {
+        const float ring_zenith_deg[3] = {15.f, 45.f, 75.f};
+        const int ring_azimuths[3] = {4, 8, 8};
+        const float ring_weight[3] = {0.25f, 0.5f, 0.25f};
+        for (int ring = 0; ring < 3; ring++) {
+            for (int azimuth_index = 0; azimuth_index < ring_azimuths[ring]; azimuth_index++) {
+                const float zenith = deg2rad(ring_zenith_deg[ring]);
+                const float azimuth = 2.f * PI_F * (float(azimuth_index) + 0.5f * float(ring)) / float(ring_azimuths[ring]);
+                sky_directions.push_back(make_vec3(sinf(zenith) * cosf(azimuth), sinf(zenith) * sinf(azimuth), cosf(zenith)));
+                sky_weights.push_back(ring_weight[ring] / float(ring_azimuths[ring]));
+            }
+        }
+    }
+
+    // Light at the centre of each voxel holding foliage; -1 marks a voxel not yet evaluated.
+    std::vector<float> voxel_light(leaf_area_density.size(), -1.f);
+    auto light_at_voxel = [&](const int3 &cell) {
+        float &light = voxel_light.at(voxel_index(cell.x, cell.y, cell.z));
+        if (light >= 0.f) {
+            return light;
+        }
+        const vec3 centre = crown_min + voxel * make_vec3(float(cell.x) + 0.5f, float(cell.y) + 0.5f, float(cell.z) + 0.5f);
+        const float step = 0.5f * voxel;
+        light = 0.f;
+        for (size_t direction = 0; direction < sky_directions.size(); direction++) {
+            float optical_depth = 0.f;
+            for (float distance = 0.5f * step;; distance += step) {
+                const vec3 point = centre + distance * sky_directions.at(direction);
+                const int i = int(std::floor((point.x - crown_min.x) / voxel));
+                const int j = int(std::floor((point.y - crown_min.y) / voxel));
+                const int k = int(std::floor((point.z - crown_min.z) / voxel));
+                if (i < 0 || j < 0 || i >= grid_size.x || j >= grid_size.y || k >= grid_size.z) {
+                    break;
+                }
+                optical_depth += branch_shedding_projection_G * leaf_area_density.at(voxel_index(i, j, k)) * step;
+            }
+            light += sky_weights.at(direction) * expf(-optical_depth);
+        }
+        return light;
+    };
+
+    // ---- Light captured by each shoot's subtree ---- //
+    // Summed first over each shoot's own leaves, then accumulated toward the base. A shoot is created after its parent, so its ID is
+    // the larger and a single sweep from the last shoot to the first carries every subtree's total to its root.
+    std::vector<float> subtree_leaf_area(shoot_tree.size(), 0.f);
+    std::vector<float> subtree_light(shoot_tree.size(), 0.f);
+    for (size_t leaf = 0; leaf < leaf_positions.size(); leaf++) {
+        const uint shootID = leaf_shootIDs.at(leaf);
+        subtree_leaf_area.at(shootID) += leaf_areas.at(leaf);
+        subtree_light.at(shootID) += leaf_areas.at(leaf) * light_at_voxel(voxel_of(leaf_positions.at(leaf)));
+    }
+    float plant_leaf_area = 0.f;
+    float plant_light = 0.f;
+    for (size_t shootID = 0; shootID < shoot_tree.size(); shootID++) {
+        plant_leaf_area += subtree_leaf_area.at(shootID);
+        plant_light += subtree_light.at(shootID);
+    }
+    if (plant_leaf_area <= 0.f || plant_light <= 0.f) {
+        return;
+    }
+    const float plant_mean_light = plant_light / plant_leaf_area;
+    for (int shootID = int(shoot_tree.size()) - 1; shootID > 0; shootID--) {
+        const int parentID = shoot_tree.at(shootID)->parent_shoot_ID;
+        if (parentID < 0) {
+            continue;
+        }
+        if (parentID >= shootID) {
+            helios_runtime_error("ERROR (PlantArchitecture::shedShadedBranches): Shoot " + std::to_string(shootID) + " has parent shoot " + std::to_string(parentID) + ", which was created after it. Subtree light cannot be accumulated.");
+        }
+        subtree_leaf_area.at(parentID) += subtree_leaf_area.at(shootID);
+        subtree_light.at(parentID) += subtree_light.at(shootID);
     }
 
     // Collect the shoots to shed before removing any of them. deletePhytomer() recursively deletes child shoots and
@@ -7350,10 +7531,13 @@ void PlantArchitecture::shedShadedBranches(uint plantID) {
             continue;
         }
 
-        // Judge the branch where its leaves are, not where it attaches: a shoot can arise on a shaded interior
-        // parent and still carry its own foliage out into the light.
-        vec3 sample_position = shoot->shoot_internode_vertices.back().back();
-        float light_exposure = shadowGridLightExposure(grid, depth_grid, voxel_size, sample_position);
+        // Judge the branch by the light reaching all the foliage it supports, relative to the plant's mean. A branch that
+        // supported no foliage at all through a full season has no income, and is judged as fully shaded.
+        const uint shootID = uint(shoot->ID);
+        float relative_light = 0.f;
+        if (subtree_leaf_area.at(shootID) > 0.f) {
+            relative_light = subtree_light.at(shootID) / subtree_leaf_area.at(shootID) / plant_mean_light;
+        }
 
         // Low-crown thinning, on its own path. Placed ahead of the light test because that test is a hard
         // rejection: a term applied after it could only ever act on branches already judged too dark, and those
@@ -7383,15 +7567,22 @@ void PlantArchitecture::shedShadedBranches(uint plantID) {
             }
         }
 
-        if (light_exposure >= branch_shedding_light_threshold) {
+        if (relative_light >= branch_shedding_relative_light_threshold) {
             continue;
         }
 
         // Below the threshold the branch is shed stochastically rather than deterministically, so that a marginal
         // cohort thins over several seasons instead of vanishing at once the moment it crosses the line.
-        float shortfall = (branch_shedding_light_threshold - light_exposure) / branch_shedding_light_threshold;
+        float shortfall = (branch_shedding_relative_light_threshold - relative_light) / branch_shedding_relative_light_threshold;
 
-        if (context_ptr->randu() < branch_shedding_probability_max * shortfall) {
+        // A branch is the less likely to be shed the larger the share of the plant's foliage it carries. Shedding is something a
+        // tree does to its small subordinate branches: a limb carrying a twentieth of the crown is not abscised for standing in
+        // somewhat less light than the rest. Without this the rule took whole framework limbs, a few per tree and at random, and
+        // left the crown lopsided.
+        const float foliage_share = subtree_leaf_area.at(shootID) / plant_leaf_area;
+        const float size_weight = expf(-foliage_share / branch_shedding_foliage_share_scale);
+
+        if (context_ptr->randu() < branch_shedding_probability_max * shortfall * size_weight) {
             shed_list.push_back(shoot->ID);
         }
     }
@@ -7967,6 +8158,81 @@ void PlantArchitecture::breakPlantDormancy(uint plantID) {
     }
 }
 
+PlantArchitecture::PhytomerCallbackScope::PhytomerCallbackScope(PlantArchitecture *plantarchitecture_ptr) : plantarchitecture_ptr(plantarchitecture_ptr) {
+    plantarchitecture_ptr->phytomer_callback_depth++;
+}
+
+PlantArchitecture::PhytomerCallbackScope::~PhytomerCallbackScope() {
+    plantarchitecture_ptr->phytomer_callback_depth--;
+}
+
+PlantArchitecture::StructuralOperationScope::StructuralOperationScope(PlantArchitecture *plantarchitecture_ptr) : plantarchitecture_ptr(plantarchitecture_ptr), uncaught_exceptions_at_entry(std::uncaught_exceptions()) {
+    plantarchitecture_ptr->structural_operation_depth++;
+}
+
+PlantArchitecture::StructuralOperationScope::~StructuralOperationScope() noexcept(false) {
+    plantarchitecture_ptr->structural_operation_depth--;
+    if (plantarchitecture_ptr->structural_operation_depth > 0) {
+        return;
+    }
+
+    // The operation is being abandoned by an exception, which already reports the failure. Applying the queued cuts now could throw a
+    // second exception during unwinding, so they are dropped with the rest of the half-finished operation.
+    if (std::uncaught_exceptions() > uncaught_exceptions_at_entry) {
+        plantarchitecture_ptr->deferred_prunes.clear();
+        plantarchitecture_ptr->callback_warnings.clear();
+        return;
+    }
+
+    plantarchitecture_ptr->flushDeferredPrunes();
+
+    if (plantarchitecture_ptr->printmessages) {
+        plantarchitecture_ptr->callback_warnings.report(std::cerr);
+    } else {
+        plantarchitecture_ptr->callback_warnings.clear();
+    }
+}
+
+bool PlantArchitecture::isInsidePhytomerCallback() const {
+    return phytomer_callback_depth > 0;
+}
+
+bool PlantArchitecture::skipStructuralOperationInCallback(const std::string &operation) {
+    if (!isInsidePhytomerCallback()) {
+        return false;
+    }
+    const size_t scope_separator = operation.rfind("::");
+    const std::string operation_name = (scope_separator == std::string::npos) ? operation : operation.substr(scope_separator + 2);
+    callback_warnings.addWarning("callback_" + operation_name + "_skipped", operation + "() was called from inside a phytomer callback and was skipped, because it cannot run while the plant is being grown. pruneBranch() is the only structural edit a callback can make; it is deferred automatically to the end of the time step.");
+    return true;
+}
+
+void PlantArchitecture::rejectStructuralOperationInCallback(const std::string &operation) const {
+    if (isInsidePhytomerCallback()) {
+        helios_runtime_error("ERROR (PlantArchitecture::" + operation + "): This operation cannot be used inside a phytomer callback (PhytomerParameters::phytomer_creation_function or phytomer_callback_function), because it adds plant structure while the plant is being grown. Call it from outside the callback, for example between calls to advanceTime(). To remove structure from a callback, use pruneBranch(), which is deferred to the end of the current time step.");
+    }
+}
+
+void PlantArchitecture::flushDeferredPrunes() {
+    if (isInsidePhytomerCallback()) {
+        helios_runtime_error("ERROR (PlantArchitecture::flushDeferredPrunes): Deferred cuts cannot be applied while a phytomer callback is running. This is an internal error in the PlantArchitecture plug-in.");
+    }
+
+    // Applying a cut never runs a phytomer callback, so nothing can be queued while these are applied.
+    std::vector<DeferredPrune> pending_prunes;
+    pending_prunes.swap(deferred_prunes);
+
+    for (const DeferredPrune &cut: pending_prunes) {
+        const std::shared_ptr<Shoot> &shoot = plant_instances.at(cut.plantID).shoot_tree.at(cut.shootID);
+        // Cuts are applied in the order they were requested. A shoot already removed by an earlier cut needs nothing more, and neither
+        // does a node that an earlier cut lower down the same shoot has already taken off.
+        if (shoot->isPruned() || cut.node_index >= shoot->phytomers.size()) {
+            continue;
+        }
+        applyPruneBranch(cut.plantID, cut.shootID, cut.node_index);
+    }
+}
+
 void PlantArchitecture::pruneBranch(uint plantID, uint shootID, uint node_index) {
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::pruneBranch): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -7984,9 +8250,28 @@ void PlantArchitecture::pruneBranch(uint plantID, uint shootID, uint node_index)
         return;
     }
 
+    // Called from inside a phytomer callback, the cut cannot be made now: the callback runs while the shoot's phytomers are being
+    // iterated (or while a phytomer is still being appended), and removing phytomers would invalidate that loop. The arguments are
+    // checked here, so errors surface at the call site, and the cut is queued to be applied once nothing is iterating the plant
+    // structure -- at the end of the current time step during growth, or before the build call returns. The bound is the phytomer
+    // count rather than current_node_number, which a creation callback sees before it has been advanced to include the new node.
+    if (isInsidePhytomerCallback()) {
+        if (node_index >= shoot->phytomers.size()) {
+            helios_runtime_error("ERROR (PlantArchitecture::pruneBranch): Node index " + std::to_string(node_index) + " is out of range for shoot " + std::to_string(shootID) + ".");
+        }
+        deferred_prunes.push_back({plantID, shootID, node_index});
+        return;
+    }
+
     if (node_index >= shoot->current_node_number) {
         helios_runtime_error("ERROR (PlantArchitecture::pruneBranch): Node index " + std::to_string(node_index) + " is out of range for shoot " + std::to_string(shootID) + ".");
     }
+
+    applyPruneBranch(plantID, shootID, node_index);
+}
+
+void PlantArchitecture::applyPruneBranch(uint plantID, uint shootID, uint node_index) {
+    const std::shared_ptr<Shoot> &shoot = plant_instances.at(plantID).shoot_tree.at(shootID);
 
     shoot->phytomers.at(node_index)->deletePhytomer();
 
@@ -8826,6 +9111,8 @@ uint PlantArchitecture::addPlantInstance(const helios::vec3 &base_position, floa
 }
 
 uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 &base_position, const AxisRotation &base_rotation, float current_age) {
+    rejectStructuralOperationInCallback("duplicatePlantInstance");
+    StructuralOperationScope structural_operation_scope(this);
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::duplicatePlantInstance): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
@@ -9011,6 +9298,9 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
 }
 
 void PlantArchitecture::deletePlantInstance(uint plantID) {
+    if (skipStructuralOperationInCallback("deletePlantInstance")) {
+        return;
+    }
     if (plant_instances.find(plantID) == plant_instances.end()) {
         return;
     }
@@ -9025,6 +9315,9 @@ void PlantArchitecture::deletePlantInstance(uint plantID) {
 }
 
 void PlantArchitecture::deletePlantInstance(const std::vector<uint> &plantIDs) {
+    if (skipStructuralOperationInCallback("deletePlantInstance")) {
+        return;
+    }
     for (uint ID: plantIDs) {
         deletePlantInstance(ID);
     }
@@ -9090,6 +9383,11 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
 }
 
 void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float time_step_days) {
+    if (skipStructuralOperationInCallback("advanceTime")) {
+        return;
+    }
+    StructuralOperationScope structural_operation_scope(this);
+
     for (uint plantID: plantIDs) {
         if (plant_instances.find(plantID) == plant_instances.end()) {
             helios_runtime_error("ERROR (PlantArchitecture::advanceTime): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -9235,6 +9533,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                     plant_instance.season_peak_shadow_grid = plant_instance.shadow_grid;
                     plant_instance.season_peak_crown_depth_grid = plant_instance.crown_depth_grid;
                     plant_instance.season_peak_shadow_grid_voxel_size = plant_instance.shadow_grid_voxel_size;
+                    captureSeasonPeakLeaves(plantID);
                 }
             }
 
@@ -9283,6 +9582,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                     phytomer->age += dt_max_days;
 
                     if (phytomer->phytomer_parameters.phytomer_callback_function != nullptr) {
+                        PhytomerCallbackScope callback_scope(this);
                         phytomer->phytomer_parameters.phytomer_callback_function(phytomer);
                     }
                 }
@@ -9521,9 +9821,14 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                                 // which correctly uses parent_petiole_index to get the specific petiole's axis vector
                                 AxisRotation base_rotation = make_AxisRotation(deg2rad(insertion_angle_adjustment), deg2rad(new_shoot_parameters->base_yaw.val()), deg2rad(new_shoot_parameters->base_roll.val()));
                                 new_shoot_parameters->base_yaw.resample();
-                                if (new_shoot_parameters->insertion_angle_decay_rate.val() == 0) {
-                                    new_shoot_parameters->insertion_angle_tip.resample();
-                                }
+                                // base_roll sets where the new shoot's first petiole, and so its phyllotactic sequence, points around the
+                                // parent. Given as a distribution it must be drawn for each shoot like base_yaw; drawn once, every shoot
+                                // started its phyllotaxy at the same orientation relative to its parent. A constant draws nothing.
+                                new_shoot_parameters->base_roll.resample();
+                                // Drawn for each shoot whatever the decay rate: resampled only when the decay rate was zero, every shoot of
+                                // a type with a nonzero decay shared one tip angle.
+                                new_shoot_parameters->insertion_angle_tip.resample();
+                                new_shoot_parameters->insertion_angle_decay_rate.resample();
 
                                 // scale the shoot internode length based on proximity from the tip
                                 float internode_length_max;
@@ -9533,6 +9838,11 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                                 } else {
                                     internode_length_max = new_shoot_parameters->internode_length_max.val();
                                 }
+                                // The snapshot is shared by every shoot of this type, so draw fresh values for the next lateral, as the epicormic path below does. Without this every lateral grown in a run
+                                // shares one internode length however wide the distribution on the shoot type.
+                                new_shoot_parameters->internode_length_max.resample();
+                                new_shoot_parameters->internode_length_decay_rate.resample();
+                                new_shoot_parameters->internode_length_min.resample();
 
                                 // Size the new lateral from its OWN shoot type, not from the phytomer it breaks out of. Inheriting the parent's initial radius made a bud on a thick woody axis produce a shoot
                                 // whose first internode matched the trunk: on the grapevine VSP trunk (radius_initial 0.05 m) a 5 cm-radius twig that collapsed to 3 mm at the very next node. The pipe-model
@@ -9621,6 +9931,12 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                     }
                 }
             }
+
+            // Cuts requested by this sub-step's phytomer callbacks were held while the loop above was iterating the shoots and their
+            // phytomers. Nothing is iterating the plant structure now, so they take effect here, at the end of the time step. advanceTime()
+            // is never entered from inside a callback (it is skipped there), and its only internal callers invoke it outside any loop
+            // over shoots, so this point is safe whether or not an enclosing build operation is still open.
+            flushDeferredPrunes();
 
 
             // Update Context geometry based on scheduling configuration

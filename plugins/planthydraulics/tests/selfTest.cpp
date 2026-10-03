@@ -51,8 +51,47 @@ DOCTEST_TEST_CASE("PlantHydraulicsModel - getModelCoefficientsFromLibrary") {
     PlantHydraulicsModel ph_test(&context_test);
     PlantHydraulicsModelCoefficients coeffs;
     DOCTEST_CHECK_NOTHROW(coeffs = ph_test.getModelCoefficientsFromLibrary("Walnut"));
-    // Note: Cannot directly access private LeafHydraulicCapacitance member
-    // Test passes if no exception is thrown during library access
+    HydraulicCapacitance leaf_capacitance = coeffs.getLeafHydraulicCapacitance();
+    DOCTEST_CHECK(leaf_capacitance.osmotic_potential_at_full_turgor == doctest::Approx(-1.6386f).epsilon(err_tol));
+    DOCTEST_CHECK(leaf_capacitance.relative_water_content_at_turgor_loss == doctest::Approx(0.7683f).epsilon(err_tol));
+    DOCTEST_CHECK(leaf_capacitance.cell_wall_elasticity_exponent == doctest::Approx(2.f).epsilon(err_tol));
+}
+
+DOCTEST_TEST_CASE("PlantHydraulicsModelCoefficients - getters return what the setters stored") {
+    PlantHydraulicsModelCoefficients coeffs;
+    coeffs.setLeafHydraulicConductance(0.05f, -1.5f, 2.f, true);
+    coeffs.setStemHydraulicConductance(0.3f, -2.5f);
+    coeffs.setRootHydraulicConductance(0.7f);
+    coeffs.setLeafHydraulicCapacitance(-2.2f, 0.85f, 1.5f, 12.f);
+    coeffs.setStemHydraulicCapacitance(0.4f);
+    coeffs.setRootHydraulicCapacitance(-1.1f, 0.9f);
+
+    HydraulicConductance K_leaf = coeffs.getLeafHydraulicConductance();
+    DOCTEST_CHECK(K_leaf.saturated_conductance == doctest::Approx(0.05f).epsilon(err_tol));
+    DOCTEST_CHECK(K_leaf.potential_at_half_saturated == doctest::Approx(-1.5f).epsilon(err_tol));
+    DOCTEST_CHECK(K_leaf.sensitivity == doctest::Approx(2.f).epsilon(err_tol));
+    DOCTEST_CHECK(K_leaf.temperature_dependence);
+
+    HydraulicConductance K_stem = coeffs.getStemHydraulicConductance();
+    DOCTEST_CHECK(K_stem.saturated_conductance == doctest::Approx(0.3f).epsilon(err_tol));
+    DOCTEST_CHECK(K_stem.potential_at_half_saturated == doctest::Approx(-2.5f).epsilon(err_tol));
+    DOCTEST_CHECK(!K_stem.temperature_dependence);
+
+    HydraulicConductance K_root = coeffs.getRootHydraulicConductance();
+    DOCTEST_CHECK(K_root.saturated_conductance == doctest::Approx(0.7f).epsilon(err_tol));
+
+    HydraulicCapacitance C_leaf = coeffs.getLeafHydraulicCapacitance();
+    DOCTEST_CHECK(C_leaf.osmotic_potential_at_full_turgor == doctest::Approx(-2.2f).epsilon(err_tol));
+    DOCTEST_CHECK(C_leaf.relative_water_content_at_turgor_loss == doctest::Approx(0.85f).epsilon(err_tol));
+    DOCTEST_CHECK(C_leaf.cell_wall_elasticity_exponent == doctest::Approx(1.5f).epsilon(err_tol));
+    DOCTEST_CHECK(C_leaf.saturated_specific_water_content == doctest::Approx(12.f).epsilon(err_tol));
+
+    HydraulicCapacitance C_stem = coeffs.getStemHydraulicCapacitance();
+    DOCTEST_CHECK(C_stem.fixed_constant_capacitance == doctest::Approx(0.4f).epsilon(err_tol));
+
+    HydraulicCapacitance C_root = coeffs.getRootHydraulicCapacitance();
+    DOCTEST_CHECK(C_root.osmotic_potential_at_full_turgor == doctest::Approx(-1.1f).epsilon(err_tol));
+    DOCTEST_CHECK(C_root.relative_water_content_at_turgor_loss == doctest::Approx(0.9f).epsilon(err_tol));
 }
 
 DOCTEST_TEST_CASE("PlantHydraulicsModel - getOrInitializePrimitiveData") {

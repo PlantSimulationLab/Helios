@@ -2845,6 +2845,58 @@ float helios::interp1(const std::vector<helios::vec2> &points, float x) {
     return 0.0f; // Suppress compiler warning (never reached)
 }
 
+//! Fraction of blackbody emissive power emitted at wavelengths shorter than wavelength_nm
+static double blackbodyFractionBelowWavelength(double wavelength_nm, double temperature_K) {
+    // In terms of x = C2/(lambda*T), the fraction is (15/pi^4) * integral from x to infinity of t^3/(e^t-1) dt (Siegel & Howell, Thermal Radiation Heat Transfer).
+    constexpr double second_radiation_constant_mK = 1.438776877e-2;
+    const double normalization = 15.0 / (M_PI * M_PI * M_PI * M_PI);
+    const double x = second_radiation_constant_mK / (wavelength_nm * 1e-9 * temperature_K);
+
+    if (x >= 2.0) {
+        // Exponential series, which converges rapidly for large x (20 terms leave an error below e^-40)
+        double series_sum = 0.0;
+        for (int n = 1; n <= 20; n++) {
+            const double nd = n;
+            series_sum += std::exp(-nd * x) / nd * (x * x * x + 3.0 * x * x / nd + 6.0 * x / (nd * nd) + 6.0 / (nd * nd * nd));
+        }
+        return normalization * series_sum;
+    }
+
+    // For small x, integrate the Bernoulli-number expansion of t^3/(e^t-1) from 0 to x and take the complement (truncation error in the fraction below 1e-5 at x = 2)
+    const double x2 = x * x;
+    const double integral_below_x = x * x2 * (1.0 / 3.0 - x / 8.0 + x2 / 60.0 - x2 * x2 / 5040.0 + x2 * x2 * x2 / 272160.0 - x2 * x2 * x2 * x2 / 13305600.0);
+    return 1.0 - normalization * integral_below_x;
+}
+
+float helios::blackbodyBandFraction(float wavelength_min_nm, float wavelength_max_nm, float temperature_K) {
+    if (temperature_K <= 0.f) {
+        helios_runtime_error("ERROR (blackbodyBandFraction): Temperature must be greater than 0 K, but a value of " + std::to_string(temperature_K) + " K was given.");
+    }
+    if (wavelength_min_nm < 0.f || wavelength_max_nm <= wavelength_min_nm) {
+        helios_runtime_error("ERROR (blackbodyBandFraction): Wavelength bounds must satisfy 0 <= wavelength_min_nm < wavelength_max_nm, but bounds of (" + std::to_string(wavelength_min_nm) + ", " + std::to_string(wavelength_max_nm) +
+                             ") nm were given.");
+    }
+
+    // No power is emitted below zero wavelength
+    const double fraction_below_min = wavelength_min_nm == 0.f ? 0.0 : blackbodyFractionBelowWavelength(wavelength_min_nm, temperature_K);
+    return static_cast<float>(blackbodyFractionBelowWavelength(wavelength_max_nm, temperature_K) - fraction_below_min);
+}
+
+float helios::blackbodySpectralRadiance(float wavelength_nm, float temperature_K) {
+    if (temperature_K <= 0.f) {
+        helios_runtime_error("ERROR (blackbodySpectralRadiance): Temperature must be greater than 0 K, but a value of " + std::to_string(temperature_K) + " K was given.");
+    }
+    if (wavelength_nm <= 0.f) {
+        helios_runtime_error("ERROR (blackbodySpectralRadiance): Wavelength must be greater than 0 nm, but a value of " + std::to_string(wavelength_nm) + " nm was given.");
+    }
+    // First and second radiation constants for spectral radiance, 2hc^2 (W m^2/sr) and hc/k (m K) (CODATA 2018)
+    constexpr double first_radiation_constant = 1.191042972e-16;
+    constexpr double second_radiation_constant_mK = 1.438776877e-2;
+    const double wavelength_m = wavelength_nm * 1e-9;
+    const double radiance_per_m = first_radiation_constant / (std::pow(wavelength_m, 5) * std::expm1(second_radiation_constant_mK / (wavelength_m * temperature_K)));
+    return static_cast<float>(radiance_per_m * 1e-9);
+}
+
 std::string helios::getFileExtension(const std::string &filepath) {
     std::filesystem::path output_path_fs = filepath;
     return output_path_fs.extension().string();

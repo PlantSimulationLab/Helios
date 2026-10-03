@@ -28,6 +28,15 @@
 // Must match HELIOS_MAX_RADIATION_BANDS in OptiX8LaunchParams.h; the host fails fast if exceeded.
 #define GLASS_MAX_BANDS 32
 
+// Diffuse, camera and pixel-label rays continue past a translucent cover from this distance (m) beyond it.
+// Must match COVER_EXIT_OFFSET in OptiX8DeviceCode.cu and RayTracing.cuh.
+#define COVER_EXIT_OFFSET 1e-4
+// Maximum number of segments a camera or pixel-label ray is traced in: each translucent cover passed and each
+// periodic-boundary wrap starts a new segment. Must match MAX_RAY_SEGMENTS in the OptiX backends.
+#define MAX_RAY_SEGMENTS 32
+// Maximum number of periodic-boundary wraps of a camera or pixel-label ray.
+#define MAX_PERIODIC_WRAPS 10
+
 vec3 glass_tau_rho_alpha(float cos_theta, float n, float KL) {
     cos_theta = max(1e-4, min(1.0, cos_theta)); // guard grazing/degenerate
     float theta   = acos(clamp(cos_theta, -1.0, 1.0));
@@ -66,6 +75,33 @@ vec3 glass_tau_rho_alpha(float cos_theta, float n, float KL) {
     rho = clamp(rho, 0.0, 1.0);
     float alpha = max(0.0, 1.0 - tau - rho);
     return vec3(tau, rho, alpha);
+}
+
+// The helpers below read the translucent-cover material buffers, which the calling shader must declare before including
+// this file: band_map_buf.map[] (set 1, binding 10), is_glass_buf.is_glass[] (11), glass_n_buf.glass_n[] (12) and
+// glass_KL_buf.glass_KL[] (13). They index the source-0 slice [prim * material_band_count + global_band], as glass
+// properties do not depend on the source.
+
+// Whether a primitive is a translucent cover for the rays of this launch. A single ray carries every launched band, so a
+// primitive that is glass in some launched bands but opaque in others cannot be both transmitted and blocked; it is a
+// cover only if it is glass in ALL launched bands, and is otherwise a normal opaque primitive for the whole ray. This
+// matches the OptiX 8 and OptiX 6 backends.
+bool glass_cover_all_bands(uint prim, uint band_count, uint material_band_count) {
+    if (band_count == 0u) {
+        return false;
+    }
+    for (uint band = 0u; band < band_count; ++band) {
+        if (is_glass_buf.is_glass[prim * material_band_count + band_map_buf.map[band]] == 0u) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Angular vec3(tau, rho, alpha) of a cover primitive in launched band `band`, for a ray at |cos(theta)| to its normal.
+vec3 glass_cover_tau_rho_alpha(uint prim, uint band, uint material_band_count, float cos_theta) {
+    uint gmi = prim * material_band_count + band_map_buf.map[band];
+    return glass_tau_rho_alpha(cos_theta, glass_n_buf.glass_n[gmi], glass_KL_buf.glass_KL[gmi]);
 }
 
 #endif // GLASS_COVER_GLSL

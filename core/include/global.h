@@ -1175,6 +1175,27 @@ namespace helios {
      */
     [[nodiscard]] float interp1(const std::vector<helios::vec2> &points, float x);
 
+    //! Fraction of total blackbody emissive power emitted between two wavelengths
+    /**
+     * Evaluates the integral of Planck's law between the two wavelengths divided by its integral over all wavelengths (sigma*T^4), using the series solutions given in Siegel & Howell, Thermal Radiation Heat Transfer. Multiplying the result
+     * by epsilon*sigma*T^4 gives the in-band emitted flux of a gray surface.
+     * \param[in] wavelength_min_nm Lower wavelength bound in nanometers (must be >= 0).
+     * \param[in] wavelength_max_nm Upper wavelength bound in nanometers (must be greater than wavelength_min_nm).
+     * \param[in] temperature_K Blackbody temperature in Kelvin (must be > 0).
+     * \return Fraction of blackbody emissive power in the band, in the range [0,1].
+     * \ingroup functions
+     */
+    [[nodiscard]] float blackbodyBandFraction(float wavelength_min_nm, float wavelength_max_nm, float temperature_K);
+
+    //! Spectral radiance of a blackbody (Planck's law)
+    /**
+     * \param[in] wavelength_nm Wavelength in nanometers (must be > 0).
+     * \param[in] temperature_K Blackbody temperature in Kelvin (must be > 0).
+     * \return Spectral radiance in W/m^2/sr/nm. Its integral over all wavelengths is sigma*T^4/pi.
+     * \ingroup functions
+     */
+    [[nodiscard]] float blackbodySpectralRadiance(float wavelength_nm, float temperature_K);
+
     //! Generate linearly spaced values between two endpoints
     /**
      * \param[in] start Starting value
