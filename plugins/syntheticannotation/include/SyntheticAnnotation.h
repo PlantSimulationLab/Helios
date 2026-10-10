@@ -23,6 +23,12 @@
 #include "Context.h"
 #include "Visualizer.h"
 
+//! Automatic generation of labeled images for machine learning from a rendering of the Context
+/**
+ * \deprecated This plug-in is deprecated and will be removed in Helios v2.0. The Visualizer plug-in now writes bounding boxes (Visualizer::writeImageBoundingBoxes()), segmentation masks
+ * (Visualizer::writeImageSegmentationMasks()) and depth images (Visualizer::writeDepthImageData()) directly, with objects labeled through primitive or object data as for the radiation plug-in's camera
+ * annotations. See the plug-in documentation for the equivalent of each method.
+ */
 class SyntheticAnnotation {
 public:
     //! Synthetic image annotation plug-in default constructor

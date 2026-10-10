@@ -26,13 +26,24 @@
 #include <utility>
 #include <vector>
 
+namespace helios {
+    class Context;
+}
+
 //! Writing of image annotation files in the standard formats used to train machine-learning models
 /**
  * These routines are deliberately independent of how the image was produced. Every entry point
  * takes plain pixel data -- binary masks, bounding boxes -- rather than a camera or a renderer, so
  * that any plug-in that can produce a per-pixel object label can write annotations in the same
  * formats. The radiation plug-in supplies its masks from ray-traced camera pixel labels; the
- * synthetic annotation plug-in supplies them from a rasterized ID rendering.
+ * visualizer and synthetic annotation plug-ins supply them from a rasterized ID rendering.
+ *
+ * The routines that take a "pixel-to-primitive map" turn a per-pixel record of which primitive is
+ * visible, together with labels stored as primitive or object data in the Context, into finished
+ * annotation files. Two renderers that produce the same map for the same labeled Context therefore
+ * write identical annotations. The map is a row-major vector of length width*height in the image
+ * convention below, in which each element is the UUID of the primitive visible in that pixel plus
+ * one, and zero means no primitive is visible.
  *
  * The image coordinate convention throughout is the one the annotation formats require: the origin
  * is the TOP-LEFT corner of the image, with y increasing downward. Callers whose pixel buffer is
@@ -155,6 +166,76 @@ namespace helios::annotation {
      * \param[in] filename Path of the file to write.
      */
     void writeYOLOClassNames(const std::map<uint, std::string> &class_names, const std::string &filename);
+
+    //! Compute a bounding box for each labeled object visible in a pixel-to-primitive map
+    /**
+     * A label is a primitive or object data value of type `uint` or `int`: every primitive carrying the same value of the same data label belongs to one object, and one box is produced per distinct value. Primitives
+     * that do not carry the data label are not annotated.
+     *
+     * A box encloses whole every pixel in which the object is visible: it runs from the left edge of the first pixel column to the right edge of the last, and from the top edge of the first pixel row to the bottom
+     * edge of the last. An object visible in a single pixel therefore has a box one pixel in size.
+     *
+     * \param[in] context Context holding the primitives named by the map and their label data.
+     * \param[in] pixel_UUIDs Pixel-to-primitive map (UUID+1 per pixel, 0 for none), row-major with row 0 at the top of the image.
+     * \param[in] resolution Image dimensions in pixels.
+     * \param[in] data_labels Names of the primitive or object data labels to annotate.
+     * \param[in] class_IDs Class index written for the objects of each data label, in the same order as data_labels.
+     * \param[in] use_object_data If true, labels are read from the data of each primitive's parent object. If false, they are read from primitive data.
+     * \return One box per distinct pair of class index and label value, ordered by class index and then label value.
+     */
+    [[nodiscard]] std::vector<YOLOBox> labelBoundingBoxes(const helios::Context *context, const std::vector<uint> &pixel_UUIDs, const helios::int2 &resolution, const std::vector<std::string> &data_labels, const std::vector<uint> &class_IDs,
+                                                          bool use_object_data);
+
+    //! Write YOLO bounding boxes and a class file for the labeled objects visible in a pixel-to-primitive map
+    /**
+     * The boxes are written to a file named after the image, with its extension replaced by ".txt", in the directory `image_path`. The class file holds one "class_ID data_label" pair per line.
+     *
+     * \param[in] context Context holding the primitives named by the map and their label data.
+     * \param[in] pixel_UUIDs Pixel-to-primitive map (UUID+1 per pixel, 0 for none), row-major with row 0 at the top of the image.
+     * \param[in] resolution Image dimensions in pixels.
+     * \param[in] data_labels Names of the primitive or object data labels to annotate.
+     * \param[in] class_IDs Class index written for the objects of each data label, in the same order as data_labels.
+     * \param[in] image_file Name of the image these boxes annotate. Only its stem is used, to name the output file.
+     * \param[in] classes_txt_file Name of the class file to write within `image_path`.
+     * \param[in] image_path Directory to write the output files to.
+     * \param[in] use_object_data If true, labels are read from the data of each primitive's parent object. If false, they are read from primitive data.
+     * \param[in] caller Name of the calling method, used to attribute error messages (e.g. "Visualizer::writeImageBoundingBoxes").
+     */
+    void writeLabelBoundingBoxes(const helios::Context *context, const std::vector<uint> &pixel_UUIDs, const helios::int2 &resolution, const std::vector<std::string> &data_labels, const std::vector<uint> &class_IDs, const std::string &image_file,
+                                 const std::string &classes_txt_file, const std::string &image_path, bool use_object_data, const std::string &caller);
+
+    //! Build a binary mask for each distinct value of a data label visible in a pixel-to-primitive map
+    /**
+     * \param[in] context Context holding the primitives named by the map and their label data.
+     * \param[in] pixel_UUIDs Pixel-to-primitive map (UUID+1 per pixel, 0 for none), row-major with row 0 at the top of the image.
+     * \param[in] resolution Image dimensions in pixels.
+     * \param[in] data_label Name of the primitive or object data label, which must have type `uint` or `int`.
+     * \param[in] use_object_data If true, the label is read from the data of each primitive's parent object. If false, it is read from primitive data.
+     * \return Binary mask per label value, indexed [row][column] with row 0 at the top of the image.
+     */
+    [[nodiscard]] std::map<int, std::vector<std::vector<bool>>> labelMasks(const helios::Context *context, const std::vector<uint> &pixel_UUIDs, const helios::int2 &resolution, const std::string &data_label, bool use_object_data);
+
+    //! Write COCO JSON segmentation masks for the labeled objects visible in a pixel-to-primitive map
+    /**
+     * Each connected region of pixels sharing one value of a data label becomes one annotation, so an object split in two by an occluder yields two annotations. Pixels touching only at a corner are connected.
+     * The "bbox" of an annotation is (x, y, width, height) in pixels, enclosing whole every pixel of the region.
+     * A region of only one or two pixels is too small to outline and is not written.
+     *
+     * \param[in] context Context holding the primitives named by the map and their label data.
+     * \param[in] pixel_UUIDs Pixel-to-primitive map (UUID+1 per pixel, 0 for none), row-major with row 0 at the top of the image.
+     * \param[in] resolution Image dimensions in pixels.
+     * \param[in] data_labels Names of the primitive or object data labels to annotate. Each becomes a COCO category.
+     * \param[in] class_IDs Class index (COCO category ID) of each data label, in the same order as data_labels.
+     * \param[in] json_filename Path of the COCO JSON file to write. ".json" is appended if it is missing.
+     * \param[in] image_file Path of the image these masks annotate, which must exist.
+     * \param[in] data_attribute_labels Primitive or object data labels of type `int`, `uint`, `float` or `double` whose mean over the pixels of each mask is written to that annotation's "attributes". A label that
+     * exists as both is read from primitive data. Labels that do not exist are ignored.
+     * \param[in] append_file If true, annotations are added to the file at `json_filename` if it already exists. If false, a new file is written.
+     * \param[in] use_object_data If true, labels are read from the data of each primitive's parent object. If false, they are read from primitive data.
+     * \param[in] caller Name of the calling method, used to attribute error messages (e.g. "Visualizer::writeImageSegmentationMasks").
+     */
+    void writeLabelSegmentationMasks(const helios::Context *context, const std::vector<uint> &pixel_UUIDs, const helios::int2 &resolution, const std::vector<std::string> &data_labels, const std::vector<uint> &class_IDs,
+                                     const std::string &json_filename, const std::string &image_file, const std::vector<std::string> &data_attribute_labels, bool append_file, bool use_object_data, const std::string &caller);
 
 } // namespace helios::annotation
 

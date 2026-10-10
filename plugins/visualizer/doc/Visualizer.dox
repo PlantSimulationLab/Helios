@@ -679,6 +679,81 @@
    }
   ~~~~~~
 
+  \subsection Annotation Annotated Images for Machine Learning
+
+  Because the %Visualizer knows which Context primitive is visible in every pixel it draws, it can write the labels for a rendered image along with the image itself: rectangular bounding boxes in YOLO format, segmentation masks in COCO JSON format, and depth images. Together with \ref Visualizer::printWindow( const char*, const std::string& ) "printWindow()", this produces labeled training images of a Helios scene without the radiation plug-in or a GPU ray tracer.
+
+  Objects are labeled through primitive data or object data in the Context, using the same convention as the camera annotations of the radiation plug-in (RadiationModel::writeImageBoundingBoxes() and RadiationModel::writeImageSegmentationMasks()):
+
+  - A <b>data label</b> names a class of object, e.g. "fruit". Its value, which must be of type <code>uint</code> or <code>int</code>, identifies the individual object: all primitives carrying the same value belong to one object.
+  - Primitives that do not carry the data label are not annotated, although they still hide whatever is behind them.
+  - Each data label is given a <b>class ID</b> when the annotations are written.
+
+  A Context labeled for one of the two can therefore be annotated by the other without change, and both write their files through the same routines. The two renderers sample the scene differently, so their annotations of the same view should not be expected to match pixel for pixel.
+
+  ~~~~~~{.cpp}
+   Context context;
+
+   // ... build the scene ...
+
+   // Each fruit is one object: give all of its primitives the same value of "fruit"
+   for( uint fruit = 0; fruit < fruit_UUIDs.size(); fruit++ ){
+      context.setPrimitiveData( fruit_UUIDs.at(fruit), "fruit", fruit+1 );
+   }
+
+   Visualizer vis( 1200, 800, 4, false, true ); //headless: no window is needed
+   vis.buildContextGeometry( &context );
+   vis.setCameraPosition( make_vec3(0,-5,3), make_vec3(0,0,1) );
+   vis.hideWatermark();
+
+   vis.printWindow( "images/view0.jpeg" ); //the directory "images" must already exist
+
+   // Bounding boxes -> images/view0.txt and images/classes.txt
+   vis.writeImageBoundingBoxes( "fruit", 0, "view0.jpeg", "classes.txt", "images/" );
+
+   // Segmentation masks -> images/annotations.json
+   vis.writeImageSegmentationMasks( "fruit", 0, "images/annotations.json", "images/view0.jpeg" );
+
+   // Depth -> images/view0_depth.txt
+   vis.writeDepthImageData( "images/view0_depth.txt" );
+  ~~~~~~
+
+  The annotations always describe the view at the time they are written, so to produce many views of one scene, move the camera and write the image and its annotations for each view in turn. Passing <code>append_file = true</code> to \ref Visualizer::writeImageSegmentationMasks( const std::string&, uint, const std::string&, const std::string&, const std::vector<std::string>&, bool ) "writeImageSegmentationMasks()" collects the masks of every view in a single COCO file.
+
+  <table>
+    <tr><th>Annotation</th><th>Primitive data labels</th><th>Object data labels</th></tr>
+    <tr><td>Bounding boxes (YOLO)</td><td>\ref Visualizer::writeImageBoundingBoxes( const std::string&, uint, const std::string&, const std::string&, const std::string& ) "writeImageBoundingBoxes()"</td><td>\ref Visualizer::writeImageBoundingBoxes_ObjectData( const std::string&, uint, const std::string&, const std::string&, const std::string& ) "writeImageBoundingBoxes_ObjectData()"</td></tr>
+    <tr><td>Segmentation masks (COCO JSON)</td><td>\ref Visualizer::writeImageSegmentationMasks( const std::string&, uint, const std::string&, const std::string&, const std::vector<std::string>&, bool ) "writeImageSegmentationMasks()"</td><td>\ref Visualizer::writeImageSegmentationMasks_ObjectData( const std::string&, uint, const std::string&, const std::string&, const std::vector<std::string>&, bool ) "writeImageSegmentationMasks_ObjectData()"</td></tr>
+  </table>
+
+  Each of these also has an overload taking a vector of data labels and a vector of class IDs, for annotating several classes in one call. The output can be checked by eye with \ref Visualizer::displayImageWithBoundingBoxes() "displayImageWithBoundingBoxes()" and \ref Visualizer::displayImageWithSegmentationMasks() "displayImageWithSegmentationMasks()" (see \ref DisplayImage).
+
+  Some points to be aware of:
+
+  - Annotations describe objects <b>as they appear</b>. A bounding box encloses the visible pixels of an object, and a mask outlines them; parts hidden behind other geometry are not included. An object whose visible area is split in two by something in front of it has one bounding box spanning both parts, but two segmentation masks.
+  - A bounding box encloses whole every pixel in which the object is visible, so every visible labeled object has one. A region of only one or two pixels is too small to outline and has no mask.
+  - A primitive with a transparency-masked texture, such as a leaf image, is annotated only where its texture is opaque.
+  - A semi-transparent primitive (color alpha less than 1) is treated as opaque: it is annotated where it is in front, and hides what is behind it.
+  - The annotations are exact. They do not depend on the colors or lighting of the scene, or on the anti-aliasing the %Visualizer was created with, and writing them does not modify the Context.
+  - Bounding box and mask coordinates are measured from the <b>top-left</b> corner of the image, as the YOLO and COCO formats require.
+  - Rectangles and triangles added directly to the %Visualizer (rather than through the Context) hide the Context primitives behind them, but cannot themselves be annotated. Lines and points added to the %Visualizer are ignored: they hide nothing in the annotations or the depth image. The sky dome, colorbar and watermark are ignored by the annotations and have no depth, though they do appear in a saved image; hide the ones that should not be in a training image.
+  - On a high-DPI display a windowed %Visualizer renders more pixels than the window size it was created with. The saved image and its annotations always have the same dimensions, which are given by \ref Visualizer::getFramebufferSize() "getFramebufferSize()". A headless %Visualizer always renders at exactly the size requested.
+
+  \subsubsection AnnotationDepth Depth images
+
+  The depth of a pixel is the distance in world units from the camera to the surface visible in that pixel, measured along the viewing direction of the camera (not along the line of sight through the pixel). Pixels in which nothing is visible have a depth of -1. Three output forms are available:
+
+  <table>
+    <tr><th>Function</th><th>Output</th></tr>
+    <tr><td>\ref Visualizer::writeDepthImageData() "writeDepthImageData()"</td><td>Text file with one line per image row, starting from the top of the image.</td></tr>
+    <tr><td>\ref Visualizer::writeDepthImageDataEXR() "writeDepthImageDataEXR()"</td><td>EXR file holding the depth as a floating-point image.</td></tr>
+    <tr><td>\ref Visualizer::writeNormDepthImage() "writeNormDepthImage()"</td><td>Grayscale JPEG for viewing, in which the nearest surface is white and anything at or beyond a given maximum depth is black.</td></tr>
+  </table>
+
+  The underlying buffers can also be retrieved directly, without writing a file: \ref Visualizer::getDepthImage() "getDepthImage()" returns the depth of each pixel, and \ref Visualizer::getPixelUUIDs() "getPixelUUIDs()" returns the UUID of the Context primitive visible in each pixel.
+
+  \note \ref Visualizer::getDepthMap(std::vector<float>&, uint&, uint&) "getDepthMap()" and \ref Visualizer::plotDepthMap() "plotDepthMap()" produce a <i>normalized</i> depth map for display, scaled between the nearest and farthest values in view. It is not a distance. Use getDepthImage() when the depth is needed in world units.
+
   \subsection ColorShade Colors and Shading
   
   \subsubsection ColoringRGB Coloring by r-g-b code
@@ -897,7 +972,7 @@
    </tr>
  </table>
 
-  If the Phong shading model is used, the position of the light source should be specified.  This is accomplished through the \ref Visualizer::setLightDirection( const helios::vec3 &direction ) command, which takes a unit vector pointing toward the light source.  The example below shows how to enable the Phong lighting model with shadows, with the light position set according to the position of the sun.
+  If the Phong shading model is used, the position of the light source should be specified.  This is accomplished through the \ref Visualizer::setLightDirection( const helios::vec3 &direction ) command, which takes a vector pointing from the scene toward the light source (it does not need to be a unit vector).  The example below shows how to enable the Phong lighting model with shadows, with the light position set according to the position of the sun.
 
   ~~~~~~{.cpp}
    #include "Visualizer.h"

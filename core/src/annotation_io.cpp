@@ -17,6 +17,7 @@
 */
 
 #include "annotation_io.h"
+#include "Context.h"
 #include "global.h"
 
 #include <filesystem>
@@ -27,6 +28,126 @@
 #include <stack>
 
 using namespace helios;
+
+namespace {
+
+    //! Read the integer label that a primitive carries under one data label
+    /**
+     * \param[in] context Context holding the primitive.
+     * \param[in] UUID Primitive to read the label of.
+     * \param[in] data_label Name of the primitive or object data label.
+     * \param[in] use_object_data If true, the label is read from the primitive's parent object. If false, it is read from the primitive.
+     * \param[out] label_value Value of the label, if the primitive carries one.
+     * \return True if the primitive (or its parent object) has this data label with type `uint` or `int`.
+     */
+    bool readLabelValue(const Context *context, uint UUID, const std::string &data_label, bool use_object_data, uint &label_value) {
+        if (use_object_data) {
+            const uint objID = context->getPrimitiveParentObjectID(UUID);
+            if (objID == 0 || !context->doesObjectExist(objID) || !context->doesObjectDataExist(objID, data_label.c_str())) {
+                return false;
+            }
+            const HeliosDataType datatype = context->getObjectDataType(data_label.c_str());
+            if (datatype == HELIOS_TYPE_UINT) {
+                context->getObjectData(objID, data_label.c_str(), label_value);
+                return true;
+            } else if (datatype == HELIOS_TYPE_INT) {
+                int label_value_int;
+                context->getObjectData(objID, data_label.c_str(), label_value_int);
+                label_value = (uint) label_value_int;
+                return true;
+            }
+            return false;
+        }
+
+        if (!context->doesPrimitiveDataExist(UUID, data_label.c_str())) {
+            return false;
+        }
+        const HeliosDataType datatype = context->getPrimitiveDataType(data_label.c_str());
+        if (datatype == HELIOS_TYPE_UINT) {
+            context->getPrimitiveData(UUID, data_label.c_str(), label_value);
+            return true;
+        } else if (datatype == HELIOS_TYPE_INT) {
+            int label_value_int;
+            context->getPrimitiveData(UUID, data_label.c_str(), label_value_int);
+            label_value = (uint) label_value_int;
+            return true;
+        }
+        return false;
+    }
+
+    //! Read a numeric primitive or object data value of a primitive as a double
+    /**
+     * \param[in] context Context holding the primitive.
+     * \param[in] UUID Primitive to read the value of.
+     * \param[in] data_label Name of the primitive or object data label.
+     * \param[in] is_primitive_data If true, the value is read from the primitive. If false, it is read from the primitive's parent object.
+     * \param[out] value Value of the data, if the primitive carries it.
+     * \return True if the primitive (or its parent object) has this data label with type `int`, `uint`, `float` or `double`.
+     */
+    bool readNumericData(const Context *context, uint UUID, const std::string &data_label, bool is_primitive_data, double &value) {
+        if (is_primitive_data) {
+            if (!context->doesPrimitiveDataExist(UUID, data_label.c_str())) {
+                return false;
+            }
+            const HeliosDataType datatype = context->getPrimitiveDataType(data_label.c_str());
+            if (datatype == HELIOS_TYPE_INT) {
+                int val;
+                context->getPrimitiveData(UUID, data_label.c_str(), val);
+                value = static_cast<double>(val);
+                return true;
+            } else if (datatype == HELIOS_TYPE_UINT) {
+                uint val;
+                context->getPrimitiveData(UUID, data_label.c_str(), val);
+                value = static_cast<double>(val);
+                return true;
+            } else if (datatype == HELIOS_TYPE_FLOAT) {
+                float val;
+                context->getPrimitiveData(UUID, data_label.c_str(), val);
+                value = static_cast<double>(val);
+                return true;
+            } else if (datatype == HELIOS_TYPE_DOUBLE) {
+                context->getPrimitiveData(UUID, data_label.c_str(), value);
+                return true;
+            }
+            return false;
+        }
+
+        const uint objID = context->getPrimitiveParentObjectID(UUID);
+        if (objID == 0 || !context->doesObjectDataExist(objID, data_label.c_str())) {
+            return false;
+        }
+        const HeliosDataType datatype = context->getObjectDataType(data_label.c_str());
+        if (datatype == HELIOS_TYPE_INT) {
+            int val;
+            context->getObjectData(objID, data_label.c_str(), val);
+            value = static_cast<double>(val);
+            return true;
+        } else if (datatype == HELIOS_TYPE_UINT) {
+            uint val;
+            context->getObjectData(objID, data_label.c_str(), val);
+            value = static_cast<double>(val);
+            return true;
+        } else if (datatype == HELIOS_TYPE_FLOAT) {
+            float val;
+            context->getObjectData(objID, data_label.c_str(), val);
+            value = static_cast<double>(val);
+            return true;
+        } else if (datatype == HELIOS_TYPE_DOUBLE) {
+            context->getObjectData(objID, data_label.c_str(), value);
+            return true;
+        }
+        return false;
+    }
+
+    //! Check that a pixel-to-primitive map has one element per pixel of the image it describes
+    void validatePixelMapSize(const std::vector<uint> &pixel_UUIDs, const helios::int2 &resolution, const std::string &caller) {
+        if (resolution.x <= 0 || resolution.y <= 0 || pixel_UUIDs.size() != size_t(resolution.x) * size_t(resolution.y)) {
+            helios_runtime_error("ERROR (" + caller + "): The pixel-to-primitive map has " + std::to_string(pixel_UUIDs.size()) + " elements, which does not match the image resolution of " + std::to_string(resolution.x) + " x " +
+                                 std::to_string(resolution.y) + " pixels.");
+        }
+    }
+
+} // namespace
 
 std::pair<int, int> helios::annotation::findStartingBoundaryPixel(const std::vector<std::vector<bool>> &mask, const helios::int2 &resolution) {
     for (int j = 0; j < resolution.y; j++) {
@@ -389,4 +510,317 @@ void helios::annotation::writeYOLOClassNames(const std::map<uint, std::string> &
     }
 
     classes_file.close();
+}
+
+std::vector<helios::annotation::YOLOBox> helios::annotation::labelBoundingBoxes(const helios::Context *context, const std::vector<uint> &pixel_UUIDs, const helios::int2 &resolution, const std::vector<std::string> &data_labels,
+                                                                                const std::vector<uint> &class_IDs, bool use_object_data) {
+
+    if (data_labels.size() != class_IDs.size()) {
+        helios_runtime_error("ERROR (annotation::labelBoundingBoxes): The lengths of data_labels and class_IDs vectors must be the same.");
+    }
+    validatePixelMapSize(pixel_UUIDs, resolution, "annotation::labelBoundingBoxes");
+
+    // Bounds (xmin, xmax, ymin, ymax) in pixels of each object, keyed by (class_ID, label value)
+    std::map<std::pair<uint, uint>, vec4> label_bounds;
+
+    for (int j = 0; j < resolution.y; j++) {
+        for (int i = 0; i < resolution.x; i++) {
+
+            const uint UUID_plus_one = pixel_UUIDs.at(size_t(j) * size_t(resolution.x) + size_t(i));
+            if (UUID_plus_one == 0) { // no primitive visible in this pixel
+                continue;
+            }
+            const uint UUID = UUID_plus_one - 1;
+            if (!context->doesPrimitiveExist(UUID)) {
+                continue;
+            }
+
+            for (size_t label_idx = 0; label_idx < data_labels.size(); label_idx++) {
+
+                uint label_value;
+                if (!readLabelValue(context, UUID, data_labels[label_idx], use_object_data, label_value)) {
+                    continue;
+                }
+
+                const std::pair<uint, uint> key = std::make_pair(class_IDs[label_idx], label_value);
+
+                if (label_bounds.find(key) == label_bounds.end()) {
+                    label_bounds[key] = make_vec4(1e6, -1, 1e6, -1);
+                }
+
+                vec4 &bounds = label_bounds[key];
+                if (i < bounds.x) {
+                    bounds.x = i;
+                }
+                if (i > bounds.y) {
+                    bounds.y = i;
+                }
+                if (j < bounds.z) {
+                    bounds.z = j;
+                }
+                if (j > bounds.w) {
+                    bounds.w = j;
+                }
+            }
+        }
+    }
+
+    std::vector<YOLOBox> yolo_boxes;
+    yolo_boxes.reserve(label_bounds.size());
+    for (const auto &box: label_bounds) {
+        const vec4 bbox = box.second;
+        // The bounds are the indices of the first and last pixels of the object. Pixel i covers the interval from i to i+1, so the box that encloses those pixels whole ends at the far edge of the last one.
+        const vec2 box_min = make_vec2(bbox.x, bbox.z);
+        const vec2 box_max = make_vec2(bbox.y + 1.f, bbox.w + 1.f);
+        YOLOBox yolo_box;
+        yolo_box.class_ID = box.first.first;
+        yolo_box.center = make_vec2(0.5f * (box_min.x + box_max.x) / float(resolution.x), 0.5f * (box_min.y + box_max.y) / float(resolution.y));
+        yolo_box.size = make_vec2((box_max.x - box_min.x) / float(resolution.x), (box_max.y - box_min.y) / float(resolution.y));
+        yolo_boxes.push_back(yolo_box);
+    }
+
+    return yolo_boxes;
+}
+
+void helios::annotation::writeLabelBoundingBoxes(const helios::Context *context, const std::vector<uint> &pixel_UUIDs, const helios::int2 &resolution, const std::vector<std::string> &data_labels, const std::vector<uint> &class_IDs,
+                                                 const std::string &image_file, const std::string &classes_txt_file, const std::string &image_path, bool use_object_data, const std::string &caller) {
+
+    if (data_labels.size() != class_IDs.size()) {
+        helios_runtime_error("ERROR (" + caller + "): The lengths of the data label and object_class_ID vectors must be the same.");
+    }
+    validatePixelMapSize(pixel_UUIDs, resolution, caller);
+
+    std::string output_path = image_path;
+    if (!image_path.empty() && !validateOutputPath(output_path)) {
+        helios_runtime_error("ERROR (" + caller + "): Invalid image output directory '" + image_path + "'. Check that the path exists and that you have write permission.");
+    } else if (!isDirectoryPath(output_path)) {
+        helios_runtime_error("ERROR (" + caller + "): Expected a directory path but got a file path for argument 'image_path'.");
+    }
+
+    const std::string outfile_txt = output_path + std::filesystem::path(image_file).stem().string() + ".txt";
+
+    writeYOLOBoxes(labelBoundingBoxes(context, pixel_UUIDs, resolution, data_labels, class_IDs, use_object_data), outfile_txt);
+
+    std::ofstream classes_txt_stream(output_path + classes_txt_file);
+    if (!classes_txt_stream.is_open()) {
+        helios_runtime_error("ERROR (" + caller + "): Could not open output classes file '" + output_path + classes_txt_file + "'.");
+    }
+    for (size_t i = 0; i < class_IDs.size(); i++) {
+        classes_txt_stream << class_IDs.at(i) << " " << data_labels.at(i) << std::endl;
+    }
+    classes_txt_stream.close();
+}
+
+std::map<int, std::vector<std::vector<bool>>> helios::annotation::labelMasks(const helios::Context *context, const std::vector<uint> &pixel_UUIDs, const helios::int2 &resolution, const std::string &data_label, bool use_object_data) {
+
+    validatePixelMapSize(pixel_UUIDs, resolution, "annotation::labelMasks");
+
+    std::map<int, std::vector<std::vector<bool>>> label_masks;
+
+    for (int j = 0; j < resolution.y; j++) {
+        for (int i = 0; i < resolution.x; i++) {
+
+            const uint UUID_plus_one = pixel_UUIDs.at(size_t(j) * size_t(resolution.x) + size_t(i));
+            if (UUID_plus_one == 0) { // no primitive visible in this pixel
+                continue;
+            }
+            const uint UUID = UUID_plus_one - 1;
+            if (!context->doesPrimitiveExist(UUID)) {
+                continue;
+            }
+
+            uint label_value;
+            if (!readLabelValue(context, UUID, data_label, use_object_data, label_value)) {
+                continue;
+            }
+
+            if (label_masks.find(label_value) == label_masks.end()) {
+                label_masks[label_value] = std::vector<std::vector<bool>>(resolution.y, std::vector<bool>(resolution.x, false));
+            }
+            label_masks[label_value][j][i] = true;
+        }
+    }
+
+    return label_masks;
+}
+
+void helios::annotation::writeLabelSegmentationMasks(const helios::Context *context, const std::vector<uint> &pixel_UUIDs, const helios::int2 &resolution, const std::vector<std::string> &data_labels, const std::vector<uint> &class_IDs,
+                                                     const std::string &json_filename, const std::string &image_file, const std::vector<std::string> &data_attribute_labels, bool append_file, bool use_object_data, const std::string &caller) {
+
+    if (data_labels.size() != class_IDs.size()) {
+        helios_runtime_error("ERROR (" + caller + "): The lengths of the data label and object_class_ID vectors must be the same.");
+    }
+    validatePixelMapSize(pixel_UUIDs, resolution, caller);
+
+    // Check that all data labels exist
+    const std::vector<std::string> all_primitive_data = context->listAllPrimitiveDataLabels();
+    const std::vector<std::string> all_object_data = context->listAllObjectDataLabels();
+    const std::vector<std::string> &all_label_data = use_object_data ? all_object_data : all_primitive_data;
+    helios::WarningAggregator missing_label_warnings;
+    for (const auto &data_label: data_labels) {
+        if (std::find(all_label_data.begin(), all_label_data.end(), data_label) == all_label_data.end()) {
+            if (use_object_data) {
+                missing_label_warnings.addWarning("missing_object_data_label", "Object data label '" + data_label + "' does not exist in the context.");
+            } else {
+                missing_label_warnings.addWarning("missing_primitive_data_label", "Primitive data label '" + data_label + "' does not exist in the context.");
+            }
+        }
+    }
+    missing_label_warnings.report(std::cerr);
+
+    if (!std::filesystem::exists(image_file)) {
+        helios_runtime_error("ERROR (" + caller + "): Image file '" + image_file + "' does not exist.");
+    }
+
+    // Ensure the JSON filename has a .json extension
+    std::string outfile = json_filename;
+    if (outfile.length() < 5 || outfile.substr(outfile.length() - 5) != ".json") {
+        outfile += ".json";
+    }
+
+    auto coco_json_pair = initializeCOCOJson(outfile, append_file, resolution, image_file);
+    nlohmann::json coco_json = coco_json_pair.first;
+    const int image_id = coco_json_pair.second;
+    addCOCOCategory(coco_json, class_IDs, data_labels);
+
+    // Attributes are looked up in primitive data first and object data second; labels found in neither are ignored
+    struct AttributeInfo {
+        std::string label;
+        bool is_primitive_data;
+    };
+    std::vector<AttributeInfo> attribute_info;
+    for (const auto &attribute_label: data_attribute_labels) {
+        if (std::find(all_primitive_data.begin(), all_primitive_data.end(), attribute_label) != all_primitive_data.end()) {
+            attribute_info.push_back({attribute_label, true});
+        } else if (std::find(all_object_data.begin(), all_object_data.end(), attribute_label) != all_object_data.end()) {
+            attribute_info.push_back({attribute_label, false});
+        }
+    }
+    const bool use_attributes = !attribute_info.empty();
+
+    for (size_t label_idx = 0; label_idx < data_labels.size(); ++label_idx) {
+
+        const std::map<int, std::vector<std::vector<bool>>> label_masks = labelMasks(context, pixel_UUIDs, resolution, data_labels[label_idx], use_object_data);
+
+        // Find the highest existing annotation ID to avoid conflicts
+        int max_annotation_id = -1;
+        for (const auto &existing_annotation: coco_json["annotations"]) {
+            if (existing_annotation["id"] > max_annotation_id) {
+                max_annotation_id = existing_annotation["id"];
+            }
+        }
+
+        // The annotation and its attributes are built together for each connected component, so that the attribute values written to an annotation are always those of its own pixels.
+        for (const auto &label_pair: label_masks) {
+            const auto &mask = label_pair.second;
+
+            std::vector<std::vector<bool>> visited(resolution.y, std::vector<bool>(resolution.x, false));
+
+            for (int j = 0; j < resolution.y; j++) {
+                for (int i = 0; i < resolution.x; i++) {
+                    if (!mask[j][i] || visited[j][i]) {
+                        continue;
+                    }
+
+                    // Flood fill the connected component that starts at this pixel
+                    std::stack<std::pair<int, int>> stack;
+                    std::vector<std::pair<int, int>> component_pixels;
+                    stack.push({i, j});
+                    visited[j][i] = true;
+
+                    int min_x = i, max_x = i, min_y = j, max_y = j;
+                    int area = 0;
+
+                    while (!stack.empty()) {
+                        auto [ci, cj] = stack.top();
+                        stack.pop();
+                        area++;
+                        component_pixels.push_back({ci, cj});
+
+                        min_x = std::min(min_x, ci);
+                        max_x = std::max(max_x, ci);
+                        min_y = std::min(min_y, cj);
+                        max_y = std::max(max_y, cj);
+
+                        // Check 8-connected neighbors. This must match the connectivity of the boundary tracers below, which are 8-connected: a 4-connected fill would split a diagonal chain of pixels into a
+                        // separate component per pixel, while the tracer would walk the whole chain as one object.
+                        for (int di = -1; di <= 1; di++) {
+                            for (int dj = -1; dj <= 1; dj++) {
+                                if (di == 0 && dj == 0)
+                                    continue;
+                                int ni = ci + di;
+                                int nj = cj + dj;
+                                if (ni >= 0 && ni < resolution.x && nj >= 0 && nj < resolution.y && mask[nj][ni] && !visited[nj][ni]) {
+                                    stack.push({ni, nj});
+                                    visited[nj][ni] = true;
+                                }
+                            }
+                        }
+                    }
+
+                    // Trace the boundary over a mask holding only this component, so that the start pixel is guaranteed to belong to it and the walk cannot cross into a different component that touches it diagonally.
+                    const std::vector<std::vector<bool>> component_mask = buildComponentMask(component_pixels, resolution);
+                    const std::pair<int, int> start_pixel = findStartingBoundaryPixel(component_mask, resolution);
+                    if (start_pixel.first < 0) {
+                        continue;
+                    }
+
+                    auto contour = traceBoundaryMoore(component_mask, start_pixel.first, start_pixel.second, resolution);
+
+                    // The Moore trace can stall on very small or awkwardly shaped regions, so fall back to collecting the boundary pixels directly
+                    if (contour.size() < 10) {
+                        contour = traceBoundarySimple(component_mask, start_pixel.first, start_pixel.second, resolution);
+                    }
+
+                    if (contour.size() < 3) { // too few points to form a polygon
+                        continue;
+                    }
+
+                    nlohmann::json json_annotation;
+                    json_annotation["id"] = max_annotation_id + 1;
+                    json_annotation["image_id"] = image_id;
+                    json_annotation["category_id"] = (int) class_IDs[label_idx];
+                    // The width and height count whole pixels, so the box reaches the far edge of the last pixel in each direction
+                    json_annotation["bbox"] = {min_x, min_y, max_x - min_x + 1, max_y - min_y + 1};
+                    json_annotation["area"] = area;
+                    json_annotation["iscrowd"] = 0;
+
+                    // Convert contour to segmentation format (flatten coordinates)
+                    std::vector<int> segmentation_coords;
+                    for (const auto &point: contour) {
+                        segmentation_coords.push_back(point.first); // x coordinate
+                        segmentation_coords.push_back(point.second); // y coordinate
+                    }
+                    json_annotation["segmentation"] = {segmentation_coords};
+
+                    if (use_attributes) {
+                        std::map<std::string, double> component_attributes;
+                        for (const auto &attribute: attribute_info) {
+                            double sum = 0.0;
+                            int count = 0;
+                            for (const auto &[pixel_i, pixel_j]: component_pixels) {
+                                const uint UUID_plus_one = pixel_UUIDs.at(size_t(pixel_j) * size_t(resolution.x) + size_t(pixel_i));
+                                if (UUID_plus_one == 0 || !context->doesPrimitiveExist(UUID_plus_one - 1)) {
+                                    continue;
+                                }
+                                double value = 0.0;
+                                if (readNumericData(context, UUID_plus_one - 1, attribute.label, attribute.is_primitive_data, value)) {
+                                    sum += value;
+                                    count++;
+                                }
+                            }
+                            // An attribute carried by none of the mask's primitives is reported as zero
+                            component_attributes[attribute.label] = (count > 0) ? sum / count : 0.0;
+                        }
+                        json_annotation["attributes"] = component_attributes;
+                    }
+
+                    coco_json["annotations"].push_back(json_annotation);
+                    max_annotation_id++;
+                }
+            }
+        }
+    }
+
+    writeCOCOJson(coco_json, outfile);
 }

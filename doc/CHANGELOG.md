@@ -1,5 +1,34 @@
 # Changelog
 
+# [1.3.91] 2026-10-10
+
+## Core
+
+- Added `annotation::writeLabelBoundingBoxes()`, `annotation::writeLabelSegmentationMasks()`, `annotation::labelBoundingBoxes()` and `annotation::labelMasks()` to `annotation_io.h`. These write YOLO bounding boxes and COCO segmentation masks from a per-pixel map of the visible primitive and labels stored as primitive or object data, so any renderer that can say which primitive is in each pixel writes the same annotations. The radiation and visualizer plug-ins both use them.
+
+## Plant Architecture
+
+- Fixed the lateral leaflets of the library bean and cowpea being mirrored about their midrib. The left and right leaflet images were assigned to each other's side of the trifoliate leaf, so the broad half of every lateral blade faced in toward the terminal leaflet instead of out toward the petiole base. `BeanLeafPrototype_trifoliate_OBJ()` and `CowpeaLeafPrototype_trifoliate_OBJ()` chose their left and right meshes the same way and are corrected as well.
+- A petiole is no longer thinner than three tenths of its full radius while its leaf is emerging. A petiole's radius follows how far it has elongated and a leaf is created at a small fraction of its size, so the petiole of a new leaf was a few microns across - a hundredth of its full radius in the library's plants. Past three tenths of its length the radius follows the elongation as before, and a mature petiole has the radius it always had. A plant structure XML file written by an earlier version restores each petiole at the radius it was saved with, so one saved while thinner than the floor stays proportionally thin as it finishes elongating.
+- Redrew `CowpeaLeaf_unifoliate_centered.png`, the image of the library cowpea's embryonic (unifoliate) leaves. It had been lopsided about its midrib like a lateral leaflet, where a cowpea's first pair of leaves is close to symmetric. The new image is exactly symmetric about its midrib, which runs along the centre line of the image, and rounded at the base. The outline of the embryonic leaf blade changes with it, and so does its area; the leaflets of the trifoliate leaves are unchanged.
+
+## Radiation
+
+- Fixed the bounding boxes written by `RadiationModel::writeImageBoundingBoxes()` and `RadiationModel::writeImageBoundingBoxes_ObjectData()` ending one pixel short of the object on its right and bottom sides, and an object only one pixel wide or tall being given no box at all. A box now encloses every pixel of its object, so its width and height are one pixel larger and its center half a pixel further right and down than before. The `bbox` of each annotation written by `RadiationModel::writeImageSegmentationMasks()` and `RadiationModel::writeImageSegmentationMasks_ObjectData()` was one pixel short in the same way and is corrected too.
+- Fixed `RadiationModel::writeImageSegmentationMasks()` writing another object's values to the `attributes` of masks when `data_attribute_labels` was given and the image held a labeled region too small to outline. A visible region of one or two pixels produces no mask, but was still counted when the attribute means were paired with the masks, so every mask after the first such region carried the values of a different object. Thin or distant objects commonly leave fragments that small. `RadiationModel::writeImageSegmentationMasks_ObjectData()` was not affected.
+
+## Visualizer
+
+- The `Visualizer` can now write the labels for a rendered image: `Visualizer::writeImageBoundingBoxes()` and `Visualizer::writeImageBoundingBoxes_ObjectData()` write rectangular bounding boxes in YOLO format, and `Visualizer::writeImageSegmentationMasks()` and `Visualizer::writeImageSegmentationMasks_ObjectData()` write segmentation masks in COCO JSON format. Objects are labeled through primitive or object data exactly as for the camera annotations of the radiation plug-in, so a Context labeled for one can be annotated by the other without change. The annotations do not depend on colors, lighting or anti-aliasing, and writing them does not modify the Context.
+- Added `Visualizer::getDepthImage()`, which returns the distance in world units from the camera to the surface visible in each pixel, and `Visualizer::writeDepthImageData()`, `Visualizer::writeDepthImageDataEXR()` and `Visualizer::writeNormDepthImage()` to write it to a text, EXR or grayscale JPEG file. The depth is measured along the viewing direction, as for the depth images of the radiation plug-in.
+- Added `Visualizer::getPixelUUIDs()`, which returns the UUID of the Context primitive visible in each pixel of the current view.
+- Fixed `Visualizer::getDepthMap()` returning a fragment of the depth map on a high-DPI display. It reported the window dimensions but the depth map has the dimensions of the framebuffer, which is larger there, so the values returned were the start of the larger buffer rather than an image of the scene. The `std::vector` overload now returns the whole map with the framebuffer dimensions; the deprecated pointer overload, whose buffer is sized from the window, raises an error in that case.
+- Fixed a voxel in the Context being drawn as a single rectangle instead of a box. Only its +y face was displayed, so the voxel was invisible or a thin sliver from most directions. All six faces are now drawn, with normals pointing out of the voxel so that each is lit from the side it is seen from. This had been the case since v1.3.32; voxels added with `Visualizer::addVoxelByCenter()` were not affected.
+
+## Synthetic Annotation
+
+- The synthetic annotation plug-in is deprecated and will be removed in v2.0. Its bounding box and segmentation mask outputs are now available directly from the `Visualizer` (see above), and its documentation lists the equivalent of each method. The plug-in continues to work unchanged until then.
+
 # [1.3.90] 2026-10-03
 
 ## Core

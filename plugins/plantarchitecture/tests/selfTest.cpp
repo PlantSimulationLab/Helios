@@ -8656,6 +8656,12 @@ DOCTEST_TEST_CASE("PlantArchitecture petiole geometry is a continuous tube") {
                 if (!(node_radius > 0.f)) {
                     continue;
                 }
+                // The ring is picked out below by distance from the node, which only isolates it while the neighbouring rings are further along the
+                // petiole than that tolerance reaches. A petiole that has barely begun to elongate is shorter than it is wide - its radius has a floor
+                // and its length does not - and its neighbouring rings would be counted as a seam.
+                if ((centerline.at(interior_node + 1) - node_center).magnitude() < 0.5f * node_radius || (centerline.at(interior_node - 1) - node_center).magnitude() < 0.5f * node_radius) {
+                    continue;
+                }
 
                 // A vertex belongs to this node's ring if it lies on that node's circle.
                 std::vector<vec3> ring_vertices;
@@ -9230,6 +9236,88 @@ DOCTEST_TEST_CASE("PlantArchitecture lateral leaflets lie in the plane of their 
         }
     }
     DOCTEST_CHECK(laterals_checked == 12);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture library trifoliate leaves carry each lateral leaflet's broad half on the outer side") {
+    // The lateral leaflets of a bean or cowpea trifoliate leaf are oblique: the half of the blade facing the petiole base is broader than the half facing the terminal leaflet. The library has one
+    // image for each side, and the two were assigned to each other's side, so every lateral leaflet was drawn mirrored about its midrib with its broad half turned in toward the terminal leaflet.
+    for (const std::string plant_name: {"bean", "cowpea"}) {
+        Context context;
+        context.seedRandomGenerator(12345);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary(plant_name);
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 20);
+
+        int broad_half_outward = 0;
+        int broad_half_inward = 0;
+        for (const uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            for (const auto &phytomer: plantarchitecture.getPlantShoot(plantID, shootID)->phytomers) {
+                for (size_t petiole = 0; petiole < phytomer->leaf_objIDs.size(); petiole++) {
+                    const std::vector<uint> &leaflets = phytomer->leaf_objIDs.at(petiole);
+                    if (leaflets.size() != 3) {
+                        continue; // the unifoliate leaves of the first node
+                    }
+                    // Points from the petiole base toward the terminal leaflet.
+                    const vec3 rachis = phytomer->getPetioleAxisVector(1.f, uint(petiole));
+
+                    for (const size_t lateral: {size_t(0), size_t(2)}) {
+                        // The lateral images are centered on the midrib, so it runs along v = 0.5 and splits the blade into two halves. getPrimitiveArea() excludes the transparent part of
+                        // the image, which makes the summed area of a half the area of leaf drawn on it.
+                        float half_area[2] = {0.f, 0.f};
+                        vec3 half_centroid[2] = {make_vec3(0, 0, 0), make_vec3(0, 0, 0)};
+                        for (const uint UUID: context.getObjectPrimitiveUUIDs(leaflets.at(lateral))) {
+                            if (context.getPrimitiveTextureFile(UUID).empty()) {
+                                continue; // the petiolule
+                            }
+                            const std::vector<vec2> uv = context.getPrimitiveTextureUV(UUID);
+                            const std::vector<vec3> vertices = context.getPrimitiveVertices(UUID);
+                            DOCTEST_REQUIRE(uv.size() == 3);
+                            const int half = ((uv.at(0).y + uv.at(1).y + uv.at(2).y) / 3.f > 0.5f) ? 1 : 0;
+                            const float area = context.getPrimitiveArea(UUID);
+                            half_area[half] += area;
+                            half_centroid[half] = half_centroid[half] + area * (vertices.at(0) + vertices.at(1) + vertices.at(2)) / 3.f;
+                        }
+                        DOCTEST_REQUIRE(half_area[0] > 0.f);
+                        DOCTEST_REQUIRE(half_area[1] > 0.f);
+                        const int broad = (half_area[1] > half_area[0]) ? 1 : 0;
+                        const vec3 toward_broad_half = half_centroid[broad] / half_area[broad] - half_centroid[1 - broad] / half_area[1 - broad];
+                        if (toward_broad_half * rachis < 0.f) {
+                            broad_half_outward++;
+                        } else {
+                            broad_half_inward++;
+                        }
+                    }
+                }
+            }
+        }
+
+        // A leaflet that has only just emerged is small enough for its curvature to blur which way a half faces, so a stray one is tolerated; the defect turned every one of them.
+        const int laterals_checked = broad_half_outward + broad_half_inward;
+        DOCTEST_REQUIRE(laterals_checked > 10);
+        DOCTEST_CHECK_MESSAGE(broad_half_outward > 0.9f * float(laterals_checked), plant_name << ": " << broad_half_outward << " of " << laterals_checked << " lateral leaflets have their broad half on the outer side");
+    }
+
+    // The mesh-based trifoliate prototypes choose a left or right mesh by the same index and had the same two swapped. A prototype lies along +x, and the leaflet with a negative index is turned
+    // to the right of the petiole, which carries the prototype's -y side outward; so that is the side its broad half has to be on, and +y for the leaflet with a positive index.
+    Context context;
+    LeafPrototype prototype_parameters(context.getRandomGenerator());
+    for (const auto &prototype_function: {BeanLeafPrototype_trifoliate_OBJ, CowpeaLeafPrototype_trifoliate_OBJ}) {
+        for (const int compound_leaf_index: {-1, 1}) {
+            const uint objID = prototype_function(&context, &prototype_parameters, compound_leaf_index);
+            float area_total = 0.f;
+            float area_weighted_y = 0.f;
+            for (const uint UUID: context.getObjectPrimitiveUUIDs(objID)) {
+                const std::vector<vec3> vertices = context.getPrimitiveVertices(UUID);
+                const float area = context.getPrimitiveArea(UUID);
+                area_total += area;
+                area_weighted_y += area * (vertices.at(0).y + vertices.at(1).y + vertices.at(2).y) / 3.f;
+            }
+            DOCTEST_REQUIRE(area_total > 0.f);
+            const float centroid_y = area_weighted_y / area_total;
+            DOCTEST_CHECK_MESSAGE(centroid_y * float(compound_leaf_index) > 0.f, "compound leaf index " << compound_leaf_index << ": blade centroid at y = " << centroid_y);
+        }
+    }
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture scalePetioleMaxLength retargets petiole elongation") {
@@ -11097,6 +11185,110 @@ DOCTEST_TEST_CASE("PlantArchitecture library leaflets carry petiolules that cont
             }
         }
     }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture a blade carried on a petiolule droops and stays joined to its stalk") {
+    // A leaflet with a petiolule is one object holding two surfaces: the blade lattice, and the stalk's rings appended after it. The deflection understands only the lattice, and for as long as it
+    // took the whole mesh for one it found no lattice in such a leaf and left it rigid - so leaf flexibility did nothing at all on any species whose leaflets carry petiolules.
+    //
+    // Measured in each leaflet's own frame, recovered from its object transform, which the deflection does not touch: lengths are then in blade lengths and the same leaflet of the rigid and the
+    // flexible plant can be compared directly.
+    struct LeafletShape {
+        float blade_lowest = 0.f; // lowest point of the blade, below the plane the leaflet was built in
+        float blade_area = 0.f;
+        float stalk_base = 0.f; // where the stalk begins along the leaflet's axis
+        float cylinder_off_axis = 0.f; // furthest the cylindrical part of the stalk comes from the leaflet's axis
+        float join_to_blade = 0.f; // gap from the tip of the join to the nearest point of the blade
+    };
+
+    auto measurePlant = [](float flexibility) {
+        Context context;
+        context.seedRandomGenerator(7);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("cowpea");
+        ShootParameters parameters = plantarchitecture.getCurrentShootParameters("trifoliate");
+        parameters.phytomer_parameters.leaf.prototype.flexibility = flexibility;
+        plantarchitecture.updateCurrentShootParameters("trifoliate", parameters);
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30.f);
+
+        std::vector<LeafletShape> leaflets;
+        for (const uint objID: plantarchitecture.getPlantLeafObjectIDs(plantID)) {
+            const std::vector<uint> UUIDs = context.getObjectPrimitiveUUIDs(objID);
+            const std::vector<uint> petiolule_UUIDs = context.filterPrimitivesByData(UUIDs, "object_label", "petiolule");
+            if (petiolule_UUIDs.empty()) {
+                continue;
+            }
+            float T[16];
+            context.getObjectTransformationMatrix(objID, T);
+            const vec3 axis_x(T[0], T[4], T[8]), axis_y(T[1], T[5], T[9]), axis_z(T[2], T[6], T[10]);
+            const vec3 origin(T[3], T[7], T[11]);
+            const float blade_length = axis_x.magnitude();
+            auto local = [&](const vec3 &vertex) {
+                const vec3 offset = vertex - origin;
+                return make_vec3(offset * axis_x, offset * axis_y, offset * axis_z) / (blade_length * blade_length);
+            };
+
+            LeafletShape shape;
+            std::vector<vec3> blade_vertices;
+            float blade_x_min = 1e6f;
+            shape.blade_lowest = 1e6f;
+            for (const uint UUID: context.filterPrimitivesByData(UUIDs, "object_label", "leaf")) {
+                shape.blade_area += context.getPrimitiveArea(UUID) / (blade_length * blade_length);
+                for (const vec3 &vertex: context.getPrimitiveVertices(UUID)) {
+                    const vec3 p = local(vertex);
+                    blade_vertices.push_back(p);
+                    blade_x_min = std::min(blade_x_min, p.x);
+                    shape.blade_lowest = std::min(shape.blade_lowest, p.z);
+                }
+            }
+            shape.stalk_base = 1e6f;
+            vec3 join_tip = make_vec3(-1e6f, 0, 0);
+            for (const uint UUID: petiolule_UUIDs) {
+                for (const vec3 &vertex: context.getPrimitiveVertices(UUID)) {
+                    const vec3 p = local(vertex);
+                    shape.stalk_base = std::min(shape.stalk_base, p.x);
+                    if (p.x > join_tip.x) {
+                        join_tip = p;
+                    }
+                    if (p.x <= blade_x_min + 1e-4f) {
+                        shape.cylinder_off_axis = std::max(shape.cylinder_off_axis, sqrtf(p.y * p.y + p.z * p.z));
+                    }
+                }
+            }
+            shape.join_to_blade = 1e6f;
+            for (const vec3 &p: blade_vertices) {
+                shape.join_to_blade = std::min(shape.join_to_blade, (p - join_tip).magnitude());
+            }
+            leaflets.push_back(shape);
+        }
+        return leaflets;
+    };
+
+    const std::vector<LeafletShape> rigid = measurePlant(0.f);
+    const std::vector<LeafletShape> flexible = measurePlant(3.f);
+    DOCTEST_REQUIRE(!rigid.empty());
+    // Flexibility is not a random draw, so the two plants are the same plant and their leaflets correspond one to one.
+    DOCTEST_REQUIRE(flexible.size() == rigid.size());
+
+    float mean_droop = 0.f;
+    for (size_t leaflet = 0; leaflet < rigid.size(); leaflet++) {
+        mean_droop += (rigid.at(leaflet).blade_lowest - flexible.at(leaflet).blade_lowest) / float(rigid.size());
+
+        // The stalk is the part that does not bend: it starts where it started, and its cylinder stays on the leaflet's axis.
+        DOCTEST_CHECK(flexible.at(leaflet).stalk_base == doctest::Approx(rigid.at(leaflet).stalk_base).epsilon(1e-3));
+        DOCTEST_CHECK(flexible.at(leaflet).cylinder_off_axis == doctest::Approx(rigid.at(leaflet).cylinder_off_axis).epsilon(1e-3));
+
+        // The join lies under the blade base and has to go with it, or the blade bends away and leaves the stalk's tip standing clear of it.
+        DOCTEST_CHECK_MESSAGE(flexible.at(leaflet).join_to_blade < rigid.at(leaflet).join_to_blade + 0.01f,
+                              "leaflet " << leaflet << ": join tip is " << flexible.at(leaflet).join_to_blade << " blade lengths from the drooping blade, " << rigid.at(leaflet).join_to_blade << " from the rigid one");
+
+        // Bending is inextensible, so the blade keeps its area.
+        DOCTEST_CHECK(flexible.at(leaflet).blade_area == doctest::Approx(rigid.at(leaflet).blade_area).epsilon(0.05));
+    }
+
+    // The property the fix exists for. On the code that left such a leaf rigid this is exactly zero.
+    DOCTEST_CHECK_MESSAGE(mean_droop > 0.03f, "blades drooped by " << mean_droop << " blade lengths on average");
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture cowpea pod asset encloses a volume") {
@@ -16514,9 +16706,18 @@ DOCTEST_TEST_CASE("PlantArchitecture leaf elevation distribution matches the tar
     const std::vector<uint> leaf_objIDs = plantarchitecture.getPlantLeafObjectIDs(plantID);
     DOCTEST_REQUIRE(leaf_objIDs.size() > 50);
 
-    // Inclination of each leaf, folded into [0,pi/2] the same way the distribution code folds it.
+    // Inclination of each leaf, folded into [0,pi/2] the same way the distribution code folds it. The direction a blade faces is its area-weighted mean normal over the blade's own facets, which is
+    // the quantity the distribution code steers. Context::getObjectAverageNormal() is not that: it gives every facet of the object the same weight, the petiolule's included, and sits several degrees
+    // off the blade - by an amount that depends on how the leaf image divides a folded blade's area between its two halves.
     auto inclinationOf = [](const Context &ctx, uint objID) {
-        vec3 normal = ctx.getObjectAverageNormal(objID);
+        vec3 normal = make_vec3(0, 0, 0);
+        for (const uint UUID: ctx.filterPrimitivesByData(ctx.getObjectPrimitiveUUIDs(objID), "object_label", "leaf")) {
+            const float area = ctx.getPrimitiveArea(UUID);
+            const vec3 facet_normal = ctx.getPrimitiveNormal(UUID);
+            if (area > 0.f && std::isfinite(facet_normal.x) && std::isfinite(facet_normal.y) && std::isfinite(facet_normal.z)) {
+                normal = normal + area * facet_normal;
+            }
+        }
         return acos_safe(std::fabs(normal.z) / std::max(normal.magnitude(), 1e-9f));
     };
 
@@ -17838,5 +18039,50 @@ DOCTEST_TEST_CASE("PlantArchitecture library plant models declare a leaf inclina
         plantarchitecture.loadPlantModelFromLibrary("pistachio");
         const uint pistachio_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
         DOCTEST_CHECK(plantarchitecture.isPlantLeafAngleDistributionTrackingEnabled(pistachio_plantID));
+    }
+}
+
+TEST_CASE("PlantArchitecture - Emerging petiole radius floor") {
+    // A petiole's radius follows how far it has elongated, and a leaf is created at a hundredth of its size, so a new leaf's petiole was a hundredth of
+    // its full radius: 0.02 mm on a 2 mm petiole, thinner than any tissue. The radius is held at no less than three tenths of full until the petiole has
+    // elongated past that, and reaches exactly the full radius at maturity as before.
+    const float full_radius = 0.002f; // set by definePetioleDroopShootType()
+    const float floor_fraction = 0.3f;
+    const PetioleDroopSettings settings = horizontalPetioleDroopSettings(0.f, 0.f);
+
+    SUBCASE("at creation") {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        definePetioleDroopShootType(context, plantarchitecture, settings);
+        const uint plantID = plantarchitecture.addPlantInstance(nullorigin, 0);
+        static_cast<void>(plantarchitecture.addBaseStemShoot(plantID, 1, make_AxisRotation(0, 0, 0), 0.003, 0.02, 1, 0.01, 0, "droopy"));
+        const auto &phytomer = plantarchitecture.getPlantShoot(plantID, 0)->phytomers.front();
+        DOCTEST_CHECK(phytomer->petiole_radii.at(0).front() == doctest::Approx(floor_fraction * full_radius).epsilon(1e-4));
+    }
+
+    SUBCASE("while growing and at maturity") {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        const uint plantID = growPetioleDroopPlant(context, plantarchitecture, settings, 20, 1.f);
+        uint still_elongating = 0;
+        uint mature = 0;
+        for (const auto &phytomer: plantarchitecture.getPlantShoot(plantID, 0)->phytomers) {
+            if (!phytomer->hasLeaf()) {
+                continue;
+            }
+            const float fraction = phytomer->current_petiole_scale_factor.at(0);
+            const float base_radius = phytomer->petiole_radii.at(0).front();
+            DOCTEST_INFO("petiole elongated to " << fraction << " of its length has base radius " << base_radius);
+            DOCTEST_CHECK(base_radius == doctest::Approx(std::max(fraction, floor_fraction) * full_radius).epsilon(1e-3));
+            if (fraction < floor_fraction) {
+                still_elongating++;
+            } else if (fraction >= 1.f) {
+                mature++;
+            }
+        }
+        // Both ends of the rule have to be on the plant for the loop above to have tested them.
+        DOCTEST_CHECK(still_elongating > 0);
+        DOCTEST_CHECK(mature > 0);
     }
 }

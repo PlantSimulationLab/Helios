@@ -5024,7 +5024,10 @@ protected:
      * leaves do not droop.
      */
     struct LeafRestGeometry {
+        //! Blade lattice, which is what bends
         std::vector<helios::vec3> vertices;
+        //! Vertices that follow the lattice in the leaf's mesh - its petiolule, if it has one - which do not bend but have to be written back along with the blade
+        std::vector<helios::vec3> appended_vertices;
         uint subdivisions_x = 0;
         uint subdivisions_y = 0;
     };
@@ -5032,8 +5035,8 @@ protected:
 
     //! Record the undeformed geometry of one leaf prototype, so leaves copied from it can be deflected from their rest shape
     /**
-     * Appends one entry to \ref unique_leaf_prototype_rest_geometry for the given prototype, capturing the blade lattice in the prototype's own local frame. A rigid species, or a mesh that is not the plain
-     * lattice the deflection understands, records an empty entry and its leaves stay rigid. Called both when a phytomer first builds its prototypes and when readPlantStructureXML() rebuilds them, so that a
+     * Appends one entry to \ref unique_leaf_prototype_rest_geometry for the given prototype, capturing the blade lattice in the prototype's own local frame, and separately the petiolule vertices that follow
+     * it in a leaf built with one. A rigid species, or a mesh that is not a lattice the deflection understands, records an empty entry and its leaves stay rigid. Called both when a phytomer first builds its prototypes and when readPlantStructureXML() rebuilds them, so that a
      * reloaded plant droops like a grown one.
      * \param[in] prototype_params Leaf prototype parameters the prototype was built from.
      * \param[in] leaves_per_petiole Number of leaflets the prototype set is being built for, which is part of the cache key.

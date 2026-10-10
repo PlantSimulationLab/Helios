@@ -304,6 +304,24 @@ const std::vector<int> *GeometryHandler::getFaceIndexData_ptr(VisualizerGeometry
     return &face_index_data.at(geometry_type);
 }
 
+std::vector<uint> GeometryHandler::getFaceContextUUIDs(VisualizerGeometryType geometry_type) const {
+
+    // Every per-face array has one element per face, and a face's index in the shaders is its position in those arrays.
+    std::vector<uint> face_context_UUIDs(visible_flag_data.at(geometry_type).size(), 0);
+
+    for (const auto &[UUID, index_map]: UUID_map) {
+        if (index_map.geometry_type != geometry_type) {
+            continue;
+        }
+        if (!context_geometry_flag_data.at(geometry_type).at(index_map.context_geometry_flag_index) || delete_flag_data.at(geometry_type).at(index_map.delete_flag_index)) {
+            continue;
+        }
+        face_context_UUIDs.at(index_map.visible_index) = getContextUUID(UUID) + 1;
+    }
+
+    return face_context_UUIDs;
+}
+
 void GeometryHandler::setVertices(size_t UUID, const std::vector<helios::vec3> &vertices) {
 
 #ifdef HELIOS_DEBUG
@@ -774,6 +792,22 @@ bool GeometryHandler::isContextGeometry(size_t UUID) const {
     const PrimitiveIndexMap &index_map = UUID_map.at(UUID);
 
     return context_geometry_flag_data.at(index_map.geometry_type).at(index_map.context_geometry_flag_index);
+}
+
+// The face number of a Context primitive is stored above the 32 bits that hold its UUID.
+static_assert(sizeof(size_t) >= 8, "Geometry identifiers must be 64 bits wide to hold a Context UUID and a face number.");
+static constexpr size_t context_UUID_bit_count = 32;
+
+size_t GeometryHandler::getContextGeometryID(uint context_UUID, uint face) {
+    return (static_cast<size_t>(face) << context_UUID_bit_count) | static_cast<size_t>(context_UUID);
+}
+
+uint GeometryHandler::getContextUUID(size_t context_geometry_ID) {
+    return static_cast<uint>(context_geometry_ID & ((size_t(1) << context_UUID_bit_count) - 1));
+}
+
+uint GeometryHandler::getContextFaceNumber(size_t context_geometry_ID) {
+    return static_cast<uint>(context_geometry_ID >> context_UUID_bit_count);
 }
 
 const std::vector<float> *GeometryHandler::getSizeData_ptr(VisualizerGeometryType geometry_type) const {

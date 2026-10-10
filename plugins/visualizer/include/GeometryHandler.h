@@ -163,6 +163,16 @@ public:
      */
     [[nodiscard]] const std::vector<int> *getFaceIndexData_ptr(VisualizerGeometryType geometry_type) const;
 
+    //! Get the Context primitive that each face of a geometry type was built from
+    /**
+     * This is the inverse of the lookup from an identifier to its face: the element at a face's index is the UUID of the Context primitive that face draws, plus one. Faces that do not draw a Context primitive
+     * (geometry added directly to the visualizer, the sky, overlays) and faces that have been deleted hold zero.
+     *
+     * \param[in] geometry_type Geometry type whose faces are queried.
+     * \return One element per face of the geometry type, indexed by the face index the shaders receive.
+     */
+    [[nodiscard]] std::vector<uint> getFaceContextUUIDs(VisualizerGeometryType geometry_type) const;
+
     /**
      * \brief Sets the vertices for a geometry element identified by a unique UUID.
      *
@@ -410,13 +420,44 @@ public:
     /**
      * \brief Whether a geometry element was uploaded from the Context rather than added directly to the Visualizer.
      *
-     * Context geometry is keyed by its 32-bit Context UUID; everything else carries a random 64-bit ID, so the ID alone
-     * cannot tell the two apart once it is cast to a UUID.
+     * Context geometry is keyed by an identifier built from its 32-bit Context UUID (see \ref getContextGeometryID());
+     * everything else carries a random 64-bit ID, so the ID alone cannot tell the two apart once it is converted to a UUID.
      *
      * \param[in] UUID Unique identifier of the geometry.
      * \return True if the geometry came from the Context.
      */
     [[nodiscard]] bool isContextGeometry(size_t UUID) const;
+
+    //! Number of rectangular faces that draw one Context voxel
+    static constexpr uint context_voxel_face_count = 6;
+
+    //! Get the identifier under which one face of a Context primitive is stored
+    /**
+     * Each identifier holds exactly one face. A patch or triangle is a single face, stored under its Context UUID. A voxel is drawn as several faces (\ref context_voxel_face_count), which share the voxel's
+     * UUID in the low 32 bits of the identifier and are told apart by the face number in the bits above; its first face is likewise stored under the UUID itself.
+     *
+     * \param[in] context_UUID UUID of the Context primitive.
+     * \param[in] face Which of the primitive's faces, starting from zero.
+     * \return Identifier of that face.
+     * \sa getContextUUID()
+     */
+    [[nodiscard]] static size_t getContextGeometryID(uint context_UUID, uint face = 0);
+
+    //! Get the UUID of the Context primitive that a face of Context geometry draws
+    /**
+     * \param[in] context_geometry_ID Identifier of geometry for which \ref isContextGeometry() is true.
+     * \return UUID of the Context primitive.
+     * \sa getContextGeometryID()
+     */
+    [[nodiscard]] static uint getContextUUID(size_t context_geometry_ID);
+
+    //! Get which face of its Context primitive a face of Context geometry is
+    /**
+     * \param[in] context_geometry_ID Identifier of geometry for which \ref isContextGeometry() is true.
+     * \return Face number, starting from zero. Always zero for a patch or triangle.
+     * \sa getContextGeometryID()
+     */
+    [[nodiscard]] static uint getContextFaceNumber(size_t context_geometry_ID);
 
     /**
      * \brief Retrieves a pointer to the size data associated with the specified geometry type.

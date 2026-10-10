@@ -2317,8 +2317,10 @@ void PlantArchitecture::initializeBeanShoots() {
 
     LeafPrototype leaf_prototype_trifoliate(context_ptr->getRandomGenerator());
     leaf_prototype_trifoliate.leaf_texture_file[0] = "BeanLeaf_tip.png";
-    leaf_prototype_trifoliate.leaf_texture_file[-1] = "BeanLeaf_left_centered.png";
-    leaf_prototype_trifoliate.leaf_texture_file[1] = "BeanLeaf_right_centered.png";
+    // Leaflet index -1 is the leaflet to the right of the petiole when the leaf is seen from above looking toward its tip, and +1 the one to its left, so the image named for each side goes with the
+    // index of the opposite sign. Assigned the other way round, the broad half of each lateral blade faces in toward the terminal leaflet rather than out toward the petiole base.
+    leaf_prototype_trifoliate.leaf_texture_file[-1] = "BeanLeaf_right_centered.png";
+    leaf_prototype_trifoliate.leaf_texture_file[1] = "BeanLeaf_left_centered.png";
     leaf_prototype_trifoliate.leaf_aspect_ratio = 1.f;
     leaf_prototype_trifoliate.midrib_fold_fraction = 0.2;
     leaf_prototype_trifoliate.longitudinal_curvature.uniformDistribution(-0.3f, -0.2f);
@@ -2792,8 +2794,10 @@ void PlantArchitecture::initializeCowpeaShoots() {
 
     LeafPrototype leaf_prototype_trifoliate(context_ptr->getRandomGenerator());
     leaf_prototype_trifoliate.leaf_texture_file[0] = "CowpeaLeaf_tip_centered.png";
-    leaf_prototype_trifoliate.leaf_texture_file[-1] = "CowpeaLeaf_left_centered.png";
-    leaf_prototype_trifoliate.leaf_texture_file[1] = "CowpeaLeaf_right_centered.png";
+    // Leaflet index -1 is the leaflet to the right of the petiole when the leaf is seen from above looking toward its tip, and +1 the one to its left, so the image named for each side goes with the
+    // index of the opposite sign. Assigned the other way round, the broad half of each lateral blade faces in toward the terminal leaflet rather than out toward the petiole base.
+    leaf_prototype_trifoliate.leaf_texture_file[-1] = "CowpeaLeaf_right_centered.png";
+    leaf_prototype_trifoliate.leaf_texture_file[1] = "CowpeaLeaf_left_centered.png";
     leaf_prototype_trifoliate.leaf_aspect_ratio = 0.7f;
     leaf_prototype_trifoliate.midrib_fold_fraction = 0.2;
     leaf_prototype_trifoliate.longitudinal_curvature.uniformDistribution(-0.3f, -0.1f);
@@ -2806,6 +2810,8 @@ void PlantArchitecture::initializeCowpeaShoots() {
 
     LeafPrototype leaf_prototype_unifoliate = leaf_prototype_trifoliate;
     leaf_prototype_unifoliate.leaf_texture_file.clear();
+    // The embryonic (unifoliate) leaves have an image of their own, drawn from the terminal leaflet's: symmetric about its midrib, as a cowpea's first pair of leaves nearly is, and rounded at the base
+    // where the terminal leaflet is cut off nearly square.
     leaf_prototype_unifoliate.leaf_texture_file[0] = "CowpeaLeaf_unifoliate_centered.png";
 
     // ---- Phytomer Parameters ---- //

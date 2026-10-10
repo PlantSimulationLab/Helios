@@ -11,6 +11,24 @@
  <tr><th>Class <td>\ref SyntheticAnnotation
  </table>
 
+ \section SADeprecated Deprecation Notice
+
+ \deprecated This plug-in is deprecated and will be removed in Helios v2.0. Bounding boxes, segmentation masks and depth images can now be written directly by the \ref VisualizerDoc "Visualizer" plug-in (see \ref Annotation), using the same labeling convention and file formats as the camera annotations of the radiation plug-in. New code should use the %Visualizer; this plug-in continues to work unchanged until it is removed.
+
+ The table below lists the %Visualizer equivalent of each part of this plug-in.
+
+ <table>
+ <tr><th>This plug-in</th><th>%Visualizer equivalent</th></tr>
+ <tr><td>\ref SyntheticAnnotation::labelPrimitives( const std::vector<std::vector<uint>>&, const char* ) "labelPrimitives()" with one group of UUIDs per object</td><td>Set primitive data named after the class on each object's primitives, with a different <code>uint</code> value for each object: <code>context.setPrimitiveData( UUIDs, "fruit", objectID )</code>.</td></tr>
+ <tr><td>\ref SyntheticAnnotation::enableObjectDetection() "Object detection" (bounding boxes)</td><td>Visualizer::writeImageBoundingBoxes(), or Visualizer::writeImageBoundingBoxes_ObjectData() for labels stored as object data.</td></tr>
+ <tr><td>\ref SyntheticAnnotation::enableInstanceSegmentation() "Instance segmentation" (COCO masks)</td><td>Visualizer::writeImageSegmentationMasks(), or Visualizer::writeImageSegmentationMasks_ObjectData().</td></tr>
+ <tr><td>\ref SyntheticAnnotation::enableSemanticSegmentation() "Semantic segmentation" and <code>pixelID_combined.txt</code></td><td>No direct equivalent. Visualizer::getPixelUUIDs() returns the primitive visible in each pixel, from which a per-pixel class image can be built.</td></tr>
+ <tr><td>RGB rendering</td><td>Visualizer::printWindow().</td></tr>
+ <tr><td>\ref SyntheticAnnotation::setCameraPosition( const std::vector<helios::vec3>&, const std::vector<helios::vec3>& ) "Multiple camera views"</td><td>Loop over the views, calling Visualizer::setCameraPosition() and then writing the image and annotations for each.</td></tr>
+ <tr><td>\ref SyntheticAnnotation::setMinimumLabelPixels() "Minimum label pixels"</td><td>No equivalent: there is no threshold to set. As for the radiation plug-in, every visible labeled object has a bounding box, and only a region of one or two pixels has no mask.</td></tr>
+ <tr><td>(none)</td><td>Depth images: Visualizer::writeDepthImageData(), Visualizer::writeDepthImageDataEXR() and Visualizer::writeNormDepthImage().</td></tr>
+ </table>
+
  \section SAissues Known Issues
 
  - The RGB rendering is drawn to a window, so the plug-in requires a display. It cannot be run on a headless machine. (The annotation passes themselves render offscreen and would not need one.)

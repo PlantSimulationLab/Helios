@@ -2213,3 +2213,278 @@ DOCTEST_TEST_CASE("Beta and ellipsoidal leaf angle distribution CDFs") {
         DOCTEST_CHECK_THROWS(static_cast<void>(invert_ellipsoidal_azimuth_CDF(-0.1f, 0.5f, 0.f)));
     }
 }
+
+//! Whether a call throws, with anything it writes to stderr discarded
+/**
+ * The capture is destroyed when this returns, so the assertion made on the result reports its own failure normally.
+ */
+template<typename Callable>
+static bool annotationCallThrows(Callable &&call) {
+    capture_cerr capture;
+    try {
+        call();
+    } catch (const std::exception &) {
+        return true;
+    }
+    return false;
+}
+
+//! Build a row-major pixel-to-primitive map (UUID+1 per pixel, 0 for none) from rectangular pixel blocks
+/**
+ * \param[in] resolution Image dimensions in pixels.
+ * \param[in] blocks Each block is (UUID, xmin, xmax, ymin, ymax) with inclusive pixel bounds and y measured from the top of the image.
+ */
+static std::vector<uint> buildTestPixelMap(const int2 &resolution, const std::vector<std::array<uint, 5>> &blocks) {
+    std::vector<uint> pixel_UUIDs(size_t(resolution.x) * size_t(resolution.y), 0);
+    for (const auto &block: blocks) {
+        for (uint j = block[3]; j <= block[4]; j++) {
+            for (uint i = block[1]; i <= block[2]; i++) {
+                pixel_UUIDs.at(size_t(j) * size_t(resolution.x) + size_t(i)) = block[0] + 1;
+            }
+        }
+    }
+    return pixel_UUIDs;
+}
+
+TEST_CASE("annotation label bounding boxes from a pixel-to-primitive map") {
+
+    Context context;
+    const uint UUID_a = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    const uint UUID_b = context.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+    const uint UUID_c = context.addPatch(make_vec3(4, 0, 0), make_vec2(1, 1));
+    const uint UUID_unlabeled = context.addPatch(make_vec3(6, 0, 0), make_vec2(1, 1));
+
+    // Two primitives sharing a label value are one object; a different value is a different object
+    context.setPrimitiveData(UUID_a, "fruit", uint(1));
+    context.setPrimitiveData(UUID_b, "fruit", uint(1));
+    context.setPrimitiveData(UUID_c, "fruit", uint(2));
+
+    const int2 resolution = make_int2(20, 10);
+    const std::vector<uint> pixel_UUIDs = buildTestPixelMap(resolution, {{UUID_a, 2, 5, 1, 3}, {UUID_b, 6, 9, 2, 4}, {UUID_c, 14, 17, 6, 8}, {UUID_unlabeled, 0, 19, 9, 9}});
+
+    SUBCASE("one box per label value, in image coordinates") {
+        const std::vector<annotation::YOLOBox> boxes = annotation::labelBoundingBoxes(&context, pixel_UUIDs, resolution, {"fruit"}, {3}, false);
+        DOCTEST_REQUIRE(boxes.size() == 2);
+
+        // Label value 1 spans both of its primitives: pixel columns 2 to 9 and rows 1 to 4. The box encloses those pixels whole, so it runs from the left edge of column 2 to the right edge of column 9 (x from 2 to
+        // 10) and from the top edge of row 1 to the bottom edge of row 4 (y from 1 to 5).
+        DOCTEST_CHECK(boxes.at(0).class_ID == 3);
+        DOCTEST_CHECK(boxes.at(0).center.x == doctest::Approx(6.f / 20.f));
+        DOCTEST_CHECK(boxes.at(0).center.y == doctest::Approx(3.f / 10.f));
+        DOCTEST_CHECK(boxes.at(0).size.x == doctest::Approx(8.f / 20.f));
+        DOCTEST_CHECK(boxes.at(0).size.y == doctest::Approx(4.f / 10.f));
+
+        // Label value 2: columns 14 to 17 and rows 6 to 8, measured from the top of the image
+        DOCTEST_CHECK(boxes.at(1).center.x == doctest::Approx(16.f / 20.f));
+        DOCTEST_CHECK(boxes.at(1).center.y == doctest::Approx(7.5f / 10.f));
+        DOCTEST_CHECK(boxes.at(1).size.x == doctest::Approx(4.f / 20.f));
+        DOCTEST_CHECK(boxes.at(1).size.y == doctest::Approx(3.f / 10.f));
+    }
+
+    SUBCASE("an object covering a single pixel has a box one pixel in size") {
+        const std::vector<uint> single_pixel_map = buildTestPixelMap(resolution, {{UUID_c, 3, 3, 2, 2}});
+        const std::vector<annotation::YOLOBox> boxes = annotation::labelBoundingBoxes(&context, single_pixel_map, resolution, {"fruit"}, {0}, false);
+        DOCTEST_REQUIRE(boxes.size() == 1);
+        DOCTEST_CHECK(boxes.at(0).center.x == doctest::Approx(3.5f / 20.f));
+        DOCTEST_CHECK(boxes.at(0).center.y == doctest::Approx(2.5f / 10.f));
+        DOCTEST_CHECK(boxes.at(0).size.x == doctest::Approx(1.f / 20.f));
+        DOCTEST_CHECK(boxes.at(0).size.y == doctest::Approx(1.f / 10.f));
+    }
+
+    SUBCASE("labels of type int are accepted and other types are ignored") {
+        context.setPrimitiveData(UUID_a, "stem", int(7));
+        context.setPrimitiveData(UUID_c, "weight", 1.5f);
+        DOCTEST_CHECK(annotation::labelBoundingBoxes(&context, pixel_UUIDs, resolution, {"stem"}, {0}, false).size() == 1);
+        DOCTEST_CHECK(annotation::labelBoundingBoxes(&context, pixel_UUIDs, resolution, {"weight"}, {0}, false).empty());
+    }
+
+    SUBCASE("labels read from object data") {
+        const uint objID = context.addPolymeshObject({UUID_b, UUID_c});
+        context.setObjectData(objID, "plant", uint(5));
+        const std::vector<annotation::YOLOBox> boxes = annotation::labelBoundingBoxes(&context, pixel_UUIDs, resolution, {"plant"}, {1}, true);
+        DOCTEST_REQUIRE(boxes.size() == 1);
+        // The object spans primitives b and c: pixel columns 6 to 17 and rows 2 to 8
+        DOCTEST_CHECK(boxes.at(0).class_ID == 1);
+        DOCTEST_CHECK(boxes.at(0).center.x == doctest::Approx(12.f / 20.f));
+        DOCTEST_CHECK(boxes.at(0).size.y == doctest::Approx(7.f / 10.f));
+        // The same label is not found when it is looked up as primitive data
+        DOCTEST_CHECK(annotation::labelBoundingBoxes(&context, pixel_UUIDs, resolution, {"plant"}, {1}, false).empty());
+    }
+
+    SUBCASE("written files") {
+        const std::filesystem::path output_directory = std::filesystem::temp_directory_path() / "helios_annotation_bbox_test";
+        std::filesystem::create_directories(output_directory);
+        const std::string image_path = output_directory.string() + "/";
+
+        annotation::writeLabelBoundingBoxes(&context, pixel_UUIDs, resolution, {"fruit"}, {3}, "render.jpeg", "classes.txt", image_path, false, "test");
+
+        std::ifstream box_file(output_directory / "render.txt");
+        DOCTEST_REQUIRE(box_file.is_open());
+        std::string line;
+        std::vector<std::string> lines;
+        while (std::getline(box_file, line)) {
+            lines.push_back(line);
+        }
+        DOCTEST_REQUIRE(lines.size() == 2);
+        DOCTEST_CHECK(lines.at(0) == "3 0.300000 0.300000 0.400000 0.400000");
+        DOCTEST_CHECK(lines.at(1) == "3 0.800000 0.750000 0.200000 0.300000");
+
+        std::ifstream classes_file(output_directory / "classes.txt");
+        DOCTEST_REQUIRE(classes_file.is_open());
+        std::getline(classes_file, line);
+        DOCTEST_CHECK(line == "3 fruit");
+
+        box_file.close();
+        classes_file.close();
+        std::filesystem::remove_all(output_directory);
+    }
+
+    SUBCASE("invalid arguments") {
+        DOCTEST_CHECK(annotationCallThrows([&] { static_cast<void>(annotation::labelBoundingBoxes(&context, pixel_UUIDs, resolution, {"fruit", "stem"}, {0}, false)); }));
+        DOCTEST_CHECK(annotationCallThrows([&] { static_cast<void>(annotation::labelBoundingBoxes(&context, pixel_UUIDs, make_int2(20, 11), {"fruit"}, {0}, false)); }));
+
+        // A directory beneath a regular file cannot be created on any platform. A missing directory at the filesystem root is not a
+        // portable stand-in: on Windows it resolves to the root of the current drive, where it is simply created.
+        const std::filesystem::path blocking_file = std::filesystem::temp_directory_path() / "helios_annotation_bbox_test_blocking_file";
+        std::ofstream(blocking_file) << "not a directory";
+        const std::string unwritable_image_path = (blocking_file / "output").string() + "/";
+        DOCTEST_CHECK(annotationCallThrows([&] { annotation::writeLabelBoundingBoxes(&context, pixel_UUIDs, resolution, {"fruit"}, {0}, "render.jpeg", "classes.txt", unwritable_image_path, false, "test"); }));
+        std::filesystem::remove(blocking_file);
+    }
+}
+
+TEST_CASE("annotation segmentation masks from a pixel-to-primitive map") {
+
+    Context context;
+    const uint UUID_a = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    const uint UUID_b = context.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+    const uint UUID_c = context.addPatch(make_vec3(4, 0, 0), make_vec2(1, 1));
+
+    context.setPrimitiveData(UUID_a, "leaf", uint(1));
+    context.setPrimitiveData(UUID_b, "leaf", uint(1));
+    context.setPrimitiveData(UUID_c, "leaf", uint(2));
+    context.setPrimitiveData(UUID_a, "temperature", 300.f);
+    context.setPrimitiveData(UUID_b, "temperature", 310.f);
+    context.setPrimitiveData(UUID_c, "temperature", 320.f);
+
+    const std::filesystem::path output_directory = std::filesystem::temp_directory_path() / "helios_annotation_mask_test";
+    std::filesystem::create_directories(output_directory);
+    const std::string image_file = (output_directory / "render.jpeg").string();
+    const std::string json_file = (output_directory / "masks.json").string();
+    {
+        std::ofstream placeholder_image(image_file);
+        placeholder_image << "placeholder";
+    }
+
+    const int2 resolution = make_int2(24, 12);
+
+    auto readAnnotations = [&json_file]() {
+        std::ifstream json_stream(json_file);
+        nlohmann::json coco_json;
+        json_stream >> coco_json;
+        return coco_json;
+    };
+
+    SUBCASE("one annotation per connected region") {
+        // Label value 1 appears as two separate regions (its two primitives do not touch), label value 2 as one
+        const std::vector<uint> pixel_UUIDs = buildTestPixelMap(resolution, {{UUID_a, 1, 5, 1, 4}, {UUID_b, 9, 14, 2, 6}, {UUID_c, 17, 22, 5, 10}});
+
+        annotation::writeLabelSegmentationMasks(&context, pixel_UUIDs, resolution, {"leaf"}, {4}, json_file, image_file, {"temperature"}, false, false, "test");
+
+        const nlohmann::json coco_json = readAnnotations();
+        DOCTEST_REQUIRE(coco_json["images"].size() == 1);
+        DOCTEST_CHECK(coco_json["images"][0]["file_name"] == "render.jpeg");
+        DOCTEST_CHECK(coco_json["images"][0]["width"] == 24);
+        DOCTEST_CHECK(coco_json["images"][0]["height"] == 12);
+        DOCTEST_REQUIRE(coco_json["categories"].size() == 1);
+        DOCTEST_CHECK(coco_json["categories"][0]["id"] == 4);
+        DOCTEST_CHECK(coco_json["categories"][0]["name"] == "leaf");
+
+        DOCTEST_REQUIRE(coco_json["annotations"].size() == 3);
+        const auto &first = coco_json["annotations"][0];
+        DOCTEST_CHECK(first["category_id"] == 4);
+        DOCTEST_CHECK(first["bbox"] == nlohmann::json({1, 1, 5, 4}));
+        DOCTEST_CHECK(first["area"] == 20);
+        DOCTEST_CHECK(first["attributes"]["temperature"].get<double>() == doctest::Approx(300.0));
+        DOCTEST_CHECK(first["segmentation"][0].size() >= 6);
+
+        const auto &second = coco_json["annotations"][1];
+        DOCTEST_CHECK(second["bbox"] == nlohmann::json({9, 2, 6, 5}));
+        DOCTEST_CHECK(second["area"] == 30);
+        DOCTEST_CHECK(second["attributes"]["temperature"].get<double>() == doctest::Approx(310.0));
+
+        const auto &third = coco_json["annotations"][2];
+        DOCTEST_CHECK(third["bbox"] == nlohmann::json({17, 5, 6, 6}));
+        DOCTEST_CHECK(third["attributes"]["temperature"].get<double>() == doctest::Approx(320.0));
+
+        // Annotation IDs are unique
+        DOCTEST_CHECK(first["id"] != second["id"]);
+        DOCTEST_CHECK(second["id"] != third["id"]);
+    }
+
+    SUBCASE("attributes stay paired with their mask when a region is too small to outline") {
+        // Primitive a covers a single pixel, which cannot be traced to a polygon and so produces no annotation. It is scanned before primitive c's region. The one annotation written must carry the attribute
+        // value of its own pixels (320), not that of the dropped region (300).
+        const std::vector<uint> pixel_UUIDs = buildTestPixelMap(resolution, {{UUID_a, 0, 0, 0, 0}, {UUID_c, 10, 15, 4, 9}});
+
+        annotation::writeLabelSegmentationMasks(&context, pixel_UUIDs, resolution, {"leaf"}, {0}, json_file, image_file, {"temperature"}, false, false, "test");
+
+        const nlohmann::json coco_json = readAnnotations();
+        DOCTEST_REQUIRE(coco_json["annotations"].size() == 1);
+        DOCTEST_CHECK(coco_json["annotations"][0]["area"] == 36);
+        DOCTEST_CHECK(coco_json["annotations"][0]["attributes"]["temperature"].get<double>() == doctest::Approx(320.0));
+    }
+
+    SUBCASE("appending adds a second image and keeps annotation IDs unique") {
+        const std::vector<uint> pixel_UUIDs = buildTestPixelMap(resolution, {{UUID_a, 1, 5, 1, 4}});
+        const std::string second_image_file = (output_directory / "render2.jpeg").string();
+        {
+            std::ofstream placeholder_image(second_image_file);
+            placeholder_image << "placeholder";
+        }
+
+        annotation::writeLabelSegmentationMasks(&context, pixel_UUIDs, resolution, {"leaf"}, {4}, json_file, image_file, {}, false, false, "test");
+        annotation::writeLabelSegmentationMasks(&context, pixel_UUIDs, resolution, {"leaf"}, {4}, json_file, second_image_file, {}, true, false, "test");
+
+        const nlohmann::json coco_json = readAnnotations();
+        DOCTEST_CHECK(coco_json["images"].size() == 2);
+        DOCTEST_CHECK(coco_json["categories"].size() == 1);
+        DOCTEST_REQUIRE(coco_json["annotations"].size() == 2);
+        DOCTEST_CHECK(coco_json["annotations"][0]["id"] != coco_json["annotations"][1]["id"]);
+        DOCTEST_CHECK(coco_json["annotations"][0]["image_id"] != coco_json["annotations"][1]["image_id"]);
+        DOCTEST_CHECK(!coco_json["annotations"][0].contains("attributes"));
+    }
+
+    SUBCASE("labels read from object data, with a .json extension added") {
+        const uint objID = context.addPolymeshObject({UUID_a, UUID_b});
+        context.setObjectData(objID, "plant", uint(9));
+        // The two primitives of the object touch, so the object is one region
+        const std::vector<uint> pixel_UUIDs = buildTestPixelMap(resolution, {{UUID_a, 1, 5, 1, 4}, {UUID_b, 6, 10, 1, 4}});
+
+        annotation::writeLabelSegmentationMasks(&context, pixel_UUIDs, resolution, {"plant"}, {2}, (output_directory / "masks").string(), image_file, {}, false, true, "test");
+
+        const nlohmann::json coco_json = readAnnotations();
+        DOCTEST_REQUIRE(coco_json["annotations"].size() == 1);
+        DOCTEST_CHECK(coco_json["annotations"][0]["category_id"] == 2);
+        DOCTEST_CHECK(coco_json["annotations"][0]["area"] == 40);
+    }
+
+    SUBCASE("invalid arguments") {
+        const std::vector<uint> pixel_UUIDs = buildTestPixelMap(resolution, {{UUID_a, 1, 5, 1, 4}});
+        DOCTEST_CHECK(annotationCallThrows([&] { annotation::writeLabelSegmentationMasks(&context, pixel_UUIDs, resolution, {"leaf"}, {0}, json_file, (output_directory / "missing.jpeg").string(), {}, false, false, "test"); }));
+        DOCTEST_CHECK(annotationCallThrows([&] { annotation::writeLabelSegmentationMasks(&context, pixel_UUIDs, resolution, {"leaf"}, {0, 1}, json_file, image_file, {}, false, false, "test"); }));
+        DOCTEST_CHECK(annotationCallThrows([&] { annotation::writeLabelSegmentationMasks(&context, pixel_UUIDs, make_int2(3, 3), {"leaf"}, {0}, json_file, image_file, {}, false, false, "test"); }));
+
+        std::string warnings;
+        {
+            capture_cerr capture;
+            // A data label that exists nowhere in the Context is reported but is not an error
+            annotation::writeLabelSegmentationMasks(&context, pixel_UUIDs, resolution, {"no_such_label"}, {0}, json_file, image_file, {}, false, false, "test");
+            warnings = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(warnings.find("no_such_label") != std::string::npos);
+        DOCTEST_CHECK(readAnnotations()["annotations"].empty());
+    }
+
+    std::filesystem::remove_all(output_directory);
+}

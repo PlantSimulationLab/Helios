@@ -196,6 +196,9 @@ struct Shader {
     GLint skyGeometryFlagTextureObjectUniform;
     GLint hiddenFlagTextureObjectUniform;
 
+    //! Location of the geometry type index uniform, which only the annotation pass shader declares
+    GLint geometryTypeUniform;
+
     //! Indicates whether initialize() has been successfully called
     bool initialized = false;
 };
@@ -532,14 +535,14 @@ public:
 
     //! Set camera position
     /**
-     * \param[in] cameraPosition (x,y,z) position of the camera, i.e., this is where the actual camera or `eye' is positioned.
+     * \param[in] cameraPosition (x,y,z) position of the camera, i.e., this is where the actual camera or 'eye' is positioned.
      * \param[in] lookAt (x,y,z) position of where the camera is looking at.
      */
     void setCameraPosition(const helios::vec3 &cameraPosition, const helios::vec3 &lookAt);
 
     //! Set camera position
     /**
-     * \param[in] cameraAngle (elevation,azimuth) angle to the camera with respect to the `lookAt' position.
+     * \param[in] cameraAngle (elevation,azimuth) angle to the camera with respect to the 'lookAt' position.
      * \param[in] lookAt (x,y,z) position of where the camera is looking at.
      */
     void setCameraPosition(const helios::SphericalCoord &cameraAngle, const helios::vec3 &lookAt);
@@ -552,7 +555,7 @@ public:
 
     //! Set the direction of the light source
     /**
-     * \param[in] direction Vector pointing in the direction of the light source (vector starts at light source and points toward scene.)
+     * \param[in] direction Vector pointing from the scene toward the light source; for example, (0,0,1) places the light directly overhead. It does not need to be a unit vector.
      */
     void setLightDirection(const helios::vec3 &direction);
 
@@ -1235,31 +1238,31 @@ public:
      */
     void updateContextPrimitiveColors();
 
-    //! Color primitives from Context by color mapping their `Primitive Data'
+    //! Color primitives from Context by color mapping their 'Primitive Data'
     /**
-     * \param[in] data_name Name of `Primitive Data'
+     * \param[in] data_name Name of 'Primitive Data'
      * \note If the data value does not exist for a certain primitive, a value of 0 is assumed.
      */
     void colorContextPrimitivesByData(const char *data_name);
 
-    //! Color primitives from Context by color mapping their `Primitive Data'
+    //! Color primitives from Context by color mapping their 'Primitive Data'
     /**
-     * \param[in] data_name Name of `Primitive Data'
+     * \param[in] data_name Name of 'Primitive Data'
      * \param[in] UUIDs UUID's of primitives to be colored by data
      * \note If the data value does not exist for a certain primitive, a value of 0 is assumed.
      */
     void colorContextPrimitivesByData(const char *data_name, const std::vector<uint> &UUIDs);
 
-    //! Color primitives from Context by color mapping their `Object Data'
+    //! Color primitives from Context by color mapping their 'Object Data'
     /**
-     * \param[in] data_name Name of `Object Data'
+     * \param[in] data_name Name of 'Object Data'
      * \note If the data value does not exist for a certain primitive, a value of 0 is assumed.
      */
     void colorContextPrimitivesByObjectData(const char *data_name);
 
-    //! Color primitives from Context by color mapping their `Object Data'
+    //! Color primitives from Context by color mapping their 'Object Data'
     /**
-     * \param[in] data_name Name of `Object Data'
+     * \param[in] data_name Name of 'Object Data'
      * \param[in] ObjIDs Object ID's of primitives to be colored by object data
      * \note If the data value does not exist for a certain primitive, a value of 0 is assumed.
      */
@@ -1442,14 +1445,199 @@ public:
      */
     void getWindowPixelsRGB(std::vector<uint> &pixel_data, uint &width_pixels, uint &height_pixels) const;
 
-    //! Get depth buffer data for the current display window
+    //! Get the normalized depth map of the current view
     /**
-     * \param[out] buffer Distance to nearest object from the camera location. The buffer must hold `width*height` elements as reported by \ref getWindowSize(). Note this differs from \ref getWindowPixelsRGB(), which is sized from the framebuffer rather than the window.
+     * \param[out] buffer Normalized depth of each pixel, as described for the overload of getDepthMap() that takes a std::vector. The buffer must hold `width*height` elements as reported by \ref getWindowSize().
+     * \note This overload cannot be used where the framebuffer is larger than the window, as on a high-DPI display, because the depth map then does not fit in a buffer of that size; an error is raised. Use the std::vector overload, which sizes the buffer itself.
      */
     [[deprecated]]
     void getDepthMap(float *buffer);
 
+    //! Get the normalized depth map of the current view
+    /**
+     * The values are the non-linear depth buffer values of the current frame, rescaled between the nearest and farthest of them and inverted, so that 255 is the nearest surface in view and 0 the farthest
+     * (including background). This is the image shown by \ref plotDepthMap(). It is not a distance: use \ref getDepthImage() for depth in world units.
+     *
+     * \param[out] depth_pixels Normalized depth of each pixel in the range 0 to 255, row-major with row 0 at the BOTTOM of the image.
+     * \param[out] width_pixels Width of the returned image in pixels, which is the framebuffer width (see \ref getFramebufferSize()).
+     * \param[out] height_pixels Height of the returned image in pixels, which is the framebuffer height.
+     */
     void getDepthMap(std::vector<float> &depth_pixels, uint &width_pixels, uint &height_pixels);
+
+    //! Get the distance from the camera to the nearest surface in each pixel of the current view
+    /**
+     * The depth is the distance in world units from the camera to the visible surface, measured along the camera viewing direction. Geometry lying in the plane through a point perpendicular to the viewing direction
+     * therefore has one depth across the whole image. This is the same definition of depth as the camera depth images of the radiation plug-in (RadiationModel::writeDepthImageData()).
+     *
+     * The frame is rendered as part of the call if needed, in the same way as \ref printWindow(const char*, const std::string&) "printWindow()".
+     *
+     * \param[out] depth_pixels Depth of each pixel, row-major with row 0 at the TOP of the image, which is the orientation of an image saved by printWindow(). Pixels in which no geometry is visible hold -1.
+     * \param[out] width_pixels Width of the returned image in pixels, which is the framebuffer width (see \ref getFramebufferSize()).
+     * \param[out] height_pixels Height of the returned image in pixels, which is the framebuffer height.
+     * \note Geometry nearer to the camera than the near clipping plane is not visible in the rendered image, and is likewise absent here. The near plane lies at 5 percent of the distance from the camera to its look-at point, and no nearer than 0.1.
+     * \note Semi-transparent primitives (color alpha less than 1) are treated as opaque: the depth is that of the nearest surface whether or not it can be seen through.
+     * \note Lines and points added to the Visualizer have no depth: the depth is that of the surface behind them. The same is true of the sky dome and of 2D overlays (colorbar, watermark, text), so a pixel showing
+     * only these holds -1.
+     */
+    void getDepthImage(std::vector<float> &depth_pixels, uint &width_pixels, uint &height_pixels);
+
+    //! Get the Context primitive visible in each pixel of the current view
+    /**
+     * This is the pixel-to-primitive map from which bounding boxes and segmentation masks are computed. It is exact: it does not depend on primitive colors, lighting, or the anti-aliasing the Visualizer was created
+     * with, and producing it does not modify the Context.
+     *
+     * The frame is rendered as part of the call if needed, in the same way as \ref printWindow(const char*, const std::string&) "printWindow()".
+     *
+     * \param[out] pixel_UUIDs UUID of the Context primitive visible in each pixel plus one, row-major with row 0 at the TOP of the image. Pixels in which no Context primitive is visible hold 0. That includes
+     * background, and pixels covered by a rectangle or triangle that was added directly to the Visualizer (which hides what is behind it but is not a Context primitive).
+     * \param[out] width_pixels Width of the returned image in pixels, which is the framebuffer width (see \ref getFramebufferSize()).
+     * \param[out] height_pixels Height of the returned image in pixels, which is the framebuffer height.
+     * \note A primitive whose texture has a transparency channel is visible only where its texture is opaque, as in the rendered image.
+     * \note A semi-transparent primitive (color alpha less than 1) is treated as opaque: it is reported where it is the nearest surface, and what is seen through it is not.
+     * \note The sky dome and 2D overlays (colorbar, watermark, text) are not part of the map, although they do appear in a saved image.
+     * \note Lines and points added to the Visualizer are likewise not part of the map and do not hide the primitives behind them, although they do appear in a saved image.
+     */
+    void getPixelUUIDs(std::vector<uint> &pixel_UUIDs, uint &width_pixels, uint &height_pixels);
+
+    //! Write bounding boxes for the current view based on primitive data labels, in Ultralytics YOLO format
+    /**
+     * Objects are identified by a primitive data label of type `uint` or `int`: all visible primitives carrying the same value of the label form one object, and one box is written per distinct value. Primitives
+     * without the label are not annotated. This is the labeling convention of RadiationModel::writeImageBoundingBoxes(), and the boxes are computed and written by the same routine (helios::annotation::writeLabelBoundingBoxes()).
+     *
+     * A box encloses whole every pixel in which the object is visible, so even an object visible in a single pixel has a box.
+     *
+     * The boxes are written to a text file named after the image with its extension replaced by ".txt", and describe the view at the time of the call. Save the image itself with \ref printWindow(const char*, const std::string&) "printWindow()".
+     * The output can be checked with \ref displayImageWithBoundingBoxes().
+     *
+     * \param[in] primitive_data_label Name of the primitive data label. Primitive data must have type `uint` or `int`.
+     * \param[in] object_class_ID Object class ID to write for the objects of this label.
+     * \param[in] image_file Name of the image file these boxes annotate. Only its stem is used, to name the output file.
+     * \param[in] classes_txt_file [optional] Name of the text file to write class names to, within `image_path`. Each line holds a class ID and the data label it was given for.
+     * \param[in] image_path [optional] Directory in which the output files are written. By default, the current working directory.
+     */
+    void writeImageBoundingBoxes(const std::string &primitive_data_label, uint object_class_ID, const std::string &image_file, const std::string &classes_txt_file = "classes.txt", const std::string &image_path = "./");
+
+    //! Write bounding boxes for the current view based on several primitive data labels, in Ultralytics YOLO format
+    /**
+     * See \ref writeImageBoundingBoxes(const std::string&, uint, const std::string&, const std::string&, const std::string&) "writeImageBoundingBoxes()". Each data label is a class of object.
+     *
+     * \param[in] primitive_data_label Names of the primitive data labels. Primitive data must have type `uint` or `int`.
+     * \param[in] object_class_ID Object class ID to write for the objects of each label, in the same order as primitive_data_label.
+     * \param[in] image_file Name of the image file these boxes annotate. Only its stem is used, to name the output file.
+     * \param[in] classes_txt_file [optional] Name of the text file to write class names to, within `image_path`.
+     * \param[in] image_path [optional] Directory in which the output files are written. By default, the current working directory.
+     */
+    void writeImageBoundingBoxes(const std::vector<std::string> &primitive_data_label, const std::vector<uint> &object_class_ID, const std::string &image_file, const std::string &classes_txt_file = "classes.txt",
+                                 const std::string &image_path = "./");
+
+    //! Write bounding boxes for the current view based on object data labels, in Ultralytics YOLO format
+    /**
+     * As \ref writeImageBoundingBoxes(const std::string&, uint, const std::string&, const std::string&, const std::string&) "writeImageBoundingBoxes()", except that the label is read from the data of each
+     * primitive's parent compound object. Primitives that belong to no object are not annotated.
+     *
+     * \param[in] object_data_label Name of the object data label. Object data must have type `uint` or `int`.
+     * \param[in] object_class_ID Object class ID to write for the objects of this label.
+     * \param[in] image_file Name of the image file these boxes annotate. Only its stem is used, to name the output file.
+     * \param[in] classes_txt_file [optional] Name of the text file to write class names to, within `image_path`.
+     * \param[in] image_path [optional] Directory in which the output files are written. By default, the current working directory.
+     */
+    void writeImageBoundingBoxes_ObjectData(const std::string &object_data_label, uint object_class_ID, const std::string &image_file, const std::string &classes_txt_file = "classes.txt", const std::string &image_path = "./");
+
+    //! Write bounding boxes for the current view based on several object data labels, in Ultralytics YOLO format
+    /**
+     * \param[in] object_data_label Names of the object data labels. Object data must have type `uint` or `int`.
+     * \param[in] object_class_ID Object class ID to write for the objects of each label, in the same order as object_data_label.
+     * \param[in] image_file Name of the image file these boxes annotate. Only its stem is used, to name the output file.
+     * \param[in] classes_txt_file [optional] Name of the text file to write class names to, within `image_path`.
+     * \param[in] image_path [optional] Directory in which the output files are written. By default, the current working directory.
+     */
+    void writeImageBoundingBoxes_ObjectData(const std::vector<std::string> &object_data_label, const std::vector<uint> &object_class_ID, const std::string &image_file, const std::string &classes_txt_file = "classes.txt",
+                                            const std::string &image_path = "./");
+
+    //! Write segmentation masks for the current view based on primitive data labels, in COCO JSON format
+    /**
+     * Objects are identified by a primitive data label of type `uint` or `int`, as for \ref writeImageBoundingBoxes(const std::string&, uint, const std::string&, const std::string&, const std::string&) "writeImageBoundingBoxes()".
+     * Each connected region of pixels sharing one value of the label becomes one annotation holding the outline of that region, so an object that is split in two by something in front of it yields two annotations.
+     * The masks describe objects as they appear: parts hidden behind other geometry are not included. This is the convention of RadiationModel::writeImageSegmentationMasks(), and the masks are computed and written by
+     * the same routine (helios::annotation::writeLabelSegmentationMasks()). A region of only one or two pixels is too small to outline and is not written.
+     *
+     * The masks describe the view at the time of the call. The output can be checked with \ref displayImageWithSegmentationMasks().
+     *
+     * \param[in] primitive_data_label Name of the primitive data label. Primitive data must have type `uint` or `int`.
+     * \param[in] object_class_ID Object class ID (COCO category ID) to write for the objects of this label.
+     * \param[in] json_filename Name of the output JSON file, which may include a path. ".json" is appended if it has no such extension.
+     * \param[in] image_file Name of the image file these masks annotate, which must already exist (see \ref printWindow(const char*, const std::string&) "printWindow()").
+     * \param[in] data_attribute_labels [optional] Primitive or object data labels of type `int`, `uint`, `float` or `double` whose mean value over the pixels of each mask is written to that annotation's "attributes".
+     * A label that exists as both is read from primitive data. Labels that do not exist are ignored.
+     * \param[in] append_file [optional] If true, the annotations are added to the COCO JSON file if it already exists, so that one file can describe many images. If false, a new file is written.
+     */
+    void writeImageSegmentationMasks(const std::string &primitive_data_label, uint object_class_ID, const std::string &json_filename, const std::string &image_file, const std::vector<std::string> &data_attribute_labels = {},
+                                     bool append_file = false);
+
+    //! Write segmentation masks for the current view based on several primitive data labels, in COCO JSON format
+    /**
+     * \param[in] primitive_data_label Names of the primitive data labels. Primitive data must have type `uint` or `int`.
+     * \param[in] object_class_ID Object class ID (COCO category ID) to write for the objects of each label, in the same order as primitive_data_label.
+     * \param[in] json_filename Name of the output JSON file, which may include a path. ".json" is appended if it has no such extension.
+     * \param[in] image_file Name of the image file these masks annotate, which must already exist.
+     * \param[in] data_attribute_labels [optional] Primitive or object data labels whose mean value over the pixels of each mask is written to that annotation's "attributes".
+     * \param[in] append_file [optional] If true, the annotations are added to an existing COCO JSON file. If false, a new file is written.
+     */
+    void writeImageSegmentationMasks(const std::vector<std::string> &primitive_data_label, const std::vector<uint> &object_class_ID, const std::string &json_filename, const std::string &image_file,
+                                     const std::vector<std::string> &data_attribute_labels = {}, bool append_file = false);
+
+    //! Write segmentation masks for the current view based on object data labels, in COCO JSON format
+    /**
+     * As \ref writeImageSegmentationMasks(const std::string&, uint, const std::string&, const std::string&, const std::vector<std::string>&, bool) "writeImageSegmentationMasks()", except that the label is read
+     * from the data of each primitive's parent compound object. Primitives that belong to no object are not annotated.
+     *
+     * \param[in] object_data_label Name of the object data label. Object data must have type `uint` or `int`.
+     * \param[in] object_class_ID Object class ID (COCO category ID) to write for the objects of this label.
+     * \param[in] json_filename Name of the output JSON file, which may include a path. ".json" is appended if it has no such extension.
+     * \param[in] image_file Name of the image file these masks annotate, which must already exist.
+     * \param[in] data_attribute_labels [optional] Primitive or object data labels whose mean value over the pixels of each mask is written to that annotation's "attributes".
+     * \param[in] append_file [optional] If true, the annotations are added to an existing COCO JSON file. If false, a new file is written.
+     */
+    void writeImageSegmentationMasks_ObjectData(const std::string &object_data_label, uint object_class_ID, const std::string &json_filename, const std::string &image_file, const std::vector<std::string> &data_attribute_labels = {},
+                                                bool append_file = false);
+
+    //! Write segmentation masks for the current view based on several object data labels, in COCO JSON format
+    /**
+     * \param[in] object_data_label Names of the object data labels. Object data must have type `uint` or `int`.
+     * \param[in] object_class_ID Object class ID (COCO category ID) to write for the objects of each label, in the same order as object_data_label.
+     * \param[in] json_filename Name of the output JSON file, which may include a path. ".json" is appended if it has no such extension.
+     * \param[in] image_file Name of the image file these masks annotate, which must already exist.
+     * \param[in] data_attribute_labels [optional] Primitive or object data labels whose mean value over the pixels of each mask is written to that annotation's "attributes".
+     * \param[in] append_file [optional] If true, the annotations are added to an existing COCO JSON file. If false, a new file is written.
+     */
+    void writeImageSegmentationMasks_ObjectData(const std::vector<std::string> &object_data_label, const std::vector<uint> &object_class_ID, const std::string &json_filename, const std::string &image_file,
+                                                const std::vector<std::string> &data_attribute_labels = {}, bool append_file = false);
+
+    //! Write the depth image of the current view to a text file
+    /**
+     * The file holds one line per image row, starting from the top of the image, with the depth of each pixel in that row separated by spaces. See \ref getDepthImage() for the definition of depth. Pixels in which
+     * no geometry is visible are written as -1.
+     *
+     * \param[in] filename Name of the text file to write, which may include a path.
+     */
+    void writeDepthImageData(const std::string &filename);
+
+    //! Write the depth image of the current view to an EXR file, with lossless float compression
+    /**
+     * See \ref getDepthImage() for the definition of depth. Pixels in which no geometry is visible are written as -1.
+     *
+     * \param[in] filename Name of the EXR file to write, which may include a path.
+     */
+    void writeDepthImageDataEXR(const std::string &filename);
+
+    //! Write the depth image of the current view as a grayscale JPEG image, normalized between the nearest depth and a maximum depth
+    /**
+     * The nearest visible surface is white and anything at or beyond the maximum depth is black. Pixels in which no geometry is visible are treated as lying at the maximum depth.
+     *
+     * \param[in] filename Name of the JPEG file to write, which may include a path.
+     * \param[in] max_depth Depth that maps to black, in world units (e.g., the far side of the scene). Must be greater than zero.
+     */
+    void writeNormDepthImage(const std::string &filename, float max_depth);
 
     //! Get the size of the display window in pixels
     /**
@@ -1897,7 +2085,7 @@ private:
     //! (x,y,z) coordinates of location where the camera is looking
     helios::vec3 camera_lookat_center;
 
-    //! (x,y,z) coordinates of the camera (a.k.a. the `eye' location)
+    //! (x,y,z) coordinates of the camera (a.k.a. the 'eye' location)
     helios::vec3 camera_eye_location;
 
     //! Minimum allowable distance from the camera eye location to the lookat location
@@ -1908,6 +2096,9 @@ private:
 
     //! Handle to the OpenGL shader (depth buffer for shadows)
     Shader depthShader;
+
+    //! Handle to the OpenGL shader used by the annotation pass (visible primitive and depth per pixel)
+    Shader annotationShader;
 
     //! Handle to the OpenGL shader for wide lines (uses geometry shader)
     Shader lineShader;
@@ -1931,6 +2122,34 @@ private:
     // depth map at the window resolution rather than the shadow map's own resolution.
     uint depthbufferFramebufferID = 0;
     uint depthbufferTexture = 0;
+
+    //! Framebuffer that the annotation pass renders into
+    /*! Single-sampled regardless of the anti-aliasing the Visualizer was created with, because a
+        blended edge sample would name a primitive that is not there. It carries an integer
+        attachment identifying the visible primitive and a float attachment holding its depth. */
+    uint annotationFramebufferID = 0;
+    //! Integer color attachment of the annotation framebuffer: geometry type index + 1 and face index
+    uint annotationIndexTexture = 0;
+    //! Float color attachment of the annotation framebuffer: distance along the viewing direction
+    uint annotationDepthTexture = 0;
+    //! Depth renderbuffer of the annotation framebuffer, used only for hidden-surface removal
+    uint annotationDepthRenderbuffer = 0;
+    //! Dimensions the annotation framebuffer attachments are currently allocated at
+    uint annotation_buffer_width = 0, annotation_buffer_height = 0;
+
+    //! Render the annotation pass for the current camera and read back its buffers
+    /**
+     * Renders the frame first if the one on the GPU is out of date, exactly as \ref printWindow() does, so that the buffers describe the same view as a saved image whichever of the two is requested first.
+     *
+     * \param[out] pixel_UUIDs UUID of the Context primitive visible in each pixel plus one, or zero where none is visible. Row-major with row 0 at the top of the image.
+     * \param[out] pixel_depth Distance in world units from the camera to the visible surface along the viewing direction, or -1 where nothing is visible. Same layout as pixel_UUIDs.
+     * \param[out] width_pixels Width of the buffers in pixels, which is the framebuffer width.
+     * \param[out] height_pixels Height of the buffers in pixels, which is the framebuffer height.
+     */
+    void renderAnnotationBuffers(std::vector<uint> &pixel_UUIDs, std::vector<float> &pixel_depth, uint &width_pixels, uint &height_pixels);
+
+    //! Check that a Context has been given to the Visualizer and return it, for the methods that annotate Context primitives
+    [[nodiscard]] helios::Context *getContextForAnnotation(const std::string &caller) const;
 
     // Offscreen rendering support for CI testing
     uint offscreenFramebufferID = 0;
@@ -2088,7 +2307,7 @@ private:
     size_t background_rectangle_ID;
     std::vector<size_t> background_sky_IDs;
 
-    //! Vector pointing from the light source to the scene
+    //! Unit vector pointing from the scene toward the light source
     helios::vec3 light_direction;
 
     //! Vector containing UUIDs of the coordinate axes

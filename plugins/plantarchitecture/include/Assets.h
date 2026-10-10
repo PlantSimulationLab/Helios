@@ -40,6 +40,13 @@
  */
 std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, float scale, float mature_scale, float flexibility, float taper = 1.f);
 
+//! Number of vertices a petiolule adds to a leaf prototype built by the generic leaf prototype function
+/**
+ * The petiolule's vertices are appended after the blade lattice in the prototype's mesh, so this is what separates the two: the lattice is every vertex but the last petioluleVertexCount().
+ * \return Number of petiolule vertices, which does not depend on the petiolule's length or radius.
+ */
+uint petioluleVertexCount();
+
 //! Bend a petiole centerline as a tapered cantilever loaded by the leaflets attached along it
 /**
  * The centerline is clamped at its first node. Each load acts at its arclength along the centerline, and the rotation of segment j is

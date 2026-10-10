@@ -163,8 +163,8 @@
   - \subpage RadiationDoc "Radiation Model: GPU-accelerated ray-tracing radiation transport model (all platforms via Vulkan; NVIDIA systems via OptiX)"
   - \subpage SolarPositionDoc "Solar Position Model: Model for the position of the sun in the sky, as well as models of solar radiation flux and longwave flux from the sky."
   - \subpage StomatalDoc "Stomatal Conductance Model: Model for the conductance of water vapor through stomatal pores"
-  - \subpage SyntheticAnnotationDoc "Synthetic Annotation: Automatic generation of labeled images for machine learning (object detection, semantic and instance segmentation)."
-  - \subpage VisualizerDoc "Visualizer: visualization of model geometry and data"
+  - \subpage SyntheticAnnotationDoc "Synthetic Annotation: Automatic generation of labeled images for machine learning (object detection, semantic and instance segmentation). Deprecated: use the Visualizer."
+  - \subpage VisualizerDoc "Visualizer: visualization of model geometry and data, and generation of labeled images for machine learning"
 
   - \subpage WeberPennDoc "Weber-Penn Tree: Procedural tree architecture generation"
 

@@ -1868,11 +1868,13 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     std::string primaryFragShader = helios::resolvePluginAsset("visualizer", "shaders/primaryShader.frag").string();
     std::string shadowVertShader = helios::resolvePluginAsset("visualizer", "shaders/shadow.vert").string();
     std::string shadowFragShader = helios::resolvePluginAsset("visualizer", "shaders/shadow.frag").string();
+    std::string annotationFragShader = helios::resolvePluginAsset("visualizer", "shaders/annotation.frag").string();
     std::string lineVertShader = helios::resolvePluginAsset("visualizer", "shaders/line.vert").string();
     std::string lineGeomShader = helios::resolvePluginAsset("visualizer", "shaders/line.geom").string();
 
     primaryShader.initialize(primaryVertShader.c_str(), primaryFragShader.c_str(), this);
     depthShader.initialize(shadowVertShader.c_str(), shadowFragShader.c_str(), this);
+    annotationShader.initialize(shadowVertShader.c_str(), annotationFragShader.c_str(), this);
     lineShader.initialize(lineVertShader.c_str(), primaryFragShader.c_str(), this, lineGeomShader.c_str());
 
     // Check for OpenGL errors after shader initialization
@@ -1966,6 +1968,24 @@ Visualizer::~Visualizer() {
     if (depthbufferTexture != 0) {
         glDeleteTextures(1, &depthbufferTexture);
         depthbufferTexture = 0;
+    }
+
+    // Clean up the framebuffer used by the annotation pass
+    if (annotationFramebufferID != 0) {
+        glDeleteFramebuffers(1, &annotationFramebufferID);
+        annotationFramebufferID = 0;
+    }
+    if (annotationIndexTexture != 0) {
+        glDeleteTextures(1, &annotationIndexTexture);
+        annotationIndexTexture = 0;
+    }
+    if (annotationDepthTexture != 0) {
+        glDeleteTextures(1, &annotationDepthTexture);
+        annotationDepthTexture = 0;
+    }
+    if (annotationDepthRenderbuffer != 0) {
+        glDeleteRenderbuffers(1, &annotationDepthRenderbuffer);
+        annotationDepthRenderbuffer = 0;
     }
 
     // Clean up offscreen rendering resources for headless mode

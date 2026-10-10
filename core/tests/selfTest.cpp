@@ -17,6 +17,7 @@
  */
 
 #include "Context.h"
+#include "annotation_io.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #define DOCTEST_CONFIG_DISABLE_AUTOMATIC_DISCOVERY

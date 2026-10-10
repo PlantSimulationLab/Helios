@@ -26,6 +26,16 @@ using namespace helios;
 
 // Minimum thresholds for creating tube geometry to avoid malformed triangles
 static const float MIN_TUBE_RADIUS_FOR_GEOMETRY = 1e-5f;
+
+// A petiole's radius follows how far it has elongated, and a leaf is created at a small fraction of its size - a hundredth, in the library's plants - so
+// with nothing under it a new leaf sat on a petiole a hundredth of its full radius, a few microns across. A petiole is never thinner than this fraction of
+// its full radius; past it the radius follows the elongation as before and reaches the full radius at maturity.
+static const float PETIOLE_MIN_RADIUS_FRACTION = 0.3f;
+
+//! The fraction of its full radius a petiole has once it has elongated to the given fraction of its full length.
+static float petioleRadiusFraction(float petiole_scale_factor_fraction) {
+    return std::max(petiole_scale_factor_fraction, PETIOLE_MIN_RADIUS_FRACTION);
+}
 static const float MIN_TUBE_LENGTH_FOR_GEOMETRY = 1e-4f;
 
 static void renameAutoMaterial(helios::Context *context_ptr, uint objID, const std::string &desired_base_name) {
@@ -2171,7 +2181,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         dr_petiole.at(p) = petiole_length.at(p) / float(phytomer_parameters.petiole.length_segments);
         dr_petiole_max.at(p) = phytomer_parameters.petiole.length.val() / float(phytomer_parameters.petiole.length_segments);
 
-        petiole_radii.at(p).at(0) = leaf_scale_factor_fraction * phytomer_parameters.petiole.radius.val();
+        petiole_radii.at(p).at(0) = petioleRadiusFraction(leaf_scale_factor_fraction) * phytomer_parameters.petiole.radius.val();
         if (petiole_radii.at(p).at(0) <= 0.f) {
             petiole_radii.at(p).at(0) = MIN_TUBE_RADIUS_FOR_GEOMETRY;
         }
@@ -2717,7 +2727,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
 
             petiole_vertices.at(petiole).at(j) = petiole_vertices.at(petiole).at(j - 1) + dr_petiole.at(petiole) * petiole_axis_actual;
 
-            petiole_radii.at(petiole).at(j) = leaf_scale_factor_fraction * phytomer_parameters.petiole.radius.val() * (1.f - petiole_taper.at(petiole) / float(Ndiv_petiole_length) * float(j));
+            petiole_radii.at(petiole).at(j) = petioleRadiusFraction(leaf_scale_factor_fraction) * phytomer_parameters.petiole.radius.val() * (1.f - petiole_taper.at(petiole) / float(Ndiv_petiole_length) * float(j));
             petiole_colors.at(j) = phytomer_parameters.petiole.color;
 
             assert(!std::isnan(petiole_vertices.at(petiole).at(j).x) && std::isfinite(petiole_vertices.at(petiole).at(j).x));
@@ -3763,6 +3773,9 @@ void Phytomer::setPetioleAndLeafScaleFraction(uint petiole_index, float petiole_
     // The petiole and the blade have separate deltas because they grow on separate rates: the petiole on its shoot's internode elongation rate, the blade on the leaf expansion rate. For a shoot type that
     // does not distinguish the two the fractions are equal at every step, and the two deltas are then the same number.
     const float petiole_delta_scale = petiole_scale_factor_fraction / current_petiole_scale_factor.at(petiole_index);
+    // The radius has a floor the length does not (see PETIOLE_MIN_RADIUS_FRACTION), so it moves by the ratio of the floored fractions: not at all while
+    // the petiole is below the floor, and by the same factor as the length above it.
+    const float petiole_radius_delta_scale = petioleRadiusFraction(petiole_scale_factor_fraction) / petioleRadiusFraction(current_petiole_scale_factor.at(petiole_index));
     float delta_scale = leaf_scale_factor_fraction / current_leaf_scale_factor.at(petiole_index);
 
     petiole_length.at(petiole_index) *= petiole_delta_scale;
@@ -3774,12 +3787,12 @@ void Phytomer::setPetioleAndLeafScaleFraction(uint petiole_index, float petiole_
 
     // scale the petiole geometry if it exists, or create it if it doesn't but should now
 
-    // Scale the stored centerline about the petiole base, and the radii uniformly. The geometry is
+    // Scale the stored centerline about the petiole base, and the radii uniformly by their own factor. The geometry is
     // then driven from these arrays, so both the existing-geometry and create-geometry cases below
     // work from the same scaled state.
     const vec3 base = petiole_vertices.at(petiole_index).at(0);
     for (uint node = 0; node < petiole_radii.at(petiole_index).size(); node++) {
-        petiole_radii.at(petiole_index).at(node) *= petiole_delta_scale;
+        petiole_radii.at(petiole_index).at(node) *= petiole_radius_delta_scale;
     }
     for (uint node = 1; node < petiole_vertices.at(petiole_index).size(); node++) {
         vec3 offset = petiole_vertices.at(petiole_index).at(node) - base;
@@ -3900,15 +3913,22 @@ void PlantArchitecture::recordLeafPrototypeRestGeometry(const LeafPrototype &pro
         for (vec3 &vertex: rest_geometry.vertices) {
             vertex = vertex - prototype_origin;
         }
+        // A petiolule's vertices follow the blade's in the mesh. They are set aside here so that what is left is the lattice alone: taking the whole mesh for a lattice finds none in a leaf that carries a
+        // petiolule, which left every such leaf rigid whatever its flexibility.
+        if (prototype_params.build_petiolule && rest_geometry.vertices.size() > petioluleVertexCount()) {
+            const auto first_appended = rest_geometry.vertices.end() - petioluleVertexCount();
+            rest_geometry.appended_vertices.assign(first_appended, rest_geometry.vertices.end());
+            rest_geometry.vertices.erase(first_appended, rest_geometry.vertices.end());
+        }
         // The blade is a regular lattice, so its dimensions can be recovered from the mesh itself. Deriving them here rather than recomputing them from the prototype parameters is what keeps
         // this correct for a prototype whose lateral subdivision count came from a resampled random aspect ratio, which the caller cannot reproduce.
         rest_geometry.subdivisions_x = prototype_params.subdivisions;
         if (rest_geometry.subdivisions_x > 0 && rest_geometry.vertices.size() % (rest_geometry.subdivisions_x + 1) == 0) {
             rest_geometry.subdivisions_y = uint(rest_geometry.vertices.size() / (rest_geometry.subdivisions_x + 1)) - 1;
         } else {
-            // The mesh is not the plain lattice this deformation understands - an OBJ-loaded leaf, or one carrying a petiolule appended to the blade - so it is left rigid rather than deformed
-            // by an index mapping that does not describe it.
+            // The mesh is not the plain lattice this deformation understands - an OBJ-loaded leaf, say - so it is left rigid rather than deformed by an index mapping that does not describe it.
             rest_geometry.vertices.clear();
+            rest_geometry.appended_vertices.clear();
             rest_geometry.subdivisions_x = 0;
         }
     }
@@ -4454,6 +4474,29 @@ void Phytomer::deformLeafUnderSelfWeight(uint petiole_index, uint leaf_index) {
     std::vector<vec3> deformed_prototype_frame = deformLeafLattice(rest.vertices, rest.subdivisions_x, rest.subdivisions_y, current_scale, mature_scale, flexibility, phytomer_parameters.leaf.prototype.flexibility_taper.val());
     for (vec3 &vertex: deformed_prototype_frame) {
         vertex = vertex / current_scale;
+    }
+
+    // A petiolule does not bend: the blade is clamped where the stalk's cylinder ends, so the cylinder keeps its rest shape. The join beyond it lies under the base of the blade, though, and has to go with
+    // it or the blade would lift away and leave the join standing clear. Each of its vertices is carried by however far the midrib has moved at the same distance along the leaflet.
+    if (!rest.appended_vertices.empty()) {
+        const uint j_mid = rest.subdivisions_y / 2;
+        auto midribIndex = [&rest, j_mid](uint i) { return size_t(j_mid) * (size_t(rest.subdivisions_x) + 1) + size_t(i); };
+        for (const vec3 &rest_vertex: rest.appended_vertices) {
+            vec3 displacement = nullorigin;
+            if (rest_vertex.x > rest.vertices.at(midribIndex(0)).x) {
+                uint station = 1;
+                while (station < rest.subdivisions_x && rest.vertices.at(midribIndex(station)).x < rest_vertex.x) {
+                    station++;
+                }
+                const float x_inner = rest.vertices.at(midribIndex(station - 1)).x;
+                const float x_outer = rest.vertices.at(midribIndex(station)).x;
+                const float t = x_outer > x_inner ? std::clamp((rest_vertex.x - x_inner) / (x_outer - x_inner), 0.f, 1.f) : 0.f;
+                const vec3 displacement_inner = deformed_prototype_frame.at(midribIndex(station - 1)) - rest.vertices.at(midribIndex(station - 1));
+                const vec3 displacement_outer = deformed_prototype_frame.at(midribIndex(station)) - rest.vertices.at(midribIndex(station));
+                displacement = displacement_inner + t * (displacement_outer - displacement_inner);
+            }
+            deformed_prototype_frame.push_back(rest_vertex + displacement);
+        }
     }
 
     float transform[16];

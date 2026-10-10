@@ -318,6 +318,92 @@ GPU_TEST_CASE("RadiationModel segmentation mask attributes correspond to their o
     }
 }
 
+GPU_TEST_CASE("RadiationModel::writeImageSegmentationMasks attributes survive a region too small to outline") {
+    // A visible region of one or two pixels cannot be traced to a polygon, so it produces no annotation. The per-annotation attribute averaging used to run as a separate pass that still counted such a region,
+    // and the two result lists were paired by index: every annotation after the first dropped region was given the attribute values of a different object. Thin or distant objects routinely leave fragments
+    // this small, so in a realistic scene most annotations carried another object's values.
+    //
+    // Sub-pixel patches are scattered ahead of a large patch in label order. Any of them that lands on a pixel center is a one-pixel region. The large patch must still report its own temperature.
+
+    Context context;
+
+    const float fragment_temperature = 100.f;
+    const float large_temperature = 300.f;
+
+    // The camera below sees 0.109 m per pixel at the patches, so these 0.05 m patches cover at most one pixel center each
+    const std::vector<float> fragment_x = {-3.013f, -2.471f, -1.929f, -1.387f, -0.845f, -0.303f, 0.239f, 0.781f, 1.323f, 1.865f, 2.407f, 2.949f};
+    for (size_t fragment = 0; fragment < fragment_x.size(); fragment++) {
+        const uint UUID = context.addPatch(make_vec3(fragment_x.at(fragment), 0, -2.f + 0.037f * float(fragment)), make_vec2(0.05, 0.05), make_SphericalCoord(0.5 * M_PI, 0.f));
+        context.setPrimitiveData(UUID, "patch_id", uint(fragment + 1));
+        context.setPrimitiveData(UUID, "patch_temp", fragment_temperature);
+    }
+
+    const uint large_patch = context.addPatch(make_vec3(0, 0, 1.5), make_vec2(2, 2), make_SphericalCoord(0.5 * M_PI, 0.f));
+    context.setPrimitiveData(large_patch, "patch_id", uint(100));
+    context.setPrimitiveData(large_patch, "patch_temp", large_temperature);
+
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiationmodel.disableMessages();
+
+    CameraProperties cam_props;
+    cam_props.camera_resolution = make_int2(128, 128);
+    cam_props.HFOV = 70;
+    cam_props.focal_plane_distance = 10;
+    cam_props.lens_diameter = 0.f;
+    radiationmodel.addRadiationCamera("fragment_cam", {"SW"}, make_vec3(0, -10, 0), make_vec3(0, 0, 0), cam_props, 1);
+
+    radiationmodel.addRadiationBand("SW");
+    radiationmodel.setScatteringDepth("SW", 1);
+    uint source = radiationmodel.addCollimatedRadiationSource(make_vec3(0, 1, 0));
+    radiationmodel.setSourceFlux(source, "SW", 1000.f);
+    radiationmodel.updateGeometry();
+    radiationmodel.runBand("SW");
+
+    // The scenario requires at least one fragment to be visible as a region of fewer than three pixels
+    std::vector<uint> pixel_UUIDs;
+    context.getGlobalData("camera_fragment_cam_pixel_UUID", pixel_UUIDs);
+    size_t small_fragment_regions = 0;
+    for (uint fragment_UUID = 0; fragment_UUID < fragment_x.size(); fragment_UUID++) {
+        const size_t fragment_pixels = size_t(std::count(pixel_UUIDs.begin(), pixel_UUIDs.end(), fragment_UUID + 1));
+        if (fragment_pixels > 0 && fragment_pixels < 3) {
+            small_fragment_regions++;
+        }
+    }
+    DOCTEST_REQUIRE(small_fragment_regions > 0);
+
+    const std::string outdir = "./attr_fragment_test/";
+    std::filesystem::remove_all(outdir);
+    std::filesystem::create_directories(outdir);
+
+    const std::string image_file = radiationmodel.writeCameraImage("fragment_cam", {"SW"}, "fragment", outdir);
+    radiationmodel.writeImageSegmentationMasks("fragment_cam", "patch_id", 1u, outdir + "fragment_masks.json", image_file, {"patch_temp"}, false);
+
+    nlohmann::json coco;
+    const std::string json_file = outdir + "fragment_masks.json";
+    const bool json_exists = std::filesystem::exists(json_file);
+    if (json_exists) {
+        std::ifstream file(json_file);
+        file >> coco;
+    }
+
+    std::filesystem::remove_all(outdir);
+
+    DOCTEST_REQUIRE(json_exists);
+    DOCTEST_REQUIRE(coco.contains("annotations"));
+
+    // The large patch is the only region of any size
+    size_t large_annotations = 0;
+    for (const auto &ann: coco["annotations"]) {
+        if (ann["area"].get<int>() < 100) {
+            continue;
+        }
+        large_annotations++;
+        DOCTEST_REQUIRE(ann.contains("attributes"));
+        DOCTEST_CHECK(ann["attributes"]["patch_temp"].get<double>() == doctest::Approx(double(large_temperature)));
+    }
+    DOCTEST_CHECK(large_annotations == 1);
+}
+
 int RadiationModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

@@ -3,6 +3,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <filesystem>
 #include "doctest.h"
+#include "annotation_io.h"
 #include "doctest_utils.h"
 
 using namespace helios;
@@ -158,6 +159,16 @@ public:
     //! Times a build has walked the Context to settle which primitives are colored by data
     static size_t getColorPrimitiveSetRefills(const Visualizer &visualizer) {
         return visualizer.color_primitive_set_refills;
+    }
+
+    //! Make the window dimensions the Visualizer reports smaller than its framebuffer, as they are on a high-DPI display
+    /**
+     * On a high-DPI display the framebuffer has more pixels than the window has points. That cannot be arranged from a test by other means, because a headless Visualizer's framebuffer always matches the size
+     * it was created with and a test machine's display may not be high-DPI. Rendering is unaffected: it is sized from the framebuffer.
+     */
+    static void setReportedWindowSize(Visualizer &visualizer, uint window_width, uint window_height) {
+        visualizer.Wdisplay = window_width;
+        visualizer.Hdisplay = window_height;
     }
 
     //! Placeholder depth texture bound to the `shadowMap` sampler before a shadow map exists
@@ -5016,4 +5027,901 @@ TEST_CASE("Visualizer renders a camera looking straight down") {
 
     DOCTEST_CHECK(nadir > 0.9);
     DOCTEST_CHECK(oblique > 0.5);
+}
+
+//! Pixel bounds of an axis-aligned world rectangle seen by the nadir camera used in the annotation tests
+/**
+ * The camera sits at (0,0,camera_height) looking straight down with the default 45 degree vertical field of view, for which world +x is to the right of the image and world +y is at its top.
+ *
+ * \param[in] center Center of the rectangle in world coordinates.
+ * \param[in] size Side lengths of the rectangle along world x and y.
+ * \param[in] camera_height Height of the camera above z=0.
+ * \param[in] image_size Width and height of the (square) image in pixels.
+ * \return (xmin, xmax, ymin, ymax) of the pixels whose centers the rectangle covers, with y measured from the top of the image.
+ */
+static int4 nadirPixelBounds(const vec3 &center, const vec2 &size, float camera_height, uint image_size) {
+    const float half_extent = (camera_height - center.z) * std::tan(0.5f * 45.f * PI_F / 180.f);
+    auto columnOf = [&](float x) { return (0.5f + 0.5f * x / half_extent) * float(image_size); };
+    auto rowOf = [&](float y) { return (0.5f - 0.5f * y / half_extent) * float(image_size); };
+    // A pixel is covered when its center (index + 0.5) lies inside the projected rectangle
+    const int xmin = int(std::ceil(columnOf(center.x - 0.5f * size.x) - 0.5f));
+    const int xmax = int(std::floor(columnOf(center.x + 0.5f * size.x) - 0.5f));
+    const int ymin = int(std::ceil(rowOf(center.y + 0.5f * size.y) - 0.5f));
+    const int ymax = int(std::floor(rowOf(center.y - 0.5f * size.y) - 0.5f));
+    return make_int4(xmin, xmax, ymin, ymax);
+}
+
+//! Whether a call throws, with anything it writes to stderr discarded
+/**
+ * The capture is destroyed when this returns, so the assertion made on the result reports its own failure normally.
+ */
+template<typename Callable>
+static bool annotationCallThrows(Callable &&call) {
+    capture_cerr capture;
+    try {
+        call();
+    } catch (const std::exception &) {
+        return true;
+    }
+    return false;
+}
+
+//! Count the pixels of a pixel-to-primitive map that show a given primitive
+static size_t countPixelsOf(const std::vector<uint> &pixel_UUIDs, uint UUID) {
+    return size_t(std::count(pixel_UUIDs.begin(), pixel_UUIDs.end(), UUID + 1));
+}
+
+DOCTEST_TEST_CASE("Visualizer pixel-to-primitive map identifies the visible Context primitive") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    const uint image_size = 200;
+    const float camera_height = 10.f;
+
+    Context context;
+    // A patch and a triangle are added first of their kind, so both have face index 0 within their geometry type: telling them apart requires the geometry type as well as the face index.
+    const uint UUID_patch = context.addPatch(make_vec3(1, 2, 0), make_vec2(2, 2));
+    const uint UUID_triangle = context.addTriangle(make_vec3(-3, 1, 0), make_vec3(-1, 1, 0), make_vec3(-2, 3, 0));
+    const uint UUID_ground = context.addPatch(make_vec3(-1, -2, 0), make_vec2(3, 3));
+    const uint UUID_above_ground = context.addPatch(make_vec3(-1, -2, 1), make_vec2(1, 1));
+
+    Visualizer visualizer(image_size, image_size, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.hideWatermark();
+    visualizer.hideNavigationGizmo();
+    visualizer.buildContextGeometry(&context);
+    visualizer.setCameraPosition(make_vec3(0, 0, camera_height), make_vec3(0, 0, 0));
+
+    // Geometry added directly to the Visualizer is not a Context primitive. It hides the patch behind it without being reported.
+    const vec3 overlay_center = make_vec3(1.f, 2.f, 2.f);
+    visualizer.addRectangleByCenter(overlay_center, make_vec2(0.4f, 0.4f), nullrotation, RGB::red, Visualizer::COORDINATES_CARTESIAN);
+
+    // Lines and points added to the Visualizer do not hide anything. Each is placed halfway along the line of sight to a pixel that is checked below: the point in front of the center of the raised patch,
+    // and the line in front of the triangle's centroid.
+    visualizer.addPoint(make_vec3(-0.5f, -1.f, 5.5f), RGB::blue, 15.f, Visualizer::COORDINATES_CARTESIAN);
+    visualizer.addLine(make_vec3(-1.3f, 5.f / 6.f, 5.f), make_vec3(-0.7f, 5.f / 6.f, 5.f), RGB::blue, 5.f, Visualizer::COORDINATES_CARTESIAN);
+
+    std::vector<uint> pixel_UUIDs;
+    uint width = 0, height = 0;
+    visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+
+    uint framebuffer_width, framebuffer_height;
+    visualizer.getFramebufferSize(framebuffer_width, framebuffer_height);
+    DOCTEST_REQUIRE(width == framebuffer_width);
+    DOCTEST_REQUIRE(height == framebuffer_height);
+    DOCTEST_REQUIRE(pixel_UUIDs.size() == size_t(width) * size_t(height));
+    DOCTEST_REQUIRE(width == image_size);
+
+    auto pixelAt = [&](int column, int row) { return pixel_UUIDs.at(size_t(row) * size_t(width) + size_t(column)); };
+    auto centerPixelOf = [&](const int4 &bounds) { return pixelAt((bounds.x + bounds.y) / 2, (bounds.z + bounds.w) / 2); };
+
+    const int4 patch_bounds = nadirPixelBounds(make_vec3(1, 2, 0), make_vec2(2, 2), camera_height, image_size);
+    const int4 ground_bounds = nadirPixelBounds(make_vec3(-1, -2, 0), make_vec2(3, 3), camera_height, image_size);
+    const int4 above_ground_bounds = nadirPixelBounds(make_vec3(-1, -2, 1), make_vec2(1, 1), camera_height, image_size);
+    const int4 overlay_bounds = nadirPixelBounds(overlay_center, make_vec2(0.4f, 0.4f), camera_height, image_size);
+
+    // Background
+    DOCTEST_CHECK(pixelAt(0, 0) == 0);
+    DOCTEST_CHECK(pixelAt(int(width) - 1, int(height) - 1) == 0);
+
+    // The patch is in the upper right of the image: the map is top-down, like a saved image
+    DOCTEST_CHECK(pixelAt(patch_bounds.x + 2, patch_bounds.z + 2) == UUID_patch + 1);
+    DOCTEST_CHECK(pixelAt(patch_bounds.y - 2, patch_bounds.w - 2) == UUID_patch + 1);
+    DOCTEST_CHECK(pixelAt(patch_bounds.x - 2, patch_bounds.z + 2) == 0);
+    DOCTEST_CHECK(pixelAt(patch_bounds.x + 2, patch_bounds.z - 2) == 0);
+
+    // Triangle centroid (-2, 5/3, 0)
+    const int4 centroid_pixel = nadirPixelBounds(make_vec3(-2, 5.f / 3.f, 0), make_vec2(0.2f, 0.2f), camera_height, image_size);
+    DOCTEST_CHECK(centerPixelOf(centroid_pixel) == UUID_triangle + 1);
+
+    // The nearer patch hides the ground beneath it, and the ground is visible around it
+    DOCTEST_CHECK(centerPixelOf(above_ground_bounds) == UUID_above_ground + 1);
+    DOCTEST_CHECK(pixelAt(ground_bounds.x + 2, ground_bounds.z + 2) == UUID_ground + 1);
+
+    // Visualizer-only geometry occludes the patch but reports no primitive
+    DOCTEST_CHECK(centerPixelOf(overlay_bounds) == 0);
+
+    // The depth behind the point and the line is that of the surfaces they are in front of
+    std::vector<float> depth_pixels;
+    visualizer.getDepthImage(depth_pixels, width, height);
+    auto depthAtCenterOf = [&](const int4 &bounds) { return depth_pixels.at(size_t((bounds.z + bounds.w) / 2) * size_t(width) + size_t((bounds.x + bounds.y) / 2)); };
+    DOCTEST_CHECK(depthAtCenterOf(above_ground_bounds) == doctest::Approx(camera_height - 1.f).epsilon(1e-3));
+    DOCTEST_CHECK(depthAtCenterOf(centroid_pixel) == doctest::Approx(camera_height).epsilon(1e-3));
+
+    // Pixel counts match the projected areas (the overlay removes some of the patch's pixels)
+    const size_t expected_patch_pixels = size_t(patch_bounds.y - patch_bounds.x + 1) * size_t(patch_bounds.w - patch_bounds.z + 1);
+    const size_t overlay_pixels = size_t(overlay_bounds.y - overlay_bounds.x + 1) * size_t(overlay_bounds.w - overlay_bounds.z + 1);
+    DOCTEST_CHECK(double(countPixelsOf(pixel_UUIDs, UUID_patch)) == doctest::Approx(double(expected_patch_pixels - overlay_pixels)).epsilon(0.05));
+
+    // A primitive deleted from the Context after the render is no longer reported
+    context.deletePrimitive(UUID_above_ground);
+    visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+    DOCTEST_CHECK(countPixelsOf(pixel_UUIDs, UUID_above_ground) == 0);
+    DOCTEST_CHECK(centerPixelOf(above_ground_bounds) == UUID_ground + 1);
+    DOCTEST_CHECK(pixelAt(patch_bounds.x + 2, patch_bounds.z + 2) == UUID_patch + 1);
+}
+
+DOCTEST_TEST_CASE("Visualizer pixel-to-primitive map is independent of anti-aliasing and leaves the Context untouched") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    Context context;
+    const RGBcolor patch_color = make_RGBcolor(0.2f, 0.7f, 0.1f);
+    std::vector<uint> UUIDs;
+    for (int i = 0; i < 5; i++) {
+        UUIDs.push_back(context.addPatch(make_vec3(-2.f + float(i), 0.3f * float(i), 0.2f * float(i)), make_vec2(1.3f, 0.9f), make_SphericalCoord(0.3f * float(i), 0.5f * float(i)), patch_color));
+    }
+    const std::vector<std::string> data_labels_before = context.listAllPrimitiveDataLabels();
+
+    auto pixelMap = [&](int antialiasing_samples) {
+        Visualizer visualizer(160, 120, antialiasing_samples, false, true);
+        visualizer.disableMessages();
+        visualizer.hideWatermark();
+        visualizer.setLightingModel(Visualizer::LIGHTING_PHONG_SHADOWED);
+        visualizer.buildContextGeometry(&context);
+        visualizer.setCameraPosition(make_vec3(1, -6, 6), make_vec3(0, 0, 0));
+        std::vector<uint> pixel_UUIDs;
+        uint width, height;
+        visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+        return pixel_UUIDs;
+    };
+
+    const std::vector<uint> map_aliased = pixelMap(0);
+    const std::vector<uint> map_antialiased = pixelMap(8);
+
+    DOCTEST_REQUIRE(!map_aliased.empty());
+    DOCTEST_CHECK(map_aliased == map_antialiased);
+
+    // Every patch is visible, and every reported value names a primitive of the Context
+    for (uint UUID: UUIDs) {
+        DOCTEST_CHECK(countPixelsOf(map_aliased, UUID) > 0);
+    }
+    for (uint value: map_aliased) {
+        if (value != 0 && !context.doesPrimitiveExist(value - 1)) {
+            DOCTEST_FAIL("The pixel-to-primitive map names a primitive that does not exist in the Context.");
+            break;
+        }
+    }
+
+    // Annotation does not recolor primitives or leave data behind
+    for (uint UUID: UUIDs) {
+        const RGBcolor color = context.getPrimitiveColor(UUID);
+        DOCTEST_CHECK(color.r == doctest::Approx(patch_color.r));
+        DOCTEST_CHECK(color.g == doctest::Approx(patch_color.g));
+        DOCTEST_CHECK(color.b == doctest::Approx(patch_color.b));
+    }
+    DOCTEST_CHECK(context.listAllPrimitiveDataLabels() == data_labels_before);
+}
+
+DOCTEST_TEST_CASE("Visualizer pixel-to-primitive map sees through transparent texture pixels") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    const uint image_size = 300;
+    const float camera_height = 10.f;
+
+    Context context;
+    const uint UUID_ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(6, 6));
+    const uint UUID_leaf = context.addPatch(make_vec3(0, 0, 1), make_vec2(4, 4), nullrotation, "plugins/visualizer/textures/AlmondLeaf.png");
+    const float solid_fraction = context.getPrimitiveSolidFraction(UUID_leaf);
+    DOCTEST_REQUIRE(solid_fraction > 0.05f);
+    DOCTEST_REQUIRE(solid_fraction < 0.95f);
+
+    Visualizer visualizer(image_size, image_size, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.hideWatermark();
+    visualizer.buildContextGeometry(&context);
+    visualizer.setCameraPosition(make_vec3(0, 0, camera_height), make_vec3(0, 0, 0));
+
+    std::vector<uint> pixel_UUIDs;
+    uint width, height;
+    visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+
+    const int4 leaf_bounds = nadirPixelBounds(make_vec3(0, 0, 1), make_vec2(4, 4), camera_height, image_size);
+    const size_t leaf_patch_pixels = size_t(leaf_bounds.y - leaf_bounds.x + 1) * size_t(leaf_bounds.w - leaf_bounds.z + 1);
+
+    // The leaf occupies only the opaque part of its patch, and the ground shows through the rest
+    const double leaf_pixel_fraction = double(countPixelsOf(pixel_UUIDs, UUID_leaf)) / double(leaf_patch_pixels);
+    DOCTEST_CHECK(leaf_pixel_fraction == doctest::Approx(double(solid_fraction)).epsilon(0.1));
+
+    size_t ground_pixels_inside_leaf_patch = 0;
+    for (int row = leaf_bounds.z; row <= leaf_bounds.w; row++) {
+        for (int column = leaf_bounds.x; column <= leaf_bounds.y; column++) {
+            if (pixel_UUIDs.at(size_t(row) * size_t(width) + size_t(column)) == UUID_ground + 1) {
+                ground_pixels_inside_leaf_patch++;
+            }
+        }
+    }
+    DOCTEST_CHECK(ground_pixels_inside_leaf_patch + countPixelsOf(pixel_UUIDs, UUID_leaf) == leaf_patch_pixels);
+
+    // The depth image agrees with the map about what is visible in each pixel
+    std::vector<float> depth_pixels;
+    visualizer.getDepthImage(depth_pixels, width, height);
+    bool depth_matches_map = true;
+    for (size_t p = 0; p < pixel_UUIDs.size(); p++) {
+        const float expected_depth = (pixel_UUIDs.at(p) == UUID_leaf + 1) ? camera_height - 1.f : (pixel_UUIDs.at(p) == UUID_ground + 1) ? camera_height : -1.f;
+        if (std::fabs(depth_pixels.at(p) - expected_depth) > 1e-3f) {
+            depth_matches_map = false;
+            break;
+        }
+    }
+    DOCTEST_CHECK(depth_matches_map);
+}
+
+DOCTEST_TEST_CASE("Visualizer annotations describe the same view as the saved image when requested before any render") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    Context context;
+    const uint UUID = context.addPatch(make_vec3(3, 1, 0.5f), make_vec2(2, 1), make_SphericalCoord(0.4f, 1.f), RGB::red);
+
+    // The camera is left at its default, which is fitted to the scene when the first frame is rendered
+    Visualizer visualizer(200, 150, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.hideWatermark();
+    visualizer.hideNavigationGizmo();
+    visualizer.setBackgroundColor(RGB::black);
+    visualizer.buildContextGeometry(&context);
+
+    std::vector<uint> map_before_render;
+    uint width, height;
+    visualizer.getPixelUUIDs(map_before_render, width, height);
+    DOCTEST_REQUIRE(countPixelsOf(map_before_render, UUID) > 0);
+
+    const std::string image_file = "test_annotation_view_consistency.png";
+    visualizer.printWindow(image_file.c_str(), "png");
+
+    std::vector<uint> map_after_render;
+    visualizer.getPixelUUIDs(map_after_render, width, height);
+    DOCTEST_CHECK(map_before_render == map_after_render);
+
+    // The red patch covers the same pixels in the saved image as in the map
+    std::vector<RGBAcolor> image_pixels;
+    uint image_width, image_height;
+    helios::readPNG(image_file, image_width, image_height, image_pixels);
+    DOCTEST_REQUIRE(image_width == width);
+    DOCTEST_REQUIRE(image_height == height);
+
+    // readPNG returns rows top-down, as the map is
+    size_t disagreeing_pixels = 0;
+    for (uint row = 0; row < height; row++) {
+        for (uint column = 0; column < width; column++) {
+            const bool red_in_image = image_pixels.at(size_t(row) * size_t(width) + size_t(column)).r > 0.5f;
+            const bool patch_in_map = map_after_render.at(size_t(row) * size_t(width) + size_t(column)) == UUID + 1;
+            if (red_in_image != patch_in_map) {
+                disagreeing_pixels++;
+            }
+        }
+    }
+    DOCTEST_CHECK(disagreeing_pixels == 0);
+
+    std::filesystem::remove(image_file);
+}
+
+DOCTEST_TEST_CASE("Visualizer pixel-to-primitive map and depth image treat semi-transparent primitives as opaque") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    const uint image_size = 200;
+    const float camera_height = 10.f;
+    const RGBAcolor translucent = make_RGBAcolor(1.f, 0.f, 0.f, 0.5f);
+
+    Context context;
+    const uint UUID_ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4));
+    // A translucent patch above the ground, with an opaque patch above part of it
+    const uint UUID_translucent = context.addPatch(make_vec3(-1, 0, 1), make_vec2(1, 1), nullrotation, translucent);
+    const uint UUID_opaque_above = context.addPatch(make_vec3(-1, 0, 2), make_vec2(0.3f, 0.3f));
+    // Two translucent patches, one above the other. The nearer is added first, so it is the nearer one that must be reported whatever order they were added in.
+    const uint UUID_translucent_near = context.addPatch(make_vec3(1, 0, 2), make_vec2(0.4f, 0.4f), nullrotation, translucent);
+    const uint UUID_translucent_far = context.addPatch(make_vec3(1, 0, 1), make_vec2(1, 1), nullrotation, translucent);
+    // A translucent triangle above the ground, with its centroid at (0, -4/3, 1)
+    const uint UUID_translucent_triangle = context.addTriangle(make_vec3(-0.5f, -1.6f, 1), make_vec3(0.5f, -1.6f, 1), make_vec3(0, -0.8f, 1), translucent);
+
+    Visualizer visualizer(image_size, image_size, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.hideWatermark();
+    visualizer.hideNavigationGizmo();
+    visualizer.buildContextGeometry(&context);
+    visualizer.setCameraPosition(make_vec3(0, 0, camera_height), make_vec3(0, 0, 0));
+
+    std::vector<uint> pixel_UUIDs;
+    std::vector<float> depth_pixels;
+    uint width = 0, height = 0;
+    visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+    visualizer.getDepthImage(depth_pixels, width, height);
+    DOCTEST_REQUIRE(width == image_size);
+
+    // The patches reach the Visualizer with their transparency, so this exercises the path that draws translucent geometry
+    DOCTEST_REQUIRE(VisualizerTestHelper::getGeometryColor(visualizer, UUID_translucent).a < 1.f);
+    DOCTEST_REQUIRE(VisualizerTestHelper::getGeometryColor(visualizer, UUID_translucent_near).a < 1.f);
+
+    auto indexOfCenter = [&](const int4 &bounds) { return size_t((bounds.z + bounds.w) / 2) * size_t(width) + size_t((bounds.x + bounds.y) / 2); };
+    auto indexOfCorner = [&](const int4 &bounds) { return size_t(bounds.z + 2) * size_t(width) + size_t(bounds.x + 2); };
+
+    const int4 translucent_bounds = nadirPixelBounds(make_vec3(-1, 0, 1), make_vec2(1, 1), camera_height, image_size);
+    const int4 opaque_above_bounds = nadirPixelBounds(make_vec3(-1, 0, 2), make_vec2(0.3f, 0.3f), camera_height, image_size);
+    const int4 translucent_near_bounds = nadirPixelBounds(make_vec3(1, 0, 2), make_vec2(0.4f, 0.4f), camera_height, image_size);
+    const int4 translucent_far_bounds = nadirPixelBounds(make_vec3(1, 0, 1), make_vec2(1, 1), camera_height, image_size);
+    const int4 triangle_centroid_bounds = nadirPixelBounds(make_vec3(0, -4.f / 3.f, 1), make_vec2(0.2f, 0.2f), camera_height, image_size);
+
+    // A translucent patch is reported in place of the ground seen through it, at its own depth
+    DOCTEST_CHECK(pixel_UUIDs.at(indexOfCorner(translucent_bounds)) == UUID_translucent + 1);
+    DOCTEST_CHECK(depth_pixels.at(indexOfCorner(translucent_bounds)) == doctest::Approx(camera_height - 1.f).epsilon(1e-3));
+    DOCTEST_CHECK(pixel_UUIDs.at(indexOfCenter(triangle_centroid_bounds)) == UUID_translucent_triangle + 1);
+    DOCTEST_CHECK(depth_pixels.at(indexOfCenter(triangle_centroid_bounds)) == doctest::Approx(camera_height - 1.f).epsilon(1e-3));
+
+    // An opaque patch in front of a translucent one hides it
+    DOCTEST_CHECK(pixel_UUIDs.at(indexOfCenter(opaque_above_bounds)) == UUID_opaque_above + 1);
+    DOCTEST_CHECK(depth_pixels.at(indexOfCenter(opaque_above_bounds)) == doctest::Approx(camera_height - 2.f).epsilon(1e-3));
+
+    // Of two translucent patches, the nearer is reported where they overlap and the farther elsewhere
+    DOCTEST_CHECK(pixel_UUIDs.at(indexOfCenter(translucent_near_bounds)) == UUID_translucent_near + 1);
+    DOCTEST_CHECK(depth_pixels.at(indexOfCenter(translucent_near_bounds)) == doctest::Approx(camera_height - 2.f).epsilon(1e-3));
+    DOCTEST_CHECK(pixel_UUIDs.at(indexOfCorner(translucent_far_bounds)) == UUID_translucent_far + 1);
+    DOCTEST_CHECK(depth_pixels.at(indexOfCorner(translucent_far_bounds)) == doctest::Approx(camera_height - 1.f).epsilon(1e-3));
+
+    // The ground is still reported where nothing is above it
+    DOCTEST_CHECK(pixel_UUIDs.at(indexOfCenter(nadirPixelBounds(make_vec3(0, 1.5f, 0), make_vec2(0.2f, 0.2f), camera_height, image_size))) == UUID_ground + 1);
+}
+
+DOCTEST_TEST_CASE("Visualizer writeImageBoundingBoxes") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    const uint image_size = 200;
+    const float camera_height = 10.f;
+
+    Context context;
+    const vec3 fruit_center = make_vec3(1, 2, 0);
+    const vec2 fruit_size = make_vec2(2, 2);
+    const uint UUID_fruit = context.addPatch(fruit_center, fruit_size);
+    // Two primitives of one compound object, labeled through object data
+    const uint UUID_stem_a = context.addPatch(make_vec3(-2, -1, 0), make_vec2(1, 1));
+    const uint UUID_stem_b = context.addPatch(make_vec3(-2, -2.5f, 0), make_vec2(1, 1));
+    const uint UUID_unlabeled = context.addPatch(make_vec3(2, -2, 0), make_vec2(1, 1));
+    static_cast<void>(UUID_unlabeled);
+
+    context.setPrimitiveData(UUID_fruit, "fruit", uint(1));
+    const uint stem_object = context.addPolymeshObject({UUID_stem_a, UUID_stem_b});
+    context.setObjectData(stem_object, "stem", uint(1));
+
+    Visualizer visualizer(image_size, image_size, 4, false, true);
+    visualizer.disableMessages();
+    visualizer.hideWatermark();
+    visualizer.hideNavigationGizmo();
+    visualizer.buildContextGeometry(&context);
+    visualizer.setCameraPosition(make_vec3(0, 0, camera_height), make_vec3(0, 0, 0));
+
+    const std::filesystem::path output_directory = std::filesystem::temp_directory_path() / "helios_visualizer_bbox_test";
+    std::filesystem::create_directories(output_directory);
+    const std::string image_path = output_directory.string() + "/";
+    const std::string image_file = image_path + "render.jpeg";
+    visualizer.printWindow(image_file.c_str());
+
+    const float pixel_tolerance = 1.5f / float(image_size);
+
+    DOCTEST_SUBCASE("primitive data labels") {
+        visualizer.writeImageBoundingBoxes("fruit", 2, image_file, "classes.txt", image_path);
+
+        // The files are in the format the Visualizer reads back
+        const std::vector<Visualizer::BoundingBox> boxes = Visualizer::readBoundingBoxFile(image_path + "render.txt");
+        DOCTEST_REQUIRE(boxes.size() == 1);
+        const int4 bounds = nadirPixelBounds(fruit_center, fruit_size, camera_height, image_size);
+        DOCTEST_CHECK(boxes.at(0).class_ID == 2);
+        DOCTEST_CHECK(std::fabs(boxes.at(0).center.x - 0.5f * float(bounds.x + bounds.y + 1) / float(image_size)) < pixel_tolerance);
+        DOCTEST_CHECK(std::fabs(boxes.at(0).center.y - 0.5f * float(bounds.z + bounds.w + 1) / float(image_size)) < pixel_tolerance);
+        DOCTEST_CHECK(std::fabs(boxes.at(0).size.x - float(bounds.y - bounds.x + 1) / float(image_size)) < pixel_tolerance);
+        DOCTEST_CHECK(std::fabs(boxes.at(0).size.y - float(bounds.w - bounds.z + 1) / float(image_size)) < pixel_tolerance);
+        // The fruit is in the upper right of the image, and YOLO measures y from the top
+        DOCTEST_CHECK(boxes.at(0).center.x > 0.5f);
+        DOCTEST_CHECK(boxes.at(0).center.y < 0.5f);
+
+        const std::map<uint, std::string> class_names = Visualizer::readBoundingBoxClassNames(image_path + "classes.txt");
+        DOCTEST_REQUIRE(class_names.count(2) == 1);
+        DOCTEST_CHECK(class_names.at(2) == "fruit");
+    }
+
+    DOCTEST_SUBCASE("object data labels") {
+        visualizer.writeImageBoundingBoxes_ObjectData("stem", 0, image_file, "classes.txt", image_path);
+
+        const std::vector<Visualizer::BoundingBox> boxes = Visualizer::readBoundingBoxFile(image_path + "render.txt");
+        DOCTEST_REQUIRE(boxes.size() == 1);
+        // One box spanning both primitives of the object: x from -2.5 to -1.5 and y from -3 to -0.5
+        const int4 bounds = nadirPixelBounds(make_vec3(-2, -1.75f, 0), make_vec2(1, 2.5f), camera_height, image_size);
+        DOCTEST_CHECK(std::fabs(boxes.at(0).center.x - 0.5f * float(bounds.x + bounds.y + 1) / float(image_size)) < pixel_tolerance);
+        DOCTEST_CHECK(std::fabs(boxes.at(0).center.y - 0.5f * float(bounds.z + bounds.w + 1) / float(image_size)) < pixel_tolerance);
+        DOCTEST_CHECK(std::fabs(boxes.at(0).size.y - float(bounds.w - bounds.z + 1) / float(image_size)) < pixel_tolerance);
+
+        // A primitive data label is not found when it is looked up as object data
+        visualizer.writeImageBoundingBoxes_ObjectData("fruit", 0, image_file, "classes.txt", image_path);
+        DOCTEST_CHECK(Visualizer::readBoundingBoxFile(image_path + "render.txt").empty());
+    }
+
+    DOCTEST_SUBCASE("several labels, and the boxes follow the camera") {
+        context.setPrimitiveData(UUID_stem_a, "stem_primitive", uint(1));
+        visualizer.writeImageBoundingBoxes(std::vector<std::string>{"fruit", "stem_primitive"}, std::vector<uint>{0, 1}, image_file, "classes.txt", image_path);
+        std::vector<Visualizer::BoundingBox> boxes = Visualizer::readBoundingBoxFile(image_path + "render.txt");
+        DOCTEST_REQUIRE(boxes.size() == 2);
+        const float fruit_width_far = boxes.at(0).size.x;
+
+        // Halving the camera distance doubles the size of the fruit in the image
+        visualizer.setCameraPosition(make_vec3(1, 2, 0.5f * camera_height), make_vec3(1, 2, 0));
+        visualizer.writeImageBoundingBoxes("fruit", 0, image_file, "classes.txt", image_path);
+        boxes = Visualizer::readBoundingBoxFile(image_path + "render.txt");
+        DOCTEST_REQUIRE(boxes.size() == 1);
+        DOCTEST_CHECK(boxes.at(0).size.x == doctest::Approx(2.f * fruit_width_far).epsilon(0.05));
+        DOCTEST_CHECK(std::fabs(boxes.at(0).center.x - 0.5f) < 2.f * pixel_tolerance);
+    }
+
+    DOCTEST_SUBCASE("invalid arguments") {
+        DOCTEST_CHECK(annotationCallThrows([&] { visualizer.writeImageBoundingBoxes(std::vector<std::string>{"fruit", "stem"}, std::vector<uint>{0}, image_file, "classes.txt", image_path); }));
+
+        // A directory beneath a regular file cannot be created on any platform. A missing directory at the filesystem root is not a
+        // portable stand-in: on Windows it resolves to the root of the current drive, where it is simply created.
+        const std::filesystem::path blocking_file = output_directory / "blocking_file";
+        std::ofstream(blocking_file) << "not a directory";
+        const std::string unwritable_image_path = (blocking_file / "output").string() + "/";
+        DOCTEST_CHECK(annotationCallThrows([&] { visualizer.writeImageBoundingBoxes("fruit", 0, image_file, "classes.txt", unwritable_image_path); }));
+
+        Visualizer visualizer_without_context(50, 50, 0, false, true);
+        visualizer_without_context.disableMessages();
+        DOCTEST_CHECK(annotationCallThrows([&] { visualizer_without_context.writeImageBoundingBoxes("fruit", 0, image_file, "classes.txt", image_path); }));
+    }
+
+    std::filesystem::remove_all(output_directory);
+}
+
+DOCTEST_TEST_CASE("Visualizer writeImageSegmentationMasks") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    const uint image_size = 200;
+    const float camera_height = 10.f;
+
+    Context context;
+    // A long leaf, crossed by an unlabeled bar above it that splits its visible area in two
+    const uint UUID_leaf = context.addPatch(make_vec3(0, 2, 0), make_vec2(6, 1));
+    const uint UUID_bar = context.addPatch(make_vec3(0, 2, 1), make_vec2(1, 3));
+    static_cast<void>(UUID_bar);
+    const uint UUID_second_leaf = context.addPatch(make_vec3(0, -2, 0), make_vec2(2, 2));
+
+    context.setPrimitiveData(UUID_leaf, "leaf", uint(1));
+    context.setPrimitiveData(UUID_second_leaf, "leaf", uint(2));
+    context.setPrimitiveData(UUID_leaf, "temperature", 300.f);
+    context.setPrimitiveData(UUID_second_leaf, "temperature", 310.f);
+
+    Visualizer visualizer(image_size, image_size, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.hideWatermark();
+    visualizer.hideNavigationGizmo();
+    visualizer.buildContextGeometry(&context);
+    visualizer.setCameraPosition(make_vec3(0, 0, camera_height), make_vec3(0, 0, 0));
+
+    const std::filesystem::path output_directory = std::filesystem::temp_directory_path() / "helios_visualizer_mask_test";
+    std::filesystem::create_directories(output_directory);
+    const std::string image_file = (output_directory / "render.jpeg").string();
+    const std::string json_file = (output_directory / "masks.json").string();
+    visualizer.printWindow(image_file.c_str());
+
+    DOCTEST_SUBCASE("masks describe the visible extent of each object") {
+        std::string warnings;
+        {
+            capture_cerr capture;
+            visualizer.writeImageSegmentationMasks("leaf", 3, json_file, image_file, {"temperature"});
+            warnings = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(warnings.empty());
+
+        // The file is in the format the Visualizer reads back: the split leaf gives two masks and the second leaf one
+        const std::vector<Visualizer::SegmentationMask> masks = Visualizer::readSegmentationMaskFile(json_file);
+        DOCTEST_REQUIRE(masks.size() == 3);
+        for (const auto &mask: masks) {
+            DOCTEST_CHECK(mask.class_ID == 3);
+        }
+
+        std::ifstream json_stream(json_file);
+        nlohmann::json coco_json;
+        json_stream >> coco_json;
+        DOCTEST_CHECK(coco_json["images"][0]["file_name"] == "render.jpeg");
+        DOCTEST_CHECK(coco_json["images"][0]["width"] == int(image_size));
+        DOCTEST_CHECK(coco_json["categories"][0]["name"] == "leaf");
+
+        // The pixel areas of the masks add up to the visible pixels of each leaf
+        std::vector<uint> pixel_UUIDs;
+        uint width, height;
+        visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+        int split_leaf_area = 0;
+        int second_leaf_area = 0;
+        for (const auto &coco_annotation: coco_json["annotations"]) {
+            if (coco_annotation["attributes"]["temperature"].get<double>() == doctest::Approx(300.0)) {
+                split_leaf_area += coco_annotation["area"].get<int>();
+            } else {
+                DOCTEST_CHECK(coco_annotation["attributes"]["temperature"].get<double>() == doctest::Approx(310.0));
+                second_leaf_area += coco_annotation["area"].get<int>();
+            }
+        }
+        DOCTEST_CHECK(split_leaf_area == int(countPixelsOf(pixel_UUIDs, UUID_leaf)));
+        DOCTEST_CHECK(second_leaf_area == int(countPixelsOf(pixel_UUIDs, UUID_second_leaf)));
+
+        // The second leaf is in the lower half of the image; COCO measures y from the top
+        const int4 bounds = nadirPixelBounds(make_vec3(0, -2, 0), make_vec2(2, 2), camera_height, image_size);
+        bool found_second_leaf = false;
+        for (const auto &coco_annotation: coco_json["annotations"]) {
+            if (coco_annotation["attributes"]["temperature"].get<double>() > 305.0) {
+                found_second_leaf = true;
+                DOCTEST_CHECK(std::abs(coco_annotation["bbox"][0].get<int>() - bounds.x) <= 1);
+                DOCTEST_CHECK(std::abs(coco_annotation["bbox"][1].get<int>() - bounds.z) <= 1);
+                DOCTEST_CHECK(coco_annotation["bbox"][1].get<int>() > int(image_size) / 2);
+            }
+        }
+        DOCTEST_CHECK(found_second_leaf);
+    }
+
+    DOCTEST_SUBCASE("object data labels and appending") {
+        const uint leaf_object = context.addPolymeshObject({UUID_second_leaf});
+        context.setObjectData(leaf_object, "plant", uint(4));
+
+        visualizer.writeImageSegmentationMasks_ObjectData("plant", 0, json_file, image_file);
+        DOCTEST_CHECK(Visualizer::readSegmentationMaskFile(json_file).size() == 1);
+
+        // Appending a second class to the same file keeps the first
+        visualizer.writeImageSegmentationMasks(std::vector<std::string>{"leaf"}, std::vector<uint>{1}, json_file, image_file, {}, true);
+        DOCTEST_CHECK(Visualizer::readSegmentationMaskFile(json_file).size() == 4);
+    }
+
+    DOCTEST_SUBCASE("invalid arguments") {
+        DOCTEST_CHECK(annotationCallThrows([&] { visualizer.writeImageSegmentationMasks("leaf", 0, json_file, (output_directory / "missing.jpeg").string()); }));
+        DOCTEST_CHECK(annotationCallThrows([&] { visualizer.writeImageSegmentationMasks(std::vector<std::string>{"leaf"}, std::vector<uint>{0, 1}, json_file, image_file); }));
+        DOCTEST_CHECK(annotationCallThrows([&] { visualizer.writeImageSegmentationMasks_ObjectData(std::vector<std::string>{"leaf"}, std::vector<uint>{0, 1}, json_file, image_file); }));
+    }
+
+    std::filesystem::remove_all(output_directory);
+}
+
+DOCTEST_TEST_CASE("Visualizer depth image is the distance along the viewing direction") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    const uint image_size = 200;
+
+    Context context;
+    const uint UUID_ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4), nullrotation, RGB::black);
+    const uint UUID_raised = context.addPatch(make_vec3(1.5f, 2.5f, 3), make_vec2(1, 1), nullrotation, RGB::red);
+
+    Visualizer visualizer(image_size, image_size, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.hideWatermark();
+    visualizer.hideNavigationGizmo();
+    visualizer.setBackgroundColor(RGB::black);
+    visualizer.buildContextGeometry(&context);
+
+    std::vector<float> depth_pixels;
+    std::vector<uint> pixel_UUIDs;
+    uint width, height;
+
+    DOCTEST_SUBCASE("camera looking straight down") {
+        const float camera_height = 10.f;
+        visualizer.setCameraPosition(make_vec3(0, 0, camera_height), make_vec3(0, 0, 0));
+        visualizer.getDepthImage(depth_pixels, width, height);
+        visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+        DOCTEST_REQUIRE(depth_pixels.size() == pixel_UUIDs.size());
+        DOCTEST_REQUIRE(countPixelsOf(pixel_UUIDs, UUID_raised) > 0);
+
+        // A plane perpendicular to the viewing direction has one depth everywhere, including far off-axis
+        bool depths_correct = true;
+        for (size_t p = 0; p < pixel_UUIDs.size(); p++) {
+            const float expected_depth = (pixel_UUIDs.at(p) == UUID_ground + 1) ? camera_height : (pixel_UUIDs.at(p) == UUID_raised + 1) ? camera_height - 3.f : -1.f;
+            if (std::fabs(depth_pixels.at(p) - expected_depth) > 1e-3f) {
+                depths_correct = false;
+                break;
+            }
+        }
+        DOCTEST_CHECK(depths_correct);
+        DOCTEST_CHECK(depth_pixels.at(0) == -1.f); // background
+    }
+
+    DOCTEST_SUBCASE("oblique camera") {
+        const vec3 camera_position = make_vec3(1, -6, 8);
+        const vec3 camera_lookat = make_vec3(0, 0, 0);
+        vec3 view_direction = camera_lookat - camera_position;
+        view_direction.normalize();
+        visualizer.setCameraPosition(camera_position, camera_lookat);
+        visualizer.getDepthImage(depth_pixels, width, height);
+        visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+
+        // The look-at point is on the ground and at the center of the image
+        const size_t center_pixel = size_t(height / 2) * size_t(width) + size_t(width / 2);
+        DOCTEST_REQUIRE(pixel_UUIDs.at(center_pixel) == UUID_ground + 1);
+        DOCTEST_CHECK(depth_pixels.at(center_pixel) == doctest::Approx((camera_lookat - camera_position).magnitude()).epsilon(0.01));
+
+        // Over the raised patch the depth spans exactly the depths of its corners, and averages to the depth of its center
+        float corner_depth_min = 1e6f, corner_depth_max = -1e6f;
+        for (const vec3 &vertex: context.getPrimitiveVertices(UUID_raised)) {
+            const float corner_depth = (vertex - camera_position) * view_direction;
+            corner_depth_min = std::min(corner_depth_min, corner_depth);
+            corner_depth_max = std::max(corner_depth_max, corner_depth);
+        }
+        double depth_sum = 0;
+        size_t raised_pixel_count = 0;
+        bool depths_within_corner_range = true;
+        for (size_t p = 0; p < pixel_UUIDs.size(); p++) {
+            if (pixel_UUIDs.at(p) != UUID_raised + 1) {
+                continue;
+            }
+            depth_sum += depth_pixels.at(p);
+            raised_pixel_count++;
+            if (depth_pixels.at(p) < corner_depth_min - 1e-3f || depth_pixels.at(p) > corner_depth_max + 1e-3f) {
+                depths_within_corner_range = false;
+            }
+        }
+        DOCTEST_REQUIRE(raised_pixel_count > 10);
+        DOCTEST_CHECK(depths_within_corner_range);
+        const float center_depth = (make_vec3(1.5f, 2.5f, 3) - camera_position) * view_direction;
+        DOCTEST_CHECK(depth_sum / double(raised_pixel_count) == doctest::Approx(center_depth).epsilon(0.01));
+    }
+
+    DOCTEST_SUBCASE("depth image files") {
+        const float camera_height = 10.f;
+        visualizer.setCameraPosition(make_vec3(0, 0, camera_height), make_vec3(0, 0, 0));
+
+        const std::filesystem::path output_directory = std::filesystem::temp_directory_path() / "helios_visualizer_depth_test";
+        std::filesystem::create_directories(output_directory);
+        const std::string text_file = (output_directory / "depth.txt").string();
+        const std::string exr_file = (output_directory / "depth.exr").string();
+        const std::string norm_file = (output_directory / "depth_norm.jpeg").string();
+        const std::string image_file = (output_directory / "render.jpeg").string();
+
+        visualizer.printWindow(image_file.c_str());
+        visualizer.writeDepthImageData(text_file);
+        visualizer.writeDepthImageDataEXR(exr_file);
+        visualizer.writeNormDepthImage(norm_file, camera_height);
+        visualizer.getDepthImage(depth_pixels, width, height);
+
+        // The text file holds one row per line from the top of the image
+        std::ifstream text_stream(text_file);
+        DOCTEST_REQUIRE(text_stream.is_open());
+        std::vector<float> text_depths;
+        std::string line;
+        size_t line_count = 0;
+        while (std::getline(text_stream, line)) {
+            std::istringstream line_stream(line);
+            float value;
+            while (line_stream >> value) {
+                text_depths.push_back(value);
+            }
+            line_count++;
+        }
+        DOCTEST_CHECK(line_count == height);
+        DOCTEST_REQUIRE(text_depths.size() == depth_pixels.size());
+        bool text_matches = true;
+        for (size_t p = 0; p < depth_pixels.size(); p++) {
+            if (std::fabs(text_depths.at(p) - depth_pixels.at(p)) > 1e-3f) {
+                text_matches = false;
+                break;
+            }
+        }
+        DOCTEST_CHECK(text_matches);
+
+        DOCTEST_CHECK(std::filesystem::exists(exr_file));
+        DOCTEST_CHECK(std::filesystem::file_size(exr_file) > 0);
+
+        // The normalized image has the same orientation as the saved render: the raised (red, nearest) patch is white where the render is red, and the ground at the maximum depth is black.
+        std::vector<RGBcolor> render_pixels, norm_pixels;
+        uint render_width, render_height, norm_width, norm_height;
+        helios::readJPEG(image_file, render_width, render_height, render_pixels);
+        helios::readJPEG(norm_file, norm_width, norm_height, norm_pixels);
+        DOCTEST_REQUIRE(norm_width == render_width);
+        DOCTEST_REQUIRE(norm_height == render_height);
+        size_t red_pixels = 0, red_pixels_white_in_depth = 0, other_pixels_bright_in_depth = 0;
+        for (size_t p = 0; p < render_pixels.size(); p++) {
+            const bool is_red = render_pixels.at(p).r > 0.6f && render_pixels.at(p).g < 0.3f;
+            if (is_red) {
+                red_pixels++;
+                if (norm_pixels.at(p).r > 0.8f) {
+                    red_pixels_white_in_depth++;
+                }
+            } else if (render_pixels.at(p).r < 0.2f && norm_pixels.at(p).r > 0.5f) {
+                other_pixels_bright_in_depth++;
+            }
+        }
+        DOCTEST_REQUIRE(red_pixels > 50);
+        DOCTEST_CHECK(double(red_pixels_white_in_depth) > 0.9 * double(red_pixels));
+        DOCTEST_CHECK(double(other_pixels_bright_in_depth) < 0.1 * double(red_pixels));
+
+        DOCTEST_CHECK(annotationCallThrows([&] { visualizer.writeNormDepthImage(norm_file, 0.f); }));
+        // norm_file is a regular file, so no file can be opened beneath it on any platform
+        DOCTEST_CHECK(annotationCallThrows([&] { visualizer.writeDepthImageData(norm_file + "/depth.txt"); }));
+
+        std::filesystem::remove_all(output_directory);
+    }
+}
+
+DOCTEST_TEST_CASE("Visualizer getDepthMap returns the whole depth image on a high-DPI display") {
+    // The depth buffer is rendered at the framebuffer resolution, which on a high-DPI display is larger than the window. getDepthMap() reported the window dimensions and copied only that many values out of the
+    // larger buffer, so what it returned was the leading part of the buffer read with the wrong row length rather than an image of the scene.
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    Visualizer visualizer(200, 160, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.hideWatermark();
+    // A rectangle that fills the middle of the view, leaving background on every side
+    std::vector<vec3> vertices{make_vec3(-1, -1, 0), make_vec3(1, -1, 0), make_vec3(1, 1, 0), make_vec3(-1, 1, 0)};
+    visualizer.addRectangleByVertices(vertices, RGB::red, Visualizer::COORDINATES_CARTESIAN);
+    visualizer.setCameraPosition(make_vec3(0, 0, 5), make_vec3(0, 0, 0));
+    visualizer.plotUpdate(true);
+
+    // A display with a scale factor of 2: the window is half the framebuffer size in each direction
+    VisualizerTestHelper::setReportedWindowSize(visualizer, 100, 80);
+
+    uint framebuffer_width, framebuffer_height;
+    visualizer.getFramebufferSize(framebuffer_width, framebuffer_height);
+    DOCTEST_REQUIRE(framebuffer_width == 200);
+    DOCTEST_REQUIRE(framebuffer_height == 160);
+
+    std::vector<float> depth_pixels;
+    uint depth_width = 0, depth_height = 0;
+    visualizer.getDepthMap(depth_pixels, depth_width, depth_height);
+
+    DOCTEST_CHECK(depth_width == framebuffer_width);
+    DOCTEST_CHECK(depth_height == framebuffer_height);
+    DOCTEST_REQUIRE(depth_pixels.size() == size_t(depth_width) * size_t(depth_height));
+
+    // The rectangle is centered in the view, so the nearest (brightest) values are at the center of the image and all four corners are background
+    const float center_value = depth_pixels.at(size_t(depth_height / 2) * size_t(depth_width) + size_t(depth_width / 2));
+    const float corner_value = depth_pixels.at(0);
+    DOCTEST_CHECK(center_value > corner_value);
+    DOCTEST_CHECK(depth_pixels.at(size_t(depth_width) - 1) == doctest::Approx(corner_value));
+    DOCTEST_CHECK(depth_pixels.at(size_t(depth_height - 1) * size_t(depth_width)) == doctest::Approx(corner_value));
+    DOCTEST_CHECK(depth_pixels.at(size_t(depth_height) * size_t(depth_width) - 1) == doctest::Approx(corner_value));
+}
+
+DOCTEST_TEST_CASE("Visualizer draws every face of a Context voxel") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    Context context;
+    const uint UUID_voxel = context.addVoxel(make_vec3(0, 0, 0), make_vec3(1, 1, 1), 0, RGB::green);
+
+    Visualizer visualizer(200, 200, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.hideWatermark();
+    visualizer.hideNavigationGizmo();
+    visualizer.setBackgroundColor(RGB::white);
+    visualizer.buildContextGeometry(&context);
+
+    // One camera position facing each face of the voxel. The two along z are offset slightly so that the viewing direction is not parallel to the camera's up direction.
+    const std::vector<vec3> face_views = {make_vec3(5, 0, 0), make_vec3(-5, 0, 0), make_vec3(0, 5, 0), make_vec3(0, -5, 0), make_vec3(0.01f, 0, 5), make_vec3(0.01f, 0, -5)};
+
+    auto voxelPixelsFrom = [&](const vec3 &camera_position) {
+        visualizer.setCameraPosition(camera_position, make_vec3(0, 0, 0));
+        std::vector<uint> pixel_UUIDs;
+        uint width = 0, height = 0;
+        visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+        return countPixelsOf(pixel_UUIDs, UUID_voxel);
+    };
+
+    auto centerColorFrom = [&](const vec3 &camera_position) {
+        visualizer.setCameraPosition(camera_position, make_vec3(0, 0, 0));
+        visualizer.plotUpdate(true);
+        std::vector<uint> pixels;
+        uint width = 0, height = 0;
+        visualizer.getWindowPixelsRGB(pixels, width, height);
+        const size_t center = 3 * (size_t(height / 2) * size_t(width) + size_t(width / 2));
+        return make_int3(int(pixels.at(center)), int(pixels.at(center + 1)), int(pixels.at(center + 2)));
+    };
+
+    // A cube looks the same from all six sides. The nearest face is 4.5 away, so it is well over a tenth of the image wide.
+    const size_t reference_pixels = voxelPixelsFrom(face_views.front());
+    DOCTEST_CHECK(reference_pixels > 400);
+    for (const vec3 &camera_position: face_views) {
+        DOCTEST_CHECK(double(voxelPixelsFrom(camera_position)) == doctest::Approx(double(reference_pixels)).epsilon(0.05));
+    }
+
+    DOCTEST_SUBCASE("a new color in the Context reaches every face") {
+        context.setPrimitiveColor(UUID_voxel, RGB::blue);
+        for (const vec3 &camera_position: face_views) {
+            const int3 color = centerColorFrom(camera_position);
+            DOCTEST_CHECK(color.x < 30);
+            DOCTEST_CHECK(color.y < 30);
+            DOCTEST_CHECK(color.z > 150);
+        }
+    }
+
+    DOCTEST_SUBCASE("coloring by data colors every face alike, and so does a change of colorbar range") {
+        context.setPrimitiveData(UUID_voxel, "value", 0.f);
+        visualizer.colorContextPrimitivesByData("value");
+        visualizer.setColorbarRange(0.f, 1.f);
+        visualizer.disableColorbar();
+
+        const int3 color_low = centerColorFrom(face_views.front());
+        DOCTEST_CHECK(color_low != make_int3(0, 255, 0));
+        DOCTEST_CHECK(color_low != make_int3(255, 255, 255));
+        for (const vec3 &camera_position: face_views) {
+            DOCTEST_CHECK(centerColorFrom(camera_position) == color_low);
+        }
+
+        // The voxel's value moves from the bottom of the range to the top without the voxel itself changing, which recolors the displayed geometry in place.
+        visualizer.setColorbarRange(-1.f, 0.f);
+        const int3 color_high = centerColorFrom(face_views.front());
+        DOCTEST_CHECK(color_high != color_low);
+        DOCTEST_CHECK(color_high != make_int3(255, 255, 255));
+        for (const vec3 &camera_position: face_views) {
+            DOCTEST_CHECK(centerColorFrom(camera_position) == color_high);
+        }
+    }
+
+    DOCTEST_SUBCASE("deleting the voxel from the Context removes every face") {
+        context.deletePrimitive(UUID_voxel);
+        for (const vec3 &camera_position: face_views) {
+            DOCTEST_CHECK(voxelPixelsFrom(camera_position) == 0);
+            DOCTEST_CHECK(centerColorFrom(camera_position) == make_int3(255, 255, 255));
+        }
+    }
+}
+
+DOCTEST_TEST_CASE("Visualizer lights each face of a Context voxel from outside the voxel") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    Context context;
+    context.addVoxel(make_vec3(0, 0, 0), make_vec3(1, 1, 1), 0, RGB::green);
+
+    Visualizer visualizer(200, 200, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.hideWatermark();
+    visualizer.hideNavigationGizmo();
+    visualizer.setBackgroundColor(RGB::white);
+    visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
+    visualizer.buildContextGeometry(&context);
+
+    auto centerGreenLevel = [&](const vec3 &camera_position, const vec3 &light_direction) {
+        visualizer.setLightDirection(light_direction);
+        visualizer.setCameraPosition(camera_position, make_vec3(0, 0, 0));
+        visualizer.plotUpdate(true);
+        std::vector<uint> pixels;
+        uint width = 0, height = 0;
+        visualizer.getWindowPixelsRGB(pixels, width, height);
+        return pixels.at(3 * (size_t(height / 2) * size_t(width) + size_t(width / 2)) + 1);
+    };
+
+    // Each face is viewed head-on, once with the light on the camera's side of the voxel and once with it on the far side. A face whose normal pointed into the voxel would be lit in the second case rather than
+    // the first. The viewing directions along z are tilted slightly so that they are not parallel to the camera's up direction.
+    const std::vector<vec3> outward_directions = {make_vec3(1, 0, 0), make_vec3(-1, 0, 0), make_vec3(0, 1, 0), make_vec3(0, -1, 0), make_vec3(0.002f, 0, 1), make_vec3(0.002f, 0, -1)};
+    for (const vec3 &outward: outward_directions) {
+        const uint lit = centerGreenLevel(5.f * outward, outward);
+        const uint unlit = centerGreenLevel(5.f * outward, -1.f * outward);
+        DOCTEST_CHECK(lit > unlit + 40);
+    }
 }

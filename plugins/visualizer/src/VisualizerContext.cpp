@@ -116,8 +116,12 @@ void Visualizer::buildContextGeometry_private() {
             surviving_count++;
             contextUUIDs_needupdate.push_back(UUID);
         } else {
-            if (geometry_handler.doesGeometryExist(UUID)) {
-                geometry_handler.deleteGeometry(UUID);
+            // The primitive's type can no longer be asked of the Context, so every face it could have had is looked for.
+            for (uint face = 0; face < GeometryHandler::context_voxel_face_count; face++) {
+                const size_t face_ID = GeometryHandler::getContextGeometryID(UUID, face);
+                if (geometry_handler.doesGeometryExist(face_ID)) {
+                    geometry_handler.deleteGeometry(face_ID);
+                }
             }
             if (contextUUIDs_uploaded.erase(UUID) > 0) {
                 context_geometry_deleted = true;
@@ -435,14 +439,16 @@ void Visualizer::buildContextGeometry_private() {
         else if (ptype == helios::PRIMITIVE_TYPE_VOXEL) {
             std::vector<vec3> v_vertices = context->getPrimitiveVertices(UUID);
 
+            // Each face lists its vertices counter-clockwise as seen from outside the voxel, so that its normal points outward and it is lit from the side it can be seen from.
+
             // bottom
-            const std::vector<vec3> bottom_vertices{v_vertices.at(0), v_vertices.at(1), v_vertices.at(2), v_vertices.at(3)};
+            const std::vector<vec3> bottom_vertices{v_vertices.at(0), v_vertices.at(3), v_vertices.at(2), v_vertices.at(1)};
 
             // top
             const std::vector<vec3> top_vertices{v_vertices.at(4), v_vertices.at(5), v_vertices.at(6), v_vertices.at(7)};
 
             //-x
-            const std::vector<vec3> mx_vertices{v_vertices.at(0), v_vertices.at(3), v_vertices.at(7), v_vertices.at(4)};
+            const std::vector<vec3> mx_vertices{v_vertices.at(0), v_vertices.at(4), v_vertices.at(7), v_vertices.at(3)};
 
             //+x
             const std::vector<vec3> px_vertices{v_vertices.at(1), v_vertices.at(2), v_vertices.at(6), v_vertices.at(5)};
@@ -453,37 +459,20 @@ void Visualizer::buildContextGeometry_private() {
             //+y
             const std::vector<vec3> py_vertices{v_vertices.at(2), v_vertices.at(3), v_vertices.at(7), v_vertices.at(6)};
 
-            // Voxel does not have an associated texture or we are ignoring texture
-            if (texture_file.empty()) {
-                geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, bottom_vertices, color, {}, -1, false, false, COORDINATES_CARTESIAN, true, true);
-                geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, top_vertices, color, {}, -1, false, false, COORDINATES_CARTESIAN, true, true);
-                geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, mx_vertices, color, {}, -1, false, false, COORDINATES_CARTESIAN, true, true);
-                geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, px_vertices, color, {}, -1, false, false, COORDINATES_CARTESIAN, true, true);
-                geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, my_vertices, color, {}, -1, false, false, COORDINATES_CARTESIAN, true, true);
-                geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, py_vertices, color, {}, -1, false, false, COORDINATES_CARTESIAN, true, true);
-            }
-            // Voxel has a texture
-            else {
-                const std::vector<helios::vec2> voxel_uvs = {{0.f, 0.f}, {1.f, 0.f}, {1.f, 1.f}, {0.f, 1.f}};
+            // Each face is stored under its own identifier. Added under the voxel's UUID alone, every face after the first would overwrite the one before it.
+            const std::vector<std::vector<vec3>> face_vertices = {bottom_vertices, top_vertices, mx_vertices, px_vertices, my_vertices, py_vertices};
+            assert(face_vertices.size() == GeometryHandler::context_voxel_face_count);
 
-                // coloring primitive based on texture
-                if (!isContextPrimitiveTextureColorOverridden(UUID)) {
-                    geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, bottom_vertices, color, voxel_uvs, textureID, false, false, COORDINATES_CARTESIAN, true, true);
-                    geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, top_vertices, color, voxel_uvs, textureID, false, false, COORDINATES_CARTESIAN, true, true);
-                    geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, mx_vertices, color, voxel_uvs, textureID, false, false, COORDINATES_CARTESIAN, true, true);
-                    geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, px_vertices, color, voxel_uvs, textureID, false, false, COORDINATES_CARTESIAN, true, true);
-                    geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, my_vertices, color, voxel_uvs, textureID, false, false, COORDINATES_CARTESIAN, true, true);
-                    geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, py_vertices, color, voxel_uvs, textureID, false, false, COORDINATES_CARTESIAN, true, true);
-                }
-                // coloring primitive based on primitive data
-                else {
-                    geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, bottom_vertices, color, voxel_uvs, textureID, true, false, COORDINATES_CARTESIAN, true, true);
-                    geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, top_vertices, color, voxel_uvs, textureID, true, false, COORDINATES_CARTESIAN, true, true);
-                    geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, mx_vertices, color, voxel_uvs, textureID, true, false, COORDINATES_CARTESIAN, true, true);
-                    geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, px_vertices, color, voxel_uvs, textureID, true, false, COORDINATES_CARTESIAN, true, true);
-                    geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, my_vertices, color, voxel_uvs, textureID, true, false, COORDINATES_CARTESIAN, true, true);
-                    geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, py_vertices, color, voxel_uvs, textureID, true, false, COORDINATES_CARTESIAN, true, true);
-                }
+            std::vector<helios::vec2> voxel_uvs;
+            if (!texture_file.empty()) {
+                voxel_uvs = {{0.f, 0.f}, {1.f, 0.f}, {1.f, 1.f}, {0.f, 1.f}};
+            }
+            // A voxel without a texture is colored by its color. One with a texture is colored by the texture, unless primitive data or the Context overrides it.
+            const bool override_texture_color = !texture_file.empty() && isContextPrimitiveTextureColorOverridden(UUID);
+
+            for (uint face = 0; face < GeometryHandler::context_voxel_face_count; face++) {
+                geometry_handler.addGeometry(GeometryHandler::getContextGeometryID(UUID, face), GeometryHandler::GEOMETRY_TYPE_RECTANGLE, face_vertices.at(face), color, voxel_uvs, textureID, override_texture_color, false, COORDINATES_CARTESIAN, true,
+                                             true);
             }
         }
     }
@@ -650,7 +639,7 @@ void Visualizer::updatePhongMaterialIndices() {
         if (!geometry_handler.isContextGeometry(geometry_UUID)) {
             continue;
         }
-        const uint UUID = static_cast<uint>(geometry_UUID);
+        const uint UUID = GeometryHandler::getContextUUID(geometry_UUID);
         if (context->doesPrimitiveExist(UUID)) {
             referenced_material_IDs.insert(context->getPrimitiveMaterialID(UUID));
         }
@@ -677,13 +666,13 @@ void Visualizer::updatePhongMaterialIndices() {
         if (!geometry_handler.isContextGeometry(geometry_UUID)) {
             continue;
         }
-        const uint UUID = static_cast<uint>(geometry_UUID);
+        const uint UUID = GeometryHandler::getContextUUID(geometry_UUID);
         if (!context->doesPrimitiveExist(UUID)) {
             continue;
         }
         const auto it = material_ID_to_index.find(context->getPrimitiveMaterialID(UUID));
         // A material with no Phong data is absent from the map; -1 means "use the global material".
-        geometry_handler.setMaterialIndex(UUID, it != material_ID_to_index.end() ? it->second : -1);
+        geometry_handler.setMaterialIndex(geometry_UUID, it != material_ID_to_index.end() ? it->second : -1);
     }
 
     phong_material_fingerprint = fingerprint;
@@ -712,11 +701,11 @@ std::vector<uint> Visualizer::getDisplayedContextPrimitiveUUIDs() const {
     std::vector<uint> UUIDs;
     for (const size_t geometry_ID: geometry_handler.getAllGeometryIDs()) {
         // Geometry added directly to the Visualizer carries a random 64-bit ID that, truncated, can equal a Context UUID, so
-        // it is told apart by its flag. Context geometry is keyed by its UUID, so for it the cast is exact.
-        if (!geometry_handler.isContextGeometry(geometry_ID)) {
+        // it is told apart by its flag. A voxel is displayed as several faces, and is listed once, by its first.
+        if (!geometry_handler.isContextGeometry(geometry_ID) || GeometryHandler::getContextFaceNumber(geometry_ID) != 0) {
             continue;
         }
-        const uint UUID = static_cast<uint>(geometry_ID);
+        const uint UUID = GeometryHandler::getContextUUID(geometry_ID);
         if (context->doesPrimitiveExist(UUID)) {
             UUIDs.push_back(UUID);
         }
@@ -784,7 +773,7 @@ void Visualizer::recolorContextGeometry(const std::unordered_set<uint> &UUIDs_to
         if (!geometry_handler.isContextGeometry(geometry_ID)) {
             continue;
         }
-        const uint UUID = static_cast<uint>(geometry_ID);
+        const uint UUID = GeometryHandler::getContextUUID(geometry_ID);
         if (UUIDs_to_skip.find(UUID) != UUIDs_to_skip.end() || !context->doesPrimitiveExist(UUID)) {
             continue;
         }
@@ -808,7 +797,10 @@ void Visualizer::recolorContextGeometry(const std::unordered_set<uint> &UUIDs_to
         }
 
         geometry_handler.setColor(geometry_ID, color);
-        context_primitives_recolored_last_build++;
+        // Counted per primitive: a voxel's faces are all recolored, and it is counted by its first.
+        if (GeometryHandler::getContextFaceNumber(geometry_ID) == 0) {
+            context_primitives_recolored_last_build++;
+        }
     }
 }
 

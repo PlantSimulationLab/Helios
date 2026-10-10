@@ -21,6 +21,15 @@
 
 using namespace helios;
 
+// The stalk is a cylinder followed by a join onto the blade. Both are rings of vertices around the leaflet's axis, and the join closes to a single point on the midrib.
+static constexpr int petiolule_radial_subdivisions = 8;
+static constexpr int petiolule_join_rings = 6;
+
+uint petioluleVertexCount() {
+    // Two rings bound the cylinder, the join adds one ring per step short of its tip, and the tip is a single vertex.
+    return uint((2 + petiolule_join_rings - 1) * petiolule_radial_subdivisions + 1);
+}
+
 std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, float scale, float mature_scale, float flexibility, float taper) {
 
     const size_t vertex_count = (size_t(Nx) + 1) * (size_t(Ny) + 1);
@@ -619,8 +628,6 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
         // stopping against a blade of zero thickness leaves a visible step, so over the join the stalk's cross-section flattens onto the blade plane: its
         // thickness falls to zero with zero slope at both ends, so it leaves the cylinder and meets the blade tangentially, while its width narrows to a
         // rounded tip on the midrib. Built directly into the leaf's face set, as rings of vertices, so that the combined object describes both surfaces.
-        constexpr int petiolule_radial_subdivisions = 8;
-        constexpr int petiolule_join_rings = 6;
         constexpr float petiolule_join_length_in_radii = 4.f;
         const float join_length = petiolule_join_length_in_radii * petiolule_radius;
 
@@ -869,9 +876,9 @@ uint BeanLeafPrototype_trifoliate_OBJ(helios::Context *context_ptr, LeafPrototyp
     if (compound_leaf_index == 0) {
         UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/BeanLeaf_tip.obj").string().c_str(), true);
     } else if (compound_leaf_index < 0) {
-        UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/BeanLeaf_left.obj").string().c_str(), true);
-    } else {
         UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/BeanLeaf_right.obj").string().c_str(), true);
+    } else {
+        UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/BeanLeaf_left.obj").string().c_str(), true);
     }
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
@@ -977,11 +984,11 @@ uint CowpeaLeafPrototype_unifoliate_OBJ(helios::Context *context_ptr, LeafProtot
 uint CowpeaLeafPrototype_trifoliate_OBJ(helios::Context *context_ptr, LeafPrototype *prototype_parameters, int compound_leaf_index) {
     std::vector<uint> UUIDs;
     if (compound_leaf_index < 0) {
-        UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/CowpeaLeaf_left_highres.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+        UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/CowpeaLeaf_right_highres.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     } else if (compound_leaf_index == 0) {
         UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/CowpeaLeaf_tip_highres.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     } else {
-        UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/CowpeaLeaf_right_highres.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+        UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/CowpeaLeaf_left_highres.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     }
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;

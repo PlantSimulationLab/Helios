@@ -1969,14 +1969,6 @@ public:
                                                 const std::vector<std::string> &data_attribute_labels = {}, bool append_file = false);
 
 private:
-    //! Build a binary mask per distinct value of a primitive or object data label, from the camera's per-pixel UUID buffer
-    /**
-     * This is the only part of the annotation pipeline that is specific to the radiation model: it
-     * turns camera pixel labels into plain masks. Everything downstream of it -- contour tracing,
-     * COCO assembly, YOLO writing -- is shared with other plug-ins through \ref annotation_io.h.
-     */
-    std::map<int, std::vector<std::vector<bool>>> generateLabelMasks(const std::string &cameralabel, const std::string &data_label, bool use_object_data);
-
     // Helper functions for camera metadata export
     std::string detectLightingType() const;
     float calculateCameraTiltAngle(const helios::vec3 &position, const helios::vec3 &lookat) const;

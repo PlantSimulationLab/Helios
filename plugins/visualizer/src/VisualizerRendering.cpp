@@ -23,6 +23,7 @@
 // #include <chrono>
 
 #include "Visualizer.h"
+#include "annotation_io.h"
 
 using namespace helios;
 
@@ -543,15 +544,12 @@ void Visualizer::getWindowPixelsRGB(std::vector<uint> &pixel_data, uint &width_p
 }
 
 void Visualizer::getDepthMap(float *buffer) {
-    // if (depth_buffer_data.empty()) {
-    //     helios_runtime_error("ERROR (Visualizer::getDepthMap): No depth map data available. You must run 'plotDepthMap' before depth map can be retrieved.");
-    // }
-    //
-    // updatePerspectiveTransformation(camera_lookat_center, camera_eye_location, true);
-    //
-    // for (int i = 0; i < depth_buffer_data.size(); i++) {
-    //     buffer[i] = -perspectiveTransformationMatrix[3].z / (depth_buffer_data.at(i) * -2.0f + 1.0f - perspectiveTransformationMatrix[2].z);
-    // }
+    // The caller sizes this buffer from the window dimensions, but the depth image has the dimensions of the framebuffer. Where the two differ the image does not fit, and copying the part that does would
+    // hand back rows of the wrong length.
+    if (Wframebuffer != Wdisplay || Hframebuffer != Hdisplay) {
+        helios_runtime_error("ERROR (Visualizer::getDepthMap): The framebuffer (" + std::to_string(Wframebuffer) + "x" + std::to_string(Hframebuffer) + " pixels) is larger than the window (" + std::to_string(Wdisplay) + "x" +
+                             std::to_string(Hdisplay) + "), as it is on a high-DPI display, so the depth map does not fit in a buffer sized from the window. Use the overload of getDepthMap() that takes a std::vector, which sizes the buffer itself.");
+    }
 
     std::vector<float> depth_pixels;
     uint width, height;
@@ -562,42 +560,14 @@ void Visualizer::getDepthMap(float *buffer) {
 }
 
 void Visualizer::getDepthMap(std::vector<float> &depth_pixels, uint &width_pixels, uint &height_pixels) {
-    width_pixels = Wdisplay;
-    height_pixels = Hdisplay;
-
-    depth_pixels.resize(width_pixels * height_pixels);
 
     updateDepthBuffer();
-    // updatePerspectiveTransformation( false );
 
-    // un-project depth values to give physical depth
+    // The depth buffer is rendered at the framebuffer resolution, which is larger than the window on a high-DPI display
+    width_pixels = Wframebuffer;
+    height_pixels = Hframebuffer;
 
-    // build a viewport vector for unProject
-    // const glm::vec4 viewport(0, 0, width_pixels, height_pixels);
-    //
-    // for (size_t i = 0; i < width_pixels*height_pixels; ++i) {
-    //     // compute pixel coords from linear index
-    //     int x = int(i % width_pixels);
-    //     int y = int(i / height_pixels);
-    //
-    //     // center of the pixel
-    //     float winx = float(x) + 0.5f;
-    //     float winy = float(y) + 0.5f;
-    //     float depth = depth_buffer_data.at(i);  // in [0..1]
-    //
-    //     // build the window‐space coordinate
-    //     glm::vec3 winCoord(winx, winy, depth);
-    //
-    //     // unProject to get world‐space position
-    //     glm::vec3 worldPos = glm::unProject( winCoord, cameraViewMatrix, cameraProjectionMatrix, viewport );
-    //
-    //     // transform into camera‐space
-    //     const glm::vec4 camPos = cameraViewMatrix * glm::vec4(worldPos, 1.0f);
-    //
-    //     // camPos.z is negative in front of the eye; flip sign for a positive distance
-    //     // depth_pixels[i] = -camPos.z;
-    //     depth_pixels[i] = depth*255.f;
-    // }
+    depth_pixels.resize(depth_buffer_data.size());
 
     // normalize data and invert the color space so white=closest, black = furthest
     float depth_min = (std::numeric_limits<float>::max)();
@@ -615,8 +585,6 @@ void Visualizer::getDepthMap(std::vector<float> &depth_pixels, uint &width_pixel
         value = clamp(value, 0.f, 255.f);
         depth_pixels.at(i) = 255.f - value;
     }
-
-    //\todo This is not working. Basically the same code works in the plotDepthMap() method, but for some reason doesn't seem to yield the correct float values.
 }
 
 void Visualizer::getWindowSize(uint &width, uint &height) const {
@@ -1278,6 +1246,9 @@ void Visualizer::render(bool shadow) const {
     GLint current_shader_program = 0;
     glGetIntegerv(GL_CURRENT_PROGRAM, &current_shader_program);
 
+    // The annotation pass identifies each face by its geometry type as well as its face index, so it must be told which type each draw call below is drawing.
+    const bool annotation_pass = annotationShader.initialized && static_cast<GLuint>(current_shader_program) == annotationShader.shaderID;
+
     // Bind our texture array
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D_ARRAY, texArray);
@@ -1331,6 +1302,9 @@ void Visualizer::render(bool shadow) const {
 
         glBindVertexArray(primaryShader.vertex_array_IDs.at(triangle_ind));
         assert(checkerrors());
+        if (annotation_pass) {
+            glUniform1i(annotationShader.geometryTypeUniform, static_cast<GLint>(triangle_ind));
+        }
         glDrawArrays(GL_TRIANGLES, 0, triangle_count * 3);
     }
 
@@ -1374,6 +1348,9 @@ void Visualizer::render(bool shadow) const {
         glBindTexture(GL_TEXTURE_BUFFER, phong_material_table_texture);
 
         glBindVertexArray(primaryShader.vertex_array_IDs.at(rectangle_ind));
+        if (annotation_pass) {
+            glUniform1i(annotationShader.geometryTypeUniform, static_cast<GLint>(rectangle_ind));
+        }
 
         std::vector<GLint> opaque_firsts;
         std::vector<GLint> opaque_counts;
@@ -1453,7 +1430,10 @@ void Visualizer::render(bool shadow) const {
                 return a.depth > b.depth; // farthest first
             });
 
-            glDepthMask(GL_FALSE);
+            // The annotation pass records which surface is in front rather than blending colors, so there these rectangles take part in hidden-surface removal like any other and the order they are drawn in does not matter.
+            if (!annotation_pass) {
+                glDepthMask(GL_FALSE);
+            }
             // Glyphs need linear filtering to keep their antialiased edges smooth, while the image
             // textures interleaved with them in this list must stay point sampled. The sampler is
             // bound and unbound as the list crosses between the two rather than per draw.
@@ -1981,6 +1961,311 @@ void Visualizer::plotDepthMap() {
     }
 }
 
+void Visualizer::renderAnnotationBuffers(std::vector<uint> &pixel_UUIDs, std::vector<float> &pixel_depth, uint &width_pixels, uint &height_pixels) {
+
+    // Pick up any change made to the Context since the last render, so that the annotations never describe primitives that have since moved or been deleted.
+    buildContextGeometry_private();
+
+    // Bring the rendered frame up to date, under the same conditions as printWindow(). This also settles anything that is decided at render time, such as the default camera that is fitted to the scene, so
+    // that the annotations describe the same view as the image whichever of the two is produced first.
+    if (!rendered_frame_is_current || !geometry_handler.getDirtyUUIDs().empty() || geometry_handler.doesBufferNeedFullUpdate() || cameraHasChanged()) {
+        plotUpdate(true);
+    }
+
+    width_pixels = Wframebuffer;
+    height_pixels = Hframebuffer;
+    const size_t pixel_count = size_t(Wframebuffer) * size_t(Hframebuffer);
+
+    GLint previous_framebuffer = 0;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previous_framebuffer);
+    GLint previous_viewport[4];
+    glGetIntegerv(GL_VIEWPORT, previous_viewport);
+
+    if (annotationFramebufferID == 0) {
+        glGenFramebuffers(1, &annotationFramebufferID);
+        glGenTextures(1, &annotationIndexTexture);
+        glGenTextures(1, &annotationDepthTexture);
+        glGenRenderbuffers(1, &annotationDepthRenderbuffer);
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, annotationFramebufferID);
+
+    // (Re)allocate the attachments whenever the framebuffer size has changed, e.g. after a window resize
+    if (annotation_buffer_width != Wframebuffer || annotation_buffer_height != Hframebuffer) {
+        glActiveTexture(GL_TEXTURE0);
+
+        glBindTexture(GL_TEXTURE_2D, annotationIndexTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32I, Wframebuffer, Hframebuffer, 0, GL_RG_INTEGER, GL_INT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, annotationIndexTexture, 0);
+
+        glBindTexture(GL_TEXTURE_2D, annotationDepthTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, Wframebuffer, Hframebuffer, 0, GL_RED, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, annotationDepthTexture, 0);
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        glBindRenderbuffer(GL_RENDERBUFFER, annotationDepthRenderbuffer);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32F, Wframebuffer, Hframebuffer);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, annotationDepthRenderbuffer);
+        glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+        annotation_buffer_width = Wframebuffer;
+        annotation_buffer_height = Hframebuffer;
+    }
+
+    const GLenum draw_buffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+    glDrawBuffers(2, draw_buffers);
+
+    const GLenum annotation_framebuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (annotation_framebuffer_status != GL_FRAMEBUFFER_COMPLETE) {
+        glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer);
+        helios_runtime_error("ERROR (Visualizer::renderAnnotationBuffers): Annotation framebuffer is incomplete (status " + std::to_string(annotation_framebuffer_status) +
+                             "). The graphics driver does not support rendering to the integer and floating-point targets that bounding boxes, segmentation masks and depth images are computed from.");
+    }
+
+    glViewport(0, 0, Wframebuffer, Hframebuffer);
+
+    // Pixels that no primitive covers keep these values: no primitive, and a depth of -1
+    const GLint no_primitive[4] = {0, 0, 0, 0};
+    const GLfloat no_depth[4] = {-1.f, 0.f, 0.f, 0.f};
+    glClearBufferiv(GL_COLOR, 0, no_primitive);
+    glClearBufferfv(GL_COLOR, 1, no_depth);
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    annotationShader.useShader();
+
+    updatePerspectiveTransformation(false);
+    annotationShader.setTransformationMatrix(perspectiveTransformationMatrix);
+
+    annotationShader.enableTextureMaps();
+    annotationShader.enableTextureMasks();
+
+    // The values written by this pass are data, not colors, so they must replace what is in the buffer rather than be blended with it.
+    glDisable(GL_BLEND);
+
+    render(true);
+
+    glFinish();
+
+    std::vector<GLint> primitive_index_data(2 * pixel_count);
+    std::vector<GLfloat> depth_data(pixel_count);
+
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+    glReadPixels(0, 0, GLsizei(Wframebuffer), GLsizei(Hframebuffer), GL_RG_INTEGER, GL_INT, primitive_index_data.data());
+    glReadBuffer(GL_COLOR_ATTACHMENT1);
+    glReadPixels(0, 0, GLsizei(Wframebuffer), GLsizei(Hframebuffer), GL_RED, GL_FLOAT, depth_data.data());
+    const GLenum read_error = glGetError();
+
+    // Restore the state that the rest of the Visualizer relies on
+    glEnable(GL_BLEND);
+    glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer);
+    glViewport(previous_viewport[0], previous_viewport[1], previous_viewport[2], previous_viewport[3]);
+
+    if (read_error != GL_NO_ERROR) {
+        helios_runtime_error("ERROR (Visualizer::renderAnnotationBuffers): Reading back the annotation framebuffer failed (OpenGL error " + std::to_string(read_error) + ").");
+    }
+
+    // Translate (geometry type, face index) into Context primitive UUIDs. Only rectangles and triangles are drawn by this pass.
+    std::vector<std::vector<uint>> face_context_UUIDs(GeometryHandler::all_geometry_types.size());
+    for (size_t type_index = 0; type_index < GeometryHandler::all_geometry_types.size(); type_index++) {
+        const GeometryHandler::VisualizerGeometryType geometry_type = GeometryHandler::all_geometry_types.at(type_index);
+        if (geometry_type == GeometryHandler::GEOMETRY_TYPE_RECTANGLE || geometry_type == GeometryHandler::GEOMETRY_TYPE_TRIANGLE) {
+            face_context_UUIDs.at(type_index) = geometry_handler.getFaceContextUUIDs(geometry_type);
+        }
+    }
+
+    pixel_UUIDs.assign(pixel_count, 0);
+    pixel_depth.assign(pixel_count, -1.f);
+
+    // OpenGL returns rows bottom-up; the buffers handed back are top-down, which is the orientation of a saved image and of every annotation format.
+    for (uint j = 0; j < Hframebuffer; j++) {
+        const size_t source_row = size_t(Hframebuffer - 1 - j) * size_t(Wframebuffer);
+        const size_t output_row = size_t(j) * size_t(Wframebuffer);
+        for (uint i = 0; i < Wframebuffer; i++) {
+            const GLint geometry_type_plus_one = primitive_index_data[2 * (source_row + i)];
+            if (geometry_type_plus_one == 0) { // nothing visible in this pixel
+                continue;
+            }
+            pixel_depth[output_row + i] = depth_data[source_row + i];
+
+            const std::vector<uint> &type_face_UUIDs = face_context_UUIDs.at(size_t(geometry_type_plus_one - 1));
+            const GLint face_index = primitive_index_data[2 * (source_row + i) + 1];
+            if (face_index >= 0 && size_t(face_index) < type_face_UUIDs.size()) {
+                // Zero for geometry that is not a Context primitive: it hides what is behind it, but is not itself an annotatable object
+                pixel_UUIDs[output_row + i] = type_face_UUIDs[size_t(face_index)];
+            }
+        }
+    }
+}
+
+helios::Context *Visualizer::getContextForAnnotation(const std::string &caller) const {
+    if (context == nullptr) {
+        helios_runtime_error("ERROR (" + caller + "): No Context geometry has been given to the Visualizer. Call buildContextGeometry() before requesting annotations, which describe the primitives of the Context.");
+    }
+    return context;
+}
+
+void Visualizer::getPixelUUIDs(std::vector<uint> &pixel_UUIDs, uint &width_pixels, uint &height_pixels) {
+    static_cast<void>(getContextForAnnotation("Visualizer::getPixelUUIDs"));
+    std::vector<float> pixel_depth;
+    renderAnnotationBuffers(pixel_UUIDs, pixel_depth, width_pixels, height_pixels);
+}
+
+void Visualizer::getDepthImage(std::vector<float> &depth_pixels, uint &width_pixels, uint &height_pixels) {
+    std::vector<uint> pixel_UUIDs;
+    renderAnnotationBuffers(pixel_UUIDs, depth_pixels, width_pixels, height_pixels);
+}
+
+void Visualizer::writeImageBoundingBoxes(const std::string &primitive_data_label, uint object_class_ID, const std::string &image_file, const std::string &classes_txt_file, const std::string &image_path) {
+    writeImageBoundingBoxes(std::vector<std::string>{primitive_data_label}, std::vector<uint>{object_class_ID}, image_file, classes_txt_file, image_path);
+}
+
+void Visualizer::writeImageBoundingBoxes(const std::vector<std::string> &primitive_data_label, const std::vector<uint> &object_class_ID, const std::string &image_file, const std::string &classes_txt_file, const std::string &image_path) {
+    const helios::Context *annotated_context = getContextForAnnotation("Visualizer::writeImageBoundingBoxes");
+    if (primitive_data_label.size() != object_class_ID.size()) {
+        helios_runtime_error("ERROR (Visualizer::writeImageBoundingBoxes): The lengths of primitive_data_label and object_class_ID vectors must be the same.");
+    }
+
+    std::vector<uint> pixel_UUIDs;
+    std::vector<float> pixel_depth;
+    uint width_pixels, height_pixels;
+    renderAnnotationBuffers(pixel_UUIDs, pixel_depth, width_pixels, height_pixels);
+
+    helios::annotation::writeLabelBoundingBoxes(annotated_context, pixel_UUIDs, make_int2(int(width_pixels), int(height_pixels)), primitive_data_label, object_class_ID, image_file, classes_txt_file, image_path, false,
+                                                "Visualizer::writeImageBoundingBoxes");
+}
+
+void Visualizer::writeImageBoundingBoxes_ObjectData(const std::string &object_data_label, uint object_class_ID, const std::string &image_file, const std::string &classes_txt_file, const std::string &image_path) {
+    writeImageBoundingBoxes_ObjectData(std::vector<std::string>{object_data_label}, std::vector<uint>{object_class_ID}, image_file, classes_txt_file, image_path);
+}
+
+void Visualizer::writeImageBoundingBoxes_ObjectData(const std::vector<std::string> &object_data_label, const std::vector<uint> &object_class_ID, const std::string &image_file, const std::string &classes_txt_file, const std::string &image_path) {
+    const helios::Context *annotated_context = getContextForAnnotation("Visualizer::writeImageBoundingBoxes_ObjectData");
+    if (object_data_label.size() != object_class_ID.size()) {
+        helios_runtime_error("ERROR (Visualizer::writeImageBoundingBoxes_ObjectData): The lengths of object_data_label and object_class_ID vectors must be the same.");
+    }
+
+    std::vector<uint> pixel_UUIDs;
+    std::vector<float> pixel_depth;
+    uint width_pixels, height_pixels;
+    renderAnnotationBuffers(pixel_UUIDs, pixel_depth, width_pixels, height_pixels);
+
+    helios::annotation::writeLabelBoundingBoxes(annotated_context, pixel_UUIDs, make_int2(int(width_pixels), int(height_pixels)), object_data_label, object_class_ID, image_file, classes_txt_file, image_path, true,
+                                                "Visualizer::writeImageBoundingBoxes_ObjectData");
+}
+
+void Visualizer::writeImageSegmentationMasks(const std::string &primitive_data_label, uint object_class_ID, const std::string &json_filename, const std::string &image_file, const std::vector<std::string> &data_attribute_labels, bool append_file) {
+    writeImageSegmentationMasks(std::vector<std::string>{primitive_data_label}, std::vector<uint>{object_class_ID}, json_filename, image_file, data_attribute_labels, append_file);
+}
+
+void Visualizer::writeImageSegmentationMasks(const std::vector<std::string> &primitive_data_label, const std::vector<uint> &object_class_ID, const std::string &json_filename, const std::string &image_file,
+                                             const std::vector<std::string> &data_attribute_labels, bool append_file) {
+    const helios::Context *annotated_context = getContextForAnnotation("Visualizer::writeImageSegmentationMasks");
+    if (primitive_data_label.size() != object_class_ID.size()) {
+        helios_runtime_error("ERROR (Visualizer::writeImageSegmentationMasks): The lengths of primitive_data_label and object_class_ID vectors must be the same.");
+    }
+
+    std::vector<uint> pixel_UUIDs;
+    std::vector<float> pixel_depth;
+    uint width_pixels, height_pixels;
+    renderAnnotationBuffers(pixel_UUIDs, pixel_depth, width_pixels, height_pixels);
+
+    helios::annotation::writeLabelSegmentationMasks(annotated_context, pixel_UUIDs, make_int2(int(width_pixels), int(height_pixels)), primitive_data_label, object_class_ID, json_filename, image_file, data_attribute_labels, append_file, false,
+                                                    "Visualizer::writeImageSegmentationMasks");
+}
+
+void Visualizer::writeImageSegmentationMasks_ObjectData(const std::string &object_data_label, uint object_class_ID, const std::string &json_filename, const std::string &image_file, const std::vector<std::string> &data_attribute_labels,
+                                                        bool append_file) {
+    writeImageSegmentationMasks_ObjectData(std::vector<std::string>{object_data_label}, std::vector<uint>{object_class_ID}, json_filename, image_file, data_attribute_labels, append_file);
+}
+
+void Visualizer::writeImageSegmentationMasks_ObjectData(const std::vector<std::string> &object_data_label, const std::vector<uint> &object_class_ID, const std::string &json_filename, const std::string &image_file,
+                                                        const std::vector<std::string> &data_attribute_labels, bool append_file) {
+    const helios::Context *annotated_context = getContextForAnnotation("Visualizer::writeImageSegmentationMasks_ObjectData");
+    if (object_data_label.size() != object_class_ID.size()) {
+        helios_runtime_error("ERROR (Visualizer::writeImageSegmentationMasks_ObjectData): The lengths of object_data_label and object_class_ID vectors must be the same.");
+    }
+
+    std::vector<uint> pixel_UUIDs;
+    std::vector<float> pixel_depth;
+    uint width_pixels, height_pixels;
+    renderAnnotationBuffers(pixel_UUIDs, pixel_depth, width_pixels, height_pixels);
+
+    helios::annotation::writeLabelSegmentationMasks(annotated_context, pixel_UUIDs, make_int2(int(width_pixels), int(height_pixels)), object_data_label, object_class_ID, json_filename, image_file, data_attribute_labels, append_file, true,
+                                                    "Visualizer::writeImageSegmentationMasks_ObjectData");
+}
+
+void Visualizer::writeDepthImageData(const std::string &filename) {
+
+    std::vector<float> depth_pixels;
+    uint width_pixels, height_pixels;
+    getDepthImage(depth_pixels, width_pixels, height_pixels);
+
+    std::ofstream depth_file(filename);
+    if (!depth_file.is_open()) {
+        helios_runtime_error("ERROR (Visualizer::writeDepthImageData): Could not open file '" + filename + "' for writing.");
+    }
+
+    for (uint j = 0; j < height_pixels; j++) {
+        for (uint i = 0; i < width_pixels; i++) {
+            depth_file << depth_pixels.at(size_t(j) * size_t(width_pixels) + size_t(i)) << " ";
+        }
+        depth_file << "\n";
+    }
+
+    depth_file.close();
+}
+
+void Visualizer::writeDepthImageDataEXR(const std::string &filename) {
+
+    std::vector<float> depth_pixels;
+    uint width_pixels, height_pixels;
+    getDepthImage(depth_pixels, width_pixels, height_pixels);
+
+    helios::writeEXR(filename, width_pixels, height_pixels, depth_pixels);
+}
+
+void Visualizer::writeNormDepthImage(const std::string &filename, float max_depth) {
+
+    if (max_depth <= 0.f) {
+        helios_runtime_error("ERROR (Visualizer::writeNormDepthImage): The maximum depth must be greater than zero, but " + std::to_string(max_depth) + " was given.");
+    }
+
+    std::vector<float> depth_pixels;
+    uint width_pixels, height_pixels;
+    getDepthImage(depth_pixels, width_pixels, height_pixels);
+
+    // Background pixels and anything beyond the maximum depth are placed at the maximum depth
+    float min_depth = max_depth;
+    for (float &depth: depth_pixels) {
+        if (depth < 0.f || depth > max_depth) {
+            depth = max_depth;
+        }
+        min_depth = std::min(min_depth, depth);
+    }
+
+    // A scene with nothing nearer than the maximum depth has no depth range to normalize by; the image is then uniformly black, which is what "everything at the maximum depth" means.
+    const float depth_range = max_depth - min_depth;
+
+    // writeJPEG() takes its rows bottom-up, whereas the depth image is top-down
+    std::vector<RGBcolor> pixel_data(depth_pixels.size());
+    for (uint j = 0; j < height_pixels; j++) {
+        const size_t output_row = size_t(height_pixels - 1 - j) * size_t(width_pixels);
+        for (uint i = 0; i < width_pixels; i++) {
+            const float depth = depth_pixels.at(size_t(j) * size_t(width_pixels) + size_t(i));
+            const float brightness = (depth_range > 0.f) ? 1.f - (depth - min_depth) / depth_range : 0.f;
+            pixel_data.at(output_row + i) = make_RGBcolor(brightness, brightness, brightness);
+        }
+    }
+
+    writeJPEG(filename, width_pixels, height_pixels, pixel_data);
+}
+
 void Shader::initialize(const char *vertex_shader_file, const char *fragment_shader_file, Visualizer *visualizer_ptr, const char *geometry_shader_file) {
     // ~~~~~~~~~~~~~~~ COMPILE SHADERS ~~~~~~~~~~~~~~~~~~~~~~~~~//
 
@@ -2230,6 +2515,7 @@ void Shader::initialize(const char *vertex_shader_file, const char *fragment_sha
     coordinateFlagTextureObjectUniform = glGetUniformLocation(shaderID, "coordinate_flag_texture_object");
     skyGeometryFlagTextureObjectUniform = glGetUniformLocation(shaderID, "sky_geometry_flag_texture_object");
     hiddenFlagTextureObjectUniform = glGetUniformLocation(shaderID, "hidden_flag_texture_object");
+    geometryTypeUniform = glGetUniformLocation(shaderID, "geometryType");
 
     // Set the texture unit assignments for texture buffers
     if (colorTextureObjectUniform >= 0)
