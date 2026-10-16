@@ -2,6 +2,13 @@
 
 # [1.3.92] 2026-XX-XX
 
+## Core
+
+- Fixed the `.dat` files written by `Context::writeOBJ()` for `primitive_dat_fields` having their rows out of order with the faces of the `.obj` file whenever any primitive carried `object_label` primitive data, which includes plants from the PlantArchitecture plug-in. Faces are grouped by object label but the rows were written by material only, so a mesh colored from these files showed each value on the wrong face, with no error reported. Row i now always corresponds to face i.
+- `Context::writeOBJ()` now raises an error naming the label and primitive UUID, before writing any file, when a primitive lacks a data label requested in `primitive_dat_fields` or that data is not a scalar type. Previously it wrote every file, filled the `.dat` rows for those primitives with 0, and only then raised a generic error.
+- Fixed `Context::writeOBJ()` silently writing an incomplete `.obj` file when given fewer threads than it requested - when called from inside an OpenMP parallel region, with `OMP_THREAD_LIMIT` set, or in any build without OpenMP. Only part of the vertex, normal, texture-coordinate and face records was written (a quarter of them for a call from inside a parallel region), so the file loaded as a valid but truncated mesh. Without OpenMP this affected every scene with 1000 or more vertices.
+- `Context::writePrimitiveData()` now raises an error when the output file cannot be opened, instead of silently writing nothing. Its warning for unsupported data types now lists `string` among the supported types, and its documentation no longer claims that missing primitive data raises an error - a 0 is written with a single warning, as before.
+
 ## Radiation
 
 - Fixed primitives with `twosided_flag` set to 3 (or 2) still blocking rays and appearing in camera images on the OptiX 8 and Vulkan ray-tracing backends. Only the OptiX 6 backend skipped them, so on the other backends such primitives cast shadows and were rendered, and on Vulkan a primitive with `twosided_flag` 3 also absorbed diffuse radiation from both faces. All three backends now treat these primitives identically. This affected the radiation source and camera models added by `RadiationModel::enableLightModelVisualization()` and `RadiationModel::enableCameraModelVisualization()`.

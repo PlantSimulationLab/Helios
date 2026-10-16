@@ -5341,7 +5341,11 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
     size_t vertex_count = 1;
     size_t normal_count = 0;
     size_t uv_count = 1;
-    std::map<uint, std::vector<uint>> UUIDs_write;
+
+    // UUID of the primitive that produced each face, stored alongside 'faces' and 'object_faces' so that the .dat rows can be written in the same order as the faces.
+    const bool write_dat_files = !primitive_dat_fields.empty();
+    std::map<uint, std::vector<uint>> face_UUIDs;
+    std::map<std::string, std::map<uint, std::vector<uint>>> object_face_UUIDs;
 
     std::map<std::string, std::map<uint, std::vector<int3>>> object_faces;
     std::map<std::string, std::map<uint, std::vector<int3>>> object_normal_inds;
@@ -5421,10 +5425,6 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
             }
 
             material_cache[material_key] = material_ID;
-        }
-
-        if (!primitive_dat_fields.empty()) {
-            UUIDs_write[material_ID].push_back(p);
         }
 
         // Resolve the parent polymesh once per primitive: both the normal block below and the vertex block further down need it, and each resolution costs a map lookup plus a dynamic_cast.
@@ -5533,6 +5533,10 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
 
             faces[material_ID].push_back(ftmp);
             object_faces[obj_label][material_ID].push_back(ftmp);
+            if (write_dat_files) {
+                face_UUIDs[material_ID].push_back(p);
+                object_face_UUIDs[obj_label][material_ID].push_back(p);
+            }
 
             if (write_normals) {
                 normal_inds[material_ID].push_back(primitive_normal_index);
@@ -5560,6 +5564,10 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
             faces[material_ID].push_back(ftmp2);
             object_faces[obj_label][material_ID].push_back(ftmp1);
             object_faces[obj_label][material_ID].push_back(ftmp2);
+            if (write_dat_files) {
+                face_UUIDs[material_ID].insert(face_UUIDs[material_ID].end(), 2, scast<uint>(p));
+                object_face_UUIDs[obj_label][material_ID].insert(object_face_UUIDs[obj_label][material_ID].end(), 2, scast<uint>(p));
+            }
             for (int i = 0; i < 4; i++) {
                 verts.push_back(vertices.at(i));
                 vertex_count++;
@@ -5600,6 +5608,22 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
                 object_uv_inds[obj_label][material_ID].push_back(tuv);
                 object_uv_inds[obj_label][material_ID].push_back(tuv);
             }
+        }
+    }
+
+    // Every requested label must be writable for every primitive before any file is touched, so that a bad request never leaves a partial or zero-filled .dat file behind.
+    for (const std::string &label: primitive_dat_fields) {
+        for (uint UUID: UUIDs) {
+            if (!doesPrimitiveDataExist(UUID, label.c_str())) {
+                helios_runtime_error("ERROR (Context::writeOBJ): Primitive data '" + label + "' does not exist for primitive UUID " + std::to_string(UUID) +
+                                     ", so its .dat file cannot be written. Set this data on every primitive being written, or remove '" + label + "' from the primitive_dat_fields argument.");
+            }
+        }
+        // The Context registers a single type per primitive data label, so one check covers every primitive.
+        const HeliosDataType data_type = getPrimitiveDataType(label.c_str());
+        if (data_type != HELIOS_TYPE_INT && data_type != HELIOS_TYPE_UINT && data_type != HELIOS_TYPE_FLOAT && data_type != HELIOS_TYPE_DOUBLE && data_type != HELIOS_TYPE_STRING) {
+            helios_runtime_error("ERROR (Context::writeOBJ): Primitive data '" + label + "' (e.g., for primitive UUID " + std::to_string(UUIDs.front()) + ") has type '" + dataTypeToString(data_type) +
+                                 "', which cannot be written to a .dat file. Only scalar primitive data (int, uint, float, double, or string) is supported.");
         }
     }
 
@@ -5685,14 +5709,17 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
 #pragma omp parallel num_threads(num_threads)
 #endif
     {
+        // Chunk by the team size actually granted: the runtime may form a smaller team than requested (e.g., inside an enclosing parallel region), and chunks for threads that never start would be lost.
         int tid = 0;
+        int team_size = 1;
 #ifdef USE_OPENMP
         tid = omp_get_thread_num();
+        team_size = omp_get_num_threads();
 #endif
         std::ostringstream vertex_stream;
         vertex_stream.precision(8);
 
-        const size_t chunk_size = (verts.size() + num_threads - 1) / num_threads;
+        const size_t chunk_size = (verts.size() + team_size - 1) / team_size;
         const size_t start_idx = tid * chunk_size;
         const size_t end_idx = std::min(start_idx + chunk_size, verts.size());
 
@@ -5716,13 +5743,15 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
 #endif
         {
             int tid = 0;
+            int team_size = 1;
 #ifdef USE_OPENMP
             tid = omp_get_thread_num();
+            team_size = omp_get_num_threads();
 #endif
             std::ostringstream normal_stream;
             normal_stream.precision(8);
 
-            const size_t chunk_size = (normals.size() + num_threads - 1) / num_threads;
+            const size_t chunk_size = (normals.size() + team_size - 1) / team_size;
             const size_t start_idx = tid * chunk_size;
             const size_t end_idx = std::min(start_idx + chunk_size, normals.size());
 
@@ -5755,13 +5784,15 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
 #endif
         {
             int tid = 0;
+            int team_size = 1;
 #ifdef USE_OPENMP
             tid = omp_get_thread_num();
+            team_size = omp_get_num_threads();
 #endif
             std::ostringstream uv_stream;
             uv_stream.precision(8);
 
-            const size_t chunk_size = (uv.size() + num_threads - 1) / num_threads;
+            const size_t chunk_size = (uv.size() + team_size - 1) / team_size;
             const size_t start_idx = tid * chunk_size;
             const size_t end_idx = std::min(start_idx + chunk_size, uv.size());
 
@@ -5775,6 +5806,12 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
         for (const auto &chunk: uv_chunks) {
             objfstream << chunk;
         }
+    }
+
+    // UUID of the primitive behind each face, in the order the faces are written to the OBJ; row i of each .dat file corresponds to entry i.
+    std::vector<uint> dat_row_UUIDs;
+    if (write_dat_files) {
+        dat_row_UUIDs.reserve(primitive_count * 2);
     }
 
     // Parallel face string generation
@@ -5793,6 +5830,10 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
                 objfstream << "usemtl material" << mat << "\n";
 
                 const auto &current_faces = fit->second;
+                if (write_dat_files) {
+                    const std::vector<uint> &group_face_UUIDs = object_face_UUIDs.at(obj_label).at(mat);
+                    dat_row_UUIDs.insert(dat_row_UUIDs.end(), group_face_UUIDs.begin(), group_face_UUIDs.end());
+                }
                 if (current_faces.size() > 100) { // Only parallelize if enough faces
                     // Parallel face string generation for this material
                     std::vector<std::string> face_chunks;
@@ -5803,12 +5844,14 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
 #endif
                     {
                         int tid = 0;
+                        int team_size = 1;
 #ifdef USE_OPENMP
                         tid = omp_get_thread_num();
+                        team_size = omp_get_num_threads();
 #endif
                         std::ostringstream face_stream;
 
-                        const size_t chunk_size = (current_faces.size() + num_threads - 1) / num_threads;
+                        const size_t chunk_size = (current_faces.size() + team_size - 1) / team_size;
                         const size_t start_idx = tid * chunk_size;
                         const size_t end_idx = std::min(start_idx + chunk_size, current_faces.size());
 
@@ -5874,6 +5917,10 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
             objfstream << "usemtl material" << mat << "\n";
 
             const auto &current_faces = faces.at(mat);
+            if (write_dat_files) {
+                const std::vector<uint> &material_face_UUIDs = face_UUIDs.at(mat);
+                dat_row_UUIDs.insert(dat_row_UUIDs.end(), material_face_UUIDs.begin(), material_face_UUIDs.end());
+            }
             if (current_faces.size() > 100) { // Only parallelize if enough faces
                 // Parallel face string generation for this material
                 std::vector<std::string> face_chunks;
@@ -5884,12 +5931,14 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
 #endif
                 {
                     int tid = 0;
+                    int team_size = 1;
 #ifdef USE_OPENMP
                     tid = omp_get_thread_num();
+                    team_size = omp_get_num_threads();
 #endif
                     std::ostringstream face_stream;
 
-                    const size_t chunk_size = (current_faces.size() + num_threads - 1) / num_threads;
+                    const size_t chunk_size = (current_faces.size() + team_size - 1) / team_size;
                     const size_t start_idx = tid * chunk_size;
                     const size_t end_idx = std::min(start_idx + chunk_size, current_faces.size());
 
@@ -5972,89 +6021,38 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
     objfstream.close();
     mtlfstream.close();
 
-    if (!primitive_dat_fields.empty()) {
-        bool uuidexistswarning = false;
-        bool dataexistswarning = false;
-        bool datatypewarning = false;
+    // Data existence and type were validated above, before any file was opened.
+    for (const std::string &label: primitive_dat_fields) {
+        std::filesystem::path dat_path = std::filesystem::path(file_path) / (file_stem + "_" + std::string(label) + ".dat");
+        std::string datfilename = dat_path.string();
+        std::ofstream datout(datfilename);
 
-        for (const std::string &label: primitive_dat_fields) {
-            std::filesystem::path dat_path = std::filesystem::path(file_path) / (file_stem + "_" + std::string(label) + ".dat");
-            std::string datfilename = dat_path.string();
-            std::ofstream datout(datfilename);
-
-            for (int mat = 0; mat < materials.size(); mat++) {
-                for (uint UUID: UUIDs_write.at(mat)) {
-                    if (!doesPrimitiveExist(UUID)) {
-                        uuidexistswarning = true;
-                        continue;
-                    }
-
-                    // a patch is converted to 2 triangles, so need to write 2 data values for patches
-                    int Nprims = 1;
-                    if (getPrimitiveType(UUID) == PRIMITIVE_TYPE_PATCH) {
-                        Nprims = 2;
-                    }
-
-                    if (!doesPrimitiveDataExist(UUID, label.c_str())) {
-                        dataexistswarning = true;
-                        for (int i = 0; i < Nprims; i++) {
-                            datout << 0 << std::endl;
-                        }
-                        continue;
-                    }
-
-                    HeliosDataType type = getPrimitiveDataType(label.c_str());
-                    if (type == HELIOS_TYPE_INT) {
-                        int data;
-                        getPrimitiveData(UUID, label.c_str(), data);
-                        for (int i = 0; i < Nprims; i++) {
-                            datout << data << std::endl;
-                        }
-                    } else if (type == HELIOS_TYPE_UINT) {
-                        uint data;
-                        getPrimitiveData(UUID, label.c_str(), data);
-                        for (int i = 0; i < Nprims; i++) {
-                            datout << data << std::endl;
-                        }
-                    } else if (type == HELIOS_TYPE_FLOAT) {
-                        float data;
-                        getPrimitiveData(UUID, label.c_str(), data);
-                        for (int i = 0; i < Nprims; i++) {
-                            datout << data << std::endl;
-                        }
-                    } else if (type == HELIOS_TYPE_DOUBLE) {
-                        double data;
-                        getPrimitiveData(UUID, label.c_str(), data);
-                        for (int i = 0; i < Nprims; i++) {
-                            datout << data << std::endl;
-                        }
-                    } else if (type == HELIOS_TYPE_STRING) {
-                        std::string data;
-                        getPrimitiveData(UUID, label.c_str(), data);
-                        for (int i = 0; i < Nprims; i++) {
-                            datout << data << std::endl;
-                        }
-                    } else {
-                        datatypewarning = true;
-                        for (int i = 0; i < Nprims; i++) {
-                            datout << 0 << std::endl;
-                        }
-                    }
-                }
+        const HeliosDataType type = getPrimitiveDataType(label.c_str());
+        for (uint UUID: dat_row_UUIDs) {
+            if (type == HELIOS_TYPE_INT) {
+                int data;
+                getPrimitiveData(UUID, label.c_str(), data);
+                datout << data << std::endl;
+            } else if (type == HELIOS_TYPE_UINT) {
+                uint data;
+                getPrimitiveData(UUID, label.c_str(), data);
+                datout << data << std::endl;
+            } else if (type == HELIOS_TYPE_FLOAT) {
+                float data;
+                getPrimitiveData(UUID, label.c_str(), data);
+                datout << data << std::endl;
+            } else if (type == HELIOS_TYPE_DOUBLE) {
+                double data;
+                getPrimitiveData(UUID, label.c_str(), data);
+                datout << data << std::endl;
+            } else if (type == HELIOS_TYPE_STRING) {
+                std::string data;
+                getPrimitiveData(UUID, label.c_str(), data);
+                datout << data << std::endl;
             }
-
-            datout.close();
         }
 
-        if (uuidexistswarning) {
-            helios_runtime_error("Context::writeOBJ: One or more UUIDs do not exist in the Context. Cannot write OBJ file with invalid primitives.");
-        }
-        if (dataexistswarning) {
-            helios_runtime_error("Context::writeOBJ: Primitive data requested did not exist for one or more primitives. Cannot write incomplete data to OBJ file.");
-        }
-        if (datatypewarning) {
-            helios_runtime_error("Context::writeOBJ: Only scalar primitive data types (uint, int, float, double, and string) are supported for primitive data export.");
-        }
+        datout.close();
     }
 }
 
@@ -6064,6 +6062,9 @@ void Context::writePrimitiveData(const std::string &filename, const std::vector<
 
 void Context::writePrimitiveData(const std::string &filename, const std::vector<std::string> &column_format, const std::vector<uint> &UUIDs, bool print_header) const {
     std::ofstream file(filename);
+    if (!file.is_open()) {
+        helios_runtime_error("ERROR (Context::writePrimitiveData): Could not open file '" + filename + "' for writing. Check that the directory exists and that you have write permission.");
+    }
 
     if (print_header) {
         for (const auto &label: column_format) {
@@ -6129,7 +6130,7 @@ void Context::writePrimitiveData(const std::string &filename, const std::vector<
         std::cerr << "WARNING (Context::writePrimitiveData): Primitive data requested did not exist for one or more primitives. A default value of 0 was written in these cases." << std::endl;
     }
     if (datatypewarning) {
-        std::cerr << "WARNING (Context::writePrimitiveData): Only scalar primitive data types (uint, int, float, and double) are supported for this function. A column of 0's was written in these cases." << std::endl;
+        std::cerr << "WARNING (Context::writePrimitiveData): Only scalar primitive data types (int, uint, float, double, and string) are supported for this function. A column of 0's was written in these cases." << std::endl;
     }
 
     file.close();

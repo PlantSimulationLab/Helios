@@ -8304,17 +8304,19 @@ namespace helios {
         //! Write primitive data to an ASCII text file for all primitives in the Context
         /**
          * \param[in] filename Path to file that will be written.
-         * \param[in] column_format Vector of strings with primitive data labels - the order of the text file columns will be determined by the order of the labels in the vector. If primitive data does not exist, an error will be thrown.
+         * \param[in] column_format Vector of strings with primitive data labels - the order of the text file columns will be determined by the order of the labels in the vector. The label "UUID" writes the primitive UUID. If primitive data does not exist for a primitive, or is not a scalar type (int, uint, float, double, or string), 0 is written in its place and a single warning is printed for the call.
          * \param[in] print_header [optional] Flag specifying whether to print the name of the primitive data in the column header.
+         * \note An error is raised if the file cannot be opened for writing.
          */
         void writePrimitiveData(const std::string &filename, const std::vector<std::string> &column_format, bool print_header = false) const;
 
         //! Write primitive data to an ASCII text file for selected primitives in the Context
         /**
          * \param[in] filename Path to file that will be written.
-         * \param[in] column_format Vector of strings with primitive data labels - the order of the text file columns will be determined by the order of the labels in the vector. If primitive data does not exist, an error will be thrown.
+         * \param[in] column_format Vector of strings with primitive data labels - the order of the text file columns will be determined by the order of the labels in the vector. The label "UUID" writes the primitive UUID. If primitive data does not exist for a primitive, or is not a scalar type (int, uint, float, double, or string), 0 is written in its place and a single warning is printed for the call.
          * \param[in] UUIDs Unique universal identifiers for primitives to include when writing data to file.
          * \param[in] print_header [optional] Flag specifying whether to print the name of the primitive data in the column header.
+         * \note An error is raised if the file cannot be opened for writing.
          */
         void writePrimitiveData(const std::string &filename, const std::vector<std::string> &column_format, const std::vector<uint> &UUIDs, bool print_header = false) const;
 
@@ -8462,6 +8464,10 @@ namespace helios {
          * \param[in] primitive_dat_fields A .dat file will be written containing primitive data given in this vector (for Unity visualization)
          * \param[in] write_normals [optional] true if we should write the normal vectors
          * \param[in] silent [optional] If set to true, output messaged will be disabled
+         * \note For each label in primitive_dat_fields, an ASCII file \<stem\>_\<label\>.dat is written next to the .obj file with one value per line. Line i holds the value for face i of the .obj file, counting faces in the
+         * order they appear in the file. A patch is written as two triangular faces, so its value appears on two consecutive lines. If any primitive carries "object_label" primitive data, faces are grouped by object
+         * label (in order of first appearance in UUIDs) and then by material within each group; otherwise they are grouped by material only.
+         * \note Every primitive in UUIDs must have each requested label, with type int, uint, float, double, or string. Otherwise an error is raised before any file is written.
          */
         void writeOBJ(const std::string &filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields, bool write_normals = false, bool silent = false) const;
 
