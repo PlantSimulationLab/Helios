@@ -131,6 +131,11 @@ uint traverse_bvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_i
                     continue;
                 }
 
+                // Invisible primitives (twosided_flag >= 2) are never intersected
+                if (twosided_buf.twosided_flags[prim_idx] >= 2u) {
+                    continue;
+                }
+
                 // Perform ray-primitive intersection based on type
                 HitInfo hit;
                 hit.hit = false;
@@ -336,6 +341,7 @@ uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim
                     uint actual_prim_type = prim_types_buf.types[prim_idx];
 
                     if (prim_idx == origin_prim_idx) continue;
+                    if (twosided_buf.twosided_flags[prim_idx] >= 2u) continue; // invisible primitive
 
                     HitInfo hit;
                     hit.hit = false;

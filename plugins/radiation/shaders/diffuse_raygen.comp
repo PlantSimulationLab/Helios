@@ -422,8 +422,9 @@ void main() {
     // A translucent cover books what reaches it with its angular glass properties, not rho/tau.
     bool origin_is_cover = glass_cover_all_bands(prim_idx, pc.band_count, pc.material_band_count);
 
-    // Skip if launching from bottom face and twosided_flag = 0 (single-sided, top only)
-    if (pc.launch_face == 0 && twosided == 0) {
+    // The top face launches unless the primitive is invisible (twosided_flag = 3); the bottom face launches only for two-sided
+    // primitives (twosided_flag = 1)
+    if ((pc.launch_face == 1 && twosided == 3) || (pc.launch_face == 0 && twosided != 1)) {
         return;
     }
 

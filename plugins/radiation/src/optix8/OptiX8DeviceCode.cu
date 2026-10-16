@@ -371,6 +371,8 @@ extern "C" __global__ void __intersection__patch() {
 
     if (ptype != 0 && ptype != 1 && ptype != 3) return; // only patch, triangle, tile
 
+    if (params.twosided_flag[pos] >= 2) return; // invisible primitive: never intersected
+
     float T[16];
     loadTransformMatrix(pos, T);
 

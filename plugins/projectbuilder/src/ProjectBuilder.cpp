@@ -471,7 +471,7 @@ void ProjectBuilder::updateArrows() {
             context->rotatePrimitive(arrow_dict.at(current_rig)[arrow_count], arrow_direction_sph.elevation, "x");
             context->rotatePrimitive(arrow_dict.at(current_rig)[arrow_count], -arrow_direction_sph.azimuth, "z");
             context->translatePrimitive(arrow_dict.at(current_rig)[arrow_count], arrow_pos);
-            context->setPrimitiveData(arrow_dict.at(current_rig)[arrow_count], "twosided_flag", uint(3));
+            context->setPrimitiveData(arrow_dict.at(current_rig)[arrow_count], "invisibility_flag", uint(1));
             arrow_count++;
         }
         float col[3];
@@ -506,7 +506,7 @@ void ProjectBuilder::updateCameraModels() {
         context->rotatePrimitive(camera_models_dict.at(rig_label_), camera_direction_sph.elevation, "x");
         context->rotatePrimitive(camera_models_dict.at(rig_label_), -camera_direction_sph.azimuth, "z");
         context->translatePrimitive(camera_models_dict.at(rig_label_), camera_pos);
-        context->setPrimitiveData(camera_models_dict.at(rig_label_), "twosided_flag", uint(3));
+        context->setPrimitiveData(camera_models_dict.at(rig_label_), "invisibility_flag", uint(1));
         float col[3];
         RGBcolor rig_color = rig_colors[camera_idx];
         col[0] = rig_color.r;

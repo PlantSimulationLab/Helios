@@ -640,8 +640,8 @@ void main() {
                 float dot_product = dot(ray_dir, normal);
                 bool is_top_face = (dot_product > 0.0);
 
-                // Skip if wrong face or transparent primitive
-                if (twosided == 3 || (!is_top_face && twosided == 0)) {
+                // Skip invisible primitives, and the bottom face unless the primitive is two-sided
+                if (twosided == 3 || (!is_top_face && twosided != 1)) {
                     continue;
                 }
 

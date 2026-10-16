@@ -1557,7 +1557,7 @@ void RadiationModel::buildLightModelGeometry(uint sourceID) {
         context->translatePrimitive(source_model_UUIDs.at(sourceID), source.source_position);
     }
 
-    context->setPrimitiveData(source_model_UUIDs.at(sourceID), "twosided_flag", uint(3)); // source model does not interact with radiation field
+    context->setPrimitiveData(source_model_UUIDs.at(sourceID), "invisibility_flag", uint(1)); // source model does not interact with radiation field
 }
 
 void RadiationModel::buildCameraModelGeometry(const std::string &cameralabel) {
@@ -1576,7 +1576,7 @@ void RadiationModel::buildCameraModelGeometry(const std::string &cameralabel) {
 
     context->translatePrimitive(camera_model_UUIDs.at(cameralabel), camera.position);
 
-    context->setPrimitiveData(camera_model_UUIDs.at(cameralabel), "twosided_flag", uint(3)); // camera model does not interact with radiation field
+    context->setPrimitiveData(camera_model_UUIDs.at(cameralabel), "invisibility_flag", uint(1)); // camera model does not interact with radiation field
 }
 
 void RadiationModel::updateLightModelPosition(uint sourceID, const helios::vec3 &delta_position) {
@@ -6693,9 +6693,21 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
         // Solid fraction
         geometry_data.solid_fractions[prim_idx] = context->getPrimitiveSolidFraction(UUID);
 
-        // Two-sided flag. Store the raw value (0=one-sided, 1=two-sided, 2=transparent, 3=special/source-model)
-        // rather than collapsing to a boolean, so the backends receive the full semantics.
-        geometry_data.twosided_flags[prim_idx] = static_cast<char>(context->getPrimitiveTwosidedFlag(UUID, 1));
+        // Two-sided flag. Store the raw value (0=one-sided, 1=two-sided, 2=transparent, 3=invisible) rather than collapsing to a
+        // boolean, so the backends receive the full semantics. "invisibility_flag" primitive data = 1 is stored as 3 and takes
+        // precedence over both the material and primitive-data twosided_flag.
+        uint twosided_flag = context->getPrimitiveTwosidedFlag(UUID, 1);
+        if (context->doesPrimitiveDataExist(UUID, "invisibility_flag")) {
+            uint invisibility_flag;
+            context->getPrimitiveData(UUID, "invisibility_flag", invisibility_flag);
+            if (invisibility_flag == 1) {
+                twosided_flag = 3;
+            } else if (invisibility_flag != 0) {
+                helios_runtime_error("ERROR (RadiationModel::buildGeometryData): Primitive " + std::to_string(UUID) + " has \"invisibility_flag\" primitive data set to " + std::to_string(invisibility_flag) +
+                                     ". Valid values are 0 (visible) or 1 (invisible to the radiation model).");
+            }
+        }
+        geometry_data.twosided_flags[prim_idx] = static_cast<char>(twosided_flag);
 
         if (parentID > 0 && context->getObjectType(parentID) == helios::OBJECT_TYPE_TILE) {
             // Tile subpatch: treat as individual patch for both OptiX and Vulkan backends.

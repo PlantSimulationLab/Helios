@@ -206,6 +206,14 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
      <td>1</td>
    </tr>
    <tr>
+     <td>invisibility\_flag</td>
+     <td>N/A</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly</td>
+     <td>If set to 1, the primitive is invisible to the radiation model. See Sect. \ref RadInvisible below for more information.</td>
+     <td>N/A</td>
+     <td>0</td>
+   </tr>
+   <tr>
      <td>specular\_exponent</td>
      <td>N/A</td>
      <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
@@ -257,7 +265,7 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  By default, a planar primitive will emit and absorb radiation from/to both faces. For primitives that only emit and absorb from/to one face (e.g., ground primitives), this default behavior should be modified. Single-sided emission can be achieved by setting primitive data for the particular primitive with a name of "twosided_flag" to a value of 0 (where '0' is defined as an unsigned integer):
 
   ~~~~~~{.cpp}
-  context.setPrimitiveData( UUID, "twosided_flag", uint(1) );
+  context.setPrimitiveData( UUID, "twosided_flag", uint(0) );
   ~~~~~~
 
  Note that in this case radiation will be emitted from the side with its face in the direction of the primitive normal vector. If primitive data called "twosided_flag" is set to 1, this will produce the default behavior of emission from both faces.
@@ -277,6 +285,18 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
   ~~~~~~
 
  If no user-assigned material exists (or the material is auto-generated), the radiation model falls back to checking for "twosided_flag" primitive data.
+
+ \subsection RadInvisible Invisible Primitives
+
+ It is sometimes useful to keep geometry in the Context that should not interact with the radiation field, such as markers or models used only for visualization. Setting primitive data called "invisibility_flag" to 1 (as an unsigned integer) makes a primitive invisible to the radiation model:
+
+  ~~~~~~{.cpp}
+  context.setPrimitiveData( UUID, "invisibility_flag", uint(1) );
+  ~~~~~~
+
+ An invisible primitive is never intersected by direct, diffuse, scattered, or camera rays, so it does not cast shadows and does not appear in camera images. It also neither absorbs nor emits radiation, so its "radiation_flux_*" output is zero. The "invisibility_flag" takes precedence over the "twosided_flag" of the primitive, including one set through a material. A value of 0 has no effect, and any other value is an error.
+
+ For backward compatibility, setting "twosided_flag" to 3 has the same effect as setting "invisibility_flag" to 1.
 
  \subsection RadBands Defining Wavelength Bands
 

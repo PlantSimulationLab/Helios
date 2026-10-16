@@ -1027,6 +1027,152 @@ GPU_TEST_CASE("RadiationModel Simple Direct") {
     DOCTEST_CHECK(error <= 0.01); // 1% tolerance
 }
 
+// Scene for the invisible-primitive tests: a one-sided, black 1x1 ground patch at z=0 under a black 4x4 blocker patch at
+// z=0.5. A visible blocker shades the ground completely from an overhead sun and blocks most of the diffuse sky.
+static void buildInvisibleBlockerScene(Context &context, uint &ground, uint &blocker) {
+    ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(ground, "twosided_flag", uint(0));
+    context.setPrimitiveData(ground, "reflectivity_SW", 0.0f);
+    blocker = context.addPatch(make_vec3(0, 0, 0.5), make_vec2(4, 4));
+    context.setPrimitiveData(blocker, "reflectivity_SW", 0.0f);
+}
+
+// Runs a single shortwave band with either an overhead collimated sun or a uniform diffuse sky (1000 W/m^2, no scattering) and
+// returns the absorbed flux of the ground patch.
+static float runInvisibleBlockerBand(Context &context, uint ground, bool diffuse_sky) {
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    radiation.setScatteringDepth("SW", 0);
+    if (diffuse_sky) {
+        radiation.setDiffuseRadiationFlux("SW", 1000.0f);
+        radiation.setDiffuseRayCount("SW", 10000);
+    } else {
+        uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        radiation.setSourceFlux(sun, "SW", 1000.0f);
+        radiation.setDirectRayCount("SW", 10000);
+    }
+    radiation.updateGeometry();
+    radiation.runBand("SW");
+
+    float ground_flux;
+    context.getPrimitiveData(ground, "radiation_flux_SW", ground_flux);
+    return ground_flux;
+}
+
+GPU_TEST_CASE("RadiationModel invisible primitives - twosided_flag 3 does not occlude direct or diffuse radiation") {
+    // A primitive with twosided_flag = 3 must be invisible to the radiation field. It was only skipped during ray traversal on
+    // the OptiX 6 backend; OptiX 8 and Vulkan still intersected it, so it shaded the ground beneath it.
+    Context context;
+    uint ground, blocker;
+    buildInvisibleBlockerScene(context, ground, blocker);
+    context.setPrimitiveData(blocker, "twosided_flag", uint(3));
+
+    float ground_direct = runInvisibleBlockerBand(context, ground, false);
+    float blocker_direct;
+    context.getPrimitiveData(blocker, "radiation_flux_SW", blocker_direct);
+    float ground_diffuse = runInvisibleBlockerBand(context, ground, true);
+    float blocker_diffuse;
+    context.getPrimitiveData(blocker, "radiation_flux_SW", blocker_diffuse);
+
+    DOCTEST_CHECK(ground_direct > 990.0f);
+    DOCTEST_CHECK(ground_direct < 1010.0f);
+    DOCTEST_CHECK(ground_diffuse > 950.0f);
+    DOCTEST_CHECK(ground_diffuse < 1050.0f);
+    DOCTEST_CHECK(blocker_direct == 0.0f);
+    DOCTEST_CHECK(blocker_diffuse == 0.0f);
+}
+
+GPU_TEST_CASE("RadiationModel invisible primitives - invisibility_flag") {
+    Context context;
+    uint ground, blocker;
+    buildInvisibleBlockerScene(context, ground, blocker);
+
+    // invisibility_flag = 0 leaves the blocker visible: the ground is fully shaded from the overhead sun.
+    context.setPrimitiveData(blocker, "invisibility_flag", uint(0));
+    float ground_direct_visible = runInvisibleBlockerBand(context, ground, false);
+    DOCTEST_CHECK(ground_direct_visible < 10.0f);
+
+    // invisibility_flag = 1 makes the blocker invisible to both direct and diffuse radiation.
+    context.setPrimitiveData(blocker, "invisibility_flag", uint(1));
+    float ground_direct = runInvisibleBlockerBand(context, ground, false);
+    float ground_diffuse = runInvisibleBlockerBand(context, ground, true);
+    float blocker_diffuse;
+    context.getPrimitiveData(blocker, "radiation_flux_SW", blocker_diffuse);
+
+    DOCTEST_CHECK(ground_direct > 990.0f);
+    DOCTEST_CHECK(ground_direct < 1010.0f);
+    DOCTEST_CHECK(ground_diffuse > 950.0f);
+    DOCTEST_CHECK(ground_diffuse < 1050.0f);
+    DOCTEST_CHECK(blocker_diffuse == 0.0f);
+}
+
+GPU_TEST_CASE("RadiationModel invisible primitives - invisibility_flag overrides a user material twosided_flag") {
+    // A user material's twosided_flag takes precedence over twosided_flag primitive data, but must not override invisibility.
+    Context context;
+    uint ground, blocker;
+    buildInvisibleBlockerScene(context, ground, blocker);
+    context.addMaterial("blocker_material");
+    context.setMaterialTwosidedFlag("blocker_material", 1);
+    context.assignMaterialToPrimitive(blocker, "blocker_material");
+    context.setPrimitiveData(blocker, "invisibility_flag", uint(1));
+
+    float ground_direct = runInvisibleBlockerBand(context, ground, false);
+
+    DOCTEST_CHECK(ground_direct > 990.0f);
+    DOCTEST_CHECK(ground_direct < 1010.0f);
+}
+
+GPU_TEST_CASE("RadiationModel invisible primitives - invisible primitive does not appear in camera images") {
+    // Camera looks straight down at a sunlit, reflective ground through a black blocker. A visible blocker fills the centre of
+    // the image with black; an invisible one must let the camera see the lit ground.
+    std::vector<float> center_pixel_value(2);
+    for (uint invisible = 0; invisible < 2; invisible++) {
+        Context context;
+        uint ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(10, 10));
+        context.setPrimitiveData(ground, "reflectivity_SW", 0.5f);
+        uint blocker = context.addPatch(make_vec3(0, 0, 1), make_vec2(4, 4));
+        context.setPrimitiveData(blocker, "reflectivity_SW", 0.0f);
+        context.setPrimitiveData(blocker, "invisibility_flag", invisible);
+
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+        radiation.disableMessages();
+        radiation.addRadiationBand("SW");
+        radiation.disableEmission("SW");
+        radiation.setScatteringDepth("SW", 1);
+        uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        radiation.setSourceFlux(sun, "SW", 1000.0f);
+
+        CameraProperties cam_props;
+        cam_props.camera_resolution = make_int2(16, 16);
+        cam_props.HFOV = 20;
+        cam_props.lens_diameter = 0.f;
+        radiation.addRadiationCamera("top_cam", {"SW"}, make_vec3(0, 0, 5), make_vec3(0, 0, 0), cam_props, 10);
+
+        radiation.updateGeometry();
+        radiation.runBand("SW");
+
+        std::vector<float> pixels = radiation.getCameraPixelData("top_cam", "SW");
+        center_pixel_value.at(invisible) = pixels.at(8 * 16 + 8);
+    }
+
+    DOCTEST_CHECK(center_pixel_value.at(0) == 0.0f);
+    DOCTEST_CHECK(center_pixel_value.at(1) > 0.0f);
+}
+
+GPU_TEST_CASE("RadiationModel invisible primitives - invalid invisibility_flag value throws") {
+    Context context;
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(patch, "invisibility_flag", uint(2));
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SW");
+
+    DOCTEST_CHECK_THROWS(radiation.updateGeometry());
+}
+
 GPU_TEST_CASE("RadiationModel Multi-Band Stale Backend Geometry") {
     // Regression test for a Vulkan-backend size-mismatch crash on a multi-band launch.
     //
