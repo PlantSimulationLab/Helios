@@ -58,6 +58,8 @@ RadiationModel::RadiationModel(helios::Context *context_a) {
     temperature_default = 300;
 
     periodic_flag = make_vec2(0, 0);
+    periodic_xbounds = make_vec2(0, 0);
+    periodic_ybounds = make_vec2(0, 0);
 
     spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/camera_spectral_library.xml").string());
     spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/light_spectral_library.xml").string());
@@ -102,6 +104,8 @@ RadiationModel::RadiationModel(helios::Context *context_a, bool skip_backend_ini
     sigmas_default = 0.f;
     temperature_default = 300;
     periodic_flag = make_vec2(0, 0);
+    periodic_xbounds = make_vec2(0, 0);
+    periodic_ybounds = make_vec2(0, 0);
 
     spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/camera_spectral_library.xml").string());
     spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/light_spectral_library.xml").string());
@@ -6471,6 +6475,17 @@ helios::RayTracingLaunchParams RadiationModel::buildCameraLaunchParams(const Rad
     // Camera position and orientation
     params.camera_position = camera.position;
     helios::SphericalCoord dir = cart2sphere(camera.lookat - camera.position);
+
+    // A periodic domain repeats laterally, so a camera outside of it sees the same scene as a camera moved into it by a whole number of
+    // periods. Wrap the ray origin into the domain, where the periodic boundary faces can wrap its rays.
+    if (periodic_flag.x == 1) {
+        const float period_x = periodic_xbounds.y - periodic_xbounds.x;
+        params.camera_position.x -= period_x * std::floor((params.camera_position.x - periodic_xbounds.x) / period_x);
+    }
+    if (periodic_flag.y == 1) {
+        const float period_y = periodic_ybounds.y - periodic_ybounds.x;
+        params.camera_position.y -= period_y * std::floor((params.camera_position.y - periodic_ybounds.x) / period_y);
+    }
     params.camera_direction = helios::make_vec2(dir.zenith, dir.azimuth);
 
     // Camera optical properties
@@ -6792,24 +6807,16 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
     vec2 xbounds, ybounds, zbounds;
     context->getDomainBoundingBox(xbounds, ybounds, zbounds);
 
-    // Validate camera positions if periodic boundaries enabled
+    // Extend the z-bounds to include the cameras when periodic boundaries are enabled. A camera outside the domain laterally is wrapped
+    // into it by buildCameraLaunchParams(), but its height is not changed, so the boundary faces must reach it.
     if (periodic_flag.x == 1 || periodic_flag.y == 1) {
-        if (!cameras.empty()) {
-            for (auto &camera: cameras) {
-                vec3 camerapos = camera.second.position;
-                if (camerapos.x < xbounds.x || camerapos.x > xbounds.y || camerapos.y < ybounds.x || camerapos.y > ybounds.y) {
-                    std::cout << "WARNING (RadiationModel::buildGeometryData): camera position is outside of the domain bounding box. Disabling periodic boundary conditions." << std::endl;
-                    periodic_flag.x = 0;
-                    periodic_flag.y = 0;
-                    break;
-                }
-                // Extend z-bounds to include camera
-                if (camerapos.z < zbounds.x) {
-                    zbounds.x = camerapos.z;
-                }
-                if (camerapos.z > zbounds.y) {
-                    zbounds.y = camerapos.z;
-                }
+        for (const auto &camera: cameras) {
+            const vec3 &camerapos = camera.second.position;
+            if (camerapos.z < zbounds.x) {
+                zbounds.x = camerapos.z;
+            }
+            if (camerapos.z > zbounds.y) {
+                zbounds.y = camerapos.z;
             }
         }
     }
@@ -6821,6 +6828,10 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
     ybounds.y += 1e-5;
     zbounds.x -= 1e-5;
     zbounds.y += 1e-5;
+
+    // The rays are wrapped by the width of these padded bounds, so cameras must be wrapped by the same period
+    periodic_xbounds = xbounds;
+    periodic_ybounds = ybounds;
 
     // Bbox UUIDs must not collide with real primitive UUIDs
     // Use max_UUID + 1 as base (not Nprimitives, which can cause collisions with sparse UUIDs)

@@ -732,6 +732,8 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  context.cropDomainY( ground_center.y + make_vec2(-0.5*ground_size.y,0.5*ground_size.y) );
  ~~~~~~
 
+ Radiation cameras may be placed outside of the domain in a periodic direction. Since the domain repeats indefinitely, the camera sees the same scene as a camera moved into the domain by a whole number of domain widths, and the camera's rays are traced from that equivalent position. The camera's height and viewing direction are not changed.
+
  \subsection RadCam Radiation Cameras
 
  Simulated cameras can be added to the domain in order to measure radiative fluxes and produce simulated images (with annotations if desired).

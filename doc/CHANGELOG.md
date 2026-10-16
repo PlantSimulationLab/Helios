@@ -11,6 +11,7 @@
 
 ## Radiation
 
+- Fixed a radiation camera placed laterally outside the domain disabling periodic boundary conditions (`RadiationModel::enforcePeriodicBoundary()`) for the whole model, which removed periodicity from all subsequent flux calculations and made the camera image a single unrepeated domain. A camera outside the domain in a periodic direction is now traced from the equivalent position inside the domain, so it sees the repeated scene and periodicity remains enforced.
 - Fixed primitives with `twosided_flag` set to 3 (or 2) still blocking rays and appearing in camera images on the OptiX 8 and Vulkan ray-tracing backends. Only the OptiX 6 backend skipped them, so on the other backends such primitives cast shadows and were rendered, and on Vulkan a primitive with `twosided_flag` 3 also absorbed diffuse radiation from both faces. All three backends now treat these primitives identically. This affected the radiation source and camera models added by `RadiationModel::enableLightModelVisualization()` and `RadiationModel::enableCameraModelVisualization()`.
 - Added the `invisibility_flag` primitive data (`uint`). Setting it to 1 makes a primitive invisible to the radiation model: it is not intersected by any ray, does not appear in camera images, and neither absorbs nor emits radiation. It takes precedence over `twosided_flag`, including a `twosided_flag` set through a material, which previously made `twosided_flag` 3 primitive data ineffective on primitives with a user-assigned material. Setting `twosided_flag` to 3 still has the same effect.
 

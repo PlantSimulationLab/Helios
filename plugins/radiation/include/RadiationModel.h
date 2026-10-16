@@ -2510,6 +2510,12 @@ protected:
     //! Periodic boundary condition flags (x, y)
     helios::vec2 periodic_flag;
 
+    //! x-extent (min, max) of the periodic boundary faces, i.e. the domain bounding box plus its padding; the period in x is its width
+    helios::vec2 periodic_xbounds;
+
+    //! y-extent (min, max) of the periodic boundary faces, i.e. the domain bounding box plus its padding; the period in y is its width
+    helios::vec2 periodic_ybounds;
+
     bool radiativepropertiesneedupdate = true;
 
     //! Whether camera images interpolate the outgoing flux across each facet rather than holding it constant

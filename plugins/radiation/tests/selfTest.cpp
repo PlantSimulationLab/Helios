@@ -12354,6 +12354,74 @@ GPU_TEST_CASE("RadiationModel camera pixel depth through a periodic boundary") {
     DOCTEST_CHECK(pixel_depths.at(40) < expected + 1e-3f);
 }
 
+// A camera outside the domain of a periodic boundary sees the repeated domain, as if it were moved into the domain by a
+// whole number of periods.
+GPU_TEST_CASE("RadiationModel camera outside a periodic domain is wrapped into it") {
+    Context context;
+    uint ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(10, 10));
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("LW");
+    radiation.setDiffuseRayCount("LW", 100);
+    radiation.setScatteringDepth("LW", 1);
+    radiation.enforcePeriodicBoundary("xy");
+    // Two periods beyond +x, looking along +x: the centre ray hits the ground 10 m further along x (unwrapped).
+    radiation.addRadiationCamera("cam_x", {"LW"}, make_vec3(20, 0, 1), make_vec3(30, 0, 0), glass_camera_properties(2.f), 1);
+    // Between one and two periods beyond -y, looking along -y: the centre ray wraps through the -y boundary.
+    radiation.addRadiationCamera("cam_y", {"LW"}, make_vec3(0, -23, 1), make_vec3(0, -33, 0), glass_camera_properties(2.f), 1);
+    radiation.updateGeometry();
+    radiation.runBand("LW");
+
+    const float expected = std::sqrt(10.f * 10.f + 1.f); // the centre ray is along the view direction
+    for (const std::string camera_label: {"cam_x", "cam_y"}) {
+        std::vector<uint> pixel_UUIDs;
+        context.getGlobalData(("camera_" + camera_label + "_pixel_UUID").c_str(), pixel_UUIDs);
+        std::vector<float> pixel_depths;
+        context.getGlobalData(("camera_" + camera_label + "_pixel_depth").c_str(), pixel_depths);
+        DOCTEST_REQUIRE(pixel_UUIDs.size() == 81);
+        DOCTEST_REQUIRE(pixel_depths.size() == 81);
+
+        DOCTEST_INFO(camera_label << " centre pixel UUID label " << pixel_UUIDs.at(40) << ", depth " << pixel_depths.at(40) << ", expected " << expected);
+        DOCTEST_CHECK(pixel_UUIDs.at(40) == ground + 1);
+        DOCTEST_CHECK(pixel_depths.at(40) > expected - 1e-3f);
+        DOCTEST_CHECK(pixel_depths.at(40) < expected + 1e-3f);
+    }
+}
+
+// A camera outside the domain must not switch off the periodic boundary for the flux calculation.
+GPU_TEST_CASE("RadiationModel periodic boundary stays enforced with a camera outside the domain") {
+    Context context;
+    // Ground strips 1 m wide in x, and an opaque roof over -5 < x < -3 at z = 1. The sun is at 45 degrees elevation towards
+    // +x, so the roof's shadow falls on -6 < x < -4, and through the periodic boundary on the strip 4 < x < 5.
+    std::vector<uint> ground_strips;
+    for (int i = 0; i < 10; i++) {
+        ground_strips.push_back(context.addPatch(make_vec3(-4.5f + float(i), 0, 0), make_vec2(1, 10)));
+    }
+    context.addPatch(make_vec3(-4, 0, 1), make_vec2(2, 10));
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    radiation.setDirectRayCount("SW", 100);
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(1, 0, 1));
+    radiation.setSourceFlux(sun, "SW", std::sqrt(2.f)); // unit flux on a horizontal surface
+    radiation.enforcePeriodicBoundary("x");
+    radiation.addRadiationCamera("cam", {"SW"}, make_vec3(25, 0, 3), make_vec3(25, 0, 0), glass_camera_properties(20.f), 1);
+    radiation.updateGeometry();
+    radiation.runBand("SW");
+
+    float shadowed_through_boundary;
+    context.getPrimitiveData(ground_strips.at(9), "radiation_flux_SW", shadowed_through_boundary);
+    float sunlit;
+    context.getPrimitiveData(ground_strips.at(5), "radiation_flux_SW", sunlit);
+    DOCTEST_INFO("strip 4 < x < 5 flux " << shadowed_through_boundary << ", strip 0 < x < 1 flux " << sunlit);
+    DOCTEST_CHECK(shadowed_through_boundary < 0.01f);
+    DOCTEST_CHECK(sunlit > 0.99f);
+    DOCTEST_CHECK(sunlit < 1.01f);
+}
+
 // A constant reflectivity_<band> and a reflectivity spectrum that is flat at the same value describe the same surface, so a
 // camera must render them the same, also when the source spectrum and the camera response are not flat.
 GPU_TEST_CASE("RadiationModel camera renders a constant reflectivity like the equal flat reflectivity spectrum") {
