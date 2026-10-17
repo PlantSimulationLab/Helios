@@ -520,9 +520,7 @@ void main() {
                     float gamma = r2; // sp_local.x
                     masked = !mask_texel_is_opaque(mask_id, triangle_texture_uv(prim_idx, vec2(beta, gamma)));
                 }
-                if (masked) {
-                    continue; // Skip this ray - all 50 attempts hit transparent texels
-                }
+                // If all attempts hit transparent texels, launch from the last sample rather than drop the ray and its energy
             }
 
             // Read pre-computed world-space normal from buffer
@@ -540,6 +538,7 @@ void main() {
 
                 vec3 ray_dir;
                 float strength = 0.0;
+                vec3 source_target = source_pos; // point sampled on a finite source, where the shadow ray ends
 
                 if (source_type == 0) { // Collimated source (sun)
                     ray_dir = normalize(source_pos); // source_pos is direction for collimated
@@ -554,7 +553,8 @@ void main() {
 
                     // Ray from surface point toward sampled point on sphere
                     float ray_magnitude;
-                    ray_dir = safe_normalize(sphere_point + source_pos - ray_origin, ray_magnitude);
+                    source_target = sphere_point + source_pos;
+                    ray_dir = safe_normalize(source_target - ray_origin, ray_magnitude);
                     if (ray_magnitude < 1e-20) {
                         continue; // Surface point coincides with the sampled source point
                     }
@@ -581,7 +581,8 @@ void main() {
                     vec3 light_direction = normalize(transform_direction(light_transform, vec3(0, 0, 1)));
 
                     // Ray from surface to light sample point
-                    ray_dir = light_point + source_pos - ray_origin;
+                    source_target = light_point + source_pos;
+                    ray_dir = source_target - ray_origin;
 
                     // Back-face rejection: skip if ray hits back side of light
                     if (dot(ray_dir, light_direction) > 0.0) {
@@ -614,7 +615,8 @@ void main() {
                     vec3 light_direction = normalize(transform_direction(light_transform, vec3(0, 0, 1)));
 
                     // Ray from surface to light sample point (scale AFTER transform, matches OptiX line 213)
-                    ray_dir = radius * light_point + source_pos - ray_origin;
+                    source_target = radius * light_point + source_pos;
+                    ray_dir = source_target - ray_origin;
 
                     // Back-face rejection
                     if (dot(ray_dir, light_direction) > 0.0) {
@@ -656,10 +658,16 @@ void main() {
                 // Periodic boundary wrap loop + translucent-cover pass-through loop: a glass occluder is
                 // not a blocker — accumulate its angular transmittance, deposit its reflected/absorbed
                 // energy, and re-trace past it toward the source (bounded iterations).
+                // The ray counts as blocked unless it reaches the source: a ray that reaches the periodic wrap limit or the
+                // segment limit deposits nothing, as in the OptiX backends.
                 float occlusion_t;
                 uint occluder;
                 vec3 trace_origin = ray_origin;
-                bool is_occluded = false;
+                bool is_occluded = true;
+                int boundary_hits = 0;
+                // Distance left to the point sampled on a finite source, measured from trace_origin. A hit beyond it is
+                // behind the source and does not block.
+                float distance_to_source = length(source_target - ray_origin);
 
                 for (int step = 0; step < 32; ++step) {
                     occluder = traverse_cwbvh(trace_origin, ray_dir, 1e-4, prim_idx, occlusion_t);
@@ -667,30 +675,37 @@ void main() {
                     // Periodic boundary wrap (bbox face is not a real occluder)
                     if (pc.bbox_count != 0) {
                         vec3 wrapped_origin;
+                        float boundary_t;
                         bool hit_periodic = check_periodic_boundary(
                             trace_origin, ray_dir, occlusion_t,
                             pc.periodic_flag_x, pc.periodic_flag_y, pc.bbox_count,
                             pc.domain_xmin, pc.domain_xmax, pc.domain_ymin, pc.domain_ymax,
-                            wrapped_origin);
+                            wrapped_origin, boundary_t);
                         if (hit_periodic) {
+                            if (source_type != 0 && boundary_t >= distance_to_source) {
+                                is_occluded = false; // the source is reached before the boundary
+                                break;
+                            }
+                            if (++boundary_hits >= MAX_PERIODIC_WRAPS) break; // wrap limit — treated as blocked
+                            distance_to_source -= boundary_t;
                             trace_origin = wrapped_origin;
-                            occluder = UINT_MAX;
                             continue;
                         }
                     }
 
-                    if (occluder == 0xFFFFFFFF) break; // miss — reached the source
+                    if (occluder == 0xFFFFFFFF) { // miss — reached the source
+                        is_occluded = false;
+                        break;
+                    }
 
-                    // For a sphere source, a hit beyond the source does not block. occlusion_t is measured from
-                    // trace_origin, which is past any translucent covers already crossed.
-                    if (source_type != 0) {
-                        float dist_to_source = length(source_pos - trace_origin);
-                        if (occlusion_t >= dist_to_source) break; // hit is past the source — unblocked
+                    // occlusion_t is measured from trace_origin, which is past any boundaries and translucent covers already crossed.
+                    if (source_type != 0 && occlusion_t >= distance_to_source) {
+                        is_occluded = false; // hit is behind the source — unblocked
+                        break;
                     }
 
                     // A primitive that is not a translucent cover for all launched bands is an opaque blocker.
                     if (occluder == prim_idx || !glass_cover_all_bands(occluder, pc.band_count, pc.material_band_count)) {
-                        is_occluded = true;
                         break;
                     }
 
@@ -707,6 +722,7 @@ void main() {
 
                     // Advance just past the cover hit and continue toward the source.
                     trace_origin = trace_origin + ray_dir * (occlusion_t + 1e-4);
+                    distance_to_source -= occlusion_t + 1e-4;
                 }
 
                 if (is_occluded) {

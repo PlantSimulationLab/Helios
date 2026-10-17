@@ -423,8 +423,7 @@ namespace helios {
             }
             if (voxel_count > 0) {
                 helios_runtime_error("ERROR (VulkanComputeBackend::updateGeometry): the scene contains " + std::to_string(voxel_count) +
-                                     " voxel primitive(s), which this backend cannot intersect. Voxel ray tracing is implemented only in the OptiX backends. Build with CUDA available (and without "
-                                     "-DFORCE_VULKAN_BACKEND=ON) to trace this scene, or remove the voxels from the Context.");
+                                     " voxel primitive(s), which this backend cannot intersect. Voxel ray tracing is implemented only in the OptiX 6 backend. Remove the voxels from the Context to trace this scene.");
             }
         }
 
@@ -1004,10 +1003,9 @@ namespace helios {
                 launch_to_global_band.push_back(g);
             }
         }
-        if (launch_to_global_band.empty()) {
-            for (uint32_t g = 0; g < launch_band_count; g++) {
-                launch_to_global_band.push_back(g);
-            }
+        if (launch_to_global_band.size() != launch_band_count) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::launchDirectRays): The launch parameters flag " + std::to_string(launch_to_global_band.size()) + " launched band(s), but the current runBand() launch has " +
+                                 std::to_string(launch_band_count) + ". band_launch_flag must flag exactly the bands being launched.");
         }
 
         // Upload band mapping to GPU buffer
@@ -1439,11 +1437,9 @@ namespace helios {
                 launch_to_global_band.push_back(g);
             }
         }
-        if (launch_to_global_band.empty()) {
-            // Fallback: identity mapping (all bands active)
-            for (uint32_t g = 0; g < launch_band_count; g++) {
-                launch_to_global_band.push_back(g);
-            }
+        if (launch_to_global_band.size() != launch_band_count) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::launchDiffuseRays): The launch parameters flag " + std::to_string(launch_to_global_band.size()) + " launched band(s), but the current runBand() launch has " +
+                                 std::to_string(launch_band_count) + ". band_launch_flag must flag exactly the bands being launched.");
         }
 
         // Upload band mapping to GPU buffer
@@ -1655,10 +1651,9 @@ namespace helios {
                 launch_to_global_band.push_back(g);
             }
         }
-        if (launch_to_global_band.empty()) {
-            for (uint32_t g = 0; g < launch_band_count; g++) {
-                launch_to_global_band.push_back(g);
-            }
+        if (launch_to_global_band.size() != launch_band_count) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::launchCameraRays): The launch parameters flag " + std::to_string(launch_to_global_band.size()) + " launched band(s), but the current runBand() launch has " +
+                                 std::to_string(launch_band_count) + ". band_launch_flag must flag exactly the bands being launched.");
         }
 
         // Ensure camera_radiation_buffer exists at FULL resolution
@@ -2306,6 +2301,15 @@ namespace helios {
 
         // Zero radiation buffers
         zeroBuffer(radiation_in_buffer);
+
+        // The last scattering iteration of the previous runBand() leaves its output in the scatter buffers, and its outgoing energy in
+        // radiation_out. A runBand() without a direct launch adds its primary diffuse/emission launch straight into the scatter buffers,
+        // and a camera can read radiation_out without anything being uploaded first, so both must start this runBand() empty.
+        for (Buffer *carried_over_buffer: {&scatter_top_buffer, &scatter_bottom_buffer, &radiation_out_top_buffer, &radiation_out_bottom_buffer}) {
+            if (carried_over_buffer->buffer != VK_NULL_HANDLE) {
+                zeroBuffer(*carried_over_buffer);
+            }
+        }
 
         descriptors_dirty = true; // Result buffers created/changed
     }

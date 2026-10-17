@@ -486,9 +486,8 @@ void main() {
                         sp_local.z = 0.0;
                         sample_uv = vec2(sp_local.x + 0.5, sp_local.y + 0.5);
                     }
-                    if (!check_texture_mask(prim_idx, sample_uv, prim_type)) {
-                        continue; // Skip ray after 10 failed retries
-                    }
+                    // Launch from the last sample even if it is still transparent, as the OptiX backends do: dropping the ray would
+                    // lose its share of the primitive's energy, which is large for a sparsely masked primitive
                 }
             } else if (prim_type == 1 && mask_ids_buf.mask_ids[prim_idx] >= 0) {
                 // Triangle origin masking via rejection sampling
@@ -504,9 +503,7 @@ void main() {
                     float gamma = r2; // sp_local.x
                     masked = !mask_texel_is_opaque(mask_id, triangle_texture_uv(prim_idx, vec2(beta, gamma)));
                 }
-                if (masked) {
-                    continue; // Skip this ray - all 50 attempts hit transparent texels
-                }
+                // If all attempts hit transparent texels, launch from the last sample rather than drop the ray and its energy
             }
 
             // Transform to world space
@@ -554,6 +551,10 @@ void main() {
             float closest_t;
             uint hit_prim_idx;
             vec3 trace_origin = ray_origin;
+            // A ray that reaches the periodic wrap limit or the segment limit ends without reaching the sky or a surface, and
+            // deposits nothing, as in the OptiX backends.
+            bool ray_terminated = false;
+            int boundary_hits = 0;
 
             for (int step = 0; step < 32; ++step) {
                 hit_prim_idx = traverse_cwbvh(
@@ -573,15 +574,22 @@ void main() {
                         pc.domain_xmin, pc.domain_xmax, pc.domain_ymin, pc.domain_ymax,
                         wrapped_origin);
                     if (hit_periodic) {
+                        if (++boundary_hits >= MAX_PERIODIC_WRAPS) break; // wrap limit — the ray is abandoned
                         trace_origin = wrapped_origin;
                         continue;
                     }
                 }
 
-                if (hit_prim_idx == 0xFFFFFFFF) break; // miss — reached the sky
+                if (hit_prim_idx == 0xFFFFFFFF) { // miss — reached the sky
+                    ray_terminated = true;
+                    break;
+                }
 
                 // A primitive that is not a translucent cover for all launched bands is a normal surface.
-                if (hit_prim_idx == prim_idx || !glass_cover_all_bands(hit_prim_idx, pc.band_count, pc.material_band_count)) break; // real surface hit — handled by the band loop below
+                if (hit_prim_idx == prim_idx || !glass_cover_all_bands(hit_prim_idx, pc.band_count, pc.material_band_count)) { // real surface hit — handled by the band loop below
+                    ray_terminated = true;
+                    break;
+                }
 
                 // Glass pass-through: receive the cover's own outgoing radiance from the face the ray hits, then
                 // accumulate its per-band transmittance. What the cover itself absorbs and reflects is booked by the
@@ -603,7 +611,8 @@ void main() {
             }
 
             // Process hit or miss — loop over all bands (BVH traversal is band-independent)
-            bool hit_found = (hit_prim_idx != 0xFFFFFFFF);
+            bool hit_found = ray_terminated && (hit_prim_idx != 0xFFFFFFFF);
+            bool sky_found = ray_terminated && (hit_prim_idx == 0xFFFFFFFF);
 
             // Read hit surface normal once (shared across bands)
             vec3 hit_normal;
@@ -672,7 +681,7 @@ void main() {
                         scatter_top_val    = transmit_energy;
                     }
 
-                } else {
+                } else if (sky_found) {
                     // ========== MISS: Ray hit sky ==========
                     float diffuse_flux = diffuse_flux_buf.diffuse_flux[band];
 

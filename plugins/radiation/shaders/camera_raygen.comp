@@ -273,6 +273,9 @@ void shade_camera_hit(uint pixel_index, vec3 ray_origin, vec3 ray_dir, float clo
     // Determine which face was hit
     bool face = dot(normal, ray_dir) < 0.0; // true = hit top face
 
+    // Normal of the face the camera sees, for the specular term
+    vec3 viewed_normal = face ? normal : -normal;
+
     // Resolve the shared vertices of the facet that was hit, and the weights to blend them with. Done once for the whole hit rather than once per band.
     int smooth_v0 = -1;
     int smooth_v1 = -1;
@@ -404,6 +407,11 @@ void shade_camera_hit(uint pixel_index, vec3 ray_origin, vec3 ray_dir, float clo
                         light_direction = normalize(get_source_position(s) - hit_point);
                     }
 
+                    // A source behind the face the camera sees lights the other face, which this view cannot see a highlight on
+                    if (dot(light_direction, viewed_normal) <= 0.0) {
+                        continue;
+                    }
+
                     // Blinn-Phong half-vector (between light direction and view direction).
                     // These coincide when the camera looks straight down the light direction,
                     // which makes the difference zero and normalize() NaN.
@@ -420,7 +428,7 @@ void shade_camera_hit(uint pixel_index, vec3 ray_origin, vec3 ray_dir, float clo
                     // Blinn-Phong specular BRDF:
                     // (exp+2)/(2π) normalizes the distribution to unity
                     // Division by antialiasing_samples averages over Monte Carlo samples
-                    strength_spec += spec * scale * pow(max(0.0, dot(half_vec, normal)), exp_val)
+                    strength_spec += spec * scale * pow(max(0.0, dot(half_vec, viewed_normal)), exp_val)
                                    * (exp_val + 2.0) / (float(pc.antialiasing_samples) * 2.0 * PI);
                 }
             }
@@ -601,8 +609,7 @@ void main() {
             if (hit_periodic) {
                 ray_origin = wrapped_origin;
                 if (++wraps >= MAX_PERIODIC_WRAPS) {
-                    shade_camera_miss(pixel_index, ray_origin, ray_dir, strength); // out of wraps: shaded as a miss from the last wrap
-                    return;
+                    return; // out of wraps: the ray is abandoned and adds nothing, as in the OptiX backends
                 }
                 continue;
             }

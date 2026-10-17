@@ -34,7 +34,8 @@
 // Maximum number of segments a camera or pixel-label ray is traced in: each translucent cover passed and each
 // periodic-boundary wrap starts a new segment. Must match MAX_RAY_SEGMENTS in the OptiX backends.
 #define MAX_RAY_SEGMENTS 32
-// Maximum number of periodic-boundary wraps of a camera or pixel-label ray.
+// Number of periodic-boundary hits after which a ray of any type is abandoned (the ray is wrapped at most MAX_PERIODIC_WRAPS - 1
+// times): it deposits nothing, as if blocked. Must match MAX_PERIODIC_WRAPS in the OptiX backends.
 #define MAX_PERIODIC_WRAPS 10
 
 vec3 glass_tau_rho_alpha(float cos_theta, float n, float KL) {

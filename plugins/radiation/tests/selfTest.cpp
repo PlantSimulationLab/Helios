@@ -14882,3 +14882,305 @@ GPU_TEST_CASE("RadiationModel scattering bookkeeping - a band's result does not 
         DOCTEST_CHECK(flux_together.at(b) == doctest::Approx(flux_alone).epsilon(0.015));
     }
 }
+
+GPU_TEST_CASE("RadiationModel scattering bookkeeping - a repeated runBand without direct rays gives the same result") {
+    // Regression test. The last scattering iteration of a runBand() leaves its output in the scatter buffers. The OptiX backends
+    // cleared them at the start of the next runBand(), but the Vulkan backend did not, so a runBand() with no direct launch
+    // (diffuse-only or emission-only, e.g. repeated longwave calls in an energy-balance loop) added the previous call's leftover
+    // scattered energy to its own. The first call was correct and every later call was too high.
+    //
+    // The scene is the open-top reflective well, so the scattered energy left over after a shallow scattering depth is large.
+
+    const float wall_height = 2.f;
+
+    Context context;
+    std::vector<uint> UUIDs;
+    UUIDs.push_back(context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1)));
+    UUIDs.push_back(context.addPatch(make_vec3(-0.5, 0, 0.5 * wall_height), make_vec2(wall_height, 1), make_SphericalCoord(0.5 * M_PI, 0.5 * M_PI)));
+    UUIDs.push_back(context.addPatch(make_vec3(0.5, 0, 0.5 * wall_height), make_vec2(wall_height, 1), make_SphericalCoord(0.5 * M_PI, 1.5 * M_PI)));
+    UUIDs.push_back(context.addPatch(make_vec3(0, -0.5, 0.5 * wall_height), make_vec2(1, wall_height), make_SphericalCoord(0.5 * M_PI, 0)));
+    UUIDs.push_back(context.addPatch(make_vec3(0, 0.5, 0.5 * wall_height), make_vec2(1, wall_height), make_SphericalCoord(0.5 * M_PI, M_PI)));
+    context.setPrimitiveData(UUIDs, "reflectivity_SW", 0.9f);
+
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiationmodel.disableMessages();
+    radiationmodel.addRadiationBand("SW");
+    radiationmodel.disableEmission("SW");
+    radiationmodel.setDiffuseRayCount("SW", 10000);
+    radiationmodel.setScatteringDepth("SW", 2);
+    radiationmodel.setDiffuseRadiationFlux("SW", 1000.f);
+    radiationmodel.updateGeometry();
+
+    std::vector<float> floor_flux;
+    for (int call = 0; call < 3; call++) {
+        radiationmodel.runBand("SW");
+        float flux;
+        context.getPrimitiveData(UUIDs.front(), "radiation_flux_SW", flux);
+        floor_flux.push_back(flux);
+    }
+
+    DOCTEST_CAPTURE(floor_flux.at(0));
+    DOCTEST_CAPTURE(floor_flux.at(1));
+    DOCTEST_CAPTURE(floor_flux.at(2));
+    DOCTEST_REQUIRE(floor_flux.at(0) > 0.f);
+    DOCTEST_CHECK(floor_flux.at(1) == doctest::Approx(floor_flux.at(0)).epsilon(0.02));
+    DOCTEST_CHECK(floor_flux.at(2) == doctest::Approx(floor_flux.at(0)).epsilon(0.02));
+}
+
+GPU_TEST_CASE("RadiationModel - a specular highlight appears on the bottom face of a surface lit and viewed from below") {
+    // Regression test. The Blinn-Phong term used the primitive's fixed (top-face) normal. Viewed from below with the light also
+    // below, the half vector points away from that normal, so the bottom face of a two-sided surface never showed a highlight on
+    // the OptiX 6 and Vulkan backends. The normal must face the side the camera sees.
+
+    Context context;
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(patch, "twosided_flag", uint(1));
+    context.setPrimitiveData(patch, "reflectivity_SUN", 0.05f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SUN");
+    radiation.setScatteringDepth("SUN", 1);
+    radiation.disableEmission("SUN");
+    radiation.setDirectRayCount("SUN", 10000);
+    radiation.setDiffuseRayCount("SUN", 0);
+    uint source = radiation.addCollimatedRadiationSource(make_vec3(0, 0, -1)); // the sun is BELOW the patch
+    radiation.setSourceFlux(source, "SUN", 1000.0f);
+
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = make_int2(24, 24);
+    camera_properties.lens_diameter = 0.0f;
+    camera_properties.focal_plane_distance = 2.0f;
+    camera_properties.HFOV = 20.0f;
+    camera_properties.exposure = "manual";
+    camera_properties.white_balance = "off";
+    radiation.addRadiationCamera("under_cam", {"SUN"}, make_vec3(0, 0, -2), make_vec3(0, 0, 0), camera_properties, 50);
+
+    // Renders and returns the mean pixel over the patch
+    auto render = [&]() {
+        radiation.updateGeometry();
+        radiation.runBand("SUN");
+        std::vector<float> pixels;
+        std::vector<uint> pixel_UUIDs;
+        context.getGlobalData("camera_under_cam_SUN", pixels);
+        context.getGlobalData("camera_under_cam_pixel_UUID", pixel_UUIDs);
+        double sum = 0;
+        size_t count = 0;
+        for (size_t pixel = 0; pixel < pixels.size(); pixel++) {
+            if (pixel_UUIDs.at(pixel) == patch + 1) {
+                sum += pixels.at(pixel);
+                count++;
+            }
+        }
+        DOCTEST_REQUIRE(count > 0);
+        return float(sum / double(count));
+    };
+
+    context.setPrimitiveData(patch, "specular_exponent", -1.0f);
+    const float diffuse = render();
+    context.setPrimitiveData(patch, "specular_exponent", 20.0f);
+    const float with_specular = render();
+
+    DOCTEST_CAPTURE(diffuse);
+    DOCTEST_CAPTURE(with_specular);
+    DOCTEST_REQUIRE(diffuse > 0.f);
+    DOCTEST_CHECK(with_specular - diffuse > 2.0f * diffuse);
+}
+
+GPU_TEST_CASE("RadiationModel - rays from a sparsely masked primitive are not lost") {
+    // Regression test. Ray origins on a masked primitive are resampled until they land on an opaque texel. After a fixed number
+    // of failed attempts the OptiX backends launch the ray from the last sample, but the Vulkan backend dropped it (diffuse rays
+    // from patches, and direct and diffuse rays from triangles), so a sparsely masked primitive absorbed far less than an
+    // unmasked one in the same light. Absorbed flux per unit area must not depend on the mask.
+
+    // A mask with 1% opaque texels
+    const std::string mask_file = (std::filesystem::temp_directory_path() / "helios_radiation_sparse_mask.png").string();
+    const uint mask_size = 100;
+    std::vector<RGBAcolor> mask_pixels(mask_size * mask_size, make_RGBAcolor(0.f, 1.f, 0.f, 0.f));
+    for (uint j = 0; j < mask_size; j += 10) {
+        for (uint i = 0; i < mask_size; i += 10) {
+            mask_pixels.at(j * mask_size + i) = make_RGBAcolor(0.f, 1.f, 0.f, 1.f);
+        }
+    }
+    helios::writePNG(mask_file, mask_size, mask_size, mask_pixels);
+
+    // shape: 0 = patch, 1 = triangle
+    auto absorbedFlux = [&](int shape, bool masked, bool direct) {
+        Context context;
+        uint UUID;
+        if (shape == 0) {
+            UUID = masked ? context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), mask_file.c_str()) : context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        } else {
+            const vec3 v0 = make_vec3(0, 0, 0), v1 = make_vec3(1, 0, 0), v2 = make_vec3(1, 1, 0);
+            UUID = masked ? context.addTriangle(v0, v1, v2, mask_file.c_str(), make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1)) : context.addTriangle(v0, v1, v2);
+        }
+        context.setPrimitiveData(UUID, "reflectivity_SW", 0.f);
+        context.setPrimitiveData(UUID, "transmissivity_SW", 0.f);
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        model.addRadiationBand("SW");
+        model.disableEmission("SW");
+        model.setScatteringDepth("SW", 0);
+        if (direct) {
+            uint sun = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+            model.setSourceFlux(sun, "SW", 1000.f);
+            model.setDirectRayCount("SW", 10000);
+            model.setDiffuseRadiationFlux("SW", 0.f);
+        } else {
+            model.setDiffuseRayCount("SW", 10000);
+            model.setDiffuseRadiationFlux("SW", 1000.f);
+        }
+        model.updateGeometry();
+        model.runBand("SW");
+
+        float flux;
+        context.getPrimitiveData(UUID, "radiation_flux_SW", flux);
+        return flux;
+    };
+
+    for (int shape = 0; shape < 2; shape++) {
+        for (bool direct: {true, false}) {
+            const float unmasked = absorbedFlux(shape, false, direct);
+            const float masked = absorbedFlux(shape, true, direct);
+            DOCTEST_CAPTURE(shape);
+            DOCTEST_CAPTURE(direct);
+            DOCTEST_CAPTURE(unmasked);
+            DOCTEST_CAPTURE(masked);
+            DOCTEST_CHECK(unmasked > 0.f);
+            DOCTEST_CHECK(masked == doctest::Approx(unmasked).epsilon(0.03));
+        }
+    }
+
+    std::filesystem::remove(mask_file);
+}
+
+GPU_TEST_CASE("RadiationModel - an object behind an extended light source does not shadow it") {
+    // Regression test. A shadow ray toward a rectangle, disk or sphere source must stop at the point it sampled on the source.
+    // The Vulkan backend instead stopped at the distance to the source's CENTRE, so for a receiver off to the side of a large
+    // source, an object just behind the emitting face (farther than the sampled point but nearer than the centre) blocked the
+    // light. The OptiX backends stop at the sampled point.
+
+    auto receiverFlux = [](bool add_object_behind_source) {
+        Context context;
+        uint receiver = context.addPatch(make_vec3(1.5, 0, 0), make_vec2(0.5, 0.5));
+        context.setPrimitiveData(receiver, "reflectivity_SW", 0.f);
+        if (add_object_behind_source) {
+            // Horizontal plate just above the downward-facing source, over the receiver's side of it
+            context.addPatch(make_vec3(1.5, 0, 1.1), make_vec2(2, 2));
+        }
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        model.addRadiationBand("SW");
+        model.disableEmission("SW");
+        model.setScatteringDepth("SW", 0);
+        model.setDirectRayCount("SW", 10000);
+        model.setDiffuseRadiationFlux("SW", 0.f);
+        // 4 x 4 m source at z = 1 centred over the origin, emitting downward
+        uint source = model.addRectangleRadiationSource(make_vec3(0, 0, 1), make_vec2(4, 4), make_vec3(M_PI, 0, 0));
+        model.setSourceFlux(source, "SW", 1000.f);
+        model.updateGeometry();
+        model.runBand("SW");
+
+        float flux;
+        context.getPrimitiveData(receiver, "radiation_flux_SW", flux);
+        return flux;
+    };
+
+    const float open = receiverFlux(false);
+    const float with_object_behind_source = receiverFlux(true);
+    DOCTEST_CAPTURE(open);
+    DOCTEST_CAPTURE(with_object_behind_source);
+    DOCTEST_REQUIRE(open > 0.f);
+    DOCTEST_CHECK(with_object_behind_source == doctest::Approx(open).epsilon(0.02));
+}
+
+GPU_TEST_CASE("RadiationModel - periodic boundaries wrap rays in a domain far from the origin") {
+    // A ray reaching a periodic boundary face is moved to the opposite face. The OptiX 6 and Vulkan backends identify the face by
+    // comparing the hit point to the domain bounds with an absolute tolerance of 1e-5, which is below the float spacing of
+    // coordinates far from the origin (e.g. UTM-referenced scenes). For the axis-aligned boundary faces the hit point lands
+    // exactly on the face, so the wrap must still work there.
+    //
+    // The scene is a ground patch fully covered by a roof of the same size, lit at 45 degrees with x-periodic boundaries: every
+    // ray from the ground hits the roof, either directly or after one wrap, so the ground is in full shade wherever it is.
+
+    auto groundFlux = [](float x_offset) {
+        Context context;
+        uint ground = context.addPatch(make_vec3(x_offset, 0, 0), make_vec2(1, 1));
+        context.addPatch(make_vec3(x_offset, 0, 1), make_vec2(1, 1));
+        context.setPrimitiveData(context.getAllUUIDs(), "reflectivity_SW", 0.f);
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        model.addRadiationBand("SW");
+        model.disableEmission("SW");
+        model.setScatteringDepth("SW", 0);
+        model.setDirectRayCount("SW", 10000);
+        model.setDiffuseRadiationFlux("SW", 0.f);
+        uint sun = model.addCollimatedRadiationSource(make_vec3(1, 0, 1));
+        model.setSourceFlux(sun, "SW", 1000.f);
+        model.enforcePeriodicBoundary("x");
+        model.updateGeometry();
+        model.runBand("SW");
+
+        float flux;
+        context.getPrimitiveData(ground, "radiation_flux_SW", flux);
+        return flux;
+    };
+
+    // 1000*cos(45 deg) would reach an unshaded ground
+    for (float x_offset: {0.f, 1000.f, 10000.f, 100000.f}) {
+        const float flux = groundFlux(x_offset);
+        DOCTEST_CAPTURE(x_offset);
+        DOCTEST_CAPTURE(flux);
+        DOCTEST_CHECK(flux < 20.f);
+    }
+}
+
+GPU_TEST_CASE("RadiationModel - a ray that reaches the periodic wrap limit is treated as blocked") {
+    // A ray crossing a periodic boundary is wrapped to the opposite side at most a fixed number of times (MAX_PERIODIC_WRAPS = 10
+    // boundary hits, shared by all backends); a ray that reaches the limit deposits nothing, as if blocked. The OptiX backends did
+    // this, but the Vulkan backend kept wrapping for up to 31 boundary hits and then counted the ray as reaching the source.
+    //
+    // A ground patch is lit at a low angle in an x-periodic domain made tall by a patch off to the side (outside the ground's y
+    // range, so no ray from the ground can hit it). Every ray from the ground is unobstructed, so the number of wraps it needs to
+    // climb out of the top of the domain is the only thing that decides whether it is counted. This pins down the documented
+    // truncation, which deliberately under-counts rays needing more wraps; raising the limit must change every backend together.
+
+    auto groundFlux = [](float domain_height) {
+        Context context;
+        uint ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context.addPatch(make_vec3(0, 5, domain_height), make_vec2(1, 1));
+        context.setPrimitiveData(context.getAllUUIDs(), "reflectivity_SW", 0.f);
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        model.addRadiationBand("SW");
+        model.disableEmission("SW");
+        model.setScatteringDepth("SW", 0);
+        model.setDirectRayCount("SW", 10000);
+        model.setDiffuseRadiationFlux("SW", 0.f);
+        // Rises 0.2 m for every 1 m travelled in x, so a 1 m wide domain is crossed once per 0.2 m of height
+        uint sun = model.addCollimatedRadiationSource(make_vec3(1, 0, 0.2));
+        model.setSourceFlux(sun, "SW", 1000.f);
+        model.enforcePeriodicBoundary("x");
+        model.updateGeometry();
+        model.runBand("SW");
+
+        float flux;
+        context.getPrimitiveData(ground, "radiation_flux_SW", flux);
+        return flux;
+    };
+
+    // A 1 m tall domain is left after at most 5 boundary crossings: the ground receives the full beam, 1000*sin(elevation)
+    const float expected_unshaded = 1000.f * 0.2f / std::sqrt(1.f + 0.2f * 0.2f);
+    const float few_wraps = groundFlux(1.f);
+    DOCTEST_CAPTURE(few_wraps);
+    DOCTEST_CHECK(few_wraps == doctest::Approx(expected_unshaded).epsilon(0.03));
+
+    // A 4 m tall domain needs about 20 crossings, beyond the limit, so no ray is counted
+    const float many_wraps = groundFlux(4.f);
+    DOCTEST_CAPTURE(many_wraps);
+    DOCTEST_CHECK(many_wraps < 0.01f * expected_unshaded);
+}
