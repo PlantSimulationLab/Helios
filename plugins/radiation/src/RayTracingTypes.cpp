@@ -134,14 +134,6 @@ namespace helios {
             helios_runtime_error("RayTracingGeometry validation failed: tiles.vertices.size()=" + std::to_string(tiles.vertices.size()) + " != tile_count*4=" + std::to_string(tile_count * 4));
         }
 
-        if (voxels.UUIDs.size() != voxel_count) {
-            helios_runtime_error("RayTracingGeometry validation failed: voxels.UUIDs.size()=" + std::to_string(voxels.UUIDs.size()) + " != voxel_count=" + std::to_string(voxel_count));
-        }
-
-        if (voxels.vertices.size() != voxel_count * 8) {
-            helios_runtime_error("RayTracingGeometry validation failed: voxels.vertices.size()=" + std::to_string(voxels.vertices.size()) + " != voxel_count*8=" + std::to_string(voxel_count * 8));
-        }
-
         if (bboxes.UUIDs.size() != bbox_count) {
             helios_runtime_error("RayTracingGeometry validation failed: bboxes.UUIDs.size()=" + std::to_string(bboxes.UUIDs.size()) + " != bbox_count=" + std::to_string(bbox_count));
         }

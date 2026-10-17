@@ -87,12 +87,11 @@ namespace helios {
                 return computeDiskAABB(prim_index);
             case 3:
                 return computeTileAABB(prim_index);
-            case 4:
-                return computeVoxelAABB(prim_index);
             case 5:
                 return computeBBoxAABB(prim_index);
             default:
-                return AABB{{0, 0, 0}, {0, 0, 0}};
+                helios_runtime_error("ERROR (BVHBuilder::computePrimitiveAABB): Primitive " + std::to_string(prim_index) + " has type " + std::to_string(prim_type) + ", which the BVH builder does not support.");
+                return AABB{};
         }
     }
 
@@ -181,29 +180,6 @@ namespace helios {
 
         for (uint32_t v = 0; v < 4; ++v) {
             helios::vec3 world_vertex = transformPoint(transform, canonical_quad[v]);
-
-            bounds.min.x = std::min(bounds.min.x, world_vertex.x);
-            bounds.min.y = std::min(bounds.min.y, world_vertex.y);
-            bounds.min.z = std::min(bounds.min.z, world_vertex.z);
-            bounds.max.x = std::max(bounds.max.x, world_vertex.x);
-            bounds.max.y = std::max(bounds.max.y, world_vertex.y);
-            bounds.max.z = std::max(bounds.max.z, world_vertex.z);
-        }
-
-        return bounds;
-    }
-
-    AABB BVHBuilder::computeVoxelAABB(uint32_t prim_index) const {
-        // O(1) lookup using pre-computed offset table
-        uint32_t voxel_index = type_offsets[prim_index];
-
-        // Voxels have 8 vertices
-        const float *transform = &geometry->transform_matrices[prim_index * 16];
-        AABB bounds{{1e30f, 1e30f, 1e30f}, {-1e30f, -1e30f, -1e30f}};
-
-        for (uint32_t v = 0; v < 8; ++v) {
-            helios::vec3 vertex = geometry->voxels.vertices[voxel_index * 8 + v];
-            helios::vec3 world_vertex = transformPoint(transform, vertex);
 
             bounds.min.x = std::min(bounds.min.x, world_vertex.x);
             bounds.min.y = std::min(bounds.min.y, world_vertex.y);

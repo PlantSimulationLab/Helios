@@ -159,8 +159,9 @@ static __device__ float evaluateDiffuseAngularDistribution(const float3 &ray_dir
     if (sky_params.w > 0.f) {
         float gamma     = acos_safe(dot(ray_dir, peak_dir)) * 180.f / M_PI;
         float cos_theta = fmaxf(ray_dir.z, 0.f);
-        float pattern   = (1.f + sky_params.x * expf(-gamma / sky_params.y))
-                        * (1.f + (sky_params.z - 1.f) * (1.f - cos_theta));
+        // A non-positive circumsolar width means no circumsolar region (a width of zero would give 0/0 = NaN toward the sun)
+        float circumsolar_term = (sky_params.y > 0.f) ? (1.f + sky_params.x * expf(-gamma / sky_params.y)) : 1.f;
+        float pattern   = circumsolar_term * (1.f + (sky_params.z - 1.f) * (1.f - cos_theta));
         return pattern * sky_params.w * M_PI;
     }
     return 1.f; // isotropic
@@ -373,13 +374,19 @@ extern "C" __global__ void __intersection__patch() {
 
     if (params.twosided_flag[pos] >= 2) return; // invisible primitive: never intersected
 
+    // A direct or diffuse ray never hits the primitive it was launched from. The minimum ray distance alone does not ensure this
+    // far from the origin, where the rounding error of the launch point can exceed it.
+    const PerRayData *prd = getPayloadPRD();
+    if (prd->skip_origin && params.primitive_positions[prd->origin_UUID] == pos) return;
+
     float T[16];
     loadTransformMatrix(pos, T);
 
     if (ptype == 0 || ptype == 3) {
         // ---- Patch: rectangle in canonical [-0.5, 0.5]^2 space ----
-        // Normal = third column of rotation part of T
-        float3 normal = make_float3(T[2], T[6], T[10]);
+        // Normal = cross product of the first two columns of T, the convention of the ray-generation programs (the third column
+        // points the other way for a mirrored transform)
+        float3 normal = normalize(cross(make_float3(T[0], T[4], T[8]), make_float3(T[1], T[5], T[9])));
         float  nd     = dot(ray_direction, normal);
         if (fabsf(nd) < 1e-8f) return; // ray parallel to patch plane
 
@@ -507,11 +514,6 @@ extern "C" __global__ void __intersection__tile() {
     // Tile intersection is handled by __intersection__patch (ptype == 3).
 }
 
-extern "C" __global__ void __intersection__voxel() {
-    // Voxel intersection is not yet implemented. Voxel primitives are rejected at
-    // the host level in updateGeometry(), so this program is never invoked.
-}
-
 extern "C" __global__ void __intersection__bbox() {
     // Bbox intersection is not yet implemented in this backend.
 }
@@ -529,8 +531,8 @@ extern "C" __global__ void __intersection__bbox() {
 #define MAX_PERIODIC_WRAPS 10
 
 // Compute |cos(theta)| between a ray and the surface normal of a primitive.
-// Mirrors the normal construction in __intersection__patch (3rd transform column for patch/tile,
-// edge cross-product for triangle). Returns a value in (0, 1]; degenerate cases return 1.
+// Mirrors the normal construction in __intersection__patch (cross product of the first two transform
+// columns for patch/tile, edge cross-product for triangle). Returns a value in (0, 1]; degenerate cases return 1.
 static __forceinline__ __device__ float coverCosTheta(uint32_t hit_position, const float3 &ray_dir) {
     const uint32_t ptype = params.primitive_type[hit_position];
     float T[16];
@@ -543,8 +545,8 @@ static __forceinline__ __device__ float coverCosTheta(uint32_t hit_position, con
         const float3 e0 = make_float3(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z);
         const float3 e1 = make_float3(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z);
         normal = cross(e0, e1);
-    } else { // patch or tile: normal is the 3rd column of the rotation part
-        normal = make_float3(T[2], T[6], T[10]);
+    } else { // patch or tile
+        normal = cross(make_float3(T[0], T[4], T[8]), make_float3(T[1], T[5], T[9]));
     }
     const float nmag = d_magnitude(normal);
     if (nmag < 1e-12f) return 1.f;
@@ -760,7 +762,7 @@ extern "C" __global__ void __miss__diffuse() {
 
     if (params.diffuse_flux == nullptr) {
         printf("ERROR (OptiX8 __miss__diffuse): diffuse_flux is null. "
-               "Call updateDiffuseRadiation() before launchDiffuseRays().\n");
+               "launchDiffuseRays() must be given the diffuse flux of each launched band.\n");
         __trap();
     }
 
@@ -943,6 +945,7 @@ static __forceinline__ __device__ void handlePeriodicBoundaryHit(PerRayData *prd
 
     const uint32_t bbox_local = hit_uuid - params.bbox_UUID_base;
     prd->periodic_hit = hit_pos;
+    prd->periodic_hit_t = t_hit;
 
     if (params.periodic_flag.x == 1 && bbox_local < 2) {
         // x-faces: bbox 0 = x-min, bbox 1 = x-max
@@ -1164,8 +1167,8 @@ extern "C" __global__ void __closesthit__camera() {
     float3 n1 = make_float3(1.f, 0.f, 0.f); d_transformPoint(T, n1);
     float3 n2 = make_float3(0.f, 1.f, 0.f); d_transformPoint(T, n2);
     float3 normal = normalize(cross(n1 - n0, n2 - n0));
-    // Ensure normal points toward the camera (consistent with face_top)
-    if (face_top != (dot(normal, ray_direction) < 0.f)) {
+    // The normal of the face the camera sees
+    if (dot(normal, ray_direction) > 0.f) {
         normal = make_float3(-normal.x, -normal.y, -normal.z);
     }
 
@@ -1319,7 +1322,12 @@ extern "C" __global__ void __closesthit__camera() {
                                                            params.source_positions[rr].y - hp.y,
                                                            params.source_positions[rr].z - hp.z));
                     }
-                    const float3 spec_dir = normalize(light_dir - ray_direction);
+                    // A source on the other side of the surface lights the face the camera does not see
+                    if (dot(light_dir, normal) <= 0.f) continue;
+                    const float3 half_vector = light_dir - ray_direction;
+                    const float  half_length = d_magnitude(half_vector);
+                    if (half_length < 1e-6f) continue;
+                    const float3 spec_dir = half_vector / half_length;
                     const float exponent  = params.specular_exponent[hit_position];
                     const float scale_coeff = params.specular_scale[hit_position]; // 1 for a primitive without "specular_scale" data
                     const float cos_spec = fmaxf(0.f, dot(spec_dir, normal));
@@ -1411,8 +1419,10 @@ extern "C" __global__ void __raygen__direct() {
     float T[16];
     loadTransformMatrix(prim_pos, T);
 
+    // Seeded by the global primitive position: rays are launched in batches of at most 65535 primitives, and a batch-local index
+    // would give primitives k and k + 65535 identical samples.
     const uint32_t linear_idx = xi + dim_x * yi;
-    uint32_t seed = tea<16>(linear_idx + Nrays * prim_local, params.random_seed);
+    uint32_t seed = tea<16>(linear_idx + Nrays * prim_pos, params.random_seed);
 
     for (int jj = 0; jj < NY; jj++) {
         for (int ii = 0; ii < NX; ii++) {
@@ -1605,6 +1615,7 @@ extern "C" __global__ void __raygen__direct() {
                 prd.seed                 = seed;
                 prd.origin_UUID          = UUID;
                 prd.source_ID            = (unsigned char)rr;
+                prd.skip_origin          = true;
                 prd.hit_periodic_boundary = false;
                 prd.face                 = (dot(ray_direction, normal) > 0.f);
                 initCoverTransmittance(prd); // translucent-cover attenuation starts at 1 (no covers crossed)
@@ -1612,15 +1623,18 @@ extern "C" __global__ void __raygen__direct() {
                 // Strength set above per source type
                 prd.strength = strength;
 
-                // Only fire from the face pointing toward source (or two-sided)
+                // Only fire from the top face, or from the bottom face of a two-sided primitive (twosided_flag 1). An invisible
+                // primitive (twosided_flag 3) fires no rays.
                 const int8_t tsf = params.twosided_flag[prim_pos];
-                if (!prd.face && tsf == 0) continue;
-                if (tsf == 3) continue; // reserved flag — skip
+                if (!prd.face && tsf != 1) continue;
+                if (tsf == 3) continue;
 
                 uint32_t u0, u1;
                 float3 current_origin = ray_origin;
 
-                for (int wrap = 0; wrap < 10; ++wrap) {
+                // A ray that reaches the wrap limit deposits nothing (treated as blocked). After a wrap, a ray toward a finite
+                // source only has the rest of the distance to the point it sampled on the source left to travel.
+                for (int wrap = 0; wrap < MAX_PERIODIC_WRAPS; ++wrap) {
                     packPointer(&prd, u0, u1);
                     optixTrace(
                         params.traversable,
@@ -1638,6 +1652,9 @@ extern "C" __global__ void __raygen__direct() {
                     );
                     if (!prd.hit_periodic_boundary) break;
                     current_origin = prd.periodic_hit;
+                    if (src_type != 0) {
+                        ray_tmax = fmaxf(ray_tmax - prd.periodic_hit_t, 2e-4f); // stays above tmin
+                    }
                     prd.hit_periodic_boundary = false;
                 }
 
@@ -1675,9 +1692,9 @@ extern "C" __global__ void __raygen__diffuse() {
     float T[16];
     loadTransformMatrix(prim_pos, T);
 
-    // Seed once per ray index
+    // Seed once per ray index, by the global primitive position (see __raygen__direct)
     const uint32_t linear_idx = theta_idx + dim_x * phi_idx;
-    uint32_t seed = tea<16>(linear_idx + dimxy * prim_local, params.random_seed);
+    uint32_t seed = tea<16>(linear_idx + dimxy * prim_pos, params.random_seed);
 
     // Stratified cosine-weighted hemisphere sampling
     const float Rt = (theta_idx + rnd(seed)) / float(dim_x);
@@ -1790,6 +1807,7 @@ extern "C" __global__ void __raygen__diffuse() {
             prd.seed                  = seed;
             prd.origin_UUID           = UUID;
             prd.source_ID             = (unsigned char)params.Nsources; // diffuse/scatter material slot, weighted by the band's combined incident spectrum
+            prd.skip_origin           = true;
             prd.hit_periodic_boundary = false;
             prd.strength              = 1.0 / double(dimxy);
             initCoverTransmittance(prd); // translucent-cover attenuation starts at 1 (no covers crossed)
@@ -1925,6 +1943,7 @@ extern "C" __global__ void __raygen__camera() {
     PerRayData prd;
     prd.strength             = 1.0f / (float)dim_x;
     prd.origin_UUID          = pixel_index;
+    prd.skip_origin          = false; // origin_UUID is a pixel index
     prd.face                 = true;
     prd.source_ID            = 0;
     prd.seed                 = seed;
@@ -2004,6 +2023,7 @@ extern "C" __global__ void __raygen__pixel_label() {
     PerRayData prd;
     prd.strength             = 0.f; // used as the distance travelled before any translucent covers passed
     prd.origin_UUID          = pixel_index;
+    prd.skip_origin          = false; // origin_UUID is a pixel index
     prd.face                 = true;
     prd.source_ID            = 0;
     prd.seed                 = seed;
@@ -2021,6 +2041,7 @@ extern "C" __global__ void __raygen__pixel_label() {
     // any translucent covers.
     float3 cur_origin = ray_origin;
     int wraps = 0;
+    bool ray_ended = false;
     for (int segment = 0; segment < MAX_RAY_SEGMENTS; segment++) {
         prd.hit_periodic_boundary = false;
         prd.hit_cover             = false;
@@ -2035,7 +2056,18 @@ extern "C" __global__ void __raygen__pixel_label() {
         } else if (prd.hit_cover) {
             cur_origin = prd.cover_exit;
         } else {
+            ray_ended = true;
             break;
+        }
+    }
+
+    // A ray that runs out of wraps or segments is treated as blocked: the pixel shows no primitive, as for a ray that leaves the scene
+    if (!ray_ended) {
+        if (params.camera_pixel_label) {
+            params.camera_pixel_label[pixel_index] = 0u;
+        }
+        if (params.camera_pixel_depth) {
+            params.camera_pixel_depth[pixel_index] = -1.0f;
         }
     }
 }

@@ -112,7 +112,7 @@ RT_PROGRAM void direct_raygen() {
                 // FIX: Use objID (position) instead of UUID for primitive_solid_fraction access
                 if (ID >= 0 && primitive_solid_fraction[objID] > 0.f && primitive_solid_fraction[objID] < 1.f) { // has texture transparency
 
-                    d_sampleTexture_triangle(sp, v0, v1, v2, prd, m_trans, ID, puvID);
+                    d_sampleTexture_triangle(sp, prd, ID, puvID);
                 }
 
             } else if (ptype == 2) { // Disk
@@ -128,10 +128,6 @@ RT_PROGRAM void direct_raygen() {
                 d_transformPoint(m_trans, v2);
 
                 normal = normalize(cross(v1 - v0, v2 - v0));
-
-            } else if (ptype == 4) { // Voxel
-
-                float Rz = rnd(prd.seed);
             }
 
             // translate the ray to the location of the primitive
@@ -239,13 +235,18 @@ RT_PROGRAM void direct_raygen() {
 
                 if ((prd.face == 1 || twosided_flag[objID] == 1) && twosided_flag[objID] != 3) {
 
-                    for (int wrap = 0; wrap < 10; ++wrap) {
+                    // A ray that reaches the wrap limit deposits nothing (treated as blocked). After a wrap, a ray toward a finite
+                    // source only has the rest of the distance to the point it sampled on the source left to travel.
+                    for (int wrap = 0; wrap < MAX_PERIODIC_WRAPS; ++wrap) {
                         rtTrace(top_object, ray, prd);
 
                         if (!prd.hit_periodic_boundary)
                             break; // real hit or miss → done
 
                         ray.origin = prd.periodic_hit;
+                        if (source_types[rr] != 0) {
+                            ray.tmax = fmaxf(ray.tmax - prd.periodic_hit_t, 2e-4f); // stays above tmin
+                        }
                         prd.hit_periodic_boundary = false;
                     }
                 }
@@ -343,7 +344,7 @@ RT_PROGRAM void diffuse_raygen() {
                 int ID = maskID[objID];
                 if (ID >= 0) { // has texture transparency
 
-                    d_sampleTexture_triangle(sp, v0, v1, v2, prd, m_trans, ID, puvID);
+                    d_sampleTexture_triangle(sp, prd, ID, puvID);
                 }
 
             } else if (ptype == 2) { // Disk
@@ -391,13 +392,6 @@ RT_PROGRAM void diffuse_raygen() {
                 float3 v2 = make_float3(0, 1, 0);
                 d_transformPoint(m_trans, v2);
                 normal = normalize(cross(v1 - v0, v2 - v0));
-
-            } else if (ptype == 4) { // Voxel
-
-                // Map sample to cube [-0.5,0.5] [-0.5,0.5] [-0.5,0.5]
-                sp.x = -0.5f + Rx;
-                sp.y = -0.5f + Ry;
-                sp.z = -0.5f + rnd(prd.seed);
             }
 
             // Choose random hemispherical direction - map samples to hemisphere (from Suffern (2007) "Ray tracing fom the ground up" Chap. 6)
@@ -408,12 +402,7 @@ RT_PROGRAM void diffuse_raygen() {
             Rt = (launch_index.x + rnd(prd.seed)) / float(launch_dim.x);
             Rp = (launch_index.y + rnd(prd.seed)) / float(launch_dim.y);
 
-            float t;
-            if (ptype == 4) { // voxel
-                t = acos_safe(1.f - Rt);
-            } else { // other
-                t = asin_safe(sqrtf(Rt));
-            }
+            float t = asin_safe(sqrtf(Rt));
             float p = 2.f * M_PI * Rp;
 
             float3 ray_direction;
@@ -424,98 +413,76 @@ RT_PROGRAM void diffuse_raygen() {
             float3 ray_origin;
             optix::Ray ray;
 
-            if (ptype == 4) { // voxel
+            ray_direction = d_rotatePoint(ray_direction, acos_safe(normal.z), atan2(normal.y, normal.x));
 
-                prd.strength = 0.5f / float(dimx);
-                prd.origin_UUID = UUID;
-                prd.face = 0;
-                prd.source_ID = Nsources; // diffuse/scatter material slot, weighted by the band's combined incident spectrum
-                prd.hit_periodic_boundary = false;
+            prd.strength = 1.f / float(dimx);
 
-                ray_origin = sp;
-                d_transformPoint(m_trans, ray_origin);
+            prd.origin_UUID = UUID;
+            prd.source_ID = Nsources; // diffuse/scatter material slot, weighted by the band's combined incident spectrum
+            prd.hit_periodic_boundary = false;
+            initCoverTransmittance(prd); // translucent-cover attenuation starts at 1 (no covers crossed)
+
+            // ---- "top" surface launch -------
+            ray_origin = sp;
+            d_transformPoint(m_trans, ray_origin);
+
+            if (launch_face == 1 && twosided_flag[objID] != 3) {
 
                 ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
-                initCoverTransmittance(prd);
-                rtTrace(top_object, ray, prd);
 
-                ray = optix::make_Ray(ray_origin, -ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
-                initCoverTransmittance(prd);
-                rtTrace(top_object, ray, prd);
+                prd.face = 1;
 
-            } else { // not a voxel
+                // Trace segment by segment: re-trace after wrapping through a periodic boundary and after passing a
+                // translucent cover.
+                prd.hit_cover = false;
+                int wraps = 0;
+                for (int segment = 0; segment < MAX_RAY_SEGMENTS; ++segment) {
+                    rtTrace(top_object, ray, prd);
 
-                ray_direction = d_rotatePoint(ray_direction, acos_safe(normal.z), atan2(normal.y, normal.x));
-
-                prd.strength = 1.f / float(dimx);
-
-                prd.origin_UUID = UUID;
-                prd.source_ID = Nsources; // diffuse/scatter material slot, weighted by the band's combined incident spectrum
-                prd.hit_periodic_boundary = false;
-                initCoverTransmittance(prd); // translucent-cover attenuation starts at 1 (no covers crossed)
-
-                // ---- "top" surface launch -------
-                ray_origin = sp;
-                d_transformPoint(m_trans, ray_origin);
-
-                if (launch_face == 1 && twosided_flag[objID] != 3) {
-
-                    ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
-
-                    prd.face = 1;
-
-                    // Trace segment by segment: re-trace after wrapping through a periodic boundary and after passing a
-                    // translucent cover.
-                    prd.hit_cover = false;
-                    int wraps = 0;
-                    for (int segment = 0; segment < MAX_RAY_SEGMENTS; ++segment) {
-                        rtTrace(top_object, ray, prd);
-
-                        if (prd.hit_periodic_boundary) {
-                            if (++wraps >= MAX_PERIODIC_WRAPS) {
-                                break;
-                            }
-                            ray.origin = prd.periodic_hit;
-                            prd.hit_periodic_boundary = false;
-                        } else if (prd.hit_cover) {
-                            ray.origin = prd.cover_exit;
-                            prd.hit_cover = false;
-                        } else {
-                            break; // real hit or miss → done
+                    if (prd.hit_periodic_boundary) {
+                        if (++wraps >= MAX_PERIODIC_WRAPS) {
+                            break;
                         }
-                    }
-
-                    // ---- "bottom" surface launch -------
-                } else if (launch_face == 0 && twosided_flag[objID] == 1) {
-
-                    ray_direction = -ray_direction;
-                    ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
-
-                    prd.face = 0;
-
-                    // Trace segment by segment: re-trace after wrapping through a periodic boundary and after passing a
-                    // translucent cover.
-                    prd.hit_cover = false;
-                    int wraps = 0;
-                    for (int segment = 0; segment < MAX_RAY_SEGMENTS; ++segment) {
-                        rtTrace(top_object, ray, prd);
-
-                        if (prd.hit_periodic_boundary) {
-                            if (++wraps >= MAX_PERIODIC_WRAPS) {
-                                break;
-                            }
-                            ray.origin = prd.periodic_hit;
-                            prd.hit_periodic_boundary = false;
-                        } else if (prd.hit_cover) {
-                            ray.origin = prd.cover_exit;
-                            prd.hit_cover = false;
-                        } else {
-                            break; // real hit or miss → done
-                        }
+                        ray.origin = prd.periodic_hit;
+                        prd.hit_periodic_boundary = false;
+                    } else if (prd.hit_cover) {
+                        ray.origin = prd.cover_exit;
+                        prd.hit_cover = false;
+                    } else {
+                        break; // real hit or miss → done
                     }
                 }
-                // else: Skip ray trace for bottom face of one-sided primitives
+
+                // ---- "bottom" surface launch -------
+            } else if (launch_face == 0 && twosided_flag[objID] == 1) {
+
+                ray_direction = -ray_direction;
+                ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
+
+                prd.face = 0;
+
+                // Trace segment by segment: re-trace after wrapping through a periodic boundary and after passing a
+                // translucent cover.
+                prd.hit_cover = false;
+                int wraps = 0;
+                for (int segment = 0; segment < MAX_RAY_SEGMENTS; ++segment) {
+                    rtTrace(top_object, ray, prd);
+
+                    if (prd.hit_periodic_boundary) {
+                        if (++wraps >= MAX_PERIODIC_WRAPS) {
+                            break;
+                        }
+                        ray.origin = prd.periodic_hit;
+                        prd.hit_periodic_boundary = false;
+                    } else if (prd.hit_cover) {
+                        ray.origin = prd.cover_exit;
+                        prd.hit_cover = false;
+                    } else {
+                        break; // real hit or miss → done
+                    }
+                }
             }
+            // else: Skip ray trace for bottom face of one-sided primitives
         }
     }
 }
@@ -693,6 +660,7 @@ RT_PROGRAM void pixel_label_raygen() {
     // Trace segment by segment, as camera_raygen does, so the label is that of the first surface behind any
     // translucent covers.
     int wraps = 0;
+    bool ray_ended = false;
     for (int segment = 0; segment < MAX_RAY_SEGMENTS; ++segment) {
         prd.hit_periodic_boundary = false;
         prd.hit_cover = false;
@@ -706,7 +674,14 @@ RT_PROGRAM void pixel_label_raygen() {
         } else if (prd.hit_cover) {
             ray.origin = prd.cover_exit;
         } else {
+            ray_ended = true;
             break; // real hit or miss → done
         }
+    }
+
+    // A ray that runs out of wraps or segments is treated as blocked: the pixel shows no primitive, as for a ray that leaves the scene
+    if (!ray_ended) {
+        camera_pixel_label[origin_ID] = 0;
+        camera_pixel_depth[origin_ID] = -1;
     }
 }

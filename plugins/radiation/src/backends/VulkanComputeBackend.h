@@ -89,7 +89,6 @@ namespace helios {
         void updateSources(const std::vector<RayTracingSource> &sources) override;
 
         // ========== Diffuse/Sky Radiation ==========
-        void updateDiffuseRadiation(const std::vector<float> &flux, const std::vector<float> &extinction, const std::vector<helios::vec3> &peak_dir, const std::vector<float> &dist_norm, const std::vector<float> &sky_energy) override;
 
         void updateSkyModel(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction, const std::vector<float> &solar_disk_radiance, float solar_disk_cos_angle,
                             const std::vector<float> &camera_diffuse_flux, const std::vector<uint32_t> &band_emission_flag) override;

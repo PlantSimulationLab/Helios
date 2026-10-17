@@ -4891,7 +4891,6 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         std::vector<bool> band_flags(band_launch_flag.begin(), band_launch_flag.end());
         params.band_launch_flag = band_flags;
         params.scattering_iteration = 0;
-        params.max_scatters = scatteringDepth;
         params.radiation_out_top = flux_top;
         params.radiation_out_bottom = flux_bottom;
 
@@ -5013,7 +5012,6 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             std::vector<bool> band_flags(band_launch_flag.begin(), band_launch_flag.end());
             params.band_launch_flag = band_flags;
             params.scattering_iteration = s;
-            params.max_scatters = scatteringDepth;
 
             // Pass diffuse radiation parameters to backend
             params.diffuse_flux = diffuse_flux;
@@ -5433,15 +5431,9 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 }
 
 float RadiationModel::getSkyEnergy() {
-
-    helios::RayTracingResults results;
-    backend->getRadiationResults(results);
-
-    float Rsky = 0.f;
-    for (size_t i = 0; i < results.sky_energy.size(); i++) {
-        Rsky += results.sky_energy.at(i);
-    }
-    return Rsky;
+    helios_runtime_error("ERROR (RadiationModel::getSkyEnergy): The radiative energy lost to the sky is not computed by any ray-tracing backend, so this method has no value to "
+                         "return. It is deprecated and will be removed in v2.0.");
+    return 0.f; // unreachable
 }
 
 std::vector<float> RadiationModel::getTotalAbsorbedFlux() {
@@ -6502,15 +6494,7 @@ helios::RayTracingLaunchParams RadiationModel::buildCameraLaunchParams(const Rad
 
     // Compute effective HFOV with zoom
     float effective_HFOV = camera.HFOV_degrees / camera.camera_zoom;
-    params.camera_HFOV = effective_HFOV * M_PI / 180.0f;
     params.camera_viewplane_length = 0.5f / tanf(0.5f * effective_HFOV * M_PI / 180.f);
-
-    // Compute pixel solid angle
-    float HFOV_rad = effective_HFOV * M_PI / 180.f;
-    float VFOV_rad = HFOV_rad / camera.FOV_aspect_ratio;
-    float pixel_angle_h = HFOV_rad / float(camera.resolution.x);
-    float pixel_angle_v = VFOV_rad / float(camera.resolution.y);
-    params.camera_pixel_solid_angle = pixel_angle_h * pixel_angle_v;
 
     // Explicitly set scattering iteration for cameras (always iteration 0 for specular)
     params.scattering_iteration = 0;
@@ -6587,6 +6571,11 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
         if (!context->doesPrimitiveExist(UUID))
             continue;
 
+        if (context->getPrimitiveType(UUID) == helios::PRIMITIVE_TYPE_VOXEL) {
+            helios_runtime_error("ERROR (RadiationModel::updateGeometry): Primitive UUID " + std::to_string(UUID) +
+                                 " is a voxel, which the radiation model cannot trace. Delete the voxels from the Context, or pass updateGeometry() a list of UUIDs that leaves them out.");
+        }
+
         float area = context->getPrimitiveArea(UUID);
         uint parentID = context->getPrimitiveParentObjectID(UUID);
         if ((area == 0 || std::isnan(area)) && context->getObjectType(parentID) != helios::OBJECT_TYPE_TILE) {
@@ -6651,8 +6640,6 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
     geometry_data.disk_UUIDs.clear();
     geometry_data.tiles.vertices.clear();
     geometry_data.tiles.UUIDs.clear();
-    geometry_data.voxels.vertices.clear();
-    geometry_data.voxels.UUIDs.clear();
     geometry_data.bboxes.vertices.clear();
     geometry_data.bboxes.UUIDs.clear();
 
@@ -6693,7 +6680,7 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
     geometry_data.primitive_IDs = primitiveID_for_backend;
 
     // Populate geometry for each primitive
-    size_t patch_idx = 0, tri_idx = 0, disk_idx = 0, voxel_idx = 0, bbox_idx = 0;
+    size_t patch_idx = 0, tri_idx = 0, disk_idx = 0, bbox_idx = 0;
 
     // Iterate over ALL primitives to set per-primitive data
     // (not just Nobjects, which only has one entry per object group)
@@ -6774,21 +6761,6 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
             geometry_data.object_subdivisions[prim_idx] = helios::make_int2(1, 1);
             geometry_data.triangles.UUIDs.push_back(UUID); // Store actual UUID, not position
             tri_idx++;
-
-        } else if (type == helios::PRIMITIVE_TYPE_VOXEL) {
-            geometry_data.primitive_types[prim_idx] = 4; // voxel
-
-            context->getPrimitiveTransformationMatrix(UUID, m);
-            memcpy(&geometry_data.transform_matrices[prim_idx * 16], m, 16 * sizeof(float));
-
-            std::vector<vec3> verts = context->getPrimitiveVertices(UUID);
-            for (const auto &v: verts) {
-                geometry_data.voxels.vertices.push_back(v);
-            }
-
-            geometry_data.object_subdivisions[prim_idx] = helios::make_int2(1, 1);
-            geometry_data.voxels.UUIDs.push_back(UUID); // Store actual UUID, not position
-            voxel_idx++;
         }
     }
 
@@ -6797,7 +6769,6 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
     geometry_data.triangle_count = tri_idx;
     geometry_data.disk_count = disk_idx;
     geometry_data.tile_count = 0; // Tile subpatches are treated as individual patches
-    geometry_data.voxel_count = voxel_idx;
 
     // ========== Periodic Boundary Bboxes ==========
     // Create bbox geometry for periodic boundary conditions
@@ -6989,6 +6960,10 @@ void RadiationModel::buildTextureData() {
         // Extract UV coordinates for this primitive
         // uv_IDs stores the position index (not offset), used to access uvdata[vertex][position] in CUDA
         std::vector<helios::vec2> uvs = context->getPrimitiveTextureUV(UUID);
+        if (uvs.empty() && context->getPrimitiveType(UUID) == helios::PRIMITIVE_TYPE_TRIANGLE) {
+            helios_runtime_error("ERROR (RadiationModel::updateGeometry): Triangle UUID " + std::to_string(UUID) + " has a texture with a transparency channel ('" + texture_file +
+                                 "') but no texture (u,v) coordinates, so its transparency mask cannot be applied. Add the triangle with Context::addTriangle() giving the texture file and (u,v) coordinates.");
+        }
         if (!uvs.empty()) {
             geometry_data.uv_IDs[prim_idx] = static_cast<int>(prim_idx); // Store position index for CUDA 2D buffer access
             for (const auto &uv: uvs) {
@@ -7043,17 +7018,8 @@ void RadiationModel::buildSourceData() {
         backend_src.rotation = src.source_rotation;
         backend_src.width = src.source_width;
         backend_src.type = src.source_type;
-
-        // Flatten flux arrays - use getSourceFlux() to handle -1.f sentinel values
-        backend_src.fluxes.clear();
-        backend_src.fluxes_cam.clear();
-        for (const auto &band_pair: radiation_bands) {
-            std::string band_label = band_pair.second.label;
-            // Use getSourceFlux() which properly handles -1.f sentinel (returns 0 or integrates spectrum)
-            float flux = getSourceFlux(s, band_label);
-            backend_src.fluxes.push_back(flux);
-            backend_src.fluxes_cam.push_back(flux); // Same for now
-        }
+        // The source fluxes are uploaded for each launch (uploadSourceFluxes()), and the camera weights in fluxes_cam are set before each direct launch
+        // when the model has cameras, since both depend on the bands launched.
 
         source_data.push_back(backend_src);
     }

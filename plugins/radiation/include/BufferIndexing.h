@@ -214,7 +214,6 @@ public:
  * Used for:
  * - radiation_in, radiation_out_top, radiation_out_bottom
  * - scatter_buff_top, scatter_buff_bottom
- * - sky_energy
  */
 using RadiationBufferIndexer = BufferIndexer2D;
 

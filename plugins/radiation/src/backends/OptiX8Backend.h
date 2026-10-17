@@ -100,12 +100,7 @@ namespace helios {
         // Radiation sources
         void updateSources(const std::vector<RayTracingSource> &sources) override;
 
-        // Diffuse/sky radiation
-        void updateDiffuseRadiation(const std::vector<float> &flux, const std::vector<float> &extinction,
-                                    const std::vector<helios::vec3> &peak_dir,
-                                    const std::vector<float> &dist_norm,
-                                    const std::vector<float> &sky_energy) override;
-
+        // Sky radiation
         void updateSkyModel(const std::vector<helios::vec4> &sky_radiance_params,
                             const std::vector<float> &camera_sky_radiance,
                             const helios::vec3 &sun_direction,
@@ -211,8 +206,6 @@ namespace helios {
         CUdeviceptr d_disk_UUIDs             = 0;
         CUdeviceptr d_tile_vertices          = 0;
         CUdeviceptr d_tile_UUIDs             = 0;
-        CUdeviceptr d_voxel_vertices         = 0;
-        CUdeviceptr d_voxel_UUIDs            = 0;
         CUdeviceptr d_bbox_vertices          = 0;
         CUdeviceptr d_bbox_UUIDs             = 0;
 
@@ -250,7 +243,6 @@ namespace helios {
         CUdeviceptr d_white_reference_top_cam    = 0; //!< Each camera's white reference (top face) [camera][prim][launch band]
         CUdeviceptr d_white_reference_bottom_cam = 0; //!< Each camera's white reference (bottom face) [camera][prim][launch band]
         CUdeviceptr d_radiation_specular     = 0;
-        CUdeviceptr d_Rsky                   = 0;
 
         // ---- Camera device buffers ----
         CUdeviceptr d_camera_pixel_label     = 0;
@@ -293,7 +285,6 @@ namespace helios {
         size_t   current_triangle_count  = 0;
         size_t   current_disk_count      = 0;
         size_t   current_tile_count      = 0;
-        size_t   current_voxel_count     = 0;
         size_t   current_bbox_count      = 0;
         size_t   current_source_count    = 0;
         size_t   current_band_count      = 0;

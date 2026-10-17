@@ -37,14 +37,14 @@ namespace helios {
     /**
      * @brief Geometry data for ray tracing (backend-agnostic)
      *
-     * All geometry data for 6 primitive types: patch, triangle, disk, tile, voxel, bbox.
+     * All geometry data for the primitive types: patch, triangle, disk, tile, bbox (voxels are not traced).
      * Data is organized per-primitive and per-type.
      */
     struct RayTracingGeometry {
 
         // Per-primitive data (indexed by primitive index 0..primitive_count-1)
         std::vector<float> transform_matrices; //!< Transform matrices (16 floats per primitive, row-major)
-        std::vector<uint> primitive_types; //!< Primitive type: 0=patch, 1=triangle, 2=disk, 3=tile, 4=voxel, 5=bbox
+        std::vector<uint> primitive_types; //!< Primitive type: 0=patch, 1=triangle, 2=disk, 3=tile, 5=bbox (4, formerly voxel, is unused)
         std::vector<uint> primitive_UUIDs; //!< UUID for each primitive (for result mapping)
         std::vector<uint> primitive_IDs; //!< Primitive ID within parent object (for sub-patch calculations)
         std::vector<uint> object_IDs; //!< Parent object ID for each primitive
@@ -69,8 +69,7 @@ namespace helios {
         PrimitiveTypeGeometry patches; //!< Patch data (4 vertices per patch)
         PrimitiveTypeGeometry triangles; //!< Triangle data (3 vertices per triangle)
         PrimitiveTypeGeometry tiles; //!< Tile data (4 vertices per tile)
-        PrimitiveTypeGeometry voxels; //!< Voxel data (8 vertices per voxel)
-        PrimitiveTypeGeometry bboxes; //!< Bounding box data (8 vertices per bbox)
+        PrimitiveTypeGeometry bboxes; //!< Bounding box data (4 vertices per bbox face)
 
         // Disk-specific data (disks don't use vertex arrays)
         std::vector<helios::vec3> disk_centers; //!< Disk center positions
@@ -94,7 +93,6 @@ namespace helios {
         size_t patch_count = 0; //!< Number of patches
         size_t triangle_count = 0; //!< Number of triangles
         size_t tile_count = 0; //!< Number of tiles
-        size_t voxel_count = 0; //!< Number of voxels
         size_t bbox_count = 0; //!< Number of bounding boxes
         uint bbox_UUID_base = 0; //!< Starting UUID for bboxes (max_real_UUID + 1)
 
@@ -212,8 +210,7 @@ namespace helios {
         helios::vec3 rotation; //!< Rotation angles (Euler angles in radians)
         helios::vec2 width; //!< Width/size (for rectangle/disk sources)
         uint type; //!< Type: 0=collimated, 1=sphere, 2=sun_sphere, 3=rectangle, 4=disk
-        std::vector<float> fluxes; //!< Flux per band
-        std::vector<float> fluxes_cam; //!< Camera-weighted flux per band
+        std::vector<float> fluxes_cam; //!< Camera weights of the source flux [launched band][camera], set before each direct launch when the model has cameras (empty otherwise)
     };
 
     /**
@@ -234,7 +231,6 @@ namespace helios {
 
         // Scattering
         uint scattering_iteration = 0; //!< Current scattering iteration (0 = first bounce)
-        uint max_scatters = 0; //!< Maximum number of scattering events
 
         // Face selection (for diffuse rays)
         uint launch_face = 0; //!< Face to launch from: 1 = top (the side the normal points to), 0 = bottom
@@ -247,11 +243,9 @@ namespace helios {
         float camera_lens_diameter = 0.0f; //!< Camera lens diameter (0 = pinhole)
         float camera_fov_aspect = 0.0f; //!< Field of view aspect ratio (HFOV/VFOV)
         helios::int2 camera_resolution; //!< Camera resolution (width, height)
-        float camera_HFOV = 0.0f; //!< Horizontal field of view (radians)
         uint antialiasing_samples = 1; //!< Antialiasing samples per pixel
         helios::int2 camera_pixel_offset; //!< Pixel offset for tiled rendering
         float camera_viewplane_length = 0.0f; //!< Viewplane length computed from effective_HFOV/zoom
-        float camera_pixel_solid_angle = 0.0f; //!< Pixel solid angle in steradians
         helios::int2 camera_resolution_full; //!< Full resolution for tiled rendering (global coordinates)
 
         // Diffuse radiation parameters (for diffuse ray launches)
@@ -288,7 +282,6 @@ namespace helios {
         std::vector<float> scatter_buff_top_cam; //!< Camera-weighted scattered radiation buffer (top) per [camera][primitive][band]
         std::vector<float> scatter_buff_bottom_cam; //!< Camera-weighted scattered radiation buffer (bottom) per [camera][primitive][band]
         std::vector<float> radiation_specular; //!< Specular reflection per [source][camera][primitive][band]
-        std::vector<float> sky_energy; //!< Energy absorbed by sky per band
 
         size_t num_primitives = 0; //!< Number of primitives
         size_t num_bands = 0; //!< Number of bands

@@ -1650,6 +1650,10 @@ public:
     std::vector<float> getTotalAbsorbedFlux();
 
     //! Get the radiative energy lost to the sky (surroundings)
+    /**
+     * \deprecated Not implemented by any ray-tracing backend: it always returned 0. It now raises an error, and will be removed in v2.0.
+     */
+    [[deprecated("getSkyEnergy() is not implemented and raises an error; it will be removed in v2.0")]]
     float getSkyEnergy();
 
     //! Calculate G(theta) (i.e., projected area fraction) for a group of primitives given a certain viewing direction

@@ -409,24 +409,6 @@ namespace helios {
             uploadBufferData(triangle_vertices_buffer, tri_verts.data(), tri_verts.size() * sizeof(helios::vec3));
         }
 
-        // The software BVH traversal intersects patches/tiles and triangles only (see
-        // traverse_cwbvh() in shaders/common/bvh_traversal.glsl). A voxel in the scene would
-        // occupy a BVH leaf that no ray can ever hit, so it would neither intercept nor absorb
-        // radiation and the run would simply report less interception than the scene contains.
-        // Refuse the geometry instead of returning a quietly wrong answer.
-        {
-            size_t voxel_count = 0;
-            for (size_t i = 0; i < primitive_count; ++i) {
-                if (geometry.primitive_types[i] == 4) {
-                    voxel_count++;
-                }
-            }
-            if (voxel_count > 0) {
-                helios_runtime_error("ERROR (VulkanComputeBackend::updateGeometry): the scene contains " + std::to_string(voxel_count) +
-                                     " voxel primitive(s), which this backend cannot intersect. Voxel ray tracing is implemented only in the OptiX 6 backend. Remove the voxels from the Context to trace this scene.");
-            }
-        }
-
         // Pre-compute world-space normals for each primitive.
         // Eliminates per-thread get_patch_normal() / get_triangle_normal() (3 transform_point + cross product)
         // in both direct and diffuse shaders, and also eliminates the per-hit normal computation in diffuse.
@@ -891,15 +873,12 @@ namespace helios {
         uploadBufferData(source_widths_buffer, widths.data(), widths.size() * sizeof(helios::vec2));
     }
 
-    void VulkanComputeBackend::updateDiffuseRadiation(const std::vector<float> &flux, const std::vector<float> &extinction, const std::vector<helios::vec3> &peak_dir, const std::vector<float> &dist_norm, const std::vector<float> &sky_energy) {
-        // Intentional no-op: the Vulkan backend uploads diffuse radiation parameters directly
-        // in launchDiffuseRays() from the RayTracingLaunchParams struct, rather than caching
-        // them here. This method is required by the RayTracingBackend interface but is not
-        // called by RadiationModel.
-    }
-
     void VulkanComputeBackend::updateSkyModel(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction, const std::vector<float> &solar_disk_radiance,
                                               float solar_disk_cos_angle, const std::vector<float> &camera_diffuse_flux, const std::vector<uint32_t> &band_emission_flag) {
+        if (sky_radiance_params.empty() || camera_sky_radiance.empty() || solar_disk_radiance.empty() || camera_diffuse_flux.empty() || band_emission_flag.empty()) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::updateSkyModel): Every per-band sky model vector must have one entry per launched band, but at least one is empty.");
+        }
+
         // Store sun parameters for push constants
         cached_sun_direction = sun_direction;
         cached_solar_disk_cos_angle = solar_disk_cos_angle;

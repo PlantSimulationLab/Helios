@@ -53,8 +53,10 @@ struct PerRayData {
     bool   face;               //!< Top face = true, bottom face = false
     uint   seed;               //!< LCG random seed
     unsigned char source_ID;   //!< Source index, or Nsources (the diffuse/scatter material slot) for diffuse rays (max 255 sources)
+    bool   skip_origin;        //!< The ray never hits the primitive origin_UUID (direct and diffuse rays; camera and pixel-label rays carry a pixel index there)
     bool   hit_periodic_boundary;
     float3 periodic_hit;       //!< World-space hit on the periodic wall
+    float  periodic_hit_t;     //!< Distance from the segment origin to the periodic wall it hit
     //! Per-launch-band transmittance accumulated as the ray passes through translucent covers
     //! (glass/plastic). Initialised to 1 in the raygen programs; multiplied by the Fresnel+Bouguer
     //! tau(theta) in the any-hit program (direct) or the closest-hit programs (diffuse, camera);
@@ -70,7 +72,7 @@ struct PerRayData {
 struct HitGroupData {
     float3*   vertices; //!< Device pointer to type-specific vertex array (layout varies by type)
     uint32_t* UUIDs;    //!< Device pointer to type-specific UUID array
-    uint32_t  prim_type; //!< 0=patch, 1=triangle, 2=disk, 3=tile, 4=voxel, 5=bbox
+    uint32_t  prim_type; //!< 0=patch, 1=triangle, 2=disk, 3=tile, 5=bbox
 };
 
 // ---------------------------------------------------------------------------
@@ -87,7 +89,7 @@ struct OptiX8LaunchParams {
 
     // ---- Geometry buffers (device pointers) ----
     float*    transform_matrix;      //!< [prim * 16 + elem], row-major 4x4
-    uint32_t* primitive_type;        //!< 0=patch,1=tri,2=disk,3=tile,4=voxel,5=bbox
+    uint32_t* primitive_type;        //!< 0=patch,1=tri,2=disk,3=tile,5=bbox
     uint32_t* primitive_positions;   //!< UUID→array-index sparse lookup (size=max_UUID+1)
     uint32_t* primitiveID;           //!< First primitive index in parent object
     uint32_t* objectID;              //!< Parent object ID for each primitive
@@ -109,8 +111,6 @@ struct OptiX8LaunchParams {
     uint32_t* disk_UUIDs;
     float3*   tile_vertices;         //!< [tile_idx * 4 + corner_idx]
     uint32_t* tile_UUIDs;
-    float3*   voxel_vertices;        //!< [voxel_idx * 8 + corner_idx]
-    uint32_t* voxel_UUIDs;
     float3*   bbox_vertices;         //!< [bbox_idx * 4 + corner_idx] (4 vertices per planar face)
     uint32_t* bbox_UUIDs;
 
@@ -144,7 +144,6 @@ struct OptiX8LaunchParams {
     float*    white_reference_top_cam;    //!< Each camera's white reference, accumulated over all the launches of a runBand(); same layout as scatter_buff_top_cam
     float*    white_reference_bottom_cam; //!< same layout as white_reference_top_cam
     float*    radiation_specular;     //!< [src*Ncams*Nprims*Nbands + cam*Nprims*Nbands + prim*Nbands + band]
-    float*    Rsky;                   //!< Sky energy absorbed [band]
 
     // ---- Camera output buffers ----
     uint32_t* camera_pixel_label;
@@ -204,10 +203,8 @@ struct OptiX8LaunchParams {
     float     camera_lens_diameter;
     float     camera_focal_length;
     float     FOV_aspect_ratio;
-    float     camera_HFOV;
     int2      camera_resolution;
     float     camera_viewplane_length;
-    float     camera_pixel_solid_angle;
     int2      camera_pixel_offset;
     int2      camera_resolution_full;
 

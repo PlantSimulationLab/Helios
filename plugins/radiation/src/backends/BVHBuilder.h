@@ -258,11 +258,6 @@ namespace helios {
         AABB computeTileAABB(uint32_t prim_index) const;
 
         /**
-         * @brief Compute AABB for voxel (type 4)
-         */
-        AABB computeVoxelAABB(uint32_t prim_index) const;
-
-        /**
          * @brief Compute AABB for bbox (type 5)
          */
         AABB computeBBoxAABB(uint32_t prim_index) const;

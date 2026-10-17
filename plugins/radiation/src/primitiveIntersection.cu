@@ -224,10 +224,11 @@ RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geo
                     float2 uv = uv0 + beta * (uv1 - uv0) + gamma * (uv2 - uv0);
                     uv.y = 1.f - uv.y;
 
-                    uint3 ind = make_uint3(roundf(float(sz.x - 1) * fabs(uv.x)), roundf(float(sz.y - 1) * fabs(uv.y)), maskID[ID]);
-                    if (ind.x >= sz.x || ind.y >= sz.y) {
-                        // Texture coord out of bounds - skip
-                    }
+                    // Texel i spans texture coordinates i/(size-1) to (i+1)/(size-1), as in Texture::computeSolidFraction() and
+                    // the patch test above
+                    int ix = max(0, min(int(floorf(float(sz.x - 1) * uv.x)), sz.x - 1));
+                    int iy = max(0, min(int(floorf(float(sz.y - 1) * uv.y)), sz.y - 1));
+                    uint3 ind = make_uint3(ix, iy, maskID[ID]);
                     if (maskdata[ind]) {
                         if (rtPotentialIntersection(t)) {
                             UUID = triangle_UUID[objID];
@@ -299,107 +300,6 @@ RT_PROGRAM void disk_bounds(int objID, float result[6]) {
     float3 mn = make_float3(-1, -1, -0.001f);
     float3 mx = make_float3(1, 1, 0.001f);
     aabb->set(mn, mx);
-}
-
-//----------------- Voxel Primitive ----------------------//
-
-/** OptiX ray-voxel intersection program. */
-
-RT_PROGRAM void voxel_intersect(int objID /**< [in] index of primitive in geometric object.*/) {
-
-    if (isRayOrigin(voxel_UUID[objID])) { // the ray should not intersect the primitive from which it was launched
-        return;
-    }
-    // FIX: Convert UUID to position for twosided_flag access
-    uint position = primitive_positions[voxel_UUID[objID]];
-    if (twosided_flag[position] >= 2) { // if twosided_flag=2, ignore intersection (transparent)
-        return;
-    }
-
-    float x0 = voxel_vertices[make_uint2(0, objID)].x;
-    float y0 = voxel_vertices[make_uint2(0, objID)].y;
-    float z0 = voxel_vertices[make_uint2(0, objID)].z;
-
-    float x1 = voxel_vertices[make_uint2(1, objID)].x;
-    float y1 = voxel_vertices[make_uint2(1, objID)].y;
-    float z1 = voxel_vertices[make_uint2(1, objID)].z;
-
-    float ox = ray.origin.x;
-    float oy = ray.origin.y;
-    float oz = ray.origin.z;
-    float dx = ray.direction.x;
-    float dy = ray.direction.y;
-    float dz = ray.direction.z;
-
-    float tx_min, ty_min, tz_min;
-    float tx_max, ty_max, tz_max;
-
-    float a = 1.0 / dx;
-    if (a >= 0) {
-        tx_min = (x0 - ox) * a;
-        tx_max = (x1 - ox) * a;
-    } else {
-        tx_min = (x1 - ox) * a;
-        tx_max = (x0 - ox) * a;
-    }
-
-    float b = 1.0 / dy;
-    if (b >= 0) {
-        ty_min = (y0 - oy) * b;
-        ty_max = (y1 - oy) * b;
-    } else {
-        ty_min = (y1 - oy) * b;
-        ty_max = (y0 - oy) * b;
-    }
-
-    float c = 1.0 / dz;
-    if (c >= 0) {
-        tz_min = (z0 - oz) * c;
-        tz_max = (z1 - oz) * c;
-    } else {
-        tz_min = (z1 - oz) * c;
-        tz_max = (z0 - oz) * c;
-    }
-
-    float t0, t1;
-
-    // find largest entering t value
-
-    if (tx_min > ty_min)
-        t0 = tx_min;
-    else
-        t0 = ty_min;
-
-    if (tz_min > t0)
-        t0 = tz_min;
-
-    // find smallest exiting t value
-
-    if (tx_max < ty_max)
-        t1 = tx_max;
-    else
-        t1 = ty_max;
-
-    if (tz_max < t1)
-        t1 = tz_max;
-
-    if (t0 < t1 && t0 > 1e-5) { // note: if ray originated inside voxel, no intersection occurs.
-        if (rtPotentialIntersection(t0)) {
-            UUID = voxel_UUID[objID];
-            surface_u = 0.f; // voxels take no part in camera flux smoothing
-            surface_v = 0.f;
-            rtReportIntersection(0);
-        }
-    }
-}
-
-/** Axis-aligned bounding box program for voxel primitives. */
-
-RT_PROGRAM void voxel_bounds(int objID, float result[6]) {
-    optix::Aabb *aabb = (optix::Aabb *) result;
-    float3 min = voxel_vertices[make_uint2(0, objID)];
-    float3 max = voxel_vertices[make_uint2(1, objID)];
-    aabb->set(min, max);
 }
 
 //----------------- Bounding Box Primitive ----------------------//
