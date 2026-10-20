@@ -87,7 +87,7 @@ namespace helios {
          * count silently wrapped those leaves: 300 primitives became 44, and exactly 256 became
          * 0, which made the traversal skip the leaf entirely and drop the geometry in it without
          * any diagnostic. The eight bytes come from the former child_prim_type[8], which nothing
-         * ever read - the traversal shader resolves each primitive's type through prim_types_buf.
+         * ever read - the traversal shader reads each primitive's type from its leaf intersection record.
          */
         uint16_t child_prim_count[8];
     };
@@ -205,6 +205,7 @@ namespace helios {
             uint32_t prim_count = 0; //!< Number of primitives in leaf
             uint32_t prim_type = 0; //!< Primitive type (for leaves)
             uint32_t split_axis = 0; //!< Split axis (0=x, 1=y, 2=z)
+            uint32_t subtree_prim_count = 0; //!< Primitives in this node's subtree (set by reconstructTree(), read by collapseToBVH8())
         };
 
         // Temporary data during construction
@@ -224,9 +225,22 @@ namespace helios {
          */
         static constexpr uint32_t CWBVH_TRAVERSAL_STACK_DEPTH = 80;
 
-        static constexpr uint32_t MAX_PRIMS_PER_LEAF = 4; //!< Max primitives per leaf
+        /**
+         * Max primitives per leaf. One, so that every primitive gets its own quantized box in the parent
+         * CWBVH node and a ray that misses that box never reads the primitive's intersection record.
+         * On the Vulkan backend this was measured faster than larger leaves: diffuse launches on a
+         * homogeneous canopy took 1.2x longer with 4 primitives per leaf and 1.8x longer with 8.
+         */
+        static constexpr uint32_t MAX_PRIMS_PER_LEAF = 1;
         static constexpr uint32_t MAX_DEPTH = 32; //!< Max tree depth
         static constexpr uint32_t NUM_BINS = 16; //!< Number of bins for SAH
+        /**
+         * SAH cost of one BVH2 traversal step relative to one primitive test. Below 1 because the
+         * BVH2 is collapsed into an 8-wide tree, where one node visit tests the boxes of up to three
+         * BVH2 levels at once. Measured on the Vulkan backend: 0.3 traced diffuse rays 1.1x faster
+         * than 1.0, and 0.1 was no faster than 0.3.
+         */
+        static constexpr float SAH_TRAVERSAL_COST = 0.3f;
 
         /**
          * @brief Compute AABB for a primitive
@@ -256,11 +270,6 @@ namespace helios {
          * @brief Compute AABB for tile (type 3)
          */
         AABB computeTileAABB(uint32_t prim_index) const;
-
-        /**
-         * @brief Compute AABB for voxel (type 4)
-         */
-        AABB computeVoxelAABB(uint32_t prim_index) const;
 
         /**
          * @brief Compute AABB for bbox (type 5)

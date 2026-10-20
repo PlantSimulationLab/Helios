@@ -342,8 +342,9 @@ DOCTEST_TEST_CASE("WeberPennTree Single Branch Per Trunk Segment") {
     // Both builds sample the same shape function over the same trunk, so their mean branch areas must
     // agree closely. With the division by zero, the one-per-segment build has every branch clamped to
     // ShapeRatio(1,0)=0.2 while the other averages about 0.735, so the ratio below collapses to
-    // roughly 0.3. The 0.7 threshold sits well clear of both outcomes.
-    DOCTEST_CHECK(area_per_branch_one > 0.7f * area_per_branch_two);
+    // roughly 0.3. The rest of the tree is still randomized (the generator is seeded from the clock), and correct builds
+    // have been measured as low as 0.69, so the 0.5 threshold sits between the two outcomes.
+    DOCTEST_CHECK(area_per_branch_one > 0.5f * area_per_branch_two);
 }
 
 DOCTEST_TEST_CASE("WeberPennTree Leaf Angle Distribution") {

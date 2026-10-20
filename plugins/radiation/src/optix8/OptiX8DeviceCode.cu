@@ -159,8 +159,9 @@ static __device__ float evaluateDiffuseAngularDistribution(const float3 &ray_dir
     if (sky_params.w > 0.f) {
         float gamma     = acos_safe(dot(ray_dir, peak_dir)) * 180.f / M_PI;
         float cos_theta = fmaxf(ray_dir.z, 0.f);
-        float pattern   = (1.f + sky_params.x * expf(-gamma / sky_params.y))
-                        * (1.f + (sky_params.z - 1.f) * (1.f - cos_theta));
+        // A non-positive circumsolar width means no circumsolar region (a width of zero would give 0/0 = NaN toward the sun)
+        float circumsolar_term = (sky_params.y > 0.f) ? (1.f + sky_params.x * expf(-gamma / sky_params.y)) : 1.f;
+        float pattern   = circumsolar_term * (1.f + (sky_params.z - 1.f) * (1.f - cos_theta));
         return pattern * sky_params.w * M_PI;
     }
     return 1.f; // isotropic
@@ -348,8 +349,16 @@ extern "C" __global__ void __intersection__patch() {
         float  nd = dot(ray_direction, n);
         if (fabsf(nd) < 1e-8f) return; // ray parallel to face
 
+        // A ray is wrapped only by the face it leaves the domain through: faces come in (min, max) pairs, and vertex 0 of a face
+        // minus vertex 0 of the other face of its pair points out of the domain. The face a wrapped ray starts on is therefore
+        // never hit again, so the ray can be continued with no minimum distance, and a ray leaving the domain is wrapped even
+        // if it starts closer to the face than the minimum distance. Such a hit is reported at t_min, with its true distance
+        // in attribute 2.
+        const float3 opposite_v0 = params.bbox_vertices[(bbox_local ^ 1u) * 4];
+        if (dot(ray_direction, v0 - opposite_v0) <= 0.f) return;
+
         float t = dot(make_float3(v0.x - ray_origin.x, v0.y - ray_origin.y, v0.z - ray_origin.z), n) / nd;
-        if (t < t_min || t > t_max) return;
+        if (t > t_max) return;
 
         // Hit point must lie within the bounding box of the quad vertices
         float3 hit = make_float3(ray_origin.x + t * ray_direction.x,
@@ -365,19 +374,27 @@ extern "C" __global__ void __intersection__patch() {
         if (hit.x < mnx || hit.x > mxx || hit.y < mny || hit.y > mxy ||
             hit.z < mnz || hit.z > mxz) return;
 
-        optixReportIntersection(t, 0, uuid, 0u, __float_as_uint(0.f), __float_as_uint(0.f));
+        optixReportIntersection(fmaxf(t, t_min), 0, uuid, 0u, __float_as_uint(t), __float_as_uint(0.f));
         return;
     }
 
     if (ptype != 0 && ptype != 1 && ptype != 3) return; // only patch, triangle, tile
+
+    if (params.twosided_flag[pos] >= 2) return; // invisible primitive: never intersected
+
+    // A direct or diffuse ray never hits the primitive it was launched from. The minimum ray distance alone does not ensure this
+    // far from the origin, where the rounding error of the launch point can exceed it.
+    const PerRayData *prd = getPayloadPRD();
+    if (prd->skip_origin && params.primitive_positions[prd->origin_UUID] == pos) return;
 
     float T[16];
     loadTransformMatrix(pos, T);
 
     if (ptype == 0 || ptype == 3) {
         // ---- Patch: rectangle in canonical [-0.5, 0.5]^2 space ----
-        // Normal = third column of rotation part of T
-        float3 normal = make_float3(T[2], T[6], T[10]);
+        // Normal = cross product of the first two columns of T, the convention of the ray-generation programs (the third column
+        // points the other way for a mirrored transform)
+        float3 normal = normalize(cross(make_float3(T[0], T[4], T[8]), make_float3(T[1], T[5], T[9])));
         float  nd     = dot(ray_direction, normal);
         if (fabsf(nd) < 1e-8f) return; // ray parallel to patch plane
 
@@ -505,11 +522,6 @@ extern "C" __global__ void __intersection__tile() {
     // Tile intersection is handled by __intersection__patch (ptype == 3).
 }
 
-extern "C" __global__ void __intersection__voxel() {
-    // Voxel intersection is not yet implemented. Voxel primitives are rejected at
-    // the host level in updateGeometry(), so this program is never invoked.
-}
-
 extern "C" __global__ void __intersection__bbox() {
     // Bbox intersection is not yet implemented in this backend.
 }
@@ -520,15 +532,18 @@ extern "C" __global__ void __intersection__bbox() {
 
 // Diffuse, camera and pixel-label rays continue past a translucent cover from this distance (m) beyond it.
 #define COVER_EXIT_OFFSET 1e-4f
+// Number of periodic-boundary hits after which a ray of any type is abandoned (the ray is wrapped at most MAX_PERIODIC_WRAPS - 1
+// times): it deposits nothing, as if blocked. Must match MAX_PERIODIC_WRAPS in RayTracing.cuh and the Vulkan shaders.
+#define MAX_PERIODIC_WRAPS 1000
+// Number of translucent covers a diffuse, camera or pixel-label ray can pass in addition to its periodic-boundary wraps.
+#define MAX_COVER_PASSES 32
 // Maximum number of segments a diffuse, camera or pixel-label ray is traced in: each translucent cover passed
 // and each periodic-boundary wrap starts a new segment. A ray that runs out stops without further contribution.
-#define MAX_RAY_SEGMENTS 32
-// Maximum number of periodic-boundary wraps of a diffuse, camera or pixel-label ray.
-#define MAX_PERIODIC_WRAPS 10
+#define MAX_RAY_SEGMENTS (MAX_PERIODIC_WRAPS + MAX_COVER_PASSES)
 
 // Compute |cos(theta)| between a ray and the surface normal of a primitive.
-// Mirrors the normal construction in __intersection__patch (3rd transform column for patch/tile,
-// edge cross-product for triangle). Returns a value in (0, 1]; degenerate cases return 1.
+// Mirrors the normal construction in __intersection__patch (cross product of the first two transform
+// columns for patch/tile, edge cross-product for triangle). Returns a value in (0, 1]; degenerate cases return 1.
 static __forceinline__ __device__ float coverCosTheta(uint32_t hit_position, const float3 &ray_dir) {
     const uint32_t ptype = params.primitive_type[hit_position];
     float T[16];
@@ -541,8 +556,8 @@ static __forceinline__ __device__ float coverCosTheta(uint32_t hit_position, con
         const float3 e0 = make_float3(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z);
         const float3 e1 = make_float3(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z);
         normal = cross(e0, e1);
-    } else { // patch or tile: normal is the 3rd column of the rotation part
-        normal = make_float3(T[2], T[6], T[10]);
+    } else { // patch or tile
+        normal = cross(make_float3(T[0], T[4], T[8]), make_float3(T[1], T[5], T[9]));
     }
     const float nmag = d_magnitude(normal);
     if (nmag < 1e-12f) return 1.f;
@@ -758,11 +773,14 @@ extern "C" __global__ void __miss__diffuse() {
 
     if (params.diffuse_flux == nullptr) {
         printf("ERROR (OptiX8 __miss__diffuse): diffuse_flux is null. "
-               "Call updateDiffuseRadiation() before launchDiffuseRays().\n");
+               "launchDiffuseRays() must be given the diffuse flux of each launched band.\n");
         __trap();
     }
 
     const float3 ray_dir = optixGetWorldRayDirection();
+
+    // The diffuse sky fills only the upper hemisphere unless enabled below the horizon.
+    if (ray_dir.z < 0.f && params.below_horizon_diffuse_enabled == 0) return;
 
     // A translucent cover books what reaches it with its angular glass properties, not rho/tau.
     const bool  origin_is_cover = coverInAllLaunchedBands(origin_position);
@@ -887,8 +905,11 @@ extern "C" __global__ void __miss__camera() {
             }
         }
 
+        // The sky fills only the upper hemisphere unless the diffuse sky is enabled below the horizon.
+        const bool sees_sky = ray_dir.z >= 0.f || params.below_horizon_diffuse_enabled != 0;
+
         // Sky radiance fallback
-        if (radiance <= 0.0f && params.camera_sky_radiance && params.camera_sky_radiance[b] > 0.0f) {
+        if (sees_sky && radiance <= 0.0f && params.camera_sky_radiance && params.camera_sky_radiance[b] > 0.0f) {
             const float4 sky_p = params.sky_radiance_params ? params.sky_radiance_params[b]
                                                              : make_float4(0.f, 0.f, 0.f, 0.f);
             radiance = params.camera_sky_radiance[b] *
@@ -897,7 +918,7 @@ extern "C" __global__ void __miss__camera() {
 
         // Isotropic sky emission/longwave: when band has emission enabled, the user-set diffuse_flux
         // represents hemispherical sky thermal/longwave irradiance. Convert to isotropic radiance.
-        if (params.band_emission_flag && params.band_emission_flag[b] != 0u &&
+        if (sees_sky && params.band_emission_flag && params.band_emission_flag[b] != 0u &&
             params.camera_diffuse_flux && params.camera_diffuse_flux[b] > 0.0f) {
             radiance += params.camera_diffuse_flux[b] / M_PI;
         }
@@ -932,7 +953,7 @@ extern "C" __global__ void __miss__pixel_label() {
 // Vertex 0 of each face is always the "min" corner, so bbox_vertices[b*4+0] gives
 // the face's position (x or y coordinate) without floating-point tolerance issues.
 static __forceinline__ __device__ void handlePeriodicBoundaryHit(PerRayData *prd, uint32_t hit_uuid) {
-    const float  t_hit    = optixGetRayTmax();
+    const float  t_hit    = __uint_as_float(optixGetAttribute_2()); // true distance to the face (the hit may be reported at t_min)
     const float3 ray_orig = optixGetWorldRayOrigin();
     const float3 ray_dir  = optixGetWorldRayDirection();
     const float3 hit_pos  = make_float3(ray_orig.x + t_hit * ray_dir.x,
@@ -941,6 +962,7 @@ static __forceinline__ __device__ void handlePeriodicBoundaryHit(PerRayData *prd
 
     const uint32_t bbox_local = hit_uuid - params.bbox_UUID_base;
     prd->periodic_hit = hit_pos;
+    prd->periodic_hit_t = t_hit;
 
     if (params.periodic_flag.x == 1 && bbox_local < 2) {
         // x-faces: bbox 0 = x-min, bbox 1 = x-max
@@ -957,6 +979,66 @@ static __forceinline__ __device__ void handlePeriodicBoundaryHit(PerRayData *prd
         const float width = ymax - ymin;
         prd->periodic_hit.y += (bbox_local == y_base) ? width : -width;
     }
+}
+
+// Count a direct or diffuse ray abandoned at the periodic wrap limit (read back by the host after a runBand() call's launches)
+static __forceinline__ __device__ void countAbandonedRay() {
+    if (params.abandoned_ray_count) {
+        atomicAdd(params.abandoned_ray_count, 1u);
+    }
+}
+
+// Move a coordinate into [lower, upper) by a whole number of periods. A point on the lower face of a ray travelling out through
+// that face is moved to the upper face instead, so the ray starts inside the domain. Must match wrap_into_period() in the Vulkan
+// shaders.
+static __forceinline__ __device__ float wrapIntoPeriod(float coordinate, float direction, float lower, float upper) {
+    const float period = upper - lower;
+    float wrapped = coordinate - period * floorf((coordinate - lower) / period);
+    if (wrapped < lower || wrapped >= upper) {
+        wrapped = lower; // rounding at a whole number of periods
+    }
+    if (wrapped == lower && direction < 0.f) {
+        wrapped = upper;
+    }
+    return wrapped;
+}
+
+// Move a camera ray that starts above or below the periodic boundary faces to the top or bottom of the faces. The faces span only
+// the height of the geometry, so the ray passes nothing it can hit on the way there; it is then moved into the domain laterally
+// by a whole number of periods, which is where it would have been wrapped to on the way. A ray that never reaches the faces'
+// height range is left where it is. Returns the distance the ray was moved along its direction. Must match
+// advance_to_periodic_faces() in the Vulkan shaders.
+static __forceinline__ __device__ float advanceToPeriodicFaces(float3 &ray_origin, const float3 &ray_direction) {
+    if (params.periodic_flag.x != 1 && params.periodic_flag.y != 1) {
+        return 0.f;
+    }
+
+    // Vertices 0 and 2 of every face are at the bottom and the top of the faces
+    const float face_zmin = params.bbox_vertices[0].z;
+    const float face_zmax = params.bbox_vertices[2].z;
+
+    float face_z;
+    if (ray_origin.z > face_zmax && ray_direction.z < 0.f) {
+        face_z = face_zmax;
+    } else if (ray_origin.z < face_zmin && ray_direction.z > 0.f) {
+        face_z = face_zmin;
+    } else {
+        return 0.f;
+    }
+
+    const float t = (face_z - ray_origin.z) / ray_direction.z;
+    float3 moved = make_float3(ray_origin.x + t * ray_direction.x, ray_origin.y + t * ray_direction.y, face_z);
+    if (params.periodic_flag.x == 1) {
+        // x-faces are bboxes 0 (x-min) and 1 (x-max)
+        moved.x = wrapIntoPeriod(moved.x, ray_direction.x, params.bbox_vertices[0 * 4].x, params.bbox_vertices[1 * 4].x);
+    }
+    if (params.periodic_flag.y == 1) {
+        // y-faces follow the x-faces when x is periodic
+        const uint32_t y_base = (params.periodic_flag.x == 1) ? 2u : 0u;
+        moved.y = wrapIntoPeriod(moved.y, ray_direction.y, params.bbox_vertices[y_base * 4].y, params.bbox_vertices[(y_base + 1) * 4].y);
+    }
+    ray_origin = moved;
+    return t;
 }
 
 // ---------------------------------------------------------------------------
@@ -1162,8 +1244,8 @@ extern "C" __global__ void __closesthit__camera() {
     float3 n1 = make_float3(1.f, 0.f, 0.f); d_transformPoint(T, n1);
     float3 n2 = make_float3(0.f, 1.f, 0.f); d_transformPoint(T, n2);
     float3 normal = normalize(cross(n1 - n0, n2 - n0));
-    // Ensure normal points toward the camera (consistent with face_top)
-    if (face_top != (dot(normal, ray_direction) < 0.f)) {
+    // The normal of the face the camera sees
+    if (dot(normal, ray_direction) > 0.f) {
         normal = make_float3(-normal.x, -normal.y, -normal.z);
     }
 
@@ -1317,7 +1399,12 @@ extern "C" __global__ void __closesthit__camera() {
                                                            params.source_positions[rr].y - hp.y,
                                                            params.source_positions[rr].z - hp.z));
                     }
-                    const float3 spec_dir = normalize(light_dir - ray_direction);
+                    // A source on the other side of the surface lights the face the camera does not see
+                    if (dot(light_dir, normal) <= 0.f) continue;
+                    const float3 half_vector = light_dir - ray_direction;
+                    const float  half_length = d_magnitude(half_vector);
+                    if (half_length < 1e-6f) continue;
+                    const float3 spec_dir = half_vector / half_length;
                     const float exponent  = params.specular_exponent[hit_position];
                     const float scale_coeff = params.specular_scale[hit_position]; // 1 for a primitive without "specular_scale" data
                     const float cos_spec = fmaxf(0.f, dot(spec_dir, normal));
@@ -1354,8 +1441,8 @@ extern "C" __global__ void __closesthit__pixel_label() {
     // Periodic boundary: treat as transparent wall and re-launch
     if ((params.periodic_flag.x != 0.f || params.periodic_flag.y != 0.f) &&
         hit_position != 0xFFFFFFFFu && params.primitive_type[hit_position] == 5) {
-        prd->strength += (double)optixGetRayTmax(); // the distance travelled to the boundary counts toward the depth
         handlePeriodicBoundaryHit(prd, hit_uuid);
+        prd->strength += (double)prd->periodic_hit_t; // the distance travelled to the boundary counts toward the depth
         prd->hit_periodic_boundary = true;
         return;
     }
@@ -1409,8 +1496,10 @@ extern "C" __global__ void __raygen__direct() {
     float T[16];
     loadTransformMatrix(prim_pos, T);
 
+    // Seeded by the global primitive position: rays are launched in batches of at most 65535 primitives, and a batch-local index
+    // would give primitives k and k + 65535 identical samples.
     const uint32_t linear_idx = xi + dim_x * yi;
-    uint32_t seed = tea<16>(linear_idx + Nrays * prim_local, params.random_seed);
+    uint32_t seed = tea<16>(linear_idx + Nrays * prim_pos, params.random_seed);
 
     for (int jj = 0; jj < NY; jj++) {
         for (int ii = 0; ii < NX; ii++) {
@@ -1603,6 +1692,7 @@ extern "C" __global__ void __raygen__direct() {
                 prd.seed                 = seed;
                 prd.origin_UUID          = UUID;
                 prd.source_ID            = (unsigned char)rr;
+                prd.skip_origin          = true;
                 prd.hit_periodic_boundary = false;
                 prd.face                 = (dot(ray_direction, normal) > 0.f);
                 initCoverTransmittance(prd); // translucent-cover attenuation starts at 1 (no covers crossed)
@@ -1610,21 +1700,27 @@ extern "C" __global__ void __raygen__direct() {
                 // Strength set above per source type
                 prd.strength = strength;
 
-                // Only fire from the face pointing toward source (or two-sided)
+                // Only fire from the top face, or from the bottom face of a two-sided primitive (twosided_flag 1). An invisible
+                // primitive (twosided_flag 3) fires no rays.
                 const int8_t tsf = params.twosided_flag[prim_pos];
-                if (!prd.face && tsf == 0) continue;
-                if (tsf == 3) continue; // reserved flag — skip
+                if (!prd.face && tsf != 1) continue;
+                if (tsf == 3) continue;
 
                 uint32_t u0, u1;
                 float3 current_origin = ray_origin;
 
-                for (int wrap = 0; wrap < 10; ++wrap) {
+                // A ray that reaches the wrap limit deposits nothing (treated as blocked). After a wrap, a ray toward a finite
+                // source only has the rest of the distance to the point it sampled on the source left to travel. A wrapped ray
+                // continues with no minimum distance, so that it hits geometry right at the boundary it was wrapped to.
+                bool wrap_limit_reached = true;
+                float segment_t_min = 1e-4f;
+                for (int wrap = 0; wrap < MAX_PERIODIC_WRAPS; ++wrap) {
                     packPointer(&prd, u0, u1);
                     optixTrace(
                         params.traversable,
                         current_origin,
                         ray_direction,
-                        1e-4f,       // tmin
+                        segment_t_min, // tmin
                         ray_tmax,    // tmax
                         0.f,         // time
                         OptixVisibilityMask(255),
@@ -1634,9 +1730,19 @@ extern "C" __global__ void __raygen__direct() {
                         0,           // miss SBT index (direct miss = 0)
                         u0, u1
                     );
-                    if (!prd.hit_periodic_boundary) break;
+                    if (!prd.hit_periodic_boundary) {
+                        wrap_limit_reached = false;
+                        break;
+                    }
                     current_origin = prd.periodic_hit;
+                    segment_t_min = 0.f;
+                    if (src_type != 0) {
+                        ray_tmax = fmaxf(ray_tmax - prd.periodic_hit_t, 2e-4f);
+                    }
                     prd.hit_periodic_boundary = false;
+                }
+                if (wrap_limit_reached) {
+                    countAbandonedRay();
                 }
 
                 seed = prd.seed;
@@ -1673,9 +1779,9 @@ extern "C" __global__ void __raygen__diffuse() {
     float T[16];
     loadTransformMatrix(prim_pos, T);
 
-    // Seed once per ray index
+    // Seed once per ray index, by the global primitive position (see __raygen__direct)
     const uint32_t linear_idx = theta_idx + dim_x * phi_idx;
-    uint32_t seed = tea<16>(linear_idx + dimxy * prim_local, params.random_seed);
+    uint32_t seed = tea<16>(linear_idx + dimxy * prim_pos, params.random_seed);
 
     // Stratified cosine-weighted hemisphere sampling
     const float Rt = (theta_idx + rnd(seed)) / float(dim_x);
@@ -1788,6 +1894,7 @@ extern "C" __global__ void __raygen__diffuse() {
             prd.seed                  = seed;
             prd.origin_UUID           = UUID;
             prd.source_ID             = (unsigned char)params.Nsources; // diffuse/scatter material slot, weighted by the band's combined incident spectrum
+            prd.skip_origin           = true;
             prd.hit_periodic_boundary = false;
             prd.strength              = 1.0 / double(dimxy);
             initCoverTransmittance(prd); // translucent-cover attenuation starts at 1 (no covers crossed)
@@ -1798,26 +1905,33 @@ extern "C" __global__ void __raygen__diffuse() {
                 prd.face = true;
                 float3 cur_origin = ray_origin;
                 // Trace segment by segment: re-trace after wrapping through a periodic boundary and after passing a
-                // translucent cover.
+                // translucent cover. A wrapped ray continues with no minimum distance, so that it hits geometry right at the
+                // boundary it was wrapped to.
                 prd.hit_cover = false;
                 int wraps = 0;
+                float segment_t_min = 1e-4f;
                 for (int segment = 0; segment < MAX_RAY_SEGMENTS; ++segment) {
                     packPointer(&prd, u0, u1);
                     optixTrace(
                         params.traversable,
                         cur_origin, ray_dir,
-                        1e-4f, 1e38f, 0.f,
+                        segment_t_min, 1e38f, 0.f,
                         OptixVisibilityMask(255),
                         OPTIX_RAY_FLAG_NONE,
                         1, 0, 1, // SBT offset=1 (diffuse hit), stride=0, miss index=1 (diffuse miss)
                         u0, u1
                     );
                     if (prd.hit_periodic_boundary) {
-                        if (++wraps >= MAX_PERIODIC_WRAPS) break;
+                        if (++wraps >= MAX_PERIODIC_WRAPS) {
+                            countAbandonedRay();
+                            break;
+                        }
                         cur_origin = prd.periodic_hit;
+                        segment_t_min = 0.f;
                         prd.hit_periodic_boundary = false;
                     } else if (prd.hit_cover) {
                         cur_origin = prd.cover_exit;
+                        segment_t_min = 1e-4f;
                         prd.hit_cover = false;
                     } else {
                         break;
@@ -1828,26 +1942,33 @@ extern "C" __global__ void __raygen__diffuse() {
                 float3 neg_dir = make_float3(-ray_dir.x, -ray_dir.y, -ray_dir.z);
                 float3 cur_origin = ray_origin;
                 // Trace segment by segment: re-trace after wrapping through a periodic boundary and after passing a
-                // translucent cover.
+                // translucent cover. A wrapped ray continues with no minimum distance, so that it hits geometry right at the
+                // boundary it was wrapped to.
                 prd.hit_cover = false;
                 int wraps = 0;
+                float segment_t_min = 1e-4f;
                 for (int segment = 0; segment < MAX_RAY_SEGMENTS; ++segment) {
                     packPointer(&prd, u0, u1);
                     optixTrace(
                         params.traversable,
                         cur_origin, neg_dir,
-                        1e-4f, 1e38f, 0.f,
+                        segment_t_min, 1e38f, 0.f,
                         OptixVisibilityMask(255),
                         OPTIX_RAY_FLAG_NONE,
                         1, 0, 1,
                         u0, u1
                     );
                     if (prd.hit_periodic_boundary) {
-                        if (++wraps >= MAX_PERIODIC_WRAPS) break;
+                        if (++wraps >= MAX_PERIODIC_WRAPS) {
+                            countAbandonedRay();
+                            break;
+                        }
                         cur_origin = prd.periodic_hit;
+                        segment_t_min = 0.f;
                         prd.hit_periodic_boundary = false;
                     } else if (prd.hit_cover) {
                         cur_origin = prd.cover_exit;
+                        segment_t_min = 1e-4f;
                         prd.hit_cover = false;
                     } else {
                         break;
@@ -1923,6 +2044,7 @@ extern "C" __global__ void __raygen__camera() {
     PerRayData prd;
     prd.strength             = 1.0f / (float)dim_x;
     prd.origin_UUID          = pixel_index;
+    prd.skip_origin          = false; // origin_UUID is a pixel index
     prd.face                 = true;
     prd.source_ID            = 0;
     prd.seed                 = seed;
@@ -1933,8 +2055,13 @@ extern "C" __global__ void __raygen__camera() {
     uint32_t p0, p1;
     packPointer(&prd, p0, p1);
 
-    const float t_min = 1e-5f;
+    // A wrapped ray continues with no minimum distance, so that it hits geometry right at the boundary it was wrapped to
+    const float initial_t_min = 1e-5f;
     const float t_max = 1e30f;
+    float t_min = initial_t_min;
+
+    // A ray starting above or below a periodic domain is moved to it in one step
+    advanceToPeriodicFaces(ray_origin, ray_direction);
 
     // Trace segment by segment: the ray is re-launched after wrapping through a periodic boundary and after
     // passing a translucent cover, whose closest-hit has already added the cover's own radiance.
@@ -1951,8 +2078,10 @@ extern "C" __global__ void __raygen__camera() {
         if (prd.hit_periodic_boundary) {
             if (++wraps >= MAX_PERIODIC_WRAPS) break;
             cur_origin = prd.periodic_hit;
+            t_min = 0.f;
         } else if (prd.hit_cover) {
             cur_origin = prd.cover_exit;
+            t_min = initial_t_min;
         } else {
             break;
         }
@@ -2002,6 +2131,7 @@ extern "C" __global__ void __raygen__pixel_label() {
     PerRayData prd;
     prd.strength             = 0.f; // used as the distance travelled before any translucent covers passed
     prd.origin_UUID          = pixel_index;
+    prd.skip_origin          = false; // origin_UUID is a pixel index
     prd.face                 = true;
     prd.source_ID            = 0;
     prd.seed                 = seed;
@@ -2012,13 +2142,19 @@ extern "C" __global__ void __raygen__pixel_label() {
     uint32_t p0, p1;
     packPointer(&prd, p0, p1);
 
-    const float t_min = 1e-5f;
+    // A wrapped ray continues with no minimum distance, so that it hits geometry right at the boundary it was wrapped to
+    const float initial_t_min = 1e-5f;
     const float t_max = 1e30f;
+    float t_min = initial_t_min;
+
+    // A ray starting above or below a periodic domain is moved to it in one step; the distance counts toward the depth
+    prd.strength = (double)advanceToPeriodicFaces(ray_origin, ray_direction);
 
     // Trace segment by segment, as __raygen__camera does, so the label is that of the first surface behind
     // any translucent covers.
     float3 cur_origin = ray_origin;
     int wraps = 0;
+    bool ray_ended = false;
     for (int segment = 0; segment < MAX_RAY_SEGMENTS; segment++) {
         prd.hit_periodic_boundary = false;
         prd.hit_cover             = false;
@@ -2030,10 +2166,23 @@ extern "C" __global__ void __raygen__pixel_label() {
         if (prd.hit_periodic_boundary) {
             if (++wraps >= MAX_PERIODIC_WRAPS) break;
             cur_origin = prd.periodic_hit;
+            t_min = 0.f;
         } else if (prd.hit_cover) {
             cur_origin = prd.cover_exit;
+            t_min = initial_t_min;
         } else {
+            ray_ended = true;
             break;
+        }
+    }
+
+    // A ray that runs out of wraps or segments is treated as blocked: the pixel shows no primitive, as for a ray that leaves the scene
+    if (!ray_ended) {
+        if (params.camera_pixel_label) {
+            params.camera_pixel_label[pixel_index] = 0u;
+        }
+        if (params.camera_pixel_depth) {
+            params.camera_pixel_depth[pixel_index] = -1.0f;
         }
     }
 }

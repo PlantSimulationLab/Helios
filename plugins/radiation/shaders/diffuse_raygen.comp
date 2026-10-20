@@ -53,16 +53,13 @@ layout(push_constant) uniform PushConstants {
     uint camera_count;     // Number of cameras; 0 = skip camera-weighted scatter
     uint camera_id;        // Camera whose weighting the camera-scatter buffers accumulate
     uint face_absorption_enabled; // 1 = also accumulate the absorption that arrived on the top face into radiation_in_top
+    uint below_horizon_diffuse_enabled; // 1 = the diffuse sky also reaches rays leaving below the horizon
 } pc;
 
 // ========== Descriptor Set 0: Geometry ==========
 layout(set = 0, binding = 0) readonly buffer BVHBuffer {
     float data[]; // BVHNode array (accessed via bvh_traversal.glsl)
 } bvh_buf;
-
-layout(set = 0, binding = 1) readonly buffer PrimIndicesBuffer {
-    uint indices[];
-} prim_indices_buf;
 
 layout(set = 0, binding = 2) readonly buffer TransformMatricesBuffer {
     float matrices[]; // 16 floats per primitive (row-major)
@@ -88,13 +85,9 @@ layout(set = 0, binding = 7) readonly buffer TwosidedFlagBuffer {
     uint twosided_flags[];
 } twosided_buf;
 
-layout(set = 0, binding = 8) readonly buffer PatchVerticesBuffer {
-    float vertices[]; // 12 floats per patch (4 vec3 vertices)
-} patch_vertices_buf;
-
-layout(set = 0, binding = 9) readonly buffer TriangleVerticesBuffer {
-    float vertices[]; // 9 floats per triangle (3 vec3 vertices)
-} triangle_vertices_buf;
+layout(set = 0, binding = 8) readonly buffer LeafRecordBuffer {
+    vec4 records[]; // 4 vec4 per BVH leaf slot (layout in common/intersections.glsl)
+} leaf_records_buf;
 
 layout(set = 0, binding = 10) readonly buffer NormalsBuffer {
     float normals[]; // 3 floats per primitive (pre-computed world-space normal)
@@ -118,7 +111,7 @@ layout(set = 0, binding = 17) readonly buffer BboxVerticesBuffer {
 // stride, while the host uploads tightly-packed 12-byte helios::vec3. Declaring them as `vec3[]`
 // therefore reads the wrong 12 bytes for every element after the first, and reads past the end of
 // the allocation for the last one. They are declared as flat float arrays and fetched three at a
-// time instead, matching patch_vertices_buf / triangle_vertices_buf / normals_buf.
+// time instead, matching normals_buf.
 layout(set = 1, binding = 0) readonly buffer SourcePositionsBuffer {
     float positions[]; // 3 floats per source
 } source_positions_buf;
@@ -229,6 +222,12 @@ layout(set = 2, binding = 13) buffer WhiteReferenceTopBuffer {
 layout(set = 2, binding = 14) buffer WhiteReferenceBottomBuffer {
     float white_reference_bottom[];
 } white_reference_bottom_buf;
+
+// ========== Descriptor Set 4: Ray counters ==========
+// counters[0]: rays abandoned at the periodic wrap limit, read back by the host after the launches of a runBand() call
+layout(set = 4, binding = 0) buffer RayCountersBuffer {
+    uint counters[];
+} ray_counters_buf;
 
 layout(set = 3, binding = 0) readonly buffer DiffuseFluxBuffer {
     float diffuse_flux[]; // [band] - Sky irradiance per band
@@ -422,8 +421,9 @@ void main() {
     // A translucent cover books what reaches it with its angular glass properties, not rho/tau.
     bool origin_is_cover = glass_cover_all_bands(prim_idx, pc.band_count, pc.material_band_count);
 
-    // Skip if launching from bottom face and twosided_flag = 0 (single-sided, top only)
-    if (pc.launch_face == 0 && twosided == 0) {
+    // The top face launches unless the primitive is invisible (twosided_flag = 3); the bottom face launches only for two-sided
+    // primitives (twosided_flag = 1)
+    if ((pc.launch_face == 1 && twosided == 3) || (pc.launch_face == 0 && twosided != 1)) {
         return;
     }
 
@@ -485,9 +485,8 @@ void main() {
                         sp_local.z = 0.0;
                         sample_uv = vec2(sp_local.x + 0.5, sp_local.y + 0.5);
                     }
-                    if (!check_texture_mask(prim_idx, sample_uv, prim_type)) {
-                        continue; // Skip ray after 10 failed retries
-                    }
+                    // Launch from the last sample even if it is still transparent, as the OptiX backends do: dropping the ray would
+                    // lose its share of the primitive's energy, which is large for a sparsely masked primitive
                 }
             } else if (prim_type == 1 && mask_ids_buf.mask_ids[prim_idx] >= 0) {
                 // Triangle origin masking via rejection sampling
@@ -503,9 +502,7 @@ void main() {
                     float gamma = r2; // sp_local.x
                     masked = !mask_texel_is_opaque(mask_id, triangle_texture_uv(prim_idx, vec2(beta, gamma)));
                 }
-                if (masked) {
-                    continue; // Skip this ray - all 50 attempts hit transparent texels
-                }
+                // If all attempts hit transparent texels, launch from the last sample rather than drop the ray and its energy
             }
 
             // Transform to world space
@@ -553,12 +550,17 @@ void main() {
             float closest_t;
             uint hit_prim_idx;
             vec3 trace_origin = ray_origin;
+            // A ray that reaches the periodic wrap limit or the segment limit ends without reaching the sky or a surface, and
+            // deposits nothing, as in the OptiX backends.
+            bool ray_terminated = false;
+            int boundary_hits = 0;
 
-            for (int step = 0; step < 32; ++step) {
+            float segment_t_min = 1e-5; // avoids self-intersection
+            for (int step = 0; step < MAX_RAY_SEGMENTS; ++step) {
                 hit_prim_idx = traverse_cwbvh(
                     trace_origin,
                     ray_direction,
-                    1e-5, // t_min (avoid self-intersection)
+                    segment_t_min,
                     prim_idx, // origin primitive index (skip self-hits)
                     closest_t
                 );
@@ -572,15 +574,26 @@ void main() {
                         pc.domain_xmin, pc.domain_xmax, pc.domain_ymin, pc.domain_ymax,
                         wrapped_origin);
                     if (hit_periodic) {
+                        if (++boundary_hits >= MAX_PERIODIC_WRAPS) { // wrap limit — the ray is abandoned
+                            atomicAdd(ray_counters_buf.counters[0], 1u);
+                            break;
+                        }
                         trace_origin = wrapped_origin;
+                        segment_t_min = 0.0; // a wrapped ray hits geometry right at the boundary it was wrapped to
                         continue;
                     }
                 }
 
-                if (hit_prim_idx == 0xFFFFFFFF) break; // miss — reached the sky
+                if (hit_prim_idx == 0xFFFFFFFF) { // miss — reached the sky
+                    ray_terminated = true;
+                    break;
+                }
 
                 // A primitive that is not a translucent cover for all launched bands is a normal surface.
-                if (hit_prim_idx == prim_idx || !glass_cover_all_bands(hit_prim_idx, pc.band_count, pc.material_band_count)) break; // real surface hit — handled by the band loop below
+                if (hit_prim_idx == prim_idx || !glass_cover_all_bands(hit_prim_idx, pc.band_count, pc.material_band_count)) { // real surface hit — handled by the band loop below
+                    ray_terminated = true;
+                    break;
+                }
 
                 // Glass pass-through: receive the cover's own outgoing radiance from the face the ray hits, then
                 // accumulate its per-band transmittance. What the cover itself absorbs and reflects is booked by the
@@ -599,10 +612,13 @@ void main() {
                 }
 
                 trace_origin = trace_origin + ray_direction * (closest_t + 1e-4);
+                segment_t_min = 1e-5;
             }
 
             // Process hit or miss — loop over all bands (BVH traversal is band-independent)
-            bool hit_found = (hit_prim_idx != 0xFFFFFFFF);
+            bool hit_found = ray_terminated && (hit_prim_idx != 0xFFFFFFFF);
+            // The diffuse sky fills only the upper hemisphere unless enabled below the horizon.
+            bool sky_found = ray_terminated && (hit_prim_idx == 0xFFFFFFFF) && (ray_direction.z >= 0.0 || pc.below_horizon_diffuse_enabled != 0u);
 
             // Read hit surface normal once (shared across bands)
             vec3 hit_normal;
@@ -671,7 +687,7 @@ void main() {
                         scatter_top_val    = transmit_energy;
                     }
 
-                } else {
+                } else if (sky_found) {
                     // ========== MISS: Ray hit sky ==========
                     float diffuse_flux = diffuse_flux_buf.diffuse_flux[band];
 

@@ -104,17 +104,6 @@ namespace helios {
         // ========== Diffuse/Sky Radiation ==========
 
         /**
-         * @brief Update diffuse (ambient) radiation parameters
-         *
-         * @param[in] flux Diffuse flux per band
-         * @param[in] extinction Extinction coefficient per band
-         * @param[in] peak_dir Peak direction for diffuse distribution per band
-         * @param[in] dist_norm Distribution normalization factor per band
-         * @param[in] sky_energy Energy absorbed by sky per band
-         */
-        virtual void updateDiffuseRadiation(const std::vector<float> &flux, const std::vector<float> &extinction, const std::vector<helios::vec3> &peak_dir, const std::vector<float> &dist_norm, const std::vector<float> &sky_energy) = 0;
-
-        /**
          * @brief Update sky radiance model parameters (for camera rendering)
          *
          * @param[in] sky_radiance_params Prague sky model parameters per band (vec4)
@@ -212,7 +201,20 @@ namespace helios {
          */
         [[nodiscard]] virtual size_t getRadiationInTopBufferSize() const = 0;
 
+        /**
+         * @brief Number of direct and diffuse rays abandoned at the periodic wrap limit
+         *
+         * @return Rays that reached the periodic-boundary wrap limit (MAX_PERIODIC_WRAPS) and were treated as blocked, accumulated by every
+         * direct and diffuse launch since zeroAbandonedRayCount()
+         */
+        [[nodiscard]] virtual size_t getAbandonedRayCount() = 0;
+
         // ========== Buffer Management Utilities ==========
+
+        /**
+         * @brief Zero the count of rays abandoned at the periodic wrap limit (see getAbandonedRayCount())
+         */
+        virtual void zeroAbandonedRayCount() = 0;
 
         /**
          * @brief Zero all radiation result buffers (radiation_in, radiation_out, radiation_specular, white reference)

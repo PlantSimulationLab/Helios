@@ -955,15 +955,15 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
             CO2 = CO2_default;
         }
 
-        float gM;
+        float gS; // stomatal conductance to water vapor
         if (context->doesPrimitiveDataExist(UUID, "moisture_conductance") && context->getPrimitiveDataType("moisture_conductance") == HELIOS_TYPE_FLOAT) {
-            context->getPrimitiveData(UUID, "moisture_conductance", gM);
-            if (gM < 0) {
-                gM = 0;
+            context->getPrimitiveData(UUID, "moisture_conductance", gS);
+            if (gS < 0) {
+                gS = 0;
                 warnings.addWarning("negative_moisture_conductance_clipped", "Moisture conductance value provided was negative. Clipping to zero.");
             }
         } else {
-            gM = gM_default;
+            gS = gM_default;
         }
 
         // Number of sides - check material first, then primitive data
@@ -973,6 +973,10 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
         float stomatal_sidedness = 0.f; // default all stomata on one side (hypostomatous)
         if (Nsides == 2 && context->doesPrimitiveDataExist(UUID, "stomatal_sidedness") && context->getPrimitiveDataType("stomatal_sidedness") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "stomatal_sidedness", stomatal_sidedness);
+        } else if (Nsides == 2 && context->doesPrimitiveDataExist(UUID, "evaporating_faces") && context->getPrimitiveDataType("evaporating_faces") == HELIOS_TYPE_UINT) {
+            uint evaporating_faces;
+            context->getPrimitiveData(UUID, "evaporating_faces", evaporating_faces);
+            stomatal_sidedness = (evaporating_faces == 2) ? 0.5f : 0.f;
         }
 
         float gH;
@@ -988,11 +992,15 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
             warnings.addWarning("negative_boundarylayer_conductance_clipped", "Boundary-layer conductance value provided was negative. Clipping to zero.");
         }
 
-        // combine stomatal (gM) and boundary-layer (gH) conductances
-        if (gH == 0 || gM == 0) { // conductances in series: if either is zero there is no CO2 supply (and the expression below is 0/0)
-            gM = 0;
+        // Total conductance to CO2 between the intercellular air spaces and the air outside the boundary layer. The stomatal and boundary-layer conductances to CO2 are those to water vapor divided by 1.6 and
+        // 1.37, respectively. gH is summed over all faces, but CO2 entering through the stomata of a face only crosses that face's boundary layer, so the two act in series on each face.
+        float gC;
+        if (gH == 0 || gS == 0) { // conductances in series: if either is zero there is no CO2 supply (and the expression below is 0/0)
+            gC = 0;
         } else {
-            gM = 1.08f * gH * gM * (stomatal_sidedness / (1.08f * gH + gM * stomatal_sidedness) + (1.f - stomatal_sidedness) / (1.08f * gH + gM * (1.f - stomatal_sidedness)));
+            float gbc = 1.08f * gH / float(Nsides) / 1.37f; // boundary-layer conductance to CO2 of one face
+            float gsc = gS / 1.6f; // stomatal conductance to CO2
+            gC = gbc * gsc * (stomatal_sidedness / (gbc + gsc * stomatal_sidedness) + (1.f - stomatal_sidedness) / (gbc + gsc * (1.f - stomatal_sidedness)));
         }
 
         float A, Ci, Gamma, electron_transport_ratio = 0.f;
@@ -1009,7 +1017,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
                 FarquharModelCoefficients coeffs = getCoefficientsForPrimitive_Farquhar(UUID);
 
                 // Set up variables vector for evaluateCi_Farquhar
-                std::vector<float> variables{CO2, i_PAR, TL, gM, 0.f, 0.f, 0.f, float(TPU_flag), 0.f};
+                std::vector<float> variables{CO2, i_PAR, TL, gC, 0.f, 0.f, 0.f, float(TPU_flag), 0.f};
 
                 // Call evaluateCi_Farquhar directly to compute A for the manual Ci
                 // This bypasses the fzero iteration in evaluateFarquharModel
@@ -1035,7 +1043,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
                 }
 
                 FarquharModelCoefficients coeffs = getCoefficientsForPrimitive_Farquhar(UUID);
-                A = evaluateFarquharModel(coeffs, i_PAR, TL, CO2, gM, Ci, Gamma, limitation_state, TPU_flag, electron_transport_ratio, warnings);
+                A = evaluateFarquharModel(coeffs, i_PAR, TL, CO2, gC, Ci, Gamma, limitation_state, TPU_flag, electron_transport_ratio, warnings);
 
                 // Store computed Ci for next timestep (temporal continuity)
                 previous_Ci[UUID] = Ci;
@@ -1049,7 +1057,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
                 // Manual Cm path — skip both stomatal iteration and the Cm = Ci - A/gm fixed point.
                 // A is computed directly at the supplied Cm; Ci is back-computed from Cm + A/gm.
                 const float Cm_in = manual_Cm.at(UUID);
-                std::vector<float> variables{CO2, i_PAR, TL, gM, 0.f, 0.f, 0.f, 0.f, 0.f};
+                std::vector<float> variables{CO2, i_PAR, TL, gC, 0.f, 0.f, 0.f, 0.f, 0.f};
                 evaluateCm_C4(Cm_in, variables, c4coeffs);
                 A = variables[4];
                 limitation_state = static_cast<int>(variables[5]);
@@ -1062,7 +1070,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
             } else if (manual_Ci.find(UUID) != manual_Ci.end()) {
                 // Manual Ci path — bypass stomatal iteration, evaluate A via Cm = Ci - A/gm fixed point
                 Ci = manual_Ci.at(UUID);
-                std::vector<float> variables{CO2, i_PAR, TL, gM, 0.f, 0.f, 0.f, 0.f, 0.f};
+                std::vector<float> variables{CO2, i_PAR, TL, gC, 0.f, 0.f, 0.f, 0.f, 0.f};
                 evaluateCi_C4(Ci, variables, &c4coeffs);
                 A = variables[4];
                 limitation_state = static_cast<int>(variables[5]);
@@ -1077,7 +1085,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
                     Ci = CO2 * 0.4f; // C4 typically has lower Ci/Ca (~0.3-0.4) than C3
                 }
                 Cm_c4 = Ci;
-                A = evaluateC4Model(c4coeffs, i_PAR, TL, CO2, gM, Ci, Cm_c4, Vp_c4, limitation_state, electron_transport_ratio, warnings);
+                A = evaluateC4Model(c4coeffs, i_PAR, TL, CO2, gC, Ci, Cm_c4, Vp_c4, limitation_state, electron_transport_ratio, warnings);
                 previous_Ci[UUID] = Ci;
             }
             Gamma = 0.f; // not defined the same way for C4 — leave zero
@@ -1085,7 +1093,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
         } else { // Empirical Model
 
             EmpiricalModelCoefficients coeffs = getCoefficientsForPrimitive_Empirical(UUID);
-            A = evaluateEmpiricalModel(coeffs, i_PAR, TL, CO2, gM);
+            A = evaluateEmpiricalModel(coeffs, i_PAR, TL, CO2, gC);
         }
 
         if (A == 0) {
@@ -1154,7 +1162,7 @@ namespace {
     }
 } // namespace
 
-float PhotosynthesisModel::evaluateCi_Empirical(const EmpiricalModelCoefficients &params, float Ci, float CO2, float fL, float fT, float Rd, float gM) const {
+float PhotosynthesisModel::evaluateCi_Empirical(const EmpiricalModelCoefficients &params, float Ci, float CO2, float fL, float fT, float Rd, float gC) const {
 
 
     //--- CO2 Response Function --- //
@@ -1168,13 +1176,13 @@ float PhotosynthesisModel::evaluateCi_Empirical(const EmpiricalModelCoefficients
 
     //--- Calculate error and update --- //
 
-    float resid = 0.75f * gM * (CO2 - Ci) - A;
+    float resid = gC * (CO2 - Ci) - A;
 
 
     return resid;
 }
 
-float PhotosynthesisModel::evaluateEmpiricalModel(const EmpiricalModelCoefficients &params, float i_PAR, float TL, float CO2, float gM) {
+float PhotosynthesisModel::evaluateEmpiricalModel(const EmpiricalModelCoefficients &params, float i_PAR, float TL, float CO2, float gC) {
 
     // initial guess for intercellular CO2
     float Ci = CO2;
@@ -1196,8 +1204,8 @@ float PhotosynthesisModel::evaluateEmpiricalModel(const EmpiricalModelCoefficien
     float Ci_old = Ci;
     float Ci_old_old = 0.95f * Ci;
 
-    float resid_old = evaluateCi_Empirical(params, Ci_old, CO2, fL, fT, Rd, gM);
-    float resid_old_old = evaluateCi_Empirical(params, Ci_old_old, CO2, fL, fT, Rd, gM);
+    float resid_old = evaluateCi_Empirical(params, Ci_old, CO2, fL, fT, Rd, gC);
+    float resid_old_old = evaluateCi_Empirical(params, Ci_old_old, CO2, fL, fT, Rd, gC);
 
     float err = 10000, err_max = 0.01;
     int iter = 0, max_iter = 100;
@@ -1210,7 +1218,7 @@ float PhotosynthesisModel::evaluateEmpiricalModel(const EmpiricalModelCoefficien
 
         Ci = fabs((Ci_old_old * resid_old - Ci_old * resid_old_old) / (resid_old - resid_old_old));
 
-        resid = evaluateCi_Empirical(params, Ci, CO2, fL, fT, Rd, gM);
+        resid = evaluateCi_Empirical(params, Ci, CO2, fL, fT, Rd, gC);
 
         resid_old_old = resid_old;
         resid_old = resid;
@@ -1243,7 +1251,7 @@ float PhotosynthesisModel::evaluateCi_Farquhar(float Ci, std::vector<float> &var
     float CO2 = variables[0];
     float Q = variables[1];
     float TL = variables[2];
-    float gM = variables[3];
+    float gC = variables[3];
     int TPUflag = modelcoeffs.TPU_flag;
 
     float R = 0.0083144598; // molar gas constant (kJ/K/mol)
@@ -1412,7 +1420,7 @@ float PhotosynthesisModel::evaluateCi_Farquhar(float Ci, std::vector<float> &var
 
     //--- Calculate error and update --- //
 
-    float resid = 0.75f * gM * (CO2 - Ci) - A;
+    float resid = gC * (CO2 - Ci) - A;
 
     variables[4] = A;
     variables[5] = limitation_state;
@@ -1508,7 +1516,7 @@ float PhotosynthesisModel::evaluateCi_C4(float Ci, std::vector<float> &variables
     const float CO2 = variables[0];
     const float I_incident = variables[1];
     const float TL = variables[2];
-    const float gM = variables[3];
+    const float gC = variables[3];
 
     const float R = 0.0083144598f; // kJ/K/mol
     const float invDiffRT = (1.f / 298.15f - 1.f / TL) / R;
@@ -1560,7 +1568,7 @@ float PhotosynthesisModel::evaluateCi_C4(float Ci, std::vector<float> &variables
     variables[8] = c4RelativeLightSaturation(A, Aj, Rd, J, J_light_limited);
 
     // Outer residual: stomatal-conductance balance (used by fzero when Ci is not manually overridden)
-    return 0.75f * gM * (CO2 - Ci) - A;
+    return gC * (CO2 - Ci) - A;
 }
 
 
@@ -1596,11 +1604,11 @@ float PhotosynthesisModel::evaluateCm_C4(float Cm, std::vector<float> &variables
 }
 
 
-float PhotosynthesisModel::evaluateC4Model(const C4ModelCoefficients &params, float i_PAR, float TL, float CO2, float gM, float &Ci, float &Cm, float &Vp, int &limitation_state, float &electron_transport_ratio, helios::WarningAggregator &warnings) {
+float PhotosynthesisModel::evaluateC4Model(const C4ModelCoefficients &params, float i_PAR, float TL, float CO2, float gC, float &Ci, float &Cm, float &Vp, int &limitation_state, float &electron_transport_ratio, helios::WarningAggregator &warnings) {
 
     float A = 0.f;
-    // variables layout: [CO2, I_abs, TL, gM, A_out, limitation_out, Cm_out, Vp_out, electron_transport_ratio_out]
-    std::vector<float> variables{CO2, i_PAR, TL, gM, A, static_cast<float>(limitation_state), Cm, Vp, 0.f};
+    // variables layout: [CO2, I_abs, TL, gC, A_out, limitation_out, Cm_out, Vp_out, electron_transport_ratio_out]
+    std::vector<float> variables{CO2, i_PAR, TL, gC, A, static_cast<float>(limitation_state), Cm, Vp, 0.f};
 
     std::vector<float> initial_guesses;
     if (Ci > 0 && std::isfinite(Ci)) {
@@ -1655,11 +1663,11 @@ float PhotosynthesisModel::respondToTemperature(const PhotosyntheticTemperatureR
 }
 
 
-float PhotosynthesisModel::evaluateFarquharModel(const FarquharModelCoefficients &params, float i_PAR, float TL, float CO2, float gM, float &Ci, float &Gamma, int &limitation_state, int &TPU_flag, float &electron_transport_ratio,
+float PhotosynthesisModel::evaluateFarquharModel(const FarquharModelCoefficients &params, float i_PAR, float TL, float CO2, float gC, float &Ci, float &Gamma, int &limitation_state, int &TPU_flag, float &electron_transport_ratio,
                                                  helios::WarningAggregator &warnings) {
 
     float A = 0;
-    std::vector<float> variables{CO2, i_PAR, TL, gM, A, float(limitation_state), Gamma, float(TPU_flag), 0.f};
+    std::vector<float> variables{CO2, i_PAR, TL, gC, A, float(limitation_state), Gamma, float(TPU_flag), 0.f};
 
     // Temporal continuity approach: use previous Ci as initial guess, with fallbacks
     // This leverages the fact that Ci changes slowly between timesteps

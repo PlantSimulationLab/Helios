@@ -87,12 +87,11 @@ namespace helios {
                 return computeDiskAABB(prim_index);
             case 3:
                 return computeTileAABB(prim_index);
-            case 4:
-                return computeVoxelAABB(prim_index);
             case 5:
                 return computeBBoxAABB(prim_index);
             default:
-                return AABB{{0, 0, 0}, {0, 0, 0}};
+                helios_runtime_error("ERROR (BVHBuilder::computePrimitiveAABB): Primitive " + std::to_string(prim_index) + " has type " + std::to_string(prim_type) + ", which the BVH builder does not support.");
+                return AABB{};
         }
     }
 
@@ -181,29 +180,6 @@ namespace helios {
 
         for (uint32_t v = 0; v < 4; ++v) {
             helios::vec3 world_vertex = transformPoint(transform, canonical_quad[v]);
-
-            bounds.min.x = std::min(bounds.min.x, world_vertex.x);
-            bounds.min.y = std::min(bounds.min.y, world_vertex.y);
-            bounds.min.z = std::min(bounds.min.z, world_vertex.z);
-            bounds.max.x = std::max(bounds.max.x, world_vertex.x);
-            bounds.max.y = std::max(bounds.max.y, world_vertex.y);
-            bounds.max.z = std::max(bounds.max.z, world_vertex.z);
-        }
-
-        return bounds;
-    }
-
-    AABB BVHBuilder::computeVoxelAABB(uint32_t prim_index) const {
-        // O(1) lookup using pre-computed offset table
-        uint32_t voxel_index = type_offsets[prim_index];
-
-        // Voxels have 8 vertices
-        const float *transform = &geometry->transform_matrices[prim_index * 16];
-        AABB bounds{{1e30f, 1e30f, 1e30f}, {-1e30f, -1e30f, -1e30f}};
-
-        for (uint32_t v = 0; v < 8; ++v) {
-            helios::vec3 vertex = geometry->voxels.vertices[voxel_index * 8 + v];
-            helios::vec3 world_vertex = transformPoint(transform, vertex);
 
             bounds.min.x = std::min(bounds.min.x, world_vertex.x);
             bounds.min.y = std::min(bounds.min.y, world_vertex.y);
@@ -343,7 +319,7 @@ namespace helios {
                 if (left_prefix_count[split_idx] == 0 || right_prefix_count[split_idx] == 0)
                     continue;
 
-                float cost = 1.0f + (left_prefix_bounds[split_idx].surfaceArea() * left_prefix_count[split_idx] + right_prefix_bounds[split_idx].surfaceArea() * right_prefix_count[split_idx]) / parent_sa;
+                float cost = SAH_TRAVERSAL_COST + (left_prefix_bounds[split_idx].surfaceArea() * left_prefix_count[split_idx] + right_prefix_bounds[split_idx].surfaceArea() * right_prefix_count[split_idx]) / parent_sa;
 
                 if (cost < best_cost) {
                     best_cost = cost;
@@ -411,25 +387,24 @@ namespace helios {
         // nodes (visited by all rays) are contiguous at the start of the buffer and
         // remain cache-resident during traversal.
 
-        // First pass: BFS to assign indices and collect nodes in level order
-        std::queue<BuildNode *> bfs_queue;
+        // First pass: BFS to assign indices and collect nodes in level order. A node's BFS index is its
+        // position in bfs_order, so an internal node's children get the next two indices at the moment
+        // they are appended; recording that index here avoids a pointer-to-index map.
         std::vector<BuildNode *> bfs_order;
-        bfs_queue.push(node);
-        while (!bfs_queue.empty()) {
-            BuildNode *current = bfs_queue.front();
-            bfs_queue.pop();
-            bfs_order.push_back(current);
+        std::vector<uint32_t> left_child_index;
+        bfs_order.reserve(allocated_nodes.size());
+        left_child_index.reserve(allocated_nodes.size());
+        bfs_order.push_back(node);
+        for (size_t i = 0; i < bfs_order.size(); ++i) {
+            BuildNode *current = bfs_order[i];
             if (current->prim_count == 0) {
-                // Internal node: enqueue children (left then right)
-                bfs_queue.push(current->left);
-                bfs_queue.push(current->right);
+                // Internal node: children (left then right) occupy the next two BFS slots
+                left_child_index.push_back(static_cast<uint32_t>(bfs_order.size()));
+                bfs_order.push_back(current->left);
+                bfs_order.push_back(current->right);
+            } else {
+                left_child_index.push_back(UINT32_MAX);
             }
-        }
-
-        // Build a map from BuildNode pointer to its BFS index
-        std::unordered_map<BuildNode *, uint32_t> node_to_index;
-        for (uint32_t i = 0; i < bfs_order.size(); ++i) {
-            node_to_index[bfs_order[i]] = i;
         }
 
         // Second pass: write BVHNode entries in BFS order with correct child indices
@@ -455,8 +430,8 @@ namespace helios {
                 // Internal node
                 flat_node.prim_count = 0;
                 flat_node.split_axis = current->split_axis;
-                flat_node.left_child = node_to_index[current->left];
-                flat_node.right_child = node_to_index[current->right];
+                flat_node.left_child = left_child_index[i];
+                flat_node.right_child = left_child_index[i] + 1;
             }
 
             nodes[i] = flat_node;
@@ -532,12 +507,14 @@ namespace helios {
             node->first_prim_offset = flat_node.first_prim;
             node->left = nullptr;
             node->right = nullptr;
+            node->subtree_prim_count = node->prim_count;
         } else {
             // Internal node
             node->prim_count = 0;
             node->split_axis = flat_node.split_axis;
             node->left = reconstructTree(bvh2_nodes, flat_node.left_child);
             node->right = reconstructTree(bvh2_nodes, flat_node.right_child);
+            node->subtree_prim_count = (node->left ? node->left->subtree_prim_count : 0u) + (node->right ? node->right->subtree_prim_count : 0u);
         }
 
         return node;
@@ -547,14 +524,6 @@ namespace helios {
         if (!bvh2_node)
             return nullptr;
 
-        // Helper lambda: Count total primitives in a subtree
-        auto countPrimitivesInSubtree = [](BuildNode *node, auto &self) -> uint32_t {
-            if (!node)
-                return 0;
-            if (node->prim_count > 0)
-                return node->prim_count;
-            return self(node->left, self) + self(node->right, self);
-        };
         BVH8Node *node8 = new BVH8Node();
         allocated_bvh8_nodes.push_back(node8);
 
@@ -582,8 +551,7 @@ namespace helios {
                 if (candidates[i]->prim_count > 0)
                     continue; // Skip leaves
 
-                // Count total primitives in this subtree (recursive count)
-                uint32_t subtree_prims = countPrimitivesInSubtree(candidates[i], countPrimitivesInSubtree);
+                uint32_t subtree_prims = candidates[i]->subtree_prim_count;
 
                 if (subtree_prims > max_prim_count) {
                     max_prim_count = subtree_prims;

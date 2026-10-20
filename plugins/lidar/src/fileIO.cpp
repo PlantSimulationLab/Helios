@@ -504,13 +504,28 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
             }
 
             // ----- detectionThreshold (minimum return energy fraction) ------//
-            float detectionThreshold = 0.f;
+            float detectionThreshold = ScanMetadata().detectionThreshold;
             const char *detThresh_str = s.child_value("detectionThreshold");
             if (strlen(detThresh_str) == 0) {
                 detThresh_str = s.child_value("detectionthreshold");
             }
             if (strlen(detThresh_str) > 0) {
                 detectionThreshold = fmax(0, atof(detThresh_str));
+            }
+
+            // ----- recordPartialMisses (miss point for the escaped part of a multi-return pulse) ------//
+            bool recordPartialMisses = ScanMetadata().recordPartialMisses;
+            std::string partialMiss_str = deblank(s.child_value("recordPartialMisses"));
+            std::transform(partialMiss_str.begin(), partialMiss_str.end(), partialMiss_str.begin(), [](unsigned char ch) { return std::tolower(ch); });
+            if (!partialMiss_str.empty()) {
+                if (partialMiss_str == "true" || partialMiss_str == "1") {
+                    recordPartialMisses = true;
+                } else if (partialMiss_str == "false" || partialMiss_str == "0") {
+                    recordPartialMisses = false;
+                } else {
+                    cerr << "failed.\n";
+                    helios_runtime_error("ERROR (LiDARcloud::loadXML): Unrecognized recordPartialMisses '" + partialMiss_str + "' for scan #" + std::to_string(scan_count) + ". Valid values are 'true' and 'false'.");
+                }
             }
 
             // ----- distanceFilter ------//
@@ -674,6 +689,7 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
                 setScanMaxReturns(scanID, maxReturns);
                 setScanPulseWidth(scanID, pulseWidth);
                 setScanDetectionThreshold(scanID, detectionThreshold);
+                setScanRecordPartialMisses(scanID, recordPartialMisses);
 
             } else if (spinning_multibeam) {
 
@@ -700,6 +716,7 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
                 setScanMaxReturns(scanID, maxReturns);
                 setScanPulseWidth(scanID, pulseWidth);
                 setScanDetectionThreshold(scanID, detectionThreshold);
+                setScanRecordPartialMisses(scanID, recordPartialMisses);
 
             } else if (physical_moving_raster) {
 
@@ -711,6 +728,7 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
                 setScanMaxReturns(scanID, maxReturns);
                 setScanPulseWidth(scanID, pulseWidth);
                 setScanDetectionThreshold(scanID, detectionThreshold);
+                setScanRecordPartialMisses(scanID, recordPartialMisses);
 
             } else {
 
@@ -723,6 +741,7 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
                 scan.maxReturns = maxReturns;
                 scan.pulseWidth = pulseWidth;
                 scan.detectionThreshold = detectionThreshold;
+                scan.recordPartialMisses = recordPartialMisses;
 
                 addScan(scan);
 
@@ -1753,8 +1772,11 @@ void LiDARcloud::exportScans(const char *filename) {
         if (getScanPulseWidth(i) > 0.f) {
             append_text_child("pulseWidth", std::to_string(getScanPulseWidth(i)));
         }
-        if (getScanDetectionThreshold(i) > 0.f) {
+        if (getScanDetectionThreshold(i) != ScanMetadata().detectionThreshold) {
             append_text_child("detectionThreshold", std::to_string(getScanDetectionThreshold(i)));
+        }
+        if (getScanRecordPartialMisses(i) != ScanMetadata().recordPartialMisses) {
+            append_text_child("recordPartialMisses", getScanRecordPartialMisses(i) ? "true" : "false");
         }
 
         if (scan_tilt_roll != 0.f || scan_tilt_pitch != 0.f) {

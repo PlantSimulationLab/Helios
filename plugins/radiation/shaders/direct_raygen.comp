@@ -61,10 +61,6 @@ layout(set = 0, binding = 0) readonly buffer BVHBuffer {
     float data[];
 } bvh_buf;
 
-layout(set = 0, binding = 1) readonly buffer PrimIndicesBuffer {
-    uint indices[];
-} prim_indices_buf;
-
 layout(set = 0, binding = 2) readonly buffer TransformMatricesBuffer {
     float matrices[]; // 16 floats per primitive (row-major)
 } transform_buf;
@@ -89,13 +85,9 @@ layout(set = 0, binding = 7) readonly buffer TwosidedFlagBuffer {
     uint twosided_flags[];
 } twosided_buf;
 
-layout(set = 0, binding = 8) readonly buffer PatchVerticesBuffer {
-    float vertices[]; // 12 floats per patch (4 vec3 vertices)
-} patch_vertices_buf;
-
-layout(set = 0, binding = 9) readonly buffer TriangleVerticesBuffer {
-    float vertices[]; // 9 floats per triangle (3 vec3 vertices)
-} triangle_vertices_buf;
+layout(set = 0, binding = 8) readonly buffer LeafRecordBuffer {
+    vec4 records[]; // 4 vec4 per BVH leaf slot (layout in common/intersections.glsl)
+} leaf_records_buf;
 
 layout(set = 0, binding = 10) readonly buffer NormalsBuffer {
     float normals[]; // 3 floats per primitive (pre-computed world-space normal)
@@ -119,7 +111,7 @@ layout(set = 0, binding = 17) readonly buffer BboxVerticesBuffer {
 // stride, while the host uploads tightly-packed 12-byte helios::vec3. Declaring them as `vec3[]`
 // therefore reads the wrong 12 bytes for every element after the first, and reads past the end of
 // the allocation for the last one. They are declared as flat float arrays and fetched three at a
-// time instead, matching patch_vertices_buf / triangle_vertices_buf / normals_buf.
+// time instead, matching normals_buf.
 layout(set = 1, binding = 0) readonly buffer SourcePositionsBuffer {
     float positions[]; // 3 floats per source
 } source_positions_buf;
@@ -245,6 +237,12 @@ layout(set = 2, binding = 13) buffer WhiteReferenceTopBuffer {
 layout(set = 2, binding = 14) buffer WhiteReferenceBottomBuffer {
     float white_reference_bottom[];
 } white_reference_bottom_buf;
+
+// ========== Descriptor Set 4: Ray counters ==========
+// counters[0]: rays abandoned at the periodic wrap limit, read back by the host after the launches of a runBand() call
+layout(set = 4, binding = 0) buffer RayCountersBuffer {
+    uint counters[];
+} ray_counters_buf;
 
 // ========== Include common shader utilities ==========
 #include "common/random.glsl"
@@ -520,9 +518,7 @@ void main() {
                     float gamma = r2; // sp_local.x
                     masked = !mask_texel_is_opaque(mask_id, triangle_texture_uv(prim_idx, vec2(beta, gamma)));
                 }
-                if (masked) {
-                    continue; // Skip this ray - all 50 attempts hit transparent texels
-                }
+                // If all attempts hit transparent texels, launch from the last sample rather than drop the ray and its energy
             }
 
             // Read pre-computed world-space normal from buffer
@@ -540,6 +536,7 @@ void main() {
 
                 vec3 ray_dir;
                 float strength = 0.0;
+                vec3 source_target = source_pos; // point sampled on a finite source, where the shadow ray ends
 
                 if (source_type == 0) { // Collimated source (sun)
                     ray_dir = normalize(source_pos); // source_pos is direction for collimated
@@ -554,7 +551,8 @@ void main() {
 
                     // Ray from surface point toward sampled point on sphere
                     float ray_magnitude;
-                    ray_dir = safe_normalize(sphere_point + source_pos - ray_origin, ray_magnitude);
+                    source_target = sphere_point + source_pos;
+                    ray_dir = safe_normalize(source_target - ray_origin, ray_magnitude);
                     if (ray_magnitude < 1e-20) {
                         continue; // Surface point coincides with the sampled source point
                     }
@@ -581,7 +579,8 @@ void main() {
                     vec3 light_direction = normalize(transform_direction(light_transform, vec3(0, 0, 1)));
 
                     // Ray from surface to light sample point
-                    ray_dir = light_point + source_pos - ray_origin;
+                    source_target = light_point + source_pos;
+                    ray_dir = source_target - ray_origin;
 
                     // Back-face rejection: skip if ray hits back side of light
                     if (dot(ray_dir, light_direction) > 0.0) {
@@ -614,7 +613,8 @@ void main() {
                     vec3 light_direction = normalize(transform_direction(light_transform, vec3(0, 0, 1)));
 
                     // Ray from surface to light sample point (scale AFTER transform, matches OptiX line 213)
-                    ray_dir = radius * light_point + source_pos - ray_origin;
+                    source_target = radius * light_point + source_pos;
+                    ray_dir = source_target - ray_origin;
 
                     // Back-face rejection
                     if (dot(ray_dir, light_direction) > 0.0) {
@@ -640,8 +640,8 @@ void main() {
                 float dot_product = dot(ray_dir, normal);
                 bool is_top_face = (dot_product > 0.0);
 
-                // Skip if wrong face or transparent primitive
-                if (twosided == 3 || (!is_top_face && twosided == 0)) {
+                // Skip invisible primitives, and the bottom face unless the primitive is two-sided
+                if (twosided == 3 || (!is_top_face && twosided != 1)) {
                     continue;
                 }
 
@@ -656,41 +656,59 @@ void main() {
                 // Periodic boundary wrap loop + translucent-cover pass-through loop: a glass occluder is
                 // not a blocker — accumulate its angular transmittance, deposit its reflected/absorbed
                 // energy, and re-trace past it toward the source (bounded iterations).
+                // The ray counts as blocked unless it reaches the source: a ray that reaches the periodic wrap limit or the
+                // segment limit deposits nothing, as in the OptiX backends.
                 float occlusion_t;
                 uint occluder;
                 vec3 trace_origin = ray_origin;
-                bool is_occluded = false;
+                bool is_occluded = true;
+                int boundary_hits = 0;
+                // Distance left to the point sampled on a finite source, measured from trace_origin. A hit beyond it is
+                // behind the source and does not block.
+                float distance_to_source = length(source_target - ray_origin);
 
-                for (int step = 0; step < 32; ++step) {
-                    occluder = traverse_cwbvh(trace_origin, ray_dir, 1e-4, prim_idx, occlusion_t);
+                float segment_t_min = 1e-4;
+                for (int step = 0; step < MAX_RAY_SEGMENTS; ++step) {
+                    occluder = traverse_cwbvh(trace_origin, ray_dir, segment_t_min, prim_idx, occlusion_t);
 
                     // Periodic boundary wrap (bbox face is not a real occluder)
                     if (pc.bbox_count != 0) {
                         vec3 wrapped_origin;
+                        float boundary_t;
                         bool hit_periodic = check_periodic_boundary(
                             trace_origin, ray_dir, occlusion_t,
                             pc.periodic_flag_x, pc.periodic_flag_y, pc.bbox_count,
                             pc.domain_xmin, pc.domain_xmax, pc.domain_ymin, pc.domain_ymax,
-                            wrapped_origin);
+                            wrapped_origin, boundary_t);
                         if (hit_periodic) {
+                            if (source_type != 0 && boundary_t >= distance_to_source) {
+                                is_occluded = false; // the source is reached before the boundary
+                                break;
+                            }
+                            if (++boundary_hits >= MAX_PERIODIC_WRAPS) { // wrap limit — treated as blocked
+                                atomicAdd(ray_counters_buf.counters[0], 1u);
+                                break;
+                            }
+                            distance_to_source -= boundary_t;
                             trace_origin = wrapped_origin;
-                            occluder = UINT_MAX;
+                            segment_t_min = 0.0; // a wrapped ray hits geometry right at the boundary it was wrapped to
                             continue;
                         }
                     }
 
-                    if (occluder == 0xFFFFFFFF) break; // miss — reached the source
+                    if (occluder == 0xFFFFFFFF) { // miss — reached the source
+                        is_occluded = false;
+                        break;
+                    }
 
-                    // For a sphere source, a hit beyond the source does not block. occlusion_t is measured from
-                    // trace_origin, which is past any translucent covers already crossed.
-                    if (source_type != 0) {
-                        float dist_to_source = length(source_pos - trace_origin);
-                        if (occlusion_t >= dist_to_source) break; // hit is past the source — unblocked
+                    // occlusion_t is measured from trace_origin, which is past any boundaries and translucent covers already crossed.
+                    if (source_type != 0 && occlusion_t >= distance_to_source) {
+                        is_occluded = false; // hit is behind the source — unblocked
+                        break;
                     }
 
                     // A primitive that is not a translucent cover for all launched bands is an opaque blocker.
                     if (occluder == prim_idx || !glass_cover_all_bands(occluder, pc.band_count, pc.material_band_count)) {
-                        is_occluded = true;
                         break;
                     }
 
@@ -707,6 +725,8 @@ void main() {
 
                     // Advance just past the cover hit and continue toward the source.
                     trace_origin = trace_origin + ray_dir * (occlusion_t + 1e-4);
+                    distance_to_source -= occlusion_t + 1e-4;
+                    segment_t_min = 1e-4;
                 }
 
                 if (is_occluded) {

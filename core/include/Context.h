@@ -2489,7 +2489,7 @@ namespace helios {
                 primitive_data_string[label] = {data};
                 primitive_data_types[label] = HELIOS_TYPE_STRING;
             }
-            dirty_flag = true;
+            markDirty();
         }
 
         //! Add data value associated with a primitive element
@@ -2538,7 +2538,7 @@ namespace helios {
                 primitive_data_string[label] = data;
                 primitive_data_types[label] = HELIOS_TYPE_STRING;
             }
-            dirty_flag = true;
+            markDirty();
         }
 
         //! Get data associated with a primitive element
@@ -2786,6 +2786,12 @@ namespace helios {
 
         //! flag to indicate state of primitive has been changed
         bool dirty_flag;
+
+        //! Set dirty_flag and advance the parent Context's geometry revision (see Context::getGeometryRevision())
+        void markDirty();
+
+        //! Mark the primitive dirty and also advance the parent Context's shape revision (see Context::getShapeRevision()). Called by mutators that change the primitive's vertices, transform, texture mapping, or solid fraction.
+        void markShapeModified();
 
         std::map<std::string, HeliosDataType> primitive_data_types;
         std::map<std::string, std::vector<int>> primitive_data_int;
@@ -3488,6 +3494,39 @@ namespace helios {
         //! List of primitives that have been modified since geometry was last set as clean
         std::vector<uint> dirty_deleted_primitives;
 
+        //! Change counter that stays cheap when advanced from many threads at once
+        /**
+         * Primitives are modified from OpenMP parallel loops (e.g., setPrimitiveData() on many UUIDs), where an atomic
+         * increment per modification makes every thread contend for the same cache line. Instead, a modification only sets
+         * a flag, and only when it is not already set, so the cache line stays shared once the flag is up. The revision
+         * advances by one when it is read after a modification, so two reads return the same value exactly when no
+         * modification happened in between.
+         */
+        struct RevisionCounter {
+            void markModified() const {
+                if (!modified.load(std::memory_order_relaxed)) {
+                    modified.store(true, std::memory_order_relaxed);
+                }
+            }
+
+            [[nodiscard]] uint64_t read() const {
+                if (modified.exchange(false, std::memory_order_relaxed)) {
+                    revision.fetch_add(1, std::memory_order_relaxed);
+                }
+                return revision.load(std::memory_order_relaxed);
+            }
+
+        private:
+            mutable std::atomic<bool> modified{false};
+            mutable std::atomic<uint64_t> revision{0};
+        };
+
+        //! Advanced whenever a primitive is marked dirty or deleted (see getGeometryRevision())
+        RevisionCounter geometry_revision;
+
+        //! Advanced whenever a primitive's shape (vertices, transform, texture mapping, or solid fraction) changes or a primitive is deleted (see getShapeRevision()). Unlike geometry_revision, changes to primitive data and color do not advance it.
+        RevisionCounter shape_revision;
+
         //! Map containing a pointer to each compound object
         std::unordered_map<uint, CompoundObject *> objects;
 
@@ -3732,6 +3771,32 @@ namespace helios {
          * \sa markGeometryDirty()
          */
         [[nodiscard]] bool isGeometryDirty() const;
+
+        //! Get a counter that advances whenever any primitive is modified (marked dirty) or deleted
+        /**
+         * If two calls return the same value, no primitive was modified or deleted in between, so a plug-in that tracks
+         * geometry changes can skip scanning the dirty list. Creating a primitive is not guaranteed to advance the counter;
+         * compare getPrimitiveCount() as well to detect new primitives. Unlike the dirty flags, the counter is not reset by
+         * markGeometryClean().
+         * \return Current geometry revision
+         * \sa getDirtyUUIDs()
+         * \sa getDeletedUUIDs()
+         */
+        [[nodiscard]] uint64_t getGeometryRevision() const;
+
+        //! Get a counter that advances whenever a primitive's shape changes or a primitive is deleted
+        /**
+         * A shape change is any change to a primitive's vertices or transformation (translation, rotation, scaling, setting
+         * vertices or the transformation matrix), its texture file or (u,v) coordinates, or its solid fraction. Unlike
+         * getGeometryRevision(), setting primitive data or color does not advance this counter, so a plug-in that caches
+         * geometry (e.g., a ray-tracing acceleration structure) can detect that the cache is stale without being invalidated
+         * by its own output data. markGeometryDirty() also advances the counter. Creating a primitive is not guaranteed to
+         * advance the counter; compare getPrimitiveCount() as well to detect new primitives. The counter is not reset by
+         * markGeometryClean().
+         * \return Current shape revision
+         * \sa getGeometryRevision()
+         */
+        [[nodiscard]] uint64_t getShapeRevision() const;
 
         //! Mark a primitive as "dirty", meaning it has been modified since last set as clean
         /**
@@ -8304,17 +8369,19 @@ namespace helios {
         //! Write primitive data to an ASCII text file for all primitives in the Context
         /**
          * \param[in] filename Path to file that will be written.
-         * \param[in] column_format Vector of strings with primitive data labels - the order of the text file columns will be determined by the order of the labels in the vector. If primitive data does not exist, an error will be thrown.
+         * \param[in] column_format Vector of strings with primitive data labels - the order of the text file columns will be determined by the order of the labels in the vector. The label "UUID" writes the primitive UUID. If primitive data does not exist for a primitive, or is not a scalar type (int, uint, float, double, or string), 0 is written in its place and a single warning is printed for the call.
          * \param[in] print_header [optional] Flag specifying whether to print the name of the primitive data in the column header.
+         * \note An error is raised if the file cannot be opened for writing.
          */
         void writePrimitiveData(const std::string &filename, const std::vector<std::string> &column_format, bool print_header = false) const;
 
         //! Write primitive data to an ASCII text file for selected primitives in the Context
         /**
          * \param[in] filename Path to file that will be written.
-         * \param[in] column_format Vector of strings with primitive data labels - the order of the text file columns will be determined by the order of the labels in the vector. If primitive data does not exist, an error will be thrown.
+         * \param[in] column_format Vector of strings with primitive data labels - the order of the text file columns will be determined by the order of the labels in the vector. The label "UUID" writes the primitive UUID. If primitive data does not exist for a primitive, or is not a scalar type (int, uint, float, double, or string), 0 is written in its place and a single warning is printed for the call.
          * \param[in] UUIDs Unique universal identifiers for primitives to include when writing data to file.
          * \param[in] print_header [optional] Flag specifying whether to print the name of the primitive data in the column header.
+         * \note An error is raised if the file cannot be opened for writing.
          */
         void writePrimitiveData(const std::string &filename, const std::vector<std::string> &column_format, const std::vector<uint> &UUIDs, bool print_header = false) const;
 
@@ -8462,6 +8529,10 @@ namespace helios {
          * \param[in] primitive_dat_fields A .dat file will be written containing primitive data given in this vector (for Unity visualization)
          * \param[in] write_normals [optional] true if we should write the normal vectors
          * \param[in] silent [optional] If set to true, output messaged will be disabled
+         * \note For each label in primitive_dat_fields, an ASCII file \<stem\>_\<label\>.dat is written next to the .obj file with one value per line. Line i holds the value for face i of the .obj file, counting faces in the
+         * order they appear in the file. A patch is written as two triangular faces, so its value appears on two consecutive lines. If any primitive carries "object_label" primitive data, faces are grouped by object
+         * label (in order of first appearance in UUIDs) and then by material within each group; otherwise they are grouped by material only.
+         * \note Every primitive in UUIDs must have each requested label, with type int, uint, float, double, or string. Otherwise an error is raised before any file is written.
          */
         void writeOBJ(const std::string &filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields, bool write_normals = false, bool silent = false) const;
 

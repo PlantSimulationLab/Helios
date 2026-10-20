@@ -276,9 +276,9 @@ void OptiX8Backend::shutdown() {
     freePtr(d_white_reference_top_cam);
     freePtr(d_white_reference_bottom_cam);
     freePtr(d_radiation_specular);
-    freePtr(d_Rsky);
     freePtr(d_camera_pixel_label);
     freePtr(d_camera_pixel_depth);
+    freePtr(d_abandoned_ray_count);
     freePtr(d_source_positions);
     freePtr(d_source_rotations);
     freePtr(d_source_widths);
@@ -337,14 +337,9 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
     validateGeometryBeforeUpload(geometry);
 
     // Validate that all primitive types are supported by the OptiX 8.1 backend.
-    // Supported: patch (0), triangle (1), tile (3). Disk (2), voxel (4), and
-    // bbox (5) intersection programs are not yet implemented.
+    // Supported: patch (0), triangle (1), tile (3) and periodic-boundary bbox (5). Disk (2) is not yet implemented.
     if (geometry.disk_count > 0) {
         helios_runtime_error("ERROR (OptiX8Backend::updateGeometry): Scene contains disk primitives, "
-                             "which are not yet supported by the OptiX 8.1 backend.");
-    }
-    if (geometry.voxel_count > 0) {
-        helios_runtime_error("ERROR (OptiX8Backend::updateGeometry): Scene contains voxel primitives, "
                              "which are not yet supported by the OptiX 8.1 backend.");
     }
 
@@ -399,12 +394,6 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
                geometry.tiles.vertices.size() * sizeof(helios::vec3));
         upload(d_tile_UUIDs, geometry.tiles.UUIDs.data(),
                geometry.tiles.UUIDs.size() * sizeof(uint32_t));
-    }
-    if (geometry.voxels.count > 0) {
-        upload(d_voxel_vertices, geometry.voxels.vertices.data(),
-               geometry.voxels.vertices.size() * sizeof(helios::vec3));
-        upload(d_voxel_UUIDs, geometry.voxels.UUIDs.data(),
-               geometry.voxels.UUIDs.size() * sizeof(uint32_t));
     }
     if (geometry.bbox_count > 0) {
         upload(d_bbox_vertices, geometry.bboxes.vertices.data(),
@@ -508,8 +497,6 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
     h_params.disk_UUIDs               = reinterpret_cast<uint32_t *>(d_disk_UUIDs);
     h_params.tile_vertices            = reinterpret_cast<float3 *>(d_tile_vertices);
     h_params.tile_UUIDs               = reinterpret_cast<uint32_t *>(d_tile_UUIDs);
-    h_params.voxel_vertices           = reinterpret_cast<float3 *>(d_voxel_vertices);
-    h_params.voxel_UUIDs              = reinterpret_cast<uint32_t *>(d_voxel_UUIDs);
     h_params.bbox_vertices            = reinterpret_cast<float3 *>(d_bbox_vertices);
     h_params.bbox_UUIDs               = reinterpret_cast<uint32_t *>(d_bbox_UUIDs);
     h_params.Nprimitives              = Nprims;
@@ -528,7 +515,6 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
     current_triangle_count  = geometry.triangle_count;
     current_disk_count      = geometry.disk_count;
     current_tile_count      = geometry.tile_count;
-    current_voxel_count     = geometry.voxel_count;
     current_bbox_count      = geometry.bbox_count;
 
     buildAABBs(geometry);
@@ -707,8 +693,9 @@ void OptiX8Backend::updateSources(const std::vector<RayTracingSource> &sources) 
     }
     if (!fluxes_cam.empty()) {
         upload(d_source_fluxes_cam, fluxes_cam.data(), fluxes_cam.size() * sizeof(float));
-        h_params.source_fluxes_cam = reinterpret_cast<float *>(d_source_fluxes_cam);
     }
+    // Assign unconditionally so that empty weights give nullptr rather than the buffer freed above
+    h_params.source_fluxes_cam = reinterpret_cast<float *>(d_source_fluxes_cam);
 
     current_source_count = Nsources;
 
@@ -723,46 +710,6 @@ void OptiX8Backend::updateSources(const std::vector<RayTracingSource> &sources) 
 // Diffuse / sky
 // ---------------------------------------------------------------------------
 
-void OptiX8Backend::updateDiffuseRadiation(const std::vector<float> &flux, const std::vector<float> &extinction,
-                                            const std::vector<helios::vec3> &peak_dir,
-                                            const std::vector<float> &dist_norm,
-                                            const std::vector<float> &sky_energy) {
-    freeCUdeviceptr(d_diffuse_flux);
-    freeCUdeviceptr(d_diffuse_extinction);
-    freeCUdeviceptr(d_diffuse_peak_dir);
-    freeCUdeviceptr(d_diffuse_dist_norm);
-    freeCUdeviceptr(d_Rsky);
-
-    auto upload_f = [this](CUdeviceptr &ptr, const std::vector<float> &v) {
-        if (!v.empty()) {
-            CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&ptr), v.size() * sizeof(float)));
-            CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(ptr), v.data(),
-                                  v.size() * sizeof(float), cudaMemcpyHostToDevice));
-        }
-    };
-    upload_f(d_diffuse_flux,       flux);
-    upload_f(d_diffuse_extinction, extinction);
-    upload_f(d_diffuse_dist_norm,  dist_norm);
-    upload_f(d_Rsky,               sky_energy);
-
-    if (!peak_dir.empty()) {
-        std::vector<float3> pd_f3(peak_dir.size());
-        for (size_t i = 0; i < peak_dir.size(); i++) {
-            pd_f3[i] = make_float3(peak_dir[i].x, peak_dir[i].y, peak_dir[i].z);
-        }
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_diffuse_peak_dir),
-                              pd_f3.size() * sizeof(float3)));
-        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_diffuse_peak_dir), pd_f3.data(),
-                              pd_f3.size() * sizeof(float3), cudaMemcpyHostToDevice));
-    }
-
-    h_params.diffuse_flux       = reinterpret_cast<float *>(d_diffuse_flux);
-    h_params.diffuse_extinction = reinterpret_cast<float *>(d_diffuse_extinction);
-    h_params.diffuse_peak_dir   = reinterpret_cast<float3 *>(d_diffuse_peak_dir);
-    h_params.diffuse_dist_norm  = reinterpret_cast<float *>(d_diffuse_dist_norm);
-    h_params.Rsky               = reinterpret_cast<float *>(d_Rsky);
-}
-
 void OptiX8Backend::updateSkyModel(const std::vector<helios::vec4> &sky_radiance_params,
                                     const std::vector<float> &camera_sky_radiance,
                                     const helios::vec3 &sun_direction,
@@ -770,6 +717,10 @@ void OptiX8Backend::updateSkyModel(const std::vector<helios::vec4> &sky_radiance
                                     float solar_disk_cos_angle,
                                     const std::vector<float> &camera_diffuse_flux,
                                     const std::vector<uint32_t> &band_emission_flag) {
+    if (sky_radiance_params.empty() || camera_sky_radiance.empty() || solar_disk_radiance.empty() || camera_diffuse_flux.empty() || band_emission_flag.empty()) {
+        helios_runtime_error("ERROR (OptiX8Backend::updateSkyModel): Every per-band sky model vector must have one entry per launched band, but at least one is empty.");
+    }
+
     // Upload sky_radiance_params (helios::vec4 → float4)
     freeCUdeviceptr(d_sky_radiance_params);
     if (!sky_radiance_params.empty()) {
@@ -868,12 +819,12 @@ void OptiX8Backend::launchDirectRays(const RayTracingLaunchParams &launch_params
     h_params.band_launch_flag = reinterpret_cast<bool *>(d_band_launch_flag);
     h_params.traversable      = gas_handle;
 
-    // 2D stratification: split rays_per_primitive into dim_x × dim_y grid (same as diffuse)
-    // rays_per_primitive is always n*n (RadiationModel sets it as ceil(sqrt(N))^2)
+    // 2D stratification on a square grid of ceil(sqrt(N)) x ceil(sqrt(N)) rays, as in the OptiX 6 and Vulkan backends. The direct
+    // ray count N of a band need not be a square.
     const uint32_t launch_count  = launch_params.launch_count;
     const uint32_t rpp   = launch_params.rays_per_primitive;
-    const uint32_t dim_x = static_cast<uint32_t>(sqrtf(static_cast<float>(rpp)));
-    const uint32_t dim_y = (dim_x > 0) ? (rpp / dim_x) : 1u;
+    const uint32_t dim_x = static_cast<uint32_t>(std::ceil(std::sqrt(static_cast<double>(rpp))));
+    const uint32_t dim_y = dim_x;
     h_params.launch_dim_x        = dim_x;
     h_params.launch_dim_y        = dim_y;
 
@@ -1216,6 +1167,15 @@ size_t OptiX8Backend::getRadiationInTopBufferSize() const {
     return d_radiation_in_top ? radiation_in_top_count : 0;
 }
 
+size_t OptiX8Backend::getAbandonedRayCount() {
+    if (!d_abandoned_ray_count) {
+        return 0; // never zeroed, so no launch counted anything
+    }
+    uint32_t abandoned = 0;
+    CUDA_CHECK(cudaMemcpy(&abandoned, reinterpret_cast<const void *>(d_abandoned_ray_count), sizeof(uint32_t), cudaMemcpyDeviceToHost));
+    return abandoned;
+}
+
 void OptiX8Backend::getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels,
                                       std::vector<float> &pixel_depths, uint camera_id,
                                       const helios::int2 &resolution) {
@@ -1223,6 +1183,13 @@ void OptiX8Backend::getCameraResults(std::vector<float> &pixel_data, std::vector
 
     if (d_radiation_in_camera && Npixels > 0 && current_launch_band_count > 0) {
         pixel_data = downloadFloat(d_radiation_in_camera, Npixels * current_launch_band_count);
+    }
+    // A non-finite pixel would make the auto-exposure gain NaN and the whole frame black with no error, as the Vulkan backend also checks
+    for (size_t i = 0; i < pixel_data.size(); i++) {
+        if (!std::isfinite(pixel_data[i])) {
+            helios_runtime_error("ERROR (OptiX8Backend::getCameraResults): Ray tracing produced a non-finite value (" + std::to_string(pixel_data[i]) + ") for camera " + std::to_string(camera_id) + " at index " +
+                                 std::to_string(i) + " of " + std::to_string(pixel_data.size()) + " of the pixel radiation buffer. The image is unusable; please report this with the scene that produced it.");
+        }
     }
 
     if (d_camera_pixel_label && Npixels > 0) {
@@ -1291,6 +1258,14 @@ void OptiX8Backend::zeroRadiationBuffers(size_t launch_band_count, bool track_fa
     }
     h_params.radiation_specular = reinterpret_cast<float *>(d_radiation_specular);
     radiation_specular_buffer_bytes = specular_bytes;
+}
+
+void OptiX8Backend::zeroAbandonedRayCount() {
+    if (!d_abandoned_ray_count) {
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_abandoned_ray_count), sizeof(uint32_t)));
+        h_params.abandoned_ray_count = reinterpret_cast<uint32_t *>(d_abandoned_ray_count);
+    }
+    CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_abandoned_ray_count), 0, sizeof(uint32_t)));
 }
 
 void OptiX8Backend::zeroScatterBuffers() {
@@ -1428,16 +1403,11 @@ void OptiX8Backend::uploadSourceFluxes(const std::vector<float> &fluxes) {
     h_params.source_fluxes = reinterpret_cast<float *>(d_source_fluxes);
 }
 
-void OptiX8Backend::uploadSourceFluxesCam(const std::vector<float> &fluxes_cam) {
-    freeCUdeviceptr(d_source_fluxes_cam);
-    if (!fluxes_cam.empty()) {
-        const size_t bytes = fluxes_cam.size() * sizeof(float);
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_source_fluxes_cam), bytes));
-        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_source_fluxes_cam), fluxes_cam.data(), bytes,
-                              cudaMemcpyHostToDevice));
-    }
-    // Assign unconditionally so an empty upload yields nullptr (not a dangling freed pointer).
-    h_params.source_fluxes_cam = reinterpret_cast<float *>(d_source_fluxes_cam);
+void OptiX8Backend::uploadSourceFluxesCam(const std::vector<float> & /*fluxes_cam*/) {
+    // No-op, as in the OptiX 6 backend. The camera weights of the source fluxes are uploaded with the sources in updateSources(),
+    // laid out [source][launched band][camera] for every camera, which is what the direct miss program reads. The per-camera
+    // [source][launched band] slice passed here before a camera launch is only used by the Vulkan backend; uploading it here
+    // would overwrite that buffer with a differently laid out one.
 }
 
 // ---------------------------------------------------------------------------
@@ -1485,8 +1455,6 @@ void OptiX8Backend::freeGeometryBuffers() {
     freeCUdeviceptr(d_disk_UUIDs);
     freeCUdeviceptr(d_tile_vertices);
     freeCUdeviceptr(d_tile_UUIDs);
-    freeCUdeviceptr(d_voxel_vertices);
-    freeCUdeviceptr(d_voxel_UUIDs);
     freeCUdeviceptr(d_bbox_vertices);
     freeCUdeviceptr(d_bbox_UUIDs);
     freeCUdeviceptr(d_mask_data);
@@ -1576,29 +1544,28 @@ void OptiX8Backend::buildAABBs(const RayTracingGeometry &geometry) {
         } else if (pt == 2) { // Disk: bounding box of unit circle
             expand(-0.5f, -0.5f, 0.f); expand( 0.5f, -0.5f, 0.f);
             expand(-0.5f,  0.5f, 0.f); expand( 0.5f,  0.5f, 0.f);
-        } else if (pt == 4) { // Voxel: unit cube [0,1]^3
-            for (float fx : {0.f, 1.f})
-                for (float fy : {0.f, 1.f})
-                    for (float fz : {0.f, 1.f})
-                        expand(fx, fy, fz);
-        } else { // Unknown type: unit box fallback
-            expand(-0.5f, -0.5f, -0.5f); expand( 0.5f,  0.5f,  0.5f);
+        } else {
+            helios_runtime_error("ERROR (OptiX8Backend::buildAABBs): Primitive at position " + std::to_string(pos) + " has type " + std::to_string(pt) + ", which this backend cannot trace.");
         }
 
         store_aabb(pos, mn_x, mn_y, mn_z, mx_x, mx_y, mx_z);
     }
 
-    // Bbox faces: AABB from actual world-space vertices (4 vertices per face)
+    // Bbox faces: AABB from actual world-space vertices (4 vertices per face), padded so that a ray starting closer to a face
+    // than its minimum distance still reaches the intersection program, which wraps it when it is leaving the domain
     for (uint32_t b = 0; b < Nbboxes; b++) {
         float mn_x = FLT_MAX, mn_y = FLT_MAX, mn_z = FLT_MAX;
         float mx_x = -FLT_MAX, mx_y = -FLT_MAX, mx_z = -FLT_MAX;
+        float max_abs_coordinate = 0.f;
         for (int v = 0; v < 4; v++) {
             const helios::vec3 &vtx = geometry.bboxes.vertices[b * 4 + v];
             mn_x = std::min(mn_x, vtx.x); mx_x = std::max(mx_x, vtx.x);
             mn_y = std::min(mn_y, vtx.y); mx_y = std::max(mx_y, vtx.y);
             mn_z = std::min(mn_z, vtx.z); mx_z = std::max(mx_z, vtx.z);
+            max_abs_coordinate = std::max({max_abs_coordinate, std::fabs(vtx.x), std::fabs(vtx.y), std::fabs(vtx.z)});
         }
-        store_aabb(Nprims + b, mn_x, mn_y, mn_z, mx_x, mx_y, mx_z);
+        const float pad = 1e-3f + 1e-6f * max_abs_coordinate;
+        store_aabb(Nprims + b, mn_x - pad, mn_y - pad, mn_z - pad, mx_x + pad, mx_y + pad, mx_z + pad);
     }
 
     const size_t aabb_bytes = Ntotal * sizeof(OptixAabb);
@@ -1747,17 +1714,16 @@ void OptiX8Backend::applyLaunchParams(const RayTracingLaunchParams &params) {
     h_params.launch_face            = params.launch_face;
     h_params.scattering_iteration   = params.scattering_iteration;
     h_params.specular_reflection_enabled = params.specular_reflection_enabled;
+    h_params.below_horizon_diffuse_enabled = params.below_horizon_diffuse_enabled;
     h_params.camera_ID              = params.camera_id;
     h_params.camera_position        = make_float3(params.camera_position.x, params.camera_position.y, params.camera_position.z);
     h_params.camera_direction       = make_float2(params.camera_direction.x, params.camera_direction.y);
     h_params.camera_focal_length    = params.camera_focal_length;
     h_params.camera_lens_diameter   = params.camera_lens_diameter;
     h_params.FOV_aspect_ratio       = params.camera_fov_aspect;
-    h_params.camera_HFOV            = params.camera_HFOV;
     h_params.camera_resolution.x      = params.camera_resolution.x;
     h_params.camera_resolution.y      = params.camera_resolution.y;
     h_params.camera_viewplane_length= params.camera_viewplane_length;
-    h_params.camera_pixel_solid_angle = params.camera_pixel_solid_angle;
     h_params.camera_pixel_offset.x    = params.camera_pixel_offset.x;
     h_params.camera_pixel_offset.y    = params.camera_pixel_offset.y;
     h_params.camera_resolution_full.x = params.camera_resolution_full.x;

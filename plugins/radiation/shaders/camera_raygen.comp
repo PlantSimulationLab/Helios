@@ -47,7 +47,7 @@ layout(push_constant) uniform PushConstants {
     uint primitive_count;          // 4 bytes, offset 76
     vec3 sun_direction;            // 12 bytes, offset 80
     float solar_disk_cos_angle;    // 4 bytes, offset 92
-    uint periodic_flags;           // 4 bytes, offset 96 (bit 0: periodic in x, bit 1: periodic in y)
+    uint boundary_flags;           // 4 bytes, offset 96 (bit 0: periodic in x, bit 1: periodic in y, bit 2: diffuse sky below the horizon)
     uint material_band_count;      // 4 bytes, offset 100 (global band count, for the material buffers)
     uint bbox_count;               // 4 bytes, offset 104
     float domain_xmin;             // 4 bytes, offset 108
@@ -59,15 +59,13 @@ layout(push_constant) uniform PushConstants {
 
 // ========== Descriptor Set 0: Geometry ==========
 layout(set = 0, binding = 0) readonly buffer BVHBuffer { float data[]; } bvh_buf;
-layout(set = 0, binding = 1) readonly buffer PrimIndicesBuffer { uint indices[]; } prim_indices_buf;
 layout(set = 0, binding = 2) readonly buffer TransformMatricesBuffer { float matrices[]; } transform_buf;
 layout(set = 0, binding = 3) readonly buffer PrimTypesBuffer { uint types[]; } prim_types_buf;
 layout(set = 0, binding = 4) readonly buffer PrimUUIDsBuffer { uint uuids[]; } prim_uuids_buf;
 layout(set = 0, binding = 5) readonly buffer PrimPositionsBuffer { uint positions[]; } prim_positions_buf;
 layout(set = 0, binding = 6) readonly buffer ObjectSubdivisionsBuffer { ivec2 subdivisions[]; } obj_subdivisions_buf;
 layout(set = 0, binding = 7) readonly buffer TwosidedFlagBuffer { uint twosided_flags[]; } twosided_buf;
-layout(set = 0, binding = 8) readonly buffer PatchVerticesBuffer { float vertices[]; } patch_vertices_buf;
-layout(set = 0, binding = 9) readonly buffer TriangleVerticesBuffer { float vertices[]; } triangle_vertices_buf;
+layout(set = 0, binding = 8) readonly buffer LeafRecordBuffer { vec4 records[]; } leaf_records_buf; // layout in common/intersections.glsl
 layout(set = 0, binding = 10) readonly buffer NormalsBuffer { float normals[]; } normals_buf;
 layout(set = 0, binding = 11) readonly buffer MaskDataBuffer { uint mask_data[]; } mask_data_buf;
 layout(set = 0, binding = 12) readonly buffer MaskSizesBuffer { ivec2 mask_sizes[]; } mask_sizes_buf;
@@ -83,7 +81,7 @@ layout(set = 0, binding = 18) readonly buffer SmoothingVertexIndicesBuffer { int
 // stride, while the host uploads tightly-packed 12-byte helios::vec3. Declaring them as `vec3[]`
 // therefore reads the wrong 12 bytes for every element after the first, and reads past the end of
 // the allocation for the last one. They are declared as flat float arrays and fetched three at a
-// time instead, matching patch_vertices_buf / triangle_vertices_buf / normals_buf.
+// time instead, matching normals_buf.
 layout(set = 1, binding = 0) readonly buffer SourcePositionsBuffer { float positions[]; } source_positions_buf;
 layout(set = 1, binding = 1) readonly buffer SourceTypesBuffer { uint types[]; } source_types_buf;
 layout(set = 1, binding = 2) readonly buffer SourceRotationsBuffer { float rotations[]; } source_rotations_buf;
@@ -273,6 +271,9 @@ void shade_camera_hit(uint pixel_index, vec3 ray_origin, vec3 ray_dir, float clo
     // Determine which face was hit
     bool face = dot(normal, ray_dir) < 0.0; // true = hit top face
 
+    // Normal of the face the camera sees, for the specular term
+    vec3 viewed_normal = face ? normal : -normal;
+
     // Resolve the shared vertices of the facet that was hit, and the weights to blend them with. Done once for the whole hit rather than once per band.
     int smooth_v0 = -1;
     int smooth_v1 = -1;
@@ -404,6 +405,11 @@ void shade_camera_hit(uint pixel_index, vec3 ray_origin, vec3 ray_dir, float clo
                         light_direction = normalize(get_source_position(s) - hit_point);
                     }
 
+                    // A source behind the face the camera sees lights the other face, which this view cannot see a highlight on
+                    if (dot(light_direction, viewed_normal) <= 0.0) {
+                        continue;
+                    }
+
                     // Blinn-Phong half-vector (between light direction and view direction).
                     // These coincide when the camera looks straight down the light direction,
                     // which makes the difference zero and normalize() NaN.
@@ -420,7 +426,7 @@ void shade_camera_hit(uint pixel_index, vec3 ray_origin, vec3 ray_dir, float clo
                     // Blinn-Phong specular BRDF:
                     // (exp+2)/(2π) normalizes the distribution to unity
                     // Division by antialiasing_samples averages over Monte Carlo samples
-                    strength_spec += spec * scale * pow(max(0.0, dot(half_vec, normal)), exp_val)
+                    strength_spec += spec * scale * pow(max(0.0, dot(half_vec, viewed_normal)), exp_val)
                                    * (exp_val + 2.0) / (float(pc.antialiasing_samples) * 2.0 * PI);
                 }
             }
@@ -485,8 +491,11 @@ void shade_camera_miss(uint pixel_index, vec3 ray_origin, vec3 ray_dir, float st
             }
         }
 
+        // The sky fills only the upper hemisphere unless the diffuse sky is enabled below the horizon.
+        bool sees_sky = ray_dir.z >= 0.0 || ((pc.boundary_flags >> 2) & 1u) != 0u;
+
         // Fallback to sky radiance if no sources visible
-        if (radiance <= 0.0 && camera_sky_radiance[b] > 0.0) {
+        if (sees_sky && radiance <= 0.0 && camera_sky_radiance[b] > 0.0) {
             // Evaluate directional sky radiance using Prague model
             // For camera: power-law disabled (K=0, norm=1)
             float angular_weight = evaluate_sky_distribution(
@@ -502,7 +511,7 @@ void shade_camera_miss(uint pixel_index, vec3 ray_origin, vec3 ray_dir, float st
         // Isotropic sky emission/longwave: when band has emission enabled, the user-set
         // diffuse_flux represents hemispherical sky thermal/longwave irradiance.
         // Convert hemispherical flux to isotropic radiance: L = E / pi.
-        if (band_emission_flag[b] != 0u && camera_diffuse_flux[b] > 0.0) {
+        if (sees_sky && band_emission_flag[b] != 0u && camera_diffuse_flux[b] > 0.0) {
             radiance += camera_diffuse_flux[b] / PI;
         }
 
@@ -580,29 +589,35 @@ void main() {
         camera_cover_tau[b] = 1.0; // no translucent covers crossed yet
     }
 
+    // A ray starting above or below a periodic domain is moved to it in one step
+    if (pc.bbox_count != 0) {
+        advance_to_periodic_faces(ray_origin, ray_dir, pc.boundary_flags & 1u, (pc.boundary_flags >> 1) & 1u, pc.domain_xmin, pc.domain_xmax, pc.domain_ymin, pc.domain_ymax);
+    }
+
     // ========== Trace segment by segment ==========
     // The ray is re-traced after wrapping through a periodic boundary, and after passing a translucent cover, whose own
     // outgoing radiance is added first. What lies behind a cover is attenuated by the cover's transmittance.
 
     int wraps = 0;
+    float segment_t_min = 1e-5;
     for (int segment = 0; segment < MAX_RAY_SEGMENTS; ++segment) {
         float closest_t;
         vec2 hit_uv = vec2(0.0);
-        uint hit_prim = traverse_cwbvh(ray_origin, ray_dir, 1e-5, UINT_MAX, closest_t, hit_uv);
+        uint hit_prim = traverse_cwbvh(ray_origin, ray_dir, segment_t_min, UINT_MAX, closest_t, hit_uv);
 
         if (pc.bbox_count != 0) {
             vec3 wrapped_origin;
             bool hit_periodic = check_periodic_boundary(
                 ray_origin, ray_dir, closest_t,
-                pc.periodic_flags & 1u, (pc.periodic_flags >> 1) & 1u, pc.bbox_count,
+                pc.boundary_flags & 1u, (pc.boundary_flags >> 1) & 1u, pc.bbox_count,
                 pc.domain_xmin, pc.domain_xmax, pc.domain_ymin, pc.domain_ymax,
                 wrapped_origin);
 
             if (hit_periodic) {
                 ray_origin = wrapped_origin;
+                segment_t_min = 0.0; // a wrapped ray hits geometry right at the boundary it was wrapped to
                 if (++wraps >= MAX_PERIODIC_WRAPS) {
-                    shade_camera_miss(pixel_index, ray_origin, ray_dir, strength); // out of wraps: shaded as a miss from the last wrap
-                    return;
+                    return; // out of wraps: the ray is abandoned and adds nothing, as in the OptiX backends
                 }
                 continue;
             }
@@ -630,5 +645,6 @@ void main() {
             camera_cover_tau[b] *= glass_cover_tau_rho_alpha(hit_prim, b, pc.material_band_count, cover_cos).x;
         }
         ray_origin = ray_origin + ray_dir * (closest_t + COVER_EXIT_OFFSET);
+        segment_t_min = 1e-5;
     }
 }

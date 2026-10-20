@@ -89,7 +89,6 @@ rtBuffer<float, 1> diffuse_flux;
 rtBuffer<float, 1> diffuse_extinction;
 rtBuffer<float3, 1> diffuse_peak_dir;
 rtBuffer<float, 1> diffuse_dist_norm;
-rtBuffer<float, 1> Rsky;
 
 // Atmospheric sky radiance parameters (for camera miss rays)
 rtBuffer<float4, 1> sky_radiance_params; // Per-band: (circumsolar_strength, circumsolar_width, horizon_coeff, zenith_scale)
@@ -114,9 +113,6 @@ rtBuffer<unsigned int, 1> disk_UUID;
 //--- Tiles ---//
 rtBuffer<float3, 2> tile_vertices;
 rtBuffer<unsigned int, 1> tile_UUID;
-//--- Voxels ---//
-rtBuffer<float3, 2> voxel_vertices;
-rtBuffer<unsigned int, 1> voxel_UUID;
 //--- Bounding Box ---//
 rtBuffer<float3, 2> bbox_vertices;
 rtBuffer<unsigned int, 1> bbox_UUID;
@@ -148,6 +144,7 @@ rtBuffer<float, 1> specular_exponent;
 rtBuffer<float, 1> specular_scale;
 rtDeclareVariable(unsigned int, specular_reflection_enabled, , );
 rtDeclareVariable(unsigned int, scattering_iteration, , ); // Current scattering iteration (0-based)
+rtDeclareVariable(unsigned int, below_horizon_diffuse_enabled, , ); // 1 = the diffuse sky also reaches rays leaving below the horizon
 
 // Output buffers
 rtBuffer<float, 1> radiation_in;
@@ -172,6 +169,9 @@ rtBuffer<float, 1> radiation_specular; // Incident radiation for specular (per s
 // Camera variables
 rtBuffer<unsigned int, 1> camera_pixel_label;
 rtBuffer<float, 1> camera_pixel_depth;
+
+// Ray counters
+rtBuffer<unsigned int, 1> abandoned_ray_count; // [1]: direct and diffuse rays abandoned at the periodic wrap limit
 rtDeclareVariable(unsigned int, camera_ID, , );
 rtDeclareVariable(unsigned int, Ncameras, , );
 rtDeclareVariable(float3, camera_position, , );
@@ -180,7 +180,6 @@ rtDeclareVariable(float, camera_lens_diameter, , );
 rtDeclareVariable(float, FOV_aspect_ratio, , );
 rtDeclareVariable(float, camera_focal_length, , ); // Focal plane distance (working distance for ray generation), NOT lens optical focal length
 rtDeclareVariable(float, camera_viewplane_length, , );
-rtDeclareVariable(float, camera_pixel_solid_angle, , ); // Solid angle subtended by a single pixel (steradians)
 
 
 void queryGPUMemory(void);
@@ -207,6 +206,8 @@ struct PerRayData {
     //! Flag to determine if ray hit a periodic boundary
     bool hit_periodic_boundary;
     optix::float3 periodic_hit;
+    //! Distance from the segment origin to the periodic boundary it hit
+    float periodic_hit_t;
     //! Per-launch-band transmittance accumulated as the ray passes through translucent covers
     //! (glass/plastic). Initialised to 1 in the raygen programs; multiplied by the Fresnel+Bouguer
     //! tau(theta) in the any-hit program (direct) or the closest-hit programs (diffuse, camera);
@@ -220,11 +221,14 @@ struct PerRayData {
 
 //! Diffuse, camera and pixel-label rays continue past a translucent cover from this distance (m) beyond it.
 #define COVER_EXIT_OFFSET 1e-4f
+//! Number of periodic-boundary hits after which a ray of any type is abandoned (the ray is wrapped at most MAX_PERIODIC_WRAPS - 1
+//! times): it deposits nothing, as if blocked. Must match MAX_PERIODIC_WRAPS in OptiX8DeviceCode.cu and the Vulkan shaders.
+#define MAX_PERIODIC_WRAPS 1000
+//! Number of translucent covers a diffuse, camera or pixel-label ray can pass in addition to its periodic-boundary wraps.
+#define MAX_COVER_PASSES 32
 //! Maximum number of segments a diffuse, camera or pixel-label ray is traced in: each translucent cover passed
 //! and each periodic-boundary wrap starts a new segment. A ray that runs out stops without further contribution.
-#define MAX_RAY_SEGMENTS 32
-//! Maximum number of periodic-boundary wraps of a diffuse, camera or pixel-label ray.
-#define MAX_PERIODIC_WRAPS 10
+#define MAX_RAY_SEGMENTS (MAX_PERIODIC_WRAPS + MAX_COVER_PASSES)
 
 static __device__ void init_state(PerRayData *prd);
 
@@ -593,7 +597,7 @@ __device__ bool d_sampleTexture_patch(optix::float3 &sp, const optix::int2 &subp
     return solid;
 }
 
-__device__ bool d_sampleTexture_triangle(optix::float3 &sp, const optix::float3 &v0, const optix::float3 &v1, const optix::float3 &v2, PerRayData &prd, const float (&m_trans)[16], int mask_ID, int uv_ID) {
+__device__ bool d_sampleTexture_triangle(optix::float3 &sp, PerRayData &prd, int mask_ID, int uv_ID) {
 
     int2 sz = masksize[mask_ID];
 
@@ -601,31 +605,14 @@ __device__ bool d_sampleTexture_triangle(optix::float3 &sp, const optix::float3 
     float2 uv1 = uvdata[make_uint2(1, uv_ID)];
     float2 uv2 = uvdata[make_uint2(2, uv_ID)];
 
-    float a = v0.x - v1.x, b = v0.x - v2.x, d = v0.x;
-    float e = v0.y - v1.y, f = v0.y - v2.y, h = v0.y;
-    float i = v0.z - v1.z, j = v0.z - v2.z, l = v0.z;
-
     bool solid = false;
     int count = 0;
     while (!solid) {
         count++;
 
-        float3 R = sp;
-        d_transformPoint(m_trans, R);
-
-        float c = R.x, g = R.y, k = R.z;
-
-        float m = f * k - g * j, n = h * k - g * l, p = f * l - h * j;
-        float q = g * i - e * k, s = e * j - f * i;
-
-        float inv_denom = 1.f / (a * m + b * q + c * s);
-
-        float e1 = d * m - b * n - c * p;
-        float beta = e1 * inv_denom;
-
-        float r = r = e * l - h * i;
-        float e2 = a * n + d * q + c * r;
-        float gamma = e2 * inv_denom;
+        // Barycentric weights of the second and third vertices of the canonical triangle (0,0,0), (0,1,0), (1,1,0)
+        float beta = sp.y - sp.x;
+        float gamma = sp.x;
 
         float2 uv = uv0 + beta * (uv1 - uv0) + gamma * (uv2 - uv0);
 

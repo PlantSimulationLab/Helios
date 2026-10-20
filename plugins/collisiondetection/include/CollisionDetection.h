@@ -92,8 +92,8 @@ public:
      */
     struct RayQuery {
         helios::vec3 origin; //!< Ray origin point
-        helios::vec3 direction; //!< Ray direction vector (should be normalized)
-        float max_distance; //!< Maximum ray distance (negative = infinite)
+        helios::vec3 direction; //!< Ray direction vector (need not be unit length; it is normalized before tracing, and a zero vector never hits)
+        float max_distance; //!< Maximum ray distance in metres along the ray (negative = infinite)
         std::vector<uint> target_UUIDs; //!< Target primitive UUIDs (empty = all primitives)
 
         RayQuery() : origin(0, 0, 0), direction(0, 0, 1), max_distance(-1.0f) {
@@ -107,10 +107,10 @@ public:
      */
     struct HitResult {
         bool hit; //!< True if ray intersected with a primitive
-        float distance; //!< Distance to intersection point (only valid if hit = true)
+        float distance; //!< Distance in metres from the ray origin to the intersection point (only valid if hit = true; -1 on a miss)
         uint primitive_UUID; //!< UUID of intersected primitive (only valid if hit = true)
         helios::vec3 intersection_point; //!< World coordinates of intersection (only valid if hit = true)
-        helios::vec3 normal; //!< Surface normal at intersection (only valid if hit = true)
+        helios::vec3 normal; //!< Unit surface normal at intersection, oriented to face the ray origin (only valid if hit = true)
         float path_length; //!< Unobstructed path length through voxel (t_max - max(0, t_min)) for LiDAR processing
 
         HitResult() : hit(false), distance(-1.0f), primitive_UUID(0), intersection_point(0, 0, 0), normal(0, 0, 0), path_length(0.0f) {
@@ -356,8 +356,8 @@ public:
     /**
      * \brief Cast a single ray with simplified parameters
      * \param[in] origin Ray origin point
-     * \param[in] direction Ray direction vector (should be normalized)
-     * \param[in] max_distance Maximum ray distance (negative = infinite)
+     * \param[in] direction Ray direction vector (need not be unit length; distances are measured in metres along it)
+     * \param[in] max_distance Maximum ray distance in metres (negative = infinite)
      * \param[in] target_UUIDs Target primitive UUIDs (empty = all primitives)
      * \return HitResult containing intersection details
      */
@@ -365,6 +365,11 @@ public:
 
     /**
      * \brief Cast multiple rays in batch for improved performance
+     *
+     * Large batches (at least one million rays on a scene of at least 500 primitives) are traced on the GPU when GPU
+     * acceleration is enabled, unless any ray carries \ref RayQuery::target_UUIDs, in which case the batch is traced on
+     * the CPU. Both backends return the same results.
+     *
      * \param[in] ray_queries Vector of ray parameters
      * \param[out] stats Optional ray-tracing statistics
      * \return Vector of HitResult corresponding to each input ray
@@ -387,9 +392,9 @@ public:
      * whole batch (see \ref disableAutomaticBVHRebuilds).
      *
      * \param[in] origins Array of ray origins (length \p count).
-     * \param[in] directions Array of ray directions (length \p count; need not be pre-normalized).
+     * \param[in] directions Array of ray directions (length \p count; need not be pre-normalized, since distances are measured in metres along the normalized direction).
      * \param[in] count Number of rays.
-     * \param[in] max_distance Maximum ray distance shared by all rays (negative = infinite).
+     * \param[in] max_distance Maximum ray distance in metres shared by all rays (negative = infinite).
      * \param[out] out_distance Array (length \p count) receiving the hit distance for each ray (valid only where out_primitive_UUID != 0xFFFFFFFF).
      * \param[out] out_normal Array (length \p count) receiving the surface normal at the hit (valid only where out_primitive_UUID != 0xFFFFFFFF).
      * \param[out] out_primitive_UUID Array (length \p count) receiving the hit primitive UUID, or 0xFFFFFFFF for a miss.
@@ -456,10 +461,11 @@ public:
 #ifdef HELIOS_CUDA_AVAILABLE
     /**
      * \brief Cast rays using GPU acceleration with warp-efficient kernels
-     * \param[in] ray_queries Vector of ray queries to process
+     * \param[in] ray_queries Vector of ray queries to process; none may carry \ref RayQuery::target_UUIDs
      * \param[out] stats Ray-tracing performance statistics
      * \return Vector of HitResult with optimal GPU performance
-     * \note This method is only available when CUDA is enabled during compilation
+     * \note This method is only available when CUDA is enabled during compilation. It throws if GPU acceleration is
+     * disabled or if any query has target UUIDs; \ref castRays(const std::vector<RayQuery>&, RayTracingStats*) handles both cases.
      */
     std::vector<HitResult> castRaysGPU(const std::vector<RayQuery> &ray_queries, RayTracingStats &stats);
 #endif
@@ -490,6 +496,8 @@ public:
      * \param[in] grid_divisions Number of divisions in x, y, z dimensions
      * \param[in] ray_queries Vector of rays to intersect with the grid
      * \return 4D vector indexed as [i][j][k][hit_index] containing HitResult objects for each hit in each voxel
+     * \note A hit on a face shared by two cells belongs to the upper cell, except on the grid's top face, which belongs to
+     * the top cell. Hits outside the grid are not reported.
      */
     std::vector<std::vector<std::vector<std::vector<HitResult>>>> performGridRayIntersection(const helios::vec3 &grid_center, const helios::vec3 &grid_size, const helios::int3 &grid_divisions, const std::vector<RayQuery> &ray_queries);
 
@@ -525,8 +533,8 @@ public:
      * \brief Find the radial direction through a cone toward the largest gap
      * \param[in] apex Cone apex position
      * \param[in] centralAxis Central axis of the cone
-     * \param[in] half_angle Half-angle of cone in radians
-     * \param[in] height Height of cone (0 = infinite)
+     * \param[in] half_angle Half-angle of cone in radians, in (0, pi]
+     * \param[in] height Height of cone (0 = infinite); must not be negative
      * \param[in] initialSamples Number of initial uniform samples (default: 256)
      * \return OptimalPathResult containing the optimal direction and collision count
      */
@@ -586,22 +594,15 @@ public:
      * \brief Calculate voxel-primitive intersections using OpenMP parallelization
      * \param[in] UUIDs Optional primitive UUIDs (empty = all primitives)
      * \note Requires actual voxel primitives in Context
-     * \note Creates "inside_UUIDs" primitive data on voxels
+     * \note A primitive is inside a voxel when its centroid lies within the voxel's (axis-aligned) box. A centroid on a face
+     * shared by two voxels is assigned to only one of them.
+     * \note Sets "inside_UUIDs" primitive data (ascending UUIDs) on each voxel that contains a primitive, replacing the
+     * result of any earlier call; the data is removed from voxels that contain none.
      * \note Uses OpenMP for CPU parallel execution
      */
     void calculatePrimitiveVoxelIntersection(const std::vector<uint> &UUIDs = {});
 
     // -------- GEOMETRIC UTILITY FUNCTIONS --------
-
-    /**
-     * \brief Calculate 3D line intersection point
-     * \param[in] line1_point Point on first line
-     * \param[in] line1_direction Direction of first line
-     * \param[in] line2_point Point on second line
-     * \param[in] line2_direction Direction of second line
-     * \return Intersection point (assumes lines intersect)
-     */
-    helios::vec3 linesIntersection(const helios::vec3 &line1_point, const helios::vec3 &line1_direction, const helios::vec3 &line2_point, const helios::vec3 &line2_direction) const;
 
     /**
      * \brief Compare floats with dual tolerance (absolute + relative)
@@ -713,8 +714,9 @@ public:
      * \brief Find collisions within a specified distance threshold
      * \param[in] query_UUIDs Vector of primitive UUIDs to test for collisions
      * \param[in] target_UUIDs Vector of primitive UUIDs to test against
-     * \param[in] max_distance Maximum distance for collision consideration
-     * \return Vector of collision pairs within distance threshold
+     * \param[in] max_distance Maximum distance between the centroids of a colliding pair
+     * \return Pairs (query, target) whose bounding boxes overlap and whose centroids are at most max_distance apart,
+     * ordered by query (in the order given), then by target UUID
      */
     std::vector<std::pair<uint, uint>> findCollisionsWithinDistance(const std::vector<uint> &query_UUIDs, const std::vector<uint> &target_UUIDs, float max_distance);
 
@@ -742,7 +744,7 @@ public:
     /**
      * \brief Determine the distance to the nearest primitive in any direction, filtered by direction component
      * \param[in] origin Origin location from which to search
-     * \param[in] direction Unit direction vector to filter "forward" surfaces (dot product > 0)
+     * \param[in] direction Direction vector used to filter "forward" surfaces (dot product > 0); normalized internally, must be non-zero
      * \param[in] candidate_UUIDs Vector of primitive UUIDs to consider for intersection
      * \param[out] distance Distance to the nearest primitive (only valid if return is true)
      * \param[out] obstacle_direction Direction from origin to nearest obstacle (only valid if return is true)
@@ -759,8 +761,8 @@ public:
      * \brief Find the nearest solid obstacle within a cone using ray casting
      * \param[in] apex Cone apex position
      * \param[in] axis Central axis of the cone (normalized)
-     * \param[in] half_angle Half-angle of cone in radians
-     * \param[in] height Maximum detection distance (cone height)
+     * \param[in] half_angle Half-angle of cone in radians, in (0, pi/2]
+     * \param[in] height Maximum detection distance (cone height); must be positive
      * \param[in] candidate_UUIDs Vector of primitive UUIDs to consider as solid obstacles
      * \param[out] distance Distance to nearest obstacle (only valid if return is true)
      * \param[out] obstacle_direction Direction from apex to nearest obstacle (only valid if return is true)
@@ -782,8 +784,8 @@ public:
      *
      * \param[in] apex Location of the cone apex (plant growth point)
      * \param[in] axis Central axis direction of the cone (growth direction, normalized)
-     * \param[in] half_angle Half-angle of the cone in radians
-     * \param[in] height Height of the cone (detection distance)
+     * \param[in] half_angle Half-angle of the cone in radians, in (0, pi/2]
+     * \param[in] height Height of the cone (detection distance); must be positive
      * \param[in] candidate_UUIDs Vector of obstacle primitive UUIDs to check for collisions
      * \param[in] plant_primitives Vector of plant primitive UUIDs to identify the querying tree
      * \param[out] distance Distance to the nearest obstacle surface
@@ -813,6 +815,9 @@ public:
     /**
      * \brief Mark specific geometry as static (will be cached for efficiency)
      * \param[in] UUIDs Vector of primitive UUIDs that represent static obstacles
+     * \note Has an effect only in hierarchical mode (\ref enableHierarchicalBVH()): the BVH then keeps these primitives in a
+     * separately cached subtree that is rebuilt only when they change, while the rest of the geometry is rebuilt as usual.
+     * Static primitives are still found by every query.
      */
     void setStaticGeometry(const std::vector<uint> &UUIDs);
 
@@ -833,6 +838,8 @@ public:
 
     /**
      * \brief Enable hierarchical BVH with separate static and dynamic geometry
+     * \note Primitives given to \ref setStaticGeometry() are kept in a subtree that each BVH build reuses unless that
+     * geometry changed, so rebuilding after growth only rebuilds the dynamic geometry. Takes effect at the next BVH build.
      */
     void enableHierarchicalBVH();
 
@@ -844,8 +851,9 @@ public:
     /**
      * \brief Build static BVH for obstacles and non-growing geometry
      *
-     * Builds the static BVH using geometry set by setStaticGeometry().
-     * Should be called after enabling hierarchical BVH and setting static geometry.
+     * Rebuilds the BVH now, with the static subtree rebuilt from the geometry set by setStaticGeometry(). Not normally
+     * needed: each BVH build rebuilds the static subtree whenever the static geometry has changed.
+     * \note Requires hierarchical mode (\ref enableHierarchicalBVH()).
      */
     void buildStaticBVH();
 
@@ -935,8 +943,9 @@ public:
      * \brief Check whether a CUDA-capable GPU is available for acceleration.
      *
      * Returns true only if the plugin was compiled with CUDA support, at least one CUDA
-     * device is present at runtime, and the GPU path is not disabled via the HELIOS_NO_GPU
-     * environment variable. The result is cached after the first call.
+     * device is present at runtime and can run the plugin's kernels and accept a device
+     * allocation, and the GPU path is not disabled via the HELIOS_NO_GPU environment
+     * variable. The result is cached after the first call.
      *
      * Note: this reports GPU capability. Whether a given calculation actually uses the GPU
      * also depends on batch size and scene complexity (see shouldUseGPU). Use
@@ -992,6 +1001,12 @@ public:
     static int selfTest(int argc, char **argv);
 
 private:
+    //! Test-only accessor for private state
+    /**
+     * Defined in the plug-in's selfTest.cpp for the self-tests; it is not part of the public API.
+     */
+    friend class CollisionDetectionTestHelper;
+
     //! Pointer to the Helios context
     helios::Context *context;
 
@@ -1053,6 +1068,13 @@ private:
      * \param[in] UUID Primitive to cache; must exist in the Context
      */
     void cachePrimitive(uint UUID);
+
+    /**
+     * \brief Build the cache entry for one primitive from the Context, without storing it
+     * \param[in] UUID Primitive to read; must exist in the Context
+     * \return Cache entry holding the primitive's type, vertices and texture transparency data
+     */
+    [[nodiscard]] CachedPrimitive makeCachedPrimitive(uint UUID) const;
 
     /**
      * \brief Rebuild the dense, BVH-leaf-ordered primitive cache (\ref primitive_cache_dense) from the UUID-keyed
@@ -1281,9 +1303,6 @@ private:
     //! Maximum distance for collision detection queries (meters)
     float max_collision_distance;
 
-    //! Spatial partitioning hash for fast proximity queries
-    std::unordered_map<uint, helios::vec3> primitive_centroids_cache;
-
     // -------- GPU MEMORY POINTERS --------
 
     //! GPU memory for BVH nodes
@@ -1291,6 +1310,11 @@ private:
 
     //! GPU memory for primitive indices
     uint *d_primitive_indices;
+
+    //! GPU memory for primitive bounding-box minimum/maximum corners in BVH order (float3 each; void* keeps CUDA types out of
+    //! this header). Resident for the box queries of findCollisions().
+    void *d_primitive_aabb_min;
+    void *d_primitive_aabb_max;
 
     //! GPU memory for per-primitive type codes (resident scene geometry, uploaded once per BVH build)
     int *d_primitive_types;
@@ -1327,11 +1351,29 @@ private:
     //! GPU memory allocated flag
     bool gpu_memory_allocated;
 
+    //! Incremented whenever the host BVH (bvh_nodes/primitive_indices) changes
+    uint64_t bvh_generation;
+
+    //! Value of bvh_generation when the BVH now resident on the GPU was uploaded
+    uint64_t gpu_resident_bvh_generation;
+
+    //! Context geometry revision at which the resident scene was last checked for deleted primitives (max = not checked)
+    uint64_t gpu_deletion_check_revision;
+
     //! Internal tracking of processed UUIDs to avoid redundant BVH rebuilds
     std::set<uint> last_processed_uuids;
 
     //! Internal tracking of deleted UUIDs that we've already handled
     std::set<uint> last_processed_deleted_uuids;
+
+    //! Context primitive count when the BVH was last built, to detect geometry added or deleted while the Context's
+    //! dirty and deleted lists were cleared by Context::markGeometryClean()
+    size_t context_primitive_count_at_build;
+
+    //! Context geometry revision and primitive count when ensureBVHCurrent() last checked for changes; if both are
+    //! unchanged it returns without scanning the dirty list
+    uint64_t geometry_revision_at_last_check;
+    size_t primitive_count_at_last_check;
 
     //! Cache for static geometry (obstacles, fixed structures)
     std::set<uint> static_geometry_cache;
@@ -1370,11 +1412,17 @@ private:
     /**
      * \brief Rebuild the BVH over all Context geometry except the given primitives, keeping it recorded as a restriction
      *
-     * Primitives added to the Context after the exclusions were recorded are included. Does nothing if every primitive
-     * is excluded.
+     * Primitives added to the Context after the exclusions were recorded are included. If every remaining primitive is
+     * excluded, the BVH is cleared and the exclusions are kept.
      * \param[in] excluded_geometry Primitives to keep out of the BVH
      */
     void rebuildBVHExcluding(const std::set<uint> &excluded_geometry);
+
+    /**
+     * \brief Empty the BVH and its caches (including the GPU copy) and record the current Context state as processed
+     * \note Does not change the restriction state (bvh_geometry_restricted, bvh_excluded_geometry); callers set it.
+     */
+    void clearBVH();
 
     //! Flag to track if BVH needs rebuilding
     bool bvh_dirty;
@@ -1405,8 +1453,22 @@ private:
     //! Last geometry set used for static BVH
     std::set<uint> last_static_bvh_geometry;
 
-    //! Helper method for hierarchical BVH updates
-    void updateHierarchicalBVH(const std::set<uint> &requested_geometry, bool force_rebuild);
+    /**
+     * \brief Build a standalone BVH over the given primitives (root at index 0)
+     * \param[in] UUIDs Primitives to build over; their bounding boxes must be in primitive_aabbs_cache
+     * \param[out] nodes BVH nodes, with child indices relative to this array
+     * \param[out] primitives Primitive UUIDs in the order the leaves reference
+     * \note Uses the member BVH arrays as scratch space; only called from buildBVH(), which overwrites them afterwards.
+     */
+    void buildBVHSubtree(const std::vector<uint> &UUIDs, std::vector<BVHNode> &nodes, std::vector<uint> &primitives);
+
+    /**
+     * \brief Assemble the hierarchical BVH: the cached static subtree and a freshly built dynamic subtree under one root
+     * \param[in] static_primitives Primitives of this build that were given to setStaticGeometry()
+     * \param[in] dynamic_primitives All other primitives of this build
+     * \param[in] static_geometry_changed Whether any static primitive's bounding box changed since the static subtree was built
+     */
+    void assembleHierarchicalBVH(const std::vector<uint> &static_primitives, const std::vector<uint> &dynamic_primitives, bool static_geometry_changed);
 
     // -------- TREE-BASED BVH DATA STRUCTURES --------
 
@@ -1603,14 +1665,22 @@ private:
 
 #ifdef HELIOS_CUDA_AVAILABLE
     /**
-     * \brief Traverse BVH on GPU to find intersecting primitives
-     * \param[in] query_aabb_min Minimum corner of query bounding box
-     * \param[in] query_aabb_max Maximum corner of query bounding box
-     * \return Vector of intersecting primitive UUIDs
+     * \brief Traverse the resident BVH on the GPU for a batch of query boxes, in one count launch and one fill launch
+     * \param[in] query_aabb_min Minimum corners of the query boxes, xyz per query
+     * \param[in] query_aabb_max Maximum corners of the query boxes, xyz per query
+     * \param[out] hit_offsets Start of each query's hits in \p hits; holds one entry per query plus a final entry equal to hits.size()
+     * \param[out] hits UUIDs of the primitives whose bounding boxes overlap each query box, grouped by query
      * \note This method is only available when CUDA is enabled during compilation
      */
-    std::vector<uint> traverseBVH_GPU(const helios::vec3 &query_aabb_min, const helios::vec3 &query_aabb_max);
+    void traverseBVH_GPU(const std::vector<float> &query_aabb_min, const std::vector<float> &query_aabb_max, std::vector<size_t> &hit_offsets, std::vector<uint> &hits);
 #endif
+
+    /**
+     * \brief Find the primitives in the current BVH whose bounding boxes overlap those of the query primitives
+     * \param[in] query_UUIDs UUIDs of existing query primitives
+     * \return Sorted, de-duplicated UUIDs of the overlapping primitives; a query primitive is never reported against itself
+     */
+    std::vector<uint> findOverlappingPrimitives(const std::vector<uint> &query_UUIDs);
 
     /**
      * \brief Test if two AABBs intersect
@@ -1756,13 +1826,6 @@ private:
     void calculateVoxelRayPathLengths_CPU(const std::vector<helios::vec3> &ray_origins, const std::vector<helios::vec3> &ray_directions);
 
     /**
-     * \brief GPU implementation of voxel ray path length calculations
-     * \param[in] ray_origins Vector of ray origin points
-     * \param[in] ray_directions Vector of ray direction vectors
-     */
-    bool calculateVoxelRayPathLengths_GPU(const std::vector<helios::vec3> &ray_origins, const std::vector<helios::vec3> &ray_directions);
-
-    /**
      * \brief Validate voxel grid indices
      * \param[in] ijk Voxel indices to validate
      * \return True if indices are valid
@@ -1822,6 +1885,19 @@ private:
     void transferBVHToGPU();
 
     /**
+     * \brief Make sure the current BVH is resident on the GPU, uploading it if nothing or an older BVH is resident
+     * \note Raises helios_runtime_error() if the upload fails or the BVH is empty. Call only with GPU acceleration enabled.
+     */
+    void ensureBVHResidentOnGPU();
+
+    /**
+     * \brief Mark primitives of the resident scene that have been deleted from the Context, so that GPU rays pass through them
+     * \note Call after ensureBVHResidentOnGPU() and before a GPU ray launch. The scan of the BVH runs only if the Context
+     * geometry revision has changed since the last check.
+     */
+    void markDeletedPrimitivesOnGPU();
+
+    /**
      * \brief Build the GPU-resident geometry arrays (types, packed vertices, offsets) for the current BVH.
      *
      * Walks primitive_indices (preserving BVH order) and packs each primitive into 4 vertices (padded). Vertices
@@ -1849,9 +1925,10 @@ private:
     /**
      * \brief Shared GPU-dispatch predicate used by both castRays() and castRaysSoA().
      *
-     * Returns true when GPU acceleration is enabled, the ray batch is large enough to amortize the launch, and the
-     * resident scene geometry is uploaded. Always false on a non-CUDA build. Keeping this in one place ensures the
-     * vector and SoA cast paths never drift in how they choose GPU vs CPU.
+     * Returns true when GPU acceleration is enabled, the ray batch is large enough to amortize the launch, and the scene
+     * is complex enough. Always false on a non-CUDA build. A caller taking the GPU path then makes the scene resident
+     * with ensureBVHResidentOnGPU(). Keeping this in one place ensures the vector and SoA cast paths never drift in how
+     * they choose GPU vs CPU.
      *
      * \param[in] ray_count Number of rays in the batch
      * \return True if the GPU path should be used for this batch
@@ -1890,15 +1967,6 @@ private:
      */
     bool validateUUIDs(const std::vector<uint> &UUIDs) const;
 
-    /**
-     * \brief Test ray-primitive intersection and compute exact intersection distance
-     * \param[in] origin Ray origin point
-     * \param[in] direction Ray direction vector (normalized)
-     * \param[in] primitive_UUID UUID of the primitive to test
-     * \param[out] distance Distance to intersection point (only valid if return is true)
-     * \return True if ray intersects primitive, false otherwise
-     */
-    bool rayPrimitiveIntersection(const helios::vec3 &origin, const helios::vec3 &direction, uint primitive_UUID, float &distance) const;
 
     /**
      * \brief Process ray batch using CPU (sequential processing)
@@ -1947,10 +2015,43 @@ private:
     void castPacketSoATraversal(const helios::vec3 *origins, const helios::vec3 *directions, size_t begin, size_t end, float max_distance, float *out_distance, helios::vec3 *out_normal, uint *out_primitive_UUID, RayTracingStats &stats);
 
     /**
-     * \brief Basic BVH traversal (fallback when optimized structures not available)
-     * This method provides the critical early miss detection that was missing from brute-force approach
+     * \brief Cast a single ray against the BVH as it currently stands, without checking the Context for geometry changes
+     * \param[in] origin Ray origin point
+     * \param[in] direction Ray direction vector (normalized internally)
+     * \param[in] max_distance Maximum ray distance (negative = infinite)
+     * \param[in] target_UUIDs Primitives to test against (empty = all geometry in the BVH)
+     * \return HitResult for the nearest intersection
+     * \note castRay() calls prepareForRayCasting() and then this. Loops casting many rays call prepareForRayCasting() once
+     * and then this per ray: it may rebuild the BVH and its caches, so it must not run inside a parallel region.
      */
-    HitResult castRayBVHTraversal(const RayQuery &query);
+    HitResult castRayOnCurrentBVH(const helios::vec3 &origin, const helios::vec3 &direction, float max_distance, const std::vector<uint> &target_UUIDs);
+
+    /**
+     * \brief Bring the BVH, the primitive caches and the SoA BVH layout up to date for ray casting
+     * \note Not thread-safe: call once before casting rays, never from inside a parallel region.
+     */
+    void prepareForRayCasting();
+
+    /**
+     * \brief Keep the primitives whose bounding box comes within a given distance of a point
+     * \param[in] point Query point
+     * \param[in] reach Maximum distance from the point to the nearest point of a primitive's bounding box
+     * \param[in] UUIDs Candidate primitive UUIDs; UUIDs of primitives that no longer exist are dropped
+     * \return The candidates within reach, in their original order
+     */
+    [[nodiscard]] std::vector<uint> filterPrimitivesWithinReach(const helios::vec3 &point, float reach, const std::vector<uint> &UUIDs) const;
+
+    /**
+     * \brief Raise an error if a cone query's parameters are invalid
+     * \param[in] caller Name of the calling method, for the error message
+     * \param[in] axis Cone axis; must be finite and non-zero
+     * \param[in] half_angle Cone half-angle in radians; must be in (0, max_half_angle]
+     * \param[in] max_half_angle Largest half-angle the caller supports
+     * \param[in] height Cone height; must be positive, or zero when zero_height_means_unlimited
+     * \param[in] zero_height_means_unlimited Whether a height of 0 is the caller's "unlimited" value
+     * \param[in] sample_count Number of sample rays; must be positive
+     */
+    void validateConeQuery(const std::string &caller, const helios::vec3 &axis, float half_angle, float max_half_angle, float height, bool zero_height_means_unlimited, int sample_count) const;
 
     /**
      * \brief Optimized AABB intersection tests
@@ -1970,11 +2071,6 @@ private:
      * Used by the basic BVH traversal for early miss detection
      */
     bool rayAABBIntersect(const helios::vec3 &ray_origin, const helios::vec3 &ray_direction, const helios::vec3 &aabb_min, const helios::vec3 &aabb_max) const;
-
-    /**
-     * \brief Helper method for primitive intersection
-     */
-    HitResult intersectPrimitive(const RayQuery &query, uint primitive_id);
 
 
     // -------- RASTERIZATION-BASED COLLISION DETECTION --------

@@ -328,7 +328,7 @@ void Context::translateObjectPrimitives_private(const std::vector<uint> &UUIDs, 
             makeTranslationMatrix(shift, T);
             matmult(T, M, M);
         }
-        primitive->second->dirty_flag = true;
+        primitive->second->markShapeModified();
     }
 }
 
@@ -627,6 +627,8 @@ void Context::deletePrimitive(uint UUID) {
     delete prim;
     primitives.erase(UUID);
     dirty_deleted_primitives.push_back(UUID);
+    geometry_revision.markModified();
+    shape_revision.markModified();
     invalidateAllUUIDsCache();
 }
 
@@ -919,9 +921,23 @@ void Primitive::getTransformationMatrix(float (&T)[16]) const {
     std::memcpy(T, transform, 16 * sizeof(float));
 }
 
+void Primitive::markDirty() {
+    dirty_flag = true;
+    if (context_ptr != nullptr) {
+        context_ptr->geometry_revision.markModified();
+    }
+}
+
+void Primitive::markShapeModified() {
+    markDirty();
+    if (context_ptr != nullptr) {
+        context_ptr->shape_revision.markModified();
+    }
+}
+
 void Primitive::setTransformationMatrix(float (&T)[16]) {
     std::memcpy(transform, T, 16 * sizeof(float));
-    dirty_flag = true;
+    markShapeModified();
 }
 
 float Patch::getArea() const {
@@ -1030,7 +1046,7 @@ void Primitive::setColor(const helios::RGBcolor &newcolor) {
         materialID = context_ptr->copyMaterialForPrimitive(UUID);
     }
     context_ptr->materials.at(materialID).color = make_RGBAcolor(newcolor, 1.f);
-    dirty_flag = true;
+    markDirty();
 }
 
 void Primitive::setColor(const helios::RGBAcolor &newcolor) {
@@ -1042,7 +1058,7 @@ void Primitive::setColor(const helios::RGBAcolor &newcolor) {
         materialID = context_ptr->copyMaterialForPrimitive(UUID);
     }
     context_ptr->materials.at(materialID).color = newcolor;
-    dirty_flag = true;
+    markDirty();
 }
 
 bool Primitive::hasTexture() const {
@@ -1070,7 +1086,7 @@ void Primitive::setTextureFile(const char *texture) {
         materialID = context_ptr->copyMaterialForPrimitive(UUID);
     }
     context_ptr->materials.at(materialID).texture_file = texture;
-    dirty_flag = true;
+    markShapeModified();
 }
 
 std::vector<vec2> Primitive::getTextureUV() {
@@ -1079,7 +1095,7 @@ std::vector<vec2> Primitive::getTextureUV() {
 
 void Primitive::setTextureUV(const std::vector<vec2> &a_uv) {
     uv = a_uv;
-    dirty_flag = true;
+    markShapeModified();
 }
 
 void Primitive::overrideTextureColor() {
@@ -1091,7 +1107,7 @@ void Primitive::overrideTextureColor() {
         materialID = context_ptr->copyMaterialForPrimitive(UUID);
     }
     context_ptr->materials.at(materialID).texture_color_overridden = true;
-    dirty_flag = true;
+    markDirty();
 }
 
 void Primitive::useTextureColor() {
@@ -1103,7 +1119,7 @@ void Primitive::useTextureColor() {
         materialID = context_ptr->copyMaterialForPrimitive(UUID);
     }
     context_ptr->materials.at(materialID).texture_color_overridden = false;
-    dirty_flag = true;
+    markDirty();
 }
 
 bool Primitive::isTextureColorOverridden() const {
@@ -1120,7 +1136,7 @@ float Primitive::getSolidFraction() const {
 
 void Primitive::setSolidFraction(float solidFraction) {
     solid_fraction = solidFraction;
-    dirty_flag = true;
+    markShapeModified();
 }
 
 bool Triangle::edgeFunction(const helios::vec2 &a, const helios::vec2 &b, const helios::vec2 &c) {
@@ -1129,7 +1145,7 @@ bool Triangle::edgeFunction(const helios::vec2 &a, const helios::vec2 &b, const 
 
 void Triangle::setVertices(const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2) {
     makeTransformationMatrix(vertex0, vertex1, vertex2);
-    dirty_flag = true;
+    markShapeModified();
 }
 
 void Primitive::syncParentObjectAfterTransform() const {
@@ -1165,7 +1181,7 @@ void Primitive::applyTransform(float (&T)[16]) {
     }
 
     matmult(T, transform, transform);
-    dirty_flag = true;
+    markShapeModified();
     syncParentObjectAfterTransform();
 }
 
@@ -1187,7 +1203,7 @@ void Primitive::scale(const vec3 &S) {
     float T[16];
     makeScaleMatrix(S, T);
     matmult(T, transform, transform);
-    dirty_flag = true;
+    markShapeModified();
     syncParentObjectAfterTransform();
 }
 
@@ -1209,7 +1225,7 @@ void Primitive::scale(const vec3 &S, const vec3 &point) {
     float T[16];
     makeScaleMatrix(S, point, T);
     matmult(T, transform, transform);
-    dirty_flag = true;
+    markShapeModified();
     syncParentObjectAfterTransform();
 }
 
@@ -1230,7 +1246,7 @@ void Primitive::translate(const helios::vec3 &shift) {
     float T[16];
     makeTranslationMatrix(shift, T);
     matmult(T, transform, transform);
-    dirty_flag = true;
+    markShapeModified();
     syncParentObjectAfterTransform();
 }
 
@@ -1262,7 +1278,7 @@ void Patch::rotate(float rotation_radians, const char *rotation_axis_xyz_string)
     } else {
         helios_runtime_error("ERROR (Patch::rotate): Rotation axis should be one of x, y, or z.");
     }
-    dirty_flag = true;
+    markShapeModified();
     syncParentObjectAfterTransform();
 }
 
@@ -1282,7 +1298,7 @@ void Patch::rotate(float rotation_radians, const helios::vec3 &rotation_axis_vec
     float R[16];
     makeRotationMatrix(rotation_radians, rotation_axis_vector, R);
     matmult(R, transform, transform);
-    dirty_flag = true;
+    markShapeModified();
     syncParentObjectAfterTransform();
 }
 
@@ -1302,7 +1318,7 @@ void Patch::rotate(float rotation_radians, const helios::vec3 &origin, const hel
     float R[16];
     makeRotationMatrix(rotation_radians, origin, rotation_axis_vector, R);
     matmult(R, transform, transform);
-    dirty_flag = true;
+    markShapeModified();
     syncParentObjectAfterTransform();
 }
 
@@ -1334,7 +1350,7 @@ void Triangle::rotate(float rotation_radians, const char *rotation_axis_xyz_stri
     } else {
         helios_runtime_error("ERROR (Triangle::rotate): Rotation axis should be one of x, y, or z.");
     }
-    dirty_flag = true;
+    markShapeModified();
     syncParentObjectAfterTransform();
 }
 
@@ -1354,7 +1370,7 @@ void Triangle::rotate(float rotation_radians, const helios::vec3 &rotation_axis_
     float R[16];
     makeRotationMatrix(rotation_radians, rotation_axis_vector, R);
     matmult(R, transform, transform);
-    dirty_flag = true;
+    markShapeModified();
     syncParentObjectAfterTransform();
 }
 
@@ -1374,7 +1390,7 @@ void Triangle::rotate(float rotation_radians, const helios::vec3 &origin, const 
     float R[16];
     makeRotationMatrix(rotation_radians, origin, rotation_axis_vector, R);
     matmult(R, transform, transform);
-    dirty_flag = true;
+    markShapeModified();
     syncParentObjectAfterTransform();
 }
 
@@ -1406,7 +1422,7 @@ void Voxel::rotate(float rotation_radians, const char *rotation_axis_xyz_string)
     float Rz[16];
     makeRotationMatrix(rotation_radians, "z", Rz);
     matmult(Rz, transform, transform);
-    dirty_flag = true;
+    markShapeModified();
     syncParentObjectAfterTransform();
 }
 

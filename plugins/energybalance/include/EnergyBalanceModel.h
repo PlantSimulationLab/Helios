@@ -137,7 +137,8 @@ public:
      * When enabled, \ref run() iterates the surface energy balance and the airspace solution to convergence, since leaf temperature and the airspace state are mutually dependent. Because the model solves for a steady state, it is not
      * compatible with the dynamic (non-steady-state) forms of \ref run() that take a timestep argument.
      *
-     * This routine sets primitive data 'air_temperature', 'air_humidity', and 'wind_speed' for all primitives in \p canopy_UUIDs and \p ground_UUIDs, and adds 'boundarylayer_conductance_out' to the optional outputs because the airspace solution requires it.
+     * This routine sets primitive data 'air_temperature', 'air_humidity', and 'wind_speed' for all primitives in \p canopy_UUIDs and \p ground_UUIDs, and adds 'boundarylayer_conductance_out' to the optional outputs because the airspace solution
+     * requires it.
      *
      * The soil exchanges sensible heat and water vapor with the lowest airspace layer through the same boundary-layer and moisture conductances its own surface energy balance uses, so that the heat and water released by the soil are exactly
      * what the airspace receives. Ground primitives without 'boundarylayer_conductance' primitive data use the bare-soil conductance of Kustas and Norman (1999) rather than the flat-plate relation used for other primitives; a value
@@ -206,7 +207,49 @@ public:
     void printDefaultValueReport(const std::vector<uint> &UUIDs) const;
 
 private:
+    //! Per-primitive inputs to the surface energy balance, gathered from the Context. Element u of each vector corresponds to element u of the UUID vector they were gathered for.
+    struct SurfaceEnergyBalanceInputs {
+        std::vector<float> To; //!< Surface temperature at the start of the timestep, which is also the initial guess for the solution (K)
+        std::vector<float> R; //!< Absorbed radiation flux summed over all bands (W/m^2)
+        std::vector<float> Qother; //!< Other surface flux (W/m^2)
+        std::vector<float> eps; //!< Emissivity of the emitting band
+        std::vector<float> Ta; //!< Air temperature (K)
+        std::vector<float> ea; //!< Air vapor pressure (Pa)
+        std::vector<float> pressure; //!< Atmospheric pressure (Pa)
+        std::vector<float> gH; //!< Boundary-layer conductance to heat summed over all faces (mol/m^2-s)
+        std::vector<float> gS; //!< Moisture (stomatal) conductance (mol/m^2-s)
+        std::vector<uint> Nsides; //!< Number of faces exchanging heat
+        std::vector<float> stomatal_sidedness; //!< Fraction of stomata on the lower face
+        std::vector<float> heatcapacity; //!< Heat capacity (J/m^2-K)
+        std::vector<float> surfacehumidity; //!< Relative humidity at the evaporating surface
+    };
+
     void evaluateSurfaceEnergyBalance(const std::vector<uint> &UUIDs, float dt);
+
+    //! Read the surface energy balance inputs for each primitive from the Context, substituting defaults for missing data
+    /**
+     * \param[in] UUIDs Universal unique identifiers for primitives included in the surface energy balance.
+     * \param[out] inputs Gathered inputs, one element per UUID.
+     */
+    void gatherSurfaceEnergyBalanceInputs(const std::vector<uint> &UUIDs, SurfaceEnergyBalanceInputs &inputs);
+
+    //! Solve the surface energy balance for surface temperature, on the GPU if enabled and otherwise on the CPU
+    /**
+     * Non-finite solutions are replaced by the default surface temperature.
+     * \param[in] inputs Gathered surface energy balance inputs.
+     * \param[in] dt Timestep in seconds (zero for steady state).
+     * \param[out] T Surface temperature of each primitive (K).
+     */
+    void solveSurfaceTemperatures(const SurfaceEnergyBalanceInputs &inputs, float dt, std::vector<float> &T);
+
+    //! Write surface temperature, sensible and latent fluxes, and any requested optional output to the Context
+    /**
+     * \param[in] UUIDs Universal unique identifiers the inputs were gathered for.
+     * \param[in] inputs Gathered surface energy balance inputs.
+     * \param[in] T Surface temperature of each primitive (K).
+     * \param[in] dt Timestep in seconds (zero for steady state).
+     */
+    void writeSurfaceEnergyBalanceOutputs(const std::vector<uint> &UUIDs, const SurfaceEnergyBalanceInputs &inputs, const std::vector<float> &T, float dt);
 
     //! Solve the coupled surface energy balance and canopy airspace state to convergence
     /**
@@ -279,15 +322,15 @@ private:
     bool canopy_airspace_layers_assigned = false;
 
 #ifdef HELIOS_CUDA_AVAILABLE
-    //! GPU implementation using CUDA
-    void evaluateSurfaceEnergyBalance_GPU(const std::vector<uint> &UUIDs, float dt);
+    //! GPU implementation of the surface temperature solution using CUDA
+    void solveSurfaceTemperatures_GPU(const SurfaceEnergyBalanceInputs &inputs, float dt, std::vector<float> &T);
 
     //! Check if GPU is available at runtime and initialize
     void initializeGPUAcceleration();
 #endif
 
-    //! CPU implementation using OpenMP
-    void evaluateSurfaceEnergyBalance_CPU(const std::vector<uint> &UUIDs, float dt);
+    //! CPU implementation of the surface temperature solution using OpenMP
+    void solveSurfaceTemperatures_CPU(const SurfaceEnergyBalanceInputs &inputs, float dt, std::vector<float> &T);
 
     //! Copy of a pointer to the context
     helios::Context *context;

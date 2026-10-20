@@ -68,7 +68,7 @@ The radiation model requires at least one ray-tracing backend. Two backends are 
 
 CMake automatically detects which backends are available and enables them. On NVIDIA systems with driver ≥ 560 and CUDA 12.0+, the OptiX 8.1 backend is selected by default; on systems with driver &lt; 560 and CUDA 9.0+, the OptiX 6.5 (legacy) backend is used instead. On systems without NVIDIA hardware or when CUDA is not installed, the Vulkan backend is used. You can force the Vulkan backend by setting <tt>-DFORCE_VULKAN_BACKEND=ON</tt>, or force the OptiX 6.5 legacy backend by setting <tt>-DOPTIX_VERSION_LEGACY=ON</tt>.
 
-\note <b>Feature coverage:</b> The Vulkan backend's software BVH intersects patches, tiles and triangles only. A scene containing voxel primitives is rejected with an error rather than traced as though the voxels were absent; voxel ray tracing is available only on the OptiX backends.
+\note <b>Feature coverage:</b> The radiation model traces patches, tiles and triangles on every backend. A scene containing voxel primitives is rejected with an error by \ref RadiationModel::updateGeometry() rather than traced as though the voxels were absent; pass \ref RadiationModel::updateGeometry(const std::vector<uint>&) "updateGeometry()" a list of UUIDs that leaves them out to trace the rest of the scene.
 
 \note <b>Performance:</b> The OptiX backend is strongly preferred on NVIDIA systems. For direct radiation source ray traces, performance between the two backends is broadly comparable. However, for diffuse radiation or scattering ray traces, the Vulkan backend can be significantly slower. If you have an NVIDIA GPU and are running simulations with diffuse radiation or multiple scattering iterations, it is strongly recommended to install CUDA and use the OptiX backend. On systems with driver ≥ 560, the OptiX 8.1 backend will be selected automatically.
 
@@ -206,6 +206,14 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
      <td>1</td>
    </tr>
    <tr>
+     <td>invisibility\_flag</td>
+     <td>N/A</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly</td>
+     <td>If set to 1, the primitive is invisible to the radiation model. See Sect. \ref RadInvisible below for more information.</td>
+     <td>N/A</td>
+     <td>0</td>
+   </tr>
+   <tr>
      <td>specular\_exponent</td>
      <td>N/A</td>
      <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
@@ -257,7 +265,7 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  By default, a planar primitive will emit and absorb radiation from/to both faces. For primitives that only emit and absorb from/to one face (e.g., ground primitives), this default behavior should be modified. Single-sided emission can be achieved by setting primitive data for the particular primitive with a name of "twosided_flag" to a value of 0 (where '0' is defined as an unsigned integer):
 
   ~~~~~~{.cpp}
-  context.setPrimitiveData( UUID, "twosided_flag", uint(1) );
+  context.setPrimitiveData( UUID, "twosided_flag", uint(0) );
   ~~~~~~
 
  Note that in this case radiation will be emitted from the side with its face in the direction of the primitive normal vector. If primitive data called "twosided_flag" is set to 1, this will produce the default behavior of emission from both faces.
@@ -277,6 +285,18 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
   ~~~~~~
 
  If no user-assigned material exists (or the material is auto-generated), the radiation model falls back to checking for "twosided_flag" primitive data.
+
+ \subsection RadInvisible Invisible Primitives
+
+ It is sometimes useful to keep geometry in the Context that should not interact with the radiation field, such as markers or models used only for visualization. Setting primitive data called "invisibility_flag" to 1 (as an unsigned integer) makes a primitive invisible to the radiation model:
+
+  ~~~~~~{.cpp}
+  context.setPrimitiveData( UUID, "invisibility_flag", uint(1) );
+  ~~~~~~
+
+ An invisible primitive is never intersected by direct, diffuse, scattered, or camera rays, so it does not cast shadows and does not appear in camera images. It also neither absorbs nor emits radiation, so its "radiation_flux_*" output is zero. The "invisibility_flag" takes precedence over the "twosided_flag" of the primitive, including one set through a material. A value of 0 has no effect, and any other value is an error.
+
+ For backward compatibility, setting "twosided_flag" to 3 has the same effect as setting "invisibility_flag" to 1.
 
  \subsection RadBands Defining Wavelength Bands
 
@@ -466,8 +486,8 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  glass appears darker by \f$\tau\f$ and several panes attenuate multiplicatively. The pixel labels and depths
  written to the global data "camera_[camera_label]_pixel_UUID" and "camera_[camera_label]_pixel_depth" also
  pass through covers: they record the first surface behind the covers that is not itself a cover, and a pixel
- that sees only covers and the sky is labelled as sky. A camera ray is traced through at most 32 segments (each
- cover crossed and each periodic-boundary wrap starts a new one); what lies beyond is not seen. As for direct
+ that sees only covers and the sky is labelled as sky. A camera ray passes through at most 32 covers (in addition
+ to its periodic-boundary wraps, see \ref RadPeriodic); what lies beyond is not seen. As for direct
  and diffuse rays, a primitive that is glass in some but not all of the bands launched together in one
  runBand() call is opaque to the camera in every band. The camera model makes these approximations:
  <ul>
@@ -641,6 +661,8 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  radiationmodel.setDiffuseRadiationFlux("PAR",200.f); //set the flux
  ~~~~~~
 
+ The diffuse flux is the flux incident on a horizontal surface above all geometry, and the sky that supplies it fills the upper hemisphere only. A ray that leaves all geometry heading below the horizon (e.g., past the edge of a finite ground, or from the underside of an isolated object with nothing beneath it) receives no ambient radiation. Near the edges of a finite domain, surfaces therefore see a dark void below them where the ground would otherwise continue; to remove this edge effect, use periodic boundary conditions (see \ref RadPeriodic). Versions of Helios before 1.3.92 instead filled the full sphere with sky radiation, so that rays leaving below the horizon received the same ambient radiation as rays leaving upward. That behavior can be restored with \ref RadiationModel::enableBelowHorizonDiffuseRadiation() "enableBelowHorizonDiffuseRadiation()"; it applies to all bands and to radiation cameras.
+
  Alternatively, diffuse flux can be computed automatically from a spectral distribution by setting the diffuse spectrum:
 
  ~~~~~~{.cpp}
@@ -683,15 +705,28 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
 
  \subsection RadScatter Scattering Iterations
  
- If the reflectivity or transmissivity are set to values greater than 0, scattering calculations are required to simulate the reflected or transmitted radiation transport.  These scattering calculations are performed iteratively until there is no energy left to be scattered.  The number of scattering iterations is defined using:
- 
+ If the reflectivity or transmissivity are set to values greater than 0, scattering calculations are required to simulate the reflected or transmitted radiation transport.  These scattering calculations are performed iteratively: in each iteration, every primitive launches the energy it scattered in the previous one.  The maximum number of scattering iterations is defined using:
+
  ~~~~~~{.cpp}
- radiationmodel.setScatteringDepth( "PAR", 3); //set the number of scattering iterations
+ radiationmodel.setScatteringDepth( "PAR", 3); //set the maximum number of scattering iterations
+ ~~~~~~
+
+ Each iteration launches a fraction q of the energy launched in the one before. In a dense canopy, q is roughly the leaf scattering albedo (reflectivity plus transmissivity) times the chance that scattered light hits another leaf: about 0.1 for PAR leaves and 0.5 for near-infrared leaves with reflectivity and transmissivity of 0.4. After the last iteration some energy is still waiting to be scattered. Rather than absorbing it where it sits, which overestimates absorption by a fraction that falls only as q to the power of the depth, the model sums the remaining iterations as a geometric series: each primitive receives its absorption in the last iteration times q/(1-q), where q is measured from the energy launched in the last two iterations. In a homogeneous canopy with near-infrared leaves, leaf absorption is then within about 0.1% of the converged value after three iterations and a few hundredths of a percent after four, so a depth of 3 to 5 is usually enough. A band with a depth of 0 has no scattering: its primitives absorb all the radiation they intercept.
+
+ \note The summed tail applies to the absorbed flux (the "radiation_flux_<band>" primitive data), not to radiation camera images. A camera sees the radiation scattered in the iterations that were traced, so an image of a strongly scattering band still misses the multiply-scattered light beyond the scattering depth; keep the depth higher for such images.
+
+ Because each iteration carries less energy than the one before, later iterations contribute less to the noise in the absorbed flux. By default the number of diffuse rays per primitive in each scattering iteration is therefore reduced in proportion to the energy it launches, with a minimum of 16 rays; a band's last iteration gets 1/(1-q) times more, since the summed tail scales what it absorbs. This traces fewer rays for a small increase in the noise of the scattered part of the absorbed flux, which matters most for deeply shaded primitives and camera images, whose light comes mostly from scattering. \ref RadiationModel::disableScatteringRayReduction() "disableScatteringRayReduction()" turns this off, so that every iteration uses the full diffuse ray count.
+
+ The iterations for a band can also stop before its depth is reached, once the largest to-be-scattered flux of any primitive falls below a threshold given in the band's flux units. The remaining energy is then summed in the same way.
+
+ ~~~~~~{.cpp}
+ radiationmodel.setScatteringDepth( "NIR", 10); //at most 10 scattering iterations
+ radiationmodel.setMinScatterEnergy( "NIR", 0.01); //stop once no primitive has more than 0.01 W/m^2 left to scatter
  ~~~~~~
 
  \subsection RadPeriodic Periodic Boundary Conditions
 
- By default, the radiation model does not enforce any boundary conditions on the edge of the domain (other than being a diffuse ambient radiation source if one has been added). Optionally, users can specify to enforce a periodic boundary in the horizontal in either the x- or y-direction or both. This effectively means that the domain repeats indefinitely, and that any radiation leaving the domain on one boundary will re-enter the domain on the opposite boundary. This is useful for eliminating domain edge effects.
+ By default, the radiation model does not enforce any boundary conditions on the edge of the domain: rays that leave the domain upward receive the diffuse ambient radiation if it has been added, and rays that leave downward receive nothing (see \ref AmbSource). Optionally, users can specify to enforce a periodic boundary in the horizontal in either the x- or y-direction or both. This effectively means that the domain repeats indefinitely, and that any radiation leaving the domain on one boundary will re-enter the domain on the opposite boundary. This is useful for eliminating domain edge effects.
 
  \image html PeriodicBC.png
 
@@ -701,7 +736,7 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  radiationmodel.enforcePeriodicBoundary("xy"); //enforce periodic boundaries in horizontal
  ~~~~~~
 
- Note that it is very important that no primitives extend laterally beyond the ground surface, otherwise the periodic boundary will lie beyond the lateral extent of the ground and there will potentially be ambient radiation that enters the domain from below. If there is a chance that primitives may laterally extend beyond the ground, it is recommended to use the \ref helios::Context::cropDomain() function to crop the domain in the horizontal to the size of the ground.
+ Note that it is very important that no primitives extend laterally beyond the ground surface, otherwise the periodic boundary will lie beyond the lateral extent of the ground and rays can leave the domain downward through the gap, where they see no ground. If there is a chance that primitives may laterally extend beyond the ground, it is recommended to use the \ref helios::Context::cropDomain() function to crop the domain in the horizontal to the size of the ground.
 
  ~~~~~~{.cpp}
  vec2 ground_size(10,10);  //lateral size of the ground
@@ -711,6 +746,10 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  context.cropDomainX( ground_center.x + make_vec2(-0.5*ground_size.x,0.5*ground_size.x) );
  context.cropDomainY( ground_center.y + make_vec2(-0.5*ground_size.y,0.5*ground_size.y) );
  ~~~~~~
+
+ Radiation cameras may be placed outside of the domain in a periodic direction, and above or below it. Since the domain repeats indefinitely, the camera sees the same scene as a camera moved into the domain by a whole number of domain widths, and the camera's rays are traced from that equivalent position. The camera's height and viewing direction are not changed. A camera ray that starts above (or below) the geometry crosses only empty space until it reaches the geometry, so it is moved there in one step, however many domain widths it travels on the way.
+
+ A ray is wrapped through the periodic boundary at most 999 times; a ray that reaches the boundary for the 1000th time without hitting anything or leaving the domain through its top or bottom is treated as blocked. This only affects rays nearly parallel to the ground in a domain that is narrow compared with its height (e.g., a sun within a few degrees of the horizon over a single-plant domain). If more than 0.01% of the direct and diffuse rays launched by a call to \ref RadiationModel::runBand() "runBand()" are treated as blocked this way, a warning is written to the standard error stream; widening the periodic domain reduces their number.
 
  \subsection RadCam Radiation Cameras
 
@@ -1293,19 +1332,17 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
 
  \note Bands run together share a single ray launch, so the direct and diffuse ray counts used are the largest values set for any of the bands in the call (see \ref RadiationModel::setDirectRayCount() "setDirectRayCount()" and \ref RadiationModel::setDiffuseRayCount() "setDiffuseRayCount()"). For example, if the 'PAR' band is set to 100 direct rays per primitive and the 'NIR' band is set to 1000, both bands are traced with 1000 rays per primitive. To use a different ray count for each band, run the bands in separate calls to \ref RadiationModel::runBand() "runBand()".
 
- The context geometry is built within the radiation model automatically, so \ref RadiationModel::updateGeometry() "updateGeometry()" does not have to be called before the first run. It is also rebuilt automatically when primitives have been <b>added to</b> or <b>deleted from</b> the Context since the last build, which is detected by comparing the number of primitives in the Context against the number present when the geometry was last built.
-
- \warning Because the check compares primitive counts, it does not detect changes that leave the number of primitives in the Context unchanged. In particular, <b>modifying existing primitives</b> — translating, rotating, or scaling them, or otherwise changing their vertices — and <b>deleting and adding an equal number of primitives</b> between runs are both invisible to it. In those cases the trace would run against the previous geometry, and \ref RadiationModel::updateGeometry() "updateGeometry()" must be called explicitly:
+ The context geometry is built within the radiation model automatically, so \ref RadiationModel::updateGeometry() "updateGeometry()" does not have to be called before the first run. It is also rebuilt automatically at the next run when primitives have been <b>added to</b> or <b>deleted from</b> the Context since the last build, or when existing primitives have <b>changed shape</b>: translated, rotated, or scaled, given new vertices or a new transformation matrix, or given a new texture, texture (u,v) coordinates, or solid fraction. Setting primitive data or color does not trigger a rebuild, so the model's own flux output and the data written by other plug-ins between runs do not cause the geometry to be rebuilt every run.
 
  ~~~~~~{.cpp}
  radiationmodel.runBand("PAR"); //builds the geometry automatically
 
- context.translatePrimitive(UUIDs, make_vec3(0, 0, 1)); //moves existing primitives; the count is unchanged
+ context.translatePrimitive(UUIDs, make_vec3(0, 0, 1)); //moves existing primitives
 
- radiationmodel.updateGeometry(); //required: the automatic rebuild will not catch this
-
- radiationmodel.runBand("PAR");
+ radiationmodel.runBand("PAR"); //rebuilds the geometry automatically before tracing
  ~~~~~~
+
+ \warning The <tt>twosided_flag</tt> and <tt>invisibility_flag</tt> primitive data (and a <tt>twosided_flag</tt> set through a material) are read by the ray tracer when the geometry is built. Because setting primitive data does not trigger a rebuild, \ref RadiationModel::updateGeometry() "updateGeometry()" must be called explicitly after changing them on primitives that were already part of a previous run.
 
  The geometry update can be somewhat costly, so \ref RadiationModel::updateGeometry() "updateGeometry()" may also be called directly simply to control when that cost is incurred:
 
@@ -1318,6 +1355,17 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  A final consideration is the \ref RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) "updateGeometry(UUIDs)" overload, which restricts the model to a subset of the Context primitives. A subset build is never rebuilt automatically, since doing so would discard the requested subset; call it again after modifying Context geometry.
 
  The model will create several primitive data in the context with values set using simulation results (see Sect. "Output Primitive Data" above).
+
+ \subsubsection RadSeed Reproducible Results
+
+ The ray directions and launch points are sampled randomly, so each result carries Monte-Carlo noise that decreases with the ray count. The random seed of every ray launch (direct, diffuse, scattering and camera) is drawn from the Context's random number generator, so seeding the Context with \ref helios::Context::seedRandomGenerator() "seedRandomGenerator()" makes the radiation model reproducible along with the other plug-ins:
+
+ ~~~~~~{.cpp}
+ context.seedRandomGenerator(42);
+ radiationmodel.runBand("PAR"); //gives the same fluxes every time the program is run
+ ~~~~~~
+
+ If the Context is not seeded, it is seeded from the system clock and the noise differs between runs. Each launch advances the Context's random generator, so running the radiation model changes the random numbers seen by any code that draws from the Context afterward. Two runs from the same seed trace the same rays, but the absorbed fluxes may still differ in their last few digits because the GPU sums contributions from many rays in an order that varies between runs. Results from the same seed also differ between ray-tracing backends.
 
  \subsection RadSolar Integrating with the SolarPosition Plug-in
 

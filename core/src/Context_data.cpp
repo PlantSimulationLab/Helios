@@ -194,7 +194,7 @@ void Primitive::clearPrimitiveData(const char *label) {
     } else {
         assert(false);
     }
-    dirty_flag = true;
+    markDirty();
 }
 
 bool Primitive::doesPrimitiveDataExist(const char *label) const {
@@ -379,7 +379,7 @@ void Context::copyPrimitiveData(uint sourceUUID, uint destinationUUID) {
         incrementPrimitiveDataLabelCounter(label);
     }
 
-    destination->dirty_flag = true;
+    destination->markDirty();
 }
 
 void Context::renamePrimitiveData(uint UUID, const char *old_label, const char *new_label) {
@@ -394,7 +394,7 @@ void Context::renamePrimitiveData(uint UUID, const char *old_label, const char *
 
     duplicatePrimitiveData(UUID, old_label, new_label);
     clearPrimitiveData(UUID, old_label);
-    primitives.at(UUID)->dirty_flag = true;
+    primitives.at(UUID)->markDirty();
 }
 
 void Context::duplicatePrimitiveData(uint UUID, const char *old_label, const char *new_label) {
@@ -442,7 +442,7 @@ void Context::duplicatePrimitiveData(uint UUID, const char *old_label, const cha
         assert(false);
     }
 
-    primitives.at(UUID)->dirty_flag = true;
+    primitives.at(UUID)->markDirty();
 }
 
 std::vector<std::string> Context::listPrimitiveData(uint UUID) const {
@@ -483,7 +483,7 @@ void Context::duplicatePrimitiveData(const char *existing_data_label, const char
             } else {
                 helios_runtime_error("ERROR (Context::duplicatePrimitiveData): Unsupported primitive data type for label '" + std::string(existing_data_label) + "'.");
             }
-            primitive->dirty_flag = true;
+            primitive->markDirty();
         }
     }
 }
@@ -1137,7 +1137,7 @@ void Context::scalePrimitiveData(const std::vector<uint> &UUIDs, const std::stri
         } else {
             helios_runtime_error("ERROR (Context::scalePrimitiveData): This operation only supports primitive data of type float, double, vec2, vec3, and vec4.");
         }
-        primitives.at(UUID)->dirty_flag = true;
+        primitives.at(UUID)->markDirty();
     }
 
     if (primitives_not_exist > 0) {
@@ -1168,7 +1168,7 @@ void Context::incrementPrimitiveData(const std::vector<uint> &UUIDs, const char 
             for (uint i = 0; i < size; i++) {
                 primitives.at(UUID)->primitive_data_int.at(label).at(i) += increment;
             }
-            primitives.at(UUID)->dirty_flag = true;
+            primitives.at(UUID)->markDirty();
         } else {
             warnings.addWarning("increment_type_mismatch", "Attempted to increment primitive data for type int, but data '" + std::string(label) + "' does not have type int.");
         }
@@ -1193,7 +1193,7 @@ void Context::incrementPrimitiveData(const std::vector<uint> &UUIDs, const char 
             for (uint i = 0; i < size; i++) {
                 primitives.at(UUID)->primitive_data_uint.at(label).at(i) += increment;
             }
-            primitives.at(UUID)->dirty_flag = true;
+            primitives.at(UUID)->markDirty();
         } else {
             warnings.addWarning("increment_type_mismatch", "Attempted to increment Primitive data for type uint, but data '" + std::string(label) + "' does not have type uint.");
         }
@@ -1218,7 +1218,7 @@ void Context::incrementPrimitiveData(const std::vector<uint> &UUIDs, const char 
             for (uint i = 0; i < size; i++) {
                 primitives.at(UUID)->primitive_data_float.at(label).at(i) += increment;
             }
-            primitives.at(UUID)->dirty_flag = true;
+            primitives.at(UUID)->markDirty();
         } else {
             warnings.addWarning("increment_type_mismatch", "Attempted to increment Primitive data for type float, but data '" + std::string(label) + "' does not have type float.");
         }
@@ -1243,7 +1243,7 @@ void Context::incrementPrimitiveData(const std::vector<uint> &UUIDs, const char 
             for (uint i = 0; i < size; i++) {
                 primitives.at(UUID)->primitive_data_double.at(label).at(i) += increment;
             }
-            primitives.at(UUID)->dirty_flag = true;
+            primitives.at(UUID)->markDirty();
         } else {
             warnings.addWarning("increment_type_mismatch", "Attempted to increment Primitive data for type double, but data '" + std::string(label) + "' does not have type double.");
         }

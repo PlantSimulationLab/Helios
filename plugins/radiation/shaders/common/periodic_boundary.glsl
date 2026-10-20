@@ -38,10 +38,15 @@
 /**
  * Ray-rectangle intersection for one bbox face.
  *
- * Uses the same plane + point-in-quad algorithm as intersect_patch().
- * Returns t value at intersection, or -1.0 on miss.
+ * Plane intersection followed by a point-in-quad test along the face's two edges. A ray is wrapped only by the face it leaves
+ * the domain through: faces come in (min, max) pairs, and vertex 0 of a face minus vertex 0 of the other face of its pair points
+ * out of the domain. The face a wrapped ray starts on is therefore never hit again, so the ray can be continued with no minimum
+ * distance, and a ray leaving the domain is wrapped at whatever distance it is from the face, also one closer than the minimum
+ * distance of the BVH traversal.
+ * Returns whether the face was hit, and the distance to it in t.
  */
-float intersect_bbox_face(vec3 ray_origin, vec3 ray_dir, uint face_idx) {
+bool intersect_bbox_face(vec3 ray_origin, vec3 ray_dir, uint face_idx, out float t) {
+    t = 0.0;
     uint base = face_idx * 12; // 4 vertices * 3 floats each
     vec3 v0 = vec3(bbox_verts_buf.vertices[base + 0], bbox_verts_buf.vertices[base + 1], bbox_verts_buf.vertices[base + 2]);
     vec3 v1 = vec3(bbox_verts_buf.vertices[base + 3], bbox_verts_buf.vertices[base + 4], bbox_verts_buf.vertices[base + 5]);
@@ -54,14 +59,18 @@ float intersect_bbox_face(vec3 ray_origin, vec3 ray_dir, uint face_idx) {
     // abs(NaN) < 1e-8 evaluates to false.
     vec3 face_normal = cross(v1 - v0, v2 - v0);
     float face_normal_length = length(face_normal);
-    if (face_normal_length < 1e-20) return -1.0; // Degenerate face
+    if (face_normal_length < 1e-20) return false; // Degenerate face
     vec3 normal = face_normal / face_normal_length;
 
     float denom = dot(ray_dir, normal);
-    if (abs(denom) < 1e-8) return -1.0; // Ray parallel to face
+    if (abs(denom) < 1e-8) return false; // Ray parallel to face
 
-    float t = dot(anchor - ray_origin, normal) / denom;
-    if (t <= 1e-5 || t > 1e8) return -1.0; // Behind ray or too far
+    uint opposite_base = (face_idx ^ 1u) * 12;
+    vec3 opposite_v0 = vec3(bbox_verts_buf.vertices[opposite_base + 0], bbox_verts_buf.vertices[opposite_base + 1], bbox_verts_buf.vertices[opposite_base + 2]);
+    if (dot(ray_dir, v0 - opposite_v0) <= 0.0) return false; // Ray entering the domain through this face
+
+    t = dot(anchor - ray_origin, normal) / denom;
+    if (t > 1e8) return false; // Too far
 
     // Check if hit point is inside the rectangle
     vec3 p = ray_origin + ray_dir * t;
@@ -72,10 +81,7 @@ float intersect_bbox_face(vec3 ray_origin, vec3 ray_dir, uint face_idx) {
     float ddota = dot(d, a);
     float ddotb = dot(d, b);
 
-    if (ddota > 0.0 && ddota < dot(a, a) && ddotb > 0.0 && ddotb < dot(b, b)) {
-        return t;
-    }
-    return -1.0;
+    return ddota > 0.0 && ddota < dot(a, a) && ddotb > 0.0 && ddotb < dot(b, b);
 }
 
 /**
@@ -86,8 +92,8 @@ float intersect_bbox_face(vec3 ray_origin, vec3 ray_dir, uint face_idx) {
  * by translating the hit point across the domain.
  *
  * Wrapping logic matches OptiX rayHit.cu:41-65:
- * - Hit at -x boundary → wrap to +x (add width_x - eps)
- * - Hit at +x boundary → wrap to -x (subtract width_x - eps)
+ * - Hit at -x boundary → wrap to +x (add width_x)
+ * - Hit at +x boundary → wrap to -x (subtract width_x)
  * - Same for Y boundaries
  *
  * Returns true if a periodic boundary was hit (caller should re-trace from wrapped_origin), and sets boundary_t to the
@@ -103,8 +109,8 @@ bool check_periodic_boundary(
     int closest_face = -1;
 
     for (uint b = 0; b < bbox_count; ++b) {
-        float t = intersect_bbox_face(ray_origin, ray_dir, b);
-        if (t > 0.0 && t < bbox_t) {
+        float t;
+        if (intersect_bbox_face(ray_origin, ray_dir, b, t) && t < bbox_t) {
             bbox_t = t;
             closest_face = int(b);
         }
@@ -117,19 +123,21 @@ bool check_periodic_boundary(
     vec3 hit_pos = ray_origin + ray_dir * bbox_t;
 
     // Compute wrapped position (matches OptiX rayHit.cu:41-65)
+    // Tolerance for identifying the face that was hit. The ray continues from exactly one period away, the same point on the
+    // opposite face: moving it any further would shift it off its straight path by that much at every wrap.
     float eps = 1e-5;
     float width_x = domain_xmax - domain_xmin;
     float width_y = domain_ymax - domain_ymin;
 
     wrapped_origin = hit_pos;
     if (periodic_flag_x == 1 && abs(hit_pos.x - domain_xmin) <= eps) {
-        wrapped_origin.x += width_x - eps; // -x boundary → wrap to +x
+        wrapped_origin.x += width_x; // -x boundary → wrap to +x
     } else if (periodic_flag_x == 1 && abs(hit_pos.x - domain_xmax) <= eps) {
-        wrapped_origin.x -= width_x - eps; // +x boundary → wrap to -x
+        wrapped_origin.x -= width_x; // +x boundary → wrap to -x
     } else if (periodic_flag_y == 1 && abs(hit_pos.y - domain_ymin) <= eps) {
-        wrapped_origin.y += width_y - eps; // -y boundary → wrap to +y
+        wrapped_origin.y += width_y; // -y boundary → wrap to +y
     } else if (periodic_flag_y == 1 && abs(hit_pos.y - domain_ymax) <= eps) {
-        wrapped_origin.y -= width_y - eps; // +y boundary → wrap to -y
+        wrapped_origin.y -= width_y; // +y boundary → wrap to -y
     }
 
     return true;
@@ -145,6 +153,65 @@ bool check_periodic_boundary(
     float boundary_t;
     return check_periodic_boundary(ray_origin, ray_dir, bvh_closest_t, periodic_flag_x, periodic_flag_y, bbox_count, domain_xmin, domain_xmax, domain_ymin, domain_ymax,
                                    wrapped_origin, boundary_t);
+}
+
+/**
+ * Move a coordinate into [lower, upper) by a whole number of periods.
+ *
+ * A point on the lower face of a ray travelling out through that face is moved to the upper face instead, so the ray starts
+ * inside the domain. Must match wrapIntoPeriod() in the OptiX backends.
+ */
+float wrap_into_period(float coordinate, float direction, float lower, float upper) {
+    float period = upper - lower;
+    float wrapped = coordinate - period * floor((coordinate - lower) / period);
+    if (wrapped < lower || wrapped >= upper) {
+        wrapped = lower; // rounding at a whole number of periods
+    }
+    if (wrapped == lower && direction < 0.0) {
+        wrapped = upper;
+    }
+    return wrapped;
+}
+
+/**
+ * Move a camera ray that starts above or below the periodic boundary faces to the top or bottom of the faces.
+ *
+ * The faces span only the height of the geometry, so a ray starting above (below) them passes nothing it can hit before it
+ * descends (rises) to their top (bottom). It is moved there in one step, then into the domain laterally by a whole number of
+ * periods, which is where it would have been wrapped to on the way. A ray that never reaches the faces' height range is left
+ * where it is: it hits nothing either way. Must match advanceToPeriodicFaces() in the OptiX backends.
+ *
+ * Returns the distance the ray was moved along its direction (0 if it was not moved).
+ */
+float advance_to_periodic_faces(
+    inout vec3 ray_origin, vec3 ray_dir,
+    uint periodic_flag_x, uint periodic_flag_y,
+    float domain_xmin, float domain_xmax, float domain_ymin, float domain_ymax
+) {
+    // Vertices 0 and 2 of every face are at the bottom and the top of the faces
+    float face_zmin = bbox_verts_buf.vertices[2];
+    float face_zmax = bbox_verts_buf.vertices[8];
+
+    float face_z;
+    if (ray_origin.z > face_zmax && ray_dir.z < 0.0) {
+        face_z = face_zmax;
+    } else if (ray_origin.z < face_zmin && ray_dir.z > 0.0) {
+        face_z = face_zmin;
+    } else {
+        return 0.0;
+    }
+
+    float t = (face_z - ray_origin.z) / ray_dir.z;
+    vec3 moved = ray_origin + ray_dir * t;
+    moved.z = face_z;
+    if (periodic_flag_x == 1u) {
+        moved.x = wrap_into_period(moved.x, ray_dir.x, domain_xmin, domain_xmax);
+    }
+    if (periodic_flag_y == 1u) {
+        moved.y = wrap_into_period(moved.y, ray_dir.y, domain_ymin, domain_ymax);
+    }
+    ray_origin = moved;
+    return t;
 }
 
 #endif // PERIODIC_BOUNDARY_GLSL

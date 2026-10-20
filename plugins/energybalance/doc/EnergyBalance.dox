@@ -100,8 +100,8 @@ Useful OS-specific information for installing CUDA can be found here: \ref Depen
  <tr><td>\f$h\f$</td><td>Relative humidity of air outside of boundary-layer.</td></tr>
  <tr><td>\f$p_{atm}\f$ (Pa)</td><td>Atmospheric pressure.</td></tr>
  <tr><td>\f$C_p\f$ (J/m<sup>2</sup>/<sup>o</sup>C)</td><td>Heat capacity of object.</td></tr>
- <tr><td>\f$Q_{other}\f$ (W/m<sup>2</sup>)</td><td>Any surface fluxes other than radiation, convection, or latent (e.g., storage).</td></tr>
- <tr><td>\f$n_s\f$</td><td>Number of primitive faces with heat transfer (e.g., typically \f$n_s=1\f$ for leaves, and \f$n_s=0\f$ for the ground.</td></tr>
+ <tr><td>\f$Q_{other}\f$ (W/m<sup>2</sup>)</td><td>Any surface fluxes other than radiation, convection, latent, or storage.</td></tr>
+ <tr><td>\f$n_s\f$</td><td>Number of primitive faces with heat transfer, set by the primitive "twosided_flag": \f$n_s=1\f$ for a single-sided primitive (twosided_flag=0, e.g., the ground), and \f$n_s=2\f$ for a two-sided primitive (twosided_flag=1, e.g., leaves).</td></tr>
  </table>
 
  Constants are given by:
@@ -131,7 +131,7 @@ Useful OS-specific information for installing CUDA can be found here: \ref Depen
  <tr><td>emissivity\_[*] <td>unitless <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Surface emissivity for band [*], used for the emitted thermal radiation term. Thermal emission uses a single emissivity: that of the band for which emission is enabled in the \ref RadiationModel. If emission is enabled for more than one band, the first emission-enabled band's emissivity is used and a warning is issued. When no emission information is available (radiation fluxes set manually without running the \ref RadiationModel), the first band that defines an emissivity is used. <td>Can be set by \ref RadiationModel plug-in. <td>1.0
  <tr><td>wind\_speed <td>m/s <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Air wind speed just outside of primitive boundary-layer. <td>N/A <td>1 m/s
  <tr><td>object\_length <td>m <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Characteristic dimension of object formed by primitive. <td>N/A <td>Square root of primitive surface area
- <tr><td>boundarylayer\_conductance<td>mol air/m<sup>2</sup>-s <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Leaf boundary-layer conductance to heat. <td>\ref BLConductanceModel plug-in <td>Try calculating from model \f$0.135\sqrt{\frac{U}{L}}\f$
+ <tr><td>boundarylayer\_conductance<td>mol air/m<sup>2</sup>-s <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Leaf boundary-layer conductance to heat, summed over both faces of a two-sided primitive. <td>\ref BLConductanceModel plug-in <td>Try calculating from model \f$0.135\sqrt{\frac{U}{L}}\f$
  <tr><td>air\_temperature <td>Kelvin <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Ambient air temperature outside of surface boundary layer. <td>N/A <td>300 K
  <tr><td>moisture\_conductance <td>mol air/m<sup>2</sup>-s <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Conductance to moisture between sub-surface air spaces and surface (e.g., for leaves this is stomatal conductance). <td>Can be computed by \ref StomatalConductanceModel plug-in. <td>0
  <tr><td>surface\_humidity <td>unitless <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Relative humidity of air immediately above surface evaporating site. <td>N/A <td>1.0 (saturated)
@@ -238,9 +238,9 @@ Useful OS-specific information for installing CUDA can be found here: \ref Depen
 
    Once the water vapor has diffused to the surface, the rate of transfer is then determined by the surface boundary-layer conductance. The sub-surface conductance and boundary-layer conductance act in serial, and can be combined to yield an overall moisture conductance between the sub-surface air spaces and the outside of the boundary layer according to
 
-   \f$g_M = 1.08g_Hg_S\left[\dfrac{\zeta}{1.08g_H+g_S\zeta}+\dfrac{(1-\zeta)}{1.08g_H+g_S(1-\zeta)}\right]\f$,
+   \f$g_M = \dfrac{1.08g_H}{n_s}g_S\left[\dfrac{\zeta}{1.08g_H/n_s+g_S\zeta}+\dfrac{(1-\zeta)}{1.08g_H/n_s+g_S(1-\zeta)}\right]\f$,
 
-   where \f$g_H\f$ is the boundary-layer conductance to heat, and \f$1.08g_H\f$ gives the boundary-layer conductance to moisture considering the differences in diffusivity between water vapor and heat.
+   where \f$g_H\f$ is the boundary-layer conductance to heat summed over all \f$n_s\f$ faces of the primitive, and \f$1.08g_H/n_s\f$ gives the boundary-layer conductance to moisture of a single face considering the differences in diffusivity between water vapor and heat. Moisture leaving a face crosses only that face's boundary layer, so the stomatal conductance on each face acts in series with the boundary-layer conductance of that face alone.
 
    \f$\zeta=\dfrac{D_{upper}}{D_{lower}+D_{upper}}\f$
 
@@ -289,7 +289,7 @@ Useful OS-specific information for installing CUDA can be found here: \ref Depen
 
  Additional functions are available to run the unsteady energy balance model with heat storage. If the timestep argument "dt" is passed with value greater than 0, and the heat capacity \f$C_p\f$ is greater than 0, the unsteady energy balance equation will be applied with the heat storage term included. The following equation is then solved for the surface temperature at time \f$t+\Delta t\f$
 
- \f[ R-n_s\varepsilon\sigma T_s(t+\Delta t)^4 - c_p g_H \left( T_s(t+\Delta t)-T_a \right) - \lambda g_M \left(\frac{e_s(T_s(t+\Delta t))f_s-e_s(T_a)h}{p_{atm}}\right)-Q_{other} + C_p\dfrac{T_s(t+\Delta t) - T_s(t)}{\Delta t}.\f]
+ \f[ R-n_s\varepsilon\sigma T_s(t+\Delta t)^4 - c_p g_H \left( T_s(t+\Delta t)-T_a \right) - \lambda g_M \left(\frac{e_s(T_s(t+\Delta t))f_s-e_s(T_a)h}{p_{atm}}\right)-Q_{other} - C_p\dfrac{T_s(t+\Delta t) - T_s(t)}{\Delta t} = 0.\f]
 
  The timestep should be chosen such that it is significantly smaller than the characteristic time constant of heat storage.
 

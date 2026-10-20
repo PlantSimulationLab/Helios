@@ -34,6 +34,8 @@ rtDeclareVariable(unsigned int, UUID, attribute UUID, );
 // attribute not written by the program that reported the hit is undefined when it is read.
 rtDeclareVariable(float, surface_u, attribute surface_u, );
 rtDeclareVariable(float, surface_v, attribute surface_v, );
+// True distance to a periodic boundary face, which bbox_intersect may report at the ray's minimum distance instead
+rtDeclareVariable(float, periodic_face_t, attribute periodic_face_t, );
 // Note: Nprimitives is declared in RayTracing.cuh (for bbox position calculation)
 
 //! Whether the primitive with this UUID launched the current ray, which must not intersect it again
@@ -102,6 +104,7 @@ RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in ge
                         UUID = patch_UUID[objID];
                         surface_u = ddota / dot(a, a);
                         surface_v = ddotb / dot(b, b);
+                        periodic_face_t = 0.f; // read only for periodic boundary faces
                         rtReportIntersection(0);
                     }
                 } else { // use transparency mask
@@ -130,6 +133,7 @@ RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in ge
                             UUID = patch_UUID[objID];
                             surface_u = ddota / dot(a, a);
                             surface_v = ddotb / dot(b, b);
+                            periodic_face_t = 0.f; // read only for periodic boundary faces
                             rtReportIntersection(0);
                         }
                     }
@@ -211,6 +215,7 @@ RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geo
                         UUID = triangle_UUID[objID];
                         surface_u = beta;
                         surface_v = gamma;
+                        periodic_face_t = 0.f; // read only for periodic boundary faces
                         rtReportIntersection(0);
                     }
                 } else { // has texture transparency
@@ -224,15 +229,17 @@ RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geo
                     float2 uv = uv0 + beta * (uv1 - uv0) + gamma * (uv2 - uv0);
                     uv.y = 1.f - uv.y;
 
-                    uint3 ind = make_uint3(roundf(float(sz.x - 1) * fabs(uv.x)), roundf(float(sz.y - 1) * fabs(uv.y)), maskID[ID]);
-                    if (ind.x >= sz.x || ind.y >= sz.y) {
-                        // Texture coord out of bounds - skip
-                    }
+                    // Texel i spans texture coordinates i/(size-1) to (i+1)/(size-1), as in Texture::computeSolidFraction() and
+                    // the patch test above
+                    int ix = max(0, min(int(floorf(float(sz.x - 1) * uv.x)), sz.x - 1));
+                    int iy = max(0, min(int(floorf(float(sz.y - 1) * uv.y)), sz.y - 1));
+                    uint3 ind = make_uint3(ix, iy, maskID[ID]);
                     if (maskdata[ind]) {
                         if (rtPotentialIntersection(t)) {
                             UUID = triangle_UUID[objID];
                             surface_u = beta;
                             surface_v = gamma;
+                            periodic_face_t = 0.f; // read only for periodic boundary faces
                             rtReportIntersection(0);
                         }
                     }
@@ -286,6 +293,7 @@ RT_PROGRAM void disk_intersect(int objID /**< [in] index of primitive in geometr
                 UUID = disk_UUID[objID];
                 surface_u = 0.f; // disks take no part in camera flux smoothing
                 surface_v = 0.f;
+                periodic_face_t = 0.f; // read only for periodic boundary faces
                 rtReportIntersection(0);
             }
         }
@@ -299,107 +307,6 @@ RT_PROGRAM void disk_bounds(int objID, float result[6]) {
     float3 mn = make_float3(-1, -1, -0.001f);
     float3 mx = make_float3(1, 1, 0.001f);
     aabb->set(mn, mx);
-}
-
-//----------------- Voxel Primitive ----------------------//
-
-/** OptiX ray-voxel intersection program. */
-
-RT_PROGRAM void voxel_intersect(int objID /**< [in] index of primitive in geometric object.*/) {
-
-    if (isRayOrigin(voxel_UUID[objID])) { // the ray should not intersect the primitive from which it was launched
-        return;
-    }
-    // FIX: Convert UUID to position for twosided_flag access
-    uint position = primitive_positions[voxel_UUID[objID]];
-    if (twosided_flag[position] >= 2) { // if twosided_flag=2, ignore intersection (transparent)
-        return;
-    }
-
-    float x0 = voxel_vertices[make_uint2(0, objID)].x;
-    float y0 = voxel_vertices[make_uint2(0, objID)].y;
-    float z0 = voxel_vertices[make_uint2(0, objID)].z;
-
-    float x1 = voxel_vertices[make_uint2(1, objID)].x;
-    float y1 = voxel_vertices[make_uint2(1, objID)].y;
-    float z1 = voxel_vertices[make_uint2(1, objID)].z;
-
-    float ox = ray.origin.x;
-    float oy = ray.origin.y;
-    float oz = ray.origin.z;
-    float dx = ray.direction.x;
-    float dy = ray.direction.y;
-    float dz = ray.direction.z;
-
-    float tx_min, ty_min, tz_min;
-    float tx_max, ty_max, tz_max;
-
-    float a = 1.0 / dx;
-    if (a >= 0) {
-        tx_min = (x0 - ox) * a;
-        tx_max = (x1 - ox) * a;
-    } else {
-        tx_min = (x1 - ox) * a;
-        tx_max = (x0 - ox) * a;
-    }
-
-    float b = 1.0 / dy;
-    if (b >= 0) {
-        ty_min = (y0 - oy) * b;
-        ty_max = (y1 - oy) * b;
-    } else {
-        ty_min = (y1 - oy) * b;
-        ty_max = (y0 - oy) * b;
-    }
-
-    float c = 1.0 / dz;
-    if (c >= 0) {
-        tz_min = (z0 - oz) * c;
-        tz_max = (z1 - oz) * c;
-    } else {
-        tz_min = (z1 - oz) * c;
-        tz_max = (z0 - oz) * c;
-    }
-
-    float t0, t1;
-
-    // find largest entering t value
-
-    if (tx_min > ty_min)
-        t0 = tx_min;
-    else
-        t0 = ty_min;
-
-    if (tz_min > t0)
-        t0 = tz_min;
-
-    // find smallest exiting t value
-
-    if (tx_max < ty_max)
-        t1 = tx_max;
-    else
-        t1 = ty_max;
-
-    if (tz_max < t1)
-        t1 = tz_max;
-
-    if (t0 < t1 && t0 > 1e-5) { // note: if ray originated inside voxel, no intersection occurs.
-        if (rtPotentialIntersection(t0)) {
-            UUID = voxel_UUID[objID];
-            surface_u = 0.f; // voxels take no part in camera flux smoothing
-            surface_v = 0.f;
-            rtReportIntersection(0);
-        }
-    }
-}
-
-/** Axis-aligned bounding box program for voxel primitives. */
-
-RT_PROGRAM void voxel_bounds(int objID, float result[6]) {
-    optix::Aabb *aabb = (optix::Aabb *) result;
-    float3 min = voxel_vertices[make_uint2(0, objID)];
-    float3 max = voxel_vertices[make_uint2(1, objID)];
-    aabb->set(min, max);
 }
 
 //----------------- Bounding Box Primitive ----------------------//
@@ -429,9 +336,18 @@ RT_PROGRAM void bbox_intersect(int objID /**< [in] index of primitive in geometr
     float3 a = v1 - v0;
     float3 b = v3 - v0;
 
+    // A ray is wrapped only by the face it leaves the domain through: faces come in (min, max) pairs, and vertex 0 of a face minus
+    // vertex 0 of the other face of its pair points out of the domain. The face a wrapped ray starts on is therefore never hit
+    // again, so the ray can be continued with no minimum distance, and a ray leaving the domain is wrapped even if it starts closer
+    // to the face than the minimum distance. Such a hit is reported at the minimum distance, with its true distance in
+    // periodic_face_t.
+    if (dot(ray.direction, v0 - bbox_vertices[make_uint2(0, objID ^ 1)]) <= 0.f) {
+        return;
+    }
+
     float t = dot(anchor - ray.origin, normal) / dot(ray.direction, normal);
 
-    if (t == t && t > 1e-8 && t < 1e8) {
+    if (t == t && t < 1e8) {
 
         float3 p = ray.origin + ray.direction * t;
         float3 d = p - anchor;
@@ -444,10 +360,11 @@ RT_PROGRAM void bbox_intersect(int objID /**< [in] index of primitive in geometr
 
             if (ddotb > 0.0 && ddotb < dot(b, b)) {
 
-                if (rtPotentialIntersection(t)) {
+                if (rtPotentialIntersection(fmaxf(t, ray.tmin))) {
                     UUID = bbox_UUID[objID];
                     surface_u = 0.f; // periodic boundary walls take no part in camera flux smoothing
                     surface_v = 0.f;
+                    periodic_face_t = t;
                     rtReportIntersection(0);
                 }
             }
@@ -465,7 +382,11 @@ RT_PROGRAM void bbox_bounds(int objID, float result[6]) {
     float3 v3 = bbox_vertices[make_uint2(3, objID)];
     float3 min = make_float3(fmin(fmin(v0.x, v1.x), fmin(v2.x, v3.x)), fmin(fmin(v0.y, v1.y), fmin(v2.y, v3.y)), fmin(fmin(v0.z, v1.z), fmin(v2.z, v3.z)));
     float3 max = make_float3(fmax(fmax(v0.x, v1.x), fmax(v2.x, v3.x)), fmax(fmax(v0.y, v1.y), fmax(v2.y, v3.y)), fmax(fmax(v0.z, v1.z), fmax(v2.z, v3.z)));
-    aabb->set(min, max);
+    // Padded so that a ray starting closer to a face than its minimum distance still reaches bbox_intersect, which wraps it when it
+    // is leaving the domain
+    const float max_abs_coordinate = fmaxf(fmaxf(fmaxf(fabsf(min.x), fabsf(min.y)), fabsf(min.z)), fmaxf(fmaxf(fabsf(max.x), fabsf(max.y)), fabsf(max.z)));
+    const float pad = 1e-3f + 1e-6f * max_abs_coordinate;
+    aabb->set(min - make_float3(pad), max + make_float3(pad));
 }
 
 //----------------- Tile Object ----------------------//
@@ -532,6 +453,7 @@ RT_PROGRAM void tile_intersect(int objID /**< [in] index of primitive in geometr
                         UUID = U + subpatch_y * object_subdivisions[ID].x + subpatch_x;
                         surface_u = uv.x * object_subdivisions[ID].x - float(subpatch_x);
                         surface_v = uv.y * object_subdivisions[ID].y - float(subpatch_y);
+                        periodic_face_t = 0.f; // read only for periodic boundary faces
                         rtReportIntersection(0);
                     }
                 } else { // use transparency mask
@@ -548,6 +470,7 @@ RT_PROGRAM void tile_intersect(int objID /**< [in] index of primitive in geometr
                             UUID = U + subpatch_y * object_subdivisions[ID].x + subpatch_x;
                             surface_u = uv.x * object_subdivisions[ID].x - float(subpatch_x);
                             surface_v = uv.y * object_subdivisions[ID].y - float(subpatch_y);
+                            periodic_face_t = 0.f; // read only for periodic boundary faces
                             rtReportIntersection(0);
                         }
                     }

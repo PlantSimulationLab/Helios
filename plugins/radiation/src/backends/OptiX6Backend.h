@@ -86,7 +86,6 @@ namespace helios {
         void updateSources(const std::vector<RayTracingSource> &sources) override;
 
         // Diffuse/sky radiation
-        void updateDiffuseRadiation(const std::vector<float> &flux, const std::vector<float> &extinction, const std::vector<helios::vec3> &peak_dir, const std::vector<float> &dist_norm, const std::vector<float> &sky_energy) override;
 
         void updateSkyModel(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction, const std::vector<float> &solar_disk_radiance, float solar_disk_cos_angle,
                             const std::vector<float> &camera_diffuse_flux, const std::vector<uint32_t> &band_emission_flag) override;
@@ -103,10 +102,12 @@ namespace helios {
         void getWhiteReferenceResults(std::vector<float> &white_reference_top, std::vector<float> &white_reference_bottom) override;
         void getRadiationInTopResults(std::vector<float> &radiation_in_top) override;
         [[nodiscard]] size_t getRadiationInTopBufferSize() const override;
+        [[nodiscard]] size_t getAbandonedRayCount() override;
 
         // Buffer utilities
         void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption) override;
         void zeroScatterBuffers() override;
+        void zeroAbandonedRayCount() override;
         void zeroCameraPixelBuffers(const helios::int2 &resolution) override;
         void copyScatterToRadiation() override;
         void uploadRadiationOut(const std::vector<float> &radiation_out_top, const std::vector<float> &radiation_out_bottom) override;
@@ -141,7 +142,6 @@ namespace helios {
         RTgeometry triangle_geometry;
         RTgeometry disk_geometry;
         RTgeometry tile_geometry;
-        RTgeometry voxel_geometry;
         RTgeometry bbox_geometry;
 
         // Geometry instances
@@ -149,7 +149,6 @@ namespace helios {
         RTgeometryinstance triangle_geometryinstance;
         RTgeometryinstance disk_geometryinstance;
         RTgeometryinstance tile_geometryinstance;
-        RTgeometryinstance voxel_geometryinstance;
         RTgeometryinstance bbox_geometryinstance;
 
         // Materials (one per primitive type)
@@ -157,7 +156,6 @@ namespace helios {
         RTmaterial triangle_material;
         RTmaterial disk_material;
         RTmaterial tile_material;
-        RTmaterial voxel_material;
         RTmaterial bbox_material;
 
         // Intersection programs
@@ -169,8 +167,6 @@ namespace helios {
         RTprogram disk_bounds;
         RTprogram tile_intersect;
         RTprogram tile_bounds;
-        RTprogram voxel_intersect;
-        RTprogram voxel_bounds;
         RTprogram bbox_intersect;
         RTprogram bbox_bounds;
 
@@ -198,8 +194,6 @@ namespace helios {
         RTvariable disk_normals_RTvariable;
         RTbuffer tile_vertices_RTbuffer;
         RTvariable tile_vertices_RTvariable;
-        RTbuffer voxel_vertices_RTbuffer;
-        RTvariable voxel_vertices_RTvariable;
         RTbuffer bbox_vertices_RTbuffer;
         RTvariable bbox_vertices_RTvariable;
         RTbuffer object_subdivisions_RTbuffer;
@@ -218,8 +212,6 @@ namespace helios {
         RTvariable disk_UUID_RTvariable;
         RTbuffer tile_UUID_RTbuffer;
         RTvariable tile_UUID_RTvariable;
-        RTbuffer voxel_UUID_RTbuffer;
-        RTvariable voxel_UUID_RTvariable;
         RTbuffer bbox_UUID_RTbuffer;
         RTvariable bbox_UUID_RTvariable;
         RTbuffer objectID_RTbuffer;
@@ -274,8 +266,6 @@ namespace helios {
         RTvariable vertex_radiation_out_top_RTvariable;
         RTbuffer vertex_radiation_out_bottom_RTbuffer;
         RTvariable vertex_radiation_out_bottom_RTvariable;
-        RTbuffer Rsky_RTbuffer;
-        RTvariable Rsky_RTvariable;
         RTbuffer radiation_specular_RTbuffer;
         RTvariable radiation_specular_RTvariable;
         RTbuffer scatter_buff_top_RTbuffer;
@@ -298,6 +288,10 @@ namespace helios {
         RTvariable camera_pixel_label_RTvariable;
         RTbuffer camera_pixel_depth_RTbuffer;
         RTvariable camera_pixel_depth_RTvariable;
+
+        // Buffers: Ray counters
+        RTbuffer abandoned_ray_count_RTbuffer; //!< [1]: direct and diffuse rays abandoned at the periodic wrap limit
+        RTvariable abandoned_ray_count_RTvariable;
 
         // Buffers: Diffuse/Sky (5 buffers)
         RTbuffer diffuse_flux_RTbuffer;
@@ -334,8 +328,6 @@ namespace helios {
         RTvariable source_rotations_RTvariable;
         RTbuffer band_launch_flag_RTbuffer;
         RTvariable band_launch_flag_RTvariable;
-        RTbuffer max_scatters_RTbuffer;
-        RTvariable max_scatters_RTvariable;
 
         // Buffers: Texture/Masking (5 buffers)
         RTbuffer maskdata_RTbuffer;
@@ -371,15 +363,14 @@ namespace helios {
         RTvariable camera_lens_diameter_RTvariable;
         RTvariable camera_focal_length_RTvariable;
         RTvariable FOV_aspect_ratio_RTvariable;
-        RTvariable camera_HFOV_RTvariable;
         RTvariable camera_resolution_RTvariable;
         RTvariable camera_viewplane_length_RTvariable;
-        RTvariable camera_pixel_solid_angle_RTvariable;
         RTvariable camera_pixel_offset_x_RTvariable;
         RTvariable camera_pixel_offset_y_RTvariable;
         RTvariable camera_ID_RTvariable;
         RTvariable camera_resolution_full_RTvariable;
         RTvariable specular_reflection_enabled_RTvariable;
+        RTvariable below_horizon_diffuse_enabled_RTvariable;
         RTvariable scattering_iteration_RTvariable;
 
         // Helper methods for buffer management (will be moved from RadiationModel)
@@ -410,7 +401,6 @@ namespace helios {
         void geometryToBuffers(const RayTracingGeometry &geometry);
         void materialsToBuffers(const RayTracingMaterial &materials);
         void sourcesToBuffers(const std::vector<RayTracingSource> &sources);
-        void diffuseToBuffers(const std::vector<float> &flux, const std::vector<float> &extinction, const std::vector<helios::vec3> &peak_dir, const std::vector<float> &dist_norm, const std::vector<float> &sky_energy);
         void skyModelToBuffers(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction, const std::vector<float> &solar_disk_radiance, float solar_disk_cos_angle,
                                const std::vector<float> &camera_diffuse_flux, const std::vector<uint32_t> &band_emission_flag);
         void launchParamsToVariables(const RayTracingLaunchParams &params);
@@ -434,7 +424,6 @@ namespace helios {
         size_t current_triangle_count = 0;
         size_t current_disk_count = 0;
         size_t current_tile_count = 0;
-        size_t current_voxel_count = 0;
         size_t current_bbox_count = 0;
         size_t current_source_count = 0;
         size_t current_band_count = 0;

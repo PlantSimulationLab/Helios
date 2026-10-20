@@ -145,15 +145,13 @@ namespace helios {
 
         // Destroy buffers
         destroyBuffer(bvh_buffer);
-        destroyBuffer(primitive_indices_buffer);
         destroyBuffer(transform_matrices_buffer);
         destroyBuffer(primitive_types_buffer);
         destroyBuffer(primitive_uuids_buffer);
         destroyBuffer(primitive_positions_buffer);
         destroyBuffer(object_subdivisions_buffer);
         destroyBuffer(twosided_flag_buffer);
-        destroyBuffer(patch_vertices_buffer);
-        destroyBuffer(triangle_vertices_buffer);
+        destroyBuffer(leaf_records_buffer);
         destroyBuffer(normal_buffer);
         destroyBuffer(mask_data_buffer);
         destroyBuffer(mask_sizes_buffer);
@@ -200,7 +198,7 @@ namespace helios {
         destroyBuffer(solar_disk_radiance_buffer);
         destroyBuffer(camera_diffuse_flux_buffer);
         destroyBuffer(band_emission_flag_buffer);
-        destroyBuffer(debug_counters_buffer);
+        destroyBuffer(ray_counters_buffer);
         destroyBuffer(bbox_vertices_buffer);
         destroyBuffer(band_map_buffer);
         destroyBuffer(is_glass_buffer);
@@ -243,16 +241,6 @@ namespace helios {
             }
             bvh_buffer = createBuffer(cwbvh_nodes.size() * sizeof(CWBVH_Node), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
             uploadBufferData(bvh_buffer, cwbvh_nodes.data(), cwbvh_nodes.size() * sizeof(CWBVH_Node));
-        }
-
-        // Upload primitive indices
-        const auto &prim_indices = bvh_builder.getPrimitiveIndices();
-        if (!prim_indices.empty()) {
-            if (primitive_indices_buffer.buffer != VK_NULL_HANDLE) {
-                destroyBuffer(primitive_indices_buffer);
-            }
-            primitive_indices_buffer = createBuffer(prim_indices.size() * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-            uploadBufferData(primitive_indices_buffer, prim_indices.data(), prim_indices.size() * sizeof(uint32_t));
         }
 
         // Upload transform matrices
@@ -358,74 +346,99 @@ namespace helios {
             uploadBufferData(twosided_flag_buffer, twosided_uint.data(), twosided_uint.size() * sizeof(uint));
         }
 
-        // Build pre-transformed (world-space) vertex buffers indexed by global primitive index.
-        // Vertices are transformed from canonical local space to world space using each primitive's
-        // transform matrix. This eliminates per-ray matrix loads and transform_point() calls in the
-        // BVH traversal shader inner loop — the single biggest GPU performance optimization.
+        // Build the leaf intersection records: one 64-byte record per BVH leaf slot, stored in leaf order so that the
+        // primitives a leaf references are read contiguously, with no lookup through a primitive index buffer.
+        // Patches, tiles and triangles share a single plane + dual-edge-basis test (intersect_leaf_record() in
+        // shaders/common/intersections.glsl, which documents the layout), so the traversal loop has no per-type
+        // branch and does no cross product or normalization per test. Vertices are transformed from canonical
+        // local space to world space here, once, rather than per ray.
         {
             static const helios::vec3 canonical_quad[4] = {{-0.5f, -0.5f, 0.f}, {0.5f, -0.5f, 0.f}, {0.5f, 0.5f, 0.f}, {-0.5f, 0.5f, 0.f}};
             static const helios::vec3 canonical_tri[3] = {{0.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {1.f, 1.f, 0.f}};
+            // Must match LEAF_RECORD_TRIANGLE / LEAF_RECORD_NEVER_HIT in intersections.glsl
+            const uint32_t record_flag_triangle = 1u;
+            const uint32_t record_flag_never_hit = 2u;
 
-            // Patch/tile vertex buffer: 4 vec3s per primitive slot, indexed by global prim_idx
-            std::vector<helios::vec3> patch_verts(primitive_count * 4, helios::make_vec3(0.f, 0.f, 0.f));
-            // Triangle vertex buffer: 3 vec3s per primitive slot, indexed by global prim_idx
-            std::vector<helios::vec3> tri_verts(primitive_count * 3, helios::make_vec3(0.f, 0.f, 0.f));
+            const std::vector<uint32_t> &leaf_prim_indices = bvh_builder.getPrimitiveIndices();
+            std::vector<float> leaf_records(std::max<size_t>(1, leaf_prim_indices.size()) * 16, 0.f);
 
-            for (size_t i = 0; i < primitive_count; ++i) {
-                uint prim_type = geometry.primitive_types[i];
-                const float *transform = &geometry.transform_matrices[i * 16];
+            for (size_t slot = 0; slot < leaf_prim_indices.size(); ++slot) {
+                uint32_t prim_idx = leaf_prim_indices[slot];
+                uint32_t prim_type = geometry.primitive_types[prim_idx];
+                const float *transform = &geometry.transform_matrices[prim_idx * 16];
+                bool is_triangle = (prim_type == 1);
+                bool is_quad = (prim_type == 0 || prim_type == 3); // Patch or Tile
 
-                if (prim_type == 0 || prim_type == 3) { // Patch or Tile
-                    for (int v = 0; v < 4; ++v) {
-                        const helios::vec3 &p = canonical_quad[v];
-                        helios::vec3 world_v;
-                        world_v.x = transform[0] * p.x + transform[1] * p.y + transform[2] * p.z + transform[3];
-                        world_v.y = transform[4] * p.x + transform[5] * p.y + transform[6] * p.z + transform[7];
-                        world_v.z = transform[8] * p.x + transform[9] * p.y + transform[10] * p.z + transform[11];
-                        patch_verts[i * 4 + v] = world_v;
+                // Anchor vertex v0 and the two edges leaving it: v0->v1 and v0->v3 for a quad, v0->v1 and v0->v2 for a triangle
+                const helios::vec3 *canonical = is_triangle ? canonical_tri : canonical_quad;
+                int vertex_ids[3] = {0, 1, is_triangle ? 2 : 3};
+                helios::vec3 world_v[3];
+                for (int v = 0; v < 3; ++v) {
+                    const helios::vec3 &p = canonical[vertex_ids[v]];
+                    world_v[v].x = transform[0] * p.x + transform[1] * p.y + transform[2] * p.z + transform[3];
+                    world_v[v].y = transform[4] * p.x + transform[5] * p.y + transform[6] * p.z + transform[7];
+                    world_v[v].z = transform[8] * p.x + transform[9] * p.y + transform[10] * p.z + transform[11];
+                }
+                // Edges in double precision so that the dual basis of a small or skinny primitive stays accurate
+                double e1[3] = {double(world_v[1].x) - world_v[0].x, double(world_v[1].y) - world_v[0].y, double(world_v[1].z) - world_v[0].z};
+                double e2[3] = {double(world_v[2].x) - world_v[0].x, double(world_v[2].y) - world_v[0].y, double(world_v[2].z) - world_v[0].z};
+                double n[3] = {e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]};
+                double n_length = std::sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
+
+                uint32_t flags = is_triangle ? record_flag_triangle : 0u;
+                // Never intersected: invisible primitives (twosided_flag >= 2), zero-area primitives, and any type this
+                // backend has no intersector for (disks and bboxes are never emitted; voxels are rejected below)
+                if (geometry.twosided_flags[prim_idx] >= 2 || n_length < 1e-20 || (!is_triangle && !is_quad)) {
+                    flags |= record_flag_never_hit;
+                }
+
+                double dual_u[3] = {0, 0, 0};
+                double dual_v[3] = {0, 0, 0};
+                double unit_normal[3] = {0, 0, 1};
+                if ((flags & record_flag_never_hit) == 0u) {
+                    for (int c = 0; c < 3; ++c) {
+                        unit_normal[c] = n[c] / n_length;
                     }
-                } else if (prim_type == 1) { // Triangle
-                    for (int v = 0; v < 3; ++v) {
-                        const helios::vec3 &p = canonical_tri[v];
-                        helios::vec3 world_v;
-                        world_v.x = transform[0] * p.x + transform[1] * p.y + transform[2] * p.z + transform[3];
-                        world_v.y = transform[4] * p.x + transform[5] * p.y + transform[6] * p.z + transform[7];
-                        world_v.z = transform[8] * p.x + transform[9] * p.y + transform[10] * p.z + transform[11];
-                        tri_verts[i * 3 + v] = world_v;
+                    if (is_triangle) {
+                        // Dual basis of (e1, e2) in the triangle's plane: dual_u.e1 = dual_v.e2 = 1, dual_u.e2 = dual_v.e1 = 0,
+                        // so the two coordinates of a hit point are its barycentric weights of v1 and v2
+                        double inv_n_length = 1.0 / n_length;
+                        dual_u[0] = (e2[1] * unit_normal[2] - e2[2] * unit_normal[1]) * inv_n_length;
+                        dual_u[1] = (e2[2] * unit_normal[0] - e2[0] * unit_normal[2]) * inv_n_length;
+                        dual_u[2] = (e2[0] * unit_normal[1] - e2[1] * unit_normal[0]) * inv_n_length;
+                        dual_v[0] = (unit_normal[1] * e1[2] - unit_normal[2] * e1[1]) * inv_n_length;
+                        dual_v[1] = (unit_normal[2] * e1[0] - unit_normal[0] * e1[2]) * inv_n_length;
+                        dual_v[2] = (unit_normal[0] * e1[1] - unit_normal[1] * e1[0]) * inv_n_length;
+                    } else {
+                        // A patch is a rectangle, so its edges are orthogonal and the dual basis is e/|e|^2: the coordinates
+                        // run from 0 at v0 to 1 at v1 and v3
+                        double e1_length_squared = e1[0] * e1[0] + e1[1] * e1[1] + e1[2] * e1[2];
+                        double e2_length_squared = e2[0] * e2[0] + e2[1] * e2[1] + e2[2] * e2[2];
+                        for (int c = 0; c < 3; ++c) {
+                            dual_u[c] = e1[c] / e1_length_squared;
+                            dual_v[c] = e2[c] / e2_length_squared;
+                        }
                     }
+                }
+
+                float *record = &leaf_records[slot * 16];
+                record[0] = world_v[0].x;
+                record[1] = world_v[0].y;
+                record[2] = world_v[0].z;
+                std::memcpy(&record[3], &prim_idx, sizeof(uint32_t));
+                std::memcpy(&record[7], &flags, sizeof(uint32_t));
+                for (int c = 0; c < 3; ++c) {
+                    record[4 + c] = static_cast<float>(dual_u[c]);
+                    record[8 + c] = static_cast<float>(dual_v[c]);
+                    record[12 + c] = static_cast<float>(unit_normal[c]);
                 }
             }
 
-            if (patch_vertices_buffer.buffer != VK_NULL_HANDLE) {
-                destroyBuffer(patch_vertices_buffer);
+            if (leaf_records_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(leaf_records_buffer);
             }
-            patch_vertices_buffer = createBuffer(patch_verts.size() * sizeof(helios::vec3), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-            uploadBufferData(patch_vertices_buffer, patch_verts.data(), patch_verts.size() * sizeof(helios::vec3));
-
-            if (triangle_vertices_buffer.buffer != VK_NULL_HANDLE) {
-                destroyBuffer(triangle_vertices_buffer);
-            }
-            triangle_vertices_buffer = createBuffer(tri_verts.size() * sizeof(helios::vec3), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-            uploadBufferData(triangle_vertices_buffer, tri_verts.data(), tri_verts.size() * sizeof(helios::vec3));
-        }
-
-        // The software BVH traversal intersects patches/tiles and triangles only (see
-        // traverse_cwbvh() in shaders/common/bvh_traversal.glsl). A voxel in the scene would
-        // occupy a BVH leaf that no ray can ever hit, so it would neither intercept nor absorb
-        // radiation and the run would simply report less interception than the scene contains.
-        // Refuse the geometry instead of returning a quietly wrong answer.
-        {
-            size_t voxel_count = 0;
-            for (size_t i = 0; i < primitive_count; ++i) {
-                if (geometry.primitive_types[i] == 4) {
-                    voxel_count++;
-                }
-            }
-            if (voxel_count > 0) {
-                helios_runtime_error("ERROR (VulkanComputeBackend::updateGeometry): the scene contains " + std::to_string(voxel_count) +
-                                     " voxel primitive(s), which this backend cannot intersect. Voxel ray tracing is implemented only in the OptiX backends. Build with CUDA available (and without "
-                                     "-DFORCE_VULKAN_BACKEND=ON) to trace this scene, or remove the voxels from the Context.");
-            }
+            leaf_records_buffer = createBuffer(leaf_records.size() * sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            uploadBufferData(leaf_records_buffer, leaf_records.data(), leaf_records.size() * sizeof(float));
         }
 
         // Pre-compute world-space normals for each primitive.
@@ -892,15 +905,12 @@ namespace helios {
         uploadBufferData(source_widths_buffer, widths.data(), widths.size() * sizeof(helios::vec2));
     }
 
-    void VulkanComputeBackend::updateDiffuseRadiation(const std::vector<float> &flux, const std::vector<float> &extinction, const std::vector<helios::vec3> &peak_dir, const std::vector<float> &dist_norm, const std::vector<float> &sky_energy) {
-        // Intentional no-op: the Vulkan backend uploads diffuse radiation parameters directly
-        // in launchDiffuseRays() from the RayTracingLaunchParams struct, rather than caching
-        // them here. This method is required by the RayTracingBackend interface but is not
-        // called by RadiationModel.
-    }
-
     void VulkanComputeBackend::updateSkyModel(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction, const std::vector<float> &solar_disk_radiance,
                                               float solar_disk_cos_angle, const std::vector<float> &camera_diffuse_flux, const std::vector<uint32_t> &band_emission_flag) {
+        if (sky_radiance_params.empty() || camera_sky_radiance.empty() || solar_disk_radiance.empty() || camera_diffuse_flux.empty() || band_emission_flag.empty()) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::updateSkyModel): Every per-band sky model vector must have one entry per launched band, but at least one is empty.");
+        }
+
         // Store sun parameters for push constants
         cached_sun_direction = sun_direction;
         cached_solar_disk_cos_angle = solar_disk_cos_angle;
@@ -1004,10 +1014,9 @@ namespace helios {
                 launch_to_global_band.push_back(g);
             }
         }
-        if (launch_to_global_band.empty()) {
-            for (uint32_t g = 0; g < launch_band_count; g++) {
-                launch_to_global_band.push_back(g);
-            }
+        if (launch_to_global_band.size() != launch_band_count) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::launchDirectRays): The launch parameters flag " + std::to_string(launch_to_global_band.size()) + " launched band(s), but the current runBand() launch has " +
+                                 std::to_string(launch_band_count) + ". band_launch_flag must flag exactly the bands being launched.");
         }
 
         // Upload band mapping to GPU buffer
@@ -1054,6 +1063,9 @@ namespace helios {
         // Zero scatter buffers before each direct launch (runBand does not zero them before direct)
         zeroBuffer(scatter_top_buffer);
         zeroBuffer(scatter_bottom_buffer);
+
+        // MUST be before descriptor update check
+        ensureRayCountersBuffer();
 
         // Update descriptor sets only if buffers changed
         if (descriptors_dirty) {
@@ -1166,9 +1178,10 @@ namespace helios {
             // Bind pipeline
             vkCmdBindPipeline(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_direct);
 
-            // Bind descriptor sets
+            // Bind descriptor sets (the sky set is not used by direct rays)
             VkDescriptorSet sets[] = {set_geometry, set_materials, set_results};
             vkCmdBindDescriptorSets(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 3, sets, 0, nullptr);
+            vkCmdBindDescriptorSets(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 4, 1, &set_debug, 0, nullptr);
 
             vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
             vkCmdDispatch(compute_command_buffer, dispatch_x, dispatch_y, dispatch_z);
@@ -1407,16 +1420,8 @@ namespace helios {
             }
         }
 
-        // Create debug counters buffer if needed (5 uint32_t counters)
         // MUST be before descriptor update check
-        if (debug_counters_buffer.buffer == VK_NULL_HANDLE) {
-            debug_counters_buffer = createBuffer(5 * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
-            zeroBuffer(debug_counters_buffer);
-            descriptors_dirty = true;
-        } else {
-            // Zero counters before each dispatch
-            zeroBuffer(debug_counters_buffer);
-        }
+        ensureRayCountersBuffer();
 
         // Update descriptor sets only if buffers changed
         if (descriptors_dirty) {
@@ -1439,11 +1444,9 @@ namespace helios {
                 launch_to_global_band.push_back(g);
             }
         }
-        if (launch_to_global_band.empty()) {
-            // Fallback: identity mapping (all bands active)
-            for (uint32_t g = 0; g < launch_band_count; g++) {
-                launch_to_global_band.push_back(g);
-            }
+        if (launch_to_global_band.size() != launch_band_count) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::launchDiffuseRays): The launch parameters flag " + std::to_string(launch_to_global_band.size()) + " launched band(s), but the current runBand() launch has " +
+                                 std::to_string(launch_band_count) + ". band_launch_flag must flag exactly the bands being launched.");
         }
 
         // Upload band mapping to GPU buffer
@@ -1474,9 +1477,12 @@ namespace helios {
             uint32_t camera_count; // Number of cameras (trailing stride of rho_cam/tau_cam); 0 = no camera-weighted scatter
             uint32_t camera_id; // Camera whose weighting the camera-scatter buffers accumulate
             uint32_t face_absorption_enabled; // 1 = accumulate the absorption that arrived on the top face into radiation_in_top
+            uint32_t below_horizon_diffuse_enabled; // 1 = the diffuse sky also reaches rays leaving below the horizon
         } push_constants;
+        static_assert(sizeof(PushConstants) <= 128, "diffuse push constants must fit the 128-byte push-constant range");
 
         // Initialize invariant push constants
+        push_constants.below_horizon_diffuse_enabled = params.below_horizon_diffuse_enabled != 0 ? 1u : 0u;
         push_constants.rays_per_primitive = params.rays_per_primitive;
         push_constants.random_seed = params.random_seed;
         push_constants.band_count = launch_band_count; // Use launch band count (not global)
@@ -1655,10 +1661,9 @@ namespace helios {
                 launch_to_global_band.push_back(g);
             }
         }
-        if (launch_to_global_band.empty()) {
-            for (uint32_t g = 0; g < launch_band_count; g++) {
-                launch_to_global_band.push_back(g);
-            }
+        if (launch_to_global_band.size() != launch_band_count) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::launchCameraRays): The launch parameters flag " + std::to_string(launch_to_global_band.size()) + " launched band(s), but the current runBand() launch has " +
+                                 std::to_string(launch_band_count) + ". band_launch_flag must flag exactly the bands being launched.");
         }
 
         // Ensure camera_radiation_buffer exists at FULL resolution
@@ -1725,7 +1730,7 @@ namespace helios {
             uint32_t primitive_count; // 4 bytes
             helios::vec3 sun_direction; // 12 bytes
             float solar_disk_cos_angle; // 4 bytes
-            uint32_t periodic_flags; // 4 bytes (bit 0: periodic in x, bit 1: periodic in y)
+            uint32_t boundary_flags; // 4 bytes (bit 0: periodic in x, bit 1: periodic in y, bit 2: diffuse sky below the horizon)
             uint32_t material_band_count; // 4 bytes (global band count, for the material buffers)
             uint32_t bbox_count; // 4 bytes
             float domain_xmin; // 4 bytes
@@ -1756,7 +1761,7 @@ namespace helios {
         push_constants.primitive_count = primitive_count;
         push_constants.sun_direction = cached_sun_direction;
         push_constants.solar_disk_cos_angle = cached_solar_disk_cos_angle;
-        push_constants.periodic_flags = (periodic_flag_x != 0.f ? 1u : 0u) | (periodic_flag_y != 0.f ? 2u : 0u);
+        push_constants.boundary_flags = (periodic_flag_x != 0.f ? 1u : 0u) | (periodic_flag_y != 0.f ? 2u : 0u) | (params.below_horizon_diffuse_enabled != 0 ? 4u : 0u);
         push_constants.material_band_count = static_cast<uint32_t>(band_count);
         push_constants.bbox_count = bbox_count;
         push_constants.domain_xmin = domain_bounds[0];
@@ -2167,6 +2172,15 @@ namespace helios {
         return radiation_in_top_buffer.size / sizeof(float);
     }
 
+    size_t VulkanComputeBackend::getAbandonedRayCount() {
+        if (ray_counters_buffer.buffer == VK_NULL_HANDLE) {
+            return 0; // no direct or diffuse rays launched
+        }
+        uint32_t abandoned = 0;
+        downloadBufferData(ray_counters_buffer, &abandoned, sizeof(uint32_t));
+        return abandoned;
+    }
+
     void VulkanComputeBackend::getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels, std::vector<float> &pixel_depths, uint camera_id, const helios::int2 &resolution) {
         size_t total_pixels = size_t(resolution.x) * size_t(resolution.y);
         if (total_pixels == 0) {
@@ -2307,7 +2321,29 @@ namespace helios {
         // Zero radiation buffers
         zeroBuffer(radiation_in_buffer);
 
+        // The last scattering iteration of the previous runBand() leaves its output in the scatter buffers, and its outgoing energy in
+        // radiation_out. A runBand() without a direct launch adds its primary diffuse/emission launch straight into the scatter buffers,
+        // and a camera can read radiation_out without anything being uploaded first, so both must start this runBand() empty.
+        for (Buffer *carried_over_buffer: {&scatter_top_buffer, &scatter_bottom_buffer, &radiation_out_top_buffer, &radiation_out_bottom_buffer}) {
+            if (carried_over_buffer->buffer != VK_NULL_HANDLE) {
+                zeroBuffer(*carried_over_buffer);
+            }
+        }
+
         descriptors_dirty = true; // Result buffers created/changed
+    }
+
+    void VulkanComputeBackend::ensureRayCountersBuffer() {
+        if (ray_counters_buffer.buffer == VK_NULL_HANDLE) {
+            ray_counters_buffer = createBuffer(sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            zeroBuffer(ray_counters_buffer);
+            descriptors_dirty = true;
+        }
+    }
+
+    void VulkanComputeBackend::zeroAbandonedRayCount() {
+        ensureRayCountersBuffer();
+        zeroBuffer(ray_counters_buffer);
     }
 
     void VulkanComputeBackend::zeroScatterBuffers() {
@@ -2965,15 +3001,13 @@ namespace helios {
         // Set 0: Geometry buffers (changes on geometry update)
         std::vector<VkDescriptorSetLayoutBinding> geometry_bindings = {
                 {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // BVH nodes
-                {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Primitive indices
                 {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Transform matrices
                 {3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Primitive types
                 {4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Primitive UUIDs
                 {5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Primitive positions
                 {6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Object subdivisions
                 {7, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Twosided flags
-                {8, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Patch vertices
-                {9, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Triangle vertices
+                {8, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Leaf intersection records
                 {10, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // World-space normals
                 {11, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Mask data (uint)
                 {12, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Mask sizes (ivec2)
@@ -3069,9 +3103,9 @@ namespace helios {
             helios_runtime_error("ERROR (VulkanComputeBackend::createDescriptorSets): Failed to create sky descriptor set layout");
         }
 
-        // Set 4: Debug counters (profiling/diagnostics)
+        // Set 4: Ray counters (rays abandoned at the periodic wrap limit)
         std::vector<VkDescriptorSetLayoutBinding> debug_bindings = {
-                {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // debug_counters
+                {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // ray_counters
         };
 
         layout_info.bindingCount = static_cast<uint32_t>(debug_bindings.size());
@@ -3084,7 +3118,7 @@ namespace helios {
         // ========== Create Descriptor Pool ==========
 
         std::vector<VkDescriptorPoolSize> pool_sizes = {
-                {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 72}, // All sets: 19 geo + 17 mat + 15 result + 9 sky + 1 debug + margin
+                {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 72}, // All sets: 17 geo + 17 mat + 15 result + 9 sky + 1 debug + margin
         };
 
         VkDescriptorPoolCreateInfo pool_info{};
@@ -3562,11 +3596,6 @@ namespace helios {
         bvh_info.offset = 0;
         bvh_info.range = VK_WHOLE_SIZE;
 
-        VkDescriptorBufferInfo prim_indices_info{};
-        prim_indices_info.buffer = primitive_indices_buffer.buffer;
-        prim_indices_info.offset = 0;
-        prim_indices_info.range = VK_WHOLE_SIZE;
-
         VkDescriptorBufferInfo transform_info{};
         transform_info.buffer = transform_matrices_buffer.buffer;
         transform_info.offset = 0;
@@ -3597,15 +3626,10 @@ namespace helios {
         twosided_info.offset = 0;
         twosided_info.range = VK_WHOLE_SIZE;
 
-        VkDescriptorBufferInfo patch_vertices_info{};
-        patch_vertices_info.buffer = patch_vertices_buffer.buffer;
-        patch_vertices_info.offset = 0;
-        patch_vertices_info.range = VK_WHOLE_SIZE;
-
-        VkDescriptorBufferInfo triangle_vertices_info{};
-        triangle_vertices_info.buffer = triangle_vertices_buffer.buffer;
-        triangle_vertices_info.offset = 0;
-        triangle_vertices_info.range = VK_WHOLE_SIZE;
+        VkDescriptorBufferInfo leaf_records_info{};
+        leaf_records_info.buffer = leaf_records_buffer.buffer;
+        leaf_records_info.offset = 0;
+        leaf_records_info.range = VK_WHOLE_SIZE;
 
         VkDescriptorBufferInfo normal_info{};
         normal_info.buffer = normal_buffer.buffer;
@@ -3622,18 +3646,6 @@ namespace helios {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &bvh_info;
-            descriptor_writes.push_back(write);
-        }
-
-        if (primitive_indices_buffer.buffer != VK_NULL_HANDLE) {
-            VkWriteDescriptorSet write{};
-            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            write.dstSet = set_geometry;
-            write.dstBinding = 1;
-            write.dstArrayElement = 0;
-            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            write.descriptorCount = 1;
-            write.pBufferInfo = &prim_indices_info;
             descriptor_writes.push_back(write);
         }
 
@@ -3709,7 +3721,7 @@ namespace helios {
             descriptor_writes.push_back(write);
         }
 
-        if (patch_vertices_buffer.buffer != VK_NULL_HANDLE) {
+        if (leaf_records_buffer.buffer != VK_NULL_HANDLE) {
             VkWriteDescriptorSet write{};
             write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             write.dstSet = set_geometry;
@@ -3717,19 +3729,7 @@ namespace helios {
             write.dstArrayElement = 0;
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
-            write.pBufferInfo = &patch_vertices_info;
-            descriptor_writes.push_back(write);
-        }
-
-        if (triangle_vertices_buffer.buffer != VK_NULL_HANDLE) {
-            VkWriteDescriptorSet write{};
-            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            write.dstSet = set_geometry;
-            write.dstBinding = 9;
-            write.dstArrayElement = 0;
-            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            write.descriptorCount = 1;
-            write.pBufferInfo = &triangle_vertices_info;
+            write.pBufferInfo = &leaf_records_info;
             descriptor_writes.push_back(write);
         }
 
@@ -4609,14 +4609,14 @@ namespace helios {
             descriptor_writes.push_back(write);
         }
 
-        // ========== Set 4: Debug Counters ==========
+        // ========== Set 4: Ray Counters ==========
 
-        VkDescriptorBufferInfo debug_counters_info{};
-        debug_counters_info.buffer = debug_counters_buffer.buffer;
-        debug_counters_info.offset = 0;
-        debug_counters_info.range = VK_WHOLE_SIZE;
+        VkDescriptorBufferInfo ray_counters_info{};
+        ray_counters_info.buffer = ray_counters_buffer.buffer;
+        ray_counters_info.offset = 0;
+        ray_counters_info.range = VK_WHOLE_SIZE;
 
-        if (debug_counters_buffer.buffer != VK_NULL_HANDLE) {
+        if (ray_counters_buffer.buffer != VK_NULL_HANDLE) {
             VkWriteDescriptorSet write{};
             write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             write.dstSet = set_debug;
@@ -4624,7 +4624,7 @@ namespace helios {
             write.dstArrayElement = 0;
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
-            write.pBufferInfo = &debug_counters_info;
+            write.pBufferInfo = &ray_counters_info;
             descriptor_writes.push_back(write);
         }
 

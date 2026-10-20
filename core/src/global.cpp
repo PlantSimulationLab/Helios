@@ -3537,14 +3537,18 @@ std::vector<vec4> helios::linspace(const vec4 &start, const vec4 &end, int num) 
 //--------- WarningAggregator Implementation ---------//
 
 void helios::WarningAggregator::addWarning(const std::string &category, const std::string &message) {
-    if (!enabled_) {
+    addWarning(category, message, 1);
+}
+
+void helios::WarningAggregator::addWarning(const std::string &category, const std::string &message, size_t count) {
+    if (!enabled_ || count == 0) {
         return;
     }
 
     std::lock_guard<std::mutex> lock(mutex_);
 
     // Increment total count (always)
-    counts_[category]++;
+    counts_[category] += count;
 
     // Only store up to MAX_EXAMPLES messages to prevent memory issues
     auto &messages = warnings_[category];

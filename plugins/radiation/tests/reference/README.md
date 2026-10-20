@@ -120,3 +120,43 @@ leaf optics and LAI, the two models should not agree exactly:
   to canopy gap fraction and leaf-angle-specific absorption.
 
 The test currently asserts 15% (far-red) / 20% (red) per the V&V plan.
+
+---
+
+# Homogeneous canopy fixture (uniform leaf angle distribution)
+
+`homogeneous_canopy_uniform_LAI1.obj` (+ `.mtl`) is the leaf geometry for the test
+case "RadiationModel Homogeneous Canopy with Periodic Boundaries". The test checks canopy
+interception against Beer's law and the probability distributions of absorbed direct
+and diffuse flux against the theory of Bailey and Fu (2022), Agric. For. Meteorol.
+322:109009.
+
+## Geometry
+
+- Domain 10 x 10 m, canopy height 3 m, LAI = 1 (one-sided leaf area / ground area)
+- 10,000 square leaves of width 0.1 m, centers uniformly random in the domain
+- Uniform leaf angle distribution: leaf normal zenith angle uniform on [0, 90°],
+  azimuth uniform on [0, 360°)
+- Context RNG seeded with `seedRandomGenerator(5)`
+
+The leaves were sliced at the domain boundary with
+`CollisionDetection::slicePrimitivesUsingGrid()` (one cell, `grid_center=(0,0,1.5)`,
+`grid_size=(10,10,6)`). Every piece outside the cell (`cell_ID == -1`) was moved by
+±10 m in x and/or y to the opposite side of the domain, based on its centroid. The canopy
+therefore fills the box exactly, with no leaf area lost or overhanging, and the periodic
+domain is homogeneous right up to its edges. The result has 10,691 primitives (patches and
+slice triangles). After `loadOBJ()` these become 20,466 triangles.
+
+To regenerate it, run this snippet in a project with the `collisiondetection` plug-in,
+then call `writeOBJ()` on the sliced UUIDs:
+
+```cpp
+context.seedRandomGenerator(5);
+for (int i = 0; i < 10000; i++) {
+    vec3 position((-0.5f + context.randu()) * 10.f, (-0.5f + context.randu()) * 10.f, 0.05f + context.randu() * 2.9f);
+    SphericalCoord rotation(1.f, 0.5f * float(M_PI) * context.randu(), 2.f * float(M_PI) * context.randu());
+    UUIDs.push_back(context.addPatch(position, make_vec2(0.1f, 0.1f), rotation));
+}
+std::vector<uint> sliced = collisiondetection.slicePrimitivesUsingGrid(UUIDs, make_vec3(0, 0, 1.5f), make_vec3(10, 10, 6), make_int3(1, 1, 1));
+// translate each primitive with cell_ID == -1 by +/-10 m back into the domain, then clear "cell_ID"
+```

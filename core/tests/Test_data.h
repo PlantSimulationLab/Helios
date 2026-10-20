@@ -997,6 +997,74 @@ TEST_CASE("Primitive Data") {
     }
 }
 
+TEST_CASE("Context::writePrimitiveData") {
+    const std::string output_file = "lib/test_writePrimitiveData.txt";
+
+    SUBCASE("output file that cannot be opened raises an error") {
+        Context ctx;
+        uint UUID = ctx.addPatch();
+        ctx.setPrimitiveData(UUID, "temperature", 300.f);
+
+        std::string message;
+        try {
+            ctx.writePrimitiveData("lib/nonexistent_directory_for_writePrimitiveData/out.txt", {"temperature"});
+        } catch (const std::runtime_error &error) {
+            message = error.what();
+        }
+        DOCTEST_CHECK(message.find("nonexistent_directory_for_writePrimitiveData/out.txt") != std::string::npos);
+    }
+
+    SUBCASE("missing data is written as 0 with a single warning") {
+        Context ctx;
+        std::vector<uint> UUIDs;
+        for (int i = 0; i < 5; i++) {
+            UUIDs.push_back(ctx.addPatch(make_vec3(float(i), 0, 0), make_vec2(1, 1)));
+        }
+        ctx.setPrimitiveData(UUIDs.front(), "temperature", 300.f);
+
+        std::string warnings;
+        {
+            capture_cerr cerr_buffer;
+            ctx.writePrimitiveData(output_file, {"temperature"}, UUIDs);
+            warnings = cerr_buffer.get_captured_output();
+        }
+
+        std::vector<std::string> rows;
+        std::ifstream file(output_file);
+        std::string line;
+        while (std::getline(file, line)) {
+            rows.push_back(line);
+        }
+        file.close();
+        std::remove(output_file.c_str());
+
+        DOCTEST_REQUIRE(rows.size() == 5);
+        DOCTEST_CHECK(rows.at(0) == "300");
+        for (size_t row = 1; row < rows.size(); row++) {
+            DOCTEST_CHECK(rows.at(row) == "0");
+        }
+        // One warning for the whole call, not one per primitive.
+        DOCTEST_CHECK(std::count(warnings.begin(), warnings.end(), '\n') == 1);
+        DOCTEST_CHECK(warnings.find("did not exist") != std::string::npos);
+    }
+
+    SUBCASE("non-scalar data type warning lists the supported types") {
+        Context ctx;
+        uint UUID = ctx.addPatch();
+        ctx.setPrimitiveData(UUID, "direction", make_vec3(0, 0, 1));
+
+        std::string warnings;
+        {
+            capture_cerr cerr_buffer;
+            ctx.writePrimitiveData(output_file, {"direction"}, std::vector<uint>{UUID});
+            warnings = cerr_buffer.get_captured_output();
+        }
+        std::remove(output_file.c_str());
+
+        DOCTEST_CHECK(warnings.find("int, uint, float, double, and string") != std::string::npos);
+    }
+}
+
 TEST_CASE("Vector setObjectData Value Caching") {
     Context ctx_test;
 

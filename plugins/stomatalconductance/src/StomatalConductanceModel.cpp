@@ -47,6 +47,70 @@ namespace {
     constexpr const char *LABEL_BB_theta = "gs_bb_theta";
     constexpr const char *LABEL_BB_sigma = "gs_bb_sigma";
     constexpr const char *LABEL_BB_chi = "gs_bb_chi";
+
+    //! Boundary-layer conductance that, in series with the total stomatal conductance, carries the same flux as the stomata of each leaf face in series with the boundary layer of that face
+    /**
+     * The stomatal conductance is split between the upper and lower faces in the proportions \f$\zeta\f$ and \f$1-\zeta\f$, and each face exchanges gas only through its own boundary layer. The surface
+     * concentration seen through this effective conductance is the stomata-weighted mean of the two face surface concentrations. It equals the face conductance for stomata on one face only, and
+     * twice the face conductance for stomata split equally between both faces.
+     * \param[in] g_stomatal Total stomatal conductance of the leaf (mol/m^2/s).
+     * \param[in] g_boundarylayer_face Boundary-layer conductance of a single leaf face (mol/m^2/s).
+     * \param[in] stomatal_sidedness Fraction of the stomata on the upper leaf face.
+     * \return Effective boundary-layer conductance (mol/m^2/s).
+     */
+    float effectiveBoundaryLayerConductance(float g_stomatal, float g_boundarylayer_face, float stomatal_sidedness) {
+        g_stomatal = std::max(0.f, g_stomatal);
+        float numerator = 0.f;
+        float denominator = 0.f;
+        for (float face_fraction: {stomatal_sidedness, 1.f - stomatal_sidedness}) {
+            float face_term = face_fraction / (g_boundarylayer_face + face_fraction * g_stomatal);
+            numerator += face_term;
+            denominator += face_fraction * face_term;
+        }
+        return g_boundarylayer_face * numerator / denominator;
+    }
+
+    //! Solve the leaf-surface water vapor balance gs(esurf)*(es-esurf) = gbw*(esurf-ea) for the surface vapor pressure esurf
+    /**
+     * For a non-negative stomatal conductance the residual is non-negative at esurf = ea and non-positive at esurf = es, so the root lies between the two and is found by bisection, which cannot fail for
+     * the very large stomatal conductances that occur when the leaf-surface CO2 concentration is small. If the residual has the same sign at both ends (the conductance model returned a negative gs,
+     * e.g. for a negative net photosynthesis), the secant solver is used instead.
+     * \param[in] residual Residual of the surface vapor balance as a function of esurf.
+     * \param[in] variables Model variables passed to the residual function.
+     * \param[in] coefficients Model coefficients passed to the residual function.
+     * \param[in] ea Vapor pressure of the air outside the boundary layer (Pa).
+     * \param[in] es Saturation vapor pressure at the leaf temperature (Pa).
+     * \param[inout] warnings Warning aggregator for the secant solver.
+     * \return Leaf-surface vapor pressure (Pa).
+     */
+    float solveSurfaceVaporPressure(float (*residual)(float, std::vector<float> &, const void *), std::vector<float> &variables, const void *coefficients, float ea, float es, helios::WarningAggregator &warnings) {
+        float e_low = std::min(ea, es);
+        float e_high = std::max(ea, es);
+        float residual_low = residual(e_low, variables, coefficients);
+        float residual_high = residual(e_high, variables, coefficients);
+        if (residual_low == 0.f) {
+            return e_low;
+        }
+        if (residual_high == 0.f) {
+            return e_high;
+        }
+        if (!(residual_low * residual_high < 0.f)) {
+            float initial_guess = ea + 0.1f * (es - ea);
+            return helios::fzero(residual, variables, coefficients, initial_guess, 0.001f, 200, &warnings);
+        }
+        constexpr int max_bisection_iterations = 100;
+        for (int iteration = 0; iteration < max_bisection_iterations && e_high - e_low > 0.001f; iteration++) {
+            float e_middle = 0.5f * (e_low + e_high);
+            float residual_middle = residual(e_middle, variables, coefficients);
+            if ((residual_middle < 0.f) == (residual_low < 0.f)) {
+                e_low = e_middle;
+                residual_low = residual_middle;
+            } else {
+                e_high = e_middle;
+            }
+        }
+        return 0.5f * (e_low + e_high);
+    }
 } // namespace
 
 StomatalConductanceModel::StomatalConductanceModel(helios::Context *m_context) {
@@ -72,7 +136,7 @@ StomatalConductanceModel::StomatalConductanceModel(helios::Context *m_context) {
 
     air_CO2_default = 400; // umol/mol
 
-    blconductance_default = 0.1; // mol/m^2/s
+    blconductance_default = 1.0; // mol/m^2/s, conductance to heat summed over both faces of a two-sided primitive
 
     beta_default = 1.f; // unitless
 
@@ -603,11 +667,10 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
         float gbw = blconductance_default;
         if (context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance") && context->getPrimitiveDataType("boundarylayer_conductance") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "boundarylayer_conductance", gbw);
-            gbw = gbw * 1.08; // assume bl conductance to moisture is 1.08 of conductance to heat
         } else if (context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_out") && context->getPrimitiveDataType("boundarylayer_conductance_out") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "boundarylayer_conductance_out", gbw);
-            gbw = gbw * 1.08; // assume bl conductance to moisture is 1.08 of conductance to heat
         }
+        gbw = gbw * 1.08f; // assume bl conductance to moisture is 1.08 of conductance to heat
         // A negative boundary-layer conductance is not physically meaningful and cannot be interpreted as a limit of the model, so it is rejected outright.
         if (!std::isfinite(gbw) || gbw < 0.f) {
             helios_runtime_error("ERROR (StomatalConductanceModel::run): Boundary-layer conductance for primitive " + std::to_string(UUID) + " is " + std::to_string(gbw / 1.08f) +
@@ -623,6 +686,24 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
             warnings.addWarning("zero_boundarylayer_conductance",
                                 "Boundary-layer conductance is zero for one or more primitives, so no vapor exchange is possible and the steady-state stomatal conductance was taken to be zero. This occurs for zero-size primitives or when the wind speed is zero.");
         }
+
+        // The boundary-layer conductance is summed over both faces of a two-sided primitive, but the stomata on a face only exchange gas through that face's boundary layer. The stomatal sidedness is the
+        // fraction of the stomata on the upper face, and is 0 for a one-sided primitive (as in the energy balance and photosynthesis models).
+        uint twosided_flag = context->getPrimitiveTwosidedFlag(UUID, 1);
+        uint Nsides = (twosided_flag == 0) ? 1 : 2;
+        float stomatal_sidedness = 0.f;
+        if (Nsides == 2 && context->doesPrimitiveDataExist(UUID, "stomatal_sidedness") && context->getPrimitiveDataType("stomatal_sidedness") == HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(UUID, "stomatal_sidedness", stomatal_sidedness);
+        } else if (Nsides == 2 && context->doesPrimitiveDataExist(UUID, "evaporating_faces") && context->getPrimitiveDataType("evaporating_faces") == HELIOS_TYPE_UINT) {
+            uint evaporating_faces;
+            context->getPrimitiveData(UUID, "evaporating_faces", evaporating_faces);
+            stomatal_sidedness = (evaporating_faces == 2) ? 0.5f : 0.f;
+        }
+        if (!std::isfinite(stomatal_sidedness) || stomatal_sidedness < 0.f || stomatal_sidedness > 1.f) {
+            helios_runtime_error("ERROR (StomatalConductanceModel::run): The stomatal sidedness for primitive " + std::to_string(UUID) + " is " + std::to_string(stomatal_sidedness) +
+                                 ", but it must be between 0 and 1. Check the primitive data \"stomatal_sidedness\".");
+        }
+        const float gbw_face = gbw / float(Nsides);
 
         // beta soil moisture factor
         float beta = beta_default;
@@ -650,6 +731,7 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
         float An = An_default;
         float Gamma = Gamma_default;
         float Cs = air_CO2_default;
+        float Ca = air_CO2_default;
         if (!no_boundarylayer_exchange && (model == "BWB" || model == "BBL" || model == "MOPT")) {
 
             // net photosynthesis
@@ -667,34 +749,12 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
             }
 
             // ambient air CO2
-            float Ca = air_CO2_default;
             if (context->doesPrimitiveDataExist(UUID, "air_CO2") && context->getPrimitiveDataType("air_CO2") == HELIOS_TYPE_FLOAT) {
                 context->getPrimitiveData(UUID, "air_CO2", Ca);
             }
             if (!std::isfinite(Ca) || Ca <= 0.f) {
                 helios_runtime_error("ERROR (StomatalConductanceModel::run): The ambient CO2 concentration for primitive " + std::to_string(UUID) + " is " + std::to_string(Ca) +
                                      " umol/mol, but it must be a finite positive value. Check the primitive data \"air_CO2\", or remove it to use the default value of " + std::to_string(air_CO2_default) + " umol/mol.");
-            }
-
-            float gbc = 0.75f * gbw; // bl conductance to CO2
-
-            // An = gbc*(Ca-Cs)
-            Cs = Ca - An / gbc;
-
-            // A non-positive surface CO2 concentration is not physically meaningful, and would flip the sign of gs in the models below (all of which divide by Cs or by Cs-Gamma). This occurs when the
-            // assimilation rate is too large to be supplied through the given boundary-layer conductance. Note that a negative An (dark respiration) legitimately gives Cs > Ca and is not an error.
-            if (!std::isfinite(Cs) || Cs <= 0.f) {
-                helios_runtime_error("ERROR (StomatalConductanceModel::run): The CO2 concentration at the leaf surface for primitive " + std::to_string(UUID) + " evaluated to " + std::to_string(Cs) +
-                                     " umol/mol, which is not physically meaningful. The net photosynthetic flux (" + std::to_string(An) + " umol/m^2/s) is too large to be supplied through the boundary-layer conductance (" +
-                                     std::to_string(gbw / 1.08f) + " mol/m^2/s) at an ambient CO2 concentration of " + std::to_string(Ca) +
-                                     " umol/mol. Check the primitive data \"net_photosynthesis\", \"boundarylayer_conductance\", and \"air_CO2\".");
-            }
-
-            // The Ball-Berry-Leuning model has a pole at Cs == Gamma. Approaching it produces an unbounded conductance, so the degenerate case is rejected explicitly.
-            if (model == "BBL" && Cs <= Gamma) {
-                helios_runtime_error("ERROR (StomatalConductanceModel::run): The CO2 concentration at the leaf surface for primitive " + std::to_string(UUID) + " (" + std::to_string(Cs) +
-                                     " umol/mol) is less than or equal to the CO2 compensation point Gamma (" + std::to_string(Gamma) +
-                                     " umol/mol). The Ball-Berry-Leuning model is singular at this point. Check the primitive data \"Gamma_CO2\", \"net_photosynthesis\", and \"boundarylayer_conductance\".");
             }
         }
 
@@ -707,126 +767,214 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
         }
 
 
-        float gs;
-        if (no_boundarylayer_exchange) {
-
-            gs = 0.f;
-
-        } else if (model == "BWB") {
-
-            // model coefficients
-            BWBcoefficients coeffs = getCoefficientsForPrimitive_BWB(UUID);
-            float gs0 = coeffs.gs0;
-            float a1 = coeffs.a1;
-
-            std::vector<float> variables{An, Cs, es, ea, gbw, beta};
-
-            // Use better initial guess: start closer to air vapor pressure
-            // Surface vapor pressure should be between ea and es, typically closer to ea
-            float initial_guess = ea + 0.1f * (es - ea);
-            // Use looser tolerance and more iterations for vapor pressure equations
-            float esurf = fzero(evaluate_BWBmodel, variables, &coeffs, initial_guess, 0.001f, 200, &warnings);
-            float hs = esurf / es;
-            gs = gs0 + a1 * An * beta * hs / Cs;
-
-            if (std::find(output_prim_data.begin(), output_prim_data.end(), "model_parameters") != output_prim_data.end()) {
-                context->setPrimitiveData(UUID, "gs0_BWB", gs0);
-                context->setPrimitiveData(UUID, "a1_BWB", a1);
+        // Solve for the steady-state conductance. The leaf-surface balance and the conductance model are evaluated for given effective boundary-layer conductances to water vapor and CO2 (see
+        // effectiveBoundaryLayerConductance()). Returns false, without evaluating gs, if the resulting leaf-surface CO2 concentration is not physically meaningful for the model: Cs <= 0, which would flip
+        // the sign of gs in the models below (all of which divide by Cs or by Cs-Gamma), or Cs <= Gamma for the Ball-Berry-Leuning model, which has a pole there. Note that a negative An (dark
+        // respiration) legitimately gives Cs > Ca and is not an error.
+        auto solveConductance = [&](float gbw_effective, float gbc_effective, bool write_outputs, float &gs_result) -> bool {
+            if (model == "BWB" || model == "BBL" || model == "MOPT") {
+                // An = gbc*(Ca-Cs)
+                Cs = Ca - An / gbc_effective;
+                if (!std::isfinite(Cs) || Cs <= 0.f || (model == "BBL" && Cs <= Gamma)) {
+                    return false;
+                }
             }
 
-        } else if (model == "BBL") {
+            if (model == "BWB") {
 
-            // model coefficients
-            BBLcoefficients coeffs = getCoefficientsForPrimitive_BBL(UUID);
-            float gs0 = coeffs.gs0;
-            float a1 = coeffs.a1;
-            float D0 = coeffs.D0;
+                // model coefficients
+                BWBcoefficients coeffs = getCoefficientsForPrimitive_BWB(UUID);
+                float gs0 = coeffs.gs0;
+                float a1 = coeffs.a1;
 
-            std::vector<float> variables{An, Cs, Gamma, es, ea, gbw, press, beta};
+                std::vector<float> variables{An, Cs, es, ea, gbw_effective, beta};
 
-            // Use better initial guess: start closer to air vapor pressure
-            float initial_guess = ea + 0.1f * (es - ea);
-            float esurf = fzero(evaluate_BBLmodel, variables, &coeffs, initial_guess, 0.001f, 200, &warnings); // Pa
-            float Ds = max(0.f, (es - esurf) / press * 1000.f); // mmol/mol
-            gs = gs0 + a1 * An * beta / (Cs - Gamma) / (1.f + Ds / D0);
+                float esurf = solveSurfaceVaporPressure(evaluate_BWBmodel, variables, &coeffs, ea, es, warnings);
+                float hs = esurf / es;
+                gs_result = gs0 + a1 * An * beta * hs / Cs;
 
-            if (std::find(output_prim_data.begin(), output_prim_data.end(), "model_parameters") != output_prim_data.end()) {
-                context->setPrimitiveData(UUID, "gs0_BBL", gs0);
-                context->setPrimitiveData(UUID, "a1_BBL", a1);
-                context->setPrimitiveData(UUID, "D0_BBL", D0);
+                if (write_outputs && std::find(output_prim_data.begin(), output_prim_data.end(), "model_parameters") != output_prim_data.end()) {
+                    context->setPrimitiveData(UUID, "gs0_BWB", gs0);
+                    context->setPrimitiveData(UUID, "a1_BWB", a1);
+                }
+
+            } else if (model == "BBL") {
+
+                // model coefficients
+                BBLcoefficients coeffs = getCoefficientsForPrimitive_BBL(UUID);
+                float gs0 = coeffs.gs0;
+                float a1 = coeffs.a1;
+                float D0 = coeffs.D0;
+
+                std::vector<float> variables{An, Cs, Gamma, es, ea, gbw_effective, press, beta};
+
+                float esurf = solveSurfaceVaporPressure(evaluate_BBLmodel, variables, &coeffs, ea, es, warnings); // Pa
+                float Ds = max(0.f, (es - esurf) / press * 1000.f); // mmol/mol
+                gs_result = gs0 + a1 * An * beta / (Cs - Gamma) / (1.f + Ds / D0);
+
+                if (write_outputs && std::find(output_prim_data.begin(), output_prim_data.end(), "model_parameters") != output_prim_data.end()) {
+                    context->setPrimitiveData(UUID, "gs0_BBL", gs0);
+                    context->setPrimitiveData(UUID, "a1_BBL", a1);
+                    context->setPrimitiveData(UUID, "D0_BBL", D0);
+                }
+
+            } else if (model == "MOPT") {
+
+                // model coefficients
+                MOPTcoefficients coeffs = getCoefficientsForPrimitive_MOPT(UUID);
+                float gs0 = coeffs.gs0;
+                float g1 = coeffs.g1;
+
+                std::vector<float> variables{An, Cs, es, ea, gbw_effective, beta};
+
+                float esurf = solveSurfaceVaporPressure(evaluate_MOPTmodel, variables, &coeffs, ea, es, warnings);
+                float Ds = max(0.00001f, (es - esurf) / 1000.f); // kPa
+                gs_result = gs0 + 1.6f * (1.f + g1 * sqrtf(beta / Ds)) * An / Cs;
+
+                if (write_outputs && std::find(output_prim_data.begin(), output_prim_data.end(), "model_parameters") != output_prim_data.end()) {
+                    context->setPrimitiveData(UUID, "gs0_MOPT", gs0);
+                    context->setPrimitiveData(UUID, "g1_MOPT", g1);
+                }
+
+            } else if (model == "BB") {
+
+                // model coefficients
+                BBcoefficients coeffs = getCoefficientsForPrimitive_BB(UUID);
+
+                // Solve for the surface vapor pressure so that the model is coupled to the boundary layer in the same way as the other models, rather than using the air-to-cavity VPD directly.
+                std::vector<float> variables{i, es, ea, gbw_effective, press, beta, Psix};
+
+                float esurf = solveSurfaceVaporPressure(evaluate_BBmodel, variables, &coeffs, ea, es, warnings);
+                float Ds = max(0.f, (es - esurf) / press * 1000.f); // mmol/mol
+
+                gs_result = evaluate_BBconductance(Ds, Psix, i, beta, coeffs);
+
+                if (write_outputs && std::find(output_prim_data.begin(), output_prim_data.end(), "model_parameters") != output_prim_data.end()) {
+                    context->setPrimitiveData(UUID, "pi0_BB", coeffs.pi_0);
+                    context->setPrimitiveData(UUID, "pim_BB", coeffs.pi_m);
+                    context->setPrimitiveData(UUID, "theta_BB", coeffs.theta);
+                    context->setPrimitiveData(UUID, "sigma_BB", coeffs.sigma);
+                    context->setPrimitiveData(UUID, "chi_BB", coeffs.chi);
+                }
+
+            } else {
+
+                // model coefficients
+                BMFcoefficients coeffs = getCoefficientsForPrimitive_BMF(UUID);
+                float Em = coeffs.Em;
+                float i0 = coeffs.i0;
+                float k = coeffs.k;
+                float b = coeffs.b;
+
+                std::vector<float> variables{i, es, ea, gbw_effective, press, beta};
+
+                float esurf = solveSurfaceVaporPressure(evaluate_BMFmodel, variables, &coeffs, ea, es, warnings);
+                float Ds = max(0.f, (es - esurf) / press * 1000.f);
+
+                gs_result = Em * beta * (i + i0) / (k + b * i + (i + i0) * Ds);
+
+                if (write_outputs && std::find(output_prim_data.begin(), output_prim_data.end(), "model_parameters") != output_prim_data.end()) {
+                    context->setPrimitiveData(UUID, "Em_BMF", Em);
+                    context->setPrimitiveData(UUID, "i0_BMF", i0);
+                    context->setPrimitiveData(UUID, "k_BMF", k);
+                    context->setPrimitiveData(UUID, "b_BMF", b);
+                }
+
+                if (write_outputs && std::find(output_prim_data.begin(), output_prim_data.end(), "vapor_pressure_deficit") != output_prim_data.end()) {
+                    context->setPrimitiveData(UUID, "vapor_pressure_deficit", Ds);
+                }
+            }
+            return true;
+        };
+
+        // Raises the error for a leaf-surface CO2 concentration rejected by solveConductance().
+        auto throwInvalidSurfaceCO2 = [&]() {
+            if (!std::isfinite(Cs) || Cs <= 0.f) {
+                helios_runtime_error("ERROR (StomatalConductanceModel::run): The CO2 concentration at the leaf surface for primitive " + std::to_string(UUID) + " evaluated to " + std::to_string(Cs) +
+                                     " umol/mol, which is not physically meaningful. The net photosynthetic flux (" + std::to_string(An) + " umol/m^2/s) is too large to be supplied through the boundary-layer conductance (" +
+                                     std::to_string(gbw / 1.08f) + " mol/m^2/s) at an ambient CO2 concentration of " + std::to_string(Ca) +
+                                     " umol/mol. Check the primitive data \"net_photosynthesis\", \"boundarylayer_conductance\", and \"air_CO2\".");
+            }
+            helios_runtime_error("ERROR (StomatalConductanceModel::run): The CO2 concentration at the leaf surface for primitive " + std::to_string(UUID) + " (" + std::to_string(Cs) +
+                                 " umol/mol) is less than or equal to the CO2 compensation point Gamma (" + std::to_string(Gamma) +
+                                 " umol/mol). The Ball-Berry-Leuning model is singular at this point. Check the primitive data \"Gamma_CO2\", \"net_photosynthesis\", and \"boundarylayer_conductance\".");
+        };
+
+        // Effective boundary-layer conductances to water vapor and CO2 with the leaf faces weighted by the stomatal conductance gs_weighting. The stomatal and boundary-layer conductances to CO2 are
+        // those to water vapor divided by 1.6 and 1.37, respectively.
+        auto effectiveConductances = [&](float gs_weighting, float &gbw_effective, float &gbc_effective) {
+            gbw_effective = effectiveBoundaryLayerConductance(gs_weighting, gbw_face, stomatal_sidedness);
+            gbc_effective = effectiveBoundaryLayerConductance(gs_weighting / 1.6f, gbw_face / 1.37f, stomatal_sidedness);
+        };
+
+        float gs = 0.f;
+        if (!no_boundarylayer_exchange) {
+
+            float gbw_effective, gbc_effective;
+
+            // The effective conductances do not depend on gs when the stomata are all on one face or split equally between both faces, and the solution is then direct. Otherwise they increase with gs,
+            // and the self-consistent solution is the root of G(w) = gs(w) - w, where gs(w) is the conductance obtained with the faces weighted by w. Increasing w raises the effective conductances
+            // and lowers gs(w), and a leaf-surface CO2 concentration rejected at w means the effective conductance to CO2 is too small, so the root lies at larger w. The root is bracketed and found
+            // by bisection, which never evaluates the validity of Cs at a trial weighting other than as a direction to search.
+            float gs_weighting = 0.f;
+            const bool weighting_depends_on_gs = stomatal_sidedness > 0.f && stomatal_sidedness < 1.f && stomatal_sidedness != 0.5f;
+            if (weighting_depends_on_gs) {
+
+                float gs_trial;
+
+                // As w -> infinity the effective conductances reach their largest possible value, twice the conductance of one face. If Cs is rejected even then, no solution exists.
+                if (!solveConductance(2.f * gbw_face, 2.f * gbw_face / 1.37f, false, gs_trial)) {
+                    throwInvalidSurfaceCO2();
+                }
+                const float gs_minimum = gs_trial;
+
+                effectiveConductances(0.f, gbw_effective, gbc_effective);
+                const bool valid_at_zero = solveConductance(gbw_effective, gbc_effective, false, gs_trial);
+                if (!valid_at_zero || gs_trial > 0.f) { // otherwise G(0) <= 0 and the weighting is 0 (gs_weighting is clamped to be non-negative)
+
+                    // Bracket the root between w_lower (G >= 0 or Cs rejected) and w_upper (G < 0).
+                    constexpr float w_limit = 1e4f; // mol/m^2/s, far above any physical stomatal conductance
+                    float w_lower = 0.f;
+                    float w_upper = std::max(gs_minimum, 1e-3f);
+                    while (true) {
+                        effectiveConductances(w_upper, gbw_effective, gbc_effective);
+                        if (solveConductance(gbw_effective, gbc_effective, false, gs_trial) && gs_trial < w_upper) {
+                            break;
+                        }
+                        w_lower = w_upper;
+                        w_upper *= 2.f;
+                        if (w_upper > w_limit) {
+                            helios_runtime_error("ERROR (StomatalConductanceModel::run): Could not bracket the stomatal conductance of primitive " + std::to_string(UUID) +
+                                                 " consistent with the boundary-layer conductances of its two leaf faces. Check the primitive data \"stomatal_sidedness\", \"boundarylayer_conductance\", and the model coefficients.");
+                        }
+                    }
+
+                    constexpr int max_bisection_iterations = 100;
+                    bool bisection_converged = false;
+                    for (int iteration = 0; iteration < max_bisection_iterations; iteration++) {
+                        const float w_middle = 0.5f * (w_lower + w_upper);
+                        effectiveConductances(w_middle, gbw_effective, gbc_effective);
+                        if (solveConductance(gbw_effective, gbc_effective, false, gs_trial) && gs_trial < w_middle) {
+                            w_upper = w_middle;
+                        } else {
+                            w_lower = w_middle;
+                        }
+                        if (w_upper - w_lower <= 1e-5f * w_upper) {
+                            bisection_converged = true;
+                            break;
+                        }
+                    }
+                    if (!bisection_converged) {
+                        helios_runtime_error("ERROR (StomatalConductanceModel::run): The stomatal conductance of primitive " + std::to_string(UUID) + " did not converge with the boundary-layer conductances of its two leaf faces within " +
+                                             std::to_string(max_bisection_iterations) + " iterations. Check the primitive data \"stomatal_sidedness\", \"boundarylayer_conductance\", and the model coefficients.");
+                    }
+                    gs_weighting = w_upper;
+                }
             }
 
-        } else if (model == "MOPT") {
-
-            // model coefficients
-            MOPTcoefficients coeffs = getCoefficientsForPrimitive_MOPT(UUID);
-            float gs0 = coeffs.gs0;
-            float g1 = coeffs.g1;
-
-            std::vector<float> variables{An, Cs, es, ea, gbw, beta};
-
-            // Use better initial guess: start closer to air vapor pressure
-            // Surface vapor pressure should be between ea and es, typically closer to ea
-            float initial_guess = ea + 0.1f * (es - ea);
-            // Use looser tolerance and more iterations for vapor pressure equations
-            float esurf = fzero(evaluate_MOPTmodel, variables, &coeffs, initial_guess, 0.001f, 200, &warnings);
-            float Ds = max(0.00001f, (es - esurf) / 1000.f); // kPa
-            gs = gs0 + 1.6f * (1.f + g1 * sqrtf(beta / Ds)) * An / Cs;
-
-            if (std::find(output_prim_data.begin(), output_prim_data.end(), "model_parameters") != output_prim_data.end()) {
-                context->setPrimitiveData(UUID, "gs0_MOPT", gs0);
-                context->setPrimitiveData(UUID, "g1_MOPT", g1);
-            }
-
-        } else if (model == "BB") {
-
-            // model coefficients
-            BBcoefficients coeffs = getCoefficientsForPrimitive_BB(UUID);
-
-            // Solve for the surface vapor pressure so that the model is coupled to the boundary layer in the same way as the other models, rather than using the air-to-cavity VPD directly.
-            std::vector<float> variables{i, es, ea, gbw, press, beta, Psix};
-
-            float initial_guess = ea + 0.1f * (es - ea);
-            float esurf = fzero(evaluate_BBmodel, variables, &coeffs, initial_guess, 0.001f, 200, &warnings);
-            float Ds = max(0.f, (es - esurf) / press * 1000.f); // mmol/mol
-
-            gs = evaluate_BBconductance(Ds, Psix, i, beta, coeffs);
-
-            if (std::find(output_prim_data.begin(), output_prim_data.end(), "model_parameters") != output_prim_data.end()) {
-                context->setPrimitiveData(UUID, "pi0_BB", coeffs.pi_0);
-                context->setPrimitiveData(UUID, "pim_BB", coeffs.pi_m);
-                context->setPrimitiveData(UUID, "theta_BB", coeffs.theta);
-                context->setPrimitiveData(UUID, "sigma_BB", coeffs.sigma);
-                context->setPrimitiveData(UUID, "chi_BB", coeffs.chi);
-            }
-
-        } else {
-
-            // model coefficients
-            BMFcoefficients coeffs = getCoefficientsForPrimitive_BMF(UUID);
-            float Em = coeffs.Em;
-            float i0 = coeffs.i0;
-            float k = coeffs.k;
-            float b = coeffs.b;
-
-            std::vector<float> variables{i, es, ea, gbw, press, beta};
-
-            // Use better initial guess: start closer to air vapor pressure
-            float initial_guess = ea + 0.1f * (es - ea);
-            float esurf = fzero(evaluate_BMFmodel, variables, &coeffs, initial_guess, 0.001f, 200, &warnings);
-            float Ds = max(0.f, (es - esurf) / press * 1000.f);
-
-            gs = Em * beta * (i + i0) / (k + b * i + (i + i0) * Ds);
-
-            if (std::find(output_prim_data.begin(), output_prim_data.end(), "model_parameters") != output_prim_data.end()) {
-                context->setPrimitiveData(UUID, "Em_BMF", Em);
-                context->setPrimitiveData(UUID, "i0_BMF", i0);
-                context->setPrimitiveData(UUID, "k_BMF", k);
-                context->setPrimitiveData(UUID, "b_BMF", b);
-            }
-
-            if (std::find(output_prim_data.begin(), output_prim_data.end(), "vapor_pressure_deficit") != output_prim_data.end()) {
-                context->setPrimitiveData(UUID, "vapor_pressure_deficit", Ds);
+            effectiveConductances(gs_weighting, gbw_effective, gbc_effective);
+            if (!solveConductance(gbw_effective, gbc_effective, true, gs)) {
+                throwInvalidSurfaceCO2();
             }
         }
 
@@ -971,7 +1119,7 @@ float StomatalConductanceModel::evaluate_MOPTmodel(float esurf, std::vector<floa
     float gbw = variables[4];
     float beta = variables[5];
 
-    float Ds = max(0.f, (es - esurf) / 1000.f); // kPa
+    float Ds = max(0.00001f, (es - esurf) / 1000.f); // kPa, floored as in run() so that gs stays finite at a saturated surface
     float gs = gs0 + 1.6f * (1.f + g1 * sqrtf(beta / Ds)) * An / Cs;
 
     return gs * (es - esurf) - gbw * (esurf - ea);

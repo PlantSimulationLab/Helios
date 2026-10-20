@@ -1981,6 +1981,20 @@ DOCTEST_TEST_CASE("PlantArchitecture hard collision avoidance base stem protecti
     DOCTEST_CHECK(plant_objects.size() >= 5); // Should have internodes, leaves, etc.
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture collision avoidance setters reject invalid values") {
+    // A zero sample count or avoidance distance would only surface later, as an error deep inside growth
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    uint obstacle_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    DOCTEST_CHECK_THROWS(plantarchitecture.setSoftCollisionAvoidanceParameters(80.f, 0.1f, 0, 0.4f));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setSoftCollisionAvoidanceParameters(80.f, 0.f, 256, 0.4f));
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.setSoftCollisionAvoidanceParameters(80.f, 0.1f, 256, 0.4f));
+    DOCTEST_CHECK_THROWS(plantarchitecture.enableSolidObstacleAvoidance({obstacle_UUID}, 0.f));
+    DOCTEST_CHECK_THROWS(plantarchitecture.enableSolidObstacleAvoidance({obstacle_UUID}, -0.5f));
+}
+
 DOCTEST_TEST_CASE("PlantArchitecture enableSolidObstacleAvoidance fruit adjustment control") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
@@ -4434,7 +4448,7 @@ DOCTEST_TEST_CASE("Build Parameters - Canopy Building with Parameters") {
     plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP");
     std::map<std::string, float> canopy_params = {
             {"vine_spacing", 2.0f}, // 2.0m vine spacing
-            {"trunk_height", 0.12f} // 12 cm trunk height
+            {"trunk_height", 0.2f} // 20 cm trunk height (default is 0.8 m)
     };
 
     // Test regular spacing canopy
@@ -4443,6 +4457,57 @@ DOCTEST_TEST_CASE("Build Parameters - Canopy Building with Parameters") {
     DOCTEST_CHECK(plantIDs.size() == 4);
     for (uint plantID: plantIDs) {
         DOCTEST_CHECK(plantID != uint(-1));
+        // The requested trunk height must reach every plant in the canopy
+        DOCTEST_CHECK(plantarchitecture.getPlantHeight(plantID) < 0.4f);
+    }
+
+    // The same canopy built without parameters uses the 0.8 m default trunk height
+    Context context_default;
+    PlantArchitecture plantarchitecture_default(&context_default);
+    plantarchitecture_default.disableMessages();
+    plantarchitecture_default.loadPlantModelFromLibrary("grapevine_VSP");
+    std::vector<uint> plantIDs_default = plantarchitecture_default.buildPlantCanopyFromLibrary(make_vec3(0, 0, 0), make_vec2(2, 2), make_int2(2, 2), 0, 1.0f);
+    DOCTEST_CHECK(plantIDs_default.size() == 4);
+    for (uint plantID: plantIDs_default) {
+        DOCTEST_CHECK(plantarchitecture_default.getPlantHeight(plantID) > 0.6f);
+    }
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Canopy Building with Parameters (extent overload)") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP");
+    std::map<std::string, float> canopy_params = {{"trunk_height", 0.2f}};
+
+    std::vector<uint> plantIDs = plantarchitecture.buildPlantCanopyFromLibrary(make_vec3(0, 0, 0), make_vec2(4, 4), 3, 0, canopy_params);
+
+    DOCTEST_CHECK(plantIDs.size() == 3);
+    for (uint plantID: plantIDs) {
+        DOCTEST_CHECK(plantarchitecture.getPlantHeight(plantID) < 0.4f);
+    }
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Canopy Building passes num_scaffolds to every plant") {
+    // Built at age 0 a pistachio is the trunk plus its scaffolds, so the shoot count is exactly num_scaffolds + 1 (default 4).
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("pistachio");
+
+    std::map<std::string, float> canopy_params = {{"num_scaffolds", 6.f}};
+
+    std::vector<uint> plantIDs_spacing = plantarchitecture.buildPlantCanopyFromLibrary(make_vec3(0, 0, 0), make_vec2(5, 5), make_int2(2, 1), 0, 1.0f, canopy_params);
+    DOCTEST_CHECK(plantIDs_spacing.size() == 2);
+    for (uint plantID: plantIDs_spacing) {
+        DOCTEST_CHECK(plantarchitecture.getAllShootIDs(plantID).size() == 7);
+    }
+
+    std::vector<uint> plantIDs_extent = plantarchitecture.buildPlantCanopyFromLibrary(make_vec3(20, 0, 0), make_vec2(10, 10), 2, 0, canopy_params);
+    DOCTEST_CHECK(plantIDs_extent.size() == 2);
+    for (uint plantID: plantIDs_extent) {
+        DOCTEST_CHECK(plantarchitecture.getAllShootIDs(plantID).size() == 7);
     }
 }
 

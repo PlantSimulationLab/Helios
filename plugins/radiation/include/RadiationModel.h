@@ -785,6 +785,7 @@ public:
      * Diffuse component of radiation incident on a horizontal surface above all geometry in the domain.
      * \param[in] label Label used to reference the band
      * \param[in] flux Radiative flux
+     * \note The diffuse sky fills the upper hemisphere only; rays leaving the domain below the horizon receive no diffuse radiation unless \ref RadiationModel::enableBelowHorizonDiffuseRadiation() "enableBelowHorizonDiffuseRadiation()" is called.
      */
     void setDiffuseRadiationFlux(const std::string &label, float flux);
 
@@ -807,6 +808,20 @@ public:
      * \param[in] peak_dir Spherical direction of the peak in diffuse radiation (elevation and azimuth angles in radians, this is usually the sun direction)
      */
     void setDiffuseRadiationExtinctionCoeff(const std::string &label, float K, const helios::SphericalCoord &peak_dir);
+
+    //! Apply the diffuse (ambient) sky radiation to rays that leave the domain below the horizon
+    /**
+     * By default, the diffuse sky only fills the upper hemisphere: a ray that leaves all geometry heading downward (e.g., past the edge of a finite ground, or from the underside of an isolated object) receives no ambient radiation. Calling this
+     * function restores the behavior of Helios versions before 1.3.92, in which the sky filled the full sphere and such rays received the same ambient radiation as rays leaving upward. This applies to all bands, and to camera rays.
+     * \note To avoid edge effects from a finite ground (where the domain edges are dark from below), use \ref RadiationModel::enforcePeriodicBoundary() "enforcePeriodicBoundary()" rather than this function.
+     */
+    void enableBelowHorizonDiffuseRadiation();
+
+    //! Do not apply the diffuse (ambient) sky radiation to rays that leave the domain below the horizon (default)
+    /**
+     * See \ref RadiationModel::enableBelowHorizonDiffuseRadiation() "enableBelowHorizonDiffuseRadiation()".
+     */
+    void disableBelowHorizonDiffuseRadiation();
 
     //! Scale the global diffuse spectrum so its integral equals the specified value (=∫Sdλ)
     /**
@@ -1213,19 +1228,38 @@ public:
      */
     void interpolateSpectrumFromObjectData(const std::vector<uint> &object_IDs, const std::vector<std::string> &spectra, const std::vector<float> &values, const std::string &object_data_query_label, const std::string &primitive_data_radprop_label);
 
-    //! Set the number of scattering iterations for a certain band
+    //! Set the maximum number of scattering iterations for a certain band
     /**
      * \param[in] label Label used to reference the band
-     * \param[in] depth Number of scattering iterations (depth=0 turns scattering off)
+     * \param[in] depth Maximum number of scattering iterations (depth=0 turns scattering off)
+     * \note The energy that would still be scattered after the last iteration is not dropped: the later iterations are summed as a geometric series, each primitive receiving its absorption in the last iteration times q/(1-q), where q is the ratio of
+     * the energy launched in the last two iterations. A depth of 3 to 5 is therefore usually enough for absorbed fluxes, even for strongly scattering bands.
+     * \note Radiation camera images are not extrapolated: they include only the scattering iterations that were traced, so images of strongly scattering bands need a higher depth.
      */
     void setScatteringDepth(const std::string &label, uint depth);
 
-    //! Set the energy threshold used to terminate scattering iterations. Scattering iterations are terminated when the maximum to-be-scattered energy among all primitives is less than "energy"
+    //! Set the energy threshold used to terminate scattering iterations early. Scattering iterations for the band stop when the maximum to-be-scattered flux among all primitives is less than "energy"
     /**
      * \param[in] label Label used to reference the band
-     * \param[in] energy Energy threshold
+     * \param[in] energy Flux threshold, in the units of the band's flux. The default of 0 never stops early, so the band runs to its scattering depth.
+     * \note The energy left in flight when the iterations stop is accounted for as described in \ref RadiationModel::setScatteringDepth().
      */
-    void setMinScatterEnergy(const std::string &label, uint energy);
+    void setMinScatterEnergy(const std::string &label, float energy);
+
+    //! Reduce the number of diffuse rays per primitive in later scattering iterations in proportion to the energy left to scatter (on by default)
+    /**
+     * Each scattering iteration launches less energy than the one before, so later iterations contribute less to the noise in the absorbed flux. With this on, iteration s uses N * E_s / E_0 rays per primitive, where N is the diffuse ray count, E_s
+     * the energy launched in iteration s and E_0 that of the first scattering iteration (the band whose energy has decayed least sets the count when several bands run together), with a minimum of 16. For a fixed total number of rays this split
+     * minimizes the noise. A band's last iteration is weighted by 1/(1-q), since the summed tail (see setScatteringDepth()) scales what it absorbs. The noise of the scattered part of the absorbed flux rises somewhat, most for deeply shaded
+     * primitives and camera images, whose light comes mostly from scattering.
+     */
+    void enableScatteringRayReduction();
+
+    //! Launch the full diffuse ray count in every scattering iteration
+    /**
+     * \sa enableScatteringRayReduction()
+     */
+    void disableScatteringRayReduction();
 
     //! Use a periodic boundary condition in one or more lateral directions
     /**
@@ -1650,6 +1684,10 @@ public:
     std::vector<float> getTotalAbsorbedFlux();
 
     //! Get the radiative energy lost to the sky (surroundings)
+    /**
+     * \deprecated Not implemented by any ray-tracing backend: it always returned 0. It now raises an error, and will be removed in v2.0.
+     */
+    [[deprecated("getSkyEnergy() is not implemented and raises an error; it will be removed in v2.0")]]
     float getSkyEnergy();
 
     //! Calculate G(theta) (i.e., projected area fraction) for a group of primitives given a certain viewing direction
@@ -2099,8 +2137,14 @@ protected:
     //! Flag to determine if status messages are output to the screen
     bool message_flag;
 
+    //! Reduce the diffuse rays per primitive in later scattering iterations (see enableScatteringRayReduction())
+    bool scattering_ray_reduction = true;
+
     //! Specular reflection: 0 = disabled (no primitive has a specular exponent), 1 = enabled, each primitive scaled by its own specular_scale (1 if unset)
     uint specular_reflection_mode = 0;
+
+    //! Diffuse sky radiation is applied to rays leaving the domain below the horizon (see enableBelowHorizonDiffuseRadiation())
+    bool below_horizon_diffuse_enabled = false;
 
     //! Pointer to the context
     helios::Context *context;
@@ -2110,6 +2154,13 @@ protected:
 
     //! Helper function to get current date and time as string
     std::string getCurrentDateTime();
+
+    //! Draw the random seed for one ray-tracing launch from the Context's random generator
+    /**
+     * Drawing from the Context generator makes the ray tracer reproducible whenever the Context has been seeded with Context::seedRandomGenerator(), consistent with the other stochastic plug-ins. Each launch draws a new seed so that successive launches (e.g., scattering iterations) are not correlated.
+     * \return Seed passed to the backend through RayTracingLaunchParams::random_seed
+     */
+    [[nodiscard]] uint drawLaunchSeed();
 
     //! Pointers to current primitive geometry
     std::vector<uint> primitiveID;
@@ -2498,17 +2549,30 @@ protected:
      */
     size_t geometry_build_primitive_count = 0;
 
+    //! Context shape revision when geometry was last built
+    /**
+     * Compared against Context::getShapeRevision() to detect primitives moved, reshaped, re-textured, or deleted since the
+     * last build. \sa needsGeometryRebuild()
+     */
+    uint64_t geometry_build_shape_revision = 0;
+
     //! Determine whether the acceleration structure is stale with respect to the Context
     /**
-     * Returns true if geometry has never been built, or if primitives have been added to or
-     * deleted from the Context since the last build. Always returns false when the last build was
-     * an explicit user-specified subset.
+     * Returns true if geometry has never been built, or if primitives have been added to, deleted
+     * from, or changed shape in the Context since the last build (see Context::getShapeRevision()).
+     * Always returns false when the last build was an explicit user-specified subset.
      * \return True if updateGeometry() should be re-run before tracing
      */
     [[nodiscard]] bool needsGeometryRebuild() const;
 
     //! Periodic boundary condition flags (x, y)
     helios::vec2 periodic_flag;
+
+    //! x-extent (min, max) of the periodic boundary faces, i.e. the domain bounding box plus its padding; the period in x is its width
+    helios::vec2 periodic_xbounds;
+
+    //! y-extent (min, max) of the periodic boundary faces, i.e. the domain bounding box plus its padding; the period in y is its width
+    helios::vec2 periodic_ybounds;
 
     bool radiativepropertiesneedupdate = true;
 

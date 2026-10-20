@@ -58,15 +58,13 @@ layout(push_constant) uniform PushConstants {
 
 // ========== Descriptor Set 0: Geometry (same as other shaders) ==========
 layout(set = 0, binding = 0) readonly buffer BVHBuffer { float data[]; } bvh_buf;
-layout(set = 0, binding = 1) readonly buffer PrimIndicesBuffer { uint indices[]; } prim_indices_buf;
 layout(set = 0, binding = 2) readonly buffer TransformMatricesBuffer { float matrices[]; } transform_buf;
 layout(set = 0, binding = 3) readonly buffer PrimTypesBuffer { uint types[]; } prim_types_buf;
 layout(set = 0, binding = 4) readonly buffer PrimUUIDsBuffer { uint uuids[]; } prim_uuids_buf;
 layout(set = 0, binding = 5) readonly buffer PrimPositionsBuffer { uint positions[]; } prim_positions_buf;
 layout(set = 0, binding = 6) readonly buffer ObjectSubdivisionsBuffer { ivec2 subdivisions[]; } obj_subdivisions_buf;
 layout(set = 0, binding = 7) readonly buffer TwosidedFlagBuffer { uint twosided_flags[]; } twosided_buf;
-layout(set = 0, binding = 8) readonly buffer PatchVerticesBuffer { float vertices[]; } patch_vertices_buf;
-layout(set = 0, binding = 9) readonly buffer TriangleVerticesBuffer { float vertices[]; } triangle_vertices_buf;
+layout(set = 0, binding = 8) readonly buffer LeafRecordBuffer { vec4 records[]; } leaf_records_buf; // layout in common/intersections.glsl
 layout(set = 0, binding = 10) readonly buffer NormalsBuffer { float normals[]; } normals_buf;
 layout(set = 0, binding = 11) readonly buffer MaskDataBuffer { uint mask_data[]; } mask_data_buf;
 layout(set = 0, binding = 12) readonly buffer MaskSizesBuffer { ivec2 mask_sizes[]; } mask_sizes_buf;
@@ -145,13 +143,19 @@ void main() {
 
     float accumulated_depth = 0.0;
     uint hit_prim = UINT_MAX;
+
+    // A ray starting above or below a periodic domain is moved to it in one step
+    if (pc.bbox_count != 0) {
+        accumulated_depth = advance_to_periodic_faces(ray_origin, ray_dir, pc.periodic_flags & 1u, (pc.periodic_flags >> 1) & 1u, pc.domain_xmin, pc.domain_xmax, pc.domain_ymin, pc.domain_ymax);
+    }
     float closest_t;
 
     // Trace segment by segment: the ray is re-traced after wrapping through a periodic boundary and after passing a
     // translucent cover, so the label and depth are those of the first surface behind any covers.
     int wraps = 0;
+    float segment_t_min = 1e-5;
     for (int segment = 0; segment < MAX_RAY_SEGMENTS; ++segment) {
-        hit_prim = traverse_cwbvh(ray_origin, ray_dir, 1e-5, UINT_MAX, closest_t);
+        hit_prim = traverse_cwbvh(ray_origin, ray_dir, segment_t_min, UINT_MAX, closest_t);
 
         if (pc.bbox_count != 0) {
             vec3 wrapped_origin;
@@ -165,6 +169,7 @@ void main() {
             if (hit_periodic) {
                 accumulated_depth += boundary_t; // the distance travelled to the boundary
                 ray_origin = wrapped_origin;
+                segment_t_min = 0.0; // a wrapped ray hits geometry right at the boundary it was wrapped to
                 hit_prim = UINT_MAX; // Reset for next iteration
                 if (++wraps >= MAX_PERIODIC_WRAPS) break;
                 continue;
@@ -175,6 +180,7 @@ void main() {
             // A translucent cover: continue, undeviated, to what lies behind it.
             accumulated_depth += closest_t + COVER_EXIT_OFFSET;
             ray_origin = ray_origin + ray_dir * (closest_t + COVER_EXIT_OFFSET);
+            segment_t_min = 1e-5;
             hit_prim = UINT_MAX; // Reset for next iteration
             continue;
         }

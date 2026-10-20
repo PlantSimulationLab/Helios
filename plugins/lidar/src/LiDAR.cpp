@@ -1705,6 +1705,20 @@ void LiDARcloud::setScanDetectionThreshold(uint scanID, float detectionThreshold
     scans.at(scanID).detectionThreshold = detectionThreshold;
 }
 
+bool LiDARcloud::getScanRecordPartialMisses(uint scanID) const {
+    if (scanID >= scans.size()) {
+        helios_runtime_error("ERROR (LiDARcloud::getScanRecordPartialMisses): Cannot get partial-miss recording for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
+    }
+    return scans.at(scanID).recordPartialMisses;
+}
+
+void LiDARcloud::setScanRecordPartialMisses(uint scanID, bool recordPartialMisses) {
+    if (scanID >= scans.size()) {
+        helios_runtime_error("ERROR (LiDARcloud::setScanRecordPartialMisses): Cannot set partial-miss recording for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
+    }
+    scans.at(scanID).recordPartialMisses = recordPartialMisses;
+}
+
 float LiDARcloud::getScanTiltRoll(uint scanID) const {
     if (scanID >= scans.size()) {
         helios_runtime_error("ERROR (LiDARcloud::getScanTiltRoll): Cannot get scanner tilt roll for scan #" + std::to_string(scanID) + " because there have only been " + std::to_string(scans.size()) + " scans added.");
@@ -9290,7 +9304,8 @@ namespace {
      *   - echo_width: sqrt(range_resolution^2 + weighted range variance), the pulse-width-convolved range spread.
      * \p t_pulse rows are {t, cos, ID, weight} and are sorted in place by range. Returns whose |intensity| is below
      * \p detection_threshold are discarded (miss sentinels are retained so transmitted beams remain available for leaf-area
-     * inversion). \p max_returns caps how many returns are reported per pulse: <= 0 means unlimited (report every detected
+     * inversion). With \p keep_partial_misses false, the miss sentinel of a pulse that kept a real return is dropped, as a
+     * real instrument records nothing for the escaped energy. \p max_returns caps how many returns are reported per pulse: <= 0 means unlimited (report every detected
      * return; the discrete multi-return instrument), while N >= 1 keeps at most N real returns selected by
      * \p single_return_selection (N=1 reproduces classic single-return, N=2 dual-return, etc.). The kept returns are always
      * re-ordered nearest-first. When a pulse produces only misses (a fully transmitted beam) a single miss sentinel is kept
@@ -9298,7 +9313,7 @@ namespace {
      * real points (matching a real discrete-return instrument).
      */
     std::vector<std::vector<float>> detectReturnsFromSubrays(std::vector<std::vector<float>> &t_pulse, float total_pulse_weight, int Npulse, float range_resolution, float detection_threshold, int max_returns,
-                                                             SingleReturnSelection single_return_selection, float miss_distance) {
+                                                             SingleReturnSelection single_return_selection, float miss_distance, bool keep_partial_misses = true) {
 
         std::vector<std::vector<float>> t_hit;
         if (t_pulse.empty()) {
@@ -9368,6 +9383,16 @@ namespace {
                 }
             }
             t_hit.swap(kept);
+        }
+
+        // A real instrument records only the returns it detects: the energy that escaped a partly intercepted pulse leaves
+        // no point. Unless partial misses are requested, drop the miss sentinel of any pulse that kept a real return (a
+        // pulse whose returns all fell below the detection threshold keeps its miss and reads as transmitted).
+        if (!keep_partial_misses) {
+            const bool any_real = std::any_of(t_hit.begin(), t_hit.end(), [&](const std::vector<float> &h) { return h[0] < 0.98f * miss_distance; });
+            if (any_real) {
+                t_hit.erase(std::remove_if(t_hit.begin(), t_hit.end(), [&](const std::vector<float> &h) { return h[0] >= 0.98f * miss_distance; }), t_hit.end());
+            }
         }
 
         // Limited-return mode (max_returns >= 1): keep at most max_returns real returns per pulse, selected by the policy.
@@ -10197,6 +10222,7 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         // RETURN_MODE_SINGLE limits to maxReturns real returns (1 = single-return, 2 = dual-return, N = N-return).
         const int max_returns = (return_mode == RETURN_MODE_MULTI) ? 0 : scans.at(s).maxReturns;
         const float detection_threshold = scans.at(s).detectionThreshold;
+        const bool keep_partial_misses = scans.at(s).recordPartialMisses;
         const float range_resolution = (scans.at(s).pulseWidth > 0.f) ? scans.at(s).pulseWidth : pulse_distance_threshold;
 
         // Apply angular (beam-pointing) jitter to the nominal direction of each beam. This is a per-pulse pointing error of
@@ -10543,7 +10569,7 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
 
             // Detect discrete returns from the analytic sum-of-Gaussians waveform. Returns rows
             // {distance, intensity, nPulseHit, IDmap, echo_width}.
-            std::vector<std::vector<float>> t_hit = detectReturnsFromSubrays(t_pulse, total_pulse_weight, Npulse, range_resolution, detection_threshold, max_returns, single_return_selection, miss_distance);
+            std::vector<std::vector<float>> t_hit = detectReturnsFromSubrays(t_pulse, total_pulse_weight, Npulse, range_resolution, detection_threshold, max_returns, single_return_selection, miss_distance, keep_partial_misses);
 
             // Count non-miss returns for proper target_index assignment
             int non_miss_count = 0;

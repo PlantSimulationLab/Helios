@@ -1148,6 +1148,293 @@ map_d lib/images/solid.jpg
     }
 }
 
+// Reads a .obj written by Context::writeOBJ and returns, for each 'f' record in file order, the UUID of the primitive in 'candidate_UUIDs' whose vertices contain all three of that face's vertices. Each primitive must be placed
+// apart from the others so that exactly one candidate matches; a face that matches none or several is returned as uint(-1).
+static std::vector<uint> readOBJFaceSourceUUIDs(const Context &context, const std::string &obj_filename, const std::vector<uint> &candidate_UUIDs) {
+    std::vector<vec3> obj_vertices;
+    std::vector<uint> face_source_UUIDs;
+    std::ifstream obj_stream(obj_filename);
+    std::string line;
+    while (std::getline(obj_stream, line)) {
+        std::istringstream line_stream(line);
+        std::string record;
+        line_stream >> record;
+        if (record == "v") {
+            vec3 vertex;
+            line_stream >> vertex.x >> vertex.y >> vertex.z;
+            obj_vertices.push_back(vertex);
+        } else if (record == "f") {
+            std::vector<vec3> face_vertices;
+            std::string corner;
+            while (line_stream >> corner) {
+                const int vertex_index = std::stoi(corner.substr(0, corner.find('/')));
+                face_vertices.push_back(obj_vertices.at(vertex_index - 1));
+            }
+            uint matched_UUID = uint(-1);
+            int match_count = 0;
+            for (uint UUID: candidate_UUIDs) {
+                const std::vector<vec3> primitive_vertices = context.getPrimitiveVertices(UUID);
+                bool all_corners_found = true;
+                for (const vec3 &face_vertex: face_vertices) {
+                    bool corner_found = false;
+                    for (const vec3 &primitive_vertex: primitive_vertices) {
+                        if ((face_vertex - primitive_vertex).magnitude() < 1e-5f) {
+                            corner_found = true;
+                            break;
+                        }
+                    }
+                    if (!corner_found) {
+                        all_corners_found = false;
+                        break;
+                    }
+                }
+                if (all_corners_found) {
+                    matched_UUID = UUID;
+                    match_count++;
+                }
+            }
+            face_source_UUIDs.push_back(match_count == 1 ? matched_UUID : uint(-1));
+        }
+    }
+    return face_source_UUIDs;
+}
+
+// Reads the one-value-per-line .dat sidecar written by Context::writeOBJ.
+static std::vector<double> readOBJDatRows(const std::string &dat_filename) {
+    std::vector<double> rows;
+    std::ifstream dat_stream(dat_filename);
+    std::string line;
+    while (std::getline(dat_stream, line)) {
+        if (!line.empty()) {
+            rows.push_back(std::stod(line));
+        }
+    }
+    return rows;
+}
+
+TEST_CASE("OBJ WriteOBJ - primitive data .dat rows follow OBJ face order") {
+    // Each primitive stores its own UUID as float data, so row i of the .dat must equal the UUID of the primitive that produced face i of the OBJ.
+    const std::string obj_file = "lib/models/test_dat_rows.obj";
+    const std::string mtl_file = "lib/models/test_dat_rows.mtl";
+    const std::string dat_file = "lib/models/test_dat_rows_source_UUID.dat";
+
+    SUBCASE("object_label groups whose materials interleave") {
+        Context ctx;
+        // Material order is red, blue, green; object order is A, B, default. Faces are grouped by object first, so the OBJ order (t0, t2, t1, p3, p3, t4) differs from material order (t0, t1, t2, p3, p3, t4).
+        uint t0 = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0.5, 1, 0), RGB::red);
+        uint t1 = ctx.addTriangle(make_vec3(2, 0, 0), make_vec3(3, 0, 0), make_vec3(2.5, 1, 0), RGB::red);
+        uint t2 = ctx.addTriangle(make_vec3(4, 0, 0), make_vec3(5, 0, 0), make_vec3(4.5, 1, 0), RGB::blue);
+        uint p3 = ctx.addPatch(make_vec3(6.5, 0.5, 0), make_vec2(1, 1), nullrotation, RGB::blue);
+        uint t4 = ctx.addTriangle(make_vec3(8, 0, 0), make_vec3(9, 0, 0), make_vec3(8.5, 1, 0), RGB::green);
+        std::vector<uint> UUIDs = {t0, t1, t2, p3, t4};
+
+        ctx.setPrimitiveData(t0, "object_label", "A");
+        ctx.setPrimitiveData(t1, "object_label", "B");
+        ctx.setPrimitiveData(t2, "object_label", "A");
+        ctx.setPrimitiveData(p3, "object_label", "B");
+        for (uint UUID: UUIDs) {
+            ctx.setPrimitiveData(UUID, "source_UUID", float(UUID));
+        }
+
+        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(obj_file, UUIDs, {"source_UUID"}, false, true));
+
+        std::vector<uint> face_source_UUIDs = readOBJFaceSourceUUIDs(ctx, obj_file, UUIDs);
+        std::vector<double> dat_rows = readOBJDatRows(dat_file);
+
+        DOCTEST_REQUIRE(face_source_UUIDs.size() == 6);
+        DOCTEST_REQUIRE(dat_rows.size() == face_source_UUIDs.size());
+        for (size_t face = 0; face < face_source_UUIDs.size(); face++) {
+            DOCTEST_INFO("face " << face);
+            DOCTEST_CHECK(face_source_UUIDs.at(face) != uint(-1));
+            DOCTEST_CHECK(dat_rows.at(face) == double(face_source_UUIDs.at(face)));
+        }
+    }
+
+    SUBCASE("object_label groups large enough for parallel face formatting") {
+        Context ctx;
+        // 600 triangles over 2 labels x 2 materials gives 150 faces per (label, material) group, above the threshold at which writeOBJ formats faces in parallel chunks.
+        std::vector<uint> UUIDs;
+        for (int i = 0; i < 600; i++) {
+            const float x = 2.f * float(i);
+            const RGBcolor color = ((i / 2) % 2 == 0) ? RGB::red : RGB::blue;
+            uint UUID = ctx.addTriangle(make_vec3(x, 0, 0), make_vec3(x + 1, 0, 0), make_vec3(x + 0.5f, 1, 0), color);
+            ctx.setPrimitiveData(UUID, "object_label", (i % 2 == 0) ? "A" : "B");
+            ctx.setPrimitiveData(UUID, "source_UUID", float(UUID));
+            UUIDs.push_back(UUID);
+        }
+
+        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(obj_file, UUIDs, {"source_UUID"}, false, true));
+
+        std::vector<uint> face_source_UUIDs = readOBJFaceSourceUUIDs(ctx, obj_file, UUIDs);
+        std::vector<double> dat_rows = readOBJDatRows(dat_file);
+
+        DOCTEST_REQUIRE(face_source_UUIDs.size() == UUIDs.size());
+        DOCTEST_REQUIRE(dat_rows.size() == face_source_UUIDs.size());
+        size_t mismatched_rows = 0;
+        for (size_t face = 0; face < face_source_UUIDs.size(); face++) {
+            if (face_source_UUIDs.at(face) == uint(-1) || dat_rows.at(face) != double(face_source_UUIDs.at(face))) {
+                mismatched_rows++;
+            }
+        }
+        DOCTEST_CHECK(mismatched_rows == 0);
+    }
+
+    SUBCASE("no object_label data") {
+        Context ctx;
+        std::vector<uint> UUIDs;
+        for (int i = 0; i < 6; i++) {
+            const float x = 2.f * float(i);
+            UUIDs.push_back(ctx.addTriangle(make_vec3(x, 0, 0), make_vec3(x + 1, 0, 0), make_vec3(x + 0.5f, 1, 0), (i % 2 == 0) ? RGB::red : RGB::blue));
+        }
+        UUIDs.push_back(ctx.addPatch(make_vec3(12.5, 0.5, 0), make_vec2(1, 1), nullrotation, RGB::red));
+        for (uint UUID: UUIDs) {
+            ctx.setPrimitiveData(UUID, "source_UUID", float(UUID));
+        }
+
+        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(obj_file, UUIDs, {"source_UUID"}, false, true));
+
+        std::vector<uint> face_source_UUIDs = readOBJFaceSourceUUIDs(ctx, obj_file, UUIDs);
+        std::vector<double> dat_rows = readOBJDatRows(dat_file);
+
+        DOCTEST_REQUIRE(face_source_UUIDs.size() == 8);
+        DOCTEST_REQUIRE(dat_rows.size() == face_source_UUIDs.size());
+        for (size_t face = 0; face < face_source_UUIDs.size(); face++) {
+            DOCTEST_INFO("face " << face);
+            DOCTEST_CHECK(face_source_UUIDs.at(face) != uint(-1));
+            DOCTEST_CHECK(dat_rows.at(face) == double(face_source_UUIDs.at(face)));
+        }
+    }
+
+    std::remove(obj_file.c_str());
+    std::remove(mtl_file.c_str());
+    std::remove(dat_file.c_str());
+}
+
+TEST_CASE("OBJ WriteOBJ - unwritable primitive data is rejected before any file is written") {
+    const std::string obj_file = "lib/models/test_dat_reject.obj";
+    const std::string mtl_file = "lib/models/test_dat_reject.mtl";
+
+    SUBCASE("primitive missing the requested data") {
+        const std::string dat_file = "lib/models/test_dat_reject_temperature.dat";
+        std::remove(obj_file.c_str());
+        std::remove(dat_file.c_str());
+
+        Context ctx;
+        uint t0 = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0.5, 1, 0));
+        uint t1 = ctx.addTriangle(make_vec3(2, 0, 0), make_vec3(3, 0, 0), make_vec3(2.5, 1, 0));
+        ctx.setPrimitiveData(t0, "temperature", 300.f);
+
+        std::string message;
+        try {
+            ctx.writeOBJ(obj_file, {t0, t1}, {"temperature"}, false, true);
+        } catch (const std::runtime_error &error) {
+            message = error.what();
+        }
+        DOCTEST_CHECK(message.find("'temperature'") != std::string::npos);
+        DOCTEST_CHECK(message.find("UUID " + std::to_string(t1)) != std::string::npos);
+        DOCTEST_CHECK(!std::filesystem::exists(dat_file));
+        DOCTEST_CHECK(!std::filesystem::exists(obj_file));
+
+        std::remove(obj_file.c_str());
+        std::remove(mtl_file.c_str());
+        std::remove(dat_file.c_str());
+    }
+
+    SUBCASE("non-scalar primitive data type") {
+        const std::string dat_file = "lib/models/test_dat_reject_direction.dat";
+        std::remove(obj_file.c_str());
+        std::remove(dat_file.c_str());
+
+        Context ctx;
+        uint t0 = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0.5, 1, 0));
+        ctx.setPrimitiveData(t0, "direction", make_vec3(0, 0, 1));
+
+        std::string message;
+        try {
+            ctx.writeOBJ(obj_file, {t0}, {"direction"}, false, true);
+        } catch (const std::runtime_error &error) {
+            message = error.what();
+        }
+        DOCTEST_CHECK(message.find("'direction'") != std::string::npos);
+        DOCTEST_CHECK(message.find("UUID " + std::to_string(t0)) != std::string::npos);
+        DOCTEST_CHECK(!std::filesystem::exists(dat_file));
+        DOCTEST_CHECK(!std::filesystem::exists(obj_file));
+
+        std::remove(obj_file.c_str());
+        std::remove(mtl_file.c_str());
+        std::remove(dat_file.c_str());
+    }
+}
+
+TEST_CASE("OBJ WriteOBJ - complete output when fewer threads run than requested") {
+    // writeOBJ formats its records in chunks, requesting several threads. Inside an enclosing parallel region with nested parallelism disabled, the OpenMP runtime gives it a team of one thread; a build without
+    // OpenMP likewise runs the region once. Either way every record must still be written.
+    const std::string obj_file = "lib/models/test_nested_parallel.obj";
+    const std::string mtl_file = "lib/models/test_nested_parallel.mtl";
+    const std::string dat_file = "lib/models/test_nested_parallel_source_UUID.dat";
+
+    Context ctx;
+    // 750 textured patches give 3000 vertices, 3000 texture coordinates, 750 normals and 1500 faces in one material - enough for writeOBJ to request several threads for each record type.
+    std::vector<uint> UUIDs;
+    for (int i = 0; i < 750; i++) {
+        uint UUID = ctx.addPatch(make_vec3(2.f * float(i), 0, 0), make_vec2(1, 1), nullrotation, "lib/images/solid.jpg");
+        ctx.setPrimitiveData(UUID, "source_UUID", float(UUID));
+        UUIDs.push_back(UUID);
+    }
+
+#ifdef USE_OPENMP
+    // omp_set_max_active_levels() is OpenMP 3.0; MSVC implements only OpenMP 2.0, where omp_set_nested() is the equivalent (and is deprecated in newer runtimes).
+#if _OPENMP >= 200805
+    const int previous_max_active_levels = omp_get_max_active_levels();
+    omp_set_max_active_levels(1);
+#else
+    const int previous_nested = omp_get_nested();
+    omp_set_nested(0);
+#endif
+#pragma omp parallel num_threads(2)
+    {
+#pragma omp single
+        ctx.writeOBJ(obj_file, UUIDs, {"source_UUID"}, true, true);
+    }
+#if _OPENMP >= 200805
+    omp_set_max_active_levels(previous_max_active_levels);
+#else
+    omp_set_nested(previous_nested);
+#endif
+#else
+    ctx.writeOBJ(obj_file, UUIDs, {"source_UUID"}, true, true);
+#endif
+
+    size_t vertex_records = 0;
+    size_t uv_records = 0;
+    size_t normal_records = 0;
+    size_t face_records = 0;
+    std::ifstream obj_stream(obj_file);
+    std::string line;
+    while (std::getline(obj_stream, line)) {
+        if (line.rfind("v ", 0) == 0) {
+            vertex_records++;
+        } else if (line.rfind("vt ", 0) == 0) {
+            uv_records++;
+        } else if (line.rfind("vn ", 0) == 0) {
+            normal_records++;
+        } else if (line.rfind("f ", 0) == 0) {
+            face_records++;
+        }
+    }
+    obj_stream.close();
+
+    DOCTEST_CHECK(vertex_records == 3000);
+    DOCTEST_CHECK(uv_records == 3000);
+    DOCTEST_CHECK(normal_records == 750);
+    DOCTEST_CHECK(face_records == 1500);
+    DOCTEST_CHECK(readOBJDatRows(dat_file).size() == face_records);
+
+    std::remove(obj_file.c_str());
+    std::remove(mtl_file.c_str());
+    std::remove(dat_file.c_str());
+}
+
 TEST_CASE("OBJ Vertex Normal and Mesh Topology Retention") {
 
     SUBCASE("Load OBJ with vn and retain authored vertex normals") {

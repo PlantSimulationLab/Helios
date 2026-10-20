@@ -74,7 +74,7 @@ if(CUDAToolkit_FOUND)
     endif()
     
     # Build with CUDA support
-    add_library(collisiondetection STATIC "src/CollisionDetection.cu" "src/CollisionDetection.cpp" "src/CollisionDetection_RayTracing.cpp" "src/CollisionDetection_Slicing.cpp" "tests/selfTest.cpp")
+    add_library(collisiondetection STATIC "src/CollisionDetection.cu" "src/CollisionDetection.cpp" "src/CollisionDetection_RayTracing.cpp" "src/CollisionDetection_Slicing.cpp" "tests/selfTest.cpp" "tests/test_device_memory.cpp")
     
     # Set CUDA properties for the target
     set_target_properties(collisiondetection PROPERTIES CUDA_RUNTIME_LIBRARY Static CUDA_RESOLVE_DEVICE_SYMBOLS ON)

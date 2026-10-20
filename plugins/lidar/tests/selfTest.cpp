@@ -1900,18 +1900,17 @@ DOCTEST_TEST_CASE("LiDAR Synthetic Scan Pulse-Shape Deviation") {
 }
 
 DOCTEST_TEST_CASE("LiDAR Default Detection Threshold") {
-    // The default detectionThreshold is a non-zero noise floor (0.05) that pairs with the recommended ~40 rays/pulse: it
-    // suppresses the single-sub-ray "phantom" returns that otherwise force very high ray counts to converge. Verify the
-    // default value and that, on a scene with a deliberately weak return, the default floor drops it while a 0 threshold
-    // keeps it. Scene (the three partial-footprint slivers from the N-return tests): the nearest sliver is weak enough to
-    // fall below the 0.05 floor.
+    // The default detectionThreshold (0.001, -30 dB) is the noise floor measured in terrestrial RIEGL scans. Verify the
+    // default value, that an XML scan without the tag gets the same default, that the default floor keeps the weak
+    // partial-footprint returns a real instrument would detect, and that a high floor drops them. Scene: the three
+    // partial-footprint slivers from the N-return tests.
     auto buildScene = [](Context &context) {
         context.addPatch(make_vec3(0.13f, 0.f, 2.5f), make_vec2(0.10f, 0.4f)); // nearest sliver (weakest)
         context.addPatch(make_vec3(-0.12f, 0.f, 1.5f), make_vec2(0.16f, 0.4f)); // middle sliver
         context.addPatch(make_vec3(0.f, 0.f, 0.4f), make_vec2(2.0f, 2.0f)); // far full footprint (strongest)
     };
 
-    // Default value is the 0.05 noise floor.
+    // Default value is the 0.001 noise floor, from addScan and from an XML scan that omits the tag.
     {
         Context ctx;
         buildScene(ctx);
@@ -1920,7 +1919,21 @@ DOCTEST_TEST_CASE("LiDAR Default Detection Threshold") {
         ScanMetadata scan(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
         uint id = cloud.addScan(scan);
         float thr = cloud.getScanDetectionThreshold(id);
-        DOCTEST_CHECK(thr == doctest::Approx(0.05f));
+        DOCTEST_CHECK(thr == doctest::Approx(0.001f));
+    }
+    {
+        const std::string xml_path = "lidar_default_threshold_tmp.xml";
+        {
+            std::ofstream f(xml_path);
+            f << "<helios>\n  <scan>\n    <origin> 0 0 5 </origin>\n    <size> 1 1 </size>\n  </scan>\n</helios>\n";
+        }
+        LiDARcloud cloud;
+        cloud.disableMessages();
+        DOCTEST_CHECK_NOTHROW(cloud.loadXML(xml_path.c_str()));
+        DOCTEST_REQUIRE(cloud.getScanCount() == 1);
+        DOCTEST_CHECK(cloud.getScanDetectionThreshold(0) == doctest::Approx(0.001f));
+        DOCTEST_CHECK(cloud.getScanRecordPartialMisses(0) == true);
+        std::remove(xml_path.c_str());
     }
 
     auto count_returns = [&](float threshold) -> uint {
@@ -1936,10 +1949,10 @@ DOCTEST_TEST_CASE("LiDAR Default Detection Threshold") {
         return cloud.getHitCount();
     };
     uint n_zero = count_returns(0.f); // no noise floor: all three slivers detected
-    uint n_default = count_returns(0.05f); // default floor
+    uint n_default = count_returns(0.001f); // default floor
     uint n_high = count_returns(0.5f); // aggressive floor: only the strong far surface clears it
     DOCTEST_CHECK(n_zero == 3); // all three partial-footprint returns resolve with no floor
-    DOCTEST_CHECK(n_default <= n_zero); // the noise floor can only remove returns, never add
+    DOCTEST_CHECK(n_default == n_zero); // the default floor sits below every partial-footprint return here
     DOCTEST_CHECK(n_high < n_zero); // a high floor suppresses the weak returns
     DOCTEST_CHECK(n_high >= 1); // the strong far surface is still detected
 }
@@ -3939,6 +3952,7 @@ DOCTEST_TEST_CASE("LiDAR Return-Mode XML Load and Round-Trip") {
         f << "    <maxReturns> 3 </maxReturns>\n";
         f << "    <pulseWidth> 0.4 </pulseWidth>\n";
         f << "    <detectionThreshold> 0.15 </detectionThreshold>\n";
+        f << "    <recordPartialMisses> false </recordPartialMisses>\n";
         f << "  </scan>\n</helios>\n";
     }
 
@@ -3951,6 +3965,7 @@ DOCTEST_TEST_CASE("LiDAR Return-Mode XML Load and Round-Trip") {
     DOCTEST_CHECK(cloud.getScanMaxReturns(0) == 3);
     DOCTEST_CHECK(cloud.getScanPulseWidth(0) == doctest::Approx(0.4f));
     DOCTEST_CHECK(cloud.getScanDetectionThreshold(0) == doctest::Approx(0.15f));
+    DOCTEST_CHECK(cloud.getScanRecordPartialMisses(0) == false);
 
     // Populate some hits so exportScans writes a complete scan, then reload and confirm the tags persist.
     Context context;
@@ -3971,9 +3986,84 @@ DOCTEST_TEST_CASE("LiDAR Return-Mode XML Load and Round-Trip") {
     DOCTEST_CHECK(reloaded.getScanMaxReturns(0) == 3);
     DOCTEST_CHECK(reloaded.getScanPulseWidth(0) == doctest::Approx(0.4f));
     DOCTEST_CHECK(reloaded.getScanDetectionThreshold(0) == doctest::Approx(0.15f));
+    DOCTEST_CHECK(reloaded.getScanRecordPartialMisses(0) == false);
 
     std::filesystem::remove_all(out_dir);
     std::remove(xml_path.c_str());
+}
+
+DOCTEST_TEST_CASE("LiDAR Zero Detection Threshold XML Round-Trip") {
+    // An explicit 0 (no noise floor) differs from the 0.001 default, so it must be written on export and survive a reload
+    // rather than silently coming back as the default.
+    LiDARcloud cloud;
+    cloud.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.0f, 0.0f, 0.0f, {});
+    uint id = cloud.addScan(scan);
+    cloud.setScanDetectionThreshold(id, 0.f);
+    Context context;
+    context.addPatch(make_vec3(0, 0, 2.0f), make_vec2(2.0f, 2.0f));
+    cloud.syntheticScan(&context, false, false);
+
+    const std::string out_dir = "lidar_zero_threshold_export_tmp";
+    std::filesystem::remove_all(out_dir);
+    const std::string xml_out = out_dir + "/scans.xml";
+    DOCTEST_CHECK_NOTHROW(cloud.exportScans(xml_out.c_str()));
+    LiDARcloud reloaded;
+    reloaded.disableMessages();
+    DOCTEST_CHECK_NOTHROW(reloaded.loadXML(xml_out.c_str()));
+    DOCTEST_REQUIRE(reloaded.getScanCount() == 1);
+    DOCTEST_CHECK(reloaded.getScanDetectionThreshold(0) == doctest::Approx(0.f));
+    DOCTEST_CHECK(reloaded.getScanRecordPartialMisses(0) == true);
+    std::filesystem::remove_all(out_dir);
+}
+
+DOCTEST_TEST_CASE("LiDAR Partial Miss Recording") {
+    // One downward multi-return pulse (footprint radius 0.15 m at the ground) whose footprint a patch edge bisects. With miss
+    // recording on, the default writes the detected return plus a partial-miss point for the escaped half; with
+    // recordPartialMisses false only the detected return is written, as a real instrument records it. A pulse that hits
+    // nothing is still recorded as a miss either way. A small patch far outside the footprint keeps the beam axis inside
+    // the scene bounding box (a pulse whose axis misses it is not traced at all).
+    auto scan_pulse = [](float patch_x, bool record_partial) {
+        Context ctx;
+        ctx.addPatch(make_vec3(patch_x, 0.f, 0.f), make_vec2(1.0f, 1.0f));
+        ctx.addPatch(make_vec3(-3.f, 0.f, -1.f), make_vec2(0.1f, 0.1f));
+        LiDARcloud cloud;
+        cloud.disableMessages();
+        ScanMetadata scan(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+        uint id = cloud.addScan(scan);
+        cloud.setScanRecordPartialMisses(id, record_partial);
+        cloud.syntheticScan(&ctx, 100, 0.05f, RETURN_MODE_MULTI, false, true);
+        std::vector<std::pair<int, int>> rows; // {is_miss, target_count}
+        for (uint i = 0; i < cloud.getHitCount(); i++) {
+            rows.emplace_back(int(cloud.getHitData(i, "is_miss")), int(cloud.getHitData(i, "target_count")));
+        }
+        std::sort(rows.begin(), rows.end());
+        return rows;
+    };
+
+    LiDARcloud defaults;
+    defaults.disableMessages();
+    ScanMetadata default_scan(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+    defaults.addScan(default_scan);
+    DOCTEST_CHECK(defaults.getScanRecordPartialMisses(0) == true);
+
+    // Patch spans x in [0, 1]: its edge runs under the beam axis.
+    auto with_partial = scan_pulse(0.5f, true);
+    DOCTEST_REQUIRE(with_partial.size() == 2);
+    DOCTEST_CHECK(with_partial[0] == std::make_pair(0, 2)); // the detected half
+    DOCTEST_CHECK(with_partial[1] == std::make_pair(1, 2)); // the escaped half
+
+    auto real_record = scan_pulse(0.5f, false);
+    DOCTEST_REQUIRE(real_record.size() == 1);
+    DOCTEST_CHECK(real_record[0] == std::make_pair(0, 1));
+
+    // Patch far outside the footprint: the pulse is fully transmitted and keeps its miss point.
+    auto transmitted = scan_pulse(5.f, false);
+    DOCTEST_REQUIRE(transmitted.size() == 1);
+    DOCTEST_CHECK(transmitted[0].first == 1);
+
+    DOCTEST_CHECK_THROWS(defaults.setScanRecordPartialMisses(7, false));
+    DOCTEST_CHECK_THROWS((void) defaults.getScanRecordPartialMisses(7));
 }
 
 DOCTEST_TEST_CASE("LiDAR Strongest-Plus-Last XML Round-Trip") {

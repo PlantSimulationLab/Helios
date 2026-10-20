@@ -29,6 +29,7 @@ constexpr float PI_F = 3.14159265358979323846f;
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <cmath>
@@ -1728,6 +1729,17 @@ namespace helios {
          * \note Thread-safe: can be called from OpenMP parallel regions
          */
         void addWarning(const std::string &category, const std::string &message);
+
+        //! Add several instances of the same warning at once
+        /**
+         * Equivalent in count to calling addWarning(category, message) \p count times, but the message is stored as a single example. Use this when instances have been tallied separately, for example per thread in an OpenMP loop, so that
+         * the aggregator's lock is taken once rather than once per instance.
+         * \param[in] category Category identifier for this warning type (e.g., "fzero_convergence_failure")
+         * \param[in] message The warning message text
+         * \param[in] count Number of instances to add. A count of zero adds nothing.
+         * \note Thread-safe: can be called from OpenMP parallel regions
+         */
+        void addWarning(const std::string &category, const std::string &message, size_t count);
 
         //! Report all accumulated warnings and clear
         /**

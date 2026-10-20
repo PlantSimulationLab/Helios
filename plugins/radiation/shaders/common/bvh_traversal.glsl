@@ -14,9 +14,10 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
-/** bvh_traversal.glsl - BVH traversal using stack
+/** bvh_traversal.glsl - Closest-hit traversal of the 8-wide compressed BVH (CWBVH)
  *
- * Stack-based traversal with ordered near-child-first descent.
+ * Stack-based traversal. Leaf primitives are tested through the leaf intersection records
+ * (see intersections.glsl); the calling shader must declare bvh_buf and leaf_records_buf.
  */
 
 #ifndef BVH_TRAVERSAL_GLSL
@@ -25,20 +26,7 @@
 #include "intersections.glsl"
 #include "texture_mask.glsl"
 
-const uint MAX_STACK_DEPTH = 36; // BVH MAX_DEPTH=32, so 36 provides headroom
 const uint UINT_MAX = 0xFFFFFFFF;
-
-// BVH node structure (matches BVHNode in BVHBuilder.h)
-struct BVHNode {
-    vec3 aabb_min;
-    vec3 aabb_max;
-    uint left_child;
-    uint right_child;
-    uint prim_count;
-    uint prim_type;
-    uint first_prim;
-    uint split_axis;
-};
 
 // Reciprocal of the ray direction that is safe for axis-aligned rays.
 //
@@ -51,138 +39,6 @@ struct BVHNode {
 vec3 safe_inv_dir(vec3 ray_dir) {
     const float LARGE = 1e30;
     return vec3(abs(ray_dir.x) > 1e-30 ? 1.0 / ray_dir.x : LARGE, abs(ray_dir.y) > 1e-30 ? 1.0 / ray_dir.y : LARGE, abs(ray_dir.z) > 1e-30 ? 1.0 / ray_dir.z : LARGE);
-}
-
-// Ray-AABB intersection test
-bool intersect_aabb(vec3 ray_origin, vec3 ray_dir_inv, vec3 aabb_min, vec3 aabb_max, float t_max) {
-    vec3 t_min_vec = (aabb_min - ray_origin) * ray_dir_inv;
-    vec3 t_max_vec = (aabb_max - ray_origin) * ray_dir_inv;
-
-    vec3 t1 = min(t_min_vec, t_max_vec);
-    vec3 t2 = max(t_min_vec, t_max_vec);
-
-    float t_near = max(max(t1.x, t1.y), t1.z);
-    float t_far = min(min(t2.x, t2.y), t2.z);
-
-    return t_near <= t_far && t_far >= 0.0 && t_near <= t_max;
-}
-
-// Forward declarations for intersection tests (defined in intersections.glsl)
-HitInfo intersect_patch(vec3 ray_origin, vec3 ray_dir, vec4 v0, vec4 v1, vec4 v2, vec4 v3);
-HitInfo intersect_triangle(vec3 ray_origin, vec3 ray_dir, vec3 v0, vec3 v1, vec3 v2);
-
-// BVH traversal with stack-based descent and closest-hit tracking
-// NOTE: This function expects buffers to be defined in the calling shader:
-//   - bvh_buf (BVHNode array)
-//   - prim_indices_buf (primitive indices)
-//   - patch_vertices_buf (patch vertex data)
-//   - triangle_vertices_buf (triangle vertex data)
-// Parameters:
-//   origin_prim_idx: Index of primitive shooting the ray (to skip self-intersection)
-// Returns: closest hit primitive index or UINT_MAX if miss
-// Outputs: closest_t (intersection distance)
-uint traverse_bvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_idx, inout float closest_t) {
-
-    // Pre-compute inverse ray direction for AABB tests (safe for axis-aligned rays)
-    vec3 ray_dir_inv = safe_inv_dir(ray_dir);
-
-    // Stack for BVH traversal (36 elements: BVH MAX_DEPTH=32, +4 headroom)
-    uint stack[36];
-    int stack_ptr = 0;
-
-    uint closest_prim = UINT_MAX;
-    closest_t = 1e30;
-
-    // Start at root (index 0)
-    stack[stack_ptr++] = 0;
-
-    while (stack_ptr > 0) {
-        // Pop node from stack
-        uint node_idx = stack[--stack_ptr];
-
-        // Access BVH node from buffer (buffer defined in calling shader)
-        // BVHNode C++ layout (48 bytes): float aabb_min[3], float aabb_max[3], uint32_t × 6
-        // In GLSL float buffer: 12 floats total (3 aabb_min + 3 aabb_max + 6 uints-as-floats)
-        uint base = node_idx * 12; // 12 floats per BVHNode (48 bytes / 4 bytes per float)
-        BVHNode node;
-        node.aabb_min = vec3(bvh_buf.data[base + 0], bvh_buf.data[base + 1], bvh_buf.data[base + 2]);
-        node.aabb_max = vec3(bvh_buf.data[base + 3], bvh_buf.data[base + 4], bvh_buf.data[base + 5]);
-        node.left_child = floatBitsToUint(bvh_buf.data[base + 6]);
-        node.right_child = floatBitsToUint(bvh_buf.data[base + 7]);
-        node.prim_count = floatBitsToUint(bvh_buf.data[base + 8]);
-        node.prim_type = floatBitsToUint(bvh_buf.data[base + 9]);
-        node.first_prim = floatBitsToUint(bvh_buf.data[base + 10]);
-        node.split_axis = floatBitsToUint(bvh_buf.data[base + 11]);
-
-        // Test ray against node AABB (early out if no intersection or farther than closest hit)
-        if (!intersect_aabb(ray_origin, ray_dir_inv, node.aabb_min, node.aabb_max, closest_t)) {
-            continue;
-        }
-
-        // Check if leaf node (right_child == UINT_MAX indicates leaf)
-        if (node.right_child == UINT_MAX) {
-            // Leaf node - test all primitives in this leaf
-            for (uint i = 0; i < node.prim_count; ++i) {
-                uint prim_idx = prim_indices_buf.indices[node.first_prim + i];
-                uint prim_type = prim_types_buf.types[prim_idx];
-
-                // Skip self-intersection (ray hitting the surface it originated from)
-                if (prim_idx == origin_prim_idx) {
-                    continue;
-                }
-
-                // Perform ray-primitive intersection based on type
-                HitInfo hit;
-                hit.hit = false;
-
-                if (prim_type == 0 || prim_type == 3) { // Patch or Tile
-                    // Get pre-transformed world-space patch vertices from buffer
-                    uint vbase = prim_idx * 12; // 12 floats per patch (4 vec3 vertices)
-                    vec4 v0 = vec4(patch_vertices_buf.vertices[vbase + 0], patch_vertices_buf.vertices[vbase + 1], patch_vertices_buf.vertices[vbase + 2], 1.0);
-                    vec4 v1 = vec4(patch_vertices_buf.vertices[vbase + 3], patch_vertices_buf.vertices[vbase + 4], patch_vertices_buf.vertices[vbase + 5], 1.0);
-                    vec4 v2 = vec4(patch_vertices_buf.vertices[vbase + 6], patch_vertices_buf.vertices[vbase + 7], patch_vertices_buf.vertices[vbase + 8], 1.0);
-                    vec4 v3 = vec4(patch_vertices_buf.vertices[vbase + 9], patch_vertices_buf.vertices[vbase + 10], patch_vertices_buf.vertices[vbase + 11], 1.0);
-
-                    hit = intersect_patch(ray_origin, ray_dir, v0, v1, v2, v3);
-
-                } else if (prim_type == 1) { // Triangle
-                    // Get pre-transformed world-space triangle vertices from buffer
-                    uint vbase = prim_idx * 9; // 9 floats per triangle (3 vec3 vertices)
-                    vec3 v0 = vec3(triangle_vertices_buf.vertices[vbase + 0], triangle_vertices_buf.vertices[vbase + 1], triangle_vertices_buf.vertices[vbase + 2]);
-                    vec3 v1 = vec3(triangle_vertices_buf.vertices[vbase + 3], triangle_vertices_buf.vertices[vbase + 4], triangle_vertices_buf.vertices[vbase + 5]);
-                    vec3 v2 = vec3(triangle_vertices_buf.vertices[vbase + 6], triangle_vertices_buf.vertices[vbase + 7], triangle_vertices_buf.vertices[vbase + 8]);
-
-                    hit = intersect_triangle(ray_origin, ray_dir, v0, v1, v2);
-
-                }
-
-                // Update closest hit if this intersection is nearer AND passes texture mask
-                if (hit.hit && hit.t < closest_t && hit.t > t_min) {
-                    // Check texture mask at hit point (transparent texels = ray passes through)
-                    if (!check_texture_mask(prim_idx, hit.uv, prim_type)) {
-                        continue; // Skip this primitive - ray passes through transparent texel
-                    }
-
-                    closest_t = hit.t;
-                    closest_prim = prim_idx;
-                }
-            }
-        } else {
-            // Internal node - push children onto stack with near-child-first ordering
-            // Use split axis and ray direction to determine which child is nearer
-            if (stack_ptr + 2 <= MAX_STACK_DEPTH) {
-                bool near_is_left = ray_dir_inv[node.split_axis] > 0.0;
-                uint near_child = near_is_left ? node.left_child : node.right_child;
-                uint far_child = near_is_left ? node.right_child : node.left_child;
-                stack[stack_ptr++] = far_child;   // Far child pushed first (processed last)
-                stack[stack_ptr++] = near_child;  // Near child pushed last (processed first)
-            } else {
-                break;
-            }
-        }
-    }
-
-    return closest_prim;
 }
 
 // ========== CWBVH (8-wide BVH with quantized AABBs) Traversal ==========
@@ -200,7 +56,6 @@ const uint MAX_CWBVH_STACK_DEPTH = 80;
 const uint slot_masks[8] = uint[8](0x00u, 0x01u, 0x03u, 0x07u, 0x0Fu, 0x1Fu, 0x3Fu, 0x7Fu);
 
 // CWBVH traversal with 8-wide nodes and quantized AABBs
-// Same signature as traverse_bvh() for drop-in replacement.
 // NOTE: This function expects bvh_buf to contain CWBVH_Node data (128 bytes/node, 32 floats/node)
 //
 // Optimized for low register pressure on Apple M2 GPU (Metal via MoltenVK):
@@ -323,8 +178,8 @@ uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim
                 uint first_prim = floatBitsToUint(bvh_buf.data[base + 20u + child_slot]);
 
                 // Read prim_count from the packed 16-bit-per-child array occupying words 28-31
-                // (CWBVH_Node::child_prim_count). Per-prim type is read via prim_types_buf
-                // below — the node carries no prim_type array.
+                // (CWBVH_Node::child_prim_count). first_prim indexes the leaf intersection records,
+                // which carry each primitive's index, type and flags.
                 uint pc_word = floatBitsToUint(bvh_buf.data[base + 28u + (child_slot >> 1u)]);
                 int bit_off = int((child_slot & 1u) * 16u);
                 uint prim_count = bitfieldExtract(pc_word, bit_off, 16);
@@ -332,39 +187,24 @@ uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim
                 if (prim_count == 0u) continue;
 
                 for (uint pi = 0u; pi < prim_count; ++pi) {
-                    uint prim_idx = prim_indices_buf.indices[first_prim + pi];
-                    uint actual_prim_type = prim_types_buf.types[prim_idx];
+                    uint slot = first_prim + pi;
+                    vec4 anchor_and_index = leaf_records_buf.records[slot * 4u];
+                    uint flags = floatBitsToUint(leaf_records_buf.records[slot * 4u + 1u].w);
+                    uint prim_idx = floatBitsToUint(anchor_and_index.w);
 
-                    if (prim_idx == origin_prim_idx) continue;
+                    if (prim_idx == origin_prim_idx || (flags & LEAF_RECORD_NEVER_HIT) != 0u) continue;
 
-                    HitInfo hit;
-                    hit.hit = false;
+                    float hit_t;
+                    vec2 hit_uv;
+                    if (!intersect_leaf_record(slot, ray_origin, ray_dir, t_min, closest_t, hit_t, hit_uv)) continue;
 
-                    if (actual_prim_type == 0u || actual_prim_type == 3u) { // Patch or Tile
-                        uint vbase = prim_idx * 12u;
-                        vec4 v0 = vec4(patch_vertices_buf.vertices[vbase], patch_vertices_buf.vertices[vbase + 1], patch_vertices_buf.vertices[vbase + 2], 1.0);
-                        vec4 v1 = vec4(patch_vertices_buf.vertices[vbase + 3], patch_vertices_buf.vertices[vbase + 4], patch_vertices_buf.vertices[vbase + 5], 1.0);
-                        vec4 v2 = vec4(patch_vertices_buf.vertices[vbase + 6], patch_vertices_buf.vertices[vbase + 7], patch_vertices_buf.vertices[vbase + 8], 1.0);
-                        vec4 v3 = vec4(patch_vertices_buf.vertices[vbase + 9], patch_vertices_buf.vertices[vbase + 10], patch_vertices_buf.vertices[vbase + 11], 1.0);
-                        hit = intersect_patch(ray_origin, ray_dir, v0, v1, v2, v3);
+                    // Transparent texels let the ray pass through
+                    uint hit_prim_type = ((flags & LEAF_RECORD_TRIANGLE) != 0u) ? 1u : 0u;
+                    if (!check_texture_mask(prim_idx, hit_uv, hit_prim_type)) continue;
 
-                    } else if (actual_prim_type == 1u) { // Triangle
-                        uint vbase = prim_idx * 9u;
-                        vec3 v0 = vec3(triangle_vertices_buf.vertices[vbase], triangle_vertices_buf.vertices[vbase + 1], triangle_vertices_buf.vertices[vbase + 2]);
-                        vec3 v1 = vec3(triangle_vertices_buf.vertices[vbase + 3], triangle_vertices_buf.vertices[vbase + 4], triangle_vertices_buf.vertices[vbase + 5]);
-                        vec3 v2 = vec3(triangle_vertices_buf.vertices[vbase + 6], triangle_vertices_buf.vertices[vbase + 7], triangle_vertices_buf.vertices[vbase + 8]);
-                        hit = intersect_triangle(ray_origin, ray_dir, v0, v1, v2);
-
-                    }
-
-                    if (hit.hit && hit.t < closest_t && hit.t > t_min) {
-                        if (!check_texture_mask(prim_idx, hit.uv, actual_prim_type)) {
-                            continue;
-                        }
-                        closest_t = hit.t;
-                        closest_prim = prim_idx;
-                        closest_uv = hit.uv;
-                    }
+                    closest_t = hit_t;
+                    closest_prim = prim_idx;
+                    closest_uv = hit_uv;
                 }
             }
         }

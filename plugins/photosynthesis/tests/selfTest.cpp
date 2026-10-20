@@ -31,7 +31,7 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Light Response Curve - Farquhar Model") {
     PhotosynthesisModel photomodel(&context_test);
 
     float Qin[9] = {0, 50, 100, 200, 400, 800, 1200, 1500, 2000};
-    std::vector<float> AQ_expected{-2.37932, 8.29752, 12.5566, 16.2075, 16.7448, 16.7448, 16.7448, 16.7448, 16.7448};
+    std::vector<float> AQ_expected{-2.37932, 8.07313, 12.0193, 15.0163, 15.0886, 15.0886, 15.0886, 15.0886, 15.0886};
 
     // Set Farquhar model coefficients
     FarquharModelCoefficients fcoeffs;
@@ -58,7 +58,7 @@ DOCTEST_TEST_CASE("PhotosynthesisModel CO2 Response Curve - Farquhar Model") {
     PhotosynthesisModel photomodel(&context_test);
 
     float CO2[9] = {100, 200, 300, 400, 500, 600, 700, 800, 1000};
-    std::vector<float> ACi_expected{1.72714, 7.32672, 12.4749, 17.199, 21.5281, 25.4923, 28.4271, 29.656, 31.3813};
+    std::vector<float> ACi_expected{1.51715, 6.4951, 11.1566, 15.5105, 19.5683, 23.3432, 26.8412, 28.8512, 30.8383};
 
     FarquharModelCoefficients fcoeffs;
     fcoeffs.setVcmax(78.5f, 65.33f);
@@ -85,7 +85,7 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Temperature Response Curve - Farquhar Mod
     PhotosynthesisModel photomodel(&context_test);
 
     float TL[7] = {270, 280, 290, 300, 310, 320, 330};
-    std::vector<float> AT_expected{3.87863, 8.74928, 14.4075, 17.199, 16.0928, 11.6431, 4.00821};
+    std::vector<float> AT_expected{3.86083, 8.55604, 13.5138, 15.5106, 14.2406, 10.2521, 3.5368};
 
     FarquharModelCoefficients fcoeffs;
     fcoeffs.setVcmax(78.5f, 65.33f);
@@ -155,7 +155,7 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Farquhar default gm = infinity preserves 
         uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
         PhotosynthesisModel photomodel(&context_test);
         float Qin[9] = {0, 50, 100, 200, 400, 800, 1200, 1500, 2000};
-        std::vector<float> AQ_expected{-2.37932f, 8.29752f, 12.5566f, 16.2075f, 16.7448f, 16.7448f, 16.7448f, 16.7448f, 16.7448f};
+        std::vector<float> AQ_expected{-2.37932f, 8.07313f, 12.0193f, 15.0163f, 15.0886f, 15.0886f, 15.0886f, 15.0886f, 15.0886f};
         FarquharModelCoefficients fcoeffs = make_coeffs();
         photomodel.setModelCoefficients(fcoeffs);
         for (int i = 0; i < 9; i++) {
@@ -171,7 +171,7 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Farquhar default gm = infinity preserves 
         uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
         PhotosynthesisModel photomodel(&context_test);
         float CO2[9] = {100, 200, 300, 400, 500, 600, 700, 800, 1000};
-        std::vector<float> ACi_expected{1.72714f, 7.32672f, 12.4749f, 17.199f, 21.5281f, 25.4923f, 28.4271f, 29.656f, 31.3813f};
+        std::vector<float> ACi_expected{1.51715f, 6.4951f, 11.1566f, 15.5105f, 19.5683f, 23.3432f, 26.8412f, 28.8512f, 30.8383f};
         FarquharModelCoefficients fcoeffs = make_coeffs();
         photomodel.setModelCoefficients(fcoeffs);
         context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 2000.0f);
@@ -188,7 +188,7 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Farquhar default gm = infinity preserves 
         uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
         PhotosynthesisModel photomodel(&context_test);
         float TL[7] = {270, 280, 290, 300, 310, 320, 330};
-        std::vector<float> AT_expected{3.87863f, 8.74928f, 14.4075f, 17.199f, 16.0928f, 11.6431f, 4.00821f};
+        std::vector<float> AT_expected{3.86083f, 8.55604f, 13.5138f, 15.5106f, 14.2406f, 10.2521f, 3.5368f};
         FarquharModelCoefficients fcoeffs = make_coeffs();
         photomodel.setModelCoefficients(fcoeffs);
         context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 2000.0f);
@@ -261,7 +261,7 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Farquhar gm finite regression") {
     // Regression anchors: values produced by the current quadratic implementation.
     // A is strictly less than the legacy (infinite-gm) value at each point — mesophyll
     // diffusion limitation reduces net assimilation as expected.
-    float A_expected[6] = {1.43302f, 5.90503f, 14.192f, 21.6148f, 27.8598f, 30.2768f};
+    float A_expected[6] = {1.29262f, 5.3503f, 12.9751f, 19.9381f, 26.2401f, 29.5821f};
     for (int i = 0; i < 6; ++i) {
         context_test.setPrimitiveData(UUID, "air_CO2", CO2_sweep[i]);
         photomodel.run();
@@ -1974,9 +1974,10 @@ DOCTEST_TEST_CASE("PhotosynthesisModel C4 Library - Temperature discrimination")
     DOCTEST_CHECK(maize_25 > 0.f);
     DOCTEST_CHECK(maize_35 > 0.f);
 
-    // The two species must differ at both temperatures (otherwise the library didn't switch)
+    // The two species must differ (otherwise the library didn't switch), both in A at 25 °C and in the response of A to
+    // temperature. A at 35 °C alone does not discriminate: the two temperature responses happen to cross near there.
     DOCTEST_CHECK(std::abs(setaria_25 - maize_25) > 0.5f);
-    DOCTEST_CHECK(std::abs(setaria_35 - maize_35) > 0.5f);
+    DOCTEST_CHECK(std::abs((setaria_35 - setaria_25) - (maize_35 - maize_25)) > 0.5f);
 
     // Setaria: monotonic Arrhenius Vcmax → A should rise meaningfully from 25→35 °C
     DOCTEST_CHECK(setaria_35 > setaria_25);
@@ -2315,4 +2316,96 @@ DOCTEST_TEST_CASE("PhotosynthesisModel zero boundary-layer conductance with open
     DOCTEST_CHECK(std::isfinite(A_no_boundarylayer));
     DOCTEST_CHECK(std::isfinite(A_no_conductance));
     DOCTEST_CHECK(A_no_boundarylayer == doctest::Approx(A_no_conductance));
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel CO2 supply conductance uses the per-face boundary-layer conductance") {
+    // Regression test: "boundarylayer_conductance" (gH) of a two-sided primitive is summed over both faces, but CO2
+    // entering one face only crosses that face's boundary layer. The buggy expression put the full both-face conductance in
+    // series with each face's share of the stomatal conductance, and converted the combined water vapor conductance to CO2
+    // with a single factor of 0.75.
+    //
+    // The total CO2 conductance is recovered from the supply equation A = gC*(Ca - Ci) and compared with the series
+    // combination, on each face, of the boundary-layer conductance to CO2 (1.08*gH/n_s/1.37) and that face's share of the
+    // stomatal conductance to CO2 (gS/1.6).
+    const float gH = 1.2f;
+    const float gS = 0.3f;
+    const float Ca = 400.f;
+
+    auto totalCO2Conductance = [&](uint twosided_flag, float boundarylayer_conductance, float stomatal_sidedness) {
+        Context context_test;
+        uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context_test.setPrimitiveData(UUID, "twosided_flag", twosided_flag);
+        context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 300.f);
+        context_test.setPrimitiveData(UUID, "temperature", 298.f);
+        context_test.setPrimitiveData(UUID, "air_CO2", Ca);
+        context_test.setPrimitiveData(UUID, "moisture_conductance", gS);
+        context_test.setPrimitiveData(UUID, "boundarylayer_conductance", boundarylayer_conductance);
+        context_test.setPrimitiveData(UUID, "stomatal_sidedness", stomatal_sidedness);
+
+        PhotosynthesisModel photomodel(&context_test);
+        photomodel.disableMessages();
+        photomodel.setModelType_Farquhar();
+        photomodel.optionalOutputPrimitiveData("Ci");
+        photomodel.run();
+
+        float A, Ci;
+        context_test.getPrimitiveData(UUID, "net_photosynthesis", A);
+        context_test.getPrimitiveData(UUID, "Ci", Ci);
+        return A / (Ca - Ci);
+    };
+
+    // Series combination of two conductances.
+    auto series = [](float g1, float g2) { return g1 * g2 / (g1 + g2); };
+
+    const float gbc_face = 1.08f * gH / 2.f / 1.37f;
+    const float gsc = gS / 1.6f;
+
+    // Hypostomatous two-sided leaf: all CO2 enters through one face.
+    const float gC_hypo = totalCO2Conductance(1, gH, 0.f);
+    DOCTEST_CHECK(std::fabs(gC_hypo - series(gbc_face, gsc)) < 0.02f * series(gbc_face, gsc));
+
+    // Amphistomatous two-sided leaf: half the stomatal conductance on each face.
+    const float gC_amphi = totalCO2Conductance(1, gH, 0.5f);
+    DOCTEST_CHECK(std::fabs(gC_amphi - 2.f * series(gbc_face, 0.5f * gsc)) < 0.02f * 2.f * series(gbc_face, 0.5f * gsc));
+
+    // A one-sided primitive's conductance is that of its single face.
+    const float gC_onesided = totalCO2Conductance(0, gH / 2.f, 0.f);
+    DOCTEST_CHECK(std::fabs(gC_onesided - series(gbc_face, gsc)) < 0.02f * series(gbc_face, gsc));
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel evaporating_faces sets the stomatal sidedness when stomatal_sidedness is not set") {
+    // The energy balance and stomatal conductance models take "evaporating_faces" = 2 to mean stomata split equally between
+    // both faces (stomatal sidedness 0.5) when "stomatal_sidedness" is not set. The photosynthesis model must use the same
+    // CO2 pathway for the same leaf.
+    auto netPhotosynthesis = [](const char *label, bool use_uint, float value) {
+        Context context_test;
+        uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 300.f);
+        context_test.setPrimitiveData(UUID, "temperature", 298.f);
+        context_test.setPrimitiveData(UUID, "air_CO2", 400.f);
+        context_test.setPrimitiveData(UUID, "moisture_conductance", 0.3f);
+        context_test.setPrimitiveData(UUID, "boundarylayer_conductance", 0.5f);
+        if (use_uint) {
+            context_test.setPrimitiveData(UUID, label, uint(value));
+        } else {
+            context_test.setPrimitiveData(UUID, label, value);
+        }
+
+        PhotosynthesisModel photomodel(&context_test);
+        photomodel.disableMessages();
+        photomodel.setModelType_Farquhar();
+        photomodel.run();
+
+        float A;
+        context_test.getPrimitiveData(UUID, "net_photosynthesis", A);
+        return A;
+    };
+
+    const float A_evaporating_faces = netPhotosynthesis("evaporating_faces", true, 2.f);
+    const float A_amphistomatous = netPhotosynthesis("stomatal_sidedness", false, 0.5f);
+    const float A_hypostomatous = netPhotosynthesis("stomatal_sidedness", false, 0.f);
+
+    DOCTEST_CHECK(A_evaporating_faces == doctest::Approx(A_amphistomatous).epsilon(1e-5));
+    // Guard that the sidedness matters at these conditions, so the check above can discriminate.
+    DOCTEST_CHECK(std::fabs(A_amphistomatous - A_hypostomatous) > 0.02f * A_hypostomatous);
 }

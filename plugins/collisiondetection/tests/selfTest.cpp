@@ -25,6 +25,9 @@
 #include <type_traits>
 #include "doctest_utils.h"
 #include "global.h"
+#ifdef HELIOS_CUDA_AVAILABLE
+#include "test_device_memory.h"
+#endif
 
 using namespace helios;
 
@@ -149,7 +152,129 @@ namespace CollisionTests {
         return uuids;
     }
 
+    /**
+     * \brief Check that a test's GPU path is active, recording a skip otherwise
+     * \param collision Collision detection instance whose GPU state is checked
+     * \param test_description Short description of what the skipped test exercises
+     * \return True if GPU acceleration is enabled; false if the test should skip its GPU assertions
+     * \note On a CUDA build with HELIOS_REQUIRE_GPU set, a missing GPU fails the test instead of skipping it.
+     */
+    bool gpuPathActive(const CollisionDetection &collision, const std::string &test_description) {
+        if (collision.isGPUAccelerationEnabled()) {
+            return true;
+        }
+#ifdef HELIOS_CUDA_AVAILABLE
+        helios::requireGPUOrFail(test_description + " needs a usable CUDA device, but GPU acceleration is not enabled.");
+#endif
+        DOCTEST_MESSAGE("SKIPPED (no usable CUDA device): " << test_description);
+        return false;
+    }
+
+#ifdef HELIOS_CUDA_AVAILABLE
+    //! Add \p count unit patches in a row along x, so that every patch bounding box is distinct
+    std::vector<uint> addPatchRow(Context &context, int count) {
+        std::vector<uint> UUIDs;
+        for (int i = 0; i < count; i++) {
+            UUIDs.push_back(context.addPatch(make_vec3(2.f * float(i), 0, 0), make_vec2(1, 1)));
+        }
+        return UUIDs;
+    }
+
+    //! Run a callable that is expected to throw, and return the exception message (empty if it did not throw)
+    template<typename Callable>
+    std::string thrownMessage(Callable &&callable) {
+        try {
+            callable();
+        } catch (const std::exception &error) {
+            return error.what();
+        }
+        return "";
+    }
+#endif
+
 } // namespace CollisionTests
+
+#ifdef HELIOS_CUDA_AVAILABLE
+//! Test-only access to the private GPU state of CollisionDetection (declared a friend in CollisionDetection.h)
+class CollisionDetectionTestHelper {
+public:
+    /**
+     * \brief Replace the BVH with a chain that is one level deeper per primitive, and upload it to the GPU
+     *
+     * Every node box encloses the whole scene. Each internal node has one leaf child and one internal child, and holds
+     * one primitive per leaf. The GPU traversal kernels push both children and pop one of them first; when that is the
+     * internal child, the leaf child stays on the stack, so the stack grows by one entry per level. The ray kernel pops the
+     * left child first and the box-query kernel the right child first.
+     * \param[in] collision Collision detection instance with GPU acceleration enabled and a BVH already built (so the
+     * bounding-box cache holds every UUID)
+     * \param[in] UUIDs Primitives to place one per leaf, top to bottom
+     * \param[in] internal_child_on_left True to grow the ray kernel's stack, false to grow the box-query kernel's stack
+     */
+    static void installChainBVH(CollisionDetection &collision, const std::vector<uint> &UUIDs, bool internal_child_on_left) {
+        vec3 scene_min = make_vec3(1e30f, 1e30f, 1e30f);
+        vec3 scene_max = make_vec3(-1e30f, -1e30f, -1e30f);
+        for (uint UUID: UUIDs) {
+            const auto &aabb = collision.primitive_aabbs_cache.at(UUID);
+            scene_min = make_vec3(std::min(scene_min.x, aabb.first.x), std::min(scene_min.y, aabb.first.y), std::min(scene_min.z, aabb.first.z));
+            scene_max = make_vec3(std::max(scene_max.x, aabb.second.x), std::max(scene_max.y, aabb.second.y), std::max(scene_max.z, aabb.second.z));
+        }
+
+        // Internal node k sits at index 2k with its leaf at 2k+1; the last leaf, at the bottom of the chain, is at 2(n-1).
+        const uint primitive_count = static_cast<uint>(UUIDs.size());
+        std::vector<CollisionDetection::BVHNode> nodes(2 * primitive_count - 1);
+        for (auto &node: nodes) {
+            node.aabb_min = scene_min - make_vec3(0.1f, 0.1f, 0.1f);
+            node.aabb_max = scene_max + make_vec3(0.1f, 0.1f, 0.1f);
+        }
+        for (uint k = 0; k < primitive_count; k++) {
+            const uint leaf_index = (k + 1 < primitive_count) ? 2 * k + 1 : 2 * k;
+            nodes[leaf_index].is_leaf = true;
+            nodes[leaf_index].primitive_start = k;
+            nodes[leaf_index].primitive_count = 1;
+            if (k + 1 < primitive_count) {
+                const uint internal_child = 2 * (k + 1);
+                nodes[2 * k].left_child = internal_child_on_left ? internal_child : leaf_index;
+                nodes[2 * k].right_child = internal_child_on_left ? leaf_index : internal_child;
+            }
+        }
+
+        collision.bvh_nodes = nodes;
+        collision.primitive_indices = UUIDs;
+        collision.bvh_generation++;
+        collision.transferBVHToGPU();
+    }
+
+    //! Upload the current BVH and scene geometry to the GPU
+    static void uploadBVH(CollisionDetection &collision) {
+        collision.transferBVHToGPU();
+    }
+
+    //! Free all device memory held for the scene
+    static void releaseDeviceMemory(CollisionDetection &collision) {
+        collision.freeGPUMemory();
+    }
+
+    //! True if the instance holds any device memory for its scene
+    static bool holdsDeviceMemory(const CollisionDetection &collision) {
+        return collision.gpu_memory_allocated || collision.d_bvh_nodes != nullptr || collision.d_primitive_indices != nullptr || collision.d_primitive_aabb_min != nullptr || collision.d_primitive_vertices != nullptr;
+    }
+
+    //! Remove one primitive from the bounding-box cache, as if the cache had missed it
+    static void eraseCachedBoundingBox(CollisionDetection &collision, uint UUID) {
+        collision.primitive_aabbs_cache.erase(UUID);
+    }
+
+    //! Run the GPU box query of findCollisions() directly against the resident BVH
+    static std::vector<uint> queryBoxGPU(CollisionDetection &collision, const vec3 &query_min, const vec3 &query_max) {
+        const std::vector<float> query_aabb_min = {query_min.x, query_min.y, query_min.z};
+        const std::vector<float> query_aabb_max = {query_max.x, query_max.y, query_max.z};
+        std::vector<size_t> hit_offsets;
+        std::vector<uint> hits;
+        collision.traverseBVH_GPU(query_aabb_min, query_aabb_max, hit_offsets, hits);
+        return hits;
+    }
+};
+#endif
 
 DOCTEST_TEST_CASE("CollisionDetection Plugin Initialization") {
     Context context;
@@ -547,6 +672,208 @@ DOCTEST_TEST_CASE("CollisionDetection Restricted BVH Survives Automatic Rebuild"
 
     // The excluded primitive must never be reported.
     DOCTEST_CHECK(result.primitive_UUID != near_UUID);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection Restricted BVH Is Not Rebuilt By Every Query") {
+    // The primitives a buildBVH(subset) call leaves out stay flagged dirty in the Context until the user clears them.
+    // They are not new geometry, so they must not trigger an automatic rebuild on every ray cast.
+    Context context;
+    uint excluded_UUID = context.addPatch(make_vec3(0, 0, 2), make_vec2(10, 10));
+    uint kept_UUID = context.addPatch(make_vec3(0, 0, 8), make_vec2(10, 10));
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.buildBVH({kept_UUID});
+    collision.enableMessages();
+
+    std::string output;
+    std::vector<CollisionDetection::HitResult> results;
+    {
+        capture_cout capture;
+        for (int i = 0; i < 3; i++) {
+            results.push_back(collision.castRay(make_vec3(0, 0, 0), make_vec3(0, 0, 1), -1.0f));
+        }
+        output = capture.get_captured_output();
+    }
+
+    DOCTEST_CHECK(output.find("rebuilding") == std::string::npos);
+    for (const auto &result: results) {
+        DOCTEST_CHECK(result.hit);
+        DOCTEST_CHECK(result.primitive_UUID == kept_UUID);
+        DOCTEST_CHECK(result.primitive_UUID != excluded_UUID);
+    }
+}
+
+DOCTEST_TEST_CASE("CollisionDetection castRay And castRays Agree") {
+    // castRay() and castRays() must give the same answer for the same ray: same hit/miss decision at triangle edges and
+    // near the ray origin, and the same normal orientation (facing the ray origin).
+    Context context;
+    uint triangle_UUID = context.addTriangle(make_vec3(0, 0, 2), make_vec3(1, 0, 2), make_vec3(0, 1, 2));
+    uint patch_UUID = context.addPatch(make_vec3(5, 0, 2), make_vec2(1, 1));
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    std::vector<CollisionDetection::RayQuery> queries;
+    queries.emplace_back(make_vec3(0.25f, 0.25f, 0), make_vec3(0, 0, 1), -1.0f, std::vector<uint>{}); // triangle interior, from below
+    queries.emplace_back(make_vec3(0.25f, 0.25f, 4), make_vec3(0, 0, -1), -1.0f, std::vector<uint>{}); // triangle interior, from above
+    queries.emplace_back(make_vec3(-1e-6f, 0.5f, 0), make_vec3(0, 0, 1), -1.0f, std::vector<uint>{}); // 1e-6 outside the triangle edge x = 0
+    queries.emplace_back(make_vec3(0.25f, 0.25f, 2.f - 5e-6f), make_vec3(0, 0, 1), -1.0f, std::vector<uint>{}); // 5 micrometres below the triangle
+    queries.emplace_back(make_vec3(5, 0, 0), make_vec3(0, 0, 1), -1.0f, std::vector<uint>{}); // patch, from below
+
+    std::vector<CollisionDetection::HitResult> batch = collision.castRays(queries);
+    for (size_t i = 0; i < queries.size(); i++) {
+        CollisionDetection::HitResult single = collision.castRay(queries[i]);
+        DOCTEST_INFO("query " << i);
+        DOCTEST_CHECK(single.hit == batch[i].hit);
+        if (single.hit && batch[i].hit) {
+            DOCTEST_CHECK(single.primitive_UUID == batch[i].primitive_UUID);
+            DOCTEST_CHECK(std::abs(single.distance - batch[i].distance) < 1e-5f);
+            DOCTEST_CHECK((single.normal - batch[i].normal).magnitude() < 1e-5f);
+            DOCTEST_CHECK(single.normal * queries[i].direction < 0.f); // faces the ray origin
+        }
+    }
+    DOCTEST_CHECK(batch[0].primitive_UUID == triangle_UUID);
+    DOCTEST_CHECK(batch[4].primitive_UUID == patch_UUID);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection Hierarchical BVH Searches Static And Dynamic Geometry") {
+    // With hierarchical mode on, geometry passed to setStaticGeometry() is kept in a separately cached part of the BVH.
+    // Every query must still see it, alongside the dynamic geometry. Automatic rebuilds are off, as in PlantArchitecture,
+    // so a full rebuild cannot paper over a BVH that is missing the static part.
+    Context context;
+    uint ground_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(10, 10));
+    std::vector<uint> plant_UUIDs;
+    for (int i = 0; i < 20; i++) {
+        plant_UUIDs.push_back(context.addTriangle(make_vec3(20 + i, 0, 1), make_vec3(20.5f + i, 0, 1), make_vec3(20 + i, 0.5f, 1)));
+    }
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.disableAutomaticBVHRebuilds();
+    collision.enableHierarchicalBVH();
+    collision.setStaticGeometry({ground_UUID});
+    collision.updateBVH(context.getAllUUIDs(), true);
+
+    DOCTEST_CHECK(collision.getPrimitiveCount() == 21);
+
+    // Static geometry, found by single and batch ray casts and by findCollisions()
+    CollisionDetection::HitResult ground_hit = collision.castRay(make_vec3(1, 1, 5), make_vec3(0, 0, -1));
+    DOCTEST_CHECK(ground_hit.hit);
+    DOCTEST_CHECK(ground_hit.primitive_UUID == ground_UUID);
+    std::vector<CollisionDetection::HitResult> batch = collision.castRays({CollisionDetection::RayQuery(make_vec3(1, 1, 5), make_vec3(0, 0, -1)), CollisionDetection::RayQuery(make_vec3(20.1f, 0.1f, 5), make_vec3(0, 0, -1))});
+    DOCTEST_CHECK(batch.at(0).primitive_UUID == ground_UUID);
+    DOCTEST_CHECK(batch.at(1).primitive_UUID == plant_UUIDs.front());
+
+    uint probe_UUID = context.addPatch(make_vec3(1, 1, 0), make_vec2(0.5, 0.5));
+    std::vector<uint> collisions = collision.findCollisions(probe_UUID);
+    DOCTEST_CHECK(std::find(collisions.begin(), collisions.end(), ground_UUID) != collisions.end());
+    context.deletePrimitive(probe_UUID);
+
+    // Dynamic geometry added later, and static geometry moved, are both picked up by the next update
+    uint new_leaf_UUID = context.addTriangle(make_vec3(40, 0, 1), make_vec3(40.5f, 0, 1), make_vec3(40, 0.5f, 1));
+    context.translatePrimitive(ground_UUID, make_vec3(0, 0, 2));
+    collision.updateBVH(context.getAllUUIDs(), true);
+
+    CollisionDetection::HitResult moved_ground_hit = collision.castRay(make_vec3(1, 1, 5), make_vec3(0, 0, -1));
+    DOCTEST_CHECK(moved_ground_hit.primitive_UUID == ground_UUID);
+    DOCTEST_CHECK(moved_ground_hit.distance == doctest::Approx(3.0f).epsilon(1e-4));
+    CollisionDetection::HitResult new_leaf_hit = collision.castRay(make_vec3(40.1f, 0.1f, 5), make_vec3(0, 0, -1));
+    DOCTEST_CHECK(new_leaf_hit.primitive_UUID == new_leaf_UUID);
+    DOCTEST_CHECK(collision.getPrimitiveCount() == 22);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection castRays Skips Deleted Primitives With Automatic Rebuilds Disabled") {
+    // With automatic rebuilds disabled the BVH can hold primitives deleted since it was built. A batch ray cast must pass
+    // through them, as castRay() does, rather than report a UUID that no longer exists.
+    Context context;
+    uint near_UUID = context.addPatch(make_vec3(0, 0, 2), make_vec2(10, 10));
+    uint far_UUID = context.addPatch(make_vec3(0, 0, 8), make_vec2(10, 10));
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.buildBVH();
+    collision.disableAutomaticBVHRebuilds();
+
+    std::vector<CollisionDetection::RayQuery> queries;
+    queries.emplace_back(make_vec3(0, 0, 0), make_vec3(0, 0, 1), -1.0f, std::vector<uint>{});
+    std::vector<CollisionDetection::HitResult> warm_up = collision.castRays(queries); // builds the primitive caches
+
+    context.deletePrimitive(near_UUID);
+
+    std::vector<CollisionDetection::HitResult> results = collision.castRays(queries);
+    DOCTEST_CHECK(warm_up.at(0).primitive_UUID == near_UUID);
+    DOCTEST_CHECK(results.at(0).hit);
+    DOCTEST_CHECK(results.at(0).primitive_UUID == far_UUID);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection BVH Sees Deletion Hidden By markGeometryClean") {
+    // Context::markGeometryClean() empties the dirty and deleted lists the automatic rebuild relies on. A primitive
+    // deleted before that call must not be reported (the traversal also skips primitives that no longer exist).
+    Context context;
+    uint near_UUID = context.addPatch(make_vec3(0, 0, 2), make_vec2(10, 10));
+    uint far_UUID = context.addPatch(make_vec3(0, 0, 8), make_vec2(10, 10));
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.buildBVH();
+
+    context.deletePrimitive(near_UUID);
+    context.markGeometryClean();
+
+    CollisionDetection::HitResult result = collision.castRay(make_vec3(0, 0, 0), make_vec3(0, 0, 1), -1.0f);
+    DOCTEST_CHECK(result.hit);
+    DOCTEST_CHECK(result.primitive_UUID == far_UUID);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection BVH Sees Addition Hidden By markGeometryClean") {
+    Context context;
+    uint far_UUID = context.addPatch(make_vec3(0, 0, 8), make_vec2(10, 10));
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.buildBVH();
+
+    uint near_UUID = context.addPatch(make_vec3(0, 0, 2), make_vec2(10, 10));
+    context.markGeometryClean();
+
+    CollisionDetection::HitResult result = collision.castRay(make_vec3(0, 0, 0), make_vec3(0, 0, 1), -1.0f);
+    DOCTEST_CHECK(result.hit);
+    DOCTEST_CHECK(result.primitive_UUID == near_UUID);
+    DOCTEST_CHECK(result.primitive_UUID != far_UUID);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection BVH Is Emptied When All Its Geometry Is Deleted") {
+    Context context;
+    uint UUID = context.addPatch(make_vec3(0, 0, 2), make_vec2(10, 10));
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.buildBVH();
+
+    context.deletePrimitive(UUID);
+
+    CollisionDetection::HitResult result = collision.castRay(make_vec3(0, 0, 0), make_vec3(0, 0, 1), -1.0f);
+    DOCTEST_CHECK_FALSE(result.hit);
+    DOCTEST_CHECK(collision.getPrimitiveCount() == 0);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection Restricted BVH Is Emptied When All Its Geometry Is Deleted") {
+    Context context;
+    uint excluded_UUID = context.addPatch(make_vec3(0, 0, 2), make_vec2(10, 10));
+    uint kept_UUID = context.addPatch(make_vec3(0, 0, 8), make_vec2(10, 10));
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.buildBVH({kept_UUID});
+
+    context.deletePrimitive(kept_UUID);
+
+    // The only remaining primitive was deliberately excluded, so nothing can be hit
+    CollisionDetection::HitResult result = collision.castRay(make_vec3(0, 0, 0), make_vec3(0, 0, 1), -1.0f);
+    DOCTEST_CHECK_FALSE(result.hit);
+    DOCTEST_CHECK(collision.getPrimitiveCount() == 0);
+    DOCTEST_CHECK(context.doesPrimitiveExist(excluded_UUID));
 }
 
 
@@ -1090,6 +1417,154 @@ DOCTEST_TEST_CASE("CollisionDetection Soft/Hard Detection Integration - Differen
     DOCTEST_CHECK(collision.getPrimitiveCount() == all_geometry.size());
 }
 
+DOCTEST_TEST_CASE("CollisionDetection Cone Queries Reject Invalid Parameters") {
+    // Invalid parameters are errors, not "no obstacle found": the caller's configuration is wrong and must be told so.
+    // They are rejected even when no candidate is nearby.
+    Context context;
+    uint far_UUID = context.addPatch(make_vec3(100, 0, 0), make_vec2(1, 1));
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    const vec3 apex = make_vec3(0, 0, 0);
+    const vec3 axis = make_vec3(0, 0, 1);
+    float distance;
+    vec3 direction;
+
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.findNearestSolidObstacleInCone(apex, axis, 0.f, 1.f, {far_UUID}, distance, direction)));
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.findNearestSolidObstacleInCone(apex, axis, 2.f, 1.f, {far_UUID}, distance, direction)));
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.findNearestSolidObstacleInCone(apex, axis, 0.3f, 0.f, {far_UUID}, distance, direction)));
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.findNearestSolidObstacleInCone(apex, axis, 0.3f, 1.f, {far_UUID}, distance, direction, 0)));
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.findNearestSolidObstacleInCone(apex, make_vec3(0, 0, 0), 0.3f, 1.f, {far_UUID}, distance, direction)));
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.findNearestSolidObstacleInCone(apex, axis, 0.f, 1.f, {far_UUID}, {}, distance, direction)));
+
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.findOptimalConePath(apex, axis, 0.f, 1.f, 16)));
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.findOptimalConePath(apex, axis, 4.f, 1.f, 16)));
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.findOptimalConePath(apex, axis, 0.3f, -1.f, 16)));
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.findOptimalConePath(apex, axis, 0.3f, 1.f, 0)));
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.findOptimalConePath(apex, make_vec3(0, 0, 0), 0.3f, 1.f, 16)));
+    DOCTEST_CHECK_NOTHROW(static_cast<void>(collision.findOptimalConePath(apex, axis, 0.3f, 0.f, 16))); // height 0 means unlimited
+
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.findNearestPrimitiveDistance(apex, make_vec3(0, 0, 0), {far_UUID}, distance, direction)));
+}
+
+DOCTEST_TEST_CASE("CollisionDetection findNearestPrimitiveDistance Accepts Unnormalized Direction") {
+    // A direction of length 2 describes the same direction as its unit vector; it used to be refused with "no surface found"
+    Context context;
+    uint wall_UUID = context.addPatch(make_vec3(0, 0, 3), make_vec2(4, 4));
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    float unit_distance = -1, scaled_distance = -1;
+    vec3 unit_direction, scaled_direction;
+    bool unit_found = collision.findNearestPrimitiveDistance(make_vec3(0, 0, 0), make_vec3(0, 0, 1), {wall_UUID}, unit_distance, unit_direction);
+    bool scaled_found = collision.findNearestPrimitiveDistance(make_vec3(0, 0, 0), make_vec3(0, 0, 2), {wall_UUID}, scaled_distance, scaled_direction);
+
+    DOCTEST_CHECK(unit_found);
+    DOCTEST_CHECK(scaled_found);
+    DOCTEST_CHECK(scaled_distance == doctest::Approx(unit_distance));
+}
+
+DOCTEST_TEST_CASE("CollisionDetection performGridRayIntersection Cell Assignment At The Grid Boundary") {
+    // Grid spans z in [-1, 1] with two cells. A hit 0.5 below the grid is outside it (int() truncation used to put it in
+    // cell 0); a hit exactly on the top face belongs to the top cell, as one on the bottom face belongs to the bottom cell.
+    Context context;
+    context.addPatch(make_vec3(0, 0, -1.5f), make_vec2(0.5, 0.5));
+    context.addPatch(make_vec3(3, 0, 1.f), make_vec2(0.5, 0.5));
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    std::vector<CollisionDetection::RayQuery> rays;
+    rays.emplace_back(make_vec3(0, 0, -5), make_vec3(0, 0, 1)); // hits the patch below the grid
+    rays.emplace_back(make_vec3(3, 0, -5), make_vec3(0, 0, 1)); // hits the patch on the top face
+    auto grid_results = collision.performGridRayIntersection(make_vec3(1.5f, 0, 0), make_vec3(6, 2, 2), make_int3(1, 1, 2), rays);
+
+    DOCTEST_CHECK(grid_results.at(0).at(0).at(0).empty());
+    DOCTEST_CHECK(grid_results.at(0).at(0).at(1).size() == 1);
+
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.performGridRayIntersection(make_vec3(0, 0, 0), make_vec3(2, 2, 2), make_int3(0, 1, 1), rays)));
+}
+
+DOCTEST_TEST_CASE("CollisionDetection findCollisionsWithinDistance") {
+    // A pair is reported when the bounding boxes overlap and the centroids are within max_distance
+    Context context;
+    uint query_a = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    uint query_b = context.addPatch(make_vec3(10, 0, 0), make_vec2(1, 1));
+    uint near_target = context.addPatch(make_vec3(0.3f, 0, 0), make_vec2(1, 1), make_SphericalCoord(0.5f * M_PI, 0)); // overlaps a, centroids 0.3 apart
+    uint far_large_target = context.addPatch(make_vec3(4.4f, 0, 0), make_vec2(10, 1)); // overlaps a, centroids 4.4 apart
+    uint target_near_b = context.addPatch(make_vec3(10, 0.2f, 0), make_vec2(1, 1)); // overlaps b, centroids 0.2 apart
+    uint isolated_target = context.addPatch(make_vec3(0, 20, 0), make_vec2(1, 1)); // overlaps nothing
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    std::vector<std::pair<uint, uint>> pairs = collision.findCollisionsWithinDistance({query_a, query_b}, {near_target, far_large_target, target_near_b, isolated_target}, 1.0f);
+    std::vector<std::pair<uint, uint>> expected = {{query_a, near_target}, {query_b, target_near_b}};
+    DOCTEST_CHECK(pairs == expected);
+
+    // With a larger threshold the large target (x from -0.6 to 9.4, so it overlaps a but not b) counts too
+    std::vector<std::pair<uint, uint>> wide_pairs = collision.findCollisionsWithinDistance({query_a, query_b}, {near_target, far_large_target, target_near_b, isolated_target}, 6.0f);
+    std::vector<std::pair<uint, uint>> wide_expected = {{query_a, near_target}, {query_a, far_large_target}, {query_b, target_near_b}};
+    DOCTEST_CHECK(wide_pairs == wide_expected);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection Tree-Based Culling Keeps Large Obstacles Whose Centre Is Far Away") {
+    // A 100 m ground patch lies 1 m below the cone apex, but its centre is 40 m away. Spatial culling must judge
+    // proximity by the obstacle's extent, not its centre, or the shoot is told there is nothing in its way.
+    Context context;
+    uint ground_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(100, 100));
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.enableTreeBasedBVH(2.0f);
+    collision.setStaticObstacles({ground_UUID});
+    collision.buildBVH();
+
+    float distance = -1;
+    vec3 obstacle_direction;
+    bool hit = collision.findNearestSolidObstacleInCone(make_vec3(40, 0, 1), make_vec3(0, 0, -1), 0.35f, 2.0f, {ground_UUID}, distance, obstacle_direction);
+
+    DOCTEST_CHECK(hit);
+    DOCTEST_CHECK(distance > 0.99f);
+    DOCTEST_CHECK(distance < 1.07f); // the slant distance to the plane for a ray at the 0.35 rad cone edge
+}
+
+DOCTEST_TEST_CASE("CollisionDetection Tree-Based Culling Does Not Drop findCollisions Targets") {
+    // Spatial culling is an optimization: with it allowed, findCollisions() must report the same collisions as
+    // without it. The target here is a primitive of another plant, which is neither a static obstacle nor registered.
+    Context context;
+    uint query_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    uint target_UUID = context.addPatch(make_vec3(0.2f, 0, 0), make_vec2(1, 1), make_SphericalCoord(0.5f * M_PI, 0));
+    uint far_UUID = context.addPatch(make_vec3(20, 0, 0), make_vec2(1, 1));
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.enableTreeBasedBVH(2.0f);
+    collision.setStaticObstacles({far_UUID});
+
+    std::vector<uint> culled = collision.findCollisions({query_UUID}, {}, {target_UUID, far_UUID}, {}, true);
+    std::vector<uint> unculled = collision.findCollisions({query_UUID}, {}, {target_UUID, far_UUID}, {}, false);
+
+    DOCTEST_CHECK(unculled == std::vector<uint>{target_UUID});
+    DOCTEST_CHECK(culled == unculled);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection filterGeometryByDistance Sees Moved Geometry") {
+    Context context;
+    uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    std::vector<uint> before = collision.filterGeometryByDistance(make_vec3(0, 0, 0), 1.0f, {UUID});
+    context.translatePrimitive(UUID, make_vec3(10, 0, 0));
+    std::vector<uint> after_near_origin = collision.filterGeometryByDistance(make_vec3(0, 0, 0), 1.0f, {UUID});
+    std::vector<uint> after_near_new_position = collision.filterGeometryByDistance(make_vec3(10, 0, 0), 1.0f, {UUID});
+
+    DOCTEST_CHECK(before == std::vector<uint>{UUID});
+    DOCTEST_CHECK(after_near_origin.empty());
+    DOCTEST_CHECK(after_near_new_position == std::vector<uint>{UUID});
+}
+
 
 DOCTEST_TEST_CASE("CollisionDetection Cone Sampling Is Deterministic") {
     // findNearestSolidObstacleInCone() spreads sample directions across the cone and reports the nearest hit
@@ -1559,18 +2034,11 @@ DOCTEST_TEST_CASE("CollisionDetection findOptimalConePath Edge Cases") {
     vec3 apex = make_vec3(0, 0, 0);
     vec3 central_axis = make_vec3(0, 0, 1);
 
-    // Test 1: Invalid parameters
-    {
-        // Zero samples
-        CollisionDetection::OptimalPathResult result = collision.findOptimalConePath(apex, central_axis, M_PI / 4.0f, 0.0f, 0);
-        DOCTEST_CHECK(result.direction * central_axis > 0.9f); // Should default to central axis
-    }
+    // Test 1: Invalid parameters are errors (zero samples)
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.findOptimalConePath(apex, central_axis, M_PI / 4.0f, 0.0f, 0)));
 
-    // Test 2: Zero half-angle
-    {
-        CollisionDetection::OptimalPathResult result = collision.findOptimalConePath(apex, central_axis, 0.0f, 0.0f, 16);
-        DOCTEST_CHECK(result.direction * central_axis > 0.9f); // Should default to central axis
-    }
+    // Test 2: Zero half-angle is an error
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.findOptimalConePath(apex, central_axis, 0.0f, 0.0f, 16)));
 
     // Test 3: Empty scene (no geometry)
     {
@@ -2057,6 +2525,50 @@ DOCTEST_TEST_CASE("CollisionDetection CPU vs GPU Consistency - Large Scale") {
     DOCTEST_CHECK(cpu_results == gpu_results);
 }
 
+DOCTEST_TEST_CASE("CollisionDetection CPU vs GPU Consistency - Query Overlapping Thousands of Primitives") {
+    // A single large query box (a ground tile under a dense canopy) can overlap far more primitives than any fixed
+    // per-query result buffer holds. The GPU must report every overlap, exactly as the CPU traversal does.
+    Context context;
+
+    uint ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(10, 10));
+
+    // 55 x 55 = 3025 small triangles straddling the ground plane, all inside the ground tile's footprint.
+    std::vector<uint> leaves;
+    const int grid = 55;
+    const float spacing = 8.0f / float(grid);
+    for (int i = 0; i < grid; i++) {
+        for (int j = 0; j < grid; j++) {
+            float x = -4.0f + (float(i) + 0.5f) * spacing;
+            float y = -4.0f + (float(j) + 0.5f) * spacing;
+            leaves.push_back(context.addTriangle(make_vec3(x, y, -0.01f), make_vec3(x + 0.02f, y, 0.01f), make_vec3(x, y + 0.02f, 0.01f)));
+        }
+    }
+    std::sort(leaves.begin(), leaves.end());
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    collision.disableGPUAcceleration();
+    collision.buildBVH();
+    std::vector<uint> cpu_unrestricted = collision.findCollisions(std::vector<uint>{ground});
+    std::vector<uint> cpu_restricted = collision.findCollisions({ground}, {}, leaves, {});
+
+    collision.enableGPUAcceleration();
+    collision.buildBVH();
+    if (!CollisionTests::gpuPathActive(collision, "GPU findCollisions for a query overlapping thousands of primitives")) {
+        return;
+    }
+    std::vector<uint> gpu_unrestricted = collision.findCollisions(std::vector<uint>{ground});
+    std::vector<uint> gpu_restricted = collision.findCollisions({ground}, {}, leaves, {});
+
+    DOCTEST_CHECK(cpu_unrestricted == leaves);
+    DOCTEST_CHECK(cpu_restricted == leaves);
+    DOCTEST_CHECK(gpu_unrestricted.size() == leaves.size());
+    DOCTEST_CHECK(gpu_unrestricted == cpu_unrestricted);
+    DOCTEST_CHECK(gpu_restricted.size() == leaves.size());
+    DOCTEST_CHECK(gpu_restricted == cpu_restricted);
+}
+
 // =================== NEGATIVE TESTING ===================
 
 DOCTEST_TEST_CASE("CollisionDetection Negative Test - Well Separated Primitives") {
@@ -2342,11 +2854,12 @@ DOCTEST_TEST_CASE("CollisionDetection findNearestPrimitiveDistance - Edge Cases"
     bool result_empty = collision.findNearestPrimitiveDistance(origin, direction, empty_UUIDs, distance, obstacle_direction_unused);
     DOCTEST_CHECK(result_empty == false);
 
-    // Test 2: Non-normalized direction vector (should return false with warning)
+    // Test 2: Non-normalized direction vector is normalized internally, giving the same answer as the unit vector
     vec3 non_normalized_dir = make_vec3(2, 0, 0); // Magnitude = 2
     std::vector<uint> valid_UUIDs = {triangle1};
     bool result_non_norm = collision.findNearestPrimitiveDistance(origin, non_normalized_dir, valid_UUIDs, distance, obstacle_direction_unused);
-    DOCTEST_CHECK(result_non_norm == false);
+    bool result_unit = collision.findNearestPrimitiveDistance(origin, make_vec3(1, 0, 0), valid_UUIDs, distance, obstacle_direction_unused);
+    DOCTEST_CHECK(result_non_norm == result_unit);
 
     // Test 3: Invalid UUID in candidate list
     std::vector<uint> invalid_UUIDs = {999999}; // Non-existent UUID
@@ -2423,7 +2936,7 @@ DOCTEST_TEST_CASE("CollisionDetection findNearestPrimitiveDistance - Directional
             {make_vec3(0, 1, 0), 4.0f, 6.0f, true}, // +Y direction
             {make_vec3(0, 0, 1), 4.0f, 6.0f, true}, // +Z direction
             {make_vec3(-1, 0, 0), 4.0f, 6.0f, true}, // -X direction
-            {make_vec3(0.707f, 0.707f, 0), 6.0f, 8.0f, false}, // Diagonal XY (should miss)
+            {make_vec3(0.707f, 0.707f, 0), 4.0f, 6.0f, true}, // Diagonal XY: the +X and +Y triangles are both in front of it, 5 away
     };
 
     vec3 obstacle_direction_unused;
@@ -2617,15 +3130,10 @@ DOCTEST_TEST_CASE("CollisionDetection Cone-Based Parameter Validation") {
     float distance;
     vec3 obstacle_direction;
 
-    // Test invalid parameters
-    bool result1 = collision.findNearestSolidObstacleInCone(apex, axis, -0.1f, 1.0f, obstacles, distance, obstacle_direction); // Negative angle
-    DOCTEST_CHECK(result1 == false);
-
-    bool result2 = collision.findNearestSolidObstacleInCone(apex, axis, M_PI, 1.0f, obstacles, distance, obstacle_direction); // Too large angle
-    DOCTEST_CHECK(result2 == false);
-
-    bool result3 = collision.findNearestSolidObstacleInCone(apex, axis, deg2rad(30.0f), -1.0f, obstacles, distance, obstacle_direction); // Negative height
-    DOCTEST_CHECK(result3 == false);
+    // Invalid parameters are errors
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.findNearestSolidObstacleInCone(apex, axis, -0.1f, 1.0f, obstacles, distance, obstacle_direction))); // Negative angle
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.findNearestSolidObstacleInCone(apex, axis, M_PI, 1.0f, obstacles, distance, obstacle_direction))); // Too large angle
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.findNearestSolidObstacleInCone(apex, axis, deg2rad(30.0f), -1.0f, obstacles, distance, obstacle_direction))); // Negative height
 
     // Test empty candidate list
     std::vector<uint> empty_obstacles;
@@ -2763,6 +3271,48 @@ DOCTEST_TEST_CASE("CollisionDetection Voxel Ray Path Length - Data Consistency")
     }
 
     DOCTEST_CHECK(found_data); // Should have found at least some ray intersections
+}
+
+DOCTEST_TEST_CASE("CollisionDetection Voxel Ray Path Length - Hit Classification Follows Geometry") {
+    // Hit classification must come from tracing the actual scene geometry, on every build. A previous GPU kernel
+    // classified hits from the ray index (every 4th ray "hit") and fixed t_enter thresholds instead of tracing.
+    Context context;
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    // One 2x2x2 voxel centred on the origin, with a 1x1 patch through its middle at z = 0
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    vec3 grid_center(0, 0, 0);
+    vec3 grid_size(2, 2, 2);
+    int3 grid_divisions(1, 1, 1);
+
+    std::vector<vec3> ray_origins;
+    std::vector<vec3> ray_directions;
+
+    // 8 rays that hit the patch inside the voxel
+    for (int i = 0; i < 8; i++) {
+        ray_origins.push_back(make_vec3(-0.35f + 0.1f * float(i), 0.1f, -5));
+        ray_directions.push_back(make_vec3(0, 0, 1));
+    }
+    // 4 rays that cross the voxel but miss the patch
+    for (int i = 0; i < 4; i++) {
+        ray_origins.push_back(make_vec3(0.8f, -0.3f + 0.2f * float(i), -5));
+        ray_directions.push_back(make_vec3(0, 0, 1));
+    }
+
+    collision.calculateVoxelRayPathLengths(grid_center, grid_size, grid_divisions, ray_origins, ray_directions);
+
+    int P_denom, P_trans;
+    collision.getVoxelTransmissionProbability(make_int3(0, 0, 0), P_denom, P_trans);
+    int hit_before, hit_after, hit_inside;
+    collision.getVoxelRayHitCounts(make_int3(0, 0, 0), hit_before, hit_after, hit_inside);
+
+    DOCTEST_CHECK(P_denom == 12);
+    DOCTEST_CHECK(hit_inside == 8);
+    DOCTEST_CHECK(P_trans == 4);
+    DOCTEST_CHECK(hit_before == 0);
+    DOCTEST_CHECK(hit_after == 12);
 }
 
 DOCTEST_TEST_CASE("CollisionDetection Voxel Ray Path Length - Manual Data Setting") {
@@ -4087,6 +4637,72 @@ DOCTEST_TEST_CASE("CollisionDetection Ray Casting - Edge Cases and Error Handlin
     DOCTEST_CHECK(invalid_result.primitive_UUID == triangle);
 }
 
+DOCTEST_TEST_CASE("CollisionDetection Ray Casting - Non-Unit Directions Give Metric Distances on Every Batch Path") {
+    // castRay() normalizes its direction, so distances and max_distance are in metres. Every batch path must follow the
+    // same convention: a direction of length 2 must not halve the reported distance or double the reach of max_distance.
+    Context context;
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.disableGPUAcceleration();
+    collision.buildBVH();
+
+    const vec3 origin(0.1f, 0.2f, 1.0f);
+    const vec3 direction(0, 0, -2.0f); // length 2; the patch is 1 m away
+    const vec3 expected_point(0.1f, 0.2f, 0.0f);
+    constexpr uint MISS_UUID = 0xFFFFFFFFu;
+
+    CollisionDetection::HitResult reference = collision.castRay(origin, direction);
+    DOCTEST_REQUIRE(reference.hit);
+    DOCTEST_CHECK(reference.distance == doctest::Approx(1.0f).epsilon(1e-5));
+
+    std::vector<CollisionDetection::RayQuery> queries = {CollisionDetection::RayQuery(origin, direction)};
+
+    std::vector<CollisionDetection::HitResult> batch = collision.castRays(queries);
+    DOCTEST_REQUIRE(batch.size() == 1);
+    DOCTEST_CHECK(batch[0].hit);
+    DOCTEST_CHECK(batch[0].primitive_UUID == patch);
+    DOCTEST_CHECK(batch[0].distance == doctest::Approx(1.0f).epsilon(1e-5));
+    DOCTEST_CHECK((batch[0].intersection_point - expected_point).magnitude() < 1e-5f);
+
+    std::vector<CollisionDetection::HitResult> optimized = collision.castRaysOptimized(queries);
+    DOCTEST_REQUIRE(optimized.size() == 1);
+    DOCTEST_CHECK(optimized[0].hit);
+    DOCTEST_CHECK(optimized[0].distance == doctest::Approx(1.0f).epsilon(1e-5));
+    DOCTEST_CHECK((optimized[0].intersection_point - expected_point).magnitude() < 1e-5f);
+
+    const size_t count = 4;
+    std::vector<vec3> origins(count, origin), directions(count, direction);
+    std::vector<float> soa_distance(count, -1.0f), packet_distance(count, -1.0f);
+    std::vector<vec3> soa_normal(count), packet_normal(count);
+    std::vector<uint> soa_uuid(count, MISS_UUID), packet_uuid(count, MISS_UUID);
+    collision.castRaysSoA(origins.data(), directions.data(), count, -1.0f, soa_distance.data(), soa_normal.data(), soa_uuid.data());
+    collision.castRaysSoA_packets(origins.data(), directions.data(), count, count, -1.0f, packet_distance.data(), packet_normal.data(), packet_uuid.data());
+    for (size_t i = 0; i < count; i++) {
+        DOCTEST_CHECK(soa_uuid[i] == patch);
+        DOCTEST_CHECK(soa_distance[i] == doctest::Approx(1.0f).epsilon(1e-5));
+        DOCTEST_CHECK(packet_uuid[i] == patch);
+        DOCTEST_CHECK(packet_distance[i] == doctest::Approx(1.0f).epsilon(1e-5));
+    }
+
+    // max_distance is in metres too: 0.75 m falls short of the patch 1 m away.
+    const float short_reach = 0.75f;
+    DOCTEST_CHECK_FALSE(collision.castRay(origin, direction, short_reach).hit);
+    std::vector<CollisionDetection::RayQuery> short_queries = {CollisionDetection::RayQuery(origin, direction, short_reach)};
+    std::vector<CollisionDetection::HitResult> short_batch = collision.castRays(short_queries);
+    DOCTEST_REQUIRE(short_batch.size() == 1);
+    DOCTEST_CHECK_FALSE(short_batch[0].hit);
+    std::fill(soa_uuid.begin(), soa_uuid.end(), MISS_UUID);
+    std::fill(packet_uuid.begin(), packet_uuid.end(), MISS_UUID);
+    collision.castRaysSoA(origins.data(), directions.data(), count, short_reach, soa_distance.data(), soa_normal.data(), soa_uuid.data());
+    collision.castRaysSoA_packets(origins.data(), directions.data(), count, count, short_reach, packet_distance.data(), packet_normal.data(), packet_uuid.data());
+    for (size_t i = 0; i < count; i++) {
+        DOCTEST_CHECK(soa_uuid[i] == MISS_UUID);
+        DOCTEST_CHECK(packet_uuid[i] == MISS_UUID);
+    }
+}
+
 DOCTEST_TEST_CASE("CollisionDetection Ray Casting - Performance and Scalability") {
     Context context;
     CollisionDetection collision(&context);
@@ -4824,8 +5440,8 @@ DOCTEST_TEST_CASE("CollisionDetection Mathematical Accuracy - Ray-Triangle Inter
     DOCTEST_CHECK(std::abs(result.intersection_point.y - 1.0f / 3.0f) < 1e-6f);
     DOCTEST_CHECK(std::abs(result.intersection_point.z - 0.0f) < 1e-6f);
 
-    // Normal should be (0, 0, 1) for this triangle
-    vec3 expected_normal = normalize(cross(v1 - v0, v2 - v0));
+    // The triangle's geometric normal is (0, 0, 1); the reported normal faces the ray origin, which is below it
+    vec3 expected_normal = -normalize(cross(v1 - v0, v2 - v0));
     float normal_dot = result.normal.x * expected_normal.x + result.normal.y * expected_normal.y + result.normal.z * expected_normal.z;
     DOCTEST_CHECK(std::abs(normal_dot - 1.0f) < 1e-6f);
 }
@@ -4904,6 +5520,8 @@ DOCTEST_TEST_CASE("CollisionDetection Mathematical Accuracy - Barycentric Coordi
 
 // -------- COMPREHENSIVE GPU-SPECIFIC TESTS --------
 
+// castRaysGPU() exists only in CUDA builds.
+#ifdef HELIOS_CUDA_AVAILABLE
 DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - Direct castRaysGPU Testing") {
     Context context;
     CollisionDetection collision(&context);
@@ -4915,111 +5533,647 @@ DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - Direct castRaysGPU Testing"
     uuids.push_back(context.addTriangle(make_vec3(2, 0, 0), make_vec3(3, 0, 0), make_vec3(2.5f, 1, 0)));
     uuids.push_back(context.addPatch(make_vec3(5, 0, 0), make_vec2(1, 1)));
 
-    // Create comprehensive ray set
+    // A row of downward rays crossing both triangles and the patch, offset so that no ray grazes a primitive edge
     std::vector<CollisionDetection::RayQuery> queries;
     for (int i = 0; i < 100; i++) {
         CollisionDetection::RayQuery query;
-        query.origin = make_vec3(i * 0.1f - 2, -1, 0.5f);
-        query.direction = normalize(make_vec3(0, 1, 0));
+        query.origin = make_vec3(i * 0.1f - 2 + 0.03f, 0.3f, 1);
+        query.direction = make_vec3(0, 0, -1);
         query.max_distance = 5.0f;
         queries.push_back(query);
     }
 
-    // Test GPU functionality if available
-    try {
-        collision.enableGPUAcceleration();
-#ifdef HELIOS_CUDA_AVAILABLE
-        if (collision.isGPUAccelerationEnabled()) {
-            CollisionDetection::RayTracingStats gpu_stats;
-            std::vector<CollisionDetection::HitResult> gpu_results = collision.castRaysGPU(queries, gpu_stats);
-
-            DOCTEST_CHECK(gpu_results.size() == queries.size());
-            DOCTEST_CHECK(gpu_stats.total_rays_cast == queries.size());
-
-            // Test against CPU reference
-            collision.disableGPUAcceleration();
-            CollisionDetection::RayTracingStats cpu_stats;
-            std::vector<CollisionDetection::HitResult> cpu_results = collision.castRays(queries, &cpu_stats);
-
-            // Compare results
-            DOCTEST_CHECK(cpu_results.size() == gpu_results.size());
-
-            int consistent_hits = 0;
-            for (size_t i = 0; i < cpu_results.size(); i++) {
-                if (cpu_results[i].hit == gpu_results[i].hit) {
-                    consistent_hits++;
-                    if (cpu_results[i].hit) {
-                        // Allow small floating-point differences in GPU vs CPU
-                        DOCTEST_CHECK(std::abs(cpu_results[i].distance - gpu_results[i].distance) < 0.001f);
-                        DOCTEST_CHECK(cpu_results[i].primitive_UUID == gpu_results[i].primitive_UUID);
-                    }
-                }
-            }
-
-            // Should have high consistency (allow for some GPU/CPU differences)
-            DOCTEST_CHECK(consistent_hits >= (int) (0.95f * queries.size()));
-
-        } else {
-            DOCTEST_WARN("GPU acceleration not available - skipping direct GPU tests");
-        }
-#endif
-    } catch (std::exception &e) {
-        DOCTEST_WARN((std::string("GPU test failed (expected on non-NVIDIA systems): ") + e.what()).c_str());
+    collision.enableGPUAcceleration();
+    if (!CollisionTests::gpuPathActive(collision, "direct castRaysGPU against the CPU")) {
+        return;
     }
+    CollisionDetection::RayTracingStats gpu_stats;
+    std::vector<CollisionDetection::HitResult> gpu_results = collision.castRaysGPU(queries, gpu_stats);
+    DOCTEST_CHECK(gpu_results.size() == queries.size());
+    DOCTEST_CHECK(gpu_stats.total_rays_cast == queries.size());
+
+    // CPU reference
+    collision.disableGPUAcceleration();
+    CollisionDetection::RayTracingStats cpu_stats;
+    std::vector<CollisionDetection::HitResult> cpu_results = collision.castRays(queries, &cpu_stats);
+    DOCTEST_REQUIRE(cpu_results.size() == gpu_results.size());
+
+    size_t cpu_hits = 0;
+    for (size_t i = 0; i < cpu_results.size(); i++) {
+        DOCTEST_INFO("ray " << i);
+        DOCTEST_CHECK(cpu_results[i].hit == gpu_results[i].hit);
+        if (cpu_results[i].hit && gpu_results[i].hit) {
+            cpu_hits++;
+            DOCTEST_CHECK(std::abs(cpu_results[i].distance - gpu_results[i].distance) < 0.001f);
+            DOCTEST_CHECK(cpu_results[i].primitive_UUID == gpu_results[i].primitive_UUID);
+        }
+    }
+    DOCTEST_CHECK(cpu_hits == 24); // 7 rays on each triangle and 10 on the patch
 }
 
 DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - Error Handling and Edge Cases") {
     Context context;
+    context.addPatch(make_vec3(0, 0, 0.5f), make_vec2(1, 1));
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.enableGPUAcceleration();
+    if (!CollisionTests::gpuPathActive(collision, "castRaysGPU edge cases")) {
+        return;
+    }
+
+    // Test 1: Empty ray queries
+    std::vector<CollisionDetection::RayQuery> empty_queries;
+    CollisionDetection::RayTracingStats stats;
+    std::vector<CollisionDetection::HitResult> results = collision.castRaysGPU(empty_queries, stats);
+    DOCTEST_CHECK(results.empty());
+    DOCTEST_CHECK(stats.total_rays_cast == 0);
+
+    // Test 2: Large batch processing. Each ray points up from height z with a 1 m reach, so it hits the patch at
+    // z = 0.5 exactly when it starts below it (rays starting within 1 mm of the patch are not checked).
+    std::vector<CollisionDetection::RayQuery> large_batch;
+    for (int i = 0; i < 10000; i++) {
+        CollisionDetection::RayQuery query;
+        query.origin = make_vec3(0, 0, i * 0.001f);
+        query.direction = make_vec3(0, 0, 1);
+        query.max_distance = 1.0f;
+        large_batch.push_back(query);
+    }
+
+    CollisionDetection::RayTracingStats large_stats;
+    std::vector<CollisionDetection::HitResult> large_results = collision.castRaysGPU(large_batch, large_stats);
+    DOCTEST_REQUIRE(large_results.size() == large_batch.size());
+    DOCTEST_CHECK(large_stats.total_rays_cast == large_batch.size());
+    int wrong_results = 0;
+    for (size_t i = 0; i < large_batch.size(); i++) {
+        const float start_height = large_batch[i].origin.z;
+        if (std::abs(start_height - 0.5f) > 1e-3f && large_results[i].hit != (start_height < 0.5f)) {
+            wrong_results++;
+        }
+    }
+    DOCTEST_CHECK(wrong_results == 0);
+
+    // Test 3: Degenerate rays
+    std::vector<CollisionDetection::RayQuery> degenerate_queries;
+    CollisionDetection::RayQuery degenerate;
+    degenerate.origin = make_vec3(0, 0, 0);
+    degenerate.direction = make_vec3(0, 0, 0); // Zero direction
+    degenerate_queries.push_back(degenerate);
+
+    CollisionDetection::RayTracingStats degenerate_stats;
+    std::vector<CollisionDetection::HitResult> degenerate_results = collision.castRaysGPU(degenerate_queries, degenerate_stats);
+    DOCTEST_CHECK(degenerate_results.size() == 1);
+    DOCTEST_CHECK(degenerate_results[0].hit == false); // Should handle gracefully
+
+    // Test 4: A scene with no geometry cannot be traced, and says so
+    Context empty_context;
+    CollisionDetection empty_collision(&empty_context);
+    empty_collision.disableMessages();
+    empty_collision.enableGPUAcceleration();
+    DOCTEST_CHECK_THROWS_AS(empty_collision.castRaysGPU(large_batch, large_stats), std::runtime_error);
+}
+#endif
+
+DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - castRays Honours target_UUIDs Above the GPU Threshold") {
+    // A batch large enough to dispatch to the GPU must still restrict hits to each ray's target_UUIDs, exactly as the
+    // same batch does on the CPU. Every ray passes through a blocking patch on its way to the target patch behind it.
+    Context context;
+    uint target_patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4));
+    uint blocking_patch = context.addPatch(make_vec3(0, 0, 1), make_vec2(4, 4));
+    for (int i = 0; i < 600; i++) { // far-away filler so the scene exceeds the GPU primitive threshold
+        float x = 100.0f + float(i % 30);
+        float y = float(i / 30);
+        context.addTriangle(make_vec3(x, y, 0), make_vec3(x + 0.5f, y, 0), make_vec3(x, y + 0.5f, 0));
+    }
+
+    const int rays_per_side = 1000; // 1,000,000 rays: at the GPU batch threshold
+    std::vector<CollisionDetection::RayQuery> queries;
+    queries.reserve(size_t(rays_per_side) * size_t(rays_per_side));
+    for (int i = 0; i < rays_per_side; i++) {
+        for (int j = 0; j < rays_per_side; j++) {
+            vec3 origin(-1.5f + 3.0f * float(i) / float(rays_per_side), -1.5f + 3.0f * float(j) / float(rays_per_side), 2.0f);
+            queries.emplace_back(origin, make_vec3(0, 0, -1), -1.0f, std::vector<uint>{target_patch});
+        }
+    }
+
     CollisionDetection collision(&context);
     collision.disableMessages();
 
-    try {
-        collision.enableGPUAcceleration();
-#ifdef HELIOS_CUDA_AVAILABLE
-        if (collision.isGPUAccelerationEnabled()) {
+    collision.disableGPUAcceleration();
+    collision.buildBVH();
+    std::vector<CollisionDetection::HitResult> cpu_results = collision.castRays(queries);
 
-            // Test 1: Empty ray queries
-            std::vector<CollisionDetection::RayQuery> empty_queries;
-            CollisionDetection::RayTracingStats stats;
-            std::vector<CollisionDetection::HitResult> results = collision.castRaysGPU(empty_queries, stats);
-            DOCTEST_CHECK(results.empty());
-            DOCTEST_CHECK(stats.total_rays_cast == 0);
+    collision.enableGPUAcceleration();
+    collision.buildBVH();
+    if (!CollisionTests::gpuPathActive(collision, "castRays target_UUIDs filtering on a GPU-sized batch")) {
+        return;
+    }
+    std::vector<CollisionDetection::HitResult> gpu_results = collision.castRays(queries);
 
-            // Test 2: Large batch processing
-            std::vector<CollisionDetection::RayQuery> large_batch;
-            for (int i = 0; i < 10000; i++) {
-                CollisionDetection::RayQuery query;
-                query.origin = make_vec3(0, 0, i * 0.001f);
-                query.direction = make_vec3(0, 0, 1);
-                query.max_distance = 1.0f;
-                large_batch.push_back(query);
-            }
-
-            CollisionDetection::RayTracingStats large_stats;
-            std::vector<CollisionDetection::HitResult> large_results = collision.castRaysGPU(large_batch, large_stats);
-            DOCTEST_CHECK(large_results.size() == large_batch.size());
-            DOCTEST_CHECK(large_stats.total_rays_cast == large_batch.size());
-
-            // Test 3: Degenerate rays
-            std::vector<CollisionDetection::RayQuery> degenerate_queries;
-            CollisionDetection::RayQuery degenerate;
-            degenerate.origin = make_vec3(0, 0, 0);
-            degenerate.direction = make_vec3(0, 0, 0); // Zero direction
-            degenerate_queries.push_back(degenerate);
-
-            CollisionDetection::RayTracingStats degenerate_stats;
-            std::vector<CollisionDetection::HitResult> degenerate_results = collision.castRaysGPU(degenerate_queries, degenerate_stats);
-            DOCTEST_CHECK(degenerate_results.size() == 1);
-            DOCTEST_CHECK(degenerate_results[0].hit == false); // Should handle gracefully
-
-        } else {
-            DOCTEST_WARN("GPU acceleration not available - skipping GPU error handling tests");
+    DOCTEST_REQUIRE(cpu_results.size() == queries.size());
+    DOCTEST_REQUIRE(gpu_results.size() == queries.size());
+    size_t cpu_wrong = 0, gpu_wrong = 0, gpu_hits_on_blocker = 0;
+    for (size_t i = 0; i < queries.size(); i++) {
+        if (!cpu_results[i].hit || cpu_results[i].primitive_UUID != target_patch || std::abs(cpu_results[i].distance - 2.0f) > 1e-4f) {
+            cpu_wrong++;
         }
+        if (!gpu_results[i].hit || gpu_results[i].primitive_UUID != target_patch || std::abs(gpu_results[i].distance - 2.0f) > 1e-4f) {
+            gpu_wrong++;
+        }
+        if (gpu_results[i].hit && gpu_results[i].primitive_UUID == blocking_patch) {
+            gpu_hits_on_blocker++;
+        }
+    }
+    DOCTEST_CHECK(cpu_wrong == 0);
+    DOCTEST_CHECK(gpu_wrong == 0);
+    DOCTEST_CHECK(gpu_hits_on_blocker == 0);
+
+#ifdef HELIOS_CUDA_AVAILABLE
+    // castRaysGPU() itself has no target filter, so it must refuse a batch that carries target lists.
+    std::vector<CollisionDetection::RayQuery> targeted_queries(queries.begin(), queries.begin() + 10);
+    CollisionDetection::RayTracingStats stats;
+    DOCTEST_CHECK_THROWS_AS(collision.castRaysGPU(targeted_queries, stats), std::runtime_error);
 #endif
-    } catch (std::exception &e) {
-        DOCTEST_WARN((std::string("GPU error handling test failed: ") + e.what()).c_str());
+}
+
+DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - GPU findCollisions Skips Primitives Deleted With Automatic Rebuilds Disabled") {
+    // With automatic rebuilds disabled the BVH, and its copy on the GPU, can hold primitives deleted since it was built.
+    // The CPU traversal skips them, so the GPU box query must not report them either.
+    Context context;
+    uint query_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+    uint kept_UUID = context.addPatch(make_vec3(0.5f, 0, 0), make_vec2(2, 2));
+    uint deleted_UUID = context.addPatch(make_vec3(-0.5f, 0, 0), make_vec2(2, 2));
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.enableGPUAcceleration();
+    collision.buildBVH();
+    if (!CollisionTests::gpuPathActive(collision, "GPU findCollisions after a primitive is deleted")) {
+        return;
+    }
+    collision.disableAutomaticBVHRebuilds();
+
+    context.deletePrimitive(deleted_UUID);
+
+    std::vector<uint> gpu_collisions = collision.findCollisions(query_UUID);
+    collision.disableGPUAcceleration();
+    std::vector<uint> cpu_collisions = collision.findCollisions(query_UUID);
+
+    DOCTEST_CHECK(std::find(gpu_collisions.begin(), gpu_collisions.end(), deleted_UUID) == gpu_collisions.end());
+    DOCTEST_CHECK(std::find(gpu_collisions.begin(), gpu_collisions.end(), kept_UUID) != gpu_collisions.end());
+    DOCTEST_CHECK(gpu_collisions == cpu_collisions);
+}
+
+// castRaysGPU() exists only in CUDA builds.
+#ifdef HELIOS_CUDA_AVAILABLE
+DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - castRaysGPU Intersection Point for a Non-Unit Direction") {
+    Context context;
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.enableGPUAcceleration();
+    collision.buildBVH();
+    if (!CollisionTests::gpuPathActive(collision, "castRaysGPU with a non-unit direction")) {
+        return;
+    }
+
+    std::vector<CollisionDetection::RayQuery> queries = {CollisionDetection::RayQuery(make_vec3(0.1f, 0.2f, 1.0f), make_vec3(0, 0, -2.0f))};
+    CollisionDetection::RayTracingStats stats;
+    std::vector<CollisionDetection::HitResult> results = collision.castRaysGPU(queries, stats);
+
+    DOCTEST_REQUIRE(results.size() == 1);
+    DOCTEST_CHECK(results[0].hit);
+    DOCTEST_CHECK(results[0].primitive_UUID == patch);
+    DOCTEST_CHECK(results[0].distance == doctest::Approx(1.0f).epsilon(1e-5));
+    DOCTEST_CHECK((results[0].intersection_point - make_vec3(0.1f, 0.2f, 0.0f)).magnitude() < 1e-5f);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - GPU and CPU Ray Casts Agree at Intersection Tolerances") {
+    // The CPU traversal is the reference. Each case sits between the CPU and GPU tolerances, so it is decided
+    // differently by the two backends unless they apply the same thresholds.
+    struct ToleranceCase {
+        std::string description;
+        bool is_voxel;
+        CollisionDetection::RayQuery query;
+        bool cpu_expected_hit;
+    };
+    const float grazing_slope = 1e-6f; // |cos| between the ray and the patch normal
+    std::vector<ToleranceCase> cases = {
+            {"ray starting 5e-6 m above a patch", false, CollisionDetection::RayQuery(make_vec3(0.1f, 0.1f, 5e-6f), make_vec3(0, 0, -1)), true},
+            {"max_distance exactly equal to the hit distance", false, CollisionDetection::RayQuery(make_vec3(0.1f, 0.1f, 1.0f), make_vec3(0, 0, -1), 1.0f), false},
+            {"ray grazing a patch with |cos| = 1e-6", false, CollisionDetection::RayQuery(make_vec3(-0.9f, 0.1f, 0.4f * grazing_slope), normalize(make_vec3(1, 0, -grazing_slope))), true},
+            {"ray leaving a voxel 5e-6 m from its exit face", true, CollisionDetection::RayQuery(make_vec3(0.1f, 0.1f, 0.5f - 5e-6f), make_vec3(0, 0, 1)), true},
+    };
+
+    for (const ToleranceCase &tolerance_case: cases) {
+        DOCTEST_CAPTURE(tolerance_case.description);
+        Context context;
+        if (tolerance_case.is_voxel) {
+            context.addVoxel(make_vec3(0, 0, 0), make_vec3(1, 1, 1));
+        } else {
+            context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+        }
+        std::vector<CollisionDetection::RayQuery> queries = {tolerance_case.query};
+
+        CollisionDetection cpu_collision(&context);
+        cpu_collision.disableMessages();
+        cpu_collision.disableGPUAcceleration();
+        cpu_collision.buildBVH();
+        std::vector<CollisionDetection::HitResult> cpu_results = cpu_collision.castRays(queries);
+
+        CollisionDetection gpu_collision(&context);
+        gpu_collision.disableMessages();
+        gpu_collision.enableGPUAcceleration();
+        gpu_collision.buildBVH();
+        if (!CollisionTests::gpuPathActive(gpu_collision, "GPU/CPU ray-cast tolerance agreement")) {
+            return;
+        }
+        CollisionDetection::RayTracingStats stats;
+        std::vector<CollisionDetection::HitResult> gpu_results = gpu_collision.castRaysGPU(queries, stats);
+
+        DOCTEST_REQUIRE(cpu_results.size() == 1);
+        DOCTEST_REQUIRE(gpu_results.size() == 1);
+        DOCTEST_CHECK(cpu_results[0].hit == tolerance_case.cpu_expected_hit);
+        DOCTEST_CHECK(gpu_results[0].hit == cpu_results[0].hit);
+        if (gpu_results[0].hit && cpu_results[0].hit) {
+            DOCTEST_CHECK(gpu_results[0].distance == doctest::Approx(cpu_results[0].distance).epsilon(1e-4));
+        }
     }
 }
+
+DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - castRaysGPU Miss Reports the Same Distance as the CPU") {
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.enableGPUAcceleration();
+    collision.buildBVH();
+    if (!CollisionTests::gpuPathActive(collision, "castRaysGPU miss distance")) {
+        return;
+    }
+
+    std::vector<CollisionDetection::RayQuery> queries = {CollisionDetection::RayQuery(make_vec3(0, 0, 1), make_vec3(0, 0, 1))}; // points away
+    CollisionDetection::RayTracingStats stats;
+    std::vector<CollisionDetection::HitResult> results = collision.castRaysGPU(queries, stats);
+    DOCTEST_REQUIRE(results.size() == 1);
+    DOCTEST_CHECK_FALSE(results[0].hit);
+    DOCTEST_CHECK(results[0].distance == CollisionDetection::HitResult().distance);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - castRaysGPU Zero Direction Never Hits") {
+    // A zero direction has no ray to trace, so it misses even from inside a voxel, as on the CPU.
+    Context context;
+    context.addVoxel(make_vec3(0, 0, 0), make_vec3(1, 1, 1));
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.enableGPUAcceleration();
+    collision.buildBVH();
+    if (!CollisionTests::gpuPathActive(collision, "castRaysGPU zero direction")) {
+        return;
+    }
+
+    std::vector<CollisionDetection::RayQuery> queries = {CollisionDetection::RayQuery(make_vec3(0.1f, 0.1f, 0.1f), make_vec3(0, 0, 0))};
+    CollisionDetection::RayTracingStats stats;
+    std::vector<CollisionDetection::HitResult> gpu_results = collision.castRaysGPU(queries, stats);
+    collision.disableGPUAcceleration();
+    std::vector<CollisionDetection::HitResult> cpu_results = collision.castRays(queries);
+    DOCTEST_REQUIRE(gpu_results.size() == 1);
+    DOCTEST_REQUIRE(cpu_results.size() == 1);
+    DOCTEST_CHECK_FALSE(cpu_results[0].hit);
+    DOCTEST_CHECK_FALSE(gpu_results[0].hit);
+    DOCTEST_CHECK(gpu_results[0].distance == cpu_results[0].distance);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - castRaysGPU With GPU Acceleration Disabled Throws") {
+    // castRaysGPU() is an explicit request for the GPU path; with GPU acceleration off it must not quietly run something else.
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.disableGPUAcceleration();
+    collision.buildBVH();
+
+    std::vector<CollisionDetection::RayQuery> queries = {CollisionDetection::RayQuery(make_vec3(0, 0, 1), make_vec3(0, 0, -1))};
+    CollisionDetection::RayTracingStats stats;
+    DOCTEST_CHECK_THROWS_AS(collision.castRaysGPU(queries, stats), std::runtime_error);
+}
+
+// The tests below use CollisionDetectionTestHelper to reach GPU failure paths that valid scenes never trigger.
+
+DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - Box Query Stack Overflow Raises Instead of Returning Short Results") {
+    Context context;
+    std::vector<uint> UUIDs = CollisionTests::addPatchRow(context, 200);
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.enableGPUAcceleration();
+    collision.buildBVH();
+    if (!CollisionTests::gpuPathActive(collision, "GPU box-query stack overflow")) {
+        return;
+    }
+    const vec3 query_min = make_vec3(-1, -1, -1);
+    const vec3 query_max = make_vec3(400, 1, 1);
+
+    // Control: a chain shallower than the traversal stack returns every primitive.
+    std::vector<uint> shallow_UUIDs(UUIDs.begin(), UUIDs.begin() + 100);
+    CollisionDetectionTestHelper::installChainBVH(collision, shallow_UUIDs, false);
+    std::vector<uint> hits = CollisionDetectionTestHelper::queryBoxGPU(collision, query_min, query_max);
+    DOCTEST_CHECK(hits.size() == shallow_UUIDs.size());
+
+    // A chain deeper than the stack must raise, not return the primitives it managed to reach.
+    CollisionDetectionTestHelper::installChainBVH(collision, UUIDs, false);
+    std::string message = CollisionTests::thrownMessage([&] { CollisionDetectionTestHelper::queryBoxGPU(collision, query_min, query_max); });
+    DOCTEST_CHECK(message.find("stack overflow in bvhBoxQueryKernel") != std::string::npos);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - Ray Stack Overflow Raises and Frees the Ray Buffers") {
+    Context context;
+    std::vector<uint> UUIDs = CollisionTests::addPatchRow(context, 200);
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.enableGPUAcceleration();
+    collision.buildBVH();
+    if (!CollisionTests::gpuPathActive(collision, "GPU ray-cast stack overflow")) {
+        return;
+    }
+    CollisionDetection::RayTracingStats stats;
+
+    // Control: a chain shallower than the traversal stack is traced normally.
+    std::vector<uint> shallow_UUIDs(UUIDs.begin(), UUIDs.begin() + 100);
+    CollisionDetectionTestHelper::installChainBVH(collision, shallow_UUIDs, true);
+    std::vector<CollisionDetection::RayQuery> control_queries = {CollisionDetection::RayQuery(make_vec3(10, 0, 1), make_vec3(0, 0, -1))};
+    std::vector<CollisionDetection::HitResult> control_results = collision.castRaysGPU(control_queries, stats);
+    DOCTEST_REQUIRE(control_results.size() == 1);
+    DOCTEST_CHECK(control_results[0].hit);
+    DOCTEST_CHECK(control_results[0].primitive_UUID == UUIDs[5]);
+
+    // A chain deeper than the stack must raise. The ray batch is large (about 50 MB of device buffers), so a launch that
+    // leaked its buffers on the throw would show up clearly in the device's free memory.
+    CollisionDetectionTestHelper::installChainBVH(collision, UUIDs, true);
+    std::vector<CollisionDetection::RayQuery> queries(1000000, CollisionDetection::RayQuery(make_vec3(10, 0, 1), make_vec3(0, 0, -1)));
+    std::string message = CollisionTests::thrownMessage([&] { collision.castRaysGPU(queries, stats); });
+    DOCTEST_CHECK(message.find("stack overflow in rayPrimitiveBVHKernel") != std::string::npos);
+
+    // The first failing cast above also settles one-time device reservations, so measure across further ones. Leaked
+    // buffers accumulate by roughly 50 MB per cast, so several casts separate a leak from noise in the reported free
+    // memory. On MSVC this catches the launch wrappers being declared extern "C", whose destructors /EHsc skips on a throw.
+    const int failing_casts = 8;
+    const size_t free_before = CollisionTests::freeDeviceBytes();
+    for (int cast = 0; cast < failing_casts; cast++) {
+        message = CollisionTests::thrownMessage([&] { collision.castRaysGPU(queries, stats); });
+        DOCTEST_CHECK(message.find("stack overflow in rayPrimitiveBVHKernel") != std::string::npos);
+    }
+    const size_t free_after = CollisionTests::freeDeviceBytes();
+    const double leaked_MB = (double(free_before) - double(free_after)) / (1024.0 * 1024.0);
+    DOCTEST_INFO("device memory lost across " << failing_casts << " failing ray casts: " << leaked_MB << " MB");
+    DOCTEST_CHECK(leaked_MB < 100.0);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - Missing Cached Bounding Box Raises and Leaves Nothing on the GPU") {
+    Context context;
+    std::vector<uint> UUIDs = CollisionTests::addPatchRow(context, 10);
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.enableGPUAcceleration();
+    collision.buildBVH();
+    if (!CollisionTests::gpuPathActive(collision, "GPU upload with a missing cached bounding box")) {
+        return;
+    }
+    DOCTEST_REQUIRE(CollisionDetectionTestHelper::holdsDeviceMemory(collision));
+
+    CollisionDetectionTestHelper::eraseCachedBoundingBox(collision, UUIDs[3]);
+    std::string message = CollisionTests::thrownMessage([&] { CollisionDetectionTestHelper::uploadBVH(collision); });
+    DOCTEST_CHECK(message.find("has no cached bounding box") != std::string::npos);
+    DOCTEST_CHECK_FALSE(CollisionDetectionTestHelper::holdsDeviceMemory(collision));
+}
+
+DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - GPU Allocation Failure Raises, Leaves Nothing on the GPU, and Recovers") {
+    Context context;
+    std::vector<uint> UUIDs = CollisionTests::addPatchRow(context, 10);
+    uint query_UUID = context.addPatch(make_vec3(3, 0, 0), make_vec2(4, 1)); // spans the patches at x = 2 and x = 4
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.enableGPUAcceleration();
+    collision.buildBVH(UUIDs);
+    if (!CollisionTests::gpuPathActive(collision, "GPU allocation failure")) {
+        return;
+    }
+
+    // Release the resident scene first: the upload frees it before allocating, and would otherwise reuse that same memory.
+    CollisionDetectionTestHelper::releaseDeviceMemory(collision);
+    std::string message;
+    {
+        CollisionTests::DeviceMemoryHog hog;
+        message = CollisionTests::thrownMessage([&] { CollisionDetectionTestHelper::uploadBVH(collision); });
+    }
+    DOCTEST_CHECK(message.find("Failed to allocate") != std::string::npos);
+    DOCTEST_CHECK_FALSE(CollisionDetectionTestHelper::holdsDeviceMemory(collision));
+    DOCTEST_CHECK(collision.isGPUAccelerationEnabled()); // no silent switch to the CPU
+
+    // With memory available again, the next GPU query uploads the scene and returns the right answer.
+    std::vector<uint> collisions = collision.findCollisions(query_UUID);
+    std::sort(collisions.begin(), collisions.end());
+    DOCTEST_CHECK(collisions == std::vector<uint>({UUIDs[1], UUIDs[2]}));
+}
+
+DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - GPU Failure in a Target-Restricted findCollisions Leaves Later Queries Correct") {
+    // A failed upload while the BVH is narrowed to a query's targets must not leave later, unrestricted queries
+    // searching only those targets.
+    Context context;
+    std::vector<uint> UUIDs = CollisionTests::addPatchRow(context, 10);
+    uint query_UUID = context.addPatch(make_vec3(3, 0, 0), make_vec2(4, 1)); // spans the patches at x = 2 and x = 4
+    const std::vector<uint> expected = {UUIDs[1], UUIDs[2]};
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.enableGPUAcceleration();
+    collision.buildBVH();
+    if (!CollisionTests::gpuPathActive(collision, "GPU failure in a target-restricted findCollisions")) {
+        return;
+    }
+    std::vector<uint> collisions = collision.findCollisions(query_UUID);
+    std::sort(collisions.begin(), collisions.end());
+    DOCTEST_REQUIRE(collisions == expected);
+
+    // Release the resident scene first: the upload frees it before allocating, and would otherwise reuse that same memory.
+    CollisionDetectionTestHelper::releaseDeviceMemory(collision);
+    std::string message;
+    {
+        CollisionTests::DeviceMemoryHog hog;
+        message = CollisionTests::thrownMessage([&] { collision.findCollisions({query_UUID}, {}, {UUIDs[1]}, {}); });
+    }
+    DOCTEST_CHECK(message.find("Failed to allocate") != std::string::npos);
+
+    collisions = collision.findCollisions(query_UUID);
+    std::sort(collisions.begin(), collisions.end());
+    DOCTEST_CHECK(collisions == expected);
+
+    collision.disableGPUAcceleration();
+    collisions = collision.findCollisions(query_UUID);
+    std::sort(collisions.begin(), collisions.end());
+    DOCTEST_CHECK(collisions == expected);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - GPU Failure in an Explicit buildBVH Subset Keeps the Subset Restriction") {
+    // buildBVH(subset) excludes the rest of the geometry until the next explicit build. If its upload fails, the BVH it
+    // built on the host must still be recorded as that restriction, so a later automatic rebuild does not bring the
+    // excluded primitives back.
+    Context context;
+    std::vector<uint> UUIDs = CollisionTests::addPatchRow(context, 10);
+    uint query_UUID = context.addPatch(make_vec3(3, 0, 0), make_vec2(4, 1)); // spans the patches at x = 2 and x = 4
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.enableGPUAcceleration();
+    collision.buildBVH();
+    if (!CollisionTests::gpuPathActive(collision, "GPU failure in an explicit buildBVH subset")) {
+        return;
+    }
+
+    // Release the resident scene first: the upload frees it before allocating, and would otherwise reuse that same memory.
+    CollisionDetectionTestHelper::releaseDeviceMemory(collision);
+    std::string message;
+    {
+        CollisionTests::DeviceMemoryHog hog;
+        message = CollisionTests::thrownMessage([&] { collision.buildBVH({UUIDs[1], query_UUID}); });
+    }
+    DOCTEST_CHECK(message.find("Failed to allocate") != std::string::npos);
+
+    // New geometry triggers an automatic rebuild, which keeps excluding UUIDs[2].
+    uint new_UUID = context.addPatch(make_vec3(3, 0, 0), make_vec2(1, 1));
+    std::vector<uint> collisions = collision.findCollisions(query_UUID);
+    std::sort(collisions.begin(), collisions.end());
+    DOCTEST_CHECK(collisions == std::vector<uint>({UUIDs[1], new_UUID}));
+}
+
+DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - GPU-Sized Ray Batches Upload the Scene Instead of Falling Back to the CPU") {
+    // With GPU acceleration enabled but no scene on the GPU (here after a released upload), a batch large enough for the
+    // GPU must upload the scene and trace there, raising if the upload fails, rather than quietly tracing on the CPU.
+    Context context;
+    std::vector<uint> UUIDs = CollisionTests::addPatchRow(context, 600);
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.enableGPUAcceleration();
+    collision.buildBVH();
+    if (!CollisionTests::gpuPathActive(collision, "GPU-sized ray batches after a released upload")) {
+        return;
+    }
+
+    const size_t ray_count = 1000000;
+    std::vector<CollisionDetection::RayQuery> queries(ray_count, CollisionDetection::RayQuery(make_vec3(10, 0, 1), make_vec3(0, 0, -1)));
+    std::vector<vec3> origins(ray_count, make_vec3(10, 0, 1));
+    std::vector<vec3> directions(ray_count, make_vec3(0, 0, -1));
+    std::vector<float> distances(ray_count);
+    std::vector<vec3> normals(ray_count);
+    std::vector<uint> hit_UUIDs(ray_count);
+
+    CollisionDetectionTestHelper::releaseDeviceMemory(collision);
+    std::string vector_message;
+    std::string pointer_message;
+    {
+        CollisionTests::DeviceMemoryHog hog;
+        vector_message = CollisionTests::thrownMessage([&] { collision.castRays(queries); });
+        pointer_message = CollisionTests::thrownMessage([&] { collision.castRaysSoA(origins.data(), directions.data(), ray_count, -1.f, distances.data(), normals.data(), hit_UUIDs.data()); });
+    }
+    DOCTEST_CHECK(vector_message.find("Failed to allocate") != std::string::npos);
+    DOCTEST_CHECK(pointer_message.find("Failed to allocate") != std::string::npos);
+
+    std::vector<CollisionDetection::HitResult> results = collision.castRays(queries);
+    DOCTEST_CHECK(CollisionDetectionTestHelper::holdsDeviceMemory(collision));
+    DOCTEST_REQUIRE(results.size() == ray_count);
+    DOCTEST_CHECK(results.front().hit);
+    DOCTEST_CHECK(results.front().primitive_UUID == UUIDs[5]);
+    DOCTEST_CHECK(results.back().primitive_UUID == UUIDs[5]);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - GPU Ray Casts Pass Through Primitives Deleted With Automatic Rebuilds Disabled") {
+    // The GPU counterpart of "castRays Skips Deleted Primitives With Automatic Rebuilds Disabled": a ray must pass through
+    // a primitive deleted since the scene was uploaded and hit the one behind it, as the CPU traversal does.
+    Context context;
+    uint near_UUID = context.addPatch(make_vec3(0, 0, 2), make_vec2(10, 10));
+    uint far_UUID = context.addPatch(make_vec3(0, 0, 8), make_vec2(10, 10));
+    for (int i = 0; i < 600; i++) { // far-away filler so the scene exceeds the GPU primitive threshold
+        float x = 100.0f + float(i % 30);
+        float y = float(i / 30);
+        context.addTriangle(make_vec3(x, y, 0), make_vec3(x + 0.5f, y, 0), make_vec3(x, y + 0.5f, 0));
+    }
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.enableGPUAcceleration();
+    collision.buildBVH();
+    if (!CollisionTests::gpuPathActive(collision, "GPU ray casts after a primitive is deleted")) {
+        return;
+    }
+    collision.disableAutomaticBVHRebuilds();
+
+    std::vector<CollisionDetection::RayQuery> queries = {CollisionDetection::RayQuery(make_vec3(0, 0, 1), make_vec3(0, 0, 1))};
+    CollisionDetection::RayTracingStats stats;
+    std::vector<CollisionDetection::HitResult> before_deletion = collision.castRaysGPU(queries, stats);
+
+    context.deletePrimitive(near_UUID);
+
+    std::vector<CollisionDetection::HitResult> results = collision.castRaysGPU(queries, stats);
+
+    // A batch this large takes the GPU branch of the pointer-based castRaysSoA().
+    const size_t ray_count = 1000000;
+    std::vector<vec3> origins(ray_count, make_vec3(0, 0, 1));
+    std::vector<vec3> directions(ray_count, make_vec3(0, 0, 1));
+    std::vector<float> distances(ray_count);
+    std::vector<vec3> normals(ray_count);
+    std::vector<uint> hit_UUIDs(ray_count);
+    collision.castRaysSoA(origins.data(), directions.data(), ray_count, -1.f, distances.data(), normals.data(), hit_UUIDs.data());
+    const size_t soa_rays_not_on_far_patch = std::count_if(hit_UUIDs.begin(), hit_UUIDs.end(), [far_UUID](uint UUID) { return UUID != far_UUID; });
+
+    DOCTEST_CHECK(before_deletion.at(0).primitive_UUID == near_UUID);
+    DOCTEST_REQUIRE(results.size() == 1);
+    DOCTEST_CHECK(results[0].hit);
+    DOCTEST_CHECK(results[0].primitive_UUID == far_UUID);
+    DOCTEST_CHECK(results[0].distance == doctest::Approx(7.0f).epsilon(1e-5));
+    DOCTEST_CHECK(soa_rays_not_on_far_patch == 0);
+    DOCTEST_CHECK(distances.front() == doctest::Approx(7.0f).epsilon(1e-5));
+}
+
+DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - Enabling the GPU After a Deletion With Automatic Rebuilds Disabled") {
+    // Uploading a BVH that still holds a deleted primitive (here: GPU acceleration enabled only after the deletion) must
+    // work, and the GPU must then answer as the CPU does: rays pass through the deleted primitive and it is not reported
+    // as a collision.
+    Context context;
+    uint near_UUID = context.addPatch(make_vec3(0, 0, 2), make_vec2(10, 10));
+    uint far_UUID = context.addPatch(make_vec3(0, 0, 8), make_vec2(10, 10));
+    uint query_UUID = context.addPatch(make_vec3(3, 3, 2), make_vec2(1, 1)); // overlaps the near patch, off the ray's path
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.disableGPUAcceleration();
+    collision.buildBVH();
+    collision.disableAutomaticBVHRebuilds();
+
+    context.deletePrimitive(near_UUID);
+
+    std::string enable_message = CollisionTests::thrownMessage([&] { collision.enableGPUAcceleration(); });
+    DOCTEST_CHECK(enable_message.empty());
+    if (!enable_message.empty() || !CollisionTests::gpuPathActive(collision, "GPU upload of a BVH holding a deleted primitive")) {
+        return;
+    }
+
+    std::vector<CollisionDetection::RayQuery> queries = {CollisionDetection::RayQuery(make_vec3(0, 0, 1), make_vec3(0, 0, 1))};
+    CollisionDetection::RayTracingStats stats;
+    std::vector<CollisionDetection::HitResult> results = collision.castRaysGPU(queries, stats);
+    std::vector<uint> collisions = collision.findCollisions(query_UUID);
+
+    DOCTEST_REQUIRE(results.size() == 1);
+    DOCTEST_CHECK(results[0].primitive_UUID == far_UUID);
+    DOCTEST_CHECK(std::find(collisions.begin(), collisions.end(), near_UUID) == collisions.end());
+}
+#endif
 
 // -------- FLOATING-POINT PRECISION EDGE CASE TESTS --------
 
@@ -6431,6 +7585,98 @@ DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - Cropping t
     DOCTEST_CHECK(voxel_UUIDs.size() >= 1);
 }
 
+DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - Sliced texture UVs follow position") {
+    // A 2x2 textured patch maps (x,y) linearly to (u,v) = ((x+1)/2, (y+1)/2). Slicing at y = +-0.5 cuts the two edges of
+    // constant u, one of which runs in decreasing v (v3 -> v0). Every vertex of every piece must keep the linear mapping.
+    Context context;
+    uint prim_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2), make_SphericalCoord(0, 0), "lib/images/disk_texture.png");
+
+    CollisionDetection collisiondetection(&context);
+    collisiondetection.disableMessages();
+
+    std::vector<uint> sliced_UUIDs = collisiondetection.slicePrimitivesUsingGrid(std::vector<uint>{prim_UUID}, make_vec3(0, 0, 0), make_vec3(3, 3, 1), make_int3(1, 3, 1));
+    DOCTEST_REQUIRE(sliced_UUIDs.size() > 1);
+
+    float max_uv_error = 0;
+    size_t checked_vertices = 0;
+    for (uint UUID: sliced_UUIDs) {
+        std::vector<vec3> vertices = context.getPrimitiveVertices(UUID);
+        std::vector<vec2> uvs = context.getPrimitiveTextureUV(UUID);
+        DOCTEST_REQUIRE(uvs.size() == vertices.size());
+        for (size_t i = 0; i < vertices.size(); i++) {
+            max_uv_error = std::max(max_uv_error, std::abs(uvs.at(i).x - 0.5f * (vertices.at(i).x + 1.f)));
+            max_uv_error = std::max(max_uv_error, std::abs(uvs.at(i).y - 0.5f * (vertices.at(i).y + 1.f)));
+            checked_vertices++;
+        }
+    }
+    DOCTEST_CHECK(checked_vertices > 4);
+    DOCTEST_CHECK(max_uv_error < 1e-4f);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - Slicing through a vertex away from the origin") {
+    // Triangles with one vertex exactly on a grid face, 100 m from the origin. Slice points on the two edges that meet at
+    // that vertex used to come back a few float ulps away from it, failed the fixed 1e-6 vertex match, and left the
+    // vertex used to split the triangle uninitialized, so pieces were created with a corner at the world origin.
+    std::mt19937 generator(12345); // raw mt19937 output is identical on every platform; the distributions are not
+    auto unit = [&generator](float lo, float hi) { return lo + (hi - lo) * float(generator() % 100000) / 100000.f; };
+
+    const float offset = 100.f;
+    const float face_x = offset + 0.5f;
+    int pieces_outside_triangle = 0;
+    int area_mismatches = 0;
+    for (int trial = 0; trial < 200; trial++) {
+        Context context;
+        vec3 v0 = make_vec3(face_x, offset + unit(-1, 1), offset + unit(-1, 1));
+        vec3 v1 = make_vec3(face_x + unit(0.2f, 1), offset + unit(-1, 1), offset + unit(-1, 1));
+        vec3 v2 = make_vec3(face_x - unit(0.2f, 1), offset + unit(-1, 1), offset + unit(-1, 1));
+        uint UUID = context.addTriangle(v0, v1, v2);
+        float original_area = context.getPrimitiveArea(UUID);
+        vec3 triangle_min, triangle_max;
+        context.getPrimitiveBoundingBox(UUID, triangle_min, triangle_max);
+
+        CollisionDetection collisiondetection(&context);
+        collisiondetection.disableMessages();
+        std::vector<uint> pieces = collisiondetection.slicePrimitivesUsingGrid({UUID}, make_vec3(face_x, offset, offset), make_vec3(4, 6, 6), make_int3(2, 1, 1));
+
+        float total_area = 0;
+        float max_escape = 0;
+        for (uint piece: pieces) {
+            total_area += context.getPrimitiveArea(piece);
+            for (const vec3 &vertex: context.getPrimitiveVertices(piece)) {
+                max_escape = std::max({max_escape, triangle_min.x - vertex.x, vertex.x - triangle_max.x, triangle_min.y - vertex.y, vertex.y - triangle_max.y, triangle_min.z - vertex.z, vertex.z - triangle_max.z});
+            }
+        }
+        if (max_escape > 1e-3f) {
+            pieces_outside_triangle++;
+        }
+        if (std::abs(total_area - original_area) > 1e-3f * original_area) {
+            area_mismatches++;
+        }
+    }
+    DOCTEST_CHECK(pieces_outside_triangle == 0);
+    DOCTEST_CHECK(area_mismatches == 0);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - Slicing a sliver through two of its vertices") {
+    // This triangle has a vertex exactly on the face x = -0.25 of a 16^3 grid. Earlier cuts leave a sliver piece whose
+    // vertex lies on the face z = -0.5 while the opposite edge crosses that face within the vertex-matching tolerance of
+    // another vertex, so all three slice points are vertices. The plane runs along an edge of the sliver: nothing to cut.
+    Context context;
+    uint UUID = context.addTriangle(make_vec3(-0.38f, -0.57f, -0.57f), make_vec3(-0.25f, -0.55f, -0.54f), make_vec3(-0.37f, -0.45f, -0.46f));
+    float original_area = context.getPrimitiveArea(UUID);
+
+    CollisionDetection collisiondetection(&context);
+    collisiondetection.disableMessages();
+    std::vector<uint> pieces;
+    DOCTEST_REQUIRE_NOTHROW(pieces = collisiondetection.slicePrimitivesUsingGrid({UUID}, make_vec3(0, 0, 0), make_vec3(2, 2, 2), make_int3(16, 16, 16)));
+
+    float total_area = 0;
+    for (uint piece: pieces) {
+        total_area += context.getPrimitiveArea(piece);
+    }
+    DOCTEST_CHECK(std::abs(total_area - original_area) < 1e-4f * original_area);
+}
+
 DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - Basic functionality test") {
     Context context;
 
@@ -6594,6 +7840,53 @@ DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - calculateP
 
     DOCTEST_CHECK(inside_prims.size() == 1);
     DOCTEST_CHECK(inside_prims[0] == patch1);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - calculatePrimitiveVoxelIntersection Recomputes Rather Than Appends") {
+    // Each call must report where the primitives are now: calling it again must not duplicate entries, and a primitive
+    // moved to another voxel must no longer be listed in the old one.
+    Context context;
+    CollisionDetection collisiondetection(&context);
+    collisiondetection.disableMessages();
+
+    uint voxel1 = context.addVoxel(make_vec3(-2, 0, 0), make_vec3(1, 1, 1));
+    uint voxel2 = context.addVoxel(make_vec3(2, 0, 0), make_vec3(1, 1, 1));
+    uint patch = context.addPatch(make_vec3(-2, 0, 0), make_vec2(0.2, 0.2));
+
+    collisiondetection.calculatePrimitiveVoxelIntersection();
+    collisiondetection.calculatePrimitiveVoxelIntersection();
+
+    std::vector<uint> inside1;
+    context.getPrimitiveData(voxel1, "inside_UUIDs", inside1);
+    DOCTEST_CHECK(inside1 == std::vector<uint>{patch});
+
+    context.translatePrimitive(patch, make_vec3(4, 0, 0));
+    collisiondetection.calculatePrimitiveVoxelIntersection();
+
+    std::vector<uint> inside2;
+    context.getPrimitiveData(voxel2, "inside_UUIDs", inside2);
+    DOCTEST_CHECK(inside2 == std::vector<uint>{patch});
+    DOCTEST_CHECK(!context.doesPrimitiveDataExist(voxel1, "inside_UUIDs"));
+}
+
+DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - calculatePrimitiveVoxelIntersection Order Is Deterministic") {
+    // The primitives inside a voxel are listed in ascending UUID order, independent of how the work is split across threads
+    Context context;
+    CollisionDetection collisiondetection(&context);
+    collisiondetection.disableMessages();
+
+    uint voxel = context.addVoxel(make_vec3(0, 0, 0), make_vec3(2, 2, 2));
+    std::vector<uint> patches;
+    for (int i = 0; i < 2000; i++) {
+        patches.push_back(context.addPatch(make_vec3(-0.9f + 0.0009f * float(i), 0, 0), make_vec2(0.01, 0.01)));
+    }
+
+    collisiondetection.calculatePrimitiveVoxelIntersection();
+
+    std::vector<uint> inside;
+    context.getPrimitiveData(voxel, "inside_UUIDs", inside);
+    std::sort(patches.begin(), patches.end());
+    DOCTEST_CHECK(inside == patches);
 }
 
 DOCTEST_TEST_CASE("CollisionDetection GPU/CPU Ray Casting Parity") {

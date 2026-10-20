@@ -55,11 +55,6 @@ struct GPUBVHNode {
 };
 
 // External CUDA functions
-extern "C" {
-void launchBVHTraversal(void *h_nodes, int node_count, unsigned int *h_primitive_indices, int primitive_count, float *h_primitive_aabb_min, float *h_primitive_aabb_max, float *h_query_aabb_min, float *h_query_aabb_max, int num_queries,
-                        unsigned int *h_results, unsigned int *h_result_counts, int max_results_per_query);
-bool launchVoxelRayPathLengths(int num_rays, float *h_ray_origins, float *h_ray_directions, float grid_center_x, float grid_center_y, float grid_center_z, float grid_size_x, float grid_size_y, float grid_size_z, int grid_divisions_x,
-                               int grid_divisions_y, int grid_divisions_z, int primitive_count, int *h_voxel_ray_counts, float *h_voxel_path_lengths, int *h_voxel_transmitted, int *h_voxel_hit_before, int *h_voxel_hit_after, int *h_voxel_hit_inside);
 // Warp-efficient GPU kernels
 void launchWarpEfficientBVH(void *h_bvh_soa_gpu, unsigned int *h_primitive_indices, int primitive_count, float *h_primitive_aabb_min, float *h_primitive_aabb_max, float *h_ray_origins, float *h_ray_directions, float *h_ray_max_distances,
                             int num_rays, unsigned int *h_results, unsigned int *h_result_counts, int max_results_per_ray);
@@ -68,7 +63,6 @@ void launchWarpEfficientBVH(void *h_bvh_soa_gpu, unsigned int *h_primitive_indic
 void launchRaysOnResidentScene(void *d_bvh_nodes, int node_count, unsigned int *d_primitive_indices, int primitive_count, int *d_primitive_types, float3 *d_primitive_vertices, unsigned int *d_vertex_offsets, const unsigned char *d_mask_data,
                                const unsigned int *d_mask_offsets, const int *d_mask_sizes, const int *d_mask_IDs, const float *d_uv_data, const int *d_uv_IDs, int total_vertex_count, const float *h_ray_origins, const float *h_ray_directions,
                                const float *h_ray_max_distances, float uniform_max_distance, int num_rays, float *h_hit_distances, unsigned int *h_hit_primitive_ids, unsigned int *h_hit_counts, float *h_hit_normals, bool find_closest_hit);
-}
 
 // Helper function to convert helios::vec3 to float3
 inline float3 heliosVecToFloat3(const helios::vec3 &v) {
@@ -83,6 +77,19 @@ CollisionDetection::HitResult CollisionDetection::castRay(const RayQuery &ray_qu
 }
 
 CollisionDetection::HitResult CollisionDetection::castRay(const vec3 &origin, const vec3 &direction, float max_distance, const std::vector<uint> &target_UUIDs) {
+    prepareForRayCasting();
+    return castRayOnCurrentBVH(origin, direction, max_distance, target_UUIDs);
+}
+
+void CollisionDetection::prepareForRayCasting() {
+    ensureBVHCurrent(); // handles automatic rebuilds
+    if (!bvh_nodes.empty()) {
+        ensurePrimitiveCacheCurrent();
+        ensureOptimizedBVH();
+    }
+}
+
+CollisionDetection::HitResult CollisionDetection::castRayOnCurrentBVH(const vec3 &origin, const vec3 &direction, float max_distance, const std::vector<uint> &target_UUIDs) {
     HitResult result;
 
     // Normalize direction vector
@@ -92,18 +99,12 @@ CollisionDetection::HitResult CollisionDetection::castRay(const vec3 &origin, co
     }
     ray_direction = ray_direction / ray_direction.magnitude();
 
-    // Ensure BVH is current before ray casting (handles automatic rebuilds)
-    const_cast<CollisionDetection *>(this)->ensureBVHCurrent();
-
-    // CRITICAL FIX: Use BVH traversal when available for performance
-    // This fixes the 10x+ performance regression by replacing brute-force primitive testing
+    // Same traversal as the batch ray casts. prepareForRayCasting() must have run since the last geometry change; it is
+    // not called here because this is also called per ray from parallel loops.
     if (!bvh_nodes.empty()) {
-        // Build primitive cache for thread-safe access if not already built (keeps the dense cache in sync too)
-        ensurePrimitiveCacheCurrent();
-
-        // Use BVH traversal for both filtered and unfiltered queries - BVH supports UUID filtering
         RayQuery query(origin, ray_direction, max_distance, target_UUIDs);
-        return castRayBVHTraversal(query);
+        RayTracingStats unused_stats;
+        return castRaySoATraversal(query, unused_stats);
     }
 
     // FALLBACK: Brute-force primitive testing (only when no BVH available or target UUIDs specified)
@@ -121,99 +122,25 @@ CollisionDetection::HitResult CollisionDetection::castRay(const vec3 &origin, co
             // Fall back to context call (thread-unsafe)
             search_primitives = context->getAllUUIDs();
         }
+        if (bvh_geometry_restricted) {
+            // An empty BVH left by a buildBVH(subset) whose primitives were all deleted must still exclude what that
+            // subset excluded
+            search_primitives.erase(std::remove_if(search_primitives.begin(), search_primitives.end(), [this](uint UUID) { return bvh_excluded_geometry.find(UUID) != bvh_excluded_geometry.end(); }), search_primitives.end());
+        }
     } else {
         search_primitives = target_UUIDs;
     }
 
-    // Find nearest intersection
-    float nearest_distance = std::numeric_limits<float>::max();
-    if (max_distance > 0) {
-        nearest_distance = max_distance;
-    }
-
-    uint hit_primitive = 0;
-    bool found_intersection = false;
-
-    // Test each primitive for intersection
+    // Find the nearest intersection, using the same intersection test as the BVH traversals
+    float nearest_distance = (max_distance > 0) ? max_distance : std::numeric_limits<float>::max();
     for (uint candidate_uuid: search_primitives) {
-        float intersection_distance;
-        bool hit = false;
-
-        // Use thread-safe cached intersection if available
-        if (!primitive_cache.empty()) {
-            HitResult primitive_result = intersectPrimitiveThreadSafe(origin, ray_direction, candidate_uuid, max_distance);
-            if (primitive_result.hit) {
-                hit = true;
-                intersection_distance = primitive_result.distance;
-            }
-        } else {
-            // Fall back to thread-unsafe context call
-            if (!context->doesPrimitiveExist(candidate_uuid)) {
-                continue;
-            }
-            hit = rayPrimitiveIntersection(origin, ray_direction, candidate_uuid, intersection_distance);
-
-            // Reject hits on transparent texels so the ray passes through to geometry behind.
-            if (hit && context->primitiveTextureHasTransparencyChannel(candidate_uuid)) {
-                CachedPrimitive temp_cached(context->getPrimitiveType(candidate_uuid), context->getPrimitiveVertices(candidate_uuid));
-                temp_cached.transparency_mask = context->getPrimitiveTextureTransparencyData(candidate_uuid);
-                temp_cached.texture_size = context->getPrimitiveTextureSize(candidate_uuid);
-                temp_cached.uv = context->getPrimitiveTextureUV(candidate_uuid);
-                if (!isHitTexelOpaque(temp_cached, origin + ray_direction * intersection_distance)) {
-                    hit = false;
-                }
-            }
+        if (!context->doesPrimitiveExist(candidate_uuid)) {
+            continue;
         }
-
-        if (hit) {
-            // Check distance constraints
-            if (intersection_distance > 1e-6f && // Avoid self-intersection
-                intersection_distance < nearest_distance) { // Find nearest
-
-                nearest_distance = intersection_distance;
-                hit_primitive = candidate_uuid;
-                found_intersection = true;
-            }
-        }
-    }
-
-    // Fill result
-    if (found_intersection) {
-        result.hit = true;
-        result.distance = nearest_distance;
-        result.primitive_UUID = hit_primitive;
-        result.intersection_point = origin + ray_direction * nearest_distance;
-
-        // Calculate surface normal
-        try {
-            PrimitiveType type = context->getPrimitiveType(hit_primitive);
-            std::vector<vec3> vertices = context->getPrimitiveVertices(hit_primitive);
-
-            if (type == PRIMITIVE_TYPE_TRIANGLE && vertices.size() >= 3) {
-                // Calculate triangle normal
-                vec3 v0 = vertices[0];
-                vec3 v1 = vertices[1];
-                vec3 v2 = vertices[2];
-                vec3 edge1 = v1 - v0;
-                vec3 edge2 = v2 - v0;
-                result.normal = cross(edge1, edge2);
-                result.normal = result.normal / result.normal.magnitude();
-            } else if (type == PRIMITIVE_TYPE_PATCH && vertices.size() >= 4) {
-                // Calculate patch normal (assuming quad)
-                vec3 v0 = vertices[0];
-                vec3 v1 = vertices[1];
-                vec3 v2 = vertices[2];
-                vec3 edge1 = v1 - v0;
-                vec3 edge2 = v2 - v0;
-                result.normal = cross(edge1, edge2);
-                result.normal = result.normal / result.normal.magnitude();
-            } else {
-                // Default normal (pointing back along ray)
-                result.normal = make_vec3(-ray_direction.x, -ray_direction.y, -ray_direction.z);
-            }
-        } catch (const std::exception &e) {
-            // If we can't get surface normal, use default
-            result.normal = make_vec3(-ray_direction.x, -ray_direction.y, -ray_direction.z);
+        HitResult candidate = intersectPrimitiveThreadSafe(origin, ray_direction, candidate_uuid, nearest_distance);
+        if (candidate.hit && candidate.distance < nearest_distance) {
+            nearest_distance = candidate.distance;
+            result = candidate;
         }
     }
 
@@ -223,11 +150,12 @@ CollisionDetection::HitResult CollisionDetection::castRay(const vec3 &origin, co
 
 bool CollisionDetection::shouldUseGPU(size_t ray_count) const {
 #ifdef HELIOS_CUDA_AVAILABLE
-    // Use GPU only for large batches (amortize launch + transfer overhead) on a complex, already-resident scene.
-    // CPU is faster for small batches. Mirrors the thresholds the vector dispatch has always used.
+    // Use GPU only for large batches (amortize launch + transfer overhead) on a complex scene. CPU is faster for small
+    // batches. Mirrors the thresholds the vector dispatch has always used. Residency is not part of the choice: once GPU
+    // acceleration is enabled, a batch that qualifies uploads the scene if needed rather than quietly using the CPU.
     constexpr size_t GPU_BATCH_THRESHOLD = 1000000; // batches >= 1M rays
     constexpr size_t MIN_PRIMITIVES_FOR_GPU = 500; // minimum scene complexity
-    return gpu_acceleration_enabled && ray_count >= GPU_BATCH_THRESHOLD && d_bvh_nodes != nullptr && d_primitive_vertices != nullptr && !primitive_indices.empty() && primitive_indices.size() >= MIN_PRIMITIVES_FOR_GPU;
+    return gpu_acceleration_enabled && ray_count >= GPU_BATCH_THRESHOLD && primitive_indices.size() >= MIN_PRIMITIVES_FOR_GPU;
 #else
     (void) ray_count;
     return false;
@@ -243,10 +171,13 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRays(const st
     local_stats.total_rays_cast = ray_queries.size();
 
     // Smart CPU/GPU selection via the shared predicate (see shouldUseGPU): GPU only pays off for large batches on a
-    // sufficiently complex, GPU-resident scene. Keeping the predicate in one place ensures castRays and castRaysSoA
-    // never diverge in how they choose GPU vs CPU.
+    // sufficiently complex scene. Keeping the predicate in one place ensures castRays and castRaysSoA
+    // never diverge in how they choose GPU vs CPU. The GPU kernel has no per-ray target filter, so a batch in which any
+    // ray carries target_UUIDs is always traced on the CPU.
 #ifdef HELIOS_CUDA_AVAILABLE
-    if (shouldUseGPU(ray_queries.size())) {
+    ensureBVHCurrent(); // shouldUseGPU() must see the current scene
+    const bool any_targets = std::any_of(ray_queries.begin(), ray_queries.end(), [](const RayQuery &query) { return !query.target_UUIDs.empty(); });
+    if (!any_targets && shouldUseGPU(ray_queries.size())) {
         castRaysGPU(ray_queries, results, local_stats);
     } else {
         castRaysCPU(ray_queries, results, local_stats);
@@ -279,6 +210,13 @@ void CollisionDetection::castRaysGPU(const std::vector<RayQuery> &ray_queries, s
 std::vector<std::vector<std::vector<std::vector<CollisionDetection::HitResult>>>> CollisionDetection::performGridRayIntersection(const vec3 &grid_center, const vec3 &grid_size, const helios::int3 &grid_divisions,
                                                                                                                                  const std::vector<RayQuery> &ray_queries) {
 
+    if (grid_divisions.x <= 0 || grid_divisions.y <= 0 || grid_divisions.z <= 0) {
+        helios_runtime_error("ERROR (CollisionDetection::performGridRayIntersection): Grid divisions must be positive in every direction.");
+    }
+    if (!(grid_size.x > 0.f && grid_size.y > 0.f && grid_size.z > 0.f)) {
+        helios_runtime_error("ERROR (CollisionDetection::performGridRayIntersection): Grid size must be positive in every direction.");
+    }
+
     // Initialize result grid
     std::vector<std::vector<std::vector<std::vector<HitResult>>>> grid_results;
     grid_results.resize(grid_divisions.x);
@@ -292,17 +230,28 @@ std::vector<std::vector<std::vector<std::vector<CollisionDetection::HitResult>>>
     // Calculate voxel size
     vec3 voxel_size = make_vec3(grid_size.x / float(grid_divisions.x), grid_size.y / float(grid_divisions.y), grid_size.z / float(grid_divisions.z));
 
+    // Bring the BVH up to date once for the whole batch rather than once per ray
+    prepareForRayCasting();
+
     // Process each ray
     for (const auto &query: ray_queries) {
-        HitResult hit_result = castRay(query);
+        HitResult hit_result = castRayOnCurrentBVH(query.origin, query.direction, query.max_distance, query.target_UUIDs);
 
         if (hit_result.hit) {
             // Determine which voxel the hit point falls into
             vec3 relative_pos = hit_result.intersection_point - (grid_center - grid_size * 0.5f);
 
-            int voxel_i = int(relative_pos.x / voxel_size.x);
-            int voxel_j = int(relative_pos.y / voxel_size.y);
-            int voxel_k = int(relative_pos.z / voxel_size.z);
+            // floor() rather than int(): truncation toward zero would put a hit up to one cell below the grid into cell 0.
+            // A hit on the grid's top face belongs to the top cell, as one on the bottom face belongs to the bottom cell.
+            auto cellIndex = [](float relative, float cell_size, float extent, int divisions) {
+                if (relative == extent) {
+                    return divisions - 1;
+                }
+                return static_cast<int>(std::floor(relative / cell_size));
+            };
+            int voxel_i = cellIndex(relative_pos.x, voxel_size.x, grid_size.x, grid_divisions.x);
+            int voxel_j = cellIndex(relative_pos.y, voxel_size.y, grid_size.y, grid_divisions.y);
+            int voxel_k = cellIndex(relative_pos.z, voxel_size.z, grid_size.z, grid_divisions.z);
 
             // Check bounds
             if (voxel_i >= 0 && voxel_i < grid_divisions.x && voxel_j >= 0 && voxel_j < grid_divisions.y && voxel_k >= 0 && voxel_k < grid_divisions.z) {
@@ -413,9 +362,9 @@ void CollisionDetection::calculateRayPathLengthsDetailed(const vec3 &grid_center
     calculateVoxelRayPathLengths(grid_center, grid_size, grid_divisions, ray_origins, ray_directions);
 
     // Cast each ray and collect detailed results
+    prepareForRayCasting();
     for (size_t i = 0; i < ray_origins.size(); i++) {
-        RayQuery query(ray_origins[i], ray_directions[i]);
-        HitResult result = castRay(query);
+        HitResult result = castRayOnCurrentBVH(ray_origins[i], ray_directions[i], -1.0f, {});
         hit_results.push_back(result);
     }
 }
@@ -593,9 +542,11 @@ void CollisionDetection::castRaysSoA(const helios::vec3 *origins, const helios::
     // GPU fast path: for large batches on a GPU-resident scene, trace on the device and write results straight into the
     // caller arrays. The scene geometry is uploaded once per scan by buildBVH()/transferBVHToGPU() (driven by the
     // LiDAR prepare/finish bracket), so only this batch's ray + result buffers move across the bus here — keeping a
-    // chunked synthetic scan from re-uploading the whole scene per chunk. shouldUseGPU() also guards that the scene is
-    // actually resident (d_primitive_vertices != nullptr); otherwise we fall through to the CPU traversal below.
+    // chunked synthetic scan from re-uploading the whole scene per chunk. If the scene is not resident (or an older BVH
+    // is), it is uploaded here; a failed upload raises rather than falling through to the CPU traversal below.
     if (shouldUseGPU(count)) {
+        ensureBVHResidentOnGPU();
+        markDeletedPrimitivesOnGPU();
         // The CPU convention "max_distance <= 0 => unbounded" maps to a large finite kernel cutoff, broadcast to every
         // ray (no per-ray distance array needed).
         const float kernel_max_distance = (max_distance > 0) ? max_distance : std::numeric_limits<float>::max();
@@ -718,7 +669,7 @@ void CollisionDetection::castRaysSoA_packets(const helios::vec3 *origins, const 
 
     // The packet traversal is a CPU-only optimization. On a GPU-resident scene large enough to favor the device, defer
     // to the per-ray path which dispatches to the GPU kernel (per-ray on the GPU is already massively parallel and the
-    // packet sharing would not map onto it). shouldUseGPU is false when no GPU build / scene is resident.
+    // packet sharing would not map onto it). shouldUseGPU is false on a non-CUDA build or with GPU acceleration off.
     if (shouldUseGPU(count)) {
         castRaysSoA(origins, directions, count, max_distance, out_distance, out_normal, out_primitive_UUID, stats);
         return;
@@ -796,10 +747,15 @@ void CollisionDetection::castPacketSoATraversal(const helios::vec3 *origins, con
     HitResult best[MAX_PACKET_RAYS];
     vec3 ray_origin[MAX_PACKET_RAYS];
     vec3 ray_dir[MAX_PACKET_RAYS];
+    bool ray_valid[MAX_PACKET_RAYS];
     const float init_far = (max_distance > 0) ? max_distance : std::numeric_limits<float>::max();
     for (size_t r = 0; r < n; r++) {
         ray_origin[r] = origins[begin + r];
-        ray_dir[r] = directions[begin + r];
+        // Directions need not be unit length: as in castRay(), they are normalized so distances and max_distance are
+        // metric. A zero-length direction is a miss.
+        const float direction_magnitude = directions[begin + r].magnitude();
+        ray_valid[r] = (direction_magnitude >= 1e-8f);
+        ray_dir[r] = ray_valid[r] ? directions[begin + r] / direction_magnitude : directions[begin + r];
         closest[r] = init_far;
         // best[r] default-constructed: hit == false
     }
@@ -824,7 +780,7 @@ void CollisionDetection::castPacketSoATraversal(const helios::vec3 *origins, con
             int active_idx[MAX_PACKET_RAYS];
             int active_count = 0;
             for (size_t r = 0; r < n; r++) {
-                if (aabbIntersectSoA(ray_origin[r], ray_dir[r], closest[r], node_idx)) {
+                if (ray_valid[r] && aabbIntersectSoA(ray_origin[r], ray_dir[r], closest[r], node_idx)) {
                     active_idx[active_count++] = int(r);
                 }
             }
@@ -844,7 +800,7 @@ void CollisionDetection::castPacketSoATraversal(const helios::vec3 *origins, con
                 for (int a = 0; a < active_count; ++a) {
                     const int r = active_idx[a];
                     HitResult pr = use_dense_cache ? intersectCachedPrimitive(ray_origin[r], ray_dir[r], primitive_cache_dense[slot], closest[r]) : intersectPrimitiveThreadSafe(ray_origin[r], ray_dir[r], primitive_id, closest[r]);
-                    if (pr.hit && pr.distance < closest[r]) {
+                    if (pr.hit && pr.distance < closest[r] && context->doesPrimitiveExist(primitive_id)) { // skip primitives deleted since the BVH was built
                         best[r] = pr;
                         closest[r] = pr.distance;
                     }
@@ -855,7 +811,7 @@ void CollisionDetection::castPacketSoATraversal(const helios::vec3 *origins, con
             // the full active set is only needed at leaves.
             bool any_hit_box = false;
             for (size_t r = 0; r < n; r++) {
-                if (aabbIntersectSoA(ray_origin[r], ray_dir[r], closest[r], node_idx)) {
+                if (ray_valid[r] && aabbIntersectSoA(ray_origin[r], ray_dir[r], closest[r], node_idx)) {
                     any_hit_box = true;
                     break;
                 }
@@ -988,6 +944,13 @@ CollisionDetection::HitResult CollisionDetection::castRaySoATraversal(const RayQ
         return result; // No BVH built
     }
 
+    // The direction need not be unit length: as in castRay(), it is normalized so distances and max_distance are metric.
+    const float direction_magnitude = query.direction.magnitude();
+    if (direction_magnitude < 1e-8f) {
+        return result; // Invalid direction
+    }
+    const vec3 ray_direction = query.direction / direction_magnitude;
+
     // Fixed-size traversal stack (no per-ray heap allocation). An iterative DFS that pushes both children holds at most
     // ~one node per tree level, so the capacity must exceed buildBVHRecursive's MAX_DEPTH (64). 128 leaves generous
     // headroom; the guarded push below is a defensive backstop that must never actually trigger for a valid tree.
@@ -1012,7 +975,7 @@ CollisionDetection::HitResult CollisionDetection::castRaySoATraversal(const RayQ
         }
 
         // AABB intersection test using SoA layout
-        if (!aabbIntersectSoA(query.origin, query.direction, closest_distance, node_idx)) {
+        if (!aabbIntersectSoA(query.origin, ray_direction, closest_distance, node_idx)) {
             continue;
         }
 
@@ -1041,9 +1004,11 @@ CollisionDetection::HitResult CollisionDetection::castRaySoATraversal(const RayQ
 
                 // Hot path: dense-cache slot lookup (no unordered_map find). Falls back to the UUID-keyed
                 // intersection when the dense cache is unavailable.
-                HitResult primitive_result = use_dense_cache ? intersectCachedPrimitive(query.origin, query.direction, primitive_cache_dense[slot], closest_distance)
-                                                             : intersectPrimitiveThreadSafe(query.origin, query.direction, primitive_id, closest_distance);
-                if (primitive_result.hit && primitive_result.distance < closest_distance) {
+                HitResult primitive_result = use_dense_cache ? intersectCachedPrimitive(query.origin, ray_direction, primitive_cache_dense[slot], closest_distance)
+                                                             : intersectPrimitiveThreadSafe(query.origin, ray_direction, primitive_id, closest_distance);
+                // A primitive deleted since the BVH was built (possible with automatic rebuilds disabled) is skipped; the
+                // existence check runs only for a hit that would become the nearest, so it stays off the per-test path
+                if (primitive_result.hit && primitive_result.distance < closest_distance && context->doesPrimitiveExist(primitive_id)) {
                     result = primitive_result;
                     closest_distance = primitive_result.distance;
                 }
@@ -1059,8 +1024,8 @@ CollisionDetection::HitResult CollisionDetection::castRaySoATraversal(const RayQ
 
             if (left_valid && right_valid) {
                 // Order by entry distance into each child's AABB so the nearer child is popped first.
-                const float t_left = aabbEntryDistanceSoA(query.origin, query.direction, left_child);
-                const float t_right = aabbEntryDistanceSoA(query.origin, query.direction, right_child);
+                const float t_left = aabbEntryDistanceSoA(query.origin, ray_direction, left_child);
+                const float t_right = aabbEntryDistanceSoA(query.origin, ray_direction, right_child);
                 uint32_t first = left_child, second = right_child;
                 if (t_right < t_left) {
                     first = right_child;
@@ -1201,85 +1166,6 @@ float CollisionDetection::aabbEntryDistanceSoA(const helios::vec3 &ray_origin, c
 
 
 // Basic BVH traversal using standard node structure
-CollisionDetection::HitResult CollisionDetection::castRayBVHTraversal(const RayQuery &query) {
-    HitResult result;
-
-    if (bvh_nodes.empty()) {
-        return result; // No BVH built
-    }
-
-    // Stack-based traversal using standard BVH nodes
-    std::stack<size_t> node_stack;
-    node_stack.push(0); // Start from root
-
-    float closest_distance = (query.max_distance > 0) ? query.max_distance : std::numeric_limits<float>::max();
-
-    while (!node_stack.empty()) {
-        size_t node_idx = node_stack.top();
-        node_stack.pop();
-
-        if (node_idx >= bvh_nodes.size()) {
-            if (printmessages) {
-                std::cout << "ERROR: Invalid BVH node index " << node_idx << " >= " << bvh_nodes.size() << " nodes" << std::endl;
-            }
-            result.hit = false;
-            return result;
-        }
-
-        const BVHNode &node = bvh_nodes[node_idx];
-
-        // AABB intersection test - this provides the early miss detection that was missing
-        if (!rayAABBIntersect(query.origin, query.direction, node.aabb_min, node.aabb_max)) {
-            continue; // Ray misses this node's bounding box - skip entire subtree
-        }
-
-        if (node.is_leaf) {
-            // Process primitives in this leaf
-            for (uint32_t i = 0; i < node.primitive_count; ++i) {
-                if (node.primitive_start + i >= primitive_indices.size()) {
-                    if (printmessages) {
-                        std::cout << "ERROR: Invalid BVH primitive index " << (node.primitive_start + i) << " >= " << primitive_indices.size() << " primitives" << std::endl;
-                    }
-                    result.hit = false;
-                    return result;
-                }
-
-                uint primitive_id = primitive_indices[node.primitive_start + i];
-
-                // Skip if not in target list (if specified)
-                if (!query.target_UUIDs.empty()) {
-                    bool found = false;
-                    for (uint target: query.target_UUIDs) {
-                        if (primitive_id == target) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found)
-                        continue;
-                }
-
-                // Perform primitive intersection test
-                HitResult primitive_hit = intersectPrimitive(query, primitive_id);
-                if (primitive_hit.hit && primitive_hit.distance < closest_distance) {
-                    result = primitive_hit;
-                    closest_distance = primitive_hit.distance;
-                }
-            }
-        } else {
-            // Internal node - add children to stack for traversal
-            if (node.left_child != 0xFFFFFFFF && node.left_child < bvh_nodes.size()) {
-                node_stack.push(node.left_child);
-            }
-            if (node.right_child != 0xFFFFFFFF && node.right_child < bvh_nodes.size()) {
-                node_stack.push(node.right_child);
-            }
-        }
-    }
-
-    return result;
-}
-
 // Helper method to test ray-AABB intersection
 bool CollisionDetection::rayAABBIntersect(const vec3 &ray_origin, const vec3 &ray_direction, const vec3 &aabb_min, const vec3 &aabb_max) const {
     // Robust ray-AABB intersection using slab method with proper axis-aligned ray handling
@@ -1355,62 +1241,6 @@ bool CollisionDetection::rayAABBIntersect(const vec3 &ray_origin, const vec3 &ra
 }
 
 // Helper method to intersect with individual primitive (reuses existing logic)
-CollisionDetection::HitResult CollisionDetection::intersectPrimitive(const RayQuery &query, uint primitive_id) {
-    // PERFORMANCE FIX: Use direct context call instead of expensive cached primitive data
-    // This avoids the need to build and maintain a primitive cache
-    HitResult result;
-
-    float distance;
-    if (rayPrimitiveIntersection(query.origin, query.direction, primitive_id, distance)) {
-        vec3 intersection_point = query.origin + query.direction * distance;
-
-        // Calculate surface normal directly from context (minimal overhead)
-        PrimitiveType type = context->getPrimitiveType(primitive_id);
-        std::vector<vec3> vertices = context->getPrimitiveVertices(primitive_id);
-
-        // Reject hits on transparent texels so the ray passes through to geometry behind.
-        if (context->primitiveTextureHasTransparencyChannel(primitive_id)) {
-            CachedPrimitive temp_cached(type, vertices);
-            temp_cached.transparency_mask = context->getPrimitiveTextureTransparencyData(primitive_id);
-            temp_cached.texture_size = context->getPrimitiveTextureSize(primitive_id);
-            temp_cached.uv = context->getPrimitiveTextureUV(primitive_id);
-            if (!isHitTexelOpaque(temp_cached, intersection_point)) {
-                return result; // result.hit is still false
-            }
-        }
-
-        result.hit = true;
-        result.distance = distance;
-        result.primitive_UUID = primitive_id;
-        result.intersection_point = intersection_point;
-
-        if (type == PRIMITIVE_TYPE_TRIANGLE && vertices.size() >= 3) {
-            vec3 edge1 = vertices[1] - vertices[0];
-            vec3 edge2 = vertices[2] - vertices[0];
-            result.normal = cross(edge1, edge2);
-            if (result.normal.magnitude() > 1e-8f) {
-                result.normal = result.normal / result.normal.magnitude();
-            } else {
-                result.normal = make_vec3(-query.direction.x, -query.direction.y, -query.direction.z);
-            }
-        } else if (type == PRIMITIVE_TYPE_PATCH && vertices.size() >= 3) {
-            vec3 edge1 = vertices[1] - vertices[0];
-            vec3 edge2 = vertices[2] - vertices[0];
-            result.normal = cross(edge1, edge2);
-            if (result.normal.magnitude() > 1e-8f) {
-                result.normal = result.normal / result.normal.magnitude();
-            } else {
-                result.normal = make_vec3(-query.direction.x, -query.direction.y, -query.direction.z);
-            }
-        } else {
-            // Default normal (opposite to ray direction)
-            result.normal = make_vec3(-query.direction.x, -query.direction.y, -query.direction.z);
-        }
-    }
-
-    return result;
-}
-
 bool CollisionDetection::isHitTexelOpaque(const CachedPrimitive &cached, const vec3 &hit_point) const {
 
     // No transparency mask -> primitive is fully solid.
@@ -1485,71 +1315,12 @@ CollisionDetection::HitResult CollisionDetection::intersectPrimitiveThreadSafe(c
     // Check if we have cached primitive data for this primitive
     auto it = primitive_cache.find(primitive_id);
     if (it == primitive_cache.end()) {
-        // Primitive not in cache - this shouldn't happen in optimized paths
-        // This indicates that the context was modified after the cache was built
-        // Fall back to thread-unsafe context call (only safe for sequential code)
-        // For parallel regions, this could cause issues, but it's better than crashing
-        float distance;
-        if (rayPrimitiveIntersection(origin, direction, primitive_id, distance)) {
-            vec3 intersection_point = origin + direction * distance;
-
-            // Calculate surface normal for uncached primitive
-            PrimitiveType type = context->getPrimitiveType(primitive_id);
-            std::vector<vec3> vertices = context->getPrimitiveVertices(primitive_id);
-
-            // Reject hits on transparent texels (build a temporary cache entry from the Context;
-            // this fallback path is already thread-unsafe so the extra Context reads are acceptable).
-            if (context->primitiveTextureHasTransparencyChannel(primitive_id)) {
-                CachedPrimitive temp_cached(type, vertices);
-                temp_cached.transparency_mask = context->getPrimitiveTextureTransparencyData(primitive_id);
-                temp_cached.texture_size = context->getPrimitiveTextureSize(primitive_id);
-                temp_cached.uv = context->getPrimitiveTextureUV(primitive_id);
-                if (!isHitTexelOpaque(temp_cached, intersection_point)) {
-                    return result; // result.hit is still false
-                }
-            }
-
-            result.hit = true;
-            result.distance = distance;
-            result.primitive_UUID = primitive_id;
-            result.intersection_point = intersection_point;
-
-            if (type == PRIMITIVE_TYPE_TRIANGLE && vertices.size() >= 3) {
-                vec3 edge1 = vertices[1] - vertices[0];
-                vec3 edge2 = vertices[2] - vertices[0];
-                result.normal = cross(edge1, edge2);
-                if (result.normal.magnitude() > 1e-8f) {
-                    result.normal = result.normal / result.normal.magnitude();
-                    // Ensure normal points towards ray origin (for LiDAR compatibility)
-                    vec3 to_origin = origin - result.intersection_point;
-                    if (result.normal * to_origin < 0) {
-                        result.normal = result.normal * -1.0f;
-                    }
-                } else {
-                    result.normal = make_vec3(-direction.x, -direction.y, -direction.z);
-                    result.normal = result.normal / result.normal.magnitude();
-                }
-            } else if (type == PRIMITIVE_TYPE_PATCH && vertices.size() >= 4) {
-                vec3 edge1 = vertices[1] - vertices[0];
-                vec3 edge2 = vertices[2] - vertices[0];
-                result.normal = cross(edge1, edge2);
-                if (result.normal.magnitude() > 1e-8f) {
-                    result.normal = result.normal / result.normal.magnitude();
-                    // Ensure normal points towards ray origin (for LiDAR compatibility)
-                    vec3 to_origin = origin - result.intersection_point;
-                    if (result.normal * to_origin < 0) {
-                        result.normal = result.normal * -1.0f;
-                    }
-                } else {
-                    result.normal = make_vec3(-direction.x, -direction.y, -direction.z);
-                    result.normal = result.normal / result.normal.magnitude();
-                }
-            } else {
-                result.normal = make_vec3(-direction.x, -direction.y, -direction.z);
-                result.normal = result.normal / result.normal.magnitude();
-            }
+        // Primitive not in cache: the Context was modified after the cache was built. Build a temporary entry from the
+        // Context (not thread-safe, so only reached from sequential code) and use the same intersection test.
+        if (!context->doesPrimitiveExist(primitive_id)) {
+            return HitResult();
         }
-        return result;
+        return intersectCachedPrimitive(origin, direction, makeCachedPrimitive(primitive_id), max_distance);
     }
 
     // Cache hit: delegate to the shared cached-primitive intersection (same logic as the dense-cache hot path).
@@ -1748,6 +1519,10 @@ void CollisionDetection::buildPrimitiveCache() {
 }
 
 void CollisionDetection::cachePrimitive(uint UUID) {
+    primitive_cache[UUID] = makeCachedPrimitive(UUID);
+}
+
+CollisionDetection::CachedPrimitive CollisionDetection::makeCachedPrimitive(uint UUID) const {
     PrimitiveType type = context->getPrimitiveType(UUID);
     std::vector<vec3> vertices = context->getPrimitiveVertices(UUID);
 
@@ -1765,7 +1540,7 @@ void CollisionDetection::cachePrimitive(uint UUID) {
         cached.uv = context->getPrimitiveTextureUV(UUID);
     }
 
-    primitive_cache[UUID] = std::move(cached);
+    return cached;
 }
 
 void CollisionDetection::rebuildDensePrimitiveCache() {
@@ -1922,8 +1697,18 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysGPU(const
     std::vector<HitResult> results;
     results.resize(ray_queries.size());
 
-    if (ray_queries.empty() || !gpu_acceleration_enabled) {
-        return castRaysSoA(ray_queries, stats); // Use CPU implementation
+    if (!gpu_acceleration_enabled) {
+        helios_runtime_error("ERROR (CollisionDetection::castRaysGPU): GPU acceleration is disabled. Call enableGPUAcceleration() first, or use castRays(), which chooses between the CPU and GPU automatically.");
+    }
+    for (const RayQuery &query: ray_queries) {
+        if (!query.target_UUIDs.empty()) {
+            helios_runtime_error("ERROR (CollisionDetection::castRaysGPU): A ray query has target_UUIDs, but the GPU ray caster has no per-ray target filter. Use castRays(), which traces target-restricted batches on the CPU.");
+        }
+    }
+    if (ray_queries.empty()) {
+        stats.total_rays_cast = 0;
+        stats.total_hits = 0;
+        return results;
     }
 
     // Ensure the BVH is built. With GPU acceleration enabled, buildBVH() also uploads the scene geometry to the device
@@ -1935,14 +1720,9 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysGPU(const
         }
     }
 
-    // If the caller enabled GPU after the BVH was already built, the scene may not be resident yet; upload it now.
-    if (d_bvh_nodes == nullptr || d_primitive_vertices == nullptr) {
-        transferBVHToGPU();
-    }
-    // If the scene still could not be made resident (e.g. GPU disabled at runtime), fall back to the CPU path.
-    if (!gpu_acceleration_enabled || d_bvh_nodes == nullptr || d_primitive_vertices == nullptr || primitive_indices.empty()) {
-        return castRaysSoA(ray_queries, stats);
-    }
+    // The scene may not be resident yet (GPU enabled after the build, an earlier failed upload) or an older BVH may be.
+    ensureBVHResidentOnGPU();
+    markDeletedPrimitivesOnGPU();
 
     // Prepare host ray data with normalized directions (matching CPU RayQuery semantics). A non-positive max_distance
     // means "unbounded" on the CPU path; translate it to a large finite value so the GPU AABB/closest-hit logic agrees.
@@ -1979,18 +1759,16 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysGPU(const
     size_t hit_count = 0;
     for (size_t i = 0; i < num_rays; i++) {
         const float max_d = (ray_queries[i].max_distance > 0) ? ray_queries[i].max_distance : std::numeric_limits<float>::max();
-        if (hit_counts[i] > 0 && hit_distances[i] <= max_d) {
+        if (hit_counts[i] > 0 && hit_distances[i] < max_d) {
+            // hit_distances are metric, so the hit point is located along the normalized direction that was uploaded.
+            const vec3 unit_direction = make_vec3(ray_directions[i * 3], ray_directions[i * 3 + 1], ray_directions[i * 3 + 2]);
             results[i].hit = true;
             results[i].primitive_UUID = hit_primitive_ids[i];
             results[i].distance = hit_distances[i];
-            results[i].intersection_point = ray_queries[i].origin + ray_queries[i].direction * hit_distances[i];
+            results[i].intersection_point = ray_queries[i].origin + unit_direction * hit_distances[i];
             results[i].normal = make_vec3(hit_normals[i * 3], hit_normals[i * 3 + 1], hit_normals[i * 3 + 2]);
             hit_count++;
-        } else {
-            results[i].hit = false;
-            results[i].primitive_UUID = 0;
-            results[i].distance = std::numeric_limits<float>::max();
-        }
+        } // a miss keeps the default-constructed HitResult, the same as the CPU paths
     }
 
     stats.total_rays_cast = num_rays;

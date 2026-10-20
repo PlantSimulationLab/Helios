@@ -106,6 +106,74 @@ TEST_CASE("Core Context State and Configuration") {
         DOCTEST_CHECK(ctx.isGeometryDirty());
     }
 
+    SUBCASE("Geometry revision") {
+        // The revision advances on every modification and deletion, and is not reset by markGeometryClean()
+        Context ctx;
+        uint p = ctx.addPatch();
+        uint t = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0));
+        ctx.markGeometryClean();
+        const uint64_t after_creation = ctx.getGeometryRevision();
+        DOCTEST_CHECK(ctx.getGeometryRevision() == after_creation); // no change, no advance
+
+        ctx.translatePrimitive(p, make_vec3(1, 0, 0));
+        const uint64_t after_translate = ctx.getGeometryRevision();
+        DOCTEST_CHECK(after_translate > after_creation);
+
+        ctx.markGeometryClean();
+        DOCTEST_CHECK(ctx.getGeometryRevision() == after_translate);
+
+        ctx.setPrimitiveColor(t, RGB::red);
+        const uint64_t after_color = ctx.getGeometryRevision();
+        DOCTEST_CHECK(after_color > after_translate);
+
+        ctx.markPrimitiveDirty(t);
+        const uint64_t after_mark = ctx.getGeometryRevision();
+        DOCTEST_CHECK(after_mark > after_color);
+
+        ctx.deletePrimitive(p);
+        DOCTEST_CHECK(ctx.getGeometryRevision() > after_mark);
+    }
+
+    SUBCASE("Shape revision") {
+        // The shape revision advances on shape changes and deletions, but not on data or color changes, and is not reset by markGeometryClean()
+        Context ctx;
+        uint p = ctx.addPatch();
+        uint t = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0));
+        const uint64_t after_creation = ctx.getShapeRevision();
+
+        ctx.setPrimitiveData(p, "temperature", 300.f);
+        ctx.setPrimitiveData(std::vector<uint>{p, t}, "flux", 1.f);
+        ctx.setPrimitiveColor(t, RGB::red);
+        ctx.markPrimitiveDirty(t);
+        DOCTEST_CHECK(ctx.getShapeRevision() == after_creation);
+
+        ctx.translatePrimitive(p, make_vec3(1, 0, 0));
+        const uint64_t after_translate = ctx.getShapeRevision();
+        DOCTEST_CHECK(after_translate > after_creation);
+
+        ctx.markGeometryClean();
+        DOCTEST_CHECK(ctx.getShapeRevision() == after_translate);
+
+        ctx.rotatePrimitive(p, 0.5f, "z");
+        const uint64_t after_rotate = ctx.getShapeRevision();
+        DOCTEST_CHECK(after_rotate > after_translate);
+
+        ctx.scalePrimitive(p, make_vec3(2, 2, 2));
+        const uint64_t after_scale = ctx.getShapeRevision();
+        DOCTEST_CHECK(after_scale > after_rotate);
+
+        ctx.setTriangleVertices(t, make_vec3(0, 0, 1), make_vec3(1, 0, 1), make_vec3(0, 1, 1));
+        const uint64_t after_vertices = ctx.getShapeRevision();
+        DOCTEST_CHECK(after_vertices > after_scale);
+
+        ctx.markGeometryDirty();
+        const uint64_t after_mark_geometry = ctx.getShapeRevision();
+        DOCTEST_CHECK(after_mark_geometry > after_vertices);
+
+        ctx.deletePrimitive(p);
+        DOCTEST_CHECK(ctx.getShapeRevision() > after_mark_geometry);
+    }
+
     SUBCASE("Geometry dirty flags vector") {
         Context ctx;
         std::vector<uint> ids{ctx.addPatch(), ctx.addPatch()};

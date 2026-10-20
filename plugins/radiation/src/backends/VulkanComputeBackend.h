@@ -89,7 +89,6 @@ namespace helios {
         void updateSources(const std::vector<RayTracingSource> &sources) override;
 
         // ========== Diffuse/Sky Radiation ==========
-        void updateDiffuseRadiation(const std::vector<float> &flux, const std::vector<float> &extinction, const std::vector<helios::vec3> &peak_dir, const std::vector<float> &dist_norm, const std::vector<float> &sky_energy) override;
 
         void updateSkyModel(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction, const std::vector<float> &solar_disk_radiance, float solar_disk_cos_angle,
                             const std::vector<float> &camera_diffuse_flux, const std::vector<uint32_t> &band_emission_flag) override;
@@ -106,10 +105,12 @@ namespace helios {
         void getWhiteReferenceResults(std::vector<float> &white_reference_top, std::vector<float> &white_reference_bottom) override;
         void getRadiationInTopResults(std::vector<float> &radiation_in_top) override;
         [[nodiscard]] size_t getRadiationInTopBufferSize() const override;
+        [[nodiscard]] size_t getAbandonedRayCount() override;
 
         // ========== Buffer Management Utilities ==========
         void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption) override;
         void zeroScatterBuffers() override;
+        void zeroAbandonedRayCount() override;
         void zeroCameraPixelBuffers(const helios::int2 &resolution) override;
         void copyScatterToRadiation() override;
         void uploadRadiationOut(const std::vector<float> &radiation_out_top, const std::vector<float> &radiation_out_bottom) override;
@@ -210,15 +211,14 @@ namespace helios {
 
         // Geometry buffers (Set 0)
         Buffer bvh_buffer;
-        Buffer primitive_indices_buffer;
         Buffer transform_matrices_buffer;
         Buffer primitive_types_buffer;
         Buffer primitive_uuids_buffer;
         Buffer primitive_positions_buffer;
         Buffer object_subdivisions_buffer;
         Buffer twosided_flag_buffer;
-        Buffer patch_vertices_buffer;
-        Buffer triangle_vertices_buffer;
+        //! One 64-byte intersection record per BVH leaf slot, in leaf order (layout documented in shaders/common/intersections.glsl)
+        Buffer leaf_records_buffer;
         Buffer normal_buffer; //!< Pre-computed world-space normals (vec3 per primitive)
         Buffer mask_data_buffer; //!< Flat uint mask texels: 0=transparent, 1=opaque
         Buffer mask_sizes_buffer; //!< ivec2 (width, height) per unique mask texture
@@ -280,8 +280,8 @@ namespace helios {
         Buffer camera_diffuse_flux_buffer; //!< Per-band diffuse (hemispherical) sky flux for camera longwave/emission sky
         Buffer band_emission_flag_buffer;  //!< Per-band emission flag (uint), gates camera_diffuse_flux sampling
 
-        // Debug/profiling buffers (Set 4)
-        Buffer debug_counters_buffer;
+        // Ray counters (Set 4): [0] direct and diffuse rays abandoned at the periodic wrap limit since zeroAbandonedRayCount()
+        Buffer ray_counters_buffer;
 
         // Descriptor sets
         VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
@@ -289,7 +289,7 @@ namespace helios {
         VkDescriptorSetLayout set_layout_materials = VK_NULL_HANDLE;
         VkDescriptorSetLayout set_layout_results = VK_NULL_HANDLE;
         VkDescriptorSetLayout set_layout_sky = VK_NULL_HANDLE;
-        VkDescriptorSetLayout set_layout_debug = VK_NULL_HANDLE; // Debug counters
+        VkDescriptorSetLayout set_layout_debug = VK_NULL_HANDLE; // Ray counters
         VkDescriptorSet set_geometry = VK_NULL_HANDLE;
         VkDescriptorSet set_materials = VK_NULL_HANDLE;
         VkDescriptorSet set_results = VK_NULL_HANDLE;
@@ -397,6 +397,9 @@ namespace helios {
          * @brief Zero buffer contents
          */
         void zeroBuffer(Buffer &buffer);
+
+        //! Create the ray counters buffer (Set 4) if it does not exist yet, zeroed
+        void ensureRayCountersBuffer();
 
         /**
          * @brief Create descriptor sets

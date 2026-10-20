@@ -34,6 +34,8 @@ rtDeclareVariable(unsigned int, UUID, attribute UUID, );
 // Where on the facet the ray landed, written by every intersection program. See primitiveIntersection.cu for the meaning of each component.
 rtDeclareVariable(float, surface_u, attribute surface_u, );
 rtDeclareVariable(float, surface_v, attribute surface_v, );
+// True distance to a periodic boundary face, which bbox_intersect may report at the ray's minimum distance instead
+rtDeclareVariable(float, periodic_face_t, attribute periodic_face_t, );
 
 // ---------------------------------------------------------------------------
 // Translucent cover (glass/plastic) optical model
@@ -232,8 +234,12 @@ RT_PROGRAM void closest_hit_direct() {
 
         prd.hit_periodic_boundary = true;
 
-        float3 ray_origin = ray.origin + t_hit * ray.direction;
+        prd.periodic_hit_t = periodic_face_t;
 
+        float3 ray_origin = ray.origin + periodic_face_t * ray.direction;
+
+        // Tolerance for identifying the face that was hit. The ray continues from exactly one period away, the same point on the
+        // opposite face: moving it any further would shift it off its straight path by that much at every wrap.
         float eps = 1e-5;
 
         float2 xbounds = make_float2(bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
@@ -244,13 +250,13 @@ RT_PROGRAM void closest_hit_direct() {
 
         prd.periodic_hit = ray_origin;
         if (periodic_flag.x == 1 && fabs(ray_origin.x - xbounds.x) <= eps) { //-x facing boundary
-            prd.periodic_hit.x += +width_x - eps;
+            prd.periodic_hit.x += width_x;
         } else if (periodic_flag.x == 1 && fabs(ray_origin.x - xbounds.y) <= eps) { //+x facing boundary
-            prd.periodic_hit.x += -width_x + eps;
+            prd.periodic_hit.x -= width_x;
         } else if (periodic_flag.y == 1 && fabs(ray_origin.y - ybounds.x) <= eps) { //-y facing boundary
-            prd.periodic_hit.y += +width_y - eps;
+            prd.periodic_hit.y += width_y;
         } else if (periodic_flag.y == 1 && fabs(ray_origin.y - ybounds.y) <= eps) { //+y facing boundary
-            prd.periodic_hit.y += -width_y + eps;
+            prd.periodic_hit.y -= width_y;
         }
     }
 };
@@ -276,8 +282,10 @@ RT_PROGRAM void closest_hit_diffuse() {
 
         prd.hit_periodic_boundary = true;
 
-        float3 ray_origin = ray.origin + t_hit * ray.direction;
+        float3 ray_origin = ray.origin + periodic_face_t * ray.direction;
 
+        // Tolerance for identifying the face that was hit. The ray continues from exactly one period away, the same point on the
+        // opposite face: moving it any further would shift it off its straight path by that much at every wrap.
         float eps = 1e-5;
 
         float2 xbounds = make_float2(bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
@@ -288,13 +296,13 @@ RT_PROGRAM void closest_hit_diffuse() {
 
         prd.periodic_hit = ray_origin;
         if (periodic_flag.x == 1 && fabs(ray_origin.x - xbounds.x) <= eps) { //-x facing boundary
-            prd.periodic_hit.x += +width_x - eps;
+            prd.periodic_hit.x += width_x;
         } else if (periodic_flag.x == 1 && fabs(ray_origin.x - xbounds.y) <= eps) { //+x facing boundary
-            prd.periodic_hit.x += -width_x + eps;
+            prd.periodic_hit.x -= width_x;
         } else if (periodic_flag.y == 1 && fabs(ray_origin.y - ybounds.x) <= eps) { //-y facing boundary
-            prd.periodic_hit.y += +width_y - eps;
+            prd.periodic_hit.y += width_y;
         } else if (periodic_flag.y == 1 && fabs(ray_origin.y - ybounds.y) <= eps) { //+y facing boundary
-            prd.periodic_hit.y += -width_y + eps;
+            prd.periodic_hit.y -= width_y;
         }
 
     } else {
@@ -333,11 +341,6 @@ RT_PROGRAM void closest_hit_diffuse() {
             float3 v2 = make_float3(0, 1, 0);
             d_transformPoint(m, v2);
             normal = cross(v1 - v0, v2 - v0);
-        } else if (primitive_type[hit_position] == 4) { // hit voxel
-            float3 vmin = make_float3(-0.5, -0.5, -0.5);
-            d_transformPoint(m, vmin);
-            float3 vmax = make_float3(0.5, 0.5, 0.5);
-            d_transformPoint(m, vmax);
         }
         normal = normalize(normal);
 
@@ -363,7 +366,7 @@ RT_PROGRAM void closest_hit_diffuse() {
             size_t ind_hit = rad_indexer(hit_position, b);
 
             double strength;
-            if (face || primitive_type[hit_position] == 4) {
+            if (face) {
                 strength = radiation_out_top[ind_hit] * prd.strength;
             } else {
                 strength = radiation_out_bottom[ind_hit] * prd.strength;
@@ -386,79 +389,55 @@ RT_PROGRAM void closest_hit_diffuse() {
             float t_rho = rho[radprop_ind_global];
             float t_tau = tau[radprop_ind_global];
 
-            // Check if ray was launched from voxel (type 4)
-            if (primitive_type[origin_position] == 4) { // ray was launched from voxel
-
-                //                float kappa = t_rho; //just a reminder that rho is actually the absorption coefficient
-                //                float sigma_s = t_tau; //just a reminder that tau is actually the scattering coefficient
-                //                float beta = kappa + sigma_s;
-                //
-                //                // absorption
-                //                atomicAdd(&radiation_in[ind_origin], strength * exp(-beta * 0.5 * prd.area) * kappa / beta);
-                //
-                //                // scattering
-                //                atomicAdd(&scatter_buff_top[ind_origin], strength * exp(-beta * 0.5 * prd.area) * sigma_s / beta);
-
-            } else { // ray was NOT launched from voxel
-
-                // absorption - calculate with defensive check for energy conservation violations
-                float absorption_factor = 1.f - t_rho - t_tau;
-                float contribution = strength * absorption_factor;
+            // absorption - calculate with defensive check for energy conservation violations
+            float absorption_factor = 1.f - t_rho - t_tau;
+            float contribution = strength * absorption_factor;
 
 
 #ifndef NDEBUG
-                if (absorption_factor < -1e-5f) {
-                    printf("ERROR: Negative absorption! rho=%.6f, tau=%.6f, origin_UUID=%u\n", t_rho, t_tau, origin_UUID);
-                    absorption_factor = 0.f;
-                }
+            if (absorption_factor < -1e-5f) {
+                printf("ERROR: Negative absorption! rho=%.6f, tau=%.6f, origin_UUID=%u\n", t_rho, t_tau, origin_UUID);
+                absorption_factor = 0.f;
+            }
 #endif
-                atomicAdd(&radiation_in[ind_origin], contribution);
-                if (face_absorption_enabled && prd.face) {
-                    atomicAdd(&radiation_in_top[ind_origin], contribution);
-                }
-
-                if ((t_rho > 0 || t_tau > 0) && strength > 0) {
-                    if (prd.face) { // reflection from top, transmission from bottom
-                        atomicFloatAdd(&scatter_buff_top[ind_origin], strength * t_rho); // reflection
-                        atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * t_tau); // transmission
-                    } else { // reflection from bottom, transmission from top
-                        atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * t_rho); // reflection
-                        atomicFloatAdd(&scatter_buff_top[ind_origin], strength * t_tau); // transmission
-                    }
-                }
-                if (Ncameras > 0) {
-                    // Camera-weighted scatter, accumulated once per camera into that camera's [primitive][band]
-                    // block. This launch runs once per dispatch, not once per camera, so camera_ID is not
-                    // meaningful here; weighting by a single camera handed every other camera that camera's image.
-                    size_t cam_scatter_stride = (size_t) Nprimitives * Nbands_launch;
-                    for (unsigned int cam = 0; cam < Ncameras; cam++) {
-                        // Use BufferIndexer for camera material: [source][primitive][band][camera]
-                        size_t indc = cam_mat_indexer(prd.source_ID, origin_position, b_global, cam);
-                        float t_rho_cam = rho_cam[indc];
-                        float t_tau_cam = tau_cam[indc];
-                        size_t ind_cam = cam * cam_scatter_stride + ind_origin;
-                        if ((t_rho_cam > 0 || t_tau_cam > 0) && strength > 0) {
-                            if (prd.face) { // reflection from top, transmission from bottom
-                                atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_rho_cam); // reflection
-                                atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_tau_cam); // transmission
-                            } else { // reflection from bottom, transmission from top
-                                atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_rho_cam); // reflection
-                                atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_tau_cam); // transmission
-                            }
-                        }
-                    }
-                    // Note: Don't accumulate scattered radiation to radiation_specular
-                    // Specular should only reflect DIRECT source radiation (accumulated in miss_direct)
-                }
+            atomicAdd(&radiation_in[ind_origin], contribution);
+            if (face_absorption_enabled && prd.face) {
+                atomicAdd(&radiation_in_top[ind_origin], contribution);
             }
 
-            // if( primitive_type[UUID] == 4 ){ //if we hit a voxel, reduce strength and launch another ray
-            //   optix::Ray ray_transmit = optix::make_Ray(ray.origin+(t_hit+prd.area+1e-5)*ray.direction, ray.direction, ray.ray_type, 1e-4, RT_DEFAULT_MAX);
-            //   PerRayData prd_transmit = prd;
-            //   float beta = rho[UUID]+tau[UUID];
-            //   prd_transmit.strength = prd.strength*(1.f-exp(-beta*0.5*prd.area));
-            //   rtTrace( top_object, ray_transmit, prd_transmit);
-            // }
+            if ((t_rho > 0 || t_tau > 0) && strength > 0) {
+                if (prd.face) { // reflection from top, transmission from bottom
+                    atomicFloatAdd(&scatter_buff_top[ind_origin], strength * t_rho); // reflection
+                    atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * t_tau); // transmission
+                } else { // reflection from bottom, transmission from top
+                    atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * t_rho); // reflection
+                    atomicFloatAdd(&scatter_buff_top[ind_origin], strength * t_tau); // transmission
+                }
+            }
+            if (Ncameras > 0) {
+                // Camera-weighted scatter, accumulated once per camera into that camera's [primitive][band]
+                // block. This launch runs once per dispatch, not once per camera, so camera_ID is not
+                // meaningful here; weighting by a single camera handed every other camera that camera's image.
+                size_t cam_scatter_stride = (size_t) Nprimitives * Nbands_launch;
+                for (unsigned int cam = 0; cam < Ncameras; cam++) {
+                    // Use BufferIndexer for camera material: [source][primitive][band][camera]
+                    size_t indc = cam_mat_indexer(prd.source_ID, origin_position, b_global, cam);
+                    float t_rho_cam = rho_cam[indc];
+                    float t_tau_cam = tau_cam[indc];
+                    size_t ind_cam = cam * cam_scatter_stride + ind_origin;
+                    if ((t_rho_cam > 0 || t_tau_cam > 0) && strength > 0) {
+                        if (prd.face) { // reflection from top, transmission from bottom
+                            atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_rho_cam); // reflection
+                            atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_tau_cam); // transmission
+                        } else { // reflection from bottom, transmission from top
+                            atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_rho_cam); // reflection
+                            atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_tau_cam); // transmission
+                        }
+                    }
+                }
+                // Note: Don't accumulate scattered radiation to radiation_specular
+                // Specular should only reflect DIRECT source radiation (accumulated in miss_direct)
+            }
         }
 
         // A translucent cover: its own outgoing radiance (reflection and emission) was received above like that of any
@@ -492,8 +471,10 @@ RT_PROGRAM void closest_hit_camera() {
 
         prd.hit_periodic_boundary = true;
 
-        float3 ray_origin = ray.origin + t_hit * ray.direction;
+        float3 ray_origin = ray.origin + periodic_face_t * ray.direction;
 
+        // Tolerance for identifying the face that was hit. The ray continues from exactly one period away, the same point on the
+        // opposite face: moving it any further would shift it off its straight path by that much at every wrap.
         float eps = 1e-5;
 
         float2 xbounds = make_float2(bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
@@ -504,13 +485,13 @@ RT_PROGRAM void closest_hit_camera() {
 
         prd.periodic_hit = ray_origin;
         if (periodic_flag.x == 1 && fabs(ray_origin.x - xbounds.x) <= eps) { //-x facing boundary
-            prd.periodic_hit.x += +width_x - eps;
+            prd.periodic_hit.x += width_x;
         } else if (periodic_flag.x == 1 && fabs(ray_origin.x - xbounds.y) <= eps) { //+x facing boundary
-            prd.periodic_hit.x += -width_x + eps;
+            prd.periodic_hit.x -= width_x;
         } else if (periodic_flag.y == 1 && fabs(ray_origin.y - ybounds.x) <= eps) { //-y facing boundary
-            prd.periodic_hit.y += +width_y - eps;
+            prd.periodic_hit.y += width_y;
         } else if (periodic_flag.y == 1 && fabs(ray_origin.y - ybounds.y) <= eps) { //+y facing boundary
-            prd.periodic_hit.y += -width_y + eps;
+            prd.periodic_hit.y -= width_y;
         }
 
     } else {
@@ -549,15 +530,13 @@ RT_PROGRAM void closest_hit_camera() {
             float3 v2 = make_float3(0, 1, 0);
             d_transformPoint(m, v2);
             normal = cross(v1 - v0, v2 - v0);
-        } else if (primitive_type[hit_position] == 4) { // hit voxel
-            float3 vmin = make_float3(-0.5, -0.5, -0.5);
-            d_transformPoint(m, vmin);
-            float3 vmax = make_float3(0.5, 0.5, 0.5);
-            d_transformPoint(m, vmax);
         }
         normal = normalize(normal);
 
         bool face = dot(normal, ray.direction) < 0;
+
+        // The normal of the face the camera sees
+        const float3 viewed_normal = face ? normal : -normal;
 
 
         float3 camera_normal = d_rotatePoint(make_float3(0, 0, 1), -0.5 * M_PI + camera_direction.x, 0.5f * M_PI - camera_direction.y);
@@ -644,7 +623,7 @@ RT_PROGRAM void closest_hit_camera() {
             // Use BufferIndexer: [primitive][band]
             size_t ind_hit = rad_indexer(hit_position, b);
 
-            const bool use_top_face = (face || primitive_type[hit_position] == 4);
+            const bool use_top_face = face;
 
             // Camera flux smoothing: blend the outgoing flux across the facet from the values carried by the vertices it shares with its neighbours, so that a coarsely tessellated curved surface does not
             // render as flat panels with a step at every facet edge. A primitive taking no part in smoothing keeps the single value of the facet behind the pixel.
@@ -724,13 +703,23 @@ RT_PROGRAM void closest_hit_camera() {
                             light_direction = normalize(source_positions[rr] - hit_point);
                         }
 
+                        // A source on the other side of the surface lights the face the camera does not see
+                        if (dot(light_direction, viewed_normal) <= 0.f) {
+                            continue;
+                        }
+
                         // Blinn-Phong specular direction (half-vector)
-                        float3 specular_direction = normalize(light_direction - ray.direction);
+                        float3 half_vector = light_direction - ray.direction;
+                        float half_length = d_magnitude(half_vector);
+                        if (half_length < 1e-6f) {
+                            continue;
+                        }
+                        float3 specular_direction = half_vector / half_length;
 
                         float exponent = specular_exponent[hit_position];
                         double scale_coefficient = specular_scale[hit_position]; // 1 for a primitive without "specular_scale" data
 
-                        strength_spec += spec * scale_coefficient * pow(max(0.f, dot(specular_direction, normal)), exponent) * (exponent + 2.f) /
+                        strength_spec += spec * scale_coefficient * pow(max(0.f, dot(specular_direction, viewed_normal)), exponent) * (exponent + 2.f) /
                                          (double(launch_dim.x) * 2.f * M_PI); // launch_dim.x is the number of rays launched per pixel, so we divide by it to get the average flux per ray. (exponent+2)/2pi normalizes reflected distribution to unity.
                     }
                 }
@@ -764,10 +753,12 @@ RT_PROGRAM void closest_hit_pixel_label() {
     if ((periodic_flag.x == 1 || periodic_flag.y == 1) && primitive_type[hit_position] == 5) { // periodic boundary condition
 
         prd.hit_periodic_boundary = true;
-        prd.strength += t_hit; // the distance travelled to the boundary counts toward the depth
+        prd.strength += periodic_face_t; // the distance travelled to the boundary counts toward the depth
 
-        float3 ray_origin = ray.origin + t_hit * ray.direction;
+        float3 ray_origin = ray.origin + periodic_face_t * ray.direction;
 
+        // Tolerance for identifying the face that was hit. The ray continues from exactly one period away, the same point on the
+        // opposite face: moving it any further would shift it off its straight path by that much at every wrap.
         float eps = 1e-5;
 
         float2 xbounds = make_float2(bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
@@ -778,13 +769,13 @@ RT_PROGRAM void closest_hit_pixel_label() {
 
         prd.periodic_hit = ray_origin;
         if (periodic_flag.x == 1 && fabs(ray_origin.x - xbounds.x) <= eps) { //-x facing boundary
-            prd.periodic_hit.x += +width_x - eps;
+            prd.periodic_hit.x += width_x;
         } else if (periodic_flag.x == 1 && fabs(ray_origin.x - xbounds.y) <= eps) { //+x facing boundary
-            prd.periodic_hit.x += -width_x + eps;
+            prd.periodic_hit.x -= width_x;
         } else if (periodic_flag.y == 1 && fabs(ray_origin.y - ybounds.x) <= eps) { //-y facing boundary
-            prd.periodic_hit.y += +width_y - eps;
+            prd.periodic_hit.y += width_y;
         } else if (periodic_flag.y == 1 && fabs(ray_origin.y - ybounds.y) <= eps) { //+y facing boundary
-            prd.periodic_hit.y += -width_y + eps;
+            prd.periodic_hit.y -= width_y;
         }
 
     } else {
@@ -1012,7 +1003,9 @@ __device__ float evaluateDiffuseAngularDistribution(const float3 &ray_dir, const
 
         // Circumsolar + horizon brightening
         // params: (circ_strength, circ_width, horizon_brightness, normalization)
-        float pattern = (1.0f + prague_params.x * expf(-gamma / prague_params.y)) * (1.0f + (prague_params.z - 1.0f) * (1.0f - cos_theta));
+        // A non-positive circumsolar width means no circumsolar region (a width of zero would give 0/0 = NaN toward the sun)
+        float circumsolar_term = (prague_params.y > 0.f) ? (1.0f + prague_params.x * expf(-gamma / prague_params.y)) : 1.0f;
+        float pattern = circumsolar_term * (1.0f + (prague_params.z - 1.0f) * (1.0f - cos_theta));
 
         // Multiply by π to account for cosine-weighted sampling PDF (cos×sin/π)
         // This ensures correct Monte Carlo integration for Prague angular distribution
@@ -1040,6 +1033,11 @@ RT_PROGRAM void miss_diffuse() {
     const bool origin_is_cover = coverInAllLaunchedBands(origin_position);
     const float origin_cos = origin_is_cover ? coverNormalFaceCos(origin_position, ray.direction, origin_face_unused) : 1.f;
 
+    // The diffuse sky fills only the upper hemisphere unless enabled below the horizon.
+    if (ray.direction.z < 0.f && below_horizon_diffuse_enabled == 0) {
+        return;
+    }
+
     int b = -1;
     for (size_t b_global = 0; b_global < Nbands_global; b_global++) {
 
@@ -1061,72 +1059,56 @@ RT_PROGRAM void miss_diffuse() {
             // Attenuation from any translucent covers (glass/plastic) the sky ray passed through, per band.
             float cover_tau = (b < HELIOS_MAX_RADIATION_BANDS) ? prd.cover_transmittance[b] : 1.f;
 
-            // Check if ray was launched from voxel (type 4)
-            if (primitive_type[origin_position] == 4) { // ray was launched from voxel
+            // Use unified distribution function (supports power-law, Prague, and isotropic modes)
+            float fd = evaluateDiffuseAngularDistribution(ray.direction, diffuse_peak_dir[b], diffuse_extinction[b], diffuse_dist_norm[b], sky_radiance_params[b]);
 
-                float kappa = t_rho; // just a reminder that rho is actually the absorption coefficient
-                float sigma_s = t_tau; // just a reminder that tau is actually the scattering coefficient
-                float beta = kappa + sigma_s;
+            float strength = fd * diffuse_flux[b] * prd.strength * cover_tau;
 
-                // absorption
-                atomicAdd(&radiation_in[ind_origin], diffuse_flux[b] * prd.strength * cover_tau * kappa / beta);
+            if (origin_is_cover) {
+                depositOnCoverOrigin(origin_position, ind_origin, b_global, origin_cos, strength);
+            } else {
+                //  absorption
+                atomicAdd(&radiation_in[ind_origin], strength * (1.f - t_rho - t_tau));
+                if (face_absorption_enabled && prd.face) {
+                    atomicAdd(&radiation_in_top[ind_origin], strength * (1.f - t_rho - t_tau));
+                }
 
-                // scattering
-                atomicAdd(&scatter_buff_top[ind_origin], diffuse_flux[b] * prd.strength * cover_tau * sigma_s / beta);
-
-            } else { // ray was NOT launched from voxel
-
-                // Use unified distribution function (supports power-law, Prague, and isotropic modes)
-                float fd = evaluateDiffuseAngularDistribution(ray.direction, diffuse_peak_dir[b], diffuse_extinction[b], diffuse_dist_norm[b], sky_radiance_params[b]);
-
-                float strength = fd * diffuse_flux[b] * prd.strength * cover_tau;
-
-                if (origin_is_cover) {
-                    depositOnCoverOrigin(origin_position, ind_origin, b_global, origin_cos, strength);
-                } else {
-                    //  absorption
-                    atomicAdd(&radiation_in[ind_origin], strength * (1.f - t_rho - t_tau));
-                    if (face_absorption_enabled && prd.face) {
-                        atomicAdd(&radiation_in_top[ind_origin], strength * (1.f - t_rho - t_tau));
+                if (t_rho > 0 || t_tau > 0) {
+                    if (prd.face) { // reflection from top, transmission from bottom
+                        atomicFloatAdd(&scatter_buff_top[ind_origin], strength * t_rho); // reflection
+                        atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * t_tau); // transmission
+                    } else { // reflection from bottom, transmission from top
+                        atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * t_rho); // reflection
+                        atomicFloatAdd(&scatter_buff_top[ind_origin], strength * t_tau); // transmission
                     }
-
-                    if (t_rho > 0 || t_tau > 0) {
-                        if (prd.face) { // reflection from top, transmission from bottom
-                            atomicFloatAdd(&scatter_buff_top[ind_origin], strength * t_rho); // reflection
-                            atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * t_tau); // transmission
-                        } else { // reflection from bottom, transmission from top
-                            atomicFloatAdd(&scatter_buff_bottom[ind_origin], strength * t_rho); // reflection
-                            atomicFloatAdd(&scatter_buff_top[ind_origin], strength * t_tau); // transmission
-                        }
-                    }
-                    if (Ncameras > 0) {
-                        // Camera-weighted scatter, accumulated once per camera into that camera's [primitive][band]
-                        // block. This launch runs once per dispatch, not once per camera, so camera_ID is not
-                        // meaningful here; weighting by a single camera handed every other camera that camera's image.
-                        size_t cam_scatter_stride = (size_t) Nprimitives * Nbands_launch;
-                        for (unsigned int cam = 0; cam < Ncameras; cam++) {
-                            // Use BufferIndexer: [source][primitive][band][camera]
-                            size_t indc = cam_mat_indexer(prd.source_ID, origin_position, b_global, cam);
-                            float t_rho_cam = rho_cam[indc];
-                            float t_tau_cam = tau_cam[indc];
-                            size_t ind_cam = cam * cam_scatter_stride + ind_origin;
-                            if ((t_rho_cam > 0 || t_tau_cam > 0) && prd.strength > 0) {
-                                if (prd.face) { // reflection from top, transmission from bottom
-                                    atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_rho_cam); // reflection
-                                    atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_tau_cam); // transmission
-                                } else { // reflection from bottom, transmission from top
-                                    atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_rho_cam); // reflection
-                                    atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_tau_cam); // transmission
-                                }
+                }
+                if (Ncameras > 0) {
+                    // Camera-weighted scatter, accumulated once per camera into that camera's [primitive][band]
+                    // block. This launch runs once per dispatch, not once per camera, so camera_ID is not
+                    // meaningful here; weighting by a single camera handed every other camera that camera's image.
+                    size_t cam_scatter_stride = (size_t) Nprimitives * Nbands_launch;
+                    for (unsigned int cam = 0; cam < Ncameras; cam++) {
+                        // Use BufferIndexer: [source][primitive][band][camera]
+                        size_t indc = cam_mat_indexer(prd.source_ID, origin_position, b_global, cam);
+                        float t_rho_cam = rho_cam[indc];
+                        float t_tau_cam = tau_cam[indc];
+                        size_t ind_cam = cam * cam_scatter_stride + ind_origin;
+                        if ((t_rho_cam > 0 || t_tau_cam > 0) && prd.strength > 0) {
+                            if (prd.face) { // reflection from top, transmission from bottom
+                                atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_rho_cam); // reflection
+                                atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_tau_cam); // transmission
+                            } else { // reflection from bottom, transmission from top
+                                atomicFloatAdd(&scatter_buff_bottom_cam[ind_cam], strength * t_rho_cam); // reflection
+                                atomicFloatAdd(&scatter_buff_top_cam[ind_cam], strength * t_tau_cam); // transmission
                             }
                         }
                     }
                 }
-                if (Ncameras > 0) {
-                    accumulateWhiteReference(ind_origin, b_global, strength);
-                    // Note: Don't accumulate diffuse sky radiation to radiation_specular
-                    // Specular should only reflect DIRECT source radiation (accumulated in miss_direct)
-                }
+            }
+            if (Ncameras > 0) {
+                accumulateWhiteReference(ind_origin, b_global, strength);
+                // Note: Don't accumulate diffuse sky radiation to radiation_specular
+                // Specular should only reflect DIRECT source radiation (accumulated in miss_direct)
             }
         }
     }
@@ -1184,8 +1166,11 @@ RT_PROGRAM void miss_camera() {
             }
         }
 
+        // The sky fills only the upper hemisphere unless the diffuse sky is enabled below the horizon.
+        const bool sees_sky = ray.direction.z >= 0.f || below_horizon_diffuse_enabled != 0;
+
         // Fallback to sky radiance if no sources visible
-        if (radiance <= 0.0f && camera_sky_radiance[b] > 0.f) {
+        if (sees_sky && radiance <= 0.0f && camera_sky_radiance[b] > 0.f) {
             // Evaluate directional sky radiance using unified distribution function
             // camera_sky_radiance[b] contains the base zenith sky radiance (W/m²/sr) from Prague model
             // For camera, power-law is disabled (K=0, norm=1), so Prague params are used
@@ -1199,7 +1184,7 @@ RT_PROGRAM void miss_camera() {
 
         // Isotropic sky emission/longwave: when band has emission enabled, the user-set diffuse_flux
         // represents hemispherical sky thermal/longwave irradiance. Convert to isotropic radiance.
-        if (band_emission_flag[b] != 0u && camera_diffuse_flux[b] > 0.f) {
+        if (sees_sky && band_emission_flag[b] != 0u && camera_diffuse_flux[b] > 0.f) {
             radiance += camera_diffuse_flux[b] / M_PI;
         }
 

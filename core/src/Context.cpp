@@ -287,8 +287,17 @@ void Context::markGeometryClean() {
 
 void Context::markGeometryDirty() {
     for (auto &[UUID, primitive]: primitives) {
-        primitive->dirty_flag = true;
+        primitive->markDirty();
     }
+    shape_revision.markModified();
+}
+
+uint64_t Context::getGeometryRevision() const {
+    return geometry_revision.read();
+}
+
+uint64_t Context::getShapeRevision() const {
+    return shape_revision.read();
 }
 
 bool Context::isGeometryDirty() const {
@@ -309,7 +318,7 @@ void Context::markPrimitiveDirty(uint UUID) const {
         helios_runtime_error("ERROR (Context::markPrimitiveDirty): Primitive with UUID " + std::to_string(UUID) + " does not exist.");
     }
 #endif
-    primitives.at(UUID)->dirty_flag = true;
+    primitives.at(UUID)->markDirty();
 }
 
 void Context::markPrimitiveDirty(const std::vector<uint> &UUIDs) const {

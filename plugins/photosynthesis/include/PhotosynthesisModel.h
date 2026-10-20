@@ -976,13 +976,13 @@ private:
     //! Storage for manual Cm overrides (C4 model only) that bypass both stomatal iteration and Cm = Ci - A/gm fixed point
     std::unordered_map<uint, float> manual_Cm;
 
-    float evaluateEmpiricalModel(const EmpiricalModelCoefficients &params, float i_PAR, float TL, float CO2, float gM);
+    float evaluateEmpiricalModel(const EmpiricalModelCoefficients &params, float i_PAR, float TL, float CO2, float gC);
 
-    float evaluateFarquharModel(const FarquharModelCoefficients &params, float i_PAR, float TL, float CO2, float gM, float &Ci, float &Gamma, int &limitation_state, int &TPU_flag, float &electron_transport_ratio, helios::WarningAggregator &warnings);
+    float evaluateFarquharModel(const FarquharModelCoefficients &params, float i_PAR, float TL, float CO2, float gC, float &Ci, float &Gamma, int &limitation_state, int &TPU_flag, float &electron_transport_ratio, helios::WarningAggregator &warnings);
 
-    float evaluateC4Model(const C4ModelCoefficients &params, float i_PAR, float TL, float CO2, float gM, float &Ci, float &Cm, float &Vp, int &limitation_state, float &electron_transport_ratio, helios::WarningAggregator &warnings);
+    float evaluateC4Model(const C4ModelCoefficients &params, float i_PAR, float TL, float CO2, float gC, float &Ci, float &Cm, float &Vp, int &limitation_state, float &electron_transport_ratio, helios::WarningAggregator &warnings);
 
-    float evaluateCi_Empirical(const EmpiricalModelCoefficients &params, float Ci, float CO2, float fL, float fT, float Rd, float gM) const;
+    float evaluateCi_Empirical(const EmpiricalModelCoefficients &params, float Ci, float CO2, float fL, float fT, float Rd, float gC) const;
 
     static float evaluateCi_Farquhar(float Ci, std::vector<float> &variables, const void *parameters);
 

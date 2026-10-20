@@ -69,7 +69,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  This plugin provides comprehensive collision detection and spatial analysis capabilities for arbitrary 3D geometry using high-performance GPU-accelerated spatial data structures. The system uses a Bounding Volume Hierarchy (BVH) to efficiently perform various spatial queries including collision detection, ray tracing, cone-based path finding, and grid-based statistical analysis.
 
- The collision detection system supports both CPU and GPU acceleration with automatic fallback. When CUDA is available, the plugin automatically uses GPU kernels to perform parallel spatial queries, providing significant speedup for large scenes. The system gracefully falls back to CPU computation when GPU resources are unavailable.
+ The collision detection system supports both CPU and GPU computation. When the plugin is built with CUDA and a usable GPU is found at construction, GPU acceleration is enabled automatically; otherwise the plugin uses the CPU. Once GPU acceleration is enabled, a GPU failure (out of device memory, a failed transfer or kernel launch) raises an error rather than silently switching to the CPU. See \ref CDGPUControl.
 
  Key features include:
  - **Collision Detection**: Fast primitive-to-primitive and primitive-to-object collision queries
@@ -184,6 +184,8 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  std::vector<uint> restricted_collisions = collision.findCollisions(
      primitive_UUIDs, object_IDs, target_UUIDs, target_objects);
  ~~~~~~
+
+ Automatic rebuilds detect geometry changes from the Context's dirty and deleted primitive lists, which only \ref helios::Context::markGeometryClean() clears. If primitives are added or deleted before a call to \ref helios::Context::markGeometryClean(), the change is still detected through the number of primitives in the Context, unless as many were added as deleted. A primitive that was moved, rotated or scaled in place before that call cannot be detected without checking every primitive on every query. If your program calls \ref helios::Context::markGeometryClean(), call \ref CollisionDetection::rebuildBVH() after such changes, or make sure a collision detection query runs before the geometry is marked clean.
 
  \subsection CDRayTracing Ray Tracing Operations
 
@@ -380,7 +382,9 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  ~~~~~~{.cpp}
  // Check whether a usable GPU is present (capability). Returns false on CPU-only builds,
- // when no CUDA device is found, or when the HELIOS_NO_GPU environment variable is set.
+ // when no CUDA device is found, when the device cannot run this build's kernels (for example,
+ // the build has no kernel image for its architecture, or it is busy in exclusive-process mode),
+ // or when the HELIOS_NO_GPU environment variable is set.
  if( CollisionDetection::isGPUAvailable() ){
      std::cout << "A GPU is available for acceleration" << std::endl;
  }
@@ -402,6 +406,13 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  \note Set the <tt>HELIOS_NO_GPU</tt> environment variable to a non-zero value to force the
  CPU path for headless/CI runs; isGPUAvailable() then reports false and enableGPUAcceleration()
  becomes a no-op, so the reported availability always matches the executed path.
+
+ \note Once GPU acceleration is enabled, either automatically by the constructor or by enableGPUAcceleration(),
+ any later failure to allocate device memory, upload the BVH or launch a kernel raises a <tt>helios_runtime_error</tt>
+ instead of falling back to the CPU. Call disableGPUAcceleration() to run on the CPU. After such an error has been
+ caught, the next GPU call uploads the scene again. Batch ray casts (\ref CollisionDetection::castRays()) use the GPU
+ only for batches of at least one million rays against at least 500 primitives, and never for a batch in which any
+ ray sets <tt>target_UUIDs</tt>; those always run on the CPU.
 
  \section CDTroubleshooting Troubleshooting
 

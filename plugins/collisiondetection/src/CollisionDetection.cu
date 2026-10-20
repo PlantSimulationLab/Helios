@@ -43,6 +43,45 @@ namespace helios {
     } while (0)
 
 /**
+ * \brief Owning handle for a temporary device allocation, freed when the handle goes out of scope.
+ *
+ * The launch wrappers allocate several per-call buffers and throw (HELIOS_CUDA_CHECK) on any CUDA failure. Holding each
+ * buffer in a DeviceBuffer frees every allocation made before the failing call instead of leaking it.
+ */
+template<typename T>
+class DeviceBuffer {
+public:
+    DeviceBuffer() = default;
+    explicit DeviceBuffer(size_t count) {
+        allocate(count);
+    }
+    ~DeviceBuffer() {
+        if (device_pointer != nullptr) {
+            cudaFree(device_pointer);
+        }
+    }
+    DeviceBuffer(const DeviceBuffer &) = delete;
+    DeviceBuffer &operator=(const DeviceBuffer &) = delete;
+
+    //! Allocate room for \p count elements, releasing any previous allocation first.
+    void allocate(size_t count) {
+        if (device_pointer != nullptr) {
+            cudaFree(device_pointer);
+            device_pointer = nullptr;
+        }
+        HELIOS_CUDA_CHECK(cudaMalloc(&device_pointer, count * sizeof(T)));
+    }
+
+    //! Device pointer, or null if nothing has been allocated.
+    T *get() const {
+        return device_pointer;
+    }
+
+private:
+    T *device_pointer = nullptr;
+};
+
+/**
  * \brief GPU-friendly BVH node structure (Legacy AoS format)
  *
  * This structure is optimized for GPU memory access patterns
@@ -286,8 +325,8 @@ __device__ __forceinline__ bool rayTriangleIntersectCPU(const float3 &origin, co
 // Device function for ray-patch intersection (same algorithm as CPU)
 __device__ __forceinline__ bool rayPatchIntersect(const float3 &origin, const float3 &direction, const float3 &v0, const float3 &v1, const float3 &v2, const float3 &v3, float &distance) {
 
-    // Calculate patch vectors and normal (same as CPU radiation model)
-    const float EPSILON = 1e-5f;  // Match triangle epsilon for consistency
+    // Calculate patch vectors and normal. Tolerances match the CPU patchIntersect() (CollisionDetection_RayTracing.cpp).
+    const float EPSILON = 1e-8f;
 
     float3 anchor = v0;
     float3 normal = cross(v1 - v0, v2 - v0);
@@ -311,7 +350,7 @@ __device__ __forceinline__ bool rayPatchIntersect(const float3 &origin, const fl
             float ddotb = dot(d, b);
 
             // Check if point is within patch bounds
-            if (ddota >= 0.0f && ddota <= dot(a, a) && ddotb >= 0.0f && ddotb <= dot(b, b)) {
+            if (ddota >= -EPSILON && ddota <= dot(a, a) + EPSILON && ddotb >= -EPSILON && ddotb <= dot(b, b) + EPSILON) {
 
                 distance = t;
                 return true;
@@ -323,7 +362,7 @@ __device__ __forceinline__ bool rayPatchIntersect(const float3 &origin, const fl
 
 // Ray-AABB intersection for voxel primitives
 __device__ bool rayVoxelIntersect(const float3 &ray_origin, const float3 &ray_direction, const float3 &aabb_min, const float3 &aabb_max, float &distance) {
-    const float EPSILON = 1e-5f;  // Match triangle/patch epsilon for consistency
+    const float EPSILON = 1e-6f; // matches the CPU voxel branch of intersectCachedPrimitive()
 
     // Calculate t values for each slab (sign-preserving reciprocal avoids 0*inf=NaN for axis-aligned rays grazing a face).
     float3 inv_dir = safeRayInvDir(ray_direction);
@@ -354,14 +393,14 @@ __device__ bool rayVoxelIntersect(const float3 &ray_origin, const float3 &ray_di
     float t_exit = fminf(fminf(t_max.x, t_max.y), t_max.z);
 
     // Check for intersection
-    if (t_enter > t_exit || t_exit < EPSILON) {
+    if (t_enter > t_exit || t_exit < 0.0f) {
         return false; // No intersection or behind ray
     }
 
     // Set distance to entry point (or exit if ray starts inside)
-    distance = (t_enter > EPSILON) ? t_enter : t_exit;
+    distance = (t_enter >= EPSILON) ? t_enter : t_exit;
 
-    return distance > EPSILON;
+    return distance >= EPSILON;
 }
 
 /**
@@ -534,9 +573,11 @@ __global__ void rayPrimitiveBVHKernel(GPUBVHNode *d_bvh_nodes, unsigned int *d_p
     unsigned int thread_stack[BVH_TRAVERSAL_STACK_CAPACITY];
     int stack_size = 0;
 
-    // Start from root node
-    thread_stack[0] = 0;
-    stack_size = 1;
+    // Start from root node. A zero direction has no ray to trace, so it skips the traversal and misses, as on the CPU.
+    if (dmag > 1e-8f) {
+        thread_stack[0] = 0;
+        stack_size = 1;
+    }
 
     // Main traversal loop
     while (stack_size > 0) {
@@ -615,7 +656,8 @@ __global__ void rayPrimitiveBVHKernel(GPUBVHNode *d_bvh_nodes, unsigned int *d_p
 
                 // Process hit if found
 
-                if (hit && hit_distance > 1e-5f && hit_distance <= ray_max_distance) {
+                // Same acceptance as the CPU intersectCachedPrimitive(): a minimum distance of 1e-6 and a strict max_distance.
+                if (hit && hit_distance > 1e-6f && hit_distance < ray_max_distance) {
 
                     // Texture transparency: if this primitive has a mask and the hit lands on a transparent texel, the ray
                     // passes through it (skip without recording) so traversal continues to geometry behind, matching the
@@ -699,8 +741,47 @@ __global__ void rayPrimitiveBVHKernel(GPUBVHNode *d_bvh_nodes, unsigned int *d_p
     }
 }
 
-// C-style wrapper functions for calling from C++ code
-extern "C" {
+//! Type code given to a resident primitive that has been deleted from the Context since the scene was uploaded.
+//! rayPrimitiveBVHKernel tests only types 0-2, so rays pass through such a primitive, as the CPU traversal does.
+#define GPU_PRIMITIVE_TYPE_DELETED (-1)
+
+/**
+ * \brief CUDA kernel marking resident primitives as deleted
+ * \param[in,out] d_primitive_types Resident per-primitive type codes in BVH order
+ * \param[in] d_positions Positions in BVH order of the primitives to mark
+ * \param[in] count Number of positions
+ */
+__global__ void markPrimitivesDeletedKernel(int *d_primitive_types, const unsigned int *d_positions, int count) {
+    const int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < count) {
+        d_primitive_types[d_positions[i]] = GPU_PRIMITIVE_TYPE_DELETED;
+    }
+}
+
+// Host wrapper functions called from the C++ sources. These must keep C++ linkage (no extern "C"): they raise
+// helios_runtime_error, and MSVC's /EHsc assumes extern "C" functions never throw, so it skips the destructors of their
+// locals during unwinding and the DeviceBuffer allocations are leaked on every error.
+
+/**
+ * \brief Mark primitives of the resident scene as deleted, so that rays pass through them
+ * \param[in,out] d_primitive_types Resident per-primitive type codes in BVH order
+ * \param[in] h_positions Host array of the positions in BVH order of the primitives to mark
+ * \param[in] count Number of positions
+ */
+void launchMarkPrimitivesDeleted(int *d_primitive_types, const unsigned int *h_positions, int count) {
+    if (count == 0) {
+        return;
+    }
+    DeviceBuffer<unsigned int> d_positions(count);
+    HELIOS_CUDA_CHECK(cudaMemcpy(d_positions.get(), h_positions, size_t(count) * sizeof(unsigned int), cudaMemcpyHostToDevice));
+
+    const int threads_per_block = 256;
+    const int num_blocks = (count + threads_per_block - 1) / threads_per_block;
+    cudaGetLastError(); // clear an error left by an earlier failed CUDA call so that the check below reports only this launch
+    markPrimitivesDeletedKernel<<<num_blocks, threads_per_block>>>(d_primitive_types, d_positions.get(), count);
+    HELIOS_CUDA_CHECK(cudaGetLastError());
+    HELIOS_CUDA_CHECK(cudaDeviceSynchronize());
+}
 
 /**
  * \brief Launch the ray-primitive intersection kernel against scene geometry that is ALREADY resident on the device.
@@ -744,50 +825,52 @@ void launchRaysOnResidentScene(void *d_bvh_nodes, int node_count, unsigned int *
 
     // Allocate ONLY the per-call ray + result buffers; the geometry pointers are resident and owned by the caller. Each
     // optional host pointer that is null skips its device buffer / copy, so a caller writing straight into its own arrays
-    // (the SoA path) drives no extra host staging. d_hit_counts is always allocated because the kernel writes it.
-    float3 *d_ray_origins = nullptr, *d_ray_directions = nullptr, *d_hit_normals = nullptr;
-    float *d_ray_max_distances = nullptr, *d_hit_distances = nullptr;
-    unsigned int *d_hit_primitive_ids = nullptr, *d_hit_counts = nullptr;
-
+    // (the SoA path) drives no extra host staging. d_hit_counts is always allocated because the kernel writes it. The
+    // buffers free themselves, including when a CUDA call below throws.
     const size_t ray_data_size = size_t(num_rays) * sizeof(float3);
     const size_t ray_distances_size = size_t(num_rays) * sizeof(float);
     const size_t hit_results_size = size_t(num_rays) * sizeof(unsigned int);
 
-    HELIOS_CUDA_CHECK(cudaMalloc(&d_ray_origins, ray_data_size));
-    HELIOS_CUDA_CHECK(cudaMalloc(&d_ray_directions, ray_data_size));
-    HELIOS_CUDA_CHECK(cudaMalloc(&d_hit_distances, ray_distances_size));
-    HELIOS_CUDA_CHECK(cudaMalloc(&d_hit_primitive_ids, hit_results_size));
-    HELIOS_CUDA_CHECK(cudaMalloc(&d_hit_counts, hit_results_size));
+    DeviceBuffer<float3> d_ray_origins(num_rays);
+    DeviceBuffer<float3> d_ray_directions(num_rays);
+    DeviceBuffer<float> d_hit_distances(num_rays);
+    DeviceBuffer<unsigned int> d_hit_primitive_ids(num_rays);
+    DeviceBuffer<unsigned int> d_hit_counts(num_rays);
+    DeviceBuffer<float> d_ray_max_distances;
     const bool per_ray_max = (h_ray_max_distances != nullptr);
     if (per_ray_max) {
-        HELIOS_CUDA_CHECK(cudaMalloc(&d_ray_max_distances, ray_distances_size));
+        d_ray_max_distances.allocate(num_rays);
     }
+    DeviceBuffer<float3> d_hit_normals;
     const bool want_normals = (h_hit_normals != nullptr);
     if (want_normals) {
-        HELIOS_CUDA_CHECK(cudaMalloc(&d_hit_normals, ray_data_size));
+        d_hit_normals.allocate(num_rays);
     }
 
     // helios::vec3 and the caller's flat xyz arrays have the exact byte layout of float3, so the host ray buffers copy
     // straight into the device float3 buffers with no host repack. Directions are normalized in the kernel.
-    HELIOS_CUDA_CHECK(cudaMemcpy(d_ray_origins, h_ray_origins, ray_data_size, cudaMemcpyHostToDevice));
-    HELIOS_CUDA_CHECK(cudaMemcpy(d_ray_directions, h_ray_directions, ray_data_size, cudaMemcpyHostToDevice));
+    HELIOS_CUDA_CHECK(cudaMemcpy(d_ray_origins.get(), h_ray_origins, ray_data_size, cudaMemcpyHostToDevice));
+    HELIOS_CUDA_CHECK(cudaMemcpy(d_ray_directions.get(), h_ray_directions, ray_data_size, cudaMemcpyHostToDevice));
     if (per_ray_max) {
-        HELIOS_CUDA_CHECK(cudaMemcpy(d_ray_max_distances, h_ray_max_distances, ray_distances_size, cudaMemcpyHostToDevice));
+        HELIOS_CUDA_CHECK(cudaMemcpy(d_ray_max_distances.get(), h_ray_max_distances, ray_distances_size, cudaMemcpyHostToDevice));
     }
 
-    int threads_per_block = 256;
-    int num_blocks = (num_rays + threads_per_block - 1) / threads_per_block;
+    const int threads_per_block = 256;
+    const int num_blocks = static_cast<int>((static_cast<long long>(num_rays) + threads_per_block - 1) / threads_per_block);
 
     // Reset the traversal-stack overflow flag before launch; checked after sync (fail-fast on a deeper-than-expected tree).
     const unsigned int stack_overflow_reset = 0;
     HELIOS_CUDA_CHECK(cudaMemcpyToSymbol(d_bvh_stack_overflow, &stack_overflow_reset, sizeof(unsigned int)));
 
+    // cudaGetLastError() after the launch also returns an error left by an earlier failed CUDA call, which was already raised
+    // to the caller. Clear it here so that the launch check reports only this launch.
+    cudaGetLastError();
     rayPrimitiveBVHKernel<<<num_blocks, threads_per_block>>>((GPUBVHNode *) d_bvh_nodes, d_primitive_indices, d_primitive_types, d_primitive_vertices, d_vertex_offsets, d_mask_data, d_mask_offsets, d_mask_sizes, d_mask_IDs, d_uv_data, d_uv_IDs,
-                                                             d_ray_origins, d_ray_directions, d_ray_max_distances, uniform_max_distance, num_rays, primitive_count, total_vertex_count, d_hit_distances, d_hit_primitive_ids, d_hit_counts,
-                                                             d_hit_normals, find_closest_hit);
+                                                             d_ray_origins.get(), d_ray_directions.get(), d_ray_max_distances.get(), uniform_max_distance, num_rays, primitive_count, total_vertex_count, d_hit_distances.get(),
+                                                             d_hit_primitive_ids.get(), d_hit_counts.get(), d_hit_normals.get(), find_closest_hit);
 
-    cudaDeviceSynchronize();
-    HELIOS_CUDA_CHECK(cudaGetLastError());
+    HELIOS_CUDA_CHECK(cudaGetLastError()); // launch configuration errors
+    HELIOS_CUDA_CHECK(cudaDeviceSynchronize()); // errors raised while the kernel ran
 
     unsigned int stack_overflow_flag = 0;
     HELIOS_CUDA_CHECK(cudaMemcpyFromSymbol(&stack_overflow_flag, d_bvh_stack_overflow, sizeof(unsigned int)));
@@ -796,101 +879,78 @@ void launchRaysOnResidentScene(void *d_bvh_nodes, int node_count, unsigned int *
                                      "). This must not happen for a valid SAH tree; raise BVH_TRAVERSAL_STACK_CAPACITY or check the BVH build.");
     }
 
-    HELIOS_CUDA_CHECK(cudaMemcpy(h_hit_distances, d_hit_distances, ray_distances_size, cudaMemcpyDeviceToHost));
-    HELIOS_CUDA_CHECK(cudaMemcpy(h_hit_primitive_ids, d_hit_primitive_ids, hit_results_size, cudaMemcpyDeviceToHost));
+    HELIOS_CUDA_CHECK(cudaMemcpy(h_hit_distances, d_hit_distances.get(), ray_distances_size, cudaMemcpyDeviceToHost));
+    HELIOS_CUDA_CHECK(cudaMemcpy(h_hit_primitive_ids, d_hit_primitive_ids.get(), hit_results_size, cudaMemcpyDeviceToHost));
     if (h_hit_counts != nullptr) {
-        HELIOS_CUDA_CHECK(cudaMemcpy(h_hit_counts, d_hit_counts, hit_results_size, cudaMemcpyDeviceToHost));
+        HELIOS_CUDA_CHECK(cudaMemcpy(h_hit_counts, d_hit_counts.get(), hit_results_size, cudaMemcpyDeviceToHost));
     }
     if (want_normals) {
-        HELIOS_CUDA_CHECK(cudaMemcpy(h_hit_normals, d_hit_normals, ray_data_size, cudaMemcpyDeviceToHost));
-    }
-
-    cudaFree(d_ray_origins);
-    cudaFree(d_ray_directions);
-    if (d_ray_max_distances) {
-        cudaFree(d_ray_max_distances);
-    }
-    cudaFree(d_hit_distances);
-    cudaFree(d_hit_primitive_ids);
-    cudaFree(d_hit_counts);
-    if (d_hit_normals) {
-        cudaFree(d_hit_normals);
+        HELIOS_CUDA_CHECK(cudaMemcpy(h_hit_normals, d_hit_normals.get(), ray_data_size, cudaMemcpyDeviceToHost));
     }
 }
 
 /**
- * \brief CUDA kernel for BVH traversal collision detection
+ * \brief CUDA kernel finding, for each query box, the resident-BVH primitives whose bounding boxes overlap it
  *
- * Each thread processes one query AABB and traverses the BVH to find collisions.
+ * Each thread processes one query box. The kernel runs twice over the same traversal: with \p d_hit_offsets null it only
+ * counts each query's hits into \p d_hit_counts; with \p d_hit_offsets set to the exclusive prefix sums of those counts it
+ * writes each query's hits to d_hits[d_hit_offsets[query]...]. The output is therefore sized exactly and never truncated.
  *
- * \param[in] d_nodes Array of BVH nodes on GPU
- * \param[in] d_primitive_indices Array of primitive indices on GPU
- * \param[in] d_query_aabb_min Array of query AABB minimum corners
- * \param[in] d_query_aabb_max Array of query AABB maximum corners
- * \param[out] d_results Array to store collision results
- * \param[out] d_result_counts Array to store number of results per query
- * \param[in] num_queries Number of queries to process
- * \param[in] max_results_per_query Maximum results to store per query
+ * \param[in] d_nodes Resident BVH nodes
+ * \param[in] d_primitive_indices Resident primitive UUIDs in BVH order
+ * \param[in] d_primitive_aabb_min Resident primitive bounding-box minimum corners in BVH order
+ * \param[in] d_primitive_aabb_max Resident primitive bounding-box maximum corners in BVH order
+ * \param[in] d_query_aabb_min Query bounding-box minimum corners
+ * \param[in] d_query_aabb_max Query bounding-box maximum corners
+ * \param[in] num_queries Number of query boxes
+ * \param[in] d_hit_offsets Per-query start index into \p d_hits (fill pass), or null (count pass)
+ * \param[out] d_hit_counts Per-query hit counts (written in the count pass only)
+ * \param[out] d_hits Hit primitive UUIDs (written in the fill pass only)
  */
-__global__ void bvhTraversalKernel(GPUBVHNode *d_nodes, unsigned int *d_primitive_indices, float3 *d_primitive_aabb_min, float3 *d_primitive_aabb_max, float3 *d_query_aabb_min, float3 *d_query_aabb_max, unsigned int *d_results,
-                                   unsigned int *d_result_counts, int num_queries, int max_results_per_query) {
+__global__ void bvhBoxQueryKernel(const GPUBVHNode *d_nodes, const unsigned int *d_primitive_indices, const float3 *d_primitive_aabb_min, const float3 *d_primitive_aabb_max, const float3 *d_query_aabb_min, const float3 *d_query_aabb_max,
+                                  int num_queries, const unsigned long long *d_hit_offsets, unsigned int *d_hit_counts, unsigned int *d_hits) {
 
-    int query_idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (query_idx >= num_queries)
+    const int query_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (query_idx >= num_queries) {
         return;
+    }
 
-    float3 query_min = d_query_aabb_min[query_idx];
-    float3 query_max = d_query_aabb_max[query_idx];
+    const float3 query_min = d_query_aabb_min[query_idx];
+    const float3 query_max = d_query_aabb_max[query_idx];
 
-    unsigned int result_count = 0;
-    unsigned int *query_results = &d_results[query_idx * max_results_per_query];
+    const bool fill_pass = (d_hit_offsets != nullptr);
+    unsigned int *query_hits = fill_pass ? d_hits + d_hit_offsets[query_idx] : nullptr;
+    unsigned int hit_count = 0;
 
-    // Stack-based traversal. Per-thread local stack (thread-private; sized to BVH_TRAVERSAL_STACK_CAPACITY > MAX_DEPTH). The
-    // old block-shared 32-entry-per-thread array silently dropped children on deep SAH trees, missing real collisions.
+    // Per-thread local stack, sized to BVH_TRAVERSAL_STACK_CAPACITY (well above the SAH tree depth).
     unsigned int thread_stack[BVH_TRAVERSAL_STACK_CAPACITY];
-    int stack_size = 0;
-
-    // Start traversal from root node
     thread_stack[0] = 0;
-    stack_size = 1;
+    int stack_size = 1;
 
-    while (stack_size > 0 && result_count < max_results_per_query) {
-
-        // Pop node from stack
+    while (stack_size > 0) {
         stack_size--;
-        unsigned int node_idx = thread_stack[stack_size];
-
-        // Check if node index is valid
-        if (node_idx == 0xFFFFFFFF)
+        const unsigned int node_idx = thread_stack[stack_size];
+        if (node_idx == 0xFFFFFFFF) {
             continue;
+        }
 
-        GPUBVHNode node = d_nodes[node_idx];
-
-        // Test if query AABB intersects node AABB
+        const GPUBVHNode node = d_nodes[node_idx];
         if (!d_aabbIntersect(query_min, query_max, node.aabb_min, node.aabb_max)) {
             continue;
         }
 
         if (node.is_leaf) {
-            // Check each primitive in this leaf individually
-            for (unsigned int i = 0; i < node.primitive_count && result_count < max_results_per_query; i++) {
-                unsigned int primitive_index = node.primitive_start + i;
-                unsigned int primitive_id = d_primitive_indices[primitive_index];
-
-                // Get primitive's AABB from pre-computed arrays (using array position, not UUID)
-                float3 prim_min = d_primitive_aabb_min[primitive_index];
-                float3 prim_max = d_primitive_aabb_max[primitive_index];
-
-                // Only add to results if AABBs actually intersect
-                if (d_aabbIntersect(query_min, query_max, prim_min, prim_max)) {
-                    query_results[result_count] = primitive_id;
-                    result_count++;
+            for (unsigned int i = 0; i < node.primitive_count; i++) {
+                const unsigned int primitive_index = node.primitive_start + i;
+                if (d_aabbIntersect(query_min, query_max, d_primitive_aabb_min[primitive_index], d_primitive_aabb_max[primitive_index])) {
+                    if (fill_pass) {
+                        query_hits[hit_count] = d_primitive_indices[primitive_index];
+                    }
+                    hit_count++;
                 }
             }
         } else {
-            // Add child nodes to stack. Capacity is sized well above tree depth; an overflow raises the device flag (the
-            // host throws) rather than silently dropping a child and under-reporting collisions.
+            // An overflow raises the device flag (the host throws) rather than silently dropping a child and under-reporting.
             if (node.left_child != 0xFFFFFFFF) {
                 if (stack_size < BVH_TRAVERSAL_STACK_CAPACITY) {
                     thread_stack[stack_size] = node.left_child;
@@ -910,488 +970,107 @@ __global__ void bvhTraversalKernel(GPUBVHNode *d_nodes, unsigned int *d_primitiv
         }
     }
 
-    d_result_counts[query_idx] = result_count;
+    if (!fill_pass) {
+        d_hit_counts[query_idx] = hit_count;
+    }
 }
 
-/**
- * \brief Launch BVH traversal kernel from C++ code
- *
- * \param[in] h_nodes Host array of BVH nodes
- * \param[in] node_count Number of BVH nodes
- * \param[in] h_primitive_indices Host array of primitive indices
- * \param[in] primitive_count Number of primitive indices
- * \param[in] h_query_aabb_min Host array of query AABB minimum corners
- * \param[in] h_query_aabb_max Host array of query AABB maximum corners
- * \param[in] num_queries Number of queries
- * \param[out] h_results Host array for results
- * \param[out] h_result_counts Host array for result counts
- * \param[in] max_results_per_query Maximum results per query
- */
-void launchBVHTraversal(void *h_nodes, int node_count, unsigned int *h_primitive_indices, int primitive_count, float *h_primitive_aabb_min, float *h_primitive_aabb_max, float *h_query_aabb_min, float *h_query_aabb_max, int num_queries,
-                        unsigned int *h_results, unsigned int *h_result_counts, int max_results_per_query) {
+//! Upload the query boxes and run one pass of bvhBoxQueryKernel, throwing on any CUDA error or traversal-stack overflow.
+static void runBVHBoxQueryPass(void *d_nodes, unsigned int *d_primitive_indices, void *d_primitive_aabb_min, void *d_primitive_aabb_max, const float *h_query_aabb_min, const float *h_query_aabb_max, int num_queries,
+                               const unsigned long long *d_hit_offsets, unsigned int *d_hit_counts, unsigned int *d_hits) {
 
-    if (num_queries == 0)
-        return;
+    // float3 is three packed floats, so the host xyz arrays copy straight into float3 buffers.
+    DeviceBuffer<float3> d_query_min(num_queries);
+    DeviceBuffer<float3> d_query_max(num_queries);
+    HELIOS_CUDA_CHECK(cudaMemcpy(d_query_min.get(), h_query_aabb_min, num_queries * sizeof(float3), cudaMemcpyHostToDevice));
+    HELIOS_CUDA_CHECK(cudaMemcpy(d_query_max.get(), h_query_aabb_max, num_queries * sizeof(float3), cudaMemcpyHostToDevice));
 
-    // Allocate GPU memory for query data and primitive AABBs
-    float3 *d_query_min;
-    float3 *d_query_max;
-    float3 *d_primitive_min;
-    float3 *d_primitive_max;
-    unsigned int *d_results;
-    unsigned int *d_result_counts;
-
-    size_t query_size = num_queries * sizeof(float3);
-    size_t primitive_aabb_size = primitive_count * sizeof(float3);
-    size_t results_size = num_queries * max_results_per_query * sizeof(unsigned int);
-    size_t counts_size = num_queries * sizeof(unsigned int);
-
-    cudaMalloc((void **) &d_query_min, query_size);
-    cudaMalloc((void **) &d_query_max, query_size);
-    cudaMalloc((void **) &d_primitive_min, primitive_aabb_size);
-    cudaMalloc((void **) &d_primitive_max, primitive_aabb_size);
-    cudaMalloc((void **) &d_results, results_size);
-    cudaMalloc((void **) &d_result_counts, counts_size);
-
-    // Convert query data to float3 format
-    std::vector<float3> query_min_vec(num_queries);
-    std::vector<float3> query_max_vec(num_queries);
-    for (int i = 0; i < num_queries; i++) {
-        query_min_vec[i] = make_float3(h_query_aabb_min[i * 3], h_query_aabb_min[i * 3 + 1], h_query_aabb_min[i * 3 + 2]);
-        query_max_vec[i] = make_float3(h_query_aabb_max[i * 3], h_query_aabb_max[i * 3 + 1], h_query_aabb_max[i * 3 + 2]);
-    }
-
-    // Convert primitive AABB data to float3 format
-    std::vector<float3> primitive_min_vec(primitive_count);
-    std::vector<float3> primitive_max_vec(primitive_count);
-    for (int i = 0; i < primitive_count; i++) {
-        primitive_min_vec[i] = make_float3(h_primitive_aabb_min[i * 3], h_primitive_aabb_min[i * 3 + 1], h_primitive_aabb_min[i * 3 + 2]);
-        primitive_max_vec[i] = make_float3(h_primitive_aabb_max[i * 3], h_primitive_aabb_max[i * 3 + 1], h_primitive_aabb_max[i * 3 + 2]);
-    }
-
-    // Copy query and primitive AABB data to GPU
-    cudaMemcpy(d_query_min, query_min_vec.data(), query_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_query_max, query_max_vec.data(), query_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_primitive_min, primitive_min_vec.data(), primitive_aabb_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_primitive_max, primitive_max_vec.data(), primitive_aabb_size, cudaMemcpyHostToDevice);
-
-    // Launch kernel
-    int block_size = 256;
-    int num_blocks = (num_queries + block_size - 1) / block_size;
-
-    // Reset the traversal-stack overflow flag before launch; checked after sync (fail-fast on a deeper-than-expected tree).
     const unsigned int stack_overflow_reset = 0;
-    cudaMemcpyToSymbol(d_bvh_stack_overflow, &stack_overflow_reset, sizeof(unsigned int));
+    HELIOS_CUDA_CHECK(cudaMemcpyToSymbol(d_bvh_stack_overflow, &stack_overflow_reset, sizeof(unsigned int)));
 
-    bvhTraversalKernel<<<num_blocks, block_size>>>((GPUBVHNode *) h_nodes, (unsigned int *) h_primitive_indices, d_primitive_min, d_primitive_max, d_query_min, d_query_max, d_results, d_result_counts, num_queries, max_results_per_query);
-
-    cudaDeviceSynchronize();
-
-    // Check for errors
-    cudaError_t err = cudaGetLastError();
-    if (err != cudaSuccess) {
-        fprintf(stderr, "CUDA kernel launch error: %s\n", cudaGetErrorString(err));
-        // Clean up GPU memory before returning
-        cudaFree(d_query_min);
-        cudaFree(d_query_max);
-        cudaFree(d_primitive_min);
-        cudaFree(d_primitive_max);
-        cudaFree(d_results);
-        cudaFree(d_result_counts);
-        return;
-    }
+    const int block_size = 256;
+    const int num_blocks = static_cast<int>((static_cast<long long>(num_queries) + block_size - 1) / block_size);
+    // cudaGetLastError() after the launch also returns an error left by an earlier failed CUDA call, which was already raised
+    // to the caller. Clear it here so that the launch check reports only this launch.
+    cudaGetLastError();
+    bvhBoxQueryKernel<<<num_blocks, block_size>>>((const GPUBVHNode *) d_nodes, d_primitive_indices, (const float3 *) d_primitive_aabb_min, (const float3 *) d_primitive_aabb_max, d_query_min.get(), d_query_max.get(), num_queries, d_hit_offsets,
+                                                  d_hit_counts, d_hits);
+    HELIOS_CUDA_CHECK(cudaGetLastError());
+    HELIOS_CUDA_CHECK(cudaDeviceSynchronize());
 
     unsigned int stack_overflow_flag = 0;
-    cudaMemcpyFromSymbol(&stack_overflow_flag, d_bvh_stack_overflow, sizeof(unsigned int));
+    HELIOS_CUDA_CHECK(cudaMemcpyFromSymbol(&stack_overflow_flag, d_bvh_stack_overflow, sizeof(unsigned int)));
     if (stack_overflow_flag != 0) {
-        cudaFree(d_query_min);
-        cudaFree(d_query_max);
-        cudaFree(d_primitive_min);
-        cudaFree(d_primitive_max);
-        cudaFree(d_results);
-        cudaFree(d_result_counts);
-        helios::helios_runtime_error("ERROR (CollisionDetection GPU): BVH traversal stack overflow in bvhTraversalKernel - tree depth exceeded BVH_TRAVERSAL_STACK_CAPACITY (" + std::to_string(BVH_TRAVERSAL_STACK_CAPACITY) +
+        helios::helios_runtime_error("ERROR (CollisionDetection GPU): BVH traversal stack overflow in bvhBoxQueryKernel - tree depth exceeded BVH_TRAVERSAL_STACK_CAPACITY (" + std::to_string(BVH_TRAVERSAL_STACK_CAPACITY) +
                                      "). This must not happen for a valid SAH tree; raise BVH_TRAVERSAL_STACK_CAPACITY or check the BVH build.");
     }
-
-    // Copy results back
-    cudaMemcpy(h_results, d_results, results_size, cudaMemcpyDeviceToHost);
-    cudaMemcpy(h_result_counts, d_result_counts, counts_size, cudaMemcpyDeviceToHost);
-
-    // Clean up GPU memory
-    cudaFree(d_query_min);
-    cudaFree(d_query_max);
-    cudaFree(d_primitive_min);
-    cudaFree(d_primitive_max);
-    cudaFree(d_results);
-    cudaFree(d_result_counts);
 }
 
 /**
- * \brief CUDA kernel to calculate ray path lengths through a regular voxel grid
+ * \brief Count, for each query box, the primitives of the resident BVH whose bounding boxes overlap it (first of two passes)
  *
- * This kernel computes the intersection of rays with voxels and accumulates
- * path length statistics for integration with aeriallidar and lidar plugins.
- *
- * \param[in] num_rays Number of rays to process
- * \param[in] d_ray_origins Array of ray origin points
- * \param[in] d_ray_directions Array of ray direction vectors (normalized)
- * \param[in] grid_center Center of the voxel grid
- * \param[in] grid_size Total size of the voxel grid
- * \param[in] grid_divisions Number of divisions in x, y, z
- * \param[out] d_voxel_ray_counts Flattened array to accumulate ray counts per voxel
- * \param[out] d_voxel_path_lengths Flattened array to accumulate path lengths per voxel
- * \param[out] d_voxel_transmitted Flattened array to count transmitted rays per voxel
+ * \param[in] d_nodes Resident BVH nodes
+ * \param[in] d_primitive_indices Resident primitive UUIDs in BVH order
+ * \param[in] d_primitive_aabb_min Resident primitive bounding-box minimum corners (float3) in BVH order
+ * \param[in] d_primitive_aabb_max Resident primitive bounding-box maximum corners (float3) in BVH order
+ * \param[in] h_query_aabb_min Host query minimum corners, xyz per query
+ * \param[in] h_query_aabb_max Host query maximum corners, xyz per query
+ * \param[in] num_queries Number of query boxes
+ * \param[out] h_hit_counts Host array of \p num_queries hit counts
  */
-__global__ void intersectRegularGridKernel(const size_t num_rays, float3 *d_ray_origins, float3 *d_ray_directions, float3 grid_center, float3 grid_size, int3 grid_divisions, int primitive_count, int *d_voxel_ray_counts, float *d_voxel_path_lengths,
-                                           int *d_voxel_transmitted, int *d_voxel_hit_before, int *d_voxel_hit_after, int *d_voxel_hit_inside) {
-
-    size_t ray_idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (ray_idx >= num_rays) {
+void launchBVHBoxQueryCount(void *d_nodes, unsigned int *d_primitive_indices, void *d_primitive_aabb_min, void *d_primitive_aabb_max, const float *h_query_aabb_min, const float *h_query_aabb_max, int num_queries, unsigned int *h_hit_counts) {
+    if (num_queries == 0) {
         return;
     }
-
-    float3 ray_origin = d_ray_origins[ray_idx];
-    float3 ray_direction = d_ray_directions[ray_idx];
-
-    // Calculate voxel size
-    float3 voxel_size = make_float3(grid_size.x / static_cast<float>(grid_divisions.x), grid_size.y / static_cast<float>(grid_divisions.y), grid_size.z / static_cast<float>(grid_divisions.z));
-
-    // Calculate grid bounds once
-    float3 grid_min = make_float3(grid_center.x - 0.5f * grid_size.x, grid_center.y - 0.5f * grid_size.y, grid_center.z - 0.5f * grid_size.z);
-    float3 grid_max = make_float3(grid_center.x + 0.5f * grid_size.x, grid_center.y + 0.5f * grid_size.y, grid_center.z + 0.5f * grid_size.z);
-
-    // Quick ray-grid intersection test
-    float t_grid_min = -1e30f, t_grid_max = 1e30f;
-
-    // Check if ray intersects the entire grid first
-    for (int axis = 0; axis < 3; ++axis) {
-        float origin_comp = (axis == 0) ? ray_origin.x : (axis == 1) ? ray_origin.y : ray_origin.z;
-        float dir_comp = (axis == 0) ? ray_direction.x : (axis == 1) ? ray_direction.y : ray_direction.z;
-        float min_comp = (axis == 0) ? grid_min.x : (axis == 1) ? grid_min.y : grid_min.z;
-        float max_comp = (axis == 0) ? grid_max.x : (axis == 1) ? grid_max.y : grid_max.z;
-
-        if (fabsf(dir_comp) < 1e-9f) {
-            if (origin_comp < min_comp || origin_comp > max_comp) {
-                return; // Ray doesn't intersect grid
-            }
-        } else {
-            float t1 = (min_comp - origin_comp) / dir_comp;
-            float t2 = (max_comp - origin_comp) / dir_comp;
-
-            if (t1 > t2) {
-                float temp = t1;
-                t1 = t2;
-                t2 = temp;
-            }
-
-            t_grid_min = fmaxf(t_grid_min, t1);
-            t_grid_max = fminf(t_grid_max, t2);
-
-            if (t_grid_min > t_grid_max) {
-                return; // No intersection with grid
-            }
-        }
-    }
-
-    if (t_grid_max <= 1e-6f) {
-        return; // Grid is behind ray
-    }
-
-    // Only test voxels if ray intersects the grid
-    // Test intersection with each voxel in the grid
-    for (int i = 0; i < grid_divisions.x; i++) {
-        for (int j = 0; j < grid_divisions.y; j++) {
-            for (int k = 0; k < grid_divisions.z; k++) {
-
-                // Calculate voxel AABB
-                float3 voxel_min = make_float3(grid_min.x + i * voxel_size.x, grid_min.y + j * voxel_size.y, grid_min.z + k * voxel_size.z);
-
-                float3 voxel_max = make_float3(voxel_min.x + voxel_size.x, voxel_min.y + voxel_size.y, voxel_min.z + voxel_size.z);
-
-                // Ray-AABB intersection test with improved precision
-                float t_min_x, t_max_x, t_min_y, t_max_y, t_min_z, t_max_z;
-
-                // X slab - handle near-zero direction components
-                if (fabsf(ray_direction.x) < 1e-9f) {
-                    if (ray_origin.x < voxel_min.x || ray_origin.x > voxel_max.x) {
-                        continue; // Ray is parallel and outside slab
-                    }
-                    t_min_x = -1e30f;
-                    t_max_x = 1e30f;
-                } else {
-                    float inv_dir_x = 1.0f / ray_direction.x;
-                    if (inv_dir_x >= 0) {
-                        t_min_x = (voxel_min.x - ray_origin.x) * inv_dir_x;
-                        t_max_x = (voxel_max.x - ray_origin.x) * inv_dir_x;
-                    } else {
-                        t_min_x = (voxel_max.x - ray_origin.x) * inv_dir_x;
-                        t_max_x = (voxel_min.x - ray_origin.x) * inv_dir_x;
-                    }
-                }
-
-                // Y slab - handle near-zero direction components
-                if (fabsf(ray_direction.y) < 1e-9f) {
-                    if (ray_origin.y < voxel_min.y || ray_origin.y > voxel_max.y) {
-                        continue; // Ray is parallel and outside slab
-                    }
-                    t_min_y = -1e30f;
-                    t_max_y = 1e30f;
-                } else {
-                    float inv_dir_y = 1.0f / ray_direction.y;
-                    if (inv_dir_y >= 0) {
-                        t_min_y = (voxel_min.y - ray_origin.y) * inv_dir_y;
-                        t_max_y = (voxel_max.y - ray_origin.y) * inv_dir_y;
-                    } else {
-                        t_min_y = (voxel_max.y - ray_origin.y) * inv_dir_y;
-                        t_max_y = (voxel_min.y - ray_origin.y) * inv_dir_y;
-                    }
-                }
-
-                // Z slab - handle near-zero direction components
-                if (fabsf(ray_direction.z) < 1e-9f) {
-                    if (ray_origin.z < voxel_min.z || ray_origin.z > voxel_max.z) {
-                        continue; // Ray is parallel and outside slab
-                    }
-                    t_min_z = -1e30f;
-                    t_max_z = 1e30f;
-                } else {
-                    float inv_dir_z = 1.0f / ray_direction.z;
-                    if (inv_dir_z >= 0) {
-                        t_min_z = (voxel_min.z - ray_origin.z) * inv_dir_z;
-                        t_max_z = (voxel_max.z - ray_origin.z) * inv_dir_z;
-                    } else {
-                        t_min_z = (voxel_max.z - ray_origin.z) * inv_dir_z;
-                        t_max_z = (voxel_min.z - ray_origin.z) * inv_dir_z;
-                    }
-                }
-
-                // Find intersection parameters
-                float t_enter = fmaxf(fmaxf(t_min_x, t_min_y), t_min_z);
-                float t_exit = fminf(fminf(t_max_x, t_max_y), t_max_z);
-
-                // Check if ray intersects voxel with very stringent conditions to match CPU DDA
-                // Only count intersections that are clearly inside the voxel, not just touching edges
-                if (t_enter < t_exit && t_exit > 1e-5f && (t_exit - t_enter) > 1e-4f) {
-
-                    // Calculate path length through voxel
-                    float path_length = t_exit - t_enter;
-
-                    // Handle case where ray starts inside voxel
-                    if (t_enter < 0) {
-                        path_length = t_exit;
-                        t_enter = 0.0f;
-                    }
-
-                    // Only count intersections with significant path length (more restrictive)
-                    if (path_length < 1e-4f) {
-                        continue; // Skip this voxel
-                    }
-
-                    // Additional filtering: skip voxels where ray barely grazes edges
-                    // Check if intersection is close to voxel boundaries (likely edge case)
-                    float voxel_diag = sqrtf(voxel_size.x * voxel_size.x + voxel_size.y * voxel_size.y + voxel_size.z * voxel_size.z);
-                    if (path_length < voxel_diag * 0.1f) {
-                        continue; // Skip grazing intersections
-                    }
-
-                    // Calculate flattened voxel index
-                    int voxel_idx = i * grid_divisions.y * grid_divisions.z + j * grid_divisions.z + k;
-
-                    // Accumulate statistics using atomic operations
-                    atomicAdd(&d_voxel_ray_counts[voxel_idx], 1);
-                    atomicAdd(&d_voxel_path_lengths[voxel_idx], path_length);
-
-                    // Improved geometry detection based on scene content
-                    if (primitive_count == 0) {
-                        // No geometry in scene - all rays are transmitted (matches CPU behavior)
-                        atomicAdd(&d_voxel_transmitted[voxel_idx], 1);
-                    } else {
-                        // There is geometry in the scene - use improved approximation
-                        // TODO: Implement actual BVH ray casting on GPU
-                        // For now, use a more sophisticated approximation that considers geometry
-
-                        // Calculate distance from voxel center
-                        float3 voxel_center = make_float3((voxel_min.x + voxel_max.x) * 0.5f, (voxel_min.y + voxel_max.y) * 0.5f, (voxel_min.z + voxel_max.z) * 0.5f);
-
-                        // Simple heuristic: rays closer to origin more likely to hit geometry
-                        float ray_distance = sqrtf(ray_origin.x * ray_origin.x + ray_origin.y * ray_origin.y + ray_origin.z * ray_origin.z);
-
-                        // Probability of hitting geometry decreases with distance
-                        bool hit_geometry = (ray_idx % 4 == 0) && (ray_distance < 10.0f);
-
-                        if (hit_geometry) {
-                            // Classify hit based on ray entry position relative to voxel
-                            if (t_enter < 0.5f) {
-                                atomicAdd(&d_voxel_hit_inside[voxel_idx], 1);
-                                atomicAdd(&d_voxel_hit_after[voxel_idx], 1);
-                            } else if (t_enter < 2.0f) {
-                                atomicAdd(&d_voxel_hit_after[voxel_idx], 1);
-                            } else {
-                                atomicAdd(&d_voxel_hit_before[voxel_idx], 1);
-                            }
-                        } else {
-                            atomicAdd(&d_voxel_transmitted[voxel_idx], 1);
-                        }
-                    }
-                }
-            }
-        }
-    }
+    DeviceBuffer<unsigned int> d_hit_counts(num_queries);
+    runBVHBoxQueryPass(d_nodes, d_primitive_indices, d_primitive_aabb_min, d_primitive_aabb_max, h_query_aabb_min, h_query_aabb_max, num_queries, nullptr, d_hit_counts.get(), nullptr);
+    HELIOS_CUDA_CHECK(cudaMemcpy(h_hit_counts, d_hit_counts.get(), num_queries * sizeof(unsigned int), cudaMemcpyDeviceToHost));
 }
 
 /**
- * \brief Launch CUDA kernel for regular grid voxel ray path length calculation
- * \return true if GPU execution succeeded, false if GPU unavailable or error occurred
+ * \brief Write, for each query box, the UUIDs of the resident-BVH primitives whose bounding boxes overlap it (second of two passes)
+ *
+ * \param[in] d_nodes Resident BVH nodes
+ * \param[in] d_primitive_indices Resident primitive UUIDs in BVH order
+ * \param[in] d_primitive_aabb_min Resident primitive bounding-box minimum corners (float3) in BVH order
+ * \param[in] d_primitive_aabb_max Resident primitive bounding-box maximum corners (float3) in BVH order
+ * \param[in] h_query_aabb_min Host query minimum corners, xyz per query
+ * \param[in] h_query_aabb_max Host query maximum corners, xyz per query
+ * \param[in] num_queries Number of query boxes
+ * \param[in] h_hit_offsets Host array of \p num_queries start indices into \p h_hits (exclusive prefix sums of launchBVHBoxQueryCount's counts)
+ * \param[in] total_hits Total number of hits over all queries (size of \p h_hits)
+ * \param[out] h_hits Host array receiving the hit primitive UUIDs, grouped by query
  */
-bool launchVoxelRayPathLengths(int num_rays, float *h_ray_origins, float *h_ray_directions, float grid_center_x, float grid_center_y, float grid_center_z, float grid_size_x, float grid_size_y, float grid_size_z, int grid_divisions_x,
-                               int grid_divisions_y, int grid_divisions_z, int primitive_count, int *h_voxel_ray_counts, float *h_voxel_path_lengths, int *h_voxel_transmitted, int *h_voxel_hit_before, int *h_voxel_hit_after,
-                               int *h_voxel_hit_inside) {
-
-    // Check if GPU is available before attempting allocation
-    int deviceCount = 0;
-    cudaError_t err = cudaGetDeviceCount(&deviceCount);
-    if (err != cudaSuccess || deviceCount == 0) {
-        // No GPU available - return false for CPU fallback
-        return false;
+void launchBVHBoxQueryFill(void *d_nodes, unsigned int *d_primitive_indices, void *d_primitive_aabb_min, void *d_primitive_aabb_max, const float *h_query_aabb_min, const float *h_query_aabb_max, int num_queries,
+                           const unsigned long long *h_hit_offsets, unsigned long long total_hits, unsigned int *h_hits) {
+    if (num_queries == 0 || total_hits == 0) {
+        return;
     }
-
-    // Allocate device memory
-    float3 *d_ray_origins, *d_ray_directions;
-    int *d_voxel_ray_counts, *d_voxel_transmitted;
-    int *d_voxel_hit_before, *d_voxel_hit_after, *d_voxel_hit_inside;
-    float *d_voxel_path_lengths;
-
-    size_t ray_data_size = num_rays * 3 * sizeof(float);
-    size_t voxel_count = grid_divisions_x * grid_divisions_y * grid_divisions_z;
-    size_t voxel_int_size = voxel_count * sizeof(int);
-    size_t voxel_float_size = voxel_count * sizeof(float);
-
-    // Allocate memory
-    err = cudaMalloc(&d_ray_origins, ray_data_size);
-    if (err != cudaSuccess) return false;
-
-    err = cudaMalloc(&d_ray_directions, ray_data_size);
-    if (err != cudaSuccess) {
-        cudaFree(d_ray_origins);
-        return false;
-    }
-
-    err = cudaMalloc(&d_voxel_ray_counts, voxel_int_size);
-    if (err != cudaSuccess) {
-        cudaFree(d_ray_origins);
-        cudaFree(d_ray_directions);
-        return false;
-    }
-
-    err = cudaMalloc(&d_voxel_transmitted, voxel_int_size);
-    if (err != cudaSuccess) {
-        cudaFree(d_ray_origins);
-        cudaFree(d_ray_directions);
-        cudaFree(d_voxel_ray_counts);
-        return false;
-    }
-
-    err = cudaMalloc(&d_voxel_hit_before, voxel_int_size);
-    if (err != cudaSuccess) {
-        cudaFree(d_ray_origins);
-        cudaFree(d_ray_directions);
-        cudaFree(d_voxel_ray_counts);
-        cudaFree(d_voxel_transmitted);
-        return false;
-    }
-
-    err = cudaMalloc(&d_voxel_hit_after, voxel_int_size);
-    if (err != cudaSuccess) {
-        cudaFree(d_ray_origins);
-        cudaFree(d_ray_directions);
-        cudaFree(d_voxel_ray_counts);
-        cudaFree(d_voxel_transmitted);
-        cudaFree(d_voxel_hit_before);
-        return false;
-    }
-
-    err = cudaMalloc(&d_voxel_hit_inside, voxel_int_size);
-    if (err != cudaSuccess) {
-        cudaFree(d_ray_origins);
-        cudaFree(d_ray_directions);
-        cudaFree(d_voxel_ray_counts);
-        cudaFree(d_voxel_transmitted);
-        cudaFree(d_voxel_hit_before);
-        cudaFree(d_voxel_hit_after);
-        return false;
-    }
-
-    err = cudaMalloc(&d_voxel_path_lengths, voxel_float_size);
-    if (err != cudaSuccess) {
-        cudaFree(d_ray_origins);
-        cudaFree(d_ray_directions);
-        cudaFree(d_voxel_ray_counts);
-        cudaFree(d_voxel_transmitted);
-        cudaFree(d_voxel_hit_before);
-        cudaFree(d_voxel_hit_after);
-        cudaFree(d_voxel_hit_inside);
-        return false;
-    }
-
-    // Copy input data to device
-    cudaMemcpy(d_ray_origins, h_ray_origins, ray_data_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_ray_directions, h_ray_directions, ray_data_size, cudaMemcpyHostToDevice);
-    cudaMemset(d_voxel_ray_counts, 0, voxel_int_size);
-    cudaMemset(d_voxel_transmitted, 0, voxel_int_size);
-    cudaMemset(d_voxel_hit_before, 0, voxel_int_size);
-    cudaMemset(d_voxel_hit_after, 0, voxel_int_size);
-    cudaMemset(d_voxel_hit_inside, 0, voxel_int_size);
-    cudaMemset(d_voxel_path_lengths, 0, voxel_float_size);
-
-    // Launch kernel
-    dim3 block_size(256);
-    dim3 grid_size((num_rays + block_size.x - 1) / block_size.x);
-
-    float3 grid_center = make_float3(grid_center_x, grid_center_y, grid_center_z);
-    float3 grid_size_vec = make_float3(grid_size_x, grid_size_y, grid_size_z);
-    int3 grid_divisions_vec = make_int3(grid_divisions_x, grid_divisions_y, grid_divisions_z);
-
-    intersectRegularGridKernel<<<grid_size, block_size>>>(num_rays, d_ray_origins, d_ray_directions, grid_center, grid_size_vec, grid_divisions_vec, primitive_count, d_voxel_ray_counts, d_voxel_path_lengths, d_voxel_transmitted, d_voxel_hit_before,
-                                                          d_voxel_hit_after, d_voxel_hit_inside);
-
-    cudaDeviceSynchronize();
-
-    // Check for errors
-    err = cudaGetLastError();
-    if (err != cudaSuccess) {
-        // Clean up GPU memory before returning
-        cudaFree(d_ray_origins);
-        cudaFree(d_ray_directions);
-        cudaFree(d_voxel_ray_counts);
-        cudaFree(d_voxel_transmitted);
-        cudaFree(d_voxel_hit_before);
-        cudaFree(d_voxel_hit_after);
-        cudaFree(d_voxel_hit_inside);
-        cudaFree(d_voxel_path_lengths);
-        return false;
-    }
-
-    // Copy results back to host
-    cudaMemcpy(h_voxel_ray_counts, d_voxel_ray_counts, voxel_int_size, cudaMemcpyDeviceToHost);
-    cudaMemcpy(h_voxel_path_lengths, d_voxel_path_lengths, voxel_float_size, cudaMemcpyDeviceToHost);
-    cudaMemcpy(h_voxel_transmitted, d_voxel_transmitted, voxel_int_size, cudaMemcpyDeviceToHost);
-    cudaMemcpy(h_voxel_hit_before, d_voxel_hit_before, voxel_int_size, cudaMemcpyDeviceToHost);
-    cudaMemcpy(h_voxel_hit_after, d_voxel_hit_after, voxel_int_size, cudaMemcpyDeviceToHost);
-    cudaMemcpy(h_voxel_hit_inside, d_voxel_hit_inside, voxel_int_size, cudaMemcpyDeviceToHost);
-
-    // Free device memory
-    cudaFree(d_ray_origins);
-    cudaFree(d_ray_directions);
-    cudaFree(d_voxel_ray_counts);
-    cudaFree(d_voxel_transmitted);
-    cudaFree(d_voxel_hit_before);
-    cudaFree(d_voxel_hit_after);
-    cudaFree(d_voxel_hit_inside);
-    cudaFree(d_voxel_path_lengths);
-
-    return true; // Success
+    DeviceBuffer<unsigned long long> d_hit_offsets(num_queries);
+    DeviceBuffer<unsigned int> d_hits(total_hits);
+    HELIOS_CUDA_CHECK(cudaMemcpy(d_hit_offsets.get(), h_hit_offsets, num_queries * sizeof(unsigned long long), cudaMemcpyHostToDevice));
+    runBVHBoxQueryPass(d_nodes, d_primitive_indices, d_primitive_aabb_min, d_primitive_aabb_max, h_query_aabb_min, h_query_aabb_max, num_queries, d_hit_offsets.get(), nullptr, d_hits.get());
+    HELIOS_CUDA_CHECK(cudaMemcpy(h_hits, d_hits.get(), total_hits * sizeof(unsigned int), cudaMemcpyDeviceToHost));
 }
 
-} // extern "C"
+/**
+ * \brief Check that the current CUDA device can run this plug-in's kernels
+ *
+ * A visible device can still be unusable: the build may have no kernel image for its architecture, or it may be busy in
+ * exclusive-process mode. Both show up here, before GPU acceleration is chosen, rather than as a failure of every GPU call.
+ *
+ * \return True if the kernels have an image for the device and a small device allocation succeeds
+ */
+bool probeCollisionDetectionKernels() {
+    cudaFuncAttributes attributes;
+    bool usable = cudaFuncGetAttributes(&attributes, bvhBoxQueryKernel) == cudaSuccess && cudaFuncGetAttributes(&attributes, rayPrimitiveBVHKernel) == cudaSuccess;
+    if (usable) {
+        void *probe_allocation = nullptr;
+        usable = cudaMalloc(&probe_allocation, 256) == cudaSuccess;
+        if (probe_allocation != nullptr) {
+            cudaFree(probe_allocation);
+        }
+    }
+    cudaGetLastError(); // a failed probe is answered by the return value; do not leave it as the thread's last CUDA error
+    return usable;
+}

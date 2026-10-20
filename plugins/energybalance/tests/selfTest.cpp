@@ -636,6 +636,63 @@ DOCTEST_TEST_CASE("EnergyBalanceModel zero boundary-layer conductance with stoma
     DOCTEST_CHECK(std::isfinite(T));
 }
 
+DOCTEST_TEST_CASE("EnergyBalanceModel moisture conductance uses the per-face boundary-layer conductance") {
+    // Regression test: "boundarylayer_conductance" (gH) of a two-sided primitive is summed over both faces, but vapor
+    // leaving one face only crosses that face's boundary layer, 1.08*gH/2. The buggy expression put the full 1.08*gH in
+    // series with each face's share of the stomatal conductance, overestimating the total moisture conductance gM by
+    // ~19% for a hypostomatous leaf and ~10% for an amphistomatous one at the conductances used here.
+    //
+    // The effective gM is recovered from the reported latent flux and solved surface temperature, and compared with the
+    // analytic series combination of each face's stomatal and boundary-layer conductances.
+    const float gH = 1.2f;
+    const float gS = 0.3f;
+    const float Ta = 300.f;
+    const float air_humidity = 0.5f;
+    const float pressure = 101000.f;
+
+    auto effectiveMoistureConductance = [&](uint twosided_flag, float boundarylayer_conductance, float stomatal_sidedness) {
+        Context context;
+        uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context.setPrimitiveData(UUID, "twosided_flag", twosided_flag);
+        context.setPrimitiveData(UUID, "radiation_flux_SW", 400.f);
+        context.setPrimitiveData(UUID, "radiation_flux_LW", float(2.f * 5.67e-8 * pow(Ta, 4)));
+        context.setPrimitiveData(UUID, "air_temperature", Ta);
+        context.setPrimitiveData(UUID, "air_humidity", air_humidity);
+        context.setPrimitiveData(UUID, "air_pressure", pressure);
+        context.setPrimitiveData(UUID, "boundarylayer_conductance", boundarylayer_conductance);
+        context.setPrimitiveData(UUID, "moisture_conductance", gS);
+        context.setPrimitiveData(UUID, "stomatal_sidedness", stomatal_sidedness);
+
+        EnergyBalanceModel model(&context);
+        model.disableMessages();
+        model.addRadiationBand("SW");
+        model.addRadiationBand("LW");
+        model.run();
+
+        float latent_flux, T;
+        context.getPrimitiveData(UUID, "latent_flux", latent_flux);
+        context.getPrimitiveData(UUID, "temperature", T);
+        return latent_flux * pressure / (lambda_mol * (esat_Pa(T) - air_humidity * esat_Pa(Ta)));
+    };
+
+    // Series combination of the boundary-layer conductance to vapor of one face (gbv) with a stomatal conductance (gs).
+    auto series = [](float gbv, float gs) { return gbv * gs / (gbv + gs); };
+
+    const float gbv_face = 1.08f * gH / 2.f;
+
+    // Hypostomatous two-sided leaf: all vapor leaves through one face.
+    const float gM_hypo = effectiveMoistureConductance(1, gH, 0.f);
+    DOCTEST_CHECK(std::fabs(gM_hypo - series(gbv_face, gS)) < 0.01f * series(gbv_face, gS));
+
+    // Amphistomatous two-sided leaf: half the stomatal conductance on each face.
+    const float gM_amphi = effectiveMoistureConductance(1, gH, 0.5f);
+    DOCTEST_CHECK(std::fabs(gM_amphi - 2.f * series(gbv_face, 0.5f * gS)) < 0.01f * 2.f * series(gbv_face, 0.5f * gS));
+
+    // A one-sided primitive's conductance is that of its single face, so it already had the per-face value.
+    const float gM_onesided = effectiveMoistureConductance(0, gH / 2.f, 0.f);
+    DOCTEST_CHECK(std::fabs(gM_onesided - series(gbv_face, gS)) < 0.01f * series(gbv_face, gS));
+}
+
 DOCTEST_TEST_CASE("EnergyBalanceModel single emission-enabled band selects its emissivity") {
     // When the RadiationModel records emission-enabled state, thermal emission must use the emissivity of
     // the single emission-enabled band (here LW, emissivity 0.8) and ignore other bands' emissivities.
@@ -777,6 +834,30 @@ DOCTEST_TEST_CASE("EnergyBalanceModel surface humidity scales surface vapor pres
     DOCTEST_CHECK(T_dry > T_saturated);
     // Guard the magnitude too, so a merely-marginal difference cannot pass.
     DOCTEST_CHECK(T_dry - T_saturated > 1.f);
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel duplicate UUIDs rejected") {
+    // Results are written to the Context in parallel, so a primitive listed twice would be written by two threads at once.
+    Context context;
+    std::vector<uint> UUIDs;
+    for (int i = 0; i < 4; i++) {
+        UUIDs.push_back(context.addPatch(make_vec3(float(i), 0, 0), make_vec2(0.1f, 0.1f)));
+    }
+    context.setPrimitiveData(UUIDs, "radiation_flux_SW", 300.f);
+    context.setPrimitiveData(UUIDs, "temperature", 300.f);
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+
+    std::vector<uint> UUIDs_duplicated = UUIDs;
+    UUIDs_duplicated.push_back(UUIDs.at(2));
+    std::string expected_message = "UUID " + std::to_string(UUIDs.at(2)) + " appears more than once";
+    DOCTEST_CHECK_THROWS_WITH_AS(model.run(UUIDs_duplicated), doctest::Contains(expected_message.c_str()), std::runtime_error);
+    DOCTEST_CHECK_THROWS_WITH_AS(model.run(UUIDs_duplicated, 60.f), doctest::Contains("appears more than once"), std::runtime_error);
+
+    // The same primitives listed once must work.
+    DOCTEST_CHECK_NOTHROW(model.run(UUIDs));
 }
 
 // ---- Canopy airspace model ---- //
@@ -1345,6 +1426,10 @@ DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Requires Primitives In Run
     std::vector<uint> UUIDs_all = UUIDs;
     UUIDs_all.push_back(UUID_ground);
     DOCTEST_CHECK_NOTHROW(model.run(UUIDs_all));
+
+    // Listing a primitive twice is rejected in canopy airspace mode as well.
+    UUIDs_all.push_back(UUID_ground);
+    DOCTEST_CHECK_THROWS_WITH_AS(model.run(UUIDs_all), doctest::Contains("appears more than once"), std::runtime_error);
 }
 
 DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Dynamic Mode Rejected") {

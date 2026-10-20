@@ -33,6 +33,9 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Original selfTest") {
     std::vector<float> gs_BMF(gs_ref.size());
 
     uint UUID0 = context_selftest.addPatch();
+    // gbw_ref is the gas-exchange chamber's boundary-layer conductance, which is the conductance between the stomata and the chamber air. A one-sided primitive applies it to the stomata
+    // unchanged, whereas a two-sided primitive would split it between its faces.
+    context_selftest.setPrimitiveData(UUID0, "twosided_flag", uint(0));
 
     BWBcoefficients BWBcoeffs;
     BBLcoefficients BBLcoeffs;
@@ -1128,4 +1131,177 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - BBL Gamma warning reports the Gamm
         std::string gamma_warning = output.substr(pos);
         DOCTEST_CHECK(gamma_warning.find("for 2 primitives") != std::string::npos);
     }
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - Leaf-surface humidity uses the per-face boundary-layer conductance") {
+    // Regression test: "boundarylayer_conductance" (gH) of a two-sided primitive is summed over both faces, but vapor
+    // leaving the stomata on one face only crosses that face's boundary layer, 1.08*gH/2. The buggy model put the full
+    // 1.08*gH in series with the stomata when solving for the leaf-surface vapor pressure, so the surface was too close to
+    // ambient humidity and the transpiration implied by gs was larger than the flux the energy balance computes from the
+    // same gs.
+    //
+    // The transpiration implied by the solved surface, gs*Ds, must equal the energy balance flux gM*(es-ea)/P, where gM
+    // combines each face's share of gs in series with that face's boundary-layer conductance.
+    const float gH = 0.4f;
+    const float TL = 303.f;
+    const float Ta = 300.f;
+    const float rh = 0.3f;
+    const float press = 101000.f;
+
+    // Saturation vapor pressure as evaluated by the model (Pa).
+    auto esat = [](float T) { return 611.f * std::exp(17.502f * (T - 273.f) / ((T - 273.f) + 240.97f)); };
+    const float VPD_air = (esat(TL) - rh * esat(Ta)) / press * 1000.f; // mmol/mol
+
+    for (float stomatal_sidedness: {0.f, 0.25f, 0.5f}) {
+        Context context;
+        StomatalConductanceModel gsm(&context);
+        gsm.disableMessages();
+        gsm.optionalOutputPrimitiveData("vapor_pressure_deficit");
+
+        uint UUID = context.addPatch();
+        context.setPrimitiveData(UUID, "radiation_flux_PAR", 400.f);
+        context.setPrimitiveData(UUID, "temperature", TL);
+        context.setPrimitiveData(UUID, "air_temperature", Ta);
+        context.setPrimitiveData(UUID, "air_humidity", rh);
+        context.setPrimitiveData(UUID, "air_pressure", press);
+        context.setPrimitiveData(UUID, "boundarylayer_conductance", gH);
+        context.setPrimitiveData(UUID, "stomatal_sidedness", stomatal_sidedness);
+
+        BMFcoefficients coeffs;
+        gsm.setModelCoefficients(coeffs);
+        gsm.run();
+
+        float gs, Ds;
+        context.getPrimitiveData(UUID, "moisture_conductance", gs);
+        context.getPrimitiveData(UUID, "vapor_pressure_deficit", Ds);
+
+        const float gbv_face = 1.08f * gH / 2.f;
+        float gM = 0.f;
+        for (float face_fraction: {stomatal_sidedness, 1.f - stomatal_sidedness}) {
+            if (face_fraction > 0.f) {
+                gM += gbv_face * face_fraction * gs / (gbv_face + face_fraction * gs);
+            }
+        }
+
+        INFO("stomatal_sidedness = " << stomatal_sidedness);
+        DOCTEST_CHECK(gs > 0.f);
+        DOCTEST_CHECK(std::fabs(gs * Ds - gM * VPD_air) < 0.005f * gM * VPD_air);
+    }
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - Leaf-surface CO2 uses the per-face boundary-layer conductance") {
+    // Regression test: as for vapor, CO2 reaching the stomata of a hypostomatous two-sided leaf only crosses the boundary
+    // layer of the stomata-bearing face, whose conductance is half of the both-face "boundarylayer_conductance". Such a leaf
+    // must therefore respond exactly like a one-sided primitive with half the boundary-layer conductance, and an
+    // amphistomatous leaf exactly like a one-sided primitive with the full conductance. The buggy model treated the
+    // hypostomatous leaf like the one-sided primitive with the full conductance.
+    const float gH = 0.3f;
+
+    auto stomatalConductance = [](uint twosided_flag, float boundarylayer_conductance, float stomatal_sidedness) {
+        Context context;
+        StomatalConductanceModel gsm(&context);
+        gsm.disableMessages();
+
+        uint UUID = context.addPatch();
+        context.setPrimitiveData(UUID, "twosided_flag", twosided_flag);
+        context.setPrimitiveData(UUID, "temperature", 303.f);
+        context.setPrimitiveData(UUID, "air_temperature", 300.f);
+        context.setPrimitiveData(UUID, "air_humidity", 0.3f);
+        context.setPrimitiveData(UUID, "air_CO2", 400.f);
+        context.setPrimitiveData(UUID, "net_photosynthesis", 15.f);
+        context.setPrimitiveData(UUID, "boundarylayer_conductance", boundarylayer_conductance);
+        context.setPrimitiveData(UUID, "stomatal_sidedness", stomatal_sidedness);
+
+        BWBcoefficients coeffs;
+        gsm.setModelCoefficients(coeffs);
+        gsm.run();
+
+        float gs;
+        context.getPrimitiveData(UUID, "moisture_conductance", gs);
+        return gs;
+    };
+
+    const float gs_hypo = stomatalConductance(1, gH, 0.f);
+    const float gs_onesided_half = stomatalConductance(0, gH / 2.f, 0.f);
+    DOCTEST_CHECK(gs_hypo == doctest::Approx(gs_onesided_half).epsilon(1e-4));
+
+    const float gs_amphi = stomatalConductance(1, gH, 0.5f);
+    const float gs_onesided_full = stomatalConductance(0, gH, 0.f);
+    DOCTEST_CHECK(gs_amphi == doctest::Approx(gs_onesided_full).epsilon(1e-4));
+
+    // Guard that the boundary layer matters at these conditions, so the checks above can discriminate.
+    DOCTEST_CHECK(std::fabs(gs_onesided_half - gs_onesided_full) > 0.05f * gs_onesided_full);
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - Leaf-surface CO2 uses the 1.37 boundary-layer diffusivity ratio") {
+    // The boundary-layer conductance to CO2 is that to water vapor divided by 1.37, the convention used in leaf gas-exchange
+    // analysis. With a saturated leaf surface at air temperature (relative humidity 1, leaf temperature equal to air
+    // temperature) the surface humidity is exactly 1 regardless of the boundary layer, so the Ball-Woodrow-Berry model
+    // gives gs = gs0 + a1*An/Cs with Cs = Ca - An/gbc in closed form.
+    const float gH = 0.1f;
+    const float An = 10.f;
+    const float Ca = 400.f;
+
+    Context context;
+    StomatalConductanceModel gsm(&context);
+    gsm.disableMessages();
+
+    uint UUID = context.addPatch();
+    context.setPrimitiveData(UUID, "twosided_flag", uint(0));
+    context.setPrimitiveData(UUID, "temperature", 300.f);
+    context.setPrimitiveData(UUID, "air_temperature", 300.f);
+    context.setPrimitiveData(UUID, "air_humidity", 1.f);
+    context.setPrimitiveData(UUID, "air_CO2", Ca);
+    context.setPrimitiveData(UUID, "net_photosynthesis", An);
+    context.setPrimitiveData(UUID, "boundarylayer_conductance", gH);
+
+    BWBcoefficients coeffs;
+    gsm.setModelCoefficients(coeffs);
+    gsm.run();
+
+    float gs;
+    context.getPrimitiveData(UUID, "moisture_conductance", gs);
+
+    const float gbc = 1.08f * gH / 1.37f;
+    const float Cs = Ca - An / gbc;
+    const float gs_expected = coeffs.gs0 + coeffs.a1 * An / Cs;
+    DOCTEST_CHECK(gs == doctest::Approx(gs_expected).epsilon(1e-4));
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - Intermediate stomatal sidedness does not spuriously reject the leaf-surface CO2") {
+    // Regression test: for a stomatal sidedness other than 0 or 0.5 the effective boundary-layer conductance increases with
+    // gs. The fixed-point iteration first evaluated it in the gs -> 0 limit, where it is smallest, and threw "CO2 concentration
+    // at the leaf surface ... not physically meaningful" whenever that first estimate gave Cs <= 0, even when the converged
+    // solution was valid. Here (low wind, 10% of stomata on the upper face) the first estimate gives Cs < 0, but the stomata
+    // open enough at the solution to supply An.
+    auto runModel = [](float An) {
+        Context context;
+        StomatalConductanceModel gsm(&context);
+        gsm.disableMessages();
+
+        uint UUID = context.addPatch();
+        context.setPrimitiveData(UUID, "temperature", 303.f);
+        context.setPrimitiveData(UUID, "air_temperature", 300.f);
+        context.setPrimitiveData(UUID, "air_humidity", 0.3f);
+        context.setPrimitiveData(UUID, "air_CO2", 400.f);
+        context.setPrimitiveData(UUID, "net_photosynthesis", An);
+        context.setPrimitiveData(UUID, "boundarylayer_conductance", 0.1f);
+        context.setPrimitiveData(UUID, "stomatal_sidedness", 0.1f);
+
+        BWBcoefficients coeffs;
+        gsm.setModelCoefficients(coeffs);
+        gsm.run();
+
+        float gs;
+        context.getPrimitiveData(UUID, "moisture_conductance", gs);
+        return gs;
+    };
+
+    float gs = 0.f;
+    DOCTEST_CHECK_NOTHROW(gs = runModel(20.f));
+    DOCTEST_CHECK(std::isfinite(gs));
+    DOCTEST_CHECK(gs > 0.f);
+
+    // An assimilation rate that cannot be supplied even with both faces' full boundary-layer conductance is still rejected.
+    DOCTEST_CHECK_THROWS(gs = runModel(60.f));
 }

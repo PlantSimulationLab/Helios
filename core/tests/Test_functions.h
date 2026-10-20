@@ -1554,6 +1554,29 @@ TEST_CASE("WarningAggregator") {
         DOCTEST_CHECK(agg.getCount("category_b") == 3);
     }
 
+    SUBCASE("Add several instances at once") {
+        WarningAggregator agg;
+        agg.addWarning("tallied", "tallied message", 250);
+        agg.addWarning("tallied", "single message");
+        agg.addWarning("tallied", "tallied message", 0);
+        DOCTEST_CHECK(agg.getCount("tallied") == 251);
+
+        // A count of zero must not create the category
+        agg.addWarning("empty", "never reported", 0);
+        DOCTEST_CHECK(agg.getCount("empty") == 0);
+
+        std::ostringstream oss;
+        agg.report(oss);
+        std::string output = oss.str();
+        DOCTEST_CHECK(output.find("251 instances of 'tallied'") != std::string::npos);
+        DOCTEST_CHECK(output.find("tallied message") != std::string::npos);
+        DOCTEST_CHECK(output.find("empty") == std::string::npos);
+
+        agg.setEnabled(false);
+        agg.addWarning("tallied", "tallied message", 10);
+        DOCTEST_CHECK(agg.getCount("tallied") == 0);
+    }
+
     SUBCASE("Enable and disable") {
         WarningAggregator agg;
 

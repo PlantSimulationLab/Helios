@@ -529,15 +529,29 @@ struct ScanMetadata {
      * beam energy) is below this value is discarded, modeling the minimum detectable signal above the noise floor of a real
      * instrument. Set to 0 to disable suppression so every return is reported.
      *
-     * The default of 0.05 models a realistic ~5% noise floor and pairs with the recommended ~40 rays/pulse: with N
-     * sub-rays the weakest possible return is 1/N of pulse energy (a single sub-ray), so a 0.05 threshold at N=40 keeps
-     * only returns supported by at least ~2 sub-rays. This suppresses the single-sub-ray "phantom" returns whose Bernoulli
-     * appearance/disappearance otherwise forces very high ray counts to converge, letting ~40 rays/pulse reach a stable
-     * multi-return statistic. Raise N if you lower this threshold below ~1/N (a threshold under 1/N has no effect, since no
-     * return can be weaker than one sub-ray); a value of 0 reproduces the previous "report every return" behavior.
+     * The default of 0.001 (-30 dB) matches the noise floor measured in terrestrial RIEGL scans, where the weakest
+     * detected echo lies 30-40 dB below a full-footprint leaf return (0.0002-0.002 of the pulse energy) at 3-80 m. A
+     * threshold under 1/N has no effect with N sub-rays per pulse (no return can be weaker than one sub-ray), so at the
+     * recommended ~40 rays/pulse every resolved return is reported, as a real instrument would. The number of weak
+     * returns per pulse then grows slowly with N (each sub-ray stands for a smaller sliver of the footprint); raising the
+     * threshold to ~2/N suppresses those single-sub-ray returns at the cost of discarding partial interceptions a real
+     * instrument would detect, which biases leaf-area inversion low.
      * \note This is only used for synthetic scan generation.
      */
-    float detectionThreshold = 0.05f;
+    float detectionThreshold = 0.001f;
+
+    //! Whether a multi-return pulse also records the energy that escaped it as a miss point
+    /**
+     * With miss recording on, a \ref RETURN_MODE_MULTI pulse that is only partly intercepted also writes a miss point
+     * (intensity 0) for the part of the beam that left the scene. A real instrument never records that point: it reports
+     * the returns it detected and nothing for the escaped energy. Leaf-area inversion that weights a pulse's returns
+     * equally reads close to unbiased with these points and HIGH without them, because a partial edge hit then counts as
+     * a full interception. Set to false to produce the record a real instrument (plus a gap-filled miss for each fully
+     * transmitted pulse) would provide. Fully transmitted pulses are always recorded as a miss when miss recording is on.
+     * \ref RETURN_MODE_SINGLE never records a partial miss.
+     * \note This is only used for synthetic scan generation.
+     */
+    bool recordPartialMisses = true;
 
     //! Global scanner tilt roll angle in radians (right-hand rotation about the body lateral axis)
     /**
@@ -2299,6 +2313,20 @@ public:
      * \param[in] detectionThreshold Minimum return energy fraction in [0,1]; returns weaker than this are discarded. 0 disables suppression.
      */
     void setScanDetectionThreshold(uint scanID, float detectionThreshold);
+
+    //! Get whether a scan's partly intercepted multi-return pulses also record the escaped energy as a miss point
+    /**
+     * \param[in] scanID ID of scan.
+     * \return True if a partial-miss point is recorded alongside the detected returns (see \ref ScanMetadata::recordPartialMisses).
+     */
+    [[nodiscard]] bool getScanRecordPartialMisses(uint scanID) const;
+
+    //! Set whether a scan's partly intercepted multi-return pulses also record the escaped energy as a miss point
+    /**
+     * \param[in] scanID ID of scan.
+     * \param[in] recordPartialMisses False reproduces what a real instrument records: detected returns only, plus a miss for each fully transmitted pulse when miss recording is on.
+     */
+    void setScanRecordPartialMisses(uint scanID, bool recordPartialMisses);
 
     //! Get the global scanner tilt roll angle for a scan
     /**

@@ -138,10 +138,6 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, intersect_ptx_path.c_str(), "tile_intersect", &tile_intersect));
     RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, intersect_ptx_path.c_str(), "tile_bounds", &tile_bounds));
 
-    // Voxel programs
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, intersect_ptx_path.c_str(), "voxel_intersect", &voxel_intersect));
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, intersect_ptx_path.c_str(), "voxel_bounds", &voxel_bounds));
-
     RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, intersect_ptx_path.c_str(), "bbox_intersect", &bbox_intersect));
     RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, intersect_ptx_path.c_str(), "bbox_bounds", &bbox_bounds));
 
@@ -166,11 +162,6 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtGeometryCreate(OptiX_Context, &tile_geometry));
     RT_CHECK_ERROR(rtGeometrySetBoundingBoxProgram(tile_geometry, tile_bounds));
     RT_CHECK_ERROR(rtGeometrySetIntersectionProgram(tile_geometry, tile_intersect));
-
-    // Voxel geometry
-    RT_CHECK_ERROR(rtGeometryCreate(OptiX_Context, &voxel_geometry));
-    RT_CHECK_ERROR(rtGeometrySetBoundingBoxProgram(voxel_geometry, voxel_bounds));
-    RT_CHECK_ERROR(rtGeometrySetIntersectionProgram(voxel_geometry, voxel_intersect));
 
     // Bbox geometry
     RT_CHECK_ERROR(rtGeometryCreate(OptiX_Context, &bbox_geometry));
@@ -212,13 +203,6 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(tile_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label));
     RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(tile_material, RAYTYPE_DIRECT, any_hit_direct));
 
-    // Voxel material
-    RT_CHECK_ERROR(rtMaterialCreate(OptiX_Context, &voxel_material));
-    RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(voxel_material, RAYTYPE_DIRECT, closest_hit_direct));
-    RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(voxel_material, RAYTYPE_DIFFUSE, closest_hit_diffuse));
-    RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(voxel_material, RAYTYPE_CAMERA, closest_hit_camera));
-    RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(voxel_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label));
-
     // Bbox material
     RT_CHECK_ERROR(rtMaterialCreate(OptiX_Context, &bbox_material));
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(bbox_material, RAYTYPE_DIRECT, closest_hit_direct));
@@ -247,7 +231,7 @@ void OptiX6Backend::initialize() {
 
     // Create geometry group
     RT_CHECK_ERROR(rtGeometryGroupCreate(OptiX_Context, &base_geometry_group));
-    RT_CHECK_ERROR(rtGeometryGroupSetChildCount(base_geometry_group, 6)); // 6 primitive types
+    RT_CHECK_ERROR(rtGeometryGroupSetChildCount(base_geometry_group, 5)); // patch, triangle, disk, tile, bbox
     RT_CHECK_ERROR(rtTransformSetChild(transform, base_geometry_group));
 
     // Create geometry acceleration (Trbvh for fast BVH building)
@@ -282,17 +266,11 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtGeometryInstanceSetMaterial(tile_geometryinstance, 0, tile_material));
     RT_CHECK_ERROR(rtGeometryGroupSetChild(base_geometry_group, 3, tile_geometryinstance));
 
-    RT_CHECK_ERROR(rtGeometryInstanceCreate(OptiX_Context, &voxel_geometryinstance));
-    RT_CHECK_ERROR(rtGeometryInstanceSetGeometry(voxel_geometryinstance, voxel_geometry));
-    RT_CHECK_ERROR(rtGeometryInstanceSetMaterialCount(voxel_geometryinstance, 1));
-    RT_CHECK_ERROR(rtGeometryInstanceSetMaterial(voxel_geometryinstance, 0, voxel_material));
-    RT_CHECK_ERROR(rtGeometryGroupSetChild(base_geometry_group, 4, voxel_geometryinstance));
-
     RT_CHECK_ERROR(rtGeometryInstanceCreate(OptiX_Context, &bbox_geometryinstance));
     RT_CHECK_ERROR(rtGeometryInstanceSetGeometry(bbox_geometryinstance, bbox_geometry));
     RT_CHECK_ERROR(rtGeometryInstanceSetMaterialCount(bbox_geometryinstance, 1));
     RT_CHECK_ERROR(rtGeometryInstanceSetMaterial(bbox_geometryinstance, 0, bbox_material));
-    RT_CHECK_ERROR(rtGeometryGroupSetChild(base_geometry_group, 5, bbox_geometryinstance));
+    RT_CHECK_ERROR(rtGeometryGroupSetChild(base_geometry_group, 4, bbox_geometryinstance));
 
     // Set top_object variable
     RTvariable top_object;
@@ -308,7 +286,6 @@ void OptiX6Backend::initialize() {
     addBuffer("disk_radii", disk_radii_RTbuffer, disk_radii_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("disk_normals", disk_normals_RTbuffer, disk_normals_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 1);
     addBuffer("tile_vertices", tile_vertices_RTbuffer, tile_vertices_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 2);
-    addBuffer("voxel_vertices", voxel_vertices_RTbuffer, voxel_vertices_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 2);
     addBuffer("bbox_vertices", bbox_vertices_RTbuffer, bbox_vertices_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 2);
 
     // Primitive data buffers
@@ -322,7 +299,6 @@ void OptiX6Backend::initialize() {
     addBuffer("triangle_UUID", triangle_UUID_RTbuffer, triangle_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
     addBuffer("disk_UUID", disk_UUID_RTbuffer, disk_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
     addBuffer("tile_UUID", tile_UUID_RTbuffer, tile_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
-    addBuffer("voxel_UUID", voxel_UUID_RTbuffer, voxel_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
     addBuffer("bbox_UUID", bbox_UUID_RTbuffer, bbox_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
 
     // Mapping buffers
@@ -362,10 +338,10 @@ void OptiX6Backend::initialize() {
     addBuffer("radiation_in_camera", radiation_in_camera_RTbuffer, radiation_in_camera_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("camera_pixel_label", camera_pixel_label_RTbuffer, camera_pixel_label_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_UNSIGNED_INT, 1);
     addBuffer("camera_pixel_depth", camera_pixel_depth_RTbuffer, camera_pixel_depth_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
+    addBuffer("abandoned_ray_count", abandoned_ray_count_RTbuffer, abandoned_ray_count_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_UNSIGNED_INT, 1);
     addBuffer("scatter_buff_top", scatter_buff_top_RTbuffer, scatter_buff_top_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("scatter_buff_bottom", scatter_buff_bottom_RTbuffer, scatter_buff_bottom_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("radiation_specular", radiation_specular_RTbuffer, radiation_specular_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
-    addBuffer("Rsky", Rsky_RTbuffer, Rsky_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("scatter_buff_top_cam", scatter_buff_top_cam_RTbuffer, scatter_buff_top_cam_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("scatter_buff_bottom_cam", scatter_buff_bottom_cam_RTbuffer, scatter_buff_bottom_cam_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("white_reference_top_cam", white_reference_top_cam_RTbuffer, white_reference_top_cam_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
@@ -394,7 +370,6 @@ void OptiX6Backend::initialize() {
 
     // Band control buffers
     addBuffer("band_launch_flag", band_launch_flag_RTbuffer, band_launch_flag_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_BYTE, 1);
-    addBuffer("max_scatters", max_scatters_RTbuffer, max_scatters_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
 
     // Texture/masking buffers
     addBuffer("masksize", masksize_RTbuffer, masksize_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_INT2, 1);
@@ -435,6 +410,9 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "specular_reflection_enabled", &specular_reflection_enabled_RTvariable));
     RT_CHECK_ERROR(rtVariableSet1ui(specular_reflection_enabled_RTvariable, 0));
 
+    RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "below_horizon_diffuse_enabled", &below_horizon_diffuse_enabled_RTvariable));
+    RT_CHECK_ERROR(rtVariableSet1ui(below_horizon_diffuse_enabled_RTvariable, 0));
+
     RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "scattering_iteration", &scattering_iteration_RTvariable));
     RT_CHECK_ERROR(rtVariableSet1ui(scattering_iteration_RTvariable, 0));
 
@@ -461,8 +439,6 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "FOV_aspect_ratio", &FOV_aspect_ratio_RTvariable));
     RT_CHECK_ERROR(rtVariableSet1f(FOV_aspect_ratio_RTvariable, 1.f));
 
-    RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "camera_HFOV", &camera_HFOV_RTvariable));
-    RT_CHECK_ERROR(rtVariableSet1f(camera_HFOV_RTvariable, 0.f));
 
     RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "camera_focal_length", &camera_focal_length_RTvariable));
     RT_CHECK_ERROR(rtVariableSet1f(camera_focal_length_RTvariable, 0.f));
@@ -470,8 +446,6 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "camera_viewplane_length", &camera_viewplane_length_RTvariable));
     RT_CHECK_ERROR(rtVariableSet1f(camera_viewplane_length_RTvariable, 0.f));
 
-    RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "camera_pixel_solid_angle", &camera_pixel_solid_angle_RTvariable));
-    RT_CHECK_ERROR(rtVariableSet1f(camera_pixel_solid_angle_RTvariable, 0.f));
 
     RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "camera_pixel_offset_x", &camera_pixel_offset_x_RTvariable));
     RT_CHECK_ERROR(rtVariableSet1ui(camera_pixel_offset_x_RTvariable, 0));
@@ -528,7 +502,6 @@ void OptiX6Backend::updateGeometry(const RayTracingGeometry &geometry) {
     current_triangle_count = geometry.triangle_count;
     current_disk_count = geometry.disk_count;
     current_tile_count = geometry.tile_count;
-    current_voxel_count = geometry.voxel_count;
     current_bbox_count = geometry.bbox_count;
 
     RT_CHECK_ERROR(rtVariableSet1ui(Nprimitives_RTvariable, geometry.primitive_count));
@@ -551,7 +524,6 @@ void OptiX6Backend::buildAccelerationStructure() {
     RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(triangle_geometry, current_triangle_count));
     RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(disk_geometry, current_disk_count));
     RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(tile_geometry, current_tile_count));
-    RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(voxel_geometry, current_voxel_count));
     RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(bbox_geometry, current_bbox_count));
 
     // OptiX will automatically rebuild the acceleration structure on next launch
@@ -586,20 +558,14 @@ void OptiX6Backend::updateSources(const std::vector<RayTracingSource> &sources) 
     RT_CHECK_ERROR(rtVariableSet1ui(Nsources_RTvariable, sources.size()));
 }
 
-void OptiX6Backend::updateDiffuseRadiation(const std::vector<float> &flux, const std::vector<float> &extinction, const std::vector<helios::vec3> &peak_dir, const std::vector<float> &dist_norm, const std::vector<float> &sky_energy) {
-
-    if (!is_initialized) {
-        helios_runtime_error("ERROR (OptiX6Backend::updateDiffuseRadiation): Backend not initialized.");
-    }
-
-    diffuseToBuffers(flux, extinction, peak_dir, dist_norm, sky_energy);
-}
-
 void OptiX6Backend::updateSkyModel(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction, const std::vector<float> &solar_disk_radiance, float solar_disk_cos_angle,
                                     const std::vector<float> &camera_diffuse_flux, const std::vector<uint32_t> &band_emission_flag) {
 
     if (!is_initialized) {
         helios_runtime_error("ERROR (OptiX6Backend::updateSkyModel): Backend not initialized.");
+    }
+    if (sky_radiance_params.empty() || camera_sky_radiance.empty() || solar_disk_radiance.empty() || camera_diffuse_flux.empty() || band_emission_flag.empty()) {
+        helios_runtime_error("ERROR (OptiX6Backend::updateSkyModel): Every per-band sky model vector must have one entry per launched band, but at least one is empty.");
     }
 
     skyModelToBuffers(sky_radiance_params, camera_sky_radiance, sun_direction, solar_disk_radiance, solar_disk_cos_angle, camera_diffuse_flux, band_emission_flag);
@@ -739,6 +705,8 @@ void OptiX6Backend::launchDiffuseRays(const RayTracingLaunchParams &params) {
         uint specular_enabled = params.specular_reflection_enabled ? 1 : 0;
         RT_CHECK_ERROR(rtVariableSet1ui(specular_reflection_enabled_RTvariable, specular_enabled));
 
+        RT_CHECK_ERROR(rtVariableSet1ui(below_horizon_diffuse_enabled_RTvariable, params.below_horizon_diffuse_enabled ? 1 : 0));
+
         // Launch this batch: dimension = (n, n, primitives_this_batch)
         RT_CHECK_ERROR(rtContextLaunch3D(OptiX_Context, RAYTYPE_DIFFUSE, n, n, prims_this_launch));
     }
@@ -767,19 +735,12 @@ void OptiX6Backend::launchCameraRays(const RayTracingLaunchParams &params) {
     RT_CHECK_ERROR(rtVariableSet1f(camera_lens_diameter_RTvariable, params.camera_lens_diameter));
     RT_CHECK_ERROR(rtVariableSet1f(FOV_aspect_ratio_RTvariable, params.camera_fov_aspect));
 
-    // Debug: check camera_HFOV value
-    if (std::isnan(params.camera_HFOV) || std::isinf(params.camera_HFOV)) {
-    }
-
-    RT_CHECK_ERROR(rtVariableSet1f(camera_HFOV_RTvariable, params.camera_HFOV));
-
     RT_CHECK_ERROR(rtVariableSet1ui(camera_pixel_offset_x_RTvariable, params.camera_pixel_offset.x));
     RT_CHECK_ERROR(rtVariableSet1ui(camera_pixel_offset_y_RTvariable, params.camera_pixel_offset.y));
     RT_CHECK_ERROR(rtVariableSet1ui(camera_ID_RTvariable, params.camera_id));
 
-    // Set the 3 new camera parameters
+    // Set the camera geometry parameters
     RT_CHECK_ERROR(rtVariableSet1f(camera_viewplane_length_RTvariable, params.camera_viewplane_length));
-    RT_CHECK_ERROR(rtVariableSet1f(camera_pixel_solid_angle_RTvariable, params.camera_pixel_solid_angle));
     RT_CHECK_ERROR(rtVariableSet2i(camera_resolution_full_RTvariable, params.camera_resolution_full.x, params.camera_resolution_full.y));
 
     // Only zero camera buffer when starting a new camera or band count changes.
@@ -813,11 +774,12 @@ void OptiX6Backend::launchPixelLabelRays(const RayTracingLaunchParams &params) {
     // Set launch parameters
     launchParamsToVariables(params);
 
-    // Set only essential parameters for pixel coordinate calculations
-    // Camera orientation (position/direction) is inherited from camera rendering
-    // (This matches master's behavior where pixel labeling reuses camera settings)
+    // Camera pose and pixel geometry from the launch parameters, so labels do not depend on a preceding launchCameraRays() call
+    RT_CHECK_ERROR(rtVariableSet3f(camera_position_RTvariable, params.camera_position.x, params.camera_position.y, params.camera_position.z));
+    RT_CHECK_ERROR(rtVariableSet2f(camera_direction_RTvariable, params.camera_direction.x, params.camera_direction.y));
+    RT_CHECK_ERROR(rtVariableSet1f(camera_focal_length_RTvariable, params.camera_focal_length));
+    RT_CHECK_ERROR(rtVariableSet1f(FOV_aspect_ratio_RTvariable, params.camera_fov_aspect));
     RT_CHECK_ERROR(rtVariableSet1f(camera_viewplane_length_RTvariable, params.camera_viewplane_length));
-    RT_CHECK_ERROR(rtVariableSet1f(camera_pixel_solid_angle_RTvariable, params.camera_pixel_solid_angle));
     RT_CHECK_ERROR(rtVariableSet2i(camera_resolution_full_RTvariable, params.camera_resolution_full.x, params.camera_resolution_full.y));
 
     // Set camera pixel offset for tiling
@@ -856,6 +818,14 @@ void OptiX6Backend::getCameraResults(std::vector<float> &pixel_data, std::vector
     pixel_data = getOptiXbufferData(radiation_in_camera_RTbuffer);
     pixel_labels = getOptiXbufferData_ui(camera_pixel_label_RTbuffer);
     pixel_depths = getOptiXbufferData(camera_pixel_depth_RTbuffer);
+
+    // A non-finite pixel would make the auto-exposure gain NaN and the whole frame black with no error, as the Vulkan backend also checks
+    for (size_t i = 0; i < pixel_data.size(); i++) {
+        if (!std::isfinite(pixel_data[i])) {
+            helios_runtime_error("ERROR (OptiX6Backend::getCameraResults): Ray tracing produced a non-finite value (" + std::to_string(pixel_data[i]) + ") for camera " + std::to_string(camera_id) + " at index " + std::to_string(i) + " of " +
+                                 std::to_string(pixel_data.size()) + " of the pixel radiation buffer. The image is unusable; please report this with the scene that produced it.");
+        }
+    }
 }
 
 void OptiX6Backend::getWhiteReferenceResults(std::vector<float> &white_reference_top, std::vector<float> &white_reference_bottom) {
@@ -886,6 +856,10 @@ size_t OptiX6Backend::getRadiationInTopBufferSize() const {
     RTsize allocated_size = 0;
     RT_CHECK_ERROR(rtBufferGetSize1D(radiation_in_top_RTbuffer, &allocated_size));
     return allocated_size;
+}
+
+size_t OptiX6Backend::getAbandonedRayCount() {
+    return getOptiXbufferData_ui(abandoned_ray_count_RTbuffer).at(0);
 }
 
 void OptiX6Backend::zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption) {
@@ -942,17 +916,16 @@ void OptiX6Backend::zeroRadiationBuffers(size_t launch_band_count, bool track_fa
         zeroBuffer1D(radiation_specular_RTbuffer, 1);
     }
 
-    // Zero sky energy buffer
-    if (current_band_count > 0) {
-        zeroBuffer1D(Rsky_RTbuffer, current_band_count);
-    }
-
     // Absorbed radiation that arrived on the top face [primitive][launch band]. Without face absorption tracking the programs skip the write, so it is shrunk to a
     // one-element placeholder.
     const size_t radiation_in_top_size = current_primitive_count * launch_band_count;
     face_absorption_enabled = track_face_absorption && radiation_in_top_size > 0;
     zeroBuffer1D(radiation_in_top_RTbuffer, face_absorption_enabled ? radiation_in_top_size : 1);
     RT_CHECK_ERROR(rtVariableSet1ui(face_absorption_enabled_RTvariable, face_absorption_enabled ? 1 : 0));
+}
+
+void OptiX6Backend::zeroAbandonedRayCount() {
+    zeroBuffer1D(abandoned_ray_count_RTbuffer, 1);
 }
 
 void OptiX6Backend::zeroScatterBuffers() {
@@ -1062,11 +1035,9 @@ void OptiX6Backend::queryGPUMemory() const {
         return;
     }
 
-    // Query OptiX memory usage
-    RTsize memory_used;
-    RT_CHECK_ERROR(rtContextGetAttribute(OptiX_Context, RT_CONTEXT_ATTRIBUTE_AVAILABLE_DEVICE_MEMORY, sizeof(RTsize), &memory_used));
-
-    // Memory info available via backend->queryGPUMemory() - removed automatic output for cleaner tests
+    RTsize available_bytes;
+    RT_CHECK_ERROR(rtContextGetAttribute(OptiX_Context, RT_CONTEXT_ATTRIBUTE_AVAILABLE_DEVICE_MEMORY, sizeof(RTsize), &available_bytes));
+    std::cout << "GPU memory: " << static_cast<float>(available_bytes) / (1024.0f * 1024.0f) << " MB available" << std::endl;
 }
 
 std::string OptiX6Backend::getBackendName() const {
@@ -1692,19 +1663,6 @@ void OptiX6Backend::geometryToBuffers(const RayTracingGeometry &geometry) {
         initializeBuffer1Dui(tile_UUID_RTbuffer, geometry.tiles.UUIDs);
     }
 
-    // Voxel vertices: std::vector<vec3> → 2D buffer [voxel][8]
-    if (geometry.voxel_count > 0 && !geometry.voxels.vertices.empty()) {
-        std::vector<std::vector<helios::vec3>> voxel_verts_2d(geometry.voxel_count);
-        for (size_t v = 0; v < geometry.voxel_count; v++) {
-            voxel_verts_2d[v].resize(8);
-            for (int vtx = 0; vtx < 8; vtx++) {
-                voxel_verts_2d[v][vtx] = geometry.voxels.vertices[v * 8 + vtx];
-            }
-        }
-        initializeBuffer2Dfloat3(voxel_vertices_RTbuffer, voxel_verts_2d);
-        initializeBuffer1Dui(voxel_UUID_RTbuffer, geometry.voxels.UUIDs);
-    }
-
     // Bbox vertices: std::vector<vec3> → 2D buffer [bbox][4]
     // Bbox faces are 4-vertex rectangles (verified in primitiveIntersection.cu:390-393)
     if (geometry.bbox_count > 0 && !geometry.bboxes.vertices.empty()) {
@@ -1883,31 +1841,10 @@ void OptiX6Backend::sourcesToBuffers(const std::vector<RayTracingSource> &source
     // source_fluxes is indexed [source][launched band] and is uploaded for each launch by uploadSourceFluxes(). The per-source fluxes here
     // are for every band in the model, so uploading them would hand the launched bands other bands' fluxes whenever the sources are
     // updated after the launch's fluxes (as runBand() does to compute camera-weighted fluxes).
+    if (fluxes_cam.empty()) {
+        fluxes_cam.push_back(1.f); // one-element placeholder: the camera weights are only set, and read, when the model has cameras
+    }
     initializeBuffer1Df(source_fluxes_cam_RTbuffer, fluxes_cam);
-}
-
-void OptiX6Backend::diffuseToBuffers(const std::vector<float> &flux, const std::vector<float> &extinction, const std::vector<helios::vec3> &peak_dir, const std::vector<float> &dist_norm, const std::vector<float> &sky_energy) {
-    // Upload diffuse radiation parameters
-
-    if (!flux.empty()) {
-        initializeBuffer1Df(diffuse_flux_RTbuffer, flux);
-    }
-
-    if (!extinction.empty()) {
-        initializeBuffer1Df(diffuse_extinction_RTbuffer, extinction);
-    }
-
-    if (!peak_dir.empty()) {
-        initializeBuffer1Dfloat3(diffuse_peak_dir_RTbuffer, peak_dir);
-    }
-
-    if (!dist_norm.empty()) {
-        initializeBuffer1Df(diffuse_dist_norm_RTbuffer, dist_norm);
-    }
-
-    if (!sky_energy.empty()) {
-        initializeBuffer1Df(Rsky_RTbuffer, sky_energy);
-    }
 }
 
 void OptiX6Backend::skyModelToBuffers(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction, const std::vector<float> &solar_disk_radiance, float solar_disk_cos_angle,
@@ -1973,6 +1910,8 @@ void OptiX6Backend::launchParamsToVariables(const RayTracingLaunchParams &params
     // Specular reflection flag
     uint specular_enabled = params.specular_reflection_enabled ? 1 : 0;
     RT_CHECK_ERROR(rtVariableSet1ui(specular_reflection_enabled_RTvariable, specular_enabled));
+
+    RT_CHECK_ERROR(rtVariableSet1ui(below_horizon_diffuse_enabled_RTvariable, params.below_horizon_diffuse_enabled ? 1 : 0));
 }
 
 void OptiX6Backend::buffersToResults(RayTracingResults &results) {
@@ -1992,5 +1931,4 @@ void OptiX6Backend::buffersToResults(RayTracingResults &results) {
     }
 
     results.radiation_specular = getOptiXbufferData(radiation_specular_RTbuffer);
-    results.sky_energy = getOptiXbufferData(Rsky_RTbuffer);
 }

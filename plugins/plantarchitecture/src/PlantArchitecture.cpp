@@ -594,7 +594,7 @@ std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::v
         }
         for (int i = 0; i < plant_count_xy.x; i++) {
             if (context_ptr->randu() < germination_rate) {
-                plantIDs.push_back(buildPlantInstanceFromLibrary(canopy_center_position + make_vec3(-0.5f * canopy_extent.x + float(i) * plant_spacing_xy.x, -0.5f * canopy_extent.y + float(j) * plant_spacing_xy.y, 0), 0));
+                plantIDs.push_back(buildPlantInstanceFromLibrary(canopy_center_position + make_vec3(-0.5f * canopy_extent.x + float(i) * plant_spacing_xy.x, -0.5f * canopy_extent.y + float(j) * plant_spacing_xy.y, 0), 0, build_parameters));
             }
         }
     }
@@ -617,7 +617,7 @@ std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::v
             return plantIDs;
         }
         vec3 plant_origin = canopy_center_position + make_vec3((-0.5f + context_ptr->randu()) * canopy_extent_xy.x, (-0.5f + context_ptr->randu()) * canopy_extent_xy.y, 0);
-        plantIDs.push_back(buildPlantInstanceFromLibrary(plant_origin, age));
+        plantIDs.push_back(buildPlantInstanceFromLibrary(plant_origin, age, build_parameters));
     }
 
     return plantIDs;
@@ -9527,7 +9527,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
             // Re-register plants with per-tree BVH to update primitive counts as plants grow
             if (collision_detection_ptr->isTreeBasedBVHEnabled()) {
                 for (uint plantID: plantIDs) {
-                    std::vector<uint> plant_primitives = getPlantCollisionRelevantObjectIDs(plantID);
+                    std::vector<uint> plant_primitives = context_ptr->getObjectPrimitiveUUIDs(getPlantCollisionRelevantObjectIDs(plantID));
                     if (!plant_primitives.empty()) {
                         collision_detection_ptr->registerTree(plantID, plant_primitives);
                     }
@@ -10679,7 +10679,13 @@ void PlantArchitecture::enableSoftCollisionAvoidance(const std::vector<uint> &ta
         // Set static obstacles (non-plant geometry that affects all trees)
         std::vector<uint> static_obstacles;
         static_obstacles.insert(static_obstacles.end(), target_object_UUIDs.begin(), target_object_UUIDs.end());
-        static_obstacles.insert(static_obstacles.end(), target_object_IDs.begin(), target_object_IDs.end());
+        // setStaticObstacles() takes primitive UUIDs, so expand the target objects (skipping any deleted since)
+        for (uint objID: target_object_IDs) {
+            if (objID != 0 && context_ptr->doesObjectExist(objID)) {
+                std::vector<uint> object_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                static_obstacles.insert(static_obstacles.end(), object_primitives.begin(), object_primitives.end());
+            }
+        }
 
         // Build initial BVH cache to prevent warnings during early collision detection calls
         rebuildBVHForTimestep();
@@ -10695,7 +10701,7 @@ void PlantArchitecture::enableSoftCollisionAvoidance(const std::vector<uint> &ta
         // This allows each plant to have its own collision BVH for linear scaling
         std::vector<uint> plant_ids = getAllPlantIDs();
         for (uint plant_id: plant_ids) {
-            std::vector<uint> plant_primitives = getPlantCollisionRelevantObjectIDs(plant_id);
+            std::vector<uint> plant_primitives = context_ptr->getObjectPrimitiveUUIDs(getPlantCollisionRelevantObjectIDs(plant_id));
             if (!plant_primitives.empty()) {
                 collision_detection_ptr->registerTree(plant_id, plant_primitives);
             }
@@ -10731,6 +10737,9 @@ void PlantArchitecture::setSoftCollisionAvoidanceParameters(float view_half_angl
         helios_runtime_error("ERROR (PlantArchitecture::setSoftCollisionAvoidanceParameters): cone_half_angle_deg must be between 0 and 180 degrees.");
     }
     if (look_ahead_distance <= 0.0f) {
+        helios_runtime_error("ERROR (PlantArchitecture::setSoftCollisionAvoidanceParameters): look_ahead_distance must be positive.");
+    }
+    if (sample_count <= 0) {
         helios_runtime_error("ERROR (PlantArchitecture::setSoftCollisionAvoidanceParameters): sample_count must be positive.");
     }
     if (inertia_weight < 0.0f || inertia_weight > 1.0f) {
@@ -10777,6 +10786,9 @@ void PlantArchitecture::setCollisionRelevantOrgans(bool include_internodes, bool
 
 
 void PlantArchitecture::enableSolidObstacleAvoidance(const std::vector<uint> &obstacle_UUIDs, float avoidance_distance, bool enable_fruit_adjustment, bool enable_obstacle_pruning) {
+    if (!(avoidance_distance > 0.0f)) {
+        helios_runtime_error("ERROR (PlantArchitecture::enableSolidObstacleAvoidance): avoidance_distance must be positive.");
+    }
     solid_obstacle_avoidance_enabled = true;
     solid_obstacle_UUIDs = obstacle_UUIDs;
     solid_obstacle_avoidance_distance = avoidance_distance;
@@ -10812,7 +10824,13 @@ void PlantArchitecture::enableSolidObstacleAvoidance(const std::vector<uint> &ob
     if (collision_detection_enabled && collision_detection_ptr != nullptr && collision_detection_ptr->isTreeBasedBVHEnabled()) {
         std::vector<uint> static_obstacles;
         static_obstacles.insert(static_obstacles.end(), collision_target_UUIDs.begin(), collision_target_UUIDs.end());
-        static_obstacles.insert(static_obstacles.end(), collision_target_object_IDs.begin(), collision_target_object_IDs.end());
+        // setStaticObstacles() takes primitive UUIDs, so expand the target objects (skipping any deleted since)
+        for (uint objID: collision_target_object_IDs) {
+            if (objID != 0 && context_ptr->doesObjectExist(objID)) {
+                std::vector<uint> object_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                static_obstacles.insert(static_obstacles.end(), object_primitives.begin(), object_primitives.end());
+            }
+        }
         static_obstacles.insert(static_obstacles.end(), solid_obstacle_UUIDs.begin(), solid_obstacle_UUIDs.end());
 
         collision_detection_ptr->setStaticObstacles(static_obstacles);
